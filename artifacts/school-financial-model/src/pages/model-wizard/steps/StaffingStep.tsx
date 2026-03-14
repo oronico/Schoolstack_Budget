@@ -21,23 +21,28 @@ export function StaffingStep() {
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
 
-  const existingRows = watch("staffingRows") as StaffingRowData[] | undefined;
+  const formRows = watch("staffingRows") as StaffingRowData[] | undefined;
   const [rows, setRows] = useState<StaffingRowData[]>([]);
-  const [initialized, setInitialized] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   useEffect(() => {
-    if (initialized) return;
-    if (existingRows && existingRows.length > 0) {
-      setRows(existingRows);
-      setExpandedRows(new Set(existingRows.map((r) => r.id)));
-    } else {
+    if (formRows !== undefined && formRows.length > 0) {
+      setRows(formRows);
+      if (!defaultsApplied) {
+        setExpandedRows(new Set(formRows.map((r) => r.id)));
+        setDefaultsApplied(true);
+      }
+    } else if (formRows !== undefined && Array.isArray(formRows) && formRows.length === 0 && defaultsApplied) {
+      setRows([]);
+    } else if (!defaultsApplied) {
       const defaults = generateDefaultStaffingRows(schoolStage, fundingProfile);
       setRows(defaults);
       setExpandedRows(new Set(defaults.map((r) => r.id)));
+      setValue("staffingRows", defaults, { shouldDirty: true });
+      setDefaultsApplied(true);
     }
-    setInitialized(true);
-  }, [existingRows, schoolStage, fundingProfile, initialized]);
+  }, [formRows, schoolStage, fundingProfile, defaultsApplied, setValue]);
 
   const syncToForm = useCallback(
     (updatedRows: StaffingRowData[]) => {

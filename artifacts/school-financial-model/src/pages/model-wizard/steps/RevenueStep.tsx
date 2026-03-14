@@ -30,33 +30,38 @@ export function RevenueStep() {
   const schoolStage = watch("schoolProfile.schoolStage") as string | undefined;
   const yearCount = getYearCount(schoolStage);
 
-  const existingRows = watch("revenueRows") as RevenueRowData[] | undefined;
+  const formRows = watch("revenueRows") as RevenueRowData[] | undefined;
   const [rows, setRows] = useState<RevenueRowData[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<RevenueCategory>>(new Set());
-  const [initialized, setInitialized] = useState(false);
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   useEffect(() => {
-    if (initialized) return;
-    if (existingRows && existingRows.length > 0) {
-      const adjusted = existingRows.map((r) => ({
+    if (formRows !== undefined && formRows.length > 0) {
+      const adjusted = formRows.map((r) => ({
         ...r,
         amounts: r.amounts.length >= yearCount
           ? r.amounts.slice(0, yearCount)
           : [...r.amounts, ...new Array(yearCount - r.amounts.length).fill(0)],
       }));
       setRows(adjusted);
-      const enabledCats = new Set<RevenueCategory>();
-      adjusted.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
-      setExpandedCategories(enabledCats);
-    } else {
+      if (!defaultsApplied) {
+        const enabledCats = new Set<RevenueCategory>();
+        adjusted.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
+        setExpandedCategories(enabledCats);
+        setDefaultsApplied(true);
+      }
+    } else if (formRows !== undefined && Array.isArray(formRows) && formRows.length === 0 && defaultsApplied) {
+      setRows([]);
+    } else if (!defaultsApplied) {
       const defaults = generateDefaultRevenueRows(fundingProfile, yearCount);
       setRows(defaults);
       const enabledCats = new Set<RevenueCategory>();
       defaults.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
       setExpandedCategories(enabledCats);
+      setValue("revenueRows", defaults, { shouldDirty: true });
+      setDefaultsApplied(true);
     }
-    setInitialized(true);
-  }, [existingRows, fundingProfile, yearCount, initialized]);
+  }, [formRows, fundingProfile, yearCount, defaultsApplied, setValue]);
 
   const syncToForm = useCallback((updatedRows: RevenueRowData[]) => {
     setRows(updatedRows);
