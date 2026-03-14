@@ -747,7 +747,14 @@ components:
           type: string
         schoolType:
           type: string
-          enum: [microschool, private_school, charter_school, other]
+          enum: [charter_school, homeschool_coop, learning_pod, microschool, private_school, tutoring_center, other]
+        schoolTypeOther:
+          type: string
+        entityType:
+          type: string
+          enum: [sole_practitioner, llc_single, llc_partnership, c_corp, s_corp, nonprofit_501c3]
+        ein:
+          type: string
         schoolStage:
           $ref: "#/components/schemas/SchoolStage"
         fundingProfile:

@@ -198,16 +198,34 @@ export type SchoolProfileSchoolType =
   (typeof SchoolProfileSchoolType)[keyof typeof SchoolProfileSchoolType];
 
 export const SchoolProfileSchoolType = {
+  charter_school: "charter_school",
+  homeschool_coop: "homeschool_coop",
+  learning_pod: "learning_pod",
   microschool: "microschool",
   private_school: "private_school",
-  charter_school: "charter_school",
+  tutoring_center: "tutoring_center",
   other: "other",
+} as const;
+
+export type SchoolProfileEntityType =
+  (typeof SchoolProfileEntityType)[keyof typeof SchoolProfileEntityType];
+
+export const SchoolProfileEntityType = {
+  sole_practitioner: "sole_practitioner",
+  llc_single: "llc_single",
+  llc_partnership: "llc_partnership",
+  c_corp: "c_corp",
+  s_corp: "s_corp",
+  nonprofit_501c3: "nonprofit_501c3",
 } as const;
 
 export interface SchoolProfile {
   schoolName?: string;
   state?: string;
   schoolType?: SchoolProfileSchoolType;
+  schoolTypeOther?: string;
+  entityType?: SchoolProfileEntityType;
+  ein?: string;
   schoolStage?: SchoolStage;
   fundingProfile?: FundingProfile;
   openingYear?: number;

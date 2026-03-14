@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { FundingProfile } from "./fundingProfile";
+import type { SchoolProfileEntityType } from "./schoolProfileEntityType";
 import type { SchoolProfileSchoolType } from "./schoolProfileSchoolType";
 import type { SchoolStage } from "./schoolStage";
 
@@ -13,6 +14,9 @@ export interface SchoolProfile {
   schoolName?: string;
   state?: string;
   schoolType?: SchoolProfileSchoolType;
+  schoolTypeOther?: string;
+  entityType?: SchoolProfileEntityType;
+  ein?: string;
   schoolStage?: SchoolStage;
   fundingProfile?: FundingProfile;
   openingYear?: number;

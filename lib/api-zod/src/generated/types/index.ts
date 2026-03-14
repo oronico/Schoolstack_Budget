@@ -41,6 +41,7 @@ export * from "./revenueComposition";
 export * from "./revenueDriverType";
 export * from "./revenueRow";
 export * from "./schoolProfile";
+export * from "./schoolProfileEntityType";
 export * from "./schoolProfileSchoolType";
 export * from "./schoolStage";
 export * from "./staffing";

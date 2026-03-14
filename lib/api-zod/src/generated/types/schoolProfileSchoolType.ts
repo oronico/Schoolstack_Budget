@@ -10,8 +10,11 @@ export type SchoolProfileSchoolType =
   (typeof SchoolProfileSchoolType)[keyof typeof SchoolProfileSchoolType];
 
 export const SchoolProfileSchoolType = {
+  charter_school: "charter_school",
+  homeschool_coop: "homeschool_coop",
+  learning_pod: "learning_pod",
   microschool: "microschool",
   private_school: "private_school",
-  charter_school: "charter_school",
+  tutoring_center: "tutoring_center",
   other: "other",
 } as const;

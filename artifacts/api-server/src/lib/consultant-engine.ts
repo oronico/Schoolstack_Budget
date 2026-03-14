@@ -1081,10 +1081,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         priority: "medium",
       });
     }
-    const tutoringExpenseRows = (data.expenseRows as Array<{ enabled: boolean; category: string; amounts: unknown; driverType: string }>) || [];
+    const tutoringExpenseRows = (data.expenseRows as Array<{ enabled: boolean; category: string; amounts: number[]; driverType: string }>) || [];
     const tutoringOccCost = tutoringExpenseRows
       .filter(r => r.enabled && r.category === "occupancy_facility")
-      .reduce((sum, r) => sum + computeDriverValue(r.amounts as Record<string, unknown>, 0, r.driverType, y1.students), 0);
+      .reduce((sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0);
     const tutoringOccPct = y1.totalRevenue > 0 ? tutoringOccCost / y1.totalRevenue : 0;
     if (tutoringOccPct > 0.25) {
       recommendations.push({

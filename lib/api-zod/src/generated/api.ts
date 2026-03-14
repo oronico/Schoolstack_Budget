@@ -117,8 +117,28 @@ export const CreateModelBody = zod.object({
         schoolName: zod.string().optional(),
         state: zod.string().optional(),
         schoolType: zod
-          .enum(["microschool", "private_school", "charter_school", "other"])
+          .enum([
+            "charter_school",
+            "homeschool_coop",
+            "learning_pod",
+            "microschool",
+            "private_school",
+            "tutoring_center",
+            "other",
+          ])
           .optional(),
+        schoolTypeOther: zod.string().optional(),
+        entityType: zod
+          .enum([
+            "sole_practitioner",
+            "llc_single",
+            "llc_partnership",
+            "c_corp",
+            "s_corp",
+            "nonprofit_501c3",
+          ])
+          .optional(),
+        ein: zod.string().optional(),
         schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
         fundingProfile: zod
           .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
@@ -315,8 +335,28 @@ export const GetModelResponse = zod.object({
         schoolName: zod.string().optional(),
         state: zod.string().optional(),
         schoolType: zod
-          .enum(["microschool", "private_school", "charter_school", "other"])
+          .enum([
+            "charter_school",
+            "homeschool_coop",
+            "learning_pod",
+            "microschool",
+            "private_school",
+            "tutoring_center",
+            "other",
+          ])
           .optional(),
+        schoolTypeOther: zod.string().optional(),
+        entityType: zod
+          .enum([
+            "sole_practitioner",
+            "llc_single",
+            "llc_partnership",
+            "c_corp",
+            "s_corp",
+            "nonprofit_501c3",
+          ])
+          .optional(),
+        ein: zod.string().optional(),
         schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
         fundingProfile: zod
           .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
@@ -514,8 +554,28 @@ export const UpdateModelBody = zod.object({
         schoolName: zod.string().optional(),
         state: zod.string().optional(),
         schoolType: zod
-          .enum(["microschool", "private_school", "charter_school", "other"])
+          .enum([
+            "charter_school",
+            "homeschool_coop",
+            "learning_pod",
+            "microschool",
+            "private_school",
+            "tutoring_center",
+            "other",
+          ])
           .optional(),
+        schoolTypeOther: zod.string().optional(),
+        entityType: zod
+          .enum([
+            "sole_practitioner",
+            "llc_single",
+            "llc_partnership",
+            "c_corp",
+            "s_corp",
+            "nonprofit_501c3",
+          ])
+          .optional(),
+        ein: zod.string().optional(),
         schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
         fundingProfile: zod
           .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
@@ -705,8 +765,28 @@ export const UpdateModelResponse = zod.object({
         schoolName: zod.string().optional(),
         state: zod.string().optional(),
         schoolType: zod
-          .enum(["microschool", "private_school", "charter_school", "other"])
+          .enum([
+            "charter_school",
+            "homeschool_coop",
+            "learning_pod",
+            "microschool",
+            "private_school",
+            "tutoring_center",
+            "other",
+          ])
           .optional(),
+        schoolTypeOther: zod.string().optional(),
+        entityType: zod
+          .enum([
+            "sole_practitioner",
+            "llc_single",
+            "llc_partnership",
+            "c_corp",
+            "s_corp",
+            "nonprofit_501c3",
+          ])
+          .optional(),
+        ein: zod.string().optional(),
         schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
         fundingProfile: zod
           .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
@@ -923,8 +1003,28 @@ export const ArchiveModelResponse = zod.object({
         schoolName: zod.string().optional(),
         state: zod.string().optional(),
         schoolType: zod
-          .enum(["microschool", "private_school", "charter_school", "other"])
+          .enum([
+            "charter_school",
+            "homeschool_coop",
+            "learning_pod",
+            "microschool",
+            "private_school",
+            "tutoring_center",
+            "other",
+          ])
           .optional(),
+        schoolTypeOther: zod.string().optional(),
+        entityType: zod
+          .enum([
+            "sole_practitioner",
+            "llc_single",
+            "llc_partnership",
+            "c_corp",
+            "s_corp",
+            "nonprofit_501c3",
+          ])
+          .optional(),
+        ein: zod.string().optional(),
         schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
         fundingProfile: zod
           .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
