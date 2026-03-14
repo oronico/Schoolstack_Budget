@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Edit2, Users, DollarSign, TrendingDown, Building2 } from "lucide-react";
+import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2 } from "lucide-react";
 import { useMemo } from "react";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
 
@@ -206,6 +206,12 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   const totalExpenses = staffingSummary.totalCost + expenseSummary.total + capitalDebtSummary.total;
   const netIncome = revenueSummary.total - totalExpenses;
 
+  const finalYearStudents = data.enrollment?.[`year${yearCount}`] || data.enrollment?.year3 || 0;
+  const studentGrowth = year1Students > 0 && finalYearStudents > year1Students
+    ? Math.round(((finalYearStudents - year1Students) / year1Students) * 100)
+    : 0;
+  const marginPct = revenueSummary.total > 0 ? Math.round((netIncome / revenueSummary.total) * 100) : 0;
+
   const Section = ({ title, step, icon, children }: { title: string; step: number; icon?: React.ReactNode; children: React.ReactNode }) => (
     <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
       <div className="flex items-center justify-between mb-5 pb-4 border-b border-border/40">
@@ -243,7 +249,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
       {hasRowData && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white rounded-2xl p-4 border border-border/60 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center justify-between mb-2">
               <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
                 <DollarSign className="h-4 w-4 text-green-700" />
               </div>
@@ -253,7 +259,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
           </div>
 
           <div className="bg-white rounded-2xl p-4 border border-border/60 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center justify-between mb-2">
               <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
                 <TrendingDown className="h-4 w-4 text-rose-600" />
               </div>
@@ -263,10 +269,16 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
           </div>
 
           <div className="bg-white rounded-2xl p-4 border border-border/60 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center justify-between mb-2">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${netIncome >= 0 ? "bg-green-100" : "bg-rose-100"}`}>
                 <DollarSign className={`h-4 w-4 ${netIncome >= 0 ? "text-green-700" : "text-rose-600"}`} />
               </div>
+              {revenueSummary.total > 0 && (
+                <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${marginPct >= 0 ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-600"}`}>
+                  {marginPct >= 0 ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
+                  {Math.abs(marginPct)}% margin
+                </span>
+              )}
             </div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year 1 {niLabel}</p>
             <p className={`font-display font-bold text-xl mt-1 ${netIncome >= 0 ? "text-green-700" : "text-rose-600"}`}>
@@ -275,10 +287,16 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
           </div>
 
           <div className="bg-white rounded-2xl p-4 border border-border/60 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center justify-between mb-2">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                 <Users className="h-4 w-4 text-blue-700" />
               </div>
+              {studentGrowth > 0 && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
+                  <ArrowUpRight className="h-2.5 w-2.5" />
+                  +{studentGrowth}%
+                </span>
+              )}
             </div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year 1 Students</p>
             <p className="font-display font-bold text-xl text-foreground mt-1">{year1Students}</p>

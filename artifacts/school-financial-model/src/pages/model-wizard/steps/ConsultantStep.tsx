@@ -7,8 +7,6 @@ import {
   Area,
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   XAxis,
@@ -533,16 +531,22 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={cumChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+              <AreaChart data={cumChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="cumNetGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_COLORS.green} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={CHART_COLORS.green} stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(40 15% 88%)" />
                 <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="left" tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${fmtCompact(v)}`} />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}mo`} />
                 <Tooltip content={<CustomTooltip formatter={(v) => typeof v === "number" && Math.abs(v) > 100 ? fmtCurrency(v) : `${Number(v).toFixed(1)} months`} />} />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                <Line yAxisId="left" type="monotone" dataKey={cumNiLabel} stroke={CHART_COLORS.green} strokeWidth={2.5} dot={{ r: 4, fill: CHART_COLORS.green }} activeDot={{ r: 6 }} />
-                <Line yAxisId="right" type="monotone" dataKey="Reserve (Months)" stroke={CHART_COLORS.amber} strokeWidth={2.5} strokeDasharray="5 5" dot={{ r: 4, fill: CHART_COLORS.amber }} activeDot={{ r: 6 }} />
-              </LineChart>
+                <Area yAxisId="left" type="monotone" dataKey={cumNiLabel} stroke={CHART_COLORS.green} strokeWidth={2.5} fill="url(#cumNetGradient)" dot={{ r: 4, fill: CHART_COLORS.green }} activeDot={{ r: 6 }} />
+                <Area yAxisId="right" type="monotone" dataKey="Reserve (Months)" stroke={CHART_COLORS.amber} strokeWidth={2.5} strokeDasharray="5 5" fill="transparent" dot={{ r: 4, fill: CHART_COLORS.amber }} activeDot={{ r: 6 }} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
           <CollapsibleTable label="View detailed table">
