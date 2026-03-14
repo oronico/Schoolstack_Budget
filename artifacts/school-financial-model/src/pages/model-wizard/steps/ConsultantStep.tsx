@@ -9,6 +9,8 @@ import {
   Bar,
   LineChart,
   Line,
+  PieChart,
+  Pie,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -29,7 +31,7 @@ import {
   BarChart3,
   Lightbulb,
   Star,
-  PieChart,
+  PieChart as PieChartIcon,
   Activity,
   ChevronDown,
   ChevronUp,
@@ -190,6 +192,15 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
     "Public & Aid": Math.round(rc.publicPct * 100),
     "Philanthropy": Math.round(rc.philanthropyPct * 100),
   }));
+
+  const PIE_COLORS = [CHART_COLORS.green, CHART_COLORS.teal, CHART_COLORS.amber];
+  const y1PieData = revComp && revComp.length > 0
+    ? [
+        { name: "Tuition & Fees", value: Math.round(revComp[0].tuitionPct * 100) },
+        { name: "Public & Aid", value: Math.round(revComp[0].publicPct * 100) },
+        { name: "Philanthropy", value: Math.round(revComp[0].philanthropyPct * 100) },
+      ].filter((d) => d.value > 0)
+    : null;
 
   const costChartData = costComp?.map((cc, i) => ({
     year: `Year ${i + 1}`,
@@ -366,22 +377,59 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
       {revChartData && revChartData.length > 0 && (
         <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
           <div className="flex items-center gap-2 mb-5">
-            <PieChart className="h-5 w-5 text-primary" />
+            <PieChartIcon className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-lg text-foreground">Revenue Mix</h3>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(40 15% 88%)" />
-                <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} domain={[0, 100]} />
-                <Tooltip content={<CustomTooltip formatter={(v) => `${v}%`} />} />
-                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-                <Area type="monotone" dataKey="Tuition & Fees" stackId="1" stroke={CHART_COLORS.green} fill={CHART_COLORS.green} fillOpacity={0.7} />
-                <Area type="monotone" dataKey="Public & Aid" stackId="1" stroke={CHART_COLORS.teal} fill={CHART_COLORS.teal} fillOpacity={0.7} />
-                <Area type="monotone" dataKey="Philanthropy" stackId="1" stroke={CHART_COLORS.amber} fill={CHART_COLORS.amber} fillOpacity={0.7} />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {y1PieData && y1PieData.length > 0 && (
+              <div className="flex flex-col items-center">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Year 1 Breakdown</p>
+                <div className="h-48 w-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={y1PieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={75}
+                        paddingAngle={3}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {y1PieData.map((_, index) => (
+                          <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => `${value}%`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap justify-center gap-3 mt-2">
+                  {y1PieData.map((entry, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-xs">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <span className="text-muted-foreground">{entry.name}: <span className="font-semibold text-foreground">{entry.value}%</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className={cn("h-64", y1PieData && y1PieData.length > 0 ? "lg:col-span-2" : "col-span-full")}>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Trend Over Time</p>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(40 15% 88%)" />
+                  <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} domain={[0, 100]} />
+                  <Tooltip content={<CustomTooltip formatter={(v) => `${v}%`} />} />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                  <Area type="monotone" dataKey="Tuition & Fees" stackId="1" stroke={CHART_COLORS.green} fill={CHART_COLORS.green} fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Public & Aid" stackId="1" stroke={CHART_COLORS.teal} fill={CHART_COLORS.teal} fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Philanthropy" stackId="1" stroke={CHART_COLORS.amber} fill={CHART_COLORS.amber} fillOpacity={0.7} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
           <CollapsibleTable label="View detailed table">
             <div className="overflow-hidden rounded-xl border border-border/60">
