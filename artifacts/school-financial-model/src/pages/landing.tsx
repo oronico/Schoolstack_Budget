@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { ArrowRight, Calculator, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { motion } from "framer-motion";
+import { SampleModelShowcase } from "@/components/landing/SampleModelShowcase";
 
 export function LandingPage() {
   return (
@@ -79,6 +80,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      <SampleModelShowcase />
 
       <section className="py-20 bg-background">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
