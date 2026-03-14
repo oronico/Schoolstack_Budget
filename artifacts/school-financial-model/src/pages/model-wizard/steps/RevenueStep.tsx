@@ -284,6 +284,12 @@ function RevenueLineItem({
 }: RevenueLineItemProps) {
   const [showTiming, setShowTiming] = useState(false);
 
+  const hasTimingControls = row.id === "gross_tuition"
+    || row.category === "tuition_offsets"
+    || row.category === "public_funding"
+    || row.category === "school_choice"
+    || row.category === "grants_contributions";
+
   return (
     <div
       className={cn(
@@ -315,20 +321,22 @@ function RevenueLineItem({
         <div className="flex items-center gap-2">
           {row.enabled && (
             <>
-              <button
-                type="button"
-                onClick={() => setShowTiming(!showTiming)}
-                className={cn(
-                  "flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border transition-colors",
-                  showTiming
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-card text-muted-foreground hover:text-foreground"
-                )}
-                title="Payment timing settings"
-              >
-                <Clock className="h-3 w-3" />
-                <span className="hidden sm:inline">Timing</span>
-              </button>
+              {hasTimingControls && (
+                <button
+                  type="button"
+                  onClick={() => setShowTiming(!showTiming)}
+                  className={cn(
+                    "flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border transition-colors",
+                    showTiming
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Payment timing settings"
+                >
+                  <Clock className="h-3 w-3" />
+                  <span className="hidden sm:inline">Timing</span>
+                </button>
+              )}
               <select
                 value={row.driverType}
                 onChange={(e) => onDriverChange(e.target.value as RevenueDriverType)}
@@ -376,7 +384,7 @@ function RevenueLineItem({
             ))}
           </div>
 
-          {showTiming && (
+          {showTiming && hasTimingControls && (
             <TimingControls
               row={row}
               onTimingChange={onTimingChange}

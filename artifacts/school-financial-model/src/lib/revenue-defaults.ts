@@ -136,20 +136,25 @@ export function computeMonthlyCashInflow(
     const category = row.category;
 
     if (category === "tuition_and_fees" || category === "tuition_offsets") {
-      const billingMonths = row.billingMonths ?? 10;
-      const collectionRate = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
-        ? (row.collectionRate ?? 95) / 100
-        : 1;
-      const delayDays = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
-        ? (row.collectionDelayDays ?? 0)
-        : 0;
-      const delayMonths = Math.floor(delayDays / 30);
-      const effectiveAmount = category === "tuition_offsets" ? -annualAmount : annualAmount;
-      const adjustedAmount = effectiveAmount * collectionRate;
-      const perMonth = adjustedAmount / billingMonths;
-      const startMonth = (billingMonths === 12 ? 0 : 1) + delayMonths;
-      for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) {
-        monthly[i] += perMonth;
+      const isTuition = row.id === "gross_tuition" || category === "tuition_offsets";
+      if (isTuition) {
+        const billingMonths = row.billingMonths ?? 10;
+        const collectionRate = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
+          ? (row.collectionRate ?? 95) / 100
+          : 1;
+        const delayDays = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
+          ? (row.collectionDelayDays ?? 0)
+          : 0;
+        const delayMonths = Math.floor(delayDays / 30);
+        const effectiveAmount = category === "tuition_offsets" ? -annualAmount : annualAmount;
+        const adjustedAmount = effectiveAmount * collectionRate;
+        const perMonth = adjustedAmount / billingMonths;
+        const startMonth = (billingMonths === 12 ? 0 : 1) + delayMonths;
+        for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) {
+          monthly[i] += perMonth;
+        }
+      } else {
+        monthly[0] += annualAmount;
       }
     } else if (category === "public_funding") {
       const freq = row.paymentFrequency ?? "monthly";
