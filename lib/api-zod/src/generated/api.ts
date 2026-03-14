@@ -114,6 +114,9 @@ export const CreateModelBody = zod.object({
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
         maxCapacity: zod.number().optional(),
+        fiscalYearStartMonth: zod.number().optional(),
+        isPartialFirstYear: zod.boolean().optional(),
+        year1OperatingMonths: zod.number().optional(),
       })
       .optional(),
     enrollment: zod
@@ -129,9 +132,14 @@ export const CreateModelBody = zod.object({
       .object({
         tuitionPerStudent: zod.number().optional(),
         esaRevenuePerStudent: zod.number().optional(),
+        publicFundingPerStudent: zod.number().optional(),
         otherRevenuePerStudent: zod.number().optional(),
         scholarshipRate: zod.number().optional(),
         annualFundraising: zod.number().optional(),
+        annualDonations: zod.number().optional(),
+        foundationGrants: zod.number().optional(),
+        capitalGifts: zod.number().optional(),
+        annualTuitionIncrease: zod.number().optional(),
       })
       .optional(),
     staffing: zod
@@ -150,10 +158,20 @@ export const CreateModelBody = zod.object({
         annualRentIncrease: zod.number().optional(),
         annualUtilities: zod.number().optional(),
         annualInsurance: zod.number().optional(),
+        facilityMaintenance: zod.number().optional(),
         curriculumCostPerStudent: zod.number().optional(),
         techCostPerStudent: zod.number().optional(),
         annualMarketing: zod.number().optional(),
+        professionalDevelopment: zod.number().optional(),
+        foodServicePerStudent: zod.number().optional(),
+        transportationAnnual: zod.number().optional(),
+        studentServicesAnnual: zod.number().optional(),
         otherAnnualExpenses: zod.number().optional(),
+        annualSalaryIncrease: zod.number().optional(),
+        generalCostInflation: zod.number().optional(),
+        annualInterestRate: zod.number().optional(),
+        loanTermYears: zod.number().optional(),
+        loanAmount: zod.number().optional(),
       })
       .optional(),
   }),
@@ -182,6 +200,9 @@ export const GetModelResponse = zod.object({
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
         maxCapacity: zod.number().optional(),
+        fiscalYearStartMonth: zod.number().optional(),
+        isPartialFirstYear: zod.boolean().optional(),
+        year1OperatingMonths: zod.number().optional(),
       })
       .optional(),
     enrollment: zod
@@ -197,9 +218,14 @@ export const GetModelResponse = zod.object({
       .object({
         tuitionPerStudent: zod.number().optional(),
         esaRevenuePerStudent: zod.number().optional(),
+        publicFundingPerStudent: zod.number().optional(),
         otherRevenuePerStudent: zod.number().optional(),
         scholarshipRate: zod.number().optional(),
         annualFundraising: zod.number().optional(),
+        annualDonations: zod.number().optional(),
+        foundationGrants: zod.number().optional(),
+        capitalGifts: zod.number().optional(),
+        annualTuitionIncrease: zod.number().optional(),
       })
       .optional(),
     staffing: zod
@@ -218,10 +244,20 @@ export const GetModelResponse = zod.object({
         annualRentIncrease: zod.number().optional(),
         annualUtilities: zod.number().optional(),
         annualInsurance: zod.number().optional(),
+        facilityMaintenance: zod.number().optional(),
         curriculumCostPerStudent: zod.number().optional(),
         techCostPerStudent: zod.number().optional(),
         annualMarketing: zod.number().optional(),
+        professionalDevelopment: zod.number().optional(),
+        foodServicePerStudent: zod.number().optional(),
+        transportationAnnual: zod.number().optional(),
+        studentServicesAnnual: zod.number().optional(),
         otherAnnualExpenses: zod.number().optional(),
+        annualSalaryIncrease: zod.number().optional(),
+        generalCostInflation: zod.number().optional(),
+        annualInterestRate: zod.number().optional(),
+        loanTermYears: zod.number().optional(),
+        loanAmount: zod.number().optional(),
       })
       .optional(),
   }),
@@ -251,6 +287,9 @@ export const UpdateModelBody = zod.object({
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
         maxCapacity: zod.number().optional(),
+        fiscalYearStartMonth: zod.number().optional(),
+        isPartialFirstYear: zod.boolean().optional(),
+        year1OperatingMonths: zod.number().optional(),
       })
       .optional(),
     enrollment: zod
@@ -266,9 +305,14 @@ export const UpdateModelBody = zod.object({
       .object({
         tuitionPerStudent: zod.number().optional(),
         esaRevenuePerStudent: zod.number().optional(),
+        publicFundingPerStudent: zod.number().optional(),
         otherRevenuePerStudent: zod.number().optional(),
         scholarshipRate: zod.number().optional(),
         annualFundraising: zod.number().optional(),
+        annualDonations: zod.number().optional(),
+        foundationGrants: zod.number().optional(),
+        capitalGifts: zod.number().optional(),
+        annualTuitionIncrease: zod.number().optional(),
       })
       .optional(),
     staffing: zod
@@ -287,10 +331,20 @@ export const UpdateModelBody = zod.object({
         annualRentIncrease: zod.number().optional(),
         annualUtilities: zod.number().optional(),
         annualInsurance: zod.number().optional(),
+        facilityMaintenance: zod.number().optional(),
         curriculumCostPerStudent: zod.number().optional(),
         techCostPerStudent: zod.number().optional(),
         annualMarketing: zod.number().optional(),
+        professionalDevelopment: zod.number().optional(),
+        foodServicePerStudent: zod.number().optional(),
+        transportationAnnual: zod.number().optional(),
+        studentServicesAnnual: zod.number().optional(),
         otherAnnualExpenses: zod.number().optional(),
+        annualSalaryIncrease: zod.number().optional(),
+        generalCostInflation: zod.number().optional(),
+        annualInterestRate: zod.number().optional(),
+        loanTermYears: zod.number().optional(),
+        loanAmount: zod.number().optional(),
       })
       .optional(),
   }),
@@ -312,6 +366,9 @@ export const UpdateModelResponse = zod.object({
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
         maxCapacity: zod.number().optional(),
+        fiscalYearStartMonth: zod.number().optional(),
+        isPartialFirstYear: zod.boolean().optional(),
+        year1OperatingMonths: zod.number().optional(),
       })
       .optional(),
     enrollment: zod
@@ -327,9 +384,14 @@ export const UpdateModelResponse = zod.object({
       .object({
         tuitionPerStudent: zod.number().optional(),
         esaRevenuePerStudent: zod.number().optional(),
+        publicFundingPerStudent: zod.number().optional(),
         otherRevenuePerStudent: zod.number().optional(),
         scholarshipRate: zod.number().optional(),
         annualFundraising: zod.number().optional(),
+        annualDonations: zod.number().optional(),
+        foundationGrants: zod.number().optional(),
+        capitalGifts: zod.number().optional(),
+        annualTuitionIncrease: zod.number().optional(),
       })
       .optional(),
     staffing: zod
@@ -348,10 +410,20 @@ export const UpdateModelResponse = zod.object({
         annualRentIncrease: zod.number().optional(),
         annualUtilities: zod.number().optional(),
         annualInsurance: zod.number().optional(),
+        facilityMaintenance: zod.number().optional(),
         curriculumCostPerStudent: zod.number().optional(),
         techCostPerStudent: zod.number().optional(),
         annualMarketing: zod.number().optional(),
+        professionalDevelopment: zod.number().optional(),
+        foodServicePerStudent: zod.number().optional(),
+        transportationAnnual: zod.number().optional(),
+        studentServicesAnnual: zod.number().optional(),
         otherAnnualExpenses: zod.number().optional(),
+        annualSalaryIncrease: zod.number().optional(),
+        generalCostInflation: zod.number().optional(),
+        annualInterestRate: zod.number().optional(),
+        loanTermYears: zod.number().optional(),
+        loanAmount: zod.number().optional(),
       })
       .optional(),
   }),
@@ -400,6 +472,9 @@ export const ArchiveModelResponse = zod.object({
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
         maxCapacity: zod.number().optional(),
+        fiscalYearStartMonth: zod.number().optional(),
+        isPartialFirstYear: zod.boolean().optional(),
+        year1OperatingMonths: zod.number().optional(),
       })
       .optional(),
     enrollment: zod
@@ -415,9 +490,14 @@ export const ArchiveModelResponse = zod.object({
       .object({
         tuitionPerStudent: zod.number().optional(),
         esaRevenuePerStudent: zod.number().optional(),
+        publicFundingPerStudent: zod.number().optional(),
         otherRevenuePerStudent: zod.number().optional(),
         scholarshipRate: zod.number().optional(),
         annualFundraising: zod.number().optional(),
+        annualDonations: zod.number().optional(),
+        foundationGrants: zod.number().optional(),
+        capitalGifts: zod.number().optional(),
+        annualTuitionIncrease: zod.number().optional(),
       })
       .optional(),
     staffing: zod
@@ -436,10 +516,20 @@ export const ArchiveModelResponse = zod.object({
         annualRentIncrease: zod.number().optional(),
         annualUtilities: zod.number().optional(),
         annualInsurance: zod.number().optional(),
+        facilityMaintenance: zod.number().optional(),
         curriculumCostPerStudent: zod.number().optional(),
         techCostPerStudent: zod.number().optional(),
         annualMarketing: zod.number().optional(),
+        professionalDevelopment: zod.number().optional(),
+        foodServicePerStudent: zod.number().optional(),
+        transportationAnnual: zod.number().optional(),
+        studentServicesAnnual: zod.number().optional(),
         otherAnnualExpenses: zod.number().optional(),
+        annualSalaryIncrease: zod.number().optional(),
+        generalCostInflation: zod.number().optional(),
+        annualInterestRate: zod.number().optional(),
+        loanTermYears: zod.number().optional(),
+        loanAmount: zod.number().optional(),
       })
       .optional(),
   }),
@@ -475,6 +565,36 @@ export const GetConsultantAnalysisResponse = zod.object({
       interpretation: zod.string(),
     }),
   ),
+  revenueComposition: zod.array(
+    zod.object({
+      tuitionPct: zod.number(),
+      publicPct: zod.number(),
+      philanthropyPct: zod.number(),
+    }),
+  ),
+  costComposition: zod.array(
+    zod.object({
+      staffingPctOfRevenue: zod.number(),
+      facilityPctOfRevenue: zod.number(),
+      totalOpexPctOfRevenue: zod.number(),
+    }),
+  ),
+  cumulativeFinancials: zod.array(
+    zod.object({
+      year: zod.number(),
+      cumulativeNetIncome: zod.number(),
+      reserveMonths: zod.number(),
+    }),
+  ),
+  stressTests: zod.array(
+    zod.object({
+      scenario: zod.string(),
+      y1NetIncome: zod.number(),
+      y5NetIncome: zod.number(),
+      breakEvenYear: zod.number().nullable(),
+    }),
+  ),
+  enrollmentGuidance: zod.array(zod.string()),
   generatedAt: zod.date(),
 });
 

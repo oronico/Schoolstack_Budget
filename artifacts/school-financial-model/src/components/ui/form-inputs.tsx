@@ -45,14 +45,43 @@ export function FormInput({ name, label, helperText, prefix, suffix, className, 
   );
 }
 
+interface CheckboxProps {
+  name: string;
+  label: string;
+  helperText?: string;
+  className?: string;
+}
+
+export function FormCheckbox({ name, label, helperText, className }: CheckboxProps) {
+  const { register } = useFormContext();
+
+  return (
+    <div className={cn("flex items-start gap-3", className)}>
+      <input
+        id={name}
+        type="checkbox"
+        className="mt-1 h-5 w-5 rounded border-2 border-border text-primary accent-primary cursor-pointer"
+        {...register(name)}
+      />
+      <div>
+        <label htmlFor={name} className="text-sm font-semibold text-foreground cursor-pointer">
+          {label}
+        </label>
+        {helperText && <p className="text-sm text-muted-foreground mt-0.5">{helperText}</p>}
+      </div>
+    </div>
+  );
+}
+
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   name: string;
   label: string;
   options: { label: string; value: string }[];
   helperText?: string;
+  valueAsNumber?: boolean;
 }
 
-export function FormSelect({ name, label, options, helperText, className, ...props }: SelectProps) {
+export function FormSelect({ name, label, options, helperText, className, valueAsNumber, ...props }: SelectProps) {
   const { register, formState: { errors } } = useFormContext();
   const error = errors[name]?.message as string;
 
@@ -67,7 +96,7 @@ export function FormSelect({ name, label, options, helperText, className, ...pro
           "w-full rounded-xl border-2 border-border bg-card px-4 py-3 text-base text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 appearance-none cursor-pointer",
           error && "border-destructive focus:border-destructive focus:ring-destructive/10"
         )}
-        {...register(name)}
+        {...register(name, { valueAsNumber })}
         {...props}
       >
         <option value="" disabled>Select an option...</option>

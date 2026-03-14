@@ -47,11 +47,11 @@ export function ModelWizardPage() {
   const methods = useForm({
     resolver: zodResolver(fullModelSchema),
     defaultValues: {
-      schoolProfile: {},
+      schoolProfile: { fiscalYearStartMonth: 7, isPartialFirstYear: false, year1OperatingMonths: 12 },
       enrollment: {},
-      revenue: {},
+      revenue: { annualTuitionIncrease: 3 },
       staffing: { studentsPerTeacher: 12, benefitsRate: 20 },
-      facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0 },
+      facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0, annualSalaryIncrease: 3, generalCostInflation: 3 },
     },
     mode: "onChange"
   });

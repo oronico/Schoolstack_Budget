@@ -22,6 +22,15 @@ export function RevenueStep() {
             />
             
             <FormInput 
+              name="revenue.annualTuitionIncrease" 
+              label="Annual Tuition Increase" 
+              type="number"
+              suffix="%"
+              placeholder="3"
+              helperText="Expected yearly tuition escalation rate"
+            />
+
+            <FormInput 
               name="revenue.scholarshipRate" 
               label="Scholarship / Discount Rate" 
               type="number"

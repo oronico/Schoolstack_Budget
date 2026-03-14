@@ -5,6 +5,9 @@ interface SchoolProfile {
   openingYear?: number;
   currentStudents?: number;
   maxCapacity?: number;
+  fiscalYearStartMonth?: number;
+  isPartialFirstYear?: boolean;
+  year1OperatingMonths?: number;
 }
 
 interface Enrollment {
@@ -17,6 +20,7 @@ interface Enrollment {
 
 interface Revenue {
   tuitionPerStudent?: number;
+  annualTuitionIncrease?: number;
   esaRevenuePerStudent?: number;
   publicFundingPerStudent?: number;
   otherRevenuePerStudent?: number;
@@ -53,6 +57,8 @@ interface Facilities {
   loanAmount?: number;
   annualInterestRate?: number;
   loanTermYears?: number;
+  annualSalaryIncrease?: number;
+  generalCostInflation?: number;
 }
 
 interface ModelData {
@@ -76,6 +82,31 @@ export interface Recommendation {
   priority: "high" | "medium" | "low";
 }
 
+export interface RevenueComposition {
+  tuitionPct: number;
+  publicPct: number;
+  philanthropyPct: number;
+}
+
+export interface CostComposition {
+  staffingPctOfRevenue: number;
+  facilityPctOfRevenue: number;
+  totalOpexPctOfRevenue: number;
+}
+
+export interface CumulativeYear {
+  year: number;
+  cumulativeNetIncome: number;
+  reserveMonths: number;
+}
+
+export interface StressScenario {
+  scenario: string;
+  y1NetIncome: number;
+  y5NetIncome: number;
+  breakEvenYear: number | null;
+}
+
 export interface ConsultantOutput {
   executiveSummary: string;
   biggestStrength: string;
@@ -84,6 +115,11 @@ export interface ConsultantOutput {
   lenderReadiness: "Strong" | "Needs Work" | "Not Yet Ready";
   lenderReadinessExplanation: string;
   keyMetrics: KeyMetric[];
+  revenueComposition: RevenueComposition[];
+  costComposition: CostComposition[];
+  cumulativeFinancials: CumulativeYear[];
+  stressTests: StressScenario[];
+  enrollmentGuidance: string[];
   generatedAt: string;
 }
 
@@ -95,6 +131,7 @@ interface YearFinancials {
   publicRevenue: number;
   philanthropyRevenue: number;
   totalStaffingCost: number;
+  facilityCost: number;
   totalOpex: number;
   debtService: number;
   totalExpenses: number;
@@ -116,63 +153,72 @@ function computeYearFinancials(
   students: number,
   rev: Revenue,
   st: Staffing,
-  fac: Facilities
+  fac: Facilities,
+  prorationFactor: number
 ): YearFinancials {
-  const tuitionPerStudent = rev.tuitionPerStudent || 0;
-  const esaPerStudent = rev.esaRevenuePerStudent || 0;
-  const publicFundingPerStudent = rev.publicFundingPerStudent || 0;
-  const otherPerStudent = rev.otherRevenuePerStudent || 0;
+  const tuitionIncrease = (rev.annualTuitionIncrease || 0) / 100;
+  const salaryIncrease = (fac.annualSalaryIncrease || 0) / 100;
+  const costInflation = (fac.generalCostInflation || 0) / 100;
+  const pf = yearIndex === 0 ? prorationFactor : 1;
+
+  const tuitionPerStudent = (rev.tuitionPerStudent || 0) * Math.pow(1 + tuitionIncrease, yearIndex);
+  const esaPerStudent = (rev.esaRevenuePerStudent || 0) * Math.pow(1 + costInflation, yearIndex);
+  const publicFundingPerStudent = (rev.publicFundingPerStudent || 0) * Math.pow(1 + costInflation, yearIndex);
+  const otherPerStudent = (rev.otherRevenuePerStudent || 0) * Math.pow(1 + tuitionIncrease, yearIndex);
   const scholarshipRate = (rev.scholarshipRate || 0) / 100;
-  const donations = rev.annualDonations || rev.annualFundraising || 0;
-  const grants = rev.foundationGrants || 0;
+  const donations = (rev.annualDonations ?? rev.annualFundraising ?? 0) * Math.pow(1 + costInflation, yearIndex);
+  const grants = (rev.foundationGrants || 0) * Math.pow(1 + costInflation, yearIndex);
   const capitalGifts = yearIndex === 0 ? (rev.capitalGifts || 0) : 0;
 
-  const grossTuition = students * tuitionPerStudent;
-  const otherFees = students * otherPerStudent;
+  const grossTuition = students * tuitionPerStudent * pf;
+  const otherFees = students * otherPerStudent * pf;
   const scholarshipDiscount = grossTuition * scholarshipRate;
   const netTuition = grossTuition + otherFees - scholarshipDiscount;
 
-  const esaRevenue = students * esaPerStudent;
-  const publicFunding = students * publicFundingPerStudent;
+  const esaRevenue = students * esaPerStudent * pf;
+  const publicFunding = students * publicFundingPerStudent * pf;
   const publicRevenue = esaRevenue + publicFunding;
 
-  const philanthropyRevenue = donations + grants + capitalGifts;
+  const philanthropyRevenue = (donations + grants) * pf + capitalGifts;
 
   const totalRevenue = netTuition + publicRevenue + philanthropyRevenue;
 
+  const salaryEsc = Math.pow(1 + salaryIncrease, yearIndex);
   const studentsPerTeacher = st.studentsPerTeacher || 1;
   const teacherCount = studentsPerTeacher > 0 ? Math.ceil(students / studentsPerTeacher) : 0;
-  const teacherPayroll = teacherCount * (st.teacherSalary || 0);
-  const adminPayroll = (st.adminStaffCount || 0) * (st.adminSalary || 0);
-  const founderSalary = st.founderSalary || 0;
+  const teacherPayroll = teacherCount * (st.teacherSalary || 0) * salaryEsc * pf;
+  const adminPayroll = (st.adminStaffCount || 0) * (st.adminSalary || 0) * salaryEsc * pf;
+  const founderSalary = (st.founderSalary || 0) * salaryEsc * pf;
   const totalSalaries = teacherPayroll + adminPayroll + founderSalary;
   const benefits = totalSalaries * ((st.benefitsRate || 0) / 100);
   const totalStaffingCost = totalSalaries + benefits;
 
+  const infEsc = Math.pow(1 + costInflation, yearIndex);
   const monthlyRent = fac.monthlyRent || 0;
   const rentIncrease = (fac.annualRentIncrease || 0) / 100;
-  const annualRent = monthlyRent * 12 * Math.pow(1 + rentIncrease, yearIndex);
-  const utilities = fac.annualUtilities || 0;
-  const insurance = fac.annualInsurance || 0;
-  const maintenance = fac.facilityMaintenance || 0;
-  const curriculum = (fac.curriculumCostPerStudent || 0) * students;
-  const tech = (fac.techCostPerStudent || 0) * students;
-  const foodService = (fac.foodServicePerStudent || 0) * students;
-  const transportation = fac.transportationAnnual || 0;
-  const studentServices = fac.studentServicesAnnual || 0;
-  const marketing = fac.annualMarketing || 0;
-  const profDev = fac.professionalDevelopment || 0;
-  const otherExpenses = fac.otherAnnualExpenses || 0;
+  const annualRent = monthlyRent * 12 * Math.pow(1 + rentIncrease, yearIndex) * pf;
+  const utilities = (fac.annualUtilities || 0) * infEsc * pf;
+  const insurance = (fac.annualInsurance || 0) * infEsc * pf;
+  const maintenance = (fac.facilityMaintenance || 0) * infEsc * pf;
+  const facilityCost = annualRent + utilities + insurance + maintenance;
+
+  const curriculum = (fac.curriculumCostPerStudent || 0) * students * infEsc * pf;
+  const tech = (fac.techCostPerStudent || 0) * students * infEsc * pf;
+  const foodService = (fac.foodServicePerStudent || 0) * students * infEsc * pf;
+  const transportation = (fac.transportationAnnual || 0) * infEsc * pf;
+  const studentServices = (fac.studentServicesAnnual || 0) * infEsc * pf;
+  const marketing = (fac.annualMarketing || 0) * infEsc * pf;
+  const profDev = (fac.professionalDevelopment || 0) * infEsc * pf;
+  const otherExpenses = (fac.otherAnnualExpenses || 0) * infEsc * pf;
 
   const debtService = computeAnnualDebtService(
     fac.loanAmount || 0,
     (fac.annualInterestRate || 0) / 100,
     fac.loanTermYears || 0
-  );
+  ) * pf;
 
-  const totalOpex = annualRent + utilities + insurance + maintenance +
-    curriculum + tech + foodService + transportation + studentServices +
-    marketing + profDev + otherExpenses + debtService;
+  const totalOpex = facilityCost + curriculum + tech + foodService + transportation +
+    studentServices + marketing + profDev + otherExpenses + debtService;
 
   const totalExpenses = totalStaffingCost + totalOpex;
   const netIncome = totalRevenue - totalExpenses;
@@ -186,6 +232,7 @@ function computeYearFinancials(
     publicRevenue,
     philanthropyRevenue,
     totalStaffingCost,
+    facilityCost,
     totalOpex,
     debtService,
     totalExpenses,
@@ -206,6 +253,35 @@ function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
 }
 
+function runStressScenario(
+  label: string,
+  enrollmentByYear: number[],
+  rev: Revenue,
+  st: Staffing,
+  fac: Facilities,
+  prorationFactor: number,
+  modifyEnrollment?: (e: number[]) => number[],
+  modifyRev?: (r: Revenue) => Revenue,
+  modifyFac?: (f: Facilities) => Facilities,
+): StressScenario {
+  const adjEnrollment = modifyEnrollment ? modifyEnrollment([...enrollmentByYear]) : enrollmentByYear;
+  const adjRev = modifyRev ? modifyRev({ ...rev }) : rev;
+  const adjFac = modifyFac ? modifyFac({ ...fac }) : fac;
+
+  const financials = adjEnrollment.map((s, idx) =>
+    computeYearFinancials(idx, s, adjRev, st, adjFac, prorationFactor)
+  );
+
+  const beIdx = financials.findIndex((yf) => yf.netIncome >= 0);
+
+  return {
+    scenario: label,
+    y1NetIncome: financials[0].netIncome,
+    y5NetIncome: financials[4].netIncome,
+    breakEvenYear: beIdx >= 0 ? beIdx + 1 : null,
+  };
+}
+
 export function runConsultantEngine(rawData: Record<string, unknown>): ConsultantOutput {
   const data = rawData as unknown as ModelData;
   const sp = data.schoolProfile || {};
@@ -213,6 +289,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   const rev = data.revenue || {};
   const st = data.staffing || {};
   const fac = data.facilities || {};
+
+  const isPartial = sp.isPartialFirstYear || false;
+  const operatingMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
+  const prorationFactor = operatingMonths / 12;
 
   const enrollmentByYear = [
     en.year1 || 0,
@@ -223,7 +303,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   ];
 
   const yearFinancials = enrollmentByYear.map((students, idx) =>
-    computeYearFinancials(idx, students, rev, st, fac)
+    computeYearFinancials(idx, students, rev, st, fac, prorationFactor)
   );
 
   const y1 = yearFinancials[0];
@@ -251,6 +331,90 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   const dscr = hasDebt && y1.netIncome !== undefined
     ? (y1.netIncome + y1.debtService) / y1.debtService
     : 0;
+
+  const revenueComposition: RevenueComposition[] = yearFinancials.map((yf) => ({
+    tuitionPct: yf.totalRevenue > 0 ? yf.tuitionRevenue / yf.totalRevenue : 0,
+    publicPct: yf.totalRevenue > 0 ? yf.publicRevenue / yf.totalRevenue : 0,
+    philanthropyPct: yf.totalRevenue > 0 ? yf.philanthropyRevenue / yf.totalRevenue : 0,
+  }));
+
+  const costComposition: CostComposition[] = yearFinancials.map((yf) => ({
+    staffingPctOfRevenue: yf.totalRevenue > 0 ? yf.totalStaffingCost / yf.totalRevenue : 0,
+    facilityPctOfRevenue: yf.totalRevenue > 0 ? yf.facilityCost / yf.totalRevenue : 0,
+    totalOpexPctOfRevenue: yf.totalRevenue > 0 ? yf.totalOpex / yf.totalRevenue : 0,
+  }));
+
+  let cumNetIncome = 0;
+  const cumulativeFinancials: CumulativeYear[] = yearFinancials.map((yf) => {
+    cumNetIncome += yf.netIncome;
+    const monthlyExpenses = yf.totalExpenses / 12;
+    const reserveMonths = monthlyExpenses > 0 && cumNetIncome > 0
+      ? cumNetIncome / monthlyExpenses
+      : 0;
+    return {
+      year: yf.year,
+      cumulativeNetIncome: cumNetIncome,
+      reserveMonths: Math.round(reserveMonths * 10) / 10,
+    };
+  });
+
+  const enrollmentGuidance: string[] = [];
+  const maxCap = sp.maxCapacity || 0;
+
+  for (let i = 1; i < 5; i++) {
+    if (enrollmentByYear[i - 1] > 0 && enrollmentByYear[i] > 0) {
+      const growth = (enrollmentByYear[i] - enrollmentByYear[i - 1]) / enrollmentByYear[i - 1];
+      if (growth > 0.25) {
+        enrollmentGuidance.push(
+          `Year ${i} to Year ${i + 1} projects ${Math.round(growth * 100)}% enrollment growth. Growth over 25% in a single year is uncommon and may require aggressive marketing or facility expansion.`
+        );
+      }
+    }
+  }
+  if (maxCap > 0) {
+    for (let i = 0; i < 5; i++) {
+      if (enrollmentByYear[i] > maxCap) {
+        enrollmentGuidance.push(
+          `Year ${i + 1} enrollment of ${enrollmentByYear[i]} exceeds facility capacity of ${maxCap}. You'll need a larger facility or phased admissions.`
+        );
+      }
+    }
+  }
+
+  const stressTests: StressScenario[] = [
+    runStressScenario(
+      "Enrollment 20% Below Plan",
+      enrollmentByYear, rev, st, fac, prorationFactor,
+      (e) => e.map((s) => Math.round(s * 0.8)),
+    ),
+    runStressScenario(
+      "Loss of Philanthropy",
+      enrollmentByYear, rev, st, fac, prorationFactor,
+      undefined,
+      (r) => ({ ...r, annualDonations: 0, foundationGrants: 0, capitalGifts: 0, annualFundraising: 0 }),
+    ),
+    runStressScenario(
+      "Costs 10% Higher",
+      enrollmentByYear, rev, st, fac, prorationFactor,
+      undefined,
+      undefined,
+      (f) => ({
+        ...f,
+        monthlyRent: (f.monthlyRent || 0) * 1.1,
+        annualUtilities: (f.annualUtilities || 0) * 1.1,
+        annualInsurance: (f.annualInsurance || 0) * 1.1,
+        facilityMaintenance: (f.facilityMaintenance || 0) * 1.1,
+        curriculumCostPerStudent: (f.curriculumCostPerStudent || 0) * 1.1,
+        techCostPerStudent: (f.techCostPerStudent || 0) * 1.1,
+        foodServicePerStudent: (f.foodServicePerStudent || 0) * 1.1,
+        transportationAnnual: (f.transportationAnnual || 0) * 1.1,
+        studentServicesAnnual: (f.studentServicesAnnual || 0) * 1.1,
+        annualMarketing: (f.annualMarketing || 0) * 1.1,
+        professionalDevelopment: (f.professionalDevelopment || 0) * 1.1,
+        otherAnnualExpenses: (f.otherAnnualExpenses || 0) * 1.1,
+      }),
+    ),
+  ];
 
   const keyMetrics: KeyMetric[] = [];
 
@@ -382,6 +546,21 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
+  const y5Reserve = cumulativeFinancials[4];
+  if (y5Reserve) {
+    keyMetrics.push({
+      name: "Operating Reserve (Year 5)",
+      value: `${y5Reserve.reserveMonths.toFixed(1)} months`,
+      status: y5Reserve.reserveMonths >= 3 ? "good" : y5Reserve.reserveMonths >= 1 ? "warning" : "danger",
+      interpretation:
+        y5Reserve.reserveMonths >= 3
+          ? "By Year 5, the school has built a healthy operating reserve of 3+ months — a strong signal to lenders."
+          : y5Reserve.reserveMonths >= 1
+            ? "The reserve buffer is thin — target building at least 3 months of expenses as a cushion."
+            : "No meaningful reserve has been built by Year 5. This is a significant vulnerability.",
+    });
+  }
+
   const strengths: string[] = [];
   const risks: string[] = [];
 
@@ -395,6 +574,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (hasDebt && dscr >= 1.25) strengths.push("Strong debt service coverage ratio");
   if (publicRevenuePct > 0.1 && publicRevenuePct <= 0.5) strengths.push("Diversified revenue with public funding");
   if (philanthropyPct > 0 && philanthropyPct <= 0.15) strengths.push("Supplemental philanthropy without over-reliance");
+  if (y5Reserve && y5Reserve.reserveMonths >= 3) strengths.push("Healthy operating reserve by Year 5");
 
   if (y1NetMargin < 0) risks.push(`Year 1 projects a ${fmt(Math.abs(y1.netIncome))} deficit`);
   if (staffingCostPct > 0.65) risks.push(`Staffing consumes ${pct(staffingCostPct)} of revenue`);
@@ -412,6 +592,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     risks.push(`Philanthropy represents ${pct(philanthropyPct)} of revenue — unpredictable and hard to sustain`);
   if (publicRevenuePct > 0.70)
     risks.push("Over-reliance on public funding exposes the school to policy risk");
+  if (y5Reserve && y5Reserve.reserveMonths < 1)
+    risks.push("No operating reserve built by Year 5");
 
   const biggestStrength =
     strengths.length > 0
@@ -469,6 +651,14 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     recommendations.push({
       title: "Review Operating Cost Structure",
       description: `Operating costs represent ${pct(opexCostPct)} of revenue. Review each cost center — facility, student services, and administration — for potential savings. Shared space, volunteer programs, or phased services can help.`,
+      priority: "medium",
+    });
+  }
+
+  if (y5Reserve && y5Reserve.reserveMonths < 3) {
+    recommendations.push({
+      title: "Build a Cash Reserve",
+      description: `By Year 5, your projected reserve covers only ${y5Reserve.reserveMonths.toFixed(1)} months of expenses. Lenders and accreditors look for 3-6 months. Focus on building surplus in early profitable years.`,
       priority: "medium",
     });
   }
@@ -561,6 +751,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     lenderReadiness,
     lenderReadinessExplanation,
     keyMetrics,
+    revenueComposition,
+    costComposition,
+    cumulativeFinancials,
+    stressTests,
+    enrollmentGuidance,
     generatedAt: new Date().toISOString(),
   };
 }

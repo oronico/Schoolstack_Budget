@@ -14,4 +14,7 @@ export interface SchoolProfile {
   openingYear?: number;
   currentStudents?: number;
   maxCapacity?: number;
+  fiscalYearStartMonth?: number;
+  isPartialFirstYear?: boolean;
+  year1OperatingMonths?: number;
 }

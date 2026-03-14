@@ -2,6 +2,8 @@ import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Edit2 } from "lucide-react";
 
+const MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void, modelId?: number }) {
   const { getValues } = useFormContext();
   const data = getValues();
@@ -30,6 +32,8 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
     </div>
   );
 
+  const fyMonth = data.schoolProfile?.fiscalYearStartMonth || 7;
+
   return (
     <div>
       <div>
@@ -44,6 +48,10 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
         <Item label="Opening Year" value={data.schoolProfile?.openingYear} />
         <Item label="Current Students" value={data.schoolProfile?.currentStudents} />
         <Item label="Max Capacity" value={data.schoolProfile?.maxCapacity} />
+        <Item label="Fiscal Year Start" value={MONTH_NAMES[fyMonth] || "July"} />
+        {data.schoolProfile?.isPartialFirstYear && (
+          <Item label="Year 1 Operating Months" value={data.schoolProfile?.year1OperatingMonths || 12} />
+        )}
       </Section>
 
       <Section title="Enrollment" step={2}>
@@ -56,6 +64,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
 
       <Section title="Revenue" step={3}>
         <Item label="Tuition per Student" value={formatCurrency(data.revenue?.tuitionPerStudent)} />
+        <Item label="Annual Tuition Increase" value={formatPercent(data.revenue?.annualTuitionIncrease)} />
         <Item label="Scholarship Rate" value={formatPercent(data.revenue?.scholarshipRate)} />
         <Item label="Other Fees per Student" value={formatCurrency(data.revenue?.otherRevenuePerStudent)} />
         <Item label="ESA / Voucher per Student" value={formatCurrency(data.revenue?.esaRevenuePerStudent)} />
@@ -75,6 +84,8 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
       </Section>
 
       <Section title="Operations & Expenses" step={5}>
+        <Item label="Annual Salary Increase" value={formatPercent(data.facilities?.annualSalaryIncrease)} />
+        <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
         <Item label="Monthly Rent" value={formatCurrency(data.facilities?.monthlyRent)} />
         <Item label="Rent Escalation" value={formatPercent(data.facilities?.annualRentIncrease)} />
         <Item label="Utilities" value={formatCurrency(data.facilities?.annualUtilities)} />

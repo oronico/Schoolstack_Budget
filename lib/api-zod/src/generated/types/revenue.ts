@@ -9,7 +9,12 @@
 export interface Revenue {
   tuitionPerStudent?: number;
   esaRevenuePerStudent?: number;
+  publicFundingPerStudent?: number;
   otherRevenuePerStudent?: number;
   scholarshipRate?: number;
   annualFundraising?: number;
+  annualDonations?: number;
+  foundationGrants?: number;
+  capitalGifts?: number;
+  annualTuitionIncrease?: number;
 }

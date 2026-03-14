@@ -1,4 +1,5 @@
-import { FormInput, FormSelect } from "@/components/ui/form-inputs";
+import { useFormContext } from "react-hook-form";
+import { FormInput, FormSelect, FormCheckbox } from "@/components/ui/form-inputs";
 
 const STATES = [
   { value: "AL", label: "Alabama" }, { value: "AK", label: "Alaska" }, { value: "AZ", label: "Arizona" },
@@ -20,7 +21,17 @@ const STATES = [
   { value: "WI", label: "Wisconsin" }, { value: "WY", label: "Wyoming" }, { value: "DC", label: "Washington D.C." },
 ];
 
+const MONTHS = [
+  { value: "1", label: "January" }, { value: "2", label: "February" }, { value: "3", label: "March" },
+  { value: "4", label: "April" }, { value: "5", label: "May" }, { value: "6", label: "June" },
+  { value: "7", label: "July" }, { value: "8", label: "August" }, { value: "9", label: "September" },
+  { value: "10", label: "October" }, { value: "11", label: "November" }, { value: "12", label: "December" },
+];
+
 export function SchoolProfileStep() {
+  const { watch } = useFormContext();
+  const isPartialFirstYear = watch("schoolProfile.isPartialFirstYear");
+
   return (
     <div className="space-y-8">
       <div>
@@ -76,6 +87,37 @@ export function SchoolProfileStep() {
           helperText="Max students your building can hold"
           className="md:col-span-2"
         />
+      </div>
+
+      <div>
+        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Fiscal Year</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormSelect
+            name="schoolProfile.fiscalYearStartMonth"
+            label="Fiscal Year Start Month"
+            options={MONTHS}
+            valueAsNumber
+            helperText="Most schools use July (Jul-Jun fiscal year)"
+          />
+
+          <div className="flex flex-col gap-4 justify-center">
+            <FormCheckbox
+              name="schoolProfile.isPartialFirstYear"
+              label="Year 1 is a partial year"
+              helperText="Check if your school opens mid-fiscal-year"
+            />
+          </div>
+
+          {isPartialFirstYear && (
+            <FormInput
+              name="schoolProfile.year1OperatingMonths"
+              label="Year 1 Operating Months"
+              type="number"
+              placeholder="10"
+              helperText="Number of months the school operates in Year 1"
+            />
+          )}
+        </div>
       </div>
     </div>
   );

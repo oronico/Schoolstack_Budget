@@ -10,6 +10,30 @@ export function FacilitiesStep() {
 
       <div className="space-y-8">
         <div>
+          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Growth & Inflation</h3>
+          <p className="text-sm text-muted-foreground mb-4">Annual escalation rates applied to costs over the 5-year model. Rent has its own escalation below.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormInput 
+              name="facilities.annualSalaryIncrease" 
+              label="Annual Salary Increase" 
+              type="number"
+              suffix="%"
+              placeholder="3"
+              helperText="Teacher, admin, and founder salary escalation"
+            />
+            
+            <FormInput 
+              name="facilities.generalCostInflation" 
+              label="General Cost Inflation" 
+              type="number"
+              suffix="%"
+              placeholder="3"
+              helperText="Applied to utilities, insurance, supplies, services"
+            />
+          </div>
+        </div>
+
+        <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Facility Costs</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput 

@@ -8,6 +8,10 @@
 import type { ConsultantKeyMetric } from "./consultantKeyMetric";
 import type { ConsultantOutputLenderReadiness } from "./consultantOutputLenderReadiness";
 import type { ConsultantRecommendation } from "./consultantRecommendation";
+import type { CostComposition } from "./costComposition";
+import type { CumulativeYear } from "./cumulativeYear";
+import type { RevenueComposition } from "./revenueComposition";
+import type { StressScenario } from "./stressScenario";
 
 export interface ConsultantOutput {
   executiveSummary: string;
@@ -17,5 +21,10 @@ export interface ConsultantOutput {
   lenderReadiness: ConsultantOutputLenderReadiness;
   lenderReadinessExplanation: string;
   keyMetrics: ConsultantKeyMetric[];
+  revenueComposition: RevenueComposition[];
+  costComposition: CostComposition[];
+  cumulativeFinancials: CumulativeYear[];
+  stressTests: StressScenario[];
+  enrollmentGuidance: string[];
   generatedAt: Date;
 }

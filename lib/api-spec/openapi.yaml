@@ -560,6 +560,12 @@ components:
           type: integer
         maxCapacity:
           type: integer
+        fiscalYearStartMonth:
+          type: integer
+        isPartialFirstYear:
+          type: boolean
+        year1OperatingMonths:
+          type: integer
     Enrollment:
       type: object
       properties:
@@ -580,11 +586,21 @@ components:
           type: number
         esaRevenuePerStudent:
           type: number
+        publicFundingPerStudent:
+          type: number
         otherRevenuePerStudent:
           type: number
         scholarshipRate:
           type: number
         annualFundraising:
+          type: number
+        annualDonations:
+          type: number
+        foundationGrants:
+          type: number
+        capitalGifts:
+          type: number
+        annualTuitionIncrease:
           type: number
     Staffing:
       type: object
@@ -612,14 +628,90 @@ components:
           type: number
         annualInsurance:
           type: number
+        facilityMaintenance:
+          type: number
         curriculumCostPerStudent:
           type: number
         techCostPerStudent:
           type: number
         annualMarketing:
           type: number
+        professionalDevelopment:
+          type: number
+        foodServicePerStudent:
+          type: number
+        transportationAnnual:
+          type: number
+        studentServicesAnnual:
+          type: number
         otherAnnualExpenses:
           type: number
+        annualSalaryIncrease:
+          type: number
+        generalCostInflation:
+          type: number
+        annualInterestRate:
+          type: number
+        loanTermYears:
+          type: integer
+        loanAmount:
+          type: number
+    RevenueComposition:
+      type: object
+      properties:
+        tuitionPct:
+          type: number
+        publicPct:
+          type: number
+        philanthropyPct:
+          type: number
+      required:
+        - tuitionPct
+        - publicPct
+        - philanthropyPct
+    CostComposition:
+      type: object
+      properties:
+        staffingPctOfRevenue:
+          type: number
+        facilityPctOfRevenue:
+          type: number
+        totalOpexPctOfRevenue:
+          type: number
+      required:
+        - staffingPctOfRevenue
+        - facilityPctOfRevenue
+        - totalOpexPctOfRevenue
+    CumulativeYear:
+      type: object
+      properties:
+        year:
+          type: integer
+        cumulativeNetIncome:
+          type: number
+        reserveMonths:
+          type: number
+      required:
+        - year
+        - cumulativeNetIncome
+        - reserveMonths
+    StressScenario:
+      type: object
+      properties:
+        scenario:
+          type: string
+        y1NetIncome:
+          type: number
+        y5NetIncome:
+          type: number
+        breakEvenYear:
+          type: integer
+          nullable: true
+      required:
+        - scenario
+        - y1NetIncome
+        - y5NetIncome
+        - breakEvenYear
     ConsultantOutput:
       type: object
       properties:
@@ -642,6 +734,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConsultantKeyMetric"
+        revenueComposition:
+          type: array
+          items:
+            $ref: "#/components/schemas/RevenueComposition"
+        costComposition:
+          type: array
+          items:
+            $ref: "#/components/schemas/CostComposition"
+        cumulativeFinancials:
+          type: array
+          items:
+            $ref: "#/components/schemas/CumulativeYear"
+        stressTests:
+          type: array
+          items:
+            $ref: "#/components/schemas/StressScenario"
+        enrollmentGuidance:
+          type: array
+          items:
+            type: string
         generatedAt:
           type: string
           format: date-time
@@ -653,6 +765,11 @@ components:
         - lenderReadiness
         - lenderReadinessExplanation
         - keyMetrics
+        - revenueComposition
+        - costComposition
+        - cumulativeFinancials
+        - stressTests
+        - enrollmentGuidance
         - generatedAt
     ConsultantRecommendation:
       type: object

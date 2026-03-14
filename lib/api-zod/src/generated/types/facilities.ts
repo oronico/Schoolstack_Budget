@@ -11,8 +11,18 @@ export interface Facilities {
   annualRentIncrease?: number;
   annualUtilities?: number;
   annualInsurance?: number;
+  facilityMaintenance?: number;
   curriculumCostPerStudent?: number;
   techCostPerStudent?: number;
   annualMarketing?: number;
+  professionalDevelopment?: number;
+  foodServicePerStudent?: number;
+  transportationAnnual?: number;
+  studentServicesAnnual?: number;
   otherAnnualExpenses?: number;
+  annualSalaryIncrease?: number;
+  generalCostInflation?: number;
+  annualInterestRate?: number;
+  loanTermYears?: number;
+  loanAmount?: number;
 }

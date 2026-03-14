@@ -113,7 +113,8 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
     }
     const parsed = UpdateModelBody.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid model data." });
+      console.error("Update validation errors:", JSON.stringify(parsed.error.issues, null, 2));
+      res.status(400).json({ error: "Invalid model data.", details: parsed.error.issues });
       return;
     }
 

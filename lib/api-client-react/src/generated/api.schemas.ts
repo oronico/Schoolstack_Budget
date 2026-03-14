@@ -75,6 +75,9 @@ export interface SchoolProfile {
   openingYear?: number;
   currentStudents?: number;
   maxCapacity?: number;
+  fiscalYearStartMonth?: number;
+  isPartialFirstYear?: boolean;
+  year1OperatingMonths?: number;
 }
 
 export interface Enrollment {
@@ -88,9 +91,14 @@ export interface Enrollment {
 export interface Revenue {
   tuitionPerStudent?: number;
   esaRevenuePerStudent?: number;
+  publicFundingPerStudent?: number;
   otherRevenuePerStudent?: number;
   scholarshipRate?: number;
   annualFundraising?: number;
+  annualDonations?: number;
+  foundationGrants?: number;
+  capitalGifts?: number;
+  annualTuitionIncrease?: number;
 }
 
 export interface Staffing {
@@ -107,10 +115,20 @@ export interface Facilities {
   annualRentIncrease?: number;
   annualUtilities?: number;
   annualInsurance?: number;
+  facilityMaintenance?: number;
   curriculumCostPerStudent?: number;
   techCostPerStudent?: number;
   annualMarketing?: number;
+  professionalDevelopment?: number;
+  foodServicePerStudent?: number;
+  transportationAnnual?: number;
+  studentServicesAnnual?: number;
   otherAnnualExpenses?: number;
+  annualSalaryIncrease?: number;
+  generalCostInflation?: number;
+  annualInterestRate?: number;
+  loanTermYears?: number;
+  loanAmount?: number;
 }
 
 export interface ModelFormData {
@@ -132,6 +150,31 @@ export interface UpdateFinancialModelData {
   currentStep?: number;
   status?: ModelStatus;
   data: ModelFormData;
+}
+
+export interface RevenueComposition {
+  tuitionPct: number;
+  publicPct: number;
+  philanthropyPct: number;
+}
+
+export interface CostComposition {
+  staffingPctOfRevenue: number;
+  facilityPctOfRevenue: number;
+  totalOpexPctOfRevenue: number;
+}
+
+export interface CumulativeYear {
+  year: number;
+  cumulativeNetIncome: number;
+  reserveMonths: number;
+}
+
+export interface StressScenario {
+  scenario: string;
+  y1NetIncome: number;
+  y5NetIncome: number;
+  breakEvenYear: number | null;
 }
 
 export type ConsultantOutputLenderReadiness =
@@ -182,6 +225,11 @@ export interface ConsultantOutput {
   lenderReadiness: ConsultantOutputLenderReadiness;
   lenderReadinessExplanation: string;
   keyMetrics: ConsultantKeyMetric[];
+  revenueComposition: RevenueComposition[];
+  costComposition: CostComposition[];
+  cumulativeFinancials: CumulativeYear[];
+  stressTests: StressScenario[];
+  enrollmentGuidance: string[];
   generatedAt: string;
 }
 

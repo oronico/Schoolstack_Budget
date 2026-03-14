@@ -80,8 +80,8 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - Auth: `src/routes/auth.ts` — register, login, logout, /me, forgot-password, reset-password (JWT-based)
 - Models: `src/routes/models.ts` — CRUD + duplicate + archive + export endpoints
 - Admin: `src/routes/admin.ts` — `GET /api/admin/analytics` returns aggregate analytics (requires auth + admin). Admin check via `src/middlewares/admin.ts` verifies user email is in `ADMIN_EMAILS` env var (comma-separated list).
-- Consultant: `GET /api/models/:id/consultant` — deterministic CFO rules engine analysis
-- Excel export: `src/lib/excel-export.ts` — generates 7-tab workbook with real formulas (Assumptions, Enrollment, Revenue, Staffing, Operating Expenses, Five-Year Model, Summary). Revenue tab breaks out tuition, public/aid, and philanthropy. OpEx tab uses cost centers (facility, instructional, student services, admin, debt service). Summary includes DSCR metric.
+- Consultant: `GET /api/models/:id/consultant` — deterministic CFO rules engine with inflation compounding, partial-year proration, revenue/cost composition metrics, cumulative financials with reserve months, 3 stress-test scenarios (enrollment down 20%, philanthropy loss, costs up 10%), enrollment growth benchmarking guidance
+- Excel export: `src/lib/excel-export.ts` — generates 7-tab workbook with real formulas (Assumptions, Enrollment, Revenue, Staffing, Operating Expenses, Five-Year Model, Summary). Assumptions tab includes Growth & Inflation section (rows 67-70) and Fiscal Year section (rows 72-75). Revenue/Staffing/OpEx tabs use escalation formulas referencing Assumptions. Five-Year Model adds cumulative net income and operating reserve months. Summary includes DSCR metric (with partial-year proration), Revenue Mix section, and Cost Structure section.
 - Event tracking: `src/lib/track-event.ts` — best-effort event tracking helper
 - Depends on: `@workspace/db`, `@workspace/api-zod`
 
@@ -92,8 +92,10 @@ React + Vite frontend (Tailwind CSS v4). Amber-forward brand with Quicksand/Nuni
 - Landing page, auth screens (register/login/forgot-password/reset-password)
 - Dashboard with model management (create, duplicate, archive, delete)
 - 8-step model wizard: Profile → Enrollment → Revenue → Staffing → Operations → Review → Consultant → Export
-- Revenue step: Tuition & Fees, Public & Aid Revenue (ESA/voucher, per-pupil public funding), Philanthropy (donations, foundation grants, capital gifts)
-- Operations step: Facility Costs (rent, utilities, insurance, maintenance), Instructional (curriculum, tech per student), Student Services (food, transport, counseling), Administrative (marketing, prof dev, other), Debt Service (loan amount, interest rate, term → PMT-calculated annual payment)
+- School Profile step: includes Fiscal Year Start Month (select, default July), Partial First Year toggle (with year1OperatingMonths field)
+- Revenue step: Tuition & Fees (with annual tuition increase %), Public & Aid Revenue (ESA/voucher, per-pupil public funding), Philanthropy (donations, foundation grants, capital gifts)
+- Operations step: Facility Costs (rent, utilities, insurance, maintenance), Instructional (curriculum, tech per student), Student Services (food, transport, counseling), Administrative (marketing, prof dev, other), Debt Service (loan amount, interest rate, term → PMT-calculated annual payment), Growth & Inflation section (annual salary increase %, general cost inflation %)
+- Consultant step: Executive summary, key metrics, recommendations, revenue composition charts, cost composition charts, stress test scenarios table, enrollment guidance warnings, cumulative financials
 - Admin analytics page at /admin (protected by email allowlist)
 - Auth context with JWT stored in localStorage, fetch interceptor for Bearer token injection
 

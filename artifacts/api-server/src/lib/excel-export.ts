@@ -7,6 +7,9 @@ interface SchoolProfile {
   openingYear?: number;
   currentStudents?: number;
   maxCapacity?: number;
+  fiscalYearStartMonth?: number;
+  isPartialFirstYear?: boolean;
+  year1OperatingMonths?: number;
 }
 
 interface Enrollment {
@@ -19,6 +22,7 @@ interface Enrollment {
 
 interface Revenue {
   tuitionPerStudent?: number;
+  annualTuitionIncrease?: number;
   esaRevenuePerStudent?: number;
   publicFundingPerStudent?: number;
   otherRevenuePerStudent?: number;
@@ -55,6 +59,8 @@ interface Facilities {
   loanAmount?: number;
   annualInterestRate?: number;
   loanTermYears?: number;
+  annualSalaryIncrease?: number;
+  generalCostInflation?: number;
 }
 
 interface ModelData {
@@ -158,6 +164,8 @@ function schoolTypeDisplay(type?: string): string {
   }
 }
 
+const MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 function c(row: number, col: number): string {
   return `${String.fromCharCode(64 + col)}${row}`;
 }
@@ -184,9 +192,9 @@ export async function generateWorkbook(rawData: Record<string, unknown>): Promis
 
   buildAssumptionsTab(assumptionsWs, sp, en, rev, st, fac);
   buildEnrollmentTab(enrollmentWs);
-  buildRevenueTab(revenueWs);
-  buildStaffingTab(staffingWs);
-  buildOpexTab(opexWs);
+  buildRevenueTab(revenueWs, sp);
+  buildStaffingTab(staffingWs, sp);
+  buildOpexTab(opexWs, sp);
   buildFiveYearTab(fiveYearWs);
   buildSummaryTab(summaryWs, sp);
 
@@ -271,7 +279,7 @@ function buildAssumptionsTab(ws: ExcelJS.Worksheet, sp: SchoolProfile, en: Enrol
   ws.getCell(r, 1).value = "PHILANTHROPY & GRANTS";
 
   r = 28; ws.getCell(r, 1).value = "Annual Donations / Individual Giving"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = rev.annualDonations || rev.annualFundraising || 0; styleInputCell(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
+  ws.getCell(r, 2).value = rev.annualDonations ?? rev.annualFundraising ?? 0; styleInputCell(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
   r = 29; ws.getCell(r, 1).value = "Foundation & Corporate Grants"; ws.getCell(r, 1).font = NORMAL_FONT;
   ws.getCell(r, 2).value = rev.foundationGrants || 0; styleInputCell(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
   r = 30; ws.getCell(r, 1).value = "One-Time / Capital Gifts"; ws.getCell(r, 1).font = NORMAL_FONT;
@@ -354,6 +362,30 @@ function buildAssumptionsTab(ws: ExcelJS.Worksheet, sp: SchoolProfile, en: Enrol
   ws.getCell(r, 2).value = { formula: `IF(B64=0,0,IF(B63=0,B62/B64,PMT(B63,B64,-B62)))` };
   styleInputCell(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
 
+  r = 67;
+  styleSectionRow(ws, r, 2);
+  ws.getCell(r, 1).value = "GROWTH & INFLATION";
+
+  r = 68; ws.getCell(r, 1).value = "Annual Tuition Increase"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = (rev.annualTuitionIncrease || 0) / 100; styleInputCell(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
+  r = 69; ws.getCell(r, 1).value = "Annual Salary Increase"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = (fac.annualSalaryIncrease || 0) / 100; styleInputCell(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
+  r = 70; ws.getCell(r, 1).value = "General Cost Inflation"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = (fac.generalCostInflation || 0) / 100; styleInputCell(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
+
+  r = 72;
+  styleSectionRow(ws, r, 2);
+  ws.getCell(r, 1).value = "FISCAL YEAR";
+
+  r = 73; ws.getCell(r, 1).value = "Fiscal Year Start Month"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = MONTH_NAMES[sp.fiscalYearStartMonth || 7] || "July"; styleInputCell(ws.getCell(r, 2));
+  r = 74; ws.getCell(r, 1).value = "Year 1 Operating Months"; ws.getCell(r, 1).font = NORMAL_FONT;
+  const opMonths = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
+  ws.getCell(r, 2).value = opMonths; styleInputCell(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = NUMBER_FORMAT;
+  r = 75; ws.getCell(r, 1).value = "Year 1 Proration Factor"; ws.getCell(r, 1).font = BOLD_FONT;
+  ws.getCell(r, 2).value = { formula: `B74/12` };
+  styleInputCell(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = '0.000';
+
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 0 }];
 }
 
@@ -375,7 +407,7 @@ function buildEnrollmentTab(ws: ExcelJS.Worksheet) {
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
 }
 
-function buildRevenueTab(ws: ExcelJS.Worksheet) {
+function buildRevenueTab(ws: ExcelJS.Worksheet, sp: SchoolProfile) {
   ws.columns = [{ width: 40 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }];
 
   const headers = ["", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -424,6 +456,9 @@ function buildRevenueTab(ws: ExcelJS.Worksheet) {
       const col = y + 2;
       const cell = ws.getCell(item.row, col);
       const studentRef = `Enrollment!${String.fromCharCode(66 + y)}2`;
+      const tuitionEsc = `(1+Assumptions!$B$68)^${y}`;
+      const costEsc = `(1+Assumptions!$B$70)^${y}`;
+      const pf = y === 0 ? `*Assumptions!$B$75` : "";
 
       switch (item.row) {
         case ROW.students:
@@ -431,11 +466,11 @@ function buildRevenueTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = NUMBER_FORMAT;
           break;
         case ROW.tuition:
-          cell.value = { formula: `${studentRef}*Assumptions!B19` };
+          cell.value = { formula: `${studentRef}*Assumptions!$B$19*${tuitionEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.otherFees:
-          cell.value = { formula: `${studentRef}*Assumptions!B21` };
+          cell.value = { formula: `${studentRef}*Assumptions!$B$21*${tuitionEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.grossTuition:
@@ -443,7 +478,7 @@ function buildRevenueTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.scholarshipDiscount:
-          cell.value = { formula: `-(${c(ROW.tuition, col)})*Assumptions!B20` };
+          cell.value = { formula: `-(${c(ROW.tuition, col)})*Assumptions!$B$20` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.netTuition:
@@ -451,11 +486,11 @@ function buildRevenueTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.esa:
-          cell.value = { formula: `${studentRef}*Assumptions!B24` };
+          cell.value = { formula: `${studentRef}*Assumptions!$B$24*${costEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.publicFunding:
-          cell.value = { formula: `${studentRef}*Assumptions!B25` };
+          cell.value = { formula: `${studentRef}*Assumptions!$B$25*${costEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.totalPublic:
@@ -463,15 +498,15 @@ function buildRevenueTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.donations:
-          cell.value = { formula: `Assumptions!B28` };
+          cell.value = { formula: `Assumptions!$B$28*${costEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.grants:
-          cell.value = { formula: `Assumptions!B29` };
+          cell.value = { formula: `Assumptions!$B$29*${costEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.capitalGifts:
-          cell.value = { formula: y === 0 ? `Assumptions!B30` : `0` };
+          cell.value = { formula: y === 0 ? `Assumptions!$B$30` : `0` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.totalPhilanthropy:
@@ -492,7 +527,7 @@ function buildRevenueTab(ws: ExcelJS.Worksheet) {
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
 }
 
-function buildStaffingTab(ws: ExcelJS.Worksheet) {
+function buildStaffingTab(ws: ExcelJS.Worksheet, sp: SchoolProfile) {
   ws.columns = [{ width: 35 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }];
 
   const headers = ["", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -519,6 +554,8 @@ function buildStaffingTab(ws: ExcelJS.Worksheet) {
       const col = y + 2;
       const cell = ws.getCell(r, col);
       const studentRef = `Enrollment!${String.fromCharCode(66 + y)}2`;
+      const salaryEsc = `(1+Assumptions!$B$69)^${y}`;
+      const pf = y === 0 ? `*Assumptions!$B$75` : "";
 
       switch (item.label) {
         case "Students":
@@ -526,19 +563,19 @@ function buildStaffingTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = NUMBER_FORMAT;
           break;
         case "Teachers (Rounded Up)":
-          cell.value = { formula: `IF(Assumptions!B33=0,0,ROUNDUP(${studentRef}/Assumptions!B33,0))` };
+          cell.value = { formula: `IF(Assumptions!$B$33=0,0,ROUNDUP(${studentRef}/Assumptions!$B$33,0))` };
           cell.numFmt = NUMBER_FORMAT;
           break;
         case "Teacher Payroll":
-          cell.value = { formula: `${c(3, col)}*Assumptions!B34` };
+          cell.value = { formula: `${c(3, col)}*Assumptions!$B$34*${salaryEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case "Admin Payroll":
-          cell.value = { formula: `Assumptions!B35*Assumptions!B36` };
+          cell.value = { formula: `Assumptions!$B$35*Assumptions!$B$36*${salaryEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case "Founder / Leader Salary":
-          cell.value = { formula: `Assumptions!B37` };
+          cell.value = { formula: `Assumptions!$B$37*${salaryEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case "Total Salaries":
@@ -546,7 +583,7 @@ function buildStaffingTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case "Benefits":
-          cell.value = { formula: `${c(7, col)}*Assumptions!B38` };
+          cell.value = { formula: `${c(7, col)}*Assumptions!$B$38` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case "Total Staffing Cost":
@@ -564,7 +601,7 @@ function buildStaffingTab(ws: ExcelJS.Worksheet) {
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
 }
 
-function buildOpexTab(ws: ExcelJS.Worksheet) {
+function buildOpexTab(ws: ExcelJS.Worksheet, sp: SchoolProfile) {
   ws.columns = [{ width: 40 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }];
 
   const headers = ["", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
@@ -624,6 +661,8 @@ function buildOpexTab(ws: ExcelJS.Worksheet) {
       const col = y + 2;
       const cell = ws.getCell(r, col);
       const studentRef = `Enrollment!${String.fromCharCode(66 + y)}2`;
+      const infEsc = `(1+Assumptions!$B$70)^${y}`;
+      const pf = y === 0 ? `*Assumptions!$B$75` : "";
 
       switch (r) {
         case ROW.students:
@@ -631,19 +670,19 @@ function buildOpexTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = NUMBER_FORMAT;
           break;
         case ROW.rent:
-          cell.value = { formula: `Assumptions!B41*12*(1+Assumptions!B42)^${y}` };
+          cell.value = { formula: `Assumptions!$B$41*12*(1+Assumptions!$B$42)^${y}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.utilities:
-          cell.value = { formula: `Assumptions!B43` };
+          cell.value = { formula: `Assumptions!$B$43*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.insurance:
-          cell.value = { formula: `Assumptions!B44` };
+          cell.value = { formula: `Assumptions!$B$44*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.maintenance:
-          cell.value = { formula: `Assumptions!B45` };
+          cell.value = { formula: `Assumptions!$B$45*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.totalFacility:
@@ -651,11 +690,11 @@ function buildOpexTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.curriculum:
-          cell.value = { formula: `${studentRef}*Assumptions!B48` };
+          cell.value = { formula: `${studentRef}*Assumptions!$B$48*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.technology:
-          cell.value = { formula: `${studentRef}*Assumptions!B49` };
+          cell.value = { formula: `${studentRef}*Assumptions!$B$49*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.totalInstruction:
@@ -663,15 +702,15 @@ function buildOpexTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.foodService:
-          cell.value = { formula: `${studentRef}*Assumptions!B52` };
+          cell.value = { formula: `${studentRef}*Assumptions!$B$52*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.transportation:
-          cell.value = { formula: `Assumptions!B53` };
+          cell.value = { formula: `Assumptions!$B$53*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.studentServices:
-          cell.value = { formula: `Assumptions!B54` };
+          cell.value = { formula: `Assumptions!$B$54*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.totalStudentSvcs:
@@ -679,15 +718,15 @@ function buildOpexTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.marketing:
-          cell.value = { formula: `Assumptions!B57` };
+          cell.value = { formula: `Assumptions!$B$57*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.profDev:
-          cell.value = { formula: `Assumptions!B58` };
+          cell.value = { formula: `Assumptions!$B$58*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.otherOverhead:
-          cell.value = { formula: `Assumptions!B59` };
+          cell.value = { formula: `Assumptions!$B$59*${infEsc}${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.totalAdmin:
@@ -695,7 +734,7 @@ function buildOpexTab(ws: ExcelJS.Worksheet) {
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.debtService:
-          cell.value = { formula: `Assumptions!B65` };
+          cell.value = { formula: `Assumptions!$B$65${pf}` };
           cell.numFmt = CURRENCY_WHOLE_FORMAT;
           break;
         case ROW.totalOpex:
@@ -726,6 +765,8 @@ function buildFiveYearTab(ws: ExcelJS.Worksheet) {
     { label: "Operating Expenses", row: 5, src: "'Operating Expenses'", srcRow: 20, fmt: CURRENCY_WHOLE_FORMAT, bold: false },
     { label: "Total Expenses", row: 6, src: null, srcRow: 0, fmt: CURRENCY_WHOLE_FORMAT, bold: true },
     { label: "Net Income", row: 7, src: null, srcRow: 0, fmt: CURRENCY_WHOLE_FORMAT, bold: true },
+    { label: "Cumulative Net Income", row: 8, src: null, srcRow: 0, fmt: CURRENCY_WHOLE_FORMAT, bold: false },
+    { label: "Operating Reserve (Months)", row: 9, src: null, srcRow: 0, fmt: '0.0', bold: false },
   ];
 
   for (const item of rowDefs) {
@@ -742,6 +783,14 @@ function buildFiveYearTab(ws: ExcelJS.Worksheet) {
         cell.value = { formula: `${c(4, col)}+${c(5, col)}` };
       } else if (item.label === "Net Income") {
         cell.value = { formula: `${c(3, col)}-${c(6, col)}` };
+      } else if (item.label === "Cumulative Net Income") {
+        if (y === 0) {
+          cell.value = { formula: `${c(7, col)}` };
+        } else {
+          cell.value = { formula: `${c(8, col - 1)}+${c(7, col)}` };
+        }
+      } else if (item.label === "Operating Reserve (Months)") {
+        cell.value = { formula: `IF(${c(6, col)}=0,0,IF(${c(8, col)}>0,${c(8, col)}/(${c(6, col)}/12),0))` };
       } else {
         cell.value = { formula: `${item.src}!${colLetter}${item.srcRow}` };
       }
@@ -779,17 +828,21 @@ function buildSummaryTab(ws: ExcelJS.Worksheet, sp: SchoolProfile) {
   ws.getCell(r, 2).value = { formula: "Assumptions!B6" }; ws.getCell(r, 2).font = NORMAL_FONT;
   r = 7; ws.getCell(r, 1).value = "State"; ws.getCell(r, 1).font = NORMAL_FONT;
   ws.getCell(r, 2).value = { formula: "Assumptions!B5" }; ws.getCell(r, 2).font = NORMAL_FONT;
+  r = 8; ws.getCell(r, 1).value = "Fiscal Year Start"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = { formula: "Assumptions!B73" }; ws.getCell(r, 2).font = NORMAL_FONT;
 
-  r = 9;
+  r = 10;
   const sumHeaders = ["", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
   ws.getRow(r).values = sumHeaders;
   styleHeaderRow(ws, r, 6);
 
   const summaryRows = [
-    { label: "Students", row: 10, fiveYearRow: 2, fmt: NUMBER_FORMAT, bold: false },
-    { label: "Net Revenue", row: 11, fiveYearRow: 3, fmt: CURRENCY_WHOLE_FORMAT, bold: false },
-    { label: "Total Expenses", row: 12, fiveYearRow: 6, fmt: CURRENCY_WHOLE_FORMAT, bold: false },
-    { label: "Net Income", row: 13, fiveYearRow: 7, fmt: CURRENCY_WHOLE_FORMAT, bold: true },
+    { label: "Students", row: 11, fiveYearRow: 2, fmt: NUMBER_FORMAT, bold: false },
+    { label: "Net Revenue", row: 12, fiveYearRow: 3, fmt: CURRENCY_WHOLE_FORMAT, bold: false },
+    { label: "Total Expenses", row: 13, fiveYearRow: 6, fmt: CURRENCY_WHOLE_FORMAT, bold: false },
+    { label: "Net Income", row: 14, fiveYearRow: 7, fmt: CURRENCY_WHOLE_FORMAT, bold: true },
+    { label: "Cumulative Net Income", row: 15, fiveYearRow: 8, fmt: CURRENCY_WHOLE_FORMAT, bold: false },
+    { label: "Operating Reserve (Months)", row: 16, fiveYearRow: 9, fmt: '0.0', bold: false },
   ];
 
   for (const item of summaryRows) {
@@ -805,18 +858,18 @@ function buildSummaryTab(ws: ExcelJS.Worksheet, sp: SchoolProfile) {
       if (item.bold) styleBoldDataCell(cell); else styleDataCell(cell);
     }
   }
-  styleSectionRow(ws, 13, 6);
+  styleSectionRow(ws, 14, 6);
 
-  r = 15;
+  r = 18;
   styleSectionRow(ws, r, 6);
   ws.getCell(r, 1).value = "KEY METRICS";
 
   const metricRows = [
-    { label: "Revenue per Student", row: 16 },
-    { label: "Staffing Cost as % of Revenue", row: 17 },
-    { label: "Operating Cost as % of Revenue", row: 18 },
-    { label: "Net Margin %", row: 19 },
-    { label: "Debt Service Coverage Ratio", row: 20 },
+    { label: "Revenue per Student", row: 19 },
+    { label: "Staffing Cost as % of Revenue", row: 20 },
+    { label: "Operating Cost as % of Revenue", row: 21 },
+    { label: "Net Margin %", row: 22 },
+    { label: "Debt Service Coverage Ratio", row: 23 },
   ];
 
   for (const item of metricRows) {
@@ -845,14 +898,90 @@ function buildSummaryTab(ws: ExcelJS.Worksheet, sp: SchoolProfile) {
           cell.value = { formula: `IF('Five-Year Model'!${colLetter}3=0,0,'Five-Year Model'!${colLetter}7/'Five-Year Model'!${colLetter}3)` };
           cell.numFmt = PERCENT_FORMAT;
           break;
-        case "Debt Service Coverage Ratio":
-          cell.value = { formula: `IF(Assumptions!B65=0,"N/A",('Five-Year Model'!${colLetter}7+Assumptions!B65)/Assumptions!B65)` };
+        case "Debt Service Coverage Ratio": {
+          const dsRef = y === 0
+            ? `Assumptions!$B$65*Assumptions!$B$75`
+            : `Assumptions!$B$65`;
+          cell.value = { formula: `IF(Assumptions!$B$65=0,"N/A",('Five-Year Model'!${colLetter}7+${dsRef})/${dsRef})` };
           cell.numFmt = '0.00x;[Red](0.00x);"-"';
           break;
+        }
       }
       styleDataCell(cell);
     }
   }
 
-  ws.views = [{ state: "frozen", ySplit: 9, xSplit: 1 }];
+  r = 25;
+  styleSectionRow(ws, r, 6);
+  ws.getCell(r, 1).value = "REVENUE MIX";
+
+  const revMixRows = [
+    { label: "Tuition & Fees %", row: 26 },
+    { label: "Public & Aid %", row: 27 },
+    { label: "Philanthropy %", row: 28 },
+  ];
+
+  for (const item of revMixRows) {
+    ws.getCell(item.row, 1).value = item.label;
+    ws.getCell(item.row, 1).font = NORMAL_FONT;
+
+    for (let y = 0; y < 5; y++) {
+      const col = y + 2;
+      const cell = ws.getCell(item.row, col);
+      const colLetter = String.fromCharCode(66 + y);
+      const revRef = `'Five-Year Model'!${colLetter}3`;
+
+      switch (item.label) {
+        case "Tuition & Fees %":
+          cell.value = { formula: `IF(${revRef}=0,0,Revenue!${colLetter}7/${revRef})` };
+          break;
+        case "Public & Aid %":
+          cell.value = { formula: `IF(${revRef}=0,0,Revenue!${colLetter}10/${revRef})` };
+          break;
+        case "Philanthropy %":
+          cell.value = { formula: `IF(${revRef}=0,0,Revenue!${colLetter}14/${revRef})` };
+          break;
+      }
+      cell.numFmt = PERCENT_FORMAT;
+      styleDataCell(cell);
+    }
+  }
+
+  r = 30;
+  styleSectionRow(ws, r, 6);
+  ws.getCell(r, 1).value = "COST STRUCTURE";
+
+  const costRows = [
+    { label: "Staffing % of Revenue", row: 31 },
+    { label: "Facility % of Revenue", row: 32 },
+    { label: "Total Expenses % of Revenue", row: 33 },
+  ];
+
+  for (const item of costRows) {
+    ws.getCell(item.row, 1).value = item.label;
+    ws.getCell(item.row, 1).font = NORMAL_FONT;
+
+    for (let y = 0; y < 5; y++) {
+      const col = y + 2;
+      const cell = ws.getCell(item.row, col);
+      const colLetter = String.fromCharCode(66 + y);
+      const revRef = `'Five-Year Model'!${colLetter}3`;
+
+      switch (item.label) {
+        case "Staffing % of Revenue":
+          cell.value = { formula: `IF(${revRef}=0,0,'Five-Year Model'!${colLetter}4/${revRef})` };
+          break;
+        case "Facility % of Revenue":
+          cell.value = { formula: `IF(${revRef}=0,0,'Operating Expenses'!${colLetter}7/${revRef})` };
+          break;
+        case "Total Expenses % of Revenue":
+          cell.value = { formula: `IF(${revRef}=0,0,'Five-Year Model'!${colLetter}6/${revRef})` };
+          break;
+      }
+      cell.numFmt = PERCENT_FORMAT;
+      styleDataCell(cell);
+    }
+  }
+
+  ws.views = [{ state: "frozen", ySplit: 10, xSplit: 1 }];
 }

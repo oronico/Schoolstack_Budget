@@ -7,6 +7,9 @@ export const schoolProfileSchema = z.object({
   openingYear: z.coerce.number().min(2000).max(2100),
   currentStudents: z.coerce.number().min(0),
   maxCapacity: z.coerce.number().min(1, "Capacity must be at least 1"),
+  fiscalYearStartMonth: z.coerce.number().min(1).max(12),
+  isPartialFirstYear: z.boolean(),
+  year1OperatingMonths: z.coerce.number().min(1).max(12),
 });
 
 export const enrollmentSchema = z.object({
@@ -19,6 +22,7 @@ export const enrollmentSchema = z.object({
 
 export const revenueSchema = z.object({
   tuitionPerStudent: z.coerce.number().min(0),
+  annualTuitionIncrease: z.coerce.number().min(0).max(100),
   esaRevenuePerStudent: z.coerce.number().min(0),
   publicFundingPerStudent: z.coerce.number().min(0),
   otherRevenuePerStudent: z.coerce.number().min(0),
@@ -54,6 +58,8 @@ export const facilitiesSchema = z.object({
   loanAmount: z.coerce.number().min(0),
   annualInterestRate: z.coerce.number().min(0).max(100),
   loanTermYears: z.coerce.number().min(0).max(50),
+  annualSalaryIncrease: z.coerce.number().min(0).max(100),
+  generalCostInflation: z.coerce.number().min(0).max(100),
 });
 
 export const fullModelSchema = z.object({

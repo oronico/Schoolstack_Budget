@@ -12,12 +12,22 @@ import {
   BarChart3,
   Lightbulb,
   Star,
+  PieChart,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ConsultantStepProps {
   jumpToStep?: (step: number) => void;
   modelId: number | null;
+}
+
+function fmtCurrency(n: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
+function fmtPct(n: number): string {
+  return `${(n * 100).toFixed(1)}%`;
 }
 
 export function ConsultantStep({ modelId }: ConsultantStepProps) {
@@ -92,6 +102,11 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
         ? Shield
         : ShieldAlert;
 
+  const revComp = data.revenueComposition as Array<{ tuitionPct: number; publicPct: number; philanthropyPct: number }> | undefined;
+  const costComp = data.costComposition as Array<{ staffingPctOfRevenue: number; facilityPctOfRevenue: number; totalOpexPctOfRevenue: number }> | undefined;
+  const cumFin = data.cumulativeFinancials as Array<{ year: number; cumulativeNetIncome: number; reserveMonths: number }> | undefined;
+  const stressTests = data.stressTests as Array<{ scenario: string; y1NetIncome: number; y5NetIncome: number; breakEvenYear: number | null }> | undefined;
+
   return (
     <div>
       <div className="mb-8">
@@ -153,6 +168,165 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
           {data.lenderReadinessExplanation}
         </p>
       </div>
+
+      {revComp && revComp.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <PieChart className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-bold text-lg text-foreground">Revenue Mix</h3>
+          </div>
+          <div className="bg-background rounded-2xl border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-secondary/50">
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Source</th>
+                  {revComp.map((_, i) => (
+                    <th key={i} className="text-right px-4 py-3 font-semibold text-muted-foreground">Year {i + 1}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-border/50">
+                  <td className="px-4 py-2.5 font-medium">Tuition & Fees</td>
+                  {revComp.map((rc, i) => (
+                    <td key={i} className="text-right px-4 py-2.5">{fmtPct(rc.tuitionPct)}</td>
+                  ))}
+                </tr>
+                <tr className="border-t border-border/50">
+                  <td className="px-4 py-2.5 font-medium">Public & Aid</td>
+                  {revComp.map((rc, i) => (
+                    <td key={i} className="text-right px-4 py-2.5">{fmtPct(rc.publicPct)}</td>
+                  ))}
+                </tr>
+                <tr className="border-t border-border/50">
+                  <td className="px-4 py-2.5 font-medium">Philanthropy</td>
+                  {revComp.map((rc, i) => (
+                    <td key={i} className="text-right px-4 py-2.5">{fmtPct(rc.philanthropyPct)}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {costComp && costComp.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <ArrowUpRight className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-bold text-lg text-foreground">Cost Structure</h3>
+          </div>
+          <div className="bg-background rounded-2xl border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-secondary/50">
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Category</th>
+                  {costComp.map((_, i) => (
+                    <th key={i} className="text-right px-4 py-3 font-semibold text-muted-foreground">Year {i + 1}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-border/50">
+                  <td className="px-4 py-2.5 font-medium">Staffing % of Revenue</td>
+                  {costComp.map((cc, i) => (
+                    <td key={i} className="text-right px-4 py-2.5">{fmtPct(cc.staffingPctOfRevenue)}</td>
+                  ))}
+                </tr>
+                <tr className="border-t border-border/50">
+                  <td className="px-4 py-2.5 font-medium">Facility % of Revenue</td>
+                  {costComp.map((cc, i) => (
+                    <td key={i} className="text-right px-4 py-2.5">{fmtPct(cc.facilityPctOfRevenue)}</td>
+                  ))}
+                </tr>
+                <tr className="border-t border-border/50">
+                  <td className="px-4 py-2.5 font-medium">Total OpEx % of Revenue</td>
+                  {costComp.map((cc, i) => (
+                    <td key={i} className="text-right px-4 py-2.5">{fmtPct(cc.totalOpexPctOfRevenue)}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {cumFin && cumFin.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-bold text-lg text-foreground">Cumulative Financials</h3>
+          </div>
+          <div className="bg-background rounded-2xl border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-secondary/50">
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Metric</th>
+                  {cumFin.map((cf) => (
+                    <th key={cf.year} className="text-right px-4 py-3 font-semibold text-muted-foreground">Year {cf.year}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-border/50">
+                  <td className="px-4 py-2.5 font-medium">Cumulative Net Income</td>
+                  {cumFin.map((cf) => (
+                    <td key={cf.year} className={cn("text-right px-4 py-2.5 font-semibold", cf.cumulativeNetIncome >= 0 ? "text-green-700" : "text-rose-700")}>
+                      {fmtCurrency(cf.cumulativeNetIncome)}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-t border-border/50">
+                  <td className="px-4 py-2.5 font-medium">Reserve (Months of Expenses)</td>
+                  {cumFin.map((cf) => (
+                    <td key={cf.year} className={cn("text-right px-4 py-2.5 font-semibold", cf.reserveMonths >= 3 ? "text-green-700" : cf.reserveMonths >= 1 ? "text-amber-700" : "text-rose-700")}>
+                      {cf.reserveMonths.toFixed(1)}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {stressTests && stressTests.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-bold text-lg text-foreground">Stress Tests</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">What happens under adverse scenarios?</p>
+          <div className="bg-background rounded-2xl border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-secondary/50">
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Scenario</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Year 1 Net Income</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Year 5 Net Income</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Break-Even Year</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stressTests.map((st, idx) => (
+                  <tr key={idx} className="border-t border-border/50">
+                    <td className="px-4 py-2.5 font-medium">{st.scenario}</td>
+                    <td className={cn("text-right px-4 py-2.5 font-semibold", st.y1NetIncome >= 0 ? "text-green-700" : "text-rose-700")}>
+                      {fmtCurrency(st.y1NetIncome)}
+                    </td>
+                    <td className={cn("text-right px-4 py-2.5 font-semibold", st.y5NetIncome >= 0 ? "text-green-700" : "text-rose-700")}>
+                      {fmtCurrency(st.y5NetIncome)}
+                    </td>
+                    <td className="text-right px-4 py-2.5 font-semibold">
+                      {st.breakEvenYear ? `Year ${st.breakEvenYear}` : "Never"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-4">
