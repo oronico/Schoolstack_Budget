@@ -1,0 +1,21 @@
+packages:
+  "framer-motion": "For smooth page and step transitions"
+  "react-hook-form": "For complex multi-step form state management"
+  "@hookform/resolvers": "For Zod validation integration"
+  "zod": "For strict client-side form validation"
+  "use-debounce": "For debouncing auto-save API calls"
+  "lucide-react": "For beautiful, consistent iconography"
+  "clsx": "For conditional class names"
+  "tailwind-merge": "For conditional class names"
+
+images:
+  - path: "artifacts/school-financial-model/public/images/hero-bg.png"
+    description: "Abstract, elegant gradient background in warm cream and soft deep teal, professional corporate finance aesthetic, subtle geometric glassmorphism, 8k resolution, highly polished"
+    aspect_ratio: "16:9"
+  - path: "artifacts/school-financial-model/public/images/logo-icon.png"
+    description: "Minimalist modern logo mark for a school finance tool, geometric shapes combining a building pillar and an upward trending chart, deep teal color, transparent background"
+    aspect_ratio: "1:1"
+
+notes:
+  - The API relies on Bearer token authentication. We patch window.fetch to automatically append the token from localStorage.
+  - Form validation uses Zod and React Hook Form with strict number coercion.

@@ -8,3 +8,130 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface MessageResponse {
+  message: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  /** @minLength 8 */
+  password: string;
+  name: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  /** @minLength 8 */
+  password: string;
+}
+
+export interface UserResponse {
+  id: number;
+  email: string;
+  name: string;
+}
+
+export interface AuthResponse {
+  user: UserResponse;
+  token: string;
+}
+
+export type SchoolProfileSchoolType =
+  (typeof SchoolProfileSchoolType)[keyof typeof SchoolProfileSchoolType];
+
+export const SchoolProfileSchoolType = {
+  microschool: "microschool",
+  private_school: "private_school",
+  charter_school: "charter_school",
+  other: "other",
+} as const;
+
+export interface SchoolProfile {
+  schoolName?: string;
+  state?: string;
+  schoolType?: SchoolProfileSchoolType;
+  openingYear?: number;
+  currentStudents?: number;
+  maxCapacity?: number;
+}
+
+export interface Enrollment {
+  year1?: number;
+  year2?: number;
+  year3?: number;
+  year4?: number;
+  year5?: number;
+}
+
+export interface Revenue {
+  tuitionPerStudent?: number;
+  esaRevenuePerStudent?: number;
+  otherRevenuePerStudent?: number;
+  scholarshipRate?: number;
+  annualFundraising?: number;
+}
+
+export interface Staffing {
+  studentsPerTeacher?: number;
+  teacherSalary?: number;
+  adminStaffCount?: number;
+  adminSalary?: number;
+  founderSalary?: number;
+  benefitsRate?: number;
+}
+
+export interface Facilities {
+  monthlyRent?: number;
+  annualRentIncrease?: number;
+  annualUtilities?: number;
+  annualInsurance?: number;
+  curriculumCostPerStudent?: number;
+  techCostPerStudent?: number;
+  annualMarketing?: number;
+  otherAnnualExpenses?: number;
+}
+
+export interface ModelFormData {
+  schoolProfile?: SchoolProfile;
+  enrollment?: Enrollment;
+  revenue?: Revenue;
+  staffing?: Staffing;
+  facilities?: Facilities;
+}
+
+export interface FinancialModelData {
+  name: string;
+  currentStep?: number;
+  data: ModelFormData;
+}
+
+export interface FinancialModelSummary {
+  id: number;
+  name: string;
+  currentStep?: number;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface FinancialModel {
+  id: number;
+  name: string;
+  currentStep?: number;
+  data: ModelFormData;
+  updatedAt: string;
+  createdAt: string;
+}

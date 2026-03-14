@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: models
+    description: Financial model operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,300 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Request password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Reset email sent (always returns success)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /models:
+    get:
+      operationId: listModels
+      tags: [models]
+      summary: List user's financial models
+      responses:
+        "200":
+          description: List of models
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancialModelSummary"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createModel
+      tags: [models]
+      summary: Create a new financial model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancialModelData"
+      responses:
+        "201":
+          description: Model created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialModel"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /models/{id}:
+    get:
+      operationId: getModel
+      tags: [models]
+      summary: Get a financial model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Model details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialModel"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateModel
+      tags: [models]
+      summary: Update a financial model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancialModelData"
+      responses:
+        "200":
+          description: Model updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialModel"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteModel
+      tags: [models]
+      summary: Delete a financial model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Model deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /models/{id}/export:
+    get:
+      operationId: exportModel
+      tags: [models]
+      summary: Export financial model as Excel workbook
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Excel file download
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +331,229 @@ components:
           type: string
       required:
         - status
-
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+      required:
+        - email
+        - password
+        - name
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+    ResetPasswordRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+      required:
+        - token
+        - password
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserResponse"
+        token:
+          type: string
+      required:
+        - user
+        - token
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - email
+        - name
+    FinancialModelData:
+      type: object
+      properties:
+        name:
+          type: string
+        currentStep:
+          type: integer
+        data:
+          $ref: "#/components/schemas/ModelFormData"
+      required:
+        - name
+        - data
+    ModelFormData:
+      type: object
+      properties:
+        schoolProfile:
+          $ref: "#/components/schemas/SchoolProfile"
+        enrollment:
+          $ref: "#/components/schemas/Enrollment"
+        revenue:
+          $ref: "#/components/schemas/Revenue"
+        staffing:
+          $ref: "#/components/schemas/Staffing"
+        facilities:
+          $ref: "#/components/schemas/Facilities"
+    SchoolProfile:
+      type: object
+      properties:
+        schoolName:
+          type: string
+        state:
+          type: string
+        schoolType:
+          type: string
+          enum: [microschool, private_school, charter_school, other]
+        openingYear:
+          type: integer
+        currentStudents:
+          type: integer
+        maxCapacity:
+          type: integer
+    Enrollment:
+      type: object
+      properties:
+        year1:
+          type: integer
+        year2:
+          type: integer
+        year3:
+          type: integer
+        year4:
+          type: integer
+        year5:
+          type: integer
+    Revenue:
+      type: object
+      properties:
+        tuitionPerStudent:
+          type: number
+        esaRevenuePerStudent:
+          type: number
+        otherRevenuePerStudent:
+          type: number
+        scholarshipRate:
+          type: number
+        annualFundraising:
+          type: number
+    Staffing:
+      type: object
+      properties:
+        studentsPerTeacher:
+          type: number
+        teacherSalary:
+          type: number
+        adminStaffCount:
+          type: integer
+        adminSalary:
+          type: number
+        founderSalary:
+          type: number
+        benefitsRate:
+          type: number
+    Facilities:
+      type: object
+      properties:
+        monthlyRent:
+          type: number
+        annualRentIncrease:
+          type: number
+        annualUtilities:
+          type: number
+        annualInsurance:
+          type: number
+        curriculumCostPerStudent:
+          type: number
+        techCostPerStudent:
+          type: number
+        annualMarketing:
+          type: number
+        otherAnnualExpenses:
+          type: number
+    FinancialModelSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        currentStep:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - updatedAt
+        - createdAt
+    FinancialModel:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        currentStep:
+          type: integer
+        data:
+          $ref: "#/components/schemas/ModelFormData"
+        updatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - data
+        - updatedAt
+        - createdAt
