@@ -458,6 +458,7 @@ function runStressScenarioFromRows(
     modifyEnrollment?: (e: number[]) => number[];
     modifyRevenueRows?: (r: RevenueRow[]) => RevenueRow[];
     modifyExpenseRows?: (e: ExpenseRow[]) => ExpenseRow[];
+    modifyStaffingRows?: (s: StaffingRow[]) => StaffingRow[];
   },
 ): StressScenario {
   const adjEnrollment = mods.modifyEnrollment ? mods.modifyEnrollment([...enrollmentByYear]) : enrollmentByYear;
@@ -467,8 +468,11 @@ function runStressScenarioFromRows(
   const adjExpRows = mods.modifyExpenseRows
     ? mods.modifyExpenseRows(expenseRows.map(r => ({ ...r, amounts: [...r.amounts] })))
     : expenseRows;
+  const adjStaffRows = mods.modifyStaffingRows
+    ? mods.modifyStaffingRows(staffingRows.map(r => ({ ...r })))
+    : staffingRows;
 
-  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, staffingRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor);
+  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor);
   const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
 
   return {
@@ -641,8 +645,13 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       runStressScenarioFromRows("Loss of Philanthropy", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => r.category === "grants_contributions" ? { ...r, enabled: false } : r),
       }),
-      runStressScenarioFromRows("Costs 10% Higher", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
-        modifyExpenseRows: rows => rows.map(r => ({ ...r, amounts: r.amounts.map(a => a * 1.1) })),
+      runStressScenarioFromRows("Occupancy +15%, Personnel +5%", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
+        modifyExpenseRows: rows => rows.map(r =>
+          r.category === "occupancy_facility"
+            ? { ...r, amounts: r.amounts.map(a => a * 1.15) }
+            : { ...r, amounts: r.amounts.map(a => a * 1.05) }
+        ),
+        modifyStaffingRows: rows => rows.map(r => ({ ...r, annualizedRate: r.annualizedRate * 1.05 })),
       }),
     ];
   } else {
@@ -963,6 +972,13 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         priority: "medium",
       });
     }
+    if (publicRevenuePct > 0.7) {
+      recommendations.push({
+        title: "Charter Revenue Concentration Risk",
+        description: `${pct(publicRevenuePct)} of revenue comes from public per-pupil funding. Charter funding is typically disbursed on a state-defined schedule — ensure you have cash reserves or a line of credit to cover timing gaps between enrollment counts and payment receipt.`,
+        priority: "medium",
+      });
+    }
   }
 
   if (schoolType === "private" || schoolType === "private_school" || schoolType === "independent") {
@@ -974,6 +990,16 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         priority: "medium",
       });
     }
+    if (tuitionPct > 0.5) {
+      const discountRisk = y1.totalRevenue > 0 ? y1.philanthropyRevenue / y1.totalRevenue : 0;
+      if (discountRisk > 0.1) {
+        recommendations.push({
+          title: "Plan for Tuition Collection Risk",
+          description: `Private schools face collection risk from late payments, withdrawals, and financial aid shortfalls. With ${pct(tuitionPct)} of revenue from tuition, build a 5–10% bad debt reserve into your budget and maintain clear enrollment contracts with payment terms.`,
+          priority: "low",
+        });
+      }
+    }
   }
 
   if (schoolType === "hybrid" || schoolType === "micro") {
@@ -981,6 +1007,14 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       recommendations.push({
         title: "Hybrid/Micro Model Revenue Check",
         description: `Hybrid and micro schools often have higher per-student costs due to smaller cohorts. At ${fmt(revenuePerStudent)} per student, consider whether your pricing covers the premium instructional model.`,
+        priority: "medium",
+      });
+    }
+    const revenueSourceCount = [y1.tuitionRevenue, y1.publicRevenue, y1.philanthropyRevenue].filter(v => v > 0).length;
+    if (revenueSourceCount < 2) {
+      recommendations.push({
+        title: "Diversify Revenue Sources",
+        description: "Hybrid and micro schools benefit from multiple revenue streams (tuition, public funding, grants) to manage the higher cost structure of small-cohort models. Consider adding secondary revenue sources to improve financial resilience.",
         priority: "medium",
       });
     }

@@ -339,9 +339,25 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
     const data = model.data as Record<string, unknown>;
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
-    const fileName = `${schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_5-Year_Financial_Model.xlsx`;
+    const yearCount = (data?.revenueRows as unknown[])?.length > 0
+      ? ((data.revenueRows as Array<{ amounts: number[] }>)[0]?.amounts?.length || 3)
+      : 5;
+    const fileName = `${schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_${yearCount}-Year_Financial_Model.xlsx`;
 
-    const buffer = await generateWorkbook(data);
+    let consultantSummary;
+    try {
+      const output = runConsultantEngine(data);
+      consultantSummary = {
+        executiveSummary: output.executiveSummary,
+        lenderReadiness: output.lenderReadiness,
+        lenderReadinessExplanation: output.lenderReadinessExplanation,
+        biggestStrength: output.biggestStrength,
+        biggestRisk: output.biggestRisk,
+        recommendations: output.recommendations,
+      };
+    } catch (_) {}
+
+    const buffer = await generateWorkbook(data, consultantSummary);
 
     await db.update(financialModelsTable)
       .set({ lastExportedAt: new Date() })

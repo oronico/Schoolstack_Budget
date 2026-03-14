@@ -3,6 +3,50 @@ import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Edit2 } from "lucide-react";
 import { useMemo } from "react";
 
+interface ReviewRevenueRow {
+  id: string;
+  category: string;
+  lineItem: string;
+  enabled: boolean;
+  driverType: string;
+  amounts: number[];
+  percentBase?: string;
+}
+
+interface ReviewStaffingRow {
+  id: string;
+  roleName: string;
+  functionCategory: string;
+  employmentType: string;
+  fte: number;
+  annualizedRate: number;
+  benefitsEligible: boolean;
+  benefitsRate: number;
+  payrollTaxRate: number;
+  payrollLike: boolean;
+}
+
+interface ReviewExpenseRow {
+  id: string;
+  category: string;
+  lineItem: string;
+  enabled: boolean;
+  driverType: string;
+  amounts: number[];
+}
+
+interface ReviewCapDebtRow {
+  id: string;
+  lineItem: string;
+  enabled: boolean;
+  driverType: string;
+  amounts: number[];
+  isLoan?: boolean;
+  loanPrincipal?: number;
+  loanRate?: number;
+  loanTermYears?: number;
+}
+
 const MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const REVENUE_CATEGORY_LABELS: Record<string, string> = {
@@ -65,7 +109,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   const year1Students = data.enrollment?.year1 || 0;
 
   const revenueSummary = useMemo(() => {
-    const enabled = revenueRows.filter((r: any) => r.enabled);
+    const enabled = (revenueRows as ReviewRevenueRow[]).filter((r) => r.enabled);
     const rowValues = new Map<string, number>();
 
     for (const row of enabled) {
@@ -122,7 +166,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   }, [staffingRows]);
 
   const expenseSummary = useMemo(() => {
-    const enabled = expenseRows.filter((r: any) => r.enabled);
+    const enabled = (expenseRows as ReviewExpenseRow[]).filter((r) => r.enabled);
     const byCategory = new Map<string, number>();
     let total = 0;
 
@@ -142,7 +186,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   }, [expenseRows, year1Students, revenueSummary.total]);
 
   const capitalDebtSummary = useMemo(() => {
-    const enabled = capitalAndDebtRows.filter((r: any) => r.enabled);
+    const enabled = (capitalAndDebtRows as ReviewCapDebtRow[]).filter((r) => r.enabled);
     let total = 0;
 
     for (const row of enabled) {

@@ -69,6 +69,22 @@ interface CapitalDebtRow {
   loanTermYears?: number;
 }
 
+interface PriorYearSnapshot {
+  endingEnrollment?: number;
+  totalRevenue?: number;
+  totalExpenses?: number;
+  endingCash?: number;
+}
+
+interface ConsultantSummary {
+  executiveSummary?: string;
+  lenderReadiness?: string;
+  lenderReadinessExplanation?: string;
+  biggestStrength?: string;
+  biggestRisk?: string;
+  recommendations?: Array<{ title: string; description: string; priority: string }>;
+}
+
 interface ModelData {
   schoolProfile?: SchoolProfile;
   enrollment?: Enrollment;
@@ -79,6 +95,7 @@ interface ModelData {
   facilities?: Record<string, unknown>;
   expenseRows?: ExpenseRow[];
   capitalAndDebtRows?: CapitalDebtRow[];
+  priorYearSnapshot?: PriorYearSnapshot;
 }
 
 const HEADER_FILL: ExcelJS.Fill = {
@@ -229,7 +246,7 @@ const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
   administrative_general: "ADMINISTRATIVE / GENERAL",
 };
 
-export async function generateWorkbook(rawData: Record<string, unknown>): Promise<Buffer> {
+export async function generateWorkbook(rawData: Record<string, unknown>, consultantData?: ConsultantSummary): Promise<Buffer> {
   const data = rawData as unknown as ModelData;
   const sp = data.schoolProfile || {};
   const en = data.enrollment || {};
@@ -255,6 +272,9 @@ export async function generateWorkbook(rawData: Record<string, unknown>): Promis
   const salaryEscRate = (data.facilities as Record<string, unknown>)?.annualSalaryIncrease
     ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100
     : 0;
+  const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
+    ? Number((data.facilities as Record<string, unknown>).generalCostInflation) / 100
+    : 0;
   const isPartial = sp.isPartialFirstYear || false;
   const operatingMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
   const prorationFactor = operatingMonths / 12;
@@ -272,15 +292,15 @@ export async function generateWorkbook(rawData: Record<string, unknown>): Promis
     const expenseRows = data.expenseRows || [];
     const capDebtRows = data.capitalAndDebtRows || [];
 
-    const profileWs = wb.addWorksheet("School Profile");
+    const assumptionsWs = wb.addWorksheet("Assumptions");
+    buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor);
+
     const revenueWs = wb.addWorksheet("Revenue Schedule");
     const staffingWs = wb.addWorksheet("Staffing & Personnel");
     const expensesWs = wb.addWorksheet("Operating Expenses");
     const capitalWs = wb.addWorksheet("Capital & Debt");
     const pnlWs = wb.addWorksheet("Financial Model");
     const summaryWs = wb.addWorksheet("Summary");
-
-    buildProfileTab(profileWs, sp, enrollmentByYear, yearCount);
 
     const revTotalRow = buildRevenueScheduleTab(revenueWs, revenueRows, enrollmentByYear, yearCount, cols, yearHeaders);
     const staffTotalRow = buildStaffingTab(staffingWs, staffingRows, salaryEscRate, prorationFactor, yearCount, cols, yearHeaders);
@@ -292,10 +312,20 @@ export async function generateWorkbook(rawData: Record<string, unknown>): Promis
       fmRevenueRow: 2, fmStaffRow: 3, fmExpenseRow: 4, fmCapDebtRow: 5,
       fmTotalExpRow: 6, fmNIRow: 7, fmCumNIRow: 8, fmReserveRow: 9,
       studentsRef: (cl) => `'Revenue Schedule'!${cl}2`,
-    });
+    }, consultantData);
+
+    if (consultantData) {
+      const notesWs = wb.addWorksheet("Consultant Notes");
+      buildConsultantNotesTab(notesWs, consultantData);
+    }
+
+    if (data.priorYearSnapshot && sp.schoolStage === "operating_school") {
+      const priorWs = wb.addWorksheet("Prior-Year Snapshot");
+      buildPriorYearTab(priorWs, data.priorYearSnapshot);
+    }
   } else {
-    const profileWs = wb.addWorksheet("School Profile");
-    buildProfileTab(profileWs, sp, enrollmentByYear, yearCount);
+    const assumptionsWs = wb.addWorksheet("Assumptions");
+    buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor);
 
     const pnlWs = wb.addWorksheet("Financial Model");
     buildLegacyPnLTab(pnlWs, data, enrollmentByYear, yearCount, cols, yearHeaders, prorationFactor);
@@ -305,18 +335,31 @@ export async function generateWorkbook(rawData: Record<string, unknown>): Promis
       fmRevenueRow: 3, fmStaffRow: 4, fmExpenseRow: 5, fmCapDebtRow: 0,
       fmTotalExpRow: 6, fmNIRow: 7, fmCumNIRow: 8, fmReserveRow: 9,
       studentsRef: (cl) => `'Financial Model'!${cl}2`,
-    });
+    }, consultantData);
+
+    if (consultantData) {
+      const notesWs = wb.addWorksheet("Consultant Notes");
+      buildConsultantNotesTab(notesWs, consultantData);
+    }
   }
 
   const arrayBuffer = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuffer);
 }
 
-function buildProfileTab(ws: ExcelJS.Worksheet, sp: SchoolProfile, enrollment: number[], yearCount: number) {
+function buildAssumptionsTab(
+  ws: ExcelJS.Worksheet,
+  sp: SchoolProfile,
+  enrollment: number[],
+  yearCount: number,
+  salaryEscRate: number,
+  costInflation: number,
+  prorationFactor: number,
+) {
   ws.columns = [{ width: 35 }, { width: 25 }];
 
   let r = 1;
-  ws.getCell(r, 1).value = "SchoolStack Budget — School Profile";
+  ws.getCell(r, 1).value = "SchoolStack Budget — Assumptions";
   ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: "FF1E293B" }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 2);
   ws.getRow(r).height = 32;
@@ -359,6 +402,122 @@ function buildProfileTab(ws: ExcelJS.Worksheet, sp: SchoolProfile, enrollment: n
     ws.getCell(r, 2).value = enrollment[y];
     ws.getCell(r, 2).font = BOLD_FONT;
     ws.getCell(r, 2).numFmt = NUMBER_FORMAT;
+  }
+
+  r += 2;
+  styleSectionRow(ws, r, 2);
+  ws.getCell(r, 1).value = "GROWTH & ESCALATION ASSUMPTIONS";
+
+  r++;
+  ws.getCell(r, 1).value = "Annual Salary Escalation"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = salaryEscRate; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
+  r++;
+  ws.getCell(r, 1).value = "General Cost Inflation"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = costInflation; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
+  r++;
+  ws.getCell(r, 1).value = "Year 1 Proration Factor"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = prorationFactor; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = "0.00";
+  r++;
+  ws.getCell(r, 1).value = "Projection Period"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = `${yearCount} Years`; ws.getCell(r, 2).font = BOLD_FONT;
+}
+
+function buildConsultantNotesTab(ws: ExcelJS.Worksheet, consultant: ConsultantSummary) {
+  ws.columns = [{ width: 25 }, { width: 80 }];
+
+  let r = 1;
+  ws.getCell(r, 1).value = "SchoolStack Budget — Consultant Notes";
+  ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: "FF1E293B" }, name: "Calibri" };
+  ws.mergeCells(r, 1, r, 2);
+  ws.getRow(r).height = 32;
+
+  r = 3;
+  styleSectionRow(ws, r, 2);
+  ws.getCell(r, 1).value = "EXECUTIVE SUMMARY";
+
+  r++;
+  ws.getCell(r, 1).value = consultant.executiveSummary || "";
+  ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.mergeCells(r, 1, r, 2);
+  ws.getRow(r).height = 40;
+  ws.getRow(r).alignment = { wrapText: true, vertical: "top" };
+
+  r += 2;
+  styleSectionRow(ws, r, 2);
+  ws.getCell(r, 1).value = "LENDER READINESS";
+
+  r++;
+  ws.getCell(r, 1).value = "Status"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = consultant.lenderReadiness || ""; ws.getCell(r, 2).font = BOLD_FONT;
+  r++;
+  ws.getCell(r, 1).value = "Assessment"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = consultant.lenderReadinessExplanation || ""; ws.getCell(r, 2).font = NORMAL_FONT;
+  ws.getRow(r).alignment = { wrapText: true, vertical: "top" };
+  ws.getRow(r).height = 30;
+
+  r += 2;
+  ws.getCell(r, 1).value = "Biggest Strength"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = consultant.biggestStrength || ""; ws.getCell(r, 2).font = BOLD_FONT;
+  r++;
+  ws.getCell(r, 1).value = "Biggest Risk"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 2).value = consultant.biggestRisk || ""; ws.getCell(r, 2).font = BOLD_FONT;
+
+  if (consultant.recommendations && consultant.recommendations.length > 0) {
+    r += 2;
+    styleSectionRow(ws, r, 2);
+    ws.getCell(r, 1).value = "RECOMMENDATIONS";
+
+    for (const rec of consultant.recommendations) {
+      r++;
+      ws.getCell(r, 1).value = `[${rec.priority.toUpperCase()}] ${rec.title}`;
+      ws.getCell(r, 1).font = BOLD_FONT;
+      r++;
+      ws.getCell(r, 1).value = rec.description;
+      ws.getCell(r, 1).font = NORMAL_FONT;
+      ws.mergeCells(r, 1, r, 2);
+      ws.getRow(r).alignment = { wrapText: true, vertical: "top" };
+      ws.getRow(r).height = 40;
+    }
+  }
+}
+
+function buildPriorYearTab(ws: ExcelJS.Worksheet, snapshot: PriorYearSnapshot) {
+  ws.columns = [{ width: 35 }, { width: 25 }];
+
+  let r = 1;
+  ws.getCell(r, 1).value = "Prior-Year Snapshot";
+  ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: "FF1E293B" }, name: "Calibri" };
+  ws.mergeCells(r, 1, r, 2);
+  ws.getRow(r).height = 32;
+
+  r = 3;
+  styleSectionRow(ws, r, 2);
+  ws.getCell(r, 1).value = "PRIOR YEAR ACTUALS";
+
+  const items: [string, number | undefined, string][] = [
+    ["Ending Enrollment", snapshot.endingEnrollment, NUMBER_FORMAT],
+    ["Total Revenue", snapshot.totalRevenue, CURRENCY_FORMAT],
+    ["Total Expenses", snapshot.totalExpenses, CURRENCY_FORMAT],
+    ["Ending Cash Balance", snapshot.endingCash, CURRENCY_FORMAT],
+  ];
+
+  for (const [label, value, fmt] of items) {
+    r++;
+    ws.getCell(r, 1).value = label; ws.getCell(r, 1).font = NORMAL_FONT;
+    ws.getCell(r, 2).value = value ?? 0; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = fmt;
+  }
+
+  if (snapshot.totalRevenue && snapshot.totalExpenses) {
+    r++;
+    ws.getCell(r, 1).value = "Net Income (Prior Year)"; ws.getCell(r, 1).font = NORMAL_FONT;
+    ws.getCell(r, 2).value = snapshot.totalRevenue - snapshot.totalExpenses;
+    ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
+  }
+  if (snapshot.endingCash !== undefined && snapshot.totalExpenses && snapshot.totalExpenses > 0) {
+    r++;
+    ws.getCell(r, 1).value = "Cash Reserve (Months)"; ws.getCell(r, 1).font = NORMAL_FONT;
+    ws.getCell(r, 2).value = Math.round(snapshot.endingCash / (snapshot.totalExpenses / 12) * 10) / 10;
+    ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = "0.0";
   }
 }
 
@@ -888,7 +1047,7 @@ interface SummaryLayout {
   studentsRef: (colLetter: string) => string;
 }
 
-function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount: number, cols: number, yearHeaders: string[], layout: SummaryLayout) {
+function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount: number, cols: number, yearHeaders: string[], layout: SummaryLayout, consultant?: ConsultantSummary) {
   ws.columns = [{ width: 35 }, ...Array(yearCount).fill({ width: 18 })];
 
   let r = 1;
@@ -1031,6 +1190,39 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const cell = ws.getCell(r, y + 2);
     cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${c(niSumRow, y + 2)}/${c(revSumRow, y + 2)})` };
     cell.numFmt = PERCENT_FORMAT; styleBoldDataCell(cell);
+  }
+
+  if (consultant) {
+    r += 2;
+    styleSectionRow(ws, r, cols);
+    ws.getCell(r, 1).value = "LENDER READINESS ASSESSMENT";
+
+    r++;
+    ws.getCell(r, 1).value = "Readiness Status"; ws.getCell(r, 1).font = NORMAL_FONT;
+    ws.getCell(r, 2).value = consultant.lenderReadiness || "";
+    ws.getCell(r, 2).font = {
+      bold: true,
+      size: 11,
+      name: "Calibri",
+      color: { argb: consultant.lenderReadiness === "Strong" ? "FF16A34A" : consultant.lenderReadiness === "Needs Work" ? "FFD97706" : "FFDC2626" },
+    };
+
+    r++;
+    ws.getCell(r, 1).value = "Assessment"; ws.getCell(r, 1).font = NORMAL_FONT;
+    ws.getCell(r, 2).value = consultant.lenderReadinessExplanation || ""; ws.getCell(r, 2).font = NORMAL_FONT;
+    ws.mergeCells(r, 2, r, cols);
+    ws.getRow(r).alignment = { wrapText: true, vertical: "top" };
+    ws.getRow(r).height = 30;
+
+    r++;
+    ws.getCell(r, 1).value = "Biggest Strength"; ws.getCell(r, 1).font = NORMAL_FONT;
+    ws.getCell(r, 2).value = consultant.biggestStrength || ""; ws.getCell(r, 2).font = BOLD_FONT;
+    ws.mergeCells(r, 2, r, cols);
+
+    r++;
+    ws.getCell(r, 1).value = "Biggest Risk"; ws.getCell(r, 1).font = NORMAL_FONT;
+    ws.getCell(r, 2).value = consultant.biggestRisk || ""; ws.getCell(r, 2).font = BOLD_FONT;
+    ws.mergeCells(r, 2, r, cols);
   }
 
   ws.views = [{ state: "frozen", ySplit: financialHeaderRow, xSplit: 1 }];
