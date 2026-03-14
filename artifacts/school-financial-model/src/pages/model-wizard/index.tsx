@@ -56,6 +56,7 @@ export function ModelWizardPage() {
       },
       enrollment: {},
       revenue: { annualTuitionIncrease: 3 },
+      revenueRows: undefined as any,
       staffing: { studentsPerTeacher: 12, benefitsRate: 20 },
       facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0, annualSalaryIncrease: 3, generalCostInflation: 3 },
       priorYearSnapshot: {},

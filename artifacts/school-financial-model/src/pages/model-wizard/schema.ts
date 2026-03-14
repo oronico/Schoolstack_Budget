@@ -32,16 +32,27 @@ export const enrollmentSchema = z.object({
   year5: z.coerce.number().min(0, "Required").optional(),
 });
 
+export const revenueRowSchema = z.object({
+  id: z.string(),
+  category: z.enum(["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "grants_contributions", "other_revenue"]),
+  lineItem: z.string(),
+  enabled: z.boolean(),
+  driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_base"]),
+  amounts: z.array(z.number()),
+  percentBase: z.string().optional(),
+  note: z.string().optional(),
+});
+
 export const revenueSchema = z.object({
-  tuitionPerStudent: z.coerce.number().min(0),
-  annualTuitionIncrease: z.coerce.number().min(0).max(100),
-  esaRevenuePerStudent: z.coerce.number().min(0),
-  publicFundingPerStudent: z.coerce.number().min(0),
-  otherRevenuePerStudent: z.coerce.number().min(0),
-  scholarshipRate: z.coerce.number().min(0).max(100),
-  annualDonations: z.coerce.number().min(0),
-  foundationGrants: z.coerce.number().min(0),
-  capitalGifts: z.coerce.number().min(0),
+  tuitionPerStudent: z.coerce.number().min(0).optional(),
+  annualTuitionIncrease: z.coerce.number().min(0).max(100).optional(),
+  esaRevenuePerStudent: z.coerce.number().min(0).optional(),
+  publicFundingPerStudent: z.coerce.number().min(0).optional(),
+  otherRevenuePerStudent: z.coerce.number().min(0).optional(),
+  scholarshipRate: z.coerce.number().min(0).max(100).optional(),
+  annualDonations: z.coerce.number().min(0).optional(),
+  foundationGrants: z.coerce.number().min(0).optional(),
+  capitalGifts: z.coerce.number().min(0).optional(),
 });
 
 export const staffingSchema = z.object({
@@ -78,6 +89,7 @@ export const fullModelSchema = z.object({
   schoolProfile: schoolProfileSchema.optional(),
   enrollment: enrollmentSchema.optional(),
   revenue: revenueSchema.optional(),
+  revenueRows: z.array(revenueRowSchema).optional(),
   staffing: staffingSchema.optional(),
   facilities: facilitiesSchema.optional(),
   priorYearSnapshot: priorYearSnapshotSchema.optional(),
