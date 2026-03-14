@@ -230,6 +230,11 @@ router.post("/models/:id/duplicate", authMiddleware, async (req: AuthRequest, re
       schoolId: existing.schoolId,
       schoolStage: existing.schoolStage,
       fundingProfile: existing.fundingProfile,
+      priorYearSnapshotJson: existing.priorYearSnapshotJson,
+      staffingRowsJson: existing.staffingRowsJson,
+      revenueRowsJson: existing.revenueRowsJson,
+      expenseRowsJson: existing.expenseRowsJson,
+      capitalAndDebtRowsJson: existing.capitalAndDebtRowsJson,
     }).returning();
 
     await trackEvent("duplicated_model", req.userId, { sourceModelId: existing.id, newModelId: model.id });
