@@ -288,7 +288,11 @@ export async function generateWorkbook(rawData: Record<string, unknown>): Promis
     const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders);
 
     buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow);
-    buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders);
+    buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders, {
+      fmRevenueRow: 2, fmStaffRow: 3, fmExpenseRow: 4, fmCapDebtRow: 5,
+      fmTotalExpRow: 6, fmNIRow: 7, fmCumNIRow: 8, fmReserveRow: 9,
+      studentsRef: (cl) => `'Revenue Schedule'!${cl}2`,
+    });
   } else {
     const profileWs = wb.addWorksheet("School Profile");
     buildProfileTab(profileWs, sp, enrollmentByYear, yearCount);
@@ -297,7 +301,11 @@ export async function generateWorkbook(rawData: Record<string, unknown>): Promis
     buildLegacyPnLTab(pnlWs, data, enrollmentByYear, yearCount, cols, yearHeaders, prorationFactor);
 
     const summaryWs = wb.addWorksheet("Summary");
-    buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders);
+    buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders, {
+      fmRevenueRow: 3, fmStaffRow: 4, fmExpenseRow: 5, fmCapDebtRow: 0,
+      fmTotalExpRow: 6, fmNIRow: 7, fmCumNIRow: 8, fmReserveRow: 9,
+      studentsRef: (cl) => `'Financial Model'!${cl}2`,
+    });
   }
 
   const arrayBuffer = await wb.xlsx.writeBuffer();
@@ -868,7 +876,19 @@ function buildPnLTab(
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
 }
 
-function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount: number, cols: number, yearHeaders: string[]) {
+interface SummaryLayout {
+  fmRevenueRow: number;
+  fmStaffRow: number;
+  fmExpenseRow: number;
+  fmCapDebtRow: number;
+  fmTotalExpRow: number;
+  fmNIRow: number;
+  fmCumNIRow: number;
+  fmReserveRow: number;
+  studentsRef: (colLetter: string) => string;
+}
+
+function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount: number, cols: number, yearHeaders: string[], layout: SummaryLayout) {
   ws.columns = [{ width: 35 }, ...Array(yearCount).fill({ width: 18 })];
 
   let r = 1;
@@ -882,83 +902,138 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   ws.getCell(r, 1).font = { italic: true, size: 10, color: { argb: "FF888888" }, name: "Calibri" };
 
   r = 4;
-  styleSectionRow(ws, r, 2);
+  styleSectionRow(ws, r, cols);
   ws.getCell(r, 1).value = "SCHOOL INFORMATION";
 
-  r = 5; ws.getCell(r, 1).value = "School Name"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = sp.schoolName || ""; ws.getCell(r, 2).font = BOLD_FONT;
-  r = 6; ws.getCell(r, 1).value = "School Type"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = schoolTypeDisplay(sp.schoolType); ws.getCell(r, 2).font = NORMAL_FONT;
-  r = 7; ws.getCell(r, 1).value = "State"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = sp.state || ""; ws.getCell(r, 2).font = NORMAL_FONT;
-  r = 8; ws.getCell(r, 1).value = "Fiscal Year Start"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = MONTH_NAMES[sp.fiscalYearStartMonth || 7] || "July"; ws.getCell(r, 2).font = NORMAL_FONT;
+  const infoItems: [string, string][] = [
+    ["School Name", sp.schoolName || ""],
+    ["School Type", schoolTypeDisplay(sp.schoolType)],
+    ["School Stage", sp.schoolStage === "operating_school" ? "Operating School" : "New School"],
+    ["State", sp.state || ""],
+    ["Fiscal Year Start", MONTH_NAMES[sp.fiscalYearStartMonth || 7] || "July"],
+    ["Max Student Capacity", String(sp.maxCapacity || "N/A")],
+  ];
+  for (const [label, value] of infoItems) {
+    r++;
+    ws.getCell(r, 1).value = label; ws.getCell(r, 1).font = NORMAL_FONT;
+    ws.getCell(r, 2).value = value; ws.getCell(r, 2).font = BOLD_FONT;
+  }
 
-  r = 10;
+  const fmTab = "'Financial Model'";
+
+  r += 2;
   ws.getRow(r).values = yearHeaders;
   styleHeaderRow(ws, r, cols);
+  const financialHeaderRow = r;
 
-  const fmTabName = "'Financial Model'";
-  const summaryRows = [
-    { label: "Net Revenue", row: 11, fmRow: 2, fmt: CURRENCY_FORMAT, bold: false },
-    { label: "Total Expenses", row: 12, fmRow: 6, fmt: CURRENCY_FORMAT, bold: false },
-    { label: "Net Income", row: 13, fmRow: 7, fmt: CURRENCY_FORMAT, bold: true },
-    { label: "Cumulative Net Income", row: 14, fmRow: 8, fmt: CURRENCY_FORMAT, bold: false },
-    { label: "Operating Reserve (Months)", row: 15, fmRow: 9, fmt: "0.0", bold: false },
-  ];
-
-  for (const item of summaryRows) {
-    ws.getCell(item.row, 1).value = item.label;
-    ws.getCell(item.row, 1).font = item.bold ? BOLD_FONT : NORMAL_FONT;
-
-    for (let y = 0; y < yearCount; y++) {
-      const colLetter = String.fromCharCode(66 + y);
-      const cell = ws.getCell(item.row, y + 2);
-      cell.value = { formula: `${fmTabName}!${colLetter}${item.fmRow}` };
-      cell.numFmt = item.fmt;
-      if (item.bold) styleBoldDataCell(cell); else styleDataCell(cell);
-    }
+  r++;
+  ws.getCell(r, 1).value = "Total Revenue"; ws.getCell(r, 1).font = NORMAL_FONT;
+  const revSumRow = r;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmRevenueRow}` };
+    cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
   }
-  styleSectionRow(ws, 13, cols);
 
-  r = 17;
+  r++;
+  ws.getCell(r, 1).value = "Personnel Costs"; ws.getCell(r, 1).font = NORMAL_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmStaffRow}` };
+    cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
+  }
+
+  r++;
+  ws.getCell(r, 1).value = "Operating Expenses"; ws.getCell(r, 1).font = NORMAL_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmExpenseRow}` };
+    cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
+  }
+
+  r++;
+  ws.getCell(r, 1).value = "Total Expenses"; ws.getCell(r, 1).font = BOLD_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmTotalExpRow}` };
+    cell.numFmt = CURRENCY_FORMAT; styleBoldDataCell(cell);
+  }
   styleSectionRow(ws, r, cols);
-  ws.getCell(r, 1).value = "KEY METRICS";
 
-  const metricRows = [
-    { label: "Revenue per Student", row: 18 },
-    { label: "Personnel Cost as % of Revenue", row: 19 },
-    { label: "Net Margin %", row: 20 },
-  ];
+  r++;
+  ws.getCell(r, 1).value = "Net Income"; ws.getCell(r, 1).font = BOLD_FONT;
+  const niSumRow = r;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmNIRow}` };
+    cell.numFmt = CURRENCY_FORMAT; styleBoldDataCell(cell);
+  }
+  styleSectionRow(ws, r, cols);
 
-  for (const item of metricRows) {
-    ws.getCell(item.row, 1).value = item.label;
-    ws.getCell(item.row, 1).font = NORMAL_FONT;
-
-    for (let y = 0; y < yearCount; y++) {
-      const colLetter = String.fromCharCode(66 + y);
-      const cell = ws.getCell(item.row, y + 2);
-      const revRef = `${fmTabName}!${colLetter}2`;
-
-      switch (item.label) {
-        case "Revenue per Student":
-          cell.value = { formula: `IF('School Profile'!B${13 + y}=0,0,${revRef}/'School Profile'!B${13 + y})` };
-          cell.numFmt = CURRENCY_FORMAT;
-          break;
-        case "Personnel Cost as % of Revenue":
-          cell.value = { formula: `IF(${revRef}=0,0,${fmTabName}!${colLetter}3/${revRef})` };
-          cell.numFmt = PERCENT_FORMAT;
-          break;
-        case "Net Margin %":
-          cell.value = { formula: `IF(${revRef}=0,0,${fmTabName}!${colLetter}7/${revRef})` };
-          cell.numFmt = PERCENT_FORMAT;
-          break;
-      }
-      styleDataCell(cell);
-    }
+  r++;
+  ws.getCell(r, 1).value = "Cumulative Net Income"; ws.getCell(r, 1).font = NORMAL_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmCumNIRow}` };
+    cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
   }
 
-  ws.views = [{ state: "frozen", ySplit: 10, xSplit: 1 }];
+  r++;
+  ws.getCell(r, 1).value = "Operating Reserve (Months)"; ws.getCell(r, 1).font = NORMAL_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmReserveRow}` };
+    cell.numFmt = "0.0"; styleDataCell(cell);
+  }
+
+  r += 2;
+  styleSectionRow(ws, r, cols);
+  ws.getCell(r, 1).value = "KEY RATIOS";
+
+  r++;
+  ws.getCell(r, 1).value = "Revenue per Student"; ws.getCell(r, 1).font = NORMAL_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    const studRef = layout.studentsRef(cl);
+    cell.value = { formula: `IF(${studRef}=0,0,${c(revSumRow, y + 2)}/${studRef})` };
+    cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
+  }
+
+  r++;
+  ws.getCell(r, 1).value = "Personnel Cost as % of Revenue"; ws.getCell(r, 1).font = NORMAL_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${fmTab}!${cl}${layout.fmStaffRow}/${c(revSumRow, y + 2)})` };
+    cell.numFmt = PERCENT_FORMAT; styleDataCell(cell);
+  }
+
+  r++;
+  ws.getCell(r, 1).value = "Operating Cost as % of Revenue"; ws.getCell(r, 1).font = NORMAL_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${fmTab}!${cl}${layout.fmExpenseRow}/${c(revSumRow, y + 2)})` };
+    cell.numFmt = PERCENT_FORMAT; styleDataCell(cell);
+  }
+
+  r++;
+  ws.getCell(r, 1).value = "Net Margin %"; ws.getCell(r, 1).font = BOLD_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cell = ws.getCell(r, y + 2);
+    cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${c(niSumRow, y + 2)}/${c(revSumRow, y + 2)})` };
+    cell.numFmt = PERCENT_FORMAT; styleBoldDataCell(cell);
+  }
+
+  ws.views = [{ state: "frozen", ySplit: financialHeaderRow, xSplit: 1 }];
 }
 
 function buildLegacyPnLTab(

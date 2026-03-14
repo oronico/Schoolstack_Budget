@@ -110,6 +110,13 @@ interface CapitalDebtRow {
   loanTermYears?: number;
 }
 
+interface PriorYearSnapshot {
+  endingEnrollment?: number;
+  totalRevenue?: number;
+  totalExpenses?: number;
+  endingCash?: number;
+}
+
 interface ModelData {
   schoolProfile?: SchoolProfile;
   enrollment?: Enrollment;
@@ -120,6 +127,7 @@ interface ModelData {
   facilities?: LegacyFacilities;
   expenseRows?: ExpenseRow[];
   capitalAndDebtRows?: CapitalDebtRow[];
+  priorYearSnapshot?: PriorYearSnapshot;
 }
 
 export interface KeyMetric {
@@ -937,6 +945,166 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       description: `By Year ${lastYearNum}, you'll only use ${pct(capacityUtilLastYear)} of your ${sp.maxCapacity}-student capacity. A smaller, less expensive facility could improve your cost structure.`,
       priority: "low",
     });
+  }
+
+  const schoolType = sp.schoolType || "";
+  if (schoolType === "charter" || schoolType === "charter_school") {
+    if (publicRevenuePct < 0.5) {
+      recommendations.push({
+        title: "Verify Charter Funding Assumptions",
+        description: "Charter schools typically receive 50–80% of revenue from per-pupil public funding. Your model shows less than 50% from public sources — confirm your per-pupil allocation matches your state's formula and that you're capturing all eligible funding streams.",
+        priority: "medium",
+      });
+    }
+    if (y1.students < 100) {
+      recommendations.push({
+        title: "Charter Minimum Enrollment Warning",
+        description: "Many charter authorizers expect schools to demonstrate viability at 100+ students. Your Year 1 enrollment may be viewed as too small for a sustainable charter. Consider whether your authorizer has minimum enrollment requirements.",
+        priority: "medium",
+      });
+    }
+  }
+
+  if (schoolType === "private" || schoolType === "private_school" || schoolType === "independent") {
+    const tuitionPct = y1.totalRevenue > 0 ? y1.tuitionRevenue / y1.totalRevenue : 0;
+    if (tuitionPct < 0.6) {
+      recommendations.push({
+        title: "Strengthen Tuition Revenue Base",
+        description: `Private schools typically derive 60–85% of revenue from tuition. At ${pct(tuitionPct)}, your tuition revenue share is lower than typical — ensure your pricing reflects the full cost of education and is competitive for your market.`,
+        priority: "medium",
+      });
+    }
+  }
+
+  if (schoolType === "hybrid" || schoolType === "micro") {
+    if (y1.students > 0 && revenuePerStudent < 8000) {
+      recommendations.push({
+        title: "Hybrid/Micro Model Revenue Check",
+        description: `Hybrid and micro schools often have higher per-student costs due to smaller cohorts. At ${fmt(revenuePerStudent)} per student, consider whether your pricing covers the premium instructional model.`,
+        priority: "medium",
+      });
+    }
+  }
+
+  if (hasRowData) {
+    const staffingRows = data.staffingRows || [];
+    const expenseRows = data.expenseRows || [];
+    const capDebtRows = data.capitalAndDebtRows || [];
+
+    const occupancyCost = expenseRows
+      .filter(r => r.enabled && r.category === "occupancy_facility")
+      .reduce((sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0);
+    const occupancyPct = y1.totalRevenue > 0 ? occupancyCost / y1.totalRevenue : 0;
+    if (occupancyPct > 0.25) {
+      recommendations.push({
+        title: "Occupancy Costs Are High",
+        description: `Facility and occupancy expenses represent ${pct(occupancyPct)} of Year 1 revenue. Most sustainable schools keep occupancy below 20–25%. Consider co-locating, negotiating lease terms, or exploring facility grants.`,
+        priority: "high",
+      });
+    }
+
+    const contractedNonPayroll = staffingRows.filter(
+      r => r.employmentType === "contract" && !r.payrollLike
+    );
+    if (contractedNonPayroll.length > 0) {
+      const contractedTotal = contractedNonPayroll.reduce((sum, r) => sum + r.fte * r.annualizedRate, 0);
+      const contractedPct = y1.totalRevenue > 0 ? contractedTotal / y1.totalRevenue : 0;
+      if (contractedPct > 0.15) {
+        recommendations.push({
+          title: "High Contracted Personnel Costs",
+          description: `Contracted (non-payroll) personnel represent ${pct(contractedPct)} of revenue (${fmt(contractedTotal)}). This is unusual for schools — verify these aren't roles that should be full-time hires with benefits, which may be more cost-effective long-term.`,
+          priority: "medium",
+        });
+      }
+    }
+
+    const founderRoles = staffingRows.filter(r =>
+      r.roleName.toLowerCase().includes("founder") ||
+      r.roleName.toLowerCase().includes("head of school") ||
+      r.roleName.toLowerCase().includes("executive director")
+    );
+    if (founderRoles.length > 0) {
+      const founderComp = founderRoles.reduce((sum, r) => sum + r.fte * r.annualizedRate, 0);
+      if (founderComp < 50000 && founderComp > 0) {
+        recommendations.push({
+          title: "Founder Compensation May Be Unsustainably Low",
+          description: `Founder/leader compensation of ${fmt(founderComp)} is below market. While common in startup years, plan for competitive compensation by Year 2–3 to retain leadership and satisfy lender expectations.`,
+          priority: "low",
+        });
+      }
+    }
+
+    const techCost = expenseRows
+      .filter(r => r.enabled && r.category === "technology")
+      .reduce((sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0);
+    const techPerStudent = y1.students > 0 ? techCost / y1.students : 0;
+    if (techPerStudent > 2000) {
+      recommendations.push({
+        title: "Technology Costs Per Student Are High",
+        description: `Technology costs average ${fmt(techPerStudent)} per student. While tech-forward models may justify this, most schools target $500–$1,500 per student. Verify your hardware refresh cycle and software licensing costs are optimized.`,
+        priority: "medium",
+      });
+    }
+
+    const totalDebt = capDebtRows
+      .filter(r => r.enabled && r.isLoan)
+      .reduce((sum, r) => sum + (r.loanPrincipal || 0), 0);
+    if (totalDebt > 0 && y1.totalRevenue > 0) {
+      const debtToRevenue = totalDebt / y1.totalRevenue;
+      if (debtToRevenue > 3) {
+        recommendations.push({
+          title: "Debt Load Is Heavy Relative to Revenue",
+          description: `Total debt of ${fmt(totalDebt)} is ${debtToRevenue.toFixed(1)}x Year 1 revenue. Lenders typically prefer total debt below 2–3x annual revenue for startup schools. Consider phasing capital expenditures or seeking grant funding for initial build-out.`,
+          priority: "high",
+        });
+      }
+    }
+  }
+
+  const priorYear = data.priorYearSnapshot;
+  if (sp.schoolStage === "operating_school" && priorYear) {
+    if (priorYear.totalRevenue && priorYear.totalRevenue > 0 && y1.totalRevenue > 0) {
+      const revChange = (y1.totalRevenue - priorYear.totalRevenue) / priorYear.totalRevenue;
+      if (revChange > 0.3) {
+        recommendations.push({
+          title: "Revenue Projection Jump from Prior Year",
+          description: `Year 1 projects ${pct(revChange)} revenue growth over last year's actual ${fmt(priorYear.totalRevenue)}. Growth over 30% in a single year requires clear justification — enrollment surge, new funding stream, or tuition increase.`,
+          priority: "medium",
+        });
+      }
+    }
+    if (priorYear.totalExpenses && priorYear.totalExpenses > 0 && y1.totalExpenses > 0) {
+      const expChange = (y1.totalExpenses - priorYear.totalExpenses) / priorYear.totalExpenses;
+      if (expChange > 0.25) {
+        recommendations.push({
+          title: "Expense Growth Exceeds Prior Year Trend",
+          description: `Year 1 expenses are ${pct(expChange)} above last year's actual ${fmt(priorYear.totalExpenses)}. Verify that planned staff additions, facility costs, or program expansions justify this increase.`,
+          priority: "medium",
+        });
+      }
+    }
+    if (priorYear.endingCash !== undefined && priorYear.endingCash >= 0) {
+      const priorReserveMonths = priorYear.totalExpenses && priorYear.totalExpenses > 0
+        ? priorYear.endingCash / (priorYear.totalExpenses / 12)
+        : 0;
+      if (priorReserveMonths < 1.5) {
+        risks.push(`Prior year ended with only ${priorReserveMonths.toFixed(1)} months of cash reserves`);
+        recommendations.push({
+          title: "Address Cash Reserve Deficit from Prior Year",
+          description: `Last year ended with ${fmt(priorYear.endingCash)} in cash — only ${priorReserveMonths.toFixed(1)} months of expenses. Building reserves to 3+ months should be a priority. Consider a bridge line of credit while growing into profitability.`,
+          priority: "high",
+        });
+      }
+    }
+    if (priorYear.endingEnrollment && priorYear.endingEnrollment > 0 && enrollmentByYear[0] > 0) {
+      const enrollDelta = enrollmentByYear[0] - priorYear.endingEnrollment;
+      const enrollGrowthFromPrior = enrollDelta / priorYear.endingEnrollment;
+      if (enrollGrowthFromPrior > 0.25) {
+        enrollmentGuidance.push(
+          `Year 1 projects ${enrollmentByYear[0]} students, up ${Math.round(enrollGrowthFromPrior * 100)}% from last year's ${priorYear.endingEnrollment}. Verify your recruitment pipeline supports this growth.`,
+        );
+      }
+    }
   }
 
   while (recommendations.length < 3) {
