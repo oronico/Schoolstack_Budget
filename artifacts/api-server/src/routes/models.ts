@@ -306,7 +306,8 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
     }
 
     const data = model.data as Record<string, unknown>;
-    const schoolName = (data?.schoolProfile as any)?.schoolName || "School";
+    const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const fileName = `${schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_5-Year_Financial_Model.xlsx`;
 
     const buffer = await generateWorkbook(data);

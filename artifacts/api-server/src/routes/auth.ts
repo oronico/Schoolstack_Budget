@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-zod";
 import { authMiddleware, generateToken, type AuthRequest } from "../middlewares/auth";
 import { trackEvent } from "../lib/track-event";
+import { sendPasswordResetEmail } from "../lib/mailer";
 
 const router: IRouter = Router();
 
@@ -118,7 +119,7 @@ router.post("/auth/forgot-password", async (req, res) => {
       const resetTokenExpiry = new Date(Date.now() + 3600000);
       await db.update(usersTable).set({ resetToken, resetTokenExpiry }).where(eq(usersTable.id, user.id));
       await trackEvent("requested_password_reset", user.id);
-      console.log(`Password reset requested for ${email}. Token generated (use email service in production).`);
+      await sendPasswordResetEmail(user.email, resetToken);
     }
 
     res.json({ message: "If an account with that email exists, a reset link has been sent." });

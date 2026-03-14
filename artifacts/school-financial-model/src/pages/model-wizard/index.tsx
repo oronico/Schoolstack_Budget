@@ -8,7 +8,7 @@ import { Loader2, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { cn } from "@/lib/utils";
 
-import { fullModelSchema } from "./schema";
+import { fullModelSchema, type FullModelData } from "./schema";
 import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
 import { RevenueStep } from "./steps/RevenueStep";
@@ -81,7 +81,7 @@ export function ModelWizardPage() {
           data: {
             name: debouncedValues.schoolProfile?.schoolName || initialData.name,
             currentStep,
-            data: debouncedValues as any,
+            data: debouncedValues as Record<string, unknown>,
           }
         });
         setLastSaved(new Date());
@@ -120,14 +120,16 @@ export function ModelWizardPage() {
 
   const handleNext = async () => {
     // Validate current step fields before proceeding
-    let fieldsToValidate: string[] = [];
-    if (currentStep === 1) fieldsToValidate = ['schoolProfile'];
-    if (currentStep === 2) fieldsToValidate = ['enrollment'];
-    if (currentStep === 3) fieldsToValidate = ['revenue'];
-    if (currentStep === 4) fieldsToValidate = ['staffing'];
-    if (currentStep === 5) fieldsToValidate = ['facilities'];
+    const stepFieldMap: Record<number, Array<keyof FullModelData>> = {
+      1: ['schoolProfile'],
+      2: ['enrollment'],
+      3: ['revenue'],
+      4: ['staffing'],
+      5: ['facilities'],
+    };
+    const fieldsToValidate = stepFieldMap[currentStep] ?? [];
 
-    const isValid = await methods.trigger(fieldsToValidate as any);
+    const isValid = await methods.trigger(fieldsToValidate);
     if (isValid) {
       setCurrentStep(s => Math.min(s + 1, STEPS.length));
       window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -52,3 +52,5 @@ export const fullModelSchema = z.object({
   staffing: staffingSchema.optional(),
   facilities: facilitiesSchema.optional(),
 });
+
+export type FullModelData = z.infer<typeof fullModelSchema>;

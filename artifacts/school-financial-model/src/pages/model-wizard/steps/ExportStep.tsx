@@ -21,10 +21,13 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       if (!res.ok) throw new Error("Export failed");
       
       const blob = await res.blob();
+      const disposition = res.headers.get("content-disposition") || "";
+      const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
+      const filename = filenameMatch?.[1] || `School_Financial_Model_${modelId}.xlsx`;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `School_Financial_Model_${modelId}.xlsx`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
