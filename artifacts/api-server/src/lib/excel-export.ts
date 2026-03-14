@@ -254,7 +254,7 @@ function computeDriverValueExport(amounts: number[] | undefined, yearIdx: number
 function schoolTypeDisplay(type?: string, otherLabel?: string): string {
   switch (type) {
     case "charter_school": return "Charter School";
-    case "homeschool_coop": return "Home School Co-Op";
+    case "homeschool_coop": return "Homeschool Co-Op";
     case "learning_pod": return "Learning Pod";
     case "microschool": return "Microschool";
     case "private_school": return "Private School";

@@ -1067,7 +1067,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     if (y1.students > 0 && staffingCostPct > 0.65) {
       recommendations.push({
         title: "Co-Op Staffing Cost Check",
-        description: `Home school co-ops typically rely on a mix of paid instructors and parent volunteers. At ${pct(staffingCostPct)} of revenue going to staffing, consider whether your co-op model can leverage parent-taught sessions to reduce costs.`,
+        description: `Homeschool co-ops typically rely on a mix of paid instructors and parent volunteers. At ${pct(staffingCostPct)} of revenue going to staffing, consider whether your co-op model can leverage parent-taught sessions to reduce costs.`,
         priority: "medium",
       });
     }

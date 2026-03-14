@@ -157,7 +157,7 @@ export const ENTITY_TYPE_LABELS: Record<string, string> = {
 
 export const SCHOOL_TYPE_LABELS: Record<string, string> = {
   charter_school: "Charter School",
-  homeschool_coop: "Home School Co-Op",
+  homeschool_coop: "Homeschool Co-Op",
   learning_pod: "Learning Pod",
   microschool: "Microschool",
   private_school: "Private School",
