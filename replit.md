@@ -4,6 +4,20 @@
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
+**Product: SchoolStack Budget** (by SchoolStack.ai)
+A lightweight SaaS web app for school founders to create 5-year financial models with user accounts, saved drafts, CFO consultant feedback, and professional Excel exports.
+
+## Brand System
+
+- **Primary color**: Amber #D97706 (buttons, CTAs, active states, progress indicators)
+- **Anchor/Trust**: Deep Navy #1E293B (headings, foreground text)
+- **Accent/Action**: Teal #0D9488 (secondary actions, accent highlights)
+- **Success**: Sage Green #16A34A
+- **Alert**: Rose #E11D48
+- **Background**: Cream #FAF9F7
+- **Display font**: Quicksand Bold (headings)
+- **Body font**: Nunito Regular (body text, UI labels)
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
@@ -15,24 +29,28 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Frontend**: React + Vite + Tailwind CSS v4
+- **Auth**: JWT (bcryptjs for passwords, jsonwebtoken for tokens)
+- **Excel export**: ExcelJS
 
 ## Structure
 
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server
+│   └── school-financial-model/  # React + Vite frontend
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
 ├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+│   └── src/                # Individual .ts scripts
+├── pnpm-workspace.yaml
+├── tsconfig.base.json
+├── tsconfig.json
+└── package.json
 ```
 
 ## TypeScript & Composite Projects
@@ -57,22 +75,30 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - Entry: `src/index.ts` — reads `PORT`, starts Express
 - App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
 - Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
+- Auth: `src/routes/auth.ts` — register, login, logout, /me, forgot-password, reset-password (JWT-based)
+- Models: `src/routes/models.ts` — CRUD + duplicate + archive + export endpoints
 - Admin: `src/routes/admin.ts` — `GET /api/admin/analytics` returns aggregate analytics (requires auth + admin). Admin check via `src/middlewares/admin.ts` verifies user email is in `ADMIN_EMAILS` env var (comma-separated list).
+- Consultant: `GET /api/models/:id/consultant` — deterministic CFO rules engine analysis
+- Excel export: `src/lib/excel-export.ts` — generates 7-tab workbook with real formulas
+- Event tracking: `src/lib/track-event.ts` — best-effort event tracking helper
 - Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+
+### `artifacts/school-financial-model` (`@workspace/school-financial-model`)
+
+React + Vite frontend (Tailwind CSS v4). Amber-forward brand with Quicksand/Nunito typography.
+
+- Landing page, auth screens (register/login/forgot-password/reset-password)
+- Dashboard with model management (create, duplicate, archive, delete)
+- 8-step model wizard: Profile → Enrollment → Revenue → Staffing → Facilities → Review → Consultant → Export
+- Admin analytics page at /admin (protected by email allowlist)
+- Auth context with JWT stored in localStorage, fetch interceptor for Bearer token injection
 
 ### `lib/db` (`@workspace/db`)
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+Database layer using Drizzle ORM with PostgreSQL.
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas
-- Tables: `users` (role, lastSeenAt), `schools`, `financial_models` (status, lastExportedAt, schoolId), `exports`, `events`
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
+- Tables: `users` (role, lastSeenAt), `schools`, `financial_models` (status, lastExportedAt, consultantSummaryJson), `exports`, `events`
+- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`)
 
 Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
 
@@ -87,11 +113,11 @@ Run codegen: `pnpm --filter @workspace/api-spec run codegen`
 
 ### `lib/api-zod` (`@workspace/api-zod`)
 
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
+Generated Zod schemas from the OpenAPI spec. Used by `api-server` for request and response validation.
 
 ### `lib/api-client-react` (`@workspace/api-client-react`)
 
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
+Generated React Query hooks and fetch client from the OpenAPI spec.
 
 ### `scripts` (`@workspace/scripts`)
 

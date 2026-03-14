@@ -72,17 +72,17 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
 
   const lenderColor =
     data.lenderReadiness === "Strong"
-      ? "text-emerald-600"
+      ? "text-green-700"
       : data.lenderReadiness === "Needs Work"
-        ? "text-amber-600"
-        : "text-red-600";
+        ? "text-amber-700"
+        : "text-rose-700";
 
   const lenderBg =
     data.lenderReadiness === "Strong"
-      ? "bg-emerald-50 border-emerald-200"
+      ? "bg-green-50 border-green-200"
       : data.lenderReadiness === "Needs Work"
         ? "bg-amber-50 border-amber-200"
-        : "bg-red-50 border-red-200";
+        : "bg-rose-50 border-rose-200";
 
   const LenderIcon =
     data.lenderReadiness === "Strong"
@@ -115,24 +115,24 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
-            <Star className="h-5 w-5 text-emerald-600" />
-            <h4 className="font-bold text-emerald-800 text-sm uppercase tracking-wider">
+            <Star className="h-5 w-5 text-green-700" />
+            <h4 className="font-bold text-green-800 text-sm uppercase tracking-wider">
               Biggest Strength
             </h4>
           </div>
-          <p className="text-emerald-900 font-medium">{data.biggestStrength}</p>
+          <p className="text-green-900 font-medium">{data.biggestStrength}</p>
         </div>
 
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <h4 className="font-bold text-red-800 text-sm uppercase tracking-wider">
+            <AlertTriangle className="h-5 w-5 text-rose-600" />
+            <h4 className="font-bold text-rose-800 text-sm uppercase tracking-wider">
               Biggest Risk
             </h4>
           </div>
-          <p className="text-red-900 font-medium">{data.biggestRisk}</p>
+          <p className="text-rose-900 font-medium">{data.biggestRisk}</p>
         </div>
       </div>
 
@@ -168,10 +168,10 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
             ) => {
               const priorityColor =
                 rec.priority === "high"
-                  ? "bg-red-100 text-red-700 border-red-200"
+                  ? "bg-rose-100 text-rose-700 border-rose-200"
                   : rec.priority === "medium"
                     ? "bg-amber-100 text-amber-700 border-amber-200"
-                    : "bg-blue-100 text-blue-700 border-blue-200";
+                    : "bg-teal-100 text-teal-700 border-teal-200";
 
               return (
                 <div
@@ -229,17 +229,17 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
 
               const statusColor =
                 metric.status === "good"
-                  ? "text-emerald-600"
+                  ? "text-green-700"
                   : metric.status === "warning"
-                    ? "text-amber-600"
-                    : "text-red-600";
+                    ? "text-amber-700"
+                    : "text-rose-700";
 
               const statusBg =
                 metric.status === "good"
-                  ? "bg-emerald-50"
+                  ? "bg-green-50"
                   : metric.status === "warning"
                     ? "bg-amber-50"
-                    : "bg-red-50";
+                    : "bg-rose-50";
 
               return (
                 <div

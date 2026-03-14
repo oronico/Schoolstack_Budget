@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useAuth } from "@/lib/auth-context";
-import { LogOut, User, LayoutDashboard } from "lucide-react";
+import { LogOut, LayoutDashboard } from "lucide-react";
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -10,11 +10,14 @@ export function Navbar() {
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
-            <img src={`${import.meta.env.BASE_URL}images/logo-icon.png`} alt="SchoolStack" className="h-6 w-6 object-contain" />
+            <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6 text-white">
+              <path d="M4 6h16M4 10h16M4 14h10M4 18h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M18 14l2 2 2-2M18 18l2 2 2-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
           <div>
-            <h1 className="font-display text-xl font-bold tracking-tight text-foreground leading-none">SchoolStack.ai</h1>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Financial Model Builder</p>
+            <h1 className="font-display text-xl font-bold tracking-tight text-foreground leading-none">SchoolStack Budget</h1>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">by SchoolStack.ai</p>
           </div>
         </Link>
 

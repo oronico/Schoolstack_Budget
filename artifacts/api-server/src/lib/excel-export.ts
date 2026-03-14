@@ -56,7 +56,7 @@ interface ModelData {
 const HEADER_FILL: ExcelJS.Fill = {
   type: "pattern",
   pattern: "solid",
-  fgColor: { argb: "FF1B3A5C" },
+  fgColor: { argb: "FF1E293B" },
 };
 const HEADER_FONT: Partial<ExcelJS.Font> = {
   bold: true,
@@ -72,7 +72,7 @@ const SECTION_FILL: ExcelJS.Fill = {
 const SECTION_FONT: Partial<ExcelJS.Font> = {
   bold: true,
   size: 11,
-  color: { argb: "FF1B3A5C" },
+  color: { argb: "FF1E293B" },
   name: "Calibri",
 };
 const INPUT_FILL: ExcelJS.Fill = {
@@ -155,7 +155,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>): Promis
   const fac = data.facilities || {};
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "SchoolStack.ai";
+  wb.creator = "SchoolStack Budget";
   wb.created = new Date();
 
   const assumptionsWs = wb.addWorksheet("Assumptions");
@@ -188,8 +188,8 @@ function buildAssumptionsTab(ws: ExcelJS.Worksheet, sp: SchoolProfile, en: Enrol
   ];
 
   let r = 1;
-  ws.getCell(r, 1).value = "School Financial Model — Assumptions";
-  ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: "FF1B3A5C" }, name: "Calibri" };
+  ws.getCell(r, 1).value = "SchoolStack Budget — Assumptions";
+  ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: "FF1E293B" }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 5);
   ws.getRow(r).height = 32;
 
@@ -579,12 +579,12 @@ function buildSummaryTab(ws: ExcelJS.Worksheet, sp: SchoolProfile) {
 
   let r = 1;
   ws.getCell(r, 1).value = "Financial Model Summary";
-  ws.getCell(r, 1).font = { bold: true, size: 16, color: { argb: "FF1B3A5C" }, name: "Calibri" };
+  ws.getCell(r, 1).font = { bold: true, size: 16, color: { argb: "FF1E293B" }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 6);
   ws.getRow(r).height = 36;
 
   r = 2;
-  ws.getCell(r, 1).value = "Prepared by SchoolStack.ai";
+  ws.getCell(r, 1).value = "Prepared by SchoolStack Budget";
   ws.getCell(r, 1).font = { italic: true, size: 10, color: { argb: "FF888888" }, name: "Calibri" };
 
   r = 4;

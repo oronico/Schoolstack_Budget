@@ -6,8 +6,8 @@ import { format } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  draft: { label: "Draft", className: "bg-amber-100 text-amber-700" },
-  complete: { label: "Complete", className: "bg-emerald-100 text-emerald-700" },
+  draft: { label: "Draft", className: "bg-amber-100 text-amber-800" },
+  complete: { label: "Complete", className: "bg-green-100 text-green-800" },
   archived: { label: "Archived", className: "bg-gray-100 text-gray-500" },
 };
 

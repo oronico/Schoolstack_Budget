@@ -9,15 +9,9 @@ export function LandingPage() {
       <Navbar />
       
       <main className="flex-1">
-        {/* Hero Section */}
         <section className="relative pt-20 pb-32 overflow-hidden">
           <div className="absolute inset-0 z-0">
-            <img 
-              src={`${import.meta.env.BASE_URL}images/hero-bg.png`} 
-              alt="Background" 
-              className="w-full h-full object-cover opacity-60"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/80 to-background" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-background to-accent/5" />
           </div>
 
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
@@ -31,11 +25,10 @@ export function LandingPage() {
                 Built for School Founders
               </span>
               <h1 className="font-display text-5xl md:text-7xl font-extrabold text-foreground tracking-tight mb-8 leading-[1.1]">
-                Launch your school with <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-teal-400">confidence</span>.
+                Launch your school with <span className="text-primary">confidence</span>.
               </h1>
               <p className="text-xl text-muted-foreground mb-10 leading-relaxed max-w-2xl mx-auto">
-                Build a professional 5-year financial model in about 10 minutes. 
-                Clear assumptions, presentation-ready output, and fully auditable Excel exports.
+                Build a simple 5-year financial model for your school, save your work, get practical CFO guidance, and export a lender-ready Excel workbook.
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -50,7 +43,6 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Features Section */}
         <section className="py-24 bg-card border-y border-border/50">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid md:grid-cols-3 gap-12">
@@ -60,14 +52,14 @@ export function LandingPage() {
                 description="No finance degree required. We guide you step-by-step through enrollment, staffing, and facility assumptions."
               />
               <FeatureCard 
-                icon={<FileSpreadsheet className="h-8 w-8 text-primary" />}
+                icon={<FileSpreadsheet className="h-8 w-8 text-accent" />}
                 title="Underwriting Ready"
-                description="Exports to a beautiful, multi-tab Excel workbook with real formulas—perfect for lenders and investors."
+                description="Exports to a beautiful, multi-tab Excel workbook with real formulas — perfect for lenders and investors."
               />
               <FeatureCard 
                 icon={<ShieldCheck className="h-8 w-8 text-primary" />}
-                title="Secure & Private"
-                description="Your data is automatically saved as a draft. Come back anytime to adjust your assumptions."
+                title="CFO Guidance"
+                description="Get practical, plain-English feedback on your model — staffing ratios, margins, and lender readiness."
               />
             </div>
           </div>
