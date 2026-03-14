@@ -148,6 +148,16 @@ export interface RevenueRow {
   amounts: number[];
   percentBase?: string;
   note?: string;
+  billingMonths?: 9 | 10 | 12;
+  collectionMethod?: "autopay" | "invoiced" | "mixed";
+  collectionRate?: number;
+  collectionDelayDays?: number;
+  paymentFrequency?: "monthly" | "quarterly" | "semi_annual" | "annual";
+  paymentTiming?: "upfront" | "arrears";
+  disbursementType?: "direct" | "reimbursement";
+  reimbursementLagMonths?: number;
+  grantStatus?: "confirmed" | "projected";
+  receiptQuarter?: 1 | 2 | 3 | 4;
 }
 
 export interface StaffingRow {

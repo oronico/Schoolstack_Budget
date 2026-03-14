@@ -46,6 +46,16 @@ export const revenueRowSchema = z.object({
   amounts: z.array(z.number()),
   percentBase: z.string().optional(),
   note: z.string().optional(),
+  billingMonths: z.union([z.literal(9), z.literal(10), z.literal(12)]).optional(),
+  collectionMethod: z.enum(["autopay", "invoiced", "mixed"]).optional(),
+  collectionRate: z.number().optional(),
+  collectionDelayDays: z.number().optional(),
+  paymentFrequency: z.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
+  paymentTiming: z.enum(["upfront", "arrears"]).optional(),
+  disbursementType: z.enum(["direct", "reimbursement"]).optional(),
+  reimbursementLagMonths: z.number().optional(),
+  grantStatus: z.enum(["confirmed", "projected"]).optional(),
+  receiptQuarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
 });
 
 export const revenueSchema = z.object({

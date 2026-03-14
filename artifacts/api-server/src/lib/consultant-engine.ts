@@ -87,6 +87,16 @@ interface RevenueRow {
   amounts: number[];
   percentBase?: string;
   note?: string;
+  billingMonths?: number;
+  collectionMethod?: string;
+  collectionRate?: number;
+  collectionDelayDays?: number;
+  paymentFrequency?: string;
+  paymentTiming?: string;
+  disbursementType?: string;
+  reimbursementLagMonths?: number;
+  grantStatus?: string;
+  receiptQuarter?: number;
 }
 
 interface StaffingRow {
@@ -1115,6 +1125,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   }
 
   if (hasRowData) {
+    const revenueRows = data.revenueRows || [];
     const staffingRows = data.staffingRows || [];
     const expenseRows = data.expenseRows || [];
     const capDebtRows = data.capitalAndDebtRows || [];
@@ -1236,6 +1247,62 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           title: "Debt Load Is Heavy Relative to Revenue",
           description: `Total debt of ${fmt(totalDebt)} is ${debtToRevenue.toFixed(1)}x Year 1 revenue. Lenders typically prefer total debt below 2–3x annual revenue for startup schools. Consider phasing capital expenditures or seeking grant funding for initial build-out.`,
           priority: "high",
+        });
+      }
+    }
+
+    const revenueRowsWithTiming = revenueRows.filter(r => r.enabled);
+    const reimbursementRows = revenueRowsWithTiming.filter(
+      r => r.paymentTiming === "arrears" || r.disbursementType === "reimbursement"
+    );
+    if (reimbursementRows.length > 0) {
+      const reimbursementRevenue = reimbursementRows.reduce(
+        (sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0
+      );
+      const reimbursementPct = y1.totalRevenue > 0 ? reimbursementRevenue / y1.totalRevenue : 0;
+      if (reimbursementPct > 0.4) {
+        recommendations.push({
+          title: "Cash Flow Risk: Heavy Reimbursement Revenue",
+          description: `${pct(reimbursementPct)} of Year 1 revenue (${fmt(reimbursementRevenue)}) comes from reimbursement-based sources with payment delays. This creates cash flow gaps — ensure you have a line of credit or startup reserves to cover 2–3 months of operating expenses while awaiting reimbursements.`,
+          priority: "high",
+        });
+        risks.push(`${pct(reimbursementPct)} of revenue is reimbursement-based with payment delays`);
+      }
+    }
+
+    const invoicedRows = revenueRowsWithTiming.filter(
+      r => r.collectionMethod === "invoiced" || r.collectionMethod === "mixed"
+    );
+    if (invoicedRows.length > 0) {
+      const avgCollectionRate = invoicedRows.reduce(
+        (sum, r) => sum + (r.collectionRate ?? 95), 0
+      ) / invoicedRows.length;
+      if (avgCollectionRate < 95) {
+        const invoicedRevenue = invoicedRows.reduce(
+          (sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0
+        );
+        const uncollected = invoicedRevenue * (1 - avgCollectionRate / 100);
+        recommendations.push({
+          title: "Collection Rate Risk on Invoiced Revenue",
+          description: `Your invoiced revenue lines average a ${avgCollectionRate.toFixed(0)}% collection rate, representing approximately ${fmt(uncollected)} in uncollected revenue. Consider tightening payment terms, requiring autopay enrollment, or building a bad debt reserve.`,
+          priority: "medium",
+        });
+      }
+    }
+
+    const projectedGrants = revenueRowsWithTiming.filter(
+      r => r.category === "grants_contributions" && r.grantStatus === "projected"
+    );
+    if (projectedGrants.length > 0) {
+      const projectedAmount = projectedGrants.reduce(
+        (sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0
+      );
+      const projectedPct = y1.totalRevenue > 0 ? projectedAmount / y1.totalRevenue : 0;
+      if (projectedPct > 0.15) {
+        recommendations.push({
+          title: "Projected (Unconfirmed) Grant Revenue Is Significant",
+          description: `${pct(projectedPct)} of Year 1 revenue (${fmt(projectedAmount)}) comes from projected but unconfirmed grants. Develop contingency plans in case these grants don't materialize, and prioritize grant applications to convert projected funding to confirmed.`,
+          priority: "medium",
         });
       }
     }

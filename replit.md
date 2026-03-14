@@ -104,7 +104,7 @@ React + Vite frontend (Tailwind CSS v4). Amber-forward brand with Quicksand/Nuni
 - 8-step model wizard: Profile → Enrollment → Revenue → Staffing → Expenses → Review → Consultant → Export
 - **School Profile step**: School stage (`new_school` = 3-year default, `operating_school` = 4-year default with optional Year 5 extension), funding profile (`tuition_based`, `charter_public_funded`, `hybrid_mixed`), school type, fiscal year start month, partial first year toggle, optional prior-year snapshot for operating schools
 - **Enrollment step**: Per-year student counts with school-type-specific benchmarks and growth guidance
-- **Revenue step**: Row-based schedule with 6 categories (tuition_and_fees, tuition_offsets, public_funding, school_choice, grants_contributions, other_revenue), driver types (annual_fixed, monthly, per_student, percent_of_base), per-year amounts, funding-profile-aware defaults
+- **Revenue step**: Row-based schedule with 6 categories (tuition_and_fees, tuition_offsets, public_funding, school_choice, grants_contributions, other_revenue), driver types (annual_fixed, monthly, per_student, percent_of_base), per-year amounts, funding-profile-aware defaults, optional payment timing fields per line item (billing months, collection method/rate for tuition; payment frequency/timing for public funding; disbursement type/lag for ESA; grant status/receipt quarter for grants), Year 1 monthly cash inflow summary chart
 - **Staffing step**: FTE-based roster with function categories (school_leadership, instructional, student_support, operations, administrative, other), employment types (full_time, part_time, contract), benefits/payroll tax rates, payrollLike toggle for contractors, real-time cost summary
 - **Expenses step**: Row-based schedule with 4 accounting categories (instructional_program, technology, occupancy_facility, administrative_general), driver types (annual_fixed, monthly, per_student, percent_of_revenue), plus capital & debt rows with loan calculator
 - **Review step**: Grouped summaries by category with computed Year 1 totals; falls back to legacy display for old models
@@ -152,9 +152,11 @@ Utility scripts package. Each script is a `.ts` file in `src/` with a correspond
 - Partial first year support with configurable operating months and proration factor
 
 ### Revenue Model
-6 categories with row-based line items, each with driver type and per-year amounts:
+6 categories with row-based line items, each with driver type, per-year amounts, and optional payment timing:
 - `tuition_and_fees`, `tuition_offsets`, `public_funding`, `school_choice`, `grants_contributions`, `other_revenue`
 - Driver types: `annual_fixed`, `monthly`, `per_student`, `percent_of_base`
+- Timing fields: `billingMonths` (9/10/12), `collectionMethod` (autopay/invoiced/mixed), `collectionRate`, `paymentFrequency` (monthly/quarterly/semi_annual/annual), `paymentTiming` (upfront/arrears), `disbursementType` (direct/reimbursement), `reimbursementLagMonths`, `grantStatus` (confirmed/projected), `receiptQuarter` (1-4)
+- Funding-profile-aware timing defaults applied on row creation
 
 ### Staffing Model
 FTE-based roster with function categories and employment types:

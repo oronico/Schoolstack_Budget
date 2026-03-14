@@ -563,6 +563,33 @@ components:
           type: string
         note:
           type: string
+        billingMonths:
+          type: integer
+          enum: [9, 10, 12]
+        collectionMethod:
+          type: string
+          enum: [autopay, invoiced, mixed]
+        collectionRate:
+          type: number
+        collectionDelayDays:
+          type: integer
+        paymentFrequency:
+          type: string
+          enum: [monthly, quarterly, semi_annual, annual]
+        paymentTiming:
+          type: string
+          enum: [upfront, arrears]
+        disbursementType:
+          type: string
+          enum: [direct, reimbursement]
+        reimbursementLagMonths:
+          type: integer
+        grantStatus:
+          type: string
+          enum: [confirmed, projected]
+        receiptQuarter:
+          type: integer
+          enum: [1, 2, 3, 4]
       required:
         - id
         - category
