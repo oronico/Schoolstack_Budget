@@ -5,6 +5,44 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type PublicExportRequestSchoolProfile = { [key: string]: unknown };
+
+export type PublicExportRequestEnrollment = { [key: string]: unknown };
+
+export type PublicExportRequestTuitionTiersItem = { [key: string]: unknown };
+
+export type PublicExportRequestRevenue = { [key: string]: unknown };
+
+export type PublicExportRequestRevenueRowsItem = { [key: string]: unknown };
+
+export type PublicExportRequestStaffing = { [key: string]: unknown };
+
+export type PublicExportRequestStaffingRowsItem = { [key: string]: unknown };
+
+export type PublicExportRequestFacilities = { [key: string]: unknown };
+
+export type PublicExportRequestExpenseRowsItem = { [key: string]: unknown };
+
+export type PublicExportRequestCapitalAndDebtRowsItem = {
+  [key: string]: unknown;
+};
+
+export type PublicExportRequestPriorYearSnapshot = { [key: string]: unknown };
+
+export interface PublicExportRequest {
+  schoolProfile?: PublicExportRequestSchoolProfile;
+  enrollment?: PublicExportRequestEnrollment;
+  tuitionTiers?: PublicExportRequestTuitionTiersItem[];
+  revenue?: PublicExportRequestRevenue;
+  revenueRows?: PublicExportRequestRevenueRowsItem[];
+  staffing?: PublicExportRequestStaffing;
+  staffingRows?: PublicExportRequestStaffingRowsItem[];
+  facilities?: PublicExportRequestFacilities;
+  expenseRows?: PublicExportRequestExpenseRowsItem[];
+  capitalAndDebtRows?: PublicExportRequestCapitalAndDebtRowsItem[];
+  priorYearSnapshot?: PublicExportRequestPriorYearSnapshot;
+}
+
 export interface HealthStatus {
   status: string;
 }

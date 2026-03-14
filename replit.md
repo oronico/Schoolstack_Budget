@@ -6,6 +6,26 @@ SchoolStack Budget is a full-stack web application designed for school founders.
 
 I prefer iterative development with clear communication on significant changes. Please ask before making major architectural decisions or implementing new features that might diverge from the current design patterns. I appreciate concise explanations and a focus on functional programming principles where applicable.
 
+# Deployment Architecture
+
+- **Development**: Replit
+- **Source of truth**: GitHub (push from Replit)
+- **Production build/deploy**: Netlify (builds from GitHub on push)
+- **Public domain**: Squarespace DNS pointing to Netlify
+- **Replit Publish/Deploy is NOT the production path**
+
+## Netlify Configuration
+
+`netlify.toml` at repo root configures:
+- Base directory: `artifacts/school-financial-model`
+- Build command: full monorepo install + typecheck + Vite build
+- Publish directory: `dist/public`
+- API proxy redirect: `/api/*` proxied to `VITE_API_BASE_URL` env var
+- SPA catch-all redirect for client-side routing
+
+### Required Netlify Environment Variables
+- `VITE_API_BASE_URL`: Full URL of the API server (e.g., `https://api.schoolstack.ai`)
+
 # System Architecture
 
 ## Brand System
@@ -25,6 +45,29 @@ The project is built as a pnpm workspace monorepo using TypeScript (v5.9).
 
 The monorepo is organized into `artifacts/` for deployable applications (`api-server`, `school-financial-model`), `lib/` for shared libraries (`api-spec`, `api-client-react`, `api-zod`, `db`), and `scripts/` for utility scripts. TypeScript composite projects are used, ensuring type-checking from the root and efficient build processes.
 
+## Routing
+
+### Public Routes (no auth required)
+- `/` — Landing page
+- `/underwriting` — Public 7-step underwriting wizard (localStorage-backed, no DB persistence)
+- `/login` — Login page
+- `/register` — Registration page
+- `/forgot-password` — Password reset request
+- `/reset-password` — Password reset completion
+
+### Protected Routes (auth required, redirects to /login if not authenticated)
+- `/dashboard` — Model management dashboard
+- `/model/:id` — Full 8-step wizard (DB-backed, autosave)
+- `/admin` — Admin analytics dashboard
+
+### API Routes
+- `POST /api/public/export-underwriting` — Public endpoint, accepts full model JSON payload, returns 14-tab XLSX
+- `GET /api/models/:id/export/underwriting` — Authenticated 14-tab underwriting workbook export
+- `GET /api/models/:id/export` — Authenticated Excel workbook export
+- `GET /api/models/:id/export/lender-proforma` — Authenticated Lender Pro Forma XLSX
+- `GET /api/models/:id/export/pro-forma-pdf` — Authenticated Pro Forma PDF
+- `GET /api/models/:id/export/loan-readiness-pdf` — Authenticated Loan Readiness PDF
+
 ## Feature Specifications
 
 ### Universal Financial Model
@@ -35,15 +78,18 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 - **Capital & Debt Model**: Incorporates a loan calculator for PMT-based amortization.
 
 ### API Server (`api-server`)
-Manages authentication (register, login, reset password), CRUD operations for financial models, and specialized endpoints for admin analytics and a CFO consultant rules engine. It also orchestrates advanced Excel and PDF export functionalities, including a branded Lender Pro Forma and a 14-tab Underwriting Pro Forma workbook (DSCR, covenant checks, balance sheet, monthly cash flow, sources & uses).
+Manages authentication (register, login, reset password), CRUD operations for financial models, and specialized endpoints for admin analytics and a CFO consultant rules engine. It also orchestrates advanced Excel and PDF export functionalities, including a branded Lender Pro Forma and a 14-tab Underwriting Pro Forma workbook (DSCR, covenant checks, balance sheet, monthly cash flow, sources & uses). Includes a public export endpoint at `POST /api/public/export-underwriting` that requires no authentication.
 
 ### Frontend (`school-financial-model`)
 A React-based single-page application providing a user-friendly interface for model creation and management. It includes:
-- Landing and authentication pages.
+- Landing page with primary CTA routing to `/underwriting` (public wizard).
+- Public underwriting wizard at `/underwriting` — 7-step flow (Profile, Enrollment, Revenue, Staffing, Expenses, Review, Export) with localStorage persistence and public export. No account required.
+- Authentication pages (login, register, forgot/reset password).
 - A dashboard for model lifecycle management (create, duplicate, archive, delete).
-- An 8-step wizard guiding users through financial model setup: Profile, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, and Export. New users are auto-routed from registration directly into the wizard (model is auto-created).
+- An 8-step authenticated wizard guiding users through financial model setup: Profile, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, and Export. New users are auto-routed from registration directly into the wizard (model is auto-created).
 - Dedicated admin analytics page (email allowlist protected) displaying key metrics like school stage distribution, export rates, and conversion funnels.
 - Auth context with JWT stored in localStorage.
+- API base URL configurable via `VITE_API_BASE_URL` env var (defaults to same-origin for local dev).
 
 ### Consultant Engine
 A deterministic rules engine providing:

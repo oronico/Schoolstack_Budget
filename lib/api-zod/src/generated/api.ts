@@ -1411,3 +1411,21 @@ export const ExportLenderProformaParams = zod.object({
 export const ExportUnderwritingParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * Accepts full model data payload and returns a 14-tab underwriting Excel workbook. No authentication required.
+ * @summary Export underwriting workbook without authentication
+ */
+export const PublicExportUnderwritingBody = zod.object({
+  schoolProfile: zod.object({}).passthrough().optional(),
+  enrollment: zod.object({}).passthrough().optional(),
+  tuitionTiers: zod.array(zod.object({}).passthrough()).optional(),
+  revenue: zod.object({}).passthrough().optional(),
+  revenueRows: zod.array(zod.object({}).passthrough()).optional(),
+  staffing: zod.object({}).passthrough().optional(),
+  staffingRows: zod.array(zod.object({}).passthrough()).optional(),
+  facilities: zod.object({}).passthrough().optional(),
+  expenseRows: zod.array(zod.object({}).passthrough()).optional(),
+  capitalAndDebtRows: zod.array(zod.object({}).passthrough()).optional(),
+  priorYearSnapshot: zod.object({}).passthrough().optional(),
+});

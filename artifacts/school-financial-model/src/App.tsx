@@ -14,6 +14,7 @@ import { ForgotPasswordPage } from "@/pages/auth/forgot-password";
 import { ResetPasswordPage } from "@/pages/auth/reset-password";
 import { DashboardPage } from "@/pages/dashboard";
 import { ModelWizardPage } from "@/pages/model-wizard";
+import { PublicWizardPage } from "@/pages/public-wizard";
 import { AdminPage } from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/register" component={RegisterPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
+      <Route path="/underwriting" component={PublicWizardPage} />
       
       <Route path="/dashboard">
         {() => <ProtectedRoute component={DashboardPage} />}

@@ -1,0 +1,91 @@
+Important delivery context. Read carefully before making changes.
+
+This project is not deployed from Replit to production.
+Our real release path is:
+
+Replit development -> push to GitHub -> Netlify build/deploy -> live site connected through Squarespace DNS/domain setup
+
+That means:
+
+1. GitHub is the source of truth for code that ships.
+2. Netlify is the production build and deployment target.
+3. Squarespace is the public site/domain layer.
+4. Replit Publish/Deploy is not the production path for this project.
+
+Act like a production-minded engineer, not a prototype generator.
+
+Non-negotiable engineering behavior:
+- Work surgically inside the existing monorepo.
+- Preserve existing architecture unless there is a strong technical reason to change it.
+- Make changes that are safe for GitHub -> Netlify deployment.
+- Do not introduce Replit-only assumptions into the production app.
+- Do not assume local Replit behavior equals Netlify behavior.
+- Prepare the app for alpha release, not just “works on my machine”.
+
+Deployment requirements:
+- Assume Netlify will build from GitHub on push.
+- Make sure the repo contains the configuration needed for Netlify to build the correct app from this monorepo.
+- If needed, add or update netlify.toml with the correct base directory, build command, publish directory, and SPA redirect behavior.
+- Because this is a SPA, ensure Netlify routing is handled so direct visits to nested routes do not 404.
+- Do not change Squarespace DNS assumptions. Just make sure the app is ready to be deployed behind the existing Squarespace-connected domain.
+
+Quality bar for alpha:
+You must behave like an engineer preparing an alpha release candidate.
+
+That means you must:
+1. Inspect the existing codebase and understand current architecture before editing.
+2. Make a written implementation plan.
+3. Implement the requested changes incrementally.
+4. Run the relevant install, lint, typecheck, test, and build commands.
+5. Start the app locally in Replit and smoke-test the critical paths.
+6. Fix any errors you encounter.
+7. Report what you tested, what passed, what failed, and what remains risky.
+8. Leave the repository in a state that is reasonable to push to GitHub for Netlify deployment.
+
+Testing expectations:
+At minimum, run and report results for:
+- dependency install
+- lint
+- typecheck
+- unit tests, if present
+- production build
+- local smoke test of the key public routes and export flow
+
+Minimum smoke-test paths:
+- landing page loads
+- public underwriting route loads without auth
+- 8-step wizard can be navigated
+- public export endpoint returns an xlsx
+- workbook downloads and opens
+- existing authenticated app routes still load
+- no obvious console/runtime errors on critical screens
+
+Release engineering expectations:
+Before you finish, produce:
+- exact files changed
+- exact commands run
+- test results
+- build results
+- any Netlify config added or changed
+- any environment variables required for Netlify
+- alpha release checklist
+- known issues / risks
+- recommended next steps before beta
+
+Do not say the work is done until:
+- the code builds successfully
+- core routes have been smoke-tested
+- the Netlify deployment assumptions have been accounted for
+- the app is in an alpha-release-ready state for a GitHub push
+
+Current product direction:
+Keep the full 8-step underwriting wizard and all underwriting complexity.
+Simplify only the shell around it, meaning access, routing, and launch readiness.
+Do not reduce the underwriting data model.
+
+Now inspect the repo and begin with:
+1. architecture summary
+2. implementation plan
+3. file-by-file changes
+4. test/build validation
+5. alpha release summary

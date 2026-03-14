@@ -27,6 +27,7 @@ import type {
   HealthStatus,
   LoginRequest,
   MessageResponse,
+  PublicExportRequest,
   RegisterRequest,
   ResetPasswordRequest,
   UpdateFinancialModelData,
@@ -1715,3 +1716,91 @@ export function useExportUnderwriting<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Accepts full model data payload and returns a 14-tab underwriting Excel workbook. No authentication required.
+ * @summary Export underwriting workbook without authentication
+ */
+export const getPublicExportUnderwritingUrl = () => {
+  return `/api/public/export-underwriting`;
+};
+
+export const publicExportUnderwriting = async (
+  publicExportRequest: PublicExportRequest,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getPublicExportUnderwritingUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(publicExportRequest),
+  });
+};
+
+export const getPublicExportUnderwritingMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publicExportUnderwriting>>,
+    TError,
+    { data: BodyType<PublicExportRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publicExportUnderwriting>>,
+  TError,
+  { data: BodyType<PublicExportRequest> },
+  TContext
+> => {
+  const mutationKey = ["publicExportUnderwriting"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publicExportUnderwriting>>,
+    { data: BodyType<PublicExportRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return publicExportUnderwriting(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublicExportUnderwritingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publicExportUnderwriting>>
+>;
+export type PublicExportUnderwritingMutationBody =
+  BodyType<PublicExportRequest>;
+export type PublicExportUnderwritingMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Export underwriting workbook without authentication
+ */
+export const usePublicExportUnderwriting = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publicExportUnderwriting>>,
+    TError,
+    { data: BodyType<PublicExportRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof publicExportUnderwriting>>,
+  TError,
+  { data: BodyType<PublicExportRequest> },
+  TContext
+> => {
+  return useMutation(getPublicExportUnderwritingMutationOptions(options));
+};

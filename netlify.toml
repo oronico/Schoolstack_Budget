@@ -1,0 +1,13 @@
+[build]
+  base = "artifacts/school-financial-model"
+  command = "cd ../.. && pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/school-financial-model run build"
+  publish = "dist/public"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--no-optional"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

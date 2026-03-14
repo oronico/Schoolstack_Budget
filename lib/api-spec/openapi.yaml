@@ -14,6 +14,8 @@ tags:
     description: Authentication operations
   - name: models
     description: Financial model operations
+  - name: public
+    description: Public operations (no authentication required)
 paths:
   /healthz:
     get:
@@ -536,8 +538,69 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /public/export-underwriting:
+    post:
+      operationId: publicExportUnderwriting
+      tags: [public]
+      summary: Export underwriting workbook without authentication
+      description: Accepts full model data payload and returns a 14-tab underwriting Excel workbook. No authentication required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublicExportRequest"
+      responses:
+        "200":
+          description: Excel file download
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid model data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
+    PublicExportRequest:
+      type: object
+      properties:
+        schoolProfile:
+          type: object
+        enrollment:
+          type: object
+        tuitionTiers:
+          type: array
+          items:
+            type: object
+        revenue:
+          type: object
+        revenueRows:
+          type: array
+          items:
+            type: object
+        staffing:
+          type: object
+        staffingRows:
+          type: array
+          items:
+            type: object
+        facilities:
+          type: object
+        expenseRows:
+          type: array
+          items:
+            type: object
+        capitalAndDebtRows:
+          type: array
+          items:
+            type: object
+        priorYearSnapshot:
+          type: object
     HealthStatus:
       type: object
       properties:
