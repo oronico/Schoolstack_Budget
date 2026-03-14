@@ -359,7 +359,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
 
     const revTotalRow = buildRevenueScheduleTab(revenueWs, revenueRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
     const staffTotalRow = buildStaffingTab(staffingWs, staffingRows, salaryEscRate, prorationFactor, yearCount, cols, yearHeaders, aRefs);
-    const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revenueRows, yearCount, cols, yearHeaders, aRefs);
+    const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revTotalRow, yearCount, cols, yearHeaders, aRefs);
     const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
 
     buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow);
@@ -620,27 +620,7 @@ function buildRevenueScheduleTab(
     styleDataCell(cell);
   }
 
-  const rowComputedValues = new Map<string, number[]>();
-
-  for (const row of rows) {
-    if (!row.enabled || row.driverType === "percent_of_base") continue;
-    const vals: number[] = [];
-    for (let y = 0; y < yearCount; y++) {
-      vals.push(computeDriverValue(row.amounts, y, row.driverType, enrollment[y]));
-    }
-    rowComputedValues.set(row.id, vals);
-  }
-
-  for (const row of rows) {
-    if (!row.enabled || row.driverType !== "percent_of_base") continue;
-    const baseVals = rowComputedValues.get(row.percentBase || "") || [];
-    const vals: number[] = [];
-    for (let y = 0; y < yearCount; y++) {
-      const pctAmt = (row.amounts?.[y] ?? 0) / 100;
-      vals.push((baseVals[y] || 0) * pctAmt);
-    }
-    rowComputedValues.set(row.id, vals);
-  }
+  const rowExcelRows = new Map<string, number>();
 
   const categories = [
     "tuition_and_fees", "tuition_offsets", "public_funding",
@@ -648,8 +628,12 @@ function buildRevenueScheduleTab(
   ];
   const categoryTotalRows: number[] = [];
 
+  const nonPobRows = rows.filter(row => row.enabled && row.driverType !== "percent_of_base");
+  const pobRows = rows.filter(row => row.enabled && row.driverType === "percent_of_base");
+  const orderedRows = [...nonPobRows, ...pobRows];
+
   for (const cat of categories) {
-    const catRows = rows.filter(row => row.category === cat && row.enabled);
+    const catRows = orderedRows.filter(row => row.category === cat);
     if (catRows.length === 0) continue;
 
     r++;
@@ -660,15 +644,32 @@ function buildRevenueScheduleTab(
 
     for (const row of catRows) {
       r++;
+      rowExcelRows.set(row.id, r);
       ws.getCell(r, 1).value = row.lineItem;
       ws.getCell(r, 1).font = NORMAL_FONT;
 
-      const vals = rowComputedValues.get(row.id) || [];
       for (let y = 0; y < yearCount; y++) {
         const cell = ws.getCell(r, y + 2);
-        let val = vals[y] || 0;
-        if (cat === "tuition_offsets") val = -Math.abs(val);
-        cell.value = val;
+        const amt = row.amounts?.[y] ?? 0;
+        const studentsCell = aRefs ? `Assumptions!B${aRefs.enrollmentRows[y]}` : `$B$2`;
+
+        if (row.driverType === "percent_of_base") {
+          const baseExcelRow = rowExcelRows.get(row.percentBase || "");
+          if (baseExcelRow) {
+            const sign = cat === "tuition_offsets" ? "-" : "";
+            cell.value = { formula: `${sign}${c(baseExcelRow, y + 2)}*${amt / 100}` };
+          } else {
+            cell.value = 0;
+          }
+        } else if (row.driverType === "per_student") {
+          const sign = cat === "tuition_offsets" ? "-" : "";
+          cell.value = { formula: `${sign}${amt}*${studentsCell}` };
+        } else if (row.driverType === "monthly") {
+          const sign = cat === "tuition_offsets" ? "-" : "";
+          cell.value = { formula: `${sign}${amt}*12` };
+        } else {
+          cell.value = cat === "tuition_offsets" ? -Math.abs(amt) : amt;
+        }
         cell.numFmt = CURRENCY_FORMAT;
         styleDataCell(cell);
       }
@@ -873,7 +874,7 @@ function buildExpensesTab(
   ws: ExcelJS.Worksheet,
   expenseRows: ExpenseRow[],
   enrollment: number[],
-  revenueRows: RevenueRow[],
+  revTotalRow: number,
   yearCount: number,
   cols: number,
   yearHeaders: string[],
@@ -897,29 +898,6 @@ function buildExpensesTab(
     styleDataCell(cell);
   }
 
-  const totalRevenueByYear: number[] = [];
-  for (let y = 0; y < yearCount; y++) {
-    let rev = 0;
-    const rowVals = new Map<string, number>();
-
-    for (const row of revenueRows) {
-      if (!row.enabled || row.driverType === "percent_of_base") continue;
-      rowVals.set(row.id, computeDriverValue(row.amounts, y, row.driverType, enrollment[y]));
-    }
-    for (const row of revenueRows) {
-      if (!row.enabled || row.driverType !== "percent_of_base") continue;
-      const base = rowVals.get(row.percentBase || "") || 0;
-      rowVals.set(row.id, base * ((row.amounts?.[y] ?? 0) / 100));
-    }
-    for (const row of revenueRows) {
-      if (!row.enabled) continue;
-      const val = rowVals.get(row.id) || 0;
-      if (row.category === "tuition_offsets") rev -= val;
-      else rev += val;
-    }
-    totalRevenueByYear.push(rev);
-  }
-
   const categories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
   const categoryTotalRows: number[] = [];
 
@@ -940,13 +918,19 @@ function buildExpensesTab(
 
       for (let y = 0; y < yearCount; y++) {
         const cell = ws.getCell(r, y + 2);
-        let val: number;
-        if (row.driverType === "percent_of_revenue") {
-          val = ((row.amounts?.[y] ?? 0) / 100) * totalRevenueByYear[y];
+        const amt = row.amounts?.[y] ?? 0;
+        const studentsCell = aRefs ? `Assumptions!B${aRefs.enrollmentRows[y]}` : `$B$2`;
+        const revTotalRef = revTotalRow > 0 ? `'Revenue Schedule'!${String.fromCharCode(66 + y)}${revTotalRow}` : null;
+
+        if (row.driverType === "percent_of_revenue" && revTotalRef) {
+          cell.value = { formula: `${amt / 100}*${revTotalRef}` };
+        } else if (row.driverType === "per_student") {
+          cell.value = { formula: `${amt}*${studentsCell}` };
+        } else if (row.driverType === "monthly") {
+          cell.value = { formula: `${amt}*12` };
         } else {
-          val = computeDriverValue(row.amounts, y, row.driverType, enrollment[y]);
+          cell.value = amt;
         }
-        cell.value = val;
         cell.numFmt = CURRENCY_FORMAT;
         styleDataCell(cell);
       }
@@ -1008,13 +992,19 @@ function buildCapitalDebtTab(
 
     for (let y = 0; y < yearCount; y++) {
       const cell = ws.getCell(r, y + 2);
-      let val: number;
       if (row.isLoan && row.loanPrincipal && row.loanPrincipal > 0) {
-        val = computeAnnualDebtService(row.loanPrincipal, (row.loanRate || 0) / 100, row.loanTermYears || 0);
+        cell.value = computeAnnualDebtService(row.loanPrincipal, (row.loanRate || 0) / 100, row.loanTermYears || 0);
       } else {
-        val = computeDriverValue(row.amounts, y, row.driverType, enrollment[y]);
+        const amt = row.amounts?.[y] ?? 0;
+        const studentsCell = _aRefs ? `Assumptions!B${_aRefs.enrollmentRows[y]}` : null;
+        if (row.driverType === "per_student" && studentsCell) {
+          cell.value = { formula: `${amt}*${studentsCell}` };
+        } else if (row.driverType === "monthly") {
+          cell.value = { formula: `${amt}*12` };
+        } else {
+          cell.value = amt;
+        }
       }
-      cell.value = val;
       cell.numFmt = CURRENCY_FORMAT;
       styleDataCell(cell);
     }

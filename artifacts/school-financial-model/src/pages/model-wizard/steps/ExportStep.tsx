@@ -59,7 +59,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
         {exported 
           ? "Check your downloads folder for the Excel workbook. It includes all formulas and is fully unprotected."
-          : "We'll build a 7-tab Excel workbook with all formulas properly linked to your assumptions."}
+          : "We'll build a comprehensive Excel workbook with assumption-driven formulas across all tabs — ready for lenders."}
       </p>
 
       <button
