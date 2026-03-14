@@ -13,6 +13,18 @@ interface SchoolProfile {
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
+  isAccredited?: boolean;
+  accreditingBody?: string;
+  hasManagementFee?: boolean;
+  managementFeePercent?: number;
+}
+
+interface TuitionTier {
+  id: string;
+  tierType: string;
+  label: string;
+  discountPercent: number;
+  studentCounts: number[];
 }
 
 function isNonprofitEntity(entityType?: string): boolean {
@@ -146,6 +158,7 @@ interface PriorYearSnapshot {
 interface ModelData {
   schoolProfile?: SchoolProfile;
   enrollment?: Enrollment;
+  tuitionTiers?: TuitionTier[];
   revenue?: LegacyRevenue;
   revenueRows?: RevenueRow[];
   staffing?: LegacyStaffing;
@@ -264,12 +277,57 @@ interface RevenueBreakdown {
   philanthropy: number;
 }
 
-function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number): RevenueBreakdown {
+function computeTuitionWithTiers(
+  grossTuitionPerStudent: number,
+  yearIdx: number,
+  totalStudents: number,
+  tuitionTiers?: TuitionTier[],
+): number {
+  if (!tuitionTiers || tuitionTiers.length === 0) {
+    return grossTuitionPerStudent * totalStudents;
+  }
+
+  let rawTierTotal = 0;
+  for (const tier of tuitionTiers) {
+    rawTierTotal += tier.studentCounts?.[yearIdx] ?? 0;
+  }
+
+  if (rawTierTotal === 0) {
+    return grossTuitionPerStudent * totalStudents;
+  }
+
+  const scaleFactor = rawTierTotal > totalStudents ? totalStudents / rawTierTotal : 1;
+
+  let totalTuition = 0;
+  let allocatedStudents = 0;
+  for (const tier of tuitionTiers) {
+    const rawCount = tier.studentCounts?.[yearIdx] ?? 0;
+    const scaledCount = rawCount * scaleFactor;
+    allocatedStudents += scaledCount;
+    const discount = (tier.discountPercent || 0) / 100;
+    totalTuition += scaledCount * grossTuitionPerStudent * (1 - discount);
+  }
+
+  const remainingStudents = totalStudents - allocatedStudents;
+  if (remainingStudents > 0) {
+    totalTuition += remainingStudents * grossTuitionPerStudent;
+  }
+
+  return totalTuition;
+}
+
+function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number, tuitionTiers?: TuitionTier[]): RevenueBreakdown {
   const rowValues = new Map<string, number>();
 
   for (const row of rows) {
     if (!row.enabled || row.driverType === "percent_of_base") continue;
-    rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students));
+
+    if (row.id === "gross_tuition" && row.driverType === "per_student" && tuitionTiers && tuitionTiers.length > 0) {
+      const perStudentAmount = row.amounts?.[yearIdx] ?? 0;
+      rowValues.set(row.id, computeTuitionWithTiers(perStudentAmount, yearIdx, students, tuitionTiers));
+    } else {
+      rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students));
+    }
   }
 
   for (const row of rows) {
@@ -347,6 +405,7 @@ function computeAllYearsFromRows(
   capDebtRows: CapitalDebtRow[],
   salaryEscRate: number,
   prorationFactor: number,
+  tuitionTiers?: TuitionTier[],
 ): YearFinancials[] {
   const baseCost = computeStaffingBaseCost(staffingRows);
 
@@ -355,7 +414,7 @@ function computeAllYearsFromRows(
     const salaryEsc = Math.pow(1 + salaryEscRate, yearIdx);
     const totalStaffingCost = baseCost * salaryEsc * pf;
 
-    const rev = computeRevenueForYear(revenueRows, yearIdx, students);
+    const rev = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers);
     const exp = computeExpensesForYear(expenseRows, yearIdx, students, rev.total);
     const capDebt = computeCapDebtForYear(capDebtRows, yearIdx, students);
 
@@ -485,6 +544,7 @@ function runStressScenarioFromRows(
     modifyRevenueRows?: (r: RevenueRow[]) => RevenueRow[];
     modifyExpenseRows?: (e: ExpenseRow[]) => ExpenseRow[];
     modifyStaffingRows?: (s: StaffingRow[]) => StaffingRow[];
+    tuitionTiers?: TuitionTier[];
   },
 ): StressScenario {
   const adjEnrollment = mods.modifyEnrollment ? mods.modifyEnrollment([...enrollmentByYear]) : enrollmentByYear;
@@ -498,7 +558,7 @@ function runStressScenarioFromRows(
     ? mods.modifyStaffingRows(staffingRows.map(r => ({ ...r })))
     : staffingRows;
 
-  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor);
+  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers);
   const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
 
   return {
@@ -566,6 +626,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   let yearFinancials: YearFinancials[];
 
+  const tuitionTiers = data.tuitionTiers;
+
   if (hasRowData) {
     const revenueRows = data.revenueRows || [];
     const staffingRows = data.staffingRows || [];
@@ -575,7 +637,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
     yearFinancials = computeAllYearsFromRows(
       enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows,
-      salaryEscRate, prorationFactor,
+      salaryEscRate, prorationFactor, tuitionTiers,
     );
   } else {
     const rev = data.revenue || {};
@@ -667,9 +729,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     stressTests = [
       runStressScenarioFromRows("Enrollment 20% Below Plan", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyEnrollment: e => e.map(s => Math.round(s * 0.8)),
+        tuitionTiers,
       }),
       runStressScenarioFromRows("Loss of Philanthropy", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => r.category === "grants_contributions" ? { ...r, enabled: false } : r),
+        tuitionTiers,
       }),
       runStressScenarioFromRows("Occupancy +15%, Personnel +5%", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyExpenseRows: rows => rows.map(r =>
@@ -678,6 +742,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
             : { ...r, amounts: r.amounts.map(a => a * 1.05) }
         ),
         modifyStaffingRows: rows => rows.map(r => ({ ...r, annualizedRate: r.annualizedRate * 1.05 })),
+        tuitionTiers,
       }),
     ];
   } else {
@@ -1037,6 +1102,35 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         priority: "low",
       });
     }
+    if (sp.isAccredited === false) {
+      recommendations.push({
+        title: "Consider Accreditation",
+        description: "Your school is not currently accredited. Accreditation can increase family confidence, improve student transfer pathways, and open doors to certain grants and funding programs. Research regional accrediting bodies to understand the timeline and requirements.",
+        priority: "low",
+      });
+    }
+  }
+
+  if (sp.hasManagementFee && sp.managementFeePercent && sp.managementFeePercent > 0) {
+    const mgmtFeePct = sp.managementFeePercent;
+    if (mgmtFeePct > 10) {
+      recommendations.push({
+        title: "Review Management Fee Level",
+        description: `Your management fee of ${mgmtFeePct}% of revenue is above the typical 5–10% range for charter management organizations and back-office providers. Ensure the services received justify this rate and consider negotiating or comparing with alternative providers.`,
+        priority: "medium",
+      });
+    }
+    keyMetrics.push({
+      name: "Management Fee (% of Revenue)",
+      value: `${mgmtFeePct.toFixed(1)}%`,
+      status: mgmtFeePct <= 7 ? "good" : mgmtFeePct <= 12 ? "warning" : "danger",
+      interpretation:
+        mgmtFeePct <= 7
+          ? "Management fee is within the typical range for network-managed schools."
+          : mgmtFeePct <= 12
+            ? "Management fee is on the higher end — ensure the services provided justify the cost."
+            : "Management fee is significantly above typical levels and materially impacts margins.",
+    });
   }
 
   if (isMicroschool) {

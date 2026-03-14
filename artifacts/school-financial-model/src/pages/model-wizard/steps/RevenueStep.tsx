@@ -42,6 +42,7 @@ export function RevenueStep() {
   const { watch, setValue, getValues } = useFormContext();
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolStage = watch("schoolProfile.schoolStage") as string | undefined;
+  const schoolType = watch("schoolProfile.schoolType") as string | undefined;
   const yearCount = getYearCount(schoolStage);
 
   const enrollment = watch("enrollment");
@@ -79,6 +80,24 @@ export function RevenueStep() {
       setDefaultsApplied(true);
     }
   }, [formRows, fundingProfile, yearCount, defaultsApplied, setValue]);
+
+  const CHARTER_HIDDEN_CATEGORIES: RevenueCategory[] = ["tuition_and_fees", "tuition_offsets", "school_choice"];
+  useEffect(() => {
+    if (!defaultsApplied || rows.length === 0) return;
+    const isCharter = schoolType === "charter_school";
+    if (!isCharter) return;
+    const updated = rows.map((row) => {
+      if (CHARTER_HIDDEN_CATEGORIES.includes(row.category) && row.enabled) {
+        return { ...row, enabled: false };
+      }
+      return row;
+    });
+    const changed = updated.some((r, i) => r.enabled !== rows[i].enabled);
+    if (changed) {
+      setRows(updated);
+      setValue("revenueRows", updated, { shouldDirty: true });
+    }
+  }, [schoolType, defaultsApplied]);
 
   const syncToForm = useCallback((updatedRows: RevenueRowData[]) => {
     setRows(updatedRows);
@@ -141,7 +160,7 @@ export function RevenueStep() {
     setExpandedCategories((prev) => new Set(prev).add(category));
   };
 
-  const categoryOrder = getCategoryOrder(fundingProfile);
+  const categoryOrder = getCategoryOrder(fundingProfile, schoolType);
 
   const getCategoryTotal = (cat: RevenueCategory): number => {
     return rows

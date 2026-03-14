@@ -318,6 +318,12 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
           {data.schoolProfile?.isPartialFirstYear && (
             <Item label="Year 1 Operating Months" value={data.schoolProfile?.year1OperatingMonths || 12} />
           )}
+          {data.schoolProfile?.schoolType === "private_school" && (
+            <Item label="Accredited" value={data.schoolProfile?.isAccredited ? `Yes${data.schoolProfile?.accreditingBody ? ` (${data.schoolProfile.accreditingBody})` : ''}` : 'No'} />
+          )}
+          {data.schoolProfile?.hasManagementFee && (
+            <Item label="Management Fee" value={`${data.schoolProfile?.managementFeePercent || 0}% of Revenue`} />
+          )}
         </dl>
       </Section>
 
@@ -334,6 +340,25 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
           })}
         </div>
       </Section>
+
+      {data.tuitionTiers && data.tuitionTiers.length > 0 && data.schoolProfile?.schoolType !== "charter_school" && (
+        <Section title="Tuition Discount Tiers" step={2}>
+          <div className="space-y-1.5">
+            {data.tuitionTiers.map((tier: { id: string; label: string; discountPercent: number; studentCounts: number[] }) => {
+              const y1Count = tier.studentCounts?.[0] || 0;
+              return (
+                <div key={tier.id} className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
+                  <span className="text-sm font-medium text-foreground">
+                    {tier.label}
+                    <span className="ml-2 text-muted-foreground text-xs">({tier.discountPercent}% discount)</span>
+                  </span>
+                  <span className="text-sm font-semibold text-foreground">{y1Count} students (Y1)</span>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      )}
 
       {hasRowData ? (
         <>

@@ -14,6 +14,18 @@ interface SchoolProfile {
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
+  isAccredited?: boolean;
+  accreditingBody?: string;
+  hasManagementFee?: boolean;
+  managementFeePercent?: number;
+}
+
+interface TuitionTier {
+  id: string;
+  tierType: string;
+  label: string;
+  discountPercent: number;
+  studentCounts: number[];
 }
 
 function isNonprofit(entityType?: string): boolean {
@@ -119,6 +131,7 @@ interface ConsultantSummary {
 interface ModelData {
   schoolProfile?: SchoolProfile;
   enrollment?: Enrollment;
+  tuitionTiers?: TuitionTier[];
   revenue?: Record<string, unknown>;
   revenueRows?: RevenueRow[];
   staffing?: Record<string, unknown>;
@@ -200,6 +213,7 @@ function computeRevenueMixForExport(
   rows: RevenueRow[],
   enrollment: number[],
   yearCount: number,
+  tuitionTiers?: TuitionTier[],
 ): { tuitionPct: number[]; publicPct: number[]; philanthropyPct: number[] } {
   const tuitionPct: number[] = [];
   const publicPct: number[] = [];
@@ -211,7 +225,12 @@ function computeRevenueMixForExport(
 
     for (const row of rows) {
       if (!row.enabled || row.driverType === "percent_of_base") continue;
-      rowValues.set(row.id, computeDriverValueExport(row.amounts, y, row.driverType, students));
+      if (row.id === "gross_tuition" && row.driverType === "per_student" && tuitionTiers && tuitionTiers.length > 0) {
+        const perStudentAmount = row.amounts?.[y] ?? 0;
+        rowValues.set(row.id, computeTuitionWithTiersForMix(perStudentAmount, y, students, tuitionTiers));
+      } else {
+        rowValues.set(row.id, computeDriverValueExport(row.amounts, y, row.driverType, students));
+      }
     }
     for (const row of rows) {
       if (!row.enabled || row.driverType !== "percent_of_base") continue;
@@ -239,6 +258,31 @@ function computeRevenueMixForExport(
   }
 
   return { tuitionPct, publicPct, philanthropyPct };
+}
+
+function computeTuitionWithTiersForMix(
+  grossPerStudent: number,
+  yearIdx: number,
+  totalStudents: number,
+  tuitionTiers: TuitionTier[],
+): number {
+  let rawTierTotal = 0;
+  for (const tier of tuitionTiers) {
+    rawTierTotal += tier.studentCounts?.[yearIdx] ?? 0;
+  }
+  if (rawTierTotal === 0) return grossPerStudent * totalStudents;
+
+  const scaleFactor = rawTierTotal > totalStudents ? totalStudents / rawTierTotal : 1;
+  let total = 0;
+  let allocated = 0;
+  for (const tier of tuitionTiers) {
+    const scaled = (tier.studentCounts?.[yearIdx] ?? 0) * scaleFactor;
+    allocated += scaled;
+    total += scaled * grossPerStudent * (1 - (tier.discountPercent || 0) / 100);
+  }
+  const remaining = totalStudents - allocated;
+  if (remaining > 0) total += remaining * grossPerStudent;
+  return total;
 }
 
 function computeDriverValueExport(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number): number {
@@ -382,7 +426,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     const capDebtRows = data.capitalAndDebtRows || [];
 
     const assumptionsWs = wb.addWorksheet("Assumptions");
-    const aRefs = buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor);
+    const aRefs = buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor, data.tuitionTiers);
 
     const revenueWs = wb.addWorksheet("Revenue Schedule");
     const staffingWs = wb.addWorksheet("Staffing & Personnel");
@@ -391,14 +435,14 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     const pnlWs = wb.addWorksheet("Financial Model");
     const summaryWs = wb.addWorksheet("Summary");
 
-    const revTotalRow = buildRevenueScheduleTab(revenueWs, revenueRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
+    const revTotalRow = buildRevenueScheduleTab(revenueWs, revenueRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs, data.tuitionTiers);
     const staffTotalRow = buildStaffingTab(staffingWs, staffingRows, salaryEscRate, prorationFactor, yearCount, cols, yearHeaders, aRefs);
     const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revTotalRow, yearCount, cols, yearHeaders, aRefs);
     const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
 
     buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow, sp.entityType);
 
-    const revenueMix = computeRevenueMixForExport(revenueRows, enrollmentByYear, yearCount);
+    const revenueMix = computeRevenueMixForExport(revenueRows, enrollmentByYear, yearCount, data.tuitionTiers);
     buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders, {
       fmRevenueRow: 2, fmStaffRow: 3, fmExpenseRow: 4, fmCapDebtRow: 5,
       fmTotalExpRow: 6, fmNIRow: 7, fmCumNIRow: 8, fmReserveRow: 9,
@@ -417,7 +461,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     }
   } else {
     const assumptionsWs = wb.addWorksheet("Assumptions");
-    buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor);
+    buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor, data.tuitionTiers);
 
     const pnlWs = wb.addWorksheet("Financial Model");
     buildLegacyPnLTab(pnlWs, data, enrollmentByYear, yearCount, cols, yearHeaders, prorationFactor);
@@ -454,6 +498,7 @@ function buildAssumptionsTab(
   salaryEscRate: number,
   costInflation: number,
   prorationFactor: number,
+  tuitionTiers?: TuitionTier[],
 ): AssumptionRefs {
   ws.columns = [{ width: 35 }, { width: 25 }];
 
@@ -484,6 +529,17 @@ function buildAssumptionsTab(
     profileItems.push(["Year 1 Operating Months", sp.year1OperatingMonths || 12]);
   }
 
+  if (sp.schoolType === "private_school") {
+    profileItems.push(["Accredited", sp.isAccredited ? "Yes" : "No"]);
+    if (sp.isAccredited && sp.accreditingBody) {
+      profileItems.push(["Accrediting Body", sp.accreditingBody]);
+    }
+  }
+
+  if (sp.hasManagementFee) {
+    profileItems.push(["Management Fee", `${sp.managementFeePercent || 0}% of Revenue`]);
+  }
+
   for (const [label, value] of profileItems) {
     r++;
     ws.getCell(r, 1).value = label;
@@ -505,6 +561,21 @@ function buildAssumptionsTab(
     ws.getCell(r, 2).value = enrollment[y];
     ws.getCell(r, 2).font = BOLD_FONT;
     ws.getCell(r, 2).numFmt = NUMBER_FORMAT;
+  }
+
+  if (tuitionTiers && tuitionTiers.length > 0 && sp.schoolType !== "charter_school") {
+    r += 2;
+    styleSectionRow(ws, r, 2);
+    ws.getCell(r, 1).value = "TUITION DISCOUNT TIERS";
+
+    for (const tier of tuitionTiers) {
+      r++;
+      ws.getCell(r, 1).value = `${tier.label} (${tier.discountPercent}% discount)`;
+      ws.getCell(r, 1).font = NORMAL_FONT;
+      const totalStudents = tier.studentCounts.reduce((s, n) => s + n, 0);
+      ws.getCell(r, 2).value = `${totalStudents} total students across years`;
+      ws.getCell(r, 2).font = BOLD_FONT;
+    }
   }
 
   r += 2;
@@ -629,6 +700,37 @@ function buildPriorYearTab(ws: ExcelJS.Worksheet, snapshot: PriorYearSnapshot, e
   }
 }
 
+function computeTuitionWithTiersExport(
+  grossPerStudent: number,
+  yearIdx: number,
+  totalStudents: number,
+  tuitionTiers?: TuitionTier[],
+): number {
+  if (!tuitionTiers || tuitionTiers.length === 0) {
+    return grossPerStudent * totalStudents;
+  }
+  let rawTierTotal = 0;
+  for (const tier of tuitionTiers) {
+    rawTierTotal += tier.studentCounts?.[yearIdx] ?? 0;
+  }
+  if (rawTierTotal === 0) {
+    return grossPerStudent * totalStudents;
+  }
+  const scaleFactor = rawTierTotal > totalStudents ? totalStudents / rawTierTotal : 1;
+  let total = 0;
+  let allocated = 0;
+  for (const tier of tuitionTiers) {
+    const scaled = (tier.studentCounts?.[yearIdx] ?? 0) * scaleFactor;
+    allocated += scaled;
+    total += scaled * grossPerStudent * (1 - (tier.discountPercent || 0) / 100);
+  }
+  const remaining = totalStudents - allocated;
+  if (remaining > 0) {
+    total += remaining * grossPerStudent;
+  }
+  return total;
+}
+
 function buildRevenueScheduleTab(
   ws: ExcelJS.Worksheet,
   rows: RevenueRow[],
@@ -637,6 +739,7 @@ function buildRevenueScheduleTab(
   cols: number,
   yearHeaders: string[],
   aRefs?: AssumptionRefs,
+  tuitionTiers?: TuitionTier[],
 ): number {
   ws.columns = [{ width: 42 }, ...Array(yearCount).fill({ width: 18 })];
   ws.getRow(1).values = yearHeaders;
@@ -699,7 +802,12 @@ function buildRevenueScheduleTab(
           }
         } else if (row.driverType === "per_student") {
           const sign = cat === "tuition_offsets" ? "-" : "";
-          cell.value = { formula: `${sign}${amt}*${studentsCell}` };
+          if (row.id === "gross_tuition" && tuitionTiers && tuitionTiers.length > 0) {
+            const tierValue = computeTuitionWithTiersExport(amt, y, enrollment[y] || 0, tuitionTiers);
+            cell.value = cat === "tuition_offsets" ? -Math.abs(tierValue) : tierValue;
+          } else {
+            cell.value = { formula: `${sign}${amt}*${studentsCell}` };
+          }
         } else if (row.driverType === "monthly") {
           const sign = cat === "tuition_offsets" ? "-" : "";
           cell.value = { formula: `${sign}${amt}*12` };

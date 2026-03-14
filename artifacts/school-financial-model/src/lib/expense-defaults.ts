@@ -101,7 +101,7 @@ const EXPENSE_LINE_ITEMS: ExpenseLineItemDef[] = [
   { id: "legal_accounting", category: "administrative_general", lineItem: "Legal & Accounting", driverType: "annual_fixed", defaultAmount: 8000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "office_supplies", category: "administrative_general", lineItem: "Office Supplies & Postage", driverType: "annual_fixed", defaultAmount: 2000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "bank_merchant_fees", category: "administrative_general", lineItem: "Bank & Merchant Processing Fees", driverType: "percent_of_revenue", defaultAmount: 2.5, enabledFor: ["tuition_based", "hybrid_mixed"] },
-  { id: "authorizer_fee", category: "administrative_general", lineItem: "Authorizer / Management Fee", driverType: "percent_of_revenue", defaultAmount: 3, enabledFor: ["charter_public_funded"] },
+  { id: "authorizer_fee", category: "administrative_general", lineItem: "Authorizer / Management Fee", driverType: "percent_of_revenue", defaultAmount: 3, enabledFor: [] },
   { id: "audit_compliance", category: "administrative_general", lineItem: "Audit & Compliance", driverType: "annual_fixed", defaultAmount: 5000, enabledFor: ["charter_public_funded"] },
   { id: "board_governance", category: "administrative_general", lineItem: "Board & Governance", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
   { id: "miscellaneous", category: "administrative_general", lineItem: "Miscellaneous / Other Overhead", driverType: "annual_fixed", defaultAmount: 3000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
@@ -141,16 +141,25 @@ export function generateDefaultExpenseRows(
   fundingProfile: FundingProfile,
   yearCount: number,
   schoolStage: SchoolStage = "new_school",
+  managementFee?: { enabled: boolean; percent: number },
 ): ExpenseRowData[] {
   return EXPENSE_LINE_ITEMS.map((def) => {
     const baseAmount = stageAdjust(def.defaultAmount, schoolStage);
+    let enabled = def.enabledFor.includes(fundingProfile);
+    let amount = baseAmount;
+
+    if (def.id === "authorizer_fee" && managementFee) {
+      enabled = managementFee.enabled;
+      amount = managementFee.enabled ? managementFee.percent : baseAmount;
+    }
+
     return {
       id: uid(),
       category: def.category,
       lineItem: def.lineItem,
-      enabled: def.enabledFor.includes(fundingProfile),
+      enabled,
       driverType: def.driverType,
-      amounts: new Array(yearCount).fill(baseAmount),
+      amounts: new Array(yearCount).fill(amount),
       note: "",
     };
   });

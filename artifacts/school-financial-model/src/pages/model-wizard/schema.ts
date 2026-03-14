@@ -5,6 +5,16 @@ export const fundingProfileSchema = z.enum(["tuition_based", "charter_public_fun
 export const schoolTypeSchema = z.enum(["charter_school", "homeschool_coop", "learning_pod", "microschool", "private_school", "tutoring_center", "other"]);
 export const entityTypeSchema = z.enum(["sole_practitioner", "llc_single", "llc_partnership", "c_corp", "s_corp", "nonprofit_501c3"]);
 
+export const tuitionTierTypeSchema = z.enum(["full_pay", "staff_discount", "sibling_discount", "high_need_scholarship", "custom"]);
+
+export const tuitionTierSchema = z.object({
+  id: z.string(),
+  tierType: tuitionTierTypeSchema,
+  label: z.string(),
+  discountPercent: z.coerce.number().min(0).max(100),
+  studentCounts: z.array(z.coerce.number().min(0)),
+});
+
 export const schoolProfileSchema = z.object({
   schoolName: z.string().min(1, "School name is required"),
   state: z.string().min(1, "State is required"),
@@ -20,6 +30,10 @@ export const schoolProfileSchema = z.object({
   fiscalYearStartMonth: z.coerce.number().min(1).max(12),
   isPartialFirstYear: z.boolean(),
   year1OperatingMonths: z.coerce.number().min(1).max(12),
+  isAccredited: z.boolean().optional(),
+  accreditingBody: z.string().optional(),
+  hasManagementFee: z.boolean().optional(),
+  managementFeePercent: z.coerce.number().min(0).max(100).optional(),
 });
 
 export const priorYearSnapshotSchema = z.object({
@@ -140,6 +154,7 @@ export const facilitiesSchema = z.object({
 export const fullModelSchema = z.object({
   schoolProfile: schoolProfileSchema.optional(),
   enrollment: enrollmentSchema.optional(),
+  tuitionTiers: z.array(tuitionTierSchema).optional(),
   revenue: revenueSchema.optional(),
   revenueRows: z.array(revenueRowSchema).optional(),
   staffing: staffingSchema.optional(),
@@ -155,6 +170,8 @@ export type SchoolStage = z.infer<typeof schoolStageSchema>;
 export type FundingProfile = z.infer<typeof fundingProfileSchema>;
 export type SchoolType = z.infer<typeof schoolTypeSchema>;
 export type EntityType = z.infer<typeof entityTypeSchema>;
+export type TuitionTierType = z.infer<typeof tuitionTierTypeSchema>;
+export type TuitionTier = z.infer<typeof tuitionTierSchema>;
 
 export const ENTITY_TYPE_LABELS: Record<string, string> = {
   sole_practitioner: "Sole Practitioner (no EIN)",
@@ -189,4 +206,29 @@ export function profitMarginLabel(entityType?: string): string {
 
 export function cumulativeProfitLabel(entityType?: string): string {
   return isNonprofit(entityType) ? "Cumulative Net Income" : "Cumulative Profit";
+}
+
+export const TUITION_TIER_LABELS: Record<string, string> = {
+  full_pay: "Full Pay",
+  staff_discount: "Staff Discount",
+  sibling_discount: "Sibling Discount",
+  high_need_scholarship: "High Need / Scholarship",
+  custom: "Custom Tier",
+};
+
+export function isCharterSchool(schoolType?: string): boolean {
+  return schoolType === "charter_school";
+}
+
+export function isPrivateSchool(schoolType?: string): boolean {
+  return schoolType === "private_school";
+}
+
+export function getDefaultTuitionTiers(yearCount: number): TuitionTier[] {
+  return [
+    { id: "tier_full_pay", tierType: "full_pay", label: "Full Pay", discountPercent: 0, studentCounts: new Array(yearCount).fill(0) },
+    { id: "tier_staff", tierType: "staff_discount", label: "Staff Discount", discountPercent: 50, studentCounts: new Array(yearCount).fill(0) },
+    { id: "tier_sibling", tierType: "sibling_discount", label: "Sibling Discount", discountPercent: 10, studentCounts: new Array(yearCount).fill(0) },
+    { id: "tier_high_need", tierType: "high_need_scholarship", label: "High Need / Scholarship", discountPercent: 100, studentCounts: new Array(yearCount).fill(0) },
+  ];
 }

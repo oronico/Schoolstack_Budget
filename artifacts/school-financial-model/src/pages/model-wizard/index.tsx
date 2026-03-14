@@ -170,16 +170,36 @@ export function ModelWizardPage() {
   const isExportStep = currentStep === 8;
 
   const handleNext = async () => {
-    const stepFieldMap: Record<number, Array<keyof FullModelData>> = {
-      1: ['schoolProfile'],
-      2: ['enrollment'],
-      3: ['revenue', 'revenueRows'],
-      4: ['staffing', 'staffingRows'],
-      5: ['facilities', 'expenseRows', 'capitalAndDebtRows'],
+    const validateStep = async (step: number): Promise<boolean> => {
+      switch (step) {
+        case 1: return methods.trigger('schoolProfile');
+        case 2: return methods.trigger('enrollment');
+        case 3: {
+          const [a, b] = await Promise.all([
+            methods.trigger('revenue'),
+            methods.trigger('revenueRows'),
+          ]);
+          return a && b;
+        }
+        case 4: {
+          const [a, b] = await Promise.all([
+            methods.trigger('staffing'),
+            methods.trigger('staffingRows'),
+          ]);
+          return a && b;
+        }
+        case 5: {
+          const [a, b, d] = await Promise.all([
+            methods.trigger('facilities'),
+            methods.trigger('expenseRows'),
+            methods.trigger('capitalAndDebtRows'),
+          ]);
+          return a && b && d;
+        }
+        default: return true;
+      }
     };
-    const fieldsToValidate = stepFieldMap[currentStep] ?? [];
-
-    const isValid = await methods.trigger(fieldsToValidate);
+    const isValid = await validateStep(currentStep);
     if (isValid) {
       setCurrentStep(s => Math.min(s + 1, STEPS.length));
       window.scrollTo({ top: 0, behavior: 'smooth' });

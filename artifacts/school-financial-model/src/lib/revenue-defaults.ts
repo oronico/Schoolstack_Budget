@@ -289,9 +289,16 @@ export function generateDefaultRevenueRows(
     }));
 }
 
-export function getCategoryOrder(fundingProfile: FundingProfile): RevenueCategory[] {
+export const CHARTER_HIDDEN_CATEGORIES: RevenueCategory[] = [
+  "tuition_and_fees",
+  "tuition_offsets",
+  "school_choice",
+];
+
+export function getCategoryOrder(fundingProfile: FundingProfile, schoolType?: string): RevenueCategory[] {
+  const isCharter = schoolType === "charter_school";
   if (fundingProfile === "charter_public_funded") {
-    return [
+    const order: RevenueCategory[] = [
       "public_funding",
       "grants_contributions",
       "school_choice",
@@ -299,6 +306,10 @@ export function getCategoryOrder(fundingProfile: FundingProfile): RevenueCategor
       "tuition_offsets",
       "other_revenue",
     ];
+    if (isCharter) {
+      return order.filter(cat => !CHARTER_HIDDEN_CATEGORIES.includes(cat));
+    }
+    return order;
   }
   return CATEGORY_ORDER;
 }

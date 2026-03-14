@@ -102,8 +102,8 @@ React + Vite frontend (Tailwind CSS v4). Amber-forward brand with Quicksand/Nuni
 - Landing page, auth screens (register/login/forgot-password/reset-password)
 - Dashboard with model management (create, duplicate, archive, delete)
 - 8-step model wizard: Profile → Enrollment → Revenue → Staffing → Expenses → Review → Consultant → Export
-- **School Profile step**: School stage (`new_school` = 3-year default, `operating_school` = 4-year default with optional Year 5 extension), funding profile (`tuition_based`, `charter_public_funded`, `hybrid_mixed`), school type, fiscal year start month, partial first year toggle, optional prior-year snapshot for operating schools
-- **Enrollment step**: Per-year student counts with school-type-specific benchmarks and growth guidance
+- **School Profile step**: School stage (`new_school` = 3-year default, `operating_school` = 4-year default with optional Year 5 extension), funding profile (`tuition_based`, `charter_public_funded`, `hybrid_mixed`), school type, fiscal year start month, partial first year toggle, optional prior-year snapshot for operating schools. Charter schools auto-set funding to `charter_public_funded` (disabled). Private schools show accreditation question (`isAccredited` + `accreditingBody`). All school types can set a management fee (`hasManagementFee` + `managementFeePercent`).
+- **Enrollment step**: Per-year student counts with school-type-specific benchmarks and growth guidance. Non-charter schools show tuition discount tier breakdown (full_pay, staff_discount, sibling_discount, high_need_scholarship, custom) with per-tier student counts per year.
 - **Revenue step**: Row-based schedule with 6 categories (tuition_and_fees, tuition_offsets, public_funding, school_choice, grants_contributions, other_revenue), driver types (annual_fixed, monthly, per_student, percent_of_base), per-year amounts, funding-profile-aware defaults, optional payment timing fields per line item (billing months, collection method/rate for tuition; payment frequency/timing for public funding; disbursement type/lag for ESA; grant status/receipt quarter for grants), Year 1 monthly cash inflow summary chart
 - **Staffing step**: FTE-based roster with function categories (school_leadership, instructional, student_support, operations, administrative, other), employment types (full_time, part_time, contract), benefits/payroll tax rates, payrollLike toggle for contractors, real-time cost summary
 - **Expenses step**: Row-based schedule with 4 accounting categories (instructional_program, technology, occupancy_facility, administrative_general), driver types (annual_fixed, monthly, per_student, percent_of_revenue), plus capital & debt rows with loan calculator
@@ -175,7 +175,9 @@ Row-based with loan calculator (PMT-based amortization for loans with principal/
 ### Consultant Engine
 Deterministic rules engine with CFO tone producing:
 - Lender readiness score (green/yellow/red)
-- School-type-aware heuristics (charter concentration/timing, tuition collection/discount risk, hybrid diversification)
+- School-type-aware heuristics (charter concentration/timing, tuition collection/discount risk, hybrid diversification, accreditation advisory)
+- Management fee metric and advisory (% of revenue, threshold warnings)
+- Tuition tier-aware revenue calculations (per-tier discount × student counts)
 - Accounting-category diagnostics (occupancy ratio, software fragmentation, curriculum outliers, etc.)
-- 3 stress test scenarios with projected impacts
+- 3 stress test scenarios with projected impacts (tuition tier-aware)
 - Prior-year variance analysis for operating schools

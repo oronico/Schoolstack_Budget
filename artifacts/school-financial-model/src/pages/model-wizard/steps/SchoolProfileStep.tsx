@@ -1,6 +1,7 @@
+import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox } from "@/components/ui/form-inputs";
-import { Building2, Rocket, GraduationCap, Landmark, Shuffle, Briefcase, Scale, Users, Building, FileText, Heart } from "lucide-react";
+import { Building2, Rocket, GraduationCap, Landmark, Shuffle, Briefcase, Scale, Users, Building, FileText, Heart, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS } from "../schema";
 
@@ -38,15 +39,18 @@ interface RadioCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
+  disabled?: boolean;
 }
 
-function RadioCard({ selected, onSelect, icon, title, description }: RadioCardProps) {
+function RadioCard({ selected, onSelect, icon, title, description, disabled }: RadioCardProps) {
   return (
     <button
       type="button"
       onClick={onSelect}
+      disabled={disabled}
       className={cn(
         "flex items-start gap-4 p-5 rounded-2xl border-2 text-left transition-all w-full",
+        disabled && "opacity-50 cursor-not-allowed",
         selected
           ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
           : "border-border bg-card hover:border-primary/40 hover:bg-primary/[0.02]"
@@ -117,6 +121,17 @@ export function SchoolProfileStep() {
   const fundingProfile = watch("schoolProfile.fundingProfile");
   const schoolType = watch("schoolProfile.schoolType");
   const entityType = watch("schoolProfile.entityType");
+  const isAccredited = watch("schoolProfile.isAccredited");
+  const hasManagementFee = watch("schoolProfile.hasManagementFee");
+
+  const isCharter = schoolType === "charter_school";
+  const isPrivate = schoolType === "private_school";
+
+  useEffect(() => {
+    if (isCharter && fundingProfile !== "charter_public_funded") {
+      setValue("schoolProfile.fundingProfile", "charter_public_funded", { shouldDirty: true });
+    }
+  }, [isCharter, fundingProfile, setValue]);
 
   return (
     <div className="space-y-8">
@@ -149,6 +164,12 @@ export function SchoolProfileStep() {
 
       <div>
         <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">How is your school funded?</h3>
+        {isCharter && (
+          <div className="flex items-start gap-2 mb-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
+            <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-blue-700">Charter schools are automatically set to Charter / Public-funded. Tuition and ESA revenue categories are not applicable.</p>
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-4">
           <RadioCard
             value="tuition_based"
@@ -157,6 +178,7 @@ export function SchoolProfileStep() {
             icon={<GraduationCap className="h-5 w-5" />}
             title="Tuition-based"
             description="Primarily funded through tuition, fees, and family payments"
+            disabled={isCharter}
           />
           <RadioCard
             value="charter_public_funded"
@@ -173,6 +195,7 @@ export function SchoolProfileStep() {
             icon={<Shuffle className="h-5 w-5" />}
             title="Hybrid / Mixed funding"
             description="A combination of tuition, public funding, ESA/vouchers, and contributions"
+            disabled={isCharter}
           />
         </div>
       </div>
@@ -228,6 +251,51 @@ export function SchoolProfileStep() {
           helperText="Max students your building can hold"
           className="md:col-span-2"
         />
+      </div>
+
+      {isPrivate && (
+        <div>
+          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Accreditation</h3>
+          <div className="space-y-4">
+            <FormCheckbox
+              name="schoolProfile.isAccredited"
+              label="Is your school accredited?"
+              helperText="Accreditation status can be important for financial planning and compliance"
+            />
+            {isAccredited && (
+              <div className="max-w-md">
+                <FormInput
+                  name="schoolProfile.accreditingBody"
+                  label="Accrediting Body"
+                  placeholder="e.g., SACS, NAIS, AdvancED"
+                  helperText="Name of the accrediting organization"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Management Fee</h3>
+        <div className="space-y-4">
+          <FormCheckbox
+            name="schoolProfile.hasManagementFee"
+            label="Does your school pay a management fee to a network or back-office organization?"
+            helperText="Common for schools that are part of a charter network or management organization"
+          />
+          {hasManagementFee && (
+            <div className="max-w-sm">
+              <FormInput
+                name="schoolProfile.managementFeePercent"
+                label="Management Fee (% of Revenue)"
+                type="number"
+                placeholder="5"
+                helperText="Percentage of total revenue paid as a management fee"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <div>

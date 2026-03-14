@@ -1,6 +1,9 @@
+import { useEffect, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput } from "@/components/ui/form-inputs";
-import { SCHOOL_TYPE_LABELS } from "../schema";
+import { SCHOOL_TYPE_LABELS, TUITION_TIER_LABELS, getDefaultTuitionTiers, isCharterSchool } from "../schema";
+import type { TuitionTier } from "../schema";
+import { Plus, Trash2 } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -125,17 +128,86 @@ function EnrollmentChart({ enrollments, maxCapacity, schoolStage, yearCount }: {
 }
 
 export function EnrollmentStep() {
-  const { watch } = useFormContext();
+  const { watch, setValue } = useFormContext();
   const schoolType = watch("schoolProfile.schoolType") || "other";
   const schoolStage = watch("schoolProfile.schoolStage");
   const maxCapacity = watch("schoolProfile.maxCapacity") || 0;
   const enrollment = watch("enrollment") || {};
+  const tuitionTiers = watch("tuitionTiers") as TuitionTier[] | undefined;
   const guide = GUIDANCE[schoolType] || GUIDANCE.other;
 
   const defaultYearCount = getDefaultYearCount(schoolStage);
   const yearKeys = ["year1", "year2", "year3", "year4", "year5"] as const;
 
   const enrollments = yearKeys.map(k => enrollment[k] || 0);
+
+  const isCharter = isCharterSchool(schoolType);
+  const showTuitionTiers = !isCharter;
+
+  useEffect(() => {
+    if (showTuitionTiers && (!tuitionTiers || tuitionTiers.length === 0)) {
+      setValue("tuitionTiers", getDefaultTuitionTiers(defaultYearCount), { shouldDirty: true });
+    }
+  }, [showTuitionTiers, tuitionTiers, defaultYearCount, setValue]);
+
+  useEffect(() => {
+    if (tuitionTiers && tuitionTiers.length > 0) {
+      const needsUpdate = tuitionTiers.some(t => t.studentCounts.length !== defaultYearCount);
+      if (needsUpdate) {
+        const updated = tuitionTiers.map(t => ({
+          ...t,
+          studentCounts: t.studentCounts.length >= defaultYearCount
+            ? t.studentCounts.slice(0, defaultYearCount)
+            : [...t.studentCounts, ...new Array(defaultYearCount - t.studentCounts.length).fill(0)],
+        }));
+        setValue("tuitionTiers", updated, { shouldDirty: true });
+      }
+    }
+  }, [tuitionTiers, defaultYearCount, setValue]);
+
+  const updateTierStudentCount = useCallback((tierId: string, yearIdx: number, value: number) => {
+    if (!tuitionTiers) return;
+    const updated = tuitionTiers.map(t => {
+      if (t.id !== tierId) return t;
+      const newCounts = [...t.studentCounts];
+      newCounts[yearIdx] = value;
+      return { ...t, studentCounts: newCounts };
+    });
+    setValue("tuitionTiers", updated, { shouldDirty: true });
+  }, [tuitionTiers, setValue]);
+
+  const updateTierDiscount = useCallback((tierId: string, value: number) => {
+    if (!tuitionTiers) return;
+    const updated = tuitionTiers.map(t =>
+      t.id === tierId ? { ...t, discountPercent: value } : t
+    );
+    setValue("tuitionTiers", updated, { shouldDirty: true });
+  }, [tuitionTiers, setValue]);
+
+  const updateTierLabel = useCallback((tierId: string, value: string) => {
+    if (!tuitionTiers) return;
+    const updated = tuitionTiers.map(t =>
+      t.id === tierId ? { ...t, label: value } : t
+    );
+    setValue("tuitionTiers", updated, { shouldDirty: true });
+  }, [tuitionTiers, setValue]);
+
+  const addCustomTier = useCallback(() => {
+    const current = tuitionTiers || [];
+    const newTier: TuitionTier = {
+      id: `tier_custom_${Date.now()}`,
+      tierType: "custom",
+      label: "Custom Tier",
+      discountPercent: 0,
+      studentCounts: new Array(defaultYearCount).fill(0),
+    };
+    setValue("tuitionTiers", [...current, newTier], { shouldDirty: true });
+  }, [tuitionTiers, defaultYearCount, setValue]);
+
+  const removeTier = useCallback((tierId: string) => {
+    if (!tuitionTiers) return;
+    setValue("tuitionTiers", tuitionTiers.filter(t => t.id !== tierId), { shouldDirty: true });
+  }, [tuitionTiers, setValue]);
 
   const warnings: string[] = [];
   for (let i = 1; i < 5; i++) {
@@ -150,6 +222,19 @@ export function EnrollmentStep() {
     for (let i = 0; i < 5; i++) {
       if (enrollments[i] > maxCapacity) {
         warnings.push(`${getYearLabel(i, schoolStage)} enrollment (${enrollments[i]}) exceeds your facility capacity of ${maxCapacity}.`);
+      }
+    }
+  }
+
+  const tierTotalWarnings: string[] = [];
+  if (showTuitionTiers && tuitionTiers && tuitionTiers.length > 0) {
+    for (let yi = 0; yi < defaultYearCount; yi++) {
+      const tierTotal = tuitionTiers.reduce((sum, t) => sum + (t.studentCounts[yi] || 0), 0);
+      const yearEnrollment = enrollments[yi] || 0;
+      if (yearEnrollment > 0 && tierTotal > 0 && tierTotal !== yearEnrollment) {
+        tierTotalWarnings.push(
+          `${getYearLabel(yi, schoolStage)}: Tuition tier students (${tierTotal}) ${tierTotal > yearEnrollment ? 'exceed' : 'are less than'} total enrollment (${yearEnrollment}).`
+        );
       }
     }
   }
@@ -193,6 +278,96 @@ export function EnrollmentStep() {
       </div>
 
       <EnrollmentChart enrollments={enrollments} maxCapacity={maxCapacity} schoolStage={schoolStage} yearCount={defaultYearCount} />
+
+      {showTuitionTiers && tuitionTiers && tuitionTiers.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Tuition Discount Tiers</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Break down your enrollment by tuition type. This lets us calculate net tuition revenue more accurately by applying the correct discount to each group.
+          </p>
+
+          <div className="space-y-4">
+            {tuitionTiers.map((tier) => (
+              <div key={tier.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  {tier.tierType === "custom" ? (
+                    <input
+                      type="text"
+                      value={tier.label}
+                      onChange={(e) => updateTierLabel(tier.id, e.target.value)}
+                      className="font-semibold text-sm bg-transparent border-b border-dashed border-border focus:outline-none focus:border-primary w-40"
+                      placeholder="Tier name"
+                    />
+                  ) : (
+                    <span className="font-semibold text-sm text-foreground">{tier.label}</span>
+                  )}
+                  <div className="flex items-center gap-1 ml-auto">
+                    <span className="text-xs text-muted-foreground">Discount:</span>
+                    <input
+                      type="number"
+                      value={tier.discountPercent}
+                      onChange={(e) => updateTierDiscount(tier.id, parseFloat(e.target.value) || 0)}
+                      className="w-16 text-sm text-center border border-border rounded-lg px-2 py-1 bg-background"
+                      min={0}
+                      max={100}
+                      step={1}
+                    />
+                    <span className="text-xs text-muted-foreground">%</span>
+                    {tier.tierType === "custom" && (
+                      <button
+                        type="button"
+                        onClick={() => removeTier(tier.id)}
+                        className="ml-2 text-muted-foreground hover:text-destructive transition-colors p-1"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${defaultYearCount}, 1fr)` }}>
+                  {Array.from({ length: defaultYearCount }).map((_, yi) => (
+                    <div key={yi} className="flex flex-col gap-1">
+                      <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                        {getYearLabel(yi, schoolStage)}
+                      </label>
+                      <input
+                        type="number"
+                        value={tier.studentCounts[yi] ?? 0}
+                        onChange={(e) => updateTierStudentCount(tier.id, yi, parseInt(e.target.value) || 0)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        placeholder="0"
+                        min={0}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addCustomTier}
+              className="flex items-center gap-2 text-sm text-primary font-medium hover:text-primary/80 transition-colors py-2"
+            >
+              <Plus className="h-4 w-4" /> Add custom discount tier
+            </button>
+          </div>
+
+          {tierTotalWarnings.length > 0 && (
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p className="text-sm font-bold text-amber-800 mb-2">Tier Enrollment Mismatch</p>
+              <ul className="space-y-1">
+                {tierTotalWarnings.map((w, i) => (
+                  <li key={i} className="text-sm text-amber-700 flex items-start gap-2">
+                    <span className="mt-0.5">&#9888;</span> {w}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-amber-600 mt-2">Tuition tier student counts should add up to your total enrollment for each year.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {defaultYearCount < 5 && (
         <div className="bg-white rounded-2xl p-5 border border-border/60 shadow-sm">

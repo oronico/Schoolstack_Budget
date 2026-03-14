@@ -48,6 +48,9 @@ export function ExpenseStep() {
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const yearCount = getYearCount(schoolStage);
 
+  const hasManagementFee = watch("schoolProfile.hasManagementFee") as boolean | undefined;
+  const managementFeePercent = watch("schoolProfile.managementFeePercent") as number | undefined;
+
   const staffingRows = watch("staffingRows") as StaffingRowData[] | undefined;
   const formExpenseRows = watch("expenseRows") as ExpenseRowData[] | undefined;
   const formCapitalRows = watch("capitalAndDebtRows") as CapitalDebtRowData[] | undefined;
@@ -75,7 +78,8 @@ export function ExpenseStep() {
     } else if (formExpenseRows !== undefined && Array.isArray(formExpenseRows) && formExpenseRows.length === 0 && defaultsApplied) {
       setExpenseRows([]);
     } else if (!defaultsApplied) {
-      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount, schoolStage);
+      const mgmtFee = hasManagementFee ? { enabled: true, percent: managementFeePercent || 5 } : undefined;
+      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount, schoolStage, mgmtFee);
       setExpenseRows(defaults);
       const enabledCats = new Set<string>();
       defaults.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
@@ -83,7 +87,26 @@ export function ExpenseStep() {
       setValue("expenseRows", defaults, { shouldDirty: true });
       setDefaultsApplied(true);
     }
-  }, [formExpenseRows, fundingProfile, schoolStage, yearCount, defaultsApplied, setValue]);
+  }, [formExpenseRows, fundingProfile, schoolStage, yearCount, defaultsApplied, setValue, hasManagementFee, managementFeePercent]);
+
+  useEffect(() => {
+    if (!defaultsApplied || expenseRows.length === 0) return;
+    const updated = expenseRows.map((row) => {
+      if (row.lineItem !== "Authorizer / Management Fee") return row;
+      const shouldEnable = hasManagementFee === true;
+      const pct = managementFeePercent || 5;
+      return {
+        ...row,
+        enabled: shouldEnable,
+        amounts: row.amounts.map(() => shouldEnable ? pct : row.amounts[0]),
+      };
+    });
+    const changed = updated.some((r, i) => r.enabled !== expenseRows[i].enabled || r.amounts[0] !== expenseRows[i].amounts[0]);
+    if (changed) {
+      setExpenseRows(updated);
+      setValue("expenseRows", updated, { shouldDirty: true });
+    }
+  }, [hasManagementFee, managementFeePercent, defaultsApplied]);
 
   const [capitalDefaultsApplied, setCapitalDefaultsApplied] = useState(false);
   useEffect(() => {
