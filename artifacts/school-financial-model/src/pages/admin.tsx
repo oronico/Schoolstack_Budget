@@ -11,6 +11,10 @@ import {
   BarChart3,
   Loader2,
   ShieldAlert,
+  Landmark,
+  GraduationCap,
+  DollarSign,
+  CalendarRange,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -32,6 +36,12 @@ interface AnalyticsData {
     createdAt: string;
   }[];
   schoolTypeDistribution: { type: string; count: number }[];
+  schoolStageDistribution: { stage: string; count: number }[];
+  fundingProfileDistribution: { profile: string; count: number }[];
+  topRevenueLines: { lineItem: string; count: number }[];
+  topExpenseCategories: { category: string; count: number }[];
+  exportRateByType: { type: string; totalModels: number; exportedModels: number; rate: number }[];
+  year5Adoption: { totalRowModels: number; extendedTo5: number; rate: number };
   funnel: {
     signedUp: number;
     createdModel: number;
@@ -45,6 +55,24 @@ const SCHOOL_TYPE_LABELS: Record<string, string> = {
   private_school: "Private School",
   charter_school: "Charter School",
   other: "Other",
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  new_school: "New School",
+  operating_school: "Operating School",
+};
+
+const FUNDING_LABELS: Record<string, string> = {
+  tuition_based: "Tuition-Based",
+  charter_public_funded: "Charter / Public",
+  hybrid_mixed: "Hybrid / Mixed",
+};
+
+const EXPENSE_CAT_LABELS: Record<string, string> = {
+  instructional_program: "Instructional",
+  technology: "Technology",
+  occupancy_facility: "Occupancy",
+  administrative_general: "Admin / General",
 };
 
 function MetricCard({
@@ -97,6 +125,39 @@ function FunnelBar({
           style={{ width: `${pct}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+function RankedList({
+  items,
+  labelMap,
+}: {
+  items: { label: string; count: number }[];
+  labelMap?: Record<string, string>;
+}) {
+  if (items.length === 0) {
+    return <p className="text-sm text-muted-foreground">No data yet.</p>;
+  }
+  const maxCount = Math.max(...items.map((i) => i.count));
+  return (
+    <div className="space-y-2">
+      {items.map((item) => (
+        <div key={item.label} className="space-y-1">
+          <div className="flex justify-between text-sm">
+            <span className="font-medium text-foreground truncate mr-2">
+              {labelMap?.[item.label] || item.label}
+            </span>
+            <span className="text-muted-foreground flex-shrink-0">{item.count}</span>
+          </div>
+          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+            <div
+              className="h-full bg-teal-500 rounded-full transition-all duration-500"
+              style={{ width: `${maxCount > 0 ? (item.count / maxCount) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -190,17 +251,14 @@ export function AdminPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <MetricCard title="Total Users" value={data.totalUsers} icon={Users} />
+          <MetricCard title="Total Models" value={data.totalModels} icon={FileSpreadsheet} />
+          <MetricCard title="Total Exports" value={data.totalExports} icon={Download} />
           <MetricCard
-            title="Total Models"
-            value={data.totalModels}
-            icon={FileSpreadsheet}
-          />
-          <MetricCard
-            title="Total Exports"
-            value={data.totalExports}
-            icon={Download}
+            title="Year 5 Adoption"
+            value={`${(data.year5Adoption.rate * 100).toFixed(0)}%`}
+            icon={CalendarRange}
           />
         </div>
 
@@ -213,26 +271,10 @@ export function AdminPage() {
               </h2>
             </div>
             <div className="space-y-4">
-              <FunnelBar
-                label="Signed Up"
-                value={data.funnel.signedUp}
-                maxValue={data.funnel.signedUp}
-              />
-              <FunnelBar
-                label="Created Model"
-                value={data.funnel.createdModel}
-                maxValue={data.funnel.signedUp}
-              />
-              <FunnelBar
-                label="Reached Review"
-                value={data.funnel.reachedReview}
-                maxValue={data.funnel.signedUp}
-              />
-              <FunnelBar
-                label="Exported XLSX"
-                value={data.funnel.exported}
-                maxValue={data.funnel.signedUp}
-              />
+              <FunnelBar label="Signed Up" value={data.funnel.signedUp} maxValue={data.funnel.signedUp} />
+              <FunnelBar label="Created Model" value={data.funnel.createdModel} maxValue={data.funnel.signedUp} />
+              <FunnelBar label="Reached Review" value={data.funnel.reachedReview} maxValue={data.funnel.signedUp} />
+              <FunnelBar label="Exported XLSX" value={data.funnel.exported} maxValue={data.funnel.signedUp} />
             </div>
           </div>
 
@@ -243,26 +285,115 @@ export function AdminPage() {
                 School Type Distribution
               </h2>
             </div>
-            {data.schoolTypeDistribution.length === 0 ? (
+            <RankedList
+              items={data.schoolTypeDistribution.map((s) => ({ label: s.type, count: s.count }))}
+              labelMap={SCHOOL_TYPE_LABELS}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+          <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">
+                School Stage Distribution
+              </h2>
+            </div>
+            <RankedList
+              items={data.schoolStageDistribution.map((s) => ({ label: s.stage, count: s.count }))}
+              labelMap={STAGE_LABELS}
+            />
+          </div>
+
+          <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <Landmark className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">
+                Funding Profile Distribution
+              </h2>
+            </div>
+            <RankedList
+              items={data.fundingProfileDistribution.map((f) => ({ label: f.profile, count: f.count }))}
+              labelMap={FUNDING_LABELS}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+          <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">
+                Most Used Revenue Lines
+              </h2>
+            </div>
+            <RankedList
+              items={data.topRevenueLines.map((r) => ({ label: r.lineItem, count: r.count }))}
+            />
+          </div>
+
+          <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">
+                Most Used Expense Categories
+              </h2>
+            </div>
+            <RankedList
+              items={data.topExpenseCategories.map((e) => ({ label: e.category, count: e.count }))}
+              labelMap={EXPENSE_CAT_LABELS}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+          <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <Download className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">
+                Export Rate by School Type
+              </h2>
+            </div>
+            {data.exportRateByType.length === 0 ? (
               <p className="text-sm text-muted-foreground">No data yet.</p>
             ) : (
               <div className="space-y-3">
-                {data.schoolTypeDistribution.map((item) => {
-                  const totalWithType = data.schoolTypeDistribution.reduce(
-                    (sum, i) => sum + i.count,
-                    0,
-                  );
-                  return (
-                    <FunnelBar
-                      key={item.type}
-                      label={SCHOOL_TYPE_LABELS[item.type] || item.type}
-                      value={item.count}
-                      maxValue={totalWithType}
-                    />
-                  );
-                })}
+                {data.exportRateByType.map((item) => (
+                  <div key={item.type} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
+                    <span className="text-sm font-medium text-foreground">
+                      {SCHOOL_TYPE_LABELS[item.type] || item.type}
+                    </span>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-foreground">
+                        {(item.rate * 100).toFixed(0)}%
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({item.exportedModels}/{item.totalModels})
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
+          </div>
+
+          <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6">
+              <CalendarRange className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">
+                Year 5 Extension Adoption
+              </h2>
+            </div>
+            <div className="flex flex-col items-center justify-center py-6 gap-3">
+              <div className="text-5xl font-bold text-primary">
+                {(data.year5Adoption.rate * 100).toFixed(0)}%
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                {data.year5Adoption.extendedTo5} of {data.year5Adoption.totalRowModels} models
+                extended to 5-year projections
+              </p>
+            </div>
           </div>
         </div>
 

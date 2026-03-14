@@ -74,6 +74,77 @@ router.get(
         .groupBy(sql`data->'schoolProfile'->>'schoolType'`)
         .orderBy(desc(count()));
 
+      const schoolStages = await db
+        .select({
+          stage: sql<string>`data->'schoolProfile'->>'schoolStage'`.as("school_stage"),
+          count: count(),
+        })
+        .from(financialModelsTable)
+        .where(
+          sql`data->'schoolProfile'->>'schoolStage' IS NOT NULL AND data->'schoolProfile'->>'schoolStage' != ''`,
+        )
+        .groupBy(sql`data->'schoolProfile'->>'schoolStage'`)
+        .orderBy(desc(count()));
+
+      const fundingProfiles = await db
+        .select({
+          profile: sql<string>`data->'schoolProfile'->>'fundingProfile'`.as("funding_profile"),
+          count: count(),
+        })
+        .from(financialModelsTable)
+        .where(
+          sql`data->'schoolProfile'->>'fundingProfile' IS NOT NULL AND data->'schoolProfile'->>'fundingProfile' != ''`,
+        )
+        .groupBy(sql`data->'schoolProfile'->>'fundingProfile'`)
+        .orderBy(desc(count()));
+
+      const topRevenueLines = await db
+        .select({
+          lineItem: sql<string>`item->>'lineItem'`.as("line_item"),
+          count: count(),
+        })
+        .from(
+          sql`${financialModelsTable}, jsonb_array_elements(data->'revenueRows') AS item`,
+        )
+        .where(sql`(item->>'enabled')::boolean = true`)
+        .groupBy(sql`item->>'lineItem'`)
+        .orderBy(desc(count()))
+        .limit(10);
+
+      const topExpenseCategories = await db
+        .select({
+          category: sql<string>`item->>'category'`.as("category"),
+          count: count(),
+        })
+        .from(
+          sql`${financialModelsTable}, jsonb_array_elements(data->'expenseRows') AS item`,
+        )
+        .where(sql`(item->>'enabled')::boolean = true`)
+        .groupBy(sql`item->>'category'`)
+        .orderBy(desc(count()))
+        .limit(10);
+
+      const exportsByType = await db
+        .select({
+          schoolType: sql<string>`data->'schoolProfile'->>'schoolType'`.as("school_type"),
+          totalModels: count(financialModelsTable.id).as("total_models"),
+          exportedModels: sql<number>`COUNT(DISTINCT ${exportsTable.modelId})`.as("exported_models"),
+        })
+        .from(financialModelsTable)
+        .leftJoin(exportsTable, eq(financialModelsTable.id, exportsTable.modelId))
+        .where(
+          sql`data->'schoolProfile'->>'schoolType' IS NOT NULL AND data->'schoolProfile'->>'schoolType' != ''`,
+        )
+        .groupBy(sql`data->'schoolProfile'->>'schoolType'`);
+
+      const [year5Result] = await db
+        .select({
+          total: count(),
+          extended: sql<number>`COUNT(*) FILTER (WHERE jsonb_array_length(COALESCE(data->'revenueRows', '[]'::jsonb)) > 0 AND jsonb_array_length((data->'revenueRows'->0->'amounts')) >= 5)`.as("extended"),
+        })
+        .from(financialModelsTable)
+        .where(sql`jsonb_array_length(COALESCE(data->'revenueRows', '[]'::jsonb)) > 0`);
+
       const [usersWithModelResult] = await db
         .select({ value: countDistinct(financialModelsTable.userId) })
         .from(financialModelsTable);
@@ -110,6 +181,33 @@ router.get(
           type: s.schoolType || "unknown",
           count: s.count,
         })),
+        schoolStageDistribution: schoolStages.map((s) => ({
+          stage: s.stage || "unknown",
+          count: s.count,
+        })),
+        fundingProfileDistribution: fundingProfiles.map((f) => ({
+          profile: f.profile || "unknown",
+          count: f.count,
+        })),
+        topRevenueLines: topRevenueLines.map((r) => ({
+          lineItem: r.lineItem,
+          count: r.count,
+        })),
+        topExpenseCategories: topExpenseCategories.map((e) => ({
+          category: e.category,
+          count: e.count,
+        })),
+        exportRateByType: exportsByType.map((e) => ({
+          type: e.schoolType || "unknown",
+          totalModels: e.totalModels,
+          exportedModels: Number(e.exportedModels),
+          rate: e.totalModels > 0 ? Number(e.exportedModels) / e.totalModels : 0,
+        })),
+        year5Adoption: {
+          totalRowModels: year5Result.total,
+          extendedTo5: Number(year5Result.extended),
+          rate: year5Result.total > 0 ? Number(year5Result.extended) / year5Result.total : 0,
+        },
         funnel: {
           signedUp: totalUsers,
           createdModel: usersWithModel,

@@ -192,8 +192,8 @@ export function ExpenseStep() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Operating Expenses</h2>
-        <p className="text-muted-foreground text-lg">Define your school's operating and capital expenses by category.</p>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">What Does It Cost to Run Your School?</h2>
+        <p className="text-muted-foreground text-lg">Add your operating costs, facility expenses, and any loans or capital purchases.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

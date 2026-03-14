@@ -80,8 +80,8 @@ export function SchoolProfileStep() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">School Profile</h2>
-        <p className="text-muted-foreground text-lg">Let's start with the basics about your school.</p>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Tell Us About Your School</h2>
+        <p className="text-muted-foreground text-lg">We'll tailor everything to your school's type, stage, and funding model.</p>
       </div>
 
       <div>
@@ -221,7 +221,7 @@ export function SchoolProfileStep() {
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Prior-Year Snapshot</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Optional: Enter last year's actuals to provide context for your projections. This helps our consultant give more relevant guidance.
+            Optional: Enter last year's actual numbers so our consultant can compare your projections to real results.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput

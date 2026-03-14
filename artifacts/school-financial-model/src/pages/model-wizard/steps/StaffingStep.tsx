@@ -108,11 +108,10 @@ export function StaffingStep() {
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">
-          Staffing Plan
+          Who Runs Your School?
         </h2>
         <p className="text-muted-foreground text-lg">
-          Add the people who help run the school. Include every role — full-time,
-          part-time, and contracted.
+          Add every person on your team — teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically.
         </p>
       </div>
 

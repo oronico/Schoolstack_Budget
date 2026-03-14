@@ -69,8 +69,8 @@ export function EnrollmentStep() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Enrollment Projections</h2>
-        <p className="text-muted-foreground text-lg">Enter the total number of students you expect to serve each year.</p>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">How Many Students Will You Serve?</h2>
+        <p className="text-muted-foreground text-lg">Enter your expected enrollment for each year. This drives your revenue and per-student calculations.</p>
       </div>
 
       <div className="bg-secondary/50 rounded-2xl p-6 mb-8 border border-border">

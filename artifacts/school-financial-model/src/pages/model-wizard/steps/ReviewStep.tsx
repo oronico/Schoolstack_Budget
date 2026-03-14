@@ -227,8 +227,8 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   return (
     <div>
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Review Your Assumptions</h2>
-        <p className="text-muted-foreground text-lg mb-8">Make sure everything looks correct before generating your financial model.</p>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Does Everything Look Right?</h2>
+        <p className="text-muted-foreground text-lg mb-8">Review your inputs before we run the numbers. You can go back and make changes anytime.</p>
       </div>
 
       <Section title="School Profile" step={1}>

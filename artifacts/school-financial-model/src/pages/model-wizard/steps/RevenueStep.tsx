@@ -129,9 +129,9 @@ export function RevenueStep() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Revenue Schedule</h2>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Where Does Your Money Come From?</h2>
         <p className="text-muted-foreground text-lg">
-          Which revenue sources apply to your school? Toggle on the lines that matter and enter your projections.
+          Toggle on the revenue sources that apply to your school and enter your expected amounts for each year.
         </p>
       </div>
 

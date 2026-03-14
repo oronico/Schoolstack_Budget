@@ -52,10 +52,10 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
       <div className="text-center py-16">
         <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-6" />
         <h2 className="font-display text-2xl font-bold text-foreground mb-2">
-          Analyzing Your Financial Model
+          Running Your Financial Analysis
         </h2>
         <p className="text-muted-foreground text-lg">
-          Our CFO consultant is reviewing your numbers...
+          Our consultant is reviewing your model and preparing recommendations...
         </p>
       </div>
     );
@@ -115,11 +115,11 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
             <BarChart3 className="h-5 w-5 text-primary" />
           </div>
           <h2 className="font-display text-3xl font-bold text-foreground">
-            CFO Consultant Review
+            Your Financial Health Check
           </h2>
         </div>
         <p className="text-muted-foreground text-lg">
-          A structured analysis of your financial model with actionable guidance.
+          Here's what a school finance consultant would tell you about your plan.
         </p>
       </div>
 

@@ -5,7 +5,7 @@
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
 **Product: SchoolStack Budget** (by SchoolStack.ai)
-A lightweight SaaS web app for school founders to create 5-year financial models with user accounts, saved drafts, CFO consultant feedback, and professional Excel exports.
+A full-stack web app for school founders to create lender-ready 3-to-5-year financial models. Universal model supports any school type (microschool, private, charter, other), any school stage (new or operating), FTE-based staffing, accounting-category expenses, row-based revenue schedules, and assumption-driven Excel exports with cross-tab formulas.
 
 ## Brand System
 
@@ -79,9 +79,19 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
 - Auth: `src/routes/auth.ts` — register, login, logout, /me, forgot-password, reset-password (JWT-based)
 - Models: `src/routes/models.ts` — CRUD + duplicate + archive + export endpoints
-- Admin: `src/routes/admin.ts` — `GET /api/admin/analytics` returns aggregate analytics (requires auth + admin). Admin check via `src/middlewares/admin.ts` verifies user email is in `ADMIN_EMAILS` env var (comma-separated list).
-- Consultant: `GET /api/models/:id/consultant` — deterministic CFO rules engine with dual computation paths (row-based data for new models, legacy flat-field fallback), dynamic year count (3 for new_school, 5 for operating_school), driver-type-aware calculations (annual_fixed, monthly, per_student, percent_of_base, percent_of_revenue), revenue/cost composition metrics, cumulative financials with reserve months, 3 stress-test scenarios (enrollment down 20%, philanthropy loss, costs up 10%), enrollment growth benchmarking guidance
-- Excel export: `src/lib/excel-export.ts` — generates 7-tab workbook for row-based models (School Profile, Revenue Schedule, Staffing & Personnel, Operating Expenses, Capital & Debt, Financial Model, Summary) with SUM formulas for category subtotals and cross-tab formula references in the P&L tab; legacy fallback produces simplified tabs for old flat-field models
+- Admin: `src/routes/admin.ts` — `GET /api/admin/analytics` returns aggregate analytics including school stage/funding profile distributions, top revenue lines, top expense categories, export rates by school type, Year 5 adoption metrics, and conversion funnel. Requires auth + admin. Admin check via `src/middlewares/admin.ts` verifies user email is in `ADMIN_EMAILS` env var (comma-separated list).
+- Consultant: `GET /api/models/:id/consultant` — deterministic CFO rules engine with row-based data analysis, school-type-aware heuristics (charter/private/microschool/hybrid), accounting-category diagnostics (occupancy, contracted personnel, curriculum, software fragmentation, travel, founder comp, debt pressure), lender readiness assessment, stress tests, and prior-year context for operating schools
+- Excel export: `src/lib/excel-export.ts` — generates multi-tab workbook with assumption-driven formulas:
+  - **Assumptions**: School info, enrollment by year, salary escalation, cost inflation, proration factor
+  - **Revenue Schedule**: Students row references Assumptions; per_student/monthly/percent_of_base line items use formulas
+  - **Staffing & Personnel**: Roster + projection section with formulas referencing Assumptions for escalation & proration
+  - **Operating Expenses**: Students references Assumptions; driver-based formulas for per_student/monthly/percent_of_revenue
+  - **Capital & Debt**: Driver-based formulas + loan amortization
+  - **Financial Model (P&L)**: Cross-tab SUM formulas referencing schedule tabs
+  - **Summary**: Enrollment trend, financial summary, key ratios (revenue per student, personnel %, OpEx %, net margin %), revenue mix trend, lender readiness assessment
+  - **Consultant Notes** (optional): Executive summary, strengths, risks, recommendations
+  - **Prior-Year Snapshot** (optional, operating schools only)
+  - Legacy fallback for old flat-field models
 - Event tracking: `src/lib/track-event.ts` — best-effort event tracking helper
 - Depends on: `@workspace/db`, `@workspace/api-zod`
 
@@ -92,13 +102,15 @@ React + Vite frontend (Tailwind CSS v4). Amber-forward brand with Quicksand/Nuni
 - Landing page, auth screens (register/login/forgot-password/reset-password)
 - Dashboard with model management (create, duplicate, archive, delete)
 - 8-step model wizard: Profile → Enrollment → Revenue → Staffing → Expenses → Review → Consultant → Export
-- School Profile step: includes Fiscal Year Start Month (select, default July), Partial First Year toggle (with year1OperatingMonths field)
-- Revenue step: Row-based revenue schedule with 6 categories (tuition_and_fees, tuition_offsets, public_funding, school_choice, grants_contributions, other_revenue), driver types (annual_fixed, monthly, per_student, percent_of_base), per-year amounts
-- Staffing step: FTE-based staffing roster with function categories (school_leadership, instructional, student_support, operations, administrative, other), employment types (full_time, part_time, contract), benefits and payroll tax rates
-- Expenses step: Row-based expense schedule with 4 categories (instructional_program, technology, occupancy_facility, administrative_general), driver types (annual_fixed, monthly, per_student, percent_of_revenue), plus capital & debt rows with loan calculator
-- Review step: Shows row-based summaries grouped by category with computed Year 1 totals; falls back to legacy flat-field display for old models
-- Consultant step: Executive summary, key metrics, recommendations, revenue composition charts, cost composition charts, stress test scenarios table, enrollment guidance warnings, cumulative financials; dynamic year count (3 or 5)
-- Admin analytics page at /admin (protected by email allowlist)
+- **School Profile step**: School stage (`new_school` = 3-year projection, `operating_school` = 5-year), funding profile (`tuition_based`, `charter_public_funded`, `hybrid_mixed`), school type, fiscal year start month, partial first year toggle, optional prior-year snapshot for operating schools
+- **Enrollment step**: Per-year student counts with school-type-specific benchmarks and growth guidance
+- **Revenue step**: Row-based schedule with 6 categories (tuition_and_fees, tuition_offsets, public_funding, school_choice, grants_contributions, other_revenue), driver types (annual_fixed, monthly, per_student, percent_of_base), per-year amounts, funding-profile-aware defaults
+- **Staffing step**: FTE-based roster with function categories (school_leadership, instructional, student_support, operations, administrative, other), employment types (full_time, part_time, contract), benefits/payroll tax rates, payrollLike toggle for contractors, real-time cost summary
+- **Expenses step**: Row-based schedule with 4 accounting categories (instructional_program, technology, occupancy_facility, administrative_general), driver types (annual_fixed, monthly, per_student, percent_of_revenue), plus capital & debt rows with loan calculator
+- **Review step**: Grouped summaries by category with computed Year 1 totals; falls back to legacy display for old models
+- **Consultant step**: Executive summary, key metrics, recommendations, revenue/cost composition charts, stress test scenarios, enrollment guidance; uses CFO consultant tone
+- **Export step**: Downloads assumption-driven Excel workbook with cross-tab formulas
+- Admin analytics page at /admin (protected by email allowlist) with school stage/type/funding distributions, top revenue lines, top expense categories, export rates, Year 5 adoption, conversion funnel
 - Auth context with JWT stored in localStorage, fetch interceptor for Bearer token injection
 
 ### `lib/db` (`@workspace/db`)
@@ -130,3 +142,38 @@ Generated React Query hooks and fetch client from the OpenAPI spec.
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+## Universal Model Architecture
+
+### School Configuration
+- **schoolType**: `microschool | private_school | charter_school | other`
+- **schoolStage**: `new_school` (3-year projection) | `operating_school` (5-year projection)
+- **fundingProfile**: `tuition_based | charter_public_funded | hybrid_mixed`
+- Partial first year support with configurable operating months and proration factor
+
+### Revenue Model
+6 categories with row-based line items, each with driver type and per-year amounts:
+- `tuition_and_fees`, `tuition_offsets`, `public_funding`, `school_choice`, `grants_contributions`, `other_revenue`
+- Driver types: `annual_fixed`, `monthly`, `per_student`, `percent_of_base`
+
+### Staffing Model
+FTE-based roster with function categories and employment types:
+- Functions: `school_leadership`, `instructional`, `student_support`, `operations`, `administrative`, `other`
+- Employment: `full_time`, `part_time`, `contract` (with `payrollLike` toggle)
+- Benefits and payroll tax rates per role
+
+### Expense Model
+4 accounting categories with row-based line items:
+- `instructional_program`, `technology`, `occupancy_facility`, `administrative_general`
+- Driver types: `annual_fixed`, `monthly`, `per_student`, `percent_of_revenue`
+
+### Capital & Debt Model
+Row-based with loan calculator (PMT-based amortization for loans with principal/rate/term)
+
+### Consultant Engine
+Deterministic rules engine with CFO tone producing:
+- Lender readiness score (green/yellow/red)
+- School-type-aware heuristics (charter concentration/timing, tuition collection/discount risk, hybrid diversification)
+- Accounting-category diagnostics (occupancy ratio, software fragmentation, curriculum outliers, etc.)
+- 3 stress test scenarios with projected impacts
+- Prior-year variance analysis for operating schools
