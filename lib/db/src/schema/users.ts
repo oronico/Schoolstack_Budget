@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, varchar, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -8,6 +8,7 @@ export const usersTable = pgTable("users", {
   name: varchar("name", { length: 255 }).notNull(),
   passwordHash: text("password_hash").notNull(),
   role: varchar("role", { length: 50 }).default("user").notNull(),
+  tokenVersion: integer("token_version").default(0).notNull(),
   resetToken: varchar("reset_token", { length: 255 }),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   lastSeenAt: timestamp("last_seen_at"),

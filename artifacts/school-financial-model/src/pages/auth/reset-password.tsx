@@ -3,6 +3,7 @@ import { Link, useSearch } from "wouter";
 import { useResetPassword } from "@workspace/api-client-react";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export function ResetPasswordPage() {
   const searchString = useSearch();
@@ -19,8 +20,8 @@ export function ResetPasswordPage() {
     try {
       await resetMutation.mutateAsync({ data: { token, password } });
       setSuccess(true);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Failed to reset password. Link may be expired.");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Failed to reset password. Link may be expired."));
     }
   };
 

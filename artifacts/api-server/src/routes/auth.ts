@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   RegisterBody,
   LoginBody,
@@ -38,7 +38,7 @@ router.post("/auth/register", async (req, res) => {
       passwordHash,
     }).returning();
 
-    const token = generateToken(user.id);
+    const token = generateToken(user.id, user.tokenVersion);
     await trackEvent("signed_up", user.id, { email: user.email });
     res.status(201).json({
       user: { id: user.id, email: user.email, name: user.name },
@@ -73,7 +73,7 @@ router.post("/auth/login", async (req, res) => {
 
     await db.update(usersTable).set({ lastSeenAt: new Date() }).where(eq(usersTable.id, user.id));
 
-    const token = generateToken(user.id);
+    const token = generateToken(user.id, user.tokenVersion);
     await trackEvent("logged_in", user.id);
     res.json({
       user: { id: user.id, email: user.email, name: user.name },
@@ -85,8 +85,18 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
-router.post("/auth/logout", (_req, res) => {
-  res.json({ message: "Logged out successfully." });
+router.post("/auth/logout", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    if (req.userId) {
+      await db.update(usersTable)
+        .set({ tokenVersion: sql`${usersTable.tokenVersion} + 1` })
+        .where(eq(usersTable.id, req.userId));
+    }
+    res.json({ message: "Logged out successfully." });
+  } catch (err) {
+    console.error("Logout error:", err);
+    res.json({ message: "Logged out successfully." });
+  }
 });
 
 router.get("/auth/me", authMiddleware, async (req: AuthRequest, res) => {

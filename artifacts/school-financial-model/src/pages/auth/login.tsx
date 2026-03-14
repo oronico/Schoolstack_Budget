@@ -4,6 +4,7 @@ import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { Loader2 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export function LoginPage() {
   const [, setLocation] = useLocation();
@@ -21,8 +22,8 @@ export function LoginPage() {
       const res = await loginMutation.mutateAsync({ data: { email, password } });
       login(res.token, res.user);
       setLocation("/dashboard");
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Invalid email or password");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Invalid email or password"));
     }
   };
 

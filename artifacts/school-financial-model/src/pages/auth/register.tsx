@@ -4,6 +4,7 @@ import { useRegister } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { Loader2 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export function RegisterPage() {
   const [, setLocation] = useLocation();
@@ -22,8 +23,8 @@ export function RegisterPage() {
       const res = await registerMutation.mutateAsync({ data: { name, email, password } });
       login(res.token, res.user);
       setLocation("/dashboard");
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Failed to register. Please try again.");
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Failed to register. Please try again."));
     }
   };
 
