@@ -355,7 +355,9 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
         biggestRisk: output.biggestRisk,
         recommendations: output.recommendations,
       };
-    } catch (_) {}
+    } catch (consultantErr) {
+      console.warn("Consultant analysis skipped during export:", consultantErr);
+    }
 
     const buffer = await generateWorkbook(data, consultantSummary);
 
