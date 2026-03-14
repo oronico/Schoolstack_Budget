@@ -283,9 +283,9 @@ export function ExpenseStep() {
 
 function SummaryCard({ label, value, color, bold }: { label: string; value: string; color: string; bold?: boolean }) {
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-3 text-center", bold && "bg-muted/50")}>
-      <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{label}</div>
-      <div className={cn("text-lg font-bold", color)}>{value}</div>
+    <div className={cn("rounded-2xl border border-border/60 bg-white p-4 text-center shadow-sm", bold && "bg-primary/5 border-primary/20")}>
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{label}</div>
+      <div className={cn("font-display text-xl font-bold", color)}>{value}</div>
     </div>
   );
 }

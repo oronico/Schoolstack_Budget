@@ -1,8 +1,8 @@
 import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Edit2 } from "lucide-react";
+import { Edit2, Users, DollarSign, TrendingDown, Building2 } from "lucide-react";
 import { useMemo } from "react";
-import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS } from "../schema";
+import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
 
 interface ReviewRevenueRow {
   id: string;
@@ -94,8 +94,10 @@ function computeAnnualDebtService(principal: number, annualRate: number, termYea
 }
 
 export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void, modelId?: number }) {
-  const { getValues } = useFormContext();
+  const { getValues, watch } = useFormContext();
   const data = getValues();
+  const entityType = watch("schoolProfile.entityType");
+  const niLabel = profitLabel(entityType);
 
   const revenueRows = data.revenueRows || [];
   const staffingRows = data.staffingRows || [];
@@ -201,39 +203,91 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
     return { count: enabled.length, total };
   }, [capitalAndDebtRows, year1Students]);
 
-  const Section = ({ title, step, children }: { title: string, step: number, children: React.ReactNode }) => (
-    <div className="mb-8 bg-background rounded-2xl p-6 border border-border">
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
-        <h3 className="font-display font-bold text-xl">{title}</h3>
+  const totalExpenses = staffingSummary.totalCost + expenseSummary.total + capitalDebtSummary.total;
+  const netIncome = revenueSummary.total - totalExpenses;
+
+  const Section = ({ title, step, icon, children }: { title: string; step: number; icon?: React.ReactNode; children: React.ReactNode }) => (
+    <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
+      <div className="flex items-center justify-between mb-5 pb-4 border-b border-border/40">
+        <div className="flex items-center gap-2.5">
+          {icon && <span className="text-primary">{icon}</span>}
+          <h3 className="font-display font-bold text-lg">{title}</h3>
+        </div>
         <button
           onClick={() => jumpToStep(step)}
-          className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+          className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors px-3 py-1.5 rounded-lg hover:bg-primary/5"
         >
-          <Edit2 className="h-4 w-4" /> Edit
+          <Edit2 className="h-3.5 w-3.5" /> Edit
         </button>
       </div>
       {children}
     </div>
   );
 
-  const Item = ({ label, value }: { label: string, value: string | number | undefined }) => (
-    <div className="flex flex-col">
-      <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-      <dd className="text-base font-semibold text-foreground mt-1">{value !== undefined ? value : '-'}</dd>
+  const Item = ({ label, value }: { label: string; value: string | number | undefined }) => (
+    <div className="flex flex-col py-1">
+      <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</dt>
+      <dd className="text-base font-semibold text-foreground mt-1">{value !== undefined && value !== "" ? value : "—"}</dd>
     </div>
   );
 
   const fyMonth = data.schoolProfile?.fiscalYearStartMonth || 7;
 
   return (
-    <div>
+    <div className="space-y-6">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Does Everything Look Right?</h2>
-        <p className="text-muted-foreground text-lg mb-8">Review your inputs before we run the numbers. You can go back and make changes anytime.</p>
+        <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime.</p>
       </div>
 
-      <Section title="School Profile" step={1}>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+      {hasRowData && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-white rounded-2xl p-4 border border-border/60 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                <DollarSign className="h-4 w-4 text-green-700" />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year 1 Revenue</p>
+            <p className="font-display font-bold text-xl text-foreground mt-1">{formatCurrency(revenueSummary.total)}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 border border-border/60 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
+                <TrendingDown className="h-4 w-4 text-rose-600" />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year 1 Expenses</p>
+            <p className="font-display font-bold text-xl text-foreground mt-1">{formatCurrency(totalExpenses)}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 border border-border/60 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${netIncome >= 0 ? "bg-green-100" : "bg-rose-100"}`}>
+                <DollarSign className={`h-4 w-4 ${netIncome >= 0 ? "text-green-700" : "text-rose-600"}`} />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year 1 {niLabel}</p>
+            <p className={`font-display font-bold text-xl mt-1 ${netIncome >= 0 ? "text-green-700" : "text-rose-600"}`}>
+              {formatCurrency(netIncome)}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 border border-border/60 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-700" />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Year 1 Students</p>
+            <p className="font-display font-bold text-xl text-foreground mt-1">{year1Students}</p>
+          </div>
+        </div>
+      )}
+
+      <Section title="School Profile" step={1} icon={<Building2 className="h-5 w-5" />}>
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <Item label="School Name" value={data.schoolProfile?.schoolName} />
           <Item label="Type" value={data.schoolProfile?.schoolType === "other" && data.schoolProfile?.schoolTypeOther ? data.schoolProfile.schoolTypeOther : SCHOOL_TYPE_LABELS[data.schoolProfile?.schoolType] || data.schoolProfile?.schoolType} />
           <Item label="Entity Type" value={ENTITY_TYPE_LABELS[data.schoolProfile?.entityType] || data.schoolProfile?.entityType} />
@@ -249,19 +303,23 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
         </dl>
       </Section>
 
-      <Section title="Enrollment" step={2}>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-          <Item label="Year 1" value={data.enrollment?.year1} />
-          <Item label="Year 2" value={data.enrollment?.year2} />
-          <Item label="Year 3" value={data.enrollment?.year3} />
-          {yearCount > 3 && <Item label="Year 4" value={data.enrollment?.year4} />}
-          {yearCount > 4 && <Item label="Year 5" value={data.enrollment?.year5} />}
-        </dl>
+      <Section title="Enrollment" step={2} icon={<Users className="h-5 w-5" />}>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
+          {["year1", "year2", "year3", "year4", "year5"].slice(0, yearCount).map((key, i) => {
+            const val = data.enrollment?.[key];
+            return (
+              <div key={key} className="text-center py-3 px-2 rounded-xl bg-secondary/30">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Year {i + 1}</p>
+                <p className="font-display font-bold text-xl text-foreground">{val || "—"}</p>
+              </div>
+            );
+          })}
+        </div>
       </Section>
 
       {hasRowData ? (
         <>
-          <Section title="Revenue Schedule" step={3}>
+          <Section title="Revenue Schedule" step={3} icon={<DollarSign className="h-5 w-5" />}>
             <div className="mb-4 flex items-center gap-3">
               <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-semibold">
                 {revenueSummary.count} items
@@ -270,9 +328,9 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                 Year 1 Net Revenue: <span className="font-semibold text-foreground">{formatCurrency(revenueSummary.total)}</span>
               </span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {Array.from(revenueSummary.byCategory.entries()).map(([cat, val]) => (
-                <div key={cat} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                <div key={cat} className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
                   <span className="text-sm font-medium text-foreground">{REVENUE_CATEGORY_LABELS[cat] || cat}</span>
                   <span className={`text-sm font-semibold ${val < 0 ? 'text-red-600' : 'text-foreground'}`}>
                     {formatCurrency(val)}
@@ -282,24 +340,24 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             </div>
           </Section>
 
-          <Section title="Staffing & Personnel" step={4}>
+          <Section title="Staffing & Personnel" step={4} icon={<Users className="h-5 w-5" />}>
             <div className="mb-4 flex items-center gap-3 flex-wrap">
               <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-semibold">
                 {staffingSummary.count} positions
               </span>
-              <span className="inline-flex items-center gap-1 bg-muted text-muted-foreground rounded-full px-3 py-1 text-sm font-medium">
+              <span className="inline-flex items-center gap-1 bg-secondary text-muted-foreground rounded-full px-3 py-1 text-sm font-medium">
                 {staffingSummary.totalFTE} FTE
               </span>
               <span className="text-sm text-muted-foreground">
                 Total Annual Cost: <span className="font-semibold text-foreground">{formatCurrency(staffingSummary.totalCost)}</span>
               </span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {Array.from(staffingSummary.byFunc.entries()).map(([func, info]) => (
-                <div key={func} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                <div key={func} className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
                   <span className="text-sm font-medium text-foreground">
                     {FUNC_CATEGORY_LABELS[func] || func}
-                    <span className="ml-2 text-muted-foreground">({info.count} {info.count === 1 ? 'position' : 'positions'})</span>
+                    <span className="ml-2 text-muted-foreground text-xs">({info.count} {info.count === 1 ? 'position' : 'positions'})</span>
                   </span>
                   <span className="text-sm font-semibold text-foreground">{formatCurrency(info.cost)}</span>
                 </div>
@@ -316,23 +374,23 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                 Year 1 Total: <span className="font-semibold text-foreground">{formatCurrency(expenseSummary.total)}</span>
               </span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {Array.from(expenseSummary.byCategory.entries()).map(([cat, val]) => (
-                <div key={cat} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                <div key={cat} className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
                   <span className="text-sm font-medium text-foreground">{EXPENSE_CATEGORY_LABELS[cat] || cat}</span>
                   <span className="text-sm font-semibold text-foreground">{formatCurrency(val)}</span>
                 </div>
               ))}
             </div>
             {capitalDebtSummary.count > 0 && (
-              <div className="mt-4 pt-4 border-t border-border">
+              <div className="mt-4 pt-4 border-t border-border/40">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-sm font-semibold text-foreground">Capital & Debt</span>
-                  <span className="inline-flex items-center gap-1 bg-muted text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
+                  <span className="inline-flex items-center gap-1 bg-secondary text-muted-foreground rounded-full px-2.5 py-0.5 text-xs font-medium">
                     {capitalDebtSummary.count} items
                   </span>
                 </div>
-                <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
                   <span className="text-sm font-medium text-foreground">Annual Debt / Capital Costs</span>
                   <span className="text-sm font-semibold text-foreground">{formatCurrency(capitalDebtSummary.total)}</span>
                 </div>
@@ -342,8 +400,8 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
         </>
       ) : (
         <>
-          <Section title="Revenue" step={3}>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+          <Section title="Revenue" step={3} icon={<DollarSign className="h-5 w-5" />}>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
               <Item label="Tuition per Student" value={formatCurrency(data.revenue?.tuitionPerStudent)} />
               <Item label="Annual Tuition Increase" value={formatPercent(data.revenue?.annualTuitionIncrease)} />
               <Item label="Scholarship Rate" value={formatPercent(data.revenue?.scholarshipRate)} />
@@ -356,8 +414,8 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             </dl>
           </Section>
 
-          <Section title="Staffing" step={4}>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+          <Section title="Staffing" step={4} icon={<Users className="h-5 w-5" />}>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
               <Item label="Target Ratio" value={`1:${data.staffing?.studentsPerTeacher || 0}`} />
               <Item label="Teacher Salary" value={formatCurrency(data.staffing?.teacherSalary)} />
               <Item label="Admin Staff" value={data.staffing?.adminStaffCount} />
@@ -368,7 +426,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
           </Section>
 
           <Section title="Operations & Expenses" step={5}>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
               <Item label="Annual Salary Increase" value={formatPercent(data.facilities?.annualSalaryIncrease)} />
               <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
               <Item label="Monthly Rent" value={formatCurrency(data.facilities?.monthlyRent)} />

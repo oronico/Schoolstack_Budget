@@ -194,25 +194,25 @@ function SummaryCard({
   return (
     <div
       className={cn(
-        "rounded-xl border p-3 text-center",
+        "rounded-2xl border p-4 text-center shadow-sm",
         highlight
           ? "bg-primary/5 border-primary/20"
-          : "bg-secondary/30 border-border/50"
+          : "bg-white border-border/60"
       )}
     >
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         {label}
       </div>
       <div
         className={cn(
-          "text-lg font-bold mt-0.5",
+          "font-display text-xl font-bold mt-1",
           highlight ? "text-primary" : "text-foreground"
         )}
       >
         {value}
       </div>
       {sublabel && (
-        <div className="text-xs text-muted-foreground">{sublabel}</div>
+        <div className="text-xs text-muted-foreground mt-0.5">{sublabel}</div>
       )}
     </div>
   );
