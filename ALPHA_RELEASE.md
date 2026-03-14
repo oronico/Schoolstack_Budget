@@ -118,7 +118,7 @@ After deployment, verify each of these manually:
 
 ### API Server
 
-- [ ] `GET /api/health` or root responds (currently no health endpoint — check server is listening)
+- [ ] `GET /api/healthz` returns `{"status":"ok"}`
 - [ ] `POST /api/auth/register` creates a user and returns a token
 - [ ] `POST /api/auth/login` authenticates and returns a token
 - [ ] Authenticated: `GET /api/models` returns an empty array for a new user
@@ -141,7 +141,7 @@ After deployment, verify each of these manually:
 | JS bundle is ~1.2MB (single chunk) | Medium | No code splitting yet. Slow on 3G. Planned: Task #24. |
 | CORS is wide open (`cors()`) | Medium | Any origin can call the API. Lock down before beta. Planned: Task #25. |
 | Rate limiting is in-memory | Medium | Resets on server restart. Planned: Task #26. |
-| No health check endpoint | Low | Add `GET /api/health` for load balancer probes. Planned: Task #25. |
+| Health endpoint exists but undocumented | Low | `GET /api/healthz` returns `{"status":"ok"}`. Works for load balancer probes. |
 | No API server Dockerfile | Low | Must deploy via `node dist/index.cjs` manually. Planned: Task #25. |
 | JWT dev-secret fallback | Low | Non-production environments use a hardcoded secret. Safe for alpha but must set `JWT_SECRET` in production. |
 | Password reset emails require SMTP | Low | Without SMTP config, reset links are only logged to server console. Functional but not user-facing. |
@@ -191,3 +191,68 @@ If both frontend and API need rollback:
 - Public `/underwriting` wizard route with localStorage persistence (Task T004)
 - Public export API at `POST /api/public/export-underwriting` with rate limiting, payload cap, Zod validation (Task T005–T006)
 - Full typecheck, build, and e2e test pass (Task T007)
+
+---
+
+## Verification Results (March 14, 2026)
+
+All checks performed against the development environment after final code changes.
+
+### TypeScript Typecheck
+
+```
+pnpm run typecheck
+  typecheck:libs (tsc --build) .................. PASS
+  artifacts/api-server .......................... PASS
+  artifacts/mockup-sandbox ...................... PASS
+  artifacts/school-financial-model .............. PASS
+  scripts ....................................... PASS
+```
+
+### Production Builds
+
+```
+Frontend (Vite):
+  dist/public/index.html .............. 2.01 kB (gzip: 0.70 kB)
+  dist/public/assets/index.css ....... 123.62 kB (gzip: 19.39 kB)
+  dist/public/assets/index.js ...... 1,184.86 kB (gzip: 332.51 kB)
+  Build time: 14s ..................... PASS
+
+API Server (esbuild):
+  dist/index.cjs ...................... 1.6 MB
+  dist/templates/ ..................... copied
+  Build time: <1s ..................... PASS
+```
+
+### Frontend Route Checks (curl)
+
+```
+GET /               .......... HTTP 200  PASS
+GET /underwriting   .......... HTTP 200  PASS
+GET /login          .......... HTTP 200  PASS
+GET /register       .......... HTTP 200  PASS
+GET /dashboard      .......... HTTP 200  PASS (redirects to /login client-side)
+```
+
+### API Endpoint Checks
+
+```
+GET  /api/healthz ........................... HTTP 200  {"status":"ok"}  PASS
+POST /api/public/export-underwriting ........ HTTP 200  22,162 bytes XLSX  PASS
+Rate limit (6th request in 1 min) ........... HTTP 429  PASS
+```
+
+### E2E Tests (Playwright)
+
+```
+1) Landing page loads with hero heading ........... PASS
+2) /underwriting wizard loads without auth ........ PASS
+3) /login form renders with email/password ........ PASS
+4) /dashboard redirects to /login (unauthed) ...... PASS
+All 4/4 tests passed.
+```
+
+### Visual Verification
+
+- Landing page: Hero, CTAs ("Build My Model", "Log into existing"), navbar all render correctly
+- Public wizard: 7-step indicator (PROFILE through EXPORT), "Tell Us About Your School" step 1 renders correctly
