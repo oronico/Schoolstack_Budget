@@ -20,9 +20,12 @@ export const enrollmentSchema = z.object({
 export const revenueSchema = z.object({
   tuitionPerStudent: z.coerce.number().min(0),
   esaRevenuePerStudent: z.coerce.number().min(0),
+  publicFundingPerStudent: z.coerce.number().min(0),
   otherRevenuePerStudent: z.coerce.number().min(0),
   scholarshipRate: z.coerce.number().min(0).max(100),
-  annualFundraising: z.coerce.number().min(0),
+  annualDonations: z.coerce.number().min(0),
+  foundationGrants: z.coerce.number().min(0),
+  capitalGifts: z.coerce.number().min(0),
 });
 
 export const staffingSchema = z.object({
@@ -39,10 +42,18 @@ export const facilitiesSchema = z.object({
   annualRentIncrease: z.coerce.number().min(0).max(100),
   annualUtilities: z.coerce.number().min(0),
   annualInsurance: z.coerce.number().min(0),
+  facilityMaintenance: z.coerce.number().min(0),
   curriculumCostPerStudent: z.coerce.number().min(0),
   techCostPerStudent: z.coerce.number().min(0),
   annualMarketing: z.coerce.number().min(0),
+  professionalDevelopment: z.coerce.number().min(0),
+  foodServicePerStudent: z.coerce.number().min(0),
+  transportationAnnual: z.coerce.number().min(0),
+  studentServicesAnnual: z.coerce.number().min(0),
   otherAnnualExpenses: z.coerce.number().min(0),
+  loanAmount: z.coerce.number().min(0),
+  annualInterestRate: z.coerce.number().min(0).max(100),
+  loanTermYears: z.coerce.number().min(0).max(50),
 });
 
 export const fullModelSchema = z.object({

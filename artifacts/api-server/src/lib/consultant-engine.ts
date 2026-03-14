@@ -18,8 +18,12 @@ interface Enrollment {
 interface Revenue {
   tuitionPerStudent?: number;
   esaRevenuePerStudent?: number;
+  publicFundingPerStudent?: number;
   otherRevenuePerStudent?: number;
   scholarshipRate?: number;
+  annualDonations?: number;
+  foundationGrants?: number;
+  capitalGifts?: number;
   annualFundraising?: number;
 }
 
@@ -37,10 +41,18 @@ interface Facilities {
   annualRentIncrease?: number;
   annualUtilities?: number;
   annualInsurance?: number;
+  facilityMaintenance?: number;
   curriculumCostPerStudent?: number;
   techCostPerStudent?: number;
   annualMarketing?: number;
+  professionalDevelopment?: number;
+  foodServicePerStudent?: number;
+  transportationAnnual?: number;
+  studentServicesAnnual?: number;
   otherAnnualExpenses?: number;
+  loanAmount?: number;
+  annualInterestRate?: number;
+  loanTermYears?: number;
 }
 
 interface ModelData {
@@ -79,11 +91,24 @@ interface YearFinancials {
   year: number;
   students: number;
   totalRevenue: number;
+  tuitionRevenue: number;
+  publicRevenue: number;
+  philanthropyRevenue: number;
   totalStaffingCost: number;
   totalOpex: number;
+  debtService: number;
   totalExpenses: number;
   netIncome: number;
   netMargin: number;
+}
+
+function computeAnnualDebtService(loanAmount: number, annualRate: number, termYears: number): number {
+  if (loanAmount <= 0 || termYears <= 0) return 0;
+  if (annualRate <= 0) return loanAmount / termYears;
+  const monthlyRate = annualRate / 12;
+  const months = termYears * 12;
+  const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+  return monthlyPayment * 12;
 }
 
 function computeYearFinancials(
@@ -95,16 +120,25 @@ function computeYearFinancials(
 ): YearFinancials {
   const tuitionPerStudent = rev.tuitionPerStudent || 0;
   const esaPerStudent = rev.esaRevenuePerStudent || 0;
+  const publicFundingPerStudent = rev.publicFundingPerStudent || 0;
   const otherPerStudent = rev.otherRevenuePerStudent || 0;
   const scholarshipRate = (rev.scholarshipRate || 0) / 100;
-  const fundraising = rev.annualFundraising || 0;
+  const donations = rev.annualDonations || rev.annualFundraising || 0;
+  const grants = rev.foundationGrants || 0;
+  const capitalGifts = yearIndex === 0 ? (rev.capitalGifts || 0) : 0;
 
   const grossTuition = students * tuitionPerStudent;
-  const grossEsa = students * esaPerStudent;
-  const grossOther = students * otherPerStudent;
-  const grossRevenue = grossTuition + grossEsa + grossOther;
+  const otherFees = students * otherPerStudent;
   const scholarshipDiscount = grossTuition * scholarshipRate;
-  const totalRevenue = grossRevenue - scholarshipDiscount + fundraising;
+  const netTuition = grossTuition + otherFees - scholarshipDiscount;
+
+  const esaRevenue = students * esaPerStudent;
+  const publicFunding = students * publicFundingPerStudent;
+  const publicRevenue = esaRevenue + publicFunding;
+
+  const philanthropyRevenue = donations + grants + capitalGifts;
+
+  const totalRevenue = netTuition + publicRevenue + philanthropyRevenue;
 
   const studentsPerTeacher = st.studentsPerTeacher || 1;
   const teacherCount = studentsPerTeacher > 0 ? Math.ceil(students / studentsPerTeacher) : 0;
@@ -120,11 +154,25 @@ function computeYearFinancials(
   const annualRent = monthlyRent * 12 * Math.pow(1 + rentIncrease, yearIndex);
   const utilities = fac.annualUtilities || 0;
   const insurance = fac.annualInsurance || 0;
+  const maintenance = fac.facilityMaintenance || 0;
   const curriculum = (fac.curriculumCostPerStudent || 0) * students;
   const tech = (fac.techCostPerStudent || 0) * students;
+  const foodService = (fac.foodServicePerStudent || 0) * students;
+  const transportation = fac.transportationAnnual || 0;
+  const studentServices = fac.studentServicesAnnual || 0;
   const marketing = fac.annualMarketing || 0;
+  const profDev = fac.professionalDevelopment || 0;
   const otherExpenses = fac.otherAnnualExpenses || 0;
-  const totalOpex = annualRent + utilities + insurance + curriculum + tech + marketing + otherExpenses;
+
+  const debtService = computeAnnualDebtService(
+    fac.loanAmount || 0,
+    (fac.annualInterestRate || 0) / 100,
+    fac.loanTermYears || 0
+  );
+
+  const totalOpex = annualRent + utilities + insurance + maintenance +
+    curriculum + tech + foodService + transportation + studentServices +
+    marketing + profDev + otherExpenses + debtService;
 
   const totalExpenses = totalStaffingCost + totalOpex;
   const netIncome = totalRevenue - totalExpenses;
@@ -134,8 +182,12 @@ function computeYearFinancials(
     year: yearIndex + 1,
     students,
     totalRevenue,
+    tuitionRevenue: netTuition,
+    publicRevenue,
+    philanthropyRevenue,
     totalStaffingCost,
     totalOpex,
+    debtService,
     totalExpenses,
     netIncome,
     netMargin,
@@ -179,7 +231,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   const revenuePerStudent = y1.students > 0 ? y1.totalRevenue / y1.students : 0;
   const staffingCostPct = y1.totalRevenue > 0 ? y1.totalStaffingCost / y1.totalRevenue : 0;
-  const facilityCostPct = y1.totalRevenue > 0 ? y1.totalOpex / y1.totalRevenue : 0;
+  const opexCostPct = y1.totalRevenue > 0 ? y1.totalOpex / y1.totalRevenue : 0;
   const y1NetMargin = y1.netMargin;
   const y5NetMargin = y5.netMargin;
 
@@ -192,6 +244,13 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   const breakEvenYear = yearFinancials.findIndex((yf) => yf.netIncome >= 0);
   const capacityUtilY5 =
     sp.maxCapacity && sp.maxCapacity > 0 ? y5.students / sp.maxCapacity : 0;
+
+  const philanthropyPct = y1.totalRevenue > 0 ? y1.philanthropyRevenue / y1.totalRevenue : 0;
+  const publicRevenuePct = y1.totalRevenue > 0 ? y1.publicRevenue / y1.totalRevenue : 0;
+  const hasDebt = y1.debtService > 0;
+  const dscr = hasDebt && y1.netIncome !== undefined
+    ? (y1.netIncome + y1.debtService) / y1.debtService
+    : 0;
 
   const keyMetrics: KeyMetric[] = [];
 
@@ -220,15 +279,15 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   });
 
   keyMetrics.push({
-    name: "Facility & Ops Cost (% of Revenue)",
-    value: pct(facilityCostPct),
-    status: facilityCostPct <= 0.25 ? "good" : facilityCostPct <= 0.35 ? "warning" : "danger",
+    name: "Operating Cost (% of Revenue)",
+    value: pct(opexCostPct),
+    status: opexCostPct <= 0.30 ? "good" : opexCostPct <= 0.40 ? "warning" : "danger",
     interpretation:
-      facilityCostPct <= 0.25
+      opexCostPct <= 0.30
         ? "Operating costs are lean relative to revenue."
-        : facilityCostPct <= 0.35
-          ? "Operating costs are moderate — watch rent escalation over the 5-year period."
-          : "Operating costs are consuming a large share of revenue — consider renegotiating lease terms.",
+        : opexCostPct <= 0.40
+          ? "Operating costs are moderate — watch rent escalation and service costs over the 5-year period."
+          : "Operating costs are consuming a large share of revenue — review each cost center for savings.",
   });
 
   keyMetrics.push({
@@ -239,7 +298,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       y1NetMargin >= 0.1
         ? "Year 1 shows a healthy surplus — a strong start for a new school."
         : y1NetMargin >= 0
-          ? "Year 1 is near break-even — typical for startup schools, but leave little room for surprises."
+          ? "Year 1 is near break-even — typical for startup schools, but leaves little room for surprises."
           : `Year 1 projects a ${fmt(Math.abs(y1.netIncome))} deficit — plan for how this will be funded.`,
   });
 
@@ -281,6 +340,48 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
+  if (hasDebt) {
+    keyMetrics.push({
+      name: "Debt Service Coverage Ratio (Year 1)",
+      value: dscr > 0 ? `${dscr.toFixed(2)}x` : "N/A",
+      status: dscr >= 1.25 ? "good" : dscr >= 1.0 ? "warning" : "danger",
+      interpretation:
+        dscr >= 1.25
+          ? "DSCR is above 1.25x — lenders typically want to see at least this level."
+          : dscr >= 1.0
+            ? "DSCR is above 1.0x but tight — lenders may require additional collateral or guarantees."
+            : "DSCR is below 1.0x — the school cannot cover debt payments from operating income alone.",
+    });
+  }
+
+  if (philanthropyPct > 0.05) {
+    keyMetrics.push({
+      name: "Philanthropy (% of Revenue)",
+      value: pct(philanthropyPct),
+      status: philanthropyPct <= 0.15 ? "good" : philanthropyPct <= 0.30 ? "warning" : "danger",
+      interpretation:
+        philanthropyPct <= 0.15
+          ? "Philanthropy supplements but doesn't dominate revenue — a sustainable mix."
+          : philanthropyPct <= 0.30
+            ? "Donations and grants make up a significant share of revenue — plan for donor diversification."
+            : "Heavy reliance on philanthropy — lenders view this as unpredictable revenue. Build toward earned revenue sustainability.",
+    });
+  }
+
+  if (publicRevenuePct > 0.05) {
+    keyMetrics.push({
+      name: "Public Funding (% of Revenue)",
+      value: pct(publicRevenuePct),
+      status: publicRevenuePct <= 0.50 ? "good" : publicRevenuePct <= 0.70 ? "warning" : "danger",
+      interpretation:
+        publicRevenuePct <= 0.50
+          ? "Public funding is a meaningful revenue stream without creating over-dependency."
+          : publicRevenuePct <= 0.70
+            ? "Significant reliance on public funding — changes in state policy could materially impact revenue."
+            : "The model is heavily dependent on public funding — develop contingency plans for policy changes.",
+    });
+  }
+
   const strengths: string[] = [];
   const risks: string[] = [];
 
@@ -291,17 +392,26 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (breakEvenYear === 0) strengths.push("Profitable from Year 1");
   if (capacityUtilY5 >= 0.8) strengths.push("Efficient facility utilization by Year 5");
   if (enrollmentGrowthRate >= 0.5) strengths.push("Significant enrollment growth planned");
+  if (hasDebt && dscr >= 1.25) strengths.push("Strong debt service coverage ratio");
+  if (publicRevenuePct > 0.1 && publicRevenuePct <= 0.5) strengths.push("Diversified revenue with public funding");
+  if (philanthropyPct > 0 && philanthropyPct <= 0.15) strengths.push("Supplemental philanthropy without over-reliance");
 
   if (y1NetMargin < 0) risks.push(`Year 1 projects a ${fmt(Math.abs(y1.netIncome))} deficit`);
   if (staffingCostPct > 0.65) risks.push(`Staffing consumes ${pct(staffingCostPct)} of revenue`);
   if (revenuePerStudent < 7000) risks.push("Per-student revenue is below sustainable levels");
-  if (facilityCostPct > 0.35) risks.push("Facility costs are high relative to revenue");
+  if (opexCostPct > 0.40) risks.push("Operating costs are high relative to revenue");
   if (y5NetMargin < 0.05) risks.push("Year 5 margin is dangerously thin");
   if (breakEvenYear < 0) risks.push("Model does not reach break-even within 5 years");
   if (capacityUtilY5 < 0.6 && sp.maxCapacity && sp.maxCapacity > 0)
     risks.push("Facility will be significantly underutilized");
   if ((rev.scholarshipRate || 0) > 20)
     risks.push(`High scholarship rate (${rev.scholarshipRate}%) reduces net revenue`);
+  if (hasDebt && dscr < 1.0)
+    risks.push("Debt service exceeds operating income — loan payments are not sustainable");
+  if (philanthropyPct > 0.30)
+    risks.push(`Philanthropy represents ${pct(philanthropyPct)} of revenue — unpredictable and hard to sustain`);
+  if (publicRevenuePct > 0.70)
+    risks.push("Over-reliance on public funding exposes the school to policy risk");
 
   const biggestStrength =
     strengths.length > 0
@@ -339,10 +449,26 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
-  if (facilityCostPct > 0.35) {
+  if (hasDebt && dscr < 1.25) {
     recommendations.push({
-      title: "Negotiate Facility Costs",
-      description: `Facility and operating costs represent ${pct(facilityCostPct)} of revenue. Consider shared space arrangements, church or community partnerships, or a phased facility plan.`,
+      title: "Improve Debt Service Coverage",
+      description: `Your DSCR of ${dscr.toFixed(2)}x is ${dscr < 1.0 ? "below 1.0x — you cannot cover debt payments from operations" : "below the 1.25x lenders typically require"}. Consider reducing the loan amount, extending the term, or increasing revenue before taking on this debt.`,
+      priority: "high",
+    });
+  }
+
+  if (philanthropyPct > 0.30) {
+    recommendations.push({
+      title: "Reduce Philanthropy Dependency",
+      description: `Donations and grants represent ${pct(philanthropyPct)} of Year 1 revenue. Lenders prefer models where earned revenue drives sustainability. Build a path to reduce philanthropy dependency below 20% by Year 3.`,
+      priority: "high",
+    });
+  }
+
+  if (opexCostPct > 0.40) {
+    recommendations.push({
+      title: "Review Operating Cost Structure",
+      description: `Operating costs represent ${pct(opexCostPct)} of revenue. Review each cost center — facility, student services, and administration — for potential savings. Shared space, volunteer programs, or phased services can help.`,
       priority: "medium",
     });
   }
@@ -355,10 +481,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
-  if ((rev.annualFundraising || 0) > y1.totalRevenue * 0.2 && y1.totalRevenue > 0) {
+  if (publicRevenuePct > 0.50) {
     recommendations.push({
-      title: "Reduce Fundraising Dependency",
-      description: `Fundraising represents more than 20% of Year 1 revenue. Lenders prefer models where tuition and fees drive sustainability. Gradually reduce reliance on grants and donations.`,
+      title: "Diversify Away from Public Funding",
+      description: `Public funding represents ${pct(publicRevenuePct)} of revenue. While beneficial, changes in state legislation or charter authorization could materially impact your school. Develop supplementary revenue streams.`,
       priority: "medium",
     });
   }
@@ -402,10 +528,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   const goodMetrics = keyMetrics.filter((m) => m.status === "good").length;
   const dangerMetrics = keyMetrics.filter((m) => m.status === "danger").length;
 
-  if (dangerMetrics === 0 && y5NetMargin >= 0.1 && breakEvenYear <= 1) {
+  if (dangerMetrics === 0 && y5NetMargin >= 0.1 && breakEvenYear <= 1 && (!hasDebt || dscr >= 1.25)) {
     lenderReadiness = "Strong";
     lenderReadinessExplanation =
-      "This model shows the financial fundamentals lenders look for: a clear path to profitability, controlled costs, and sustainable growth.";
+      "This model shows the financial fundamentals lenders look for: a clear path to profitability, controlled costs, sustainable revenue mix, and adequate debt coverage.";
   } else if (dangerMetrics <= 1 && y5NetMargin >= 0) {
     lenderReadiness = "Needs Work";
     lenderReadinessExplanation =

@@ -23,7 +23,7 @@ const STEPS = [
   { id: 2, title: "Enrollment", component: EnrollmentStep },
   { id: 3, title: "Revenue", component: RevenueStep },
   { id: 4, title: "Staffing", component: StaffingStep },
-  { id: 5, title: "Facilities", component: FacilitiesStep },
+  { id: 5, title: "Operations", component: FacilitiesStep },
   { id: 6, title: "Review", component: ReviewStep },
   { id: 7, title: "Consultant", component: ConsultantStep },
   { id: 8, title: "Export", component: ExportStep },
@@ -51,7 +51,7 @@ export function ModelWizardPage() {
       enrollment: {},
       revenue: {},
       staffing: { studentsPerTeacher: 12, benefitsRate: 20 },
-      facilities: { annualRentIncrease: 3 },
+      facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0 },
     },
     mode: "onChange"
   });
