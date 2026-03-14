@@ -1,0 +1,222 @@
+You are editing an existing pnpm monorepo. Do not rebuild this app from scratch.
+
+Critical correction:
+Do NOT simplify the intake to a 5-step teaser. We need the full 8-step underwriting workflow because the complexity is required to underwrite loans across multiple school models and funding programs.
+
+What stays:
+- The existing 8-step wizard structure
+- The full model schema and row-based logic
+- Complex revenue, staffing, expenses, capital, debt, and prior-year inputs
+- Funding-profile-specific logic
+- Lender-grade xlsx export
+
+What gets simplified:
+- Account friction
+- Dashboard-first routing
+- Anything not needed before export
+- Extra platform polish that does not affect underwriting quality
+
+Product goal:
+Create a public-facing SchoolStack Budget underwriting intake that keeps the full 8-step model complexity, but allows a founder to complete it without needing the full SchoolStack.ai platform experience.
+
+Important constraints:
+- Keep the current full app intact.
+- Preserve the existing 8-step wizard and all underwriting-critical fields.
+- Do not collapse the model into a basic teaser or light assumptions form.
+- Reuse the current schema, step components, exporter patterns, and workbook/template logic wherever possible.
+- Keep branding as SchoolStack Budget by SchoolStack.ai.
+- Do not remove authenticated routes or current export routes.
+
+Current repo paths to inspect first:
+- artifacts/school-financial-model/src/pages/model-wizard/index.tsx
+- artifacts/school-financial-model/src/pages/model-wizard/schema.ts
+- artifacts/school-financial-model/src/pages/model-wizard/steps/*
+- artifacts/api-server/src/lib/lender-proforma-export.ts
+- artifacts/api-server/src/lib/excel-export.ts
+- artifacts/api-server/src/routes/models.ts
+- artifacts/api-server/src/routes/index.ts
+- artifacts/school-financial-model/src/App.tsx
+- artifacts/school-financial-model/src/pages/landing.tsx
+- root .replit
+
+New files may be added as needed:
+- artifacts/api-server/src/routes/public.ts
+- artifacts/school-financial-model/src/pages/public-underwriting.tsx
+
+Non-negotiable underwriting requirement:
+The current 8-step complexity is required because we need support for:
+- tuition-based, charter/public-funded, and hybrid/mixed school models
+- multiple revenue programs and payment behaviors
+- tuition tiers and discounts
+- school choice / ESA / public funding logic
+- collection rate and collection timing assumptions
+- reimbursement lag assumptions
+- grant timing and confirmed vs projected grants
+- staffing rows by role and employment type
+- benefits and payroll tax treatment
+- facilities, rent escalation, and financing assumptions
+- capital and debt rows
+- partial first year assumptions
+- prior-year snapshot for operating schools
+- policy and covenant checks needed for underwriting
+
+Do not replace these with a simplified assumptions form.
+
+Build objective:
+Expose the existing underwriting wizard as a public or guest-friendly flow, then generate an underwriting-ready Excel workbook.
+
+Implementation plan:
+
+1) Keep the existing 8-step wizard
+- Preserve the current 8-step flow and underlying schema.
+- Reuse the existing step components as much as possible.
+- If needed, create a public wrapper around the existing wizard rather than rewriting it.
+- The public experience may use local state instead of requiring auth-backed autosave.
+- The founder should still go through the full underwriting intake, not a shortened teaser.
+
+2) Add a public entry route
+- Add a public route such as /underwriting or /apply-financial-model
+- This route should render the existing 8-step underwriting wizard in guest mode
+- No login required for the public underwriting flow
+- Landing page primary CTA should point to this public underwriting flow, not /register
+
+3) Preserve full schema complexity
+Do not remove or flatten:
+- fullModelSchema
+- schoolProfile
+- enrollment
+- revenue
+- revenueRows
+- staffing
+- staffingRows
+- facilities
+- expenseRows
+- capitalAndDebtRows
+- priorYearSnapshot
+
+The guest/public flow must still collect all underwriting-critical data represented by this schema.
+
+4) Public API export route
+Create:
+- POST /api/public/export-lender-proforma
+
+Implement in:
+- artifacts/api-server/src/routes/public.ts
+- register the router in artifacts/api-server/src/routes/index.ts
+
+Behavior:
+- Accept the full underwriting payload, matching or closely aligned to the existing full schema
+- Reuse lender-proforma-export.ts and any existing workbook/template logic
+- Return the xlsx as an attachment
+- Do not break existing authenticated export endpoints
+
+5) Workbook requirements, underwriting-ready
+The exported xlsx must be underwriting ready and formula driven.
+
+Required tabs:
+- Underwriting Snapshot
+- Assumptions
+- Enrollment & Revenue Drivers
+- Tuition / Funding Detail
+- Staffing Plan
+- Operating Expenses
+- Facilities / Occupancy
+- Sources & Uses
+- Debt Schedule
+- Cash Flow Monthly Y1
+- 5-Year P&L
+- 5-Year Balance Sheet
+- DSCR / Covenant Checks
+- Summary
+
+Required calculations:
+- formula-driven assumptions throughout
+- monthly cash flow for first 12 months minimum
+- annual projections for Years 1 to 5
+- sources and uses balance exactly
+- debt amortization schedule
+- DSCR
+- minimum cash month
+- days cash on hand
+- runway / reserve logic
+- break-even enrollment or break-even timing
+- balance sheet ties
+- covenant / policy flags on underwriting snapshot
+
+Policy flags to include:
+- sources equal uses
+- DSCR threshold status
+- minimum liquidity status
+- break-even by target year status
+- debt paydown by target year status
+
+6) Public flow UX
+- Keep the 8 steps because they are required for underwriting
+- Simplify the shell, not the content
+- The page should feel focused and founder-friendly, but not watered down
+- No dashboard required before access
+- No account required to export
+- At the end, provide xlsx download and a small Lending Lab CTA
+
+7) Existing step logic
+Inspect the current steps and preserve them:
+- Profile
+- Enrollment
+- Revenue
+- Staffing
+- Expenses
+- Review
+- Consultant
+- Export
+
+If there are underwriting-critical fields not currently surfaced well, improve them, but do not remove complexity.
+If facilities or capital/debt inputs exist in schema but are not clearly surfaced, expose them in the appropriate existing step rather than dropping them.
+
+8) Guest-mode behavior
+- For the public route, do not require fetching or saving a model record
+- Reuse the same form schema and step components where possible
+- Replace auth-backed autosave with in-memory or localStorage persistence for guest users
+- At final export, send the complete payload to /api/public/export-lender-proforma
+
+9) Repo hygiene
+- Update root .replit if artifacts/school-financial-model is missing
+- Keep current app boot behavior intact
+- Keep secrets in environment variables
+- Keep workbook templates checked into the repo
+
+10) Acceptance criteria
+Do not stop until all of these are true:
+- public underwriting route exists and works without auth
+- landing page CTA points to the public underwriting flow
+- the public flow still uses the full 8-step underwriting intake
+- the public flow captures the same underwriting-critical complexity as the authenticated wizard
+- POST /api/public/export-lender-proforma returns an xlsx
+- workbook opens in Excel
+- workbook contains formulas, not static pasted numbers
+- monthly cash flow exists
+- 5-year P&L exists
+- 5-year balance sheet exists and ties
+- debt schedule exists
+- underwriting snapshot exists with policy flags
+- existing authenticated app still works
+- project builds successfully
+
+11) Deliverables when done
+Show me:
+- exact files changed
+- new routes added
+- whether the public wizard reuses existing step components or duplicates them
+- the JSON payload expected by the public endpoint
+- one sample successful export response
+- any remaining underwriting gaps not yet covered
+
+Work in this order:
+1. Inspect current 8-step wizard and schema
+2. Inspect current exporter and workbook/template logic
+3. Add public guest route for the wizard
+4. Add public export endpoint
+5. Ensure all underwriting-critical schema fields are surfaced
+6. Extend workbook only where necessary
+7. Fix .replit if needed
+8. Run build checks
+9. Summarize changes
