@@ -165,6 +165,61 @@ function styleBoldDataCell(cell: ExcelJS.Cell) {
   cell.border = THIN_BORDER;
 }
 
+function computeRevenueMixForExport(
+  rows: RevenueRow[],
+  enrollment: number[],
+  yearCount: number,
+): { tuitionPct: number[]; publicPct: number[]; philanthropyPct: number[] } {
+  const tuitionPct: number[] = [];
+  const publicPct: number[] = [];
+  const philanthropyPct: number[] = [];
+
+  for (let y = 0; y < yearCount; y++) {
+    const students = enrollment[y] || 0;
+    const rowValues = new Map<string, number>();
+
+    for (const row of rows) {
+      if (!row.enabled || row.driverType === "percent_of_base") continue;
+      rowValues.set(row.id, computeDriverValueExport(row.amounts, y, row.driverType, students));
+    }
+    for (const row of rows) {
+      if (!row.enabled || row.driverType !== "percent_of_base") continue;
+      const baseVal = rowValues.get(row.percentBase || "") || 0;
+      const pctVal = (row.amounts?.[y] ?? 0) / 100;
+      rowValues.set(row.id, baseVal * pctVal);
+    }
+
+    let tuition = 0, publicFund = 0, philanthropy = 0;
+    for (const row of rows) {
+      if (!row.enabled) continue;
+      const val = rowValues.get(row.id) || 0;
+      switch (row.category) {
+        case "tuition_and_fees": case "other_revenue": tuition += val; break;
+        case "tuition_offsets": tuition -= val; break;
+        case "public_funding": case "school_choice": publicFund += val; break;
+        case "grants_contributions": philanthropy += val; break;
+      }
+    }
+
+    const total = tuition + publicFund + philanthropy;
+    tuitionPct.push(total > 0 ? tuition / total : 0);
+    publicPct.push(total > 0 ? publicFund / total : 0);
+    philanthropyPct.push(total > 0 ? philanthropy / total : 0);
+  }
+
+  return { tuitionPct, publicPct, philanthropyPct };
+}
+
+function computeDriverValueExport(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number): number {
+  const base = amounts?.[yearIdx] ?? 0;
+  switch (driverType) {
+    case "monthly": return base * 12;
+    case "per_student": return base * students;
+    case "annual_fixed": return base;
+    default: return base;
+  }
+}
+
 function schoolTypeDisplay(type?: string): string {
   switch (type) {
     case "microschool": return "Microschool";
@@ -308,10 +363,13 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders);
 
     buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow);
+
+    const revenueMix = computeRevenueMixForExport(revenueRows, enrollmentByYear, yearCount);
     buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders, {
       fmRevenueRow: 2, fmStaffRow: 3, fmExpenseRow: 4, fmCapDebtRow: 5,
       fmTotalExpRow: 6, fmNIRow: 7, fmCumNIRow: 8, fmReserveRow: 9,
       studentsRef: (cl) => `'Revenue Schedule'!${cl}2`,
+      revenueMix,
     }, consultantData);
 
     if (consultantData) {
@@ -1045,6 +1103,7 @@ interface SummaryLayout {
   fmCumNIRow: number;
   fmReserveRow: number;
   studentsRef: (colLetter: string) => string;
+  revenueMix?: { tuitionPct: number[]; publicPct: number[]; philanthropyPct: number[] };
 }
 
 function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount: number, cols: number, yearHeaders: string[], layout: SummaryLayout, consultant?: ConsultantSummary) {
@@ -1190,6 +1249,28 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const cell = ws.getCell(r, y + 2);
     cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${c(niSumRow, y + 2)}/${c(revSumRow, y + 2)})` };
     cell.numFmt = PERCENT_FORMAT; styleBoldDataCell(cell);
+  }
+
+  if (layout.revenueMix) {
+    r += 2;
+    styleSectionRow(ws, r, cols);
+    ws.getCell(r, 1).value = "REVENUE MIX TREND";
+
+    const mixMetrics = [
+      { label: "Tuition & Fees %", data: layout.revenueMix.tuitionPct },
+      { label: "Public Funding %", data: layout.revenueMix.publicPct },
+      { label: "Philanthropy %", data: layout.revenueMix.philanthropyPct },
+    ];
+
+    for (const metric of mixMetrics) {
+      r++;
+      ws.getCell(r, 1).value = metric.label; ws.getCell(r, 1).font = NORMAL_FONT;
+      for (let y = 0; y < yearCount; y++) {
+        const cell = ws.getCell(r, y + 2);
+        cell.value = metric.data[y] ?? 0;
+        cell.numFmt = PERCENT_FORMAT; styleDataCell(cell);
+      }
+    }
   }
 
   if (consultant) {

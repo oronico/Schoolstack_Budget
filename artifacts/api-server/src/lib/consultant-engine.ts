@@ -2,6 +2,7 @@ interface SchoolProfile {
   schoolName?: string;
   state?: string;
   schoolType?: string;
+  fundingProfile?: string;
   schoolStage?: string;
   openingYear?: number;
   currentStudents?: number;
@@ -957,7 +958,14 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   }
 
   const schoolType = sp.schoolType || "";
-  if (schoolType === "charter" || schoolType === "charter_school") {
+  const fundingProfile = sp.fundingProfile || "";
+
+  const isCharter = schoolType === "charter_school" || fundingProfile === "charter_public_funded";
+  const isPrivate = schoolType === "private_school" || fundingProfile === "tuition_based";
+  const isMicroschool = schoolType === "microschool";
+  const isHybridFunding = fundingProfile === "hybrid_mixed";
+
+  if (isCharter) {
     if (publicRevenuePct < 0.5) {
       recommendations.push({
         title: "Verify Charter Funding Assumptions",
@@ -974,14 +982,14 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     }
     if (publicRevenuePct > 0.7) {
       recommendations.push({
-        title: "Charter Revenue Concentration Risk",
-        description: `${pct(publicRevenuePct)} of revenue comes from public per-pupil funding. Charter funding is typically disbursed on a state-defined schedule — ensure you have cash reserves or a line of credit to cover timing gaps between enrollment counts and payment receipt.`,
+        title: "Charter Revenue Concentration & Timing Risk",
+        description: `${pct(publicRevenuePct)} of revenue comes from public per-pupil funding. Charter funding is typically disbursed on a state-defined schedule — ensure you have cash reserves or a line of credit to cover timing gaps between enrollment counts and payment receipt. Also consider diversifying into supplemental revenue (fees, grants) to reduce concentration risk.`,
         priority: "medium",
       });
     }
   }
 
-  if (schoolType === "private" || schoolType === "private_school" || schoolType === "independent") {
+  if (isPrivate) {
     const tuitionPct = y1.totalRevenue > 0 ? y1.tuitionRevenue / y1.totalRevenue : 0;
     if (tuitionPct < 0.6) {
       recommendations.push({
@@ -991,31 +999,46 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       });
     }
     if (tuitionPct > 0.5) {
-      const discountRisk = y1.totalRevenue > 0 ? y1.philanthropyRevenue / y1.totalRevenue : 0;
-      if (discountRisk > 0.1) {
-        recommendations.push({
-          title: "Plan for Tuition Collection Risk",
-          description: `Private schools face collection risk from late payments, withdrawals, and financial aid shortfalls. With ${pct(tuitionPct)} of revenue from tuition, build a 5–10% bad debt reserve into your budget and maintain clear enrollment contracts with payment terms.`,
-          priority: "low",
-        });
-      }
+      recommendations.push({
+        title: "Plan for Tuition Collection & Discount Risk",
+        description: `Private schools face collection risk from late payments, withdrawals, and financial aid shortfalls. With ${pct(tuitionPct)} of revenue from tuition, build a 5–10% bad debt reserve into your budget. Factor in tuition discount rates for merit/need-based aid and maintain clear enrollment contracts with payment terms.`,
+        priority: "low",
+      });
     }
   }
 
-  if (schoolType === "hybrid" || schoolType === "micro") {
+  if (isMicroschool) {
     if (y1.students > 0 && revenuePerStudent < 8000) {
       recommendations.push({
-        title: "Hybrid/Micro Model Revenue Check",
-        description: `Hybrid and micro schools often have higher per-student costs due to smaller cohorts. At ${fmt(revenuePerStudent)} per student, consider whether your pricing covers the premium instructional model.`,
+        title: "Microschool Per-Student Revenue Check",
+        description: `Microschools often have higher per-student costs due to smaller cohorts and specialized instruction. At ${fmt(revenuePerStudent)} per student, consider whether your pricing covers the premium instructional model and overhead absorption.`,
         priority: "medium",
       });
     }
+    if (y1.students < 30 && staffingCostPct > 0.7) {
+      recommendations.push({
+        title: "Microschool Staffing Efficiency",
+        description: `With ${y1.students} students and staffing at ${pct(staffingCostPct)} of revenue, the small cohort size is making it difficult to achieve efficient staffing ratios. Consider multi-age groupings or shared instructors to improve cost structure.`,
+        priority: "medium",
+      });
+    }
+  }
+
+  if (isHybridFunding) {
     const revenueSourceCount = [y1.tuitionRevenue, y1.publicRevenue, y1.philanthropyRevenue].filter(v => v > 0).length;
     if (revenueSourceCount < 2) {
       recommendations.push({
-        title: "Diversify Revenue Sources",
-        description: "Hybrid and micro schools benefit from multiple revenue streams (tuition, public funding, grants) to manage the higher cost structure of small-cohort models. Consider adding secondary revenue sources to improve financial resilience.",
+        title: "Diversify Revenue Sources for Hybrid Model",
+        description: "A hybrid funding model benefits from balancing tuition, public funding, and grants. Currently only one revenue source is active — adding a second stream improves financial resilience against policy changes or enrollment fluctuations.",
         priority: "medium",
+      });
+    }
+    const tuitionPct = y1.totalRevenue > 0 ? y1.tuitionRevenue / y1.totalRevenue : 0;
+    if (tuitionPct > 0 && publicRevenuePct > 0) {
+      recommendations.push({
+        title: "Manage Hybrid Funding Complexity",
+        description: `Your model blends tuition (${pct(tuitionPct)}) with public funding (${pct(publicRevenuePct)}). Hybrid models add compliance complexity — ensure you're tracking each funding stream's reporting requirements separately, especially if public funds have restricted-use provisions.`,
+        priority: "low",
       });
     }
   }
@@ -1076,6 +1099,58 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       recommendations.push({
         title: "Technology Costs Per Student Are High",
         description: `Technology costs average ${fmt(techPerStudent)} per student. While tech-forward models may justify this, most schools target $500–$1,500 per student. Verify your hardware refresh cycle and software licensing costs are optimized.`,
+        priority: "medium",
+      });
+    }
+
+    const techLineItems = expenseRows.filter(r => r.enabled && r.category === "technology");
+    const softwareItems = techLineItems.filter(r =>
+      r.lineItem.toLowerCase().includes("software") || r.lineItem.toLowerCase().includes("saas") || r.lineItem.toLowerCase().includes("license")
+    );
+    if (softwareItems.length >= 4) {
+      const softwareTotal = softwareItems.reduce((sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0);
+      recommendations.push({
+        title: "Software Fragmentation Risk",
+        description: `You have ${softwareItems.length} separate software/licensing line items totaling ${fmt(softwareTotal)}. Consider bundling or evaluating overlapping platforms to reduce costs and simplify vendor management.`,
+        priority: "low",
+      });
+    }
+
+    const instructionalCost = expenseRows
+      .filter(r => r.enabled && r.category === "instructional_program")
+      .reduce((sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0);
+    const instructionalPerStudent = y1.students > 0 ? instructionalCost / y1.students : 0;
+    if (instructionalPerStudent > 3000) {
+      recommendations.push({
+        title: "Curriculum & Instructional Costs Are High",
+        description: `Instructional program costs average ${fmt(instructionalPerStudent)} per student. Most schools target $500–$2,000 per student for curriculum, supplies, and assessments. Review whether premium curriculum is justified by your educational model and outcomes.`,
+        priority: "medium",
+      });
+    }
+
+    const travelItems = expenseRows.filter(r =>
+      r.enabled && (r.lineItem.toLowerCase().includes("travel") || r.lineItem.toLowerCase().includes("field trip") || r.lineItem.toLowerCase().includes("transportation"))
+    );
+    if (travelItems.length > 0) {
+      const travelTotal = travelItems.reduce((sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0);
+      const travelPct = y1.totalRevenue > 0 ? travelTotal / y1.totalRevenue : 0;
+      if (travelPct > 0.05) {
+        recommendations.push({
+          title: "Travel & Transportation Costs Are Elevated",
+          description: `Travel-related expenses of ${fmt(travelTotal)} represent ${pct(travelPct)} of revenue. Most schools keep travel costs under 3–5% of revenue. Consider virtual alternatives or shared transportation arrangements.`,
+          priority: "low",
+        });
+      }
+    }
+
+    const adminCost = expenseRows
+      .filter(r => r.enabled && r.category === "administrative_general")
+      .reduce((sum, r) => sum + computeDriverValue(r.amounts, 0, r.driverType, y1.students), 0);
+    const programCost = instructionalCost + techCost;
+    if (programCost > 0 && adminCost > programCost * 0.8) {
+      recommendations.push({
+        title: "Administrative Overhead Exceeds Program Spending",
+        description: `Administrative costs (${fmt(adminCost)}) are approaching or exceeding program-related spending (${fmt(programCost)}). Lenders and boards typically expect the ratio to favor program delivery. Review marketing, professional development, and other admin line items for efficiency.`,
         priority: "medium",
       });
     }
