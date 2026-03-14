@@ -14,6 +14,7 @@ import { ForgotPasswordPage } from "@/pages/auth/forgot-password";
 import { ResetPasswordPage } from "@/pages/auth/reset-password";
 import { DashboardPage } from "@/pages/dashboard";
 import { ModelWizardPage } from "@/pages/model-wizard";
+import { AdminPage } from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 // Initialize fetch interceptor before anything renders
@@ -59,6 +60,9 @@ function Router() {
       </Route>
       <Route path="/model/:id">
         {() => <ProtectedRoute component={ModelWizardPage} />}
+      </Route>
+      <Route path="/admin">
+        {() => <ProtectedRoute component={AdminPage} />}
       </Route>
       
       <Route component={NotFound} />
