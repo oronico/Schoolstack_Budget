@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, Users, DollarSign, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type StaffingRowData,
@@ -111,7 +111,7 @@ export function StaffingStep() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <SummaryCard
           label="Headcount"
           value={costs.headcount.toString()}
@@ -122,8 +122,16 @@ export function StaffingStep() {
           value={`$${costs.totalSalariesWages.toLocaleString()}`}
         />
         <SummaryCard
-          label="Benefits + Taxes"
-          value={`$${(costs.totalBenefits + costs.totalPayrollTaxes).toLocaleString()}`}
+          label="Benefits"
+          value={`$${costs.totalBenefits.toLocaleString()}`}
+        />
+        <SummaryCard
+          label="Payroll Taxes"
+          value={`$${costs.totalPayrollTaxes.toLocaleString()}`}
+        />
+        <SummaryCard
+          label="Contracted Personnel"
+          value={`$${costs.totalContractedPersonnel.toLocaleString()}`}
         />
         <SummaryCard
           label="Total Personnel"
@@ -164,14 +172,6 @@ export function StaffingStep() {
       >
         <Plus className="h-4 w-4" /> Add Staff Member
       </button>
-
-      {costs.totalContractedPersonnel > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-          <strong>${costs.totalContractedPersonnel.toLocaleString()}</strong> in
-          contracted personnel is tracked separately from wages in the financial
-          model.
-        </div>
-      )}
     </div>
   );
 }
@@ -229,11 +229,12 @@ function StaffCard({
   onUpdate,
   onRemove,
 }: StaffCardProps) {
-  const salary = Math.round(row.fte * row.annualRate);
-  const benefits = row.benefitsEligible && row.employmentType !== "contract"
+  const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
+  const salary = Math.round(row.fte * row.annualizedRate);
+  const benefits = row.benefitsEligible && !isContractNotPayrollLike
     ? Math.round(salary * (row.benefitsRate / 100))
     : 0;
-  const payrollTax = row.employmentType !== "contract"
+  const payrollTax = !isContractNotPayrollLike
     ? Math.round(salary * (row.payrollTaxRate / 100))
     : 0;
   const totalCost = salary + benefits + payrollTax;
@@ -252,7 +253,7 @@ function StaffCard({
             <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           )}
           <span className="font-medium text-sm text-foreground truncate">
-            {row.role || "Untitled Role"}
+            {row.roleName || "Untitled Role"}
           </span>
           <span className="text-xs text-muted-foreground flex-shrink-0">
             {EMPLOYMENT_TYPE_LABELS[row.employmentType]} · {row.fte} FTE
@@ -268,8 +269,8 @@ function StaffCard({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FieldInput
               label="Role / Position"
-              value={row.role}
-              onChange={(v) => onUpdate("role", v)}
+              value={row.roleName}
+              onChange={(v) => onUpdate("roleName", v)}
               placeholder="e.g., Lead Teacher"
             />
             <FieldSelect
@@ -303,8 +304,8 @@ function StaffCard({
             />
             <FieldNumber
               label="Annual Rate"
-              value={row.annualRate}
-              onChange={(v) => onUpdate("annualRate", v)}
+              value={row.annualizedRate}
+              onChange={(v) => onUpdate("annualizedRate", v)}
               prefix="$"
               min={0}
             />
@@ -323,7 +324,7 @@ function StaffCard({
               label="Benefits Eligible"
               checked={row.benefitsEligible}
               onChange={(v) => onUpdate("benefitsEligible", v)}
-              disabled={row.employmentType === "contract"}
+              disabled={isContractNotPayrollLike}
             />
             <FieldNumber
               label="Benefits Rate"
@@ -332,7 +333,7 @@ function StaffCard({
               suffix="%"
               min={0}
               max={100}
-              disabled={!row.benefitsEligible || row.employmentType === "contract"}
+              disabled={!row.benefitsEligible || isContractNotPayrollLike}
             />
             <FieldNumber
               label="Payroll Tax Rate"
@@ -341,25 +342,40 @@ function StaffCard({
               suffix="%"
               min={0}
               max={100}
-              disabled={row.employmentType === "contract"}
+              disabled={isContractNotPayrollLike}
             />
             <FieldInput
               label="Notes"
-              value={row.note}
-              onChange={(v) => onUpdate("note", v)}
+              value={row.notes}
+              onChange={(v) => onUpdate("notes", v)}
               placeholder="Optional"
             />
           </div>
 
+          {row.employmentType === "contract" && (
+            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <FieldToggle
+                label="Treat as Payroll"
+                checked={row.payrollLike}
+                onChange={(v) => onUpdate("payrollLike", v)}
+              />
+              <span className="text-xs text-amber-800">
+                {row.payrollLike
+                  ? "This contractor is treated like payroll (subject to benefits & payroll taxes)."
+                  : "This contractor flows to contracted personnel, not wages."}
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between pt-2 border-t border-border/30">
             <div className="flex gap-4 text-xs text-muted-foreground">
-              {row.employmentType !== "contract" && (
+              {!isContractNotPayrollLike && (
                 <>
                   <span>Benefits: ${benefits.toLocaleString()}</span>
                   <span>Payroll Taxes: ${payrollTax.toLocaleString()}</span>
                 </>
               )}
-              {row.employmentType === "contract" && (
+              {isContractNotPayrollLike && (
                 <span className="text-amber-600">Contracted (not on payroll)</span>
               )}
             </div>

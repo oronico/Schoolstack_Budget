@@ -591,6 +591,8 @@ components:
           type: number
         payrollTaxRate:
           type: number
+        payrollLike:
+          type: boolean
         notes:
           type: string
       required:
@@ -603,6 +605,7 @@ components:
         - benefitsEligible
         - benefitsRate
         - payrollTaxRate
+        - payrollLike
     ExpenseRow:
       type: object
       properties:

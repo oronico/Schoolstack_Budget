@@ -69,15 +69,16 @@ export function ModelWizardPage() {
       staffing: { studentsPerTeacher: 12, benefitsRate: 20 },
       staffingRows: [] as Array<{
         id: string;
-        role: string;
+        roleName: string;
         functionCategory: string;
         employmentType: string;
         fte: number;
-        annualRate: number;
+        annualizedRate: number;
         benefitsEligible: boolean;
         benefitsRate: number;
         payrollTaxRate: number;
-        note: string;
+        payrollLike: boolean;
+        notes: string;
       }>,
       facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0, annualSalaryIncrease: 3, generalCostInflation: 3 },
       priorYearSnapshot: {},

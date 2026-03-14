@@ -57,15 +57,16 @@ export const revenueSchema = z.object({
 
 export const staffingRowSchema = z.object({
   id: z.string(),
-  role: z.string(),
+  roleName: z.string(),
   functionCategory: z.enum(["instructional", "school_leadership", "student_support", "operations", "administrative", "other"]),
   employmentType: z.enum(["full_time", "part_time", "contract"]),
   fte: z.number().min(0).max(1),
-  annualRate: z.number().min(0),
+  annualizedRate: z.number().min(0),
   benefitsEligible: z.boolean(),
   benefitsRate: z.number().min(0).max(100),
   payrollTaxRate: z.number().min(0).max(100),
-  note: z.string(),
+  payrollLike: z.boolean(),
+  notes: z.string(),
 });
 
 export const staffingSchema = z.object({

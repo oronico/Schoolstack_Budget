@@ -231,6 +231,7 @@ export const CreateModelBody = zod.object({
           benefitsEligible: zod.boolean(),
           benefitsRate: zod.number(),
           payrollTaxRate: zod.number(),
+          payrollLike: zod.boolean(),
           notes: zod.string().optional(),
         }),
       )
@@ -424,6 +425,7 @@ export const GetModelResponse = zod.object({
           benefitsEligible: zod.boolean(),
           benefitsRate: zod.number(),
           payrollTaxRate: zod.number(),
+          payrollLike: zod.boolean(),
           notes: zod.string().optional(),
         }),
       )
@@ -618,6 +620,7 @@ export const UpdateModelBody = zod.object({
           benefitsEligible: zod.boolean(),
           benefitsRate: zod.number(),
           payrollTaxRate: zod.number(),
+          payrollLike: zod.boolean(),
           notes: zod.string().optional(),
         }),
       )
@@ -804,6 +807,7 @@ export const UpdateModelResponse = zod.object({
           benefitsEligible: zod.boolean(),
           benefitsRate: zod.number(),
           payrollTaxRate: zod.number(),
+          payrollLike: zod.boolean(),
           notes: zod.string().optional(),
         }),
       )
@@ -1017,6 +1021,7 @@ export const ArchiveModelResponse = zod.object({
           benefitsEligible: zod.boolean(),
           benefitsRate: zod.number(),
           payrollTaxRate: zod.number(),
+          payrollLike: zod.boolean(),
           notes: zod.string().optional(),
         }),
       )

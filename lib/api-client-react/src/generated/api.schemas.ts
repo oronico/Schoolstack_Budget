@@ -160,6 +160,7 @@ export interface StaffingRow {
   benefitsEligible: boolean;
   benefitsRate: number;
   payrollTaxRate: number;
+  payrollLike: boolean;
   notes?: string;
 }
 

@@ -13,15 +13,16 @@ export type FundingProfile = "tuition_based" | "charter_public_funded" | "hybrid
 
 export interface StaffingRowData {
   id: string;
-  role: string;
+  roleName: string;
   functionCategory: StaffingFunctionCategory;
   employmentType: EmploymentType;
   fte: number;
-  annualRate: number;
+  annualizedRate: number;
   benefitsEligible: boolean;
   benefitsRate: number;
   payrollTaxRate: number;
-  note: string;
+  payrollLike: boolean;
+  notes: string;
 }
 
 export const FUNCTION_CATEGORY_LABELS: Record<StaffingFunctionCategory, string> = {
@@ -50,11 +51,11 @@ export const FUNCTION_CATEGORY_ORDER: StaffingFunctionCategory[] = [
 
 interface StaffPreset {
   id: string;
-  role: string;
+  roleName: string;
   functionCategory: StaffingFunctionCategory;
   employmentType: EmploymentType;
   fte: number;
-  annualRate: number;
+  annualizedRate: number;
   benefitsEligible: boolean;
   includeFor: { stages: SchoolStage[]; profiles: FundingProfile[] };
 }
@@ -65,111 +66,111 @@ const ALL_PROFILES: FundingProfile[] = ["tuition_based", "charter_public_funded"
 const STAFF_PRESETS: StaffPreset[] = [
   {
     id: "head_of_school",
-    role: "Head of School / Principal",
+    roleName: "Head of School / Principal",
     functionCategory: "school_leadership",
     employmentType: "full_time",
     fte: 1.0,
-    annualRate: 85000,
+    annualizedRate: 85000,
     benefitsEligible: true,
     includeFor: { stages: ALL_STAGES, profiles: ALL_PROFILES },
   },
   {
     id: "assistant_principal",
-    role: "Assistant Principal",
+    roleName: "Assistant Principal",
     functionCategory: "school_leadership",
     employmentType: "full_time",
     fte: 1.0,
-    annualRate: 70000,
+    annualizedRate: 70000,
     benefitsEligible: true,
     includeFor: { stages: ["operating_school"], profiles: ALL_PROFILES },
   },
   {
     id: "teacher_1",
-    role: "Lead Teacher",
+    roleName: "Lead Teacher",
     functionCategory: "instructional",
     employmentType: "full_time",
     fte: 1.0,
-    annualRate: 55000,
+    annualizedRate: 55000,
     benefitsEligible: true,
     includeFor: { stages: ALL_STAGES, profiles: ALL_PROFILES },
   },
   {
     id: "teacher_2",
-    role: "Teacher",
+    roleName: "Teacher",
     functionCategory: "instructional",
     employmentType: "full_time",
     fte: 1.0,
-    annualRate: 50000,
+    annualizedRate: 50000,
     benefitsEligible: true,
     includeFor: { stages: ALL_STAGES, profiles: ALL_PROFILES },
   },
   {
     id: "teaching_aide",
-    role: "Teaching Aide / Paraprofessional",
+    roleName: "Teaching Aide / Paraprofessional",
     functionCategory: "instructional",
     employmentType: "part_time",
     fte: 0.5,
-    annualRate: 28000,
+    annualizedRate: 28000,
     benefitsEligible: false,
     includeFor: { stages: ["operating_school"], profiles: ALL_PROFILES },
   },
   {
     id: "sped_coordinator",
-    role: "Special Education Coordinator",
+    roleName: "Special Education Coordinator",
     functionCategory: "student_support",
     employmentType: "full_time",
     fte: 1.0,
-    annualRate: 55000,
+    annualizedRate: 55000,
     benefitsEligible: true,
     includeFor: { stages: ALL_STAGES, profiles: ["charter_public_funded", "hybrid_mixed"] },
   },
   {
     id: "counselor",
-    role: "School Counselor",
+    roleName: "School Counselor",
     functionCategory: "student_support",
     employmentType: "full_time",
     fte: 1.0,
-    annualRate: 50000,
+    annualizedRate: 50000,
     benefitsEligible: true,
     includeFor: { stages: ["operating_school"], profiles: ALL_PROFILES },
   },
   {
     id: "office_manager",
-    role: "Office Manager",
+    roleName: "Office Manager",
     functionCategory: "administrative",
     employmentType: "full_time",
     fte: 1.0,
-    annualRate: 42000,
+    annualizedRate: 42000,
     benefitsEligible: true,
     includeFor: { stages: ALL_STAGES, profiles: ALL_PROFILES },
   },
   {
     id: "compliance_officer",
-    role: "Compliance / Reporting Officer",
+    roleName: "Compliance / Reporting Officer",
     functionCategory: "administrative",
     employmentType: "full_time",
     fte: 1.0,
-    annualRate: 55000,
+    annualizedRate: 55000,
     benefitsEligible: true,
     includeFor: { stages: ALL_STAGES, profiles: ["charter_public_funded"] },
   },
   {
     id: "facilities_custodian",
-    role: "Facilities / Custodial Staff",
+    roleName: "Facilities / Custodial Staff",
     functionCategory: "operations",
     employmentType: "part_time",
     fte: 0.5,
-    annualRate: 30000,
+    annualizedRate: 30000,
     benefitsEligible: false,
     includeFor: { stages: ["operating_school"], profiles: ALL_PROFILES },
   },
   {
     id: "bookkeeper",
-    role: "Bookkeeper / Accountant",
+    roleName: "Bookkeeper / Accountant",
     functionCategory: "administrative",
     employmentType: "contract",
     fte: 0.25,
-    annualRate: 18000,
+    annualizedRate: 18000,
     benefitsEligible: false,
     includeFor: { stages: ALL_STAGES, profiles: ALL_PROFILES },
   },
@@ -190,30 +191,32 @@ export function generateDefaultStaffingRows(
     )
     .map((p) => ({
       id: p.id,
-      role: p.role,
+      roleName: p.roleName,
       functionCategory: p.functionCategory,
       employmentType: p.employmentType,
       fte: p.fte,
-      annualRate: p.annualRate,
+      annualizedRate: p.annualizedRate,
       benefitsEligible: p.benefitsEligible,
       benefitsRate: DEFAULT_BENEFITS_RATE,
       payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
-      note: "",
+      payrollLike: false,
+      notes: "",
     }));
 }
 
 export function createBlankStaffRow(): StaffingRowData {
   return {
     id: `staff_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    role: "",
+    roleName: "",
     functionCategory: "instructional",
     employmentType: "full_time",
     fte: 1.0,
-    annualRate: 0,
+    annualizedRate: 0,
     benefitsEligible: true,
     benefitsRate: DEFAULT_BENEFITS_RATE,
     payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
-    note: "",
+    payrollLike: false,
+    notes: "",
   };
 }
 
@@ -235,10 +238,12 @@ export function calculatePersonnelCosts(rows: StaffingRowData[]): PersonnelCostS
   let totalFTE = 0;
 
   for (const row of rows) {
-    const annualCost = row.fte * row.annualRate;
+    const annualCost = row.fte * row.annualizedRate;
     totalFTE += row.fte;
 
-    if (row.employmentType === "contract") {
+    const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
+
+    if (isContractNotPayrollLike) {
       totalContractedPersonnel += annualCost;
     } else {
       totalSalariesWages += annualCost;
