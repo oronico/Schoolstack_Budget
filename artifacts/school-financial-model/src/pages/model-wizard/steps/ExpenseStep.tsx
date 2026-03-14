@@ -16,6 +16,7 @@ import {
   generateDefaultCapitalDebtRows,
   createBlankExpenseRow,
   createBlankCapitalDebtRow,
+  calculateLoanPayment,
   getYearCount,
 } from "@/lib/expense-defaults";
 import {
@@ -74,7 +75,7 @@ export function ExpenseStep() {
     } else if (formExpenseRows !== undefined && Array.isArray(formExpenseRows) && formExpenseRows.length === 0 && defaultsApplied) {
       setExpenseRows([]);
     } else if (!defaultsApplied) {
-      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount);
+      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount, schoolStage);
       setExpenseRows(defaults);
       const enabledCats = new Set<string>();
       defaults.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
@@ -82,7 +83,7 @@ export function ExpenseStep() {
       setValue("expenseRows", defaults, { shouldDirty: true });
       setDefaultsApplied(true);
     }
-  }, [formExpenseRows, fundingProfile, yearCount, defaultsApplied, setValue]);
+  }, [formExpenseRows, fundingProfile, schoolStage, yearCount, defaultsApplied, setValue]);
 
   const [capitalDefaultsApplied, setCapitalDefaultsApplied] = useState(false);
   useEffect(() => {
@@ -105,7 +106,7 @@ export function ExpenseStep() {
     } else if (formCapitalRows !== undefined && Array.isArray(formCapitalRows) && formCapitalRows.length === 0 && capitalDefaultsApplied) {
       setCapitalRows([]);
     } else if (!capitalDefaultsApplied) {
-      const defaults = generateDefaultCapitalDebtRows(fundingProfile, yearCount);
+      const defaults = generateDefaultCapitalDebtRows(fundingProfile, yearCount, schoolStage);
       setCapitalRows(defaults);
       if (defaults.some((r) => r.enabled)) {
         setExpandedCategories((prev) => new Set(prev).add("capital_financing"));
@@ -113,7 +114,7 @@ export function ExpenseStep() {
       setValue("capitalAndDebtRows", defaults, { shouldDirty: true });
       setCapitalDefaultsApplied(true);
     }
-  }, [formCapitalRows, fundingProfile, yearCount, capitalDefaultsApplied, setValue]);
+  }, [formCapitalRows, fundingProfile, schoolStage, yearCount, capitalDefaultsApplied, setValue]);
 
   const syncExpenseRows = useCallback((updated: ExpenseRowData[]) => {
     setExpenseRows(updated);
@@ -179,7 +180,7 @@ export function ExpenseStep() {
   }, [expenseRows, capitalRows]);
 
   const totalOperating = useMemo(() => {
-    let total = (personnelCosts?.totalPersonnel || 0);
+    let total = (personnelCosts?.grandTotal || 0);
     for (const cat of OPERATING_CATEGORIES) {
       total += categorySummaries[cat] || 0;
     }
@@ -196,7 +197,7 @@ export function ExpenseStep() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <SummaryCard label="Personnel" value={formatCurrency(personnelCosts?.totalPersonnel || 0)} color="text-blue-600" />
+        <SummaryCard label="Personnel" value={formatCurrency(personnelCosts?.grandTotal || 0)} color="text-blue-600" />
         <SummaryCard label="Instructional" value={formatCurrency(categorySummaries["instructional_program"] || 0)} color="text-emerald-600" />
         <SummaryCard label="Technology" value={formatCurrency(categorySummaries["technology"] || 0)} color="text-violet-600" />
         <SummaryCard label="Occupancy" value={formatCurrency(categorySummaries["occupancy_facility"] || 0)} color="text-amber-600" />
@@ -210,14 +211,14 @@ export function ExpenseStep() {
             {expandedCategories.has("personnel") ? <ChevronDown className="h-5 w-5 text-blue-600" /> : <ChevronRight className="h-5 w-5 text-blue-600" />}
             <Users className="h-5 w-5 text-blue-600" />
             <span className="font-bold text-lg text-foreground">Personnel</span>
-            <span className="ml-auto text-sm font-semibold text-blue-600">{formatCurrency(personnelCosts.totalPersonnel)}</span>
+            <span className="ml-auto text-sm font-semibold text-blue-600">{formatCurrency(personnelCosts.grandTotal)}</span>
           </button>
           {expandedCategories.has("personnel") && (
             <div className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Salaries & Wages</span><span className="font-medium">{formatCurrency(personnelCosts.totalSalaries)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Salaries & Wages</span><span className="font-medium">{formatCurrency(personnelCosts.totalSalariesWages)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Benefits</span><span className="font-medium">{formatCurrency(personnelCosts.totalBenefits)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Payroll Taxes</span><span className="font-medium">{formatCurrency(personnelCosts.totalPayrollTax)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Contracted Personnel</span><span className="font-medium">{formatCurrency(personnelCosts.totalContracted)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Payroll Taxes</span><span className="font-medium">{formatCurrency(personnelCosts.totalPayrollTaxes)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Contracted Personnel</span><span className="font-medium">{formatCurrency(personnelCosts.totalContractedPersonnel)}</span></div>
               <div className="flex justify-between border-t border-blue-200 pt-2 mt-2"><span className="font-semibold">Total Headcount</span><span className="font-semibold">{personnelCosts.headcount}</span></div>
               <p className="text-xs text-muted-foreground italic mt-2">Auto-populated from the Staffing step. Go back to step 4 to edit.</p>
             </div>
@@ -431,6 +432,18 @@ function CapitalLineCard({
     if (!row.enabled) setIsOpen(true);
   };
 
+  const computedPayment = useMemo(() => {
+    if (!row.isLoan) return 0;
+    return calculateLoanPayment(row.loanPrincipal || 0, row.loanRate || 0, row.loanTermYears || 0);
+  }, [row.isLoan, row.loanPrincipal, row.loanRate, row.loanTermYears]);
+
+  const applyLoanPayment = () => {
+    if (computedPayment > 0) {
+      const newAmounts = new Array(yearCount).fill(computedPayment);
+      onUpdate(row.id, "amounts", newAmounts);
+    }
+  };
+
   return (
     <div className={cn("rounded-xl border p-4 transition-all", row.enabled ? "border-amber-200 bg-white" : "border-border/50 bg-muted/30 opacity-60")}>
       <div className="flex items-center gap-3">
@@ -448,6 +461,7 @@ function CapitalLineCard({
             />
           </div>
         </button>
+        {row.isLoan && <span className="text-[10px] font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full whitespace-nowrap">Loan</span>}
         <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{DRIVER_TYPE_LABELS[row.driverType]}</span>
         <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
           <Trash2 className="h-4 w-4" />
@@ -457,17 +471,86 @@ function CapitalLineCard({
       {isOpen && row.enabled && (
         <div className="mt-4 space-y-4">
           <div className="flex items-center gap-4">
-            <label className="text-xs text-muted-foreground w-24">Driver Type</label>
-            <select
-              value={row.driverType}
-              onChange={(e) => onUpdate(row.id, "driverType", e.target.value)}
-              className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
-            >
-              {Object.entries(DRIVER_TYPE_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
+            <label className="text-xs text-muted-foreground w-16">Type</label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={row.isLoan || false}
+                onChange={(e) => onUpdate(row.id, "isLoan", e.target.checked)}
+                className="h-4 w-4 rounded border-border text-amber-600 focus:ring-amber-500"
+              />
+              <span className="text-muted-foreground">This is a loan (calculate debt service)</span>
+            </label>
           </div>
+
+          {row.isLoan && (
+            <div className="bg-amber-50 rounded-lg p-4 space-y-3">
+              <div className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Loan Calculator</div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Principal ($)</label>
+                  <input
+                    type="number"
+                    value={row.loanPrincipal || 0}
+                    onChange={(e) => onUpdate(row.id, "loanPrincipal", parseFloat(e.target.value) || 0)}
+                    className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+                    placeholder="100000"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Annual Rate (%)</label>
+                  <input
+                    type="number"
+                    value={row.loanRate || 0}
+                    onChange={(e) => onUpdate(row.id, "loanRate", parseFloat(e.target.value) || 0)}
+                    className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+                    step="0.25"
+                    placeholder="6"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Term (Years)</label>
+                  <input
+                    type="number"
+                    value={row.loanTermYears || 0}
+                    onChange={(e) => onUpdate(row.id, "loanTermYears", parseFloat(e.target.value) || 0)}
+                    className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+                    placeholder="10"
+                  />
+                </div>
+              </div>
+              {computedPayment > 0 && (
+                <div className="flex items-center justify-between bg-white rounded-lg p-3 border border-amber-200">
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Annual debt service: </span>
+                    <span className="font-bold text-amber-700">{formatCurrency(computedPayment)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applyLoanPayment}
+                    className="text-xs font-medium text-amber-600 hover:text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Apply to all years
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!row.isLoan && (
+            <div className="flex items-center gap-4">
+              <label className="text-xs text-muted-foreground w-16">Driver</label>
+              <select
+                value={row.driverType}
+                onChange={(e) => onUpdate(row.id, "driverType", e.target.value)}
+                className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+              >
+                {Object.entries(DRIVER_TYPE_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
@@ -486,7 +569,7 @@ function CapitalLineCard({
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground w-24">Note</label>
+            <label className="text-xs text-muted-foreground w-16">Note</label>
             <input
               type="text"
               value={row.note || ""}
@@ -499,10 +582,4 @@ function CapitalLineCard({
       )}
     </div>
   );
-}
-
-function formatCurrencyShort(val: number): string {
-  if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-  if (val >= 1000) return `$${(val / 1000).toFixed(0)}K`;
-  return `$${val}`;
 }

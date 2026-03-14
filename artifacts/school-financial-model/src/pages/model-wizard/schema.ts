@@ -95,6 +95,10 @@ export const capitalDebtRowSchema = z.object({
   driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_revenue"]),
   amounts: z.array(z.number()),
   note: z.string().default(""),
+  isLoan: z.boolean().default(false),
+  loanPrincipal: z.number().min(0).default(0),
+  loanRate: z.number().min(0).max(100).default(0),
+  loanTermYears: z.number().min(0).max(50).default(0),
 });
 
 export const facilitiesSchema = z.object({

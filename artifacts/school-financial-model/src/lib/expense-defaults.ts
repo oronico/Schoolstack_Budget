@@ -28,6 +28,10 @@ export interface CapitalDebtRowData {
   driverType: ExpenseDriverType;
   amounts: number[];
   note?: string;
+  isLoan?: boolean;
+  loanPrincipal?: number;
+  loanRate?: number;
+  loanTermYears?: number;
 }
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
@@ -109,6 +113,7 @@ interface CapitalDebtItemDef {
   driverType: ExpenseDriverType;
   defaultAmount: number;
   enabledFor: FundingProfile[];
+  isLoan?: boolean;
 }
 
 const CAPITAL_DEBT_ITEMS: CapitalDebtItemDef[] = [
@@ -116,7 +121,7 @@ const CAPITAL_DEBT_ITEMS: CapitalDebtItemDef[] = [
   { id: "leasehold_improvements", lineItem: "Leasehold Improvements / Buildout", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
   { id: "startup_equipment", lineItem: "Startup Equipment & Supplies", driverType: "annual_fixed", defaultAmount: 5000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "vehicle_purchase", lineItem: "Vehicle Purchase", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
-  { id: "debt_service", lineItem: "Loan / Debt Service", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "debt_service", lineItem: "Loan / Debt Service", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], isLoan: true },
   { id: "capital_reserve", lineItem: "Capital Reserve Fund", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
 ];
 
@@ -125,33 +130,61 @@ function uid(): string {
   return `exp_${Date.now()}_${++counter}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
+function stageAdjust(amount: number, schoolStage: SchoolStage): number {
+  if (schoolStage === "operating_school" && amount > 0) {
+    return Math.round(amount * 1.15);
+  }
+  return amount;
+}
+
 export function generateDefaultExpenseRows(
   fundingProfile: FundingProfile,
   yearCount: number,
+  schoolStage: SchoolStage = "new_school",
 ): ExpenseRowData[] {
-  return EXPENSE_LINE_ITEMS.map((def) => ({
-    id: uid(),
-    category: def.category,
-    lineItem: def.lineItem,
-    enabled: def.enabledFor.includes(fundingProfile),
-    driverType: def.driverType,
-    amounts: new Array(yearCount).fill(def.defaultAmount),
-    note: "",
-  }));
+  return EXPENSE_LINE_ITEMS.map((def) => {
+    const baseAmount = stageAdjust(def.defaultAmount, schoolStage);
+    return {
+      id: uid(),
+      category: def.category,
+      lineItem: def.lineItem,
+      enabled: def.enabledFor.includes(fundingProfile),
+      driverType: def.driverType,
+      amounts: new Array(yearCount).fill(baseAmount),
+      note: "",
+    };
+  });
 }
 
 export function generateDefaultCapitalDebtRows(
   fundingProfile: FundingProfile,
   yearCount: number,
+  schoolStage: SchoolStage = "new_school",
 ): CapitalDebtRowData[] {
-  return CAPITAL_DEBT_ITEMS.map((def) => ({
-    id: uid(),
-    lineItem: def.lineItem,
-    enabled: def.enabledFor.includes(fundingProfile),
-    driverType: def.driverType,
-    amounts: new Array(yearCount).fill(def.defaultAmount),
-    note: "",
-  }));
+  return CAPITAL_DEBT_ITEMS.map((def) => {
+    const baseAmount = schoolStage === "new_school" ? def.defaultAmount : Math.round(def.defaultAmount * 0.5);
+    return {
+      id: uid(),
+      lineItem: def.lineItem,
+      enabled: def.enabledFor.includes(fundingProfile),
+      driverType: def.driverType,
+      amounts: new Array(yearCount).fill(baseAmount),
+      note: "",
+      isLoan: def.isLoan || false,
+      loanPrincipal: 0,
+      loanRate: 0,
+      loanTermYears: 0,
+    };
+  });
+}
+
+export function calculateLoanPayment(principal: number, annualRate: number, termYears: number): number {
+  if (principal <= 0 || termYears <= 0) return 0;
+  if (annualRate <= 0) return Math.round(principal / termYears);
+  const monthlyRate = annualRate / 100 / 12;
+  const totalPayments = termYears * 12;
+  const monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / (Math.pow(1 + monthlyRate, totalPayments) - 1);
+  return Math.round(monthlyPayment * 12);
 }
 
 export function createBlankExpenseRow(category: ExpenseCategory, yearCount: number): ExpenseRowData {
