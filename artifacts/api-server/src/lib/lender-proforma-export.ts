@@ -1,6 +1,7 @@
-import ExcelJS from "exceljs";
 import path from "path";
 import fs from "fs";
+// @ts-ignore — xlsx-populate has no type definitions
+import XlsxPopulate from "xlsx-populate";
 
 function resolveTemplatePath(): string {
   const templateName = "SchoolStack_Prelaunch_ProForma_Template_v1.xlsx";
@@ -88,6 +89,7 @@ interface RevenueRow {
   amounts: number[];
   percentBase?: string;
   collectionRate?: number;
+  paymentTiming?: string;
 }
 
 interface StaffingRow {
@@ -148,6 +150,14 @@ const SCHOOL_TYPE_DISPLAY: Record<string, string> = {
   other: "Other",
 };
 
+const PAYMENT_TIMING_RATES: Record<string, number> = {
+  upfront: 1.0,
+  monthly: 0.95,
+  quarterly: 0.97,
+  semester: 0.98,
+  annual: 1.0,
+};
+
 function inferGrowthRate(amounts: number[], yearIdx0: number, yearIdx1: number): number {
   const v0 = amounts?.[yearIdx0] ?? 0;
   const v1 = amounts?.[yearIdx1] ?? 0;
@@ -178,10 +188,10 @@ function sumExpenseCategoryY1(rows: ExpenseRow[], category: string, students: nu
   return total;
 }
 
-function avgExpenseGrowth(rows: ExpenseRow[], category: string, students1: number, students2: number, rev1: number, rev2: number): number {
+function avgExpenseGrowth(rows: ExpenseRow[], categories: string[], students1: number, students2: number, rev1: number, rev2: number): number {
   let sum0 = 0, sum1 = 0;
   for (const row of rows) {
-    if (!row.enabled || row.category !== category) continue;
+    if (!row.enabled || !categories.includes(row.category)) continue;
     if (row.driverType === "percent_of_revenue") {
       sum0 += ((row.amounts?.[0] ?? 0) / 100) * rev1;
       sum1 += ((row.amounts?.[1] ?? 0) / 100) * rev2;
@@ -218,6 +228,9 @@ function computeRevenueY(rows: RevenueRow[], yearIdx: number, students: number):
   }
   return total;
 }
+
+const FACILITY_CATEGORIES = ["occupancy_facility"];
+const PROGRAM_CATEGORIES = ["instructional_program"];
 
 export function mapModelToTemplateInput(rawData: Record<string, unknown>): Record<string, string | number> {
   const data = rawData as unknown as ModelData;
@@ -287,10 +300,13 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
     result.otherEarnedGrowthPct = 0.02;
   }
 
-  const collectionRow = grossTuitionRow;
-  result.collectionRatePct = (collectionRow as RevenueRow)?.collectionRate
-    ? (collectionRow as RevenueRow).collectionRate! / 100
-    : 0.95;
+  if (grossTuitionRow?.paymentTiming && PAYMENT_TIMING_RATES[grossTuitionRow.paymentTiming] !== undefined) {
+    result.collectionRatePct = PAYMENT_TIMING_RATES[grossTuitionRow.paymentTiming];
+  } else if ((grossTuitionRow as RevenueRow)?.collectionRate) {
+    result.collectionRatePct = (grossTuitionRow as RevenueRow).collectionRate! / 100;
+  } else {
+    result.collectionRatePct = 0.95;
+  }
 
   let grantsY1 = 0;
   for (const row of revenueRows) {
@@ -349,7 +365,7 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   result.otherFacilityCostY1 = Math.max(0, otherFacility);
 
   if (expenseRows.some(r => r.enabled && r.category === "occupancy_facility" && r.amounts?.length >= 2)) {
-    result.rentGrowthPct = avgExpenseGrowth(expenseRows, "occupancy_facility", enrollY1, enrollY2, revY1, revY2);
+    result.rentGrowthPct = avgExpenseGrowth(expenseRows, ["occupancy_facility"], enrollY1, enrollY2, revY1, revY2);
     result.otherFacilityCostGrowthPct = result.rentGrowthPct as number;
   } else {
     result.rentGrowthPct = 0.03;
@@ -359,18 +375,26 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   const programY1 = sumExpenseCategoryY1(expenseRows, "instructional_program", enrollY1, revY1);
   result.programCostPerStudentY1 = enrollY1 > 0 ? Math.round(programY1 / enrollY1) : 0;
   if (expenseRows.some(r => r.enabled && r.category === "instructional_program" && r.amounts?.length >= 2)) {
-    result.programCostGrowthPct = avgExpenseGrowth(expenseRows, "instructional_program", enrollY1, enrollY2, revY1, revY2);
+    result.programCostGrowthPct = avgExpenseGrowth(expenseRows, ["instructional_program"], enrollY1, enrollY2, revY1, revY2);
   } else {
     result.programCostGrowthPct = 0.03;
   }
 
-  const otherCategories = ["technology", "administrative_general"];
+  const excludedCategories = new Set([...FACILITY_CATEGORIES, ...PROGRAM_CATEGORIES]);
+  const allExpenseCategories = new Set(expenseRows.filter(r => r.enabled).map(r => r.category));
+  const fixedOpsCategories = [...allExpenseCategories].filter(c => !excludedCategories.has(c));
+
   let fixedOpsY1 = 0;
-  for (const cat of otherCategories) {
+  for (const cat of fixedOpsCategories) {
     fixedOpsY1 += sumExpenseCategoryY1(expenseRows, cat, enrollY1, revY1);
   }
   result.fixedOperatingCostY1 = Math.round(fixedOpsY1);
-  result.fixedOperatingCostGrowthPct = 0.03;
+
+  if (fixedOpsCategories.length > 0 && expenseRows.some(r => r.enabled && fixedOpsCategories.includes(r.category) && r.amounts?.length >= 2)) {
+    result.fixedOperatingCostGrowthPct = avgExpenseGrowth(expenseRows, fixedOpsCategories, enrollY1, enrollY2, revY1, revY2);
+  } else {
+    result.fixedOperatingCostGrowthPct = 0.03;
+  }
 
   result.startingCash = prior?.endingCash ?? 0;
 
@@ -418,21 +442,19 @@ function computeAnnualDebtService(principal: number, annualRate: number, termYea
 export async function generateLenderProFormaWorkbook(rawData: Record<string, unknown>): Promise<Buffer> {
   const input = mapModelToTemplateInput(rawData);
 
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(TEMPLATE_PATH);
+  const workbook = await XlsxPopulate.fromFileAsync(TEMPLATE_PATH);
+  const assumptions = workbook.sheet("Assumptions");
 
-  const assumptions = workbook.getWorksheet("Assumptions");
   if (!assumptions) {
     throw new Error("Template missing 'Assumptions' sheet");
   }
 
   for (const [field, cellRef] of Object.entries(CELL_MAP)) {
     if (Object.prototype.hasOwnProperty.call(input, field)) {
-      const cell = assumptions.getCell(cellRef);
-      cell.value = input[field] as ExcelJS.CellValue;
+      assumptions.cell(cellRef).value(input[field]);
     }
   }
 
-  const buffer = await workbook.xlsx.writeBuffer();
+  const buffer = await workbook.outputAsync();
   return Buffer.from(buffer);
 }

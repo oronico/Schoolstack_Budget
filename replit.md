@@ -34,7 +34,7 @@ SchoolStack.ai is the parent brand (amber-forward). Each product gets its own pr
 - **Frontend**: React + Vite + Tailwind CSS v4
 - **Auth**: JWT (bcryptjs for passwords, jsonwebtoken for tokens)
 - **Excel export**: ExcelJS
-- **Lender Pro Forma export**: ExcelJS (template-based workbook with preserved formulas)
+- **Lender Pro Forma export**: xlsx-populate (template-based workbook with preserved formulas)
 - **PDF export**: PDFKit
 
 ## Structure
@@ -96,7 +96,7 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
   - Legacy fallback for old flat-field models
 - PDF export — Pro Forma: `src/lib/pdf-proforma.ts` — generates branded multi-page PDF with school profile, enrollment, revenue/staffing/expense summaries, and P&L statement using PDFKit
 - PDF export — Loan Readiness: `src/lib/pdf-loan-readiness.ts` — generates CFO analysis PDF with executive summary, lender readiness, key metrics, recommendations, composition tables, and stress tests
-- Lender Pro Forma export: `src/lib/lender-proforma-export.ts` — loads 7-sheet ExcelJS template (`src/templates/SchoolStack_Prelaunch_ProForma_Template_v1.xlsx`), injects mapped assumption values into Assumptions sheet cells, preserves all cross-sheet formulas (Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary). Template generator at `src/templates/generate-template.ts`.
+- Lender Pro Forma export: `src/lib/lender-proforma-export.ts` — loads 7-sheet template via xlsx-populate (`src/templates/SchoolStack_Prelaunch_ProForma_Template_v1.xlsx`), injects mapped assumption values into Assumptions sheet cells, preserves all cross-sheet formulas (Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary). Template generator at `src/templates/generate-template.ts`. Collection rate derived from payment timing if set, otherwise defaults to 0.95. Fixed operating costs aggregate all non-facility/non-program categories.
 - PDF utilities: `src/lib/pdf-utils.ts` — shared PDFKit helpers (branded header/footer, tables, status badges, formatters)
 - Event tracking: `src/lib/track-event.ts` — best-effort event tracking helper
 - Depends on: `@workspace/db`, `@workspace/api-zod`
