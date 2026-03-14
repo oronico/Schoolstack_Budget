@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useRegister } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { Loader2 } from "lucide-react";
-import { Navbar } from "@/components/layout/Navbar";
+import { Layout } from "@/components/layout/Layout";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export function RegisterPage() {
@@ -29,9 +29,8 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex items-center justify-center p-4">
+    <Layout>
+      <div className="flex-1 flex items-center justify-center p-4 py-16">
         <div className="w-full max-w-md">
           <div className="bg-card rounded-3xl p-8 sm:p-10 shadow-xl shadow-black/5 border border-border/50">
             <h1 className="font-display text-3xl font-bold text-foreground mb-2">Create Account</h1>
@@ -99,6 +98,6 @@ export function RegisterPage() {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

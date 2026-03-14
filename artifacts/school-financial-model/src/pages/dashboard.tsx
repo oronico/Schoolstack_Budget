@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel } from "@workspace/api-client-react";
-import { Navbar } from "@/components/layout/Navbar";
+import { Layout } from "@/components/layout/Layout";
 import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
@@ -62,9 +62,8 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <main className="flex-1 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+    <Layout>
+      <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <h1 className="font-display text-4xl font-bold text-foreground tracking-tight">Your Models</h1>
@@ -169,7 +168,7 @@ export function DashboardPage() {
             })}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 }

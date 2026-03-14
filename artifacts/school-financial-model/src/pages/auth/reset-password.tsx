@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useSearch } from "wouter";
 import { useResetPassword } from "@workspace/api-client-react";
 import { Loader2, CheckCircle2 } from "lucide-react";
-import { Navbar } from "@/components/layout/Navbar";
+import { Layout } from "@/components/layout/Layout";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export function ResetPasswordPage() {
@@ -27,9 +27,8 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center p-4 text-center">
+      <Layout>
+        <div className="flex-1 flex items-center justify-center p-4 py-16 text-center">
           <div className="max-w-md">
             <h1 className="text-2xl font-bold mb-4">Invalid Reset Link</h1>
             <p className="text-muted-foreground mb-6">The password reset link is missing or invalid.</p>
@@ -38,14 +37,13 @@ export function ResetPasswordPage() {
             </Link>
           </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex items-center justify-center p-4">
+    <Layout>
+      <div className="flex-1 flex items-center justify-center p-4 py-16">
         <div className="w-full max-w-md">
           <div className="bg-card rounded-3xl p-8 sm:p-10 shadow-xl shadow-black/5 border border-border/50">
             {success ? (
@@ -99,6 +97,6 @@ export function ResetPasswordPage() {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

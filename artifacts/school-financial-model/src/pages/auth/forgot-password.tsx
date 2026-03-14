@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useForgotPassword } from "@workspace/api-client-react";
 import { Loader2, CheckCircle2 } from "lucide-react";
-import { Navbar } from "@/components/layout/Navbar";
+import { Layout } from "@/components/layout/Layout";
 
 export function ForgotPasswordPage() {
   const forgotMutation = useForgotPassword();
@@ -15,15 +15,13 @@ export function ForgotPasswordPage() {
       await forgotMutation.mutateAsync({ data: { email } });
       setSuccess(true);
     } catch (err) {
-      // Always show success to prevent email enumeration
       setSuccess(true);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex items-center justify-center p-4">
+    <Layout>
+      <div className="flex-1 flex items-center justify-center p-4 py-16">
         <div className="w-full max-w-md">
           <div className="bg-card rounded-3xl p-8 sm:p-10 shadow-xl shadow-black/5 border border-border/50">
             {success ? (
@@ -77,6 +75,6 @@ export function ForgotPasswordPage() {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

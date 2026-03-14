@@ -5,7 +5,7 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
-import { Navbar } from "@/components/layout/Navbar";
+import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 
 import { fullModelSchema, type FullModelData } from "./schema";
@@ -157,12 +157,11 @@ export function ModelWizardPage() {
 
   if (isLoadingModel) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center">
+      <Layout>
+        <div className="flex-1 flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </div>
+      </Layout>
     );
   }
 
@@ -193,9 +192,7 @@ export function ModelWizardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      
+    <Layout>
       <div className="bg-card border-b border-border sticky top-20 z-40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
@@ -239,7 +236,7 @@ export function ModelWizardPage() {
         </div>
       </div>
 
-      <main className="flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto w-full">
+      <div className="flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto w-full">
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <ActiveStepComponent jumpToStep={setCurrentStep} modelId={modelId} />
@@ -264,7 +261,7 @@ export function ModelWizardPage() {
             </div>
           )}
         </FormProvider>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 }

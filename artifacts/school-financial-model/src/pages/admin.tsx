@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Navbar } from "@/components/layout/Navbar";
+import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import {
@@ -197,20 +197,18 @@ export function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center">
+      <Layout>
+        <div className="flex-1 flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </div>
+      </Layout>
     );
   }
 
   if (error === "forbidden") {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
+      <Layout>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 py-20">
           <div className="p-4 bg-destructive/10 text-destructive rounded-2xl">
             <ShieldAlert className="h-10 w-10" />
           </div>
@@ -226,25 +224,23 @@ export function AdminPage() {
             Back to Dashboard
           </button>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center">
+      <Layout>
+        <div className="flex-1 flex items-center justify-center py-20">
           <p className="text-destructive">Failed to load analytics data.</p>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <main className="flex-1 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+    <Layout>
+      <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="mb-10">
           <h1 className="font-display text-4xl font-bold text-foreground tracking-tight">
             Admin Analytics
@@ -465,7 +461,7 @@ export function AdminPage() {
             )}
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 }
