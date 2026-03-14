@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { getExportModelUrl, getExportProFormaPdfUrl, getExportLoanReadinessPdfUrl } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, FileText, ShieldCheck } from "lucide-react";
+import { getExportModelUrl, getExportProFormaPdfUrl, getExportLoanReadinessPdfUrl, getExportLenderProformaUrl } from "@workspace/api-client-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, FileText, ShieldCheck, Landmark } from "lucide-react";
 import { Link } from "wouter";
 
-type ExportType = "xlsx" | "proforma" | "loanReadiness";
+type ExportType = "xlsx" | "proforma" | "loanReadiness" | "lenderProforma";
 
 export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
   const [loading, setLoading] = useState<ExportType | null>(null);
@@ -18,6 +18,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         xlsx: getExportModelUrl(modelId),
         proforma: getExportProFormaPdfUrl(modelId),
         loanReadiness: getExportLoanReadinessPdfUrl(modelId),
+        lenderProforma: getExportLenderProformaUrl(modelId),
       };
 
       const token = localStorage.getItem('auth_token');
@@ -34,6 +35,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         xlsx: `School_Financial_Model_${modelId}.xlsx`,
         proforma: `Pro_Forma_${modelId}.pdf`,
         loanReadiness: `Loan_Readiness_Report_${modelId}.pdf`,
+        lenderProforma: `Lender_Pro_Forma_${modelId}.xlsx`,
       };
       const filename = filenameMatch?.[1] || fallbackNames[type];
       const url = window.URL.createObjectURL(blob);
@@ -76,7 +78,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           : "Download your financial model as an Excel workbook or polished PDF reports — ready for lender meetings."}
       </p>
 
-      <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <ExportCard
           icon={<FileSpreadsheet className="h-7 w-7" />}
           title="Excel Workbook"
@@ -85,6 +87,15 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           isExported={exported.has("xlsx")}
           disabled={loading !== null && loading !== "xlsx"}
           onClick={() => handleDownload("xlsx")}
+        />
+        <ExportCard
+          icon={<Landmark className="h-7 w-7" />}
+          title="Lender Pro Forma"
+          description="Template workbook with live P&L, DSCR & loan snapshot"
+          isLoading={loading === "lenderProforma"}
+          isExported={exported.has("lenderProforma")}
+          disabled={loading !== null && loading !== "lenderProforma"}
+          onClick={() => handleDownload("lenderProforma")}
         />
         <ExportCard
           icon={<FileText className="h-7 w-7" />}

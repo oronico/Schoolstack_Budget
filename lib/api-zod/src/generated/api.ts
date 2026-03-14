@@ -1397,3 +1397,10 @@ export const ExportProFormaPdfParams = zod.object({
 export const ExportLoanReadinessPdfParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary Export lender pro forma as template-based Excel workbook
+ */
+export const ExportLenderProformaParams = zod.object({
+  id: zod.coerce.number(),
+});
