@@ -37,7 +37,7 @@ function loadFromStorage(): Partial<FullModelData> | null {
   }
 }
 
-function saveToStorage(data: Partial<FullModelData>, step: number) {
+function saveToStorage(data: Record<string, unknown>, step: number) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     localStorage.setItem(STORAGE_KEY + "_step", String(step));
@@ -53,15 +53,10 @@ export function PublicWizardPage() {
   const savedData = loadFromStorage();
   const savedStep = parseInt(localStorage.getItem(STORAGE_KEY + "_step") || "1", 10);
 
-  const defaults: Record<string, unknown> = {
-    schoolProfile: {
-      fiscalYearStartMonth: 7,
-      isPartialFirstYear: false,
-      year1OperatingMonths: 12,
-      schoolTypeOther: "",
-      ein: "",
-    },
-    enrollment: {},
+  const defaults: FullModelData = {
+    schoolProfile: undefined,
+    enrollment: undefined,
+    tuitionTiers: undefined,
     revenue: { annualTuitionIncrease: 3 },
     revenueRows: [],
     staffing: { studentsPerTeacher: 12, benefitsRate: 20 },
@@ -69,13 +64,16 @@ export function PublicWizardPage() {
     facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0, annualSalaryIncrease: 3, generalCostInflation: 3 },
     expenseRows: [],
     capitalAndDebtRows: [],
-    priorYearSnapshot: {},
-    ...savedData,
+    priorYearSnapshot: undefined,
   };
 
-  const methods = useForm({
+  if (savedData) {
+    Object.assign(defaults, savedData);
+  }
+
+  const methods = useForm<FullModelData>({
     resolver: zodResolver(fullModelSchema),
-    defaultValues: defaults as any,
+    defaultValues: defaults,
     mode: "onChange"
   });
 

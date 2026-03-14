@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { PublicExportUnderwritingBody } from "@workspace/api-zod";
 import { generateUnderwritingWorkbook } from "../lib/underwriting-export";
 
 const router: IRouter = Router();
@@ -44,29 +45,18 @@ router.post("/public/export-underwriting", rateLimiter, async (req: Request, res
       return;
     }
 
-    const data = req.body;
-    if (!data || typeof data !== "object" || Array.isArray(data)) {
-      res.status(400).json({ error: "Request body must be a JSON object with model data." });
+    const parsed = PublicExportUnderwritingBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid model data.", details: parsed.error.issues });
       return;
     }
 
-    const allowedKeys = new Set([
-      "schoolProfile", "enrollment", "tuitionTiers", "revenue", "revenueRows",
-      "staffing", "staffingRows", "facilities", "expenseRows", "capitalAndDebtRows",
-      "priorYearSnapshot",
-    ]);
-    const cleaned: Record<string, unknown> = {};
-    for (const key of Object.keys(data)) {
-      if (allowedKeys.has(key)) {
-        cleaned[key] = data[key];
-      }
-    }
-
-    const profile = cleaned?.schoolProfile as Record<string, unknown> | undefined;
+    const data = parsed.data as Record<string, unknown>;
+    const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_").slice(0, 100);
 
-    const buffer = await generateUnderwritingWorkbook(cleaned);
+    const buffer = await generateUnderwritingWorkbook(data);
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Underwriting_Pro_Forma.xlsx"`);

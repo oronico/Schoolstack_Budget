@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { Download, Loader2, PartyPopper, ArrowRight, ClipboardCheck } from "lucide-react";
 import { Link } from "wouter";
+import { getPublicExportUnderwritingUrl } from "@workspace/api-client-react";
 
 export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: number) => void; modelId: number | null }) {
   const [loading, setLoading] = useState(false);
@@ -14,7 +15,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
 
     try {
       const data = getValues();
-      const res = await fetch("/api/public/export-underwriting", {
+      const res = await fetch(getPublicExportUnderwritingUrl(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
