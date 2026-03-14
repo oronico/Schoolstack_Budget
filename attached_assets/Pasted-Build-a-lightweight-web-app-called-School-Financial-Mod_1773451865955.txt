@@ -1,0 +1,334 @@
+Build a lightweight web app called “School Financial Model Builder by SchoolStack.ai.”
+
+PROJECT PURPOSE
+This is a teaser product that comes before the full SchoolStack.ai launch.
+It should help school founders create a simple, lender-friendly 5-year financial model and export it to Excel.
+This is meant to support a microschool/small-school loan program.
+It should feel polished and trustworthy, but simple.
+It should not try to be the full SchoolStack platform.
+
+PRIMARY USER
+A school founder, microschool founder, or small school operator with limited finance experience.
+
+CORE USER STORY
+A founder answers a short series of guided questions in a clean web experience and downloads an .xlsx financial model with:
+1. an Assumptions sheet
+2. visible formulas
+3. a simple 5-year model
+4. a clean summary sheet
+
+PRODUCT GOAL
+Build the fastest possible version that is useful, credible, and not ugly.
+
+SUCCESS CRITERIA
+- A user can complete the form in under 10 minutes
+- The exported Excel file opens cleanly in Excel
+- The workbook has an Assumptions tab and formula-driven downstream tabs
+- The UI feels modern, calm, and professional
+- The app is simple enough to ship quickly
+- No login is required
+- No database is required for v1
+
+NON-GOALS
+Do NOT build:
+- authentication
+- user accounts
+- saved drafts
+- admin portal
+- payment processing
+- SchoolStack integrations
+- AI chat or AI coach
+- benchmarking
+- scenario engine
+- dashboards with lots of charts
+- a full student information system
+- a complex spreadsheet editor in the browser
+
+DESIGN DIRECTION
+The product should be simple but not ugly.
+It should feel like a modern onboarding flow, not like a spreadsheet pasted into a browser.
+
+Visual style:
+- clean, minimal, professional
+- single-column card layout
+- strong spacing and typography
+- soft borders or subtle shadows
+- rounded corners
+- one accent color
+- neutral background
+- desktop-first, but responsive
+- no clutter
+- no dense tables in the main flow
+
+Design references in spirit:
+- Mercury
+- Ramp
+- Stripe onboarding
+- Notion, but warmer
+
+TONE
+Plain English. Calm. Supportive. Clear.
+Do not sound overly technical or corporate.
+Do not use finance jargon unless necessary.
+Use helper text that explains fields simply.
+
+INFORMATION ARCHITECTURE
+One landing screen plus a guided multi-step form.
+
+Screens / steps:
+1. Welcome
+2. School Profile
+3. Enrollment
+4. Revenue
+5. Staffing
+6. Facilities and Operating Costs
+7. Review
+8. Export
+
+WELCOME SCREEN
+Show:
+- product name
+- one-sentence value proposition
+- estimated completion time: about 10 minutes
+- CTA button: “Build My Model”
+
+Suggested value proposition:
+“Build a simple 5-year financial model for your school with clear assumptions and an Excel export.”
+
+FORM UX RULES
+- Show one section at a time
+- Each step should have 4 to 8 fields max
+- Include Back and Next buttons
+- Include a simple progress indicator across the top
+- Autosave in local browser state only for the session
+- Validate inputs inline
+- Default values are okay where helpful
+- Keep labels short and helper text even shorter
+
+FIELDS TO COLLECT
+
+1. SCHOOL PROFILE
+- School name
+- State
+- School type (microschool, private school, charter school, other)
+- Opening year
+- Current students
+- Max student capacity
+
+2. ENROLLMENT
+Collect annual enrollment assumptions for five years.
+Fields:
+- Year 1 students
+- Year 2 students
+- Year 3 students
+- Year 4 students
+- Year 5 students
+
+Optional helper text:
+“Enter the number of students you expect to serve each year.”
+
+3. REVENUE
+Fields:
+- Annual tuition per student
+- ESA / voucher revenue per student
+- Other annual revenue per student
+- Scholarship / discount rate %
+- Annual fundraising or grants, optional
+
+Keep this basic.
+Do not build a complicated revenue waterfall.
+
+4. STAFFING
+Fields:
+- Students per teacher
+- Annual teacher salary
+- Number of admin staff
+- Annual admin salary
+- Founder / leader salary
+- Benefits rate %
+
+Keep staffing logic simple and transparent.
+
+5. FACILITIES AND OPERATING COSTS
+Fields:
+- Monthly rent
+- Annual rent increase %
+- Annual utilities
+- Annual insurance
+- Curriculum / materials cost per student
+- Technology cost per student
+- Annual marketing / outreach
+- Other annual operating expenses
+
+6. REVIEW
+Show a clean summary of user inputs before export.
+Allow the user to go back and edit any section.
+
+EXPORT REQUIREMENTS
+The main output is an .xlsx workbook.
+This is the most important feature.
+
+Workbook file name:
+[SchoolName]_5-Year_Financial_Model.xlsx
+
+Required tabs:
+1. Assumptions
+2. Enrollment
+3. Revenue
+4. Staffing
+5. Operating Expenses
+6. Five-Year Model
+7. Summary
+
+Do NOT include extra tabs unless needed.
+
+WORKBOOK RULES
+- All user-editable inputs should live on the Assumptions tab
+- Downstream tabs should use formulas, not hardcoded derived values
+- Formula cells should be readable and not overly complex
+- Do not protect the workbook
+- Do not hide formulas
+- Keep the workbook clean and lender-friendly
+- Freeze top rows where helpful
+- Use basic formatting and clear section headers
+- Keep it elegant, not flashy
+
+WORKBOOK FORMATTING
+- Input cells should be visually distinct
+- Summary sheet should be clean and presentation-ready
+- Zeros should display as “-”
+- Negative numbers should display in red parentheses
+- Currency should be formatted cleanly
+- Percentages should be formatted clearly
+- Avoid excessive colors
+- Avoid busy gridline-heavy formatting
+
+MODEL LOGIC
+Keep the financial logic simple and transparent.
+
+Enrollment tab:
+- Pull annual student counts from Assumptions
+
+Revenue tab:
+- Tuition revenue = students × tuition per student
+- ESA revenue = students × ESA revenue per student
+- Other earned revenue = students × other revenue per student
+- Gross revenue = sum of those lines
+- Scholarship discount = gross tuition-related revenue × scholarship rate
+- Net revenue = gross revenue - scholarship discount + annual grants/fundraising if entered
+
+Staffing tab:
+- Teacher count = round up(students / students per teacher)
+- Teacher payroll = teacher count × teacher salary
+- Admin payroll = number of admin staff × admin salary
+- Founder salary = founder salary input
+- Benefits = total salaries × benefits rate
+- Total staffing cost = sum of the above
+
+Operating Expenses tab:
+- Rent = monthly rent × 12, grown annually by rent increase %
+- Utilities = annual utilities
+- Insurance = annual insurance
+- Curriculum/materials = students × curriculum/materials cost per student
+- Technology = students × technology cost per student
+- Marketing = annual marketing / outreach
+- Other operating expenses = annual other operating expenses
+- Total operating expenses = sum of all line items
+
+Five-Year Model tab:
+Columns should be Year 1 through Year 5.
+Rows should include:
+- Students
+- Net Revenue
+- Staffing Costs
+- Operating Expenses
+- Total Expenses
+- Net Income
+
+Summary tab:
+Show a simple, polished summary with:
+- school name
+- school type
+- five-year student growth
+- five-year revenue
+- five-year expenses
+- five-year net income
+- a few simple key metrics:
+  - revenue per student
+  - staffing cost as % of revenue
+  - facility cost as % of revenue
+  - net margin %
+
+OPTIONAL NICE-TO-HAVE
+After export, show a small callout:
+“Need capital to launch or grow your school? Learn more about the loan program.”
+
+TECH STACK
+Use a stack that is easy to run in Replit and easy to maintain.
+
+Preferred:
+- React + TypeScript
+- Tailwind CSS
+- simple client-side multi-step form
+- lightweight server endpoint for Excel export
+- ExcelJS for workbook generation
+
+Do not over-engineer this.
+
+IMPLEMENTATION APPROACH
+Build this in two phases.
+
+Phase 1:
+- polished landing page
+- multi-step form
+- local state management
+- review screen
+- stub export button
+
+Phase 2:
+- generate actual Excel workbook
+- add formulas and formatting
+- test with realistic values
+- polish UI spacing, states, and mobile responsiveness
+
+UX DETAILS
+- Use a max-width container so the form feels calm and focused
+- Use card sections with good whitespace
+- Use one primary button style
+- Use one secondary button style
+- Use clear field labels
+- Add inline validation for missing or invalid numeric inputs
+- Show a success state after download
+- Use tasteful loading states during export
+
+COPY STYLE
+Keep text human and reassuring.
+Examples:
+- “How many students do you expect to serve in Year 1?”
+- “What do families typically pay in tuition each year?”
+- “What is your expected monthly rent?”
+
+Avoid:
+- DSCR
+- EBITDA
+- underwriting language
+- internal jargon
+unless it is only in the exported workbook summary and clearly labeled
+
+ACCEPTANCE TESTS
+The build is complete when:
+1. A user can move through all steps without confusion
+2. The UI looks polished and modern
+3. The .xlsx export downloads successfully
+4. The Assumptions tab contains all editable inputs
+5. Downstream tabs contain formulas
+6. The Five-Year Model tab updates correctly based on assumptions
+7. The Summary tab is clean enough to share
+8. There are no unnecessary features
+
+IMPORTANT PRODUCT RULE
+This should feel like a focused financial planning tool.
+It should not feel like an MVP in the bad sense.
+Keep the scope small, but make the experience thoughtful and polished.
+
+Please scaffold the app, build the UI, implement the Excel export, and then stop for review once the core flow works.
