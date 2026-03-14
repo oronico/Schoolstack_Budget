@@ -25,6 +25,7 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
 
   const { data, isLoading, error, refetch } = useGetConsultantAnalysis(modelId || 0, {
     query: {
+      queryKey: [`/api/models/${modelId || 0}/consultant`],
       enabled: false,
     },
   });

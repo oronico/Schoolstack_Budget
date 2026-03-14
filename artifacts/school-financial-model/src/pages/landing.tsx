@@ -11,7 +11,7 @@ export function LandingPage() {
       <main className="flex-1">
         <section className="relative pt-20 pb-32 overflow-hidden">
           <div className="absolute inset-0 z-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-background to-accent/5" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-background to-primary/3" />
           </div>
 
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">

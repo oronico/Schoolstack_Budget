@@ -39,7 +39,7 @@ export function ModelWizardPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   const { data: initialData, isLoading: isLoadingModel } = useGetModel(modelId || 0, {
-    query: { enabled: !!modelId }
+    query: { queryKey: [`/api/models/${modelId || 0}`], enabled: !!modelId }
   });
 
   const updateMutation = useUpdateModel();
@@ -79,7 +79,7 @@ export function ModelWizardPage() {
         await updateMutation.mutateAsync({
           id: modelId,
           data: {
-            name: debouncedValues.schoolProfile?.schoolName || initialData.name,
+            name: (debouncedValues.schoolProfile as { schoolName?: string } | undefined)?.schoolName || initialData.name,
             currentStep,
             data: debouncedValues as Record<string, unknown>,
           }

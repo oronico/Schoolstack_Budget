@@ -9,10 +9,12 @@ A lightweight SaaS web app for school founders to create 5-year financial models
 
 ## Brand System
 
-- **Primary color**: Amber #D97706 (buttons, CTAs, active states, progress indicators)
-- **Anchor/Trust**: Deep Navy #1E293B (headings, foreground text)
-- **Accent/Action**: Teal #0D9488 (secondary actions, accent highlights)
-- **Success**: Sage Green #16A34A
+SchoolStack.ai is the parent brand (amber-forward). Each product gets its own primary color.
+
+- **Parent brand (SchoolStack.ai)**: Amber #D97706 — used for the navbar logo icon and "by SchoolStack.ai" subtitle (`--brand` token)
+- **Product primary (SchoolStack Budget)**: Green #16A34A — CTAs, buttons, progress bar, active states, focus rings (`--primary` token)
+- **Foreground/Trust**: Deep Navy #1E293B — headings, body text
+- **Accent**: Teal #0D9488 — secondary actions, accent highlights
 - **Alert**: Rose #E11D48
 - **Background**: Cream #FAF9F7
 - **Display font**: Quicksand Bold (headings)
