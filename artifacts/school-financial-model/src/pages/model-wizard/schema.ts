@@ -66,7 +66,7 @@ export const staffingRowSchema = z.object({
   benefitsRate: z.number().min(0).max(100),
   payrollTaxRate: z.number().min(0).max(100),
   payrollLike: z.boolean(),
-  notes: z.string(),
+  notes: z.string().default(""),
 });
 
 export const staffingSchema = z.object({
