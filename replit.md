@@ -20,11 +20,12 @@ I prefer iterative development with clear communication on significant changes. 
 - Base directory: `artifacts/school-financial-model`
 - Build command: full monorepo install + typecheck + Vite build
 - Publish directory: `dist/public`
-- API proxy redirect: `/api/*` proxied to `VITE_API_BASE_URL` env var
-- SPA catch-all redirect for client-side routing
+- Cache headers: `Cache-Control: public, max-age=31536000, immutable` for `/assets/*` (Vite hashed filenames)
+- SPA catch-all redirect for client-side routing (`/* → /index.html`, status 200)
+- No API proxy — the frontend calls the API server directly via `VITE_API_BASE_URL`
 
-### Required Netlify Environment Variables
-- `VITE_API_BASE_URL`: Full URL of the API server (e.g., `https://api.schoolstack.ai`)
+### Required Netlify Environment Variables (set in Netlify UI → Site Settings → Environment Variables)
+- `VITE_API_BASE_URL`: Full URL of the API server (e.g., `https://api.schoolstack.ai`). Baked into the frontend at build time.
 
 # System Architecture
 
