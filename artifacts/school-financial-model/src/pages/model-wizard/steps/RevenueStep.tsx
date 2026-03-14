@@ -153,7 +153,7 @@ export function RevenueStep() {
       enabled: true,
       driverType: item.driverType,
       amounts: new Array(yearCount).fill(0),
-      ...getTimingDefaults(item.category, fundingProfile),
+      ...getTimingDefaults(item.category, fundingProfile, item.id),
     };
     const updated = [...rows, newRow];
     syncToForm(updated);

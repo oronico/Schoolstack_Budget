@@ -67,10 +67,20 @@ export interface RevenueRowData {
 
 export function getTimingDefaults(
   category: RevenueCategory,
-  fundingProfile: FundingProfile
+  fundingProfile: FundingProfile,
+  itemId?: string
 ): Partial<RevenueRowData> {
   switch (category) {
     case "tuition_and_fees":
+      if (itemId && itemId !== "gross_tuition") {
+        return {};
+      }
+      return {
+        billingMonths: fundingProfile === "charter_public_funded" ? 12 : 10,
+        collectionMethod: "autopay",
+        collectionRate: 100,
+        collectionDelayDays: 0,
+      };
     case "tuition_offsets":
       return {
         billingMonths: fundingProfile === "charter_public_funded" ? 12 : 10,
@@ -290,7 +300,7 @@ export function generateDefaultRevenueRows(
       driverType: item.driverType,
       amounts: new Array(yearCount).fill(0),
       ...(item.id === "scholarships_aid" ? { percentBase: "gross_tuition" } : {}),
-      ...getTimingDefaults(item.category, fundingProfile),
+      ...getTimingDefaults(item.category, fundingProfile, item.id),
     }));
 }
 

@@ -394,7 +394,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
   buildSourcesUses(wb, capDebtRows, startingCash, annualRevenue, yc);
   buildDebtSchedule(wb, capDebtRows, yc);
-  buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, startingCash, opMonths);
+  buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, startingCash, opMonths, revenueRows, enrollment, data.tuitionTiers);
   buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType);
   buildFiveYearBS(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, startingCash, totalPrincipal, capDebtRows, yc, cols, yearHeaders);
   buildDSCRCovenant(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualDebtSvc, startingCash, enrollment, maxCapacity, yc, cols, yearHeaders);
@@ -965,9 +965,59 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, capDebtRows: CapitalDebtRow[], 
   }
 }
 
+function computeExportMonthlyRevenue(
+  rows: RevenueRow[], students: number, opMonths: number, tiers?: TuitionTier[]
+): number[] {
+  const monthly = new Array(12).fill(0);
+  const rowValues = new Map<string, number>();
+
+  for (const r of rows) {
+    if (!r.enabled || r.driverType === "percent_of_base") continue;
+    if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers && tiers.length > 0) {
+      rowValues.set(r.id, tuitionWithTiers(r.amounts?.[0] ?? 0, 0, students, tiers));
+    } else {
+      rowValues.set(r.id, driverVal(r.amounts, 0, r.driverType, students));
+    }
+  }
+  for (const r of rows) {
+    if (!r.enabled || r.driverType !== "percent_of_base") continue;
+    const baseVal = rowValues.get(r.percentBase || "") || 0;
+    rowValues.set(r.id, baseVal * ((r.amounts?.[0] ?? 0) / 100));
+  }
+
+  for (const r of rows) {
+    if (!r.enabled) continue;
+    const annualAmount = rowValues.get(r.id) || 0;
+    if (annualAmount === 0) continue;
+
+    const isTuition = r.id === "gross_tuition" || r.category === "tuition_offsets";
+
+    if (r.category === "tuition_and_fees" || r.category === "tuition_offsets") {
+      if (isTuition) {
+        const billingMonths = 10;
+        const effectiveAmount = r.category === "tuition_offsets" ? -Math.abs(annualAmount) : annualAmount;
+        const perMonth = effectiveAmount / billingMonths;
+        const startMonth = 1;
+        for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) {
+          monthly[i] += perMonth;
+        }
+      } else {
+        monthly[0] += annualAmount;
+      }
+    } else {
+      const perMonth = annualAmount / opMonths;
+      for (let m = 0; m < opMonths; m++) {
+        monthly[m] += perMonth;
+      }
+    }
+  }
+  return monthly;
+}
+
 function buildMonthlyCashFlowY1(
   wb: ExcelJS.Workbook, annualRev: number[], annualPersonnel: number[],
-  annualExpenses: number[], annualCapDebt: number[], startingCash: number, opMonths: number
+  annualExpenses: number[], annualCapDebt: number[], startingCash: number, opMonths: number,
+  revenueRows?: RevenueRow[], enrollment?: number[], tiers?: TuitionTier[]
 ) {
   const ws = wb.addWorksheet("Cash Flow Monthly Y1");
   const monthLabels = ["", ...MONTH_NAMES.slice(1)];
@@ -977,7 +1027,10 @@ function buildMonthlyCashFlowY1(
   ws.getRow(r).values = [...monthLabels, "Year 1 Total"];
   hdr(ws, r, 14);
 
-  const monthlyRev = (annualRev[0] || 0) / (opMonths || 12);
+  const students = enrollment?.[0] ?? 0;
+  const monthlyRevArray = revenueRows && revenueRows.length > 0
+    ? computeExportMonthlyRevenue(revenueRows, students, opMonths, tiers)
+    : Array.from({ length: 12 }, (_, m) => m < opMonths ? (annualRev[0] || 0) / (opMonths || 12) : 0);
   const monthlyPersonnel = (annualPersonnel[0] || 0) / (opMonths || 12);
   const monthlyOps = (annualExpenses[0] || 0) / (opMonths || 12);
   const monthlyDebt = (annualCapDebt[0] || 0) / 12;
@@ -986,7 +1039,7 @@ function buildMonthlyCashFlowY1(
   r++; ws.getCell(r, 1).value = "Revenue"; ws.getCell(r, 1).font = BF;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    cell.value = m < opMonths ? Math.round(monthlyRev) : 0;
+    cell.value = Math.round(monthlyRevArray[m] || 0);
     cell.numFmt = CUR; dc(cell);
   }
   ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})` };
