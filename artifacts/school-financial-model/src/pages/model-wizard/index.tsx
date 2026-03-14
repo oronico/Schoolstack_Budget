@@ -67,6 +67,18 @@ export function ModelWizardPage() {
         note?: string;
       }>,
       staffing: { studentsPerTeacher: 12, benefitsRate: 20 },
+      staffingRows: [] as Array<{
+        id: string;
+        role: string;
+        functionCategory: string;
+        employmentType: string;
+        fte: number;
+        annualRate: number;
+        benefitsEligible: boolean;
+        benefitsRate: number;
+        payrollTaxRate: number;
+        note: string;
+      }>,
       facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0, annualSalaryIncrease: 3, generalCostInflation: 3 },
       priorYearSnapshot: {},
     },
@@ -142,7 +154,7 @@ export function ModelWizardPage() {
       1: ['schoolProfile'],
       2: ['enrollment'],
       3: ['revenue', 'revenueRows'],
-      4: ['staffing'],
+      4: ['staffing', 'staffingRows'],
       5: ['facilities'],
     };
     const fieldsToValidate = stepFieldMap[currentStep] ?? [];

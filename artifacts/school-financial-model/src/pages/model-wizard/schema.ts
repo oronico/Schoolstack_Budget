@@ -55,13 +55,26 @@ export const revenueSchema = z.object({
   capitalGifts: z.coerce.number().min(0).optional(),
 });
 
+export const staffingRowSchema = z.object({
+  id: z.string(),
+  role: z.string(),
+  functionCategory: z.enum(["instructional", "school_leadership", "student_support", "operations", "administrative", "other"]),
+  employmentType: z.enum(["full_time", "part_time", "contract"]),
+  fte: z.number().min(0).max(1),
+  annualRate: z.number().min(0),
+  benefitsEligible: z.boolean(),
+  benefitsRate: z.number().min(0).max(100),
+  payrollTaxRate: z.number().min(0).max(100),
+  note: z.string(),
+});
+
 export const staffingSchema = z.object({
-  studentsPerTeacher: z.coerce.number().min(1, "Must be at least 1"),
-  teacherSalary: z.coerce.number().min(0),
-  adminStaffCount: z.coerce.number().min(0),
-  adminSalary: z.coerce.number().min(0),
-  founderSalary: z.coerce.number().min(0),
-  benefitsRate: z.coerce.number().min(0).max(100),
+  studentsPerTeacher: z.coerce.number().min(1, "Must be at least 1").optional(),
+  teacherSalary: z.coerce.number().min(0).optional(),
+  adminStaffCount: z.coerce.number().min(0).optional(),
+  adminSalary: z.coerce.number().min(0).optional(),
+  founderSalary: z.coerce.number().min(0).optional(),
+  benefitsRate: z.coerce.number().min(0).max(100).optional(),
 });
 
 export const facilitiesSchema = z.object({
@@ -91,6 +104,7 @@ export const fullModelSchema = z.object({
   revenue: revenueSchema.optional(),
   revenueRows: z.array(revenueRowSchema).optional(),
   staffing: staffingSchema.optional(),
+  staffingRows: z.array(staffingRowSchema).optional(),
   facilities: facilitiesSchema.optional(),
   priorYearSnapshot: priorYearSnapshotSchema.optional(),
 });
