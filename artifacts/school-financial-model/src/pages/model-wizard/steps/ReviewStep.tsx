@@ -231,9 +231,9 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   );
 
   const Item = ({ label, value }: { label: string; value: string | number | undefined }) => (
-    <div className="flex flex-col py-1">
-      <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</dt>
-      <dd className="text-base font-semibold text-foreground mt-1">{value !== undefined && value !== "" ? value : "—"}</dd>
+    <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <span className="text-sm font-semibold text-foreground">{value !== undefined && value !== "" ? value : "—"}</span>
     </div>
   );
 
@@ -419,7 +419,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
       ) : (
         <>
           <Section title="Revenue" step={3} icon={<DollarSign className="h-5 w-5" />}>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+            <div className="space-y-1.5">
               <Item label="Tuition per Student" value={formatCurrency(data.revenue?.tuitionPerStudent)} />
               <Item label="Annual Tuition Increase" value={formatPercent(data.revenue?.annualTuitionIncrease)} />
               <Item label="Scholarship Rate" value={formatPercent(data.revenue?.scholarshipRate)} />
@@ -429,22 +429,22 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
               <Item label="Annual Donations" value={formatCurrency(data.revenue?.annualDonations)} />
               <Item label="Foundation Grants" value={formatCurrency(data.revenue?.foundationGrants)} />
               <Item label="Capital Gifts" value={formatCurrency(data.revenue?.capitalGifts)} />
-            </dl>
+            </div>
           </Section>
 
           <Section title="Staffing" step={4} icon={<Users className="h-5 w-5" />}>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+            <div className="space-y-1.5">
               <Item label="Target Ratio" value={`1:${data.staffing?.studentsPerTeacher || 0}`} />
               <Item label="Teacher Salary" value={formatCurrency(data.staffing?.teacherSalary)} />
               <Item label="Admin Staff" value={data.staffing?.adminStaffCount} />
               <Item label="Admin Salary" value={formatCurrency(data.staffing?.adminSalary)} />
               <Item label="Founder Salary" value={formatCurrency(data.staffing?.founderSalary)} />
               <Item label="Benefits Rate" value={formatPercent(data.staffing?.benefitsRate)} />
-            </dl>
+            </div>
           </Section>
 
           <Section title="Operations & Expenses" step={5}>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+            <div className="space-y-1.5">
               <Item label="Annual Salary Increase" value={formatPercent(data.facilities?.annualSalaryIncrease)} />
               <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
               <Item label="Monthly Rent" value={formatCurrency(data.facilities?.monthlyRent)} />
@@ -467,7 +467,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                   <Item label="Loan Term" value={`${data.facilities?.loanTermYears || 0} years`} />
                 </>
               )}
-            </dl>
+            </div>
           </Section>
         </>
       )}
