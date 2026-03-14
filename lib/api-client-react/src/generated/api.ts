@@ -1628,3 +1628,90 @@ export function useExportLenderProforma<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Export 14-tab underwriting pro forma Excel workbook
+ */
+export const getExportUnderwritingUrl = (id: number) => {
+  return `/api/models/${id}/export/underwriting`;
+};
+
+export const exportUnderwriting = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getExportUnderwritingUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportUnderwritingQueryKey = (id: number) => {
+  return [`/api/models/${id}/export/underwriting`] as const;
+};
+
+export const getExportUnderwritingQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportUnderwriting>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportUnderwriting>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportUnderwritingQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof exportUnderwriting>>
+  > = ({ signal }) => exportUnderwriting(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportUnderwriting>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportUnderwritingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportUnderwriting>>
+>;
+export type ExportUnderwritingQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Export 14-tab underwriting pro forma Excel workbook
+ */
+
+export function useExportUnderwriting<
+  TData = Awaited<ReturnType<typeof exportUnderwriting>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportUnderwriting>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportUnderwritingQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

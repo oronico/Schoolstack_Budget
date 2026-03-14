@@ -35,13 +35,13 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 - **Capital & Debt Model**: Incorporates a loan calculator for PMT-based amortization.
 
 ### API Server (`api-server`)
-Manages authentication (register, login, reset password), CRUD operations for financial models, and specialized endpoints for admin analytics and a CFO consultant rules engine. It also orchestrates advanced Excel and PDF export functionalities, including a branded Lender Pro Forma.
+Manages authentication (register, login, reset password), CRUD operations for financial models, and specialized endpoints for admin analytics and a CFO consultant rules engine. It also orchestrates advanced Excel and PDF export functionalities, including a branded Lender Pro Forma and a 14-tab Underwriting Pro Forma workbook (DSCR, covenant checks, balance sheet, monthly cash flow, sources & uses).
 
 ### Frontend (`school-financial-model`)
 A React-based single-page application providing a user-friendly interface for model creation and management. It includes:
 - Landing and authentication pages.
 - A dashboard for model lifecycle management (create, duplicate, archive, delete).
-- An 8-step wizard guiding users through financial model setup: Profile, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, and Export.
+- An 8-step wizard guiding users through financial model setup: Profile, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, and Export. New users are auto-routed from registration directly into the wizard (model is auto-created).
 - Dedicated admin analytics page (email allowlist protected) displaying key metrics like school stage distribution, export rates, and conversion funnels.
 - Auth context with JWT stored in localStorage.
 

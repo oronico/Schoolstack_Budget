@@ -17,6 +17,7 @@ import { generateWorkbook } from "../lib/excel-export";
 import { generateProFormaPDF } from "../lib/pdf-proforma";
 import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
+import { generateUnderwritingWorkbook } from "../lib/underwriting-export";
 import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine } from "../lib/consultant-engine";
 
@@ -449,6 +450,49 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
   } catch (err) {
     console.error("Lender Pro Forma export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Lender Pro Forma workbook." });
+  }
+});
+
+router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    const data = model.data as Record<string, unknown>;
+    const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
+    const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
+
+    const buffer = await generateUnderwritingWorkbook(data);
+
+    await db.insert(exportsTable).values({
+      userId: req.userId!,
+      modelId: model.id,
+      format: "xlsx",
+    });
+
+    await trackEvent("exported_underwriting", req.userId, { modelId: model.id });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Underwriting_Pro_Forma.xlsx"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error("Underwriting export error:", err);
+    res.status(500).json({ error: "Something went wrong generating the Underwriting Pro Forma workbook." });
   }
 });
 

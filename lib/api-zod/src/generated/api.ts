@@ -1404,3 +1404,10 @@ export const ExportLoanReadinessPdfParams = zod.object({
 export const ExportLenderProformaParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary Export 14-tab underwriting pro forma Excel workbook
+ */
+export const ExportUnderwritingParams = zod.object({
+  id: zod.coerce.number(),
+});
