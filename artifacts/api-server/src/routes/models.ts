@@ -19,12 +19,25 @@ import { runConsultantEngine } from "../lib/consultant-engine";
 
 const router: IRouter = Router();
 
+function extractRowColumns(data: Record<string, unknown>) {
+  const d = data as Record<string, unknown>;
+  return {
+    priorYearSnapshotJson: (d.priorYearSnapshot as Record<string, unknown>) ?? null,
+    revenueRowsJson: (d.revenueRows as Record<string, unknown>[]) ?? null,
+    staffingRowsJson: (d.staffingRows as Record<string, unknown>[]) ?? null,
+    expenseRowsJson: (d.expenseRows as Record<string, unknown>[]) ?? null,
+    capitalAndDebtRowsJson: (d.capitalAndDebtRows as Record<string, unknown>[]) ?? null,
+  };
+}
+
 function modelResponse(model: typeof financialModelsTable.$inferSelect) {
   return {
     id: model.id,
     name: model.name,
     status: model.status,
     currentStep: model.currentStep,
+    schoolStage: model.schoolStage,
+    fundingProfile: model.fundingProfile,
     data: model.data,
     createdAt: model.createdAt.toISOString(),
     updatedAt: model.updatedAt.toISOString(),
@@ -39,6 +52,8 @@ router.get("/models", authMiddleware, async (req: AuthRequest, res) => {
         name: financialModelsTable.name,
         status: financialModelsTable.status,
         currentStep: financialModelsTable.currentStep,
+        schoolStage: financialModelsTable.schoolStage,
+        fundingProfile: financialModelsTable.fundingProfile,
         createdAt: financialModelsTable.createdAt,
         updatedAt: financialModelsTable.updatedAt,
       })
@@ -60,13 +75,17 @@ router.post("/models", authMiddleware, async (req: AuthRequest, res) => {
       res.status(400).json({ error: "Model name and data are required." });
       return;
     }
-    const { name, data, currentStep } = parsed.data;
+    const { name, data, currentStep, schoolStage, fundingProfile } = parsed.data;
+    const rowCols = extractRowColumns(data as Record<string, unknown>);
 
     const [model] = await db.insert(financialModelsTable).values({
       userId: req.userId!,
       name,
       currentStep: currentStep ?? 0,
       data: data as Record<string, unknown>,
+      schoolStage: schoolStage as typeof financialModelsTable.$inferInsert["schoolStage"],
+      fundingProfile: fundingProfile as typeof financialModelsTable.$inferInsert["fundingProfile"],
+      ...rowCols,
     }).returning();
 
     await trackEvent("created_model", req.userId, { modelId: model.id });
@@ -129,7 +148,8 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
 
-    const { name, data, currentStep, status } = parsed.data;
+    const { name, data, currentStep, status, schoolStage, fundingProfile } = parsed.data;
+    const rowCols = extractRowColumns(data as Record<string, unknown>);
     const [model] = await db
       .update(financialModelsTable)
       .set({
@@ -137,6 +157,9 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
         data: data as Record<string, unknown>,
         currentStep: currentStep ?? existing.currentStep,
         status: status ?? existing.status,
+        schoolStage: (schoolStage as typeof financialModelsTable.$inferInsert["schoolStage"]) ?? existing.schoolStage,
+        fundingProfile: (fundingProfile as typeof financialModelsTable.$inferInsert["fundingProfile"]) ?? existing.fundingProfile,
+        ...rowCols,
         updatedAt: new Date(),
       })
       .where(eq(financialModelsTable.id, params.data.id))
@@ -205,6 +228,8 @@ router.post("/models/:id/duplicate", authMiddleware, async (req: AuthRequest, re
       currentStep: existing.currentStep,
       data: existing.data as Record<string, unknown>,
       schoolId: existing.schoolId,
+      schoolStage: existing.schoolStage,
+      fundingProfile: existing.fundingProfile,
     }).returning();
 
     await trackEvent("duplicated_model", req.userId, { sourceModelId: existing.id, newModelId: model.id });

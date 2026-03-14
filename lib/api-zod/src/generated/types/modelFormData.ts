@@ -5,11 +5,16 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CapitalDebtRow } from "./capitalDebtRow";
 import type { Enrollment } from "./enrollment";
+import type { ExpenseRow } from "./expenseRow";
 import type { Facilities } from "./facilities";
+import type { PriorYearSnapshot } from "./priorYearSnapshot";
 import type { Revenue } from "./revenue";
+import type { RevenueRow } from "./revenueRow";
 import type { SchoolProfile } from "./schoolProfile";
 import type { Staffing } from "./staffing";
+import type { StaffingRow } from "./staffingRow";
 
 export interface ModelFormData {
   schoolProfile?: SchoolProfile;
@@ -17,4 +22,9 @@ export interface ModelFormData {
   revenue?: Revenue;
   staffing?: Staffing;
   facilities?: Facilities;
+  revenueRows?: RevenueRow[];
+  staffingRows?: StaffingRow[];
+  expenseRows?: ExpenseRow[];
+  capitalAndDebtRows?: CapitalDebtRow[];
+  priorYearSnapshot?: PriorYearSnapshot;
 }

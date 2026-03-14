@@ -47,16 +47,22 @@ export function ModelWizardPage() {
   const methods = useForm({
     resolver: zodResolver(fullModelSchema),
     defaultValues: {
-      schoolProfile: { fiscalYearStartMonth: 7, isPartialFirstYear: false, year1OperatingMonths: 12 },
+      schoolProfile: {
+        fiscalYearStartMonth: 7,
+        isPartialFirstYear: false,
+        year1OperatingMonths: 12,
+        schoolStage: undefined as string | undefined,
+        fundingProfile: undefined as string | undefined,
+      },
       enrollment: {},
       revenue: { annualTuitionIncrease: 3 },
       staffing: { studentsPerTeacher: 12, benefitsRate: 20 },
       facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0, annualSalaryIncrease: 3, generalCostInflation: 3 },
+      priorYearSnapshot: {},
     },
     mode: "onChange"
   });
 
-  // Initialize form with backend data
   useEffect(() => {
     if (initialData?.data) {
       methods.reset(initialData.data);
@@ -66,7 +72,6 @@ export function ModelWizardPage() {
     }
   }, [initialData, methods]);
 
-  // Auto-save logic
   const formValues = methods.watch();
   const [debouncedValues] = useDebounce(formValues, 1000);
 
@@ -76,11 +81,14 @@ export function ModelWizardPage() {
     const save = async () => {
       setIsSaving(true);
       try {
+        const profile = debouncedValues.schoolProfile as Record<string, unknown> | undefined;
         await updateMutation.mutateAsync({
           id: modelId,
           data: {
-            name: (debouncedValues.schoolProfile as { schoolName?: string } | undefined)?.schoolName || initialData.name,
+            name: (profile?.schoolName as string) || initialData.name,
             currentStep,
+            schoolStage: (profile?.schoolStage as string) || undefined,
+            fundingProfile: (profile?.fundingProfile as string) || undefined,
             data: debouncedValues as Record<string, unknown>,
           }
         });
@@ -92,7 +100,6 @@ export function ModelWizardPage() {
       }
     };
     
-    // Check if form is dirty before saving
     if (Object.keys(methods.formState.dirtyFields).length > 0) {
        save();
     }
@@ -119,7 +126,6 @@ export function ModelWizardPage() {
   const isExportStep = currentStep === 8;
 
   const handleNext = async () => {
-    // Validate current step fields before proceeding
     const stepFieldMap: Record<number, Array<keyof FullModelData>> = {
       1: ['schoolProfile'],
       2: ['enrollment'],
@@ -145,7 +151,6 @@ export function ModelWizardPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       
-      {/* Progress Header */}
       <div className="bg-card border-b border-border sticky top-20 z-40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
@@ -195,7 +200,6 @@ export function ModelWizardPage() {
             <ActiveStepComponent jumpToStep={setCurrentStep} modelId={modelId} />
           </div>
 
-          {/* Navigation */}
           {!isExportStep && (
             <div className="mt-8 flex items-center justify-between">
               <button

@@ -24,37 +24,47 @@ const GUIDANCE: Record<string, { y1Pct: string; growth: string; note: string }> 
   },
 };
 
+function getDefaultYearCount(schoolStage: string | undefined): number {
+  if (schoolStage === "operating_school") return 4;
+  return 3;
+}
+
+function getYearLabel(index: number, schoolStage: string | undefined): string {
+  if (schoolStage === "operating_school" && index === 0) return "Current Year";
+  return `Year ${index + 1}`;
+}
+
 export function EnrollmentStep() {
   const { watch } = useFormContext();
   const schoolType = watch("schoolProfile.schoolType") || "other";
+  const schoolStage = watch("schoolProfile.schoolStage");
   const maxCapacity = watch("schoolProfile.maxCapacity") || 0;
   const enrollment = watch("enrollment") || {};
   const guide = GUIDANCE[schoolType] || GUIDANCE.other;
 
-  const enrollments = [
-    enrollment.year1 || 0,
-    enrollment.year2 || 0,
-    enrollment.year3 || 0,
-    enrollment.year4 || 0,
-    enrollment.year5 || 0,
-  ];
+  const defaultYearCount = getDefaultYearCount(schoolStage);
+  const yearKeys = ["year1", "year2", "year3", "year4", "year5"] as const;
+
+  const enrollments = yearKeys.map(k => enrollment[k] || 0);
 
   const warnings: string[] = [];
   for (let i = 1; i < 5; i++) {
     if (enrollments[i - 1] > 0 && enrollments[i] > 0) {
       const growth = (enrollments[i] - enrollments[i - 1]) / enrollments[i - 1];
       if (growth > 0.25) {
-        warnings.push(`Year ${i} to Year ${i + 1} growth is ${Math.round(growth * 100)}% — over 25% year-over-year growth is aggressive and may concern lenders.`);
+        warnings.push(`${getYearLabel(i - 1, schoolStage)} to ${getYearLabel(i, schoolStage)} growth is ${Math.round(growth * 100)}% — over 25% year-over-year growth is aggressive and may concern lenders.`);
       }
     }
   }
   if (maxCapacity > 0) {
     for (let i = 0; i < 5; i++) {
       if (enrollments[i] > maxCapacity) {
-        warnings.push(`Year ${i + 1} enrollment (${enrollments[i]}) exceeds your facility capacity of ${maxCapacity}.`);
+        warnings.push(`${getYearLabel(i, schoolStage)} enrollment (${enrollments[i]}) exceeds your facility capacity of ${maxCapacity}.`);
       }
     }
   }
+
+  const placeholders = ["25", "40", "60", "80", "100"];
 
   return (
     <div className="space-y-8">
@@ -81,12 +91,24 @@ export function EnrollmentStep() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        <FormInput name="enrollment.year1" label="Year 1 Students" type="number" placeholder="25" />
-        <FormInput name="enrollment.year2" label="Year 2 Students" type="number" placeholder="40" />
-        <FormInput name="enrollment.year3" label="Year 3 Students" type="number" placeholder="60" />
-        <FormInput name="enrollment.year4" label="Year 4 Students" type="number" placeholder="80" />
-        <FormInput name="enrollment.year5" label="Year 5 Students" type="number" placeholder="100" />
+        {yearKeys.slice(0, defaultYearCount).map((key, i) => (
+          <FormInput
+            key={key}
+            name={`enrollment.${key}`}
+            label={`${getYearLabel(i, schoolStage)} Students`}
+            type="number"
+            placeholder={placeholders[i]}
+          />
+        ))}
       </div>
+
+      {defaultYearCount < 5 && (
+        <div className="bg-secondary/50 rounded-2xl p-5 border border-border">
+          <p className="text-sm text-muted-foreground">
+            You can extend your projections to Year 5 later from the Review step. For now, we'll build your model with {defaultYearCount} years.
+          </p>
+        </div>
+      )}
 
       {warnings.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">

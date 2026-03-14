@@ -1,9 +1,14 @@
 import { z } from "zod";
 
+export const schoolStageSchema = z.enum(["new_school", "operating_school"]);
+export const fundingProfileSchema = z.enum(["tuition_based", "charter_public_funded", "hybrid_mixed"]);
+
 export const schoolProfileSchema = z.object({
   schoolName: z.string().min(1, "School name is required"),
   state: z.string().min(1, "State is required"),
   schoolType: z.enum(["microschool", "private_school", "charter_school", "other"]),
+  schoolStage: schoolStageSchema,
+  fundingProfile: fundingProfileSchema,
   openingYear: z.coerce.number().min(2000).max(2100),
   currentStudents: z.coerce.number().min(0),
   maxCapacity: z.coerce.number().min(1, "Capacity must be at least 1"),
@@ -12,12 +17,19 @@ export const schoolProfileSchema = z.object({
   year1OperatingMonths: z.coerce.number().min(1).max(12),
 });
 
+export const priorYearSnapshotSchema = z.object({
+  endingEnrollment: z.coerce.number().min(0).optional(),
+  totalRevenue: z.coerce.number().min(0).optional(),
+  totalExpenses: z.coerce.number().min(0).optional(),
+  endingCash: z.coerce.number().min(0).optional(),
+});
+
 export const enrollmentSchema = z.object({
   year1: z.coerce.number().min(0, "Required"),
   year2: z.coerce.number().min(0, "Required"),
   year3: z.coerce.number().min(0, "Required"),
-  year4: z.coerce.number().min(0, "Required"),
-  year5: z.coerce.number().min(0, "Required"),
+  year4: z.coerce.number().min(0, "Required").optional(),
+  year5: z.coerce.number().min(0, "Required").optional(),
 });
 
 export const revenueSchema = z.object({
@@ -68,6 +80,9 @@ export const fullModelSchema = z.object({
   revenue: revenueSchema.optional(),
   staffing: staffingSchema.optional(),
   facilities: facilitiesSchema.optional(),
+  priorYearSnapshot: priorYearSnapshotSchema.optional(),
 });
 
 export type FullModelData = z.infer<typeof fullModelSchema>;
+export type SchoolStage = z.infer<typeof schoolStageSchema>;
+export type FundingProfile = z.infer<typeof fundingProfileSchema>;

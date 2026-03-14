@@ -92,6 +92,10 @@ export const ListModelsResponseItem = zod.object({
   name: zod.string(),
   status: zod.enum(["draft", "complete", "archived"]),
   currentStep: zod.number().optional(),
+  schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+  fundingProfile: zod
+    .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
+    .optional(),
   updatedAt: zod.date(),
   createdAt: zod.date(),
 });
@@ -103,6 +107,10 @@ export const ListModelsResponse = zod.array(ListModelsResponseItem);
 export const CreateModelBody = zod.object({
   name: zod.string(),
   currentStep: zod.number().optional(),
+  schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+  fundingProfile: zod
+    .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
+    .optional(),
   data: zod.object({
     schoolProfile: zod
       .object({
@@ -110,6 +118,10 @@ export const CreateModelBody = zod.object({
         state: zod.string().optional(),
         schoolType: zod
           .enum(["microschool", "private_school", "charter_school", "other"])
+          .optional(),
+        schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+        fundingProfile: zod
+          .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
@@ -172,6 +184,105 @@ export const CreateModelBody = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+      })
+      .optional(),
+    revenueRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "tuition_and_fees",
+            "tuition_offsets",
+            "public_funding",
+            "school_choice",
+            "grants_contributions",
+            "other_revenue",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_base",
+          ]),
+          amounts: zod.array(zod.number()),
+          percentBase: zod.string().optional(),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    staffingRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          roleName: zod.string(),
+          functionCategory: zod.enum([
+            "instructional",
+            "school_leadership",
+            "student_support",
+            "operations",
+            "administrative",
+            "other",
+          ]),
+          employmentType: zod.enum(["full_time", "part_time", "contract"]),
+          fte: zod.number(),
+          annualizedRate: zod.number(),
+          benefitsEligible: zod.boolean(),
+          benefitsRate: zod.number(),
+          payrollTaxRate: zod.number(),
+          notes: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    expenseRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "personnel",
+            "instructional_program",
+            "technology",
+            "occupancy_facility",
+            "administrative_general",
+            "capital_financing",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    capitalAndDebtRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    priorYearSnapshot: zod
+      .object({
+        endingEnrollment: zod.number().optional(),
+        totalRevenue: zod.number().optional(),
+        totalExpenses: zod.number().optional(),
+        endingCash: zod.number().optional(),
       })
       .optional(),
   }),
@@ -189,6 +300,10 @@ export const GetModelResponse = zod.object({
   name: zod.string(),
   status: zod.enum(["draft", "complete", "archived"]),
   currentStep: zod.number().optional(),
+  schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+  fundingProfile: zod
+    .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
+    .optional(),
   data: zod.object({
     schoolProfile: zod
       .object({
@@ -196,6 +311,10 @@ export const GetModelResponse = zod.object({
         state: zod.string().optional(),
         schoolType: zod
           .enum(["microschool", "private_school", "charter_school", "other"])
+          .optional(),
+        schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+        fundingProfile: zod
+          .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
@@ -258,6 +377,105 @@ export const GetModelResponse = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+      })
+      .optional(),
+    revenueRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "tuition_and_fees",
+            "tuition_offsets",
+            "public_funding",
+            "school_choice",
+            "grants_contributions",
+            "other_revenue",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_base",
+          ]),
+          amounts: zod.array(zod.number()),
+          percentBase: zod.string().optional(),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    staffingRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          roleName: zod.string(),
+          functionCategory: zod.enum([
+            "instructional",
+            "school_leadership",
+            "student_support",
+            "operations",
+            "administrative",
+            "other",
+          ]),
+          employmentType: zod.enum(["full_time", "part_time", "contract"]),
+          fte: zod.number(),
+          annualizedRate: zod.number(),
+          benefitsEligible: zod.boolean(),
+          benefitsRate: zod.number(),
+          payrollTaxRate: zod.number(),
+          notes: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    expenseRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "personnel",
+            "instructional_program",
+            "technology",
+            "occupancy_facility",
+            "administrative_general",
+            "capital_financing",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    capitalAndDebtRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    priorYearSnapshot: zod
+      .object({
+        endingEnrollment: zod.number().optional(),
+        totalRevenue: zod.number().optional(),
+        totalExpenses: zod.number().optional(),
+        endingCash: zod.number().optional(),
       })
       .optional(),
   }),
@@ -276,6 +494,10 @@ export const UpdateModelBody = zod.object({
   name: zod.string().optional(),
   currentStep: zod.number().optional(),
   status: zod.enum(["draft", "complete", "archived"]).optional(),
+  schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+  fundingProfile: zod
+    .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
+    .optional(),
   data: zod.object({
     schoolProfile: zod
       .object({
@@ -283,6 +505,10 @@ export const UpdateModelBody = zod.object({
         state: zod.string().optional(),
         schoolType: zod
           .enum(["microschool", "private_school", "charter_school", "other"])
+          .optional(),
+        schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+        fundingProfile: zod
+          .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
@@ -345,6 +571,105 @@ export const UpdateModelBody = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+      })
+      .optional(),
+    revenueRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "tuition_and_fees",
+            "tuition_offsets",
+            "public_funding",
+            "school_choice",
+            "grants_contributions",
+            "other_revenue",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_base",
+          ]),
+          amounts: zod.array(zod.number()),
+          percentBase: zod.string().optional(),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    staffingRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          roleName: zod.string(),
+          functionCategory: zod.enum([
+            "instructional",
+            "school_leadership",
+            "student_support",
+            "operations",
+            "administrative",
+            "other",
+          ]),
+          employmentType: zod.enum(["full_time", "part_time", "contract"]),
+          fte: zod.number(),
+          annualizedRate: zod.number(),
+          benefitsEligible: zod.boolean(),
+          benefitsRate: zod.number(),
+          payrollTaxRate: zod.number(),
+          notes: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    expenseRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "personnel",
+            "instructional_program",
+            "technology",
+            "occupancy_facility",
+            "administrative_general",
+            "capital_financing",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    capitalAndDebtRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    priorYearSnapshot: zod
+      .object({
+        endingEnrollment: zod.number().optional(),
+        totalRevenue: zod.number().optional(),
+        totalExpenses: zod.number().optional(),
+        endingCash: zod.number().optional(),
       })
       .optional(),
   }),
@@ -355,6 +680,10 @@ export const UpdateModelResponse = zod.object({
   name: zod.string(),
   status: zod.enum(["draft", "complete", "archived"]),
   currentStep: zod.number().optional(),
+  schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+  fundingProfile: zod
+    .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
+    .optional(),
   data: zod.object({
     schoolProfile: zod
       .object({
@@ -362,6 +691,10 @@ export const UpdateModelResponse = zod.object({
         state: zod.string().optional(),
         schoolType: zod
           .enum(["microschool", "private_school", "charter_school", "other"])
+          .optional(),
+        schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+        fundingProfile: zod
+          .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
@@ -424,6 +757,105 @@ export const UpdateModelResponse = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+      })
+      .optional(),
+    revenueRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "tuition_and_fees",
+            "tuition_offsets",
+            "public_funding",
+            "school_choice",
+            "grants_contributions",
+            "other_revenue",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_base",
+          ]),
+          amounts: zod.array(zod.number()),
+          percentBase: zod.string().optional(),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    staffingRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          roleName: zod.string(),
+          functionCategory: zod.enum([
+            "instructional",
+            "school_leadership",
+            "student_support",
+            "operations",
+            "administrative",
+            "other",
+          ]),
+          employmentType: zod.enum(["full_time", "part_time", "contract"]),
+          fte: zod.number(),
+          annualizedRate: zod.number(),
+          benefitsEligible: zod.boolean(),
+          benefitsRate: zod.number(),
+          payrollTaxRate: zod.number(),
+          notes: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    expenseRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "personnel",
+            "instructional_program",
+            "technology",
+            "occupancy_facility",
+            "administrative_general",
+            "capital_financing",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    capitalAndDebtRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    priorYearSnapshot: zod
+      .object({
+        endingEnrollment: zod.number().optional(),
+        totalRevenue: zod.number().optional(),
+        totalExpenses: zod.number().optional(),
+        endingCash: zod.number().optional(),
       })
       .optional(),
   }),
@@ -461,6 +893,10 @@ export const ArchiveModelResponse = zod.object({
   name: zod.string(),
   status: zod.enum(["draft", "complete", "archived"]),
   currentStep: zod.number().optional(),
+  schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+  fundingProfile: zod
+    .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
+    .optional(),
   data: zod.object({
     schoolProfile: zod
       .object({
@@ -468,6 +904,10 @@ export const ArchiveModelResponse = zod.object({
         state: zod.string().optional(),
         schoolType: zod
           .enum(["microschool", "private_school", "charter_school", "other"])
+          .optional(),
+        schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
+        fundingProfile: zod
+          .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
@@ -530,6 +970,105 @@ export const ArchiveModelResponse = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+      })
+      .optional(),
+    revenueRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "tuition_and_fees",
+            "tuition_offsets",
+            "public_funding",
+            "school_choice",
+            "grants_contributions",
+            "other_revenue",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_base",
+          ]),
+          amounts: zod.array(zod.number()),
+          percentBase: zod.string().optional(),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    staffingRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          roleName: zod.string(),
+          functionCategory: zod.enum([
+            "instructional",
+            "school_leadership",
+            "student_support",
+            "operations",
+            "administrative",
+            "other",
+          ]),
+          employmentType: zod.enum(["full_time", "part_time", "contract"]),
+          fte: zod.number(),
+          annualizedRate: zod.number(),
+          benefitsEligible: zod.boolean(),
+          benefitsRate: zod.number(),
+          payrollTaxRate: zod.number(),
+          notes: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    expenseRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          category: zod.enum([
+            "personnel",
+            "instructional_program",
+            "technology",
+            "occupancy_facility",
+            "administrative_general",
+            "capital_financing",
+          ]),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    capitalAndDebtRows: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          lineItem: zod.string(),
+          enabled: zod.boolean(),
+          driverType: zod.enum([
+            "annual_fixed",
+            "monthly",
+            "per_student",
+            "percent_of_revenue",
+          ]),
+          amounts: zod.array(zod.number()),
+          note: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    priorYearSnapshot: zod
+      .object({
+        endingEnrollment: zod.number().optional(),
+        totalRevenue: zod.number().optional(),
+        totalExpenses: zod.number().optional(),
+        endingCash: zod.number().optional(),
       })
       .optional(),
   }),

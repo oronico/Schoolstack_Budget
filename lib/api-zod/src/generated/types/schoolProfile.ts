@@ -5,12 +5,16 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { FundingProfile } from "./fundingProfile";
 import type { SchoolProfileSchoolType } from "./schoolProfileSchoolType";
+import type { SchoolStage } from "./schoolStage";
 
 export interface SchoolProfile {
   schoolName?: string;
   state?: string;
   schoolType?: SchoolProfileSchoolType;
+  schoolStage?: SchoolStage;
+  fundingProfile?: FundingProfile;
   openingYear?: number;
   currentStudents?: number;
   maxCapacity?: number;

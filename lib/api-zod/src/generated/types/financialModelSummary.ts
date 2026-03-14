@@ -5,13 +5,17 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { FundingProfile } from "./fundingProfile";
 import type { ModelStatus } from "./modelStatus";
+import type { SchoolStage } from "./schoolStage";
 
 export interface FinancialModelSummary {
   id: number;
   name: string;
   status: ModelStatus;
   currentStep?: number;
+  schoolStage?: SchoolStage;
+  fundingProfile?: FundingProfile;
   updatedAt: Date;
   createdAt: Date;
 }

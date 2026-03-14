@@ -506,6 +506,163 @@ components:
     ModelStatus:
       type: string
       enum: [draft, complete, archived]
+    SchoolStage:
+      type: string
+      enum: [new_school, operating_school]
+    FundingProfile:
+      type: string
+      enum: [tuition_based, charter_public_funded, hybrid_mixed]
+    RevenueDriverType:
+      type: string
+      enum: [annual_fixed, monthly, per_student, percent_of_base]
+    ExpenseDriverType:
+      type: string
+      enum: [annual_fixed, monthly, per_student, percent_of_revenue]
+    StaffingFunctionCategory:
+      type: string
+      enum: [instructional, school_leadership, student_support, operations, administrative, other]
+    StaffingEmploymentType:
+      type: string
+      enum: [full_time, part_time, contract]
+    RevenueCategory:
+      type: string
+      enum:
+        - tuition_and_fees
+        - tuition_offsets
+        - public_funding
+        - school_choice
+        - grants_contributions
+        - other_revenue
+    ExpenseCategory:
+      type: string
+      enum:
+        - personnel
+        - instructional_program
+        - technology
+        - occupancy_facility
+        - administrative_general
+        - capital_financing
+    RevenueRow:
+      type: object
+      properties:
+        id:
+          type: string
+        category:
+          $ref: "#/components/schemas/RevenueCategory"
+        lineItem:
+          type: string
+        enabled:
+          type: boolean
+        driverType:
+          $ref: "#/components/schemas/RevenueDriverType"
+        amounts:
+          type: array
+          items:
+            type: number
+        percentBase:
+          type: string
+        note:
+          type: string
+      required:
+        - id
+        - category
+        - lineItem
+        - enabled
+        - driverType
+        - amounts
+    StaffingRow:
+      type: object
+      properties:
+        id:
+          type: string
+        roleName:
+          type: string
+        functionCategory:
+          $ref: "#/components/schemas/StaffingFunctionCategory"
+        employmentType:
+          $ref: "#/components/schemas/StaffingEmploymentType"
+        fte:
+          type: number
+        annualizedRate:
+          type: number
+        benefitsEligible:
+          type: boolean
+        benefitsRate:
+          type: number
+        payrollTaxRate:
+          type: number
+        notes:
+          type: string
+      required:
+        - id
+        - roleName
+        - functionCategory
+        - employmentType
+        - fte
+        - annualizedRate
+        - benefitsEligible
+        - benefitsRate
+        - payrollTaxRate
+    ExpenseRow:
+      type: object
+      properties:
+        id:
+          type: string
+        category:
+          $ref: "#/components/schemas/ExpenseCategory"
+        lineItem:
+          type: string
+        enabled:
+          type: boolean
+        driverType:
+          $ref: "#/components/schemas/ExpenseDriverType"
+        amounts:
+          type: array
+          items:
+            type: number
+        note:
+          type: string
+      required:
+        - id
+        - category
+        - lineItem
+        - enabled
+        - driverType
+        - amounts
+    CapitalDebtRow:
+      type: object
+      properties:
+        id:
+          type: string
+        lineItem:
+          type: string
+        enabled:
+          type: boolean
+        driverType:
+          $ref: "#/components/schemas/ExpenseDriverType"
+        amounts:
+          type: array
+          items:
+            type: number
+        note:
+          type: string
+      required:
+        - id
+        - lineItem
+        - enabled
+        - driverType
+        - amounts
+    PriorYearSnapshot:
+      type: object
+      properties:
+        endingEnrollment:
+          type: integer
+        totalRevenue:
+          type: number
+        totalExpenses:
+          type: number
+        endingCash:
+          type: number
     CreateFinancialModelData:
       type: object
       properties:
@@ -513,6 +670,10 @@ components:
           type: string
         currentStep:
           type: integer
+        schoolStage:
+          $ref: "#/components/schemas/SchoolStage"
+        fundingProfile:
+          $ref: "#/components/schemas/FundingProfile"
         data:
           $ref: "#/components/schemas/ModelFormData"
       required:
@@ -527,6 +688,10 @@ components:
           type: integer
         status:
           $ref: "#/components/schemas/ModelStatus"
+        schoolStage:
+          $ref: "#/components/schemas/SchoolStage"
+        fundingProfile:
+          $ref: "#/components/schemas/FundingProfile"
         data:
           $ref: "#/components/schemas/ModelFormData"
       required:
@@ -544,6 +709,24 @@ components:
           $ref: "#/components/schemas/Staffing"
         facilities:
           $ref: "#/components/schemas/Facilities"
+        revenueRows:
+          type: array
+          items:
+            $ref: "#/components/schemas/RevenueRow"
+        staffingRows:
+          type: array
+          items:
+            $ref: "#/components/schemas/StaffingRow"
+        expenseRows:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseRow"
+        capitalAndDebtRows:
+          type: array
+          items:
+            $ref: "#/components/schemas/CapitalDebtRow"
+        priorYearSnapshot:
+          $ref: "#/components/schemas/PriorYearSnapshot"
     SchoolProfile:
       type: object
       properties:
@@ -554,6 +737,10 @@ components:
         schoolType:
           type: string
           enum: [microschool, private_school, charter_school, other]
+        schoolStage:
+          $ref: "#/components/schemas/SchoolStage"
+        fundingProfile:
+          $ref: "#/components/schemas/FundingProfile"
         openingYear:
           type: integer
         currentStudents:
@@ -813,6 +1000,10 @@ components:
           $ref: "#/components/schemas/ModelStatus"
         currentStep:
           type: integer
+        schoolStage:
+          $ref: "#/components/schemas/SchoolStage"
+        fundingProfile:
+          $ref: "#/components/schemas/FundingProfile"
         updatedAt:
           type: string
           format: date-time
@@ -836,6 +1027,10 @@ components:
           $ref: "#/components/schemas/ModelStatus"
         currentStep:
           type: integer
+        schoolStage:
+          $ref: "#/components/schemas/SchoolStage"
+        fundingProfile:
+          $ref: "#/components/schemas/FundingProfile"
         data:
           $ref: "#/components/schemas/ModelFormData"
         updatedAt:

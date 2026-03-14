@@ -58,6 +58,137 @@ export const ModelStatus = {
   archived: "archived",
 } as const;
 
+export type SchoolStage = (typeof SchoolStage)[keyof typeof SchoolStage];
+
+export const SchoolStage = {
+  new_school: "new_school",
+  operating_school: "operating_school",
+} as const;
+
+export type FundingProfile =
+  (typeof FundingProfile)[keyof typeof FundingProfile];
+
+export const FundingProfile = {
+  tuition_based: "tuition_based",
+  charter_public_funded: "charter_public_funded",
+  hybrid_mixed: "hybrid_mixed",
+} as const;
+
+export type RevenueDriverType =
+  (typeof RevenueDriverType)[keyof typeof RevenueDriverType];
+
+export const RevenueDriverType = {
+  annual_fixed: "annual_fixed",
+  monthly: "monthly",
+  per_student: "per_student",
+  percent_of_base: "percent_of_base",
+} as const;
+
+export type ExpenseDriverType =
+  (typeof ExpenseDriverType)[keyof typeof ExpenseDriverType];
+
+export const ExpenseDriverType = {
+  annual_fixed: "annual_fixed",
+  monthly: "monthly",
+  per_student: "per_student",
+  percent_of_revenue: "percent_of_revenue",
+} as const;
+
+export type StaffingFunctionCategory =
+  (typeof StaffingFunctionCategory)[keyof typeof StaffingFunctionCategory];
+
+export const StaffingFunctionCategory = {
+  instructional: "instructional",
+  school_leadership: "school_leadership",
+  student_support: "student_support",
+  operations: "operations",
+  administrative: "administrative",
+  other: "other",
+} as const;
+
+export type StaffingEmploymentType =
+  (typeof StaffingEmploymentType)[keyof typeof StaffingEmploymentType];
+
+export const StaffingEmploymentType = {
+  full_time: "full_time",
+  part_time: "part_time",
+  contract: "contract",
+} as const;
+
+export type RevenueCategory =
+  (typeof RevenueCategory)[keyof typeof RevenueCategory];
+
+export const RevenueCategory = {
+  tuition_and_fees: "tuition_and_fees",
+  tuition_offsets: "tuition_offsets",
+  public_funding: "public_funding",
+  school_choice: "school_choice",
+  grants_contributions: "grants_contributions",
+  other_revenue: "other_revenue",
+} as const;
+
+export type ExpenseCategory =
+  (typeof ExpenseCategory)[keyof typeof ExpenseCategory];
+
+export const ExpenseCategory = {
+  personnel: "personnel",
+  instructional_program: "instructional_program",
+  technology: "technology",
+  occupancy_facility: "occupancy_facility",
+  administrative_general: "administrative_general",
+  capital_financing: "capital_financing",
+} as const;
+
+export interface RevenueRow {
+  id: string;
+  category: RevenueCategory;
+  lineItem: string;
+  enabled: boolean;
+  driverType: RevenueDriverType;
+  amounts: number[];
+  percentBase?: string;
+  note?: string;
+}
+
+export interface StaffingRow {
+  id: string;
+  roleName: string;
+  functionCategory: StaffingFunctionCategory;
+  employmentType: StaffingEmploymentType;
+  fte: number;
+  annualizedRate: number;
+  benefitsEligible: boolean;
+  benefitsRate: number;
+  payrollTaxRate: number;
+  notes?: string;
+}
+
+export interface ExpenseRow {
+  id: string;
+  category: ExpenseCategory;
+  lineItem: string;
+  enabled: boolean;
+  driverType: ExpenseDriverType;
+  amounts: number[];
+  note?: string;
+}
+
+export interface CapitalDebtRow {
+  id: string;
+  lineItem: string;
+  enabled: boolean;
+  driverType: ExpenseDriverType;
+  amounts: number[];
+  note?: string;
+}
+
+export interface PriorYearSnapshot {
+  endingEnrollment?: number;
+  totalRevenue?: number;
+  totalExpenses?: number;
+  endingCash?: number;
+}
+
 export type SchoolProfileSchoolType =
   (typeof SchoolProfileSchoolType)[keyof typeof SchoolProfileSchoolType];
 
@@ -72,6 +203,8 @@ export interface SchoolProfile {
   schoolName?: string;
   state?: string;
   schoolType?: SchoolProfileSchoolType;
+  schoolStage?: SchoolStage;
+  fundingProfile?: FundingProfile;
   openingYear?: number;
   currentStudents?: number;
   maxCapacity?: number;
@@ -137,11 +270,18 @@ export interface ModelFormData {
   revenue?: Revenue;
   staffing?: Staffing;
   facilities?: Facilities;
+  revenueRows?: RevenueRow[];
+  staffingRows?: StaffingRow[];
+  expenseRows?: ExpenseRow[];
+  capitalAndDebtRows?: CapitalDebtRow[];
+  priorYearSnapshot?: PriorYearSnapshot;
 }
 
 export interface CreateFinancialModelData {
   name: string;
   currentStep?: number;
+  schoolStage?: SchoolStage;
+  fundingProfile?: FundingProfile;
   data: ModelFormData;
 }
 
@@ -149,6 +289,8 @@ export interface UpdateFinancialModelData {
   name?: string;
   currentStep?: number;
   status?: ModelStatus;
+  schoolStage?: SchoolStage;
+  fundingProfile?: FundingProfile;
   data: ModelFormData;
 }
 
@@ -238,6 +380,8 @@ export interface FinancialModelSummary {
   name: string;
   status: ModelStatus;
   currentStep?: number;
+  schoolStage?: SchoolStage;
+  fundingProfile?: FundingProfile;
   updatedAt: string;
   createdAt: string;
 }
@@ -247,6 +391,8 @@ export interface FinancialModel {
   name: string;
   status: ModelStatus;
   currentStep?: number;
+  schoolStage?: SchoolStage;
+  fundingProfile?: FundingProfile;
   data: ModelFormData;
   updatedAt: string;
   createdAt: string;
