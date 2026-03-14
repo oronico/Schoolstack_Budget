@@ -5,10 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ModelStatus } from "./modelStatus";
 
 export interface FinancialModelSummary {
   id: number;
   name: string;
+  status: ModelStatus;
   currentStep?: number;
   updatedAt: Date;
   createdAt: Date;

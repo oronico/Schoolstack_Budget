@@ -183,7 +183,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/FinancialModelData"
+              $ref: "#/components/schemas/CreateFinancialModelData"
       responses:
         "201":
           description: Model created
@@ -242,7 +242,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/FinancialModelData"
+              $ref: "#/components/schemas/UpdateFinancialModelData"
       responses:
         "200":
           description: Model updated
@@ -279,6 +279,66 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /models/{id}/duplicate:
+    post:
+      operationId: duplicateModel
+      tags: [models]
+      summary: Duplicate a financial model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Model duplicated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialModel"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /models/{id}/archive:
+    post:
+      operationId: archiveModel
+      tags: [models]
+      summary: Archive a financial model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Model archived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialModel"
         "401":
           description: Not authenticated
           content:
@@ -413,7 +473,10 @@ components:
         - id
         - email
         - name
-    FinancialModelData:
+    ModelStatus:
+      type: string
+      enum: [draft, complete, archived]
+    CreateFinancialModelData:
       type: object
       properties:
         name:
@@ -424,6 +487,19 @@ components:
           $ref: "#/components/schemas/ModelFormData"
       required:
         - name
+        - data
+    UpdateFinancialModelData:
+      type: object
+      properties:
+        name:
+          type: string
+        currentStep:
+          type: integer
+        status:
+          $ref: "#/components/schemas/ModelStatus"
+        data:
+          $ref: "#/components/schemas/ModelFormData"
+      required:
         - data
     ModelFormData:
       type: object
@@ -521,6 +597,8 @@ components:
           type: integer
         name:
           type: string
+        status:
+          $ref: "#/components/schemas/ModelStatus"
         currentStep:
           type: integer
         updatedAt:
@@ -532,6 +610,7 @@ components:
       required:
         - id
         - name
+        - status
         - updatedAt
         - createdAt
     FinancialModel:
@@ -541,6 +620,8 @@ components:
           type: integer
         name:
           type: string
+        status:
+          $ref: "#/components/schemas/ModelStatus"
         currentStep:
           type: integer
         data:
@@ -554,6 +635,7 @@ components:
       required:
         - id
         - name
+        - status
         - data
         - updatedAt
         - createdAt

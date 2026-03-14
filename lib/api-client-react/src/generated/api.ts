@@ -18,9 +18,9 @@ import type {
 
 import type {
   AuthResponse,
+  CreateFinancialModelData,
   ErrorResponse,
   FinancialModel,
-  FinancialModelData,
   FinancialModelSummary,
   ForgotPasswordRequest,
   HealthStatus,
@@ -28,6 +28,7 @@ import type {
   MessageResponse,
   RegisterRequest,
   ResetPasswordRequest,
+  UpdateFinancialModelData,
   UserResponse,
 } from "./api.schemas";
 
@@ -687,14 +688,14 @@ export const getCreateModelUrl = () => {
 };
 
 export const createModel = async (
-  financialModelData: FinancialModelData,
+  createFinancialModelData: CreateFinancialModelData,
   options?: RequestInit,
 ): Promise<FinancialModel> => {
   return customFetch<FinancialModel>(getCreateModelUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(financialModelData),
+    body: JSON.stringify(createFinancialModelData),
   });
 };
 
@@ -705,14 +706,14 @@ export const getCreateModelMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createModel>>,
     TError,
-    { data: BodyType<FinancialModelData> },
+    { data: BodyType<CreateFinancialModelData> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createModel>>,
   TError,
-  { data: BodyType<FinancialModelData> },
+  { data: BodyType<CreateFinancialModelData> },
   TContext
 > => {
   const mutationKey = ["createModel"];
@@ -726,7 +727,7 @@ export const getCreateModelMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createModel>>,
-    { data: BodyType<FinancialModelData> }
+    { data: BodyType<CreateFinancialModelData> }
   > = (props) => {
     const { data } = props ?? {};
 
@@ -739,7 +740,7 @@ export const getCreateModelMutationOptions = <
 export type CreateModelMutationResult = NonNullable<
   Awaited<ReturnType<typeof createModel>>
 >;
-export type CreateModelMutationBody = BodyType<FinancialModelData>;
+export type CreateModelMutationBody = BodyType<CreateFinancialModelData>;
 export type CreateModelMutationError = ErrorType<ErrorResponse>;
 
 /**
@@ -752,14 +753,14 @@ export const useCreateModel = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createModel>>,
     TError,
-    { data: BodyType<FinancialModelData> },
+    { data: BodyType<CreateFinancialModelData> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof createModel>>,
   TError,
-  { data: BodyType<FinancialModelData> },
+  { data: BodyType<CreateFinancialModelData> },
   TContext
 > => {
   return useMutation(getCreateModelMutationOptions(options));
@@ -859,14 +860,14 @@ export const getUpdateModelUrl = (id: number) => {
 
 export const updateModel = async (
   id: number,
-  financialModelData: FinancialModelData,
+  updateFinancialModelData: UpdateFinancialModelData,
   options?: RequestInit,
 ): Promise<FinancialModel> => {
   return customFetch<FinancialModel>(getUpdateModelUrl(id), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(financialModelData),
+    body: JSON.stringify(updateFinancialModelData),
   });
 };
 
@@ -877,14 +878,14 @@ export const getUpdateModelMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateModel>>,
     TError,
-    { id: number; data: BodyType<FinancialModelData> },
+    { id: number; data: BodyType<UpdateFinancialModelData> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateModel>>,
   TError,
-  { id: number; data: BodyType<FinancialModelData> },
+  { id: number; data: BodyType<UpdateFinancialModelData> },
   TContext
 > => {
   const mutationKey = ["updateModel"];
@@ -898,7 +899,7 @@ export const getUpdateModelMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateModel>>,
-    { id: number; data: BodyType<FinancialModelData> }
+    { id: number; data: BodyType<UpdateFinancialModelData> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -911,7 +912,7 @@ export const getUpdateModelMutationOptions = <
 export type UpdateModelMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateModel>>
 >;
-export type UpdateModelMutationBody = BodyType<FinancialModelData>;
+export type UpdateModelMutationBody = BodyType<UpdateFinancialModelData>;
 export type UpdateModelMutationError = ErrorType<ErrorResponse>;
 
 /**
@@ -924,14 +925,14 @@ export const useUpdateModel = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateModel>>,
     TError,
-    { id: number; data: BodyType<FinancialModelData> },
+    { id: number; data: BodyType<UpdateFinancialModelData> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateModel>>,
   TError,
-  { id: number; data: BodyType<FinancialModelData> },
+  { id: number; data: BodyType<UpdateFinancialModelData> },
   TContext
 > => {
   return useMutation(getUpdateModelMutationOptions(options));
@@ -1019,6 +1020,174 @@ export const useDeleteModel = <
   TContext
 > => {
   return useMutation(getDeleteModelMutationOptions(options));
+};
+
+/**
+ * @summary Duplicate a financial model
+ */
+export const getDuplicateModelUrl = (id: number) => {
+  return `/api/models/${id}/duplicate`;
+};
+
+export const duplicateModel = async (
+  id: number,
+  options?: RequestInit,
+): Promise<FinancialModel> => {
+  return customFetch<FinancialModel>(getDuplicateModelUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDuplicateModelMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof duplicateModel>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof duplicateModel>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["duplicateModel"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof duplicateModel>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return duplicateModel(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DuplicateModelMutationResult = NonNullable<
+  Awaited<ReturnType<typeof duplicateModel>>
+>;
+
+export type DuplicateModelMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Duplicate a financial model
+ */
+export const useDuplicateModel = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof duplicateModel>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof duplicateModel>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDuplicateModelMutationOptions(options));
+};
+
+/**
+ * @summary Archive a financial model
+ */
+export const getArchiveModelUrl = (id: number) => {
+  return `/api/models/${id}/archive`;
+};
+
+export const archiveModel = async (
+  id: number,
+  options?: RequestInit,
+): Promise<FinancialModel> => {
+  return customFetch<FinancialModel>(getArchiveModelUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getArchiveModelMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveModel>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof archiveModel>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["archiveModel"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof archiveModel>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return archiveModel(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ArchiveModelMutationResult = NonNullable<
+  Awaited<ReturnType<typeof archiveModel>>
+>;
+
+export type ArchiveModelMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Archive a financial model
+ */
+export const useArchiveModel = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveModel>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof archiveModel>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getArchiveModelMutationOptions(options));
 };
 
 /**

@@ -90,6 +90,7 @@ export const ResetPasswordResponse = zod.object({
 export const ListModelsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
+  status: zod.enum(["draft", "complete", "archived"]),
   currentStep: zod.number().optional(),
   updatedAt: zod.date(),
   createdAt: zod.date(),
@@ -168,6 +169,7 @@ export const GetModelParams = zod.object({
 export const GetModelResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+  status: zod.enum(["draft", "complete", "archived"]),
   currentStep: zod.number().optional(),
   data: zod.object({
     schoolProfile: zod
@@ -235,8 +237,9 @@ export const UpdateModelParams = zod.object({
 });
 
 export const UpdateModelBody = zod.object({
-  name: zod.string(),
+  name: zod.string().optional(),
   currentStep: zod.number().optional(),
+  status: zod.enum(["draft", "complete", "archived"]).optional(),
   data: zod.object({
     schoolProfile: zod
       .object({
@@ -296,6 +299,7 @@ export const UpdateModelBody = zod.object({
 export const UpdateModelResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+  status: zod.enum(["draft", "complete", "archived"]),
   currentStep: zod.number().optional(),
   data: zod.object({
     schoolProfile: zod
@@ -364,6 +368,83 @@ export const DeleteModelParams = zod.object({
 
 export const DeleteModelResponse = zod.object({
   message: zod.string(),
+});
+
+/**
+ * @summary Duplicate a financial model
+ */
+export const DuplicateModelParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Archive a financial model
+ */
+export const ArchiveModelParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ArchiveModelResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  status: zod.enum(["draft", "complete", "archived"]),
+  currentStep: zod.number().optional(),
+  data: zod.object({
+    schoolProfile: zod
+      .object({
+        schoolName: zod.string().optional(),
+        state: zod.string().optional(),
+        schoolType: zod
+          .enum(["microschool", "private_school", "charter_school", "other"])
+          .optional(),
+        openingYear: zod.number().optional(),
+        currentStudents: zod.number().optional(),
+        maxCapacity: zod.number().optional(),
+      })
+      .optional(),
+    enrollment: zod
+      .object({
+        year1: zod.number().optional(),
+        year2: zod.number().optional(),
+        year3: zod.number().optional(),
+        year4: zod.number().optional(),
+        year5: zod.number().optional(),
+      })
+      .optional(),
+    revenue: zod
+      .object({
+        tuitionPerStudent: zod.number().optional(),
+        esaRevenuePerStudent: zod.number().optional(),
+        otherRevenuePerStudent: zod.number().optional(),
+        scholarshipRate: zod.number().optional(),
+        annualFundraising: zod.number().optional(),
+      })
+      .optional(),
+    staffing: zod
+      .object({
+        studentsPerTeacher: zod.number().optional(),
+        teacherSalary: zod.number().optional(),
+        adminStaffCount: zod.number().optional(),
+        adminSalary: zod.number().optional(),
+        founderSalary: zod.number().optional(),
+        benefitsRate: zod.number().optional(),
+      })
+      .optional(),
+    facilities: zod
+      .object({
+        monthlyRent: zod.number().optional(),
+        annualRentIncrease: zod.number().optional(),
+        annualUtilities: zod.number().optional(),
+        annualInsurance: zod.number().optional(),
+        curriculumCostPerStudent: zod.number().optional(),
+        techCostPerStudent: zod.number().optional(),
+        annualMarketing: zod.number().optional(),
+        otherAnnualExpenses: zod.number().optional(),
+      })
+      .optional(),
+  }),
+  updatedAt: zod.date(),
+  createdAt: zod.date(),
 });
 
 /**

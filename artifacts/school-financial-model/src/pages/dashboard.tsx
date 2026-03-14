@@ -1,9 +1,15 @@
 import { Link, useLocation } from "wouter";
-import { useListModels, useCreateModel, useDeleteModel } from "@workspace/api-client-react";
+import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
-import { Plus, FileSpreadsheet, Trash2, Clock, Loader2 } from "lucide-react";
+import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
+
+const statusConfig: Record<string, { label: string; className: string }> = {
+  draft: { label: "Draft", className: "bg-amber-100 text-amber-700" },
+  complete: { label: "Complete", className: "bg-emerald-100 text-emerald-700" },
+  archived: { label: "Archived", className: "bg-gray-100 text-gray-500" },
+};
 
 export function DashboardPage() {
   const [, setLocation] = useLocation();
@@ -12,8 +18,10 @@ export function DashboardPage() {
   const { data: models, isLoading, refetch } = useListModels();
   const createMutation = useCreateModel();
   const deleteMutation = useDeleteModel();
+  const duplicateMutation = useDuplicateModel();
+  const archiveMutation = useArchiveModel();
 
-  if (!user) return null; // Handled by auth guard in App.tsx
+  if (!user) return null;
 
   const handleCreate = async () => {
     try {
@@ -33,6 +41,22 @@ export function DashboardPage() {
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this model?")) {
       await deleteMutation.mutateAsync({ id });
+      refetch();
+    }
+  };
+
+  const handleDuplicate = async (id: number) => {
+    try {
+      const newModel = await duplicateMutation.mutateAsync({ id });
+      refetch();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleArchive = async (id: number) => {
+    if (confirm("Are you sure you want to archive this model?")) {
+      await archiveMutation.mutateAsync({ id });
       refetch();
     }
   };
@@ -78,43 +102,71 @@ export function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {models?.map(model => (
-              <div key={model.id} className="group flex flex-col bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300">
-                <div className="flex-1 cursor-pointer" onClick={() => setLocation(`/model/${model.id}`)}>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                      <FileSpreadsheet className="h-6 w-6" />
+            {models?.map(model => {
+              const status = statusConfig[model.status] || statusConfig.draft;
+              const isArchived = model.status === "archived";
+
+              return (
+                <div key={model.id} className={`group flex flex-col bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 ${isArchived ? "opacity-70" : ""}`}>
+                  <div className="flex-1 cursor-pointer" onClick={() => setLocation(`/model/${model.id}`)}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="p-3 bg-primary/10 text-primary rounded-xl">
+                        <FileSpreadsheet className="h-6 w-6" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${status.className}`}>
+                          {status.label}
+                        </span>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-secondary text-xs font-medium text-muted-foreground">
+                          Step {model.currentStep} of 7
+                        </span>
+                      </div>
                     </div>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-secondary text-xs font-medium text-muted-foreground">
-                      Step {model.currentStep} of 7
-                    </span>
+                    <h3 className="font-display text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
+                      {model.name || "Untitled Model"}
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      Last updated {format(new Date(model.updatedAt), "MMM d, yyyy")}
+                    </div>
                   </div>
-                  <h3 className="font-display text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
-                    {model.name || "Untitled Model"}
-                  </h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    Last updated {format(new Date(model.updatedAt), "MMM d, yyyy")}
+                  
+                  <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
+                    <button 
+                      onClick={() => setLocation(`/model/${model.id}`)}
+                      className="text-sm font-semibold text-primary hover:underline"
+                    >
+                      Open Model
+                    </button>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDuplicate(model.id); }}
+                        className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                        title="Duplicate model"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      {!isArchived && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleArchive(model.id); }}
+                          className="p-2 text-muted-foreground hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          title="Archive model"
+                        >
+                          <Archive className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDelete(model.id); }}
+                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                        title="Delete model"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
-                  <button 
-                    onClick={() => setLocation(`/model/${model.id}`)}
-                    className="text-sm font-semibold text-primary hover:underline"
-                  >
-                    Open Model
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleDelete(model.id); }}
-                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                    title="Delete model"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

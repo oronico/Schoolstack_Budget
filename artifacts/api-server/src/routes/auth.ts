@@ -11,6 +11,7 @@ import {
   ResetPasswordBody,
 } from "@workspace/api-zod";
 import { authMiddleware, generateToken, type AuthRequest } from "../middlewares/auth";
+import { trackEvent } from "../lib/track-event";
 
 const router: IRouter = Router();
 
@@ -37,6 +38,7 @@ router.post("/auth/register", async (req, res) => {
     }).returning();
 
     const token = generateToken(user.id);
+    await trackEvent("signed_up", user.id, { email: user.email });
     res.status(201).json({
       user: { id: user.id, email: user.email, name: user.name },
       token,
@@ -68,7 +70,10 @@ router.post("/auth/login", async (req, res) => {
       return;
     }
 
+    await db.update(usersTable).set({ lastSeenAt: new Date() }).where(eq(usersTable.id, user.id));
+
     const token = generateToken(user.id);
+    await trackEvent("logged_in", user.id);
     res.json({
       user: { id: user.id, email: user.email, name: user.name },
       token,
@@ -90,6 +95,7 @@ router.get("/auth/me", authMiddleware, async (req: AuthRequest, res) => {
       res.status(401).json({ error: "User not found." });
       return;
     }
+    await db.update(usersTable).set({ lastSeenAt: new Date() }).where(eq(usersTable.id, user.id));
     res.json({ id: user.id, email: user.email, name: user.name });
   } catch (err) {
     console.error("Get me error:", err);
@@ -111,6 +117,7 @@ router.post("/auth/forgot-password", async (req, res) => {
       const resetToken = crypto.randomBytes(32).toString("hex");
       const resetTokenExpiry = new Date(Date.now() + 3600000);
       await db.update(usersTable).set({ resetToken, resetTokenExpiry }).where(eq(usersTable.id, user.id));
+      await trackEvent("requested_password_reset", user.id);
       console.log(`Password reset requested for ${email}. Token generated (use email service in production).`);
     }
 
@@ -144,6 +151,7 @@ router.post("/auth/reset-password", async (req, res) => {
       updatedAt: new Date(),
     }).where(eq(usersTable.id, user.id));
 
+    await trackEvent("reset_password", user.id);
     res.json({ message: "Password has been reset successfully. You can now log in." });
   } catch (err) {
     console.error("Reset password error:", err);

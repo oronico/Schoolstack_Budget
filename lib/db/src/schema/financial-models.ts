@@ -1,14 +1,18 @@
-import { pgTable, text, serial, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, jsonb, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
+import { schoolsTable } from "./schools";
 
 export const financialModelsTable = pgTable("financial_models", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  schoolId: integer("school_id").references(() => schoolsTable.id),
   name: text("name").notNull(),
+  status: varchar("status", { length: 20 }).default("draft").notNull(),
   currentStep: integer("current_step").default(0),
   data: jsonb("data").default({}).$type<Record<string, unknown>>(),
+  lastExportedAt: timestamp("last_exported_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

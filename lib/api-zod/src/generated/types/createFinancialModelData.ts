@@ -7,7 +7,7 @@
  */
 import type { ModelFormData } from "./modelFormData";
 
-export interface FinancialModelData {
+export interface CreateFinancialModelData {
   name: string;
   currentStep?: number;
   data: ModelFormData;

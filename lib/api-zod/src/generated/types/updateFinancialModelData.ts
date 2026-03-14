@@ -8,12 +8,9 @@
 import type { ModelFormData } from "./modelFormData";
 import type { ModelStatus } from "./modelStatus";
 
-export interface FinancialModel {
-  id: number;
-  name: string;
-  status: ModelStatus;
+export interface UpdateFinancialModelData {
+  name?: string;
   currentStep?: number;
+  status?: ModelStatus;
   data: ModelFormData;
-  updatedAt: Date;
-  createdAt: Date;
 }

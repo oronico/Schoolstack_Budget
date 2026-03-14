@@ -50,6 +50,14 @@ export interface AuthResponse {
   token: string;
 }
 
+export type ModelStatus = (typeof ModelStatus)[keyof typeof ModelStatus];
+
+export const ModelStatus = {
+  draft: "draft",
+  complete: "complete",
+  archived: "archived",
+} as const;
+
 export type SchoolProfileSchoolType =
   (typeof SchoolProfileSchoolType)[keyof typeof SchoolProfileSchoolType];
 
@@ -113,15 +121,23 @@ export interface ModelFormData {
   facilities?: Facilities;
 }
 
-export interface FinancialModelData {
+export interface CreateFinancialModelData {
   name: string;
   currentStep?: number;
+  data: ModelFormData;
+}
+
+export interface UpdateFinancialModelData {
+  name?: string;
+  currentStep?: number;
+  status?: ModelStatus;
   data: ModelFormData;
 }
 
 export interface FinancialModelSummary {
   id: number;
   name: string;
+  status: ModelStatus;
   currentStep?: number;
   updatedAt: string;
   createdAt: string;
@@ -130,6 +146,7 @@ export interface FinancialModelSummary {
 export interface FinancialModel {
   id: number;
   name: string;
+  status: ModelStatus;
   currentStep?: number;
   data: ModelFormData;
   updatedAt: string;
