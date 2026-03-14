@@ -82,13 +82,15 @@ export function ModelWizardPage() {
       setIsSaving(true);
       try {
         const profile = debouncedValues.schoolProfile as Record<string, unknown> | undefined;
+        const stageVal = profile?.schoolStage as "new_school" | "operating_school" | undefined;
+        const fundingVal = profile?.fundingProfile as "tuition_based" | "charter_public_funded" | "hybrid_mixed" | undefined;
         await updateMutation.mutateAsync({
           id: modelId,
           data: {
             name: (profile?.schoolName as string) || initialData.name,
             currentStep,
-            schoolStage: (profile?.schoolStage as string) || undefined,
-            fundingProfile: (profile?.fundingProfile as string) || undefined,
+            ...(stageVal ? { schoolStage: stageVal } : {}),
+            ...(fundingVal ? { fundingProfile: fundingVal } : {}),
             data: debouncedValues as Record<string, unknown>,
           }
         });
