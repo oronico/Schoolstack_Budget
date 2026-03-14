@@ -1,5 +1,67 @@
-// @ts-ignore — xlsx-populate has no type definitions
-import XlsxPopulate from "xlsx-populate";
+import ExcelJS from "exceljs";
+import path from "path";
+import fs from "fs";
+
+function resolveTemplatePath(): string {
+  const templateName = "SchoolStack_Prelaunch_ProForma_Template_v1.xlsx";
+  const candidates = [
+    path.join(process.cwd(), "artifacts", "api-server", "src", "templates", templateName),
+    path.join(process.cwd(), "src", "templates", templateName),
+    path.join(process.cwd(), "templates", templateName),
+    path.join(process.cwd(), "dist", "templates", templateName),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return candidates[0];
+}
+
+const TEMPLATE_PATH = resolveTemplatePath();
+
+const CELL_MAP: Record<string, string> = {
+  schoolName: "D5",
+  state: "D6",
+  schoolType: "D7",
+  firstOperatingYear: "D8",
+  enrollmentY1: "D12",
+  enrollmentY2: "D13",
+  enrollmentY3: "D14",
+  enrollmentY4: "D15",
+  enrollmentY5: "D16",
+  tuitionPerStudentY1: "D20",
+  tuitionGrowthPct: "D21",
+  esaPerStudentY1: "D22",
+  esaGrowthPct: "D23",
+  otherEarnedPerStudentY1: "D24",
+  otherEarnedGrowthPct: "D25",
+  collectionRatePct: "D26",
+  grantsY1: "D27",
+  grantsGrowthPct: "D28",
+  studentsPerTeacher: "D32",
+  teacherSalaryY1: "D33",
+  teacherSalaryGrowthPct: "D34",
+  adminFteY1: "D35",
+  adminFteY2: "D36",
+  adminFteY3: "D37",
+  adminFteY4: "D38",
+  adminFteY5: "D39",
+  adminSalaryY1: "D40",
+  adminSalaryGrowthPct: "D41",
+  benefitsBurdenPct: "D42",
+  annualRentY1: "D46",
+  rentGrowthPct: "D47",
+  otherFacilityCostY1: "D48",
+  otherFacilityCostGrowthPct: "D49",
+  programCostPerStudentY1: "D50",
+  programCostGrowthPct: "D51",
+  fixedOperatingCostY1: "D52",
+  fixedOperatingCostGrowthPct: "D53",
+  startingCash: "D57",
+  existingAnnualDebtService: "D58",
+  proposedLoanAmount: "D59",
+  interestRatePct: "D60",
+  termYears: "D61",
+};
 
 interface SchoolProfile {
   schoolName?: string;
@@ -197,22 +259,30 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
     result.tuitionGrowthPct = 0.03;
   }
 
-  const esaRow = revenueRows.find(r =>
+  const esaRows = revenueRows.filter(r =>
     r.enabled && (r.category === "public_funding" || r.category === "school_choice") && r.driverType === "per_student"
   );
-  result.esaPerStudentY1 = esaRow?.amounts?.[0] ?? 0;
-  if (esaRow && esaRow.amounts?.length >= 2 && (esaRow.amounts[0] ?? 0) > 0) {
-    result.esaGrowthPct = inferGrowthRate(esaRow.amounts, 0, 1);
+  let esaTotal = 0;
+  for (const row of esaRows) esaTotal += (row.amounts?.[0] ?? 0);
+  result.esaPerStudentY1 = esaTotal;
+  if (esaRows.length > 0 && esaTotal > 0) {
+    let esaY2 = 0;
+    for (const row of esaRows) esaY2 += (row.amounts?.[1] ?? row.amounts?.[0] ?? 0);
+    result.esaGrowthPct = esaTotal > 0 ? (esaY2 - esaTotal) / esaTotal : 0;
   } else {
     result.esaGrowthPct = 0;
   }
 
-  const otherEarnedRow = revenueRows.find(r =>
+  const otherEarnedRows = revenueRows.filter(r =>
     r.enabled && r.category === "other_revenue" && r.driverType === "per_student"
   );
-  result.otherEarnedPerStudentY1 = otherEarnedRow?.amounts?.[0] ?? 0;
-  if (otherEarnedRow && otherEarnedRow.amounts?.length >= 2 && (otherEarnedRow.amounts[0] ?? 0) > 0) {
-    result.otherEarnedGrowthPct = inferGrowthRate(otherEarnedRow.amounts, 0, 1);
+  let otherTotal = 0;
+  for (const row of otherEarnedRows) otherTotal += (row.amounts?.[0] ?? 0);
+  result.otherEarnedPerStudentY1 = otherTotal;
+  if (otherEarnedRows.length > 0 && otherTotal > 0) {
+    let otherY2 = 0;
+    for (const row of otherEarnedRows) otherY2 += (row.amounts?.[1] ?? row.amounts?.[0] ?? 0);
+    result.otherEarnedGrowthPct = otherTotal > 0 ? (otherY2 - otherTotal) / otherTotal : 0;
   } else {
     result.otherEarnedGrowthPct = 0.02;
   }
@@ -345,383 +415,24 @@ function computeAnnualDebtService(principal: number, annualRate: number, termYea
   return mp * 12;
 }
 
-const NAVY = "1E293B";
-const AMBER = "D97706";
-const TEAL = "0D9488";
-const WHITE = "FFFFFF";
-const CREAM = "FAF9F7";
-const LIGHT_GRAY = "F1F5F9";
-const MEDIUM_GRAY = "94A3B8";
-
-function fmt(val: number | string, type: "currency" | "pct" | "int" | "text"): string | number {
-  if (type === "text") return String(val);
-  const n = Number(val);
-  if (isNaN(n)) return 0;
-  if (type === "pct") return n;
-  if (type === "int") return Math.round(n);
-  return Math.round(n);
-}
-
-function applyGrowth(base: number, rate: number, years: number): number {
-  return base * Math.pow(1 + rate, years);
-}
-
 export async function generateLenderProFormaWorkbook(rawData: Record<string, unknown>): Promise<Buffer> {
   const input = mapModelToTemplateInput(rawData);
-  const workbook = await XlsxPopulate.fromBlankAsync();
 
-  const schoolName = String(input.schoolName || "School");
-  const state = String(input.state || "");
-  const schoolType = String(input.schoolType || "");
-  const openingYear = Number(input.firstOperatingYear || new Date().getFullYear());
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(TEMPLATE_PATH);
 
-  const enrollments = [
-    Number(input.enrollmentY1 || 0),
-    Number(input.enrollmentY2 || 0),
-    Number(input.enrollmentY3 || 0),
-    Number(input.enrollmentY4 || 0),
-    Number(input.enrollmentY5 || 0),
-  ];
-
-  const tuitionPerStudent = Number(input.tuitionPerStudentY1 || 0);
-  const tuitionGrowth = Number(input.tuitionGrowthPct || 0.03);
-  const esaPerStudent = Number(input.esaPerStudentY1 || 0);
-  const esaGrowth = Number(input.esaGrowthPct || 0);
-  const otherPerStudent = Number(input.otherEarnedPerStudentY1 || 0);
-  const otherGrowth = Number(input.otherEarnedGrowthPct || 0.02);
-  const collectionRate = Number(input.collectionRatePct || 0.95);
-  const grantsY1 = Number(input.grantsY1 || 0);
-  const grantsGrowthPct = Number(input.grantsGrowthPct || 0);
-
-  const studentsPerTeacher = Number(input.studentsPerTeacher || 12);
-  const teacherSalary = Number(input.teacherSalaryY1 || 0);
-  const teacherSalaryGrowth = Number(input.teacherSalaryGrowthPct || 0.03);
-  const adminFtes = [
-    Number(input.adminFteY1 || 0),
-    Number(input.adminFteY2 || 0),
-    Number(input.adminFteY3 || 0),
-    Number(input.adminFteY4 || 0),
-    Number(input.adminFteY5 || 0),
-  ];
-  const adminSalary = Number(input.adminSalaryY1 || 0);
-  const adminSalaryGrowth = Number(input.adminSalaryGrowthPct || 0.03);
-  const benefitsBurden = Number(input.benefitsBurdenPct || 0.1);
-
-  const annualRent = Number(input.annualRentY1 || 0);
-  const rentGrowth = Number(input.rentGrowthPct || 0.03);
-  const otherFacility = Number(input.otherFacilityCostY1 || 0);
-  const otherFacilityGrowth = Number(input.otherFacilityCostGrowthPct || 0.03);
-  const programPerStudent = Number(input.programCostPerStudentY1 || 0);
-  const programGrowth = Number(input.programCostGrowthPct || 0.03);
-  const fixedOps = Number(input.fixedOperatingCostY1 || 0);
-  const fixedOpsGrowth = Number(input.fixedOperatingCostGrowthPct || 0.03);
-
-  const startingCash = Number(input.startingCash || 0);
-  const existingDebtService = Number(input.existingAnnualDebtService || 0);
-  const proposedLoan = Number(input.proposedLoanAmount || 0);
-  const loanRate = Number(input.interestRatePct || 0.08);
-  const loanTerm = Number(input.termYears || 5);
-
-  const proposedDebtService = proposedLoan > 0 ? computeAnnualDebtService(proposedLoan, loanRate, loanTerm) : 0;
-
-  const years = 5;
-  const yearLabels = Array.from({ length: years }, (_, i) => `Year ${i + 1} (${openingYear + i})`);
-
-  const revenueByYear: number[] = [];
-  const staffingByYear: number[] = [];
-  const opexByYear: number[] = [];
-  const totalExpByYear: number[] = [];
-  const noiByYear: number[] = [];
-  const netIncomeByYear: number[] = [];
-  const cashFlowByYear: number[] = [];
-  const dscrByYear: number[] = [];
-
-  for (let y = 0; y < years; y++) {
-    const students = enrollments[y] || 0;
-    const tuition = students * applyGrowth(tuitionPerStudent, tuitionGrowth, y) * collectionRate;
-    const esa = students * applyGrowth(esaPerStudent, esaGrowth, y);
-    const other = students * applyGrowth(otherPerStudent, otherGrowth, y);
-    const grants = applyGrowth(grantsY1, grantsGrowthPct, y);
-    const totalRev = tuition + esa + other + grants;
-    revenueByYear.push(totalRev);
-
-    const teacherFte = students > 0 ? Math.ceil(students / studentsPerTeacher) : 0;
-    const tSalary = teacherFte * applyGrowth(teacherSalary, teacherSalaryGrowth, y);
-    const aSalary = (adminFtes[y] || 0) * applyGrowth(adminSalary, adminSalaryGrowth, y);
-    const totalSalaries = tSalary + aSalary;
-    const benefits = totalSalaries * benefitsBurden;
-    const totalStaffing = totalSalaries + benefits;
-    staffingByYear.push(totalStaffing);
-
-    const rent = applyGrowth(annualRent, rentGrowth, y);
-    const otherFac = applyGrowth(otherFacility, otherFacilityGrowth, y);
-    const program = students * applyGrowth(programPerStudent, programGrowth, y);
-    const fixed = applyGrowth(fixedOps, fixedOpsGrowth, y);
-    const totalOpex = rent + otherFac + program + fixed;
-    opexByYear.push(totalOpex);
-
-    const totalExp = totalStaffing + totalOpex;
-    totalExpByYear.push(totalExp);
-
-    const noi = totalRev - totalExp;
-    noiByYear.push(noi);
-
-    const totalDebtSvc = existingDebtService + proposedDebtService;
-    const netIncome = noi - totalDebtSvc;
-    netIncomeByYear.push(netIncome);
-    cashFlowByYear.push(netIncome);
-
-    dscrByYear.push(totalDebtSvc > 0 ? noi / totalDebtSvc : noi > 0 ? 99.9 : 0);
+  const assumptions = workbook.getWorksheet("Assumptions");
+  if (!assumptions) {
+    throw new Error("Template missing 'Assumptions' sheet");
   }
 
-  const sheet = workbook.sheet(0);
-  sheet.name("Pro Forma P&L");
-
-  sheet.column("A").width(4);
-  sheet.column("B").width(36);
-  sheet.column("C").width(18);
-  sheet.column("D").width(18);
-  sheet.column("E").width(18);
-  sheet.column("F").width(18);
-  sheet.column("G").width(18);
-
-  let row = 1;
-
-  const setCell = (r: number, c: string, val: string | number, opts?: { bold?: boolean; bg?: string; fg?: string; fontSize?: number; numFmt?: string; border?: boolean; align?: string }) => {
-    const cell = sheet.cell(`${c}${r}`);
-    cell.value(val);
-    if (opts?.bold) cell.style("bold", true);
-    if (opts?.bg) cell.style("fill", { type: "solid", color: opts.bg });
-    if (opts?.fg) cell.style("fontColor", opts.fg);
-    if (opts?.fontSize) cell.style("fontSize", opts.fontSize);
-    if (opts?.numFmt) cell.style("numberFormat", opts.numFmt);
-    if (opts?.align) cell.style("horizontalAlignment", opts.align);
-  };
-
-  const setHeaderRow = (r: number, label: string, bg: string, fg: string) => {
-    setCell(r, "B", label, { bold: true, bg, fg, fontSize: 11 });
-    for (const c of ["C", "D", "E", "F", "G"]) {
-      setCell(r, c, "", { bg, fg });
+  for (const [field, cellRef] of Object.entries(CELL_MAP)) {
+    if (Object.prototype.hasOwnProperty.call(input, field)) {
+      const cell = assumptions.getCell(cellRef);
+      cell.value = input[field] as ExcelJS.CellValue;
     }
-  };
-
-  const setDataRow = (r: number, label: string, values: number[], numFmt: string, bg?: string) => {
-    setCell(r, "B", label, { bg: bg || CREAM });
-    for (let i = 0; i < values.length; i++) {
-      const col = String.fromCharCode(67 + i);
-      setCell(r, col, Math.round(values[i]), { numFmt, bg: bg || CREAM, align: "right" });
-    }
-  };
-
-  sheet.range(`B${row}:G${row}`).merged(true);
-  setCell(row, "B", `${schoolName} — Lender Pro Forma`, { bold: true, fontSize: 16, fg: NAVY });
-  row++;
-
-  setCell(row, "B", "Prepared by SchoolStack Budget", { fg: MEDIUM_GRAY, fontSize: 9 });
-  row++;
-
-  setCell(row, "B", `${schoolType} | ${state} | Opening ${openingYear}`, { fg: MEDIUM_GRAY, fontSize: 10 });
-  row += 2;
-
-  setCell(row, "B", "", { bold: true, bg: NAVY, fg: WHITE });
-  for (let i = 0; i < years; i++) {
-    const col = String.fromCharCode(67 + i);
-    setCell(row, col, yearLabels[i], { bold: true, bg: NAVY, fg: WHITE, align: "center" });
-  }
-  const headerRow = row;
-  row++;
-
-  setHeaderRow(row, "ENROLLMENT", TEAL, WHITE);
-  for (let i = 0; i < years; i++) {
-    const col = String.fromCharCode(67 + i);
-    setCell(row, col, "Students", { bg: TEAL, fg: WHITE, bold: true, align: "center" });
-  }
-  row++;
-
-  setDataRow(row, "Total Students", enrollments, "#,##0");
-  row += 2;
-
-  setHeaderRow(row, "REVENUE", TEAL, WHITE);
-  for (let i = 0; i < years; i++) {
-    const col = String.fromCharCode(67 + i);
-    setCell(row, col, "", { bg: TEAL, fg: WHITE });
-  }
-  row++;
-
-  const tuitionByYear = enrollments.map((s, y) => s * applyGrowth(tuitionPerStudent, tuitionGrowth, y) * collectionRate);
-  setDataRow(row, "Tuition Revenue (Net)", tuitionByYear, "$#,##0");
-  row++;
-
-  const esaByYear = enrollments.map((s, y) => s * applyGrowth(esaPerStudent, esaGrowth, y));
-  if (esaPerStudent > 0) {
-    setDataRow(row, "ESA / School Choice Revenue", esaByYear, "$#,##0");
-    row++;
   }
 
-  const otherRevByYear = enrollments.map((s, y) => s * applyGrowth(otherPerStudent, otherGrowth, y));
-  if (otherPerStudent > 0) {
-    setDataRow(row, "Other Earned Revenue", otherRevByYear, "$#,##0");
-    row++;
-  }
-
-  if (grantsY1 > 0) {
-    const grantsByYear = Array.from({ length: years }, (_, y) => applyGrowth(grantsY1, grantsGrowthPct, y));
-    setDataRow(row, "Grants & Contributions", grantsByYear, "$#,##0");
-    row++;
-  }
-
-  setDataRow(row, "Total Revenue", revenueByYear, "$#,##0", LIGHT_GRAY);
-  setCell(row, "B", "Total Revenue", { bold: true, bg: LIGHT_GRAY });
-  row += 2;
-
-  setHeaderRow(row, "STAFFING COSTS", AMBER, WHITE);
-  for (let i = 0; i < years; i++) {
-    const col = String.fromCharCode(67 + i);
-    setCell(row, col, "", { bg: AMBER, fg: WHITE });
-  }
-  row++;
-
-  const teacherCostByYear = enrollments.map((s, y) => {
-    const fte = s > 0 ? Math.ceil(s / studentsPerTeacher) : 0;
-    return fte * applyGrowth(teacherSalary, teacherSalaryGrowth, y);
-  });
-  setDataRow(row, "Instructional Salaries", teacherCostByYear, "$#,##0");
-  row++;
-
-  const adminCostByYear = adminFtes.map((fte, y) => fte * applyGrowth(adminSalary, adminSalaryGrowth, y));
-  setDataRow(row, "Administrative Salaries", adminCostByYear, "$#,##0");
-  row++;
-
-  const benefitsByYear = staffingByYear.map((s, y) => {
-    const salaries = teacherCostByYear[y] + adminCostByYear[y];
-    return salaries * benefitsBurden;
-  });
-  setDataRow(row, "Benefits & Payroll Taxes", benefitsByYear, "$#,##0");
-  row++;
-
-  setDataRow(row, "Total Staffing", staffingByYear, "$#,##0", LIGHT_GRAY);
-  setCell(row, "B", "Total Staffing", { bold: true, bg: LIGHT_GRAY });
-  row += 2;
-
-  setHeaderRow(row, "OPERATING EXPENSES", AMBER, WHITE);
-  for (let i = 0; i < years; i++) {
-    const col = String.fromCharCode(67 + i);
-    setCell(row, col, "", { bg: AMBER, fg: WHITE });
-  }
-  row++;
-
-  const rentByYear = Array.from({ length: years }, (_, y) => applyGrowth(annualRent, rentGrowth, y));
-  setDataRow(row, "Rent / Lease", rentByYear, "$#,##0");
-  row++;
-
-  if (otherFacility > 0) {
-    const otherFacByYear = Array.from({ length: years }, (_, y) => applyGrowth(otherFacility, otherFacilityGrowth, y));
-    setDataRow(row, "Other Facility Costs", otherFacByYear, "$#,##0");
-    row++;
-  }
-
-  const programByYear = enrollments.map((s, y) => s * applyGrowth(programPerStudent, programGrowth, y));
-  if (programPerStudent > 0) {
-    setDataRow(row, "Program / Curriculum", programByYear, "$#,##0");
-    row++;
-  }
-
-  const fixedByYear = Array.from({ length: years }, (_, y) => applyGrowth(fixedOps, fixedOpsGrowth, y));
-  setDataRow(row, "G&A / Technology", fixedByYear, "$#,##0");
-  row++;
-
-  setDataRow(row, "Total Operating Expenses", opexByYear, "$#,##0", LIGHT_GRAY);
-  setCell(row, "B", "Total Operating Expenses", { bold: true, bg: LIGHT_GRAY });
-  row += 2;
-
-  setDataRow(row, "Total Expenses", totalExpByYear, "$#,##0", LIGHT_GRAY);
-  setCell(row, "B", "Total Expenses", { bold: true, bg: LIGHT_GRAY });
-  row++;
-
-  setHeaderRow(row, "NET OPERATING INCOME", NAVY, WHITE);
-  for (let i = 0; i < years; i++) {
-    const col = String.fromCharCode(67 + i);
-    setCell(row, col, Math.round(noiByYear[i]), { bold: true, bg: NAVY, fg: WHITE, numFmt: "$#,##0", align: "right" });
-  }
-  row++;
-
-  const marginByYear = revenueByYear.map((r, i) => r > 0 ? noiByYear[i] / r : 0);
-  setCell(row, "B", "Operating Margin", { fg: MEDIUM_GRAY });
-  for (let i = 0; i < years; i++) {
-    const col = String.fromCharCode(67 + i);
-    setCell(row, col, marginByYear[i], { numFmt: "0.0%", align: "right", fg: MEDIUM_GRAY });
-  }
-  row += 2;
-
-  if (proposedLoan > 0 || existingDebtService > 0) {
-    setHeaderRow(row, "DEBT SERVICE & COVERAGE", NAVY, WHITE);
-    for (let i = 0; i < years; i++) {
-      const col = String.fromCharCode(67 + i);
-      setCell(row, col, "", { bg: NAVY, fg: WHITE });
-    }
-    row++;
-
-    if (existingDebtService > 0) {
-      const existDebtArr = Array(years).fill(Math.round(existingDebtService));
-      setDataRow(row, "Existing Debt Service", existDebtArr, "$#,##0");
-      row++;
-    }
-
-    if (proposedLoan > 0) {
-      const propDebtArr = Array(years).fill(Math.round(proposedDebtService));
-      setDataRow(row, `Proposed Loan Service ($${(proposedLoan / 1000).toFixed(0)}K @ ${(loanRate * 100).toFixed(1)}%)`, propDebtArr, "$#,##0");
-      row++;
-    }
-
-    const totalDebt = existingDebtService + proposedDebtService;
-    const totalDebtArr = Array(years).fill(Math.round(totalDebt));
-    setDataRow(row, "Total Debt Service", totalDebtArr, "$#,##0", LIGHT_GRAY);
-    setCell(row, "B", "Total Debt Service", { bold: true, bg: LIGHT_GRAY });
-    row++;
-
-    setCell(row, "B", "DSCR", { bold: true });
-    for (let i = 0; i < years; i++) {
-      const col = String.fromCharCode(67 + i);
-      const dscr = dscrByYear[i];
-      const color = dscr >= 1.25 ? "16A34A" : dscr >= 1.0 ? AMBER : "DC2626";
-      setCell(row, col, dscr > 50 ? "N/A" : Number(dscr.toFixed(2)), { bold: true, fg: color, align: "right", numFmt: dscr > 50 ? "@" : "0.00x" });
-    }
-    row++;
-
-    setDataRow(row, "Net Income After Debt", netIncomeByYear, "$#,##0");
-    row += 2;
-  }
-
-  setHeaderRow(row, "CUMULATIVE CASH POSITION", TEAL, WHITE);
-  for (let i = 0; i < years; i++) {
-    const col = String.fromCharCode(67 + i);
-    setCell(row, col, "", { bg: TEAL, fg: WHITE });
-  }
-  row++;
-
-  if (startingCash > 0) {
-    setCell(row, "B", "Starting Cash", { bg: CREAM });
-    setCell(row, "C", Math.round(startingCash), { numFmt: "$#,##0", bg: CREAM, align: "right" });
-    row++;
-  }
-
-  let cumCash = startingCash;
-  const cumCashByYear: number[] = [];
-  for (let y = 0; y < years; y++) {
-    cumCash += cashFlowByYear[y];
-    cumCashByYear.push(cumCash);
-  }
-  setDataRow(row, "Cumulative Cash", cumCashByYear, "$#,##0", LIGHT_GRAY);
-  setCell(row, "B", "Cumulative Cash", { bold: true, bg: LIGHT_GRAY });
-  row += 2;
-
-  sheet.range(`B${row}:G${row}`).merged(true);
-  setCell(row, "B", `Generated by SchoolStack Budget on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, {
-    fg: MEDIUM_GRAY, fontSize: 8,
-  });
-
-  sheet.freezePanes(headerRow, 2);
-
-  const buffer = await workbook.outputAsync();
+  const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }
