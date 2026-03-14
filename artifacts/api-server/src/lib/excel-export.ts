@@ -348,7 +348,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     const capDebtRows = data.capitalAndDebtRows || [];
 
     const assumptionsWs = wb.addWorksheet("Assumptions");
-    buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor);
+    const aRefs = buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor);
 
     const revenueWs = wb.addWorksheet("Revenue Schedule");
     const staffingWs = wb.addWorksheet("Staffing & Personnel");
@@ -357,10 +357,10 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     const pnlWs = wb.addWorksheet("Financial Model");
     const summaryWs = wb.addWorksheet("Summary");
 
-    const revTotalRow = buildRevenueScheduleTab(revenueWs, revenueRows, enrollmentByYear, yearCount, cols, yearHeaders);
-    const staffTotalRow = buildStaffingTab(staffingWs, staffingRows, salaryEscRate, prorationFactor, yearCount, cols, yearHeaders);
-    const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revenueRows, yearCount, cols, yearHeaders);
-    const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders);
+    const revTotalRow = buildRevenueScheduleTab(revenueWs, revenueRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
+    const staffTotalRow = buildStaffingTab(staffingWs, staffingRows, salaryEscRate, prorationFactor, yearCount, cols, yearHeaders, aRefs);
+    const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revenueRows, yearCount, cols, yearHeaders, aRefs);
+    const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
 
     buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow);
 
@@ -405,6 +405,13 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
   return Buffer.from(arrayBuffer);
 }
 
+interface AssumptionRefs {
+  enrollmentRows: number[];
+  salaryEscRow: number;
+  costInflationRow: number;
+  prorationRow: number;
+}
+
 function buildAssumptionsTab(
   ws: ExcelJS.Worksheet,
   sp: SchoolProfile,
@@ -413,7 +420,7 @@ function buildAssumptionsTab(
   salaryEscRate: number,
   costInflation: number,
   prorationFactor: number,
-) {
+): AssumptionRefs {
   ws.columns = [{ width: 35 }, { width: 25 }];
 
   let r = 1;
@@ -453,8 +460,10 @@ function buildAssumptionsTab(
   styleSectionRow(ws, r, 2);
   ws.getCell(r, 1).value = "ENROLLMENT BY YEAR";
 
+  const enrollmentRows: number[] = [];
   for (let y = 0; y < yearCount; y++) {
     r++;
+    enrollmentRows.push(r);
     ws.getCell(r, 1).value = `Year ${y + 1} Students`;
     ws.getCell(r, 1).font = NORMAL_FONT;
     ws.getCell(r, 2).value = enrollment[y];
@@ -467,17 +476,22 @@ function buildAssumptionsTab(
   ws.getCell(r, 1).value = "GROWTH & ESCALATION ASSUMPTIONS";
 
   r++;
+  const salaryEscRow = r;
   ws.getCell(r, 1).value = "Annual Salary Escalation"; ws.getCell(r, 1).font = NORMAL_FONT;
   ws.getCell(r, 2).value = salaryEscRate; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
   r++;
+  const costInflationRow = r;
   ws.getCell(r, 1).value = "General Cost Inflation"; ws.getCell(r, 1).font = NORMAL_FONT;
   ws.getCell(r, 2).value = costInflation; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
   r++;
+  const prorationRow = r;
   ws.getCell(r, 1).value = "Year 1 Proration Factor"; ws.getCell(r, 1).font = NORMAL_FONT;
   ws.getCell(r, 2).value = prorationFactor; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = "0.00";
   r++;
   ws.getCell(r, 1).value = "Projection Period"; ws.getCell(r, 1).font = NORMAL_FONT;
   ws.getCell(r, 2).value = `${yearCount} Years`; ws.getCell(r, 2).font = BOLD_FONT;
+
+  return { enrollmentRows, salaryEscRow, costInflationRow, prorationRow };
 }
 
 function buildConsultantNotesTab(ws: ExcelJS.Worksheet, consultant: ConsultantSummary) {
@@ -586,6 +600,7 @@ function buildRevenueScheduleTab(
   yearCount: number,
   cols: number,
   yearHeaders: string[],
+  aRefs?: AssumptionRefs,
 ): number {
   ws.columns = [{ width: 42 }, ...Array(yearCount).fill({ width: 18 })];
   ws.getRow(1).values = yearHeaders;
@@ -596,7 +611,11 @@ function buildRevenueScheduleTab(
   ws.getCell(r, 1).font = NORMAL_FONT;
   for (let y = 0; y < yearCount; y++) {
     const cell = ws.getCell(r, y + 2);
-    cell.value = enrollment[y];
+    if (aRefs) {
+      cell.value = { formula: `Assumptions!B${aRefs.enrollmentRows[y]}` };
+    } else {
+      cell.value = enrollment[y];
+    }
     cell.numFmt = NUMBER_FORMAT;
     styleDataCell(cell);
   }
@@ -692,6 +711,7 @@ function buildStaffingTab(
   yearCount: number,
   cols: number,
   yearHeaders: string[],
+  aRefs?: AssumptionRefs,
 ): number {
   ws.columns = [
     { width: 30 }, { width: 18 }, { width: 14 }, { width: 10 },
@@ -805,6 +825,8 @@ function buildStaffingTab(
       const cell = ws.getCell(r, y + 2);
       const pf = y === 0 ? prorationFactor : 1;
       const esc = Math.pow(1 + salaryEscRate, y);
+      const salaryEscRef = aRefs ? `Assumptions!B${aRefs.salaryEscRow}` : null;
+      const prorationRef = aRefs ? `Assumptions!B${aRefs.prorationRow}` : null;
 
       switch (label) {
         case "Base Personnel Cost":
@@ -812,17 +834,29 @@ function buildStaffingTab(
           cell.numFmt = CURRENCY_FORMAT;
           break;
         case "Salary Escalation Factor":
-          cell.value = esc;
+          if (salaryEscRef) {
+            cell.value = { formula: `(1+${salaryEscRef})^${y}` };
+          } else {
+            cell.value = esc;
+          }
           cell.numFmt = "0.0000";
           break;
         case "Proration Factor":
-          cell.value = pf;
+          if (prorationRef && y === 0) {
+            cell.value = { formula: prorationRef };
+          } else {
+            cell.value = pf;
+          }
           cell.numFmt = "0.000";
           break;
-        case "Total Personnel Cost":
-          cell.value = Math.round(grandTotal * esc * pf);
+        case "Total Personnel Cost": {
+          const baseRef = c(projStartRow, y + 2);
+          const escRef = c(projStartRow + 1, y + 2);
+          const pfRef = c(projStartRow + 2, y + 2);
+          cell.value = { formula: `${baseRef}*${escRef}*${pfRef}` };
           cell.numFmt = CURRENCY_FORMAT;
           break;
+        }
       }
       if (bold) styleBoldDataCell(cell); else styleDataCell(cell);
     }
@@ -843,6 +877,7 @@ function buildExpensesTab(
   yearCount: number,
   cols: number,
   yearHeaders: string[],
+  aRefs?: AssumptionRefs,
 ): number {
   ws.columns = [{ width: 42 }, ...Array(yearCount).fill({ width: 18 })];
   ws.getRow(1).values = yearHeaders;
@@ -853,7 +888,11 @@ function buildExpensesTab(
   ws.getCell(r, 1).font = NORMAL_FONT;
   for (let y = 0; y < yearCount; y++) {
     const cell = ws.getCell(r, y + 2);
-    cell.value = enrollment[y];
+    if (aRefs) {
+      cell.value = { formula: `Assumptions!B${aRefs.enrollmentRows[y]}` };
+    } else {
+      cell.value = enrollment[y];
+    }
     cell.numFmt = NUMBER_FORMAT;
     styleDataCell(cell);
   }
@@ -949,6 +988,7 @@ function buildCapitalDebtTab(
   yearCount: number,
   cols: number,
   yearHeaders: string[],
+  _aRefs?: AssumptionRefs,
 ): number {
   ws.columns = [{ width: 42 }, ...Array(yearCount).fill({ width: 18 })];
   ws.getRow(1).values = yearHeaders;
@@ -1138,6 +1178,38 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   }
 
   const fmTab = "'Financial Model'";
+
+  r += 2;
+  styleSectionRow(ws, r, cols);
+  ws.getCell(r, 1).value = "ENROLLMENT TREND";
+
+  r++;
+  ws.getRow(r).values = yearHeaders;
+  styleHeaderRow(ws, r, cols);
+
+  r++;
+  ws.getCell(r, 1).value = "Students"; ws.getCell(r, 1).font = NORMAL_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cl = String.fromCharCode(66 + y);
+    const cell = ws.getCell(r, y + 2);
+    const studRef = layout.studentsRef(cl);
+    cell.value = { formula: studRef };
+    cell.numFmt = NUMBER_FORMAT; styleDataCell(cell);
+  }
+  const enrollRow = r;
+
+  r++;
+  ws.getCell(r, 1).value = "Enrollment Growth %"; ws.getCell(r, 1).font = NORMAL_FONT;
+  for (let y = 0; y < yearCount; y++) {
+    const cell = ws.getCell(r, y + 2);
+    if (y === 0) {
+      cell.value = "—"; cell.font = NORMAL_FONT;
+    } else {
+      cell.value = { formula: `IF(${c(enrollRow, y + 1)}=0,0,(${c(enrollRow, y + 2)}-${c(enrollRow, y + 1)})/${c(enrollRow, y + 1)})` };
+      cell.numFmt = PERCENT_FORMAT;
+    }
+    styleDataCell(cell);
+  }
 
   r += 2;
   ws.getRow(r).values = yearHeaders;
