@@ -1,0 +1,528 @@
+Build a lightweight SaaS web app called “School Financial Model Builder by SchoolStack.ai.”
+
+PRODUCT GOAL
+This is a teaser product that launches before the full SchoolStack.ai platform.
+Its purpose is to help school founders create a simple, lender-friendly 5-year financial model, save their work, revisit it later, get practical CFO-style guidance, and export the model to Excel.
+
+This should feel polished, trustworthy, and calm.
+Simple, but not ugly.
+It should not try to be the full SchoolStack platform.
+
+PRIMARY USER
+A school founder, microschool founder, or small private/charter school operator with limited finance expertise.
+
+CORE USER STORY
+A founder creates an account, starts a school model, enters assumptions through a clean guided flow, saves progress automatically, receives practical CFO-style feedback, and exports a clean .xlsx workbook with assumptions and formulas.
+
+PRODUCT POSITIONING
+This is not just an Excel exporter.
+This is a lightweight “fractional CFO for school founders” experience.
+
+The consultant experience should feel like:
+- practical
+- plain-English
+- supportive but candid
+- lender-aware
+- specific about risks and tradeoffs
+
+Do NOT make it feel like a generic chatbot toy.
+
+V1 PRODUCT SCOPE
+Build the following:
+
+1. User authentication
+2. Saved user dashboard
+3. Create, edit, duplicate, archive, and delete saved financial models
+4. Guided multi-step model builder
+5. CFO consultant insights panel
+6. Excel export with assumptions page and formulas
+7. Simple internal admin analytics page so we can learn from usage
+
+DO NOT BUILD
+- payment or subscriptions
+- multi-user collaboration within the same account
+- full CRM
+- messaging center
+- advanced scenario trees
+- full SchoolStack features
+- complex BI dashboards
+- bookkeeping integrations
+- free-form AI chat as the main experience
+- a browser spreadsheet editor
+
+TECHNICAL REQUIREMENTS
+Use:
+- Replit Auth for user accounts
+- Replit SQL Database / Postgres for saved data
+- React + TypeScript
+- Tailwind CSS
+- server routes / backend endpoints as needed
+- ExcelJS for workbook generation
+
+Use a clean, maintainable architecture.
+Prefer simple, readable code over clever abstractions.
+
+AUTHENTICATION REQUIREMENTS
+Implement user accounts with:
+- sign up
+- login
+- logout
+- persistent sessions
+- password reset if supported by Replit Auth
+- protected app routes
+
+At minimum, the app should support:
+- a public landing page
+- authenticated user dashboard
+- authenticated model pages
+- admin-only analytics page
+
+ADMIN ACCESS
+Create a simple admin role model.
+Admin access can be controlled by an allowlist of email addresses in environment variables for v1.
+
+DATA MODEL
+Create a database schema that supports learning from user behavior and saved financial models.
+
+Recommended tables:
+
+users
+- id
+- auth_provider_id
+- email
+- name
+- created_at
+- last_seen_at
+- role
+
+schools
+- id
+- user_id
+- school_name
+- state
+- school_type
+- opening_year
+- current_students
+- max_capacity
+- created_at
+- updated_at
+
+financial_models
+- id
+- user_id
+- school_id
+- model_name
+- status (draft, complete, archived)
+- assumptions_json
+- outputs_json
+- consultant_summary_json
+- created_at
+- updated_at
+- last_exported_at
+
+exports
+- id
+- user_id
+- financial_model_id
+- export_type
+- created_at
+
+events
+- id
+- user_id
+- financial_model_id nullable
+- event_name
+- event_metadata_json
+- created_at
+
+Keep the schema practical.
+JSON storage for assumptions and outputs is acceptable in v1 if it speeds up delivery.
+
+TRACK THESE EVENTS
+Store events so we can learn from user behavior:
+- signed_up
+- logged_in
+- created_model
+- updated_model
+- completed_review
+- exported_xlsx
+- viewed_consultant
+- duplicated_model
+- archived_model
+- deleted_model
+
+PUBLIC LANDING PAGE
+Create a simple, polished landing page with:
+- product name
+- one-sentence value proposition
+- estimated completion time
+- CTA: “Create My Model”
+- secondary CTA: “Sign In”
+
+Suggested value proposition:
+“Build a simple 5-year financial model for your school, save your work, and get practical CFO guidance with an Excel export.”
+
+DESIGN DIRECTION
+The app should feel:
+- modern
+- focused
+- trustworthy
+- founder-friendly
+- professional enough for lenders
+
+Visual direction:
+- single-column guided flow
+- strong spacing
+- excellent typography
+- card-based layout
+- soft borders and subtle shadows
+- rounded corners
+- one brand accent color
+- calm neutral background
+- minimal clutter
+
+Reference vibe:
+- Mercury
+- Ramp
+- Stripe onboarding
+- modern Notion-like clarity, but warmer
+
+Avoid:
+- dense forms
+- dashboard overload
+- loud colors
+- cheesy AI visuals
+- spreadsheet-looking screens
+
+APP STRUCTURE
+
+Public
+1. Landing page
+
+Authenticated
+2. User dashboard
+3. New model flow
+4. Edit existing model
+5. Review page
+6. Export success state
+7. Admin analytics page
+
+USER DASHBOARD
+After login, users land on a dashboard that shows:
+- welcome header
+- button to create a new model
+- list of saved models
+- model status
+- last updated date
+- last export date
+- quick actions: resume, duplicate, export, archive, delete
+
+Make the dashboard clean and useful, not cluttered.
+
+MODEL BUILDER FLOW
+Use a guided multi-step form with autosave.
+
+Steps:
+1. School Profile
+2. Enrollment
+3. Revenue
+4. Staffing
+5. Facilities & Operating Costs
+6. Review
+7. CFO Consultant
+8. Export
+
+FORM UX RULES
+- one section at a time
+- clear progress indicator
+- back and next buttons
+- autosave on field change or step change
+- inline validation
+- plain-English helper text
+- mobile responsive, but desktop-first
+
+FIELDS TO COLLECT
+
+1. SCHOOL PROFILE
+- school name
+- state
+- school type (microschool, private school, charter school, other)
+- opening year
+- current students
+- max capacity
+
+2. ENROLLMENT
+- year 1 students
+- year 2 students
+- year 3 students
+- year 4 students
+- year 5 students
+
+3. REVENUE
+- annual tuition per student
+- ESA / voucher revenue per student
+- other earned revenue per student
+- scholarship / discount rate %
+- annual fundraising or grants
+
+4. STAFFING
+- students per teacher
+- annual teacher salary
+- number of admin staff
+- annual admin salary
+- founder / leader salary
+- benefits rate %
+
+5. FACILITIES & OPERATING COSTS
+- monthly rent
+- annual rent increase %
+- annual utilities
+- annual insurance
+- curriculum / materials cost per student
+- technology cost per student
+- annual marketing / outreach
+- other annual operating expenses
+
+REVIEW PAGE
+Create a polished review screen that summarizes all assumptions before export.
+Users should be able to jump back into any section to edit.
+
+CFO CONSULTANT REQUIREMENTS
+This is a core feature.
+
+Important:
+Do NOT make v1 a free-form chat product.
+Instead, make it a structured consultant experience that feels like a smart fractional CFO reviewing the model.
+
+After assumptions are saved and outputs are calculated, generate a consultant panel with:
+
+1. Executive summary
+2. Biggest strength
+3. Biggest risk
+4. Three recommended actions
+5. Lender readiness status
+6. Key metrics with interpretation
+
+Possible lender readiness statuses:
+- Strong
+- Needs work
+- Not yet ready
+
+The consultant should speak in plain English and explain what the numbers mean.
+
+Examples of consultant observations:
+- payroll is too high relative to revenue
+- rent burden is heavy
+- enrollment growth assumptions are aggressive
+- founder salary may be unrealistically low
+- margins improve by year 3
+- revenue per student is strong
+- staffing model looks sustainable
+
+CONSULTANT ENGINE
+Build this as a deterministic rules engine first.
+Do not depend on an external LLM for the core feature set.
+
+The consultant engine should:
+- read the calculated model outputs
+- evaluate simple thresholds and patterns
+- generate structured narrative guidance
+- store the consultant output in the database
+
+Architect the code so an AI narrative layer could be added later, but keep v1 robust without needing an API key.
+
+KEY METRICS TO CALCULATE
+At minimum:
+- revenue per student
+- staffing cost % of revenue
+- facility cost % of revenue
+- net margin %
+- year-over-year enrollment growth
+- year-over-year revenue growth
+
+EXCEL EXPORT REQUIREMENTS
+The exported workbook is a primary deliverable.
+
+File name:
+[SchoolName]_5-Year_Financial_Model.xlsx
+
+Required tabs:
+1. Assumptions
+2. Enrollment
+3. Revenue
+4. Staffing
+5. Operating Expenses
+6. Five-Year Model
+7. Summary
+
+WORKBOOK RULES
+- all editable inputs live on the Assumptions tab
+- downstream tabs use formulas, not hardcoded derived values
+- formulas should be visible and understandable
+- do not protect the workbook
+- do not hide formulas
+- make the workbook clean and lender-friendly
+
+FORMAT THE WORKBOOK WELL
+- clear section headers
+- frozen panes where useful
+- input cells visually distinct
+- currency formatted cleanly
+- percentages formatted cleanly
+- negative numbers in red parentheses
+- zeros shown as “-”
+- summary sheet should look polished enough to share
+
+MODEL LOGIC
+Keep the logic simple and transparent.
+
+Enrollment:
+- use annual student counts from assumptions
+
+Revenue:
+- tuition revenue = students × tuition per student
+- ESA revenue = students × ESA revenue per student
+- other earned revenue = students × other revenue per student
+- gross revenue = sum
+- scholarship discount = applicable revenue × discount rate
+- net revenue = gross revenue - discount + grants/fundraising
+
+Staffing:
+- teacher count = round up(students / students per teacher)
+- teacher payroll = teacher count × teacher salary
+- admin payroll = admin count × admin salary
+- founder salary = founder salary input
+- benefits = total salary base × benefits rate
+- total staffing cost = sum
+
+Operating expenses:
+- annual rent = monthly rent × 12, escalated annually
+- utilities = annual utilities
+- insurance = annual insurance
+- curriculum = students × curriculum per student
+- technology = students × technology per student
+- marketing = annual marketing
+- other operating expenses = annual other operating expenses
+
+Five-Year Model:
+Columns:
+- Year 1
+- Year 2
+- Year 3
+- Year 4
+- Year 5
+
+Rows:
+- Students
+- Net Revenue
+- Staffing Costs
+- Operating Expenses
+- Total Expenses
+- Net Income
+
+Summary tab:
+Show:
+- school name
+- school type
+- five-year enrollment trend
+- five-year revenue trend
+- five-year expense trend
+- five-year net income trend
+- key metrics
+- short consultant summary
+
+ADMIN ANALYTICS PAGE
+Build a very simple internal analytics page for admins only.
+
+Show:
+- total users
+- total models
+- total exports
+- recent signups
+- recent exports
+- most common school types
+- basic funnel counts:
+  - signed up
+  - created model
+  - reached review
+  - exported xlsx
+
+Keep this simple and functional.
+No fancy BI tooling needed.
+
+UX DETAILS
+- use a max-width centered layout
+- use large, readable labels
+- short helper text
+- tasteful loading states
+- polished empty states
+- clear success state after export
+- autosave indicator
+- last saved timestamp on model pages
+
+COPY STYLE
+Use calm, plain-English copy.
+Examples:
+- “How many students do you expect to serve in Year 1?”
+- “What do families typically pay in tuition each year?”
+- “What is your expected monthly rent?”
+- “Here’s what stands out from your model.”
+
+Avoid jargon-heavy UI copy.
+
+SECURITY / PRIVACY
+- protect authenticated routes
+- users can only access their own models
+- admins can access analytics
+- never expose raw database details to the frontend
+- validate all server-side write operations
+
+IMPLEMENTATION PLAN
+Build in phases.
+
+Phase 1
+- app scaffold
+- auth
+- database schema
+- protected routes
+- dashboard shell
+- create/edit saved models
+
+Phase 2
+- multi-step model flow
+- autosave
+- calculation engine
+- review page
+
+Phase 3
+- consultant engine
+- xlsx export
+- success state
+
+Phase 4
+- admin analytics page
+- UI polish
+- final QA
+
+IMPORTANT PRODUCT RULE
+This must feel like a focused founder finance tool with a strong advisory layer.
+Not a generic template generator.
+Not a toy AI app.
+Not the full SchoolStack platform.
+
+ACCEPTANCE CRITERIA
+The app is ready for review when:
+1. A user can sign up and sign in
+2. A user can create and save multiple models
+3. A user can return later and continue editing
+4. The app autosaves reliably
+5. The dashboard is clean and usable
+6. The consultant panel gives useful, plain-English guidance
+7. The xlsx export downloads successfully
+8. The workbook includes assumptions and formulas
+9. The admin page shows basic learning metrics
+10. The UI feels polished, simple, and trustworthy
+
+After scaffolding the app, also update replit.md so future prompts preserve the product direction, UX standards, and scope boundaries above.
+
+Stop for review once the full core flow is working end-to-end.

@@ -29,7 +29,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetch();
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      const currentToken = localStorage.getItem('auth_token');
+      if (currentToken) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${currentToken}` },
+        });
+      }
+    } catch {
+      // Best-effort server invalidation; clear local state regardless
+    }
     localStorage.removeItem('auth_token');
     setToken(null);
     setLocation("/login");
