@@ -72,10 +72,10 @@ const FUNDING_LABELS: Record<string, string> = {
 };
 
 const EXPENSE_CAT_LABELS: Record<string, string> = {
-  instructional_program: "Instructional",
+  instructional_program: "Program",
   technology: "Technology",
-  occupancy_facility: "Occupancy",
-  administrative_general: "Admin / General",
+  occupancy_facility: "Facility",
+  administrative_general: "Admin & Operations",
 };
 
 function MetricCard({

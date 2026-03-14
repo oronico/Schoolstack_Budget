@@ -60,10 +60,10 @@ const REVENUE_CATEGORY_LABELS: Record<string, string> = {
 };
 
 const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
-  instructional_program: "Instructional / Program",
+  instructional_program: "Program",
   technology: "Technology",
-  occupancy_facility: "Occupancy / Facility",
-  administrative_general: "Administrative / General",
+  occupancy_facility: "Facility",
+  administrative_general: "Admin & Operations",
 };
 
 const FUNC_CATEGORY_LABELS: Record<string, string> = {
@@ -307,7 +307,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             </div>
           </Section>
 
-          <Section title="Operating Expenses" step={5}>
+          <Section title="Expenses by Category" step={5}>
             <div className="mb-4 flex items-center gap-3">
               <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-semibold">
                 {expenseSummary.count} items

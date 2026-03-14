@@ -35,12 +35,12 @@ export interface CapitalDebtRowData {
 }
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
-  personnel: "Personnel",
-  instructional_program: "Instructional / Program",
+  personnel: "People",
+  instructional_program: "Program",
   technology: "Technology",
-  occupancy_facility: "Occupancy / Facility",
-  administrative_general: "Administrative / General",
-  capital_financing: "Capital / Financing",
+  occupancy_facility: "Facility",
+  administrative_general: "Admin & Operations",
+  capital_financing: "Capital & Debt",
 };
 
 export const EXPENSE_CATEGORY_ORDER: ExpenseCategory[] = [

@@ -192,16 +192,16 @@ export function ExpenseStep() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">What Does It Cost to Run Your School?</h2>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Expenses by Category</h2>
         <p className="text-muted-foreground text-lg">Add your operating costs, facility expenses, and any loans or capital purchases.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <SummaryCard label="Personnel" value={formatCurrency(personnelCosts?.grandTotal || 0)} color="text-blue-600" />
-        <SummaryCard label="Instructional" value={formatCurrency(categorySummaries["instructional_program"] || 0)} color="text-emerald-600" />
+        <SummaryCard label="People" value={formatCurrency(personnelCosts?.grandTotal || 0)} color="text-blue-600" />
+        <SummaryCard label="Program" value={formatCurrency(categorySummaries["instructional_program"] || 0)} color="text-emerald-600" />
         <SummaryCard label="Technology" value={formatCurrency(categorySummaries["technology"] || 0)} color="text-violet-600" />
-        <SummaryCard label="Occupancy" value={formatCurrency(categorySummaries["occupancy_facility"] || 0)} color="text-amber-600" />
-        <SummaryCard label="Admin / General" value={formatCurrency(categorySummaries["administrative_general"] || 0)} color="text-rose-600" />
+        <SummaryCard label="Facility" value={formatCurrency(categorySummaries["occupancy_facility"] || 0)} color="text-amber-600" />
+        <SummaryCard label="Admin & Operations" value={formatCurrency(categorySummaries["administrative_general"] || 0)} color="text-rose-600" />
         <SummaryCard label="Total Operating" value={formatCurrency(totalOperating)} color="text-foreground" bold />
       </div>
 
@@ -210,7 +210,7 @@ export function ExpenseStep() {
           <button type="button" onClick={() => toggleCategory("personnel")} className="flex items-center gap-3 w-full text-left">
             {expandedCategories.has("personnel") ? <ChevronDown className="h-5 w-5 text-blue-600" /> : <ChevronRight className="h-5 w-5 text-blue-600" />}
             <Users className="h-5 w-5 text-blue-600" />
-            <span className="font-bold text-lg text-foreground">Personnel</span>
+            <span className="font-bold text-lg text-foreground">People</span>
             <span className="ml-auto text-sm font-semibold text-blue-600">{formatCurrency(personnelCosts.grandTotal)}</span>
           </button>
           {expandedCategories.has("personnel") && (
@@ -260,7 +260,7 @@ export function ExpenseStep() {
         <button type="button" onClick={() => toggleCategory("capital_financing")} className="flex items-center gap-3 w-full text-left p-5 hover:bg-amber-50/50 transition-colors">
           {expandedCategories.has("capital_financing") ? <ChevronDown className="h-5 w-5 text-amber-600" /> : <ChevronRight className="h-5 w-5 text-amber-600" />}
           <Landmark className="h-5 w-5 text-amber-600" />
-          <span className="font-bold text-lg text-foreground">Capital / Financing / Non-Operating</span>
+          <span className="font-bold text-lg text-foreground">Capital & Debt</span>
           <span className="text-xs text-muted-foreground ml-2">({capitalRows.filter((r) => r.enabled).length} active)</span>
           <span className="ml-auto text-sm font-semibold text-amber-600">{formatCurrency(categorySummaries["capital_financing"] || 0)}</span>
         </button>
