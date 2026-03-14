@@ -351,6 +351,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /models/{id}/consultant:
+    get:
+      operationId: getConsultantAnalysis
+      tags: [models]
+      summary: Run CFO consultant analysis on a financial model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Consultant analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsultantOutput"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /models/{id}/export:
     get:
       operationId: exportModel
@@ -590,6 +620,71 @@ components:
           type: number
         otherAnnualExpenses:
           type: number
+    ConsultantOutput:
+      type: object
+      properties:
+        executiveSummary:
+          type: string
+        biggestStrength:
+          type: string
+        biggestRisk:
+          type: string
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsultantRecommendation"
+        lenderReadiness:
+          type: string
+          enum: [Strong, Needs Work, Not Yet Ready]
+        lenderReadinessExplanation:
+          type: string
+        keyMetrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsultantKeyMetric"
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - executiveSummary
+        - biggestStrength
+        - biggestRisk
+        - recommendations
+        - lenderReadiness
+        - lenderReadinessExplanation
+        - keyMetrics
+        - generatedAt
+    ConsultantRecommendation:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [high, medium, low]
+      required:
+        - title
+        - description
+        - priority
+    ConsultantKeyMetric:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        status:
+          type: string
+          enum: [good, warning, danger]
+        interpretation:
+          type: string
+      required:
+        - name
+        - value
+        - status
+        - interpretation
     FinancialModelSummary:
       type: object
       properties:

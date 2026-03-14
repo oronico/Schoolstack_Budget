@@ -13,6 +13,7 @@ export const financialModelsTable = pgTable("financial_models", {
   currentStep: integer("current_step").default(0),
   data: jsonb("data").default({}).$type<Record<string, unknown>>(),
   lastExportedAt: timestamp("last_exported_at"),
+  consultantSummaryJson: jsonb("consultant_summary_json").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

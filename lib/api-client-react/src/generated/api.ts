@@ -18,6 +18,7 @@ import type {
 
 import type {
   AuthResponse,
+  ConsultantOutput,
   CreateFinancialModelData,
   ErrorResponse,
   FinancialModel,
@@ -1189,6 +1190,94 @@ export const useArchiveModel = <
 > => {
   return useMutation(getArchiveModelMutationOptions(options));
 };
+
+/**
+ * @summary Run CFO consultant analysis on a financial model
+ */
+export const getGetConsultantAnalysisUrl = (id: number) => {
+  return `/api/models/${id}/consultant`;
+};
+
+export const getConsultantAnalysis = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ConsultantOutput> => {
+  return customFetch<ConsultantOutput>(getGetConsultantAnalysisUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetConsultantAnalysisQueryKey = (id: number) => {
+  return [`/api/models/${id}/consultant`] as const;
+};
+
+export const getGetConsultantAnalysisQueryOptions = <
+  TData = Awaited<ReturnType<typeof getConsultantAnalysis>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getConsultantAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetConsultantAnalysisQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getConsultantAnalysis>>
+  > = ({ signal }) => getConsultantAnalysis(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getConsultantAnalysis>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetConsultantAnalysisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getConsultantAnalysis>>
+>;
+export type GetConsultantAnalysisQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Run CFO consultant analysis on a financial model
+ */
+
+export function useGetConsultantAnalysis<
+  TData = Awaited<ReturnType<typeof getConsultantAnalysis>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getConsultantAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetConsultantAnalysisQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Export financial model as Excel workbook

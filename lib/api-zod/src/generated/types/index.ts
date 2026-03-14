@@ -7,6 +7,12 @@
  */
 
 export * from "./authResponse";
+export * from "./consultantKeyMetric";
+export * from "./consultantKeyMetricStatus";
+export * from "./consultantOutput";
+export * from "./consultantOutputLenderReadiness";
+export * from "./consultantRecommendation";
+export * from "./consultantRecommendationPriority";
 export * from "./createFinancialModelData";
 export * from "./enrollment";
 export * from "./errorResponse";

@@ -15,6 +15,7 @@ import {
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 import { generateWorkbook } from "../lib/excel-export";
 import { trackEvent } from "../lib/track-event";
+import { runConsultantEngine } from "../lib/consultant-engine";
 
 const router: IRouter = Router();
 
@@ -245,6 +246,43 @@ router.post("/models/:id/archive", authMiddleware, async (req: AuthRequest, res)
   } catch (err) {
     console.error("Archive model error:", err);
     res.status(500).json({ error: "Something went wrong." });
+  }
+});
+
+router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    const data = model.data as Record<string, unknown>;
+    const consultantOutput = runConsultantEngine(data);
+
+    await db
+      .update(financialModelsTable)
+      .set({
+        consultantSummaryJson: consultantOutput as unknown as Record<string, unknown>,
+        updatedAt: new Date(),
+      })
+      .where(eq(financialModelsTable.id, params.data.id));
+
+    res.json(consultantOutput);
+  } catch (err) {
+    console.error("Consultant engine error:", err);
+    res.status(500).json({ error: "Something went wrong running the consultant analysis." });
   }
 });
 

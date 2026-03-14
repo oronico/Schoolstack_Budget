@@ -15,6 +15,7 @@ import { RevenueStep } from "./steps/RevenueStep";
 import { StaffingStep } from "./steps/StaffingStep";
 import { FacilitiesStep } from "./steps/FacilitiesStep";
 import { ReviewStep } from "./steps/ReviewStep";
+import { ConsultantStep } from "./steps/ConsultantStep";
 import { ExportStep } from "./steps/ExportStep";
 
 const STEPS = [
@@ -24,7 +25,8 @@ const STEPS = [
   { id: 4, title: "Staffing", component: StaffingStep },
   { id: 5, title: "Facilities", component: FacilitiesStep },
   { id: 6, title: "Review", component: ReviewStep },
-  { id: 7, title: "Export", component: ExportStep },
+  { id: 7, title: "Consultant", component: ConsultantStep },
+  { id: 8, title: "Export", component: ExportStep },
 ];
 
 export function ModelWizardPage() {
@@ -114,7 +116,7 @@ export function ModelWizardPage() {
 
   const ActiveStepComponent = STEPS[currentStep - 1].component;
   const isLastStep = currentStep === STEPS.length;
-  const isExportStep = currentStep === 7;
+  const isExportStep = currentStep === 8;
 
   const handleNext = async () => {
     // Validate current step fields before proceeding
@@ -206,7 +208,7 @@ export function ModelWizardPage() {
                 onClick={handleNext}
                 className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
               >
-                {currentStep === 6 ? "Generate Excel Model" : "Continue"} <ArrowRight className="h-5 w-5" />
+                {currentStep === 6 ? "View Consultant Analysis" : currentStep === 7 ? "Generate Excel Model" : "Continue"} <ArrowRight className="h-5 w-5" />
               </button>
             </div>
           )}

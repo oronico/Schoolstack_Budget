@@ -448,6 +448,37 @@ export const ArchiveModelResponse = zod.object({
 });
 
 /**
+ * @summary Run CFO consultant analysis on a financial model
+ */
+export const GetConsultantAnalysisParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetConsultantAnalysisResponse = zod.object({
+  executiveSummary: zod.string(),
+  biggestStrength: zod.string(),
+  biggestRisk: zod.string(),
+  recommendations: zod.array(
+    zod.object({
+      title: zod.string(),
+      description: zod.string(),
+      priority: zod.enum(["high", "medium", "low"]),
+    }),
+  ),
+  lenderReadiness: zod.enum(["Strong", "Needs Work", "Not Yet Ready"]),
+  lenderReadinessExplanation: zod.string(),
+  keyMetrics: zod.array(
+    zod.object({
+      name: zod.string(),
+      value: zod.string(),
+      status: zod.enum(["good", "warning", "danger"]),
+      interpretation: zod.string(),
+    }),
+  ),
+  generatedAt: zod.date(),
+});
+
+/**
  * @summary Export financial model as Excel workbook
  */
 export const ExportModelParams = zod.object({

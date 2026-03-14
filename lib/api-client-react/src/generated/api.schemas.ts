@@ -134,6 +134,57 @@ export interface UpdateFinancialModelData {
   data: ModelFormData;
 }
 
+export type ConsultantOutputLenderReadiness =
+  (typeof ConsultantOutputLenderReadiness)[keyof typeof ConsultantOutputLenderReadiness];
+
+export const ConsultantOutputLenderReadiness = {
+  Strong: "Strong",
+  Needs_Work: "Needs Work",
+  Not_Yet_Ready: "Not Yet Ready",
+} as const;
+
+export type ConsultantRecommendationPriority =
+  (typeof ConsultantRecommendationPriority)[keyof typeof ConsultantRecommendationPriority];
+
+export const ConsultantRecommendationPriority = {
+  high: "high",
+  medium: "medium",
+  low: "low",
+} as const;
+
+export interface ConsultantRecommendation {
+  title: string;
+  description: string;
+  priority: ConsultantRecommendationPriority;
+}
+
+export type ConsultantKeyMetricStatus =
+  (typeof ConsultantKeyMetricStatus)[keyof typeof ConsultantKeyMetricStatus];
+
+export const ConsultantKeyMetricStatus = {
+  good: "good",
+  warning: "warning",
+  danger: "danger",
+} as const;
+
+export interface ConsultantKeyMetric {
+  name: string;
+  value: string;
+  status: ConsultantKeyMetricStatus;
+  interpretation: string;
+}
+
+export interface ConsultantOutput {
+  executiveSummary: string;
+  biggestStrength: string;
+  biggestRisk: string;
+  recommendations: ConsultantRecommendation[];
+  lenderReadiness: ConsultantOutputLenderReadiness;
+  lenderReadinessExplanation: string;
+  keyMetrics: ConsultantKeyMetric[];
+  generatedAt: string;
+}
+
 export interface FinancialModelSummary {
   id: number;
   name: string;
