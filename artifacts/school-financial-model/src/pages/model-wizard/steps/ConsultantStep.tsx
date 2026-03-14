@@ -83,18 +83,21 @@ function CollapsibleTable({ children, label }: { children: React.ReactNode; labe
   );
 }
 
-function CustomTooltip({ active, payload, label, formatter }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string; formatter?: (v: number) => string }) {
+function CustomTooltip({ active, payload, label, formatter, formatByName }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string; formatter?: (v: number) => string; formatByName?: Record<string, (v: number) => string> }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white rounded-lg border border-border/60 shadow-lg px-3.5 py-2.5 text-xs">
       <p className="font-semibold text-foreground mb-1.5">{label}</p>
-      {payload.map((entry, i) => (
-        <div key={i} className="flex items-center gap-2 py-0.5">
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-          <span className="text-muted-foreground">{entry.name}:</span>
-          <span className="font-semibold text-foreground ml-auto">{formatter ? formatter(entry.value) : entry.value}</span>
-        </div>
-      ))}
+      {payload.map((entry, i) => {
+        const fmt = formatByName?.[entry.name] || formatter;
+        return (
+          <div key={i} className="flex items-center gap-2 py-0.5">
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+            <span className="text-muted-foreground">{entry.name}:</span>
+            <span className="font-semibold text-foreground ml-auto">{fmt ? fmt(entry.value) : entry.value}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -542,7 +545,7 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
                 <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="left" tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${fmtCompact(v)}`} />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: "#64748B" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}mo`} />
-                <Tooltip content={<CustomTooltip formatter={(v) => typeof v === "number" && Math.abs(v) > 100 ? fmtCurrency(v) : `${Number(v).toFixed(1)} months`} />} />
+                <Tooltip content={<CustomTooltip formatByName={{ [cumNiLabel]: (v) => fmtCurrency(v), "Reserve (Months)": (v) => `${Number(v).toFixed(1)} months` }} />} />
                 <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                 <Area yAxisId="left" type="monotone" dataKey={cumNiLabel} stroke={CHART_COLORS.green} strokeWidth={2.5} fill="url(#cumNetGradient)" dot={{ r: 4, fill: CHART_COLORS.green }} activeDot={{ r: 6 }} />
                 <Area yAxisId="right" type="monotone" dataKey="Reserve (Months)" stroke={CHART_COLORS.amber} strokeWidth={2.5} strokeDasharray="5 5" fill="transparent" dot={{ r: 4, fill: CHART_COLORS.amber }} activeDot={{ r: 6 }} />
