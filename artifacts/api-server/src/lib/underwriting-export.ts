@@ -382,6 +382,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   const wb = new ExcelJS.Workbook();
   wb.creator = "SchoolStack Budget — Underwriting Export";
   wb.created = new Date();
+  wb.calcProperties = { fullCalcOnLoad: true };
 
   const yearHeaders = ["", ...Array.from({ length: yc }, (_, i) => `Year ${i + 1}`)];
   const cols = yc + 1;

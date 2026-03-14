@@ -39,7 +39,7 @@ The project is built as a pnpm workspace monorepo using TypeScript (v5.9).
 - **Frontend**: React, Vite, Tailwind CSS v4.
 - **Authentication**: JWT-based (bcryptjs for passwords, jsonwebtoken for tokens).
 - **Build Tooling**: esbuild for CJS bundling.
-- **Export Capabilities**: ExcelJS for standard Excel exports, xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports.
+- **Export Capabilities**: ExcelJS for standard Excel exports (with pre-computed formula results for viewer compatibility), xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports.
 
 ## Monorepo Structure
 

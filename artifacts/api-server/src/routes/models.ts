@@ -518,7 +518,13 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
     const data = model.data as Record<string, unknown>;
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
-    const yearCount = (data?.revenueRows as unknown[])?.length > 0
+
+    const hasRevenueRows = Array.isArray(data?.revenueRows) && (data.revenueRows as unknown[]).length > 0;
+    const hasStaffingRows = Array.isArray(data?.staffingRows) && (data.staffingRows as unknown[]).length > 0;
+    const hasExpenseRows = Array.isArray(data?.expenseRows) && (data.expenseRows as unknown[]).length > 0;
+    console.log(`[Excel Export] Model ${model.id}: revenueRows=${hasRevenueRows ? (data.revenueRows as unknown[]).length : 0}, staffingRows=${hasStaffingRows ? (data.staffingRows as unknown[]).length : 0}, expenseRows=${hasExpenseRows ? (data.expenseRows as unknown[]).length : 0}, dataKeys=${Object.keys(data || {}).join(",")}`);
+
+    const yearCount = hasRevenueRows
       ? ((data.revenueRows as Array<{ amounts: number[] }>)[0]?.amounts?.length || 3)
       : 5;
     const fileName = `${schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_${yearCount}-Year_Financial_Model.xlsx`;
