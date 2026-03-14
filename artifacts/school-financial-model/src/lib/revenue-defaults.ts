@@ -90,15 +90,17 @@ export function generateDefaultRevenueRows(
   fundingProfile: FundingProfile,
   yearCount: number = 5
 ): RevenueRowData[] {
-  return LINE_ITEM_CATALOG.map((item) => ({
-    id: item.id,
-    category: item.category,
-    lineItem: item.lineItem,
-    enabled: item.enabledFor.includes(fundingProfile),
-    driverType: item.driverType,
-    amounts: new Array(yearCount).fill(0),
-    ...(item.id === "scholarships_aid" ? { percentBase: "gross_tuition" } : {}),
-  }));
+  return LINE_ITEM_CATALOG
+    .filter((item) => item.enabledFor.includes(fundingProfile))
+    .map((item) => ({
+      id: item.id,
+      category: item.category,
+      lineItem: item.lineItem,
+      enabled: true,
+      driverType: item.driverType,
+      amounts: new Array(yearCount).fill(0),
+      ...(item.id === "scholarships_aid" ? { percentBase: "gross_tuition" } : {}),
+    }));
 }
 
 export function getCategoryOrder(fundingProfile: FundingProfile): RevenueCategory[] {
@@ -115,11 +117,18 @@ export function getCategoryOrder(fundingProfile: FundingProfile): RevenueCategor
   return CATEGORY_ORDER;
 }
 
+export interface AvailableLineItem {
+  id: string;
+  category: RevenueCategory;
+  lineItem: string;
+  driverType: RevenueDriverType;
+}
+
 export function getAvailableLineItems(
   category: RevenueCategory,
   existingIds: string[]
-): LineItemDef[] {
-  return LINE_ITEM_CATALOG.filter(
-    (item) => item.category === category && !existingIds.includes(item.id)
-  );
+): AvailableLineItem[] {
+  return LINE_ITEM_CATALOG
+    .filter((item) => item.category === category && !existingIds.includes(item.id))
+    .map(({ id, category, lineItem, driverType }) => ({ id, category, lineItem, driverType }));
 }

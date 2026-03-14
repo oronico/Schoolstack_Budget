@@ -56,7 +56,16 @@ export function ModelWizardPage() {
       },
       enrollment: {},
       revenue: { annualTuitionIncrease: 3 },
-      revenueRows: undefined as any,
+      revenueRows: [] as Array<{
+        id: string;
+        category: string;
+        lineItem: string;
+        enabled: boolean;
+        driverType: string;
+        amounts: number[];
+        percentBase?: string;
+        note?: string;
+      }>,
       staffing: { studentsPerTeacher: 12, benefitsRate: 20 },
       facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0, annualSalaryIncrease: 3, generalCostInflation: 3 },
       priorYearSnapshot: {},
@@ -132,7 +141,7 @@ export function ModelWizardPage() {
     const stepFieldMap: Record<number, Array<keyof FullModelData>> = {
       1: ['schoolProfile'],
       2: ['enrollment'],
-      3: ['revenue'],
+      3: ['revenue', 'revenueRows'],
       4: ['staffing'],
       5: ['facilities'],
     };
