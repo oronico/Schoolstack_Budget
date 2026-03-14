@@ -13,7 +13,7 @@ import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
 import { RevenueStep } from "./steps/RevenueStep";
 import { StaffingStep } from "./steps/StaffingStep";
-import { FacilitiesStep } from "./steps/FacilitiesStep";
+import { ExpenseStep } from "./steps/ExpenseStep";
 import { ReviewStep } from "./steps/ReviewStep";
 import { ConsultantStep } from "./steps/ConsultantStep";
 import { ExportStep } from "./steps/ExportStep";
@@ -23,7 +23,7 @@ const STEPS = [
   { id: 2, title: "Enrollment", component: EnrollmentStep },
   { id: 3, title: "Revenue", component: RevenueStep },
   { id: 4, title: "Staffing", component: StaffingStep },
-  { id: 5, title: "Operations", component: FacilitiesStep },
+  { id: 5, title: "Expenses", component: ExpenseStep },
   { id: 6, title: "Review", component: ReviewStep },
   { id: 7, title: "Consultant", component: ConsultantStep },
   { id: 8, title: "Export", component: ExportStep },
@@ -81,6 +81,23 @@ export function ModelWizardPage() {
         notes: string;
       }>,
       facilities: { annualRentIncrease: 3, annualInterestRate: 0, loanTermYears: 0, loanAmount: 0, annualSalaryIncrease: 3, generalCostInflation: 3 },
+      expenseRows: [] as Array<{
+        id: string;
+        category: string;
+        lineItem: string;
+        enabled: boolean;
+        driverType: string;
+        amounts: number[];
+        note?: string;
+      }>,
+      capitalAndDebtRows: [] as Array<{
+        id: string;
+        lineItem: string;
+        enabled: boolean;
+        driverType: string;
+        amounts: number[];
+        note?: string;
+      }>,
       priorYearSnapshot: {},
     },
     mode: "onChange"
@@ -156,7 +173,7 @@ export function ModelWizardPage() {
       2: ['enrollment'],
       3: ['revenue', 'revenueRows'],
       4: ['staffing', 'staffingRows'],
-      5: ['facilities'],
+      5: ['facilities', 'expenseRows', 'capitalAndDebtRows'],
     };
     const fieldsToValidate = stepFieldMap[currentStep] ?? [];
 

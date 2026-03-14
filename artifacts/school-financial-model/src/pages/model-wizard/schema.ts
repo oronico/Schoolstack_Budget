@@ -78,25 +78,44 @@ export const staffingSchema = z.object({
   benefitsRate: z.coerce.number().min(0).max(100).optional(),
 });
 
+export const expenseRowSchema = z.object({
+  id: z.string(),
+  category: z.enum(["personnel", "instructional_program", "technology", "occupancy_facility", "administrative_general", "capital_financing"]),
+  lineItem: z.string(),
+  enabled: z.boolean(),
+  driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_revenue"]),
+  amounts: z.array(z.number()),
+  note: z.string().default(""),
+});
+
+export const capitalDebtRowSchema = z.object({
+  id: z.string(),
+  lineItem: z.string(),
+  enabled: z.boolean(),
+  driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_revenue"]),
+  amounts: z.array(z.number()),
+  note: z.string().default(""),
+});
+
 export const facilitiesSchema = z.object({
-  monthlyRent: z.coerce.number().min(0),
-  annualRentIncrease: z.coerce.number().min(0).max(100),
-  annualUtilities: z.coerce.number().min(0),
-  annualInsurance: z.coerce.number().min(0),
-  facilityMaintenance: z.coerce.number().min(0),
-  curriculumCostPerStudent: z.coerce.number().min(0),
-  techCostPerStudent: z.coerce.number().min(0),
-  annualMarketing: z.coerce.number().min(0),
-  professionalDevelopment: z.coerce.number().min(0),
-  foodServicePerStudent: z.coerce.number().min(0),
-  transportationAnnual: z.coerce.number().min(0),
-  studentServicesAnnual: z.coerce.number().min(0),
-  otherAnnualExpenses: z.coerce.number().min(0),
-  loanAmount: z.coerce.number().min(0),
-  annualInterestRate: z.coerce.number().min(0).max(100),
-  loanTermYears: z.coerce.number().min(0).max(50),
-  annualSalaryIncrease: z.coerce.number().min(0).max(100),
-  generalCostInflation: z.coerce.number().min(0).max(100),
+  monthlyRent: z.coerce.number().min(0).optional(),
+  annualRentIncrease: z.coerce.number().min(0).max(100).optional(),
+  annualUtilities: z.coerce.number().min(0).optional(),
+  annualInsurance: z.coerce.number().min(0).optional(),
+  facilityMaintenance: z.coerce.number().min(0).optional(),
+  curriculumCostPerStudent: z.coerce.number().min(0).optional(),
+  techCostPerStudent: z.coerce.number().min(0).optional(),
+  annualMarketing: z.coerce.number().min(0).optional(),
+  professionalDevelopment: z.coerce.number().min(0).optional(),
+  foodServicePerStudent: z.coerce.number().min(0).optional(),
+  transportationAnnual: z.coerce.number().min(0).optional(),
+  studentServicesAnnual: z.coerce.number().min(0).optional(),
+  otherAnnualExpenses: z.coerce.number().min(0).optional(),
+  loanAmount: z.coerce.number().min(0).optional(),
+  annualInterestRate: z.coerce.number().min(0).max(100).optional(),
+  loanTermYears: z.coerce.number().min(0).max(50).optional(),
+  annualSalaryIncrease: z.coerce.number().min(0).max(100).optional(),
+  generalCostInflation: z.coerce.number().min(0).max(100).optional(),
 });
 
 export const fullModelSchema = z.object({
@@ -107,6 +126,8 @@ export const fullModelSchema = z.object({
   staffing: staffingSchema.optional(),
   staffingRows: z.array(staffingRowSchema).optional(),
   facilities: facilitiesSchema.optional(),
+  expenseRows: z.array(expenseRowSchema).optional(),
+  capitalAndDebtRows: z.array(capitalDebtRowSchema).optional(),
   priorYearSnapshot: priorYearSnapshotSchema.optional(),
 });
 
