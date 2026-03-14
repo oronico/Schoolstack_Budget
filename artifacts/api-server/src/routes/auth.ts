@@ -159,6 +159,7 @@ router.post("/auth/reset-password", async (req, res) => {
       passwordHash,
       resetToken: null,
       resetTokenExpiry: null,
+      tokenVersion: sql`${usersTable.tokenVersion} + 1`,
       updatedAt: new Date(),
     }).where(eq(usersTable.id, user.id));
 
