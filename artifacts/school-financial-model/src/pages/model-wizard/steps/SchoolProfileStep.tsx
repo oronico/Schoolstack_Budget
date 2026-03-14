@@ -238,7 +238,12 @@ export function SchoolProfileStep() {
             <CompactRadioCard
               key={et.value}
               selected={entityType === et.value}
-              onSelect={() => setValue("schoolProfile.entityType", et.value, { shouldDirty: true })}
+              onSelect={() => {
+                setValue("schoolProfile.entityType", et.value, { shouldDirty: true });
+                if (et.value === "sole_practitioner") {
+                  setValue("schoolProfile.ein", "", { shouldDirty: true });
+                }
+              }}
               icon={et.icon}
               title={ENTITY_TYPE_LABELS[et.value]}
             />
