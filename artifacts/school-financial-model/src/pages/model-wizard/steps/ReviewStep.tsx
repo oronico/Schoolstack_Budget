@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Edit2 } from "lucide-react";
 import { useMemo } from "react";
+import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS } from "../schema";
 
 interface ReviewRevenueRow {
   id: string;
@@ -234,7 +235,9 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
       <Section title="School Profile" step={1}>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <Item label="School Name" value={data.schoolProfile?.schoolName} />
-          <Item label="Type" value={data.schoolProfile?.schoolType?.replace('_', ' ')} />
+          <Item label="Type" value={data.schoolProfile?.schoolType === "other" && data.schoolProfile?.schoolTypeOther ? data.schoolProfile.schoolTypeOther : SCHOOL_TYPE_LABELS[data.schoolProfile?.schoolType] || data.schoolProfile?.schoolType} />
+          <Item label="Entity Type" value={ENTITY_TYPE_LABELS[data.schoolProfile?.entityType] || data.schoolProfile?.entityType} />
+          {data.schoolProfile?.ein && <Item label="EIN" value={data.schoolProfile.ein} />}
           <Item label="State" value={data.schoolProfile?.state} />
           <Item label="Opening Year" value={data.schoolProfile?.openingYear} />
           <Item label="Current Students" value={data.schoolProfile?.currentStudents} />

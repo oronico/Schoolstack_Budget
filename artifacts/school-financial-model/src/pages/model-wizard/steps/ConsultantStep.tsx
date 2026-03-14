@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
+import { useFormContext } from "react-hook-form";
 import { useGetConsultantAnalysis } from "@workspace/api-client-react";
+import { profitLabel, cumulativeProfitLabel } from "../schema";
 import {
   Loader2,
   Shield,
@@ -31,6 +33,10 @@ function fmtPct(n: number): string {
 }
 
 export function ConsultantStep({ modelId }: ConsultantStepProps) {
+  const { watch } = useFormContext();
+  const entityType = watch("schoolProfile.entityType");
+  const niLabel = profitLabel(entityType);
+  const cumNiLabel = cumulativeProfitLabel(entityType);
   const [hasRequested, setHasRequested] = useState(false);
 
   const { data, isLoading, error, refetch } = useGetConsultantAnalysis(modelId || 0, {
@@ -269,7 +275,7 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
               </thead>
               <tbody>
                 <tr className="border-t border-border/50">
-                  <td className="px-4 py-2.5 font-medium">Cumulative Net Income</td>
+                  <td className="px-4 py-2.5 font-medium">{cumNiLabel}</td>
                   {cumFin.map((cf) => (
                     <td key={cf.year} className={cn("text-right px-4 py-2.5 font-semibold", cf.cumulativeNetIncome >= 0 ? "text-green-700" : "text-rose-700")}>
                       {fmtCurrency(cf.cumulativeNetIncome)}
@@ -302,8 +308,8 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
               <thead>
                 <tr className="bg-secondary/50">
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Scenario</th>
-                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Year 1 Net Income</th>
-                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Final Year Net Income</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Year 1 {niLabel}</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Final Year {niLabel}</th>
                   <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Break-Even Year</th>
                 </tr>
               </thead>

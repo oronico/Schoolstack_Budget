@@ -4,6 +4,9 @@ interface SchoolProfile {
   schoolName?: string;
   state?: string;
   schoolType?: string;
+  schoolTypeOther?: string;
+  entityType?: string;
+  ein?: string;
   schoolStage?: string;
   openingYear?: number;
   currentStudents?: number;
@@ -11,6 +14,34 @@ interface SchoolProfile {
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
+}
+
+function isNonprofit(entityType?: string): boolean {
+  return entityType === "nonprofit_501c3";
+}
+
+function profitLabel(entityType?: string): string {
+  return isNonprofit(entityType) ? "Net Income" : "Profit";
+}
+
+function cumulativeProfitLabel(entityType?: string): string {
+  return isNonprofit(entityType) ? "Cumulative Net Income" : "Cumulative Profit";
+}
+
+function profitMarginLabel(entityType?: string): string {
+  return isNonprofit(entityType) ? "Net Margin %" : "Profit Margin %";
+}
+
+function entityTypeDisplay(entityType?: string): string {
+  switch (entityType) {
+    case "sole_practitioner": return "Sole Practitioner";
+    case "llc_single": return "LLC — Single Member";
+    case "llc_partnership": return "LLC — Partnership";
+    case "c_corp": return "C Corporation";
+    case "s_corp": return "S Corporation";
+    case "nonprofit_501c3": return "501(c)(3) Nonprofit";
+    default: return entityType || "";
+  }
 }
 
 interface Enrollment {
@@ -220,12 +251,15 @@ function computeDriverValueExport(amounts: number[] | undefined, yearIdx: number
   }
 }
 
-function schoolTypeDisplay(type?: string): string {
+function schoolTypeDisplay(type?: string, otherLabel?: string): string {
   switch (type) {
+    case "charter_school": return "Charter School";
+    case "homeschool_coop": return "Home School Co-Op";
+    case "learning_pod": return "Learning Pod";
     case "microschool": return "Microschool";
     case "private_school": return "Private School";
-    case "charter_school": return "Charter School";
-    case "other": return "Other";
+    case "tutoring_center": return "Tutoring Center";
+    case "other": return otherLabel || "Other";
     default: return type || "";
   }
 }
@@ -362,7 +396,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revTotalRow, yearCount, cols, yearHeaders, aRefs);
     const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
 
-    buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow);
+    buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow, sp.entityType);
 
     const revenueMix = computeRevenueMixForExport(revenueRows, enrollmentByYear, yearCount);
     buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders, {
@@ -379,7 +413,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
 
     if (data.priorYearSnapshot && sp.schoolStage === "operating_school") {
       const priorWs = wb.addWorksheet("Prior-Year Snapshot");
-      buildPriorYearTab(priorWs, data.priorYearSnapshot);
+      buildPriorYearTab(priorWs, data.priorYearSnapshot, sp.entityType);
     }
   } else {
     const assumptionsWs = wb.addWorksheet("Assumptions");
@@ -436,7 +470,9 @@ function buildAssumptionsTab(
   const profileItems: [string, string | number][] = [
     ["School Name", sp.schoolName || ""],
     ["State", sp.state || ""],
-    ["School Type", schoolTypeDisplay(sp.schoolType)],
+    ["School Type", schoolTypeDisplay(sp.schoolType, sp.schoolTypeOther)],
+    ["Entity Type", entityTypeDisplay(sp.entityType)],
+    ...(sp.ein ? [["EIN", sp.ein] as [string, string]] : []),
     ["School Stage", sp.schoolStage === "operating_school" ? "Operating School" : "New School"],
     ["Opening Year", sp.openingYear || 0],
     ["Current Students", sp.currentStudents || 0],
@@ -553,7 +589,7 @@ function buildConsultantNotesTab(ws: ExcelJS.Worksheet, consultant: ConsultantSu
   }
 }
 
-function buildPriorYearTab(ws: ExcelJS.Worksheet, snapshot: PriorYearSnapshot) {
+function buildPriorYearTab(ws: ExcelJS.Worksheet, snapshot: PriorYearSnapshot, entityType?: string) {
   ws.columns = [{ width: 35 }, { width: 25 }];
 
   let r = 1;
@@ -581,7 +617,7 @@ function buildPriorYearTab(ws: ExcelJS.Worksheet, snapshot: PriorYearSnapshot) {
 
   if (snapshot.totalRevenue && snapshot.totalExpenses) {
     r++;
-    ws.getCell(r, 1).value = "Net Income (Prior Year)"; ws.getCell(r, 1).font = NORMAL_FONT;
+    ws.getCell(r, 1).value = `${profitLabel(entityType)} (Prior Year)`; ws.getCell(r, 1).font = NORMAL_FONT;
     ws.getCell(r, 2).value = snapshot.totalRevenue - snapshot.totalExpenses;
     ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = CURRENCY_FORMAT;
   }
@@ -1050,21 +1086,32 @@ function buildPnLTab(
   staffTotalRow: number,
   expTotalRow: number,
   capTotalRow: number,
+  entityType?: string,
 ) {
+  const niLabel = profitLabel(entityType);
+  const cumNiLabel = cumulativeProfitLabel(entityType);
+
   ws.columns = [{ width: 35 }, ...Array(yearCount).fill({ width: 18 })];
   const headers = [`${yearCount === 3 ? "3" : "5"}-Year Financial Model`, ...yearHeaders.slice(1)];
   ws.getRow(1).values = headers;
   styleHeaderRow(ws, 1, cols);
 
-  const pnlRows: Array<{ label: string; bold: boolean; section?: boolean }> = [
-    { label: "Total Revenue", bold: false },
-    { label: "Personnel Costs", bold: false },
-    { label: "Operating Expenses", bold: false },
-    { label: "Capital & Debt", bold: false },
-    { label: "Total Expenses", bold: true, section: true },
-    { label: "Net Income", bold: true, section: true },
-    { label: "Cumulative Net Income", bold: false },
-    { label: "Operating Reserve (Months)", bold: false },
+  const ROW_TOTAL_REV = "Total Revenue";
+  const ROW_PERSONNEL = "Personnel Costs";
+  const ROW_OPEX = "Operating Expenses";
+  const ROW_CAPDEBT = "Capital & Debt";
+  const ROW_TOTAL_EXP = "Total Expenses";
+  const ROW_RESERVE = "Operating Reserve (Months)";
+
+  const pnlRows: Array<{ label: string; bold: boolean; section?: boolean; key: string }> = [
+    { label: ROW_TOTAL_REV, bold: false, key: "totalrev" },
+    { label: ROW_PERSONNEL, bold: false, key: "personnel" },
+    { label: ROW_OPEX, bold: false, key: "opex" },
+    { label: ROW_CAPDEBT, bold: false, key: "capdebt" },
+    { label: ROW_TOTAL_EXP, bold: true, section: true, key: "totalexp" },
+    { label: niLabel, bold: true, section: true, key: "ni" },
+    { label: cumNiLabel, bold: false, key: "cumni" },
+    { label: ROW_RESERVE, bold: false, key: "reserve" },
   ];
 
   for (let idx = 0; idx < pnlRows.length; idx++) {
@@ -1077,33 +1124,33 @@ function buildPnLTab(
       const cell = ws.getCell(r, y + 2);
       const colLetter = String.fromCharCode(66 + y);
 
-      switch (item.label) {
-        case "Total Revenue":
+      switch (item.key) {
+        case "totalrev":
           cell.value = { formula: `'Revenue Schedule'!${colLetter}${revTotalRow}` };
           break;
-        case "Personnel Costs":
+        case "personnel":
           cell.value = { formula: `'Staffing & Personnel'!${colLetter}${staffTotalRow}` };
           break;
-        case "Operating Expenses":
+        case "opex":
           cell.value = { formula: `'Operating Expenses'!${colLetter}${expTotalRow}` };
           break;
-        case "Capital & Debt":
+        case "capdebt":
           cell.value = { formula: `'Capital & Debt'!${colLetter}${capTotalRow}` };
           break;
-        case "Total Expenses":
+        case "totalexp":
           cell.value = { formula: `${c(3, y + 2)}+${c(4, y + 2)}+${c(5, y + 2)}` };
           break;
-        case "Net Income":
+        case "ni":
           cell.value = { formula: `${c(2, y + 2)}-${c(6, y + 2)}` };
           break;
-        case "Cumulative Net Income":
+        case "cumni":
           if (y === 0) {
             cell.value = { formula: `${c(7, y + 2)}` };
           } else {
             cell.value = { formula: `${c(8, y + 1)}+${c(7, y + 2)}` };
           }
           break;
-        case "Operating Reserve (Months)":
+        case "reserve":
           cell.value = { formula: `IF(${c(6, y + 2)}=0,0,IF(${c(8, y + 2)}>0,${c(8, y + 2)}/(${c(6, y + 2)}/12),0))` };
           break;
       }
@@ -1155,7 +1202,9 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
 
   const infoItems: [string, string][] = [
     ["School Name", sp.schoolName || ""],
-    ["School Type", schoolTypeDisplay(sp.schoolType)],
+    ["School Type", schoolTypeDisplay(sp.schoolType, sp.schoolTypeOther)],
+    ["Entity Type", entityTypeDisplay(sp.entityType)],
+    ...(sp.ein ? [["EIN", sp.ein] as [string, string]] : []),
     ["School Stage", sp.schoolStage === "operating_school" ? "Operating School" : "New School"],
     ["State", sp.state || ""],
     ["Fiscal Year Start", MONTH_NAMES[sp.fiscalYearStartMonth || 7] || "July"],
@@ -1245,7 +1294,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   styleSectionRow(ws, r, cols);
 
   r++;
-  ws.getCell(r, 1).value = "Net Income"; ws.getCell(r, 1).font = BOLD_FONT;
+  ws.getCell(r, 1).value = profitLabel(sp.entityType); ws.getCell(r, 1).font = BOLD_FONT;
   const niSumRow = r;
   for (let y = 0; y < yearCount; y++) {
     const cl = String.fromCharCode(66 + y);
@@ -1256,7 +1305,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   styleSectionRow(ws, r, cols);
 
   r++;
-  ws.getCell(r, 1).value = "Cumulative Net Income"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 1).value = cumulativeProfitLabel(sp.entityType); ws.getCell(r, 1).font = NORMAL_FONT;
   for (let y = 0; y < yearCount; y++) {
     const cl = String.fromCharCode(66 + y);
     const cell = ws.getCell(r, y + 2);
@@ -1306,7 +1355,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   }
 
   r++;
-  ws.getCell(r, 1).value = "Net Margin %"; ws.getCell(r, 1).font = BOLD_FONT;
+  ws.getCell(r, 1).value = profitMarginLabel(sp.entityType); ws.getCell(r, 1).font = BOLD_FONT;
   for (let y = 0; y < yearCount; y++) {
     const cell = ws.getCell(r, y + 2);
     cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${c(niSumRow, y + 2)}/${c(revSumRow, y + 2)})` };
@@ -1393,9 +1442,13 @@ function buildLegacyPnLTab(
   const salaryIncrease = (fac.annualSalaryIncrease || 0) / 100;
   const costInflation = (fac.generalCostInflation || 0) / 100;
 
+  const entityType = (data.schoolProfile as SchoolProfile | undefined)?.entityType;
+  const niLbl = profitLabel(entityType);
+  const cumNiLbl = cumulativeProfitLabel(entityType);
+
   const rows = [
     "Students", "Net Revenue", "Staffing Costs", "Operating Expenses",
-    "Total Expenses", "Net Income", "Cumulative Net Income", "Operating Reserve (Months)",
+    "Total Expenses", niLbl, cumNiLbl, "Operating Reserve (Months)",
   ];
 
   let cumNI = 0;
@@ -1403,7 +1456,7 @@ function buildLegacyPnLTab(
   for (let idx = 0; idx < rows.length; idx++) {
     const r = idx + 2;
     const label = rows[idx];
-    const bold = label === "Total Expenses" || label === "Net Income";
+    const bold = label === "Total Expenses" || label === niLbl;
     ws.getCell(r, 1).value = label;
     ws.getCell(r, 1).font = bold ? BOLD_FONT : NORMAL_FONT;
 
@@ -1415,12 +1468,12 @@ function buildLegacyPnLTab(
       const infEsc = Math.pow(1 + costInflation, y);
 
       let val = 0;
-      switch (label) {
-        case "Students":
+      switch (idx) {
+        case 0:
           val = students;
           cell.numFmt = NUMBER_FORMAT;
           break;
-        case "Net Revenue": {
+        case 1: {
           const tuition = students * (rev.tuitionPerStudent || 0) * Math.pow(1 + tuitionIncrease, y) * pf;
           const otherFees = students * (rev.otherRevenuePerStudent || 0) * Math.pow(1 + tuitionIncrease, y) * pf;
           const discount = tuition * ((rev.scholarshipRate || 0) / 100);
@@ -1433,7 +1486,7 @@ function buildLegacyPnLTab(
           cell.numFmt = CURRENCY_FORMAT;
           break;
         }
-        case "Staffing Costs": {
+        case 2: {
           const spt = st.studentsPerTeacher || 1;
           const tc = spt > 0 ? Math.ceil(students / spt) : 0;
           const tp = tc * (st.teacherSalary || 0) * salEsc * pf;
@@ -1444,7 +1497,7 @@ function buildLegacyPnLTab(
           cell.numFmt = CURRENCY_FORMAT;
           break;
         }
-        case "Operating Expenses": {
+        case 3: {
           const rentInc = (fac.annualRentIncrease || 0) / 100;
           const rent = (fac.monthlyRent || 0) * 12 * Math.pow(1 + rentInc, y) * pf;
           const utils = (fac.annualUtilities || 0) * infEsc * pf;
@@ -1463,19 +1516,19 @@ function buildLegacyPnLTab(
           cell.numFmt = CURRENCY_FORMAT;
           break;
         }
-        case "Total Expenses": {
+        case 4: {
           cell.value = { formula: `${c(4, y + 2)}+${c(5, y + 2)}` };
           cell.numFmt = CURRENCY_FORMAT;
           if (bold) styleBoldDataCell(cell); else styleDataCell(cell);
           continue;
         }
-        case "Net Income": {
+        case 5: {
           cell.value = { formula: `${c(3, y + 2)}-${c(6, y + 2)}` };
           cell.numFmt = CURRENCY_FORMAT;
           if (bold) styleBoldDataCell(cell); else styleDataCell(cell);
           continue;
         }
-        case "Cumulative Net Income": {
+        case 6: {
           if (y === 0) {
             cell.value = { formula: `${c(7, y + 2)}` };
           } else {
@@ -1485,7 +1538,7 @@ function buildLegacyPnLTab(
           styleDataCell(cell);
           continue;
         }
-        case "Operating Reserve (Months)": {
+        case 7: {
           cell.value = { formula: `IF(${c(6, y + 2)}=0,0,IF(${c(8, y + 2)}>0,${c(8, y + 2)}/(${c(6, y + 2)}/12),0))` };
           cell.numFmt = "0.0";
           styleDataCell(cell);

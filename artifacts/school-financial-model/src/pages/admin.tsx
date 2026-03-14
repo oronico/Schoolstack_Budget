@@ -51,9 +51,12 @@ interface AnalyticsData {
 }
 
 const SCHOOL_TYPE_LABELS: Record<string, string> = {
+  charter_school: "Charter School",
+  homeschool_coop: "Homeschool Co-Op",
+  learning_pod: "Learning Pod",
   microschool: "Microschool",
   private_school: "Private School",
-  charter_school: "Charter School",
+  tutoring_center: "Tutoring Center",
   other: "Other",
 };
 

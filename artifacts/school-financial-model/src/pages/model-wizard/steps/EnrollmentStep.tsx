@@ -1,7 +1,23 @@
 import { useFormContext } from "react-hook-form";
 import { FormInput } from "@/components/ui/form-inputs";
+import { SCHOOL_TYPE_LABELS } from "../schema";
 
 const GUIDANCE: Record<string, { y1Pct: string; growth: string; note: string }> = {
+  charter_school: {
+    y1Pct: "70-90%",
+    growth: "10-15%",
+    note: "Charter schools usually open near capacity due to pre-enrollment requirements. Growth comes from adding grade levels or expanding facilities.",
+  },
+  homeschool_coop: {
+    y1Pct: "50-70%",
+    growth: "15-25%",
+    note: "Home school co-ops grow through community networks and word-of-mouth. Start with a core group of committed families and grow organically.",
+  },
+  learning_pod: {
+    y1Pct: "70-90%",
+    growth: "10-20%",
+    note: "Learning pods are intentionally small. Most fill quickly through local networks. Growth usually means adding pods, not expanding a single one.",
+  },
   microschool: {
     y1Pct: "60-80%",
     growth: "10-20%",
@@ -12,10 +28,10 @@ const GUIDANCE: Record<string, { y1Pct: string; growth: string; note: string }> 
     growth: "15-25%",
     note: "New private schools often open at 40-60% of capacity and take 3-4 years to reach full enrollment. Marketing and community reputation drive growth.",
   },
-  charter_school: {
-    y1Pct: "70-90%",
-    growth: "10-15%",
-    note: "Charter schools usually open near capacity due to pre-enrollment requirements. Growth comes from adding grade levels or expanding facilities.",
+  tutoring_center: {
+    y1Pct: "30-50%",
+    growth: "20-30%",
+    note: "Tutoring centers ramp up as local reputation builds. Expect 30-50% of capacity in Year 1, with steady growth as families refer others.",
   },
   other: {
     y1Pct: "50-70%",
@@ -75,7 +91,7 @@ export function EnrollmentStep() {
 
       <div className="bg-secondary/50 rounded-2xl p-6 mb-8 border border-border">
         <p className="text-sm font-medium text-foreground mb-2">
-          Enrollment Benchmarks for {schoolType === "private_school" ? "Private Schools" : schoolType === "charter_school" ? "Charter Schools" : schoolType === "microschool" ? "Microschools" : "New Schools"}
+          Enrollment Benchmarks for {SCHOOL_TYPE_LABELS[schoolType] ? `${SCHOOL_TYPE_LABELS[schoolType]}s` : "New Schools"}
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-3">{guide.note}</p>
         <div className="flex gap-6 text-sm">

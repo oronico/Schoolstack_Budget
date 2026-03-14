@@ -2,6 +2,9 @@ interface SchoolProfile {
   schoolName?: string;
   state?: string;
   schoolType?: string;
+  schoolTypeOther?: string;
+  entityType?: string;
+  ein?: string;
   fundingProfile?: string;
   schoolStage?: string;
   openingYear?: number;
@@ -10,6 +13,18 @@ interface SchoolProfile {
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
+}
+
+function isNonprofitEntity(entityType?: string): boolean {
+  return entityType === "nonprofit_501c3";
+}
+
+function profitTerm(entityType?: string): string {
+  return isNonprofitEntity(entityType) ? "net income" : "profit";
+}
+
+function profitMarginTerm(entityType?: string): string {
+  return isNonprofitEntity(entityType) ? "net margin" : "profit margin";
 }
 
 interface Enrollment {
@@ -726,8 +741,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           : "Operating costs are consuming a large share of revenue — review each cost center for savings.",
   });
 
+  const marginLabel = profitMarginTerm(sp.entityType);
+  const profitWord = profitTerm(sp.entityType);
+
   keyMetrics.push({
-    name: "Net Margin (Year 1)",
+    name: `${marginLabel.charAt(0).toUpperCase() + marginLabel.slice(1)} (Year 1)`,
     value: pct(y1NetMargin),
     status: y1NetMargin >= 0.1 ? "good" : y1NetMargin >= 0 ? "warning" : "danger",
     interpretation:
@@ -739,15 +757,15 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   });
 
   keyMetrics.push({
-    name: `Net Margin (Year ${lastYearNum})`,
+    name: `${marginLabel.charAt(0).toUpperCase() + marginLabel.slice(1)} (Year ${lastYearNum})`,
     value: pct(lastYearNetMargin),
     status: lastYearNetMargin >= 0.15 ? "good" : lastYearNetMargin >= 0.05 ? "warning" : "danger",
     interpretation:
       lastYearNetMargin >= 0.15
-        ? `By Year ${lastYearNum} the model shows strong profitability — attractive to lenders.`
+        ? `By Year ${lastYearNum} the model shows strong ${profitWord} — attractive to lenders.`
         : lastYearNetMargin >= 0.05
           ? `Year ${lastYearNum} margin is thin — a small revenue shortfall could push you into the red.`
-          : `Year ${lastYearNum} margin is concerning — lenders will want to see a clearer path to profitability.`,
+          : `Year ${lastYearNum} margin is concerning — lenders will want to see a clearer path to ${profitWord}.`,
   });
 
   keyMetrics.push({
@@ -836,11 +854,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   const strengths: string[] = [];
   const risks: string[] = [];
 
-  if (lastYearNetMargin >= 0.15) strengths.push(`Strong Year ${lastYearNum} profitability`);
+  if (lastYearNetMargin >= 0.15) strengths.push(`Strong Year ${lastYearNum} ${profitWord}`);
   if (staffingCostPct <= 0.55) strengths.push("Well-controlled staffing costs");
   if (revenuePerStudent >= 10000) strengths.push("Healthy per-student revenue");
   if (revenueGrowth >= 0.5) strengths.push(`Strong ${yearCount}-year revenue growth trajectory`);
-  if (breakEvenYear === 0) strengths.push("Profitable from Year 1");
+  if (breakEvenYear === 0) strengths.push(`${profitWord.charAt(0).toUpperCase() + profitWord.slice(1)} from Year 1`);
   if (capacityUtilLastYear >= 0.8) strengths.push(`Efficient facility utilization by Year ${lastYearNum}`);
   if (enrollmentGrowthRate >= 0.5) strengths.push("Significant enrollment growth planned");
   if (hasDebt && dscr >= 1.25) strengths.push("Strong debt service coverage ratio");
@@ -928,7 +946,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (lastReserve && lastReserve.reserveMonths < 3) {
     recommendations.push({
       title: "Build a Cash Reserve",
-      description: `By Year ${lastYearNum}, your projected reserve covers only ${lastReserve.reserveMonths.toFixed(1)} months of expenses. Lenders and accreditors look for 3-6 months. Focus on building surplus in early profitable years.`,
+      description: `By Year ${lastYearNum}, your projected reserve covers only ${lastReserve.reserveMonths.toFixed(1)} months of expenses. Lenders and accreditors look for 3-6 months. Focus on building surplus in early ${profitWord} years.`,
       priority: "medium",
     });
   }
@@ -936,7 +954,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (breakEvenYear > 1) {
     recommendations.push({
       title: "Accelerate Path to Break-Even",
-      description: `Your model doesn't break even until Year ${breakEvenYear + 1}. Consider front-loading enrollment growth or phasing expenses to reach profitability sooner.`,
+      description: `Your model doesn't break even until Year ${breakEvenYear + 1}. Consider front-loading enrollment growth or phasing expenses to reach ${profitWord} sooner.`,
       priority: "medium",
     });
   }
@@ -963,6 +981,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   const isCharter = schoolType === "charter_school" || fundingProfile === "charter_public_funded";
   const isPrivate = schoolType === "private_school" || fundingProfile === "tuition_based";
   const isMicroschool = schoolType === "microschool";
+  const isLearningPod = schoolType === "learning_pod";
+  const isHomeschoolCoop = schoolType === "homeschool_coop";
+  const isTutoringCenter = schoolType === "tutoring_center";
+  const isSmallFormat = isMicroschool || isLearningPod || isHomeschoolCoop || isTutoringCenter;
   const isHybridFunding = fundingProfile === "hybrid_mixed";
 
   if (isCharter) {
@@ -1020,6 +1042,55 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         title: "Microschool Staffing Efficiency",
         description: `With ${y1.students} students and staffing at ${pct(staffingCostPct)} of revenue, the small cohort size is making it difficult to achieve efficient staffing ratios. Consider multi-age groupings or shared instructors to improve cost structure.`,
         priority: "medium",
+      });
+    }
+  }
+
+  if (isLearningPod) {
+    if (y1.students > 0 && y1.students > 15) {
+      recommendations.push({
+        title: "Learning Pod Size Consideration",
+        description: `Learning pods typically serve 5–15 students for personalized instruction. At ${y1.students} students, consider whether your model is structured as a single pod or multiple pods — this affects staffing needs and space requirements.`,
+        priority: "low",
+      });
+    }
+    if (y1.students > 0 && revenuePerStudent < 6000) {
+      recommendations.push({
+        title: "Learning Pod Per-Student Revenue",
+        description: `At ${fmt(revenuePerStudent)} per student, ensure your pricing reflects the premium, small-group instruction model. Learning pods with fewer students need higher per-student revenue to cover facilitator costs and materials.`,
+        priority: "medium",
+      });
+    }
+  }
+
+  if (isHomeschoolCoop) {
+    if (y1.students > 0 && staffingCostPct > 0.65) {
+      recommendations.push({
+        title: "Co-Op Staffing Cost Check",
+        description: `Home school co-ops typically rely on a mix of paid instructors and parent volunteers. At ${pct(staffingCostPct)} of revenue going to staffing, consider whether your co-op model can leverage parent-taught sessions to reduce costs.`,
+        priority: "medium",
+      });
+    }
+  }
+
+  if (isTutoringCenter) {
+    if (y1.students > 0 && revenuePerStudent < 3000) {
+      recommendations.push({
+        title: "Tutoring Center Revenue per Student",
+        description: `At ${fmt(revenuePerStudent)} per student, verify your pricing structure. Tutoring centers often charge hourly or by session — ensure your annual per-student revenue projection reflects realistic session frequency and pricing.`,
+        priority: "medium",
+      });
+    }
+    const tutoringExpenseRows = (data.expenseRows as Array<{ enabled: boolean; category: string; amounts: unknown; driverType: string }>) || [];
+    const tutoringOccCost = tutoringExpenseRows
+      .filter(r => r.enabled && r.category === "occupancy_facility")
+      .reduce((sum, r) => sum + computeDriverValue(r.amounts as Record<string, unknown>, 0, r.driverType, y1.students), 0);
+    const tutoringOccPct = y1.totalRevenue > 0 ? tutoringOccCost / y1.totalRevenue : 0;
+    if (tutoringOccPct > 0.25) {
+      recommendations.push({
+        title: "Tutoring Center Occupancy Costs",
+        description: `Occupancy costs are ${pct(tutoringOccPct)} of revenue. Tutoring centers can often operate from shared or flexible spaces — consider whether a smaller footprint or shared-use arrangement could reduce facility costs.`,
+        priority: "low",
       });
     }
   }
@@ -1200,7 +1271,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         risks.push(`Prior year ended with only ${priorReserveMonths.toFixed(1)} months of cash reserves`);
         recommendations.push({
           title: "Address Cash Reserve Deficit from Prior Year",
-          description: `Last year ended with ${fmt(priorYear.endingCash)} in cash — only ${priorReserveMonths.toFixed(1)} months of expenses. Building reserves to 3+ months should be a priority. Consider a bridge line of credit while growing into profitability.`,
+          description: `Last year ended with ${fmt(priorYear.endingCash)} in cash — only ${priorReserveMonths.toFixed(1)} months of expenses. Building reserves to 3+ months should be a priority. Consider a bridge line of credit while growing into ${profitWord}.`,
           priority: "high",
         });
       }
@@ -1250,7 +1321,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (dangerMetrics === 0 && lastYearNetMargin >= 0.1 && breakEvenYear <= 1 && (!hasDebt || dscr >= 1.25)) {
     lenderReadiness = "Strong";
     lenderReadinessExplanation =
-      "This model shows the financial fundamentals lenders look for: a clear path to profitability, controlled costs, sustainable revenue mix, and adequate debt coverage.";
+      `This model shows the financial fundamentals lenders look for: a clear path to ${profitWord}, controlled costs, sustainable revenue mix, and adequate debt coverage.`;
   } else if (dangerMetrics <= 1 && lastYearNetMargin >= 0) {
     lenderReadiness = "Needs Work";
     lenderReadinessExplanation =
@@ -1265,9 +1336,9 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   let executiveSummary: string;
 
   if (lenderReadiness === "Strong") {
-    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} net margin. The model shows a financially sustainable path with ${goodMetrics} of ${keyMetrics.length} key metrics in healthy range.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} ${marginLabel}. The model shows a financially sustainable path with ${goodMetrics} of ${keyMetrics.length} key metrics in healthy range.`;
   } else if (lenderReadiness === "Needs Work") {
-    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, but the ${pct(lastYearNetMargin)} net margin and ${dangerMetrics > 0 ? `${dangerMetrics} metric${dangerMetrics > 1 ? "s" : ""} requiring attention` : "thin margins"} suggest the model needs refinement before it's lender-ready.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, but the ${pct(lastYearNetMargin)} ${marginLabel} and ${dangerMetrics > 0 ? `${dangerMetrics} metric${dangerMetrics > 1 ? "s" : ""} requiring attention` : "thin margins"} suggest the model needs refinement before it's lender-ready.`;
   } else {
     executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, but ${dangerMetrics} of ${keyMetrics.length} key metrics are in the danger zone. Significant adjustments to revenue, costs, or enrollment are needed.`;
   }

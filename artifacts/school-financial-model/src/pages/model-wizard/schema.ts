@@ -2,11 +2,16 @@ import { z } from "zod";
 
 export const schoolStageSchema = z.enum(["new_school", "operating_school"]);
 export const fundingProfileSchema = z.enum(["tuition_based", "charter_public_funded", "hybrid_mixed"]);
+export const schoolTypeSchema = z.enum(["charter_school", "homeschool_coop", "learning_pod", "microschool", "private_school", "tutoring_center", "other"]);
+export const entityTypeSchema = z.enum(["sole_practitioner", "llc_single", "llc_partnership", "c_corp", "s_corp", "nonprofit_501c3"]);
 
 export const schoolProfileSchema = z.object({
   schoolName: z.string().min(1, "School name is required"),
   state: z.string().min(1, "State is required"),
-  schoolType: z.enum(["microschool", "private_school", "charter_school", "other"]),
+  schoolType: schoolTypeSchema,
+  schoolTypeOther: z.string().optional(),
+  entityType: entityTypeSchema,
+  ein: z.string().optional(),
   schoolStage: schoolStageSchema,
   fundingProfile: fundingProfileSchema,
   openingYear: z.coerce.number().min(2000).max(2100),
@@ -138,3 +143,40 @@ export const fullModelSchema = z.object({
 export type FullModelData = z.infer<typeof fullModelSchema>;
 export type SchoolStage = z.infer<typeof schoolStageSchema>;
 export type FundingProfile = z.infer<typeof fundingProfileSchema>;
+export type SchoolType = z.infer<typeof schoolTypeSchema>;
+export type EntityType = z.infer<typeof entityTypeSchema>;
+
+export const ENTITY_TYPE_LABELS: Record<string, string> = {
+  sole_practitioner: "Sole Practitioner (no EIN)",
+  llc_single: "LLC — Single Member",
+  llc_partnership: "LLC — Partnership",
+  c_corp: "C Corporation",
+  s_corp: "S Corporation",
+  nonprofit_501c3: "501(c)(3) Nonprofit",
+};
+
+export const SCHOOL_TYPE_LABELS: Record<string, string> = {
+  charter_school: "Charter School",
+  homeschool_coop: "Home School Co-Op",
+  learning_pod: "Learning Pod",
+  microschool: "Microschool",
+  private_school: "Private School",
+  tutoring_center: "Tutoring Center",
+  other: "Other",
+};
+
+export function isNonprofit(entityType?: string): boolean {
+  return entityType === "nonprofit_501c3";
+}
+
+export function profitLabel(entityType?: string): string {
+  return isNonprofit(entityType) ? "Net Income" : "Profit";
+}
+
+export function profitMarginLabel(entityType?: string): string {
+  return isNonprofit(entityType) ? "Net Margin" : "Profit Margin";
+}
+
+export function cumulativeProfitLabel(entityType?: string): string {
+  return isNonprofit(entityType) ? "Cumulative Net Income" : "Cumulative Profit";
+}
