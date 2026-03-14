@@ -33,6 +33,7 @@ export * from "./messageResponse";
 export * from "./modelFormData";
 export * from "./modelStatus";
 export * from "./priorYearSnapshot";
+export * from "./publicConsultantAnalysis200";
 export * from "./publicExportRequest";
 export * from "./publicExportRequestCapitalAndDebtRowsItem";
 export * from "./publicExportRequestEnrollment";

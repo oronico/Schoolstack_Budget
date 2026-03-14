@@ -86,7 +86,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
       </div>
 
       <p className="text-sm text-muted-foreground mb-4">
-        Want to save your model, get CFO analysis, and unlock all export formats?
+        Want to save your model and unlock all export formats?
       </p>
       <Link
         href="/register"

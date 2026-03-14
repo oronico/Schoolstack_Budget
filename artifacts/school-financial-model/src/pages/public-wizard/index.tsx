@@ -13,6 +13,7 @@ import { RevenueStep } from "@/pages/model-wizard/steps/RevenueStep";
 import { StaffingStep } from "@/pages/model-wizard/steps/StaffingStep";
 import { ExpenseStep } from "@/pages/model-wizard/steps/ExpenseStep";
 import { ReviewStep } from "@/pages/model-wizard/steps/ReviewStep";
+import { PublicConsultantStep } from "./PublicConsultantStep";
 import { PublicExportStep } from "./PublicExportStep";
 
 const STORAGE_KEY = "schoolstack_public_model";
@@ -24,7 +25,8 @@ const STEPS = [
   { id: 4, title: "Staffing", component: StaffingStep },
   { id: 5, title: "Expenses", component: ExpenseStep },
   { id: 6, title: "Review", component: ReviewStep },
-  { id: 7, title: "Export", component: PublicExportStep },
+  { id: 7, title: "Analysis", component: PublicConsultantStep },
+  { id: 8, title: "Export", component: PublicExportStep },
 ];
 
 function loadFromStorage(): Partial<FullModelData> | null {
@@ -193,7 +195,7 @@ export function PublicWizardPage() {
                 onClick={handleNext}
                 className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
               >
-                {currentStep === 6 ? "Export Your Model" : "Continue"} <ArrowRight className="h-5 w-5" />
+                {currentStep === STEPS.length - 1 ? "Export Your Model" : "Continue"} <ArrowRight className="h-5 w-5" />
               </button>
             </div>
           )}

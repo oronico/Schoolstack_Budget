@@ -1251,11 +1251,12 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       }
     }
 
-    const founderRoles = staffingRows.filter(r =>
-      r.roleName.toLowerCase().includes("founder") ||
-      r.roleName.toLowerCase().includes("head of school") ||
-      r.roleName.toLowerCase().includes("executive director")
-    );
+    const founderRoles = staffingRows.filter(r => {
+      const name = (r.roleName || "").toLowerCase();
+      return name.includes("founder") ||
+        name.includes("head of school") ||
+        name.includes("executive director");
+    });
     if (founderRoles.length > 0) {
       const founderComp = founderRoles.reduce((sum, r) => sum + r.fte * r.annualizedRate, 0);
       if (founderComp < 50000 && founderComp > 0) {

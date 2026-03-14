@@ -27,6 +27,7 @@ import type {
   HealthStatus,
   LoginRequest,
   MessageResponse,
+  PublicConsultantAnalysis200,
   PublicExportRequest,
   RegisterRequest,
   ResetPasswordRequest,
@@ -1193,7 +1194,7 @@ export const useArchiveModel = <
 };
 
 /**
- * @summary Run CFO consultant analysis on a financial model
+ * @summary Run consultant analysis on a financial model
  */
 export const getGetConsultantAnalysisUrl = (id: number) => {
   return `/api/models/${id}/consultant`;
@@ -1254,7 +1255,7 @@ export type GetConsultantAnalysisQueryResult = NonNullable<
 export type GetConsultantAnalysisQueryError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Run CFO consultant analysis on a financial model
+ * @summary Run consultant analysis on a financial model
  */
 
 export function useGetConsultantAnalysis<
@@ -1803,4 +1804,95 @@ export const usePublicExportUnderwriting = <
   TContext
 > => {
   return useMutation(getPublicExportUnderwritingMutationOptions(options));
+};
+
+/**
+ * Accepts full model data payload and returns consultant analysis with readiness score, key metrics, and recommendations. No authentication required.
+ * @summary Run consultant analysis without authentication
+ */
+export const getPublicConsultantAnalysisUrl = () => {
+  return `/api/public/consultant`;
+};
+
+export const publicConsultantAnalysis = async (
+  publicExportRequest: PublicExportRequest,
+  options?: RequestInit,
+): Promise<PublicConsultantAnalysis200> => {
+  return customFetch<PublicConsultantAnalysis200>(
+    getPublicConsultantAnalysisUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(publicExportRequest),
+    },
+  );
+};
+
+export const getPublicConsultantAnalysisMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publicConsultantAnalysis>>,
+    TError,
+    { data: BodyType<PublicExportRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publicConsultantAnalysis>>,
+  TError,
+  { data: BodyType<PublicExportRequest> },
+  TContext
+> => {
+  const mutationKey = ["publicConsultantAnalysis"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publicConsultantAnalysis>>,
+    { data: BodyType<PublicExportRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return publicConsultantAnalysis(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublicConsultantAnalysisMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publicConsultantAnalysis>>
+>;
+export type PublicConsultantAnalysisMutationBody =
+  BodyType<PublicExportRequest>;
+export type PublicConsultantAnalysisMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Run consultant analysis without authentication
+ */
+export const usePublicConsultantAnalysis = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publicConsultantAnalysis>>,
+    TError,
+    { data: BodyType<PublicExportRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof publicConsultantAnalysis>>,
+  TError,
+  { data: BodyType<PublicExportRequest> },
+  TContext
+> => {
+  return useMutation(getPublicConsultantAnalysisMutationOptions(options));
 };

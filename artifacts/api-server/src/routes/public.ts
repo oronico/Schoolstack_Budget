@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { PublicExportUnderwritingBody } from "@workspace/api-zod";
 import { generateUnderwritingWorkbook } from "../lib/underwriting-export";
+import { runConsultantEngine } from "../lib/consultant-engine";
 
 const router: IRouter = Router();
 
@@ -64,6 +65,29 @@ router.post("/public/export-underwriting", rateLimiter, async (req: Request, res
   } catch (err) {
     console.error("Public underwriting export error:", err);
     res.status(500).json({ error: "Something went wrong generating the workbook." });
+  }
+});
+
+router.post("/public/consultant", rateLimiter, async (req: Request, res: Response) => {
+  try {
+    const contentLength = parseInt(req.headers["content-length"] || "0", 10);
+    if (contentLength > MAX_PAYLOAD_SIZE) {
+      res.status(413).json({ error: "Payload too large." });
+      return;
+    }
+
+    const parsed = PublicExportUnderwritingBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid model data.", details: parsed.error.issues });
+      return;
+    }
+
+    const data = parsed.data as Record<string, unknown>;
+    const result = runConsultantEngine(data);
+    res.json(result);
+  } catch (err) {
+    console.error("Public consultant analysis error:", err);
+    res.status(500).json({ error: "Something went wrong running the analysis." });
   }
 });
 

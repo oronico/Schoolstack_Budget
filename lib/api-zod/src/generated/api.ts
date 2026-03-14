@@ -1317,7 +1317,7 @@ export const ArchiveModelResponse = zod.object({
 });
 
 /**
- * @summary Run CFO consultant analysis on a financial model
+ * @summary Run consultant analysis on a financial model
  */
 export const GetConsultantAnalysisParams = zod.object({
   id: zod.coerce.number(),
@@ -1429,3 +1429,23 @@ export const PublicExportUnderwritingBody = zod.object({
   capitalAndDebtRows: zod.array(zod.object({}).passthrough()).optional(),
   priorYearSnapshot: zod.object({}).passthrough().optional(),
 });
+
+/**
+ * Accepts full model data payload and returns consultant analysis with readiness score, key metrics, and recommendations. No authentication required.
+ * @summary Run consultant analysis without authentication
+ */
+export const PublicConsultantAnalysisBody = zod.object({
+  schoolProfile: zod.object({}).passthrough().optional(),
+  enrollment: zod.object({}).passthrough().optional(),
+  tuitionTiers: zod.array(zod.object({}).passthrough()).optional(),
+  revenue: zod.object({}).passthrough().optional(),
+  revenueRows: zod.array(zod.object({}).passthrough()).optional(),
+  staffing: zod.object({}).passthrough().optional(),
+  staffingRows: zod.array(zod.object({}).passthrough()).optional(),
+  facilities: zod.object({}).passthrough().optional(),
+  expenseRows: zod.array(zod.object({}).passthrough()).optional(),
+  capitalAndDebtRows: zod.array(zod.object({}).passthrough()).optional(),
+  priorYearSnapshot: zod.object({}).passthrough().optional(),
+});
+
+export const PublicConsultantAnalysisResponse = zod.object({}).passthrough();

@@ -26,7 +26,7 @@ export function LandingPage() {
               Launch your school with <span className="text-primary">confidence</span>.
             </h1>
             <p className="text-xl text-muted-foreground mb-10 leading-relaxed max-w-2xl mx-auto">
-              Build a simple 5-year financial model for your school, save your work, get practical CFO guidance, and export a lender-ready Excel workbook.
+              Build a simple 5-year financial model for your school, get consultant-grade analysis, and export a lender-ready Excel workbook.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -73,7 +73,7 @@ export function LandingPage() {
             />
             <FeatureCard 
               icon={<ShieldCheck className="h-8 w-8 text-primary" />}
-              title="CFO Guidance"
+              title="Consultant Guidance"
               description="Get practical, plain-English feedback on your model — staffing ratios, margins, and lender readiness."
               delay={0.2}
             />

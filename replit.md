@@ -50,7 +50,7 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 
 ### Public Routes (no auth required)
 - `/` — Landing page
-- `/underwriting` — Public 7-step underwriting wizard (localStorage-backed, no DB persistence)
+- `/underwriting` — Public 8-step underwriting wizard (localStorage-backed, no DB persistence)
 - `/login` — Login page
 - `/register` — Registration page
 - `/forgot-password` — Password reset request
@@ -63,6 +63,7 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 
 ### API Routes
 - `POST /api/public/export-underwriting` — Public endpoint, accepts full model JSON payload, returns 14-tab XLSX
+- `POST /api/public/consultant` — Public endpoint, accepts full model JSON payload, returns consultant analysis JSON
 - `GET /api/models/:id/export/underwriting` — Authenticated 14-tab underwriting workbook export
 - `GET /api/models/:id/export` — Authenticated Excel workbook export
 - `GET /api/models/:id/export/lender-proforma` — Authenticated Lender Pro Forma XLSX
@@ -79,12 +80,12 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 - **Capital & Debt Model**: Incorporates a loan calculator for PMT-based amortization.
 
 ### API Server (`api-server`)
-Manages authentication (register, login, reset password), CRUD operations for financial models, and specialized endpoints for admin analytics and a CFO consultant rules engine. It also orchestrates advanced Excel and PDF export functionalities, including a branded Lender Pro Forma and a 14-tab Underwriting Pro Forma workbook (DSCR, covenant checks, balance sheet, monthly cash flow, sources & uses). Includes a public export endpoint at `POST /api/public/export-underwriting` that requires no authentication.
+Manages authentication (register, login, reset password), CRUD operations for financial models, and specialized endpoints for admin analytics and a consultant rules engine. It also orchestrates advanced Excel and PDF export functionalities, including a branded Lender Pro Forma and a 14-tab Underwriting Pro Forma workbook (DSCR, covenant checks, balance sheet, monthly cash flow, sources & uses). Includes a public export endpoint at `POST /api/public/export-underwriting` that requires no authentication.
 
 ### Frontend (`school-financial-model`)
 A React-based single-page application providing a user-friendly interface for model creation and management. It includes:
 - Landing page with primary CTA routing to `/underwriting` (public wizard).
-- Public underwriting wizard at `/underwriting` — 7-step flow (Profile, Enrollment, Revenue, Staffing, Expenses, Review, Export) with localStorage persistence and public export. No account required.
+- Public underwriting wizard at `/underwriting` — 8-step flow (Profile, Enrollment, Revenue, Staffing, Expenses, Review, Analysis, Export) with localStorage persistence, consultant analysis, and public export. No account required.
 - Authentication pages (login, register, forgot/reset password).
 - A dashboard for model lifecycle management (create, duplicate, archive, delete).
 - An 8-step authenticated wizard guiding users through financial model setup: Profile, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, and Export. New users are auto-routed from registration directly into the wizard (model is auto-created).

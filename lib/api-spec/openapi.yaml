@@ -357,7 +357,7 @@ paths:
     get:
       operationId: getConsultantAnalysis
       tags: [models]
-      summary: Run CFO consultant analysis on a financial model
+      summary: Run consultant analysis on a financial model
       parameters:
         - name: id
           in: path
@@ -558,6 +558,31 @@ paths:
               schema:
                 type: string
                 format: binary
+        "400":
+          description: Invalid model data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /public/consultant:
+    post:
+      operationId: publicConsultantAnalysis
+      tags: [public]
+      summary: Run consultant analysis without authentication
+      description: Accepts full model data payload and returns consultant analysis with readiness score, key metrics, and recommendations. No authentication required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublicExportRequest"
+      responses:
+        "200":
+          description: Consultant analysis result
+          content:
+            application/json:
+              schema:
+                type: object
         "400":
           description: Invalid model data
           content:

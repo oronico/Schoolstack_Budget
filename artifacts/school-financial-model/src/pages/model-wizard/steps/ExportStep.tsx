@@ -120,7 +120,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <ExportCard
           icon={<ShieldCheck className="h-7 w-7" />}
           title="Loan Readiness PDF"
-          description="CFO analysis with lender readiness assessment"
+          description="Consultant analysis with lender readiness assessment"
           isLoading={loading === "loanReadiness"}
           isExported={exported.has("loanReadiness")}
           disabled={loading !== null && loading !== "loanReadiness"}

@@ -1,37 +1,51 @@
 import { useState, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-import { useGetConsultantAnalysis } from "@workspace/api-client-react";
-import { profitLabel, cumulativeProfitLabel } from "../schema";
 import { Loader2, AlertTriangle } from "lucide-react";
+import { getPublicConsultantAnalysisUrl } from "@workspace/api-client-react";
+import { profitLabel, cumulativeProfitLabel } from "@/pages/model-wizard/schema";
 import { ConsultantAnalysisView } from "@/components/consultant/ConsultantAnalysisView";
 
-interface ConsultantStepProps {
-  jumpToStep?: (step: number) => void;
-  modelId: number | null;
-}
-
-export function ConsultantStep({ modelId }: ConsultantStepProps) {
-  const { watch } = useFormContext();
+export function PublicConsultantStep({ jumpToStep, modelId }: { jumpToStep?: (s: number) => void; modelId: number | null }) {
+  const { getValues, watch } = useFormContext();
   const entityType = watch("schoolProfile.entityType");
   const niLabel = profitLabel(entityType);
   const cumNiLabel = cumulativeProfitLabel(entityType);
-  const [hasRequested, setHasRequested] = useState(false);
 
-  const { data, isLoading, error, refetch } = useGetConsultantAnalysis(modelId || 0, {
-    query: {
-      queryKey: [`/api/models/${modelId || 0}/consultant`],
-      enabled: false,
-    },
-  });
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAnalysis = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const formData = getValues();
+      const res = await fetch(getPublicConsultantAnalysisUrl(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => null);
+        throw new Error(errBody?.error || "Analysis failed");
+      }
+
+      const result = await res.json();
+      setData(result);
+    } catch (e: any) {
+      console.error("Public consultant analysis error:", e);
+      setError(e.message || "Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (modelId && !hasRequested) {
-      setHasRequested(true);
-      refetch();
-    }
-  }, [modelId, hasRequested, refetch]);
+    fetchAnalysis();
+  }, []);
 
-  if (isLoading || !hasRequested) {
+  if (isLoading) {
     return (
       <div className="text-center py-20">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-6">
@@ -60,7 +74,7 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
           We couldn't complete the analysis. Please try again.
         </p>
         <button
-          onClick={() => refetch()}
+          onClick={fetchAnalysis}
           className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors"
         >
           Retry Analysis
@@ -71,7 +85,7 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
 
   return (
     <ConsultantAnalysisView
-      data={data as any}
+      data={data}
       niLabel={niLabel}
       cumNiLabel={cumNiLabel}
     />
