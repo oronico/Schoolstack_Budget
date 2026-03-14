@@ -34,6 +34,14 @@
 | `SMTP_PASS` | No | SMTP password. |
 | `SMTP_FROM` | No | "From" address for outgoing emails. Falls back to `SMTP_USER` or `noreply@schoolstack.ai`. |
 
+### Implicit / Platform-Provided Variables
+
+| Variable | Where | Description |
+|---|---|---|
+| `NODE_ENV` | API Server | Automatically set to `"production"` in the esbuild bundle. In development, defaults to `"development"`. Controls JWT secret fallback behavior (dev secret allowed only when not `"production"`). |
+| `REPL_ID` | Frontend | Set automatically by Replit. When present, enables Replit-specific Vite plugins (cartographer, dev-banner, runtime-error-modal). Not set on Netlify — plugins are safely skipped. |
+| `REPLIT_DEV_DOMAIN` | API Server | Set automatically by Replit. Used as fallback for `APP_URL` in password reset email links. Not available outside Replit — set `APP_URL` explicitly in production. |
+
 ---
 
 ## Deployment: Frontend (Netlify)
@@ -58,6 +66,10 @@ A `_redirects` file in `artifacts/school-financial-model/public/` provides a fal
    - `VITE_API_BASE_URL` = your API server URL (e.g., `https://api.schoolstack.ai`)
 4. **Deploy**. The first build takes ~2 minutes (installs full monorepo, builds shared libs, then Vite).
 5. **Verify** the deploy preview loads the landing page and client-side routes (`/underwriting`, `/login`, etc.) work on direct navigation.
+
+### API Routing Note
+
+There is **no** `/api/*` proxy rewrite in `netlify.toml`. The frontend and API are deployed on separate domains. The frontend routes API requests via the `VITE_API_BASE_URL` environment variable — when set, all `/api` requests are prefixed with that URL by the fetch interceptor (`fetch-patch.ts`). If `VITE_API_BASE_URL` is empty, the frontend assumes the API is co-located on the same domain (useful for development or reverse-proxy setups).
 
 ### Common Netlify Issues
 
