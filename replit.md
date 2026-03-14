@@ -102,7 +102,7 @@ React + Vite frontend (Tailwind CSS v4). Amber-forward brand with Quicksand/Nuni
 - Landing page, auth screens (register/login/forgot-password/reset-password)
 - Dashboard with model management (create, duplicate, archive, delete)
 - 8-step model wizard: Profile → Enrollment → Revenue → Staffing → Expenses → Review → Consultant → Export
-- **School Profile step**: School stage (`new_school` = 3-year projection, `operating_school` = 5-year), funding profile (`tuition_based`, `charter_public_funded`, `hybrid_mixed`), school type, fiscal year start month, partial first year toggle, optional prior-year snapshot for operating schools
+- **School Profile step**: School stage (`new_school` = 3-year default, `operating_school` = 4-year default with optional Year 5 extension), funding profile (`tuition_based`, `charter_public_funded`, `hybrid_mixed`), school type, fiscal year start month, partial first year toggle, optional prior-year snapshot for operating schools
 - **Enrollment step**: Per-year student counts with school-type-specific benchmarks and growth guidance
 - **Revenue step**: Row-based schedule with 6 categories (tuition_and_fees, tuition_offsets, public_funding, school_choice, grants_contributions, other_revenue), driver types (annual_fixed, monthly, per_student, percent_of_base), per-year amounts, funding-profile-aware defaults
 - **Staffing step**: FTE-based roster with function categories (school_leadership, instructional, student_support, operations, administrative, other), employment types (full_time, part_time, contract), benefits/payroll tax rates, payrollLike toggle for contractors, real-time cost summary
@@ -147,7 +147,7 @@ Utility scripts package. Each script is a `.ts` file in `src/` with a correspond
 
 ### School Configuration
 - **schoolType**: `microschool | private_school | charter_school | other`
-- **schoolStage**: `new_school` (3-year projection) | `operating_school` (5-year projection)
+- **schoolStage**: `new_school` (3-year default) | `operating_school` (4-year default, extendable to 5)
 - **fundingProfile**: `tuition_based | charter_public_funded | hybrid_mixed`
 - Partial first year support with configurable operating months and proration factor
 
