@@ -649,6 +649,14 @@ components:
             type: number
         note:
           type: string
+        isLoan:
+          type: boolean
+        loanPrincipal:
+          type: number
+        loanRate:
+          type: number
+        loanTermYears:
+          type: number
       required:
         - id
         - lineItem

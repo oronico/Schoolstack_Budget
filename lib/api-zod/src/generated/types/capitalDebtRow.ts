@@ -14,4 +14,8 @@ export interface CapitalDebtRow {
   driverType: ExpenseDriverType;
   amounts: number[];
   note?: string;
+  isLoan?: boolean;
+  loanPrincipal?: number;
+  loanRate?: number;
+  loanTermYears?: number;
 }
