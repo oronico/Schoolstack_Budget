@@ -21,13 +21,13 @@ const router: IRouter = Router();
 
 function extractRowColumns(data: Record<string, unknown>) {
   const d = data as Record<string, unknown>;
-  return {
-    priorYearSnapshotJson: (d.priorYearSnapshot as Record<string, unknown>) ?? null,
-    revenueRowsJson: (d.revenueRows as Record<string, unknown>[]) ?? null,
-    staffingRowsJson: (d.staffingRows as Record<string, unknown>[]) ?? null,
-    expenseRowsJson: (d.expenseRows as Record<string, unknown>[]) ?? null,
-    capitalAndDebtRowsJson: (d.capitalAndDebtRows as Record<string, unknown>[]) ?? null,
-  };
+  const result: Record<string, unknown> = {};
+  if (d.priorYearSnapshot !== undefined) result.priorYearSnapshotJson = d.priorYearSnapshot;
+  if (d.revenueRows !== undefined) result.revenueRowsJson = d.revenueRows;
+  if (d.staffingRows !== undefined) result.staffingRowsJson = d.staffingRows;
+  if (d.expenseRows !== undefined) result.expenseRowsJson = d.expenseRows;
+  if (d.capitalAndDebtRows !== undefined) result.capitalAndDebtRowsJson = d.capitalAndDebtRows;
+  return result;
 }
 
 function modelResponse(model: typeof financialModelsTable.$inferSelect) {
