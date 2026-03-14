@@ -34,6 +34,7 @@ SchoolStack.ai is the parent brand (amber-forward). Each product gets its own pr
 - **Frontend**: React + Vite + Tailwind CSS v4
 - **Auth**: JWT (bcryptjs for passwords, jsonwebtoken for tokens)
 - **Excel export**: ExcelJS
+- **PDF export**: PDFKit
 
 ## Structure
 
@@ -92,6 +93,9 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
   - **Consultant Notes** (optional): Executive summary, strengths, risks, recommendations
   - **Prior-Year Snapshot** (optional, operating schools only)
   - Legacy fallback for old flat-field models
+- PDF export — Pro Forma: `src/lib/pdf-proforma.ts` — generates branded multi-page PDF with school profile, enrollment, revenue/staffing/expense summaries, and P&L statement using PDFKit
+- PDF export — Loan Readiness: `src/lib/pdf-loan-readiness.ts` — generates CFO analysis PDF with executive summary, lender readiness, key metrics, recommendations, composition tables, and stress tests
+- PDF utilities: `src/lib/pdf-utils.ts` — shared PDFKit helpers (branded header/footer, tables, status badges, formatters)
 - Event tracking: `src/lib/track-event.ts` — best-effort event tracking helper
 - Depends on: `@workspace/db`, `@workspace/api-zod`
 
@@ -109,7 +113,7 @@ React + Vite frontend (Tailwind CSS v4). Amber-forward brand with Quicksand/Nuni
 - **Expenses step**: Row-based schedule with 4 accounting categories (instructional_program, technology, occupancy_facility, administrative_general), driver types (annual_fixed, monthly, per_student, percent_of_revenue), plus capital & debt rows with loan calculator
 - **Review step**: Grouped summaries by category with computed Year 1 totals; falls back to legacy display for old models
 - **Consultant step**: Executive summary, key metrics, recommendations, revenue/cost composition charts, stress test scenarios, enrollment guidance; uses CFO consultant tone
-- **Export step**: Downloads assumption-driven Excel workbook with cross-tab formulas
+- **Export step**: Three download options — Excel workbook (cross-tab formulas), Pro Forma PDF (financial projections summary), and Loan Readiness PDF (CFO analysis with lender readiness assessment)
 - Admin analytics page at /admin (protected by email allowlist) with school stage/type/funding distributions, top revenue lines, top expense categories, export rates, Year 5 adoption, conversion funnel
 - Auth context with JWT stored in localStorage, fetch interceptor for Bearer token injection
 

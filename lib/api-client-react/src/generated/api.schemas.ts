@@ -139,6 +139,68 @@ export const ExpenseCategory = {
   capital_financing: "capital_financing",
 } as const;
 
+export type RevenueRowBillingMonths =
+  (typeof RevenueRowBillingMonths)[keyof typeof RevenueRowBillingMonths];
+
+export const RevenueRowBillingMonths = {
+  NUMBER_9: 9,
+  NUMBER_10: 10,
+  NUMBER_12: 12,
+} as const;
+
+export type RevenueRowCollectionMethod =
+  (typeof RevenueRowCollectionMethod)[keyof typeof RevenueRowCollectionMethod];
+
+export const RevenueRowCollectionMethod = {
+  autopay: "autopay",
+  invoiced: "invoiced",
+  mixed: "mixed",
+} as const;
+
+export type RevenueRowPaymentFrequency =
+  (typeof RevenueRowPaymentFrequency)[keyof typeof RevenueRowPaymentFrequency];
+
+export const RevenueRowPaymentFrequency = {
+  monthly: "monthly",
+  quarterly: "quarterly",
+  semi_annual: "semi_annual",
+  annual: "annual",
+} as const;
+
+export type RevenueRowPaymentTiming =
+  (typeof RevenueRowPaymentTiming)[keyof typeof RevenueRowPaymentTiming];
+
+export const RevenueRowPaymentTiming = {
+  upfront: "upfront",
+  arrears: "arrears",
+} as const;
+
+export type RevenueRowDisbursementType =
+  (typeof RevenueRowDisbursementType)[keyof typeof RevenueRowDisbursementType];
+
+export const RevenueRowDisbursementType = {
+  direct: "direct",
+  reimbursement: "reimbursement",
+} as const;
+
+export type RevenueRowGrantStatus =
+  (typeof RevenueRowGrantStatus)[keyof typeof RevenueRowGrantStatus];
+
+export const RevenueRowGrantStatus = {
+  confirmed: "confirmed",
+  projected: "projected",
+} as const;
+
+export type RevenueRowReceiptQuarter =
+  (typeof RevenueRowReceiptQuarter)[keyof typeof RevenueRowReceiptQuarter];
+
+export const RevenueRowReceiptQuarter = {
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+  NUMBER_3: 3,
+  NUMBER_4: 4,
+} as const;
+
 export interface RevenueRow {
   id: string;
   category: RevenueCategory;
@@ -148,16 +210,16 @@ export interface RevenueRow {
   amounts: number[];
   percentBase?: string;
   note?: string;
-  billingMonths?: 9 | 10 | 12;
-  collectionMethod?: "autopay" | "invoiced" | "mixed";
+  billingMonths?: RevenueRowBillingMonths;
+  collectionMethod?: RevenueRowCollectionMethod;
   collectionRate?: number;
   collectionDelayDays?: number;
-  paymentFrequency?: "monthly" | "quarterly" | "semi_annual" | "annual";
-  paymentTiming?: "upfront" | "arrears";
-  disbursementType?: "direct" | "reimbursement";
+  paymentFrequency?: RevenueRowPaymentFrequency;
+  paymentTiming?: RevenueRowPaymentTiming;
+  disbursementType?: RevenueRowDisbursementType;
   reimbursementLagMonths?: number;
-  grantStatus?: "confirmed" | "projected";
-  receiptQuarter?: 1 | 2 | 3 | 4;
+  grantStatus?: RevenueRowGrantStatus;
+  receiptQuarter?: RevenueRowReceiptQuarter;
 }
 
 export interface StaffingRow {

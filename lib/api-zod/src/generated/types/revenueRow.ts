@@ -7,6 +7,13 @@
  */
 import type { RevenueCategory } from "./revenueCategory";
 import type { RevenueDriverType } from "./revenueDriverType";
+import type { RevenueRowBillingMonths } from "./revenueRowBillingMonths";
+import type { RevenueRowCollectionMethod } from "./revenueRowCollectionMethod";
+import type { RevenueRowDisbursementType } from "./revenueRowDisbursementType";
+import type { RevenueRowGrantStatus } from "./revenueRowGrantStatus";
+import type { RevenueRowPaymentFrequency } from "./revenueRowPaymentFrequency";
+import type { RevenueRowPaymentTiming } from "./revenueRowPaymentTiming";
+import type { RevenueRowReceiptQuarter } from "./revenueRowReceiptQuarter";
 
 export interface RevenueRow {
   id: string;
@@ -17,14 +24,14 @@ export interface RevenueRow {
   amounts: number[];
   percentBase?: string;
   note?: string;
-  billingMonths?: 9 | 10 | 12;
-  collectionMethod?: "autopay" | "invoiced" | "mixed";
+  billingMonths?: RevenueRowBillingMonths;
+  collectionMethod?: RevenueRowCollectionMethod;
   collectionRate?: number;
   collectionDelayDays?: number;
-  paymentFrequency?: "monthly" | "quarterly" | "semi_annual" | "annual";
-  paymentTiming?: "upfront" | "arrears";
-  disbursementType?: "direct" | "reimbursement";
+  paymentFrequency?: RevenueRowPaymentFrequency;
+  paymentTiming?: RevenueRowPaymentTiming;
+  disbursementType?: RevenueRowDisbursementType;
   reimbursementLagMonths?: number;
-  grantStatus?: "confirmed" | "projected";
-  receiptQuarter?: 1 | 2 | 3 | 4;
+  grantStatus?: RevenueRowGrantStatus;
+  receiptQuarter?: RevenueRowReceiptQuarter;
 }

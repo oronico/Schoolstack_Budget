@@ -229,16 +229,29 @@ export const CreateModelBody = zod.object({
           amounts: zod.array(zod.number()),
           percentBase: zod.string().optional(),
           note: zod.string().optional(),
-          billingMonths: zod.union([zod.literal(9), zod.literal(10), zod.literal(12)]).optional(),
-          collectionMethod: zod.enum(["autopay", "invoiced", "mixed"]).optional(),
+          billingMonths: zod
+            .union([zod.literal(9), zod.literal(10), zod.literal(12)])
+            .optional(),
+          collectionMethod: zod
+            .enum(["autopay", "invoiced", "mixed"])
+            .optional(),
           collectionRate: zod.number().optional(),
           collectionDelayDays: zod.number().optional(),
-          paymentFrequency: zod.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
+          paymentFrequency: zod
+            .enum(["monthly", "quarterly", "semi_annual", "annual"])
+            .optional(),
           paymentTiming: zod.enum(["upfront", "arrears"]).optional(),
           disbursementType: zod.enum(["direct", "reimbursement"]).optional(),
           reimbursementLagMonths: zod.number().optional(),
           grantStatus: zod.enum(["confirmed", "projected"]).optional(),
-          receiptQuarter: zod.union([zod.literal(1), zod.literal(2), zod.literal(3), zod.literal(4)]).optional(),
+          receiptQuarter: zod
+            .union([
+              zod.literal(1),
+              zod.literal(2),
+              zod.literal(3),
+              zod.literal(4),
+            ])
+            .optional(),
         }),
       )
       .optional(),
@@ -457,16 +470,29 @@ export const GetModelResponse = zod.object({
           amounts: zod.array(zod.number()),
           percentBase: zod.string().optional(),
           note: zod.string().optional(),
-          billingMonths: zod.union([zod.literal(9), zod.literal(10), zod.literal(12)]).optional(),
-          collectionMethod: zod.enum(["autopay", "invoiced", "mixed"]).optional(),
+          billingMonths: zod
+            .union([zod.literal(9), zod.literal(10), zod.literal(12)])
+            .optional(),
+          collectionMethod: zod
+            .enum(["autopay", "invoiced", "mixed"])
+            .optional(),
           collectionRate: zod.number().optional(),
           collectionDelayDays: zod.number().optional(),
-          paymentFrequency: zod.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
+          paymentFrequency: zod
+            .enum(["monthly", "quarterly", "semi_annual", "annual"])
+            .optional(),
           paymentTiming: zod.enum(["upfront", "arrears"]).optional(),
           disbursementType: zod.enum(["direct", "reimbursement"]).optional(),
           reimbursementLagMonths: zod.number().optional(),
           grantStatus: zod.enum(["confirmed", "projected"]).optional(),
-          receiptQuarter: zod.union([zod.literal(1), zod.literal(2), zod.literal(3), zod.literal(4)]).optional(),
+          receiptQuarter: zod
+            .union([
+              zod.literal(1),
+              zod.literal(2),
+              zod.literal(3),
+              zod.literal(4),
+            ])
+            .optional(),
         }),
       )
       .optional(),
@@ -686,16 +712,29 @@ export const UpdateModelBody = zod.object({
           amounts: zod.array(zod.number()),
           percentBase: zod.string().optional(),
           note: zod.string().optional(),
-          billingMonths: zod.union([zod.literal(9), zod.literal(10), zod.literal(12)]).optional(),
-          collectionMethod: zod.enum(["autopay", "invoiced", "mixed"]).optional(),
+          billingMonths: zod
+            .union([zod.literal(9), zod.literal(10), zod.literal(12)])
+            .optional(),
+          collectionMethod: zod
+            .enum(["autopay", "invoiced", "mixed"])
+            .optional(),
           collectionRate: zod.number().optional(),
           collectionDelayDays: zod.number().optional(),
-          paymentFrequency: zod.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
+          paymentFrequency: zod
+            .enum(["monthly", "quarterly", "semi_annual", "annual"])
+            .optional(),
           paymentTiming: zod.enum(["upfront", "arrears"]).optional(),
           disbursementType: zod.enum(["direct", "reimbursement"]).optional(),
           reimbursementLagMonths: zod.number().optional(),
           grantStatus: zod.enum(["confirmed", "projected"]).optional(),
-          receiptQuarter: zod.union([zod.literal(1), zod.literal(2), zod.literal(3), zod.literal(4)]).optional(),
+          receiptQuarter: zod
+            .union([
+              zod.literal(1),
+              zod.literal(2),
+              zod.literal(3),
+              zod.literal(4),
+            ])
+            .optional(),
         }),
       )
       .optional(),
@@ -907,16 +946,29 @@ export const UpdateModelResponse = zod.object({
           amounts: zod.array(zod.number()),
           percentBase: zod.string().optional(),
           note: zod.string().optional(),
-          billingMonths: zod.union([zod.literal(9), zod.literal(10), zod.literal(12)]).optional(),
-          collectionMethod: zod.enum(["autopay", "invoiced", "mixed"]).optional(),
+          billingMonths: zod
+            .union([zod.literal(9), zod.literal(10), zod.literal(12)])
+            .optional(),
+          collectionMethod: zod
+            .enum(["autopay", "invoiced", "mixed"])
+            .optional(),
           collectionRate: zod.number().optional(),
           collectionDelayDays: zod.number().optional(),
-          paymentFrequency: zod.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
+          paymentFrequency: zod
+            .enum(["monthly", "quarterly", "semi_annual", "annual"])
+            .optional(),
           paymentTiming: zod.enum(["upfront", "arrears"]).optional(),
           disbursementType: zod.enum(["direct", "reimbursement"]).optional(),
           reimbursementLagMonths: zod.number().optional(),
           grantStatus: zod.enum(["confirmed", "projected"]).optional(),
-          receiptQuarter: zod.union([zod.literal(1), zod.literal(2), zod.literal(3), zod.literal(4)]).optional(),
+          receiptQuarter: zod
+            .union([
+              zod.literal(1),
+              zod.literal(2),
+              zod.literal(3),
+              zod.literal(4),
+            ])
+            .optional(),
         }),
       )
       .optional(),
@@ -1155,16 +1207,29 @@ export const ArchiveModelResponse = zod.object({
           amounts: zod.array(zod.number()),
           percentBase: zod.string().optional(),
           note: zod.string().optional(),
-          billingMonths: zod.union([zod.literal(9), zod.literal(10), zod.literal(12)]).optional(),
-          collectionMethod: zod.enum(["autopay", "invoiced", "mixed"]).optional(),
+          billingMonths: zod
+            .union([zod.literal(9), zod.literal(10), zod.literal(12)])
+            .optional(),
+          collectionMethod: zod
+            .enum(["autopay", "invoiced", "mixed"])
+            .optional(),
           collectionRate: zod.number().optional(),
           collectionDelayDays: zod.number().optional(),
-          paymentFrequency: zod.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
+          paymentFrequency: zod
+            .enum(["monthly", "quarterly", "semi_annual", "annual"])
+            .optional(),
           paymentTiming: zod.enum(["upfront", "arrears"]).optional(),
           disbursementType: zod.enum(["direct", "reimbursement"]).optional(),
           reimbursementLagMonths: zod.number().optional(),
           grantStatus: zod.enum(["confirmed", "projected"]).optional(),
-          receiptQuarter: zod.union([zod.literal(1), zod.literal(2), zod.literal(3), zod.literal(4)]).optional(),
+          receiptQuarter: zod
+            .union([
+              zod.literal(1),
+              zod.literal(2),
+              zod.literal(3),
+              zod.literal(4),
+            ])
+            .optional(),
         }),
       )
       .optional(),
@@ -1316,5 +1381,19 @@ export const GetConsultantAnalysisResponse = zod.object({
  * @summary Export financial model as Excel workbook
  */
 export const ExportModelParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Export financial model as Pro Forma PDF
+ */
+export const ExportProFormaPdfParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Export loan readiness report as PDF
+ */
+export const ExportLoanReadinessPdfParams = zod.object({
   id: zod.coerce.number(),
 });

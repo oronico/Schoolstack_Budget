@@ -14,6 +14,8 @@ import {
 } from "@workspace/api-zod";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 import { generateWorkbook } from "../lib/excel-export";
+import { generateProFormaPDF } from "../lib/pdf-proforma";
+import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine } from "../lib/consultant-engine";
 
@@ -314,6 +316,95 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
   } catch (err) {
     console.error("Consultant engine error:", err);
     res.status(500).json({ error: "Something went wrong running the consultant analysis." });
+  }
+});
+
+router.get("/models/:id/export/pro-forma-pdf", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    const data = model.data as Record<string, unknown>;
+    const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
+    const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
+
+    const buffer = await generateProFormaPDF(data);
+
+    await db.insert(exportsTable).values({
+      userId: req.userId!,
+      modelId: model.id,
+      format: "pdf",
+    });
+
+    await trackEvent("exported_proforma_pdf", req.userId, { modelId: model.id });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Pro_Forma.pdf"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error("Pro Forma PDF export error:", err);
+    res.status(500).json({ error: "Something went wrong generating the Pro Forma PDF." });
+  }
+});
+
+router.get("/models/:id/export/loan-readiness-pdf", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    const data = model.data as Record<string, unknown>;
+    const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
+    const entityType = typeof profile?.entityType === "string" ? profile.entityType : undefined;
+    const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
+
+    const consultantOutput = runConsultantEngine(data);
+
+    const buffer = await generateLoanReadinessPDF(consultantOutput, schoolName, entityType);
+
+    await db.insert(exportsTable).values({
+      userId: req.userId!,
+      modelId: model.id,
+      format: "pdf",
+    });
+
+    await trackEvent("exported_loan_readiness_pdf", req.userId, { modelId: model.id });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Loan_Readiness_Report.pdf"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error("Loan Readiness PDF export error:", err);
+    res.status(500).json({ error: "Something went wrong generating the Loan Readiness PDF." });
   }
 });
 

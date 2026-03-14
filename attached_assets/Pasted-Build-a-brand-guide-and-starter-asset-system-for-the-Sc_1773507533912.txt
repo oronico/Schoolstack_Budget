@@ -1,0 +1,206 @@
+Build a brand guide and starter asset system for the SchoolStack product suite.
+
+Brand objective:
+Create a warm, professional, high-trust identity that feels like expert guidance with kindness. This should never feel cold, corporate, childish, or condescending. The emotional tone is “trusted advisor in a great sweater, not a suit.”
+
+Context:
+SchoolStack builds purpose-built tools that make the school back office easier, clearer, and less overwhelming.
+
+Products:
+- SchoolStack.ai — landing page is up, in development, alpha ready in September
+- Space.schoolstack.ai — beta is live
+- Budget.schoolstack.ai — in development, beta goes live this week
+
+Audience:
+Our users are school leaders and operators. They love leading their schools and hate the back office. They are not business or finance experts. They often feel overloaded by operational complexity. Our job is to take on the cognitive lift, reduce friction, save time, and make the hard stuff feel figureoutable.
+
+Brand values:
+- we guide without judgment
+- we never make users feel dumb
+- learning is normal
+- humility matters
+- math is figureoutable
+- small schools and small businesses need capacity and purpose-built tools to flourish
+
+What the brand should feel like:
+- warm
+- calm
+- capable
+- encouraging
+- clear
+- practical
+- quietly expert
+- credible enough for lenders, partners, and operators
+
+Avoid:
+- cutesy school branding
+- mascots
+- chalkboards, apples, caps, calculators, dollar signs
+- cold enterprise SaaS visuals
+- aggressive fintech energy
+- jargon-heavy copy
+- neon gradients
+- anything that feels templated or patronizing
+
+Use this palette as the foundation:
+- Amber #D97706 — signature warmth / primary spark
+- Deep Navy #1E293B — trust / anchor / text
+- Teal #0D9488 — guidance / action / intelligence
+- Sage Green #16A34A — success
+- Rose #E11D48 — alerts
+- Cream #FAF9F7 — background
+
+Typography:
+- Quicksand Bold for headlines and display
+- Nunito Regular for body and UI
+- Nunito SemiBold/Bold for buttons, labels, and subheads
+
+Usage rules:
+- Deep Navy should do most of the structural work
+- Cream should be the dominant background
+- Amber should be a signature accent, not paragraph text
+- Teal should support actions and helpful next steps
+- Sage Green should stay tied to success states unless you create a distinct darker green for Budget
+- Rose is only for alerts/errors
+- Maintain strong contrast and accessible readability
+
+Brand architecture:
+SchoolStack is the parent brand. Every product should share the same visual DNA:
+- same wordmark logic
+- same icon geometry
+- same spacing system
+- same typography
+- same rounded-corner language
+- same base palette of Cream, Deep Navy, and Amber
+
+Products should feel united but not identical.
+
+Recommended product accents:
+- SchoolStack.ai = Amber + Teal
+- SchoolStack Space = Amber + calm blue / periwinkle accent
+- SchoolStack Budget = Amber + deeper evergreen accent, or a finance green that is distinct from success-state green
+
+Optional extension colors if needed:
+- Space Blue #5B7CFA
+- Budget Evergreen #2F6B4F
+
+Logo system:
+Create a modular logo family, not three unrelated logos.
+The visual idea should suggest stack, structure, support, ordered information, and calm momentum.
+
+Preferred direction:
+Use a simple rounded-block or modular tile motif that can scale from full logo to favicon. The mark should feel modern, durable, and legible at very small sizes.
+
+Create:
+- master SchoolStack logo
+- SchoolStack.ai logo
+- SchoolStack Space logo
+- SchoolStack Budget logo
+- icon-only mark
+- horizontal and stacked lockups
+- light and dark versions
+- monochrome version
+
+Export logos as:
+- SVG
+- transparent PNG
+- PNG on Cream
+- PNG on Deep Navy
+
+Favicon system:
+Use the icon-only mark.
+No tiny text.
+Export:
+- 16x16
+- 32x32
+- 48x48
+- 64x64
+- 180x180
+- 192x192
+- 512x512
+
+Create one master favicon and one per product.
+
+Thumbnail / OG image system:
+Create reusable templates for:
+- 1200x630 OG image
+- 1080x1080 square social image
+- 1600x900 presentation thumbnail
+
+Thumbnail style:
+- large readable title
+- short descriptor area
+- generous whitespace
+- calm, polished hierarchy
+- subtle use of brand blocks or linework
+- should still read well at small preview sizes
+
+For now, use placeholders for:
+- product name
+- short descriptor
+- URL or “by SchoolStack”
+- Alpha / Beta / Live badge
+
+Include a mini design system:
+Show example components that reflect the brand:
+- primary button
+- secondary button
+- card
+- input field
+- success message
+- error message
+- helper / nudge message
+- empty state
+- nav header
+
+UI should feel:
+- one calm step at a time
+- approachable
+- capable
+- minimal but not bare
+- warm, with plenty of breathing room
+
+Voice and microcopy:
+Include a tone-of-voice section with examples.
+
+Good examples:
+- “You’re close. Here’s the next step.”
+- “We used what you already entered to lighten the lift.”
+- “A few details are missing. Add them here and we’ll keep going.”
+- “Let’s work through it together.”
+- “This part is easier than it looks.”
+
+Avoid:
+- “Invalid input.”
+- “User error.”
+- “Incorrect assumptions.”
+- “You failed to complete required fields.”
+
+Build the brand guide page with these sections:
+1. Brand essence
+2. Audience and positioning
+3. Brand traits and anti-traits
+4. Color palette and usage
+5. Typography
+6. Logo system
+7. Product system
+8. Favicon system
+9. Thumbnail system
+10. UI examples
+11. Voice and microcopy
+12. Export/download area
+
+Deliverables:
+- polished brand guide page
+- refined logo direction
+- exported logo assets
+- favicon assets
+- thumbnail templates
+- design token file for color, type, radius, spacing, and shadows
+- short README explaining how the system should be applied across products
+
+Final test:
+The result should feel like one family, make each product distinct at a glance, feel warmer than typical finance or ops software, and still look credible to funders, borrowers, school leaders, and partners.
+
+The feeling should be:
+“You are in capable hands, and this is going to be easier than you thought.”

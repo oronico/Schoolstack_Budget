@@ -1365,3 +1365,178 @@ export function useExportModel<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Export financial model as Pro Forma PDF
+ */
+export const getExportProFormaPdfUrl = (id: number) => {
+  return `/api/models/${id}/export/pro-forma-pdf`;
+};
+
+export const exportProFormaPdf = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getExportProFormaPdfUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportProFormaPdfQueryKey = (id: number) => {
+  return [`/api/models/${id}/export/pro-forma-pdf`] as const;
+};
+
+export const getExportProFormaPdfQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportProFormaPdf>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportProFormaPdf>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportProFormaPdfQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof exportProFormaPdf>>
+  > = ({ signal }) => exportProFormaPdf(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportProFormaPdf>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportProFormaPdfQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportProFormaPdf>>
+>;
+export type ExportProFormaPdfQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Export financial model as Pro Forma PDF
+ */
+
+export function useExportProFormaPdf<
+  TData = Awaited<ReturnType<typeof exportProFormaPdf>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportProFormaPdf>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportProFormaPdfQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Export loan readiness report as PDF
+ */
+export const getExportLoanReadinessPdfUrl = (id: number) => {
+  return `/api/models/${id}/export/loan-readiness-pdf`;
+};
+
+export const exportLoanReadinessPdf = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getExportLoanReadinessPdfUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportLoanReadinessPdfQueryKey = (id: number) => {
+  return [`/api/models/${id}/export/loan-readiness-pdf`] as const;
+};
+
+export const getExportLoanReadinessPdfQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportLoanReadinessPdf>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportLoanReadinessPdf>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getExportLoanReadinessPdfQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof exportLoanReadinessPdf>>
+  > = ({ signal }) => exportLoanReadinessPdf(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportLoanReadinessPdf>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportLoanReadinessPdfQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportLoanReadinessPdf>>
+>;
+export type ExportLoanReadinessPdfQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Export loan readiness report as PDF
+ */
+
+export function useExportLoanReadinessPdf<
+  TData = Awaited<ReturnType<typeof exportLoanReadinessPdf>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportLoanReadinessPdf>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportLoanReadinessPdfQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
