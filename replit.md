@@ -80,8 +80,8 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - Auth: `src/routes/auth.ts` — register, login, logout, /me, forgot-password, reset-password (JWT-based)
 - Models: `src/routes/models.ts` — CRUD + duplicate + archive + export endpoints
 - Admin: `src/routes/admin.ts` — `GET /api/admin/analytics` returns aggregate analytics (requires auth + admin). Admin check via `src/middlewares/admin.ts` verifies user email is in `ADMIN_EMAILS` env var (comma-separated list).
-- Consultant: `GET /api/models/:id/consultant` — deterministic CFO rules engine with inflation compounding, partial-year proration, revenue/cost composition metrics, cumulative financials with reserve months, 3 stress-test scenarios (enrollment down 20%, philanthropy loss, costs up 10%), enrollment growth benchmarking guidance
-- Excel export: `src/lib/excel-export.ts` — generates 7-tab workbook with real formulas (Assumptions, Enrollment, Revenue, Staffing, Operating Expenses, Five-Year Model, Summary). Assumptions tab includes Growth & Inflation section (rows 67-70) and Fiscal Year section (rows 72-75). Revenue/Staffing/OpEx tabs use escalation formulas referencing Assumptions. Five-Year Model adds cumulative net income and operating reserve months. Summary includes DSCR metric (with partial-year proration), Revenue Mix section, and Cost Structure section.
+- Consultant: `GET /api/models/:id/consultant` — deterministic CFO rules engine with dual computation paths (row-based data for new models, legacy flat-field fallback), dynamic year count (3 for new_school, 5 for operating_school), driver-type-aware calculations (annual_fixed, monthly, per_student, percent_of_base, percent_of_revenue), revenue/cost composition metrics, cumulative financials with reserve months, 3 stress-test scenarios (enrollment down 20%, philanthropy loss, costs up 10%), enrollment growth benchmarking guidance
+- Excel export: `src/lib/excel-export.ts` — generates 7-tab workbook for row-based models (School Profile, Revenue Schedule, Staffing & Personnel, Operating Expenses, Capital & Debt, Financial Model, Summary) with SUM formulas for category subtotals and cross-tab formula references in the P&L tab; legacy fallback produces simplified tabs for old flat-field models
 - Event tracking: `src/lib/track-event.ts` — best-effort event tracking helper
 - Depends on: `@workspace/db`, `@workspace/api-zod`
 
@@ -91,11 +91,13 @@ React + Vite frontend (Tailwind CSS v4). Amber-forward brand with Quicksand/Nuni
 
 - Landing page, auth screens (register/login/forgot-password/reset-password)
 - Dashboard with model management (create, duplicate, archive, delete)
-- 8-step model wizard: Profile → Enrollment → Revenue → Staffing → Operations → Review → Consultant → Export
+- 8-step model wizard: Profile → Enrollment → Revenue → Staffing → Expenses → Review → Consultant → Export
 - School Profile step: includes Fiscal Year Start Month (select, default July), Partial First Year toggle (with year1OperatingMonths field)
-- Revenue step: Tuition & Fees (with annual tuition increase %), Public & Aid Revenue (ESA/voucher, per-pupil public funding), Philanthropy (donations, foundation grants, capital gifts)
-- Operations step: Facility Costs (rent, utilities, insurance, maintenance), Instructional (curriculum, tech per student), Student Services (food, transport, counseling), Administrative (marketing, prof dev, other), Debt Service (loan amount, interest rate, term → PMT-calculated annual payment), Growth & Inflation section (annual salary increase %, general cost inflation %)
-- Consultant step: Executive summary, key metrics, recommendations, revenue composition charts, cost composition charts, stress test scenarios table, enrollment guidance warnings, cumulative financials
+- Revenue step: Row-based revenue schedule with 6 categories (tuition_and_fees, tuition_offsets, public_funding, school_choice, grants_contributions, other_revenue), driver types (annual_fixed, monthly, per_student, percent_of_base), per-year amounts
+- Staffing step: FTE-based staffing roster with function categories (school_leadership, instructional, student_support, operations, administrative, other), employment types (full_time, part_time, contract), benefits and payroll tax rates
+- Expenses step: Row-based expense schedule with 4 categories (instructional_program, technology, occupancy_facility, administrative_general), driver types (annual_fixed, monthly, per_student, percent_of_revenue), plus capital & debt rows with loan calculator
+- Review step: Shows row-based summaries grouped by category with computed Year 1 totals; falls back to legacy flat-field display for old models
+- Consultant step: Executive summary, key metrics, recommendations, revenue composition charts, cost composition charts, stress test scenarios table, enrollment guidance warnings, cumulative financials; dynamic year count (3 or 5)
 - Admin analytics page at /admin (protected by email allowlist)
 - Auth context with JWT stored in localStorage, fetch interceptor for Bearer token injection
 

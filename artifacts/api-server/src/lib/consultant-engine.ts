@@ -2,6 +2,7 @@ interface SchoolProfile {
   schoolName?: string;
   state?: string;
   schoolType?: string;
+  schoolStage?: string;
   openingYear?: number;
   currentStudents?: number;
   maxCapacity?: number;
@@ -18,7 +19,7 @@ interface Enrollment {
   year5?: number;
 }
 
-interface Revenue {
+interface LegacyRevenue {
   tuitionPerStudent?: number;
   annualTuitionIncrease?: number;
   esaRevenuePerStudent?: number;
@@ -31,7 +32,7 @@ interface Revenue {
   annualFundraising?: number;
 }
 
-interface Staffing {
+interface LegacyStaffing {
   studentsPerTeacher?: number;
   teacherSalary?: number;
   adminStaffCount?: number;
@@ -40,7 +41,7 @@ interface Staffing {
   benefitsRate?: number;
 }
 
-interface Facilities {
+interface LegacyFacilities {
   monthlyRent?: number;
   annualRentIncrease?: number;
   annualUtilities?: number;
@@ -61,12 +62,64 @@ interface Facilities {
   generalCostInflation?: number;
 }
 
+interface RevenueRow {
+  id: string;
+  category: string;
+  lineItem: string;
+  enabled: boolean;
+  driverType: string;
+  amounts: number[];
+  percentBase?: string;
+  note?: string;
+}
+
+interface StaffingRow {
+  id: string;
+  roleName: string;
+  functionCategory: string;
+  employmentType: string;
+  fte: number;
+  annualizedRate: number;
+  benefitsEligible: boolean;
+  benefitsRate: number;
+  payrollTaxRate: number;
+  payrollLike: boolean;
+  notes: string;
+}
+
+interface ExpenseRow {
+  id: string;
+  category: string;
+  lineItem: string;
+  enabled: boolean;
+  driverType: string;
+  amounts: number[];
+  note?: string;
+}
+
+interface CapitalDebtRow {
+  id: string;
+  lineItem: string;
+  enabled: boolean;
+  driverType: string;
+  amounts: number[];
+  note?: string;
+  isLoan?: boolean;
+  loanPrincipal?: number;
+  loanRate?: number;
+  loanTermYears?: number;
+}
+
 interface ModelData {
   schoolProfile?: SchoolProfile;
   enrollment?: Enrollment;
-  revenue?: Revenue;
-  staffing?: Staffing;
-  facilities?: Facilities;
+  revenue?: LegacyRevenue;
+  revenueRows?: RevenueRow[];
+  staffing?: LegacyStaffing;
+  staffingRows?: StaffingRow[];
+  facilities?: LegacyFacilities;
+  expenseRows?: ExpenseRow[];
+  capitalAndDebtRows?: CapitalDebtRow[];
 }
 
 export interface KeyMetric {
@@ -139,6 +192,18 @@ interface YearFinancials {
   netMargin: number;
 }
 
+function fmt(n: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function pct(n: number): string {
+  return `${(n * 100).toFixed(1)}%`;
+}
+
 function computeAnnualDebtService(loanAmount: number, annualRate: number, termYears: number): number {
   if (loanAmount <= 0 || termYears <= 0) return 0;
   if (annualRate <= 0) return loanAmount / termYears;
@@ -148,13 +213,147 @@ function computeAnnualDebtService(loanAmount: number, annualRate: number, termYe
   return monthlyPayment * 12;
 }
 
-function computeYearFinancials(
+function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number): number {
+  const base = amounts?.[yearIdx] ?? 0;
+  switch (driverType) {
+    case "monthly": return base * 12;
+    case "per_student": return base * students;
+    case "annual_fixed": return base;
+    default: return base;
+  }
+}
+
+interface RevenueBreakdown {
+  total: number;
+  tuition: number;
+  publicFunding: number;
+  philanthropy: number;
+}
+
+function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number): RevenueBreakdown {
+  const rowValues = new Map<string, number>();
+
+  for (const row of rows) {
+    if (!row.enabled || row.driverType === "percent_of_base") continue;
+    rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students));
+  }
+
+  for (const row of rows) {
+    if (!row.enabled || row.driverType !== "percent_of_base") continue;
+    const baseVal = rowValues.get(row.percentBase || "") || 0;
+    const percentage = (row.amounts?.[yearIdx] ?? 0) / 100;
+    rowValues.set(row.id, baseVal * percentage);
+  }
+
+  let tuition = 0, publicFunding = 0, philanthropy = 0;
+  for (const row of rows) {
+    if (!row.enabled) continue;
+    const val = rowValues.get(row.id) || 0;
+    switch (row.category) {
+      case "tuition_and_fees": case "other_revenue": tuition += val; break;
+      case "tuition_offsets": tuition -= val; break;
+      case "public_funding": case "school_choice": publicFunding += val; break;
+      case "grants_contributions": philanthropy += val; break;
+    }
+  }
+
+  return { total: tuition + publicFunding + philanthropy, tuition, publicFunding, philanthropy };
+}
+
+function computeStaffingBaseCost(rows: StaffingRow[]): number {
+  let total = 0;
+  for (const row of rows) {
+    const annualCost = row.fte * row.annualizedRate;
+    const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
+    if (isContractNotPayrollLike) {
+      total += annualCost;
+    } else {
+      total += annualCost;
+      if (row.benefitsEligible) total += annualCost * (row.benefitsRate / 100);
+      total += annualCost * (row.payrollTaxRate / 100);
+    }
+  }
+  return total;
+}
+
+function computeExpensesForYear(rows: ExpenseRow[], yearIdx: number, students: number, totalRevenue: number): { total: number; facilityCost: number } {
+  let total = 0, facilityCost = 0;
+  for (const row of rows) {
+    if (!row.enabled) continue;
+    let val: number;
+    if (row.driverType === "percent_of_revenue") {
+      val = ((row.amounts?.[yearIdx] ?? 0) / 100) * totalRevenue;
+    } else {
+      val = computeDriverValue(row.amounts, yearIdx, row.driverType, students);
+    }
+    total += val;
+    if (row.category === "occupancy_facility") facilityCost += val;
+  }
+  return { total, facilityCost };
+}
+
+function computeCapDebtForYear(rows: CapitalDebtRow[], yearIdx: number, students: number): number {
+  let total = 0;
+  for (const row of rows) {
+    if (!row.enabled) continue;
+    if (row.isLoan && row.loanPrincipal && row.loanPrincipal > 0) {
+      total += computeAnnualDebtService(row.loanPrincipal, (row.loanRate || 0) / 100, row.loanTermYears || 0);
+    } else {
+      total += computeDriverValue(row.amounts, yearIdx, row.driverType, students);
+    }
+  }
+  return total;
+}
+
+function computeAllYearsFromRows(
+  enrollmentByYear: number[],
+  revenueRows: RevenueRow[],
+  staffingRows: StaffingRow[],
+  expenseRows: ExpenseRow[],
+  capDebtRows: CapitalDebtRow[],
+  salaryEscRate: number,
+  prorationFactor: number,
+): YearFinancials[] {
+  const baseCost = computeStaffingBaseCost(staffingRows);
+
+  return enrollmentByYear.map((students, yearIdx) => {
+    const pf = yearIdx === 0 ? prorationFactor : 1;
+    const salaryEsc = Math.pow(1 + salaryEscRate, yearIdx);
+    const totalStaffingCost = baseCost * salaryEsc * pf;
+
+    const rev = computeRevenueForYear(revenueRows, yearIdx, students);
+    const exp = computeExpensesForYear(expenseRows, yearIdx, students, rev.total);
+    const capDebt = computeCapDebtForYear(capDebtRows, yearIdx, students);
+
+    const totalOpex = exp.total + capDebt;
+    const totalExpenses = totalStaffingCost + totalOpex;
+    const netIncome = rev.total - totalExpenses;
+
+    return {
+      year: yearIdx + 1,
+      students,
+      totalRevenue: rev.total,
+      tuitionRevenue: rev.tuition,
+      publicRevenue: rev.publicFunding,
+      philanthropyRevenue: rev.philanthropy,
+      totalStaffingCost,
+      facilityCost: exp.facilityCost,
+      totalOpex,
+      debtService: capDebt,
+      totalExpenses,
+      netIncome,
+      netMargin: rev.total > 0 ? netIncome / rev.total : 0,
+    };
+  });
+}
+
+function computeYearFinancialsLegacy(
   yearIndex: number,
   students: number,
-  rev: Revenue,
-  st: Staffing,
-  fac: Facilities,
-  prorationFactor: number
+  rev: LegacyRevenue,
+  st: LegacyStaffing,
+  fac: LegacyFacilities,
+  prorationFactor: number,
 ): YearFinancials {
   const tuitionIncrease = (rev.annualTuitionIncrease || 0) / 100;
   const salaryIncrease = (fac.annualSalaryIncrease || 0) / 100;
@@ -180,7 +379,6 @@ function computeYearFinancials(
   const publicRevenue = esaRevenue + publicFunding;
 
   const philanthropyRevenue = (donations + grants) * pf + capitalGifts;
-
   const totalRevenue = netTuition + publicRevenue + philanthropyRevenue;
 
   const salaryEsc = Math.pow(1 + salaryIncrease, yearIndex);
@@ -194,9 +392,8 @@ function computeYearFinancials(
   const totalStaffingCost = totalSalaries + benefits;
 
   const infEsc = Math.pow(1 + costInflation, yearIndex);
-  const monthlyRent = fac.monthlyRent || 0;
   const rentIncrease = (fac.annualRentIncrease || 0) / 100;
-  const annualRent = monthlyRent * 12 * Math.pow(1 + rentIncrease, yearIndex) * pf;
+  const annualRent = (fac.monthlyRent || 0) * 12 * Math.pow(1 + rentIncrease, yearIndex) * pf;
   const utilities = (fac.annualUtilities || 0) * infEsc * pf;
   const insurance = (fac.annualInsurance || 0) * infEsc * pf;
   const maintenance = (fac.facilityMaintenance || 0) * infEsc * pf;
@@ -214,7 +411,7 @@ function computeYearFinancials(
   const debtService = computeAnnualDebtService(
     fac.loanAmount || 0,
     (fac.annualInterestRate || 0) / 100,
-    fac.loanTermYears || 0
+    fac.loanTermYears || 0,
   ) * pf;
 
   const totalOpex = facilityCost + curriculum + tech + foodService + transportation +
@@ -222,7 +419,6 @@ function computeYearFinancials(
 
   const totalExpenses = totalStaffingCost + totalOpex;
   const netIncome = totalRevenue - totalExpenses;
-  const netMargin = totalRevenue > 0 ? netIncome / totalRevenue : 0;
 
   return {
     year: yearIndex + 1,
@@ -237,47 +433,68 @@ function computeYearFinancials(
     debtService,
     totalExpenses,
     netIncome,
-    netMargin,
+    netMargin: totalRevenue > 0 ? netIncome / totalRevenue : 0,
   };
 }
 
-function fmt(n: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-function pct(n: number): string {
-  return `${(n * 100).toFixed(1)}%`;
-}
-
-function runStressScenario(
+function runStressScenarioFromRows(
   label: string,
   enrollmentByYear: number[],
-  rev: Revenue,
-  st: Staffing,
-  fac: Facilities,
+  revenueRows: RevenueRow[],
+  staffingRows: StaffingRow[],
+  expenseRows: ExpenseRow[],
+  capDebtRows: CapitalDebtRow[],
+  salaryEscRate: number,
+  prorationFactor: number,
+  mods: {
+    modifyEnrollment?: (e: number[]) => number[];
+    modifyRevenueRows?: (r: RevenueRow[]) => RevenueRow[];
+    modifyExpenseRows?: (e: ExpenseRow[]) => ExpenseRow[];
+  },
+): StressScenario {
+  const adjEnrollment = mods.modifyEnrollment ? mods.modifyEnrollment([...enrollmentByYear]) : enrollmentByYear;
+  const adjRevRows = mods.modifyRevenueRows
+    ? mods.modifyRevenueRows(revenueRows.map(r => ({ ...r, amounts: [...r.amounts] })))
+    : revenueRows;
+  const adjExpRows = mods.modifyExpenseRows
+    ? mods.modifyExpenseRows(expenseRows.map(r => ({ ...r, amounts: [...r.amounts] })))
+    : expenseRows;
+
+  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, staffingRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor);
+  const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
+
+  return {
+    scenario: label,
+    y1NetIncome: financials[0]?.netIncome || 0,
+    y5NetIncome: financials[financials.length - 1]?.netIncome || 0,
+    breakEvenYear: beIdx >= 0 ? beIdx + 1 : null,
+  };
+}
+
+function runStressScenarioLegacy(
+  label: string,
+  enrollmentByYear: number[],
+  rev: LegacyRevenue,
+  st: LegacyStaffing,
+  fac: LegacyFacilities,
   prorationFactor: number,
   modifyEnrollment?: (e: number[]) => number[],
-  modifyRev?: (r: Revenue) => Revenue,
-  modifyFac?: (f: Facilities) => Facilities,
+  modifyRev?: (r: LegacyRevenue) => LegacyRevenue,
+  modifyFac?: (f: LegacyFacilities) => LegacyFacilities,
 ): StressScenario {
   const adjEnrollment = modifyEnrollment ? modifyEnrollment([...enrollmentByYear]) : enrollmentByYear;
   const adjRev = modifyRev ? modifyRev({ ...rev }) : rev;
   const adjFac = modifyFac ? modifyFac({ ...fac }) : fac;
 
   const financials = adjEnrollment.map((s, idx) =>
-    computeYearFinancials(idx, s, adjRev, st, adjFac, prorationFactor)
+    computeYearFinancialsLegacy(idx, s, adjRev, st, adjFac, prorationFactor),
   );
-
-  const beIdx = financials.findIndex((yf) => yf.netIncome >= 0);
+  const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
 
   return {
     scenario: label,
     y1NetIncome: financials[0].netIncome,
-    y5NetIncome: financials[4].netIncome,
+    y5NetIncome: financials[financials.length - 1].netIncome,
     breakEvenYear: beIdx >= 0 ? beIdx + 1 : null,
   };
 }
@@ -286,44 +503,66 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   const data = rawData as unknown as ModelData;
   const sp = data.schoolProfile || {};
   const en = data.enrollment || {};
-  const rev = data.revenue || {};
-  const st = data.staffing || {};
-  const fac = data.facilities || {};
 
   const isPartial = sp.isPartialFirstYear || false;
   const operatingMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
   const prorationFactor = operatingMonths / 12;
 
+  const hasRowData = !!(
+    (data.revenueRows && data.revenueRows.length > 0) ||
+    (data.staffingRows && data.staffingRows.length > 0) ||
+    (data.expenseRows && data.expenseRows.length > 0)
+  );
+
+  const yearCount = hasRowData
+    ? (data.revenueRows?.[0]?.amounts?.length || data.expenseRows?.[0]?.amounts?.length || (sp.schoolStage === "operating_school" ? 5 : 3))
+    : 5;
+
   const enrollmentByYear = [
     en.year1 || 0,
     en.year2 || 0,
     en.year3 || 0,
-    en.year4 || 0,
-    en.year5 || 0,
+    ...(yearCount > 3 ? [en.year4 || 0] : []),
+    ...(yearCount > 4 ? [en.year5 || 0] : []),
   ];
 
-  const yearFinancials = enrollmentByYear.map((students, idx) =>
-    computeYearFinancials(idx, students, rev, st, fac, prorationFactor)
-  );
+  let yearFinancials: YearFinancials[];
+
+  if (hasRowData) {
+    const revenueRows = data.revenueRows || [];
+    const staffingRows = data.staffingRows || [];
+    const expenseRows = data.expenseRows || [];
+    const capDebtRows = data.capitalAndDebtRows || [];
+    const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
+
+    yearFinancials = computeAllYearsFromRows(
+      enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows,
+      salaryEscRate, prorationFactor,
+    );
+  } else {
+    const rev = data.revenue || {};
+    const st = data.staffing || {};
+    const fac = data.facilities || {};
+    yearFinancials = enrollmentByYear.map((students, idx) =>
+      computeYearFinancialsLegacy(idx, students, rev, st, fac, prorationFactor),
+    );
+  }
 
   const y1 = yearFinancials[0];
-  const y5 = yearFinancials[4];
+  const yLast = yearFinancials[yearFinancials.length - 1];
+  const lastYearNum = yearCount;
 
   const revenuePerStudent = y1.students > 0 ? y1.totalRevenue / y1.students : 0;
   const staffingCostPct = y1.totalRevenue > 0 ? y1.totalStaffingCost / y1.totalRevenue : 0;
   const opexCostPct = y1.totalRevenue > 0 ? y1.totalOpex / y1.totalRevenue : 0;
   const y1NetMargin = y1.netMargin;
-  const y5NetMargin = y5.netMargin;
+  const lastYearNetMargin = yLast.netMargin;
 
-  const enrollmentGrowthRate =
-    y1.students > 0 ? (y5.students - y1.students) / y1.students : 0;
+  const enrollmentGrowthRate = y1.students > 0 ? (yLast.students - y1.students) / y1.students : 0;
+  const revenueGrowth = y1.totalRevenue > 0 ? (yLast.totalRevenue - y1.totalRevenue) / y1.totalRevenue : 0;
 
-  const revenueGrowth =
-    y1.totalRevenue > 0 ? (y5.totalRevenue - y1.totalRevenue) / y1.totalRevenue : 0;
-
-  const breakEvenYear = yearFinancials.findIndex((yf) => yf.netIncome >= 0);
-  const capacityUtilY5 =
-    sp.maxCapacity && sp.maxCapacity > 0 ? y5.students / sp.maxCapacity : 0;
+  const breakEvenYear = yearFinancials.findIndex(yf => yf.netIncome >= 0);
+  const capacityUtilLastYear = sp.maxCapacity && sp.maxCapacity > 0 ? yLast.students / sp.maxCapacity : 0;
 
   const philanthropyPct = y1.totalRevenue > 0 ? y1.philanthropyRevenue / y1.totalRevenue : 0;
   const publicRevenuePct = y1.totalRevenue > 0 ? y1.publicRevenue / y1.totalRevenue : 0;
@@ -332,25 +571,23 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     ? (y1.netIncome + y1.debtService) / y1.debtService
     : 0;
 
-  const revenueComposition: RevenueComposition[] = yearFinancials.map((yf) => ({
+  const revenueComposition: RevenueComposition[] = yearFinancials.map(yf => ({
     tuitionPct: yf.totalRevenue > 0 ? yf.tuitionRevenue / yf.totalRevenue : 0,
     publicPct: yf.totalRevenue > 0 ? yf.publicRevenue / yf.totalRevenue : 0,
     philanthropyPct: yf.totalRevenue > 0 ? yf.philanthropyRevenue / yf.totalRevenue : 0,
   }));
 
-  const costComposition: CostComposition[] = yearFinancials.map((yf) => ({
+  const costComposition: CostComposition[] = yearFinancials.map(yf => ({
     staffingPctOfRevenue: yf.totalRevenue > 0 ? yf.totalStaffingCost / yf.totalRevenue : 0,
     facilityPctOfRevenue: yf.totalRevenue > 0 ? yf.facilityCost / yf.totalRevenue : 0,
     totalOpexPctOfRevenue: yf.totalRevenue > 0 ? yf.totalOpex / yf.totalRevenue : 0,
   }));
 
   let cumNetIncome = 0;
-  const cumulativeFinancials: CumulativeYear[] = yearFinancials.map((yf) => {
+  const cumulativeFinancials: CumulativeYear[] = yearFinancials.map(yf => {
     cumNetIncome += yf.netIncome;
     const monthlyExpenses = yf.totalExpenses / 12;
-    const reserveMonths = monthlyExpenses > 0 && cumNetIncome > 0
-      ? cumNetIncome / monthlyExpenses
-      : 0;
+    const reserveMonths = monthlyExpenses > 0 && cumNetIncome > 0 ? cumNetIncome / monthlyExpenses : 0;
     return {
       year: yf.year,
       cumulativeNetIncome: cumNetIncome,
@@ -360,61 +597,78 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   const enrollmentGuidance: string[] = [];
   const maxCap = sp.maxCapacity || 0;
-
-  for (let i = 1; i < 5; i++) {
+  for (let i = 1; i < yearCount; i++) {
     if (enrollmentByYear[i - 1] > 0 && enrollmentByYear[i] > 0) {
       const growth = (enrollmentByYear[i] - enrollmentByYear[i - 1]) / enrollmentByYear[i - 1];
       if (growth > 0.25) {
         enrollmentGuidance.push(
-          `Year ${i} to Year ${i + 1} projects ${Math.round(growth * 100)}% enrollment growth. Growth over 25% in a single year is uncommon and may require aggressive marketing or facility expansion.`
+          `Year ${i} to Year ${i + 1} projects ${Math.round(growth * 100)}% enrollment growth. Growth over 25% in a single year is uncommon and may require aggressive marketing or facility expansion.`,
         );
       }
     }
   }
   if (maxCap > 0) {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < yearCount; i++) {
       if (enrollmentByYear[i] > maxCap) {
         enrollmentGuidance.push(
-          `Year ${i + 1} enrollment of ${enrollmentByYear[i]} exceeds facility capacity of ${maxCap}. You'll need a larger facility or phased admissions.`
+          `Year ${i + 1} enrollment of ${enrollmentByYear[i]} exceeds facility capacity of ${maxCap}. You'll need a larger facility or phased admissions.`,
         );
       }
     }
   }
 
-  const stressTests: StressScenario[] = [
-    runStressScenario(
-      "Enrollment 20% Below Plan",
-      enrollmentByYear, rev, st, fac, prorationFactor,
-      (e) => e.map((s) => Math.round(s * 0.8)),
-    ),
-    runStressScenario(
-      "Loss of Philanthropy",
-      enrollmentByYear, rev, st, fac, prorationFactor,
-      undefined,
-      (r) => ({ ...r, annualDonations: 0, foundationGrants: 0, capitalGifts: 0, annualFundraising: 0 }),
-    ),
-    runStressScenario(
-      "Costs 10% Higher",
-      enrollmentByYear, rev, st, fac, prorationFactor,
-      undefined,
-      undefined,
-      (f) => ({
-        ...f,
-        monthlyRent: (f.monthlyRent || 0) * 1.1,
-        annualUtilities: (f.annualUtilities || 0) * 1.1,
-        annualInsurance: (f.annualInsurance || 0) * 1.1,
-        facilityMaintenance: (f.facilityMaintenance || 0) * 1.1,
-        curriculumCostPerStudent: (f.curriculumCostPerStudent || 0) * 1.1,
-        techCostPerStudent: (f.techCostPerStudent || 0) * 1.1,
-        foodServicePerStudent: (f.foodServicePerStudent || 0) * 1.1,
-        transportationAnnual: (f.transportationAnnual || 0) * 1.1,
-        studentServicesAnnual: (f.studentServicesAnnual || 0) * 1.1,
-        annualMarketing: (f.annualMarketing || 0) * 1.1,
-        professionalDevelopment: (f.professionalDevelopment || 0) * 1.1,
-        otherAnnualExpenses: (f.otherAnnualExpenses || 0) * 1.1,
+  let stressTests: StressScenario[];
+
+  if (hasRowData) {
+    const revenueRows = data.revenueRows || [];
+    const staffingRows = data.staffingRows || [];
+    const expenseRows = data.expenseRows || [];
+    const capDebtRows = data.capitalAndDebtRows || [];
+    const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
+
+    stressTests = [
+      runStressScenarioFromRows("Enrollment 20% Below Plan", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
+        modifyEnrollment: e => e.map(s => Math.round(s * 0.8)),
       }),
-    ),
-  ];
+      runStressScenarioFromRows("Loss of Philanthropy", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
+        modifyRevenueRows: rows => rows.map(r => r.category === "grants_contributions" ? { ...r, enabled: false } : r),
+      }),
+      runStressScenarioFromRows("Costs 10% Higher", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
+        modifyExpenseRows: rows => rows.map(r => ({ ...r, amounts: r.amounts.map(a => a * 1.1) })),
+      }),
+    ];
+  } else {
+    const rev = data.revenue || {};
+    const st = data.staffing || {};
+    const fac = data.facilities || {};
+    stressTests = [
+      runStressScenarioLegacy("Enrollment 20% Below Plan", enrollmentByYear, rev, st, fac, prorationFactor,
+        e => e.map(s => Math.round(s * 0.8)),
+      ),
+      runStressScenarioLegacy("Loss of Philanthropy", enrollmentByYear, rev, st, fac, prorationFactor,
+        undefined,
+        r => ({ ...r, annualDonations: 0, foundationGrants: 0, capitalGifts: 0, annualFundraising: 0 }),
+      ),
+      runStressScenarioLegacy("Costs 10% Higher", enrollmentByYear, rev, st, fac, prorationFactor,
+        undefined, undefined,
+        f => ({
+          ...f,
+          monthlyRent: (f.monthlyRent || 0) * 1.1,
+          annualUtilities: (f.annualUtilities || 0) * 1.1,
+          annualInsurance: (f.annualInsurance || 0) * 1.1,
+          facilityMaintenance: (f.facilityMaintenance || 0) * 1.1,
+          curriculumCostPerStudent: (f.curriculumCostPerStudent || 0) * 1.1,
+          techCostPerStudent: (f.techCostPerStudent || 0) * 1.1,
+          foodServicePerStudent: (f.foodServicePerStudent || 0) * 1.1,
+          transportationAnnual: (f.transportationAnnual || 0) * 1.1,
+          studentServicesAnnual: (f.studentServicesAnnual || 0) * 1.1,
+          annualMarketing: (f.annualMarketing || 0) * 1.1,
+          professionalDevelopment: (f.professionalDevelopment || 0) * 1.1,
+          otherAnnualExpenses: (f.otherAnnualExpenses || 0) * 1.1,
+        }),
+      ),
+    ];
+  }
 
   const keyMetrics: KeyMetric[] = [];
 
@@ -450,7 +704,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       opexCostPct <= 0.30
         ? "Operating costs are lean relative to revenue."
         : opexCostPct <= 0.40
-          ? "Operating costs are moderate — watch rent escalation and service costs over the 5-year period."
+          ? `Operating costs are moderate — watch rent escalation and service costs over the ${yearCount}-year period.`
           : "Operating costs are consuming a large share of revenue — review each cost center for savings.",
   });
 
@@ -467,24 +721,24 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   });
 
   keyMetrics.push({
-    name: "Net Margin (Year 5)",
-    value: pct(y5NetMargin),
-    status: y5NetMargin >= 0.15 ? "good" : y5NetMargin >= 0.05 ? "warning" : "danger",
+    name: `Net Margin (Year ${lastYearNum})`,
+    value: pct(lastYearNetMargin),
+    status: lastYearNetMargin >= 0.15 ? "good" : lastYearNetMargin >= 0.05 ? "warning" : "danger",
     interpretation:
-      y5NetMargin >= 0.15
-        ? "By Year 5 the model shows strong profitability — attractive to lenders."
-        : y5NetMargin >= 0.05
-          ? "Year 5 margin is thin — a small revenue shortfall could push you into the red."
-          : "Year 5 margin is concerning — lenders will want to see a clearer path to profitability.",
+      lastYearNetMargin >= 0.15
+        ? `By Year ${lastYearNum} the model shows strong profitability — attractive to lenders.`
+        : lastYearNetMargin >= 0.05
+          ? `Year ${lastYearNum} margin is thin — a small revenue shortfall could push you into the red.`
+          : `Year ${lastYearNum} margin is concerning — lenders will want to see a clearer path to profitability.`,
   });
 
   keyMetrics.push({
-    name: "5-Year Revenue Growth",
+    name: `${yearCount}-Year Revenue Growth`,
     value: pct(revenueGrowth),
     status: revenueGrowth >= 0.5 ? "good" : revenueGrowth >= 0.2 ? "warning" : "danger",
     interpretation:
       revenueGrowth >= 0.5
-        ? "Strong projected revenue growth over the five-year period."
+        ? `Strong projected revenue growth over the ${yearCount}-year period.`
         : revenueGrowth >= 0.2
           ? "Moderate growth — consider whether enrollment targets are ambitious enough."
           : "Low projected growth — this could signal difficulty scaling the school.",
@@ -492,15 +746,15 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   if (sp.maxCapacity && sp.maxCapacity > 0) {
     keyMetrics.push({
-      name: "Capacity Utilization (Year 5)",
-      value: pct(capacityUtilY5),
-      status: capacityUtilY5 >= 0.8 ? "good" : capacityUtilY5 >= 0.6 ? "warning" : "danger",
+      name: `Capacity Utilization (Year ${lastYearNum})`,
+      value: pct(capacityUtilLastYear),
+      status: capacityUtilLastYear >= 0.8 ? "good" : capacityUtilLastYear >= 0.6 ? "warning" : "danger",
       interpretation:
-        capacityUtilY5 >= 0.8
-          ? "Year 5 enrollment approaches facility capacity — efficient use of space."
-          : capacityUtilY5 >= 0.6
+        capacityUtilLastYear >= 0.8
+          ? `Year ${lastYearNum} enrollment approaches facility capacity — efficient use of space.`
+          : capacityUtilLastYear >= 0.6
             ? "You have room to grow into your facility — plan marketing to fill seats."
-            : "Facility will be underutilized by Year 5 — consider a smaller space or higher enrollment targets.",
+            : `Facility will be underutilized by Year ${lastYearNum} — consider a smaller space or higher enrollment targets.`,
     });
   }
 
@@ -546,54 +800,52 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
-  const y5Reserve = cumulativeFinancials[4];
-  if (y5Reserve) {
+  const lastReserve = cumulativeFinancials[cumulativeFinancials.length - 1];
+  if (lastReserve) {
     keyMetrics.push({
-      name: "Operating Reserve (Year 5)",
-      value: `${y5Reserve.reserveMonths.toFixed(1)} months`,
-      status: y5Reserve.reserveMonths >= 3 ? "good" : y5Reserve.reserveMonths >= 1 ? "warning" : "danger",
+      name: `Operating Reserve (Year ${lastYearNum})`,
+      value: `${lastReserve.reserveMonths.toFixed(1)} months`,
+      status: lastReserve.reserveMonths >= 3 ? "good" : lastReserve.reserveMonths >= 1 ? "warning" : "danger",
       interpretation:
-        y5Reserve.reserveMonths >= 3
-          ? "By Year 5, the school has built a healthy operating reserve of 3+ months — a strong signal to lenders."
-          : y5Reserve.reserveMonths >= 1
+        lastReserve.reserveMonths >= 3
+          ? `By Year ${lastYearNum}, the school has built a healthy operating reserve of 3+ months — a strong signal to lenders.`
+          : lastReserve.reserveMonths >= 1
             ? "The reserve buffer is thin — target building at least 3 months of expenses as a cushion."
-            : "No meaningful reserve has been built by Year 5. This is a significant vulnerability.",
+            : `No meaningful reserve has been built by Year ${lastYearNum}. This is a significant vulnerability.`,
     });
   }
 
   const strengths: string[] = [];
   const risks: string[] = [];
 
-  if (y5NetMargin >= 0.15) strengths.push("Strong Year 5 profitability");
+  if (lastYearNetMargin >= 0.15) strengths.push(`Strong Year ${lastYearNum} profitability`);
   if (staffingCostPct <= 0.55) strengths.push("Well-controlled staffing costs");
   if (revenuePerStudent >= 10000) strengths.push("Healthy per-student revenue");
-  if (revenueGrowth >= 0.5) strengths.push("Strong 5-year revenue growth trajectory");
+  if (revenueGrowth >= 0.5) strengths.push(`Strong ${yearCount}-year revenue growth trajectory`);
   if (breakEvenYear === 0) strengths.push("Profitable from Year 1");
-  if (capacityUtilY5 >= 0.8) strengths.push("Efficient facility utilization by Year 5");
+  if (capacityUtilLastYear >= 0.8) strengths.push(`Efficient facility utilization by Year ${lastYearNum}`);
   if (enrollmentGrowthRate >= 0.5) strengths.push("Significant enrollment growth planned");
   if (hasDebt && dscr >= 1.25) strengths.push("Strong debt service coverage ratio");
   if (publicRevenuePct > 0.1 && publicRevenuePct <= 0.5) strengths.push("Diversified revenue with public funding");
   if (philanthropyPct > 0 && philanthropyPct <= 0.15) strengths.push("Supplemental philanthropy without over-reliance");
-  if (y5Reserve && y5Reserve.reserveMonths >= 3) strengths.push("Healthy operating reserve by Year 5");
+  if (lastReserve && lastReserve.reserveMonths >= 3) strengths.push(`Healthy operating reserve by Year ${lastYearNum}`);
 
   if (y1NetMargin < 0) risks.push(`Year 1 projects a ${fmt(Math.abs(y1.netIncome))} deficit`);
   if (staffingCostPct > 0.65) risks.push(`Staffing consumes ${pct(staffingCostPct)} of revenue`);
   if (revenuePerStudent < 7000) risks.push("Per-student revenue is below sustainable levels");
   if (opexCostPct > 0.40) risks.push("Operating costs are high relative to revenue");
-  if (y5NetMargin < 0.05) risks.push("Year 5 margin is dangerously thin");
-  if (breakEvenYear < 0) risks.push("Model does not reach break-even within 5 years");
-  if (capacityUtilY5 < 0.6 && sp.maxCapacity && sp.maxCapacity > 0)
+  if (lastYearNetMargin < 0.05) risks.push(`Year ${lastYearNum} margin is dangerously thin`);
+  if (breakEvenYear < 0) risks.push(`Model does not reach break-even within ${yearCount} years`);
+  if (capacityUtilLastYear < 0.6 && sp.maxCapacity && sp.maxCapacity > 0)
     risks.push("Facility will be significantly underutilized");
-  if ((rev.scholarshipRate || 0) > 20)
-    risks.push(`High scholarship rate (${rev.scholarshipRate}%) reduces net revenue`);
   if (hasDebt && dscr < 1.0)
     risks.push("Debt service exceeds operating income — loan payments are not sustainable");
   if (philanthropyPct > 0.30)
     risks.push(`Philanthropy represents ${pct(philanthropyPct)} of revenue — unpredictable and hard to sustain`);
   if (publicRevenuePct > 0.70)
     risks.push("Over-reliance on public funding exposes the school to policy risk");
-  if (y5Reserve && y5Reserve.reserveMonths < 1)
-    risks.push("No operating reserve built by Year 5");
+  if (lastReserve && lastReserve.reserveMonths < 1)
+    risks.push(`No operating reserve built by Year ${lastYearNum}`);
 
   const biggestStrength =
     strengths.length > 0
@@ -655,10 +907,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
-  if (y5Reserve && y5Reserve.reserveMonths < 3) {
+  if (lastReserve && lastReserve.reserveMonths < 3) {
     recommendations.push({
       title: "Build a Cash Reserve",
-      description: `By Year 5, your projected reserve covers only ${y5Reserve.reserveMonths.toFixed(1)} months of expenses. Lenders and accreditors look for 3-6 months. Focus on building surplus in early profitable years.`,
+      description: `By Year ${lastYearNum}, your projected reserve covers only ${lastReserve.reserveMonths.toFixed(1)} months of expenses. Lenders and accreditors look for 3-6 months. Focus on building surplus in early profitable years.`,
       priority: "medium",
     });
   }
@@ -679,10 +931,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
-  if (capacityUtilY5 < 0.6 && sp.maxCapacity && sp.maxCapacity > 0) {
+  if (capacityUtilLastYear < 0.6 && sp.maxCapacity && sp.maxCapacity > 0) {
     recommendations.push({
       title: "Right-Size Your Facility",
-      description: `By Year 5, you'll only use ${pct(capacityUtilY5)} of your ${sp.maxCapacity}-student capacity. A smaller, less expensive facility could improve your cost structure.`,
+      description: `By Year ${lastYearNum}, you'll only use ${pct(capacityUtilLastYear)} of your ${sp.maxCapacity}-student capacity. A smaller, less expensive facility could improve your cost structure.`,
       priority: "low",
     });
   }
@@ -715,14 +967,14 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   let lenderReadiness: ConsultantOutput["lenderReadiness"];
   let lenderReadinessExplanation: string;
 
-  const goodMetrics = keyMetrics.filter((m) => m.status === "good").length;
-  const dangerMetrics = keyMetrics.filter((m) => m.status === "danger").length;
+  const goodMetrics = keyMetrics.filter(m => m.status === "good").length;
+  const dangerMetrics = keyMetrics.filter(m => m.status === "danger").length;
 
-  if (dangerMetrics === 0 && y5NetMargin >= 0.1 && breakEvenYear <= 1 && (!hasDebt || dscr >= 1.25)) {
+  if (dangerMetrics === 0 && lastYearNetMargin >= 0.1 && breakEvenYear <= 1 && (!hasDebt || dscr >= 1.25)) {
     lenderReadiness = "Strong";
     lenderReadinessExplanation =
       "This model shows the financial fundamentals lenders look for: a clear path to profitability, controlled costs, sustainable revenue mix, and adequate debt coverage.";
-  } else if (dangerMetrics <= 1 && y5NetMargin >= 0) {
+  } else if (dangerMetrics <= 1 && lastYearNetMargin >= 0) {
     lenderReadiness = "Needs Work";
     lenderReadinessExplanation =
       "The model has promise but a few areas need attention before approaching lenders. Address the recommendations above to strengthen your position.";
@@ -736,11 +988,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   let executiveSummary: string;
 
   if (lenderReadiness === "Strong") {
-    executiveSummary = `${schoolName} projects ${fmt(y5.totalRevenue)} in Year 5 revenue with a ${pct(y5NetMargin)} net margin. The model shows a financially sustainable path with ${goodMetrics} of ${keyMetrics.length} key metrics in healthy range.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} net margin. The model shows a financially sustainable path with ${goodMetrics} of ${keyMetrics.length} key metrics in healthy range.`;
   } else if (lenderReadiness === "Needs Work") {
-    executiveSummary = `${schoolName} projects ${fmt(y5.totalRevenue)} in Year 5 revenue, but the ${pct(y5NetMargin)} net margin and ${dangerMetrics > 0 ? `${dangerMetrics} metric${dangerMetrics > 1 ? "s" : ""} requiring attention` : "thin margins"} suggest the model needs refinement before it's lender-ready.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, but the ${pct(lastYearNetMargin)} net margin and ${dangerMetrics > 0 ? `${dangerMetrics} metric${dangerMetrics > 1 ? "s" : ""} requiring attention` : "thin margins"} suggest the model needs refinement before it's lender-ready.`;
   } else {
-    executiveSummary = `${schoolName} projects ${fmt(y5.totalRevenue)} in Year 5 revenue, but ${dangerMetrics} of ${keyMetrics.length} key metrics are in the danger zone. Significant adjustments to revenue, costs, or enrollment are needed.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, but ${dangerMetrics} of ${keyMetrics.length} key metrics are in the danger zone. Significant adjustments to revenue, costs, or enrollment are needed.`;
   }
 
   return {

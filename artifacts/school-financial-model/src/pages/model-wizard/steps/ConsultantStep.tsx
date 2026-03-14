@@ -303,7 +303,7 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
                 <tr className="bg-secondary/50">
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Scenario</th>
                   <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Year 1 Net Income</th>
-                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Year 5 Net Income</th>
+                  <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Final Year Net Income</th>
                   <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Break-Even Year</th>
                 </tr>
               </thead>
