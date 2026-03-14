@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { getPublicConsultantAnalysisUrl } from "@workspace/api-client-react";
+import { getPublicConsultantAnalysisUrl, type ConsultantOutput } from "@workspace/api-client-react";
 import { profitLabel, cumulativeProfitLabel } from "@/pages/model-wizard/schema";
 import { ConsultantAnalysisView } from "@/components/consultant/ConsultantAnalysisView";
 
@@ -11,7 +11,7 @@ export function PublicConsultantStep({ jumpToStep, modelId }: { jumpToStep?: (s:
   const niLabel = profitLabel(entityType);
   const cumNiLabel = cumulativeProfitLabel(entityType);
 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ConsultantOutput | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,11 +31,12 @@ export function PublicConsultantStep({ jumpToStep, modelId }: { jumpToStep?: (s:
         throw new Error(errBody?.error || "Analysis failed");
       }
 
-      const result = await res.json();
+      const result: ConsultantOutput = await res.json();
       setData(result);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Something went wrong";
       console.error("Public consultant analysis error:", e);
-      setError(e.message || "Something went wrong");
+      setError(message);
     } finally {
       setIsLoading(false);
     }

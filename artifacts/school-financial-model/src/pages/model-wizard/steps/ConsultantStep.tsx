@@ -71,7 +71,7 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
 
   return (
     <ConsultantAnalysisView
-      data={data as any}
+      data={data}
       niLabel={niLabel}
       cumNiLabel={cumNiLabel}
     />

@@ -31,6 +31,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ConsultantOutput } from "@workspace/api-client-react";
 
 function fmtCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
@@ -93,22 +94,8 @@ function CustomTooltip({ active, payload, label, formatter, formatByName }: { ac
   );
 }
 
-interface ConsultantData {
-  executiveSummary: string;
-  biggestStrength: string;
-  biggestRisk: string;
-  lenderReadiness: string;
-  lenderReadinessExplanation: string;
-  keyMetrics: Array<{ name: string; value: string; status: string; interpretation: string }>;
-  recommendations: Array<{ title: string; description: string; priority: string }>;
-  revenueComposition?: Array<{ tuitionPct: number; publicPct: number; philanthropyPct: number }>;
-  costComposition?: Array<{ staffingPctOfRevenue: number; facilityPctOfRevenue: number; totalOpexPctOfRevenue: number }>;
-  cumulativeFinancials?: Array<{ year: number; cumulativeNetIncome: number; reserveMonths: number }>;
-  stressTests?: Array<{ scenario: string; y1NetIncome: number; y5NetIncome: number; breakEvenYear: number | null }>;
-}
-
 interface ConsultantAnalysisViewProps {
-  data: ConsultantData;
+  data: ConsultantOutput;
   niLabel: string;
   cumNiLabel: string;
 }
