@@ -1,0 +1,391 @@
+Revise the product so the financial model is universal across school types and uses accounting categories.
+
+IMPORTANT PRODUCT CHANGE
+Do not assume every school is tuition-based.
+Do not assume every staff member is full-time.
+Do not limit expenses to a simplified startup budget.
+The model must work for:
+- new schools
+- operating schools
+- private / tuition-based schools
+- charter / public-funded schools
+- hybrid / mixed-funding schools
+
+Keep the experience simple and polished, but make the underlying structure robust and accounting-aligned.
+
+NEW MODEL DIMENSIONS
+Add two dimensions to every model:
+
+1. SCHOOL STAGE
+- new_school
+- operating_school
+
+2. FUNDING PROFILE
+- tuition_based
+- charter_public_funded
+- hybrid_mixed
+
+Use these to drive defaults, visible fields, consultant language, and export labels.
+Do NOT fork the app into separate products.
+
+UNIVERSAL MODEL RULE
+Build one common financial engine with:
+- configurable revenue streams
+- FTE-based staffing
+- accounting-category expense structure
+- school-type-aware consultant guidance
+
+UI PRINCIPLE
+The app should still feel clean and founder-friendly.
+Use plain-English labels in the UI, but map everything to accounting categories under the hood.
+
+DATABASE CHANGES
+Update the data model so financial_models includes:
+- school_stage
+- funding_profile
+- prior_year_snapshot_json nullable
+- staffing_rows_json
+- revenue_rows_json
+- expense_rows_json
+- capital_and_debt_rows_json nullable
+
+DATA SHAPE APPROACH
+It is acceptable to store staffing, revenue, expense, and capital rows as JSON arrays in v1 if that speeds delivery.
+
+REVENUE MODEL CHANGES
+Replace the overly narrow revenue section with a universal revenue schedule.
+
+Create a structured Revenue step with prebuilt line items grouped into categories.
+
+REVENUE CATEGORIES
+
+1. Tuition & Student Fees
+- gross tuition
+- registration / enrollment fees
+- student fees
+- aftercare / extended day
+- summer program revenue
+- other earned student revenue
+
+2. Tuition Offsets
+- scholarships / financial aid / discount rate
+
+3. Public Funding
+- state / local per-pupil revenue
+- federal revenue
+- special education funding
+- transportation funding
+- food service reimbursement
+- other public funding
+
+4. School Choice / Choice Funding
+- ESA revenue
+- voucher revenue
+- scholarship organization revenue
+
+5. Grants, Contributions, Other Support
+- grants
+- donations / fundraising
+- philanthropy / other contributions
+
+6. Other Revenue
+- facility rental
+- partnerships
+- miscellaneous other revenue
+
+REVENUE ENGINE RULES
+- Revenue lines should be optional and toggleable
+- Do not force every user to complete every revenue line
+- Each revenue line should use one of these driver types:
+  - annual fixed amount
+  - monthly amount
+  - per student
+  - percent of another selected base, only where useful
+- Keep the default UI simple by showing only the most relevant lines based on funding profile
+- Allow users to add additional revenue lines from the standard list
+
+FUNDING PROFILE DEFAULTS
+For tuition_based:
+- show tuition and fees first
+- show scholarships / discounts
+- keep public funding collapsed but available
+
+For charter_public_funded:
+- show public funding lines first
+- keep tuition visible only if user enables it
+- surface grants and food reimbursement more prominently
+
+For hybrid_mixed:
+- show tuition, public funding, ESA/voucher, and contributions together
+
+STAFFING MODEL CHANGES
+Replace the simple staffing inputs with a staffing table.
+
+Each staffing row should include:
+- role name
+- function category
+- employment type
+- FTE
+- annualized rate for 1.0 FTE OR annual contract amount
+- benefits eligible yes/no
+- benefits rate %
+- payroll tax rate %
+- notes optional
+
+FUNCTION CATEGORIES
+- instructional
+- school_leadership
+- student_support
+- operations
+- administrative
+- other
+
+EMPLOYMENT TYPES
+- full_time
+- part_time
+- contract
+
+STAFFING RULES
+- Part-time staff should be modeled via FTE less than 1.0
+- Example: 0.5 FTE teacher or 0.25 FTE counselor
+- Contract workers should not flow into payroll wages if they are true contractors
+- Contract workers should flow to professional services / vendor expense unless explicitly marked as payroll-like
+- Allow prebuilt default rows based on school stage and school type, but keep them editable
+
+PERSONNEL COST CALCULATIONS
+For employee rows:
+- salary expense = FTE × annualized rate
+- benefits expense = salary expense × benefits rate, if benefits eligible
+- payroll taxes = salary expense × payroll tax rate
+
+For contract rows:
+- contract expense = annual contract amount
+- no benefits unless user explicitly adds them
+
+Summarize personnel into:
+- salaries and wages
+- benefits
+- payroll taxes
+- contracted personnel
+
+EXPENSE MODEL CHANGES
+Replace the simplified expense section with accounting-category expense groups.
+
+Build a standard operating expense schedule with these major categories and line items.
+
+1. Personnel
+- salaries and wages
+- benefits
+- payroll taxes
+- contracted personnel
+
+2. Instructional / Program
+- curriculum
+- classroom supplies
+- instructional materials
+- assessments
+- student activities
+- athletics
+- transportation
+- meals / food
+- special programs
+- field trips
+- other program expense
+
+3. Technology
+- software / subscriptions
+- devices / tech equipment expensed
+- internet
+- telecom
+- IT support / services
+
+4. Occupancy / Facility
+- rent / lease
+- mortgage interest, optional
+- utilities
+- repairs and maintenance
+- janitorial
+- security
+- property insurance
+- facility services
+- grounds / landscaping
+- other occupancy expense
+
+5. Administrative / General
+- office supplies
+- printing / postage
+- bank / merchant fees
+- legal
+- accounting / bookkeeping / audit / tax
+- HR / recruiting
+- professional development
+- conferences
+- travel
+- memberships / dues
+- licenses / permits
+- marketing / enrollment
+- vendor services
+- other general and administrative expense
+
+6. Capital / Financing / Non-Operating Cash Uses
+- FF&E
+- leasehold improvements
+- startup equipment
+- principal payments on debt
+- interest payments on debt
+
+IMPORTANT ACCOUNTING RULE
+Keep operating expenses on the P&L.
+Keep capital and financing items separate from operating expenses.
+Do not force a full balance sheet in v1, but do keep capital and debt uses visible in the export and consultant analysis.
+
+EXPENSE DRIVER TYPES
+Each expense line should support one of these driver methods:
+- annual fixed amount
+- monthly amount
+- per student
+- percent of revenue
+
+The UI should default to the most common driver for each line item.
+
+Examples:
+- rent = monthly
+- utilities = annual fixed
+- curriculum = per student
+- merchant fees = percent of selected revenue base
+- software subscriptions = annual fixed
+
+UNIVERSAL UI RULE
+Do not show every possible line item at once in an overwhelming way.
+
+Instead:
+- show grouped categories
+- prefill common lines based on school stage + funding profile
+- allow “Add another expense line” within each category
+- keep the interface clean and card-based
+
+MODEL LOGIC UPDATE
+Update the model engine so it works off structured revenue rows, staffing rows, expense rows, and capital/debt rows.
+
+NEW SCHOOL DEFAULT HORIZON
+- Year 1
+- Year 2
+- Year 3
+
+OPERATING SCHOOL DEFAULT HORIZON
+- Current Year
+- Year 2
+- Year 3
+- Year 4
+
+OPTIONAL EXTENSION
+- Add Year 5 toggle remains available on review/export
+
+OPERATING SCHOOL PRIOR-YEAR SNAPSHOT
+For operating schools, keep the optional prior-year snapshot.
+Use it in consultant logic and export context.
+Suggested fields:
+- prior-year ending enrollment
+- prior-year total revenue
+- prior-year total expenses
+- prior-year ending cash
+
+CONSULTANT ENGINE UPDATE
+Make the consultant school-type-aware and accounting-aware.
+
+The consultant should analyze:
+- revenue mix
+- staffing burden
+- occupancy burden
+- program spend
+- administrative overhead
+- capital needs
+- debt burden, if entered
+- prior-year vs current-year movement for operating schools
+
+Examples of school-type-aware guidance:
+- for tuition-based schools, comment on discount rate, tuition dependence, collection risk, and enrollment sensitivity
+- for charter/public-funded schools, comment on concentration of public funding, enrollment count dependency, timing risk, and staffing/facility alignment
+- for hybrid schools, comment on complexity and concentration across revenue streams
+
+Examples of accounting-aware guidance:
+- occupancy costs too high relative to revenue
+- contracted personnel unusually high
+- curriculum and program costs out of line with enrollment
+- software/subscription spend fragmented
+- travel and memberships high relative to stage
+- founder compensation unrealistically low
+- debt service pressure may affect loan readiness
+
+EXPORT / XLSX CHANGES
+Update the workbook tabs to reflect the universal model.
+
+Required tabs:
+1. Assumptions
+2. Revenue Schedule
+3. Staffing & Personnel
+4. Operating Expenses
+5. Capital & Debt
+6. Financial Model
+7. Summary
+8. Consultant Notes
+
+Optional tab:
+9. Prior-Year Snapshot, only when relevant
+
+EXPORT RULES
+- Assumptions tab should still be the main editable input page
+- downstream tabs must use formulas
+- formulas should be visible and understandable
+- workbook should stay clean and lender-friendly
+- use accounting category headers clearly
+- keep line items grouped and readable
+
+SUMMARY TAB REQUIREMENTS
+The Summary tab should show:
+- school name
+- school stage
+- funding profile
+- planning horizon
+- enrollment trend
+- revenue trend
+- expense trend
+- net income trend
+- revenue mix summary
+- staffing cost % of revenue
+- occupancy cost % of revenue
+- program cost % of revenue
+- admin cost % of revenue
+- lender readiness status
+- short consultant summary
+
+ADMIN ANALYTICS UPDATE
+Track:
+- school stage distribution
+- funding profile distribution
+- most commonly used revenue lines
+- most commonly used expense categories
+- average export rate by model type
+- extend_to_year_5 adoption
+
+UX COPY CHANGES
+Use plain-English copy in the UI.
+Examples:
+- “How is your school funded?”
+- “Which revenue sources apply to your school?”
+- “Add the people who help run the school, including part-time staff.”
+- “Add your expected expenses by category.”
+- “We’ll organize these into a clean financial model for you.”
+
+IMPORTANT PRODUCT RULE
+This should still feel simple, polished, and founder-friendly.
+But under the hood it must be universal, accounting-aligned, and useful for any school preparing for financing.
+
+After making these changes, update replit.md so future prompts preserve:
+- universal school support
+- school stage + funding profile logic
+- FTE-based staffing with part-time support
+- accounting-category expense structure
+- optional Year 5 extension
+- lender-ready export
+- CFO consultant tone
