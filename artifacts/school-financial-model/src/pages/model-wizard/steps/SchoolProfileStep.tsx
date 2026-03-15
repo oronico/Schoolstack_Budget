@@ -129,9 +129,10 @@ const FACILITY_BENCHMARKS: Record<string, string> = {
   other: "$2,000–$8,000/mo",
 };
 
+const CURRENT_YEAR = new Date().getFullYear();
 const LEASE_EXPIRATION_YEARS = Array.from({ length: 15 }, (_, i) => ({
-  value: String(2024 + i),
-  label: String(2024 + i),
+  value: String(CURRENT_YEAR + i),
+  label: String(CURRENT_YEAR + i),
 }));
 
 export function SchoolProfileStep() {
