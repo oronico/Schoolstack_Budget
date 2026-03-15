@@ -18,3 +18,9 @@ id = "yqU3ZXN_jFob2_oIs1d8-"
 uri = "file://DEPLOYMENT_GUIDE.md"
 type = "text"
 title = "SchoolStack Budget — Deployment Guide"
+
+[[outputs]]
+id = "DLMNL6Z3YYwBGz6nEBauT"
+uri = "file://artifacts/school-financial-model/public/proof_workbook.xlsx"
+type = "table"
+title = "Evergreen Microschool — SchoolStack Underwriting Workbook (.xlsx)"

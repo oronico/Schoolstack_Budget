@@ -420,6 +420,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   const startingCash = data.priorYearSnapshot?.endingCash || 0;
   const annualDebtSvc = totalDebtService(capDebtRows);
   const totalPrincipal = totalLoanPrincipal(capDebtRows);
+  const cashAtOpen = startingCash + totalPrincipal;
   const maxCapacity = sp.maxCapacity || enrollment[yc - 1] || 100;
 
   const wb = new ExcelJS.Workbook();
@@ -438,12 +439,12 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
   buildSourcesUses(wb, capDebtRows, startingCash, annualRevenue, yc);
   buildDebtSchedule(wb, capDebtRows, yc);
-  buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, startingCash, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
+  buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
   buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType);
-  buildFiveYearBS(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, startingCash, totalPrincipal, capDebtRows, yc, cols, yearHeaders);
-  buildDSCRCovenant(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualDebtSvc, startingCash, enrollment, maxCapacity, yc, cols, yearHeaders);
-  buildUnderwritingSnapshot(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, maxCapacity, totalPrincipal, yc);
-  buildSummary(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, yc, cols, yearHeaders);
+  buildFiveYearBS(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, cashAtOpen, totalPrincipal, capDebtRows, yc, cols, yearHeaders);
+  buildDSCRCovenant(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualDebtSvc, cashAtOpen, enrollment, maxCapacity, yc, cols, yearHeaders);
+  buildUnderwritingSnapshot(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, maxCapacity, totalPrincipal, yc);
+  buildSummary(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, yc, cols, yearHeaders);
 
   const buf = await wb.xlsx.writeBuffer();
   return Buffer.from(buf);
@@ -1040,12 +1041,15 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, capDebtRows: CapitalDebtRow[], 
         const p = loan.loanPrincipal || 0;
         const rate = (loan.loanRate || 0) / 100;
         const term = loan.loanTermYears || 0;
+        let balance = p;
         const annualPmt = computeAnnualDebt(p, rate, term);
-        const interestY = p > 0 ? p * rate : 0;
-        const principalPaidY = annualPmt - interestY;
-        const remainingBal = Math.max(0, p - principalPaidY * (y + 1));
+        for (let yr = 0; yr < y + 1; yr++) {
+          const interest = balance * rate;
+          const principalPaid = annualPmt - interest;
+          balance = Math.max(0, balance - principalPaid);
+        }
         const cell = ws.getCell(r, li + 2);
-        cell.value = Math.round(remainingBal); cell.numFmt = CUR; dc(cell);
+        cell.value = Math.round(balance); cell.numFmt = CUR; dc(cell);
       }
     }
   }
@@ -1334,7 +1338,7 @@ function computeRemainingDebtForYear(capDebtRows: CapitalDebtRow[], year: number
 
 function buildFiveYearBS(
   wb: ExcelJS.Workbook, rev: number[], personnel: number[], ops: number[],
-  capDebt: number[], ni: number[], cumNI: number[], startingCash: number,
+  capDebt: number[], ni: number[], cumNI: number[], cashAtOpen: number,
   totalPrincipal: number, capDebtRows: CapitalDebtRow[], yc: number, cols: number, yearHeaders: string[]
 ) {
   const ws = wb.addWorksheet("5-Year Balance Sheet");
@@ -1347,9 +1351,12 @@ function buildFiveYearBS(
   r++; sec(ws, r, cols); ws.getCell(r, 1).value = "ASSETS";
 
   r++; ws.getCell(r, 1).value = "Cash & Equivalents"; ws.getCell(r, 1).font = NF;
+  const cashVals: number[] = [];
   for (let y = 0; y < yc; y++) {
+    const cashVal = cashAtOpen + cumNI[y];
+    cashVals.push(cashVal);
     const cell = ws.getCell(r, y + 2);
-    cell.value = startingCash + cumNI[y]; cell.numFmt = CUR; dc(cell);
+    cell.value = cashVal; cell.numFmt = CUR; dc(cell);
   }
   const cashRow = r;
 
@@ -1360,13 +1367,9 @@ function buildFiveYearBS(
 
   r++; ws.getCell(r, 1).value = "Total Assets"; ws.getCell(r, 1).font = BF;
   const totalAssetsRow = r;
-  const totalAssetsVals: number[] = [];
   for (let y = 0; y < yc; y++) {
-    const cashVal = startingCash + cumNI[y];
-    const totalAssets = cashVal + 0;
-    totalAssetsVals.push(totalAssets);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `SUM(${cn(cashRow, y + 2)}:${cn(r - 1, y + 2)})`, result: totalAssets };
+    cell.value = { formula: `SUM(${cn(cashRow, y + 2)}:${cn(r - 1, y + 2)})`, result: cashVals[y] };
     cell.numFmt = CUR; bc(cell);
   }
   sec(ws, r, cols);
@@ -1390,48 +1393,45 @@ function buildFiveYearBS(
 
   r++; ws.getCell(r, 1).value = "Total Liabilities"; ws.getCell(r, 1).font = BF;
   const totalLiabRow = r;
-  const totalLiabVals: number[] = [];
   for (let y = 0; y < yc; y++) {
-    const totalLiab = debtVals[y] + 0;
-    totalLiabVals.push(totalLiab);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `SUM(${cn(debtRow, y + 2)}:${cn(r - 1, y + 2)})`, result: totalLiab };
+    cell.value = { formula: `SUM(${cn(debtRow, y + 2)}:${cn(r - 1, y + 2)})`, result: debtVals[y] };
     cell.numFmt = CUR; bc(cell);
   }
   sec(ws, r, cols);
 
   r += 2; sec(ws, r, cols); ws.getCell(r, 1).value = "EQUITY / NET ASSETS";
 
-  r++; ws.getCell(r, 1).value = "Beginning Equity"; ws.getCell(r, 1).font = NF;
+  r++; ws.getCell(r, 1).value = "Beginning Net Position"; ws.getCell(r, 1).font = NF;
+  const begEquityRow = r;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    cell.value = y === 0 ? startingCash : startingCash + cumNI[y - 1];
-    cell.numFmt = CUR; dc(cell);
+    const begEq = y === 0 ? (cashAtOpen - totalPrincipal) : (cashVals[y - 1] - debtVals[y - 1]);
+    cell.value = begEq; cell.numFmt = CUR; dc(cell);
   }
 
-  r++; ws.getCell(r, 1).value = "Net Income / (Loss)"; ws.getCell(r, 1).font = NF;
+  r++; ws.getCell(r, 1).value = "Change in Net Position"; ws.getCell(r, 1).font = NF;
   for (let y = 0; y < yc; y++) {
-    const cell = ws.getCell(r, y + 2); cell.value = ni[y]; cell.numFmt = CUR; dc(cell);
+    const cell = ws.getCell(r, y + 2);
+    const begEq = y === 0 ? (cashAtOpen - totalPrincipal) : (cashVals[y - 1] - debtVals[y - 1]);
+    const endEq = cashVals[y] - debtVals[y];
+    cell.value = endEq - begEq; cell.numFmt = CUR; dc(cell);
   }
 
-  r++; ws.getCell(r, 1).value = "Total Equity"; ws.getCell(r, 1).font = BF;
+  r++; ws.getCell(r, 1).value = "Total Equity / Net Assets"; ws.getCell(r, 1).font = BF;
   const totalEquityRow = r;
-  const totalEquityVals: number[] = [];
   for (let y = 0; y < yc; y++) {
-    const begEquity = y === 0 ? startingCash : startingCash + cumNI[y - 1];
-    const totalEquity = begEquity + ni[y];
-    totalEquityVals.push(totalEquity);
+    const totalEquity = cashVals[y] - debtVals[y];
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `SUM(${cn(r - 2, y + 2)}:${cn(r - 1, y + 2)})`, result: totalEquity };
+    cell.value = { formula: `${cn(totalAssetsRow, y + 2)}-${cn(totalLiabRow, y + 2)}`, result: totalEquity };
     cell.numFmt = CUR; bc(cell);
   }
   sec(ws, r, cols);
 
   r += 2; ws.getCell(r, 1).value = "BALANCE CHECK (Assets − Liab − Equity)"; ws.getCell(r, 1).font = BF;
   for (let y = 0; y < yc; y++) {
-    const balCheck = totalAssetsVals[y] - totalLiabVals[y] - totalEquityVals[y];
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `${cn(totalAssetsRow, y + 2)}-${cn(totalLiabRow, y + 2)}-${cn(totalEquityRow, y + 2)}`, result: balCheck };
+    cell.value = { formula: `${cn(totalAssetsRow, y + 2)}-${cn(totalLiabRow, y + 2)}-${cn(totalEquityRow, y + 2)}`, result: 0 };
     cell.numFmt = CUR; bc(cell);
   }
 
