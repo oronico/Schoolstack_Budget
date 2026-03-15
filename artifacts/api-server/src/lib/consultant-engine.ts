@@ -1150,8 +1150,13 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (lastReserve && lastReserve.reserveMonths < 1)
     risks.push(`Building an operating reserve by Year ${lastYearNum} is an important next goal to work toward`);
 
+  if (sp.locationSecured && sp.ownershipType === "own") {
+    strengths.push("Facility is owned — no lease renewal risk");
+  }
+
+  const facilityRisks: string[] = [];
   if (!sp.locationSecured) {
-    risks.push("No facility location secured yet — facility costs are estimated");
+    facilityRisks.push("No facility location secured yet — facility costs are estimated");
   }
   if (sp.locationSecured && sp.ownershipType === "rent" && sp.leaseExpirationYear) {
     const curYear = new Date().getFullYear();
@@ -1159,12 +1164,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     const yearsUntilExpiration = sp.leaseExpirationYear - projStart;
     if (yearsUntilExpiration >= 0 && yearsUntilExpiration < yearCount) {
       const bump = sp.postLeaseRenewalBump || 15;
-      risks.push(`Lease expires in Year ${yearsUntilExpiration + 1} — rent may increase ${bump}% at renewal`);
+      facilityRisks.push(`Lease expires in Year ${yearsUntilExpiration + 1} — rent may increase ${bump}% at renewal`);
     }
   }
-  if (sp.locationSecured && sp.ownershipType === "own") {
-    strengths.push("Facility is owned — no lease renewal risk");
-  }
+  risks.unshift(...facilityRisks);
 
   const biggestStrength =
     strengths.length > 0
