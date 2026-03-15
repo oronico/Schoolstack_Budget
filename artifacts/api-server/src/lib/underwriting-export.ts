@@ -36,7 +36,9 @@ interface RevenueRow {
   driverType: string;
   amounts: number[];
   percentBase?: string;
+  escalationRate?: number;
   note?: string;
+  billingMonths?: number;
 }
 
 interface StaffingRow {
@@ -60,6 +62,7 @@ interface ExpenseRow {
   enabled: boolean;
   driverType: string;
   amounts: number[];
+  escalationRate?: number;
   note?: string;
 }
 
@@ -185,8 +188,12 @@ function funcLabel(fc: string): string {
   return map[fc] || fc;
 }
 
-function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number): number {
-  const base = amounts?.[y] ?? 0;
+function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number): number {
+  let base = amounts?.[y] ?? 0;
+  if (escalationRate !== undefined && escalationRate !== 0 && y > 0) {
+    const y1 = amounts?.[0] ?? 0;
+    base = y1 * Math.pow(1 + escalationRate / 100, y);
+  }
   switch (dt) {
     case "monthly": return base * 12;
     case "per_student": return base * students;
@@ -227,15 +234,23 @@ function computeRevenueForYear(
   for (const r of rows) {
     if (!r.enabled || r.driverType === "percent_of_base") continue;
     if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers && tiers.length > 0) {
-      vals.set(r.id, tuitionWithTiers(r.amounts?.[y] ?? 0, y, students, tiers));
+      let perStudentAmount = r.amounts?.[y] ?? 0;
+      if (r.escalationRate !== undefined && r.escalationRate !== 0 && y > 0) {
+        perStudentAmount = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
+      }
+      vals.set(r.id, tuitionWithTiers(perStudentAmount, y, students, tiers));
     } else {
-      vals.set(r.id, driverVal(r.amounts, y, r.driverType, students));
+      vals.set(r.id, driverVal(r.amounts, y, r.driverType, students, r.escalationRate));
     }
   }
   for (const r of rows) {
     if (!r.enabled || r.driverType !== "percent_of_base") continue;
     const baseVal = vals.get(r.percentBase || "") || 0;
-    vals.set(r.id, baseVal * ((r.amounts?.[y] ?? 0) / 100));
+    let pctVal = r.amounts?.[y] ?? 0;
+    if (r.escalationRate !== undefined && r.escalationRate !== 0 && y > 0) {
+      pctVal = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
+    }
+    vals.set(r.id, baseVal * (pctVal / 100));
   }
   let total = 0;
   for (const r of rows) {
@@ -254,9 +269,13 @@ function computeExpenseForYear(
   for (const r of rows) {
     if (!r.enabled) continue;
     if (r.driverType === "percent_of_revenue") {
-      total += ((r.amounts?.[y] ?? 0) / 100) * totalRevenue;
+      let pct = r.amounts?.[y] ?? 0;
+      if (r.escalationRate !== undefined && r.escalationRate !== 0 && y > 0) {
+        pct = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
+      }
+      total += (pct / 100) * totalRevenue;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students);
+      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate);
     }
   }
   return total;
@@ -1037,11 +1056,11 @@ function computeExportMonthlyRevenue(
 
     if (r.category === "tuition_and_fees" || r.category === "tuition_offsets") {
       if (isTuition) {
-        const billingMonths = 10;
+        const bm = r.billingMonths ?? 10;
         const effectiveAmount = r.category === "tuition_offsets" ? -Math.abs(annualAmount) : annualAmount;
-        const perMonth = effectiveAmount / billingMonths;
-        const startMonth = 1;
-        for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) {
+        const perMonth = effectiveAmount / bm;
+        const startMonth = bm >= 12 ? 0 : 1;
+        for (let i = startMonth; i < startMonth + bm && i < 12; i++) {
           monthly[i] += perMonth;
         }
       } else {
