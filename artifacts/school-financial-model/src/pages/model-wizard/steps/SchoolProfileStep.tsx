@@ -141,6 +141,36 @@ export function SchoolProfileStep() {
       </div>
 
       <div>
+        <FormInput 
+          name="schoolProfile.schoolName" 
+          label="What's the name of your school?" 
+          placeholder="e.g., Summit Academy"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <FormSelect
+          name="schoolProfile.schoolType"
+          label="School Type"
+          options={Object.entries(SCHOOL_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+        />
+        
+        {schoolType === "other" && (
+          <FormInput
+            name="schoolProfile.schoolTypeOther"
+            label="Describe Your School Type"
+            placeholder="e.g., Montessori Academy"
+          />
+        )}
+
+        <FormSelect
+          name="schoolProfile.state"
+          label="State"
+          options={STATES}
+        />
+      </div>
+
+      <div>
         <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">What stage is your school?</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <RadioCard
@@ -201,33 +231,6 @@ export function SchoolProfileStep() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <FormInput 
-          name="schoolProfile.schoolName" 
-          label="School Name" 
-          placeholder="e.g., Summit Academy"
-          className="md:col-span-2"
-        />
-        
-        <FormSelect
-          name="schoolProfile.schoolType"
-          label="School Type"
-          options={Object.entries(SCHOOL_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
-        />
-        
-        {schoolType === "other" && (
-          <FormInput
-            name="schoolProfile.schoolTypeOther"
-            label="Describe Your School Type"
-            placeholder="e.g., Montessori Academy"
-          />
-        )}
-
-        <FormSelect
-          name="schoolProfile.state"
-          label="State"
-          options={STATES}
-        />
-
         <FormInput 
           name="schoolProfile.openingYear" 
           label="Opening Year" 
