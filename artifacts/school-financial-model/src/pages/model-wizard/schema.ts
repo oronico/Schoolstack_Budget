@@ -31,25 +31,25 @@ export const tuitionTierSchema = z.object({
   id: z.string(),
   tierType: tuitionTierTypeSchema,
   label: z.string(),
-  discountPercent: z.coerce.number(numMsg("discount")).min(0).max(100, "Discount percentage can't exceed 100%"),
-  studentCounts: z.array(z.coerce.number(numMsg("student count")).min(0)),
+  discountPercent: z.coerce.number(numMsg("discount")).min(0, "Discount can't be negative").max(100, "Discount percentage can't exceed 100%"),
+  studentCounts: z.array(z.coerce.number(numMsg("student count")).min(0, "Student count can't be negative")),
 });
 
 export const programSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "Give this program a name so we can track its enrollment"),
   annualTuition: z.coerce.number(numMsg("tuition")).min(0, "Enter an annual tuition amount (even $0 is fine)"),
-  priorYear: z.coerce.number(numMsg("prior year enrollment")).min(0).optional(),
-  currentYear: z.coerce.number(numMsg("current year enrollment")).min(0).optional(),
-  year1: z.coerce.number(numMsg("Year 1 enrollment")).min(0).default(0),
-  year2: z.coerce.number(numMsg("Year 2 enrollment")).min(0).default(0),
-  year3: z.coerce.number(numMsg("Year 3 enrollment")).min(0).default(0),
-  year4: z.coerce.number(numMsg("Year 4 enrollment")).min(0).default(0),
-  year5: z.coerce.number(numMsg("Year 5 enrollment")).min(0).default(0),
+  priorYear: z.coerce.number(numMsg("prior year enrollment")).min(0, "Enrollment can't be negative").optional(),
+  currentYear: z.coerce.number(numMsg("current year enrollment")).min(0, "Enrollment can't be negative").optional(),
+  year1: z.coerce.number(numMsg("Year 1 enrollment")).min(0, "Enrollment can't be negative").default(0),
+  year2: z.coerce.number(numMsg("Year 2 enrollment")).min(0, "Enrollment can't be negative").default(0),
+  year3: z.coerce.number(numMsg("Year 3 enrollment")).min(0, "Enrollment can't be negative").default(0),
+  year4: z.coerce.number(numMsg("Year 4 enrollment")).min(0, "Enrollment can't be negative").default(0),
+  year5: z.coerce.number(numMsg("Year 5 enrollment")).min(0, "Enrollment can't be negative").default(0),
 });
 
 export const tuitionEscalationSchema = z.object({
-  rate: z.coerce.number(numMsg("escalation rate")).min(0).max(20, "Escalation rate can't exceed 20%").default(3),
+  rate: z.coerce.number(numMsg("escalation rate")).min(0, "Escalation rate can't be negative").max(20, "Escalation rate can't exceed 20%").default(3),
 });
 
 export const revenueSourcesSchema = z.object({
@@ -75,7 +75,7 @@ export const schoolProfileSchema = z.object({
     invalid_type_error: "Please select a valid operating year option",
   }).optional(),
   openingYear: z.coerce.number(numMsg("opening year")).min(2000, "Enter a valid year (2000 or later)").max(2100, "Enter a valid year (2100 or earlier)").optional(),
-  currentStudents: z.coerce.number(numMsg("current students")).min(0).optional(),
+  currentStudents: z.coerce.number(numMsg("current students")).min(0, "Student count can't be negative").optional(),
   maxCapacity: z.coerce.number(numMsg("capacity")).min(1, "Enter your building's maximum student capacity (at least 1)"),
   fiscalYearStartMonth: z.coerce.number(numMsg("fiscal year start month")).min(1, "Choose a fiscal year start month").max(12, "Month must be between 1 and 12"),
   isPartialFirstYear: z.boolean(),
@@ -83,35 +83,35 @@ export const schoolProfileSchema = z.object({
   isAccredited: z.boolean().optional(),
   accreditingBody: z.string().optional(),
   hasManagementFee: z.boolean().optional(),
-  managementFeePercent: z.coerce.number(numMsg("management fee")).min(0).max(100, "Management fee percentage can't exceed 100%").optional(),
+  managementFeePercent: z.coerce.number(numMsg("management fee")).min(0, "Fee percentage can't be negative").max(100, "Management fee percentage can't exceed 100%").optional(),
   hasBookkeeper: z.boolean().optional().default(false),
-  bookkeeperMonthlyCost: z.coerce.number(numMsg("bookkeeper cost")).min(0).optional().default(0),
+  bookkeeperMonthlyCost: z.coerce.number(numMsg("bookkeeper cost")).min(0, "Cost can't be negative").optional().default(0),
   hasLawyer: z.boolean().optional().default(false),
-  lawyerMonthlyCost: z.coerce.number(numMsg("lawyer cost")).min(0).optional().default(0),
+  lawyerMonthlyCost: z.coerce.number(numMsg("lawyer cost")).min(0, "Cost can't be negative").optional().default(0),
   hasGeneralLiabilityInsurance: z.boolean().optional().default(false),
-  insuranceCost: z.coerce.number(numMsg("insurance cost")).min(0).optional().default(0),
+  insuranceCost: z.coerce.number(numMsg("insurance cost")).min(0, "Cost can't be negative").optional().default(0),
   hasSavingsAccount: z.boolean().optional().default(false),
   hasBusinessAccount: z.boolean().optional().default(false),
   hasCreditCard: z.boolean().optional().default(false),
   hasLoan: z.boolean().optional().default(false),
-  loanAmount: z.coerce.number(numMsg("loan amount")).min(0).optional().default(0),
-  loanRate: z.coerce.number(numMsg("interest rate")).min(0).max(100, "Interest rate can't exceed 100%").optional().default(0),
-  loanTermYears: z.coerce.number(numMsg("loan term")).min(0).max(50, "Loan term can't exceed 50 years").optional().default(0),
+  loanAmount: z.coerce.number(numMsg("loan amount")).min(0, "Loan amount can't be negative").optional().default(0),
+  loanRate: z.coerce.number(numMsg("interest rate")).min(0, "Interest rate can't be negative").max(100, "Interest rate can't exceed 100%").optional().default(0),
+  loanTermYears: z.coerce.number(numMsg("loan term")).min(0, "Loan term can't be negative").max(50, "Loan term can't exceed 50 years").optional().default(0),
 });
 
 export const priorYearSnapshotSchema = z.object({
-  endingEnrollment: z.coerce.number(numMsg("ending enrollment")).min(0).optional(),
-  totalRevenue: z.coerce.number(numMsg("total revenue")).min(0).optional(),
-  totalExpenses: z.coerce.number(numMsg("total expenses")).min(0).optional(),
-  endingCash: z.coerce.number(numMsg("ending cash")).min(0).optional(),
+  endingEnrollment: z.coerce.number(numMsg("ending enrollment")).min(0, "Enrollment can't be negative").optional(),
+  totalRevenue: z.coerce.number(numMsg("total revenue")).min(0, "Revenue can't be negative").optional(),
+  totalExpenses: z.coerce.number(numMsg("total expenses")).min(0, "Expenses can't be negative").optional(),
+  endingCash: z.coerce.number(numMsg("ending cash")).min(0, "Cash balance can't be negative").optional(),
 });
 
 export const currentYearProjectionSchema = z.object({
-  currentEnrollment: z.coerce.number(numMsg("current enrollment")).min(0).optional(),
-  projectedRevenue: z.coerce.number(numMsg("projected revenue")).min(0).optional(),
-  projectedExpenses: z.coerce.number(numMsg("projected expenses")).min(0).optional(),
-  currentCash: z.coerce.number(numMsg("current cash")).min(0).optional(),
-  monthsCompleted: z.coerce.number(numMsg("months completed")).min(0).max(12, "Months completed can't exceed 12").optional(),
+  currentEnrollment: z.coerce.number(numMsg("current enrollment")).min(0, "Enrollment can't be negative").optional(),
+  projectedRevenue: z.coerce.number(numMsg("projected revenue")).min(0, "Revenue can't be negative").optional(),
+  projectedExpenses: z.coerce.number(numMsg("projected expenses")).min(0, "Expenses can't be negative").optional(),
+  currentCash: z.coerce.number(numMsg("current cash")).min(0, "Cash balance can't be negative").optional(),
+  monthsCompleted: z.coerce.number(numMsg("months completed")).min(0, "Months can't be negative").max(12, "Months completed can't exceed 12").optional(),
 });
 
 export const enrollmentSchema = z.object({
@@ -151,15 +151,15 @@ export const revenueRowSchema = z.object({
 });
 
 export const revenueSchema = z.object({
-  tuitionPerStudent: z.coerce.number(numMsg("tuition per student")).min(0).optional(),
-  annualTuitionIncrease: z.coerce.number(numMsg("tuition increase")).min(0).max(100, "Annual tuition increase can't exceed 100%").optional(),
-  esaRevenuePerStudent: z.coerce.number(numMsg("ESA revenue")).min(0).optional(),
-  publicFundingPerStudent: z.coerce.number(numMsg("public funding")).min(0).optional(),
-  otherRevenuePerStudent: z.coerce.number(numMsg("other revenue")).min(0).optional(),
-  scholarshipRate: z.coerce.number(numMsg("scholarship rate")).min(0).max(100, "Scholarship rate can't exceed 100%").optional(),
-  annualDonations: z.coerce.number(numMsg("annual donations")).min(0).optional(),
-  foundationGrants: z.coerce.number(numMsg("foundation grants")).min(0).optional(),
-  capitalGifts: z.coerce.number(numMsg("capital gifts")).min(0).optional(),
+  tuitionPerStudent: z.coerce.number(numMsg("tuition per student")).min(0, "Tuition amount can't be negative").optional(),
+  annualTuitionIncrease: z.coerce.number(numMsg("tuition increase")).min(0, "Increase rate can't be negative").max(100, "Annual tuition increase can't exceed 100%").optional(),
+  esaRevenuePerStudent: z.coerce.number(numMsg("ESA revenue")).min(0, "ESA revenue can't be negative").optional(),
+  publicFundingPerStudent: z.coerce.number(numMsg("public funding")).min(0, "Public funding can't be negative").optional(),
+  otherRevenuePerStudent: z.coerce.number(numMsg("other revenue")).min(0, "Revenue amount can't be negative").optional(),
+  scholarshipRate: z.coerce.number(numMsg("scholarship rate")).min(0, "Scholarship rate can't be negative").max(100, "Scholarship rate can't exceed 100%").optional(),
+  annualDonations: z.coerce.number(numMsg("annual donations")).min(0, "Donations amount can't be negative").optional(),
+  foundationGrants: z.coerce.number(numMsg("foundation grants")).min(0, "Grants amount can't be negative").optional(),
+  capitalGifts: z.coerce.number(numMsg("capital gifts")).min(0, "Capital gifts can't be negative").optional(),
 });
 
 export const staffingRowSchema = z.object({
@@ -173,22 +173,22 @@ export const staffingRowSchema = z.object({
     required_error: "Please select the employment type",
     invalid_type_error: "Please select a valid employment type",
   }),
-  fte: z.number().min(0).max(1, "FTE can't exceed 1.0 (full-time equivalent)"),
-  annualizedRate: z.number().min(0),
+  fte: z.number().min(0, "FTE can't be negative").max(1, "FTE can't exceed 1.0 (full-time equivalent)"),
+  annualizedRate: z.number().min(0, "Annual rate can't be negative"),
   benefitsEligible: z.boolean(),
-  benefitsRate: z.number().min(0).max(100, "Benefits rate can't exceed 100%"),
-  payrollTaxRate: z.number().min(0).max(100, "Payroll tax rate can't exceed 100%"),
+  benefitsRate: z.number().min(0, "Benefits rate can't be negative").max(100, "Benefits rate can't exceed 100%"),
+  payrollTaxRate: z.number().min(0, "Payroll tax rate can't be negative").max(100, "Payroll tax rate can't exceed 100%"),
   payrollLike: z.boolean(),
   notes: z.string().default(""),
 });
 
 export const staffingSchema = z.object({
   studentsPerTeacher: z.coerce.number(numMsg("student-to-teacher ratio")).min(1, "Enter your target student-to-teacher ratio (at least 1)").optional(),
-  teacherSalary: z.coerce.number(numMsg("teacher salary")).min(0).optional(),
-  adminStaffCount: z.coerce.number(numMsg("admin staff count")).min(0).optional(),
-  adminSalary: z.coerce.number(numMsg("admin salary")).min(0).optional(),
-  founderSalary: z.coerce.number(numMsg("founder salary")).min(0).optional(),
-  benefitsRate: z.coerce.number(numMsg("benefits rate")).min(0).max(100, "Benefits rate can't exceed 100%").optional(),
+  teacherSalary: z.coerce.number(numMsg("teacher salary")).min(0, "Salary can't be negative").optional(),
+  adminStaffCount: z.coerce.number(numMsg("admin staff count")).min(0, "Staff count can't be negative").optional(),
+  adminSalary: z.coerce.number(numMsg("admin salary")).min(0, "Salary can't be negative").optional(),
+  founderSalary: z.coerce.number(numMsg("founder salary")).min(0, "Salary can't be negative").optional(),
+  benefitsRate: z.coerce.number(numMsg("benefits rate")).min(0, "Benefits rate can't be negative").max(100, "Benefits rate can't exceed 100%").optional(),
 });
 
 export const expenseRowSchema = z.object({
@@ -219,30 +219,30 @@ export const capitalDebtRowSchema = z.object({
   amounts: z.array(z.number()),
   note: z.string().default(""),
   isLoan: z.boolean().default(false),
-  loanPrincipal: z.number().min(0).default(0),
-  loanRate: z.number().min(0).max(100, "Interest rate can't exceed 100%").default(0),
-  loanTermYears: z.number().min(0).max(50, "Loan term can't exceed 50 years").default(0),
+  loanPrincipal: z.number().min(0, "Loan principal can't be negative").default(0),
+  loanRate: z.number().min(0, "Interest rate can't be negative").max(100, "Interest rate can't exceed 100%").default(0),
+  loanTermYears: z.number().min(0, "Loan term can't be negative").max(50, "Loan term can't exceed 50 years").default(0),
 });
 
 export const facilitiesSchema = z.object({
-  monthlyRent: z.coerce.number(numMsg("monthly rent")).min(0).optional(),
-  annualRentIncrease: z.coerce.number(numMsg("rent increase")).min(0).max(100, "Rent increase percentage can't exceed 100%").optional(),
-  annualUtilities: z.coerce.number(numMsg("utilities")).min(0).optional(),
-  annualInsurance: z.coerce.number(numMsg("insurance")).min(0).optional(),
-  facilityMaintenance: z.coerce.number(numMsg("maintenance")).min(0).optional(),
-  curriculumCostPerStudent: z.coerce.number(numMsg("curriculum cost")).min(0).optional(),
-  techCostPerStudent: z.coerce.number(numMsg("tech cost")).min(0).optional(),
-  annualMarketing: z.coerce.number(numMsg("marketing")).min(0).optional(),
-  professionalDevelopment: z.coerce.number(numMsg("professional development")).min(0).optional(),
-  foodServicePerStudent: z.coerce.number(numMsg("food service cost")).min(0).optional(),
-  transportationAnnual: z.coerce.number(numMsg("transportation")).min(0).optional(),
-  studentServicesAnnual: z.coerce.number(numMsg("student services")).min(0).optional(),
-  otherAnnualExpenses: z.coerce.number(numMsg("other expenses")).min(0).optional(),
-  loanAmount: z.coerce.number(numMsg("loan amount")).min(0).optional(),
-  annualInterestRate: z.coerce.number(numMsg("interest rate")).min(0).max(100, "Interest rate can't exceed 100%").optional(),
-  loanTermYears: z.coerce.number(numMsg("loan term")).min(0).max(50, "Loan term can't exceed 50 years").optional(),
-  annualSalaryIncrease: z.coerce.number(numMsg("salary increase")).min(0).max(100, "Salary increase can't exceed 100%").optional(),
-  generalCostInflation: z.coerce.number(numMsg("inflation rate")).min(0).max(100, "Inflation rate can't exceed 100%").optional(),
+  monthlyRent: z.coerce.number(numMsg("monthly rent")).min(0, "Rent can't be negative").optional(),
+  annualRentIncrease: z.coerce.number(numMsg("rent increase")).min(0, "Rent increase can't be negative").max(100, "Rent increase percentage can't exceed 100%").optional(),
+  annualUtilities: z.coerce.number(numMsg("utilities")).min(0, "Utilities cost can't be negative").optional(),
+  annualInsurance: z.coerce.number(numMsg("insurance")).min(0, "Insurance cost can't be negative").optional(),
+  facilityMaintenance: z.coerce.number(numMsg("maintenance")).min(0, "Maintenance cost can't be negative").optional(),
+  curriculumCostPerStudent: z.coerce.number(numMsg("curriculum cost")).min(0, "Curriculum cost can't be negative").optional(),
+  techCostPerStudent: z.coerce.number(numMsg("tech cost")).min(0, "Tech cost can't be negative").optional(),
+  annualMarketing: z.coerce.number(numMsg("marketing")).min(0, "Marketing budget can't be negative").optional(),
+  professionalDevelopment: z.coerce.number(numMsg("professional development")).min(0, "Professional development cost can't be negative").optional(),
+  foodServicePerStudent: z.coerce.number(numMsg("food service cost")).min(0, "Food service cost can't be negative").optional(),
+  transportationAnnual: z.coerce.number(numMsg("transportation")).min(0, "Transportation cost can't be negative").optional(),
+  studentServicesAnnual: z.coerce.number(numMsg("student services")).min(0, "Student services cost can't be negative").optional(),
+  otherAnnualExpenses: z.coerce.number(numMsg("other expenses")).min(0, "Expense amount can't be negative").optional(),
+  loanAmount: z.coerce.number(numMsg("loan amount")).min(0, "Loan amount can't be negative").optional(),
+  annualInterestRate: z.coerce.number(numMsg("interest rate")).min(0, "Interest rate can't be negative").max(100, "Interest rate can't exceed 100%").optional(),
+  loanTermYears: z.coerce.number(numMsg("loan term")).min(0, "Loan term can't be negative").max(50, "Loan term can't exceed 50 years").optional(),
+  annualSalaryIncrease: z.coerce.number(numMsg("salary increase")).min(0, "Salary increase can't be negative").max(100, "Salary increase can't exceed 100%").optional(),
+  generalCostInflation: z.coerce.number(numMsg("inflation rate")).min(0, "Inflation rate can't be negative").max(100, "Inflation rate can't exceed 100%").optional(),
 });
 
 export const fullModelSchema = z.object({
