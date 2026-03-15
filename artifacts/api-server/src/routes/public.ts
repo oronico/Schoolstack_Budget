@@ -30,9 +30,19 @@ router.post("/public/export-underwriting", rateLimiter, async (req: Request, res
 
     const buffer = await generateUnderwritingWorkbook(data);
 
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Underwriting_Pro_Forma.xlsx"`);
-    res.send(buffer);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=schoolstack-underwriting-model.xlsx"
+    );
+
+    res.setHeader("Content-Length", buffer.length);
+
+    res.end(buffer);
   } catch (err) {
     console.error("Public underwriting export error:", err);
     res.status(500).json({ error: "Something went wrong generating the workbook." });
