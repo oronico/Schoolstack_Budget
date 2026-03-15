@@ -97,6 +97,9 @@ const EXPENSE_LINE_ITEMS: ExpenseLineItemDef[] = [
   { id: "janitorial", category: "occupancy_facility", lineItem: "Janitorial / Cleaning", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
   { id: "security", category: "occupancy_facility", lineItem: "Security", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
 
+  { id: "bookkeeper", category: "administrative_general", lineItem: "Bookkeeper", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
+  { id: "lawyer", category: "administrative_general", lineItem: "Lawyer / Legal Counsel", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
+  { id: "general_liability_insurance", category: "occupancy_facility", lineItem: "General Liability Insurance", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
   { id: "marketing_admissions", category: "administrative_general", lineItem: "Marketing & Admissions", driverType: "annual_fixed", defaultAmount: 5000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "legal_accounting", category: "administrative_general", lineItem: "Legal & Accounting", driverType: "annual_fixed", defaultAmount: 8000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "office_supplies", category: "administrative_general", lineItem: "Office Supplies & Postage", driverType: "annual_fixed", defaultAmount: 2000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
@@ -194,6 +197,45 @@ export function calculateLoanPayment(principal: number, annualRate: number, term
   const totalPayments = termYears * 12;
   const monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / (Math.pow(1 + monthlyRate, totalPayments) - 1);
   return Math.round(monthlyPayment * 12);
+}
+
+const BUSINESS_OPS_EXPENSE_LINE_ITEMS = ["Bookkeeper", "Lawyer / Legal Counsel", "General Liability Insurance"];
+
+export function mergeCanonicalExpenseRows(existing: ExpenseRowData[], yearCount: number): ExpenseRowData[] {
+  const existingNames = new Set(existing.map((r) => r.lineItem));
+  const missing = EXPENSE_LINE_ITEMS
+    .filter((def) => BUSINESS_OPS_EXPENSE_LINE_ITEMS.includes(def.lineItem) && !existingNames.has(def.lineItem))
+    .map((def) => ({
+      id: uid(),
+      category: def.category,
+      lineItem: def.lineItem,
+      enabled: false,
+      driverType: def.driverType,
+      amounts: new Array(yearCount).fill(0),
+      note: "",
+    }));
+  return missing.length > 0 ? [...existing, ...missing] : existing;
+}
+
+const BUSINESS_OPS_CAPITAL_LINE_ITEMS = ["Loan / Debt Service"];
+
+export function mergeCanonicalCapitalRows(existing: CapitalDebtRowData[], yearCount: number): CapitalDebtRowData[] {
+  const existingNames = new Set(existing.map((r) => r.lineItem));
+  const missing = CAPITAL_DEBT_ITEMS
+    .filter((def) => BUSINESS_OPS_CAPITAL_LINE_ITEMS.includes(def.lineItem) && !existingNames.has(def.lineItem))
+    .map((def) => ({
+      id: uid(),
+      lineItem: def.lineItem,
+      enabled: false,
+      driverType: def.driverType,
+      amounts: new Array(yearCount).fill(0),
+      note: "",
+      isLoan: def.isLoan || false,
+      loanPrincipal: 0,
+      loanRate: 0,
+      loanTermYears: 0,
+    }));
+  return missing.length > 0 ? [...existing, ...missing] : existing;
 }
 
 export function createBlankExpenseRow(category: ExpenseCategory, yearCount: number): ExpenseRowData {

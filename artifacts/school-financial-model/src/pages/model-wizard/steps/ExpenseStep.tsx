@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type ExpenseRowData,
@@ -18,6 +18,8 @@ import {
   createBlankCapitalDebtRow,
   calculateLoanPayment,
   getYearCount,
+  mergeCanonicalExpenseRows,
+  mergeCanonicalCapitalRows,
 } from "@/lib/expense-defaults";
 import {
   type StaffingRowData,
@@ -65,6 +67,55 @@ function annualize(amount: number, driverType: ExpenseDriverType): number {
   return amount;
 }
 
+function BusinessOperationsToggle({
+  checked,
+  onChange,
+  icon: Icon,
+  label,
+  description,
+  children,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  icon: typeof DollarSign;
+  label: string;
+  description: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className={cn(
+      "rounded-xl border-2 p-4 transition-all",
+      checked ? "border-primary/30 bg-primary/5" : "border-border bg-card"
+    )}>
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className="flex items-center gap-3 w-full text-left"
+      >
+        <div className={cn(
+          "h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0",
+          checked ? "bg-primary/10" : "bg-muted"
+        )}>
+          <Icon className={cn("h-4 w-4", checked ? "text-primary" : "text-muted-foreground")} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className={cn("font-semibold text-sm", checked ? "text-foreground" : "text-muted-foreground")}>{label}</div>
+          <div className="text-xs text-muted-foreground">{description}</div>
+        </div>
+        <div className={cn(
+          "h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+          checked ? "border-primary bg-primary" : "border-border"
+        )}>
+          {checked && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
+        </div>
+      </button>
+      {checked && children && (
+        <div className="mt-3 ml-12">{children}</div>
+      )}
+    </div>
+  );
+}
+
 export function ExpenseStep() {
   const { watch, setValue } = useFormContext();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
@@ -73,6 +124,20 @@ export function ExpenseStep() {
 
   const hasManagementFee = watch("schoolProfile.hasManagementFee") as boolean | undefined;
   const managementFeePercent = watch("schoolProfile.managementFeePercent") as number | undefined;
+
+  const hasBookkeeper = watch("schoolProfile.hasBookkeeper") as boolean | undefined;
+  const bookkeeperMonthlyCost = watch("schoolProfile.bookkeeperMonthlyCost") as number | undefined;
+  const hasLawyer = watch("schoolProfile.hasLawyer") as boolean | undefined;
+  const lawyerMonthlyCost = watch("schoolProfile.lawyerMonthlyCost") as number | undefined;
+  const hasGeneralLiabilityInsurance = watch("schoolProfile.hasGeneralLiabilityInsurance") as boolean | undefined;
+  const insuranceCost = watch("schoolProfile.insuranceCost") as number | undefined;
+  const hasSavingsAccount = watch("schoolProfile.hasSavingsAccount") as boolean | undefined;
+  const hasBusinessAccount = watch("schoolProfile.hasBusinessAccount") as boolean | undefined;
+  const hasCreditCard = watch("schoolProfile.hasCreditCard") as boolean | undefined;
+  const hasLoan = watch("schoolProfile.hasLoan") as boolean | undefined;
+  const loanAmount = watch("schoolProfile.loanAmount") as number | undefined;
+  const loanRate = watch("schoolProfile.loanRate") as number | undefined;
+  const loanTermYears = watch("schoolProfile.loanTermYears") as number | undefined;
 
   const staffingRows = watch("staffingRows") as StaffingRowData[] | undefined;
   const formExpenseRows = watch("expenseRows") as ExpenseRowData[] | undefined;
@@ -94,12 +159,16 @@ export function ExpenseStep() {
 
   useEffect(() => {
     if (formExpenseRows !== undefined && formExpenseRows.length > 0) {
-      const adjusted = formExpenseRows.map((r) => ({
+      const rawAdjusted = formExpenseRows.map((r) => ({
         ...r,
         amounts: r.amounts.length >= yearCount
           ? r.amounts.slice(0, yearCount)
           : [...r.amounts, ...new Array(yearCount - r.amounts.length).fill(0)],
       }));
+      const adjusted = mergeCanonicalExpenseRows(rawAdjusted, yearCount);
+      if (adjusted.length !== formExpenseRows.length) {
+        setValue("expenseRows", adjusted, { shouldDirty: true });
+      }
       setExpenseRows(adjusted);
       if (!defaultsApplied) {
         const enabledCats = new Set<string>();
@@ -153,15 +222,106 @@ export function ExpenseStep() {
     }
   }, [hasManagementFee, managementFeePercent, defaultsApplied]);
 
+  useEffect(() => {
+    if (!defaultsApplied || expenseRows.length === 0) return;
+    let changed = false;
+    const updated = expenseRows.map((row) => {
+      if (row.lineItem === "Bookkeeper") {
+        const shouldEnable = hasBookkeeper === true;
+        const cost = bookkeeperMonthlyCost || 0;
+        if (row.enabled !== shouldEnable || row.amounts[0] !== cost) {
+          changed = true;
+          return { ...row, enabled: shouldEnable, amounts: row.amounts.map(() => cost) };
+        }
+      }
+      if (row.lineItem === "Lawyer / Legal Counsel") {
+        const shouldEnable = hasLawyer === true;
+        const cost = lawyerMonthlyCost || 0;
+        if (row.enabled !== shouldEnable || row.amounts[0] !== cost) {
+          changed = true;
+          return { ...row, enabled: shouldEnable, amounts: row.amounts.map(() => cost) };
+        }
+      }
+      if (row.lineItem === "General Liability Insurance") {
+        const shouldEnable = hasGeneralLiabilityInsurance === true;
+        const cost = insuranceCost || 0;
+        if (row.enabled !== shouldEnable || row.amounts[0] !== cost) {
+          changed = true;
+          return { ...row, enabled: shouldEnable, amounts: row.amounts.map(() => cost) };
+        }
+      }
+      return row;
+    });
+    if (changed) {
+      setExpenseRows(updated);
+      setValue("expenseRows", updated, { shouldDirty: true });
+    }
+    if (hasBookkeeper === true || hasLawyer === true) {
+      if (!enabledCategories.has("administrative_general")) {
+        setEnabledCategories((prev) => new Set(prev).add("administrative_general"));
+        setExpandedCategories((prev) => new Set(prev).add("administrative_general"));
+      }
+    }
+    if (hasGeneralLiabilityInsurance === true) {
+      if (!enabledCategories.has("occupancy_facility")) {
+        setEnabledCategories((prev) => new Set(prev).add("occupancy_facility"));
+        setExpandedCategories((prev) => new Set(prev).add("occupancy_facility"));
+      }
+    }
+  }, [hasBookkeeper, bookkeeperMonthlyCost, hasLawyer, lawyerMonthlyCost, hasGeneralLiabilityInsurance, insuranceCost, defaultsApplied, enabledCategories]);
+
+  useEffect(() => {
+    if (!defaultsApplied || capitalRows.length === 0) return;
+    const debtRow = capitalRows.find((r) => r.lineItem === "Loan / Debt Service");
+    if (!debtRow) return;
+
+    if (hasLoan !== true) {
+      if (debtRow.enabled) {
+        const updated = capitalRows.map((r) =>
+          r.lineItem === "Loan / Debt Service"
+            ? { ...r, enabled: false, amounts: r.amounts.map(() => 0) }
+            : r
+        );
+        setCapitalRows(updated);
+        setValue("capitalAndDebtRows", updated, { shouldDirty: true });
+      }
+      return;
+    }
+
+    if (!enabledCategories.has("capital_financing")) {
+      setEnabledCategories((prev) => new Set(prev).add("capital_financing"));
+      setExpandedCategories((prev) => new Set(prev).add("capital_financing"));
+    }
+
+    const principal = loanAmount || 0;
+    const rate = loanRate || 0;
+    const term = loanTermYears || 0;
+    const annualPayment = (principal > 0 && term > 0) ? calculateLoanPayment(principal, rate, term) : 0;
+    const needsUpdate = !debtRow.enabled || debtRow.amounts[0] !== annualPayment || debtRow.loanPrincipal !== principal || debtRow.loanRate !== rate || debtRow.loanTermYears !== term;
+    if (needsUpdate) {
+      const updated = capitalRows.map((r) =>
+        r.lineItem === "Loan / Debt Service"
+          ? { ...r, enabled: true, isLoan: true, loanPrincipal: principal, loanRate: rate, loanTermYears: term, amounts: r.amounts.map(() => annualPayment) }
+          : r
+      );
+      setCapitalRows(updated);
+      setValue("capitalAndDebtRows", updated, { shouldDirty: true });
+    }
+  }, [hasLoan, loanAmount, loanRate, loanTermYears, defaultsApplied, capitalRows, enabledCategories]);
+
   const [capitalDefaultsApplied, setCapitalDefaultsApplied] = useState(false);
   useEffect(() => {
     if (formCapitalRows !== undefined && formCapitalRows.length > 0) {
-      const adjusted = formCapitalRows.map((r) => ({
+      const rawAdjusted = formCapitalRows.map((r) => ({
         ...r,
         amounts: r.amounts.length >= yearCount
           ? r.amounts.slice(0, yearCount)
           : [...r.amounts, ...new Array(yearCount - r.amounts.length).fill(0)],
       }));
+      const adjusted = mergeCanonicalCapitalRows(rawAdjusted, yearCount);
+      if (adjusted.length !== formCapitalRows.length) {
+        setValue("capitalAndDebtRows", adjusted, { shouldDirty: true });
+      }
       setCapitalRows(adjusted);
       if (!capitalDefaultsApplied) {
         setExpandedCategories((prev) => {
@@ -374,8 +534,187 @@ export function ExpenseStep() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Expenses by Category</h2>
-        <p className="text-muted-foreground text-lg">Review your operating costs. We've filled in typical amounts — adjust them to match your school.</p>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Expenses & Operations</h2>
+        <p className="text-muted-foreground text-lg">First, a few quick questions about your business operations. Then we'll review your expense details.</p>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+        <div>
+          <h3 className="text-lg font-bold text-foreground mb-1">Business Operations</h3>
+          <p className="text-sm text-muted-foreground">Tell us about the services and accounts you have in place. Costs you enter here will automatically appear in your expense categories below.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <BusinessOperationsToggle
+            checked={hasBookkeeper === true}
+            onChange={(v) => setValue("schoolProfile.hasBookkeeper", v, { shouldDirty: true })}
+            icon={Calculator}
+            label="Bookkeeper"
+            description="Monthly bookkeeping or accounting service"
+          >
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Monthly cost</label>
+              <div className="relative max-w-[140px]">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  value={bookkeeperMonthlyCost || ""}
+                  onChange={(e) => setValue("schoolProfile.bookkeeperMonthlyCost", parseFloat(e.target.value) || 0, { shouldDirty: true })}
+                  className="w-full text-sm border border-border rounded-lg pl-6 pr-3 py-1.5 bg-background"
+                  placeholder="500"
+                />
+              </div>
+            </div>
+          </BusinessOperationsToggle>
+
+          <BusinessOperationsToggle
+            checked={hasLawyer === true}
+            onChange={(v) => setValue("schoolProfile.hasLawyer", v, { shouldDirty: true })}
+            icon={Scale}
+            label="Lawyer"
+            description="Legal counsel on retainer or recurring basis"
+          >
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Monthly cost</label>
+              <div className="relative max-w-[140px]">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  value={lawyerMonthlyCost || ""}
+                  onChange={(e) => setValue("schoolProfile.lawyerMonthlyCost", parseFloat(e.target.value) || 0, { shouldDirty: true })}
+                  className="w-full text-sm border border-border rounded-lg pl-6 pr-3 py-1.5 bg-background"
+                  placeholder="500"
+                />
+              </div>
+            </div>
+          </BusinessOperationsToggle>
+
+          <BusinessOperationsToggle
+            checked={hasGeneralLiabilityInsurance === true}
+            onChange={(v) => setValue("schoolProfile.hasGeneralLiabilityInsurance", v, { shouldDirty: true })}
+            icon={Shield}
+            label="General Liability Insurance"
+            description="Coverage beyond property insurance"
+          >
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Annual cost</label>
+              <div className="relative max-w-[140px]">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  value={insuranceCost || ""}
+                  onChange={(e) => setValue("schoolProfile.insuranceCost", parseFloat(e.target.value) || 0, { shouldDirty: true })}
+                  className="w-full text-sm border border-border rounded-lg pl-6 pr-3 py-1.5 bg-background"
+                  placeholder="2000"
+                />
+              </div>
+            </div>
+          </BusinessOperationsToggle>
+
+          <BusinessOperationsToggle
+            checked={hasSavingsAccount === true}
+            onChange={(v) => setValue("schoolProfile.hasSavingsAccount", v, { shouldDirty: true })}
+            icon={PiggyBank}
+            label="Savings Account"
+            description="A dedicated savings account for the school"
+          />
+
+          <BusinessOperationsToggle
+            checked={hasBusinessAccount === true}
+            onChange={(v) => setValue("schoolProfile.hasBusinessAccount", v, { shouldDirty: true })}
+            icon={Banknote}
+            label="Business Account"
+            description="A separate business checking account"
+          />
+
+          <BusinessOperationsToggle
+            checked={hasCreditCard === true}
+            onChange={(v) => setValue("schoolProfile.hasCreditCard", v, { shouldDirty: true })}
+            icon={CreditCard}
+            label="Credit Card"
+            description="A business credit card for school expenses"
+          />
+
+          <BusinessOperationsToggle
+            checked={hasLoan === true}
+            onChange={(v) => setValue("schoolProfile.hasLoan", v, { shouldDirty: true })}
+            icon={Landmark}
+            label="Loan"
+            description="A business loan or line of credit"
+          >
+            <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-1">Amount ($)</label>
+                  <input
+                    type="number"
+                    value={loanAmount || ""}
+                    onChange={(e) => setValue("schoolProfile.loanAmount", parseFloat(e.target.value) || 0, { shouldDirty: true })}
+                    className="w-full text-sm border border-border rounded-lg px-2 py-1.5 bg-background"
+                    placeholder="50000"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-1">Rate (%)</label>
+                  <input
+                    type="number"
+                    value={loanRate || ""}
+                    onChange={(e) => setValue("schoolProfile.loanRate", parseFloat(e.target.value) || 0, { shouldDirty: true })}
+                    className="w-full text-sm border border-border rounded-lg px-2 py-1.5 bg-background"
+                    placeholder="6"
+                    step="0.25"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-1">Term (yrs)</label>
+                  <input
+                    type="number"
+                    value={loanTermYears || ""}
+                    onChange={(e) => setValue("schoolProfile.loanTermYears", parseFloat(e.target.value) || 0, { shouldDirty: true })}
+                    className="w-full text-sm border border-border rounded-lg px-2 py-1.5 bg-background"
+                    placeholder="10"
+                  />
+                </div>
+              </div>
+              {(loanAmount || 0) > 0 && (loanTermYears || 0) > 0 && (
+                <div className="text-xs text-muted-foreground bg-amber-50 rounded-lg px-3 py-2">
+                  Annual debt service: <span className="font-semibold text-amber-700">{formatCurrency(calculateLoanPayment(loanAmount || 0, loanRate || 0, loanTermYears || 0))}</span>
+                  <span className="text-muted-foreground"> — auto-added to Capital & Debt below</span>
+                </div>
+              )}
+            </div>
+          </BusinessOperationsToggle>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+        <h3 className="text-lg font-bold text-foreground">Management Fee</h3>
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={hasManagementFee === true}
+            onChange={(e) => setValue("schoolProfile.hasManagementFee", e.target.checked, { shouldDirty: true })}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary mt-0.5"
+          />
+          <div className="flex-1">
+            <label className="text-sm font-medium text-foreground">Does your school pay a management fee to a network or back-office organization?</label>
+            <p className="text-xs text-muted-foreground mt-0.5">Common for schools that are part of a charter network or management organization</p>
+          </div>
+        </div>
+        {hasManagementFee && (
+          <div className="ml-7 max-w-xs">
+            <label className="text-xs text-muted-foreground block mb-1">Management Fee (% of Revenue)</label>
+            <input
+              type="number"
+              value={managementFeePercent || ""}
+              onChange={(e) => setValue("schoolProfile.managementFeePercent", parseFloat(e.target.value) || 0, { shouldDirty: true })}
+              className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+              placeholder="5"
+              step="0.5"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Auto-applied to Admin & Operations expenses</p>
+          </div>
+        )}
       </div>
 
       {maxCapacity && y1Students > 0 && (

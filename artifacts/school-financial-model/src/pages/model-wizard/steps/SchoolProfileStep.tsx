@@ -172,7 +172,6 @@ export function SchoolProfileStep() {
   const schoolType = watch("schoolProfile.schoolType");
   const entityType = watch("schoolProfile.entityType");
   const isAccredited = watch("schoolProfile.isAccredited");
-  const hasManagementFee = watch("schoolProfile.hasManagementFee");
 
   const revenueSources = watch("revenueSources") as { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean } | undefined;
 
@@ -416,28 +415,6 @@ export function SchoolProfileStep() {
           </div>
         </div>
       )}
-
-      <div>
-        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Management Fee</h3>
-        <div className="space-y-4">
-          <FormCheckbox
-            name="schoolProfile.hasManagementFee"
-            label="Does your school pay a management fee to a network or back-office organization?"
-            helperText="Common for schools that are part of a charter network or management organization"
-          />
-          {hasManagementFee && (
-            <div className="max-w-sm">
-              <FormInput
-                name="schoolProfile.managementFeePercent"
-                label="Management Fee (% of Revenue)"
-                type="number"
-                placeholder="5"
-                helperText="Percentage of total revenue paid as a management fee"
-              />
-            </div>
-          )}
-        </div>
-      </div>
 
       <div>
         <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Entity Type</h3>

@@ -60,6 +60,19 @@ export const schoolProfileSchema = z.object({
   accreditingBody: z.string().optional(),
   hasManagementFee: z.boolean().optional(),
   managementFeePercent: z.coerce.number().min(0).max(100).optional(),
+  hasBookkeeper: z.boolean().optional().default(false),
+  bookkeeperMonthlyCost: z.coerce.number().min(0).optional().default(0),
+  hasLawyer: z.boolean().optional().default(false),
+  lawyerMonthlyCost: z.coerce.number().min(0).optional().default(0),
+  hasGeneralLiabilityInsurance: z.boolean().optional().default(false),
+  insuranceCost: z.coerce.number().min(0).optional().default(0),
+  hasSavingsAccount: z.boolean().optional().default(false),
+  hasBusinessAccount: z.boolean().optional().default(false),
+  hasCreditCard: z.boolean().optional().default(false),
+  hasLoan: z.boolean().optional().default(false),
+  loanAmount: z.coerce.number().min(0).optional().default(0),
+  loanRate: z.coerce.number().min(0).max(100).optional().default(0),
+  loanTermYears: z.coerce.number().min(0).max(50).optional().default(0),
 });
 
 export const priorYearSnapshotSchema = z.object({
