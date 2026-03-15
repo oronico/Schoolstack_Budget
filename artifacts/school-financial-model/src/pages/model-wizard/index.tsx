@@ -58,6 +58,19 @@ export function ModelWizardPage() {
         ein: "",
       },
       enrollment: {},
+      programs: [] as Array<{
+        id: string;
+        name: string;
+        annualTuition: number;
+        priorYear?: number;
+        currentYear?: number;
+        year1: number;
+        year2: number;
+        year3: number;
+        year4: number;
+        year5: number;
+      }>,
+      tuitionEscalation: { rate: 3 },
       revenue: { annualTuitionIncrease: 3 },
       revenueRows: [] as Array<{
         id: string;
@@ -190,7 +203,13 @@ export function ModelWizardPage() {
     const validateStep = async (step: number): Promise<boolean> => {
       switch (step) {
         case 1: return methods.trigger('schoolProfile');
-        case 2: return methods.trigger('enrollment');
+        case 2: {
+          const progs = methods.getValues('programs') as unknown[];
+          if (progs && progs.length > 0) {
+            return methods.trigger('programs');
+          }
+          return methods.trigger('enrollment');
+        }
         case 3: {
           const [a, b] = await Promise.all([
             methods.trigger('revenue'),

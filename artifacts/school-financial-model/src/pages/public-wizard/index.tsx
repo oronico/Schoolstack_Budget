@@ -58,6 +58,8 @@ export function PublicWizardPage() {
   const defaults: FullModelData = {
     schoolProfile: undefined,
     enrollment: undefined,
+    programs: [],
+    tuitionEscalation: { rate: 3 },
     tuitionTiers: undefined,
     revenue: { annualTuitionIncrease: 3 },
     revenueRows: [],
@@ -102,7 +104,13 @@ export function PublicWizardPage() {
     const validateStep = async (step: number): Promise<boolean> => {
       switch (step) {
         case 1: return methods.trigger('schoolProfile');
-        case 2: return methods.trigger('enrollment');
+        case 2: {
+          const progs = methods.getValues('programs') as unknown[];
+          if (progs && progs.length > 0) {
+            return methods.trigger('programs');
+          }
+          return methods.trigger('enrollment');
+        }
         case 3: {
           const [a, b] = await Promise.all([methods.trigger('revenue'), methods.trigger('revenueRows')]);
           return a && b;

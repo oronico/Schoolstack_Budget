@@ -15,6 +15,23 @@ export const tuitionTierSchema = z.object({
   studentCounts: z.array(z.coerce.number().min(0)),
 });
 
+export const programSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Program name is required"),
+  annualTuition: z.coerce.number().min(0, "Tuition is required"),
+  priorYear: z.coerce.number().min(0).optional(),
+  currentYear: z.coerce.number().min(0).optional(),
+  year1: z.coerce.number().min(0).default(0),
+  year2: z.coerce.number().min(0).default(0),
+  year3: z.coerce.number().min(0).default(0),
+  year4: z.coerce.number().min(0).default(0),
+  year5: z.coerce.number().min(0).default(0),
+});
+
+export const tuitionEscalationSchema = z.object({
+  rate: z.coerce.number().min(0).max(20).default(3),
+});
+
 export const schoolProfileSchema = z.object({
   schoolName: z.string().min(1, "School name is required"),
   state: z.string().min(1, "State is required"),
@@ -166,6 +183,8 @@ export const facilitiesSchema = z.object({
 export const fullModelSchema = z.object({
   schoolProfile: schoolProfileSchema.optional(),
   enrollment: enrollmentSchema.optional(),
+  programs: z.array(programSchema).optional(),
+  tuitionEscalation: tuitionEscalationSchema.optional(),
   tuitionTiers: z.array(tuitionTierSchema).optional(),
   revenue: revenueSchema.optional(),
   revenueRows: z.array(revenueRowSchema).optional(),
@@ -185,6 +204,8 @@ export type SchoolType = z.infer<typeof schoolTypeSchema>;
 export type EntityType = z.infer<typeof entityTypeSchema>;
 export type TuitionTierType = z.infer<typeof tuitionTierTypeSchema>;
 export type TuitionTier = z.infer<typeof tuitionTierSchema>;
+export type Program = z.infer<typeof programSchema>;
+export type TuitionEscalation = z.infer<typeof tuitionEscalationSchema>;
 
 export const ENTITY_TYPE_LABELS: Record<string, string> = {
   sole_practitioner: "Sole Practitioner (no EIN)",
