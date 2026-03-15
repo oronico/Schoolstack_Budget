@@ -20,13 +20,13 @@ export function LandingPage() {
             className="mx-auto max-w-3xl"
           >
             <span className="inline-block py-1.5 px-4 rounded-full bg-primary/10 text-primary font-semibold text-sm mb-6 border border-primary/20 shadow-sm">
-              Built for School Founders
+              For Every K-12 Entrepreneur
             </span>
             <h1 className="font-display text-5xl md:text-7xl font-extrabold text-foreground tracking-tight mb-8 leading-[1.1]">
-              Launch your school with <span className="text-primary">confidence</span>.
+              Your mission deserves a <span className="text-primary">financial story</span>.
             </h1>
             <p className="text-xl text-muted-foreground mb-10 leading-relaxed max-w-2xl mx-auto">
-              Build a simple 5-year financial model for your school, get consultant-grade analysis, and export a lender-ready Excel workbook.
+              Whether you're starting a charter, private school, microschool, learning pod, or something entirely new — build a 5-year budget that brings your vision to life. No finance degree required.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -51,10 +51,10 @@ export function LandingPage() {
             className="text-center mb-16"
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
-              Everything you need to plan your school's finances
+              A budget is just the financial story of your mission
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              From enrollment projections to lender-ready exports, SchoolStack Budget walks you through every step.
+              We all start somewhere. SchoolStack Budget walks you through each step — from enrollment to expenses — so you can tell your story with confidence.
             </p>
           </motion.div>
 
@@ -62,19 +62,19 @@ export function LandingPage() {
             <FeatureCard 
               icon={<Calculator className="h-8 w-8 text-primary" />}
               title="Guided Wizard"
-              description="No finance degree required. We guide you step-by-step through enrollment, staffing, and facility assumptions."
+              description="We walk you through enrollment, staffing, and facility planning one step at a time. Your budget is a living document — it gets better every time you revisit it."
               delay={0}
             />
             <FeatureCard 
               icon={<FileSpreadsheet className="h-8 w-8 text-accent" />}
               title="Underwriting Ready"
-              description="Exports to a beautiful, multi-tab Excel workbook with real formulas — perfect for lenders and investors."
+              description="When you're ready, export a polished, multi-tab Excel workbook with real formulas — designed to help lenders and investors see your vision."
               delay={0.1}
             />
             <FeatureCard 
               icon={<ShieldCheck className="h-8 w-8 text-primary" />}
               title="Consultant Guidance"
-              description="Get practical, plain-English feedback on your model — staffing ratios, margins, and lender readiness."
+              description="Get friendly, plain-English guidance on your model — with encouragement on what's working and constructive suggestions for areas to strengthen."
               delay={0.2}
             />
           </div>
@@ -92,10 +92,10 @@ export function LandingPage() {
             transition={{ duration: 0.5 }}
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
-              Ready to build your financial model?
+              Ready to tell the financial story of your school?
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-              Join school founders who use SchoolStack Budget to plan with confidence and secure funding faster.
+              Join K-12 entrepreneurs building schools for families. Every great school started with someone brave enough to take the first step.
             </p>
             <Link href="/underwriting" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-primary text-primary-foreground text-lg font-semibold shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all duration-300">
               Get Started Free <ArrowRight className="h-5 w-5" />

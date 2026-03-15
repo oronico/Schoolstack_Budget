@@ -988,7 +988,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           ? `By Year ${lastYearNum}, the school has built a healthy operating reserve of 3+ months — a strong signal to lenders.`
           : lastReserve.reserveMonths >= 1
             ? "The reserve buffer is thin — target building at least 3 months of expenses as a cushion."
-            : `No meaningful reserve has been built by Year ${lastYearNum}. This is a significant vulnerability.`,
+            : `No meaningful reserve has been built by Year ${lastYearNum} yet — this is an important area to strengthen as you grow.`,
       benchmark: "Best practice: 3–6 months reserves",
     });
   }
@@ -1008,22 +1008,22 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (philanthropyPct > 0 && philanthropyPct <= 0.15) strengths.push("Supplemental philanthropy without over-reliance");
   if (lastReserve && lastReserve.reserveMonths >= 3) strengths.push(`Healthy operating reserve by Year ${lastYearNum}`);
 
-  if (y1NetMargin < 0) risks.push(`Year 1 projects a ${fmt(Math.abs(y1.netIncome))} deficit`);
-  if (staffingCostPct > 0.65) risks.push(`Staffing consumes ${pct(staffingCostPct)} of revenue`);
-  if (revenuePerStudent < 7000) risks.push("Per-student revenue is below sustainable levels");
-  if (opexCostPct > 0.40) risks.push("Operating costs are high relative to revenue");
-  if (lastYearNetMargin < 0.05) risks.push(`Year ${lastYearNum} margin is dangerously thin`);
-  if (breakEvenYear < 0) risks.push(`Model does not reach break-even within ${yearCount} years`);
+  if (y1NetMargin < 0) risks.push(`Year 1 projects a ${fmt(Math.abs(y1.netIncome))} shortfall — very common for early-stage schools and worth planning around`);
+  if (staffingCostPct > 0.65) risks.push(`Staffing costs at ${pct(staffingCostPct)} of revenue are an area to work on bringing down over time`);
+  if (revenuePerStudent < 7000) risks.push("Per-student revenue has room to grow toward sustainable levels");
+  if (opexCostPct > 0.40) risks.push("Operating costs are on the higher side — an opportunity to find efficiencies");
+  if (lastYearNetMargin < 0.05) risks.push(`Year ${lastYearNum} margin is quite thin — strengthening this will make the model more resilient`);
+  if (breakEvenYear < 0) risks.push(`The model doesn't yet reach break-even within ${yearCount} years — adjusting revenue or costs can help close the gap`);
   if (capacityUtilLastYear < 0.6 && sp.maxCapacity && sp.maxCapacity > 0)
-    risks.push("Facility will be significantly underutilized");
+    risks.push("Facility capacity is underutilized — a smaller space could improve your cost structure");
   if (hasDebt && dscr < 1.0)
-    risks.push("Debt service exceeds operating income — loan payments are not sustainable");
+    risks.push("Debt service currently exceeds operating income — consider adjusting loan terms or boosting revenue before taking on this debt");
   if (philanthropyPct > 0.30)
-    risks.push(`Philanthropy represents ${pct(philanthropyPct)} of revenue — unpredictable and hard to sustain`);
+    risks.push(`Philanthropy at ${pct(philanthropyPct)} of revenue is a generous foundation, but building more earned revenue will add stability`);
   if (publicRevenuePct > 0.70)
-    risks.push("Over-reliance on public funding exposes the school to policy risk");
+    risks.push("Heavy reliance on public funding — developing additional revenue streams will add resilience");
   if (lastReserve && lastReserve.reserveMonths < 1)
-    risks.push(`No operating reserve built by Year ${lastYearNum}`);
+    risks.push(`Building an operating reserve by Year ${lastYearNum} is an important next goal to work toward`);
 
   const biggestStrength =
     strengths.length > 0
@@ -1039,80 +1039,80 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   if (y1NetMargin < 0) {
     recommendations.push({
-      title: "Plan Year 1 Funding Gap",
-      description: `Your model projects a ${fmt(Math.abs(y1.netIncome))} deficit in Year 1. Identify specific sources — startup grants, personal investment, or a line of credit — to cover this gap before launch.`,
+      title: "Plan for Your Year 1 Startup Phase",
+      description: `Your model projects a ${fmt(Math.abs(y1.netIncome))} shortfall in Year 1 — this is completely normal for a new school. Start identifying sources to bridge this gap: startup grants, personal investment, or a small line of credit. Many successful schools began exactly this way.`,
       priority: "high",
     });
   }
 
   if (staffingCostPct > 0.65) {
     recommendations.push({
-      title: "Reduce Staffing Cost Ratio",
-      description: `At ${pct(staffingCostPct)} of revenue, payroll is above the 65% threshold most sustainable schools target. Consider adjusting student-teacher ratios, phasing in admin hires, or increasing class sizes slightly.`,
+      title: "Explore Ways to Optimize Staffing Costs",
+      description: `At ${pct(staffingCostPct)} of revenue, staffing is above the 65% target most schools aim for. Some options to explore: adjusting student-teacher ratios, phasing in admin hires as enrollment grows, or slightly increasing class sizes. Your team is your greatest asset — this is about finding the right balance.`,
       priority: "high",
     });
   }
 
   if (revenuePerStudent < 7000) {
     recommendations.push({
-      title: "Increase Per-Student Revenue",
-      description: `At ${fmt(revenuePerStudent)} per student, revenue is below the sustainable threshold. Explore tuition increases, ESA/voucher programs in your state, or fee-based enrichment programs.`,
+      title: "Grow Your Per-Student Revenue",
+      description: `At ${fmt(revenuePerStudent)} per student, there's an opportunity to strengthen this number. Consider modest tuition adjustments, ESA/voucher programs in your state, or fee-based enrichment programs that add value for families.`,
       priority: "high",
     });
   }
 
   if (hasDebt && dscr < 1.25) {
     recommendations.push({
-      title: "Improve Debt Service Coverage",
-      description: `Your DSCR of ${dscr.toFixed(2)}x is ${dscr < 1.0 ? "below 1.0x — you cannot cover debt payments from operations" : "below the 1.25x lenders typically require"}. Consider reducing the loan amount, extending the term, or increasing revenue before taking on this debt.`,
+      title: "Strengthen Your Debt Service Coverage",
+      description: `Your DSCR of ${dscr.toFixed(2)}x is ${dscr < 1.0 ? "below 1.0x, meaning debt payments exceed operating income right now" : "below the 1.25x lenders typically look for"}. Some paths forward: reducing the loan amount, extending the term, or growing revenue. Getting this ratio up will make your financial story much stronger.`,
       priority: "high",
     });
   }
 
   if (philanthropyPct > 0.30) {
     recommendations.push({
-      title: "Reduce Philanthropy Dependency",
-      description: `Donations and grants represent ${pct(philanthropyPct)} of Year 1 revenue. Lenders prefer models where earned revenue drives sustainability. Build a path to reduce philanthropy dependency below 20% by Year 3.`,
+      title: "Build Toward More Earned Revenue",
+      description: `Donations and grants represent ${pct(philanthropyPct)} of Year 1 revenue — it's wonderful to have that support. Over time, lenders like to see earned revenue driving sustainability. Aim to shift the mix so philanthropy is below 20% by Year 3.`,
       priority: "high",
     });
   }
 
   if (opexCostPct > 0.40) {
     recommendations.push({
-      title: "Review Operating Cost Structure",
-      description: `Operating costs represent ${pct(opexCostPct)} of revenue. Review each cost center — facility, student services, and administration — for potential savings. Shared space, volunteer programs, or phased services can help.`,
+      title: "Look for Opportunities in Operating Costs",
+      description: `Operating costs at ${pct(opexCostPct)} of revenue are on the higher side. Take a fresh look at each area — facility, student services, and administration — for creative savings. Shared space, volunteer programs, or phasing in services over time are all strategies founders use.`,
       priority: "medium",
     });
   }
 
   if (lastReserve && lastReserve.reserveMonths < 3) {
     recommendations.push({
-      title: "Build a Cash Reserve",
-      description: `By Year ${lastYearNum}, your projected reserve covers only ${lastReserve.reserveMonths.toFixed(1)} months of expenses. Lenders and accreditors look for 3-6 months. Focus on building surplus in early ${profitWord} years.`,
+      title: "Grow Your Cash Reserve Over Time",
+      description: `By Year ${lastYearNum}, your projected reserve covers ${lastReserve.reserveMonths.toFixed(1)} months of expenses. The goal is 3–6 months, and you'll get there by building surplus in your early ${profitWord} years. Every month of reserve you add makes your school more resilient.`,
       priority: "medium",
     });
   }
 
   if (breakEvenYear > 1) {
     recommendations.push({
-      title: "Accelerate Path to Break-Even",
-      description: `Your model doesn't break even until Year ${breakEvenYear + 1}. Consider front-loading enrollment growth or phasing expenses to reach ${profitWord} sooner.`,
+      title: "Explore Ways to Reach Break-Even Sooner",
+      description: `Your model reaches break-even in Year ${breakEvenYear + 1}. You might be able to get there sooner by front-loading enrollment growth or phasing in expenses more gradually. Either way, having a clear path to ${profitWord} is what matters most.`,
       priority: "medium",
     });
   }
 
   if (publicRevenuePct > 0.50) {
     recommendations.push({
-      title: "Diversify Away from Public Funding",
-      description: `Public funding represents ${pct(publicRevenuePct)} of revenue. While beneficial, changes in state legislation or charter authorization could materially impact your school. Develop supplementary revenue streams.`,
+      title: "Add Revenue Streams Beyond Public Funding",
+      description: `Public funding represents ${pct(publicRevenuePct)} of revenue — a great foundation. To add resilience, consider developing supplementary revenue streams so that changes in state policy don't put your mission at risk.`,
       priority: "medium",
     });
   }
 
   if (capacityUtilLastYear < 0.6 && sp.maxCapacity && sp.maxCapacity > 0) {
     recommendations.push({
-      title: "Right-Size Your Facility",
-      description: `By Year ${lastYearNum}, you'll only use ${pct(capacityUtilLastYear)} of your ${sp.maxCapacity}-student capacity. A smaller, less expensive facility could improve your cost structure.`,
+      title: "Consider a Right-Sized Facility",
+      description: `By Year ${lastYearNum}, you'll use about ${pct(capacityUtilLastYear)} of your ${sp.maxCapacity}-student capacity. A cozier, less expensive space could free up budget for the things that matter most to your students and families.`,
       priority: "low",
     });
   }
@@ -1139,8 +1139,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     }
     if (y1.students < 100) {
       recommendations.push({
-        title: "Charter Minimum Enrollment Warning",
-        description: "Many charter authorizers expect schools to demonstrate viability at 100+ students. Your Year 1 enrollment may be viewed as too small for a sustainable charter. Consider whether your authorizer has minimum enrollment requirements.",
+        title: "Check Charter Minimum Enrollment Requirements",
+        description: "Many charter authorizers look for 100+ students to demonstrate viability. Your Year 1 enrollment is on the smaller side — it's worth checking whether your authorizer has minimum enrollment requirements so you can plan accordingly.",
         priority: "medium",
       });
     }
@@ -1196,7 +1196,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           ? "Management fee is within the typical range for network-managed schools."
           : mgmtFeePct <= 12
             ? "Management fee is on the higher end — ensure the services provided justify the cost."
-            : "Management fee is significantly above typical levels and materially impacts margins.",
+            : "Management fee is well above typical levels — worth reviewing to ensure the services justify the cost.",
     });
   }
 
@@ -1554,22 +1554,22 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   } else if (dangerMetrics <= 1 && lastYearNetMargin >= 0) {
     lenderReadiness = "Needs Work";
     lenderReadinessExplanation =
-      "The model has promise but a few areas need attention before approaching lenders. Address the recommendations above to strengthen your position.";
+      "Your model has real promise — there are just a few areas to strengthen before approaching lenders. The recommendations above will help you get there, and every improvement makes your story more compelling.";
   } else {
     lenderReadiness = "Not Yet Ready";
     lenderReadinessExplanation =
-      "Several key metrics fall outside lender comfort zones. Focus on the high-priority recommendations to build a more compelling financial case.";
+      "Your model isn't quite lender-ready yet, but that's okay — you're building the foundation. Focus on the high-priority recommendations first, and you'll see real progress. Every great school's financial story started as a first draft.";
   }
 
   const schoolName = sp.schoolName || "Your school";
   let executiveSummary: string;
 
   if (lenderReadiness === "Strong") {
-    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} ${marginLabel}. The model shows a financially sustainable path with ${goodMetrics} of ${keyMetrics.length} key metrics in healthy range.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} ${marginLabel}. The model tells a strong financial story with ${goodMetrics} of ${keyMetrics.length} key metrics in healthy range — a great foundation for your mission.`;
   } else if (lenderReadiness === "Needs Work") {
-    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, but the ${pct(lastYearNetMargin)} ${marginLabel} and ${dangerMetrics > 0 ? `${dangerMetrics} metric${dangerMetrics > 1 ? "s" : ""} requiring attention` : "thin margins"} suggest the model needs refinement before it's lender-ready.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} ${marginLabel}. ${dangerMetrics > 0 ? `There ${dangerMetrics === 1 ? "is" : "are"} ${dangerMetrics} area${dangerMetrics > 1 ? "s" : ""} to strengthen` : "Margins are on the thinner side"} — the recommendations below will help you build a more compelling financial story.`;
   } else {
-    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, but ${dangerMetrics} of ${keyMetrics.length} key metrics are in the danger zone. Significant adjustments to revenue, costs, or enrollment are needed.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, with ${dangerMetrics} of ${keyMetrics.length} key metrics that need attention. This is a starting point — working through the recommendations below will help you build the financial story your mission deserves.`;
   }
 
   const sensitivityMatrix: SensitivityCell[] = [];

@@ -456,7 +456,7 @@ export function ExpenseStep() {
             What Does Your School Spend On?
           </h2>
           <p className="text-muted-foreground text-lg">
-            Check the categories that apply to your school. We'll show you just those sections with smart defaults filled in. You can always add or remove categories later.
+            Check the categories that apply to your school. We'll show you just those sections with smart defaults filled in. You can always add or remove categories later. Best guesses are perfectly fine — budgeting is about practice, not perfection.
           </p>
         </div>
 

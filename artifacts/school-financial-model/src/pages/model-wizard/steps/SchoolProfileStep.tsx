@@ -137,7 +137,7 @@ export function SchoolProfileStep() {
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Tell Us About Your School</h2>
-        <p className="text-muted-foreground text-lg">We'll tailor everything to your school's type, stage, and structure.</p>
+        <p className="text-muted-foreground text-lg">We'll tailor everything to your school's type, stage, and structure. There are no wrong answers here — just tell us where you are today, and we'll meet you there.</p>
       </div>
 
       <div>

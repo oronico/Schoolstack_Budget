@@ -30,7 +30,7 @@ export function StaffingStep() {
   const { watch, setValue } = useFormContext();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
-  const schoolType = (watch("schoolProfile.schoolType") || "microschool") as string;
+  const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
 
   const enrollment = watch("enrollment") as { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number } | undefined;
   const maxCapacity = watch("schoolProfile.maxCapacity") as number | undefined;
@@ -139,7 +139,7 @@ export function StaffingStep() {
           Who Runs Your School?
         </h2>
         <p className="text-muted-foreground text-lg">
-          Add every person on your team — teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically.
+          Add every person on your team — teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small — many great schools launch with just a founder and one or two team members.
         </p>
       </div>
 

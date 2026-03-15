@@ -401,7 +401,7 @@ export function RevenueStep() {
             Where Does Your Money Come From?
           </h2>
           <p className="text-muted-foreground text-lg">
-            Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget.
+            Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget. Most founders start with just one or two sources — you can always add more as your school grows.
           </p>
         </div>
 

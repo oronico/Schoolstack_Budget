@@ -238,7 +238,7 @@ export function EnrollmentStep() {
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Programs & Enrollment</h2>
         <p className="text-muted-foreground text-lg">
-          Define every program you offer — each with its own tuition and enrollment. Full day, half day, drop-in, after school, four-day week — whatever you run.
+          Define every program you offer — each with its own tuition and enrollment. Full day, half day, drop-in, after school, four-day week — whatever you run. Don't worry about getting this perfect — your budget is a living document you'll refine over time.
         </p>
       </div>
 

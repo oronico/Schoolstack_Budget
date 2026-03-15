@@ -243,7 +243,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Does Everything Look Right?</h2>
-        <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime.</p>
+        <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime. Remember, this is your first draft — every version of your budget gets stronger.</p>
       </div>
 
       {hasRowData && (
