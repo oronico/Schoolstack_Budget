@@ -1,6 +1,4 @@
 import { pgTable, text, serial, integer, timestamp, jsonb, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
 import { usersTable } from "./users";
 import { schoolsTable } from "./schools";
 
@@ -25,10 +23,5 @@ export const financialModelsTable = pgTable("financial_models", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertFinancialModelSchema = createInsertSchema(financialModelsTable).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertFinancialModel = z.infer<typeof insertFinancialModelSchema>;
+export type InsertFinancialModel = typeof financialModelsTable.$inferInsert;
 export type FinancialModel = typeof financialModelsTable.$inferSelect;

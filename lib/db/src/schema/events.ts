@@ -1,6 +1,4 @@
 import { pgTable, serial, integer, varchar, timestamp, jsonb } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
 import { usersTable } from "./users";
 
 export const eventsTable = pgTable("events", {
@@ -11,9 +9,5 @@ export const eventsTable = pgTable("events", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertEventSchema = createInsertSchema(eventsTable).omit({
-  id: true,
-  createdAt: true,
-});
-export type InsertEvent = z.infer<typeof insertEventSchema>;
+export type InsertEvent = typeof eventsTable.$inferInsert;
 export type Event = typeof eventsTable.$inferSelect;
