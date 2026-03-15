@@ -1,6 +1,6 @@
 # Overview
 
-SchoolStack Budget is a full-stack web application designed for school founders. It enables them to create comprehensive, lender-ready 3-to-5-year financial models. The platform offers a universal model adaptable to various school types (microschool, private, charter), stages (new or operating), and incorporates FTE-based staffing, accounting-category expenses, and sophisticated revenue scheduling. A key feature is the assumption-driven Excel export functionality, complete with cross-tab formulas, providing robust financial projections and analysis for strategic planning and securing funding. The project aims to empower school leaders with powerful financial tools to ensure sustainability and growth.
+SchoolStack Budget is a full-stack web application designed for school founders. It enables them to create comprehensive, lender-ready 5-year financial models. The platform offers a universal model adaptable to various school types (microschool, private, charter), stages (new or operating), and incorporates FTE-based staffing, accounting-category expenses, and sophisticated revenue scheduling. A key feature is the assumption-driven Excel export functionality, complete with cross-tab formulas, providing robust financial projections and analysis for strategic planning and securing funding. The project aims to empower school leaders with powerful financial tools to ensure sustainability and growth.
 
 # User Preferences
 
@@ -22,7 +22,9 @@ I prefer iterative development with clear communication on significant changes. 
 - Publish directory: `dist/public`
 - Cache headers: `Cache-Control: public, max-age=31536000, immutable` for `/assets/*` (Vite hashed filenames)
 - SPA catch-all redirect for client-side routing (`/* → /index.html`, status 200)
-- No API proxy — the frontend calls the API server directly via `VITE_API_BASE_URL`
+- API proxy redirect: `/api/*` → API server (must be updated with real API domain before deploy)
+- Logo cache headers: `Cache-Control: public, max-age=86400` for `/logos/*`
+- `BASE_PATH=/` set in build environment (frontend deploys at domain root on Netlify)
 
 ### Required Netlify Environment Variables (set in Netlify UI → Site Settings → Environment Variables)
 - `VITE_API_BASE_URL`: Full URL of the API server (e.g., `https://api.schoolstack.ai`). Baked into the frontend at build time.
@@ -51,8 +53,10 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 ### Public Routes (no auth required)
 - `/` — Landing page
 - `/underwriting` — Public 8-step underwriting wizard (localStorage-backed, no DB persistence)
+- `/terms` — Terms of Service
+- `/privacy` — Privacy Policy
 - `/login` — Login page
-- `/register` — Registration page
+- `/register` — Registration page (includes terms agreement checkbox)
 - `/forgot-password` — Password reset request
 - `/reset-password` — Password reset completion
 
@@ -73,7 +77,7 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 ## Feature Specifications
 
 ### Universal Financial Model
-- **School Configuration**: Supports `microschool`, `private_school`, `charter_school`, `other` school types; `new_school` (3-year default) or `operating_school` (4-year default, extendable to 5) stages; and `tuition_based`, `charter_public_funded`, `hybrid_mixed` funding profiles. Includes support for partial first years.
+- **School Configuration**: Supports `microschool`, `private_school`, `charter_school`, `other` school types; `new_school` or `operating_school` stages; and `tuition_based`, `charter_public_funded`, `hybrid_mixed` funding profiles. All models project 5 years. Legacy models with fewer years are auto-normalized on load. Includes support for partial first years.
 - **Revenue Model**: Features 6 categories (e.g., `tuition_and_fees`, `public_funding`) with row-based line items. Each line item supports various driver types (`annual_fixed`, `monthly`, `per_student`, `percent_of_base`), optional per-line escalation rates, and payment timing configurations, with funding-profile-aware defaults.
 - **Staffing Model**: FTE-based roster across function categories (e.g., `school_leadership`, `instructional`) and employment types (`full_time`, `part_time`, `contract`), including configurable benefits and payroll tax rates.
 - **Expense Model**: Row-based entries across 4 accounting categories (e.g., `instructional_program`, `occupancy_facility`) with flexible driver types.
