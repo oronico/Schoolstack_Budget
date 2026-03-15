@@ -106,7 +106,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   const hasRowData = revenueRows.length > 0 || staffingRows.length > 0 || expenseRows.length > 0;
 
   const yearCount = hasRowData
-    ? (revenueRows[0]?.amounts?.length || expenseRows[0]?.amounts?.length || 3)
+    ? (revenueRows[0]?.amounts?.length || expenseRows[0]?.amounts?.length || 5)
     : 5;
 
   const year1Students = data.enrollment?.year1 || 0;
@@ -206,7 +206,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   const totalExpenses = staffingSummary.totalCost + expenseSummary.total + capitalDebtSummary.total;
   const netIncome = revenueSummary.total - totalExpenses;
 
-  const finalYearStudents = data.enrollment?.[`year${yearCount}`] || data.enrollment?.year3 || 0;
+  const finalYearStudents = data.enrollment?.[`year${yearCount}`] || data.enrollment?.year5 || data.enrollment?.year3 || 0;
   const studentGrowth = year1Students > 0 && finalYearStudents > year1Students
     ? Math.round(((finalYearStudents - year1Students) / year1Students) * 100)
     : 0;

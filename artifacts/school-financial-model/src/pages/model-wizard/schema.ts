@@ -47,8 +47,8 @@ export const enrollmentSchema = z.object({
   year1: z.coerce.number().min(0, "Required"),
   year2: z.coerce.number().min(0, "Required"),
   year3: z.coerce.number().min(0, "Required"),
-  year4: z.coerce.number().min(0, "Required").optional(),
-  year5: z.coerce.number().min(0, "Required").optional(),
+  year4: z.coerce.number().min(0, "Required"),
+  year5: z.coerce.number().min(0, "Required"),
 });
 
 export const revenueRowSchema = z.object({

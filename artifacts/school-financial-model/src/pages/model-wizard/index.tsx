@@ -108,7 +108,24 @@ export function ModelWizardPage() {
 
   useEffect(() => {
     if (initialData?.data) {
-      methods.reset(initialData.data);
+      const d = { ...initialData.data } as Record<string, unknown>;
+      const enrollment = d.enrollment as Record<string, number> | undefined;
+      if (enrollment) {
+        if (enrollment.year4 == null) enrollment.year4 = enrollment.year3 || 0;
+        if (enrollment.year5 == null) enrollment.year5 = enrollment.year4 || 0;
+      }
+      const normalizeAmounts = (rows: Array<{ amounts?: number[] }>) => {
+        for (const row of rows) {
+          if (row.amounts && row.amounts.length < 5) {
+            const last = row.amounts[row.amounts.length - 1] || 0;
+            while (row.amounts.length < 5) row.amounts.push(last);
+          }
+        }
+      };
+      if (Array.isArray(d.revenueRows)) normalizeAmounts(d.revenueRows as Array<{ amounts?: number[] }>);
+      if (Array.isArray(d.expenseRows)) normalizeAmounts(d.expenseRows as Array<{ amounts?: number[] }>);
+      if (Array.isArray(d.capitalAndDebtRows)) normalizeAmounts(d.capitalAndDebtRows as Array<{ amounts?: number[] }>);
+      methods.reset(d);
       if (initialData.currentStep) {
         setCurrentStep(initialData.currentStep);
       }

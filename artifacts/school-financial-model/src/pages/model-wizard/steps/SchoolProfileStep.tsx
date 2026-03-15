@@ -402,8 +402,8 @@ export function SchoolProfileStep() {
           <p className="text-sm font-medium text-foreground mb-1">Planning Horizon</p>
           <p className="text-sm text-muted-foreground">
             {schoolStage === "new_school"
-              ? "Your model will project 3 years (Year 1, Year 2, Year 3). You can extend to 5 years later."
-              : "Your model will project 4 years (Current Year, Year 2, Year 3, Year 4). You can extend to 5 years later."}
+              ? "Your model will project 5 years (Year 1 through Year 5)."
+              : "Your model will project 5 years (Current Year through Year 5)."}
           </p>
         </div>
       )}

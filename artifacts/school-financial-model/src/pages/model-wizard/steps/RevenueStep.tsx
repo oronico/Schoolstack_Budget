@@ -26,9 +26,8 @@ import {
   computeMonthlyCashInflow,
 } from "@/lib/revenue-defaults";
 
-function getYearCount(schoolStage: string | undefined): number {
-  if (schoolStage === "operating_school") return 4;
-  return 3;
+function getYearCount(_schoolStage: string | undefined): number {
+  return 5;
 }
 
 function getYearLabel(index: number, schoolStage: string | undefined): string {

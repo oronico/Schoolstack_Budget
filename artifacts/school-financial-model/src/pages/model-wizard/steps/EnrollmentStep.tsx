@@ -54,9 +54,8 @@ const GUIDANCE: Record<string, { y1Pct: string; growth: string; note: string }> 
   },
 };
 
-function getDefaultYearCount(schoolStage: string | undefined): number {
-  if (schoolStage === "operating_school") return 4;
-  return 3;
+function getDefaultYearCount(_schoolStage: string | undefined): number {
+  return 5;
 }
 
 function getYearLabel(index: number, schoolStage: string | undefined): string {
@@ -265,7 +264,7 @@ export function EnrollmentStep() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         {yearKeys.slice(0, defaultYearCount).map((key, i) => (
           <FormInput
             key={key}
@@ -366,14 +365,6 @@ export function EnrollmentStep() {
               <p className="text-xs text-amber-600 mt-2">Tuition tier student counts should add up to your total enrollment for each year.</p>
             </div>
           )}
-        </div>
-      )}
-
-      {defaultYearCount < 5 && (
-        <div className="bg-white rounded-2xl p-5 border border-border/60 shadow-sm">
-          <p className="text-sm text-muted-foreground">
-            You can extend your projections to Year 5 later from the Review step. For now, we'll build your model with {defaultYearCount} years.
-          </p>
         </div>
       )}
 

@@ -219,6 +219,6 @@ export function createBlankCapitalDebtRow(yearCount: number): CapitalDebtRowData
   };
 }
 
-export function getYearCount(schoolStage?: string): number {
-  return schoolStage === "operating_school" ? 5 : 3;
+export function getYearCount(_schoolStage?: string): number {
+  return 5;
 }
