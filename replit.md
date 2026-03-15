@@ -31,7 +31,7 @@ I prefer iterative development with clear communication on significant changes. 
 
 ## Brand System
 
-The application adheres to the SchoolStack.ai brand system, utilizing an amber-forward palette for the parent brand (#D97706) and a distinct green for product-specific elements (#16A34A). Deep navy (#1E293B) is used for foreground elements, teal (#0D9488) for accents, and cream (#FAF9F7) for backgrounds. Typography uses Quicksand Bold for headings and Nunito Regular for body text and UI labels.
+The application adheres to the SchoolStack.ai brand system. SchoolStack Budget uses Amber (#D97706) as the parent brand accent and Evergreen (#328555) as the product-specific primary color. Deep Navy (#1E293B) is used for foreground elements, Teal (#0D9488) for accents, and Cream (#FAF9F7) for backgrounds. Typography uses Quicksand Bold for headings and Nunito Regular for body text and UI labels. The three-bar stacked mark is the official logo icon (SVG assets in `public/logos/`). Favicon uses the Budget three-bar mark variant.
 
 ## Technical Stack
 

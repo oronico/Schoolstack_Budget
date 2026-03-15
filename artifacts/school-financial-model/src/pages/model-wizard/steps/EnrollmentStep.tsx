@@ -115,7 +115,7 @@ function EnrollmentChart({ enrollments, maxCapacity, schoolStage, yearCount }: {
               {chartData.map((entry, i) => (
                 <Cell
                   key={i}
-                  fill={maxCapacity > 0 && entry.students > maxCapacity ? "#E11D48" : "#16A34A"}
+                  fill={maxCapacity > 0 && entry.students > maxCapacity ? "#E11D48" : "#328555"}
                   fillOpacity={0.85}
                 />
               ))}

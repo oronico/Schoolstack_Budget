@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="290" height="40" viewBox="0 0 290 40" fill="none">
+  <rect x="4" y="26" width="32" height="8" rx="3.5" fill="#1E293B"/>
+  <rect x="6" y="15" width="28" height="8" rx="3.5" fill="#5BA07A" opacity="0.6"/>
+  <rect x="4" y="4" width="24" height="8" rx="3.5" fill="#328555"/>
+  <text x="50" y="27" font-family="Quicksand, sans-serif" font-weight="700" font-size="22" fill="#1E293B">SchoolStack</text>
+  <text x="192" y="27" font-family="Quicksand, sans-serif" font-weight="700" font-size="22" fill="#328555"> Budget</text>
+</svg>

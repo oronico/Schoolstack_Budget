@@ -27,7 +27,7 @@ import { motion } from "framer-motion";
 import { sampleModelData } from "./sampleModelData";
 
 const CHART_COLORS = {
-  green: "#16A34A",
+  green: "#328555",
   teal: "#0D9488",
   amber: "#D97706",
   navy: "#1E293B",

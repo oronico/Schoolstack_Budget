@@ -9,11 +9,9 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
-            <span className="font-display text-xl font-bold text-white leading-none">$</span>
-          </div>
+          <img src={`${import.meta.env.BASE_URL}logos/schoolstack-mark.svg`} alt="SchoolStack" className="h-10 w-10 group-hover:scale-105 transition-transform duration-300" />
           <div>
-            <h1 className="font-display text-xl font-bold tracking-tight text-foreground leading-none">SchoolStack Budget</h1>
+            <h1 className="font-display text-xl font-bold tracking-tight text-foreground leading-none">SchoolStack <span className="text-primary">Budget</span></h1>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-brand">by SchoolStack.ai</p>
           </div>
         </Link>

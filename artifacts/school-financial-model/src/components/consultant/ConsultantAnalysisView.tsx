@@ -51,7 +51,7 @@ function fmtCompact(n: number): string {
 }
 
 const CHART_COLORS = {
-  green: "#16A34A",
+  green: "#328555",
   teal: "#0D9488",
   amber: "#D97706",
   rose: "#E11D48",

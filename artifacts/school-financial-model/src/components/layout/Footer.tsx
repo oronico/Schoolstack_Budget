@@ -2,14 +2,12 @@ import { Link } from "wouter";
 
 export function Footer() {
   return (
-    <footer className="bg-[hsl(142,72%,12%)] text-white/90">
+    <footer className="bg-[hsl(215,30%,12%)] text-white/90">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-                <span className="font-display text-lg font-bold text-white leading-none">$</span>
-              </div>
+              <img src={`${import.meta.env.BASE_URL}logos/schoolstack-mark.svg`} alt="SchoolStack" className="h-9 w-9" />
               <div>
                 <p className="font-display text-lg font-bold text-white leading-none">SchoolStack Budget</p>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">by SchoolStack.ai</p>
