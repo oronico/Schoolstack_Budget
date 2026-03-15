@@ -1,4 +1,7 @@
-const API_BASE = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) || "";
+const envBase = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) || "";
+const API_BASE = envBase || (typeof window !== "undefined" && window.location.hostname.includes("netlify.app")
+  ? "https://workspaceapi-server-production-bffd.up.railway.app"
+  : "");
 
 export function getApiBase(): string {
   return API_BASE;
