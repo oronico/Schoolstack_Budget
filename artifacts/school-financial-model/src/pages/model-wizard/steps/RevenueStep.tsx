@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, CheckCircle2, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type RevenueRowData,
@@ -26,6 +26,63 @@ import {
   computeMonthlyCashInflow,
 } from "@/lib/revenue-defaults";
 
+const CATEGORY_ICONS: Record<RevenueCategory, React.ComponentType<{ className?: string }>> = {
+  tuition_and_fees: GraduationCap,
+  tuition_offsets: HandCoins,
+  public_funding: Building2,
+  school_choice: Landmark,
+  grants_contributions: Gift,
+  other_revenue: Wallet,
+};
+
+interface CategoryGuidance {
+  tip: string;
+  common: boolean;
+  fundingHint?: Record<FundingProfile, string>;
+}
+
+const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
+  tuition_and_fees: {
+    tip: "Your primary income: tuition, registration fees, activity fees, and other charges families pay.",
+    common: true,
+    fundingHint: {
+      tuition_based: "This is typically your largest revenue source — 70-90% of total revenue for private and micro schools.",
+      charter_public_funded: "Charter schools may charge fees for extracurriculars and materials, but tuition is not the main source.",
+      hybrid_mixed: "Tuition supplements your public funding. Common for schools with both public per-pupil funding and family-paid tuition.",
+    },
+  },
+  tuition_offsets: {
+    tip: "Financial aid, sibling discounts, and staff discounts reduce gross tuition. Include these so lenders see the realistic net tuition.",
+    common: true,
+  },
+  public_funding: {
+    tip: "State per-pupil funding, Title I allocations, IDEA/special education funding, and other government funding sources.",
+    common: false,
+    fundingHint: {
+      tuition_based: "Private schools may receive some public funding through Title I or special education allocations.",
+      charter_public_funded: "This is your primary revenue source. Per-pupil state funding typically makes up 80%+ of charter revenue.",
+      hybrid_mixed: "Per-pupil funding from the state plus any federal allocations your school receives.",
+    },
+  },
+  school_choice: {
+    tip: "ESA vouchers, tax-credit scholarships, and education savings accounts families use to pay tuition.",
+    common: false,
+    fundingHint: {
+      tuition_based: "Growing revenue source — check if your state has an ESA or voucher program.",
+      charter_public_funded: "Generally not applicable to charter schools receiving per-pupil funding.",
+      hybrid_mixed: "A key supplemental source — ESA/voucher funds can bridge the gap between public funding and full cost.",
+    },
+  },
+  grants_contributions: {
+    tip: "Startup grants, foundation funding, donations, and fundraising revenue. Mark each as confirmed or projected.",
+    common: false,
+  },
+  other_revenue: {
+    tip: "Facility rental, before/after care, summer programs, merchandise, and any other earned revenue.",
+    common: false,
+  },
+};
+
 function getYearCount(_schoolStage: string | undefined): number {
   return 5;
 }
@@ -42,15 +99,30 @@ export function RevenueStep() {
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolStage = watch("schoolProfile.schoolStage") as string | undefined;
   const schoolType = watch("schoolProfile.schoolType") as string | undefined;
+  const maxCapacity = watch("schoolProfile.maxCapacity") as number | undefined;
   const yearCount = getYearCount(schoolStage);
 
   const enrollment = watch("enrollment");
   const y1Students = enrollment?.year1 || 0;
+  const y5Students = enrollment?.year5 || 0;
 
   const formRows = watch("revenueRows") as RevenueRowData[] | undefined;
   const [rows, setRows] = useState<RevenueRowData[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<RevenueCategory>>(new Set());
   const [defaultsApplied, setDefaultsApplied] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(true);
+  const [enabledCategories, setEnabledCategories] = useState<Set<RevenueCategory>>(() => {
+    if (fundingProfile === "charter_public_funded") {
+      return new Set<RevenueCategory>(["public_funding", "grants_contributions", "other_revenue"]);
+    }
+    return new Set<RevenueCategory>(["tuition_and_fees", "tuition_offsets", "other_revenue"]);
+  });
+
+  const deriveEnabledCategories = useCallback((rowList: RevenueRowData[]): Set<RevenueCategory> => {
+    const cats = new Set<RevenueCategory>();
+    rowList.forEach((r) => { if (r.enabled) cats.add(r.category); });
+    return cats;
+  }, []);
 
   useEffect(() => {
     if (formRows !== undefined && formRows.length > 0) {
@@ -62,46 +134,79 @@ export function RevenueStep() {
       }));
       setRows(adjusted);
       if (!defaultsApplied) {
-        const enabledCats = new Set<RevenueCategory>();
-        adjusted.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
+        const enabledCats = deriveEnabledCategories(adjusted);
         setExpandedCategories(enabledCats);
+        setEnabledCategories(enabledCats);
+        setShowCategoryPicker(false);
         setDefaultsApplied(true);
+      } else {
+        const enabledCats = deriveEnabledCategories(adjusted);
+        setEnabledCategories(enabledCats);
       }
     } else if (formRows !== undefined && Array.isArray(formRows) && formRows.length === 0 && defaultsApplied) {
       setRows([]);
     } else if (!defaultsApplied) {
       const defaults = generateDefaultRevenueRows(fundingProfile, yearCount);
       setRows(defaults);
-      const enabledCats = new Set<RevenueCategory>();
-      defaults.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
+      const enabledCats = deriveEnabledCategories(defaults);
       setExpandedCategories(enabledCats);
+      setEnabledCategories(enabledCats);
       setValue("revenueRows", defaults, { shouldDirty: true });
       setDefaultsApplied(true);
     }
-  }, [formRows, fundingProfile, yearCount, defaultsApplied, setValue]);
+  }, [formRows, fundingProfile, yearCount, defaultsApplied, setValue, deriveEnabledCategories]);
 
   const CHARTER_HIDDEN_CATEGORIES: RevenueCategory[] = ["tuition_and_fees", "tuition_offsets", "school_choice"];
   useEffect(() => {
-    if (!defaultsApplied || rows.length === 0) return;
+    if (!defaultsApplied) return;
     const isCharter = schoolType === "charter_school";
     if (!isCharter) return;
-    const updated = rows.map((row) => {
-      if (CHARTER_HIDDEN_CATEGORIES.includes(row.category) && row.enabled) {
-        return { ...row, enabled: false };
+    setRows((currentRows) => {
+      if (currentRows.length === 0) return currentRows;
+      const updated = currentRows.map((row) => {
+        if (CHARTER_HIDDEN_CATEGORIES.includes(row.category) && row.enabled) {
+          return { ...row, enabled: false };
+        }
+        return row;
+      });
+      const changed = updated.some((r, i) => r.enabled !== currentRows[i].enabled);
+      if (changed) {
+        setValue("revenueRows", updated, { shouldDirty: true });
+        setEnabledCategories((prev) => {
+          const next = new Set(prev);
+          CHARTER_HIDDEN_CATEGORIES.forEach((c) => next.delete(c as RevenueCategory));
+          return next;
+        });
+        return updated;
       }
-      return row;
+      return currentRows;
     });
-    const changed = updated.some((r, i) => r.enabled !== rows[i].enabled);
-    if (changed) {
-      setRows(updated);
-      setValue("revenueRows", updated, { shouldDirty: true });
-    }
-  }, [schoolType, defaultsApplied]);
+  }, [schoolType, defaultsApplied, setValue]);
 
   const syncToForm = useCallback((updatedRows: RevenueRowData[]) => {
     setRows(updatedRows);
     setValue("revenueRows", updatedRows, { shouldDirty: true });
   }, [setValue]);
+
+  const toggleCategoryEnabled = useCallback((cat: RevenueCategory) => {
+    setEnabledCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
+  }, []);
+
+  const applyCategories = useCallback(() => {
+    const updated = rows.map((row) => {
+      if (enabledCategories.has(row.category)) {
+        return row.enabled ? row : { ...row, enabled: true };
+      }
+      return row.enabled ? { ...row, enabled: false } : row;
+    });
+    syncToForm(updated);
+    setExpandedCategories(new Set(enabledCategories));
+    setShowCategoryPicker(false);
+  }, [rows, enabledCategories, syncToForm]);
 
   const toggleCategory = (cat: RevenueCategory) => {
     setExpandedCategories((prev) => {
@@ -174,21 +279,195 @@ export function RevenueStep() {
 
   const hasAnyRevenue = rows.some((r) => r.enabled && r.amounts[0] > 0);
 
+  const totalY1Revenue = useMemo(() => {
+    return categoryOrder.reduce((sum, cat) => sum + getCategoryTotal(cat), 0);
+  }, [rows, categoryOrder]);
+
+  const revenuePerStudent = y1Students > 0 ? Math.round(totalY1Revenue / y1Students) : 0;
+
+  const isCharter = schoolType === "charter_school" || fundingProfile === "charter_public_funded";
+
+  const formatCurrency = (val: number) =>
+    val >= 1000 ? `$${Math.round(val).toLocaleString()}` : `$${val}`;
+
+  if (showCategoryPicker) {
+    const pickerCategories = categoryOrder.filter((cat) => {
+      if (isCharter && CHARTER_HIDDEN_CATEGORIES.includes(cat)) return false;
+      return true;
+    });
+
+    return (
+      <div className="space-y-8">
+        <div>
+          <h2 className="font-display text-3xl font-bold text-foreground mb-3">
+            Where Does Your Money Come From?
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            Check the revenue sources that apply to your school. We'll show just those sections with the right defaults for your funding model.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
+          <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground">
+            <span className="font-semibold">
+              {fundingProfile === "charter_public_funded"
+                ? "Charter funding model detected."
+                : fundingProfile === "hybrid_mixed"
+                ? "Hybrid funding model — you likely have multiple sources."
+                : "Tuition-based model detected."}
+            </span>{" "}
+            {fundingProfile === "charter_public_funded"
+              ? "We've pre-selected public funding and grants. Most charter schools also earn other revenue from facility rental, before/after care, or fundraising."
+              : fundingProfile === "hybrid_mixed"
+              ? "We've pre-selected tuition and offsets. Check any additional sources — school choice programs, grants, and public funding are common supplements."
+              : "We've pre-selected tuition, offsets, and other revenue. If you receive ESA/voucher funds, grants, or public funding, check those too."}
+          </div>
+        </div>
+
+        {y1Students > 0 && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-foreground">
+              <span className="font-semibold">Revenue needs to cover {y1Students} students in Year 1{y5Students > y1Students ? `, growing to ${y5Students} by Year 5` : ""}.</span>{" "}
+              Lenders want to see diversified revenue — schools with 2+ income streams are considered lower risk.
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {pickerCategories.map((cat) => {
+            const Icon = CATEGORY_ICONS[cat];
+            const guidance = CATEGORY_GUIDANCE[cat];
+            const isEnabled = enabledCategories.has(cat);
+            const fundingHint = guidance?.fundingHint?.[fundingProfile];
+
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => toggleCategoryEnabled(cat)}
+                className={cn(
+                  "w-full rounded-2xl border-2 p-5 text-left transition-all",
+                  isEnabled
+                    ? "border-primary/40 bg-primary/5 shadow-sm"
+                    : "border-border bg-card hover:border-border/80"
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "h-10 w-10 rounded-xl flex items-center justify-center transition-colors",
+                    isEnabled ? "bg-primary/10" : "bg-muted"
+                  )}>
+                    <Icon className={cn("h-5 w-5", isEnabled ? "text-primary" : "text-muted-foreground")} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("font-bold text-lg", isEnabled ? "text-foreground" : "text-muted-foreground")}>
+                        {CATEGORY_LABELS[cat]}
+                      </span>
+                      {guidance?.common && (
+                        <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                          Most schools need this
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {fundingHint || guidance?.tip}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "h-6 w-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                    isEnabled ? "border-primary bg-primary" : "border-border"
+                  )}>
+                    {isEnabled && <CheckCircle2 className="h-4 w-4 text-white" />}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={applyCategories}
+          disabled={enabledCategories.size === 0}
+          className={cn(
+            "w-full rounded-2xl font-semibold py-4 text-lg transition-colors shadow-md",
+            enabledCategories.size > 0
+              ? "bg-primary text-white hover:bg-primary/90"
+              : "bg-muted text-muted-foreground cursor-not-allowed"
+          )}
+        >
+          Continue with {enabledCategories.size} revenue {enabledCategories.size === 1 ? "source" : "sources"}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Where Does Your Money Come From?</h2>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Revenue by Source</h2>
         <p className="text-muted-foreground text-lg">
-          Toggle on the revenue sources that apply to your school and enter your expected amounts for each year.
+          Enter your expected amounts for each year. We've filled in smart defaults — adjust them to match your school.
         </p>
       </div>
 
+      {y1Students > 0 && maxCapacity && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground">
+            <span className="font-semibold">Building capacity: {maxCapacity} students.</span>{" "}
+            Your enrollment grows from {y1Students} to {y5Students} over 5 years
+            {y5Students > (maxCapacity || 0) ? (
+              <span className="text-amber-700 font-semibold"> — that exceeds your building capacity. Revenue projections beyond capacity aren't credible to lenders.</span>
+            ) : (
+              <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5).</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {categoryOrder.filter((cat) => enabledCategories.has(cat)).map((cat) => (
+          <div key={cat} className="rounded-2xl border border-border/60 bg-white p-4 text-center shadow-sm">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{CATEGORY_LABELS[cat]}</div>
+            <div className="font-display text-xl font-bold text-foreground">{formatCurrency(getCategoryTotal(cat))}</div>
+          </div>
+        ))}
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center shadow-sm">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Total Y1 Revenue</div>
+          <div className="font-display text-xl font-bold text-foreground">{formatCurrency(totalY1Revenue)}</div>
+          {revenuePerStudent > 0 && (
+            <div className="text-[10px] text-muted-foreground mt-0.5">{formatCurrency(revenuePerStudent)} / student</div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Lightbulb className="h-4 w-4" />
+          <span>Showing {enabledCategories.size} revenue {enabledCategories.size === 1 ? "source" : "sources"}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCategoryPicker(true)}
+          className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          Change sources
+        </button>
+      </div>
+
       {categoryOrder.map((cat) => {
+        if (!enabledCategories.has(cat)) return null;
         const catRows = rows.filter((r) => r.category === cat);
         const enabledCount = catRows.filter((r) => r.enabled).length;
         const isExpanded = expandedCategories.has(cat);
         const total = getCategoryTotal(cat);
         const availableItems = getAvailableLineItems(cat, rows.map((r) => r.id));
+        const Icon = CATEGORY_ICONS[cat];
+        const guidance = CATEGORY_GUIDANCE[cat];
 
         return (
           <div
@@ -202,10 +481,11 @@ export function RevenueStep() {
             >
               <div className="flex items-center gap-3">
                 {isExpanded ? (
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  <ChevronDown className="h-5 w-5 text-primary" />
                 ) : (
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 )}
+                <Icon className="h-5 w-5 text-primary" />
                 <span className="font-semibold text-foreground">{CATEGORY_LABELS[cat]}</span>
                 {enabledCount > 0 && (
                   <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
@@ -214,14 +494,21 @@ export function RevenueStep() {
                 )}
               </div>
               {total > 0 && (
-                <span className="text-sm font-medium text-muted-foreground">
-                  ${total.toLocaleString()} Y1
+                <span className="text-sm font-semibold text-primary">
+                  {formatCurrency(total)} Y1
                 </span>
               )}
             </button>
 
             {isExpanded && (
               <div className="px-5 pb-5 space-y-3">
+                {guidance && (
+                  <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground flex items-start gap-2">
+                    <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                    <span>{guidance.tip}</span>
+                  </div>
+                )}
+
                 {catRows.length === 0 && (
                   <p className="text-sm text-muted-foreground py-2">No line items in this category yet.</p>
                 )}
@@ -237,6 +524,7 @@ export function RevenueStep() {
                     onAmountChange={(yi, val) => updateAmount(row.id, yi, val)}
                     onTimingChange={(field, val) => updateTimingField(row.id, field, val)}
                     onRemove={() => removeRow(row.id)}
+                    y1Students={y1Students}
                   />
                 ))}
 
@@ -269,6 +557,7 @@ interface RevenueLineItemProps {
   onAmountChange: (yearIndex: number, value: number) => void;
   onTimingChange: (field: string, value: unknown) => void;
   onRemove: () => void;
+  y1Students?: number;
 }
 
 function RevenueLineItem({
@@ -280,6 +569,7 @@ function RevenueLineItem({
   onAmountChange,
   onTimingChange,
   onRemove,
+  y1Students = 0,
 }: RevenueLineItemProps) {
   const [showTiming, setShowTiming] = useState(false);
 
@@ -382,6 +672,12 @@ function RevenueLineItem({
               </div>
             ))}
           </div>
+
+          {y1Students > 0 && row.driverType === "per_student" && row.amounts[0] > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              = ${(row.amounts[0] * y1Students).toLocaleString()} total for {y1Students} students in Y1
+            </p>
+          )}
 
           {showTiming && hasTimingControls && (
             <TimingControls

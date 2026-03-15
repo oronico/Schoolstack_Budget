@@ -111,6 +111,13 @@ export function ExpenseStep() {
         setEnabledCategories(enabledCats);
         setShowCategoryPicker(false);
         setDefaultsApplied(true);
+      } else {
+        const enabledCats = new Set<string>();
+        adjusted.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
+        if (formCapitalRows && formCapitalRows.some((r: CapitalDebtRowData) => r.enabled)) {
+          enabledCats.add("capital_financing");
+        }
+        setEnabledCategories(enabledCats);
       }
     } else if (formExpenseRows !== undefined && Array.isArray(formExpenseRows) && formExpenseRows.length === 0 && defaultsApplied) {
       setExpenseRows([]);
@@ -235,15 +242,17 @@ export function ExpenseStep() {
 
   const applyCategories = useCallback(() => {
     const updated = expenseRows.map((row) => {
-      if (enabledCategories.has(row.category)) return row;
-      return { ...row, enabled: false };
+      if (enabledCategories.has(row.category)) {
+        return row.enabled ? row : { ...row, enabled: true };
+      }
+      return row.enabled ? { ...row, enabled: false } : row;
     });
     syncExpenseRows(updated);
 
     const capitalEnabled = enabledCategories.has("capital_financing");
     const updatedCapital = capitalRows.map((row) => ({
       ...row,
-      enabled: capitalEnabled ? row.enabled : false,
+      enabled: capitalEnabled ? true : false,
     }));
     syncCapitalRows(updatedCapital);
 
