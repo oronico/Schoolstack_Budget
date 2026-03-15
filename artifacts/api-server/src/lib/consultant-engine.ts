@@ -271,11 +271,12 @@ function computeAnnualDebtService(loanAmount: number, annualRate: number, termYe
   return monthlyPayment * 12;
 }
 
-function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number, escalationRate?: number): number {
+function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number, escalationRate?: number, fallbackInflation?: number): number {
   let base: number;
-  if (escalationRate !== undefined && escalationRate !== 0 && yearIdx > 0) {
+  const esc = (escalationRate !== undefined && escalationRate !== 0) ? escalationRate : (fallbackInflation ?? 0);
+  if (esc !== 0 && yearIdx > 0) {
     const y1 = amounts?.[0] ?? 0;
-    base = y1 * Math.pow(1 + escalationRate / 100, yearIdx);
+    base = y1 * Math.pow(1 + esc / 100, yearIdx);
   } else {
     base = amounts?.[yearIdx] ?? 0;
   }
@@ -396,21 +397,23 @@ function computeStaffingBaseCost(rows: StaffingRow[]): number {
   return total;
 }
 
-function computeExpensesForYear(rows: ExpenseRow[], yearIdx: number, students: number, totalRevenue: number): { total: number; facilityCost: number } {
+function computeExpensesForYear(rows: ExpenseRow[], yearIdx: number, students: number, totalRevenue: number, costInflationPct?: number): { total: number; facilityCost: number } {
   let total = 0, facilityCost = 0;
+  const fallback = costInflationPct ?? 0;
   for (const row of rows) {
     if (!row.enabled) continue;
     let val: number;
     if (row.driverType === "percent_of_revenue") {
+      const esc = (row.escalationRate !== undefined && row.escalationRate !== 0) ? row.escalationRate : fallback;
       let pct: number;
-      if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
-        pct = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
+      if (esc !== 0 && yearIdx > 0) {
+        pct = (row.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, yearIdx);
       } else {
         pct = row.amounts?.[yearIdx] ?? 0;
       }
       val = (pct / 100) * totalRevenue;
     } else {
-      val = computeDriverValue(row.amounts, yearIdx, row.driverType, students, row.escalationRate);
+      val = computeDriverValue(row.amounts, yearIdx, row.driverType, students, row.escalationRate, fallback);
     }
     total += val;
     if (row.category === "occupancy_facility") facilityCost += val;
@@ -440,6 +443,7 @@ function computeAllYearsFromRows(
   salaryEscRate: number,
   prorationFactor: number,
   tuitionTiers?: TuitionTier[],
+  costInflationPct?: number,
 ): YearFinancials[] {
   const baseCost = computeStaffingBaseCost(staffingRows);
 
@@ -449,7 +453,7 @@ function computeAllYearsFromRows(
     const totalStaffingCost = baseCost * salaryEsc * pf;
 
     const rev = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers);
-    const exp = computeExpensesForYear(expenseRows, yearIdx, students, rev.total);
+    const exp = computeExpensesForYear(expenseRows, yearIdx, students, rev.total, costInflationPct);
     const capDebt = computeCapDebtForYear(capDebtRows, yearIdx, students);
 
     const totalOpex = exp.total + capDebt;
@@ -580,6 +584,7 @@ function runStressScenarioFromRows(
     modifyStaffingRows?: (s: StaffingRow[]) => StaffingRow[];
     tuitionTiers?: TuitionTier[];
   },
+  costInflationPct?: number,
 ): StressScenario {
   const adjEnrollment = mods.modifyEnrollment ? mods.modifyEnrollment([...enrollmentByYear]) : enrollmentByYear;
   const adjRevRows = mods.modifyRevenueRows
@@ -592,7 +597,7 @@ function runStressScenarioFromRows(
     ? mods.modifyStaffingRows(staffingRows.map(r => ({ ...r })))
     : staffingRows;
 
-  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers);
+  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers, costInflationPct);
   const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
 
   return {
@@ -668,10 +673,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     const expenseRows = data.expenseRows || [];
     const capDebtRows = data.capitalAndDebtRows || [];
     const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
+    const costInflationPct = data.facilities?.generalCostInflation || 0;
 
     yearFinancials = computeAllYearsFromRows(
       enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows,
-      salaryEscRate, prorationFactor, tuitionTiers,
+      salaryEscRate, prorationFactor, tuitionTiers, costInflationPct,
     );
   } else {
     const rev = data.revenue || {};
@@ -759,16 +765,17 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     const expenseRows = data.expenseRows || [];
     const capDebtRows = data.capitalAndDebtRows || [];
     const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
+    const stressCostInflation = data.facilities?.generalCostInflation || 0;
 
     stressTests = [
       runStressScenarioFromRows("Enrollment 20% Below Plan", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyEnrollment: e => e.map(s => Math.round(s * 0.8)),
         tuitionTiers,
-      }),
+      }, stressCostInflation),
       runStressScenarioFromRows("Loss of Philanthropy", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => r.category === "grants_contributions" ? { ...r, enabled: false } : r),
         tuitionTiers,
-      }),
+      }, stressCostInflation),
       runStressScenarioFromRows("Occupancy +15%, Personnel +5%", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyExpenseRows: rows => rows.map(r =>
           r.category === "occupancy_facility"
@@ -777,17 +784,17 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         ),
         modifyStaffingRows: rows => rows.map(r => ({ ...r, annualizedRate: r.annualizedRate * 1.05 })),
         tuitionTiers,
-      }),
+      }, stressCostInflation),
       runStressScenarioFromRows("Revenue Delayed 3 Months", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => ({
           ...r,
           amounts: r.amounts.map((a, i) => i === 0 ? a * 0.75 : a),
         })),
         tuitionTiers,
-      }),
+      }, stressCostInflation),
       runStressScenarioFromRows("Interest Rate +2%", enrollmentByYear, revenueRows, staffingRows, expenseRows,
         capDebtRows.map(r => r.isLoan ? { ...r, loanRate: (r.loanRate || 0) + 2 } : r),
-        salaryEscRate, prorationFactor, { tuitionTiers }),
+        salaryEscRate, prorationFactor, { tuitionTiers }, stressCostInflation),
     ];
   } else {
     const rev = data.revenue || {};
@@ -1579,13 +1586,14 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         const expenseRows = data.expenseRows || [];
         const capDebtRows = data.capitalAndDebtRows || [];
         const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
+        const sensCostInflation = data.facilities?.generalCostInflation || 0;
         const adjRevRows = revenueRows.map(r => {
           if ((r.category === "tuition_and_fees" || r.category === "tuition_offsets") && r.driverType !== "percent_of_base") {
             return { ...r, amounts: r.amounts.map(a => a * (1 + tPct / 100)) };
           }
           return r;
         });
-        const fins = computeAllYearsFromRows(adjEnroll, adjRevRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, tuitionTiers);
+        const fins = computeAllYearsFromRows(adjEnroll, adjRevRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, tuitionTiers, sensCostInflation);
         sensitivityMatrix.push({ enrollmentPct: ePct, tuitionPct: tPct, netIncome: fins[lastIdx]?.netIncome || 0 });
       } else {
         const rev = data.revenue || {};

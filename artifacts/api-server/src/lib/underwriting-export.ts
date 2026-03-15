@@ -188,11 +188,21 @@ function funcLabel(fc: string): string {
   return map[fc] || fc;
 }
 
-function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number): number {
+let _globalCostInflationPct = 0;
+
+function setGlobalCostInflation(pct: number) { _globalCostInflationPct = pct; }
+
+function resolveEsc(rowEsc?: number): number {
+  if (rowEsc !== undefined && rowEsc !== 0) return rowEsc;
+  return _globalCostInflationPct;
+}
+
+function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number): number {
   let base = amounts?.[y] ?? 0;
-  if (escalationRate !== undefined && escalationRate !== 0 && y > 0) {
+  const esc = (escalationRate !== undefined && escalationRate !== 0) ? escalationRate : (fallbackInflation ?? 0);
+  if (esc !== 0 && y > 0) {
     const y1 = amounts?.[0] ?? 0;
-    base = y1 * Math.pow(1 + escalationRate / 100, y);
+    base = y1 * Math.pow(1 + esc / 100, y);
   }
   switch (dt) {
     case "monthly": return base * 12;
@@ -200,6 +210,14 @@ function driverVal(amounts: number[] | undefined, y: number, dt: string, student
     case "annual_fixed": return base;
     default: return base;
   }
+}
+
+function resolveAmount(amounts: number[] | undefined, y: number, rowEsc?: number): number {
+  const esc = resolveEsc(rowEsc);
+  if (esc !== 0 && y > 0) {
+    return (amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
+  }
+  return amounts?.[y] ?? 0;
 }
 
 function tuitionWithTiers(gross: number, y: number, students: number, tiers?: TuitionTier[]): number {
@@ -263,19 +281,23 @@ function computeRevenueForYear(
 }
 
 function computeExpenseForYear(
-  rows: ExpenseRow[], y: number, students: number, totalRevenue: number
+  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number
 ): number {
   let total = 0;
+  const fallback = costInflationPct ?? 0;
   for (const r of rows) {
     if (!r.enabled) continue;
     if (r.driverType === "percent_of_revenue") {
-      let pct = r.amounts?.[y] ?? 0;
-      if (r.escalationRate !== undefined && r.escalationRate !== 0 && y > 0) {
-        pct = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
+      const esc = (r.escalationRate !== undefined && r.escalationRate !== 0) ? r.escalationRate : fallback;
+      let pct: number;
+      if (esc !== 0 && y > 0) {
+        pct = (r.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
+      } else {
+        pct = r.amounts?.[y] ?? 0;
       }
       total += (pct / 100) * totalRevenue;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate);
+      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback);
     }
   }
   return total;
@@ -364,6 +386,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
     ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100 : 0;
   const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
     ? Number((data.facilities as Record<string, unknown>).generalCostInflation) / 100 : 0;
+  setGlobalCostInflation(costInflation * 100);
   const isPartial = sp.isPartialFirstYear || false;
   const opMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
   const prorationFactor = opMonths / 12;
@@ -380,7 +403,8 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
     const rev = computeRevenueForYear(revenueRows, y, students, data.tuitionTiers);
     const pf = y === 0 ? prorationFactor : 1;
     const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
-    const ops = computeExpenseForYear(expenseRows, y, students, rev) * (y === 0 ? prorationFactor : 1);
+    const costInflPct = costInflation * 100;
+    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct) * (y === 0 ? prorationFactor : 1);
     const capDebt = computeCapDebtForYear(capDebtRows, y, students);
     const totalExp = personnel + ops + capDebt;
     const ni = (rev * pf) - totalExp;
@@ -783,9 +807,9 @@ function buildOperatingExpenses(
       for (let y = 0; y < yc; y++) {
         const cell = ws.getCell(r, y + 2);
         if (ro.driverType === "percent_of_revenue") {
-          cell.value = Math.round(((ro.amounts?.[y] ?? 0) / 100) * annualRev[y]);
+          cell.value = Math.round((resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y]);
         } else {
-          cell.value = Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y]));
+          cell.value = Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct));
         }
         cell.numFmt = CUR; dc(cell);
       }
@@ -796,8 +820,8 @@ function buildOperatingExpenses(
     for (let y = 0; y < yc; y++) {
       let catSum = 0;
       for (const ro of catRows) {
-        if (ro.driverType === "percent_of_revenue") catSum += Math.round(((ro.amounts?.[y] ?? 0) / 100) * annualRev[y]);
-        else catSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y]));
+        if (ro.driverType === "percent_of_revenue") catSum += Math.round((resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y]);
+        else catSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct));
       }
       totals.push(catSum);
       const cell = ws.getCell(r, y + 2);
@@ -849,9 +873,9 @@ function buildFacilitiesOccupancy(
     for (let y = 0; y < yc; y++) {
       const cell = ws.getCell(r, y + 2);
       if (ro.driverType === "percent_of_revenue") {
-        cell.value = Math.round(((ro.amounts?.[y] ?? 0) / 100) * annualRev[y]);
+        cell.value = Math.round((resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y]);
       } else {
-        cell.value = Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y]));
+        cell.value = Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct));
       }
       cell.numFmt = CUR; dc(cell);
     }
@@ -861,8 +885,8 @@ function buildFacilitiesOccupancy(
   for (let y = 0; y < yc; y++) {
     let facSum = 0;
     for (const ro of facRows) {
-      if (ro.driverType === "percent_of_revenue") facSum += Math.round(((ro.amounts?.[y] ?? 0) / 100) * annualRev[y]);
-      else facSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y]));
+      if (ro.driverType === "percent_of_revenue") facSum += Math.round((resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y]);
+      else facSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct));
     }
     const cell = ws.getCell(r, y + 2);
     cell.value = { formula: `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})`, result: facSum };
@@ -875,8 +899,8 @@ function buildFacilitiesOccupancy(
     const cell = ws.getCell(r, y + 2);
     let facTotal = 0;
     for (const ro of facRows) {
-      if (ro.driverType === "percent_of_revenue") facTotal += ((ro.amounts?.[y] ?? 0) / 100) * annualRev[y];
-      else facTotal += driverVal(ro.amounts, y, ro.driverType, enrollment[y]);
+      if (ro.driverType === "percent_of_revenue") facTotal += (resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y];
+      else facTotal += driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct);
     }
     cell.value = enrollment[y] > 0 ? Math.round(facTotal / enrollment[y]) : 0;
     cell.numFmt = CUR; dc(cell);
@@ -887,8 +911,8 @@ function buildFacilitiesOccupancy(
     const cell = ws.getCell(r, y + 2);
     let facTotal = 0;
     for (const ro of facRows) {
-      if (ro.driverType === "percent_of_revenue") facTotal += ((ro.amounts?.[y] ?? 0) / 100) * annualRev[y];
-      else facTotal += driverVal(ro.amounts, y, ro.driverType, enrollment[y]);
+      if (ro.driverType === "percent_of_revenue") facTotal += (resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y];
+      else facTotal += driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct);
     }
     cell.value = annualRev[y] > 0 ? facTotal / annualRev[y] : 0;
     cell.numFmt = PCT; dc(cell);
