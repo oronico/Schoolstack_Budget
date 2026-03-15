@@ -17,7 +17,7 @@ const allowlist = [
   "exceljs",
   "express",
   "jsonwebtoken",
-  "nodemailer",
+  "resend",
   "pdfkit",
   "pg",
   "xlsx-populate",
