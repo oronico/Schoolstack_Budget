@@ -3,6 +3,7 @@ import { PublicExportUnderwritingBody } from "@workspace/api-zod";
 import { generateUnderwritingWorkbook } from "../lib/underwriting-export";
 import { runConsultantEngine } from "../lib/consultant-engine";
 import { createRateLimiter } from "../lib/rate-limiter";
+import ExcelJS from "exceljs";
 import fs from "fs";
 import path from "path";
 
@@ -11,29 +12,20 @@ const router: IRouter = Router();
 const MAX_PAYLOAD_SIZE = 512 * 1024;
 const rateLimiter = createRateLimiter();
 
+async function generateTestWorkbook(): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Test");
+  sheet.getCell("A1").value = "SchoolStack Export Test";
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
 router.post("/public/export-underwriting", rateLimiter, async (req: Request, res: Response) => {
   try {
-    const contentLength = parseInt(req.headers["content-length"] || "0", 10);
-    if (contentLength > MAX_PAYLOAD_SIZE) {
-      res.status(413).json({ error: "Payload too large." });
-      return;
-    }
-
-    const parsed = PublicExportUnderwritingBody.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: "Invalid model data.", details: parsed.error.issues });
-      return;
-    }
-
-    const data = parsed.data as Record<string, unknown>;
-    const profile = data?.schoolProfile as Record<string, unknown> | undefined;
-    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
-    const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_").slice(0, 100);
-
-    const buffer = await generateUnderwritingWorkbook(data);
+    const buffer = await generateTestWorkbook();
 
     const debugPath = path.join(process.cwd(), "debug-export.xlsx");
-    fs.writeFileSync(debugPath, Buffer.from(buffer));
+    fs.writeFileSync(debugPath, buffer);
     console.log("DEBUG workbook bytes:", buffer.length);
     console.log("DEBUG workbook saved to:", debugPath);
 
