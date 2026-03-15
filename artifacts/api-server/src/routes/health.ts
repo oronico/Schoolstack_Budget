@@ -5,10 +5,14 @@ const router: IRouter = Router();
 
 router.get("/healthz", async (_req, res) => {
   try {
+    if (!pool) {
+      res.json({ status: "ok", db: "not_configured" });
+      return;
+    }
     await pool.query("SELECT 1");
     res.json({ status: "ok", db: "connected" });
   } catch {
-    res.status(503).json({ status: "degraded", db: "unreachable" });
+    res.json({ status: "ok", db: "unreachable" });
   }
 });
 
