@@ -524,7 +524,12 @@ function computeSchoolProfileFacilityOverlay(
 function hasSchoolProfileFacilityData(sp?: SchoolProfile): boolean {
   if (!sp) return false;
   if (sp.locationSecured === false && (sp.estimatedMonthlyFacilityBudget || 0) > 0) return true;
-  if (sp.locationSecured === true) return true;
+  if (sp.locationSecured === true && sp.ownershipType === "rent" && (sp.monthlyRent || 0) > 0) return true;
+  if (sp.locationSecured === true && sp.ownershipType === "own") {
+    const hasPropertyTax = (sp.propertyTaxAnnual || 0) > 0;
+    const hasMortgage = sp.hasMortgage && (sp.mortgageMonthlyPayment || 0) > 0;
+    if (hasPropertyTax || hasMortgage) return true;
+  }
   return false;
 }
 
