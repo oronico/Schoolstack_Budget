@@ -6,3 +6,9 @@ id = "mt89Qdy3YQO6xf-BdcRhT"
 uri = "file://RELEASE_PROOF_PACK.md"
 type = "text"
 title = "Release Proof Pack"
+
+[[outputs]]
+id = "_-VmpumSyhn-peRKoJGw9"
+uri = "file://underwriting-export.xlsx"
+type = "table"
+title = "SchoolStack Budget — Underwriting Export (Lender Review School)"
