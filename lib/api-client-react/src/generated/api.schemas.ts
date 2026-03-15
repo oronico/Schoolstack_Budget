@@ -258,6 +258,7 @@ export interface RevenueRow {
   reimbursementLagMonths?: number;
   grantStatus?: RevenueRowGrantStatus;
   receiptQuarter?: RevenueRowReceiptQuarter;
+  escalationRate?: number;
 }
 
 export interface StaffingRow {
@@ -282,6 +283,7 @@ export interface ExpenseRow {
   driverType: ExpenseDriverType;
   amounts: number[];
   note?: string;
+  escalationRate?: number;
 }
 
 export interface CapitalDebtRow {
@@ -452,6 +454,12 @@ export interface StressScenario {
   breakEvenYear: number | null;
 }
 
+export interface SensitivityCell {
+  enrollmentPct: number;
+  tuitionPct: number;
+  netIncome: number;
+}
+
 export type ConsultantOutputLenderReadiness =
   (typeof ConsultantOutputLenderReadiness)[keyof typeof ConsultantOutputLenderReadiness];
 
@@ -490,6 +498,7 @@ export interface ConsultantKeyMetric {
   value: string;
   status: ConsultantKeyMetricStatus;
   interpretation: string;
+  benchmark?: string;
 }
 
 export interface ConsultantOutput {
@@ -504,6 +513,8 @@ export interface ConsultantOutput {
   costComposition: CostComposition[];
   cumulativeFinancials: CumulativeYear[];
   stressTests: StressScenario[];
+  sensitivityMatrix: SensitivityCell[];
+  cashRunwayMonths: number;
   enrollmentGuidance: string[];
   generatedAt: string;
 }

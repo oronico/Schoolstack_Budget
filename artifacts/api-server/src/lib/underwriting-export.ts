@@ -395,7 +395,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
   buildSourcesUses(wb, capDebtRows, startingCash, annualRevenue, yc);
   buildDebtSchedule(wb, capDebtRows, yc);
-  buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, startingCash, opMonths, revenueRows, enrollment, data.tuitionTiers);
+  buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, startingCash, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
   buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType);
   buildFiveYearBS(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, startingCash, totalPrincipal, capDebtRows, yc, cols, yearHeaders);
   buildDSCRCovenant(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualDebtSvc, startingCash, enrollment, maxCapacity, yc, cols, yearHeaders);
@@ -1060,10 +1060,16 @@ function computeExportMonthlyRevenue(
 function buildMonthlyCashFlowY1(
   wb: ExcelJS.Workbook, annualRev: number[], annualPersonnel: number[],
   annualExpenses: number[], annualCapDebt: number[], startingCash: number, opMonths: number,
-  revenueRows?: RevenueRow[], enrollment?: number[], tiers?: TuitionTier[]
+  revenueRows?: RevenueRow[], enrollment?: number[], tiers?: TuitionTier[],
+  fiscalYearStartMonth?: number
 ) {
   const ws = wb.addWorksheet("Cash Flow Monthly Y1");
-  const monthLabels = ["", ...MONTH_NAMES.slice(1)];
+  const fyStart = fiscalYearStartMonth || 7;
+  const monthLabels = [""];
+  for (let i = 0; i < 12; i++) {
+    const mIdx = ((fyStart - 1 + i) % 12) + 1;
+    monthLabels.push(MONTH_NAMES[mIdx]);
+  }
   ws.columns = [{ width: 30 }, ...Array(12).fill({ width: 14 }), { width: 16 }];
 
   let r = 1;

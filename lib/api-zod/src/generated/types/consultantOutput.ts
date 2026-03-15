@@ -11,6 +11,7 @@ import type { ConsultantRecommendation } from "./consultantRecommendation";
 import type { CostComposition } from "./costComposition";
 import type { CumulativeYear } from "./cumulativeYear";
 import type { RevenueComposition } from "./revenueComposition";
+import type { SensitivityCell } from "./sensitivityCell";
 import type { StressScenario } from "./stressScenario";
 
 export interface ConsultantOutput {
@@ -25,6 +26,8 @@ export interface ConsultantOutput {
   costComposition: CostComposition[];
   cumulativeFinancials: CumulativeYear[];
   stressTests: StressScenario[];
+  sensitivityMatrix: SensitivityCell[];
+  cashRunwayMonths: number;
   enrollmentGuidance: string[];
   generatedAt: Date;
 }

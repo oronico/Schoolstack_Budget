@@ -29,6 +29,8 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
+  Grid3X3,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ConsultantOutput } from "@workspace/api-client-react";
@@ -299,6 +301,11 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel }: Consultant
                 <p className="text-muted-foreground text-xs leading-relaxed mt-auto">
                   {metric.interpretation}
                 </p>
+                {metric.benchmark && (
+                  <p className="text-xs text-blue-600/80 font-medium mt-2 pt-2 border-t border-border/40">
+                    {metric.benchmark}
+                  </p>
+                )}
               </div>
             );
           })}
@@ -575,6 +582,93 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel }: Consultant
               </table>
             </div>
           </CollapsibleTable>
+        </div>
+      )}
+
+      {data.sensitivityMatrix && data.sensitivityMatrix.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Grid3X3 className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-bold text-lg text-foreground">Sensitivity Analysis</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Final year {niLabel.toLowerCase()} under different enrollment and tuition assumptions.
+          </p>
+          {(() => {
+            const enrollPcts = [...new Set(data.sensitivityMatrix.map(c => c.enrollmentPct))].sort((a, b) => a - b);
+            const tuitionPcts = [...new Set(data.sensitivityMatrix.map(c => c.tuitionPct))].sort((a, b) => a - b);
+            const cellMap = new Map<string, number>();
+            for (const c of data.sensitivityMatrix) {
+              cellMap.set(`${c.enrollmentPct}_${c.tuitionPct}`, c.netIncome);
+            }
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-secondary/50">
+                      <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Enrollment \ Tuition</th>
+                      {tuitionPcts.map(tp => (
+                        <th key={tp} className="px-3 py-2 text-center font-semibold text-muted-foreground">
+                          {tp >= 0 ? "+" : ""}{tp}%
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {enrollPcts.map(ep => (
+                      <tr key={ep} className="border-t border-border/40">
+                        <td className="px-3 py-2 font-medium">
+                          {ep >= 0 ? "+" : ""}{ep}% Enrollment
+                        </td>
+                        {tuitionPcts.map(tp => {
+                          const ni = cellMap.get(`${ep}_${tp}`) || 0;
+                          const isBase = ep === 0 && tp === 0;
+                          return (
+                            <td
+                              key={tp}
+                              className={cn(
+                                "px-3 py-2 text-center font-semibold",
+                                isBase ? "bg-blue-50 ring-1 ring-blue-300 rounded" : "",
+                                ni >= 0 ? "text-green-700" : "text-rose-700"
+                              )}
+                            >
+                              {fmtCompact(ni)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {data.cashRunwayMonths !== undefined && (
+        <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-bold text-lg text-foreground">Cash Runway</h3>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "text-4xl font-bold font-display",
+              data.cashRunwayMonths >= 36 ? "text-green-700" : data.cashRunwayMonths >= 18 ? "text-amber-700" : "text-rose-700"
+            )}>
+              {data.cashRunwayMonths >= 60 ? "60+" : data.cashRunwayMonths} months
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {data.cashRunwayMonths >= 60
+                ? "Your school maintains positive cash throughout the entire projection period. Strong financial sustainability."
+                : data.cashRunwayMonths >= 36
+                  ? "Cash remains positive for 3+ years. A solid foundation, but continue building reserves."
+                  : data.cashRunwayMonths >= 12
+                    ? "Cash runway is limited. Focus on building reserves and securing backup funding sources."
+                    : "Cash runs out within the first year. Immediate action needed — secure additional funding or reduce costs."}
+            </p>
+          </div>
         </div>
       )}
 

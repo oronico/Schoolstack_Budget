@@ -34,4 +34,5 @@ export interface RevenueRow {
   reimbursementLagMonths?: number;
   grantStatus?: RevenueRowGrantStatus;
   receiptQuarter?: RevenueRowReceiptQuarter;
+  escalationRate?: number;
 }

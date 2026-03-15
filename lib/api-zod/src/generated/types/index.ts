@@ -63,6 +63,7 @@ export * from "./schoolProfile";
 export * from "./schoolProfileEntityType";
 export * from "./schoolProfileSchoolType";
 export * from "./schoolStage";
+export * from "./sensitivityCell";
 export * from "./staffing";
 export * from "./staffingEmploymentType";
 export * from "./staffingFunctionCategory";

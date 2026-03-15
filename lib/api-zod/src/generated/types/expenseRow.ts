@@ -16,4 +16,5 @@ export interface ExpenseRow {
   driverType: ExpenseDriverType;
   amounts: number[];
   note?: string;
+  escalationRate?: number;
 }

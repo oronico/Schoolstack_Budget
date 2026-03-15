@@ -109,6 +109,7 @@ interface RevenueRow {
   reimbursementLagMonths?: number;
   grantStatus?: string;
   receiptQuarter?: number;
+  escalationRate?: number;
 }
 
 interface StaffingRow {
@@ -133,6 +134,7 @@ interface ExpenseRow {
   driverType: string;
   amounts: number[];
   note?: string;
+  escalationRate?: number;
 }
 
 interface CapitalDebtRow {
@@ -174,6 +176,7 @@ export interface KeyMetric {
   value: string;
   status: "good" | "warning" | "danger";
   interpretation: string;
+  benchmark?: string;
 }
 
 export interface Recommendation {
@@ -207,6 +210,12 @@ export interface StressScenario {
   breakEvenYear: number | null;
 }
 
+export interface SensitivityCell {
+  enrollmentPct: number;
+  tuitionPct: number;
+  netIncome: number;
+}
+
 export interface ConsultantOutput {
   executiveSummary: string;
   biggestStrength: string;
@@ -219,6 +228,8 @@ export interface ConsultantOutput {
   costComposition: CostComposition[];
   cumulativeFinancials: CumulativeYear[];
   stressTests: StressScenario[];
+  sensitivityMatrix: SensitivityCell[];
+  cashRunwayMonths: number;
   enrollmentGuidance: string[];
   generatedAt: string;
 }
@@ -260,8 +271,14 @@ function computeAnnualDebtService(loanAmount: number, annualRate: number, termYe
   return monthlyPayment * 12;
 }
 
-function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number): number {
-  const base = amounts?.[yearIdx] ?? 0;
+function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number, escalationRate?: number): number {
+  let base: number;
+  if (escalationRate !== undefined && escalationRate !== 0 && yearIdx > 0) {
+    const y1 = amounts?.[0] ?? 0;
+    base = y1 * Math.pow(1 + escalationRate / 100, yearIdx);
+  } else {
+    base = amounts?.[yearIdx] ?? 0;
+  }
   switch (driverType) {
     case "monthly": return base * 12;
     case "per_student": return base * students;
@@ -323,17 +340,28 @@ function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: nu
     if (!row.enabled || row.driverType === "percent_of_base") continue;
 
     if (row.id === "gross_tuition" && row.driverType === "per_student" && tuitionTiers && tuitionTiers.length > 0) {
-      const perStudentAmount = row.amounts?.[yearIdx] ?? 0;
+      let perStudentAmount: number;
+      if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
+        perStudentAmount = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
+      } else {
+        perStudentAmount = row.amounts?.[yearIdx] ?? 0;
+      }
       rowValues.set(row.id, computeTuitionWithTiers(perStudentAmount, yearIdx, students, tuitionTiers));
     } else {
-      rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students));
+      rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students, row.escalationRate));
     }
   }
 
   for (const row of rows) {
     if (!row.enabled || row.driverType !== "percent_of_base") continue;
     const baseVal = rowValues.get(row.percentBase || "") || 0;
-    const percentage = (row.amounts?.[yearIdx] ?? 0) / 100;
+    let pctVal: number;
+    if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
+      pctVal = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
+    } else {
+      pctVal = row.amounts?.[yearIdx] ?? 0;
+    }
+    const percentage = pctVal / 100;
     rowValues.set(row.id, baseVal * percentage);
   }
 
@@ -374,9 +402,15 @@ function computeExpensesForYear(rows: ExpenseRow[], yearIdx: number, students: n
     if (!row.enabled) continue;
     let val: number;
     if (row.driverType === "percent_of_revenue") {
-      val = ((row.amounts?.[yearIdx] ?? 0) / 100) * totalRevenue;
+      let pct: number;
+      if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
+        pct = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
+      } else {
+        pct = row.amounts?.[yearIdx] ?? 0;
+      }
+      val = (pct / 100) * totalRevenue;
     } else {
-      val = computeDriverValue(row.amounts, yearIdx, row.driverType, students);
+      val = computeDriverValue(row.amounts, yearIdx, row.driverType, students, row.escalationRate);
     }
     total += val;
     if (row.category === "occupancy_facility") facilityCost += val;
@@ -744,6 +778,16 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         modifyStaffingRows: rows => rows.map(r => ({ ...r, annualizedRate: r.annualizedRate * 1.05 })),
         tuitionTiers,
       }),
+      runStressScenarioFromRows("Revenue Delayed 3 Months", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
+        modifyRevenueRows: rows => rows.map(r => ({
+          ...r,
+          amounts: r.amounts.map((a, i) => i === 0 ? a * 0.75 : a),
+        })),
+        tuitionTiers,
+      }),
+      runStressScenarioFromRows("Interest Rate +2%", enrollmentByYear, revenueRows, staffingRows, expenseRows,
+        capDebtRows.map(r => r.isLoan ? { ...r, loanRate: (r.loanRate || 0) + 2 } : r),
+        salaryEscRate, prorationFactor, { tuitionTiers }),
     ];
   } else {
     const rev = data.revenue || {};
@@ -775,10 +819,15 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           otherAnnualExpenses: (f.otherAnnualExpenses || 0) * 1.1,
         }),
       ),
+      runStressScenarioLegacy("Revenue Delayed 3 Months", enrollmentByYear, rev, st, fac, Math.max(0, prorationFactor - 0.25)),
+      runStressScenarioLegacy("Interest Rate +2%", enrollmentByYear, rev, st,
+        { ...fac, annualInterestRate: (fac.annualInterestRate || 0) + 2 }, prorationFactor),
     ];
   }
 
   const keyMetrics: KeyMetric[] = [];
+
+  const isCharterBenchmark = sp.schoolType === "charter_school" || sp.fundingProfile === "charter_public_funded";
 
   keyMetrics.push({
     name: "Revenue per Student (Year 1)",
@@ -790,6 +839,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         : revenuePerStudent >= 7000
           ? "Per-student revenue is moderate — consider whether tuition or supplemental funding can increase."
           : "Per-student revenue is low — this may make it difficult to cover costs as you scale.",
+    benchmark: isCharterBenchmark ? "Charter avg: $10,000–$15,000" : "Private avg: $12,000–$25,000",
   });
 
   keyMetrics.push({
@@ -802,6 +852,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         : staffingCostPct <= 0.65
           ? `Payroll is ${pct(staffingCostPct)} of revenue — most sustainable schools keep this under 65%.`
           : `Payroll is ${pct(staffingCostPct)} of revenue — this is high and could threaten financial stability.`,
+    benchmark: "Industry avg: 50–65% of revenue",
   });
 
   keyMetrics.push({
@@ -814,6 +865,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         : opexCostPct <= 0.40
           ? `Operating costs are moderate — watch rent escalation and service costs over the ${yearCount}-year period.`
           : "Operating costs are consuming a large share of revenue — review each cost center for savings.",
+    benchmark: "Target: under 30% of revenue",
   });
 
   const marginLabel = profitMarginTerm(sp.entityType);
@@ -829,6 +881,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         : y1NetMargin >= 0
           ? "Year 1 is near break-even — typical for startup schools, but leaves little room for surprises."
           : `Year 1 projects a ${fmt(Math.abs(y1.netIncome))} deficit — plan for how this will be funded.`,
+    benchmark: "Startup target: 0–5%; mature: 10%+",
   });
 
   keyMetrics.push({
@@ -841,6 +894,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         : lastYearNetMargin >= 0.05
           ? `Year ${lastYearNum} margin is thin — a small revenue shortfall could push you into the red.`
           : `Year ${lastYearNum} margin is concerning — lenders will want to see a clearer path to ${profitWord}.`,
+    benchmark: "Lender target: 10–15%+",
   });
 
   keyMetrics.push({
@@ -853,6 +907,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         : revenueGrowth >= 0.2
           ? "Moderate growth — consider whether enrollment targets are ambitious enough."
           : "Low projected growth — this could signal difficulty scaling the school.",
+    benchmark: "Healthy schools: 30–80% over 5 years",
   });
 
   if (sp.maxCapacity && sp.maxCapacity > 0) {
@@ -866,6 +921,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           : capacityUtilLastYear >= 0.6
             ? "You have room to grow into your facility — plan marketing to fill seats."
             : `Facility will be underutilized by Year ${lastYearNum} — consider a smaller space or higher enrollment targets.`,
+      benchmark: "Optimal: 80–95% utilization",
     });
   }
 
@@ -880,6 +936,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           : dscr >= 1.0
             ? "DSCR is above 1.0x but tight — lenders may require additional collateral or guarantees."
             : "DSCR is below 1.0x — the school cannot cover debt payments from operating income alone.",
+      benchmark: "Lender minimum: 1.25x",
     });
   }
 
@@ -894,6 +951,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           : philanthropyPct <= 0.30
             ? "Donations and grants make up a significant share of revenue — plan for donor diversification."
             : "Heavy reliance on philanthropy — lenders view this as unpredictable revenue. Build toward earned revenue sustainability.",
+      benchmark: "Sustainable: under 15%",
     });
   }
 
@@ -908,6 +966,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           : publicRevenuePct <= 0.70
             ? "Significant reliance on public funding — changes in state policy could materially impact revenue."
             : "The model is heavily dependent on public funding — develop contingency plans for policy changes.",
+      benchmark: "Charter avg: 60–80% public",
     });
   }
 
@@ -923,6 +982,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           : lastReserve.reserveMonths >= 1
             ? "The reserve buffer is thin — target building at least 3 months of expenses as a cushion."
             : `No meaningful reserve has been built by Year ${lastYearNum}. This is a significant vulnerability.`,
+      benchmark: "Best practice: 3–6 months reserves",
     });
   }
 
@@ -1505,11 +1565,65 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, but ${dangerMetrics} of ${keyMetrics.length} key metrics are in the danger zone. Significant adjustments to revenue, costs, or enrollment are needed.`;
   }
 
+  const sensitivityMatrix: SensitivityCell[] = [];
+  const sensEnrollPcts = [-20, -10, 0, 10, 20];
+  const sensTuitionPcts = [-20, -10, 0, 10, 20];
+  const lastIdx = yearCount - 1;
+
+  for (const ePct of sensEnrollPcts) {
+    for (const tPct of sensTuitionPcts) {
+      const adjEnroll = enrollmentByYear.map(s => Math.round(s * (1 + ePct / 100)));
+      if (hasRowData) {
+        const revenueRows = data.revenueRows || [];
+        const staffingRows = data.staffingRows || [];
+        const expenseRows = data.expenseRows || [];
+        const capDebtRows = data.capitalAndDebtRows || [];
+        const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
+        const adjRevRows = revenueRows.map(r => {
+          if ((r.category === "tuition_and_fees" || r.category === "tuition_offsets") && r.driverType !== "percent_of_base") {
+            return { ...r, amounts: r.amounts.map(a => a * (1 + tPct / 100)) };
+          }
+          return r;
+        });
+        const fins = computeAllYearsFromRows(adjEnroll, adjRevRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, tuitionTiers);
+        sensitivityMatrix.push({ enrollmentPct: ePct, tuitionPct: tPct, netIncome: fins[lastIdx]?.netIncome || 0 });
+      } else {
+        const rev = data.revenue || {};
+        const st = data.staffing || {};
+        const fac = data.facilities || {};
+        const adjRev = { ...rev, tuitionPerStudent: (rev.tuitionPerStudent || 0) * (1 + tPct / 100) };
+        const fins = adjEnroll.map((s, idx) => computeYearFinancialsLegacy(idx, s, adjRev, st, fac, prorationFactor));
+        sensitivityMatrix.push({ enrollmentPct: ePct, tuitionPct: tPct, netIncome: fins[lastIdx]?.netIncome || 0 });
+      }
+    }
+  }
+
+  let cashRunwayMonths = 0;
+  {
+    const startingCash = (data as Record<string, unknown>).priorYearSnapshot
+      ? ((data as Record<string, unknown>).priorYearSnapshot as Record<string, number>)?.endingCash || 0
+      : 0;
+    let runningCash = startingCash;
+    const totalMonths = yearCount * 12;
+    cashRunwayMonths = totalMonths;
+    for (let m = 0; m < totalMonths; m++) {
+      const yIdx = Math.floor(m / 12);
+      const yFin = yearFinancials[Math.min(yIdx, yearFinancials.length - 1)];
+      const monthlyRev = (yFin?.totalRevenue || 0) / 12;
+      const monthlyExp = (yFin?.totalExpenses || 0) / 12;
+      runningCash += monthlyRev - monthlyExp;
+      if (runningCash <= 0) {
+        cashRunwayMonths = m + 1;
+        break;
+      }
+    }
+  }
+
   return {
     executiveSummary,
     biggestStrength,
     biggestRisk,
-    recommendations: recommendations.slice(0, 3),
+    recommendations: recommendations.slice(0, 5),
     lenderReadiness,
     lenderReadinessExplanation,
     keyMetrics,
@@ -1517,6 +1631,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     costComposition,
     cumulativeFinancials,
     stressTests,
+    sensitivityMatrix,
+    cashRunwayMonths,
     enrollmentGuidance,
     generatedAt: new Date().toISOString(),
   };

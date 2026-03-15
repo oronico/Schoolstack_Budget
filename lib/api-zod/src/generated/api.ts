@@ -252,6 +252,7 @@ export const CreateModelBody = zod.object({
               zod.literal(4),
             ])
             .optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -301,6 +302,7 @@ export const CreateModelBody = zod.object({
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -493,6 +495,7 @@ export const GetModelResponse = zod.object({
               zod.literal(4),
             ])
             .optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -542,6 +545,7 @@ export const GetModelResponse = zod.object({
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -735,6 +739,7 @@ export const UpdateModelBody = zod.object({
               zod.literal(4),
             ])
             .optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -784,6 +789,7 @@ export const UpdateModelBody = zod.object({
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -969,6 +975,7 @@ export const UpdateModelResponse = zod.object({
               zod.literal(4),
             ])
             .optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -1018,6 +1025,7 @@ export const UpdateModelResponse = zod.object({
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -1230,6 +1238,7 @@ export const ArchiveModelResponse = zod.object({
               zod.literal(4),
             ])
             .optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -1279,6 +1288,7 @@ export const ArchiveModelResponse = zod.object({
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
+          escalationRate: zod.number().optional(),
         }),
       )
       .optional(),
@@ -1342,6 +1352,7 @@ export const GetConsultantAnalysisResponse = zod.object({
       value: zod.string(),
       status: zod.enum(["good", "warning", "danger"]),
       interpretation: zod.string(),
+      benchmark: zod.string().optional(),
     }),
   ),
   revenueComposition: zod.array(
@@ -1373,6 +1384,14 @@ export const GetConsultantAnalysisResponse = zod.object({
       breakEvenYear: zod.number().nullable(),
     }),
   ),
+  sensitivityMatrix: zod.array(
+    zod.object({
+      enrollmentPct: zod.number(),
+      tuitionPct: zod.number(),
+      netIncome: zod.number(),
+    }),
+  ),
+  cashRunwayMonths: zod.number(),
   enrollmentGuidance: zod.array(zod.string()),
   generatedAt: zod.date(),
 });
@@ -1467,6 +1486,7 @@ export const PublicConsultantAnalysisResponse = zod.object({
       value: zod.string(),
       status: zod.enum(["good", "warning", "danger"]),
       interpretation: zod.string(),
+      benchmark: zod.string().optional(),
     }),
   ),
   revenueComposition: zod.array(
@@ -1498,6 +1518,14 @@ export const PublicConsultantAnalysisResponse = zod.object({
       breakEvenYear: zod.number().nullable(),
     }),
   ),
+  sensitivityMatrix: zod.array(
+    zod.object({
+      enrollmentPct: zod.number(),
+      tuitionPct: zod.number(),
+      netIncome: zod.number(),
+    }),
+  ),
+  cashRunwayMonths: zod.number(),
   enrollmentGuidance: zod.array(zod.string()),
   generatedAt: zod.date(),
 });

@@ -802,6 +802,8 @@ components:
         receiptQuarter:
           type: integer
           enum: [1, 2, 3, 4]
+        escalationRate:
+          type: number
       required:
         - id
         - category
@@ -864,6 +866,8 @@ components:
             type: number
         note:
           type: string
+        escalationRate:
+          type: number
       required:
         - id
         - category
@@ -1156,6 +1160,19 @@ components:
         - y1NetIncome
         - y5NetIncome
         - breakEvenYear
+    SensitivityCell:
+      type: object
+      properties:
+        enrollmentPct:
+          type: number
+        tuitionPct:
+          type: number
+        netIncome:
+          type: number
+      required:
+        - enrollmentPct
+        - tuitionPct
+        - netIncome
     ConsultantOutput:
       type: object
       properties:
@@ -1194,6 +1211,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StressScenario"
+        sensitivityMatrix:
+          type: array
+          items:
+            $ref: "#/components/schemas/SensitivityCell"
+        cashRunwayMonths:
+          type: number
         enrollmentGuidance:
           type: array
           items:
@@ -1213,6 +1236,8 @@ components:
         - costComposition
         - cumulativeFinancials
         - stressTests
+        - sensitivityMatrix
+        - cashRunwayMonths
         - enrollmentGuidance
         - generatedAt
     ConsultantRecommendation:
@@ -1240,6 +1265,8 @@ components:
           type: string
           enum: [good, warning, danger]
         interpretation:
+          type: string
+        benchmark:
           type: string
       required:
         - name

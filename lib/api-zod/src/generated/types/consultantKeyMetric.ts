@@ -12,4 +12,5 @@ export interface ConsultantKeyMetric {
   value: string;
   status: ConsultantKeyMetricStatus;
   interpretation: string;
+  benchmark?: string;
 }

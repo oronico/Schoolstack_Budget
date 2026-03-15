@@ -74,7 +74,7 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 
 ### Universal Financial Model
 - **School Configuration**: Supports `microschool`, `private_school`, `charter_school`, `other` school types; `new_school` (3-year default) or `operating_school` (4-year default, extendable to 5) stages; and `tuition_based`, `charter_public_funded`, `hybrid_mixed` funding profiles. Includes support for partial first years.
-- **Revenue Model**: Features 6 categories (e.g., `tuition_and_fees`, `public_funding`) with row-based line items. Each line item supports various driver types (`annual_fixed`, `monthly`, `per_student`, `percent_of_base`) and optional payment timing configurations, with funding-profile-aware defaults.
+- **Revenue Model**: Features 6 categories (e.g., `tuition_and_fees`, `public_funding`) with row-based line items. Each line item supports various driver types (`annual_fixed`, `monthly`, `per_student`, `percent_of_base`), optional per-line escalation rates, and payment timing configurations, with funding-profile-aware defaults.
 - **Staffing Model**: FTE-based roster across function categories (e.g., `school_leadership`, `instructional`) and employment types (`full_time`, `part_time`, `contract`), including configurable benefits and payroll tax rates.
 - **Expense Model**: Row-based entries across 4 accounting categories (e.g., `instructional_program`, `occupancy_facility`) with flexible driver types.
 - **Capital & Debt Model**: Incorporates a loan calculator for PMT-based amortization.
@@ -109,8 +109,13 @@ A deterministic rules engine providing:
 - Management fee analysis and warnings.
 - Tuition tier-aware revenue calculations.
 - Accounting-category diagnostics (e.g., occupancy ratio, software fragmentation).
-- Three stress test scenarios with projected impacts.
+- Five stress test scenarios: Enrollment -20%, Loss of Philanthropy, Cost Escalation, Revenue Delayed 3 Months, Interest Rate +2%.
+- 5×5 sensitivity matrix (enrollment % × tuition % variations) showing final-year net income.
+- Cash runway calculation (months until cash depletion).
+- Industry benchmark comparisons on all key metrics (school-type-aware for charter vs private).
+- Per-line-item escalation rates on revenue and expense rows (optional, falls back to year-by-year amounts).
 - Prior-year variance analysis for operating schools.
+- Fiscal-year-aligned monthly cash flow (respects `fiscalYearStartMonth`).
 
 # External Dependencies
 
