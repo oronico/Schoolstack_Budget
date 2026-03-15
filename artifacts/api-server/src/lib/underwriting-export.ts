@@ -203,18 +203,17 @@ function setPrintAreaUW(ws: ExcelJS.Worksheet, lastRow: number, lastCol: number)
   };
 }
 
+function setSheetOrder(ws: ExcelJS.Worksheet, order: number) {
+  Object.defineProperty(ws, "orderNo", { value: order, writable: true, configurable: true });
+}
+
 function polishWorkbookUW(wb: ExcelJS.Workbook) {
   const coverNames = new Set(["Cover"]);
-  const skipFreeze = new Set(["Cover"]);
 
   for (const ws of wb.worksheets) {
-    if (!skipFreeze.has(ws.name)) {
-      if (!ws.views || ws.views.length === 0) {
-        ws.views = [{ state: "frozen" as const, xSplit: 1, ySplit: 1, topLeftCell: "B2", activeCell: "B2" }];
-      }
-    }
+    if (!coverNames.has(ws.name)) {
+      ws.views = [{ state: "frozen" as const, xSplit: 1, ySplit: 1, topLeftCell: "B2", activeCell: "B2" }];
 
-    if (ws.name !== "Cover") {
       const lastRow = ws.rowCount || 1;
       const lastCol = ws.columnCount || 1;
       const endColLetter = lastCol <= 26 ? String.fromCharCode(64 + lastCol) : "Z";
@@ -236,10 +235,10 @@ function polishWorkbookUW(wb: ExcelJS.Workbook) {
 
   const cover = wb.worksheets.find(s => coverNames.has(s.name));
   if (cover) {
-    (cover as any).orderNo = 1;
+    setSheetOrder(cover, 1);
     let idx = 2;
     for (const ws of wb.worksheets) {
-      if (!coverNames.has(ws.name)) { (ws as any).orderNo = idx++; }
+      if (!coverNames.has(ws.name)) { setSheetOrder(ws, idx++); }
     }
   }
 }
@@ -707,7 +706,7 @@ function buildUWCoverSheet(
     if (fmt) ws.getCell(r, 3).numFmt = fmt;
     if (label === "Overall Assessment") {
       const aFill = assessment === "Strong" ? GREEN_BG : assessment === "Conditional" ? AMBER_BG : RED_BG;
-      ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: aFill.slice(2) } };
+      ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: aFill } };
     }
   }
 
@@ -1341,9 +1340,9 @@ function buildSourcesUses(
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
   const gapCell = ws.getCell(r, 2);
   if (gap < 0) {
-    gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: RED_BG.slice(2) } };
+    gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: RED_BG } };
   } else {
-    gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG.slice(2) } };
+    gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG } };
   }
 
   r++; ws.getCell(r, 1).value = gap >= 0 ? "✓ Sources cover projected Year 1 uses" : "⚠ Funding gap — additional sources needed";
@@ -1661,9 +1660,9 @@ function buildFiveYearPL(
     cell.numFmt = CUR; gc(cell);
     const niVal = ni[y] || 0;
     if (niVal >= 0) {
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG.slice(2) } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG } };
     } else {
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: RED_BG.slice(2) } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: RED_BG } };
     }
   }
 
@@ -1904,7 +1903,7 @@ function buildDSCRCovenant(
       const noi = rev[y] - personnel[y] - ops[y];
       const dscr = noi / annualDebtSvc;
       cell.value = dscr >= 1.2 ? "PASS" : "FAIL";
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscr >= 1.2 ? GREEN_BG.slice(2) : RED_BG.slice(2) } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscr >= 1.2 ? GREEN_BG : RED_BG } };
     } else {
       cell.value = "N/A";
     }
@@ -1920,7 +1919,7 @@ function buildDSCRCovenant(
     const reserve = monthlyOps > 0 ? cash / monthlyOps : 0;
     const cell = ws.getCell(r, y + 2);
     cell.value = reserve >= 2.0 ? "PASS" : "FAIL";
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: reserve >= 2.0 ? GREEN_BG.slice(2) : RED_BG.slice(2) } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: reserve >= 2.0 ? GREEN_BG : RED_BG } };
     cell.font = BF; cell.alignment = { horizontal: "center" };
   }
 
@@ -1928,7 +1927,7 @@ function buildDSCRCovenant(
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     cell.value = ni[y] >= 0 ? "PASS" : "FAIL";
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: ni[y] >= 0 ? GREEN_BG.slice(2) : RED_BG.slice(2) } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: ni[y] >= 0 ? GREEN_BG : RED_BG } };
     cell.font = BF; cell.alignment = { horizontal: "center" };
   }
 
@@ -1937,7 +1936,7 @@ function buildDSCRCovenant(
     const util = maxCapacity > 0 ? enrollment[y] / maxCapacity : 0;
     const cell = ws.getCell(r, y + 2);
     cell.value = util >= 0.7 ? "PASS" : "FAIL";
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: util >= 0.7 ? GREEN_BG.slice(2) : RED_BG.slice(2) } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: util >= 0.7 ? GREEN_BG : RED_BG } };
     cell.font = BF; cell.alignment = { horizontal: "center" };
   }
 
@@ -1997,7 +1996,7 @@ function buildUnderwritingSnapshot(
     ws.getCell(r, 2).value = pass ? "PASS" : "FAIL";
     ws.getCell(r, 2).font = BF;
     ws.getCell(r, 2).alignment = { horizontal: "center" };
-    ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: pass ? GREEN_BG.slice(2) : RED_BG.slice(2) } };
+    ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: pass ? GREEN_BG : RED_BG } };
     ws.getCell(r, 3).value = detail; ws.getCell(r, 3).font = NF;
   }
 
@@ -2010,7 +2009,7 @@ function buildUnderwritingSnapshot(
   r++; ws.getCell(r, 1).value = "Overall Assessment"; ws.getCell(r, 1).font = NF;
   ws.getCell(r, 2).value = assessment; ws.getCell(r, 2).font = BF;
   const assessFill = assessment === "Strong" ? GREEN_BG : assessment === "Conditional" ? AMBER_BG : RED_BG;
-  ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: assessFill.slice(2) } };
+  ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: assessFill } };
 
   r += 2; sec(ws, r, 3); ws.getCell(r, 1).value = "KEY METRICS SUMMARY";
 

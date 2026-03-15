@@ -275,15 +275,17 @@ function setPrintArea(ws: ExcelJS.Worksheet, lastRow: number, lastCol: number) {
   };
 }
 
+function setSheetOrder(ws: ExcelJS.Worksheet, order: number) {
+  Object.defineProperty(ws, "orderNo", { value: order, writable: true, configurable: true });
+}
+
 function polishWorkbook(wb: ExcelJS.Workbook) {
   const coverNames = new Set(["Cover"]);
   const skipFreeze = new Set(["Cover", "Consultant Notes", "Prior-Year Snapshot"]);
 
   for (const ws of wb.worksheets) {
     if (!skipFreeze.has(ws.name)) {
-      if (!ws.views || ws.views.length === 0) {
-        ws.views = [{ state: "frozen" as const, xSplit: 1, ySplit: 1, topLeftCell: "B2", activeCell: "B2" }];
-      }
+      ws.views = [{ state: "frozen" as const, xSplit: 1, ySplit: 1, topLeftCell: "B2", activeCell: "B2" }];
     }
 
     if (ws.name !== "Cover") {
@@ -308,10 +310,10 @@ function polishWorkbook(wb: ExcelJS.Workbook) {
 
   const cover = wb.worksheets.find(s => coverNames.has(s.name));
   if (cover) {
-    (cover as any).orderNo = 1;
+    setSheetOrder(cover, 1);
     let idx = 2;
     for (const ws of wb.worksheets) {
-      if (!coverNames.has(ws.name)) { (ws as any).orderNo = idx++; }
+      if (!coverNames.has(ws.name)) { setSheetOrder(ws, idx++); }
     }
   }
 }
