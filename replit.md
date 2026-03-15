@@ -37,7 +37,7 @@ The application adheres to the SchoolStack.ai brand system, utilizing an amber-f
 
 The project is built as a pnpm workspace monorepo using TypeScript (v5.9).
 - **Backend**: Node.js (v24), Express 5 API server, PostgreSQL database with Drizzle ORM, Zod for validation, Orval for OpenAPI-based API codegen.
-- **Frontend**: React, Vite, Tailwind CSS v4.
+- **Frontend**: React, Vite, Tailwind CSS v4. Route-based code splitting via React.lazy + Suspense; vendor chunks (recharts, framer-motion, react-hook-form) split via manualChunks. No single JS chunk exceeds 500KB.
 - **Authentication**: JWT-based (bcryptjs for passwords, jsonwebtoken for tokens).
 - **Build Tooling**: esbuild for CJS bundling.
 - **Export Capabilities**: ExcelJS for standard Excel exports (with pre-computed formula results for viewer compatibility), xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports.
