@@ -143,8 +143,8 @@ export function SchoolProfileStep() {
             selected={schoolStage === "new_school"}
             onSelect={() => setValue("schoolProfile.schoolStage", "new_school", { shouldDirty: true })}
             icon={<Rocket className="h-5 w-5" />}
-            title="We're starting a new school"
-            description="Planning to open or in our first year of operation"
+            title="We're planning a new school"
+            description="We do not currently enroll students and are planning to open"
           />
           <RadioCard
             value="operating_school"
@@ -152,9 +152,23 @@ export function SchoolProfileStep() {
             onSelect={() => setValue("schoolProfile.schoolStage", "operating_school", { shouldDirty: true })}
             icon={<Building2 className="h-5 w-5" />}
             title="We're already operating"
-            description="Currently serving students and planning ahead"
+            description="We currently enroll students and are planning ahead"
           />
         </div>
+
+        {schoolStage === "new_school" && (
+          <div className="mt-4 max-w-sm">
+            <FormSelect
+              name="schoolProfile.plannedOpeningYear"
+              label="Planned Opening School Year"
+              options={[
+                { value: "2026-27", label: "2026–27" },
+                { value: "2027-28", label: "2027–28" },
+                { value: "2028-29", label: "2028–29" },
+              ]}
+            />
+          </div>
+        )}
       </div>
 
       <div>
@@ -196,20 +210,23 @@ export function SchoolProfileStep() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <FormInput 
-          name="schoolProfile.openingYear" 
-          label="Opening Year" 
-          type="number"
-          placeholder="2025"
-        />
-
-        <FormInput 
-          name="schoolProfile.currentStudents" 
-          label="Current Students (if open)" 
-          type="number"
-          placeholder="0"
-          helperText="Leave 0 if not yet open"
-        />
+        {schoolStage === "operating_school" && (
+          <>
+            <FormInput 
+              name="schoolProfile.openingYear" 
+              label="Year School Opened" 
+              type="number"
+              placeholder="2020"
+            />
+            <FormInput 
+              name="schoolProfile.currentStudents" 
+              label="Current Enrollment" 
+              type="number"
+              placeholder="0"
+              helperText="Number of students currently enrolled"
+            />
+          </>
+        )}
 
         <FormInput 
           name="schoolProfile.maxCapacity" 
@@ -217,7 +234,7 @@ export function SchoolProfileStep() {
           type="number"
           placeholder="150"
           helperText="Max students your building can hold"
-          className="md:col-span-2"
+          className={schoolStage === "new_school" ? "" : "md:col-span-2"}
         />
       </div>
 

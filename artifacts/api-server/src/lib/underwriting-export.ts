@@ -9,6 +9,7 @@ interface SchoolProfile {
   ein?: string;
   schoolStage?: string;
   openingYear?: number;
+  plannedOpeningYear?: string;
   currentStudents?: number;
   maxCapacity?: number;
   fiscalYearStartMonth?: number;
@@ -566,7 +567,9 @@ function buildAssumptions(
     ["School Type", schoolTypeLabel(sp.schoolType, sp.schoolTypeOther)],
     ["Entity Type", entityLabel(sp.entityType)],
     ["School Stage", sp.schoolStage === "operating_school" ? "Operating School" : "New School"],
-    ["Opening Year", sp.openingYear || 0],
+    ...(sp.schoolStage === "new_school" && sp.plannedOpeningYear
+      ? [["Planned Opening Year", sp.plannedOpeningYear]]
+      : [["Year Opened", sp.openingYear || 0]]),
     ["Max Student Capacity", sp.maxCapacity || 0],
     ["Fiscal Year Start", MONTH_NAMES[sp.fiscalYearStartMonth || 7] || "July"],
   ];
@@ -1857,7 +1860,8 @@ function buildSummary(
   const details: string[] = [];
   if (sp.schoolType) details.push(schoolTypeLabel(sp.schoolType, sp.schoolTypeOther));
   if (sp.state) details.push(sp.state);
-  if (sp.openingYear) details.push(`Est. ${sp.openingYear}`);
+  if (sp.plannedOpeningYear) details.push(`Opening ${sp.plannedOpeningYear}`);
+  else if (sp.openingYear) details.push(`Est. ${sp.openingYear}`);
   ws.getCell(r, 1).value = details.join("  |  ");
   ws.getCell(r, 1).font = { size: 10, color: { argb: "FF6B7280" }, name: "Calibri" };
   ws.mergeCells(r, 1, r, cols); ws.getRow(r).height = 18;
