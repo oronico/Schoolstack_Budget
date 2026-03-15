@@ -109,7 +109,7 @@ export function TermsPage() {
             <h2 className="font-display text-xl font-bold text-foreground">12. Contact</h2>
             <p>
               If you have questions about these Terms, please contact us at{" "}
-              <a href="mailto:legal@schoolstack.ai" className="text-primary hover:underline font-semibold">legal@schoolstack.ai</a>.
+              <a href="mailto:admin@schoolstack.ai" className="text-primary hover:underline font-semibold">admin@schoolstack.ai</a>.
             </p>
           </section>
         </div>

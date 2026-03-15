@@ -51,7 +51,7 @@ export function Footer() {
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-xs text-white/40 hover:text-white/70 transition-colors">Privacy</Link>
             <Link href="/terms" className="text-xs text-white/40 hover:text-white/70 transition-colors">Terms</Link>
-            <a href="mailto:legal@schoolstack.ai" className="text-xs text-white/40 hover:text-white/70 transition-colors">Contact</a>
+            <a href="mailto:admin@schoolstack.ai" className="text-xs text-white/40 hover:text-white/70 transition-colors">Contact</a>
           </div>
         </div>
       </div>

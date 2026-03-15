@@ -87,7 +87,7 @@ export function PrivacyPolicyPage() {
             </ul>
             <p className="mt-2">
               To exercise any of these rights, contact us at{" "}
-              <a href="mailto:privacy@schoolstack.ai" className="text-primary hover:underline font-semibold">privacy@schoolstack.ai</a>.
+              <a href="mailto:admin@schoolstack.ai" className="text-primary hover:underline font-semibold">admin@schoolstack.ai</a>.
             </p>
           </section>
 
@@ -116,7 +116,7 @@ export function PrivacyPolicyPage() {
             <h2 className="font-display text-xl font-bold text-foreground">11. Contact</h2>
             <p>
               If you have questions about this Privacy Policy, please contact us at{" "}
-              <a href="mailto:privacy@schoolstack.ai" className="text-primary hover:underline font-semibold">privacy@schoolstack.ai</a>.
+              <a href="mailto:admin@schoolstack.ai" className="text-primary hover:underline font-semibold">admin@schoolstack.ai</a>.
             </p>
           </section>
         </div>
