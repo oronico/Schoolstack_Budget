@@ -1,11 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { PublicExportUnderwritingBody } from "@workspace/api-zod";
-import { generateUnderwritingWorkbook, generateUnderwritingWorkbookToFile } from "../lib/underwriting-export";
+import { generateUnderwritingWorkbook } from "../lib/underwriting-export";
 import { runConsultantEngine } from "../lib/consultant-engine";
 import { createRateLimiter } from "../lib/rate-limiter";
-import fs from "fs";
-import path from "path";
-import os from "os";
 
 const router: IRouter = Router();
 
@@ -31,10 +28,7 @@ router.post("/public/export-underwriting", rateLimiter, async (req: Request, res
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_").slice(0, 100);
 
-    const tmpFile = path.join(os.tmpdir(), `schoolstack-${Date.now()}.xlsx`);
-    await generateUnderwritingWorkbookToFile(data, tmpFile);
-
-    const stat = fs.statSync(tmpFile);
+    const buffer = await generateUnderwritingWorkbook(data);
 
     res.setHeader(
       "Content-Type",
@@ -46,11 +40,9 @@ router.post("/public/export-underwriting", rateLimiter, async (req: Request, res
       "attachment; filename=schoolstack-underwriting-model.xlsx"
     );
 
-    res.setHeader("Content-Length", stat.size);
+    res.setHeader("Content-Length", buffer.length);
 
-    const stream = fs.createReadStream(tmpFile);
-    stream.pipe(res);
-    stream.on("end", () => fs.unlink(tmpFile, () => {}));
+    res.end(buffer);
   } catch (err) {
     console.error("Public underwriting export error:", err);
     res.status(500).json({ error: "Something went wrong generating the workbook." });
