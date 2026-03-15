@@ -123,9 +123,9 @@ const SECTION_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor:
 const SECTION_FONT: Partial<ExcelJS.Font> = { bold: true, size: 11, color: { argb: NAVY }, name: "Calibri" };
 const NF: Partial<ExcelJS.Font> = { size: 11, name: "Calibri" };
 const BF: Partial<ExcelJS.Font> = { size: 11, name: "Calibri", bold: true };
-const CUR = '#,##0;[Red](#,##0);"-"';
+const CUR = '_("$"* #,##0_);_("$"* (#,##0);_("$"* "-"??_);_(@_)';
 const PCT = '0.0%;[Red](0.0%);"-"';
-const NUM = '#,##0;[Red](#,##0);"-"';
+const NUM = '#,##0;#,##0;"-"';
 const BORDER: Partial<ExcelJS.Borders> = {
   top: { style: "thin", color: { argb: "FFD0D0D0" } },
   bottom: { style: "thin", color: { argb: "FFD0D0D0" } },
@@ -175,6 +175,32 @@ function safeFormulaValue(formula: string, result: unknown): { formula: string; 
 
 function setFormula(cell: ExcelJS.Cell, formula: string, result: unknown) {
   cell.value = safeFormulaValue(formula, result);
+}
+
+const SUBTOTAL_BORDER: Partial<ExcelJS.Borders> = {
+  top: { style: "thin", color: { argb: "FF1E293B" } },
+  bottom: { style: "double", color: { argb: "FF1E293B" } },
+  left: { style: "thin", color: { argb: "FFD0D0D0" } },
+  right: { style: "thin", color: { argb: "FFD0D0D0" } },
+};
+
+function gc(cell: ExcelJS.Cell) { cell.font = BF; cell.border = SUBTOTAL_BORDER; }
+
+function setPrintAreaUW(ws: ExcelJS.Worksheet, lastRow: number, lastCol: number) {
+  const endColLetter = String.fromCharCode(64 + lastCol);
+  ws.pageSetup = {
+    ...(ws.pageSetup || {}),
+    printArea: `A1:${endColLetter}${lastRow}`,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    paperSize: 1 as unknown as undefined,
+    margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+  };
+  ws.headerFooter = {
+    oddFooter: "&L&8SchoolStack Budget — Underwriting&C&8Page &P of &N&R&8&D",
+  };
 }
 
 function schoolTypeLabel(t?: string, o?: string): string {
@@ -462,6 +488,8 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   buildUnderwritingSnapshot(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, maxCapacity, totalPrincipal, yc);
   buildSummary(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, yc, cols, yearHeaders);
 
+  buildUWCoverSheet(wb, sp, yc, annualRevenue, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, maxCapacity);
+
   const arrayBuf = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuf as ArrayBuffer);
 }
@@ -543,7 +571,130 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   buildUnderwritingSnapshot(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, maxCapacity, totalPrincipal, yc);
   buildSummary(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, yc, cols, yearHeaders);
 
+  buildUWCoverSheet(wb, sp, yc, annualRevenue, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, maxCapacity);
+
   await wb.xlsx.writeFile(filePath);
+}
+
+function buildUWCoverSheet(
+  wb: ExcelJS.Workbook, sp: SchoolProfile, yc: number,
+  rev: number[], ni: number[], cumNI: number[],
+  annualDebtSvc: number, startingCash: number, enrollment: number[], maxCapacity: number,
+) {
+  const ws = wb.addWorksheet("Cover");
+  ws.columns = [{ width: 5 }, { width: 38 }, { width: 30 }, { width: 5 }];
+
+  ws.getRow(1).height = 20;
+  ws.getRow(2).height = 10;
+
+  let r = 3;
+  ws.getCell(r, 2).value = "SchoolStack Budget";
+  ws.getCell(r, 2).font = { bold: true, size: 24, color: { argb: NAVY }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+  ws.getRow(r).height = 40;
+
+  r++;
+  ws.getCell(r, 2).value = "Underwriting Package";
+  ws.getCell(r, 2).font = { bold: true, size: 16, color: { argb: "FF64748B" }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+  ws.getRow(r).height = 28;
+
+  r += 2;
+  for (let c = 2; c <= 3; c++) {
+    ws.getCell(r, c).border = { bottom: { style: "medium", color: { argb: "FFD97706" } } };
+  }
+  ws.getRow(r).height = 4;
+
+  r += 2;
+  ws.getCell(r, 2).value = "Prepared for";
+  ws.getCell(r, 2).font = { size: 10, color: { argb: "FF94A3B8" }, name: "Calibri" };
+  r++;
+  ws.getCell(r, 2).value = sp.schoolName || "School";
+  ws.getCell(r, 2).font = { bold: true, size: 18, color: { argb: NAVY }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+  ws.getRow(r).height = 32;
+
+  r++;
+  const details: string[] = [];
+  if (sp.schoolType) details.push(schoolTypeLabel(sp.schoolType, sp.schoolTypeOther));
+  if (sp.entityType) details.push(entityLabel(sp.entityType));
+  if (sp.state) details.push(sp.state);
+  ws.getCell(r, 2).value = details.join("  •  ");
+  ws.getCell(r, 2).font = { size: 11, color: { argb: "FF64748B" }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+
+  r += 2;
+  ws.getCell(r, 2).value = "Date Prepared";
+  ws.getCell(r, 2).font = { size: 10, color: { argb: "FF94A3B8" }, name: "Calibri" };
+  ws.getCell(r, 3).value = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  ws.getCell(r, 3).font = { bold: true, size: 11, color: { argb: NAVY }, name: "Calibri" };
+
+  r += 3;
+  sec(ws, r, 3);
+  ws.getCell(r, 2).value = "UNDERWRITING HIGHLIGHTS";
+  ws.getRow(r).height = 24;
+
+  const lastYear = yc - 1;
+  const finalRev = rev[lastYear] ?? 0;
+  const finalNI = ni[lastYear] ?? 0;
+  const finalCash = startingCash + cumNI[lastYear];
+
+  const passCount = [
+    finalNI >= 0,
+    finalCash > 0,
+    enrollment[lastYear] / Math.max(maxCapacity, 1) >= 0.7,
+  ].filter(Boolean).length;
+  const assessment = passCount === 3 ? "Strong" : passCount >= 2 ? "Conditional" : "Needs Work";
+
+  const highlights: Array<{ label: string; value: string | number; fmt: string }> = [
+    { label: `Year ${yc} Revenue`, value: finalRev, fmt: CUR },
+    { label: `Year ${yc} Net Income`, value: finalNI, fmt: CUR },
+    { label: "Ending Cash Balance", value: finalCash, fmt: CUR },
+    { label: "Overall Assessment", value: assessment, fmt: "" },
+  ];
+
+  for (const { label, value, fmt } of highlights) {
+    r++;
+    ws.getCell(r, 2).value = label;
+    ws.getCell(r, 2).font = NF;
+    ws.getCell(r, 2).border = BORDER;
+    ws.getCell(r, 3).value = value;
+    ws.getCell(r, 3).font = BF;
+    ws.getCell(r, 3).border = BORDER;
+    if (fmt) ws.getCell(r, 3).numFmt = fmt;
+    if (label === "Overall Assessment") {
+      const aFill = assessment === "Strong" ? GREEN_BG : assessment === "Conditional" ? AMBER_BG : RED_BG;
+      ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: aFill.slice(2) } };
+    }
+  }
+
+  r += 3;
+  sec(ws, r, 3);
+  ws.getCell(r, 2).value = "TABLE OF CONTENTS";
+  ws.getRow(r).height = 24;
+
+  const sheets = wb.worksheets.filter(s => s.name !== "Cover");
+  for (const sheet of sheets) {
+    r++;
+    ws.getCell(r, 2).value = { text: sheet.name, hyperlink: `#'${sheet.name}'!A1` };
+    ws.getCell(r, 2).font = { size: 11, name: "Calibri", color: { argb: "FF2563EB" }, underline: true };
+    ws.getCell(r, 2).border = BORDER;
+    ws.getCell(r, 3).border = BORDER;
+  }
+
+  r += 3;
+  ws.getCell(r, 2).value = "Generated by SchoolStack Budget  •  budget.schoolstack.ai";
+  ws.getCell(r, 2).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+
+  ws.pageSetup = {
+    orientation: "portrait",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 1,
+    paperSize: 1 as unknown as undefined,
+    margins: { left: 0.75, right: 0.75, top: 1, bottom: 1, header: 0.3, footer: 0.3 },
+  };
 }
 
 function buildAssumptions(
@@ -569,10 +720,10 @@ function buildAssumptions(
     ["Entity Type", entityLabel(sp.entityType)],
     ["School Stage", sp.schoolStage === "operating_school" ? "Operating School" : "New School"],
     ...(sp.schoolStage === "new_school" && sp.plannedOpeningYear
-      ? [["Planned Opening Year", sp.plannedOpeningYear]]
-      : [["Year Opened", sp.openingYear || 0]]),
-    ["Max Student Capacity", sp.maxCapacity || 0],
-    ["Fiscal Year Start", MONTH_NAMES[sp.fiscalYearStartMonth || 7] || "July"],
+      ? [["Planned Opening Year", sp.plannedOpeningYear] as [string, string | number]]
+      : [["Year Opened", sp.openingYear || 0] as [string, string | number]]),
+    ["Max Student Capacity", sp.maxCapacity || 0] as [string, string | number],
+    ["Fiscal Year Start", (MONTH_NAMES[sp.fiscalYearStartMonth || 7] || "July") as string],
   ];
   if (sp.ein) items.push(["EIN", sp.ein]);
   if (sp.isPartialFirstYear) items.push(["Year 1 Operating Months", sp.year1OperatingMonths || 12]);
@@ -1456,7 +1607,7 @@ function buildFiveYearPL(
     const totalExp = (personnel[y] || 0) + (ops[y] || 0) + (capDebt[y] || 0);
     const cell = ws.getCell(r, y + 2);
     setFormula(cell, `SUM(${cn(3, y + 2)}:${cn(r - 1, y + 2)})`, totalExp);
-    cell.numFmt = CUR; bc(cell);
+    cell.numFmt = CUR; gc(cell);
   }
 
   const niLabel = entityType === "nonprofit_501c3" ? "Net Income" : "Profit / (Loss)";
@@ -1464,7 +1615,13 @@ function buildFiveYearPL(
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     setFormula(cell, `${cn(revRowPL, y + 2)}-${cn(totalExpRow, y + 2)}`, ni[y] || 0);
-    cell.numFmt = CUR; bc(cell);
+    cell.numFmt = CUR; gc(cell);
+    const niVal = ni[y] || 0;
+    if (niVal >= 0) {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG.slice(2) } };
+    } else {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: RED_BG.slice(2) } };
+    }
   }
 
   const niRow = r;

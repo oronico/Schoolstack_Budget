@@ -185,12 +185,25 @@ const SECTION_FONT: Partial<ExcelJS.Font> = {
 };
 const NORMAL_FONT: Partial<ExcelJS.Font> = { size: 11, name: "Calibri" };
 const BOLD_FONT: Partial<ExcelJS.Font> = { size: 11, name: "Calibri", bold: true };
-const CURRENCY_FORMAT = '#,##0;[Red](#,##0);"-"';
+const CURRENCY_FORMAT = '_("$"* #,##0_);_("$"* (#,##0);_("$"* "-"??_);_(@_)';
 const PERCENT_FORMAT = '0.0%;[Red](0.0%);"-"';
-const NUMBER_FORMAT = '#,##0;[Red](#,##0);"-"';
+const NUMBER_FORMAT = '#,##0;#,##0;"-"';
 const THIN_BORDER: Partial<ExcelJS.Borders> = {
   top: { style: "thin", color: { argb: "FFD0D0D0" } },
   bottom: { style: "thin", color: { argb: "FFD0D0D0" } },
+  left: { style: "thin", color: { argb: "FFD0D0D0" } },
+  right: { style: "thin", color: { argb: "FFD0D0D0" } },
+};
+const GREEN_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F5E9" } };
+const AMBER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF8E1" } };
+const RED_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFCE4EC" } };
+const NAVY = "FF1E293B";
+const AMBER_FONT: Partial<ExcelJS.Font> = { size: 11, name: "Calibri", bold: true, color: { argb: "FFD97706" } };
+const GREEN_FONT: Partial<ExcelJS.Font> = { size: 11, name: "Calibri", bold: true, color: { argb: "FF16A34A" } };
+const RED_FONT_COLOR: Partial<ExcelJS.Font> = { size: 11, name: "Calibri", bold: true, color: { argb: "FFDC2626" } };
+const SUBTOTAL_BORDER: Partial<ExcelJS.Borders> = {
+  top: { style: "thin", color: { argb: "FF1E293B" } },
+  bottom: { style: "double", color: { argb: "FF1E293B" } },
   left: { style: "thin", color: { argb: "FFD0D0D0" } },
   right: { style: "thin", color: { argb: "FFD0D0D0" } },
 };
@@ -226,6 +239,187 @@ function styleDataCell(cell: ExcelJS.Cell) {
 function styleBoldDataCell(cell: ExcelJS.Cell) {
   cell.font = BOLD_FONT;
   cell.border = THIN_BORDER;
+}
+
+function styleGrandTotalCell(cell: ExcelJS.Cell) {
+  cell.font = BOLD_FONT;
+  cell.border = SUBTOTAL_BORDER;
+}
+
+function applyHealthFill(cell: ExcelJS.Cell, value: number, thresholds: { green: number; amber: number }, higherIsBetter = true) {
+  if (higherIsBetter) {
+    if (value >= thresholds.green) { cell.fill = GREEN_FILL; cell.font = GREEN_FONT; }
+    else if (value >= thresholds.amber) { cell.fill = AMBER_FILL; cell.font = AMBER_FONT; }
+    else { cell.fill = RED_FILL; cell.font = RED_FONT_COLOR; }
+  } else {
+    if (value <= thresholds.green) { cell.fill = GREEN_FILL; cell.font = GREEN_FONT; }
+    else if (value <= thresholds.amber) { cell.fill = AMBER_FILL; cell.font = AMBER_FONT; }
+    else { cell.fill = RED_FILL; cell.font = RED_FONT_COLOR; }
+  }
+}
+
+function setPrintArea(ws: ExcelJS.Worksheet, lastRow: number, lastCol: number) {
+  const endColLetter = String.fromCharCode(64 + lastCol);
+  ws.pageSetup = {
+    ...(ws.pageSetup || {}),
+    printArea: `A1:${endColLetter}${lastRow}`,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    paperSize: 1 as unknown as undefined,
+    margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+  };
+  ws.headerFooter = {
+    oddFooter: "&L&8SchoolStack Budget&C&8Page &P of &N&R&8&D",
+  };
+}
+
+function buildCoverSheet(
+  wb: ExcelJS.Workbook,
+  sp: SchoolProfile,
+  yearCount: number,
+  precomputed?: PrecomputedFinancials,
+  consultantData?: ConsultantSummary,
+) {
+  const ws = wb.addWorksheet("Cover");
+  ws.columns = [{ width: 5 }, { width: 35 }, { width: 30 }, { width: 5 }];
+
+  ws.getRow(1).height = 20;
+  ws.getRow(2).height = 10;
+
+  let r = 3;
+  ws.getCell(r, 2).value = "SchoolStack Budget";
+  ws.getCell(r, 2).font = { bold: true, size: 24, color: { argb: NAVY }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+  ws.getRow(r).height = 40;
+
+  r++;
+  const titleLine = `${yearCount}-Year Financial Model`;
+  ws.getCell(r, 2).value = titleLine;
+  ws.getCell(r, 2).font = { bold: true, size: 16, color: { argb: "FF64748B" }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+  ws.getRow(r).height = 28;
+
+  r += 2;
+  for (let c = 2; c <= 3; c++) {
+    ws.getCell(r, c).border = { bottom: { style: "medium", color: { argb: "FFD97706" } } };
+  }
+  ws.getRow(r).height = 4;
+
+  r += 2;
+  ws.getCell(r, 2).value = "Prepared for";
+  ws.getCell(r, 2).font = { size: 10, color: { argb: "FF94A3B8" }, name: "Calibri" };
+  r++;
+  ws.getCell(r, 2).value = sp.schoolName || "School";
+  ws.getCell(r, 2).font = { bold: true, size: 18, color: { argb: NAVY }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+  ws.getRow(r).height = 32;
+
+  r++;
+  const details: string[] = [];
+  if (sp.schoolType) details.push(schoolTypeDisplay(sp.schoolType, sp.schoolTypeOther));
+  if (sp.entityType) details.push(entityTypeDisplay(sp.entityType));
+  if (sp.state) details.push(sp.state);
+  ws.getCell(r, 2).value = details.join("  •  ");
+  ws.getCell(r, 2).font = { size: 11, color: { argb: "FF64748B" }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+
+  r += 2;
+  ws.getCell(r, 2).value = "Date Prepared";
+  ws.getCell(r, 2).font = { size: 10, color: { argb: "FF94A3B8" }, name: "Calibri" };
+  ws.getCell(r, 3).value = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  ws.getCell(r, 3).font = { bold: true, size: 11, color: { argb: NAVY }, name: "Calibri" };
+
+  if (precomputed) {
+    r += 3;
+    for (let c = 2; c <= 3; c++) {
+      ws.getCell(r, c).fill = SECTION_FILL;
+      ws.getCell(r, c).font = SECTION_FONT;
+      ws.getCell(r, c).border = THIN_BORDER;
+    }
+    ws.getCell(r, 2).value = "KEY HIGHLIGHTS";
+    ws.getRow(r).height = 24;
+
+    const lastYear = yearCount - 1;
+    const finalRev = precomputed.totalRevenue[lastYear] ?? 0;
+    const finalNI = precomputed.netIncome[lastYear] ?? 0;
+    const finalMargin = finalRev > 0 ? finalNI / finalRev : 0;
+    const finalReserve = (precomputed.totalAllExpenses[lastYear] ?? 0) > 0
+      ? ((precomputed.cumulativeNI[lastYear] ?? 0) > 0 ? (precomputed.cumulativeNI[lastYear] ?? 0) / ((precomputed.totalAllExpenses[lastYear] ?? 0) / 12) : 0)
+      : 0;
+
+    const highlights: [string, number | string, string][] = [
+      [`Year ${yearCount} Revenue`, finalRev, CURRENCY_FORMAT],
+      [`Year ${yearCount} Net Income`, finalNI, CURRENCY_FORMAT],
+      [`Year ${yearCount} Net Margin`, finalMargin, PERCENT_FORMAT],
+      ["Operating Reserve (Months)", finalReserve, "0.0"],
+    ];
+
+    for (const [label, value, fmt] of highlights) {
+      r++;
+      ws.getCell(r, 2).value = label;
+      ws.getCell(r, 2).font = NORMAL_FONT;
+      ws.getCell(r, 2).border = THIN_BORDER;
+      ws.getCell(r, 3).value = value;
+      ws.getCell(r, 3).font = BOLD_FONT;
+      ws.getCell(r, 3).numFmt = fmt;
+      ws.getCell(r, 3).border = THIN_BORDER;
+      if (typeof value === "number") {
+        if (fmt === CURRENCY_FORMAT && label.includes("Net Income")) {
+          applyHealthFill(ws.getCell(r, 3), value, { green: 0, amber: -50000 });
+        }
+        if (fmt === PERCENT_FORMAT) {
+          applyHealthFill(ws.getCell(r, 3), value, { green: 0.05, amber: 0 });
+        }
+        if (fmt === "0.0") {
+          applyHealthFill(ws.getCell(r, 3), value, { green: 3, amber: 2 });
+        }
+      }
+    }
+  }
+
+  if (consultantData?.lenderReadiness) {
+    r += 2;
+    ws.getCell(r, 2).value = "Lender Readiness";
+    ws.getCell(r, 2).font = { size: 10, color: { argb: "FF94A3B8" }, name: "Calibri" };
+    ws.getCell(r, 3).value = consultantData.lenderReadiness;
+    const readinessColor = consultantData.lenderReadiness === "Strong" ? "FF16A34A"
+      : consultantData.lenderReadiness === "Needs Work" ? "FFD97706" : "FFDC2626";
+    ws.getCell(r, 3).font = { bold: true, size: 14, name: "Calibri", color: { argb: readinessColor } };
+  }
+
+  r += 3;
+  for (let c = 2; c <= 3; c++) {
+    ws.getCell(r, c).fill = SECTION_FILL;
+    ws.getCell(r, c).font = SECTION_FONT;
+    ws.getCell(r, c).border = THIN_BORDER;
+  }
+  ws.getCell(r, 2).value = "TABLE OF CONTENTS";
+  ws.getRow(r).height = 24;
+
+  const sheets = wb.worksheets.filter(s => s.name !== "Cover");
+  for (const sheet of sheets) {
+    r++;
+    ws.getCell(r, 2).value = { text: sheet.name, hyperlink: `#'${sheet.name}'!A1` };
+    ws.getCell(r, 2).font = { size: 11, name: "Calibri", color: { argb: "FF2563EB" }, underline: true };
+    ws.getCell(r, 2).border = THIN_BORDER;
+    ws.getCell(r, 3).border = THIN_BORDER;
+  }
+
+  r += 3;
+  ws.getCell(r, 2).value = "Generated by SchoolStack Budget  •  budget.schoolstack.ai";
+  ws.getCell(r, 2).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+  ws.mergeCells(r, 2, r, 3);
+
+  ws.pageSetup = {
+    orientation: "portrait",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 1,
+    paperSize: 1 as unknown as undefined,
+    margins: { left: 0.75, right: 0.75, top: 1, bottom: 1, header: 0.3, footer: 0.3 },
+  };
 }
 
 function computeRevenueMixForExport(
@@ -588,7 +782,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
       fmTotalExpRow: 6, fmNIRow: 7, fmCumNIRow: 8, fmReserveRow: 9,
       studentsRef: (cl) => `'Revenue Schedule'!${cl}2`,
       revenueMix,
-    }, consultantData);
+    }, consultantData, precomputed);
 
     if (consultantData) {
       const notesWs = wb.addWorksheet("Consultant Notes");
@@ -599,6 +793,12 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
       const priorWs = wb.addWorksheet("Prior-Year Snapshot");
       buildPriorYearTab(priorWs, data.priorYearSnapshot, sp.entityType);
     }
+
+    buildCoverSheet(wb, sp, yearCount, precomputed, consultantData);
+
+    setPrintArea(revenueWs, revTotalRow, cols);
+    setPrintArea(expensesWs, expTotalRow, cols);
+    setPrintArea(capitalWs, capTotalRow, cols);
   } else {
     const assumptionsWs = wb.addWorksheet("Assumptions");
     buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor, data.tuitionTiers);
@@ -617,6 +817,8 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
       const notesWs = wb.addWorksheet("Consultant Notes");
       buildConsultantNotesTab(notesWs, consultantData);
     }
+
+    buildCoverSheet(wb, sp, yearCount, undefined, consultantData);
   }
 
   const arrayBuffer = await wb.xlsx.writeBuffer();
@@ -1057,7 +1259,7 @@ function buildRevenueScheduleTab(
     const sumParts = categoryTotalRows.map(tr => c(tr, y + 2)).join("+");
     cell.value = { formula: sumParts || "0", result: precomputed?.totalRevenue[y] ?? 0 };
     cell.numFmt = CURRENCY_FORMAT;
-    styleBoldDataCell(cell);
+    styleGrandTotalCell(cell);
   }
   styleSectionRow(ws, r, cols);
 
@@ -1335,7 +1537,7 @@ function buildExpensesTab(
     const sumParts = categoryTotalRows.map(tr => c(tr, y + 2)).join("+");
     cell.value = { formula: sumParts || "0", result: precomputed?.totalExpenses[y] ?? 0 };
     cell.numFmt = CURRENCY_FORMAT;
-    styleBoldDataCell(cell);
+    styleGrandTotalCell(cell);
   }
   styleSectionRow(ws, r, cols);
 
@@ -1541,7 +1743,7 @@ interface SummaryLayout {
   revenueMix?: { tuitionPct: number[]; publicPct: number[]; philanthropyPct: number[] };
 }
 
-function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount: number, cols: number, yearHeaders: string[], layout: SummaryLayout, consultant?: ConsultantSummary) {
+function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount: number, cols: number, yearHeaders: string[], layout: SummaryLayout, consultant?: ConsultantSummary, precomputed?: PrecomputedFinancials) {
   ws.columns = [{ width: 35 }, ...Array(yearCount).fill({ width: 18 })];
 
   let r = 1;
@@ -1658,9 +1860,13 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const cl = String.fromCharCode(66 + y);
     const cell = ws.getCell(r, y + 2);
     cell.value = { formula: `${fmTab}!${cl}${layout.fmNIRow}` };
-    cell.numFmt = CURRENCY_FORMAT; styleBoldDataCell(cell);
+    cell.numFmt = CURRENCY_FORMAT;
+    styleGrandTotalCell(cell);
+    if (precomputed) {
+      const niVal = precomputed.netIncome[y] ?? 0;
+      applyHealthFill(cell, niVal, { green: 0, amber: -50000 });
+    }
   }
-  styleSectionRow(ws, r, cols);
 
   r++;
   ws.getCell(r, 1).value = cumulativeProfitLabel(sp.entityType); ws.getCell(r, 1).font = NORMAL_FONT;
@@ -1672,12 +1878,18 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   }
 
   r++;
-  ws.getCell(r, 1).value = "Operating Reserve (Months)"; ws.getCell(r, 1).font = NORMAL_FONT;
+  ws.getCell(r, 1).value = "Operating Reserve (Months)"; ws.getCell(r, 1).font = BOLD_FONT;
   for (let y = 0; y < yearCount; y++) {
     const cl = String.fromCharCode(66 + y);
     const cell = ws.getCell(r, y + 2);
     cell.value = { formula: `${fmTab}!${cl}${layout.fmReserveRow}` };
-    cell.numFmt = "0.0"; styleDataCell(cell);
+    cell.numFmt = "0.0"; styleBoldDataCell(cell);
+    if (precomputed) {
+      const totalExp = precomputed.totalAllExpenses[y] ?? 0;
+      const cumNI = precomputed.cumulativeNI[y] ?? 0;
+      const reserveVal = totalExp === 0 ? 0 : (cumNI > 0 ? cumNI / (totalExp / 12) : 0);
+      applyHealthFill(cell, reserveVal, { green: 3, amber: 2 });
+    }
   }
 
   r += 2;
@@ -1718,6 +1930,12 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const cell = ws.getCell(r, y + 2);
     cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${c(niSumRow, y + 2)}/${c(revSumRow, y + 2)})` };
     cell.numFmt = PERCENT_FORMAT; styleBoldDataCell(cell);
+    if (precomputed) {
+      const revVal = precomputed.totalRevenue[y] ?? 0;
+      const niVal = precomputed.netIncome[y] ?? 0;
+      const margin = revVal > 0 ? niVal / revVal : 0;
+      applyHealthFill(cell, margin, { green: 0.05, amber: 0 });
+    }
   }
 
   if (layout.revenueMix) {
