@@ -490,13 +490,13 @@ function computeSchoolProfileFacilityOverlay(
     const yearsUntilExpiration = leaseEndYear - projectionStartYear;
 
     let annualRent: number;
-    if (yearIndex < yearsUntilExpiration) {
+    if (yearIndex <= yearsUntilExpiration) {
       annualRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
-    } else if (yearIndex === yearsUntilExpiration) {
-      annualRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump) * 12;
     } else {
-      const bumpedBase = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump);
-      annualRent = bumpedBase * 12 * Math.pow(1 + escalation, yearIndex - yearsUntilExpiration);
+      const preRenewalRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration);
+      const bumpedBase = preRenewalRent * (1 + renewalBump);
+      const postRenewalYears = yearIndex - yearsUntilExpiration - 1;
+      annualRent = bumpedBase * 12 * Math.pow(1 + escalation, postRenewalYears);
     }
     result.rent = annualRent * pf;
 
