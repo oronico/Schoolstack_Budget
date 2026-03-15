@@ -582,7 +582,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/ConsultantOutput"
         "400":
           description: Invalid model data
           content:

@@ -27,7 +27,6 @@ import type {
   HealthStatus,
   LoginRequest,
   MessageResponse,
-  PublicConsultantAnalysis200,
   PublicExportRequest,
   RegisterRequest,
   ResetPasswordRequest,
@@ -1817,16 +1816,13 @@ export const getPublicConsultantAnalysisUrl = () => {
 export const publicConsultantAnalysis = async (
   publicExportRequest: PublicExportRequest,
   options?: RequestInit,
-): Promise<PublicConsultantAnalysis200> => {
-  return customFetch<PublicConsultantAnalysis200>(
-    getPublicConsultantAnalysisUrl(),
-    {
-      ...options,
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...options?.headers },
-      body: JSON.stringify(publicExportRequest),
-    },
-  );
+): Promise<ConsultantOutput> => {
+  return customFetch<ConsultantOutput>(getPublicConsultantAnalysisUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(publicExportRequest),
+  });
 };
 
 export const getPublicConsultantAnalysisMutationOptions = <

@@ -530,5 +530,3 @@ export interface FinancialModel {
   updatedAt: string;
   createdAt: string;
 }
-
-export type PublicConsultantAnalysis200 = { [key: string]: unknown };

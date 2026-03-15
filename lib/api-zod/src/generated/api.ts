@@ -1448,4 +1448,56 @@ export const PublicConsultantAnalysisBody = zod.object({
   priorYearSnapshot: zod.object({}).passthrough().optional(),
 });
 
-export const PublicConsultantAnalysisResponse = zod.object({}).passthrough();
+export const PublicConsultantAnalysisResponse = zod.object({
+  executiveSummary: zod.string(),
+  biggestStrength: zod.string(),
+  biggestRisk: zod.string(),
+  recommendations: zod.array(
+    zod.object({
+      title: zod.string(),
+      description: zod.string(),
+      priority: zod.enum(["high", "medium", "low"]),
+    }),
+  ),
+  lenderReadiness: zod.enum(["Strong", "Needs Work", "Not Yet Ready"]),
+  lenderReadinessExplanation: zod.string(),
+  keyMetrics: zod.array(
+    zod.object({
+      name: zod.string(),
+      value: zod.string(),
+      status: zod.enum(["good", "warning", "danger"]),
+      interpretation: zod.string(),
+    }),
+  ),
+  revenueComposition: zod.array(
+    zod.object({
+      tuitionPct: zod.number(),
+      publicPct: zod.number(),
+      philanthropyPct: zod.number(),
+    }),
+  ),
+  costComposition: zod.array(
+    zod.object({
+      staffingPctOfRevenue: zod.number(),
+      facilityPctOfRevenue: zod.number(),
+      totalOpexPctOfRevenue: zod.number(),
+    }),
+  ),
+  cumulativeFinancials: zod.array(
+    zod.object({
+      year: zod.number(),
+      cumulativeNetIncome: zod.number(),
+      reserveMonths: zod.number(),
+    }),
+  ),
+  stressTests: zod.array(
+    zod.object({
+      scenario: zod.string(),
+      y1NetIncome: zod.number(),
+      y5NetIncome: zod.number(),
+      breakEvenYear: zod.number().nullable(),
+    }),
+  ),
+  enrollmentGuidance: zod.array(zod.string()),
+  generatedAt: zod.date(),
+});
