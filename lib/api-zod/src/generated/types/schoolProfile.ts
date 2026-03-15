@@ -26,7 +26,7 @@ export interface SchoolProfile {
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
   locationSecured?: boolean;
-  facilityAddress?: string;
+  facilityStreet?: string;
   facilityCity?: string;
   facilityState?: string;
   facilityZip?: string;
