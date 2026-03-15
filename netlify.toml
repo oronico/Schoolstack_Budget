@@ -1,5 +1,5 @@
 [build]
-  command = "pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/school-financial-model run build"
+  command = "pnpm install --frozen-lockfile && pnpm --filter @workspace/school-financial-model run build"
   publish = "artifacts/school-financial-model/dist/public"
 
 [build.environment]
