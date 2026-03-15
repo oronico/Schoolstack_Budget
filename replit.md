@@ -88,6 +88,7 @@ Manages authentication (register, login, reset password), CRUD operations for fi
 - **Start**: `node dist/index.cjs` (or `pnpm --filter @workspace/api-server start`)
 - **Health check**: `GET /api/healthz` returns `{"status":"ok","db":"connected"}` or `503` if DB unreachable
 - **CORS**: Set `CORS_ORIGIN` env var to restrict origins (comma-separated). Omit for open CORS (dev only).
+- **Rate limiting**: Public endpoints use PostgreSQL-backed rate limiter (`rate_limits` table). 5 requests per 60s window per IP. Survives server restarts. Stale entries cleaned every 5 minutes.
 - **Required env vars**: `PORT`, `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN` (production), `ADMIN_EMAILS`, `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`, `APP_URL`
 
 ### Frontend (`school-financial-model`)
