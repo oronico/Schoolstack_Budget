@@ -779,7 +779,8 @@ function buildAssumptionsTab(
     riskFlags.push("No facility location secured — costs are estimated");
   }
   if (sp.locationSecured && sp.ownershipType === "rent" && sp.leaseExpirationYear) {
-    const projStartYear = new Date().getFullYear();
+    const curYear = new Date().getFullYear();
+    const projStartYear = Math.max(sp.openingYear || curYear, curYear);
     const yearsUntilExpiry = sp.leaseExpirationYear - projStartYear;
     if (yearsUntilExpiry >= 0 && yearsUntilExpiry < yearCount) {
       riskFlags.push(`Lease expires in Year ${yearsUntilExpiry + 1} (${sp.leaseExpirationYear}) — renewal bump of ${sp.postLeaseRenewalBump || 15}% modeled`);
