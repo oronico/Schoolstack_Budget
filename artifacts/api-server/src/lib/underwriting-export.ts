@@ -483,7 +483,9 @@ function buildEnrollmentRevDrivers(
     const cell = ws.getCell(r, y + 2);
     if (y === 0) { cell.value = "—"; dc(cell); }
     else {
-      cell.value = { formula: `IF(${cn(r - 1, y + 1)}=0,"—",(${cn(r - 1, y + 2)}-${cn(r - 1, y + 1)})/${cn(r - 1, y + 1)})` };
+      const prev = enrollment[y - 1];
+      const cur = enrollment[y];
+      cell.value = { formula: `IF(${cn(r - 1, y + 1)}=0,"—",(${cn(r - 1, y + 2)}-${cn(r - 1, y + 1)})/${cn(r - 1, y + 1)})`, result: prev === 0 ? "—" : (cur - prev) / prev };
       cell.numFmt = PCT; dc(cell);
     }
   }
@@ -554,6 +556,7 @@ function buildTuitionFundingDetail(
 
   const categories = ["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "grants_contributions", "other_revenue"];
   const catTotalRows: number[] = [];
+  const catTotalValues: number[][] = [];
 
   for (const cat of categories) {
     const catRows = rows.filter(ro => ro.enabled && ro.category === cat);
@@ -590,20 +593,40 @@ function buildTuitionFundingDetail(
     }
 
     r++; ws.getCell(r, 1).value = `Total ${REV_CAT_LABELS[cat] || cat}`; ws.getCell(r, 1).font = BF;
+    const catTotals: number[] = [];
     for (let y = 0; y < yc; y++) {
+      let catSum = 0;
+      for (const ro of catRows) {
+        const amt = ro.amounts?.[y] ?? 0;
+        if (ro.driverType === "percent_of_base") {
+          const baseRow = rows.find(b => b.id === ro.percentBase);
+          if (baseRow) catSum += Math.round(driverVal(baseRow.amounts, y, baseRow.driverType, enrollment[y]) * (amt / 100));
+        } else if (ro.driverType === "per_student") {
+          if (ro.id === "gross_tuition" && tiers && tiers.length > 0) catSum += Math.round(tuitionWithTiers(amt, y, enrollment[y], tiers));
+          else catSum += Math.round(amt * enrollment[y]);
+        } else if (ro.driverType === "monthly") {
+          catSum += Math.round(amt * 12);
+        } else {
+          catSum += Math.round(amt);
+        }
+      }
+      if (cat === "tuition_offsets") catSum = -Math.abs(catSum);
+      catTotals.push(catSum);
       const cell = ws.getCell(r, y + 2);
-      cell.value = { formula: `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})` };
+      cell.value = { formula: `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})`, result: catSum };
       cell.numFmt = CUR; bc(cell);
     }
     sec(ws, r, cols);
     catTotalRows.push(r);
+    catTotalValues.push(catTotals);
   }
 
   r += 2; ws.getCell(r, 1).value = "TOTAL NET REVENUE"; ws.getCell(r, 1).font = BF;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     if (catTotalRows.length > 0) {
-      cell.value = { formula: catTotalRows.map(tr => cn(tr, y + 2)).join("+") };
+      const netRev = catTotalValues.reduce((sum, ct) => sum + (ct[y] || 0), 0);
+      cell.value = { formula: catTotalRows.map(tr => cn(tr, y + 2)).join("+"), result: netRev };
     } else cell.value = 0;
     cell.numFmt = CUR; bc(cell);
   }
@@ -727,6 +750,7 @@ function buildOperatingExpenses(
 
   const categories = ["instructional_program", "technology", "administrative_general"];
   const catTotalRows: number[] = [];
+  const catTotalVals: number[][] = [];
 
   for (const cat of categories) {
     const catRows = nonFacility.filter(ro => ro.enabled && ro.category === cat);
@@ -749,20 +773,29 @@ function buildOperatingExpenses(
     }
 
     r++; ws.getCell(r, 1).value = `Total ${EXP_CAT_LABELS[cat] || cat}`; ws.getCell(r, 1).font = BF;
+    const totals: number[] = [];
     for (let y = 0; y < yc; y++) {
+      let catSum = 0;
+      for (const ro of catRows) {
+        if (ro.driverType === "percent_of_revenue") catSum += Math.round(((ro.amounts?.[y] ?? 0) / 100) * annualRev[y]);
+        else catSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y]));
+      }
+      totals.push(catSum);
       const cell = ws.getCell(r, y + 2);
-      cell.value = { formula: `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})` };
+      cell.value = { formula: `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})`, result: catSum };
       cell.numFmt = CUR; bc(cell);
     }
     sec(ws, r, cols);
     catTotalRows.push(r);
+    catTotalVals.push(totals);
   }
 
   r += 2; ws.getCell(r, 1).value = "TOTAL OPERATING EXPENSES"; ws.getCell(r, 1).font = BF;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     if (catTotalRows.length > 0) {
-      cell.value = { formula: catTotalRows.map(tr => cn(tr, y + 2)).join("+") };
+      const total = catTotalVals.reduce((sum, ct) => sum + (ct[y] || 0), 0);
+      cell.value = { formula: catTotalRows.map(tr => cn(tr, y + 2)).join("+"), result: total };
     } else cell.value = 0;
     cell.numFmt = CUR; bc(cell);
   }
@@ -807,8 +840,13 @@ function buildFacilitiesOccupancy(
 
   r++; ws.getCell(r, 1).value = "Total Facility Costs"; ws.getCell(r, 1).font = BF;
   for (let y = 0; y < yc; y++) {
+    let facSum = 0;
+    for (const ro of facRows) {
+      if (ro.driverType === "percent_of_revenue") facSum += Math.round(((ro.amounts?.[y] ?? 0) / 100) * annualRev[y]);
+      else facSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y]));
+    }
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})` };
+    cell.value = { formula: `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})`, result: facSum };
     cell.numFmt = CUR; bc(cell);
   }
   sec(ws, r, cols);
@@ -869,7 +907,9 @@ function buildSourcesUses(
 
   r++; sec(ws, r, 2); ws.getCell(r, 1).value = "TOTAL SOURCES";
   const srcTotal = r;
-  ws.getCell(r, 2).value = { formula: `SUM(${cn(sourcesStart, 2)}:${cn(r - 1, 2)})` };
+  let totalSources = startingCash + (annualRev[0] || 0);
+  for (const row of capDebtRows) { if (row.enabled && row.isLoan) totalSources += row.loanPrincipal || 0; }
+  ws.getCell(r, 2).value = { formula: `SUM(${cn(sourcesStart, 2)}:${cn(r - 1, 2)})`, result: totalSources };
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
 
   r += 2; sec(ws, r, 2); ws.getCell(r, 1).value = "USES OF FUNDS";
@@ -888,12 +928,14 @@ function buildSourcesUses(
 
   r++; sec(ws, r, 2); ws.getCell(r, 1).value = "TOTAL USES";
   const useTotal = r;
-  ws.getCell(r, 2).value = { formula: `SUM(${cn(usesStart, 2)}:${cn(r - 1, 2)})` };
+  let totalUses = 0;
+  for (const row of capDebtRows) { if (row.enabled && !row.isLoan) totalUses += row.amounts?.[0] ?? 0; }
+  ws.getCell(r, 2).value = { formula: `SUM(${cn(usesStart, 2)}:${cn(r - 1, 2)})`, result: totalUses };
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
 
   r += 2;
   ws.getCell(r, 1).value = "SOURCES − USES (SURPLUS / GAP)"; ws.getCell(r, 1).font = BF;
-  ws.getCell(r, 2).value = { formula: `${cn(srcTotal, 2)}-${cn(useTotal, 2)}` };
+  ws.getCell(r, 2).value = { formula: `${cn(srcTotal, 2)}-${cn(useTotal, 2)}`, result: totalSources - totalUses };
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
 }
 
@@ -1038,72 +1080,103 @@ function buildMonthlyCashFlowY1(
 
   const revRow = r + 1;
   r++; ws.getCell(r, 1).value = "Revenue"; ws.getCell(r, 1).font = BF;
+  let revTotal = 0;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    cell.value = Math.round(monthlyRevArray[m] || 0);
+    const v = Math.round(monthlyRevArray[m] || 0);
+    revTotal += v;
+    cell.value = v;
     cell.numFmt = CUR; dc(cell);
   }
-  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})` };
+  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})`, result: revTotal };
   ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
 
   r++; ws.getCell(r, 1).value = "Personnel"; ws.getCell(r, 1).font = NF;
+  let persTotal = 0;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    cell.value = m < opMonths ? Math.round(monthlyPersonnel) : 0;
+    const v = m < opMonths ? Math.round(monthlyPersonnel) : 0;
+    persTotal += v;
+    cell.value = v;
     cell.numFmt = CUR; dc(cell);
   }
-  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})` };
+  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})`, result: persTotal };
   ws.getCell(r, 14).numFmt = CUR; dc(ws.getCell(r, 14));
 
   r++; ws.getCell(r, 1).value = "Operating Expenses"; ws.getCell(r, 1).font = NF;
+  let opsTotal = 0;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    cell.value = m < opMonths ? Math.round(monthlyOps) : 0;
+    const v = m < opMonths ? Math.round(monthlyOps) : 0;
+    opsTotal += v;
+    cell.value = v;
     cell.numFmt = CUR; dc(cell);
   }
-  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})` };
+  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})`, result: opsTotal };
   ws.getCell(r, 14).numFmt = CUR; dc(ws.getCell(r, 14));
 
   r++; ws.getCell(r, 1).value = "Debt Service"; ws.getCell(r, 1).font = NF;
+  let debtTotal = 0;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    cell.value = Math.round(monthlyDebt);
+    const v = Math.round(monthlyDebt);
+    debtTotal += v;
+    cell.value = v;
     cell.numFmt = CUR; dc(cell);
   }
-  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})` };
+  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})`, result: debtTotal };
   ws.getCell(r, 14).numFmt = CUR; dc(ws.getCell(r, 14));
 
   const totalExpRow = r + 1;
   r++; sec(ws, r, 14); ws.getCell(r, 1).value = "Total Expenses";
+  const monthlyExpTotals: number[] = [];
+  let expGrandTotal = 0;
   for (let m = 0; m < 12; m++) {
+    const pv = m < opMonths ? Math.round(monthlyPersonnel) : 0;
+    const ov = m < opMonths ? Math.round(monthlyOps) : 0;
+    const dv = Math.round(monthlyDebt);
+    const total = pv + ov + dv;
+    monthlyExpTotals.push(total);
+    expGrandTotal += total;
     const cell = ws.getCell(r, m + 2);
-    cell.value = { formula: `SUM(${cn(revRow + 1, m + 2)}:${cn(r - 1, m + 2)})` };
+    cell.value = { formula: `SUM(${cn(revRow + 1, m + 2)}:${cn(r - 1, m + 2)})`, result: total };
     cell.numFmt = CUR; bc(cell);
   }
-  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})` };
+  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})`, result: expGrandTotal };
   ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
 
   r++; ws.getCell(r, 1).value = "Net Cash Flow"; ws.getCell(r, 1).font = BF;
+  const monthlyNet: number[] = [];
+  let netTotal = 0;
   for (let m = 0; m < 12; m++) {
+    const rev = Math.round(monthlyRevArray[m] || 0);
+    const net = rev - monthlyExpTotals[m];
+    monthlyNet.push(net);
+    netTotal += net;
     const cell = ws.getCell(r, m + 2);
-    cell.value = { formula: `${cn(revRow, m + 2)}-${cn(totalExpRow, m + 2)}` };
+    cell.value = { formula: `${cn(revRow, m + 2)}-${cn(totalExpRow, m + 2)}`, result: net };
     cell.numFmt = CUR; bc(cell);
   }
-  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})` };
+  ws.getCell(r, 14).value = { formula: `SUM(${cn(r, 2)}:${cn(r, 13)})`, result: netTotal };
   ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
 
   const netCashRow = r;
   r++; ws.getCell(r, 1).value = "Cumulative Cash"; ws.getCell(r, 1).font = BF;
+  let cumCash = startingCash;
+  const cumValues: number[] = [];
   for (let m = 0; m < 12; m++) {
+    cumCash += monthlyNet[m];
+    cumValues.push(cumCash);
     const cell = ws.getCell(r, m + 2);
     if (m === 0) {
-      cell.value = { formula: `${startingCash}+${cn(netCashRow, m + 2)}` };
+      cell.value = { formula: `${startingCash}+${cn(netCashRow, m + 2)}`, result: cumCash };
     } else {
-      cell.value = { formula: `${cn(r, m + 1)}+${cn(netCashRow, m + 2)}` };
+      cell.value = { formula: `${cn(r, m + 1)}+${cn(netCashRow, m + 2)}`, result: cumCash };
     }
     cell.numFmt = CUR; bc(cell);
   }
-  ws.getCell(r, 14).value = { formula: cn(r, 13) };
+  const endingCash = cumValues[11] || 0;
+  ws.getCell(r, 14).value = { formula: cn(r, 13), result: endingCash };
   ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
 
   r += 2; sec(ws, r, 14); ws.getCell(r, 1).value = "CASH FLOW METRICS";
@@ -1111,11 +1184,12 @@ function buildMonthlyCashFlowY1(
   ws.getCell(r, 2).value = startingCash; ws.getCell(r, 2).numFmt = CUR;
   r++; ws.getCell(r, 1).value = "Ending Cash (Month 12)"; ws.getCell(r, 1).font = NF;
   const cumRow = netCashRow + 1;
-  ws.getCell(r, 2).value = { formula: cn(cumRow, 13) };
+  ws.getCell(r, 2).value = { formula: cn(cumRow, 13), result: endingCash };
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
 
   r++; ws.getCell(r, 1).value = "Minimum Cash Month"; ws.getCell(r, 1).font = NF;
-  ws.getCell(r, 2).value = { formula: `MIN(${cn(cumRow, 2)}:${cn(cumRow, 13)})` };
+  const minCash = Math.min(...cumValues);
+  ws.getCell(r, 2).value = { formula: `MIN(${cn(cumRow, 2)}:${cn(cumRow, 13)})`, result: minCash };
   ws.getCell(r, 2).numFmt = CUR;
 
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
@@ -1153,8 +1227,9 @@ function buildFiveYearPL(
   const totalExpRow = r + 1;
   r++; sec(ws, r, cols); ws.getCell(r, 1).value = "Total Expenses";
   for (let y = 0; y < yc; y++) {
+    const totalExp = (personnel[y] || 0) + (ops[y] || 0) + (capDebt[y] || 0);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `SUM(${cn(3, y + 2)}:${cn(r - 1, y + 2)})` };
+    cell.value = { formula: `SUM(${cn(3, y + 2)}:${cn(r - 1, y + 2)})`, result: totalExp };
     cell.numFmt = CUR; bc(cell);
   }
 
@@ -1162,23 +1237,26 @@ function buildFiveYearPL(
   r++; ws.getCell(r, 1).value = niLabel; ws.getCell(r, 1).font = BF;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `${cn(revRowPL, y + 2)}-${cn(totalExpRow, y + 2)}` };
+    cell.value = { formula: `${cn(revRowPL, y + 2)}-${cn(totalExpRow, y + 2)}`, result: ni[y] || 0 };
     cell.numFmt = CUR; bc(cell);
   }
 
   const niRow = r;
   r++; ws.getCell(r, 1).value = "Net Margin %"; ws.getCell(r, 1).font = NF;
   for (let y = 0; y < yc; y++) {
+    const margin = (rev[y] || 0) === 0 ? 0 : (ni[y] || 0) / (rev[y] || 1);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `IF(${cn(revRowPL, y + 2)}=0,0,${cn(niRow, y + 2)}/${cn(revRowPL, y + 2)})` };
+    cell.value = { formula: `IF(${cn(revRowPL, y + 2)}=0,0,${cn(niRow, y + 2)}/${cn(revRowPL, y + 2)})`, result: margin };
     cell.numFmt = PCT; dc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Cumulative Net Income"; ws.getCell(r, 1).font = BF;
+  let cumNI = 0;
   for (let y = 0; y < yc; y++) {
+    cumNI += ni[y] || 0;
     const cell = ws.getCell(r, y + 2);
-    if (y === 0) cell.value = { formula: cn(niRow, 2) };
-    else cell.value = { formula: `${cn(r, y + 1)}+${cn(niRow, y + 2)}` };
+    if (y === 0) cell.value = { formula: cn(niRow, 2), result: cumNI };
+    else cell.value = { formula: `${cn(r, y + 1)}+${cn(niRow, y + 2)}`, result: cumNI };
     cell.numFmt = CUR; bc(cell);
   }
 
@@ -1233,9 +1311,13 @@ function buildFiveYearBS(
 
   r++; ws.getCell(r, 1).value = "Total Assets"; ws.getCell(r, 1).font = BF;
   const totalAssetsRow = r;
+  const totalAssetsVals: number[] = [];
   for (let y = 0; y < yc; y++) {
+    const cashVal = startingCash + cumNI[y];
+    const totalAssets = cashVal + 0;
+    totalAssetsVals.push(totalAssets);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `SUM(${cn(cashRow, y + 2)}:${cn(r - 1, y + 2)})` };
+    cell.value = { formula: `SUM(${cn(cashRow, y + 2)}:${cn(r - 1, y + 2)})`, result: totalAssets };
     cell.numFmt = CUR; bc(cell);
   }
   sec(ws, r, cols);
@@ -1243,9 +1325,12 @@ function buildFiveYearBS(
   r += 2; sec(ws, r, cols); ws.getCell(r, 1).value = "LIABILITIES";
 
   r++; ws.getCell(r, 1).value = "Debt Outstanding"; ws.getCell(r, 1).font = NF;
+  const debtVals: number[] = [];
   for (let y = 0; y < yc; y++) {
+    const dv = Math.round(computeRemainingDebtForYear(capDebtRows, y + 1));
+    debtVals.push(dv);
     const cell = ws.getCell(r, y + 2);
-    cell.value = Math.round(computeRemainingDebtForYear(capDebtRows, y + 1)); cell.numFmt = CUR; dc(cell);
+    cell.value = dv; cell.numFmt = CUR; dc(cell);
   }
   const debtRow = r;
 
@@ -1256,9 +1341,12 @@ function buildFiveYearBS(
 
   r++; ws.getCell(r, 1).value = "Total Liabilities"; ws.getCell(r, 1).font = BF;
   const totalLiabRow = r;
+  const totalLiabVals: number[] = [];
   for (let y = 0; y < yc; y++) {
+    const totalLiab = debtVals[y] + 0;
+    totalLiabVals.push(totalLiab);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `SUM(${cn(debtRow, y + 2)}:${cn(r - 1, y + 2)})` };
+    cell.value = { formula: `SUM(${cn(debtRow, y + 2)}:${cn(r - 1, y + 2)})`, result: totalLiab };
     cell.numFmt = CUR; bc(cell);
   }
   sec(ws, r, cols);
@@ -1279,17 +1367,22 @@ function buildFiveYearBS(
 
   r++; ws.getCell(r, 1).value = "Total Equity"; ws.getCell(r, 1).font = BF;
   const totalEquityRow = r;
+  const totalEquityVals: number[] = [];
   for (let y = 0; y < yc; y++) {
+    const begEquity = y === 0 ? startingCash : startingCash + cumNI[y - 1];
+    const totalEquity = begEquity + ni[y];
+    totalEquityVals.push(totalEquity);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `SUM(${cn(r - 2, y + 2)}:${cn(r - 1, y + 2)})` };
+    cell.value = { formula: `SUM(${cn(r - 2, y + 2)}:${cn(r - 1, y + 2)})`, result: totalEquity };
     cell.numFmt = CUR; bc(cell);
   }
   sec(ws, r, cols);
 
   r += 2; ws.getCell(r, 1).value = "BALANCE CHECK (Assets − Liab − Equity)"; ws.getCell(r, 1).font = BF;
   for (let y = 0; y < yc; y++) {
+    const balCheck = totalAssetsVals[y] - totalLiabVals[y] - totalEquityVals[y];
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `${cn(totalAssetsRow, y + 2)}-${cn(totalLiabRow, y + 2)}-${cn(totalEquityRow, y + 2)}` };
+    cell.value = { formula: `${cn(totalAssetsRow, y + 2)}-${cn(totalLiabRow, y + 2)}-${cn(totalEquityRow, y + 2)}`, result: balCheck };
     cell.numFmt = CUR; bc(cell);
   }
 
@@ -1326,8 +1419,11 @@ function buildDSCRCovenant(
   r++; ws.getCell(r, 1).value = "DSCR"; ws.getCell(r, 1).font = BF;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
+    const roundedDS = Math.round(annualDebtSvc);
     if (annualDebtSvc > 0) {
-      cell.value = { formula: `IF(${cn(dsRow, y + 2)}=0,"N/A",${cn(noiRow, y + 2)}/${cn(dsRow, y + 2)})` };
+      const noi = Math.round(rev[y] - personnel[y] - ops[y]);
+      const dscrVal = roundedDS === 0 ? "N/A" : noi / roundedDS;
+      cell.value = { formula: `IF(${cn(dsRow, y + 2)}=0,"N/A",${cn(noiRow, y + 2)}/${cn(dsRow, y + 2)})`, result: dscrVal };
     } else {
       cell.value = "N/A";
     }
@@ -1338,23 +1434,30 @@ function buildDSCRCovenant(
 
   r++; ws.getCell(r, 1).value = "Ending Cash Balance"; ws.getCell(r, 1).font = NF;
   let cumNI = 0;
+  const cashBalances: number[] = [];
   for (let y = 0; y < yc; y++) {
     cumNI += ni[y];
-    const cell = ws.getCell(r, y + 2); cell.value = Math.round(startingCash + cumNI); cell.numFmt = CUR; dc(cell);
+    const cashBal = Math.round(startingCash + cumNI);
+    cashBalances.push(cashBal);
+    const cell = ws.getCell(r, y + 2); cell.value = cashBal; cell.numFmt = CUR; dc(cell);
   }
   const cashBalRow = r;
 
   r++; ws.getCell(r, 1).value = "Monthly Operating Cost"; ws.getCell(r, 1).font = NF;
+  const monthlyOpsCosts: number[] = [];
   for (let y = 0; y < yc; y++) {
     const totalOps = personnel[y] + ops[y];
-    const cell = ws.getCell(r, y + 2); cell.value = Math.round(totalOps / 12); cell.numFmt = CUR; dc(cell);
+    const moc = Math.round(totalOps / 12);
+    monthlyOpsCosts.push(moc);
+    const cell = ws.getCell(r, y + 2); cell.value = moc; cell.numFmt = CUR; dc(cell);
   }
   const monthlyOpsRow = r;
 
   r++; ws.getCell(r, 1).value = "Cash Reserve (Months)"; ws.getCell(r, 1).font = BF;
   for (let y = 0; y < yc; y++) {
+    const reserveMonths = monthlyOpsCosts[y] === 0 ? 0 : cashBalances[y] / monthlyOpsCosts[y];
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `IF(${cn(monthlyOpsRow, y + 2)}=0,0,${cn(cashBalRow, y + 2)}/${cn(monthlyOpsRow, y + 2)})` };
+    cell.value = { formula: `IF(${cn(monthlyOpsRow, y + 2)}=0,0,${cn(cashBalRow, y + 2)}/${cn(monthlyOpsRow, y + 2)})`, result: reserveMonths };
     cell.numFmt = "0.0"; bc(cell);
   }
 
