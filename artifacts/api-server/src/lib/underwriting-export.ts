@@ -203,6 +203,47 @@ function setPrintAreaUW(ws: ExcelJS.Worksheet, lastRow: number, lastCol: number)
   };
 }
 
+function polishWorkbookUW(wb: ExcelJS.Workbook) {
+  const coverNames = new Set(["Cover"]);
+  const skipFreeze = new Set(["Cover"]);
+
+  for (const ws of wb.worksheets) {
+    if (!skipFreeze.has(ws.name)) {
+      if (!ws.views || ws.views.length === 0) {
+        ws.views = [{ state: "frozen" as const, xSplit: 1, ySplit: 1, topLeftCell: "B2", activeCell: "B2" }];
+      }
+    }
+
+    if (ws.name !== "Cover") {
+      const lastRow = ws.rowCount || 1;
+      const lastCol = ws.columnCount || 1;
+      const endColLetter = lastCol <= 26 ? String.fromCharCode(64 + lastCol) : "Z";
+      ws.pageSetup = {
+        ...(ws.pageSetup || {}),
+        printArea: ws.pageSetup?.printArea || `A1:${endColLetter}${lastRow}`,
+        orientation: ws.pageSetup?.orientation || "landscape",
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        paperSize: 1 as unknown as undefined,
+        margins: ws.pageSetup?.margins || { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+      };
+      if (!ws.headerFooter?.oddFooter) {
+        ws.headerFooter = { oddFooter: "&L&8SchoolStack Budget — Underwriting&C&8Page &P of &N&R&8&D" };
+      }
+    }
+  }
+
+  const cover = wb.worksheets.find(s => coverNames.has(s.name));
+  if (cover) {
+    (cover as any).orderNo = 1;
+    let idx = 2;
+    for (const ws of wb.worksheets) {
+      if (!coverNames.has(ws.name)) { (ws as any).orderNo = idx++; }
+    }
+  }
+}
+
 function schoolTypeLabel(t?: string, o?: string): string {
   const map: Record<string, string> = {
     charter_school: "Charter School", homeschool_coop: "Homeschool Co-Op",
@@ -490,6 +531,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
 
   buildUWCoverSheet(wb, sp, yc, annualRevenue, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, maxCapacity);
 
+  polishWorkbookUW(wb);
   const arrayBuf = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuf as ArrayBuffer);
 }
@@ -573,6 +615,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
 
   buildUWCoverSheet(wb, sp, yc, annualRevenue, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, maxCapacity);
 
+  polishWorkbookUW(wb);
   await wb.xlsx.writeFile(filePath);
 }
 
