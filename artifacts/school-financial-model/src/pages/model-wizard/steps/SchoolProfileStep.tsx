@@ -194,7 +194,7 @@ export function SchoolProfileStep() {
         {stageError && (
           <div className="flex items-center gap-2 mt-3 text-destructive">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <p className="text-sm font-medium">Please select your school's stage</p>
+            <p className="text-sm font-medium">{stageError}</p>
           </div>
         )}
 
