@@ -1,5 +1,5 @@
 const envBase = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) || "";
-const API_BASE = envBase || (typeof window !== "undefined" && window.location.hostname.includes("netlify.app")
+const API_BASE = envBase || (typeof window !== "undefined" && (window.location.hostname.includes("netlify.app") || window.location.hostname.includes("schoolstack.ai"))
   ? "https://workspaceapi-server-production-bffd.up.railway.app"
   : "");
 

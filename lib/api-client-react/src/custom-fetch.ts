@@ -275,8 +275,11 @@ function getApiBase(): string {
   if (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
-  if (typeof window !== "undefined" && window.location.hostname.includes("netlify.app")) {
-    return "https://workspaceapi-server-production-bffd.up.railway.app";
+  if (typeof window !== "undefined") {
+    const h = window.location.hostname;
+    if (h.includes("netlify.app") || h.includes("schoolstack.ai")) {
+      return "https://workspaceapi-server-production-bffd.up.railway.app";
+    }
   }
   return "";
 }
