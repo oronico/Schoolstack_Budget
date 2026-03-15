@@ -3,6 +3,8 @@ import { PublicExportUnderwritingBody } from "@workspace/api-zod";
 import { generateUnderwritingWorkbook } from "../lib/underwriting-export";
 import { runConsultantEngine } from "../lib/consultant-engine";
 import { createRateLimiter } from "../lib/rate-limiter";
+import fs from "fs";
+import path from "path";
 
 const router: IRouter = Router();
 
@@ -29,6 +31,11 @@ router.post("/public/export-underwriting", rateLimiter, async (req: Request, res
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_").slice(0, 100);
 
     const buffer = await generateUnderwritingWorkbook(data);
+
+    const debugPath = path.join(process.cwd(), "debug-export.xlsx");
+    fs.writeFileSync(debugPath, Buffer.from(buffer));
+    console.log("DEBUG workbook bytes:", buffer.length);
+    console.log("DEBUG workbook saved to:", debugPath);
 
     res.setHeader(
       "Content-Type",

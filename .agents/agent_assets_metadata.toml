@@ -36,3 +36,9 @@ id = "KpghvOrYTkWcF_0Li4CEr"
 uri = "file://artifacts/school-financial-model/public/workbook_b64.txt"
 type = "text"
 title = "Workbook as base64 text (decode with: base64 -d workbook_b64.txt > workbook.xlsx)"
+
+[[outputs]]
+id = "_pyeqebjw1K3mPlUPuuwM"
+uri = "file://artifacts/api-server/debug-export.xlsx"
+type = "table"
+title = "debug-export.xlsx — raw bytes from server (26,667 bytes)"
