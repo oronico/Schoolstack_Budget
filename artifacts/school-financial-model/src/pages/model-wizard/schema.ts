@@ -32,6 +32,13 @@ export const tuitionEscalationSchema = z.object({
   rate: z.coerce.number().min(0).max(20).default(3),
 });
 
+export const revenueSourcesSchema = z.object({
+  tuition: z.boolean().default(false),
+  publicFunding: z.boolean().default(false),
+  schoolChoice: z.boolean().default(false),
+  grantsContributions: z.boolean().default(false),
+});
+
 export const schoolProfileSchema = z.object({
   schoolName: z.string().min(1, "School name is required"),
   state: z.string().min(1, "State is required"),
@@ -185,6 +192,7 @@ export const fullModelSchema = z.object({
   enrollment: enrollmentSchema.optional(),
   programs: z.array(programSchema).optional(),
   tuitionEscalation: tuitionEscalationSchema.optional(),
+  revenueSources: revenueSourcesSchema.optional(),
   tuitionTiers: z.array(tuitionTierSchema).optional(),
   revenue: revenueSchema.optional(),
   revenueRows: z.array(revenueRowSchema).optional(),

@@ -60,6 +60,7 @@ export function PublicWizardPage() {
     enrollment: undefined,
     programs: [],
     tuitionEscalation: { rate: 3 },
+    revenueSources: { tuition: false, publicFunding: false, schoolChoice: false, grantsContributions: false },
     tuitionTiers: undefined,
     revenue: { annualTuitionIncrease: 3 },
     revenueRows: [],

@@ -71,6 +71,7 @@ export function ModelWizardPage() {
         year5: number;
       }>,
       tuitionEscalation: { rate: 3 },
+      revenueSources: { tuition: false, publicFunding: false, schoolChoice: false, grantsContributions: false },
       revenue: { annualTuitionIncrease: 3 },
       revenueRows: [] as Array<{
         id: string;
