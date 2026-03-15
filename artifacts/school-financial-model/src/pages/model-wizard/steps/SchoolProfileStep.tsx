@@ -32,6 +32,46 @@ const MONTHS = [
   { value: "10", label: "October" }, { value: "11", label: "November" }, { value: "12", label: "December" },
 ];
 
+function EINInput() {
+  const { watch, setValue } = useFormContext();
+  const raw = watch("schoolProfile.ein") || "";
+
+  const formatEIN = (value: string): string => {
+    const digits = value.replace(/\D/g, "").slice(0, 9);
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatEIN(e.target.value);
+    setValue("schoolProfile.ein", formatted, { shouldDirty: true });
+  };
+
+  const display = formatEIN(raw);
+  const isComplete = raw.replace(/\D/g, "").length === 9;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor="ein" className="text-sm font-semibold text-foreground">
+        EIN (Employer Identification Number)
+      </label>
+      <input
+        id="ein"
+        type="text"
+        inputMode="numeric"
+        value={display}
+        onChange={handleChange}
+        maxLength={10}
+        className="w-full rounded-xl border-2 border-border bg-card px-4 py-3 text-base text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 tracking-widest font-mono"
+        placeholder="XX-XXXXXXX"
+      />
+      {display && !isComplete && (
+        <p className="text-xs text-muted-foreground">{raw.replace(/\D/g, "").length}/9 digits</p>
+      )}
+    </div>
+  );
+}
+
 interface RadioCardProps {
   value: string;
   selected: boolean;
@@ -324,11 +364,7 @@ export function SchoolProfileStep() {
             options={Object.entries(ENTITY_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
           />
           {entityType && entityType !== "sole_practitioner" && (
-            <FormInput
-              name="schoolProfile.ein"
-              label="EIN (Employer Identification Number)"
-              placeholder="XX-XXXXXXX"
-            />
+            <EINInput />
           )}
         </div>
       </div>
