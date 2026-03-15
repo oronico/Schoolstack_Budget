@@ -25,6 +25,7 @@ export const schoolProfileSchema = z.object({
   schoolStage: schoolStageSchema,
   fundingProfile: fundingProfileSchema,
   plannedOpeningYear: z.string().optional(),
+  operatingYear: z.enum(["first_year", "second_year_plus"]).optional(),
   openingYear: z.coerce.number().min(2000).max(2100).optional(),
   currentStudents: z.coerce.number().min(0).optional(),
   maxCapacity: z.coerce.number().min(1, "Capacity must be at least 1"),
@@ -42,6 +43,14 @@ export const priorYearSnapshotSchema = z.object({
   totalRevenue: z.coerce.number().min(0).optional(),
   totalExpenses: z.coerce.number().min(0).optional(),
   endingCash: z.coerce.number().min(0).optional(),
+});
+
+export const currentYearProjectionSchema = z.object({
+  currentEnrollment: z.coerce.number().min(0).optional(),
+  projectedRevenue: z.coerce.number().min(0).optional(),
+  projectedExpenses: z.coerce.number().min(0).optional(),
+  currentCash: z.coerce.number().min(0).optional(),
+  monthsCompleted: z.coerce.number().min(0).max(12).optional(),
 });
 
 export const enrollmentSchema = z.object({
@@ -166,6 +175,7 @@ export const fullModelSchema = z.object({
   expenseRows: z.array(expenseRowSchema).optional(),
   capitalAndDebtRows: z.array(capitalDebtRowSchema).optional(),
   priorYearSnapshot: priorYearSnapshotSchema.optional(),
+  currentYearProjection: currentYearProjectionSchema.optional(),
 });
 
 export type FullModelData = z.infer<typeof fullModelSchema>;

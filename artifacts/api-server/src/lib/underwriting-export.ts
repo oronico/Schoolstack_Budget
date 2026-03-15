@@ -10,6 +10,7 @@ interface SchoolProfile {
   schoolStage?: string;
   openingYear?: number;
   plannedOpeningYear?: string;
+  operatingYear?: string;
   currentStudents?: number;
   maxCapacity?: number;
   fiscalYearStartMonth?: number;

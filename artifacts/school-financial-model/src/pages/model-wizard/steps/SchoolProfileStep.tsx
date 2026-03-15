@@ -83,6 +83,7 @@ export function SchoolProfileStep() {
   const { watch, setValue } = useFormContext();
   const isPartialFirstYear = watch("schoolProfile.isPartialFirstYear");
   const schoolStage = watch("schoolProfile.schoolStage");
+  const operatingYear = watch("schoolProfile.operatingYear");
   const fundingProfile = watch("schoolProfile.fundingProfile");
   const schoolType = watch("schoolProfile.schoolType");
   const entityType = watch("schoolProfile.entityType");
@@ -165,6 +166,19 @@ export function SchoolProfileStep() {
                 { value: "2026-27", label: "2026–27" },
                 { value: "2027-28", label: "2027–28" },
                 { value: "2028-29", label: "2028–29" },
+              ]}
+            />
+          </div>
+        )}
+
+        {schoolStage === "operating_school" && (
+          <div className="mt-4 max-w-sm">
+            <FormSelect
+              name="schoolProfile.operatingYear"
+              label="How long have you been operating?"
+              options={[
+                { value: "first_year", label: "This is our first year of operation" },
+                { value: "second_year_plus", label: "We've completed at least one full school year" },
               ]}
             />
           </div>
@@ -333,11 +347,59 @@ export function SchoolProfileStep() {
         </div>
       </div>
 
-      {schoolStage === "operating_school" && (
+      {schoolStage === "operating_school" && operatingYear === "first_year" && (
         <div>
-          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Prior-Year Snapshot</h3>
+          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Current Year Projections</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Optional: Enter last year's actual numbers so our consultant can compare your projections to real results.
+            Since you're in your first year, enter your projected end-of-year numbers. These help our consultant benchmark your forward plan.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormInput
+              name="currentYearProjection.currentEnrollment"
+              label="Current Enrollment"
+              type="number"
+              placeholder="0"
+              helperText="Students currently enrolled"
+            />
+            <FormInput
+              name="currentYearProjection.monthsCompleted"
+              label="Months of Operation Completed"
+              type="number"
+              placeholder="8"
+              helperText="How many months have you been open?"
+            />
+            <FormInput
+              name="currentYearProjection.projectedRevenue"
+              label="Projected End-of-Year Revenue"
+              type="number"
+              prefix="$"
+              placeholder="0"
+              helperText="Your best estimate for total revenue this school year"
+            />
+            <FormInput
+              name="currentYearProjection.projectedExpenses"
+              label="Projected End-of-Year Expenses"
+              type="number"
+              prefix="$"
+              placeholder="0"
+              helperText="Your best estimate for total expenses this school year"
+            />
+            <FormInput
+              name="currentYearProjection.currentCash"
+              label="Current Cash on Hand"
+              type="number"
+              prefix="$"
+              placeholder="0"
+            />
+          </div>
+        </div>
+      )}
+
+      {schoolStage === "operating_school" && operatingYear === "second_year_plus" && (
+        <div>
+          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Prior-Year Actuals</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Enter last school year's actual numbers so our consultant can compare your projections to real results.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput
