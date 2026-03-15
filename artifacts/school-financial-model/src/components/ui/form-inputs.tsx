@@ -96,10 +96,11 @@ export function FormSelect({ name, label, options, helperText, className, valueA
           "w-full rounded-xl border-2 border-border bg-card px-4 py-3 text-base text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 appearance-none cursor-pointer",
           error && "border-destructive focus:border-destructive focus:ring-destructive/10"
         )}
+        defaultValue=""
         {...register(name, { valueAsNumber })}
         {...props}
       >
-        <option value="" disabled>Select an option...</option>
+        <option value="" disabled hidden>Select an option...</option>
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
