@@ -774,6 +774,43 @@ function buildAssumptionsTab(
   ws.getCell(r, 1).value = "Projection Period"; ws.getCell(r, 1).font = NORMAL_FONT;
   ws.getCell(r, 2).value = `${yearCount} Years`; ws.getCell(r, 2).font = BOLD_FONT;
 
+  const riskFlags: string[] = [];
+  if (sp.locationSecured === false) {
+    riskFlags.push("No facility location secured — costs are estimated");
+  }
+  if (sp.locationSecured && sp.ownershipType === "rent" && sp.leaseExpirationYear) {
+    const openingYear = sp.openingYear || new Date().getFullYear();
+    const yearsUntilExpiry = sp.leaseExpirationYear - openingYear;
+    if (yearsUntilExpiry >= 0 && yearsUntilExpiry < yearCount) {
+      riskFlags.push(`Lease expires in Year ${yearsUntilExpiry + 1} (${sp.leaseExpirationYear}) — renewal bump of ${sp.postLeaseRenewalBump || 15}% modeled`);
+    }
+    if (yearsUntilExpiry < 2 && yearsUntilExpiry >= 0) {
+      riskFlags.push("Short remaining lease term — less than 2 years until expiration");
+    }
+  }
+  if (sp.locationSecured && sp.ownershipType === "rent" && sp.isNNNLease) {
+    const nnnTotal = (sp.nnnCamCharges || 0) + (sp.nnnMaintenance || 0) + (sp.nnnUtilities || 0);
+    if (nnnTotal > 0) {
+      riskFlags.push(`NNN lease: $${(nnnTotal * 12).toLocaleString()}/year in additional charges (CAM, maintenance, utilities)`);
+    }
+  }
+  if (sp.locationSecured && sp.ownershipType === "own" && sp.entityType && sp.entityType !== "nonprofit_501c3" && (sp.propertyTaxAnnual || 0) > 0) {
+    riskFlags.push(`For-profit property tax: $${(sp.propertyTaxAnnual || 0).toLocaleString()}/year`);
+  }
+
+  if (riskFlags.length > 0) {
+    r += 2;
+    styleSectionRow(ws, r, 2);
+    ws.getCell(r, 1).value = "FACILITY RISK FLAGS";
+    for (const flag of riskFlags) {
+      r++;
+      ws.getCell(r, 1).value = `⚠ ${flag}`;
+      ws.getCell(r, 1).font = { ...NORMAL_FONT, color: { argb: "FFD97706" } };
+      ws.mergeCells(r, 1, r, 2);
+      ws.getRow(r).alignment = { wrapText: true, vertical: "top" };
+    }
+  }
+
   return { enrollmentRows, salaryEscRow, costInflationRow, prorationRow };
 }
 

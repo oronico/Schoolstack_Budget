@@ -170,6 +170,14 @@ export function SchoolProfileStep() {
     prevLocationSecured.current = locationSecured;
   }, [locationSecured, setValue]);
 
+  const schoolState = watch("schoolProfile.state");
+  const facilityState = watch("schoolProfile.facilityState");
+  useEffect(() => {
+    if (locationSecured && schoolState && !facilityState) {
+      setValue("schoolProfile.facilityState", schoolState, { shouldDirty: true });
+    }
+  }, [locationSecured, schoolState, facilityState, setValue]);
+
   const prevOwnership = useRef(ownershipType);
   useEffect(() => {
     if (prevOwnership.current !== ownershipType) {

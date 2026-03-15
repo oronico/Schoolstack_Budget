@@ -453,6 +453,61 @@ function computeCapDebtForYear(rows: CapitalDebtRow[], yearIdx: number, students
   return total;
 }
 
+function computeSchoolProfileFacilityOverlay(
+  sp: SchoolProfile,
+  yearIndex: number,
+  prorationFactor: number,
+): number {
+  if (!sp.locationSecured) {
+    const pf = yearIndex === 0 ? prorationFactor : 1;
+    return (sp.estimatedMonthlyFacilityBudget || 0) * 12 * pf;
+  }
+
+  const pf = yearIndex === 0 ? prorationFactor : 1;
+  let total = 0;
+
+  if (sp.ownershipType === "rent") {
+    const baseRent = sp.monthlyRent || 0;
+    const escalation = (sp.annualRentEscalation || 0) / 100;
+    const renewalBump = (sp.postLeaseRenewalBump || 15) / 100;
+    const openingYear = sp.openingYear || new Date().getFullYear();
+    const leaseEndYear = sp.leaseExpirationYear || (openingYear + 99);
+    const yearsUntilExpiration = leaseEndYear - openingYear;
+
+    let annualRent: number;
+    if (yearIndex < yearsUntilExpiration) {
+      annualRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
+    } else if (yearIndex === yearsUntilExpiration) {
+      const preRenewalRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration);
+      const bumpedRent = preRenewalRent * (1 + renewalBump);
+      annualRent = bumpedRent * 12;
+    } else {
+      const preRenewalRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration);
+      const bumpedRent = preRenewalRent * (1 + renewalBump);
+      const postRenewalYears = yearIndex - yearsUntilExpiration;
+      annualRent = bumpedRent * 12 * Math.pow(1 + escalation, postRenewalYears);
+    }
+    total += annualRent * pf;
+
+    if (sp.isNNNLease) {
+      const nnnMonthly = (sp.nnnCamCharges || 0) + (sp.nnnMaintenance || 0) + (sp.nnnUtilities || 0);
+      const costInflation = 0.03;
+      total += nnnMonthly * 12 * Math.pow(1 + costInflation, yearIndex) * pf;
+    }
+  }
+
+  if (sp.ownershipType === "own") {
+    if (sp.entityType && sp.entityType !== "nonprofit_501c3" && (sp.propertyTaxAnnual || 0) > 0) {
+      total += (sp.propertyTaxAnnual || 0) * Math.pow(1.02, yearIndex) * pf;
+    }
+    if (sp.hasMortgage && (sp.mortgageMonthlyPayment || 0) > 0) {
+      total += (sp.mortgageMonthlyPayment || 0) * 12 * pf;
+    }
+  }
+
+  return total;
+}
+
 function computeAllYearsFromRows(
   enrollmentByYear: number[],
   revenueRows: RevenueRow[],
@@ -463,8 +518,10 @@ function computeAllYearsFromRows(
   prorationFactor: number,
   tuitionTiers?: TuitionTier[],
   costInflationPct?: number,
+  schoolProfile?: SchoolProfile,
 ): YearFinancials[] {
   const baseCost = computeStaffingBaseCost(staffingRows);
+  const hasOccupancyRows = expenseRows.some(r => r.enabled && r.category === "occupancy_facility");
 
   return enrollmentByYear.map((students, yearIdx) => {
     const pf = yearIdx === 0 ? prorationFactor : 1;
@@ -475,7 +532,13 @@ function computeAllYearsFromRows(
     const exp = computeExpensesForYear(expenseRows, yearIdx, students, rev.total, costInflationPct);
     const capDebt = computeCapDebtForYear(capDebtRows, yearIdx, students);
 
-    const totalOpex = exp.total + capDebt;
+    let facilityOverlay = 0;
+    if (schoolProfile && !hasOccupancyRows) {
+      facilityOverlay = computeSchoolProfileFacilityOverlay(schoolProfile, yearIdx, prorationFactor);
+    }
+
+    const totalOpex = exp.total + capDebt + facilityOverlay;
+    const facilityCost = exp.facilityCost + facilityOverlay;
     const totalExpenses = totalStaffingCost + totalOpex;
     const netIncome = rev.total - totalExpenses;
 
@@ -487,7 +550,7 @@ function computeAllYearsFromRows(
       publicRevenue: rev.publicFunding,
       philanthropyRevenue: rev.philanthropy,
       totalStaffingCost,
-      facilityCost: exp.facilityCost,
+      facilityCost,
       totalOpex,
       debtService: capDebt,
       totalExpenses,
@@ -604,6 +667,7 @@ function runStressScenarioFromRows(
     tuitionTiers?: TuitionTier[];
   },
   costInflationPct?: number,
+  schoolProfile?: SchoolProfile,
 ): StressScenario {
   const adjEnrollment = mods.modifyEnrollment ? mods.modifyEnrollment([...enrollmentByYear]) : enrollmentByYear;
   const adjRevRows = mods.modifyRevenueRows
@@ -616,7 +680,7 @@ function runStressScenarioFromRows(
     ? mods.modifyStaffingRows(staffingRows.map(r => ({ ...r })))
     : staffingRows;
 
-  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers, costInflationPct);
+  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers, costInflationPct, schoolProfile);
   const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
 
   return {
@@ -696,15 +760,27 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
     yearFinancials = computeAllYearsFromRows(
       enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows,
-      salaryEscRate, prorationFactor, tuitionTiers, costInflationPct,
+      salaryEscRate, prorationFactor, tuitionTiers, costInflationPct, sp,
     );
   } else {
     const rev = data.revenue || {};
     const st = data.staffing || {};
     const fac = data.facilities || {};
-    yearFinancials = enrollmentByYear.map((students, idx) =>
-      computeYearFinancialsLegacy(idx, students, rev, st, fac, prorationFactor),
-    );
+    const hasLegacyRent = !!(fac.monthlyRent && fac.monthlyRent > 0);
+    yearFinancials = enrollmentByYear.map((students, idx) => {
+      const base = computeYearFinancialsLegacy(idx, students, rev, st, fac, prorationFactor);
+      if (!hasLegacyRent && sp.locationSecured !== undefined) {
+        const overlay = computeSchoolProfileFacilityOverlay(sp, idx, prorationFactor);
+        if (overlay > 0) {
+          base.facilityCost += overlay;
+          base.totalOpex += overlay;
+          base.totalExpenses += overlay;
+          base.netIncome -= overlay;
+          base.netMargin = base.totalRevenue > 0 ? base.netIncome / base.totalRevenue : 0;
+        }
+      }
+      return base;
+    });
   }
 
   const y1 = yearFinancials[0];
@@ -790,11 +866,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       runStressScenarioFromRows("Enrollment 20% Below Plan", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyEnrollment: e => e.map(s => Math.round(s * 0.8)),
         tuitionTiers,
-      }, stressCostInflation),
+      }, stressCostInflation, sp),
       runStressScenarioFromRows("Loss of Philanthropy", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => r.category === "grants_contributions" ? { ...r, enabled: false } : r),
         tuitionTiers,
-      }, stressCostInflation),
+      }, stressCostInflation, sp),
       runStressScenarioFromRows("Occupancy +15%, Personnel +5%", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyExpenseRows: rows => rows.map(r =>
           r.category === "occupancy_facility"
@@ -803,17 +879,17 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         ),
         modifyStaffingRows: rows => rows.map(r => ({ ...r, annualizedRate: r.annualizedRate * 1.05 })),
         tuitionTiers,
-      }, stressCostInflation),
+      }, stressCostInflation, sp),
       runStressScenarioFromRows("Revenue Delayed 3 Months", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
         modifyRevenueRows: rows => rows.map(r => ({
           ...r,
           amounts: r.amounts.map((a, i) => i === 0 ? a * 0.75 : a),
         })),
         tuitionTiers,
-      }, stressCostInflation),
+      }, stressCostInflation, sp),
       runStressScenarioFromRows("Interest Rate +2%", enrollmentByYear, revenueRows, staffingRows, expenseRows,
         capDebtRows.map(r => r.isLoan ? { ...r, loanRate: (r.loanRate || 0) + 2 } : r),
-        salaryEscRate, prorationFactor, { tuitionTiers }, stressCostInflation),
+        salaryEscRate, prorationFactor, { tuitionTiers }, stressCostInflation, sp),
     ];
   } else {
     const rev = data.revenue || {};
@@ -1683,7 +1759,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           }
           return r;
         });
-        const fins = computeAllYearsFromRows(adjEnroll, adjRevRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, tuitionTiers, sensCostInflation);
+        const fins = computeAllYearsFromRows(adjEnroll, adjRevRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, tuitionTiers, sensCostInflation, sp);
         sensitivityMatrix.push({ enrollmentPct: ePct, tuitionPct: tPct, netIncome: fins[lastIdx]?.netIncome || 0 });
       } else {
         const rev = data.revenue || {};
