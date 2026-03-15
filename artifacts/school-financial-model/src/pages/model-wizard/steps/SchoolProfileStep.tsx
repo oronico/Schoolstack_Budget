@@ -351,7 +351,7 @@ export function SchoolProfileStep() {
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Current Year Projections</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Since you're in your first year, enter your projected end-of-year numbers. These help our consultant benchmark your forward plan.
+            Your current year numbers give us real data to pressure test your projections and build a stronger financial story for lenders.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput
@@ -399,7 +399,7 @@ export function SchoolProfileStep() {
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Prior-Year Actuals</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Enter last school year's actual numbers so our consultant can compare your projections to real results.
+            Last year's real numbers are the foundation for credible projections — they help us stress-test assumptions and give lenders confidence in your plan.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput
