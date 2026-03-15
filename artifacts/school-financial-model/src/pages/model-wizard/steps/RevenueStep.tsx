@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type RevenueRowData,
@@ -32,6 +32,7 @@ const CATEGORY_ICONS: Record<RevenueCategory, React.ComponentType<{ className?: 
   public_funding: Building2,
   school_choice: Landmark,
   grants_contributions: Gift,
+  philanthropy: Heart,
   other_revenue: Wallet,
 };
 
@@ -74,7 +75,11 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
     },
   },
   grants_contributions: {
-    tip: "Startup grants, foundation funding, donations, and fundraising revenue. Mark each as confirmed or projected.",
+    tip: "Startup grants, foundation funding, and fundraising event revenue. Mark each as confirmed or projected.",
+    common: false,
+  },
+  philanthropy: {
+    tip: "Unrestricted gifts (annual fund, board giving) and restricted gifts (capital, program-specific, scholarship). Lenders distinguish between these — unrestricted funds support debt service; restricted funds cannot.",
     common: false,
   },
   other_revenue: {
@@ -127,7 +132,9 @@ function RevenueSourceCheck({ checked, onChange, icon, title, description, disab
   );
 }
 
-function deriveFundingProfile(sources: { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean }): FundingProfile {
+type RevenueSources = { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean; philanthropy?: boolean };
+
+function deriveFundingProfile(sources: RevenueSources): FundingProfile {
   const hasTuition = sources.tuition ?? false;
   const hasPublic = sources.publicFunding ?? false;
   const hasChoice = sources.schoolChoice ?? false;
@@ -139,12 +146,13 @@ function deriveFundingProfile(sources: { tuition?: boolean; publicFunding?: bool
   return "hybrid_mixed";
 }
 
-function sourcesToCategories(sources: { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean }): Set<RevenueCategory> {
+function sourcesToCategories(sources: RevenueSources): Set<RevenueCategory> {
   const cats = new Set<RevenueCategory>();
   if (sources.tuition) { cats.add("tuition_and_fees"); cats.add("tuition_offsets"); }
   if (sources.publicFunding) cats.add("public_funding");
   if (sources.schoolChoice) cats.add("school_choice");
   if (sources.grantsContributions) cats.add("grants_contributions");
+  if (sources.philanthropy) cats.add("philanthropy");
   cats.add("other_revenue");
   return cats;
 }
@@ -172,7 +180,7 @@ export function RevenueStep() {
   const y1Students = enrollment?.year1 || 0;
   const y5Students = enrollment?.year5 || 0;
 
-  const revenueSources = watch("revenueSources") as { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean } | undefined;
+  const revenueSources = watch("revenueSources") as RevenueSources | undefined;
 
   const isCharterType = schoolType === "charter_school";
 
@@ -192,6 +200,7 @@ export function RevenueStep() {
           publicFunding: true,
           schoolChoice: false,
           grantsContributions: revenueSources?.grantsContributions ?? false,
+          philanthropy: revenueSources?.philanthropy ?? false,
         }, { shouldDirty: true });
       }
       if (fundingProfile !== "charter_public_funded") {
@@ -206,7 +215,7 @@ export function RevenueStep() {
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(true);
   const [enabledCategories, setEnabledCategories] = useState<Set<RevenueCategory>>(() => {
-    if (revenueSources && (revenueSources.tuition || revenueSources.publicFunding || revenueSources.schoolChoice || revenueSources.grantsContributions)) {
+    if (revenueSources && (revenueSources.tuition || revenueSources.publicFunding || revenueSources.schoolChoice || revenueSources.grantsContributions || revenueSources.philanthropy)) {
       return sourcesToCategories(revenueSources);
     }
     if (fundingProfile === "charter_public_funded") {
@@ -381,7 +390,8 @@ export function RevenueStep() {
   const formatCurrency = (val: number) =>
     val >= 1000 ? `$${Math.round(val).toLocaleString()}` : `$${val}`;
 
-  const anySourceChecked = revenueSources?.tuition || revenueSources?.publicFunding || revenueSources?.schoolChoice || revenueSources?.grantsContributions;
+  const anySourceChecked = revenueSources?.tuition || revenueSources?.publicFunding || revenueSources?.schoolChoice || revenueSources?.grantsContributions || revenueSources?.philanthropy;
+  const sourceCount = [revenueSources?.tuition, revenueSources?.publicFunding, revenueSources?.schoolChoice, revenueSources?.grantsContributions, revenueSources?.philanthropy].filter(Boolean).length;
 
   if (showCategoryPicker) {
     return (
@@ -440,8 +450,15 @@ export function RevenueStep() {
             checked={revenueSources?.grantsContributions ?? false}
             onChange={(v) => handleRevenueSourceChange("grantsContributions", v)}
             icon={<Gift className="h-5 w-5" />}
-            title="Grants & Contributions"
-            description="Grants, donations, fundraising, philanthropy"
+            title="Grants & Fundraising"
+            description="Grants, fundraising events, campaign revenue"
+          />
+          <RevenueSourceCheck
+            checked={revenueSources?.philanthropy ?? false}
+            onChange={(v) => handleRevenueSourceChange("philanthropy", v)}
+            icon={<Heart className="h-5 w-5" />}
+            title="Philanthropy"
+            description="Annual fund, board giving, restricted & unrestricted gifts"
           />
         </div>
 
@@ -457,7 +474,7 @@ export function RevenueStep() {
           )}
         >
           {anySourceChecked
-            ? `Continue with ${[revenueSources?.tuition, revenueSources?.publicFunding, revenueSources?.schoolChoice, revenueSources?.grantsContributions].filter(Boolean).length} revenue ${[revenueSources?.tuition, revenueSources?.publicFunding, revenueSources?.schoolChoice, revenueSources?.grantsContributions].filter(Boolean).length === 1 ? "source" : "sources"}`
+            ? `Continue with ${sourceCount} revenue ${sourceCount === 1 ? "source" : "sources"}`
             : "Select at least one revenue source"
           }
         </button>
@@ -637,7 +654,8 @@ function RevenueLineItem({
     || row.category === "tuition_offsets"
     || row.category === "public_funding"
     || row.category === "school_choice"
-    || row.category === "grants_contributions";
+    || row.category === "grants_contributions"
+    || row.category === "philanthropy";
 
   return (
     <div
@@ -918,7 +936,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
           </>
         )}
 
-        {category === "grants_contributions" && (
+        {(category === "grants_contributions" || category === "philanthropy") && (
           <>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">

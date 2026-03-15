@@ -37,6 +37,7 @@ export const revenueSourcesSchema = z.object({
   publicFunding: z.boolean().default(false),
   schoolChoice: z.boolean().default(false),
   grantsContributions: z.boolean().default(false),
+  philanthropy: z.boolean().default(false),
 });
 
 export const schoolProfileSchema = z.object({
