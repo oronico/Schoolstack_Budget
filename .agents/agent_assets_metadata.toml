@@ -12,3 +12,9 @@ id = "_-VmpumSyhn-peRKoJGw9"
 uri = "file://underwriting-export.xlsx"
 type = "table"
 title = "SchoolStack Budget — Underwriting Export (Lender Review School)"
+
+[[outputs]]
+id = "yqU3ZXN_jFob2_oIs1d8-"
+uri = "file://DEPLOYMENT_GUIDE.md"
+type = "text"
+title = "SchoolStack Budget — Deployment Guide"
