@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, CheckCircle2, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type RevenueRowData,
@@ -83,6 +83,72 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
   },
 };
 
+interface RevenueSourceCheckProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  disabled?: boolean;
+}
+
+function RevenueSourceCheck({ checked, onChange, icon, title, description, disabled }: RevenueSourceCheckProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
+      className={cn(
+        "flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all",
+        checked
+          ? "border-primary bg-primary/5 shadow-sm"
+          : "border-border bg-card hover:border-primary/40",
+        disabled && "opacity-50 cursor-not-allowed"
+      )}
+    >
+      <div className={cn(
+        "mt-0.5 flex h-5 w-5 items-center justify-center rounded border-2 transition-all flex-shrink-0",
+        checked ? "border-primary bg-primary" : "border-border bg-background"
+      )}>
+        {checked && (
+          <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={cn("text-muted-foreground", checked && "text-primary")}>{icon}</span>
+          <span className="font-semibold text-sm text-foreground">{title}</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+      </div>
+    </button>
+  );
+}
+
+function deriveFundingProfile(sources: { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean }): FundingProfile {
+  const hasTuition = sources.tuition ?? false;
+  const hasPublic = sources.publicFunding ?? false;
+  const hasChoice = sources.schoolChoice ?? false;
+
+  if (hasPublic && !hasTuition && !hasChoice) return "charter_public_funded";
+  if ((hasTuition && hasPublic) || hasChoice) return "hybrid_mixed";
+  if (hasTuition) return "tuition_based";
+  if (hasPublic) return "charter_public_funded";
+  return "hybrid_mixed";
+}
+
+function sourcesToCategories(sources: { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean }): Set<RevenueCategory> {
+  const cats = new Set<RevenueCategory>();
+  if (sources.tuition) { cats.add("tuition_and_fees"); cats.add("tuition_offsets"); }
+  if (sources.publicFunding) cats.add("public_funding");
+  if (sources.schoolChoice) cats.add("school_choice");
+  if (sources.grantsContributions) cats.add("grants_contributions");
+  cats.add("other_revenue");
+  return cats;
+}
+
 function getYearCount(_schoolStage: string | undefined): number {
   return 5;
 }
@@ -106,12 +172,43 @@ export function RevenueStep() {
   const y1Students = enrollment?.year1 || 0;
   const y5Students = enrollment?.year5 || 0;
 
+  const revenueSources = watch("revenueSources") as { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean } | undefined;
+
+  const isCharterType = schoolType === "charter_school";
+
+  const handleRevenueSourceChange = useCallback((source: string, checked: boolean) => {
+    const updated = { ...revenueSources, [source]: checked };
+    setValue("revenueSources", updated, { shouldDirty: true });
+    const derived = deriveFundingProfile(updated);
+    setValue("schoolProfile.fundingProfile", derived, { shouldDirty: true });
+  }, [revenueSources, setValue]);
+
+  useEffect(() => {
+    if (isCharterType) {
+      const needsUpdate = !revenueSources?.publicFunding || revenueSources?.tuition || revenueSources?.schoolChoice;
+      if (needsUpdate) {
+        setValue("revenueSources", {
+          tuition: false,
+          publicFunding: true,
+          schoolChoice: false,
+          grantsContributions: revenueSources?.grantsContributions ?? false,
+        }, { shouldDirty: true });
+      }
+      if (fundingProfile !== "charter_public_funded") {
+        setValue("schoolProfile.fundingProfile", "charter_public_funded", { shouldDirty: true });
+      }
+    }
+  }, [isCharterType]);
+
   const formRows = watch("revenueRows") as RevenueRowData[] | undefined;
   const [rows, setRows] = useState<RevenueRowData[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<RevenueCategory>>(new Set());
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(true);
   const [enabledCategories, setEnabledCategories] = useState<Set<RevenueCategory>>(() => {
+    if (revenueSources && (revenueSources.tuition || revenueSources.publicFunding || revenueSources.schoolChoice || revenueSources.grantsContributions)) {
+      return sourcesToCategories(revenueSources);
+    }
     if (fundingProfile === "charter_public_funded") {
       return new Set<RevenueCategory>(["public_funding", "grants_contributions", "other_revenue"]);
     }
@@ -188,25 +285,19 @@ export function RevenueStep() {
     setValue("revenueRows", updatedRows, { shouldDirty: true });
   }, [setValue]);
 
-  const toggleCategoryEnabled = useCallback((cat: RevenueCategory) => {
-    setEnabledCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat); else next.add(cat);
-      return next;
-    });
-  }, []);
-
   const applyCategories = useCallback(() => {
+    const catsFromSources = revenueSources ? sourcesToCategories(revenueSources) : enabledCategories;
     const updated = rows.map((row) => {
-      if (enabledCategories.has(row.category)) {
+      if (catsFromSources.has(row.category)) {
         return row.enabled ? row : { ...row, enabled: true };
       }
       return row.enabled ? { ...row, enabled: false } : row;
     });
+    setEnabledCategories(catsFromSources);
     syncToForm(updated);
-    setExpandedCategories(new Set(enabledCategories));
+    setExpandedCategories(new Set(catsFromSources));
     setShowCategoryPicker(false);
-  }, [rows, enabledCategories, syncToForm]);
+  }, [rows, enabledCategories, revenueSources, syncToForm]);
 
   const toggleCategory = (cat: RevenueCategory) => {
     setExpandedCategories((prev) => {
@@ -290,12 +381,9 @@ export function RevenueStep() {
   const formatCurrency = (val: number) =>
     val >= 1000 ? `$${Math.round(val).toLocaleString()}` : `$${val}`;
 
-  if (showCategoryPicker) {
-    const pickerCategories = categoryOrder.filter((cat) => {
-      if (isCharter && CHARTER_HIDDEN_CATEGORIES.includes(cat)) return false;
-      return true;
-    });
+  const anySourceChecked = revenueSources?.tuition || revenueSources?.publicFunding || revenueSources?.schoolChoice || revenueSources?.grantsContributions;
 
+  if (showCategoryPicker) {
     return (
       <div className="space-y-8">
         <div>
@@ -303,27 +391,16 @@ export function RevenueStep() {
             Where Does Your Money Come From?
           </h2>
           <p className="text-muted-foreground text-lg">
-            Check the revenue sources that apply to your school. We'll show just those sections with the right defaults for your funding model.
+            Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
-          <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-foreground">
-            <span className="font-semibold">
-              {fundingProfile === "charter_public_funded"
-                ? "Charter funding model detected."
-                : fundingProfile === "hybrid_mixed"
-                ? "Hybrid funding model — you likely have multiple sources."
-                : "Tuition-based model detected."}
-            </span>{" "}
-            {fundingProfile === "charter_public_funded"
-              ? "We've pre-selected public funding and grants. Most charter schools also earn other revenue from facility rental, before/after care, or fundraising."
-              : fundingProfile === "hybrid_mixed"
-              ? "We've pre-selected tuition and offsets. Check any additional sources — school choice programs, grants, and public funding are common supplements."
-              : "We've pre-selected tuition, offsets, and other revenue. If you receive ESA/voucher funds, grants, or public funding, check those too."}
+        {isCharterType && (
+          <div className="flex items-start gap-2 p-4 bg-blue-50 rounded-xl border border-blue-200">
+            <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-blue-700">Charter schools typically receive public per-pupil funding. We've pre-checked that for you.</p>
           </div>
-        </div>
+        )}
 
         {y1Students > 0 && (
           <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 flex items-start gap-3">
@@ -335,71 +412,54 @@ export function RevenueStep() {
           </div>
         )}
 
-        <div className="space-y-3">
-          {pickerCategories.map((cat) => {
-            const Icon = CATEGORY_ICONS[cat];
-            const guidance = CATEGORY_GUIDANCE[cat];
-            const isEnabled = enabledCategories.has(cat);
-            const fundingHint = guidance?.fundingHint?.[fundingProfile];
-
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => toggleCategoryEnabled(cat)}
-                className={cn(
-                  "w-full rounded-2xl border-2 p-5 text-left transition-all",
-                  isEnabled
-                    ? "border-primary/40 bg-primary/5 shadow-sm"
-                    : "border-border bg-card hover:border-border/80"
-                )}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "h-10 w-10 rounded-xl flex items-center justify-center transition-colors",
-                    isEnabled ? "bg-primary/10" : "bg-muted"
-                  )}>
-                    <Icon className={cn("h-5 w-5", isEnabled ? "text-primary" : "text-muted-foreground")} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={cn("font-bold text-lg", isEnabled ? "text-foreground" : "text-muted-foreground")}>
-                        {CATEGORY_LABELS[cat]}
-                      </span>
-                      {guidance?.common && (
-                        <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                          Most schools need this
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {fundingHint || guidance?.tip}
-                    </p>
-                  </div>
-                  <div className={cn(
-                    "h-6 w-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
-                    isEnabled ? "border-primary bg-primary" : "border-border"
-                  )}>
-                    {isEnabled && <CheckCircle2 className="h-4 w-4 text-white" />}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <RevenueSourceCheck
+            checked={revenueSources?.tuition ?? false}
+            onChange={(v) => handleRevenueSourceChange("tuition", v)}
+            icon={<DollarSign className="h-5 w-5" />}
+            title="Tuition & Fees"
+            description="Tuition, registration fees, aftercare, family payments"
+            disabled={isCharterType}
+          />
+          <RevenueSourceCheck
+            checked={revenueSources?.publicFunding ?? false}
+            onChange={(v) => handleRevenueSourceChange("publicFunding", v)}
+            icon={<Landmark className="h-5 w-5" />}
+            title="Public Funding"
+            description="State, federal, or local per-pupil revenue"
+          />
+          <RevenueSourceCheck
+            checked={revenueSources?.schoolChoice ?? false}
+            onChange={(v) => handleRevenueSourceChange("schoolChoice", v)}
+            icon={<Vote className="h-5 w-5" />}
+            title="School Choice / ESA / Vouchers"
+            description="ESA accounts, voucher programs, scholarship organizations"
+            disabled={isCharterType}
+          />
+          <RevenueSourceCheck
+            checked={revenueSources?.grantsContributions ?? false}
+            onChange={(v) => handleRevenueSourceChange("grantsContributions", v)}
+            icon={<Gift className="h-5 w-5" />}
+            title="Grants & Contributions"
+            description="Grants, donations, fundraising, philanthropy"
+          />
         </div>
 
         <button
           type="button"
           onClick={applyCategories}
-          disabled={enabledCategories.size === 0}
+          disabled={!anySourceChecked}
           className={cn(
             "w-full rounded-2xl font-semibold py-4 text-lg transition-colors shadow-md",
-            enabledCategories.size > 0
+            anySourceChecked
               ? "bg-primary text-white hover:bg-primary/90"
               : "bg-muted text-muted-foreground cursor-not-allowed"
           )}
         >
-          Continue with {enabledCategories.size} revenue {enabledCategories.size === 1 ? "source" : "sources"}
+          {anySourceChecked
+            ? `Continue with ${[revenueSources?.tuition, revenueSources?.publicFunding, revenueSources?.schoolChoice, revenueSources?.grantsContributions].filter(Boolean).length} revenue ${[revenueSources?.tuition, revenueSources?.publicFunding, revenueSources?.schoolChoice, revenueSources?.grantsContributions].filter(Boolean).length === 1 ? "source" : "sources"}`
+            : "Select at least one revenue source"
+          }
         </button>
       </div>
     );

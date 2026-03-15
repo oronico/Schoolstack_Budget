@@ -1,7 +1,6 @@
-import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, Landmark, Info, AlertCircle, DollarSign, Vote, Gift } from "lucide-react";
+import { Building2, Rocket, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS } from "../schema";
 
@@ -31,50 +30,6 @@ const MONTHS = [
   { value: "7", label: "July" }, { value: "8", label: "August" }, { value: "9", label: "September" },
   { value: "10", label: "October" }, { value: "11", label: "November" }, { value: "12", label: "December" },
 ];
-
-interface RevenueSourceCheckProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  disabled?: boolean;
-}
-
-function RevenueSourceCheck({ checked, onChange, icon, title, description, disabled }: RevenueSourceCheckProps) {
-  return (
-    <button
-      type="button"
-      onClick={() => !disabled && onChange(!checked)}
-      disabled={disabled}
-      className={cn(
-        "flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all",
-        checked
-          ? "border-primary bg-primary/5 shadow-sm"
-          : "border-border bg-card hover:border-primary/40",
-        disabled && "opacity-50 cursor-not-allowed"
-      )}
-    >
-      <div className={cn(
-        "mt-0.5 flex h-5 w-5 items-center justify-center rounded border-2 transition-all flex-shrink-0",
-        checked ? "border-primary bg-primary" : "border-border bg-background"
-      )}>
-        {checked && (
-          <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
-            <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className={cn("text-muted-foreground", checked && "text-primary")}>{icon}</span>
-          <span className="font-semibold text-sm text-foreground">{title}</span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-    </button>
-  );
-}
 
 function EINInput() {
   const { watch, setValue } = useFormContext();
@@ -168,63 +123,21 @@ export function SchoolProfileStep() {
   const isPartialFirstYear = watch("schoolProfile.isPartialFirstYear");
   const schoolStage = watch("schoolProfile.schoolStage");
   const operatingYear = watch("schoolProfile.operatingYear");
-  const fundingProfile = watch("schoolProfile.fundingProfile");
   const schoolType = watch("schoolProfile.schoolType");
   const entityType = watch("schoolProfile.entityType");
   const isAccredited = watch("schoolProfile.isAccredited");
-
-  const revenueSources = watch("revenueSources") as { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean } | undefined;
 
   const isCharter = schoolType === "charter_school";
   const isPrivate = schoolType === "private_school";
 
   const { formState: { errors } } = useFormContext();
   const stageError = getNestedError(errors, "schoolProfile.schoolStage");
-  const fundingError = getNestedError(errors, "schoolProfile.fundingProfile");
-
-  const deriveFundingProfile = (sources: { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean }) => {
-    const hasTuition = sources.tuition ?? false;
-    const hasPublic = sources.publicFunding ?? false;
-    const hasChoice = sources.schoolChoice ?? false;
-
-    if (hasPublic && !hasTuition && !hasChoice) return "charter_public_funded";
-    if ((hasTuition && hasPublic) || hasChoice) return "hybrid_mixed";
-    if (hasTuition) return "tuition_based";
-    if (hasPublic) return "charter_public_funded";
-    return "hybrid_mixed";
-  };
-
-  const handleRevenueSourceChange = (source: string, checked: boolean) => {
-    const updated = { ...revenueSources, [source]: checked };
-    setValue("revenueSources", updated, { shouldDirty: true });
-    const derived = deriveFundingProfile(updated);
-    setValue("schoolProfile.fundingProfile", derived, { shouldDirty: true });
-  };
-
-  useEffect(() => {
-    if (isCharter) {
-      setValue("revenueSources.publicFunding", true, { shouldDirty: true });
-      setValue("revenueSources.tuition", false, { shouldDirty: true });
-      setValue("revenueSources.schoolChoice", false, { shouldDirty: true });
-      if (fundingProfile !== "charter_public_funded") {
-        setValue("schoolProfile.fundingProfile", "charter_public_funded", { shouldDirty: true });
-      }
-    }
-  }, [isCharter, fundingProfile, setValue]);
-
-  useEffect(() => {
-    const anyChecked = revenueSources?.tuition || revenueSources?.publicFunding || revenueSources?.schoolChoice || revenueSources?.grantsContributions;
-    if (anyChecked && !fundingProfile) {
-      const derived = deriveFundingProfile(revenueSources || {});
-      setValue("schoolProfile.fundingProfile", derived, { shouldDirty: true });
-    }
-  }, [revenueSources, fundingProfile, setValue]);
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Tell Us About Your School</h2>
-        <p className="text-muted-foreground text-lg">We'll tailor everything to your school's type, stage, and revenue sources.</p>
+        <p className="text-muted-foreground text-lg">We'll tailor everything to your school's type, stage, and structure.</p>
       </div>
 
       <div>
@@ -309,57 +222,6 @@ export function SchoolProfileStep() {
                 { value: "second_year_plus", label: "We've completed at least one full school year" },
               ]}
             />
-          </div>
-        )}
-      </div>
-
-      <div>
-        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Revenue Sources</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Check every revenue source that applies to your school. This helps us set up the right line items in your budget.
-        </p>
-        {isCharter && (
-          <div className="flex items-start gap-2 mb-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
-            <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-blue-700">Charter schools typically receive public per-pupil funding. We've pre-checked that for you.</p>
-          </div>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <RevenueSourceCheck
-            checked={revenueSources?.tuition ?? false}
-            onChange={(v) => handleRevenueSourceChange("tuition", v)}
-            icon={<DollarSign className="h-5 w-5" />}
-            title="Tuition & Fees"
-            description="Tuition, registration fees, aftercare, family payments"
-            disabled={isCharter}
-          />
-          <RevenueSourceCheck
-            checked={revenueSources?.publicFunding ?? false}
-            onChange={(v) => handleRevenueSourceChange("publicFunding", v)}
-            icon={<Landmark className="h-5 w-5" />}
-            title="Public Funding"
-            description="State, federal, or local per-pupil revenue"
-          />
-          <RevenueSourceCheck
-            checked={revenueSources?.schoolChoice ?? false}
-            onChange={(v) => handleRevenueSourceChange("schoolChoice", v)}
-            icon={<Vote className="h-5 w-5" />}
-            title="School Choice / ESA / Vouchers"
-            description="ESA accounts, voucher programs, scholarship organizations"
-            disabled={isCharter}
-          />
-          <RevenueSourceCheck
-            checked={revenueSources?.grantsContributions ?? false}
-            onChange={(v) => handleRevenueSourceChange("grantsContributions", v)}
-            icon={<Gift className="h-5 w-5" />}
-            title="Grants & Contributions"
-            description="Grants, donations, fundraising, philanthropy"
-          />
-        </div>
-        {fundingError && !revenueSources?.tuition && !revenueSources?.publicFunding && !revenueSources?.schoolChoice && !revenueSources?.grantsContributions && (
-          <div className="flex items-center gap-2 mt-3 text-destructive">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <p className="text-sm font-medium">Please select at least one revenue source</p>
           </div>
         )}
       </div>

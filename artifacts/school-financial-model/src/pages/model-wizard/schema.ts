@@ -47,7 +47,7 @@ export const schoolProfileSchema = z.object({
   entityType: entityTypeSchema,
   ein: z.string().optional(),
   schoolStage: schoolStageSchema,
-  fundingProfile: fundingProfileSchema,
+  fundingProfile: fundingProfileSchema.optional(),
   plannedOpeningYear: z.string().optional(),
   operatingYear: z.enum(["first_year", "second_year_plus"]).optional(),
   openingYear: z.coerce.number().min(2000).max(2100).optional(),
