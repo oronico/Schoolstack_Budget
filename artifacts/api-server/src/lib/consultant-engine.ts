@@ -457,8 +457,10 @@ function computeSchoolProfileFacilityOverlay(
   sp: SchoolProfile,
   yearIndex: number,
   prorationFactor: number,
+  hasExistingOccupancyRows: boolean,
 ): number {
   if (!sp.locationSecured) {
+    if (hasExistingOccupancyRows) return 0;
     const pf = yearIndex === 0 ? prorationFactor : 1;
     return (sp.estimatedMonthlyFacilityBudget || 0) * 12 * pf;
   }
@@ -474,25 +476,39 @@ function computeSchoolProfileFacilityOverlay(
     const leaseEndYear = sp.leaseExpirationYear || (openingYear + 99);
     const yearsUntilExpiration = leaseEndYear - openingYear;
 
-    let annualRent: number;
-    if (yearIndex < yearsUntilExpiration) {
-      annualRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
-    } else if (yearIndex === yearsUntilExpiration) {
-      const preRenewalRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration);
-      const bumpedRent = preRenewalRent * (1 + renewalBump);
-      annualRent = bumpedRent * 12;
-    } else {
-      const preRenewalRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration);
-      const bumpedRent = preRenewalRent * (1 + renewalBump);
-      const postRenewalYears = yearIndex - yearsUntilExpiration;
-      annualRent = bumpedRent * 12 * Math.pow(1 + escalation, postRenewalYears);
-    }
-    total += annualRent * pf;
+    if (hasExistingOccupancyRows) {
+      if (yearIndex >= yearsUntilExpiration && baseRent > 0) {
+        const normalEscalatedRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
+        let renewedRent: number;
+        if (yearIndex === yearsUntilExpiration) {
+          renewedRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump) * 12;
+        } else {
+          const bumpedBase = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump);
+          renewedRent = bumpedBase * 12 * Math.pow(1 + escalation, yearIndex - yearsUntilExpiration);
+        }
+        total += (renewedRent - normalEscalatedRent) * pf;
+      }
 
-    if (sp.isNNNLease) {
-      const nnnMonthly = (sp.nnnCamCharges || 0) + (sp.nnnMaintenance || 0) + (sp.nnnUtilities || 0);
-      const costInflation = 0.03;
-      total += nnnMonthly * 12 * Math.pow(1 + costInflation, yearIndex) * pf;
+      if (sp.isNNNLease) {
+        const nnnMonthly = (sp.nnnCamCharges || 0) + (sp.nnnMaintenance || 0) + (sp.nnnUtilities || 0);
+        total += nnnMonthly * 12 * Math.pow(1.03, yearIndex) * pf;
+      }
+    } else {
+      let annualRent: number;
+      if (yearIndex < yearsUntilExpiration) {
+        annualRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
+      } else if (yearIndex === yearsUntilExpiration) {
+        annualRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump) * 12;
+      } else {
+        const bumpedBase = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump);
+        annualRent = bumpedBase * 12 * Math.pow(1 + escalation, yearIndex - yearsUntilExpiration);
+      }
+      total += annualRent * pf;
+
+      if (sp.isNNNLease) {
+        const nnnMonthly = (sp.nnnCamCharges || 0) + (sp.nnnMaintenance || 0) + (sp.nnnUtilities || 0);
+        total += nnnMonthly * 12 * Math.pow(1.03, yearIndex) * pf;
+      }
     }
   }
 
@@ -533,8 +549,8 @@ function computeAllYearsFromRows(
     const capDebt = computeCapDebtForYear(capDebtRows, yearIdx, students);
 
     let facilityOverlay = 0;
-    if (schoolProfile && !hasOccupancyRows) {
-      facilityOverlay = computeSchoolProfileFacilityOverlay(schoolProfile, yearIdx, prorationFactor);
+    if (schoolProfile) {
+      facilityOverlay = computeSchoolProfileFacilityOverlay(schoolProfile, yearIdx, prorationFactor, hasOccupancyRows);
     }
 
     const totalOpex = exp.total + capDebt + facilityOverlay;
@@ -766,11 +782,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     const rev = data.revenue || {};
     const st = data.staffing || {};
     const fac = data.facilities || {};
-    const hasLegacyRent = !!(fac.monthlyRent && fac.monthlyRent > 0);
+    const hasLegacyFacility = !!(fac.monthlyRent && fac.monthlyRent > 0);
     yearFinancials = enrollmentByYear.map((students, idx) => {
       const base = computeYearFinancialsLegacy(idx, students, rev, st, fac, prorationFactor);
-      if (!hasLegacyRent && sp.locationSecured !== undefined) {
-        const overlay = computeSchoolProfileFacilityOverlay(sp, idx, prorationFactor);
+      if (sp.locationSecured !== undefined) {
+        const overlay = computeSchoolProfileFacilityOverlay(sp, idx, prorationFactor, hasLegacyFacility);
         if (overlay > 0) {
           base.facilityCost += overlay;
           base.totalOpex += overlay;
@@ -1640,7 +1656,6 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     const yearsUntilExpiration = leaseEndYear - openingYear;
     if (yearsUntilExpiration >= 0 && yearsUntilExpiration < yearCount) {
       const bump = sp.postLeaseRenewalBump || 15;
-      risks.push(`Lease expires in Year ${yearsUntilExpiration + 1} — rent may increase ${bump}% at renewal`);
       recommendations.push({
         title: "Plan for Lease Renewal Risk",
         description: `Your lease expires in ${leaseEndYear}, which falls within your ${yearCount}-year projection. At renewal, rent could jump ${bump}% or more. Start renewal conversations early, explore extension options, or budget for the increase. Lenders pay close attention to lease expiration timing.`,
