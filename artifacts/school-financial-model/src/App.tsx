@@ -16,6 +16,8 @@ const DashboardPage = lazy(() => import("@/pages/dashboard").then(m => ({ defaul
 const ModelWizardPage = lazy(() => import("@/pages/model-wizard").then(m => ({ default: m.ModelWizardPage })));
 const PublicWizardPage = lazy(() => import("@/pages/public-wizard").then(m => ({ default: m.PublicWizardPage })));
 const AdminPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPage })));
+const TermsPage = lazy(() => import("@/pages/legal/terms").then(m => ({ default: m.TermsPage })));
+const PrivacyPolicyPage = lazy(() => import("@/pages/legal/privacy").then(m => ({ default: m.PrivacyPolicyPage })));
 import NotFound from "@/pages/not-found";
 
 setupFetchInterceptor();
@@ -60,6 +62,8 @@ function AppRouter() {
         <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/underwriting" component={PublicWizardPage} />
+        <Route path="/terms" component={TermsPage} />
+        <Route path="/privacy" component={PrivacyPolicyPage} />
 
         <Route path="/dashboard">
           {() => <ProtectedRoute component={DashboardPage} />}

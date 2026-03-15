@@ -15,6 +15,7 @@ export function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,10 +89,29 @@ export function RegisterPage() {
                 />
               </div>
 
+              <label className="flex items-start gap-3 mt-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={e => setAgreedToTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary/20 accent-primary"
+                />
+                <span className="text-sm text-muted-foreground leading-snug">
+                  I agree to the{" "}
+                  <Link href="/terms" className="font-semibold text-primary hover:underline" target="_blank">
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy" className="font-semibold text-primary hover:underline" target="_blank">
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
+
               <button
                 type="submit"
-                disabled={registerMutation.isPending}
-                className="w-full mt-4 flex items-center justify-center py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none"
+                disabled={registerMutation.isPending || !agreedToTerms}
+                className="w-full mt-4 flex items-center justify-center py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none disabled:cursor-not-allowed"
               >
                 {registerMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create Account"}
               </button>

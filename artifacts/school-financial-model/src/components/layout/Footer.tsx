@@ -8,10 +8,7 @@ export function Footer() {
           <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-3 mb-4">
               <img src={`${import.meta.env.BASE_URL}logos/schoolstack-mark.svg`} alt="SchoolStack" className="h-9 w-9" />
-              <div>
-                <p className="font-display text-lg font-bold text-white leading-none">SchoolStack Budget</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">by SchoolStack.ai</p>
-              </div>
+              <p className="font-display text-lg font-bold text-white leading-none">SchoolStack Budget</p>
             </div>
             <p className="text-sm text-white/60 leading-relaxed max-w-xs">
               Build a simple 5-year financial model for your school, save your work, and export a lender-ready workbook.
@@ -30,9 +27,8 @@ export function Footer() {
           <div>
             <h4 className="font-display text-sm font-bold uppercase tracking-wider text-white/50 mb-4">Resources</h4>
             <ul className="space-y-2.5">
-              <li><a href="#" className="text-sm text-white/70 hover:text-white transition-colors">About</a></li>
-              <li><a href="#" className="text-sm text-white/70 hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-sm text-white/70 hover:text-white transition-colors">Terms of Service</a></li>
+              <li><Link href="/privacy" className="text-sm text-white/70 hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-sm text-white/70 hover:text-white transition-colors">Terms of Service</Link></li>
             </ul>
           </div>
 
@@ -53,9 +49,9 @@ export function Footer() {
             &copy; {new Date().getFullYear()} Building Hope Impact Fund. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-xs text-white/40 hover:text-white/70 transition-colors">Privacy</a>
-            <a href="#" className="text-xs text-white/40 hover:text-white/70 transition-colors">Terms</a>
-            <a href="#" className="text-xs text-white/40 hover:text-white/70 transition-colors">Contact</a>
+            <Link href="/privacy" className="text-xs text-white/40 hover:text-white/70 transition-colors">Privacy</Link>
+            <Link href="/terms" className="text-xs text-white/40 hover:text-white/70 transition-colors">Terms</Link>
+            <a href="mailto:legal@schoolstack.ai" className="text-xs text-white/40 hover:text-white/70 transition-colors">Contact</a>
           </div>
         </div>
       </div>
