@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "mt89Qdy3YQO6xf-BdcRhT"
+uri = "file://RELEASE_PROOF_PACK.md"
+type = "text"
+title = "Release Proof Pack"
