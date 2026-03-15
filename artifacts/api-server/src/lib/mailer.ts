@@ -69,14 +69,14 @@ export async function sendPasswordResetEmail(
     });
 
     if (error) {
-      console.error("[mailer] Resend error:", error);
+      console.error("[mailer] Resend error:", error, `Reset link: ${resetUrl}`);
       return false;
     }
 
     console.log(`[mailer] Password reset email sent to ${toEmail}`);
     return true;
   } catch (err) {
-    console.error("[mailer] Failed to send password reset email:", err);
+    console.error("[mailer] Failed to send password reset email:", err, `Reset link: ${resetUrl}`);
     return false;
   }
 }
