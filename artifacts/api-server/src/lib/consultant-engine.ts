@@ -453,20 +453,32 @@ function computeCapDebtForYear(rows: CapitalDebtRow[], yearIdx: number, students
   return total;
 }
 
+interface FacilityOverlayResult {
+  rent: number;
+  nnnCam: number;
+  nnnMaintenance: number;
+  nnnUtilities: number;
+  propertyTax: number;
+  mortgage: number;
+  estimatedBudget: number;
+  total: number;
+}
+
 function computeSchoolProfileFacilityOverlay(
   sp: SchoolProfile,
   yearIndex: number,
   prorationFactor: number,
-  hasExistingOccupancyRows: boolean,
-): number {
+): FacilityOverlayResult {
+  const zero: FacilityOverlayResult = { rent: 0, nnnCam: 0, nnnMaintenance: 0, nnnUtilities: 0, propertyTax: 0, mortgage: 0, estimatedBudget: 0, total: 0 };
+
   if (!sp.locationSecured) {
-    if (hasExistingOccupancyRows) return 0;
     const pf = yearIndex === 0 ? prorationFactor : 1;
-    return (sp.estimatedMonthlyFacilityBudget || 0) * 12 * pf;
+    const est = (sp.estimatedMonthlyFacilityBudget || 0) * 12 * pf;
+    return { ...zero, estimatedBudget: est, total: est };
   }
 
   const pf = yearIndex === 0 ? prorationFactor : 1;
-  let total = 0;
+  const result = { ...zero };
 
   if (sp.ownershipType === "rent") {
     const baseRent = sp.monthlyRent || 0;
@@ -476,52 +488,43 @@ function computeSchoolProfileFacilityOverlay(
     const leaseEndYear = sp.leaseExpirationYear || (openingYear + 99);
     const yearsUntilExpiration = leaseEndYear - openingYear;
 
-    if (hasExistingOccupancyRows) {
-      if (yearIndex >= yearsUntilExpiration && baseRent > 0) {
-        const normalEscalatedRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
-        let renewedRent: number;
-        if (yearIndex === yearsUntilExpiration) {
-          renewedRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump) * 12;
-        } else {
-          const bumpedBase = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump);
-          renewedRent = bumpedBase * 12 * Math.pow(1 + escalation, yearIndex - yearsUntilExpiration);
-        }
-        total += (renewedRent - normalEscalatedRent) * pf;
-      }
-
-      if (sp.isNNNLease) {
-        const nnnMonthly = (sp.nnnCamCharges || 0) + (sp.nnnMaintenance || 0) + (sp.nnnUtilities || 0);
-        total += nnnMonthly * 12 * Math.pow(1.03, yearIndex) * pf;
-      }
+    let annualRent: number;
+    if (yearIndex < yearsUntilExpiration) {
+      annualRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
+    } else if (yearIndex === yearsUntilExpiration) {
+      annualRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump) * 12;
     } else {
-      let annualRent: number;
-      if (yearIndex < yearsUntilExpiration) {
-        annualRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
-      } else if (yearIndex === yearsUntilExpiration) {
-        annualRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump) * 12;
-      } else {
-        const bumpedBase = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump);
-        annualRent = bumpedBase * 12 * Math.pow(1 + escalation, yearIndex - yearsUntilExpiration);
-      }
-      total += annualRent * pf;
+      const bumpedBase = baseRent * Math.pow(1 + escalation, yearsUntilExpiration) * (1 + renewalBump);
+      annualRent = bumpedBase * 12 * Math.pow(1 + escalation, yearIndex - yearsUntilExpiration);
+    }
+    result.rent = annualRent * pf;
 
-      if (sp.isNNNLease) {
-        const nnnMonthly = (sp.nnnCamCharges || 0) + (sp.nnnMaintenance || 0) + (sp.nnnUtilities || 0);
-        total += nnnMonthly * 12 * Math.pow(1.03, yearIndex) * pf;
-      }
+    if (sp.isNNNLease) {
+      const inflFactor = Math.pow(1.03, yearIndex) * pf;
+      result.nnnCam = (sp.nnnCamCharges || 0) * 12 * inflFactor;
+      result.nnnMaintenance = (sp.nnnMaintenance || 0) * 12 * inflFactor;
+      result.nnnUtilities = (sp.nnnUtilities || 0) * 12 * inflFactor;
     }
   }
 
   if (sp.ownershipType === "own") {
     if (sp.entityType && sp.entityType !== "nonprofit_501c3" && (sp.propertyTaxAnnual || 0) > 0) {
-      total += (sp.propertyTaxAnnual || 0) * Math.pow(1.02, yearIndex) * pf;
+      result.propertyTax = (sp.propertyTaxAnnual || 0) * Math.pow(1.02, yearIndex) * pf;
     }
     if (sp.hasMortgage && (sp.mortgageMonthlyPayment || 0) > 0) {
-      total += (sp.mortgageMonthlyPayment || 0) * 12 * pf;
+      result.mortgage = (sp.mortgageMonthlyPayment || 0) * 12 * pf;
     }
   }
 
-  return total;
+  result.total = result.rent + result.nnnCam + result.nnnMaintenance + result.nnnUtilities + result.propertyTax + result.mortgage + result.estimatedBudget;
+  return result;
+}
+
+function hasSchoolProfileFacilityData(sp?: SchoolProfile): boolean {
+  if (!sp) return false;
+  if (sp.locationSecured === false && (sp.estimatedMonthlyFacilityBudget || 0) > 0) return true;
+  if (sp.locationSecured === true) return true;
+  return false;
 }
 
 function computeAllYearsFromRows(
@@ -537,7 +540,10 @@ function computeAllYearsFromRows(
   schoolProfile?: SchoolProfile,
 ): YearFinancials[] {
   const baseCost = computeStaffingBaseCost(staffingRows);
-  const hasOccupancyRows = expenseRows.some(r => r.enabled && r.category === "occupancy_facility");
+  const spIsFacilityAuthority = hasSchoolProfileFacilityData(schoolProfile);
+  const effectiveExpenseRows = spIsFacilityAuthority
+    ? expenseRows.map(r => r.category === "occupancy_facility" ? { ...r, enabled: false } : r)
+    : expenseRows;
 
   return enrollmentByYear.map((students, yearIdx) => {
     const pf = yearIdx === 0 ? prorationFactor : 1;
@@ -545,12 +551,13 @@ function computeAllYearsFromRows(
     const totalStaffingCost = baseCost * salaryEsc * pf;
 
     const rev = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers);
-    const exp = computeExpensesForYear(expenseRows, yearIdx, students, rev.total, costInflationPct);
+    const exp = computeExpensesForYear(effectiveExpenseRows, yearIdx, students, rev.total, costInflationPct);
     const capDebt = computeCapDebtForYear(capDebtRows, yearIdx, students);
 
     let facilityOverlay = 0;
-    if (schoolProfile) {
-      facilityOverlay = computeSchoolProfileFacilityOverlay(schoolProfile, yearIdx, prorationFactor, hasOccupancyRows);
+    if (schoolProfile && spIsFacilityAuthority) {
+      const overlay = computeSchoolProfileFacilityOverlay(schoolProfile, yearIdx, prorationFactor);
+      facilityOverlay = overlay.total;
     }
 
     const totalOpex = exp.total + capDebt + facilityOverlay;
@@ -782,16 +789,17 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     const rev = data.revenue || {};
     const st = data.staffing || {};
     const fac = data.facilities || {};
-    const hasLegacyFacility = !!(fac.monthlyRent && fac.monthlyRent > 0);
+    const spIsAuth = hasSchoolProfileFacilityData(sp);
+    const effectiveFac = spIsAuth ? { ...fac, monthlyRent: 0, annualRentIncrease: 0 } : fac;
     yearFinancials = enrollmentByYear.map((students, idx) => {
-      const base = computeYearFinancialsLegacy(idx, students, rev, st, fac, prorationFactor);
-      if (sp.locationSecured !== undefined) {
-        const overlay = computeSchoolProfileFacilityOverlay(sp, idx, prorationFactor, hasLegacyFacility);
-        if (overlay > 0) {
-          base.facilityCost += overlay;
-          base.totalOpex += overlay;
-          base.totalExpenses += overlay;
-          base.netIncome -= overlay;
+      const base = computeYearFinancialsLegacy(idx, students, rev, st, effectiveFac, prorationFactor);
+      if (spIsAuth) {
+        const overlay = computeSchoolProfileFacilityOverlay(sp, idx, prorationFactor);
+        if (overlay.total > 0) {
+          base.facilityCost += overlay.total;
+          base.totalOpex += overlay.total;
+          base.totalExpenses += overlay.total;
+          base.netIncome -= overlay.total;
           base.netMargin = base.totalRevenue > 0 ? base.netIncome / base.totalRevenue : 0;
         }
       }
