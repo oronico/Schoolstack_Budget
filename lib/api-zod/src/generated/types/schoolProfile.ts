@@ -25,4 +25,23 @@ export interface SchoolProfile {
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
+  locationSecured?: boolean;
+  facilityAddress?: string;
+  facilityCity?: string;
+  facilityState?: string;
+  facilityZip?: string;
+  ownershipType?: "own" | "rent";
+  propertyTaxAnnual?: number;
+  hasMortgage?: boolean;
+  mortgageMonthlyPayment?: number;
+  monthlyRent?: number;
+  annualRentEscalation?: number;
+  leaseExpirationMonth?: number;
+  leaseExpirationYear?: number;
+  postLeaseRenewalBump?: number;
+  isNNNLease?: boolean;
+  nnnCamCharges?: number;
+  nnnMaintenance?: number;
+  nnnUtilities?: number;
+  estimatedMonthlyFacilityBudget?: number;
 }
