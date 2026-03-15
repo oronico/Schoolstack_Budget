@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox } from "@/components/ui/form-inputs";
-import { Building2, Rocket, GraduationCap, Landmark, Shuffle, Briefcase, Scale, Users, Building, FileText, Heart, Info } from "lucide-react";
+import { Building2, Rocket, GraduationCap, Landmark, Shuffle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS } from "../schema";
 
@@ -76,43 +76,8 @@ function RadioCard({ selected, onSelect, icon, title, description, disabled }: R
   );
 }
 
-function CompactRadioCard({ selected, onSelect, icon, title }: { selected: boolean; onSelect: () => void; icon: React.ReactNode; title: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all w-full",
-        selected
-          ? "border-primary bg-primary/5 shadow-sm shadow-primary/10"
-          : "border-border bg-card hover:border-primary/40 hover:bg-primary/[0.02]"
-      )}
-    >
-      <div className={cn(
-        "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
-        selected ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-      )}>
-        {icon}
-      </div>
-      <p className={cn("font-semibold text-sm flex-1", selected ? "text-primary" : "text-foreground")}>{title}</p>
-      <div className={cn(
-        "flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center",
-        selected ? "border-primary" : "border-border"
-      )}>
-        {selected && <div className="w-2 h-2 rounded-full bg-primary" />}
-      </div>
-    </button>
-  );
-}
 
-const ENTITY_TYPES = [
-  { value: "sole_practitioner", icon: <Briefcase className="h-4 w-4" /> },
-  { value: "llc_single", icon: <FileText className="h-4 w-4" /> },
-  { value: "llc_partnership", icon: <Users className="h-4 w-4" /> },
-  { value: "c_corp", icon: <Building className="h-4 w-4" /> },
-  { value: "s_corp", icon: <Scale className="h-4 w-4" /> },
-  { value: "nonprofit_501c3", icon: <Heart className="h-4 w-4" /> },
-];
+
 
 export function SchoolProfileStep() {
   const { watch, setValue } = useFormContext();
@@ -302,33 +267,22 @@ export function SchoolProfileStep() {
       </div>
 
       <div>
-        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">What type of entity are you?</h3>
+        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Entity Type</h3>
         <p className="text-sm text-muted-foreground mb-4">This helps us use the right financial terminology in your model and reports.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {ENTITY_TYPES.map((et) => (
-            <CompactRadioCard
-              key={et.value}
-              selected={entityType === et.value}
-              onSelect={() => {
-                setValue("schoolProfile.entityType", et.value, { shouldDirty: true });
-                if (et.value === "sole_practitioner") {
-                  setValue("schoolProfile.ein", "", { shouldDirty: true });
-                }
-              }}
-              icon={et.icon}
-              title={ENTITY_TYPE_LABELS[et.value]}
-            />
-          ))}
-        </div>
-        {entityType && entityType !== "sole_practitioner" && (
-          <div className="mt-4 max-w-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormSelect
+            name="schoolProfile.entityType"
+            label="Entity Type"
+            options={Object.entries(ENTITY_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+          />
+          {entityType && entityType !== "sole_practitioner" && (
             <FormInput
               name="schoolProfile.ein"
               label="EIN (Employer Identification Number)"
               placeholder="XX-XXXXXXX"
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div>
