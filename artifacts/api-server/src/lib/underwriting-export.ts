@@ -437,7 +437,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   buildStaffingPlan(wb, staffingRows, salaryEsc, prorationFactor, yc, cols, yearHeaders);
   buildOperatingExpenses(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
   buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
-  buildSourcesUses(wb, capDebtRows, startingCash, annualRevenue, yc);
+  buildSourcesUses(wb, capDebtRows, startingCash, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, expenseRows, staffingRows, enrollment, totalPrincipal, yc);
   buildDebtSchedule(wb, capDebtRows, yc);
   buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
   buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType);
@@ -924,10 +924,13 @@ function buildFacilitiesOccupancy(
 
 function buildSourcesUses(
   wb: ExcelJS.Workbook, capDebtRows: CapitalDebtRow[], startingCash: number,
-  annualRev: number[], yc: number
+  annualRev: number[], annualPersonnel: number[], annualExpenses: number[],
+  annualCapDebt: number[], annualNI: number[],
+  expenseRows: ExpenseRow[], staffingRows: StaffingRow[], enrollment: number[],
+  totalPrincipal: number, yc: number
 ) {
   const ws = wb.addWorksheet("Sources & Uses");
-  ws.columns = [{ width: 40 }, { width: 22 }];
+  ws.columns = [{ width: 44 }, { width: 22 }];
 
   let r = 1;
   ws.getCell(r, 1).value = "SchoolStack — Sources & Uses";
@@ -938,7 +941,7 @@ function buildSourcesUses(
   const sourcesStart = r + 1;
 
   r++; ws.getCell(r, 1).value = "Starting Cash / Equity"; ws.getCell(r, 1).font = NF;
-  ws.getCell(r, 2).value = startingCash; ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
+  ws.getCell(r, 2).value = startingCash; ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = NF;
 
   for (const row of capDebtRows) {
     if (!row.enabled || !row.isLoan) continue;
@@ -959,28 +962,100 @@ function buildSourcesUses(
   r += 2; sec(ws, r, 2); ws.getCell(r, 1).value = "USES OF FUNDS";
   const usesStart = r + 1;
 
-  for (const row of capDebtRows) {
-    if (!row.enabled || row.isLoan) continue;
-    r++; ws.getCell(r, 1).value = row.lineItem; ws.getCell(r, 1).font = NF;
-    ws.getCell(r, 2).value = row.amounts?.[0] ?? 0; ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = NF;
+  const y1Personnel = annualPersonnel[0] || 0;
+  const y1Expenses = annualExpenses[0] || 0;
+  const y1CapDebt = annualCapDebt[0] || 0;
+  const y1TotalExp = y1Personnel + y1Expenses + y1CapDebt;
+
+  const occupancyRows = expenseRows.filter(e => e.enabled && e.category === "occupancy_facility");
+  const techRows = expenseRows.filter(e => e.enabled && e.category === "technology");
+  const instructionalRows = expenseRows.filter(e => e.enabled && e.category === "instructional_program");
+  const adminRows = expenseRows.filter(e => e.enabled && e.category === "administrative_general");
+
+  const occupancyY1 = occupancyRows.reduce((s, e) => {
+    return s + driverVal(e.amounts, 0, e.driverType, enrollment[0]);
+  }, 0);
+  const techY1 = techRows.reduce((s, e) => {
+    return s + driverVal(e.amounts, 0, e.driverType, enrollment[0]);
+  }, 0);
+  const instructionalY1 = instructionalRows.reduce((s, e) => {
+    return s + driverVal(e.amounts, 0, e.driverType, enrollment[0]);
+  }, 0);
+  const adminY1 = adminRows.reduce((s, e) => {
+    return s + driverVal(e.amounts, 0, e.driverType, enrollment[0]);
+  }, 0);
+
+  const depositsPrepaid = Math.round(occupancyY1 / 12 * 2);
+  const equipmentFFE = Math.round(techY1 * 0.5);
+  const curriculumLaunch = Math.round(instructionalY1);
+  const professionalFees = Math.round(adminY1);
+  const workingCapReserve = Math.round((y1Personnel + y1Expenses) / 12 * 2);
+  const y1DebtSvc = y1CapDebt;
+  const rampDeficit = Math.max(0, -(annualNI[0] || 0));
+
+  const usesItems: [string, number][] = [];
+
+  usesItems.push(["Year 1 Personnel", Math.round(y1Personnel)]);
+
+  if (depositsPrepaid > 0) {
+    usesItems.push(["Deposits & Prepaid Occupancy (2 mo)", Math.round(depositsPrepaid)]);
+  }
+  if (occupancyY1 > 0) {
+    usesItems.push(["Occupancy / Facility Costs (Year 1)", Math.round(occupancyY1)]);
+  }
+  if (equipmentFFE > 0) {
+    usesItems.push(["Equipment / FF&E / Technology", Math.round(equipmentFFE)]);
+  }
+  if (curriculumLaunch > 0) {
+    usesItems.push(["Curriculum & Program Launch Costs", Math.round(curriculumLaunch)]);
+  }
+  if (professionalFees > 0) {
+    usesItems.push(["Professional Fees & Administration", Math.round(professionalFees)]);
   }
 
-  if (r < usesStart) {
-    r++; ws.getCell(r, 1).value = "No capital expenditures entered"; ws.getCell(r, 1).font = NF;
-    ws.getCell(r, 2).value = 0; ws.getCell(r, 2).numFmt = CUR;
+  for (const row of capDebtRows) {
+    if (!row.enabled || row.isLoan) continue;
+    usesItems.push([row.lineItem, row.amounts?.[0] ?? 0]);
+  }
+
+  if (y1DebtSvc > 0) {
+    usesItems.push(["Year 1 Debt Service", Math.round(y1DebtSvc)]);
+  }
+
+  if (workingCapReserve > 0) {
+    usesItems.push(["Working Capital Reserve (2 mo)", Math.round(workingCapReserve)]);
+  }
+
+  const subtotal = usesItems.reduce((s, [, v]) => s + v, 0);
+  const contingency = Math.round(subtotal * 0.05);
+  usesItems.push(["Contingency (5%)", contingency]);
+
+  let totalUses = 0;
+  for (const [label, val] of usesItems) {
+    r++; ws.getCell(r, 1).value = label; ws.getCell(r, 1).font = NF;
+    ws.getCell(r, 2).value = val; ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = NF;
+    totalUses += val;
   }
 
   r++; sec(ws, r, 2); ws.getCell(r, 1).value = "TOTAL USES";
   const useTotal = r;
-  let totalUses = 0;
-  for (const row of capDebtRows) { if (row.enabled && !row.isLoan) totalUses += row.amounts?.[0] ?? 0; }
   ws.getCell(r, 2).value = { formula: `SUM(${cn(usesStart, 2)}:${cn(r - 1, 2)})`, result: totalUses };
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
 
   r += 2;
   ws.getCell(r, 1).value = "SOURCES − USES (SURPLUS / GAP)"; ws.getCell(r, 1).font = BF;
-  ws.getCell(r, 2).value = { formula: `${cn(srcTotal, 2)}-${cn(useTotal, 2)}`, result: totalSources - totalUses };
+  const gap = totalSources - totalUses;
+  ws.getCell(r, 2).value = { formula: `${cn(srcTotal, 2)}-${cn(useTotal, 2)}`, result: gap };
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
+  const gapCell = ws.getCell(r, 2);
+  if (gap < 0) {
+    gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: RED_BG.slice(2) } };
+  } else {
+    gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG.slice(2) } };
+  }
+
+  r++; ws.getCell(r, 1).value = gap >= 0 ? "✓ Sources cover projected Year 1 uses" : "⚠ Funding gap — additional sources needed";
+  ws.getCell(r, 1).font = { ...NF, italic: true, color: { argb: gap >= 0 ? "FF328555" : "FFD32F2F" } };
 }
 
 function buildDebtSchedule(wb: ExcelJS.Workbook, capDebtRows: CapitalDebtRow[], yc: number) {
