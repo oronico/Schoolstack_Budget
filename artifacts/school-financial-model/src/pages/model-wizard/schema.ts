@@ -1,11 +1,26 @@
 import { z } from "zod";
 
-export const schoolStageSchema = z.enum(["new_school", "operating_school"]);
-export const fundingProfileSchema = z.enum(["tuition_based", "charter_public_funded", "hybrid_mixed"]);
-export const schoolTypeSchema = z.enum(["charter_school", "homeschool_coop", "learning_pod", "microschool", "private_school", "tutoring_center", "other"]);
-export const entityTypeSchema = z.enum(["sole_practitioner", "llc_single", "llc_partnership", "c_corp", "s_corp", "nonprofit_501c3"]);
+export const schoolStageSchema = z.enum(["new_school", "operating_school"], {
+  required_error: "Please tell us whether you're planning a new school or already operating",
+  invalid_type_error: "Please select a valid school stage",
+});
+export const fundingProfileSchema = z.enum(["tuition_based", "charter_public_funded", "hybrid_mixed"], {
+  required_error: "Please select a funding profile",
+  invalid_type_error: "Please select a valid funding profile",
+});
+export const schoolTypeSchema = z.enum(["charter_school", "homeschool_coop", "learning_pod", "microschool", "private_school", "tutoring_center", "other"], {
+  required_error: "Please select the type of school you're building",
+  invalid_type_error: "Please select a valid school type",
+});
+export const entityTypeSchema = z.enum(["sole_practitioner", "llc_single", "llc_partnership", "c_corp", "s_corp", "nonprofit_501c3"], {
+  required_error: "Please select your school's legal entity type",
+  invalid_type_error: "Please select a valid entity type",
+});
 
-export const tuitionTierTypeSchema = z.enum(["full_pay", "staff_discount", "sibling_discount", "high_need_scholarship", "custom"]);
+export const tuitionTierTypeSchema = z.enum(["full_pay", "staff_discount", "sibling_discount", "high_need_scholarship", "custom"], {
+  required_error: "Please select a tier type",
+  invalid_type_error: "Please select a valid tier type",
+});
 
 export const tuitionTierSchema = z.object({
   id: z.string(),
@@ -50,8 +65,11 @@ export const schoolProfileSchema = z.object({
   schoolStage: schoolStageSchema,
   fundingProfile: fundingProfileSchema.optional(),
   plannedOpeningYear: z.string().optional(),
-  operatingYear: z.enum(["first_year", "second_year_plus"]).optional(),
-  openingYear: z.coerce.number().min(2000).max(2100).optional(),
+  operatingYear: z.enum(["first_year", "second_year_plus"], {
+    required_error: "Please tell us how long you've been operating",
+    invalid_type_error: "Please select a valid operating year option",
+  }).optional(),
+  openingYear: z.coerce.number().min(2000, "Enter a valid year (2000 or later)").max(2100, "Enter a valid year (2100 or earlier)").optional(),
   currentStudents: z.coerce.number().min(0).optional(),
   maxCapacity: z.coerce.number().min(1, "Enter your building's maximum student capacity (at least 1)"),
   fiscalYearStartMonth: z.coerce.number().min(1, "Choose a fiscal year start month").max(12, "Month must be between 1 and 12"),
@@ -101,10 +119,16 @@ export const enrollmentSchema = z.object({
 
 export const revenueRowSchema = z.object({
   id: z.string(),
-  category: z.enum(["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "grants_contributions", "other_revenue"]),
+  category: z.enum(["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "grants_contributions", "other_revenue"], {
+    required_error: "Please select a revenue category",
+    invalid_type_error: "Please select a valid revenue category",
+  }),
   lineItem: z.string(),
   enabled: z.boolean(),
-  driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_base"]),
+  driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_base"], {
+    required_error: "Please select how this revenue is calculated",
+    invalid_type_error: "Please select a valid calculation method",
+  }),
   amounts: z.array(z.number()),
   percentBase: z.string().optional(),
   escalationRate: z.number().optional(),
@@ -123,11 +147,11 @@ export const revenueRowSchema = z.object({
 
 export const revenueSchema = z.object({
   tuitionPerStudent: z.coerce.number().min(0).optional(),
-  annualTuitionIncrease: z.coerce.number().min(0).max(100).optional(),
+  annualTuitionIncrease: z.coerce.number().min(0).max(100, "Annual tuition increase can't exceed 100%").optional(),
   esaRevenuePerStudent: z.coerce.number().min(0).optional(),
   publicFundingPerStudent: z.coerce.number().min(0).optional(),
   otherRevenuePerStudent: z.coerce.number().min(0).optional(),
-  scholarshipRate: z.coerce.number().min(0).max(100).optional(),
+  scholarshipRate: z.coerce.number().min(0).max(100, "Scholarship rate can't exceed 100%").optional(),
   annualDonations: z.coerce.number().min(0).optional(),
   foundationGrants: z.coerce.number().min(0).optional(),
   capitalGifts: z.coerce.number().min(0).optional(),
@@ -136,8 +160,14 @@ export const revenueSchema = z.object({
 export const staffingRowSchema = z.object({
   id: z.string(),
   roleName: z.string(),
-  functionCategory: z.enum(["instructional", "school_leadership", "student_support", "operations", "administrative", "other"]),
-  employmentType: z.enum(["full_time", "part_time", "contract"]),
+  functionCategory: z.enum(["instructional", "school_leadership", "student_support", "operations", "administrative", "other"], {
+    required_error: "Please select a function category for this role",
+    invalid_type_error: "Please select a valid function category",
+  }),
+  employmentType: z.enum(["full_time", "part_time", "contract"], {
+    required_error: "Please select the employment type",
+    invalid_type_error: "Please select a valid employment type",
+  }),
   fte: z.number().min(0).max(1, "FTE can't exceed 1.0 (full-time equivalent)"),
   annualizedRate: z.number().min(0),
   benefitsEligible: z.boolean(),
@@ -158,10 +188,16 @@ export const staffingSchema = z.object({
 
 export const expenseRowSchema = z.object({
   id: z.string(),
-  category: z.enum(["personnel", "instructional_program", "technology", "occupancy_facility", "administrative_general", "capital_financing"]),
+  category: z.enum(["personnel", "instructional_program", "technology", "occupancy_facility", "administrative_general", "capital_financing"], {
+    required_error: "Please select an expense category",
+    invalid_type_error: "Please select a valid expense category",
+  }),
   lineItem: z.string(),
   enabled: z.boolean(),
-  driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_revenue"]),
+  driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_revenue"], {
+    required_error: "Please select how this expense is calculated",
+    invalid_type_error: "Please select a valid calculation method",
+  }),
   amounts: z.array(z.number()),
   escalationRate: z.number().optional(),
   note: z.string().default(""),
