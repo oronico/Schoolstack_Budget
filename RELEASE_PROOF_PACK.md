@@ -17,7 +17,7 @@ commit c1ea0ac  — Update contact email addresses across legal pages and footer
 | File | Change |
 |------|--------|
 | `ALPHA_RELEASE_CHECKLIST.md` | Updated with 5-year model, full smoke tests, rollback plan |
-| `netlify.toml` | Added BASE_PATH, API proxy redirect, logo cache headers |
+| `netlify.toml` | Removed `base`, build runs from repo root, full publish path, API proxy, cache headers |
 | `replit.md` | Updated to 5-year language, added /terms and /privacy routes |
 | `artifacts/school-financial-model/src/components/layout/Footer.tsx` | Email → admin@schoolstack.ai |
 | `artifacts/school-financial-model/src/lib/expense-defaults.ts` | `getYearCount()` → always returns 5 |

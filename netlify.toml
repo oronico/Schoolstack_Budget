@@ -1,7 +1,6 @@
 [build]
-  base = "artifacts/school-financial-model"
-  command = "cd ../.. && pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/school-financial-model run build"
-  publish = "dist/public"
+  command = "pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/school-financial-model run build"
+  publish = "artifacts/school-financial-model/dist/public"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -20,7 +19,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://YOUR_API_SERVER.replit.app/api/:splat"
+  to = "https://YOUR-API-HOST/api/:splat"
   status = 200
   force = true
 

@@ -16,18 +16,18 @@ I prefer iterative development with clear communication on significant changes. 
 
 ## Netlify Configuration
 
-`netlify.toml` at repo root configures:
-- Base directory: `artifacts/school-financial-model`
-- Build command: full monorepo install + typecheck + Vite build
-- Publish directory: `dist/public`
+`netlify.toml` at repo root configures (no `base` — builds run from repo root):
+- Build command: `pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/school-financial-model run build`
+- Publish directory: `artifacts/school-financial-model/dist/public`
 - Cache headers: `Cache-Control: public, max-age=31536000, immutable` for `/assets/*` (Vite hashed filenames)
-- SPA catch-all redirect for client-side routing (`/* → /index.html`, status 200)
-- API proxy redirect: `/api/*` → API server (must be updated with real API domain before deploy)
 - Logo cache headers: `Cache-Control: public, max-age=86400` for `/logos/*`
+- API proxy redirect: `/api/*` → API server (update `YOUR-API-HOST` with real domain before deploy)
+- SPA catch-all redirect for client-side routing (`/* → /index.html`, status 200)
 - `BASE_PATH=/` set in build environment (frontend deploys at domain root on Netlify)
 
-### Required Netlify Environment Variables (set in Netlify UI → Site Settings → Environment Variables)
-- `VITE_API_BASE_URL`: Full URL of the API server (e.g., `https://api.schoolstack.ai`). Baked into the frontend at build time.
+### Netlify UI Settings
+- **Package directory**: Set to `artifacts/school-financial-model` in Netlify UI (Build & deploy → Build settings). This tells Netlify which package in the monorepo is the site.
+- **Environment variable**: `VITE_API_BASE_URL` — full URL of the API server (e.g., `https://api.schoolstack.ai`). Baked into the frontend at build time.
 
 # System Architecture
 

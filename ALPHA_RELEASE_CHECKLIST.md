@@ -49,14 +49,15 @@ All other frontend build settings are file-based in `netlify.toml` — no UI ove
 ### Netlify Configuration
 
 - [ ] Connect GitHub repo to Netlify
-- [ ] `netlify.toml` auto-detected (no UI build settings needed)
-- [ ] Update the API proxy redirect in `netlify.toml`: replace `YOUR_API_SERVER.replit.app` with actual API domain
-- [ ] Set `VITE_API_BASE_URL` in Netlify UI
+- [ ] In Netlify UI (Build & deploy → Build settings), set **Package directory** to `artifacts/school-financial-model`
+- [ ] `netlify.toml` is auto-detected for build command and publish path — do not override in UI
+- [ ] Update the API proxy redirect in `netlify.toml`: replace `YOUR-API-HOST` with actual API domain
+- [ ] Set `VITE_API_BASE_URL` environment variable in Netlify UI
 - [ ] Trigger first deploy and verify build log succeeds
 
 The `netlify.toml` handles:
-- Build command (installs from monorepo root, typechecks libs, builds frontend)
-- Publish directory (`dist/public`)
+- Build command (runs from repo root: install, typecheck libs, build frontend)
+- Publish directory (`artifacts/school-financial-model/dist/public`)
 - Node 20 / pnpm 10 runtime versions
 - `BASE_PATH=/` (frontend deploys at domain root on Netlify)
 - SPA catch-all rewrite (`/* → /index.html`)
