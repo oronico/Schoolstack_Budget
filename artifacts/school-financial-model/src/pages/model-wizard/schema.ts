@@ -11,14 +11,14 @@ export const tuitionTierSchema = z.object({
   id: z.string(),
   tierType: tuitionTierTypeSchema,
   label: z.string(),
-  discountPercent: z.coerce.number().min(0).max(100),
+  discountPercent: z.coerce.number().min(0).max(100, "Discount percentage can't exceed 100%"),
   studentCounts: z.array(z.coerce.number().min(0)),
 });
 
 export const programSchema = z.object({
   id: z.string(),
-  name: z.string().min(1, "Program name is required"),
-  annualTuition: z.coerce.number().min(0, "Tuition is required"),
+  name: z.string().min(1, "Give this program a name so we can track its enrollment"),
+  annualTuition: z.coerce.number().min(0, "Enter an annual tuition amount (even $0 is fine)"),
   priorYear: z.coerce.number().min(0).optional(),
   currentYear: z.coerce.number().min(0).optional(),
   year1: z.coerce.number().min(0).default(0),
@@ -29,7 +29,7 @@ export const programSchema = z.object({
 });
 
 export const tuitionEscalationSchema = z.object({
-  rate: z.coerce.number().min(0).max(20).default(3),
+  rate: z.coerce.number().min(0).max(20, "Escalation rate can't exceed 20%").default(3),
 });
 
 export const revenueSourcesSchema = z.object({
@@ -41,8 +41,8 @@ export const revenueSourcesSchema = z.object({
 });
 
 export const schoolProfileSchema = z.object({
-  schoolName: z.string().min(1, "School name is required"),
-  state: z.string().min(1, "State is required"),
+  schoolName: z.string().min(1, "We'll need your school's name to continue"),
+  state: z.string().min(1, "Please select the state where your school is located"),
   schoolType: schoolTypeSchema,
   schoolTypeOther: z.string().optional(),
   entityType: entityTypeSchema,
@@ -53,14 +53,14 @@ export const schoolProfileSchema = z.object({
   operatingYear: z.enum(["first_year", "second_year_plus"]).optional(),
   openingYear: z.coerce.number().min(2000).max(2100).optional(),
   currentStudents: z.coerce.number().min(0).optional(),
-  maxCapacity: z.coerce.number().min(1, "Capacity must be at least 1"),
-  fiscalYearStartMonth: z.coerce.number().min(1).max(12),
+  maxCapacity: z.coerce.number().min(1, "Enter your building's maximum student capacity (at least 1)"),
+  fiscalYearStartMonth: z.coerce.number().min(1, "Choose a fiscal year start month").max(12, "Month must be between 1 and 12"),
   isPartialFirstYear: z.boolean(),
-  year1OperatingMonths: z.coerce.number().min(1).max(12),
+  year1OperatingMonths: z.coerce.number().min(1, "Your first year needs at least 1 operating month").max(12, "Operating months can't exceed 12"),
   isAccredited: z.boolean().optional(),
   accreditingBody: z.string().optional(),
   hasManagementFee: z.boolean().optional(),
-  managementFeePercent: z.coerce.number().min(0).max(100).optional(),
+  managementFeePercent: z.coerce.number().min(0).max(100, "Management fee percentage can't exceed 100%").optional(),
   hasBookkeeper: z.boolean().optional().default(false),
   bookkeeperMonthlyCost: z.coerce.number().min(0).optional().default(0),
   hasLawyer: z.boolean().optional().default(false),
@@ -72,8 +72,8 @@ export const schoolProfileSchema = z.object({
   hasCreditCard: z.boolean().optional().default(false),
   hasLoan: z.boolean().optional().default(false),
   loanAmount: z.coerce.number().min(0).optional().default(0),
-  loanRate: z.coerce.number().min(0).max(100).optional().default(0),
-  loanTermYears: z.coerce.number().min(0).max(50).optional().default(0),
+  loanRate: z.coerce.number().min(0).max(100, "Interest rate can't exceed 100%").optional().default(0),
+  loanTermYears: z.coerce.number().min(0).max(50, "Loan term can't exceed 50 years").optional().default(0),
 });
 
 export const priorYearSnapshotSchema = z.object({
@@ -92,11 +92,11 @@ export const currentYearProjectionSchema = z.object({
 });
 
 export const enrollmentSchema = z.object({
-  year1: z.coerce.number().min(0, "Required"),
-  year2: z.coerce.number().min(0, "Required"),
-  year3: z.coerce.number().min(0, "Required"),
-  year4: z.coerce.number().min(0, "Required"),
-  year5: z.coerce.number().min(0, "Required"),
+  year1: z.coerce.number().min(0, "Enter your projected enrollment for Year 1"),
+  year2: z.coerce.number().min(0, "Enter your projected enrollment for Year 2"),
+  year3: z.coerce.number().min(0, "Enter your projected enrollment for Year 3"),
+  year4: z.coerce.number().min(0, "Enter your projected enrollment for Year 4"),
+  year5: z.coerce.number().min(0, "Enter your projected enrollment for Year 5"),
 });
 
 export const revenueRowSchema = z.object({
@@ -138,22 +138,22 @@ export const staffingRowSchema = z.object({
   roleName: z.string(),
   functionCategory: z.enum(["instructional", "school_leadership", "student_support", "operations", "administrative", "other"]),
   employmentType: z.enum(["full_time", "part_time", "contract"]),
-  fte: z.number().min(0).max(1),
+  fte: z.number().min(0).max(1, "FTE can't exceed 1.0 (full-time equivalent)"),
   annualizedRate: z.number().min(0),
   benefitsEligible: z.boolean(),
-  benefitsRate: z.number().min(0).max(100),
-  payrollTaxRate: z.number().min(0).max(100),
+  benefitsRate: z.number().min(0).max(100, "Benefits rate can't exceed 100%"),
+  payrollTaxRate: z.number().min(0).max(100, "Payroll tax rate can't exceed 100%"),
   payrollLike: z.boolean(),
   notes: z.string().default(""),
 });
 
 export const staffingSchema = z.object({
-  studentsPerTeacher: z.coerce.number().min(1, "Must be at least 1").optional(),
+  studentsPerTeacher: z.coerce.number().min(1, "Enter your target student-to-teacher ratio (at least 1)").optional(),
   teacherSalary: z.coerce.number().min(0).optional(),
   adminStaffCount: z.coerce.number().min(0).optional(),
   adminSalary: z.coerce.number().min(0).optional(),
   founderSalary: z.coerce.number().min(0).optional(),
-  benefitsRate: z.coerce.number().min(0).max(100).optional(),
+  benefitsRate: z.coerce.number().min(0).max(100, "Benefits rate can't exceed 100%").optional(),
 });
 
 export const expenseRowSchema = z.object({
@@ -176,13 +176,13 @@ export const capitalDebtRowSchema = z.object({
   note: z.string().default(""),
   isLoan: z.boolean().default(false),
   loanPrincipal: z.number().min(0).default(0),
-  loanRate: z.number().min(0).max(100).default(0),
-  loanTermYears: z.number().min(0).max(50).default(0),
+  loanRate: z.number().min(0).max(100, "Interest rate can't exceed 100%").default(0),
+  loanTermYears: z.number().min(0).max(50, "Loan term can't exceed 50 years").default(0),
 });
 
 export const facilitiesSchema = z.object({
   monthlyRent: z.coerce.number().min(0).optional(),
-  annualRentIncrease: z.coerce.number().min(0).max(100).optional(),
+  annualRentIncrease: z.coerce.number().min(0).max(100, "Rent increase percentage can't exceed 100%").optional(),
   annualUtilities: z.coerce.number().min(0).optional(),
   annualInsurance: z.coerce.number().min(0).optional(),
   facilityMaintenance: z.coerce.number().min(0).optional(),
@@ -195,10 +195,10 @@ export const facilitiesSchema = z.object({
   studentServicesAnnual: z.coerce.number().min(0).optional(),
   otherAnnualExpenses: z.coerce.number().min(0).optional(),
   loanAmount: z.coerce.number().min(0).optional(),
-  annualInterestRate: z.coerce.number().min(0).max(100).optional(),
-  loanTermYears: z.coerce.number().min(0).max(50).optional(),
-  annualSalaryIncrease: z.coerce.number().min(0).max(100).optional(),
-  generalCostInflation: z.coerce.number().min(0).max(100).optional(),
+  annualInterestRate: z.coerce.number().min(0).max(100, "Interest rate can't exceed 100%").optional(),
+  loanTermYears: z.coerce.number().min(0).max(50, "Loan term can't exceed 50 years").optional(),
+  annualSalaryIncrease: z.coerce.number().min(0).max(100, "Salary increase can't exceed 100%").optional(),
+  generalCostInflation: z.coerce.number().min(0).max(100, "Inflation rate can't exceed 100%").optional(),
 });
 
 export const fullModelSchema = z.object({
