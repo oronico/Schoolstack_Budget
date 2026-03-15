@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type ExpenseRowData,
@@ -33,6 +33,29 @@ const CATEGORY_ICONS: Record<ExpenseCategory, typeof DollarSign> = {
   capital_financing: Landmark,
 };
 
+const CATEGORY_GUIDANCE: Record<string, { tip: string; common: boolean }> = {
+  instructional_program: {
+    tip: "Curriculum, supplies, field trips. Most schools spend $300–$800 per student here.",
+    common: true,
+  },
+  technology: {
+    tip: "Devices, software, internet. Even small schools need SIS/LMS tools — budget $150–$300 per student.",
+    common: true,
+  },
+  occupancy_facility: {
+    tip: "Rent, utilities, insurance. This is often the biggest non-personnel expense — typically 15–25% of revenue.",
+    common: true,
+  },
+  administrative_general: {
+    tip: "Marketing, legal, accounting, office supplies. Don't forget bank processing fees (~2.5% of tuition revenue).",
+    common: true,
+  },
+  capital_financing: {
+    tip: "Furniture, equipment, buildout, and any loans. New schools often need $10–25K in startup equipment.",
+    common: false,
+  },
+};
+
 function formatCurrency(val: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
 }
@@ -55,10 +78,19 @@ export function ExpenseStep() {
   const formExpenseRows = watch("expenseRows") as ExpenseRowData[] | undefined;
   const formCapitalRows = watch("capitalAndDebtRows") as CapitalDebtRowData[] | undefined;
 
+  const enrollment = watch("enrollment") as { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number } | undefined;
+  const maxCapacity = watch("schoolProfile.maxCapacity") as number | undefined;
+  const y1Students = enrollment?.year1 || 0;
+  const y5Students = enrollment?.year5 || 0;
+
   const [expenseRows, setExpenseRows] = useState<ExpenseRowData[]>([]);
   const [capitalRows, setCapitalRows] = useState<CapitalDebtRowData[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [defaultsApplied, setDefaultsApplied] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(true);
+  const [enabledCategories, setEnabledCategories] = useState<Set<string>>(
+    new Set(["instructional_program", "technology", "occupancy_facility", "administrative_general"])
+  );
 
   useEffect(() => {
     if (formExpenseRows !== undefined && formExpenseRows.length > 0) {
@@ -72,7 +104,12 @@ export function ExpenseStep() {
       if (!defaultsApplied) {
         const enabledCats = new Set<string>();
         adjusted.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
+        if (formCapitalRows && formCapitalRows.some((r: CapitalDebtRowData) => r.enabled)) {
+          enabledCats.add("capital_financing");
+        }
         setExpandedCategories(enabledCats);
+        setEnabledCategories(enabledCats);
+        setShowCategoryPicker(false);
         setDefaultsApplied(true);
       }
     } else if (formExpenseRows !== undefined && Array.isArray(formExpenseRows) && formExpenseRows.length === 0 && defaultsApplied) {
@@ -84,6 +121,7 @@ export function ExpenseStep() {
       const enabledCats = new Set<string>();
       defaults.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
       setExpandedCategories(enabledCats);
+      setEnabledCategories(enabledCats);
       setValue("expenseRows", defaults, { shouldDirty: true });
       setDefaultsApplied(true);
     }
@@ -186,6 +224,33 @@ export function ExpenseStep() {
     });
   }, []);
 
+  const toggleCategoryEnabled = useCallback((cat: string) => {
+    setEnabledCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  }, []);
+
+  const applyCategories = useCallback(() => {
+    const updated = expenseRows.map((row) => {
+      if (enabledCategories.has(row.category)) return row;
+      return { ...row, enabled: false };
+    });
+    syncExpenseRows(updated);
+
+    const capitalEnabled = enabledCategories.has("capital_financing");
+    const updatedCapital = capitalRows.map((row) => ({
+      ...row,
+      enabled: capitalEnabled ? row.enabled : false,
+    }));
+    syncCapitalRows(updatedCapital);
+
+    setExpandedCategories(new Set(enabledCategories));
+    setShowCategoryPicker(false);
+  }, [expenseRows, capitalRows, enabledCategories, syncExpenseRows, syncCapitalRows]);
+
   const personnelCosts = useMemo(() => {
     if (!staffingRows || staffingRows.length === 0) return null;
     return calculatePersonnelCosts(staffingRows);
@@ -210,22 +275,136 @@ export function ExpenseStep() {
     return total;
   }, [personnelCosts, categorySummaries]);
 
+  const costPerStudent = y1Students > 0 ? Math.round(totalOperating / y1Students) : 0;
+
   const yearLabels = Array.from({ length: yearCount }, (_, i) => `Y${i + 1}`);
+
+  if (showCategoryPicker) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h2 className="font-display text-3xl font-bold text-foreground mb-3">
+            What Does Your School Spend On?
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            Check the categories that apply to your school. We'll show you just those sections with smart defaults filled in. You can always add or remove categories later.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
+          <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground">
+            <span className="font-semibold">Don't overthink it.</span>{" "}
+            Start with the categories you know about. Most small schools have costs in all four main areas — program, tech, facility, and admin. You can always come back and adjust.
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {([...OPERATING_CATEGORIES, "capital_financing" as ExpenseCategory]).map((cat) => {
+            const Icon = CATEGORY_ICONS[cat];
+            const guidance = CATEGORY_GUIDANCE[cat];
+            const isEnabled = enabledCategories.has(cat);
+
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => toggleCategoryEnabled(cat)}
+                className={cn(
+                  "w-full rounded-2xl border-2 p-5 text-left transition-all",
+                  isEnabled
+                    ? "border-primary/40 bg-primary/5 shadow-sm"
+                    : "border-border bg-card hover:border-border/80"
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "h-10 w-10 rounded-xl flex items-center justify-center transition-colors",
+                    isEnabled ? "bg-primary/10" : "bg-muted"
+                  )}>
+                    <Icon className={cn("h-5 w-5", isEnabled ? "text-primary" : "text-muted-foreground")} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("font-bold text-lg", isEnabled ? "text-foreground" : "text-muted-foreground")}>
+                        {EXPENSE_CATEGORY_LABELS[cat]}
+                      </span>
+                      {guidance?.common && (
+                        <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                          Most schools need this
+                        </span>
+                      )}
+                    </div>
+                    {guidance && (
+                      <p className="text-sm text-muted-foreground mt-1">{guidance.tip}</p>
+                    )}
+                  </div>
+                  <div className={cn(
+                    "h-6 w-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                    isEnabled ? "border-primary bg-primary" : "border-border"
+                  )}>
+                    {isEnabled && <CheckCircle2 className="h-4 w-4 text-white" />}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={applyCategories}
+          className="w-full rounded-2xl bg-primary text-white font-semibold py-4 text-lg hover:bg-primary/90 transition-colors shadow-md"
+        >
+          Continue with {enabledCategories.size} {enabledCategories.size === 1 ? "category" : "categories"}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Expenses by Category</h2>
-        <p className="text-muted-foreground text-lg">Add your operating costs, facility expenses, and any loans or capital purchases.</p>
+        <p className="text-muted-foreground text-lg">Review your operating costs. We've filled in typical amounts — adjust them to match your school.</p>
       </div>
+
+      {maxCapacity && y1Students > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground">
+            <span className="font-semibold">Building capacity: {maxCapacity} students.</span>{" "}
+            Your enrollment grows from {y1Students} to {y5Students} over 5 years
+            {y5Students > (maxCapacity || 0) ? (
+              <span className="text-amber-700 font-semibold"> — that exceeds your building capacity. Lenders will flag this.</span>
+            ) : (
+              <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5 — good for underwriting).</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <SummaryCard label="People" value={formatCurrency(personnelCosts?.grandTotal || 0)} color="text-blue-600" />
         <SummaryCard label="Program" value={formatCurrency(categorySummaries["instructional_program"] || 0)} color="text-emerald-600" />
         <SummaryCard label="Technology" value={formatCurrency(categorySummaries["technology"] || 0)} color="text-violet-600" />
         <SummaryCard label="Facility" value={formatCurrency(categorySummaries["occupancy_facility"] || 0)} color="text-amber-600" />
-        <SummaryCard label="Admin & Operations" value={formatCurrency(categorySummaries["administrative_general"] || 0)} color="text-rose-600" />
-        <SummaryCard label="Total Operating" value={formatCurrency(totalOperating)} color="text-foreground" bold />
+        <SummaryCard label="Admin & Ops" value={formatCurrency(categorySummaries["administrative_general"] || 0)} color="text-rose-600" />
+        <SummaryCard label="Total Operating" value={formatCurrency(totalOperating)} color="text-foreground" bold sublabel={costPerStudent > 0 ? `${formatCurrency(costPerStudent)} / student` : undefined} />
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Lightbulb className="h-4 w-4" />
+          <span>Showing {enabledCategories.size} expense categories</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCategoryPicker(true)}
+          className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          Change categories
+        </button>
       </div>
 
       {personnelCosts && (
@@ -250,10 +429,12 @@ export function ExpenseStep() {
       )}
 
       {OPERATING_CATEGORIES.map((cat) => {
+        if (!enabledCategories.has(cat)) return null;
         const catRows = expenseRows.filter((r) => r.category === cat);
         const Icon = CATEGORY_ICONS[cat];
         const isExpanded = expandedCategories.has(cat);
         const enabledCount = catRows.filter((r) => r.enabled).length;
+        const guidance = CATEGORY_GUIDANCE[cat];
 
         return (
           <div key={cat} className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -267,8 +448,14 @@ export function ExpenseStep() {
 
             {isExpanded && (
               <div className="px-5 pb-5 space-y-3">
+                {guidance && (
+                  <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground flex items-start gap-2">
+                    <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                    <span>{guidance.tip}</span>
+                  </div>
+                )}
                 {catRows.map((row) => (
-                  <ExpenseLineCard key={row.id} row={row} yearCount={yearCount} yearLabels={yearLabels} onUpdate={updateExpenseRow} onRemove={removeExpenseRow} />
+                  <ExpenseLineCard key={row.id} row={row} yearCount={yearCount} yearLabels={yearLabels} onUpdate={updateExpenseRow} onRemove={removeExpenseRow} y1Students={y1Students} />
                 ))}
                 <button type="button" onClick={() => addExpenseRow(cat)} className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-2">
                   <Plus className="h-4 w-4" /> Add expense line
@@ -279,36 +466,39 @@ export function ExpenseStep() {
         );
       })}
 
-      <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/30 overflow-hidden">
-        <button type="button" onClick={() => toggleCategory("capital_financing")} className="flex items-center gap-3 w-full text-left p-5 hover:bg-amber-50/50 transition-colors">
-          {expandedCategories.has("capital_financing") ? <ChevronDown className="h-5 w-5 text-amber-600" /> : <ChevronRight className="h-5 w-5 text-amber-600" />}
-          <Landmark className="h-5 w-5 text-amber-600" />
-          <span className="font-bold text-lg text-foreground">Capital & Debt</span>
-          <span className="text-xs text-muted-foreground ml-2">({capitalRows.filter((r) => r.enabled).length} active)</span>
-          <span className="ml-auto text-sm font-semibold text-amber-600">{formatCurrency(categorySummaries["capital_financing"] || 0)}</span>
-        </button>
-        <p className="px-5 text-xs text-muted-foreground -mt-2 mb-3">These items are separated from operating expenses on financial statements.</p>
+      {enabledCategories.has("capital_financing") && (
+        <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/30 overflow-hidden">
+          <button type="button" onClick={() => toggleCategory("capital_financing")} className="flex items-center gap-3 w-full text-left p-5 hover:bg-amber-50/50 transition-colors">
+            {expandedCategories.has("capital_financing") ? <ChevronDown className="h-5 w-5 text-amber-600" /> : <ChevronRight className="h-5 w-5 text-amber-600" />}
+            <Landmark className="h-5 w-5 text-amber-600" />
+            <span className="font-bold text-lg text-foreground">Capital & Debt</span>
+            <span className="text-xs text-muted-foreground ml-2">({capitalRows.filter((r) => r.enabled).length} active)</span>
+            <span className="ml-auto text-sm font-semibold text-amber-600">{formatCurrency(categorySummaries["capital_financing"] || 0)}</span>
+          </button>
+          <p className="px-5 text-xs text-muted-foreground -mt-2 mb-3">These items are separated from operating expenses on financial statements.</p>
 
-        {expandedCategories.has("capital_financing") && (
-          <div className="px-5 pb-5 space-y-3">
-            {capitalRows.map((row) => (
-              <CapitalLineCard key={row.id} row={row} yearCount={yearCount} yearLabels={yearLabels} onUpdate={updateCapitalRow} onRemove={removeCapitalRow} />
-            ))}
-            <button type="button" onClick={() => addCapitalRow()} className="flex items-center gap-2 text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors mt-2">
-              <Plus className="h-4 w-4" /> Add capital / debt item
-            </button>
-          </div>
-        )}
-      </div>
+          {expandedCategories.has("capital_financing") && (
+            <div className="px-5 pb-5 space-y-3">
+              {capitalRows.map((row) => (
+                <CapitalLineCard key={row.id} row={row} yearCount={yearCount} yearLabels={yearLabels} onUpdate={updateCapitalRow} onRemove={removeCapitalRow} />
+              ))}
+              <button type="button" onClick={() => addCapitalRow()} className="flex items-center gap-2 text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors mt-2">
+                <Plus className="h-4 w-4" /> Add capital / debt item
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function SummaryCard({ label, value, color, bold }: { label: string; value: string; color: string; bold?: boolean }) {
+function SummaryCard({ label, value, color, bold, sublabel }: { label: string; value: string; color: string; bold?: boolean; sublabel?: string }) {
   return (
     <div className={cn("rounded-2xl border border-border/60 bg-white p-4 text-center shadow-sm", bold && "bg-primary/5 border-primary/20")}>
       <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{label}</div>
       <div className={cn("font-display text-xl font-bold", color)}>{value}</div>
+      {sublabel && <div className="text-[10px] text-muted-foreground mt-0.5">{sublabel}</div>}
     </div>
   );
 }
@@ -319,12 +509,14 @@ function ExpenseLineCard({
   yearLabels,
   onUpdate,
   onRemove,
+  y1Students,
 }: {
   row: ExpenseRowData;
   yearCount: number;
   yearLabels: string[];
   onUpdate: (id: string, field: keyof ExpenseRowData, value: string | number | boolean | number[]) => void;
   onRemove: (id: string) => void;
+  y1Students: number;
 }) {
   const [isOpen, setIsOpen] = useState(row.enabled);
 
@@ -338,6 +530,12 @@ function ExpenseLineCard({
     onUpdate(row.id, "enabled", !row.enabled);
     if (!row.enabled) setIsOpen(true);
   };
+
+  const perStudentHint = row.driverType === "per_student" && y1Students > 0
+    ? `Y1 total: ${formatCurrency((row.amounts[0] || 0) * y1Students)}`
+    : row.driverType === "annual_fixed" && y1Students > 0 && row.amounts[0] > 0
+      ? `≈ ${formatCurrency(Math.round(row.amounts[0] / y1Students))} / student`
+      : null;
 
   return (
     <div className={cn("rounded-xl border p-4 transition-all", row.enabled ? "border-border bg-white" : "border-border/50 bg-muted/30 opacity-60")}>
@@ -409,6 +607,11 @@ function ExpenseLineCard({
             {row.driverType === "monthly" && (
               <div className="text-[10px] text-muted-foreground text-center mt-1">
                 Y1 annual: {formatCurrency((row.amounts[0] || 0) * 12)}
+              </div>
+            )}
+            {perStudentHint && (
+              <div className="text-[10px] text-muted-foreground text-center mt-1">
+                {perStudentHint}
               </div>
             )}
           </div>

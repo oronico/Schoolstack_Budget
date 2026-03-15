@@ -79,8 +79,8 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 ### Universal Financial Model
 - **School Configuration**: Supports `microschool`, `private_school`, `charter_school`, `other` school types; `new_school` or `operating_school` stages; and `tuition_based`, `charter_public_funded`, `hybrid_mixed` funding profiles. All models project 5 years. Legacy models with fewer years are auto-normalized on load. Includes support for partial first years.
 - **Revenue Model**: Features 6 categories (e.g., `tuition_and_fees`, `public_funding`) with row-based line items. Each line item supports various driver types (`annual_fixed`, `monthly`, `per_student`, `percent_of_base`), optional per-line escalation rates, and payment timing configurations, with funding-profile-aware defaults.
-- **Staffing Model**: FTE-based roster across function categories (e.g., `school_leadership`, `instructional`) and employment types (`full_time`, `part_time`, `contract`), including configurable benefits and payroll tax rates.
-- **Expense Model**: Row-based entries across 4 accounting categories (e.g., `instructional_program`, `occupancy_facility`) with flexible driver types.
+- **Staffing Model**: FTE-based roster across function categories (e.g., `school_leadership`, `instructional`) and employment types (`full_time`, `part_time`, `contract`), including configurable benefits and payroll tax rates. Includes growth planning guidance (Year 1–5 staffing ratio projections), school-type benchmarks, and building capacity warnings.
+- **Expense Model**: Row-based entries across 4 accounting categories (e.g., `instructional_program`, `occupancy_facility`) with flexible driver types. Features a category picker gateway (users check which expense categories apply before seeing detail fields) with contextual guidance, per-student cost context, and building capacity warnings.
 - **Capital & Debt Model**: Incorporates a loan calculator for PMT-based amortization.
 
 ### API Server (`api-server`)

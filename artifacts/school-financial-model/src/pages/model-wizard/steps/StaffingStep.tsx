@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type StaffingRowData,
@@ -16,10 +16,33 @@ import {
   calculatePersonnelCosts,
 } from "@/lib/staffing-defaults";
 
+const STAFFING_BENCHMARKS = {
+  microschool: { ratio: "1:8–1:12", staff: "2–4 staff for 15–25 students" },
+  private_school: { ratio: "1:10–1:15", staff: "5–10 staff for 50–100 students" },
+  charter_school: { ratio: "1:15–1:20", staff: "8–15 staff for 100–200 students" },
+  learning_pod: { ratio: "1:5–1:8", staff: "1–2 staff for 5–12 students" },
+  homeschool_coop: { ratio: "1:8–1:15", staff: "1–3 staff for 10–30 students" },
+  tutoring_center: { ratio: "1:5–1:10", staff: "2–5 staff for 15–40 students" },
+  other: { ratio: "1:10–1:15", staff: "varies by model" },
+};
+
 export function StaffingStep() {
   const { watch, setValue } = useFormContext();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
+  const schoolType = (watch("schoolProfile.schoolType") || "microschool") as string;
+
+  const enrollment = watch("enrollment") as { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number } | undefined;
+  const maxCapacity = watch("schoolProfile.maxCapacity") as number | undefined;
+  const enrollmentArr = [
+    enrollment?.year1 || 0,
+    enrollment?.year2 || 0,
+    enrollment?.year3 || 0,
+    enrollment?.year4 || 0,
+    enrollment?.year5 || 0,
+  ];
+  const y1Students = enrollmentArr[0];
+  const y5Students = enrollmentArr[4];
 
   const formRows = watch("staffingRows") as StaffingRowData[] | undefined;
   const [rows, setRows] = useState<StaffingRowData[]>([]);
@@ -104,6 +127,11 @@ export function StaffingStep() {
     return groups;
   }, [rows]);
 
+  const totalFTE = costs.totalFTE;
+  const studentStaffRatio = y1Students > 0 && totalFTE > 0 ? Math.round(y1Students / totalFTE * 10) / 10 : 0;
+
+  const benchmark = STAFFING_BENCHMARKS[schoolType as keyof typeof STAFFING_BENCHMARKS] || STAFFING_BENCHMARKS.other;
+
   return (
     <div className="space-y-6">
       <div>
@@ -114,6 +142,39 @@ export function StaffingStep() {
           Add every person on your team — teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically.
         </p>
       </div>
+
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground space-y-2">
+            <p>
+              <span className="font-semibold">Think ahead.</span>{" "}
+              This roster is your Year 1 team, but your enrollment grows from{" "}
+              <span className="font-semibold">{y1Students || "?"}</span> to{" "}
+              <span className="font-semibold">{y5Students || "?"} students</span> by Year 5.
+              {y5Students > y1Students && " You'll likely need to hire more staff as you grow."}{" "}
+              The salary escalation rate you set in the Assumptions step will increase these salaries automatically each year.
+            </p>
+            <p className="text-muted-foreground">
+              Typical {schoolType.replace(/_/g, " ")} ratio: <span className="font-medium text-foreground">{benchmark.ratio}</span> (student-to-staff). Current staffing benchmark: {benchmark.staff}.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {maxCapacity && y1Students > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground">
+            <span className="font-semibold">Building capacity: {maxCapacity} students.</span>{" "}
+            {y5Students > (maxCapacity || 0) ? (
+              <span className="text-amber-700">Your Year 5 enrollment ({y5Students}) exceeds building capacity. Underwriters will need to see a facility expansion plan or revised enrollment targets.</span>
+            ) : (
+              <span>Your enrollment fits within your building ({Math.round((y5Students / maxCapacity) * 100)}% capacity by Year 5). Lenders want to see you can grow into your space.</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <SummaryCard
@@ -141,8 +202,30 @@ export function StaffingStep() {
           label="Total Personnel"
           value={`$${costs.grandTotal.toLocaleString()}`}
           highlight
+          sublabel={studentStaffRatio > 0 ? `${studentStaffRatio}:1 student-to-staff` : undefined}
         />
       </div>
+
+      {y1Students > 0 && totalFTE > 0 && (
+        <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Year 1:</span> {costs.headcount} staff for {y1Students} students ({studentStaffRatio}:1 ratio)
+              {y5Students > y1Students && (
+                <span>
+                  {" · "}
+                  <span className="font-medium text-foreground">Year 5:</span> You'll have{" "}
+                  {y5Students} students — consider whether you'll need additional hires.
+                  {y5Students / totalFTE > 15 && (
+                    <span className="text-amber-600 font-medium"> Ratio would stretch to {Math.round(y5Students / totalFTE * 10) / 10}:1 without new hires.</span>
+                  )}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {FUNCTION_CATEGORY_ORDER.map((cat) => {
         const catRows = groupedRows[cat];
