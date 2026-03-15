@@ -484,9 +484,9 @@ function computeSchoolProfileFacilityOverlay(
     const baseRent = sp.monthlyRent || 0;
     const escalation = (sp.annualRentEscalation || 0) / 100;
     const renewalBump = (sp.postLeaseRenewalBump || 15) / 100;
-    const openingYear = sp.openingYear || new Date().getFullYear();
-    const leaseEndYear = sp.leaseExpirationYear || (openingYear + 99);
-    const yearsUntilExpiration = leaseEndYear - openingYear;
+    const projectionStartYear = new Date().getFullYear();
+    const leaseEndYear = sp.leaseExpirationYear || (projectionStartYear + 99);
+    const yearsUntilExpiration = leaseEndYear - projectionStartYear;
 
     let annualRent: number;
     if (yearIndex < yearsUntilExpiration) {
@@ -1148,8 +1148,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     risks.push("No facility location secured yet — facility costs are estimated");
   }
   if (sp.locationSecured && sp.ownershipType === "rent" && sp.leaseExpirationYear) {
-    const openingYear = sp.openingYear || new Date().getFullYear();
-    const yearsUntilExpiration = sp.leaseExpirationYear - openingYear;
+    const projStartYear = new Date().getFullYear();
+    const yearsUntilExpiration = sp.leaseExpirationYear - projStartYear;
     if (yearsUntilExpiration >= 0 && yearsUntilExpiration < yearCount) {
       const bump = sp.postLeaseRenewalBump || 15;
       risks.push(`Lease expires in Year ${yearsUntilExpiration + 1} — rent may increase ${bump}% at renewal`);
@@ -1659,9 +1659,9 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   }
 
   if (sp.locationSecured && sp.ownershipType === "rent" && sp.leaseExpirationYear) {
-    const openingYear = sp.openingYear || new Date().getFullYear();
+    const projStartYear = new Date().getFullYear();
     const leaseEndYear = sp.leaseExpirationYear;
-    const yearsUntilExpiration = leaseEndYear - openingYear;
+    const yearsUntilExpiration = leaseEndYear - projStartYear;
     if (yearsUntilExpiration >= 0 && yearsUntilExpiration < yearCount) {
       const bump = sp.postLeaseRenewalBump || 15;
       recommendations.push({
