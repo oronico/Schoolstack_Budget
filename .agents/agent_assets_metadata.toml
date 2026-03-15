@@ -24,3 +24,9 @@ id = "DLMNL6Z3YYwBGz6nEBauT"
 uri = "file://artifacts/school-financial-model/public/proof_workbook.xlsx"
 type = "table"
 title = "SchoolStack Workbook v3 — Fixed response headers + sanitized formulas"
+
+[[outputs]]
+id = "A2e5ZMkhnRWZHTOaqfNnx"
+uri = "file:///tmp/minimal_test.xlsx"
+type = "table"
+title = "Minimal test — 2 cells + 1 formula"
