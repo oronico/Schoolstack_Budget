@@ -1,6 +1,19 @@
 import React from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, type FieldErrors } from "react-hook-form";
 import { cn } from "@/lib/utils";
+
+export function getNestedError(errors: FieldErrors, name: string): string | undefined {
+  const parts = name.split(".");
+  let current: unknown = errors;
+  for (const part of parts) {
+    if (current == null || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  if (current && typeof current === "object" && "message" in current) {
+    return (current as { message?: string }).message;
+  }
+  return undefined;
+}
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   name: string;
@@ -12,7 +25,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function FormInput({ name, label, helperText, prefix, suffix, className, type = "text", ...props }: InputProps) {
   const { register, formState: { errors } } = useFormContext();
-  const error = errors[name]?.message as string;
+  const error = getNestedError(errors, name);
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
@@ -83,7 +96,7 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 
 export function FormSelect({ name, label, options, helperText, className, valueAsNumber, ...props }: SelectProps) {
   const { register, formState: { errors } } = useFormContext();
-  const error = errors[name]?.message as string;
+  const error = getNestedError(errors, name);
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>

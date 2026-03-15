@@ -220,6 +220,13 @@ export function ModelWizardPage() {
     if (isValid) {
       setCurrentStep(s => Math.min(s + 1, STEPS.length));
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setTimeout(() => {
+        const firstError = document.querySelector('.text-destructive');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     }
   };
 

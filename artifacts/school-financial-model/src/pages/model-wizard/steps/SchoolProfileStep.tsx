@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-import { FormInput, FormSelect, FormCheckbox } from "@/components/ui/form-inputs";
-import { Building2, Rocket, GraduationCap, Landmark, Shuffle, Info } from "lucide-react";
+import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
+import { Building2, Rocket, GraduationCap, Landmark, Shuffle, Info, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS } from "../schema";
 
@@ -93,6 +93,10 @@ export function SchoolProfileStep() {
   const isCharter = schoolType === "charter_school";
   const isPrivate = schoolType === "private_school";
 
+  const { formState: { errors } } = useFormContext();
+  const stageError = getNestedError(errors, "schoolProfile.schoolStage");
+  const fundingError = getNestedError(errors, "schoolProfile.fundingProfile");
+
   useEffect(() => {
     if (isCharter && fundingProfile !== "charter_public_funded") {
       setValue("schoolProfile.fundingProfile", "charter_public_funded", { shouldDirty: true });
@@ -156,6 +160,13 @@ export function SchoolProfileStep() {
             description="We currently enroll students and are planning ahead"
           />
         </div>
+
+        {stageError && (
+          <div className="flex items-center gap-2 mt-3 text-destructive">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <p className="text-sm font-medium">Please select your school's stage</p>
+          </div>
+        )}
 
         {schoolStage === "new_school" && (
           <div className="mt-4 max-w-sm">
@@ -221,6 +232,12 @@ export function SchoolProfileStep() {
             disabled={isCharter}
           />
         </div>
+        {fundingError && (
+          <div className="flex items-center gap-2 mt-3 text-destructive">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <p className="text-sm font-medium">Please select a funding model</p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
