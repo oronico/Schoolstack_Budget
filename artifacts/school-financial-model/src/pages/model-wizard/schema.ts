@@ -60,6 +60,11 @@ export const revenueSourcesSchema = z.object({
   philanthropy: z.boolean().default(false),
 });
 
+export const ownershipTypeSchema = z.enum(["own", "rent"], {
+  required_error: "Please tell us whether you own or rent your space",
+  invalid_type_error: "Please select own or rent",
+});
+
 export const schoolProfileSchema = z.object({
   schoolName: z.string().min(1, "We'll need your school's name to continue"),
   state: z.string().min(1, "Please select the state where your school is located"),
@@ -84,6 +89,25 @@ export const schoolProfileSchema = z.object({
   accreditingBody: z.string().optional(),
   hasManagementFee: z.boolean().optional(),
   managementFeePercent: z.coerce.number(numMsg("management fee")).min(0, "Please enter a percentage of 0% or higher").max(100, "Management fee percentage can't exceed 100%").optional(),
+  locationSecured: z.boolean().optional().default(false),
+  facilityStreet: z.string().optional(),
+  facilityCity: z.string().optional(),
+  facilityState: z.string().optional(),
+  facilityZip: z.string().optional(),
+  ownershipType: ownershipTypeSchema.optional(),
+  propertyTaxAnnual: z.coerce.number(numMsg("property tax")).min(0, "Please enter a positive property tax amount").optional().default(0),
+  hasMortgage: z.boolean().optional().default(false),
+  mortgageMonthlyPayment: z.coerce.number(numMsg("mortgage payment")).min(0, "Please enter a positive mortgage amount").optional().default(0),
+  leaseExpirationMonth: z.coerce.number(numMsg("lease expiration month")).min(1, "Choose a month").max(12, "Month must be between 1 and 12").optional(),
+  leaseExpirationYear: z.coerce.number(numMsg("lease expiration year")).min(2024, "Enter a valid year (2024 or later)").max(2050, "Enter a valid year (2050 or earlier)").optional(),
+  monthlyRent: z.coerce.number(numMsg("monthly rent")).min(0, "Please enter a positive rent amount").optional().default(0),
+  annualRentEscalation: z.coerce.number(numMsg("rent escalation")).min(0, "Please enter a rate of 0% or higher").max(100, "Escalation rate can't exceed 100%").optional().default(3),
+  postLeaseRenewalBump: z.coerce.number(numMsg("post-lease renewal bump")).min(0, "Please enter a rate of 0% or higher").max(100, "Renewal bump can't exceed 100%").optional().default(15),
+  isNNNLease: z.boolean().optional().default(false),
+  nnnCamCharges: z.coerce.number(numMsg("CAM charges")).min(0, "Please enter a positive CAM amount").optional().default(0),
+  nnnMaintenance: z.coerce.number(numMsg("NNN maintenance")).min(0, "Please enter a positive maintenance amount").optional().default(0),
+  nnnUtilities: z.coerce.number(numMsg("NNN utilities")).min(0, "Please enter a positive utilities amount").optional().default(0),
+  estimatedMonthlyFacilityBudget: z.coerce.number(numMsg("estimated facility budget")).min(0, "Please enter a positive monthly amount").optional().default(0),
   hasBookkeeper: z.boolean().optional().default(false),
   bookkeeperMonthlyCost: z.coerce.number(numMsg("bookkeeper cost")).min(0, "Please enter a positive dollar amount").optional().default(0),
   hasLawyer: z.boolean().optional().default(false),
@@ -268,6 +292,7 @@ export type SchoolStage = z.infer<typeof schoolStageSchema>;
 export type FundingProfile = z.infer<typeof fundingProfileSchema>;
 export type SchoolType = z.infer<typeof schoolTypeSchema>;
 export type EntityType = z.infer<typeof entityTypeSchema>;
+export type OwnershipType = z.infer<typeof ownershipTypeSchema>;
 export type TuitionTierType = z.infer<typeof tuitionTierTypeSchema>;
 export type TuitionTier = z.infer<typeof tuitionTierSchema>;
 export type Program = z.infer<typeof programSchema>;
@@ -294,6 +319,10 @@ export const SCHOOL_TYPE_LABELS: Record<string, string> = {
 
 export function isNonprofit(entityType?: string): boolean {
   return entityType === "nonprofit_501c3";
+}
+
+export function isForProfit(entityType?: string): boolean {
+  return !!entityType && entityType !== "nonprofit_501c3";
 }
 
 export function profitLabel(entityType?: string): string {

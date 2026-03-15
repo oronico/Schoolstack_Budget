@@ -1,8 +1,9 @@
+import { useEffect, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, AlertCircle } from "lucide-react";
+import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS } from "../schema";
+import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit } from "../schema";
 
 const STATES = [
   { value: "AL", label: "Alabama" }, { value: "AK", label: "Alaska" }, { value: "AZ", label: "Arizona" },
@@ -118,6 +119,21 @@ function RadioCard({ selected, onSelect, icon, title, description, disabled }: R
 
 
 
+const FACILITY_BENCHMARKS: Record<string, string> = {
+  microschool: "$1,500–$4,000/mo",
+  learning_pod: "$800–$2,500/mo",
+  private_school: "$5,000–$15,000/mo",
+  charter_school: "$8,000–$25,000/mo",
+  homeschool_coop: "$500–$2,000/mo",
+  tutoring_center: "$1,500–$4,000/mo",
+  other: "$2,000–$8,000/mo",
+};
+
+const LEASE_EXPIRATION_YEARS = Array.from({ length: 15 }, (_, i) => ({
+  value: String(2024 + i),
+  label: String(2024 + i),
+}));
+
 export function SchoolProfileStep() {
   const { watch, setValue } = useFormContext();
   const isPartialFirstYear = watch("schoolProfile.isPartialFirstYear");
@@ -127,8 +143,51 @@ export function SchoolProfileStep() {
   const entityType = watch("schoolProfile.entityType");
   const isAccredited = watch("schoolProfile.isAccredited");
 
+  const locationSecured = watch("schoolProfile.locationSecured");
+  const ownershipType = watch("schoolProfile.ownershipType");
+  const isNNNLease = watch("schoolProfile.isNNNLease");
+  const hasMortgage = watch("schoolProfile.hasMortgage");
+  const forProfit = isForProfit(entityType);
+
   const isCharter = schoolType === "charter_school";
   const isPrivate = schoolType === "private_school";
+
+  const prevLocationSecured = useRef(locationSecured);
+  useEffect(() => {
+    if (prevLocationSecured.current && !locationSecured) {
+      setValue("schoolProfile.ownershipType", undefined, { shouldDirty: true });
+      setValue("schoolProfile.facilityStreet", "", { shouldDirty: true });
+      setValue("schoolProfile.facilityCity", "", { shouldDirty: true });
+      setValue("schoolProfile.facilityState", "", { shouldDirty: true });
+      setValue("schoolProfile.facilityZip", "", { shouldDirty: true });
+      setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
+      setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
+      setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
+    }
+    if (!prevLocationSecured.current && locationSecured) {
+      setValue("schoolProfile.estimatedMonthlyFacilityBudget", 0, { shouldDirty: true });
+    }
+    prevLocationSecured.current = locationSecured;
+  }, [locationSecured, setValue]);
+
+  const prevOwnership = useRef(ownershipType);
+  useEffect(() => {
+    if (prevOwnership.current !== ownershipType) {
+      if (ownershipType === "own") {
+        setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
+        setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
+        setValue("schoolProfile.nnnCamCharges", 0, { shouldDirty: true });
+        setValue("schoolProfile.nnnMaintenance", 0, { shouldDirty: true });
+        setValue("schoolProfile.nnnUtilities", 0, { shouldDirty: true });
+      }
+      if (ownershipType === "rent") {
+        setValue("schoolProfile.propertyTaxAnnual", 0, { shouldDirty: true });
+        setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
+        setValue("schoolProfile.mortgageMonthlyPayment", 0, { shouldDirty: true });
+      }
+      prevOwnership.current = ownershipType;
+    }
+  }, [ownershipType, setValue]);
 
   const { formState: { errors } } = useFormContext();
   const stageError = getNestedError(errors, "schoolProfile.schoolStage");
@@ -253,6 +312,218 @@ export function SchoolProfileStep() {
           helperText="Max students your building can hold"
           className={schoolStage === "new_school" ? "" : "md:col-span-2"}
         />
+      </div>
+
+      <div>
+        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4 flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-primary" /> Facility & Location
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Your facility situation affects how we project expenses — especially rent escalation, lease renewals, and property costs.
+        </p>
+
+        <div className="space-y-5">
+          <FormCheckbox
+            name="schoolProfile.locationSecured"
+            label="I have a location secured (signed lease or owned property)"
+            helperText="If not, we'll ask for an estimate so your model still works"
+          />
+
+          {!locationSecured && (
+            <div className="rounded-2xl border border-border bg-secondary/30 p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <HelpCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-foreground">
+                  <span className="font-semibold">No worries — an estimate is fine.</span>{" "}
+                  {schoolType && FACILITY_BENCHMARKS[schoolType]
+                    ? `Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${FACILITY_BENCHMARKS[schoolType]} for rent.`
+                    : "Most small schools budget $2,000–$8,000/month for facility costs."}
+                </div>
+              </div>
+              <FormInput
+                name="schoolProfile.estimatedMonthlyFacilityBudget"
+                label="Estimated Monthly Facility Budget"
+                type="number"
+                prefix="$"
+                placeholder="3000"
+                helperText="Your best guess for monthly rent + utilities. We'll flag this as an estimate in your model."
+              />
+            </div>
+          )}
+
+          {locationSecured && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <FormInput
+                    name="schoolProfile.facilityStreet"
+                    label="Street Address"
+                    placeholder="123 Main St"
+                  />
+                </div>
+                <FormInput
+                  name="schoolProfile.facilityCity"
+                  label="City"
+                  placeholder="Springfield"
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormSelect
+                    name="schoolProfile.facilityState"
+                    label="State"
+                    options={STATES}
+                  />
+                  <FormInput
+                    name="schoolProfile.facilityZip"
+                    label="ZIP Code"
+                    placeholder="62701"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-bold text-foreground mb-3">Do you own or rent your space?</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <RadioCard
+                    value="own"
+                    selected={ownershipType === "own"}
+                    onSelect={() => setValue("schoolProfile.ownershipType", "own", { shouldDirty: true })}
+                    icon={<Home className="h-5 w-5" />}
+                    title="We own our space"
+                    description="Purchased property or building"
+                  />
+                  <RadioCard
+                    value="rent"
+                    selected={ownershipType === "rent"}
+                    onSelect={() => setValue("schoolProfile.ownershipType", "rent", { shouldDirty: true })}
+                    icon={<Key className="h-5 w-5" />}
+                    title="We rent / lease"
+                    description="Renting or leasing a space"
+                  />
+                </div>
+              </div>
+
+              {ownershipType === "own" && (
+                <div className="rounded-2xl border border-border bg-secondary/30 p-5 space-y-4">
+                  {forProfit && (
+                    <FormInput
+                      name="schoolProfile.propertyTaxAnnual"
+                      label="Annual Property Tax"
+                      type="number"
+                      prefix="$"
+                      placeholder="5000"
+                      helperText="As a for-profit entity, property tax will be added to your expenses automatically"
+                    />
+                  )}
+                  <FormCheckbox
+                    name="schoolProfile.hasMortgage"
+                    label="We have a mortgage on this property"
+                  />
+                  {hasMortgage && (
+                    <FormInput
+                      name="schoolProfile.mortgageMonthlyPayment"
+                      label="Monthly Mortgage Payment"
+                      type="number"
+                      prefix="$"
+                      placeholder="2500"
+                    />
+                  )}
+                  {!forProfit && !hasMortgage && (
+                    <p className="text-sm text-muted-foreground italic">
+                      Great — owning your space with no mortgage means lower facility costs in your model.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {ownershipType === "rent" && (
+                <div className="rounded-2xl border border-border bg-secondary/30 p-5 space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput
+                      name="schoolProfile.monthlyRent"
+                      label="Monthly Rent"
+                      type="number"
+                      prefix="$"
+                      placeholder="5000"
+                    />
+                    <FormInput
+                      name="schoolProfile.annualRentEscalation"
+                      label="Annual Rent Escalation %"
+                      type="number"
+                      placeholder="3"
+                      helperText="Typical: 2–5% per year"
+                    />
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground mb-3">When does your lease expire?</h4>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      This matters — for years beyond your lease, we'll model a conservative rent increase to reflect renewal risk.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 max-w-sm">
+                      <FormSelect
+                        name="schoolProfile.leaseExpirationMonth"
+                        label="Month"
+                        options={MONTHS}
+                        valueAsNumber
+                      />
+                      <FormSelect
+                        name="schoolProfile.leaseExpirationYear"
+                        label="Year"
+                        options={LEASE_EXPIRATION_YEARS}
+                        valueAsNumber
+                      />
+                    </div>
+                  </div>
+
+                  <FormInput
+                    name="schoolProfile.postLeaseRenewalBump"
+                    label="Post-Lease Renewal Rent Increase %"
+                    type="number"
+                    placeholder="15"
+                    helperText="When your lease expires, how much higher might rent be? Default 15% reflects market renewal risk."
+                  />
+
+                  <div className="border-t border-border pt-4">
+                    <FormCheckbox
+                      name="schoolProfile.isNNNLease"
+                      label="This is a Triple Net (NNN) lease"
+                      helperText="NNN leases mean you're responsible for property taxes, maintenance, and utilities on top of base rent"
+                    />
+                  </div>
+
+                  {isNNNLease && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ml-0">
+                      <FormInput
+                        name="schoolProfile.nnnCamCharges"
+                        label="Monthly CAM Charges"
+                        type="number"
+                        prefix="$"
+                        placeholder="500"
+                        helperText="Common area maintenance"
+                      />
+                      <FormInput
+                        name="schoolProfile.nnnMaintenance"
+                        label="Monthly Maintenance"
+                        type="number"
+                        prefix="$"
+                        placeholder="300"
+                        helperText="Repairs & upkeep"
+                      />
+                      <FormInput
+                        name="schoolProfile.nnnUtilities"
+                        label="Monthly Utilities"
+                        type="number"
+                        prefix="$"
+                        placeholder="400"
+                        helperText="Electric, water, gas"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {isPrivate && (

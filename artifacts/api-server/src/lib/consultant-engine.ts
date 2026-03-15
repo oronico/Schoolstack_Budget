@@ -17,6 +17,25 @@ interface SchoolProfile {
   accreditingBody?: string;
   hasManagementFee?: boolean;
   managementFeePercent?: number;
+  locationSecured?: boolean;
+  facilityStreet?: string;
+  facilityCity?: string;
+  facilityState?: string;
+  facilityZip?: string;
+  ownershipType?: string;
+  propertyTaxAnnual?: number;
+  hasMortgage?: boolean;
+  mortgageMonthlyPayment?: number;
+  leaseExpirationMonth?: number;
+  leaseExpirationYear?: number;
+  monthlyRent?: number;
+  annualRentEscalation?: number;
+  postLeaseRenewalBump?: number;
+  isNNNLease?: boolean;
+  nnnCamCharges?: number;
+  nnnMaintenance?: number;
+  nnnUtilities?: number;
+  estimatedMonthlyFacilityBudget?: number;
 }
 
 interface TuitionTier {
@@ -1025,6 +1044,21 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (lastReserve && lastReserve.reserveMonths < 1)
     risks.push(`Building an operating reserve by Year ${lastYearNum} is an important next goal to work toward`);
 
+  if (!sp.locationSecured) {
+    risks.push("No facility location secured yet — facility costs are estimated");
+  }
+  if (sp.locationSecured && sp.ownershipType === "rent" && sp.leaseExpirationYear) {
+    const openingYear = sp.openingYear || new Date().getFullYear();
+    const yearsUntilExpiration = sp.leaseExpirationYear - openingYear;
+    if (yearsUntilExpiration >= 0 && yearsUntilExpiration < yearCount) {
+      const bump = sp.postLeaseRenewalBump || 15;
+      risks.push(`Lease expires in Year ${yearsUntilExpiration + 1} — rent may increase ${bump}% at renewal`);
+    }
+  }
+  if (sp.locationSecured && sp.ownershipType === "own") {
+    strengths.push("Facility is owned — no lease renewal risk");
+  }
+
   const biggestStrength =
     strengths.length > 0
       ? strengths[0]
@@ -1513,6 +1547,62 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           `Year 1 projects ${enrollmentByYear[0]} students, up ${Math.round(enrollGrowthFromPrior * 100)}% from last year's ${priorYear.endingEnrollment}. Verify your recruitment pipeline supports this growth.`,
         );
       }
+    }
+  }
+
+  if (!sp.locationSecured) {
+    recommendations.push({
+      title: "Secure Your Facility Location",
+      description: "Your model is based on an estimated facility budget. Once you have a signed lease or purchase agreement, update your model with actual numbers — lenders strongly prefer models backed by real lease terms.",
+      priority: "high",
+    });
+  }
+
+  if (sp.locationSecured && sp.ownershipType === "rent" && sp.leaseExpirationYear) {
+    const openingYear = sp.openingYear || new Date().getFullYear();
+    const leaseEndYear = sp.leaseExpirationYear;
+    const yearsUntilExpiration = leaseEndYear - openingYear;
+    if (yearsUntilExpiration >= 0 && yearsUntilExpiration < yearCount) {
+      const bump = sp.postLeaseRenewalBump || 15;
+      risks.push(`Lease expires in Year ${yearsUntilExpiration + 1} — rent may increase ${bump}% at renewal`);
+      recommendations.push({
+        title: "Plan for Lease Renewal Risk",
+        description: `Your lease expires in ${leaseEndYear}, which falls within your ${yearCount}-year projection. At renewal, rent could jump ${bump}% or more. Start renewal conversations early, explore extension options, or budget for the increase. Lenders pay close attention to lease expiration timing.`,
+        priority: "high",
+      });
+    }
+    if (yearsUntilExpiration < 2 && yearsUntilExpiration >= 0) {
+      recommendations.push({
+        title: "Short Remaining Lease Term",
+        description: `Your lease expires in ${leaseEndYear} — less than 2 years away. This is a red flag for lenders who want to see facility stability through the projection period. If possible, negotiate an extension or option to renew before approaching lenders.`,
+        priority: "high",
+      });
+    }
+  }
+
+  if (sp.locationSecured && sp.ownershipType === "rent" && sp.isNNNLease) {
+    const nnnMonthly = (sp.nnnCamCharges || 0) + (sp.nnnMaintenance || 0) + (sp.nnnUtilities || 0);
+    if (nnnMonthly > 0) {
+      const nnnAnnual = nnnMonthly * 12;
+      const nnnPct = y1.totalRevenue > 0 ? nnnAnnual / y1.totalRevenue : 0;
+      if (nnnPct > 0.05) {
+        recommendations.push({
+          title: "NNN Lease Costs Add Up",
+          description: `Your triple-net charges (CAM, maintenance, utilities) total ${fmt(nnnAnnual)}/year — ${pct(nnnPct)} of Year 1 revenue. These costs escalate with inflation. Make sure they're fully reflected in your expense projections and consider negotiating caps on CAM increases.`,
+          priority: "medium",
+        });
+      }
+    }
+  }
+
+  if (sp.locationSecured && sp.ownershipType === "own" && sp.entityType && sp.entityType !== "nonprofit_501c3" && (sp.propertyTaxAnnual || 0) > 0) {
+    const ptPct = y1.totalRevenue > 0 ? (sp.propertyTaxAnnual || 0) / y1.totalRevenue : 0;
+    if (ptPct > 0.03) {
+      recommendations.push({
+        title: "Property Tax Is a Significant Expense",
+        description: `Annual property tax of ${fmt(sp.propertyTaxAnnual || 0)} represents ${pct(ptPct)} of Year 1 revenue. As a for-profit entity, this isn't tax-exempt. Factor in annual assessment increases and consider whether the property's carrying cost supports your mission.`,
+        priority: "medium",
+      });
     }
   }
 

@@ -18,6 +18,25 @@ interface SchoolProfile {
   accreditingBody?: string;
   hasManagementFee?: boolean;
   managementFeePercent?: number;
+  locationSecured?: boolean;
+  facilityStreet?: string;
+  facilityCity?: string;
+  facilityState?: string;
+  facilityZip?: string;
+  ownershipType?: string;
+  propertyTaxAnnual?: number;
+  hasMortgage?: boolean;
+  mortgageMonthlyPayment?: number;
+  leaseExpirationMonth?: number;
+  leaseExpirationYear?: number;
+  monthlyRent?: number;
+  annualRentEscalation?: number;
+  postLeaseRenewalBump?: number;
+  isNNNLease?: boolean;
+  nnnCamCharges?: number;
+  nnnMaintenance?: number;
+  nnnUtilities?: number;
+  estimatedMonthlyFacilityBudget?: number;
 }
 
 interface TuitionTier {
@@ -659,6 +678,42 @@ function buildAssumptionsTab(
 
   if (sp.hasManagementFee) {
     profileItems.push(["Management Fee", `${sp.managementFeePercent || 0}% of Revenue`]);
+  }
+
+  if (sp.locationSecured !== undefined) {
+    profileItems.push(["Location Secured", sp.locationSecured ? "Yes" : "No (Estimated)"]);
+  }
+  if (sp.locationSecured && sp.facilityStreet) {
+    const addr = [sp.facilityStreet, sp.facilityCity, sp.facilityState, sp.facilityZip].filter(Boolean).join(", ");
+    profileItems.push(["Facility Address", addr]);
+  }
+  if (sp.ownershipType) {
+    profileItems.push(["Facility Ownership", sp.ownershipType === "own" ? "Owned" : "Rented / Leased"]);
+  }
+  if (sp.ownershipType === "rent") {
+    if (sp.monthlyRent) profileItems.push(["Monthly Rent", `$${(sp.monthlyRent).toLocaleString()}`]);
+    if (sp.annualRentEscalation) profileItems.push(["Annual Rent Escalation", `${sp.annualRentEscalation}%`]);
+    if (sp.leaseExpirationMonth && sp.leaseExpirationYear) {
+      const monthNames = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      profileItems.push(["Lease Expiration", `${monthNames[sp.leaseExpirationMonth] || ""} ${sp.leaseExpirationYear}`]);
+    }
+    if (sp.postLeaseRenewalBump) profileItems.push(["Post-Lease Renewal Bump", `${sp.postLeaseRenewalBump}%`]);
+    if (sp.isNNNLease) {
+      profileItems.push(["Lease Type", "Triple Net (NNN)"]);
+      const nnnTotal = (sp.nnnCamCharges || 0) + (sp.nnnMaintenance || 0) + (sp.nnnUtilities || 0);
+      if (nnnTotal > 0) profileItems.push(["Monthly NNN Charges", `$${nnnTotal.toLocaleString()}`]);
+    }
+  }
+  if (sp.ownershipType === "own") {
+    if (sp.entityType && sp.entityType !== "nonprofit_501c3" && sp.propertyTaxAnnual) {
+      profileItems.push(["Annual Property Tax", `$${sp.propertyTaxAnnual.toLocaleString()}`]);
+    }
+    if (sp.hasMortgage && sp.mortgageMonthlyPayment) {
+      profileItems.push(["Monthly Mortgage Payment", `$${sp.mortgageMonthlyPayment.toLocaleString()}`]);
+    }
+  }
+  if (!sp.locationSecured && sp.estimatedMonthlyFacilityBudget) {
+    profileItems.push(["Estimated Monthly Facility Budget", `$${sp.estimatedMonthlyFacilityBudget.toLocaleString()}`]);
   }
 
   for (const [label, value] of profileItems) {

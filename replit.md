@@ -77,7 +77,7 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 ## Feature Specifications
 
 ### Universal Financial Model
-- **School Configuration**: Supports `microschool`, `private_school`, `charter_school`, `other` school types; `new_school` or `operating_school` stages; and `tuition_based`, `charter_public_funded`, `hybrid_mixed` funding profiles. All models project 5 years. Legacy models with fewer years are auto-normalized on load. Includes support for partial first years.
+- **School Configuration**: Supports `microschool`, `private_school`, `charter_school`, `other` school types; `new_school` or `operating_school` stages; and `tuition_based`, `charter_public_funded`, `hybrid_mixed` funding profiles. All models project 5 years. Legacy models with fewer years are auto-normalized on load. Includes support for partial first years. Facility & Location section captures location status (secured or estimated), address fields, ownership type (own/rent) with conditional sub-fields: own → property tax (for-profit only), mortgage; rent → monthly rent, escalation %, lease expiration, post-renewal bump %, NNN lease toggle with CAM/maintenance/utilities. Field resets on toggle prevent stale data.
 - **Programs & Enrollment**: Flexible program-based enrollment model. Users define custom programs (Full Day, Half Day, Four-Day, Drop-In, After School, etc.) each with its own tuition rate. Enrollment matrix shows programs as rows × year columns (prior/current year conditionally shown based on school stage). Tuition escalation (default 3%) applied to Years 2-5. Programs auto-sync totals to legacy `enrollment.year1-year5` fields for backward compatibility with export pipeline. Revenue = enrollment × escalated tuition per program per year.
 - **Revenue Model**: Features 6 categories (e.g., `tuition_and_fees`, `public_funding`) with row-based line items. Each line item supports various driver types (`annual_fixed`, `monthly`, `per_student`, `percent_of_base`), optional per-line escalation rates, and payment timing configurations, with funding-profile-aware defaults. Includes a revenue source picker gateway (users check which revenue streams apply), funding-profile-aware guidance tips, per-student revenue context, and building capacity warnings.
 - **Staffing Model**: FTE-based roster across function categories (e.g., `school_leadership`, `instructional`) and employment types (`full_time`, `part_time`, `contract`), including configurable benefits and payroll tax rates. Includes growth planning guidance (Year 1–5 staffing ratio projections), school-type benchmarks, and building capacity warnings.
@@ -114,6 +114,7 @@ A deterministic rules engine providing:
 - Management fee analysis and warnings.
 - Tuition tier-aware revenue calculations.
 - Accounting-category diagnostics (e.g., occupancy ratio, software fragmentation).
+- Facility risk flags: no-location-secured warning, lease expiration within projection period, short remaining lease term, NNN cost accumulation, property tax impact for for-profit owners.
 - Five stress test scenarios: Enrollment -20%, Loss of Philanthropy, Cost Escalation, Revenue Delayed 3 Months, Interest Rate +2%.
 - 5×5 sensitivity matrix (enrollment % × tuition % variations) showing final-year net income.
 - Cash runway calculation (months until cash depletion).
