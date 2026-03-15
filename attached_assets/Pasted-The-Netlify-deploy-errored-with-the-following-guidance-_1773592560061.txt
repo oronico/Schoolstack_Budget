@@ -1,0 +1,82 @@
+The Netlify deploy errored, with the following guidance provided:
+
+**Diagnosis**
+- The TypeScript build stops at [line 67](#L67)–[line 76](#L76) because functions like `createInsertSchema`/`createSelectSchema` are being called with a full `z.object({...})` as the override argument. In current `drizzle-zod` typings, that parameter must be a plain object whose values are the override schemas, not a `ZodObject`. Passing the wrong type now violates the generic constraint (`TS2344`).
+
+**Solution**
+- In each schema file under `lib/db/src/schema/`, replace the `z.object({...})` override argument with an object literal where each property is the `Zod` schema you want to override. For example:
+
+  ```ts
+  const metadataSchema = z
+    .record(z.string(), z.unknown())
+    .nullable()
+    .optional();
+
+  export const insertEventSchema = createInsertSchema(events, {
+    metadata: metadataSchema,
+  });
+
+  export const selectEventSchema = createSelectSchema(events, {
+    metadata: metadataSchema,
+  });
+  ```
+
+- Apply the same pattern to `exports.ts`, `financial-models.ts`, `schools.ts`, and `users.ts`, mapping each column to its override schema rather than wrapping the overrides in `z.object`. After updating these calls, rerun the build—the type check should pass.
+
+The relevant error logs are:
+
+Line 57: ​
+Line 58: [36m$ pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/school-financial-model run build[3
+Line 59: Scope: all 9 workspace projects
+Line 60: Lockfile is up to date, resolution step is skipped
+Line 61: Already up to date
+Line 62: [36m.[39m [96mpreinstall[39m$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo 
+Line 63: [36m.[39m [96mpreinstall[39m: Done
+Line 64: Done in 1.3s using pnpm v10.30.2
+Line 65: > workspace@0.0.0 typecheck:libs /opt/build/repo
+Line 66: > tsc --build
+Line 67: lib/db/src/schema/events.ts(18,35): error TS2344: Type 'ZodObject<{ userId: ZodOptional<ZodNullable<ZodInt>>; eventName: ZodStri
+Line 68:   Type 'ZodObject<{ userId: ZodOptional<ZodNullable<ZodInt>>; eventName: ZodString; metadata: ZodOptional<ZodNullable<ZodType<Re
+Line 69: lib/db/src/schema/exports.ts(19,36): error TS2344: Type 'ZodObject<{ userId: ZodInt; modelId: ZodInt; format: ZodOptional<ZodStr
+Line 70:   Type 'ZodObject<{ userId: ZodInt; modelId: ZodInt; format: ZodOptional<ZodString>; }, { out: {}; in: {}; }>' is missing the fo
+Line 71: lib/db/src/schema/financial-models.ts(33,44): error TS2344: Type 'ZodObject<{ name: ZodString; data: ZodOptional<ZodNullable<Zod
+Line 72:   Type 'ZodObject<{ name: ZodString; data: ZodOptional<ZodNullable<ZodType<Record<string, unknown>, Record<string, unknown>, $Zo
+Line 73: lib/db/src/schema/schools.ts(21,36): error TS2344: Type 'ZodObject<{ name: ZodString; userId: ZodInt; state: ZodOptional<ZodNull
+Line 74:   Type 'ZodObject<{ name: ZodString; userId: ZodInt; state: ZodOptional<ZodNullable<ZodString>>; schoolType: ZodOptional<ZodNull
+Line 75: lib/db/src/schema/users.ts(24,34): error TS2344: Type 'ZodObject<{ email: ZodString; name: ZodString; passwordHash: ZodString; r
+Line 76:   Type 'ZodObject<{ email: ZodString; name: ZodString; passwordHash: ZodString; role: ZodOptional<ZodString>; tokenVersion: ZodO
+Line 77: [41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 2.[39m
+Line 78: [91m[1m​[22m[39m
+Line 79: [91m[1m"build.command" failed                                        [22m[39m
+Line 80: [91m[1m────────────────────────────────────────────────────────────────[22m[39m
+Line 81: ​
+Line 82:   [31m[1mError message[22m[39m
+Line 83:   Command failed with exit code 2: pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/school-
+Line 84: ​
+Line 85:   [31m[1mError location[22m[39m
+Line 86:   In build.command from netlify.toml:
+Line 87:   pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/school-financial-model run build
+Line 88: ​
+Line 89:   [31m[1mResolved config[22m[39m
+Line 90:   build:
+Line 91:     command: pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm
+Line 92:       --filter @workspace/school-financial-model run build
+Line 93:     commandOrigin: config
+Line 94:     environment:
+Line 95:       - DATABASE_URL
+Line 96:       - NODE_VERSION
+Line 97:       - PNPM_VERSION
+Line 98:       - BASE_PATH
+Line 99:     publish: /opt/build/repo/artifacts/school-financial-model/dist/public
+Line 100:     publishOrigin: config
+Line 101:   headers:
+Line 102:     - for: /assets/*
+      values:
+        Cache-Control: public, max-age=31536000, immutable
+    - for: /logos/*
+      values:
+
+Line 103: Build failed due to a user error: Build script returned non-zero exit code: 2
+Line 104: Failing build: Failed to build site
+Line 105: Failed during stage 'building site': Build script returned non-zero exit code: 2
+Line 106: Finished processing build request in 17.476s
