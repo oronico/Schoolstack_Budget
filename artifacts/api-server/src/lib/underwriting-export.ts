@@ -460,8 +460,88 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   buildUnderwritingSnapshot(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, maxCapacity, totalPrincipal, yc);
   buildSummary(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, yc, cols, yearHeaders);
 
-  const buf = await wb.xlsx.writeBuffer();
-  return Buffer.from(buf);
+  const arrayBuf = await wb.xlsx.writeBuffer();
+  return Buffer.from(arrayBuf as ArrayBuffer);
+}
+
+export async function generateUnderwritingWorkbookToFile(rawData: Record<string, unknown>, filePath: string): Promise<void> {
+  const data = rawData as unknown as ModelData;
+  const sp = data.schoolProfile || {};
+  const en = data.enrollment || {};
+  const revenueRows = data.revenueRows || [];
+  const staffingRows = data.staffingRows || [];
+  const expenseRows = data.expenseRows || [];
+  const capDebtRows = data.capitalAndDebtRows || [];
+
+  const yearCount = revenueRows[0]?.amounts?.length || expenseRows[0]?.amounts?.length || (sp.schoolStage === "operating_school" ? 5 : 3);
+  const yc = Math.min(yearCount, 5);
+
+  const enrollment = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0].slice(0, yc);
+  const salaryEsc = (data.facilities as Record<string, unknown>)?.annualSalaryIncrease
+    ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100 : 0;
+  const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
+    ? Number((data.facilities as Record<string, unknown>).generalCostInflation) / 100 : 0;
+  setGlobalCostInflation(costInflation * 100);
+  const isPartial = sp.isPartialFirstYear || false;
+  const opMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
+  const prorationFactor = opMonths / 12;
+
+  const annualRevenue: number[] = [];
+  const annualPersonnel: number[] = [];
+  const annualExpenses: number[] = [];
+  const annualCapDebt: number[] = [];
+  const annualNetIncome: number[] = [];
+  const annualCumNI: number[] = [];
+
+  for (let y = 0; y < yc; y++) {
+    const students = enrollment[y];
+    const rev = computeRevenueForYear(revenueRows, y, students, data.tuitionTiers);
+    const pf = y === 0 ? prorationFactor : 1;
+    const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
+    const costInflPct = costInflation * 100;
+    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct) * (y === 0 ? prorationFactor : 1);
+    const capDebt = computeCapDebtForYear(capDebtRows, y, students);
+    const totalExp = personnel + ops + capDebt;
+    const ni = (rev * pf) - totalExp;
+
+    annualRevenue.push(Math.round(rev * pf));
+    annualPersonnel.push(Math.round(personnel));
+    annualExpenses.push(Math.round(ops));
+    annualCapDebt.push(Math.round(capDebt));
+    annualNetIncome.push(Math.round(ni));
+    annualCumNI.push((annualCumNI[y - 1] || 0) + Math.round(ni));
+  }
+
+  const startingCash = data.priorYearSnapshot?.endingCash || 0;
+  const annualDebtSvc = totalDebtService(capDebtRows);
+  const totalPrincipal = totalLoanPrincipal(capDebtRows);
+  const cashAtOpen = startingCash + totalPrincipal;
+  const maxCapacity = sp.maxCapacity || enrollment[yc - 1] || 100;
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "SchoolStack Budget — Underwriting Export";
+  wb.created = new Date();
+  wb.calcProperties = { fullCalcOnLoad: true };
+
+  const yearHeaders = ["", ...Array.from({ length: yc }, (_, i) => `Year ${i + 1}`)];
+  const cols = yc + 1;
+
+  buildAssumptions(wb, sp, enrollment, yc, salaryEsc, costInflation, prorationFactor, data.tuitionTiers);
+  buildEnrollmentRevDrivers(wb, enrollment, revenueRows, yc, cols, yearHeaders, maxCapacity, data.tuitionTiers);
+  buildTuitionFundingDetail(wb, revenueRows, enrollment, yc, cols, yearHeaders, data.tuitionTiers);
+  buildStaffingPlan(wb, staffingRows, salaryEsc, prorationFactor, yc, cols, yearHeaders);
+  buildOperatingExpenses(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
+  buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
+  buildSourcesUses(wb, capDebtRows, startingCash, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, expenseRows, staffingRows, enrollment, totalPrincipal, yc);
+  buildDebtSchedule(wb, capDebtRows, yc);
+  buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
+  buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType);
+  buildFiveYearBS(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, cashAtOpen, totalPrincipal, capDebtRows, yc, cols, yearHeaders);
+  buildDSCRCovenant(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualDebtSvc, cashAtOpen, enrollment, maxCapacity, yc, cols, yearHeaders);
+  buildUnderwritingSnapshot(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, maxCapacity, totalPrincipal, yc);
+  buildSummary(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, yc, cols, yearHeaders);
+
+  await wb.xlsx.writeFile(filePath);
 }
 
 function buildAssumptions(
