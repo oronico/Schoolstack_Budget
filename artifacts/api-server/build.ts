@@ -10,31 +10,18 @@ const __dirname = path.dirname(__filename);
 // which helps cold start times without risking some
 // packages that are not bundle compatible
 const allowlist = [
-  "@google/generative-ai",
-  "axios",
-  "connect-pg-simple",
+  "bcryptjs",
+  "cookie-parser",
   "cors",
-  "date-fns",
   "drizzle-orm",
-  "drizzle-zod",
+  "exceljs",
   "express",
-  "express-rate-limit",
-  "express-session",
   "jsonwebtoken",
-  "memorystore",
-  "multer",
-  "nanoid",
   "nodemailer",
-  "openai",
-  "passport",
-  "passport-local",
+  "pdfkit",
   "pg",
-  "stripe",
-  "uuid",
-  "ws",
-  "xlsx",
+  "xlsx-populate",
   "zod",
-  "zod-validation-error",
 ];
 
 async function buildAll() {

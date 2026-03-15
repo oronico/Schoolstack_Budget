@@ -82,6 +82,14 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 ### API Server (`api-server`)
 Manages authentication (register, login, reset password), CRUD operations for financial models, and specialized endpoints for admin analytics and a consultant rules engine. It also orchestrates advanced Excel and PDF export functionalities, including a branded Lender Pro Forma and a 14-tab Underwriting Pro Forma workbook (DSCR, covenant checks, balance sheet, monthly cash flow, sources & uses). Includes a public export endpoint at `POST /api/public/export-underwriting` that requires no authentication.
 
+#### Deployment
+- **Dockerfile** at repo root (multi-stage: builds in Node 22 Alpine, copies `dist/` to minimal production image)
+- **Build output**: `artifacts/api-server/dist/index.cjs` (single esbuild CJS bundle, ~3.5MB) + `dist/templates/` (Excel template)
+- **Start**: `node dist/index.cjs` (or `pnpm --filter @workspace/api-server start`)
+- **Health check**: `GET /api/healthz` returns `{"status":"ok","db":"connected"}` or `503` if DB unreachable
+- **CORS**: Set `CORS_ORIGIN` env var to restrict origins (comma-separated). Omit for open CORS (dev only).
+- **Required env vars**: `PORT`, `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN` (production), `ADMIN_EMAILS`, `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`, `APP_URL`
+
 ### Frontend (`school-financial-model`)
 A React-based single-page application providing a user-friendly interface for model creation and management. It includes:
 - Landing page with primary CTA routing to `/underwriting` (public wizard).

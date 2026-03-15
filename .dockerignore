@@ -1,0 +1,12 @@
+node_modules
+.git
+.replit
+.local
+.cache
+.config
+*.md
+artifacts/school-financial-model
+artifacts/mockup-sandbox
+attached_assets
+scripts
+dist
