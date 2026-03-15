@@ -30,3 +30,9 @@ id = "A2e5ZMkhnRWZHTOaqfNnx"
 uri = "file:///tmp/minimal_test.xlsx"
 type = "table"
 title = "Minimal test — 2 cells + 1 formula"
+
+[[outputs]]
+id = "KpghvOrYTkWcF_0Li4CEr"
+uri = "file://artifacts/school-financial-model/public/workbook_b64.txt"
+type = "text"
+title = "Workbook as base64 text (decode with: base64 -d workbook_b64.txt > workbook.xlsx)"
