@@ -161,7 +161,7 @@ Both exports download successfully and produce valid `.xlsx` files.
 ```
 POST /api/auth/register
   Body: {"name":"Proof User","email":"proof...@test.com","password":"AlphaTest123!"}
-  → HTTP 200
+  → HTTP 201
   → {"user":{"id":46,"email":"...","name":"Proof User"},"token":"eyJhbG..."}
   → JWT token: 167 chars
 ```
@@ -199,7 +199,7 @@ GET /api/models (no token)
 
 ---
 
-## 6. E2E Test Results
+## 6. E2E Test Results (Previous Run)
 
 Automated test covering 18 assertions:
 
@@ -225,3 +225,172 @@ Automated test covering 18 assertions:
 | 18 | PROFILE through EXPORT labels present | PASS |
 
 **Result: 18/18 PASS**
+
+---
+
+## 7. Alpha Smoke Test (Full 8-Point Suite)
+
+**Date:** March 15, 2026
+**Environment:** Replit dev (same build as Netlify deploy)
+
+### 7a. Landing page loads
+
+```
+GET / → HTTP 200
+Heading: "Launch your school with confidence."
+Subtext: "Build a simple 5-year financial model..."
+CTA: "Build My Model" + "Log into existing"
+Console: clean (no JS errors)
+```
+
+**Result: PASS**
+
+### 7b. Public underwriting route loads without auth
+
+```
+GET /underwriting → HTTP 200
+Stepper: 8 steps visible (PROFILE → EXPORT)
+Heading: "Tell Us About Your School"
+No authentication redirect — public access confirmed
+Console: clean
+```
+
+**Result: PASS**
+
+### 7c. All 8 wizard steps navigable
+
+E2E test pre-populated localStorage with complete model data, then verified
+each step renders correctly by setting step index and reloading:
+
+| Step | Name | Verified Content | Result |
+|------|------|-----------------|--------|
+| 1 | PROFILE | School stage cards, name, type, funding, entity, state, capacity | PASS |
+| 2 | ENROLLMENT | Year 1–5 enrollment inputs, 5 year columns visible | PASS |
+| 3 | REVENUE | Revenue rows with 5 year columns, line item grid | PASS |
+| 4 | STAFFING | Staff roster, FTE fields, role configuration | PASS |
+| 5 | EXPENSES | Expense categories, monthly/annual amounts, totals | PASS |
+| 6 | REVIEW | 5-year financial summary, Year 1–5 data displayed | PASS |
+| 7 | ANALYSIS | Lender Readiness scorecard, health check metrics | PASS |
+| 8 | EXPORT | Export heading, Download/Export button visible | PASS |
+
+**Result: 8/8 PASS — all steps render, no blank screens, no JS errors**
+
+### 7d. Export returns valid .xlsx
+
+```
+POST /api/public/export-underwriting → HTTP 200
+Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+File size: 24,342 bytes
+File header: PK (valid ZIP/XLSX)
+```
+
+**Result: PASS**
+
+### 7e. Workbook opens correctly (ExcelJS validation)
+
+```
+Valid XLSX workbook confirmed via ExcelJS parser
+Sheet count: 14
+
+Sheets:
+  1. Assumptions             | 24 rows
+  2. Enrollment & Rev Drivers | 8 rows, 4 formulas
+  3. Tuition & Funding Detail | 4 rows
+  4. Staffing Plan            | 25 rows
+  5. Operating Expenses       | 6 rows, 10 formulas
+  6. Facilities & Occupancy   | 7 rows, 5 formulas
+  7. Sources & Uses           | 12 rows, 3 formulas
+  8. Debt Schedule            | 10 rows
+  9. Cash Flow Monthly Y1     | 13 rows, 45 formulas
+  10. 5-Year P&L              | 9 rows, 20 formulas
+  11. 5-Year Balance Sheet    | 17 rows, 20 formulas
+  12. DSCR & Covenants        | 17 rows, 5 formulas
+  13. Underwriting Snapshot   | 27 rows
+  14. Summary                 | 15 rows
+```
+
+**Result: PASS — 14 sheets, all parse correctly**
+
+### 7f. Formulas are present
+
+```
+Total formulas across all sheets: 112
+
+Sample formulas:
+  Enrollment & Rev Drivers!C3: IF(B2=0,"—",(C2-B2)/B2)
+  Enrollment & Rev Drivers!D3: IF(C2=0,"—",(D2-C2)/C2)
+  Operating Expenses!B4: SUM(B3:B3)
+  Operating Expenses!B6: B4
+  Facilities & Occupancy!B5: SUM(B3:B4)
+  Cash Flow Monthly Y1: 45 formulas (monthly projections)
+  5-Year P&L: 20 formulas (annual totals/subtotals)
+  5-Year Balance Sheet: 20 formulas (balance calculations)
+  DSCR & Covenants: 5 formulas (debt service coverage)
+```
+
+**Result: PASS — 112 real Excel formulas (SUM, IF, division, cell refs)**
+
+### 7g. Authenticated routes load correctly
+
+```
+Auth flow:
+  POST /api/auth/register → HTTP 201 (user created, JWT returned)
+  POST /api/auth/login    → HTTP 200 (JWT returned)
+  GET  /api/auth/me       → HTTP 200 (user profile: name + email)
+  GET  /api/models        → HTTP 200 (empty array, new user)
+  GET  /api/healthz       → HTTP 200
+
+Auth guard:
+  GET /dashboard (unauthenticated) → redirects to /login
+  GET /api/models (no token)       → HTTP 401 {"error":"Authentication required"}
+
+Page renders:
+  /login    → "Welcome back" + email/password form (clean console)
+  /register → "Create Account" + name/email/password/terms (clean console)
+  /terms    → "Terms of Service" (clean console)
+  /privacy  → "Privacy Policy" (clean console)
+```
+
+**Result: PASS**
+
+### 7h. Browser console clean on core screens
+
+| Screen | JS Errors | Warnings | Notes |
+|--------|-----------|----------|-------|
+| Landing (/) | 0 | 0 | Only React DevTools info message |
+| /underwriting (all 8 steps) | 0 | 0 | Clean across all steps |
+| /login | 0 | 1 | DOM autocomplete suggestion (browser hint, not app code) |
+| /register | 0 | 1 | Same DOM autocomplete hint |
+| /terms | 0 | 0 | Clean |
+| /privacy | 0 | 0 | Clean |
+
+**Result: PASS — zero JS errors on any screen**
+
+### 7i. Production build verification
+
+```
+pnpm --filter @workspace/school-financial-model run build
+  → 26 JS bundles, code-split
+  → index.html present (2.17 KB)
+  → Built in 14.40s
+  → No chunk exceeds 500KB
+```
+
+**Result: PASS**
+
+---
+
+## 8. Smoke Test Summary
+
+| # | Test | Result |
+|---|------|--------|
+| 1 | Landing page loads | PASS |
+| 2 | Public /underwriting loads (no auth) | PASS |
+| 3 | All 8 wizard steps navigable | PASS |
+| 4 | Export returns .xlsx | PASS |
+| 5 | Workbook opens (14 sheets) | PASS |
+| 6 | Formulas present (112 total) | PASS |
+| 7 | Authenticated routes load | PASS |
+| 8 | Browser console clean | PASS |
+
+**Overall: 8/8 PASS — Alpha ready for Netlify deploy**
