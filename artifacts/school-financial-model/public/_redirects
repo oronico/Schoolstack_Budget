@@ -1,1 +1,2 @@
-/*    /index.html   200
+/api/*  https://workspaceapi-server-production-bffd.up.railway.app/api/:splat  200!
+/*      /index.html   200

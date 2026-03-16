@@ -1,10 +1,7 @@
 const envBase = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) || "";
-const API_BASE = envBase || (typeof window !== "undefined" && (window.location.hostname.includes("netlify.app") || window.location.hostname.includes("schoolstack.ai"))
-  ? "https://workspaceapi-server-production-bffd.up.railway.app"
-  : "");
 
 export function getApiBase(): string {
-  return API_BASE;
+  return envBase;
 }
 
 export function setupFetchInterceptor() {
@@ -14,8 +11,8 @@ export function setupFetchInterceptor() {
     let url = input.toString();
 
     if (url.startsWith('/api')) {
-      if (API_BASE) {
-        url = `${API_BASE}${url}`;
+      if (envBase) {
+        url = `${envBase}${url}`;
         input = url;
       }
 
