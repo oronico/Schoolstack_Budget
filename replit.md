@@ -21,13 +21,14 @@ I prefer iterative development with clear communication on significant changes. 
 - Publish directory: `artifacts/school-financial-model/dist/public`
 - Cache headers: `Cache-Control: public, max-age=31536000, immutable` for `/assets/*` (Vite hashed filenames)
 - Logo cache headers: `Cache-Control: public, max-age=86400` for `/logos/*`
-- API proxy redirect: `/api/*` → API server (update `YOUR-API-HOST` with real domain before deploy)
+- API proxy redirect: `/api/*` → Railway API server (`https://workspaceapi-server-production-bffd.up.railway.app/api/:splat`) with `200!` (force, status rewrite)
 - SPA catch-all redirect for client-side routing (`/* → /index.html`, status 200)
 - `BASE_PATH=/` set in build environment (frontend deploys at domain root on Netlify)
+- **IMPORTANT**: `public/_redirects` takes precedence over `netlify.toml` redirects. Both files must have the `/api/*` proxy rule BEFORE the SPA catch-all. The `_redirects` file is the authoritative source.
 
 ### Netlify UI Settings
 - **Package directory**: Set to `artifacts/school-financial-model` in Netlify UI (Build & deploy → Build settings). This tells Netlify which package in the monorepo is the site.
-- **Environment variable**: `VITE_API_BASE_URL` — full URL of the API server (e.g., `https://api.schoolstack.ai`). Baked into the frontend at build time.
+- **Environment variable**: `VITE_API_BASE_URL` — optional, only needed to override the API base URL. When unset, the frontend uses relative `/api/` paths (proxied by Netlify `_redirects`).
 
 # System Architecture
 
@@ -42,7 +43,12 @@ The project is built as a pnpm workspace monorepo using TypeScript (v5.9).
 - **Frontend**: React, Vite, Tailwind CSS v4. Route-based code splitting via React.lazy + Suspense; vendor chunks (recharts, framer-motion, react-hook-form) split via manualChunks. No single JS chunk exceeds 500KB.
 - **Authentication**: JWT-based (bcryptjs for passwords, jsonwebtoken for tokens).
 - **Build Tooling**: esbuild for CJS bundling.
-- **Export Capabilities**: ExcelJS for standard Excel exports (with pre-computed formula results for viewer compatibility), xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports. Primary underwriting export is now a formula-driven 4-tab Wildflower-style workbook (`formula-export.ts`): Assumptions (massive input panel with yellow-highlighted editable cells), 5-Year Model (revenue/personnel/opex/debt/P&L/DSCR/break-even with formulas referencing Assumptions), Year 1 Pro Forma (monthly Jul-Jun columns), and Actuals vs. Projections (only for operating schools with prior/current year data, includes reality-check flags). Single-year budget export generates monthly Jul-Jun columns for any chosen year (1-5) and remains in `underwriting-export.ts`. All exports feature print-ready setup: Letter 8.5×11, fit-to-width, `printTitlesRow` for repeating header rows, school name in each tab's title row, page headers (school name left, tab name right), page footers ("Built by SchoolStack Budget • budget.schoolstack.ai", page numbers, date), and a branded footer data row at the bottom of each sheet.
+- **Export Capabilities**: ExcelJS for standard Excel exports (with pre-computed formula results for viewer compatibility), xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports.
+  - **Authenticated underwriting export** (`/models/:id/export/underwriting`): 15-tab workbook via `generateUnderwritingWorkbook()` in `underwriting-export.ts` — Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover.
+  - **Public formula export** (`/public/export-underwriting`): 3-tab formula-driven workbook via `generateFormulaWorkbook()` in `formula-export.ts` — Assumptions, 5-Year Model, Year 1 Pro Forma.
+  - **Single-year budget** (`/models/:id/export/single-year`): Monthly Jul-Jun columns for any chosen year (1-5), via `underwriting-export.ts`.
+  - **Lender Pro Forma** (`/models/:id/export/lender-proforma`): Template-based Excel with preserved formulas.
+  - All exports feature print-ready setup: Letter 8.5×11, fit-to-width, `printTitlesRow` for repeating header rows, school name in each tab's title row, page headers (school name left, tab name right), page footers ("Built by SchoolStack Budget • budget.schoolstack.ai", page numbers, date), and a branded footer data row at the bottom of each sheet.
 
 ## Monorepo Structure
 
