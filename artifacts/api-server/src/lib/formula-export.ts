@@ -547,7 +547,7 @@ function buildAssumptions(
 
   r++;
   ws.getCell(r, 1).value = "Yellow cells are editable inputs. All other cells in this workbook are formulas.";
-  ws.getCell(r, 1).font = { size: 10, italic: true, name: "Calibri", color: { argb: "FF666666" } };
+  ws.getCell(r, 1).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF666666" } };
 
   r += 2;
   const profileStartRow = r;
@@ -615,7 +615,7 @@ function buildAssumptions(
         cell.alignment = { horizontal: "center" };
       }
       ws.getCell(r, 7).value = `$${(p.annualTuition || 0).toLocaleString()} tuition`;
-      ws.getCell(r, 7).font = { size: 10, italic: true, name: "Calibri", color: { argb: "FF888888" } };
+      ws.getCell(r, 7).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF888888" } };
     }
   }
 
@@ -837,7 +837,7 @@ function buildAssumptions(
   const prorationRow = r + 1;
   r++; ws.getCell(r, 1).value = "Year 1 Proration Factor"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = prorationFactor; ws.getCell(r, 2).numFmt = "0.00"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
-  ws.getCell(r, 3).value = `(${sp.year1OperatingMonths || 12} of 12 months)`; ws.getCell(r, 3).font = { size: 10, italic: true, name: "Calibri", color: { argb: "FF888888" } };
+  ws.getCell(r, 3).value = `(${sp.year1OperatingMonths || 12} of 12 months)`; ws.getCell(r, 3).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF888888" } };
 
   r++; ws.getCell(r, 1).value = "Tuition Escalation Rate"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = (data.tuitionEscalation?.rate ?? 3) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
@@ -947,7 +947,7 @@ function buildAssumptions(
   r += 2;
   ws.mergeCells(r, 1, r, 7);
   ws.getCell(r, 1).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
-  ws.getCell(r, 1).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+  ws.getCell(r, 1).font = { italic: true, size: 11, color: { argb: "FF9CA3AF" }, name: "Calibri" };
 
   ws.views = [{ state: "frozen", ySplit: 3, xSplit: 1, topLeftCell: "B4", activeCell: "B4" }];
 
@@ -1507,7 +1507,7 @@ function buildFiveYearModel(
   r += 2;
   ws.mergeCells(r, 1, r, 6);
   ws.getCell(r, 1).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
-  ws.getCell(r, 1).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+  ws.getCell(r, 1).font = { italic: true, size: 11, color: { argb: "FF9CA3AF" }, name: "Calibri" };
 
   ws.views = [{ state: "frozen", ySplit: 2, xSplit: 1, topLeftCell: "B3", activeCell: "B3" }];
 
@@ -1833,7 +1833,7 @@ function buildProForma(
   r += 2;
   ws.mergeCells(r, 1, r, 14);
   ws.getCell(r, 1).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
-  ws.getCell(r, 1).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+  ws.getCell(r, 1).font = { italic: true, size: 11, color: { argb: "FF9CA3AF" }, name: "Calibri" };
 
   ws.views = [{ state: "frozen", ySplit: 2, xSplit: 1, topLeftCell: "B3", activeCell: "B3" }];
 }
@@ -2074,7 +2074,7 @@ function buildActualsVsProjections(
   r += 2;
   ws.mergeCells(r, 1, r, cols);
   ws.getCell(r, 1).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
-  ws.getCell(r, 1).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+  ws.getCell(r, 1).font = { italic: true, size: 11, color: { argb: "FF9CA3AF" }, name: "Calibri" };
 
   ws.views = [{ state: "frozen", ySplit: 2, xSplit: 1, topLeftCell: "B3", activeCell: "B3" }];
 }

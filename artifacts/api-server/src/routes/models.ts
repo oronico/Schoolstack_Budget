@@ -13,7 +13,6 @@ import {
   ArchiveModelParams,
 } from "@workspace/api-zod";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
-import { generateWorkbook } from "../lib/excel-export";
 import { generateProFormaPDF } from "../lib/pdf-proforma";
 import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
@@ -620,22 +619,7 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
       : 5;
     const fileName = `${schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_${yearCount}-Year_Financial_Model.xlsx`;
 
-    let consultantSummary;
-    try {
-      const output = runConsultantEngine(data);
-      consultantSummary = {
-        executiveSummary: output.executiveSummary,
-        lenderReadiness: output.lenderReadiness,
-        lenderReadinessExplanation: output.lenderReadinessExplanation,
-        biggestStrength: output.biggestStrength,
-        biggestRisk: output.biggestRisk,
-        recommendations: output.recommendations,
-      };
-    } catch (consultantErr) {
-      console.warn("Consultant analysis skipped during export:", consultantErr);
-    }
-
-    const buffer = await generateWorkbook(data, consultantSummary);
+    const buffer = await generateFormulaWorkbook(data);
 
     await db.update(financialModelsTable)
       .set({ lastExportedAt: new Date() })

@@ -85,7 +85,7 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
   r += 2;
   ws.mergeCells(r, 2, r, 3);
   ws.getCell(r, 2).value = "CONFIDENTIAL — Prepared by SchoolStack Budget (budget.schoolstack.ai)";
-  ws.getCell(r, 2).font = { size: 9, name: "Calibri", color: { argb: "FF999999" }, italic: true };
+  ws.getCell(r, 2).font = { size: 11, name: "Calibri", color: { argb: "FF999999" }, italic: true };
   ws.getCell(r, 2).alignment = { horizontal: "center" };
 }
 
@@ -169,7 +169,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
 
   r++;
   ws.getCell(r, 1).value = "Yellow cells are editable inputs. All other cells are formulas.";
-  ws.getCell(r, 1).font = { size: 10, name: "Calibri", italic: true, color: { argb: "FF666666" } };
+  ws.getCell(r, 1).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF666666" } };
 
   r += 2;
   sec(ws, r, 7); ws.getCell(r, 1).value = "SCHOOL PROFILE";
@@ -1839,7 +1839,7 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
   r += 2;
   ws.mergeCells(r, 1, r, 8);
   ws.getCell(r, 1).value = "Prepared by SchoolStack Budget — budget.schoolstack.ai";
-  ws.getCell(r, 1).font = { size: 9, name: "Calibri", italic: true, color: { argb: "FF999999" } };
+  ws.getCell(r, 1).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF999999" } };
   ws.getCell(r, 1).alignment = { horizontal: "center" };
 }
 
