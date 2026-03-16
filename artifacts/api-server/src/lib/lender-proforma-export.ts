@@ -268,17 +268,16 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
     r.enabled && (r.category === "public_funding" || r.category === "school_choice") && r.driverType === "per_student"
   );
   if (hasGradeBandDataLocal(sp as SchoolProfile)) {
-    const gbRevY1 = computeGradeBandRevenueLocal(sp as SchoolProfile, 0);
     const nonGbEsa = esaRows.filter(r => r.id !== "state_local_perpupil");
-    let nonGbTotal = 0;
-    for (const row of nonGbEsa) nonGbTotal += (row.amounts?.[0] ?? 0);
-    const totalEsaY1 = enrollY1 > 0 ? (gbRevY1 / enrollY1) + nonGbTotal : nonGbTotal;
-    result.esaPerStudentY1 = totalEsaY1;
-    const gbRevY2 = computeGradeBandRevenueLocal(sp as SchoolProfile, 1);
-    let nonGbY2 = 0;
-    for (const row of nonGbEsa) nonGbY2 += (row.amounts?.[1] ?? row.amounts?.[0] ?? 0);
-    const totalEsaY2 = enrollY2 > 0 ? (gbRevY2 / enrollY2) + nonGbY2 : nonGbY2;
-    result.esaGrowthPct = totalEsaY1 > 0 ? (totalEsaY2 - totalEsaY1) / totalEsaY1 : 0;
+    const enrollments = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0];
+    for (let y = 0; y < 5; y++) {
+      const gbRev = computeGradeBandRevenueLocal(sp as SchoolProfile, y);
+      let nonGbRev = 0;
+      for (const row of nonGbEsa) nonGbRev += computeDriverValue(row.amounts, y, row.driverType, enrollments[y]);
+      result[`gbEsaRevenueY${y + 1}`] = gbRev + nonGbRev;
+    }
+    result.esaPerStudentY1 = 0;
+    result.esaGrowthPct = 0;
   } else {
     let esaTotal = 0;
     for (const row of esaRows) esaTotal += (row.amounts?.[0] ?? 0);
@@ -539,12 +538,20 @@ function computeLenderResults(input: Record<string, string | number>): LenderRes
   const noi: number[] = [];
   const operatingMargin: number[] = [];
 
+  const hasGradeBand = n("hasGradeBand") === 1;
+  const gbEsaOverrides: number[] = [];
+  if (hasGradeBand) {
+    for (let y = 0; y < 5; y++) {
+      gbEsaOverrides.push(n(`gbEsaRevenueY${y + 1}`));
+    }
+  }
+
   for (let y = 0; y < 5; y++) {
     const e = enrollment[y];
     const tuition = e * tuitionPerStudent * Math.pow(1 + tuitionGrowth, y);
     tuitionRevNet.push(tuition);
     tuitionCollected.push(tuition * collectionRate);
-    esaRevenue.push(e * esaPerStudent * Math.pow(1 + esaGrowth, y));
+    esaRevenue.push(hasGradeBand ? gbEsaOverrides[y] : e * esaPerStudent * Math.pow(1 + esaGrowth, y));
     otherRevenue.push(e * otherPerStudent * Math.pow(1 + otherGrowth, y));
     grants.push(grantsY1 * Math.pow(1 + grantsGrowth, y));
     totalRevenue.push(tuition * collectionRate + esaRevenue[y] + otherRevenue[y] + grants[y]);

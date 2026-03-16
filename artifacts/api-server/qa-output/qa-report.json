@@ -225,7 +225,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 32825,
+    "fileSize": 32827,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -619,7 +619,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 34243,
+    "fileSize": 34244,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1011,7 +1011,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 34261,
+    "fileSize": 34262,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1403,7 +1403,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 34060,
+    "fileSize": 34061,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1471,7 +1471,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 20206,
+    "fileSize": 20154,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1523,6 +1523,62 @@
         "passed": true,
         "details": [
           "Net Income: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Grade-Band Assumptions Present",
+        "passed": true,
+        "details": [
+          "Charter Funding Details section found in Assumptions"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Grade-Band Per-Pupil Rates Populated",
+        "passed": true,
+        "details": [
+          "K-5: $8200, 6-8: $9100, 9-12: $10500"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Grade-Band Revenue Y1 Positive",
+        "passed": true,
+        "details": [
+          "Y1: $1,020,000 (K5: 80×$8200, 6-8: 40×$9100, 9-12: 0×$10500)"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Grade-Band Revenue Y2 Positive",
+        "passed": true,
+        "details": [
+          "Y2: $1,703,000 (K5: 130×$8200, 6-8: 70×$9100, 9-12: 0×$10500)"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Grade-Band Revenue Y3 Positive",
+        "passed": true,
+        "details": [
+          "Y3: $2,596,000 (K5: 180×$8200, 6-8: 100×$9100, 9-12: 20×$10500)"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Grade-Band Revenue Y4 Positive",
+        "passed": true,
+        "details": [
+          "Y4: $3,503,000 (K5: 230×$8200, 6-8: 120×$9100, 9-12: 50×$10500)"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Grade-Band Revenue Y5 Positive",
+        "passed": true,
+        "details": [
+          "Y5: $4,456,000 (K5: 260×$8200, 6-8: 140×$9100, 9-12: 100×$10500)"
         ],
         "errors": []
       }

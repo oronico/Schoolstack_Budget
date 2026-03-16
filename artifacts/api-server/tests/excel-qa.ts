@@ -395,6 +395,81 @@ function runUnderwritingV2TieOuts(wb: ExcelJS.Workbook): TestResult[] {
   return results;
 }
 
+function runLenderGradeBandTieOuts(wb: ExcelJS.Workbook): TestResult[] {
+  const results = runStandardTieOuts(wb);
+
+  const assumptionsSheet = wb.worksheets.find(ws => ws.name.toLowerCase().includes("assumptions"));
+  if (!assumptionsSheet) return results;
+
+  let hasCharterSection = false;
+  let k5Rate = 0, m68Rate = 0, h912Rate = 0;
+  const enrollByBand: Record<string, number[]> = { k5: [], m68: [], h912: [] };
+
+  assumptionsSheet.eachRow((row) => {
+    for (let c = 1; c <= 4; c++) {
+      const label = extractTextValue(row.getCell(c).value).toLowerCase();
+      if (label.includes("charter funding details")) hasCharterSection = true;
+      if (label.includes("per-pupil rate") && label.includes("k-5")) {
+        const v = row.getCell(c + 1).value;
+        k5Rate = typeof v === "number" ? v : 0;
+      }
+      if (label.includes("per-pupil rate") && label.includes("6-8")) {
+        const v = row.getCell(c + 1).value;
+        m68Rate = typeof v === "number" ? v : 0;
+      }
+      if (label.includes("per-pupil rate") && label.includes("9-12")) {
+        const v = row.getCell(c + 1).value;
+        h912Rate = typeof v === "number" ? v : 0;
+      }
+      if (label.trim().match(/^k-?5$/i)) {
+        const valStr = extractTextValue(row.getCell(c + 1).value);
+        enrollByBand.k5 = valStr.split(/\s*\/\s*/).map(Number).filter(n => !isNaN(n));
+      }
+      if (label.trim().match(/^6-8$/i)) {
+        const valStr = extractTextValue(row.getCell(c + 1).value);
+        enrollByBand.m68 = valStr.split(/\s*\/\s*/).map(Number).filter(n => !isNaN(n));
+      }
+      if (label.trim().match(/^9-12$/i)) {
+        const valStr = extractTextValue(row.getCell(c + 1).value);
+        enrollByBand.h912 = valStr.split(/\s*\/\s*/).map(Number).filter(n => !isNaN(n));
+      }
+    }
+  });
+
+  results.push({
+    name: "Lender Grade-Band Assumptions Present",
+    passed: hasCharterSection,
+    details: hasCharterSection ? ["Charter Funding Details section found in Assumptions"] : [],
+    errors: hasCharterSection ? [] : ["Charter Funding Details section not found in lender Assumptions sheet"],
+  });
+
+  if (!hasCharterSection) return results;
+
+  results.push({
+    name: "Lender Grade-Band Per-Pupil Rates Populated",
+    passed: k5Rate > 0,
+    details: [`K-5: $${k5Rate}, 6-8: $${m68Rate}, 9-12: $${h912Rate}`],
+    errors: k5Rate <= 0 ? ["K-5 per-pupil rate is zero or missing"] : [],
+  });
+
+  if (enrollByBand.k5.length >= 5) {
+    for (let y = 0; y < 5; y++) {
+      const k5e = enrollByBand.k5[y] || 0;
+      const m68e = enrollByBand.m68[y] || 0;
+      const h912e = enrollByBand.h912[y] || 0;
+      const expectedGbBase = (k5e * k5Rate) + (m68e * m68Rate) + (h912e * h912Rate);
+      results.push({
+        name: `Lender Grade-Band Revenue Y${y + 1} Positive`,
+        passed: expectedGbBase > 0,
+        details: [`Y${y + 1}: $${Math.round(expectedGbBase).toLocaleString()} (K5: ${k5e}×$${k5Rate}, 6-8: ${m68e}×$${m68Rate}, 9-12: ${h912e}×$${h912Rate})`],
+        errors: expectedGbBase <= 0 ? [`Grade-band revenue Y${y + 1} is zero`] : [],
+      });
+    }
+  }
+
+  return results;
+}
+
 function runStandardTieOuts(wb: ExcelJS.Workbook): TestResult[] {
   const results: TestResult[] = [];
 
@@ -653,7 +728,8 @@ async function main() {
     allResults.push(await testExport("Standard Export", payloadName, payload, genStandard, STANDARD_TABS, runStandardTieOuts));
     allResults.push(await testExport("Formula Export", payloadName, payload, genFormula, FORMULA_TABS, runFormulaTieOuts));
     allResults.push(await testExport("Underwriting V1 (14-tab)", payloadName, payload, genUWv1, UNDERWRITING_V1_TABS, runStandardTieOuts));
-    allResults.push(await testExport("Lender Pro Forma", payloadName, payload, genLender, LENDER_TABS, runStandardTieOuts));
+    const lenderTieOut = payloadName.includes("Grade-Band") ? runLenderGradeBandTieOuts : runStandardTieOuts;
+    allResults.push(await testExport("Lender Pro Forma", payloadName, payload, genLender, LENDER_TABS, lenderTieOut));
   }
 
   console.log("\n\n╔══════════════════════════════════════════════════════════════╗");
