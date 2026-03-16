@@ -17,7 +17,7 @@ import { generateWorkbook } from "../lib/excel-export";
 import { generateProFormaPDF } from "../lib/pdf-proforma";
 import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
-import { generateSingleYearBudget } from "../lib/underwriting-export";
+import { generateSingleYearBudget, generateUnderwritingWorkbook } from "../lib/underwriting-export";
 import { generateFormulaWorkbook } from "../lib/formula-export";
 import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine } from "../lib/consultant-engine";
@@ -478,7 +478,7 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const buffer = await generateFormulaWorkbook(data);
+    const buffer = await generateUnderwritingWorkbook(data);
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
