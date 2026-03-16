@@ -43,15 +43,14 @@ export function LandingPage() {
               </h1>
 
               <p className="text-xl md:text-2xl text-[#1E293B]/70 mb-4 leading-relaxed font-medium">
-                The #1 reason schools close is financial constraints. It doesn't
-                have to be yours.
+                A strong financial plan is the foundation every school deserves.
               </p>
 
               <p className="text-lg text-[#1E293B]/60 mb-10 leading-relaxed max-w-2xl">
-                We built SchoolStack Budget because budgeting and financial
-                modeling can be overwhelming — but it doesn't have to be. Build a
-                clear, lender-ready 5-year model that reflects your mission, your
-                values, and your plan. No finance degree required.
+                Budgeting and financial modeling can be overwhelming — but it
+                doesn't have to be. Build a clear, lender-ready 5-year model
+                that reflects your mission, your values, and your plan. No
+                finance degree required.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
