@@ -1,0 +1,76 @@
+Do not change code yet. Act like a QA engineer and release engineer.
+
+I need you to verify the live alpha experience for https://budget.schoolstack.ai and report the results clearly.
+
+Your job:
+1. Test the live site
+2. Test the underwriting flow
+3. Test the export
+4. Confirm whether the app is actually alpha-ready
+5. Only after testing, recommend fixes if needed
+
+Test environment:
+- Use an incognito/private browser session
+- Do not rely on cached state
+- Treat this like a real external user would
+
+Test checklist:
+
+A. Public site health
+- Open https://budget.schoolstack.ai/
+- Confirm homepage loads
+- Note any console errors
+- Confirm branding, headline, and primary CTA render correctly
+
+B. Route health
+Test these direct URLs:
+- /
+- /underwriting
+- /login
+- /register
+- /terms
+- /privacy
+
+For each route:
+- confirm HTTP success
+- confirm it loads visually
+- confirm refresh on the route does not 404
+- note any console/runtime errors
+
+C. Underwriting flow
+- Go to /underwriting without logging in
+- Confirm the full 8-step underwriting wizard loads
+- Confirm all step labels are present
+- Navigate through all steps
+- Confirm no required fields are missing from the intended underwriting experience
+- Note any broken validation, layout issues, or confusing UX
+
+D. Export flow
+- Complete the underwriting flow with a realistic sample input
+- Export the workbook
+- Confirm the downloaded file is a real .xlsx
+- Open the workbook locally if possible
+- Confirm Excel does not show repair or corruption warnings
+- Confirm workbook tabs exist and are readable
+- Confirm formulas appear present in lender-facing sheets
+
+E. Functional checks
+- Confirm no-login public underwriting flow works
+- Confirm authenticated routes still load if applicable
+- Confirm no major browser console errors on critical screens
+- Confirm API requests succeed during the flow
+- Confirm the export request returns success
+
+F. Alpha release verdict
+At the end, give me:
+1. PASS / FAIL for each checklist section
+2. screenshots or descriptions of what you observed
+3. exact errors found
+4. whether this is safe for alpha release
+5. the top 5 fixes needed before broader release, if any
+
+Important:
+- Do not tell me “it should work”
+- Do not summarize without testing
+- Do not write code yet
+- Actually test the live deployed site and report the evidence
