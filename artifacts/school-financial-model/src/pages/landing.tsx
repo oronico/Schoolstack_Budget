@@ -197,22 +197,32 @@ export function LandingPage() {
               From the SchoolStack Suite
             </p>
             <h2 className="font-display text-2xl md:text-3xl font-bold text-[#1E293B] mb-6">
-              Connecting your facilities, budget, and project plan.
+              Connecting your facilities, budget, and back office.
             </h2>
             <p className="text-lg text-[#1E293B]/60 mb-8">
               SchoolStack Budget works seamlessly alongside SchoolStack Space
-              (facility planning) and the flagship SchoolStack project
-              management platform to keep your entire founding journey aligned.
+              (facility planning) and the flagship SchoolStack back office
+              platform — coming Fall 2026 — to keep your entire founding
+              journey aligned.
             </p>
-            <div className="flex justify-center gap-4 text-sm font-bold">
-              <span className="flex items-center gap-2 text-[#5B7CFA]">
-                <CheckCircle2 className="w-4 h-4" /> Space
+            <div className="flex justify-center gap-6 text-sm font-bold">
+              <span className="flex flex-col items-center gap-1 text-[#5B7CFA]">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" /> Space
+                </span>
+                <span className="text-xs font-normal text-[#1E293B]/40">Beta</span>
               </span>
-              <span className="flex items-center gap-2 text-[#328555]">
-                <CheckCircle2 className="w-4 h-4" /> Budget
+              <span className="flex flex-col items-center gap-1 text-[#328555]">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" /> Budget
+                </span>
+                <span className="text-xs font-normal text-[#1E293B]/40">Alpha</span>
               </span>
-              <span className="flex items-center gap-2 text-[#D97706]">
-                <CheckCircle2 className="w-4 h-4" /> Project
+              <span className="flex flex-col items-center gap-1 text-[#D97706]">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" /> SchoolStack
+                </span>
+                <span className="text-xs font-normal text-[#1E293B]/40">Fall 2026</span>
               </span>
             </div>
           </motion.div>
