@@ -43,13 +43,15 @@ export function LandingPage() {
               </h1>
 
               <p className="text-xl md:text-2xl text-[#1E293B]/70 mb-4 leading-relaxed font-medium">
-                For Every K-12 Entrepreneur
+                The #1 reason schools close is financial constraints. It doesn't
+                have to be yours.
               </p>
 
               <p className="text-lg text-[#1E293B]/60 mb-10 leading-relaxed max-w-2xl">
-                Whether you're starting a charter, private school, microschool,
-                learning pod, or something entirely new — build a 5-year budget
-                that brings your vision to life. No finance degree required.
+                We built SchoolStack Budget because budgeting and financial
+                modeling can be overwhelming — but it doesn't have to be. Build a
+                clear, lender-ready 5-year model that reflects your mission, your
+                values, and your plan. No finance degree required.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -80,12 +82,12 @@ export function LandingPage() {
             className="text-center mb-16"
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
-              A budget is just the financial story of your mission
+              Your mission, vision, and values live in your budget
             </h2>
             <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
-              We all start somewhere. SchoolStack Budget walks you through each
-              step — from enrollment to expenses — so you can tell your story
-              with confidence.
+              A 5-year financial model isn't just numbers on a spreadsheet — it's
+              how you show the world what you're building and why it will work.
+              We'll help you build one step at a time.
             </p>
           </motion.div>
 
@@ -94,17 +96,17 @@ export function LandingPage() {
               {
                 icon: <Calculator className="w-8 h-8 text-[#D97706]" />,
                 title: "Guided Wizard",
-                desc: "We walk you through enrollment, staffing, and facility planning one step at a time. Your budget is a living document — it gets better every time you revisit it.",
+                desc: "Not sure where to start? We ask you questions in plain English about enrollment, staffing, and facilities — then translate your answers into a financial model. One step at a time.",
               },
               {
                 icon: <FileSpreadsheet className="w-8 h-8 text-[#328555]" />,
                 title: "Underwriting Ready",
-                desc: "When you're ready, export a polished, multi-tab Excel workbook with real formulas — designed to help lenders and investors see your vision.",
+                desc: "When your authorizer or lender asks for projections, you'll have them. Export a polished, multi-tab Excel workbook with real formulas that holds up under review.",
               },
               {
                 icon: <ShieldCheck className="w-8 h-8 text-[#0D9488]" />,
                 title: "Consultant Guidance",
-                desc: "Get friendly, plain-English guidance on your model — with encouragement on what's working and constructive suggestions for areas to strengthen.",
+                desc: "Wondering if your numbers make sense? Get plain-English feedback on your model — what's working, what to watch, and where to strengthen before you present it.",
               },
             ].map((item, i) => (
               <motion.div
@@ -138,11 +140,11 @@ export function LandingPage() {
             className="text-center mb-16"
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
-              Built for the moments that matter
+              Built for the high-stakes moments
             </h2>
             <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
-              Every great school started with someone brave enough to take the
-              first step. We're here to walk alongside you.
+              When someone asks "can this school sustain itself?" — your model
+              needs to answer clearly. These are the moments it's built for.
             </p>
           </motion.div>
 
@@ -152,19 +154,19 @@ export function LandingPage() {
                 icon: <GraduationCap className="w-8 h-8 text-[#328555]" />,
                 bg: "bg-[#328555]/10",
                 title: "Authorizer Meetings",
-                desc: "Demonstrate financial viability and operational competence to secure approval and funding.",
+                desc: "Walk in with a model that demonstrates financial viability and operational clarity. Show them you've thought through Years 1 through 5.",
               },
               {
                 icon: <Building className="w-8 h-8 text-[#D97706]" />,
                 bg: "bg-[#D97706]/10",
                 title: "Loan Applications",
-                desc: "Provide lenders with the detailed cash flow projections required for facility financing.",
+                desc: "Lenders need to see month-by-month cash flow, debt service coverage, and break-even timelines. Your model will have all of it.",
               },
               {
                 icon: <Briefcase className="w-8 h-8 text-[#0D9488]" />,
                 bg: "bg-[#0D9488]/10",
                 title: "Board Presentations",
-                desc: "Give your founding board clear, transparent financial models they can confidently stand behind.",
+                desc: "Your founding board needs to see a clear, honest financial picture. Give them a model they can understand and stand behind.",
               },
             ].map((card, i) => (
               <motion.div
@@ -224,11 +226,12 @@ export function LandingPage() {
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
             <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-6">
-              Ready to tell the financial story of your school?
+              You've already done the hard part.
             </h2>
             <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-              Join K-12 entrepreneurs building schools for families. Every great
-              school started with someone brave enough to take the first step.
+              You decided to build a school. Let's make sure the financial story
+              matches the vision. Start your 5-year model today — it takes about
+              15 minutes.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
