@@ -1,5 +1,15 @@
 import ExcelJS from "exceljs";
 
+function safeResult(v: unknown): number | string {
+  if (v === null || v === undefined) return "0";
+  if (typeof v === "number") {
+    if (isNaN(v) || !isFinite(v)) return "0";
+    return v === 0 ? "0" : v;
+  }
+  if (typeof v === "string") return v || "0";
+  return "0";
+}
+
 interface SchoolProfile {
   schoolName?: string;
   state?: string;
@@ -1213,7 +1223,7 @@ function buildRevenueScheduleTab(
   for (let y = 0; y < yearCount; y++) {
     const cell = ws.getCell(r, y + 2);
     if (aRefs) {
-      cell.value = { formula: `Assumptions!B${aRefs.enrollmentRows[y]}`, result: enrollment[y] };
+      cell.value = { formula: `Assumptions!B${aRefs.enrollmentRows[y]}`, result: safeResult(enrollment[y]) };
     } else {
       cell.value = enrollment[y];
     }
@@ -1259,7 +1269,7 @@ function buildRevenueScheduleTab(
           const baseExcelRow = rowExcelRows.get(row.percentBase || "");
           if (baseExcelRow) {
             const sign = cat === "tuition_offsets" ? "-" : "";
-            cell.value = { formula: `${sign}${c(baseExcelRow, y + 2)}*${amt / 100}`, result: cachedVal };
+            cell.value = { formula: `${sign}${c(baseExcelRow, y + 2)}*${amt / 100}`, result: safeResult(cachedVal) };
           } else {
             cell.value = cachedVal;
           }
@@ -1269,11 +1279,11 @@ function buildRevenueScheduleTab(
             const tierValue = computeTuitionWithTiersExport(amt, y, enrollment[y] || 0, tuitionTiers);
             cell.value = cat === "tuition_offsets" ? -Math.abs(tierValue) : tierValue;
           } else {
-            cell.value = { formula: `${sign}${amt}*${studentsCell}`, result: cachedVal };
+            cell.value = { formula: `${sign}${amt}*${studentsCell}`, result: safeResult(cachedVal) };
           }
         } else if (row.driverType === "monthly") {
           const sign = cat === "tuition_offsets" ? "-" : "";
-          cell.value = { formula: `${sign}${amt}*12`, result: cachedVal };
+          cell.value = { formula: `${sign}${amt}*12`, result: safeResult(cachedVal) };
         } else {
           cell.value = cat === "tuition_offsets" ? -Math.abs(amt) : amt;
         }
@@ -1288,7 +1298,7 @@ function buildRevenueScheduleTab(
     for (let y = 0; y < yearCount; y++) {
       const cell = ws.getCell(r, y + 2);
       const catTotal = precomputed?.revenueCategoryTotals.get(cat)?.[y] ?? 0;
-      cell.value = { formula: `SUM(${c(firstDataRow, y + 2)}:${c(r - 1, y + 2)})`, result: Math.round(catTotal) };
+      cell.value = { formula: `SUM(${c(firstDataRow, y + 2)}:${c(r - 1, y + 2)})`, result: safeResult(Math.round(catTotal)) };
       cell.numFmt = CURRENCY_FORMAT;
       styleBoldDataCell(cell);
     }
@@ -1302,7 +1312,7 @@ function buildRevenueScheduleTab(
   for (let y = 0; y < yearCount; y++) {
     const cell = ws.getCell(r, y + 2);
     const sumParts = categoryTotalRows.map(tr => c(tr, y + 2)).join("+");
-    cell.value = { formula: sumParts || "0", result: precomputed?.totalRevenue[y] ?? 0 };
+    cell.value = { formula: sumParts || "0", result: safeResult(precomputed?.totalRevenue[y] ?? 0) };
     cell.numFmt = CURRENCY_FORMAT;
     styleGrandTotalCell(cell);
   }
@@ -1444,7 +1454,7 @@ function buildStaffingTab(
           break;
         case "Salary Escalation Factor":
           if (salaryEscRef) {
-            cell.value = { formula: `(1+${salaryEscRef})^${y}`, result: esc };
+            cell.value = { formula: `(1+${salaryEscRef})^${y}`, result: safeResult(esc) };
           } else {
             cell.value = esc;
           }
@@ -1452,7 +1462,7 @@ function buildStaffingTab(
           break;
         case "Proration Factor":
           if (prorationRef && y === 0) {
-            cell.value = { formula: prorationRef, result: pf };
+            cell.value = { formula: prorationRef, result: safeResult(pf) };
           } else {
             cell.value = pf;
           }
@@ -1463,7 +1473,7 @@ function buildStaffingTab(
           const escRef = c(projStartRow + 1, y + 2);
           const pfRef = c(projStartRow + 2, y + 2);
           const totalVal = Math.round(grandTotal * esc * pf);
-          cell.value = { formula: `${baseRef}*${escRef}*${pfRef}`, result: totalVal };
+          cell.value = { formula: `${baseRef}*${escRef}*${pfRef}`, result: safeResult(totalVal) };
           cell.numFmt = CURRENCY_FORMAT;
           break;
         }
@@ -1500,7 +1510,7 @@ function buildExpensesTab(
   for (let y = 0; y < yearCount; y++) {
     const cell = ws.getCell(r, y + 2);
     if (aRefs) {
-      cell.value = { formula: `Assumptions!B${aRefs.enrollmentRows[y]}`, result: enrollment[y] };
+      cell.value = { formula: `Assumptions!B${aRefs.enrollmentRows[y]}`, result: safeResult(enrollment[y]) };
     } else {
       cell.value = enrollment[y];
     }
@@ -1540,11 +1550,11 @@ function buildExpensesTab(
         }
 
         if (row.driverType === "percent_of_revenue" && revTotalRef) {
-          cell.value = { formula: `${amt / 100}*${revTotalRef}`, result: cachedExpVal };
+          cell.value = { formula: `${amt / 100}*${revTotalRef}`, result: safeResult(cachedExpVal) };
         } else if (row.driverType === "per_student") {
-          cell.value = { formula: `${amt}*${studentsCell}`, result: cachedExpVal };
+          cell.value = { formula: `${amt}*${studentsCell}`, result: safeResult(cachedExpVal) };
         } else if (row.driverType === "monthly") {
-          cell.value = { formula: `${amt}*12`, result: cachedExpVal };
+          cell.value = { formula: `${amt}*12`, result: safeResult(cachedExpVal) };
         } else {
           cell.value = amt;
         }
@@ -1566,7 +1576,7 @@ function buildExpensesTab(
           catSubtotal += computeDriverValue(cr.amounts, y, cr.driverType, enrollment[y] || 0);
         }
       }
-      cell.value = { formula: `SUM(${c(firstDataRow, y + 2)}:${c(r - 1, y + 2)})`, result: Math.round(catSubtotal) };
+      cell.value = { formula: `SUM(${c(firstDataRow, y + 2)}:${c(r - 1, y + 2)})`, result: safeResult(Math.round(catSubtotal)) };
       cell.numFmt = CURRENCY_FORMAT;
       styleBoldDataCell(cell);
     }
@@ -1580,7 +1590,7 @@ function buildExpensesTab(
   for (let y = 0; y < yearCount; y++) {
     const cell = ws.getCell(r, y + 2);
     const sumParts = categoryTotalRows.map(tr => c(tr, y + 2)).join("+");
-    cell.value = { formula: sumParts || "0", result: precomputed?.totalExpenses[y] ?? 0 };
+    cell.value = { formula: sumParts || "0", result: safeResult(precomputed?.totalExpenses[y] ?? 0) };
     cell.numFmt = CURRENCY_FORMAT;
     styleGrandTotalCell(cell);
   }
@@ -1624,9 +1634,9 @@ function buildCapitalDebtTab(
         const studentsCell = _aRefs ? `Assumptions!B${_aRefs.enrollmentRows[y]}` : null;
         const cachedCapVal = computeDriverValue(row.amounts, y, row.driverType, enrollment[y] || 0);
         if (row.driverType === "per_student" && studentsCell) {
-          cell.value = { formula: `${amt}*${studentsCell}`, result: cachedCapVal };
+          cell.value = { formula: `${amt}*${studentsCell}`, result: safeResult(cachedCapVal) };
         } else if (row.driverType === "monthly") {
-          cell.value = { formula: `${amt}*12`, result: cachedCapVal };
+          cell.value = { formula: `${amt}*12`, result: safeResult(cachedCapVal) };
         } else {
           cell.value = amt;
         }
@@ -1662,7 +1672,7 @@ function buildCapitalDebtTab(
           capSum += computeDriverValue(erow.amounts, y, erow.driverType, enrollment[y] || 0);
         }
       }
-      cell.value = { formula: `SUM(${c(firstDataRow, y + 2)}:${c(r - 1, y + 2)})`, result: Math.round(capSum) };
+      cell.value = { formula: `SUM(${c(firstDataRow, y + 2)}:${c(r - 1, y + 2)})`, result: safeResult(Math.round(capSum)) };
     } else {
       cell.value = 0;
     }
@@ -1725,29 +1735,29 @@ function buildPnLTab(
 
       switch (item.key) {
         case "totalrev":
-          cell.value = { formula: `'Revenue Schedule'!${colLetter}${revTotalRow}`, result: precomputed?.totalRevenue[y] ?? 0 };
+          cell.value = { formula: `'Revenue Schedule'!${colLetter}${revTotalRow}`, result: safeResult(precomputed?.totalRevenue[y] ?? 0) };
           break;
         case "personnel":
-          cell.value = { formula: `'Staffing & Personnel'!${colLetter}${staffTotalRow}`, result: precomputed?.totalPersonnel[y] ?? 0 };
+          cell.value = { formula: `'Staffing & Personnel'!${colLetter}${staffTotalRow}`, result: safeResult(precomputed?.totalPersonnel[y] ?? 0) };
           break;
         case "opex":
-          cell.value = { formula: `'Operating Expenses'!${colLetter}${expTotalRow}`, result: precomputed?.totalExpenses[y] ?? 0 };
+          cell.value = { formula: `'Operating Expenses'!${colLetter}${expTotalRow}`, result: safeResult(precomputed?.totalExpenses[y] ?? 0) };
           break;
         case "capdebt":
-          cell.value = { formula: `'Capital & Debt'!${colLetter}${capTotalRow}`, result: precomputed?.totalCapDebt[y] ?? 0 };
+          cell.value = { formula: `'Capital & Debt'!${colLetter}${capTotalRow}`, result: safeResult(precomputed?.totalCapDebt[y] ?? 0) };
           break;
         case "totalexp":
-          cell.value = { formula: `${c(3, y + 2)}+${c(4, y + 2)}+${c(5, y + 2)}`, result: precomputed?.totalAllExpenses[y] ?? 0 };
+          cell.value = { formula: `${c(3, y + 2)}+${c(4, y + 2)}+${c(5, y + 2)}`, result: safeResult(precomputed?.totalAllExpenses[y] ?? 0) };
           break;
         case "ni":
-          cell.value = { formula: `${c(2, y + 2)}-${c(6, y + 2)}`, result: precomputed?.netIncome[y] ?? 0 };
+          cell.value = { formula: `${c(2, y + 2)}-${c(6, y + 2)}`, result: safeResult(precomputed?.netIncome[y] ?? 0) };
           break;
         case "cumni": {
           const cumVal = precomputed?.cumulativeNI[y] ?? 0;
           if (y === 0) {
-            cell.value = { formula: `${c(7, y + 2)}`, result: cumVal };
+            cell.value = { formula: `${c(7, y + 2)}`, result: safeResult(cumVal) };
           } else {
-            cell.value = { formula: `${c(8, y + 1)}+${c(7, y + 2)}`, result: cumVal };
+            cell.value = { formula: `${c(8, y + 1)}+${c(7, y + 2)}`, result: safeResult(cumVal) };
           }
           break;
         }
@@ -1755,7 +1765,7 @@ function buildPnLTab(
           const totalExp = precomputed?.totalAllExpenses[y] ?? 0;
           const cumNI = precomputed?.cumulativeNI[y] ?? 0;
           const reserveVal = totalExp === 0 ? 0 : (cumNI > 0 ? cumNI / (totalExp / 12) : 0);
-          cell.value = { formula: `IF(${c(6, y + 2)}=0,0,IF(${c(8, y + 2)}>0,${c(8, y + 2)}/(${c(6, y + 2)}/12),0))`, result: reserveVal };
+          cell.value = { formula: `IF(${c(6, y + 2)}=0,0,IF(${c(8, y + 2)}>0,${c(8, y + 2)}/(${c(6, y + 2)}/12),0))`, result: safeResult(reserveVal) };
           break;
         }
       }
@@ -1838,7 +1848,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const cell = ws.getCell(r, y + 2);
     const studRef = layout.studentsRef(cl);
     const studVal = enrollment?.[y] ?? 0;
-    cell.value = { formula: studRef, result: studVal };
+    cell.value = { formula: studRef, result: safeResult(studVal) };
     cell.numFmt = NUMBER_FORMAT; styleDataCell(cell);
   }
   const enrollRow = r;
@@ -1853,7 +1863,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
       const prev = enrollment?.[y - 1] ?? 0;
       const curr = enrollment?.[y] ?? 0;
       const growthResult = prev > 0 ? (curr - prev) / prev : 0;
-      cell.value = { formula: `IF(${c(enrollRow, y + 1)}=0,0,(${c(enrollRow, y + 2)}-${c(enrollRow, y + 1)})/${c(enrollRow, y + 1)})`, result: growthResult };
+      cell.value = { formula: `IF(${c(enrollRow, y + 1)}=0,0,(${c(enrollRow, y + 2)}-${c(enrollRow, y + 1)})/${c(enrollRow, y + 1)})`, result: safeResult(growthResult) };
       cell.numFmt = PERCENT_FORMAT;
     }
     styleDataCell(cell);
@@ -1870,7 +1880,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   for (let y = 0; y < yearCount; y++) {
     const cl = String.fromCharCode(66 + y);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `${fmTab}!${cl}${layout.fmRevenueRow}`, result: precomputed?.totalRevenue[y] ?? 0 };
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmRevenueRow}`, result: safeResult(precomputed?.totalRevenue[y] ?? 0) };
     cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
   }
 
@@ -1879,7 +1889,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   for (let y = 0; y < yearCount; y++) {
     const cl = String.fromCharCode(66 + y);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `${fmTab}!${cl}${layout.fmStaffRow}`, result: precomputed?.totalPersonnel[y] ?? 0 };
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmStaffRow}`, result: safeResult(precomputed?.totalPersonnel[y] ?? 0) };
     cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
   }
 
@@ -1888,7 +1898,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   for (let y = 0; y < yearCount; y++) {
     const cl = String.fromCharCode(66 + y);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `${fmTab}!${cl}${layout.fmExpenseRow}`, result: precomputed?.totalExpenses[y] ?? 0 };
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmExpenseRow}`, result: safeResult(precomputed?.totalExpenses[y] ?? 0) };
     cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
   }
 
@@ -1897,7 +1907,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   for (let y = 0; y < yearCount; y++) {
     const cl = String.fromCharCode(66 + y);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `${fmTab}!${cl}${layout.fmTotalExpRow}`, result: precomputed?.totalAllExpenses[y] ?? 0 };
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmTotalExpRow}`, result: safeResult(precomputed?.totalAllExpenses[y] ?? 0) };
     cell.numFmt = CURRENCY_FORMAT; styleBoldDataCell(cell);
   }
   styleSectionRow(ws, r, cols);
@@ -1909,7 +1919,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const cl = String.fromCharCode(66 + y);
     const cell = ws.getCell(r, y + 2);
     const niVal = precomputed?.netIncome[y] ?? 0;
-    cell.value = { formula: `${fmTab}!${cl}${layout.fmNIRow}`, result: niVal };
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmNIRow}`, result: safeResult(niVal) };
     cell.numFmt = CURRENCY_FORMAT;
     styleGrandTotalCell(cell);
     if (precomputed) {
@@ -1922,7 +1932,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   for (let y = 0; y < yearCount; y++) {
     const cl = String.fromCharCode(66 + y);
     const cell = ws.getCell(r, y + 2);
-    cell.value = { formula: `${fmTab}!${cl}${layout.fmCumNIRow}`, result: precomputed?.cumulativeNI[y] ?? 0 };
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmCumNIRow}`, result: safeResult(precomputed?.cumulativeNI[y] ?? 0) };
     cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
   }
 
@@ -1934,7 +1944,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const totalExp = precomputed?.totalAllExpenses[y] ?? 0;
     const cumNI = precomputed?.cumulativeNI[y] ?? 0;
     const reserveVal = totalExp === 0 ? 0 : (cumNI > 0 ? cumNI / (totalExp / 12) : 0);
-    cell.value = { formula: `${fmTab}!${cl}${layout.fmReserveRow}`, result: reserveVal };
+    cell.value = { formula: `${fmTab}!${cl}${layout.fmReserveRow}`, result: safeResult(reserveVal) };
     cell.numFmt = "0.0"; styleBoldDataCell(cell);
     if (precomputed) {
       applyHealthFill(cell, reserveVal, { green: 3, amber: 2 });
@@ -1953,7 +1963,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const studRef = layout.studentsRef(cl);
     const studVal = enrollment?.[y] ?? 0;
     const revPerStudent = studVal > 0 ? (precomputed?.totalRevenue[y] ?? 0) / studVal : 0;
-    cell.value = { formula: `IF(${studRef}=0,0,${c(revSumRow, y + 2)}/${studRef})`, result: revPerStudent };
+    cell.value = { formula: `IF(${studRef}=0,0,${c(revSumRow, y + 2)}/${studRef})`, result: safeResult(revPerStudent) };
     cell.numFmt = CURRENCY_FORMAT; styleDataCell(cell);
   }
 
@@ -1964,7 +1974,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const cell = ws.getCell(r, y + 2);
     const revVal = precomputed?.totalRevenue[y] ?? 0;
     const staffPct = revVal > 0 ? (precomputed?.totalPersonnel[y] ?? 0) / revVal : 0;
-    cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${fmTab}!${cl}${layout.fmStaffRow}/${c(revSumRow, y + 2)})`, result: staffPct };
+    cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${fmTab}!${cl}${layout.fmStaffRow}/${c(revSumRow, y + 2)})`, result: safeResult(staffPct) };
     cell.numFmt = PERCENT_FORMAT; styleDataCell(cell);
   }
 
@@ -1975,7 +1985,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const cell = ws.getCell(r, y + 2);
     const revVal = precomputed?.totalRevenue[y] ?? 0;
     const expPct = revVal > 0 ? (precomputed?.totalExpenses[y] ?? 0) / revVal : 0;
-    cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${fmTab}!${cl}${layout.fmExpenseRow}/${c(revSumRow, y + 2)})`, result: expPct };
+    cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${fmTab}!${cl}${layout.fmExpenseRow}/${c(revSumRow, y + 2)})`, result: safeResult(expPct) };
     cell.numFmt = PERCENT_FORMAT; styleDataCell(cell);
   }
 
@@ -1986,7 +1996,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     const revVal = precomputed?.totalRevenue[y] ?? 0;
     const niVal = precomputed?.netIncome[y] ?? 0;
     const margin = revVal > 0 ? niVal / revVal : 0;
-    cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${c(niSumRow, y + 2)}/${c(revSumRow, y + 2)})`, result: margin };
+    cell.value = { formula: `IF(${c(revSumRow, y + 2)}=0,0,${c(niSumRow, y + 2)}/${c(revSumRow, y + 2)})`, result: safeResult(margin) };
     cell.numFmt = PERCENT_FORMAT; styleBoldDataCell(cell);
     if (precomputed) {
       applyHealthFill(cell, margin, { green: 0.05, amber: 0 });
@@ -2156,7 +2166,7 @@ function buildLegacyPnLTab(
         }
         case 4: {
           const totalExpVal = Math.round((staffByYr[y] || 0) + (expByYr[y] || 0));
-          cell.value = { formula: `${c(4, y + 2)}+${c(5, y + 2)}`, result: totalExpVal };
+          cell.value = { formula: `${c(4, y + 2)}+${c(5, y + 2)}`, result: safeResult(totalExpVal) };
           cell.numFmt = CURRENCY_FORMAT;
           if (bold) styleBoldDataCell(cell); else styleDataCell(cell);
           continue;
@@ -2165,7 +2175,7 @@ function buildLegacyPnLTab(
           const niVal = Math.round((revenueByYr[y] || 0) - (staffByYr[y] || 0) - (expByYr[y] || 0));
           niByYr[y] = niVal;
           cumNIByYr[y] = (y === 0 ? 0 : (cumNIByYr[y - 1] || 0)) + niVal;
-          cell.value = { formula: `${c(3, y + 2)}-${c(6, y + 2)}`, result: niVal };
+          cell.value = { formula: `${c(3, y + 2)}-${c(6, y + 2)}`, result: safeResult(niVal) };
           cell.numFmt = CURRENCY_FORMAT;
           if (bold) styleBoldDataCell(cell); else styleDataCell(cell);
           continue;
@@ -2173,9 +2183,9 @@ function buildLegacyPnLTab(
         case 6: {
           const cumVal = cumNIByYr[y] || 0;
           if (y === 0) {
-            cell.value = { formula: `${c(7, y + 2)}`, result: cumVal };
+            cell.value = { formula: `${c(7, y + 2)}`, result: safeResult(cumVal) };
           } else {
-            cell.value = { formula: `${c(8, y + 1)}+${c(7, y + 2)}`, result: cumVal };
+            cell.value = { formula: `${c(8, y + 1)}+${c(7, y + 2)}`, result: safeResult(cumVal) };
           }
           cell.numFmt = CURRENCY_FORMAT;
           styleDataCell(cell);
@@ -2185,7 +2195,7 @@ function buildLegacyPnLTab(
           const totalExpAll = (staffByYr[y] || 0) + (expByYr[y] || 0);
           const cumVal = cumNIByYr[y] || 0;
           const reserveRes = totalExpAll === 0 ? 0 : (cumVal > 0 ? cumVal / (totalExpAll / 12) : 0);
-          cell.value = { formula: `IF(${c(6, y + 2)}=0,0,IF(${c(8, y + 2)}>0,${c(8, y + 2)}/(${c(6, y + 2)}/12),0))`, result: reserveRes };
+          cell.value = { formula: `IF(${c(6, y + 2)}=0,0,IF(${c(8, y + 2)}>0,${c(8, y + 2)}/(${c(6, y + 2)}/12),0))`, result: safeResult(reserveRes) };
           cell.numFmt = "0.0";
           styleDataCell(cell);
           continue;

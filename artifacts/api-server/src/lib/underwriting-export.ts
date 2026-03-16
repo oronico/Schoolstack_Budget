@@ -164,13 +164,14 @@ function cn(row: number, col: number): string {
 }
 
 function safeFormulaValue(formula: string, result: unknown): { formula: string; result: number | string } {
-  if (result === null || result === undefined) return { formula, result: 0 };
+  if (result === null || result === undefined) return { formula, result: "0" };
   if (typeof result === "number") {
-    if (isNaN(result) || !isFinite(result)) return { formula, result: 0 };
-    return { formula, result: Math.round(result * 100) / 100 };
+    if (isNaN(result) || !isFinite(result)) return { formula, result: "0" };
+    const rounded = Math.round(result * 100) / 100;
+    return { formula, result: rounded === 0 ? "0" : rounded };
   }
-  if (typeof result === "string") return { formula, result };
-  return { formula, result: 0 };
+  if (typeof result === "string") return { formula, result: result || "0" };
+  return { formula, result: "0" };
 }
 
 function setFormula(cell: ExcelJS.Cell, formula: string, result: unknown) {
