@@ -524,7 +524,7 @@ function computeRevenueMixForExport(
         case "tuition_and_fees": case "other_revenue": tuition += val; break;
         case "tuition_offsets": tuition -= val; break;
         case "public_funding": case "school_choice": publicFund += val; break;
-        case "grants_contributions": philanthropy += val; break;
+        case "grants_contributions": case "philanthropy": philanthropy += val; break;
       }
     }
 
@@ -645,7 +645,8 @@ const REVENUE_CATEGORY_LABELS: Record<string, string> = {
   tuition_offsets: "TUITION OFFSETS",
   public_funding: "PUBLIC FUNDING",
   school_choice: "SCHOOL CHOICE / CHOICE FUNDING",
-  grants_contributions: "GRANTS, CONTRIBUTIONS & OTHER SUPPORT",
+  grants_contributions: "PHILANTHROPY",
+  philanthropy: "PHILANTHROPY",
   other_revenue: "OTHER REVENUE",
 };
 
@@ -1244,7 +1245,7 @@ function buildRevenueScheduleTab(
 
   const categories = [
     "tuition_and_fees", "tuition_offsets", "public_funding",
-    "school_choice", "grants_contributions", "other_revenue",
+    "school_choice", "philanthropy", "other_revenue",
   ];
   const categoryTotalRows: number[] = [];
 
@@ -1253,7 +1254,7 @@ function buildRevenueScheduleTab(
   const orderedRows = [...nonPobRows, ...pobRows];
 
   for (const cat of categories) {
-    const catRows = orderedRows.filter(row => row.category === cat);
+    const catRows = orderedRows.filter(row => row.category === cat || (cat === "philanthropy" && row.category === "grants_contributions"));
     if (catRows.length === 0) continue;
 
     r++;

@@ -9,6 +9,7 @@ import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 
 import { fullModelSchema, type FullModelData } from "./schema";
+import { migrateGrantsToPhilanthropy } from "@/lib/revenue-defaults";
 import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
 import { RevenueStep } from "./steps/RevenueStep";
@@ -84,7 +85,7 @@ export function ModelWizardPage() {
         year5: number;
       }>,
       tuitionEscalation: { rate: 3 },
-      revenueSources: { tuition: false, publicFunding: false, schoolChoice: false, grantsContributions: false, philanthropy: false },
+      revenueSources: { tuition: false, publicFunding: false, schoolChoice: false, philanthropy: false },
       revenue: { annualTuitionIncrease: 3 },
       revenueRows: [] as Array<{
         id: string;
@@ -149,9 +150,17 @@ export function ModelWizardPage() {
           }
         }
       };
-      if (Array.isArray(d.revenueRows)) normalizeAmounts(d.revenueRows as Array<{ amounts?: number[] }>);
+      if (Array.isArray(d.revenueRows)) {
+        normalizeAmounts(d.revenueRows as Array<{ amounts?: number[] }>);
+        d.revenueRows = migrateGrantsToPhilanthropy(d.revenueRows as any) as any;
+      }
       if (Array.isArray(d.expenseRows)) normalizeAmounts(d.expenseRows as Array<{ amounts?: number[] }>);
       if (Array.isArray(d.capitalAndDebtRows)) normalizeAmounts(d.capitalAndDebtRows as Array<{ amounts?: number[] }>);
+      const rs = d.revenueSources as Record<string, boolean> | undefined;
+      if (rs && "grantsContributions" in rs) {
+        if (rs.grantsContributions) rs.philanthropy = true;
+        delete rs.grantsContributions;
+      }
       methods.reset(d);
       if (initialData.currentStep) {
         setCurrentStep(initialData.currentStep);

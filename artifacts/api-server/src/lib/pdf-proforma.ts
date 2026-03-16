@@ -112,7 +112,8 @@ const REVENUE_CATEGORY_LABELS: Record<string, string> = {
   tuition_offsets: "Tuition Offsets",
   public_funding: "Public Funding",
   school_choice: "School Choice / Choice Funding",
-  grants_contributions: "Grants, Contributions & Other Support",
+  grants_contributions: "Philanthropy",
+  philanthropy: "Philanthropy",
   other_revenue: "Other Revenue",
 };
 
@@ -340,17 +341,17 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   if (revenueRows.length > 0) {
     sectionTitle(doc, "Revenue Schedule");
     const revCols: TableColumn[] = [{ header: "Category", width: 150 }, ...yearHeaders.map(h => ({ header: h, width: 80, align: "right" as const }))];
-    const catOrder = ["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "grants_contributions", "other_revenue"];
+    const catOrder = ["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "philanthropy", "other_revenue"];
     const revTableRows: string[][] = [];
     const yearTotals = new Array(yearCount).fill(0);
 
     for (const cat of catOrder) {
-      const catRows = revenueRows.filter(r => r.category === cat && r.enabled);
+      const catRows = revenueRows.filter(r => (r.category === cat || (cat === "philanthropy" && r.category === "grants_contributions")) && r.enabled);
       if (catRows.length === 0) continue;
       const catAmounts = new Array(yearCount).fill(0);
       for (let y = 0; y < yearCount; y++) {
         const byCat = computeRevenueByCat(revenueRows, y, enrollment[y], data.tuitionTiers, sp);
-        catAmounts[y] = byCat.get(cat) || 0;
+        catAmounts[y] = (byCat.get(cat) || 0) + (cat === "philanthropy" ? (byCat.get("grants_contributions") || 0) : 0);
         yearTotals[y] += catAmounts[y];
       }
       revTableRows.push([REVENUE_CATEGORY_LABELS[cat] || cat, ...catAmounts.map(a => fmtCurrency(a))]);

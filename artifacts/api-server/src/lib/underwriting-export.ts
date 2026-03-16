@@ -523,7 +523,8 @@ const REV_CAT_LABELS: Record<string, string> = {
   tuition_offsets: "Tuition Offsets",
   public_funding: "Public Funding",
   school_choice: "School Choice Funding",
-  grants_contributions: "Grants & Contributions",
+  grants_contributions: "Philanthropy",
+  philanthropy: "Philanthropy",
   other_revenue: "Other Revenue",
 };
 
@@ -1306,9 +1307,9 @@ function buildEnrollmentRevDrivers(
 
   r += 2; sec(ws, r, cols); ws.getCell(r, 1).value = "REVENUE MIX SUMMARY";
 
-  const categories = ["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "grants_contributions", "other_revenue"];
+  const categories = ["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "philanthropy", "other_revenue"];
   for (const cat of categories) {
-    const catRows = rows.filter(ro => ro.enabled && ro.category === cat);
+    const catRows = rows.filter(ro => ro.enabled && (ro.category === cat || (cat === "philanthropy" && ro.category === "grants_contributions")));
     if (catRows.length === 0) continue;
     r++; ws.getCell(r, 1).value = REV_CAT_LABELS[cat] || cat; ws.getCell(r, 1).font = NF;
     for (let y = 0; y < yc; y++) {
@@ -1352,12 +1353,12 @@ function buildTuitionFundingDetail(
     cell.numFmt = NUM; bc(cell);
   }
 
-  const categories = ["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "grants_contributions", "other_revenue"];
+  const categories = ["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "philanthropy", "other_revenue"];
   const catTotalRows: number[] = [];
   const catTotalValues: number[][] = [];
 
   for (const cat of categories) {
-    const catRows = rows.filter(ro => ro.enabled && ro.category === cat);
+    const catRows = rows.filter(ro => ro.enabled && (ro.category === cat || (cat === "philanthropy" && ro.category === "grants_contributions")));
     if (catRows.length === 0) continue;
 
     r++; sec(ws, r, cols); ws.getCell(r, 1).value = (REV_CAT_LABELS[cat] || cat).toUpperCase();

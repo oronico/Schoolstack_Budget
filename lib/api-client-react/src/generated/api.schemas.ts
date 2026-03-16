@@ -162,6 +162,7 @@ export const RevenueCategory = {
   public_funding: "public_funding",
   school_choice: "school_choice",
   grants_contributions: "grants_contributions",
+  philanthropy: "philanthropy",
   other_revenue: "other_revenue",
 } as const;
 

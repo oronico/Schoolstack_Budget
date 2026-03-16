@@ -431,7 +431,7 @@ function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: nu
       case "tuition_and_fees": case "other_revenue": tuition += val; break;
       case "tuition_offsets": tuition -= val; break;
       case "public_funding": case "school_choice": publicFunding += val; break;
-      case "grants_contributions": philanthropy += val; break;
+      case "grants_contributions": case "philanthropy": philanthropy += val; break;
     }
   }
 
@@ -973,7 +973,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         tuitionTiers,
       }, stressCostInflation, sp),
       runStressScenarioFromRows("Loss of Philanthropy", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
-        modifyRevenueRows: rows => rows.map(r => r.category === "grants_contributions" ? { ...r, enabled: false } : r),
+        modifyRevenueRows: rows => rows.map(r => (r.category === "grants_contributions" || r.category === "philanthropy") ? { ...r, enabled: false } : r),
         tuitionTiers,
       }, stressCostInflation, sp),
       runStressScenarioFromRows("Occupancy +15%, Personnel +5%", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
@@ -1672,7 +1672,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     }
 
     const projectedGrants = revenueRowsWithTiming.filter(
-      r => r.category === "grants_contributions" && r.grantStatus === "projected"
+      r => (r.category === "grants_contributions" || r.category === "philanthropy") && r.grantStatus === "projected"
     );
     if (projectedGrants.length > 0) {
       const projectedAmount = projectedGrants.reduce(

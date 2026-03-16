@@ -7,6 +7,7 @@ import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 
 import { fullModelSchema, type FullModelData } from "@/pages/model-wizard/schema";
+import { migrateGrantsToPhilanthropy } from "@/lib/revenue-defaults";
 import { SchoolProfileStep } from "@/pages/model-wizard/steps/SchoolProfileStep";
 import { EnrollmentStep } from "@/pages/model-wizard/steps/EnrollmentStep";
 import { RevenueStep } from "@/pages/model-wizard/steps/RevenueStep";
@@ -60,7 +61,7 @@ export function PublicWizardPage() {
     enrollment: undefined,
     programs: [],
     tuitionEscalation: { rate: 3 },
-    revenueSources: { tuition: false, publicFunding: false, schoolChoice: false, grantsContributions: false, philanthropy: false },
+    revenueSources: { tuition: false, publicFunding: false, schoolChoice: false, philanthropy: false },
     tuitionTiers: undefined,
     revenue: { annualTuitionIncrease: 3 },
     revenueRows: [],
@@ -74,6 +75,14 @@ export function PublicWizardPage() {
 
   if (savedData) {
     Object.assign(defaults, savedData);
+    if (Array.isArray(defaults.revenueRows)) {
+      defaults.revenueRows = migrateGrantsToPhilanthropy(defaults.revenueRows as any) as any;
+    }
+    const rs = defaults.revenueSources as Record<string, boolean> | undefined;
+    if (rs && "grantsContributions" in rs) {
+      if (rs.grantsContributions) rs.philanthropy = true;
+      delete rs.grantsContributions;
+    }
   }
 
   const methods = useForm<FullModelData>({

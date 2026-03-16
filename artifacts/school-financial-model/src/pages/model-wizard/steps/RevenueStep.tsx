@@ -29,14 +29,15 @@ import {
   getAvailableLineItems,
   getTimingDefaults,
   computeMonthlyCashInflow,
+  migrateGrantsToPhilanthropy,
 } from "@/lib/revenue-defaults";
+import { type TuitionTier, getDefaultTuitionTiers } from "@/pages/model-wizard/schema";
 
 const CATEGORY_ICONS: Record<RevenueCategory, React.ComponentType<{ className?: string }>> = {
   tuition_and_fees: GraduationCap,
   tuition_offsets: HandCoins,
   public_funding: Building2,
   school_choice: Landmark,
-  grants_contributions: Gift,
   philanthropy: Heart,
   other_revenue: Wallet,
 };
@@ -79,12 +80,8 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
       hybrid_mixed: "A key supplemental source — ESA/voucher funds can bridge the gap between public funding and full cost.",
     },
   },
-  grants_contributions: {
-    tip: "Startup grants, foundation funding, and fundraising event revenue. Mark each as confirmed or projected.",
-    common: false,
-  },
   philanthropy: {
-    tip: "Unrestricted gifts (annual fund, board giving) and restricted gifts (capital, program-specific, scholarship). Lenders distinguish between these — unrestricted funds support debt service; restricted funds cannot.",
+    tip: "Grants, fundraising events, annual fund, board giving, and restricted gifts. Lenders distinguish between unrestricted funds (which support debt service) and restricted funds (which cannot).",
     common: false,
   },
   other_revenue: {
@@ -137,7 +134,7 @@ function RevenueSourceCheck({ checked, onChange, icon, title, description, disab
   );
 }
 
-type RevenueSources = { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; grantsContributions?: boolean; philanthropy?: boolean };
+type RevenueSources = { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; philanthropy?: boolean };
 
 function deriveFundingProfile(sources: RevenueSources): FundingProfile {
   const hasTuition = sources.tuition ?? false;
@@ -156,7 +153,6 @@ function sourcesToCategories(sources: RevenueSources): Set<RevenueCategory> {
   if (sources.tuition) { cats.add("tuition_and_fees"); cats.add("tuition_offsets"); }
   if (sources.publicFunding) cats.add("public_funding");
   if (sources.schoolChoice) cats.add("school_choice");
-  if (sources.grantsContributions) cats.add("grants_contributions");
   if (sources.philanthropy) cats.add("philanthropy");
   cats.add("other_revenue");
   return cats;
@@ -204,7 +200,6 @@ export function RevenueStep() {
           tuition: false,
           publicFunding: true,
           schoolChoice: false,
-          grantsContributions: revenueSources?.grantsContributions ?? false,
           philanthropy: revenueSources?.philanthropy ?? false,
         }, { shouldDirty: true });
       }
@@ -220,11 +215,11 @@ export function RevenueStep() {
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(true);
   const [enabledCategories, setEnabledCategories] = useState<Set<RevenueCategory>>(() => {
-    if (revenueSources && (revenueSources.tuition || revenueSources.publicFunding || revenueSources.schoolChoice || revenueSources.grantsContributions || revenueSources.philanthropy)) {
+    if (revenueSources && (revenueSources.tuition || revenueSources.publicFunding || revenueSources.schoolChoice || revenueSources.philanthropy)) {
       return sourcesToCategories(revenueSources);
     }
     if (fundingProfile === "charter_public_funded") {
-      return new Set<RevenueCategory>(["public_funding", "grants_contributions", "other_revenue"]);
+      return new Set<RevenueCategory>(["public_funding", "philanthropy", "other_revenue"]);
     }
     return new Set<RevenueCategory>(["tuition_and_fees", "tuition_offsets", "other_revenue"]);
   });
@@ -237,7 +232,8 @@ export function RevenueStep() {
 
   useEffect(() => {
     if (formRows !== undefined && formRows.length > 0) {
-      const adjusted = formRows.map((r) => ({
+      const migrated = migrateGrantsToPhilanthropy(formRows);
+      const adjusted = migrated.map((r) => ({
         ...r,
         amounts: r.amounts.length >= yearCount
           ? r.amounts.slice(0, yearCount)
@@ -407,8 +403,8 @@ export function RevenueStep() {
   const formatCurrency = (val: number) =>
     val >= 1000 ? `$${Math.round(val).toLocaleString()}` : `$${val}`;
 
-  const anySourceChecked = revenueSources?.tuition || revenueSources?.publicFunding || revenueSources?.schoolChoice || revenueSources?.grantsContributions || revenueSources?.philanthropy;
-  const sourceCount = [revenueSources?.tuition, revenueSources?.publicFunding, revenueSources?.schoolChoice, revenueSources?.grantsContributions, revenueSources?.philanthropy].filter(Boolean).length;
+  const anySourceChecked = revenueSources?.tuition || revenueSources?.publicFunding || revenueSources?.schoolChoice || revenueSources?.philanthropy;
+  const sourceCount = [revenueSources?.tuition, revenueSources?.publicFunding, revenueSources?.schoolChoice, revenueSources?.philanthropy].filter(Boolean).length;
 
   if (showCategoryPicker) {
     return (
@@ -464,18 +460,11 @@ export function RevenueStep() {
             disabled={isCharterType}
           />
           <RevenueSourceCheck
-            checked={revenueSources?.grantsContributions ?? false}
-            onChange={(v) => handleRevenueSourceChange("grantsContributions", v)}
-            icon={<Gift className="h-5 w-5" />}
-            title="Grants & Fundraising"
-            description="Grants, fundraising events, campaign revenue"
-          />
-          <RevenueSourceCheck
             checked={revenueSources?.philanthropy ?? false}
             onChange={(v) => handleRevenueSourceChange("philanthropy", v)}
             icon={<Heart className="h-5 w-5" />}
             title="Philanthropy"
-            description="Annual fund, board giving, restricted & unrestricted gifts"
+            description="Grants, fundraising, annual fund, board giving, restricted & unrestricted gifts"
           />
         </div>
 
@@ -789,9 +778,159 @@ export function RevenueStep() {
         );
       })}
 
+      {!isCharter && (revenueSources?.tuition || enabledCategories.has("tuition_and_fees")) && (
+        <TuitionTierEditor yearCount={yearCount} schoolStage={schoolStage} />
+      )}
+
       {hasAnyRevenue && (
         <CashFlowTimingSummary monthlyInflow={monthlyCashInflow} />
       )}
+    </div>
+  );
+}
+
+interface TuitionTierEditorProps {
+  yearCount: number;
+  schoolStage: string | undefined;
+}
+
+function TuitionTierEditor({ yearCount, schoolStage }: TuitionTierEditorProps) {
+  const { watch, setValue } = useFormContext();
+  const tiers = (watch("tuitionTiers") as TuitionTier[] | undefined) || [];
+
+  useEffect(() => {
+    if (!tiers || tiers.length === 0) {
+      setValue("tuitionTiers", getDefaultTuitionTiers(yearCount), { shouldDirty: true });
+    }
+  }, []);
+
+  const updateTier = (index: number, field: keyof TuitionTier, value: unknown) => {
+    const updated = tiers.map((t, i) => {
+      if (i !== index) return t;
+      if (field === "label") {
+        return { ...t, label: value as string, tierType: "custom" as const };
+      }
+      return { ...t, [field]: value };
+    });
+    setValue("tuitionTiers", updated, { shouldDirty: true });
+  };
+
+  const updateStudentCount = (tierIndex: number, yearIndex: number, value: number) => {
+    const updated = tiers.map((t, i) => {
+      if (i !== tierIndex) return t;
+      const newCounts = [...t.studentCounts];
+      newCounts[yearIndex] = value;
+      return { ...t, studentCounts: newCounts };
+    });
+    setValue("tuitionTiers", updated, { shouldDirty: true });
+  };
+
+  const addTier = () => {
+    const newTier: TuitionTier = {
+      id: `tier_custom_${Date.now()}`,
+      tierType: "custom",
+      label: "",
+      discountPercent: 0,
+      studentCounts: new Array(yearCount).fill(0),
+    };
+    setValue("tuitionTiers", [...tiers, newTier], { shouldDirty: true });
+  };
+
+  const removeTier = (index: number) => {
+    const updated = tiers.filter((_, i) => i !== index);
+    setValue("tuitionTiers", updated, { shouldDirty: true });
+  };
+
+  const getYearLabel = (index: number): string => {
+    if (schoolStage === "operating_school" && index === 0) return "Current";
+    return `Y${index + 1}`;
+  };
+
+  return (
+    <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
+      <div className="px-5 py-4">
+        <div className="flex items-center gap-3 mb-1">
+          <GraduationCap className="h-5 w-5 text-primary" />
+          <span className="font-semibold text-foreground">Tuition Discount Tiers</span>
+        </div>
+        <p className="text-xs text-muted-foreground ml-8">
+          Define discount tiers for different student groups. Set 100% discount for free tuition (e.g., founders' kids). Student counts should reflect how many students receive each discount per year.
+        </p>
+      </div>
+
+      <div className="px-5 pb-5 space-y-3">
+        {tiers.map((tier, idx) => (
+          <div
+            key={tier.id}
+            className="rounded-xl border-2 border-primary/20 bg-primary/[0.02] p-4 space-y-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 flex items-center gap-3">
+                <input
+                  type="text"
+                  value={tier.label}
+                  onChange={(e) => updateTier(idx, "label", e.target.value)}
+                  placeholder="Tier name (e.g., Sibling Discount)"
+                  className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                />
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <input
+                    type="number"
+                    value={tier.discountPercent}
+                    onChange={(e) => updateTier(idx, "discountPercent", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                    className="w-20 rounded-lg border border-border bg-card px-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 text-right"
+                    min={0}
+                    max={100}
+                  />
+                  <span className="text-xs text-muted-foreground">% off</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeTier(idx)}
+                className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                title="Remove tier"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {tier.discountPercent === 100 && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800 flex items-center gap-1.5">
+                <Info className="h-3 w-3 flex-shrink-0" />
+                <span>100% discount = free tuition for these students</span>
+              </div>
+            )}
+
+            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
+              {Array.from({ length: yearCount }).map((_, yi) => (
+                <div key={yi} className="flex flex-col gap-1">
+                  <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                    {getYearLabel(yi)} students
+                  </label>
+                  <input
+                    type="number"
+                    value={tier.studentCounts[yi] ?? 0}
+                    onChange={(e) => updateStudentCount(idx, yi, Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full rounded-lg border border-border bg-card px-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    placeholder="0"
+                    min={0}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addTier}
+          className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors px-3 py-2 rounded-lg hover:bg-primary/5"
+        >
+          <Plus className="h-4 w-4" />
+          Add Discount Tier
+        </button>
+      </div>
     </div>
   );
 }
@@ -829,7 +968,6 @@ function RevenueLineItem({
     || row.category === "tuition_offsets"
     || row.category === "public_funding"
     || row.category === "school_choice"
-    || row.category === "grants_contributions"
     || row.category === "philanthropy";
 
   return (
@@ -1118,7 +1256,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
           </>
         )}
 
-        {(category === "grants_contributions" || category === "philanthropy") && (
+        {category === "philanthropy" && (
           <>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">

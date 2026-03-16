@@ -55,7 +55,8 @@ const REVENUE_CATEGORY_LABELS: Record<string, string> = {
   tuition_offsets: "Tuition Offsets",
   public_funding: "Public Funding",
   school_choice: "School Choice / Choice Funding",
-  grants_contributions: "Grants, Contributions & Other Support",
+  grants_contributions: "Philanthropy",
+  philanthropy: "Philanthropy",
   other_revenue: "Other Revenue",
 };
 

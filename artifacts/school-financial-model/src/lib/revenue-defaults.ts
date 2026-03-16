@@ -3,7 +3,6 @@ export type RevenueCategory =
   | "tuition_offsets"
   | "public_funding"
   | "school_choice"
-  | "grants_contributions"
   | "philanthropy"
   | "other_revenue";
 
@@ -133,11 +132,6 @@ export function getTimingDefaults(
         disbursementType: "direct",
         reimbursementLagMonths: 2,
       };
-    case "grants_contributions":
-      return {
-        grantStatus: "projected",
-        receiptQuarter: 1,
-      };
     case "philanthropy":
       return {
         grantStatus: "projected",
@@ -248,7 +242,7 @@ export function computeMonthlyCashInflow(
           }
         }
       }
-    } else if (category === "grants_contributions" || category === "philanthropy") {
+    } else if (category === "philanthropy" || (category as string) === "grants_contributions") {
       const quarter = row.receiptQuarter ?? 1;
       const startMonth = (quarter - 1) * 3;
       monthly[startMonth] += annualAmount;
@@ -266,7 +260,6 @@ export const CATEGORY_LABELS: Record<RevenueCategory, string> = {
   tuition_offsets: "Tuition Offsets",
   public_funding: "Public Funding",
   school_choice: "School Choice / Choice Funding",
-  grants_contributions: "Grants & Fundraising",
   philanthropy: "Philanthropy",
   other_revenue: "Other Revenue",
 };
@@ -276,7 +269,6 @@ export const CATEGORY_ORDER: RevenueCategory[] = [
   "tuition_offsets",
   "public_funding",
   "school_choice",
-  "grants_contributions",
   "philanthropy",
   "other_revenue",
 ];
@@ -319,9 +311,9 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
   { id: "voucher_revenue", category: "school_choice", lineItem: "Voucher Revenue", driverType: "per_student", enabledFor: [] },
   { id: "scholarship_org", category: "school_choice", lineItem: "Scholarship Organization Revenue", driverType: "per_student", enabledFor: [] },
 
-  { id: "grants", category: "grants_contributions", lineItem: "Grants", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
-  { id: "donations_fundraising", category: "grants_contributions", lineItem: "Donations / Fundraising", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
-  { id: "fundraising_events", category: "grants_contributions", lineItem: "Fundraising Events", driverType: "annual_fixed", enabledFor: [] },
+  { id: "grants", category: "philanthropy", lineItem: "Grants", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
+  { id: "donations_fundraising", category: "philanthropy", lineItem: "Donations / Fundraising", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
+  { id: "fundraising_events", category: "philanthropy", lineItem: "Fundraising Events", driverType: "annual_fixed", enabledFor: [] },
 
   { id: "unrestricted_annual_fund", category: "philanthropy", lineItem: "Annual Fund / Unrestricted Giving", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
   { id: "unrestricted_board_giving", category: "philanthropy", lineItem: "Board Giving / Board Commitments", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
@@ -366,7 +358,6 @@ export function getCategoryOrder(fundingProfile: FundingProfile, schoolType?: st
   if (fundingProfile === "charter_public_funded") {
     const order: RevenueCategory[] = [
       "public_funding",
-      "grants_contributions",
       "philanthropy",
       "school_choice",
       "tuition_and_fees",
@@ -379,6 +370,15 @@ export function getCategoryOrder(fundingProfile: FundingProfile, schoolType?: st
     return order;
   }
   return CATEGORY_ORDER;
+}
+
+export function migrateGrantsToPhilanthropy(rows: RevenueRowData[]): RevenueRowData[] {
+  return rows.map(r => {
+    if ((r.category as string) === "grants_contributions") {
+      return { ...r, category: "philanthropy" as RevenueCategory };
+    }
+    return r;
+  });
 }
 
 export interface AvailableLineItem {

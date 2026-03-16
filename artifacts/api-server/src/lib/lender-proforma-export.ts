@@ -321,7 +321,7 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
 
   let grantsY1 = 0;
   for (const row of revenueRows) {
-    if (!row.enabled || row.category !== "grants_contributions") continue;
+    if (!row.enabled || (row.category !== "grants_contributions" && row.category !== "philanthropy")) continue;
     if (row.driverType === "percent_of_base") {
       const baseRow = revenueRows.find(r => r.id === row.percentBase);
       const baseVal = baseRow ? computeDriverValue(baseRow.amounts, 0, baseRow.driverType, enrollY1) : 0;

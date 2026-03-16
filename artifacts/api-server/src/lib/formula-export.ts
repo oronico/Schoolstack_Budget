@@ -266,7 +266,7 @@ function catLabel(cat: string): string {
   const map: Record<string, string> = {
     tuition_and_fees: "Tuition & Fees", tuition_offsets: "Tuition Offsets",
     public_funding: "Public Funding", school_choice: "School Choice",
-    grants_contributions: "Grants & Contributions", other_revenue: "Other Revenue",
+    grants_contributions: "Philanthropy", philanthropy: "Philanthropy", other_revenue: "Other Revenue",
   };
   return map[cat] || cat;
 }

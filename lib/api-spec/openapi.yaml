@@ -744,6 +744,7 @@ components:
         - public_funding
         - school_choice
         - grants_contributions
+        - philanthropy
         - other_revenue
     ExpenseCategory:
       type: string
