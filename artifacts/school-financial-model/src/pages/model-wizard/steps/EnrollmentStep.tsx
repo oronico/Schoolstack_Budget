@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, TrendingUp, Info } from "lucide-react";
+import { Plus, Trash2, TrendingUp, Info, School } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import type { Program } from "../schema";
+import { GRADE_BAND_LABELS } from "@/lib/revenue-defaults";
 import {
   BarChart,
   Bar,
@@ -466,6 +467,88 @@ export function EnrollmentStep() {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {schoolType === "charter_school" && hasYear1Data && (
+        <div>
+          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
+            <span className="flex items-center gap-2">
+              <School className="h-5 w-5 text-primary" />
+              Grade-Band Enrollment Breakdown
+            </span>
+          </h3>
+          <div className="bg-white rounded-2xl p-5 border border-border/60 shadow-sm space-y-4">
+            <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl border border-blue-200">
+              <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-blue-700">
+                Charter per-pupil funding often varies by grade band. Break down your enrollment by K-5, 6-8, and 9-12 so we can apply the correct per-pupil rates. Totals should match your program enrollment above.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr>
+                    <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border w-40">
+                      Grade Band
+                    </th>
+                    {futureYearLabels.map((label, i) => (
+                      <th key={i} className="text-center py-2 px-2 text-xs font-semibold text-foreground uppercase tracking-wider border-b border-border">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(["k5", "m68", "h912"] as const).map((band) => {
+                    const bandValues = watch(`schoolProfile.gradeBandEnrollment.${band}`) || [0, 0, 0, 0, 0];
+                    return (
+                      <tr key={band} className="border-b border-border/50 hover:bg-secondary/20">
+                        <td className="py-2 px-3 font-medium text-foreground text-sm">
+                          {GRADE_BAND_LABELS[band]}
+                        </td>
+                        {futureYearLabels.map((_, i) => (
+                          <td key={i} className="py-1.5 px-1.5">
+                            <input
+                              type="number"
+                              value={bandValues[i] || ""}
+                              onChange={(e) => {
+                                const newVals = [...bandValues];
+                                newVals[i] = parseInt(e.target.value) || 0;
+                                setValue(`schoolProfile.gradeBandEnrollment.${band}`, newVals, { shouldDirty: true });
+                              }}
+                              className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-center text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                              placeholder="0"
+                              min={0}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                  <tr className="bg-secondary/40 font-semibold">
+                    <td className="py-2 px-3 text-sm text-foreground">Band Total</td>
+                    {futureYearLabels.map((_, i) => {
+                      const k5 = (watch("schoolProfile.gradeBandEnrollment.k5") || [])[i] || 0;
+                      const m68 = (watch("schoolProfile.gradeBandEnrollment.m68") || [])[i] || 0;
+                      const h912 = (watch("schoolProfile.gradeBandEnrollment.h912") || [])[i] || 0;
+                      const bandTotal = k5 + m68 + h912;
+                      const enrollTotal = totalsByYear[`year${i + 1}`] || 0;
+                      const mismatch = bandTotal > 0 && enrollTotal > 0 && bandTotal !== enrollTotal;
+                      return (
+                        <td key={i} className={cn("py-2 px-2 text-center text-sm", mismatch ? "text-red-600" : "text-foreground")}>
+                          {bandTotal}
+                          {mismatch && (
+                            <div className="text-[10px] text-red-500">≠ {enrollTotal}</div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

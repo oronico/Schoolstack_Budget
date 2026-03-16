@@ -36,6 +36,12 @@ interface SchoolProfile {
   nnnMaintenance?: number;
   nnnUtilities?: number;
   estimatedMonthlyFacilityBudget?: number;
+  gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
+  gradeBandPerPupil?: { k5: number; m68: number; h912: number };
+  enrollmentRevenueMethod?: string;
+  charterDepositTiming?: string;
+  priorYearADM?: number;
+  priorYearADA?: number;
 }
 
 interface TuitionTier {
@@ -353,13 +359,40 @@ function computeTuitionWithTiers(
   return totalTuition;
 }
 
-function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number, tuitionTiers?: TuitionTier[]): RevenueBreakdown {
+function computeGradeBandRevenueConsultant(sp: SchoolProfile, y: number): number {
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (!gbe || !gbp) return 0;
+  const k5e = gbe.k5?.[y] ?? 0;
+  const m68e = gbe.m68?.[y] ?? 0;
+  const h912e = gbe.h912?.[y] ?? 0;
+  if (k5e + m68e + h912e === 0) return 0;
+  let total = k5e * (gbp.k5 || 0) + m68e * (gbp.m68 || 0) + h912e * (gbp.h912 || 0);
+  if (sp.enrollmentRevenueMethod === "ada") {
+    const adm = sp.priorYearADM || 0;
+    const ada = sp.priorYearADA || 0;
+    total *= adm > 0 ? Math.min(ada / adm, 1) : 0.95;
+  }
+  return total;
+}
+
+function hasGradeBandConsultant(sp?: SchoolProfile): boolean {
+  if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  return ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0) &&
+    ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+}
+
+function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number, tuitionTiers?: TuitionTier[], sp?: SchoolProfile): RevenueBreakdown {
   const rowValues = new Map<string, number>();
 
   for (const row of rows) {
     if (!row.enabled || row.driverType === "percent_of_base") continue;
 
-    if (row.id === "gross_tuition" && row.driverType === "per_student" && tuitionTiers && tuitionTiers.length > 0) {
+    if (row.id === "state_local_perpupil" && sp && hasGradeBandConsultant(sp)) {
+      rowValues.set(row.id, computeGradeBandRevenueConsultant(sp, yearIdx));
+    } else if (row.id === "gross_tuition" && row.driverType === "per_student" && tuitionTiers && tuitionTiers.length > 0) {
       let perStudentAmount: number;
       if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
         perStudentAmount = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
@@ -556,7 +589,7 @@ function computeAllYearsFromRows(
     const salaryEsc = Math.pow(1 + salaryEscRate, yearIdx);
     const totalStaffingCost = baseCost * salaryEsc * pf;
 
-    const rev = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers);
+    const rev = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers, schoolProfile);
     const exp = computeExpensesForYear(effectiveExpenseRows, yearIdx, students, rev.total, costInflationPct);
     const capDebt = computeCapDebtForYear(capDebtRows, yearIdx, students);
 

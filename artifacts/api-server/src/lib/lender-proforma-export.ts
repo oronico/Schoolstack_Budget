@@ -34,6 +34,12 @@ interface SchoolProfile {
   schoolType?: string;
   schoolTypeOther?: string;
   openingYear?: number;
+  gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
+  gradeBandPerPupil?: { k5: number; m68: number; h912: number };
+  enrollmentRevenueMethod?: string;
+  charterDepositTiming?: string;
+  priorYearADM?: number;
+  priorYearADA?: number;
 }
 
 interface Enrollment {
@@ -150,11 +156,40 @@ function avgExpenseGrowth(rows: ExpenseRow[], categories: string[], students1: n
   return (sum1 - sum0) / sum0;
 }
 
-function computeRevenueY(rows: RevenueRow[], yearIdx: number, students: number): number {
+function computeGradeBandRevenueLocal(sp: SchoolProfile, y: number): number {
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (!gbe || !gbp) return 0;
+  const k5e = gbe.k5?.[y] ?? 0;
+  const m68e = gbe.m68?.[y] ?? 0;
+  const h912e = gbe.h912?.[y] ?? 0;
+  if (k5e + m68e + h912e === 0) return 0;
+  let total = k5e * (gbp.k5 || 0) + m68e * (gbp.m68 || 0) + h912e * (gbp.h912 || 0);
+  if (sp.enrollmentRevenueMethod === "ada") {
+    const adm = sp.priorYearADM || 0;
+    const ada = sp.priorYearADA || 0;
+    total *= adm > 0 ? Math.min(ada / adm, 1) : 0.95;
+  }
+  return total;
+}
+
+function hasGradeBandDataLocal(sp?: SchoolProfile): boolean {
+  if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  return ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0) &&
+    ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+}
+
+function computeRevenueY(rows: RevenueRow[], yearIdx: number, students: number, sp?: SchoolProfile): number {
   const rowValues = new Map<string, number>();
   for (const row of rows) {
     if (!row.enabled || row.driverType === "percent_of_base") continue;
-    rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students));
+    if (row.id === "state_local_perpupil" && sp && hasGradeBandDataLocal(sp)) {
+      rowValues.set(row.id, computeGradeBandRevenueLocal(sp, yearIdx));
+    } else {
+      rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students));
+    }
   }
   for (const row of rows) {
     if (!row.enabled || row.driverType !== "percent_of_base") continue;
@@ -308,8 +343,8 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
     : 10;
   result.benefitsBurdenPct = avgBenefits / 100;
 
-  const revY1 = revenueRows.length > 0 ? computeRevenueY(revenueRows, 0, enrollY1) : 0;
-  const revY2 = revenueRows.length > 0 ? computeRevenueY(revenueRows, 1, enrollY2) : 0;
+  const revY1 = revenueRows.length > 0 ? computeRevenueY(revenueRows, 0, enrollY1, sp) : 0;
+  const revY2 = revenueRows.length > 0 ? computeRevenueY(revenueRows, 1, enrollY2, sp) : 0;
 
   const facilityY1 = sumExpenseCategoryY1(expenseRows, "occupancy_facility", enrollY1, revY1);
   const rentRow = expenseRows.find(r => r.enabled && r.category === "occupancy_facility" && r.lineItem.toLowerCase().includes("rent"));
@@ -381,6 +416,26 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   result.proposedLoanAmount = proposedLoanAmount;
   result.interestRatePct = proposedRate;
   result.termYears = proposedTerm;
+
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (gbe && gbp && ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0)) {
+    result.hasGradeBand = 1;
+    result.enrollmentRevenueMethod = sp.enrollmentRevenueMethod || "count_days";
+    result.charterDepositTiming = sp.charterDepositTiming || "monthly";
+    result.priorYearADM = sp.priorYearADM || 0;
+    result.priorYearADA = sp.priorYearADA || 0;
+    result.gbK5PerPupil = gbp.k5 || 0;
+    result.gbM68PerPupil = gbp.m68 || 0;
+    result.gbH912PerPupil = gbp.h912 || 0;
+    for (let y = 0; y < 5; y++) {
+      result[`gbK5Y${y + 1}`] = gbe.k5?.[y] ?? 0;
+      result[`gbM68Y${y + 1}`] = gbe.m68?.[y] ?? 0;
+      result[`gbH912Y${y + 1}`] = gbe.h912?.[y] ?? 0;
+    }
+  } else {
+    result.hasGradeBand = 0;
+  }
 
   return result;
 }
@@ -696,6 +751,63 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
     valCell.border = thinBorder;
     if (r.fmt) valCell.numFmt = r.fmt;
     valCell.alignment = { horizontal: "right" };
+  }
+
+  if (input.hasGradeBand === 1) {
+    const METHOD_LABELS: Record<string, string> = { count_days: "Count Days", adm: "ADM (Avg Daily Membership)", ada: "ADA (Avg Daily Attendance)" };
+    const TIMING_LABELS: Record<string, string> = { monthly: "Monthly", quarterly: "Quarterly", annual: "Annual", semi_annual: "Semi-Annual" };
+    const gbStartRow = 64;
+    ws.mergeCells(`B${gbStartRow}:D${gbStartRow}`);
+    ws.getCell(`B${gbStartRow}`).value = "CHARTER FUNDING DETAILS";
+    ws.getCell(`B${gbStartRow}`).font = sectionFont;
+    ws.getCell(`B${gbStartRow}`).fill = sectionFill;
+    ws.getCell(`B${gbStartRow}`).alignment = { horizontal: "left", vertical: "middle" };
+    ws.getRow(gbStartRow).height = 24;
+
+    const gbRows: { row: number; label: string; value: string | number; fmt?: string }[] = [
+      { row: gbStartRow + 2, label: "Enrollment Revenue Method", value: METHOD_LABELS[String(input.enrollmentRevenueMethod)] || String(input.enrollmentRevenueMethod) },
+      { row: gbStartRow + 3, label: "Charter Deposit Timing", value: TIMING_LABELS[String(input.charterDepositTiming)] || String(input.charterDepositTiming) },
+      { row: gbStartRow + 4, label: "Prior-Year ADM", value: Number(input.priorYearADM) || 0, fmt: NUM },
+      { row: gbStartRow + 5, label: "Prior-Year ADA", value: Number(input.priorYearADA) || 0, fmt: NUM },
+      { row: gbStartRow + 7, label: "Per-Pupil Rate — K-5", value: Number(input.gbK5PerPupil) || 0, fmt: CUR },
+      { row: gbStartRow + 8, label: "Per-Pupil Rate — 6-8", value: Number(input.gbM68PerPupil) || 0, fmt: CUR },
+      { row: gbStartRow + 9, label: "Per-Pupil Rate — 9-12", value: Number(input.gbH912PerPupil) || 0, fmt: CUR },
+    ];
+    for (const gr of gbRows) {
+      ws.getCell(`C${gr.row}`).value = gr.label;
+      ws.getCell(`C${gr.row}`).font = labelFont;
+      ws.getCell(`C${gr.row}`).border = thinBorder;
+      ws.getCell(`D${gr.row}`).value = gr.value;
+      ws.getCell(`D${gr.row}`).font = valueFont;
+      ws.getCell(`D${gr.row}`).fill = inputFill;
+      ws.getCell(`D${gr.row}`).border = thinBorder;
+      if (gr.fmt) ws.getCell(`D${gr.row}`).numFmt = gr.fmt;
+      ws.getCell(`D${gr.row}`).alignment = { horizontal: "right" };
+    }
+
+    const gbEnrollStart = gbStartRow + 11;
+    ws.mergeCells(`C${gbEnrollStart}:D${gbEnrollStart}`);
+    ws.getCell(`C${gbEnrollStart}`).value = "Grade-Band Enrollment by Year";
+    ws.getCell(`C${gbEnrollStart}`).font = { ...labelFont, bold: true };
+
+    const gbBands = [
+      { label: "K-5", prefix: "gbK5" },
+      { label: "6-8", prefix: "gbM68" },
+      { label: "9-12", prefix: "gbH912" },
+    ];
+    let gbr = gbEnrollStart + 1;
+    for (const band of gbBands) {
+      ws.getCell(`C${gbr}`).value = `  ${band.label}`;
+      ws.getCell(`C${gbr}`).font = labelFont;
+      ws.getCell(`C${gbr}`).border = thinBorder;
+      const vals = [];
+      for (let y = 1; y <= 5; y++) vals.push(Number(input[`${band.prefix}Y${y}`]) || 0);
+      ws.getCell(`D${gbr}`).value = vals.join("  /  ");
+      ws.getCell(`D${gbr}`).font = valueFont;
+      ws.getCell(`D${gbr}`).fill = inputFill;
+      ws.getCell(`D${gbr}`).border = thinBorder;
+      gbr++;
+    }
   }
 
   ws.views = [{ state: "frozen", xSplit: 0, ySplit: 1 }];

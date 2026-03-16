@@ -129,6 +129,20 @@ export const schoolProfileSchema = z.object({
   loanTermYears: z.coerce.number(numMsg("loan term")).min(0, "Please enter a positive loan term").max(50, "Loan term can't exceed 50 years").optional().default(0),
   lendingLabIntent: lendingLabIntentSchema,
   debtIncluded: z.boolean().optional().default(true),
+  gradeBandEnrollment: z.object({
+    k5: z.array(z.coerce.number().min(0)).default([0, 0, 0, 0, 0]),
+    m68: z.array(z.coerce.number().min(0)).default([0, 0, 0, 0, 0]),
+    h912: z.array(z.coerce.number().min(0)).default([0, 0, 0, 0, 0]),
+  }).optional(),
+  gradeBandPerPupil: z.object({
+    k5: z.coerce.number().min(0).default(0),
+    m68: z.coerce.number().min(0).default(0),
+    h912: z.coerce.number().min(0).default(0),
+  }).optional(),
+  enrollmentRevenueMethod: z.enum(["count_days", "adm", "ada"]).optional(),
+  charterDepositTiming: z.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
+  priorYearADM: z.coerce.number().min(0).optional(),
+  priorYearADA: z.coerce.number().min(0).optional(),
 });
 
 export const priorYearSnapshotSchema = z.object({

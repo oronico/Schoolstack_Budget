@@ -321,6 +321,12 @@ export interface SchoolProfile {
   fundingProfile?: string;
   debtIncluded?: boolean;
   lendingLabIntent?: string;
+  gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
+  gradeBandPerPupil?: { k5: number; m68: number; h912: number };
+  enrollmentRevenueMethod?: string;
+  charterDepositTiming?: string;
+  priorYearADM?: number;
+  priorYearADA?: number;
 }
 
 export interface Enrollment { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number; }
@@ -439,6 +445,33 @@ export interface ModelData {
   covenantThresholds?: CovenantThresholds;
 }
 
+export function computeGradeBandRevenue(sp: SchoolProfile, y: number): number {
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (!gbe || !gbp) return 0;
+  const k5e = gbe.k5?.[y] ?? 0;
+  const m68e = gbe.m68?.[y] ?? 0;
+  const h912e = gbe.h912?.[y] ?? 0;
+  if (k5e + m68e + h912e === 0) return 0;
+  let total = k5e * (gbp.k5 || 0) + m68e * (gbp.m68 || 0) + h912e * (gbp.h912 || 0);
+  if (sp.enrollmentRevenueMethod === "ada") {
+    const adm = sp.priorYearADM || 0;
+    const ada = sp.priorYearADA || 0;
+    const ratio = adm > 0 ? Math.min(ada / adm, 1) : 0.95;
+    total *= ratio;
+  }
+  return total;
+}
+
+export function hasGradeBandData(sp?: SchoolProfile): boolean {
+  if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  const hasEnrollment = (gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0;
+  const hasRates = (gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0;
+  return hasEnrollment && hasRates;
+}
+
 export function tuitionWithTiers(gross: number, y: number, students: number, tiers?: TuitionTier[]): number {
   if (!tiers || tiers.length === 0) return gross * students;
   let rawTotal = 0;
@@ -457,9 +490,12 @@ export function tuitionWithTiers(gross: number, y: number, students: number, tie
 }
 
 export function computeRevLineItem(
-  r: RevenueRow, y: number, students: number, tiers?: TuitionTier[], costInflPct?: number
+  r: RevenueRow, y: number, students: number, tiers?: TuitionTier[], costInflPct?: number, sp?: SchoolProfile
 ): number {
   if (!r.enabled) return 0;
+  if (r.id === "state_local_perpupil" && sp && hasGradeBandData(sp)) {
+    return computeGradeBandRevenue(sp, y);
+  }
   if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers && tiers.length > 0) {
     let perStudentAmount = r.amounts?.[y] ?? 0;
     if (r.escalationRate !== undefined && r.escalationRate !== 0 && y > 0) {
@@ -471,12 +507,12 @@ export function computeRevLineItem(
 }
 
 export function computeRevenueForYear(
-  rows: RevenueRow[], y: number, students: number, tiers?: TuitionTier[], costInflPct?: number
+  rows: RevenueRow[], y: number, students: number, tiers?: TuitionTier[], costInflPct?: number, sp?: SchoolProfile
 ): number {
   const vals = new Map<string, number>();
   for (const r of rows) {
     if (!r.enabled || r.driverType === "percent_of_base") continue;
-    vals.set(r.id, computeRevLineItem(r, y, students, tiers, costInflPct));
+    vals.set(r.id, computeRevLineItem(r, y, students, tiers, costInflPct, sp));
   }
   for (const r of rows) {
     if (!r.enabled || r.driverType !== "percent_of_base") continue;

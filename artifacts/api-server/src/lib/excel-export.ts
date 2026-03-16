@@ -47,6 +47,12 @@ interface SchoolProfile {
   nnnMaintenance?: number;
   nnnUtilities?: number;
   estimatedMonthlyFacilityBudget?: number;
+  gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
+  gradeBandPerPupil?: { k5: number; m68: number; h912: number };
+  enrollmentRevenueMethod?: string;
+  charterDepositTiming?: string;
+  priorYearADM?: number;
+  priorYearADA?: number;
 }
 
 interface TuitionTier {

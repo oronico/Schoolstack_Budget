@@ -225,7 +225,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 32827,
+    "fileSize": 32826,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -619,7 +619,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 34244,
+    "fileSize": 34243,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1011,7 +1011,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 34262,
+    "fileSize": 34261,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1123,6 +1123,398 @@
         "passed": true,
         "details": [
           "Total Revenue: 1546000"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income: 0"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Underwriting V2 (21-tab)",
+    "payload": "Charter ADA Grade-Band",
+    "fileSize": 39916,
+    "tabs": [
+      "Cover",
+      "Instructions",
+      "Assumptions",
+      "Program Profile",
+      "Enrollment Drivers",
+      "Tuition & Funding",
+      "Staffing Drivers",
+      "OpEx Drivers",
+      "Capital Stack",
+      "Enrollment Tuition Fcst",
+      "Staffing Costs Fcst",
+      "Budget Detail",
+      "Budget Summary",
+      "Monthly Cash Flow Y1",
+      "5-Year Operating Stmt",
+      "Debt Schedule",
+      "Balance Sheet",
+      "DSCR & Covenants",
+      "Sources & Uses",
+      "Scenarios",
+      "Underwriting Snapshot"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 39.0 KB",
+          "Successfully opened workbook",
+          "Worksheets: 21"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 21 tabs: Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 1783 cells across 21 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Sources = Uses",
+        "passed": true,
+        "details": [
+          "Sources: 500000, Uses: N/A — no S&U data entered or partial data"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y1) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y2) = 0",
+        "passed": true,
+        "details": [
+          "Value A: -1, Value B: 0, Diff: 1"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y3) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y4) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y5) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Cash Flow Ending → Balance Sheet Cash (Y1)",
+        "passed": true,
+        "details": [
+          "Value A: 74498, Value B: 74498, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Debt Schedule → Balance Sheet Debt (Y1)",
+        "passed": true,
+        "details": [
+          "Value A: 323655, Value B: 323655, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Debt Schedule → Balance Sheet Debt (Y2)",
+        "passed": true,
+        "details": [
+          "Value A: 295685, Value B: 295685, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Debt Schedule → Balance Sheet Debt (Y3)",
+        "passed": true,
+        "details": [
+          "Value A: 265989, Value B: 265989, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Debt Schedule → Balance Sheet Debt (Y4)",
+        "passed": true,
+        "details": [
+          "Value A: 234462, Value B: 234462, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Debt Schedule → Balance Sheet Debt (Y5)",
+        "passed": true,
+        "details": [
+          "Value A: 200991, Value B: 200991, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "DSCR Values Present",
+        "passed": true,
+        "details": [
+          "DSCR values found and populated"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Standard Export",
+    "payload": "Charter ADA Grade-Band",
+    "fileSize": 22741,
+    "tabs": [
+      "Cover",
+      "Assumptions",
+      "Revenue Schedule",
+      "Staffing & Personnel",
+      "Operating Expenses",
+      "Capital & Debt",
+      "Financial Model",
+      "Summary"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 22.2 KB",
+          "Successfully opened workbook",
+          "Worksheets: 8"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 8 tabs: Cover, Assumptions, Revenue Schedule, Staffing & Personnel, Operating Expenses, Capital & Debt, Financial Model, Summary"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 594 cells across 8 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue: 1465000"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income: -26164"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Formula Export",
+    "payload": "Charter ADA Grade-Band",
+    "fileSize": 20349,
+    "tabs": [
+      "Assumptions",
+      "5-Year Model",
+      "Year 1 Pro Forma"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 19.9 KB",
+          "Successfully opened workbook",
+          "Worksheets: 3"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 3 tabs: Assumptions, 5-Year Model, Year 1 Pro Forma"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 1237 cells across 3 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Underwriting V1 (14-tab)",
+    "payload": "Charter ADA Grade-Band",
+    "fileSize": 34060,
+    "tabs": [
+      "Assumptions",
+      "Enrollment & Rev Drivers",
+      "Tuition & Funding Detail",
+      "Staffing Plan",
+      "Operating Expenses",
+      "Facilities & Occupancy",
+      "Capital Stack & Startup Uses",
+      "Debt Schedule",
+      "Cash Flow Monthly Y1",
+      "5-Year P&L",
+      "5-Year Balance Sheet",
+      "DSCR & Covenants",
+      "Underwriting Snapshot",
+      "Summary",
+      "Cover"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 33.3 KB",
+          "Successfully opened workbook",
+          "Worksheets: 15"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 15 tabs: Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 999 cells across 15 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue: 1178333"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income: -212164"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Lender Pro Forma",
+    "payload": "Charter ADA Grade-Band",
+    "fileSize": 20133,
+    "tabs": [
+      "Cover",
+      "Assumptions",
+      "Drivers",
+      "5-Year P&L",
+      "Cash Flow & DSCR",
+      "Staffing",
+      "Loan Snapshot",
+      "Summary"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 19.7 KB",
+          "Successfully opened workbook",
+          "Worksheets: 8"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 8 tabs: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 451 cells across 8 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue: 1465000"
         ],
         "errors": []
       },

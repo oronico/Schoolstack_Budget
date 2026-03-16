@@ -27,6 +27,12 @@ interface SchoolProfile {
   accreditingBody?: string;
   hasManagementFee?: boolean;
   managementFeePercent?: number;
+  gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
+  gradeBandPerPupil?: { k5: number; m68: number; h912: number };
+  enrollmentRevenueMethod?: string;
+  charterDepositTiming?: string;
+  priorYearADM?: number;
+  priorYearADA?: number;
 }
 
 interface Enrollment {
@@ -375,13 +381,40 @@ function computeAnnualDebt(principal: number, rate: number, termYears: number): 
   return (principal * (mr * Math.pow(1 + mr, m)) / (Math.pow(1 + mr, m) - 1)) * 12;
 }
 
+function computeGradeBandRevenueUW(sp: SchoolProfile, y: number): number {
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (!gbe || !gbp) return 0;
+  const k5e = gbe.k5?.[y] ?? 0;
+  const m68e = gbe.m68?.[y] ?? 0;
+  const h912e = gbe.h912?.[y] ?? 0;
+  if (k5e + m68e + h912e === 0) return 0;
+  let total = k5e * (gbp.k5 || 0) + m68e * (gbp.m68 || 0) + h912e * (gbp.h912 || 0);
+  if (sp.enrollmentRevenueMethod === "ada") {
+    const adm = sp.priorYearADM || 0;
+    const ada = sp.priorYearADA || 0;
+    total *= adm > 0 ? Math.min(ada / adm, 1) : 0.95;
+  }
+  return total;
+}
+
+function hasGradeBandUW(sp?: SchoolProfile): boolean {
+  if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  return ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0) &&
+    ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+}
+
 function computeRevenueForYear(
-  rows: RevenueRow[], y: number, students: number, tiers?: TuitionTier[]
+  rows: RevenueRow[], y: number, students: number, tiers?: TuitionTier[], sp?: SchoolProfile
 ): number {
   const vals = new Map<string, number>();
   for (const r of rows) {
     if (!r.enabled || r.driverType === "percent_of_base") continue;
-    if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers && tiers.length > 0) {
+    if (r.id === "state_local_perpupil" && sp && hasGradeBandUW(sp)) {
+      vals.set(r.id, computeGradeBandRevenueUW(sp, y));
+    } else if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers && tiers.length > 0) {
       let perStudentAmount = r.amounts?.[y] ?? 0;
       if (r.escalationRate !== undefined && r.escalationRate !== 0 && y > 0) {
         perStudentAmount = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
@@ -533,7 +566,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
 
   for (let y = 0; y < yc; y++) {
     const students = enrollment[y];
-    const rev = computeRevenueForYear(revenueRows, y, students, data.tuitionTiers);
+    const rev = computeRevenueForYear(revenueRows, y, students, data.tuitionTiers, sp);
     const pf = y === 0 ? prorationFactor : 1;
     const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
     const costInflPct = costInflation * 100;
@@ -623,7 +656,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
 
   for (let y = 0; y < yc; y++) {
     const students = enrollment[y];
-    const rev = computeRevenueForYear(revenueRows, y, students, data.tuitionTiers);
+    const rev = computeRevenueForYear(revenueRows, y, students, data.tuitionTiers, sp);
     const pf = y === 0 ? prorationFactor : 1;
     const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
     const costInflPct = costInflation * 100;
@@ -704,7 +737,7 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
 
   const students = enrollment[yi];
   const pf = yi === 0 ? prorationFactor : 1;
-  const annualRevRaw = computeRevenueForYear(revenueRows, yi, students, data.tuitionTiers);
+  const annualRevRaw = computeRevenueForYear(revenueRows, yi, students, data.tuitionTiers, sp);
   const annualRev = Math.round(annualRevRaw * pf);
   const annualPersonnel = Math.round(computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, yi));
   const annualOps = Math.round(computeExpenseForYear(expenseRows, yi, students, annualRevRaw, costInflPct) * pf);

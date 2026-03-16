@@ -23,6 +23,12 @@ interface SchoolProfile {
   accreditingBody?: string;
   hasManagementFee?: boolean;
   managementFeePercent?: number;
+  gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
+  gradeBandPerPupil?: { k5: number; m68: number; h912: number };
+  enrollmentRevenueMethod?: string;
+  charterDepositTiming?: string;
+  priorYearADM?: number;
+  priorYearADA?: number;
 }
 
 interface Enrollment {
@@ -153,11 +159,38 @@ function computeTuitionWithTiers(gross: number, yearIdx: number, total: number, 
   return result;
 }
 
-function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number, tiers?: TuitionTier[]): number {
+function computeGradeBandRevenuePDF(sp: SchoolProfile, y: number): number {
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (!gbe || !gbp) return 0;
+  const k5e = gbe.k5?.[y] ?? 0;
+  const m68e = gbe.m68?.[y] ?? 0;
+  const h912e = gbe.h912?.[y] ?? 0;
+  if (k5e + m68e + h912e === 0) return 0;
+  let total = k5e * (gbp.k5 || 0) + m68e * (gbp.m68 || 0) + h912e * (gbp.h912 || 0);
+  if (sp.enrollmentRevenueMethod === "ada") {
+    const adm = sp.priorYearADM || 0;
+    const ada = sp.priorYearADA || 0;
+    total *= adm > 0 ? Math.min(ada / adm, 1) : 0.95;
+  }
+  return total;
+}
+
+function hasGradeBandPDF(sp?: SchoolProfile): boolean {
+  if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  return ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0) &&
+    ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+}
+
+function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number, tiers?: TuitionTier[], sp?: SchoolProfile): number {
   const vals = new Map<string, number>();
   for (const r of rows) {
     if (!r.enabled || r.driverType === "percent_of_base") continue;
-    if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers?.length) {
+    if (r.id === "state_local_perpupil" && sp && hasGradeBandPDF(sp)) {
+      vals.set(r.id, computeGradeBandRevenuePDF(sp, yearIdx));
+    } else if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers?.length) {
       vals.set(r.id, computeTuitionWithTiers(r.amounts?.[yearIdx] ?? 0, yearIdx, students, tiers));
     } else {
       vals.set(r.id, computeDriverValue(r.amounts, yearIdx, r.driverType, students));
@@ -177,11 +210,13 @@ function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: nu
   return total;
 }
 
-function computeRevenueByCat(rows: RevenueRow[], yearIdx: number, students: number, tiers?: TuitionTier[]): Map<string, number> {
+function computeRevenueByCat(rows: RevenueRow[], yearIdx: number, students: number, tiers?: TuitionTier[], sp?: SchoolProfile): Map<string, number> {
   const vals = new Map<string, number>();
   for (const r of rows) {
     if (!r.enabled || r.driverType === "percent_of_base") continue;
-    if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers?.length) {
+    if (r.id === "state_local_perpupil" && sp && hasGradeBandPDF(sp)) {
+      vals.set(r.id, computeGradeBandRevenuePDF(sp, yearIdx));
+    } else if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers?.length) {
       vals.set(r.id, computeTuitionWithTiers(r.amounts?.[yearIdx] ?? 0, yearIdx, students, tiers));
     } else {
       vals.set(r.id, computeDriverValue(r.amounts, yearIdx, r.driverType, students));
@@ -312,7 +347,7 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
       if (catRows.length === 0) continue;
       const catAmounts = new Array(yearCount).fill(0);
       for (let y = 0; y < yearCount; y++) {
-        const byCat = computeRevenueByCat(revenueRows, y, enrollment[y], data.tuitionTiers);
+        const byCat = computeRevenueByCat(revenueRows, y, enrollment[y], data.tuitionTiers, sp);
         catAmounts[y] = byCat.get(cat) || 0;
         yearTotals[y] += catAmounts[y];
       }
@@ -368,7 +403,7 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
       if (catRows.length === 0) continue;
       const catAmounts = new Array(yearCount).fill(0);
       for (let y = 0; y < yearCount; y++) {
-        const totalRev = computeRevenueForYear(revenueRows, y, enrollment[y], data.tuitionTiers);
+        const totalRev = computeRevenueForYear(revenueRows, y, enrollment[y], data.tuitionTiers, sp);
         for (const r of catRows) {
           if (r.driverType === "percent_of_revenue") {
             catAmounts[y] += ((r.amounts?.[y] ?? 0) / 100) * totalRev;
@@ -398,7 +433,7 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   for (let y = 0; y < yearCount; y++) {
     const pf = y === 0 ? prorationFactor : 1;
     const salaryEsc = Math.pow(1 + salaryEscRate, y);
-    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], data.tuitionTiers);
+    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], data.tuitionTiers, sp);
     const staff = computeStaffingCost(staffingRows, salaryEsc, pf);
     const opex = computeExpensesCost(expenseRows, y, enrollment[y], rev);
     const capDebt = computeCapDebt(capDebtRows, y, enrollment[y]);

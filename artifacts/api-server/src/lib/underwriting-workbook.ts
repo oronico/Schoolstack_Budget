@@ -313,6 +313,51 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   ws.getCell(r, 2).value = sp.debtIncluded !== false ? "Yes" : "No"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
   const debtIncRow = r;
 
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (gbe && gbp && ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0)) {
+    const METHOD_LABELS: Record<string, string> = { count_days: "Count Days", adm: "ADM (Avg Daily Membership)", ada: "ADA (Avg Daily Attendance)" };
+    const TIMING_LABELS: Record<string, string> = { monthly: "Monthly", quarterly: "Quarterly", annual: "Annual", semi_annual: "Semi-Annual" };
+    r += 2;
+    sec(ws, r, 7); ws.getCell(r, 1).value = "CHARTER FUNDING DETAILS";
+    r++;
+    ws.getCell(r, 1).value = "Enrollment Revenue Method"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = METHOD_LABELS[sp.enrollmentRevenueMethod || "count_days"] || sp.enrollmentRevenueMethod || "Count Days"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r++;
+    ws.getCell(r, 1).value = "Charter Deposit Timing"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = TIMING_LABELS[sp.charterDepositTiming || "monthly"] || sp.charterDepositTiming || "Monthly"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r++;
+    ws.getCell(r, 1).value = "Prior-Year ADM"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = sp.priorYearADM || 0; ws.getCell(r, 2).numFmt = NUM; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r++;
+    ws.getCell(r, 1).value = "Prior-Year ADA"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = sp.priorYearADA || 0; ws.getCell(r, 2).numFmt = NUM; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r += 2;
+    ws.getRow(r).values = ["Per-Pupil Rate", ...yLabels.slice(0, 3).map((_, i) => ["K-5", "6-8", "9-12"][i])];
+    hdr(ws, r, 4);
+    r++;
+    ws.getCell(r, 1).value = "Rate per Student"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = gbp.k5 || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    ws.getCell(r, 3).value = gbp.m68 || 0; ws.getCell(r, 3).numFmt = CUR; dc(ws.getCell(r, 3)); inputCell(ws.getCell(r, 3));
+    ws.getCell(r, 4).value = gbp.h912 || 0; ws.getCell(r, 4).numFmt = CUR; dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
+    r += 2;
+    ws.getRow(r).values = ["Grade-Band Enrollment", ...yLabels];
+    hdr(ws, r, 6);
+    const bands = [
+      { label: "K-5", data: gbe.k5 },
+      { label: "6-8", data: gbe.m68 },
+      { label: "9-12", data: gbe.h912 },
+    ];
+    for (const band of bands) {
+      r++;
+      ws.getCell(r, 1).value = `  ${band.label}`; dc(ws.getCell(r, 1));
+      for (let y = 0; y < 5; y++) {
+        const cell = ws.getCell(r, y + 2);
+        cell.value = band.data?.[y] ?? 0; cell.numFmt = NUM; dc(cell); inputCell(cell);
+      }
+    }
+  }
+
   return { enrollRow, revStartRow, staffStartRow, expStartRow, capStartRow, salaryEscRow, costInflRow, prorationRow, startCashRow, maxCapRow, debtIncRow };
 }
 
@@ -458,7 +503,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
     ws.getCell(r, 1).value = `${rv.lineItem} (${catLabel(rv.category)})`; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
       const students = enrollment[y];
-      const val = computeRevLineItem(rv, y, students, tiers, costInflPct);
+      const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp);
       const sign = rv.category === "tuition_offsets" ? -1 : 1;
       const cell = ws.getCell(r, y + 2);
       cell.value = Math.round(val * sign); cell.numFmt = CUR; dc(cell);
@@ -468,7 +513,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
   r++;
   sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL REVENUE";
   for (let y = 0; y < 5; y++) {
-    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     const cell = ws.getCell(r, y + 2);
     cell.value = Math.round(val); cell.numFmt = CUR; gc(cell); outputCell(cell);
   }
@@ -533,7 +578,7 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
   const tiers = data.tuitionTiers || [];
   const costInflPct = (data.tuitionEscalation?.rate ?? 3);
   for (let y = 0; y < 5; y++) {
-    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     const pf = y === 0 ? prorationFactor : 1;
     const pers = computePersonnelForYear(staffingRows, salaryEsc, pf, y);
     const cell = ws.getCell(r, y + 2);
@@ -580,7 +625,7 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
       r++;
       ws.getCell(r, 1).value = `  ${ex.lineItem}`; dc(ws.getCell(r, 1));
       for (let y = 0; y < 5; y++) {
-        const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+        const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
         let val: number;
         if (ex.driverType === "percent_of_revenue") {
           const esc = resolveEsc(ex.escalationRate, costInflPct);
@@ -596,7 +641,7 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     r++;
     ws.getCell(r, 1).value = `Total ${expCatLabel(cat)}`; bc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+      const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
       let catTotal = 0;
       for (const ex of catRows) {
         if (ex.driverType === "percent_of_revenue") {
@@ -615,7 +660,7 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   r += 2;
   sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL OPERATING EXPENSES";
   for (let y = 0; y < 5; y++) {
-    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     const val = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct);
     const cell = ws.getCell(r, y + 2);
     cell.value = Math.round(val); cell.numFmt = CUR; gc(cell); outputCell(cell);
@@ -700,7 +745,7 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
     r++;
     ws.getCell(r, 1).value = rv.lineItem; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct);
+      const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp);
       const sign = rv.category === "tuition_offsets" ? -1 : 1;
       ws.getCell(r, y + 2).value = Math.round(val * sign); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
     }
@@ -709,14 +754,14 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
   r++;
   sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL REVENUE";
   for (let y = 0; y < 5; y++) {
-    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     ws.getCell(r, y + 2).value = Math.round(val); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2)); outputCell(ws.getCell(r, y + 2));
   }
 
   r += 2;
   ws.getCell(r, 1).value = "Revenue per Student"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
-    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     ws.getCell(r, y + 2).value = enrollment[y] > 0 ? Math.round(rev / enrollment[y]) : 0;
     ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
@@ -803,7 +848,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
     r++;
     ws.getCell(r, 1).value = `  ${rv.lineItem}`; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct);
+      const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp);
       const sign = rv.category === "tuition_offsets" ? -1 : 1;
       const pf = y === 0 ? prorationFactor : 1;
       ws.getCell(r, y + 2).value = Math.round(val * sign * pf); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
@@ -814,7 +859,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   const revByYear: number[] = [];
   for (let y = 0; y < 5; y++) {
     const pf = y === 0 ? prorationFactor : 1;
-    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct) * pf;
+    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp) * pf;
     revByYear.push(val);
     ws.getCell(r, y + 2).value = Math.round(val); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2));
   }
@@ -1013,7 +1058,7 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   ws.getRow(r).values = [...monthLabels, "Annual Total"];
   hdr(ws, r, 14);
 
-  const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct);
+  const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp);
   const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0);
   const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct) * prorationFactor;
   const cd0 = computeCapDebtForYear(capDebtRows, 0, students);

@@ -11,6 +11,28 @@ export type RevenueDriverType = "annual_fixed" | "monthly" | "per_student" | "pe
 
 export type FundingProfile = "tuition_based" | "charter_public_funded" | "hybrid_mixed";
 
+export type EnrollmentRevenueMethod = "count_days" | "adm" | "ada";
+export type CharterDepositTiming = "monthly" | "quarterly" | "semi_annual" | "annual";
+
+export const ENROLLMENT_REVENUE_METHOD_LABELS: Record<EnrollmentRevenueMethod, string> = {
+  count_days: "Count Days (Membership)",
+  adm: "Average Daily Membership (ADM)",
+  ada: "Average Daily Attendance (ADA)",
+};
+
+export const CHARTER_DEPOSIT_TIMING_LABELS: Record<CharterDepositTiming, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  semi_annual: "Semi-Annual",
+  annual: "Annual",
+};
+
+export const GRADE_BAND_LABELS: Record<string, string> = {
+  k5: "K-5 (Elementary)",
+  m68: "6-8 (Middle)",
+  h912: "9-12 (High)",
+};
+
 export type CollectionMethod = "autopay" | "invoiced" | "mixed";
 export type PaymentFrequency = "monthly" | "quarterly" | "semi_annual" | "annual";
 export type PaymentTiming = "upfront" | "arrears";

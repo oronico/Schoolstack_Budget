@@ -47,6 +47,12 @@ interface SchoolProfile {
   hasGeneralLiabilityInsurance?: boolean;
   insuranceCost?: number;
   fundingProfile?: string;
+  gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
+  gradeBandPerPupil?: { k5: number; m68: number; h912: number };
+  enrollmentRevenueMethod?: string;
+  charterDepositTiming?: string;
+  priorYearADM?: number;
+  priorYearADA?: number;
 }
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
@@ -327,13 +333,40 @@ function tuitionWithTiers(gross: number, y: number, students: number, tiers?: Tu
   return total;
 }
 
+function computeGradeBandRevenueFE(sp: SchoolProfile, y: number): number {
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (!gbe || !gbp) return 0;
+  const k5e = gbe.k5?.[y] ?? 0;
+  const m68e = gbe.m68?.[y] ?? 0;
+  const h912e = gbe.h912?.[y] ?? 0;
+  if (k5e + m68e + h912e === 0) return 0;
+  let total = k5e * (gbp.k5 || 0) + m68e * (gbp.m68 || 0) + h912e * (gbp.h912 || 0);
+  if (sp.enrollmentRevenueMethod === "ada") {
+    const adm = sp.priorYearADM || 0;
+    const ada = sp.priorYearADA || 0;
+    total *= adm > 0 ? Math.min(ada / adm, 1) : 0.95;
+  }
+  return total;
+}
+
+function hasGradeBandFE(sp?: SchoolProfile): boolean {
+  if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  return ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0) &&
+    ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+}
+
 function computeRevenueForYear(
-  rows: RevenueRow[], y: number, students: number, tiers?: TuitionTier[], costInflPct?: number
+  rows: RevenueRow[], y: number, students: number, tiers?: TuitionTier[], costInflPct?: number, sp?: SchoolProfile
 ): number {
   const vals = new Map<string, number>();
   for (const r of rows) {
     if (!r.enabled || r.driverType === "percent_of_base") continue;
-    if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers && tiers.length > 0) {
+    if (r.id === "state_local_perpupil" && sp && hasGradeBandFE(sp)) {
+      vals.set(r.id, computeGradeBandRevenueFE(sp, y));
+    } else if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers && tiers.length > 0) {
       let perStudentAmount = r.amounts?.[y] ?? 0;
       if (r.escalationRate !== undefined && r.escalationRate !== 0 && y > 0) {
         perStudentAmount = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
@@ -859,6 +892,52 @@ function buildAssumptions(
     }
   }
 
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (gbe && gbp && ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0)) {
+    const METHOD_LABELS: Record<string, string> = { count_days: "Count Days", adm: "ADM (Avg Daily Membership)", ada: "ADA (Avg Daily Attendance)" };
+    const TIMING_LABELS: Record<string, string> = { monthly: "Monthly", quarterly: "Quarterly", annual: "Annual", semi_annual: "Semi-Annual" };
+    r += 2;
+    sec(ws, r, 7); ws.getCell(r, 1).value = "CHARTER FUNDING DETAILS";
+    r++;
+    ws.getCell(r, 1).value = "Enrollment Revenue Method"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = METHOD_LABELS[sp.enrollmentRevenueMethod || "count_days"] || sp.enrollmentRevenueMethod || "Count Days"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r++;
+    ws.getCell(r, 1).value = "Charter Deposit Timing"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = TIMING_LABELS[sp.charterDepositTiming || "monthly"] || sp.charterDepositTiming || "Monthly"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r++;
+    ws.getCell(r, 1).value = "Prior-Year ADM"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = sp.priorYearADM || 0; ws.getCell(r, 2).numFmt = NUM; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r++;
+    ws.getCell(r, 1).value = "Prior-Year ADA"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = sp.priorYearADA || 0; ws.getCell(r, 2).numFmt = NUM; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r += 2;
+    const yLbls = yearLabels(sp);
+    ws.getRow(r).values = ["Per-Pupil Rate", "K-5", "6-8", "9-12"];
+    hdr(ws, r, 4);
+    r++;
+    ws.getCell(r, 1).value = "Rate per Student"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = gbp.k5 || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    ws.getCell(r, 3).value = gbp.m68 || 0; ws.getCell(r, 3).numFmt = CUR; dc(ws.getCell(r, 3)); inputCell(ws.getCell(r, 3));
+    ws.getCell(r, 4).value = gbp.h912 || 0; ws.getCell(r, 4).numFmt = CUR; dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
+    r += 2;
+    ws.getRow(r).values = ["Grade-Band Enrollment", ...yLbls];
+    hdr(ws, r, 6);
+    const bands = [
+      { label: "K-5", data: gbe.k5 },
+      { label: "6-8", data: gbe.m68 },
+      { label: "9-12", data: gbe.h912 },
+    ];
+    for (const band of bands) {
+      r++;
+      ws.getCell(r, 1).value = `  ${band.label}`; dc(ws.getCell(r, 1));
+      for (let y = 0; y < 5; y++) {
+        const cell = ws.getCell(r, y + 2);
+        cell.value = band.data?.[y] ?? 0; cell.numFmt = NUM; dc(cell); inputCell(cell);
+      }
+    }
+  }
+
   r += 2;
   ws.mergeCells(r, 1, r, 7);
   ws.getCell(r, 1).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
@@ -946,7 +1025,7 @@ function buildFiveYearModel(
       if (rv.driverType === "percent_of_base") {
         const baseRow = revenueRows.findIndex(rr => rr.id === rv.percentBase);
         if (baseRow >= 0) {
-          const baseVal = computeRevLineItem(revenueRows[baseRow], y, students, tiers, costInflPct);
+          const baseVal = computeRevLineItem(revenueRows[baseRow], y, students, tiers, costInflPct, sp);
           let pctVal = rv.amounts?.[y] ?? 0;
           if (rv.escalationRate && rv.escalationRate !== 0 && y > 0) {
             pctVal = (rv.amounts?.[0] ?? 0) * Math.pow(1 + rv.escalationRate / 100, y);
@@ -956,7 +1035,7 @@ function buildFiveYearModel(
           val = 0;
         }
       } else {
-        val = computeRevLineItem(rv, y, students, tiers, costInflPct);
+        val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp);
       }
 
       if (rv.category === "tuition_offsets") val = -Math.abs(val);
@@ -972,7 +1051,7 @@ function buildFiveYearModel(
   r++; sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL REVENUE";
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    const totalRev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+    const totalRev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     const pf = y === 0 ? prorationFactor : 1;
     setFormula(cell, `SUM(${cn(revFirstRow, y + 2)}:${cn(r - 1, y + 2)})`, Math.round(totalRev * pf));
     cell.numFmt = CUR; gc(cell);
@@ -1036,7 +1115,7 @@ function buildFiveYearModel(
         const cell = ws.getCell(r, y + 2);
         const students = enrollment[y];
         const pf = y === 0 ? prorationFactor : 1;
-        const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct);
+        const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct, sp);
         let val: number;
         if (ex.driverType === "percent_of_revenue") {
           const esc = resolveEsc(ex.escalationRate, costInflPct);
@@ -1064,7 +1143,7 @@ function buildFiveYearModel(
       } else {
         const students = enrollment[y];
         const pf = y === 0 ? prorationFactor : 1;
-        const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct);
+        const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct, sp);
         let catSum = 0;
         for (const ex of catRows) {
           if (ex.driverType === "percent_of_revenue") {
@@ -1092,7 +1171,7 @@ function buildFiveYearModel(
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     const students = enrollment[y];
-    const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct);
+    const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct, sp);
     const pf = y === 0 ? prorationFactor : 1;
     const expVal = computeExpenseForYear(expenseRows, y, students, rev, costInflPct) * pf;
     const sumParts = opexCatTotalRows.map(tr => cn(tr, y + 2)).join("+");
@@ -1146,7 +1225,7 @@ function buildFiveYearModel(
 
   for (let y = 0; y < yc; y++) {
     const pf = y === 0 ? prorationFactor : 1;
-    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     const pers = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
     const exp = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct) * pf;
     const cd = computeCapDebtForYear(capDebtRows, y, enrollment[y]);
@@ -1433,9 +1512,12 @@ function buildFiveYearModel(
   };
 }
 
-function computeRevLineItem(rv: RevenueRow, y: number, students: number, tiers: TuitionTier[], costInflPct: number): number {
+function computeRevLineItem(rv: RevenueRow, y: number, students: number, tiers: TuitionTier[], costInflPct: number, sp?: SchoolProfile): number {
   if (rv.driverType === "percent_of_base") return 0;
 
+  if (rv.id === "state_local_perpupil" && sp && hasGradeBandFE(sp)) {
+    return computeGradeBandRevenueFE(sp, y);
+  }
   if (rv.id === "gross_tuition" && rv.driverType === "per_student" && tiers && tiers.length > 0) {
     let perStudentAmount = rv.amounts?.[y] ?? 0;
     if (rv.escalationRate !== undefined && rv.escalationRate !== 0 && y > 0) {
@@ -1496,7 +1578,7 @@ function buildProForma(
   for (const rv of revenueRows) {
     r++;
     ws.getCell(r, 1).value = rv.lineItem || "Unnamed"; dc(ws.getCell(r, 1));
-    const annualVal = computeRevLineItem(rv, 0, students, tiers, costInflPct);
+    const annualVal = computeRevLineItem(rv, 0, students, tiers, costInflPct, sp);
     const isOffset = rv.category === "tuition_offsets";
     const effectiveAnnual = isOffset ? -Math.abs(annualVal) : annualVal;
     const perMonth = effectiveAnnual / (opMonths || 12);
@@ -1576,7 +1658,7 @@ function buildProForma(
   r++; sec(ws, r, 14); ws.getCell(r, 1).value = "OPERATING EXPENSES";
   const pfOpexFirstRow = r + 1;
 
-  const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct);
+  const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp);
   const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct) * prorationFactor;
   const monthlyOps = opex0 / (opMonths || 12);
 
@@ -1798,8 +1880,8 @@ function buildActualsVsProjections(
   ws.getRow(r).values = colHeaders;
   hdr(ws, r, cols);
 
-  const rev0 = computeRevenueForYear(revenueRows, 0, enrollment[0], tiers, costInflPct);
-  const rev1 = computeRevenueForYear(revenueRows, 1, enrollment[1], tiers, costInflPct);
+  const rev0 = computeRevenueForYear(revenueRows, 0, enrollment[0], tiers, costInflPct, sp);
+  const rev1 = computeRevenueForYear(revenueRows, 1, enrollment[1], tiers, costInflPct, sp);
   const pf = prorationFactor;
   const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0);
   const pers1 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 1);
