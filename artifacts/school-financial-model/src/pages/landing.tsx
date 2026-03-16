@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Link } from "wouter";
 import {
   Calculator,
@@ -11,7 +12,10 @@ import {
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { motion } from "framer-motion";
-import { SampleModelShowcase } from "@/components/landing/SampleModelShowcase";
+
+const SampleModelShowcase = lazy(() =>
+  import("@/components/landing/SampleModelShowcase").then(m => ({ default: m.SampleModelShowcase }))
+);
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -128,7 +132,9 @@ export function LandingPage() {
       </section>
 
       <div id="sample-model">
-        <SampleModelShowcase />
+        <Suspense fallback={<div className="py-24 bg-white" />}>
+          <SampleModelShowcase />
+        </Suspense>
       </div>
 
       <section className="py-24 bg-[#FAF9F7]">

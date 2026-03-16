@@ -44,10 +44,31 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-charts": ["recharts"],
-          "vendor-motion": ["framer-motion"],
-          "vendor-forms": ["react-hook-form", "@hookform/resolvers"],
+        manualChunks(id) {
+          if (id.includes("recharts") || id.includes("d3-")) {
+            return "vendor-charts";
+          }
+          if (id.includes("framer-motion")) {
+            return "vendor-motion";
+          }
+          if (id.includes("react-hook-form") || id.includes("@hookform")) {
+            return "vendor-forms";
+          }
+          if (id.includes("@radix-ui")) {
+            return "vendor-radix";
+          }
+          if (id.includes("@tanstack")) {
+            return "vendor-query";
+          }
+          if (id.includes("lucide-react")) {
+            return "vendor-icons";
+          }
+          if (id.includes("date-fns")) {
+            return "vendor-date";
+          }
+          if (id.includes("zod")) {
+            return "vendor-zod";
+          }
         },
       },
     },
