@@ -88,10 +88,18 @@ export interface RevenueRowData {
   receiptQuarter?: 1 | 2 | 3 | 4;
 }
 
+const DEPOSIT_TIMING_TO_FREQUENCY: Record<string, PaymentFrequency> = {
+  monthly: "monthly",
+  quarterly: "quarterly",
+  semi_annual: "semi_annual",
+  annual: "annual",
+};
+
 export function getTimingDefaults(
   category: RevenueCategory,
   fundingProfile: FundingProfile,
-  itemId?: string
+  itemId?: string,
+  charterDepositTiming?: CharterDepositTiming
 ): Partial<RevenueRowData> {
   switch (category) {
     case "tuition_and_fees":
@@ -111,11 +119,15 @@ export function getTimingDefaults(
         collectionRate: 100,
         collectionDelayDays: 0,
       };
-    case "public_funding":
+    case "public_funding": {
+      const freq = charterDepositTiming
+        ? (DEPOSIT_TIMING_TO_FREQUENCY[charterDepositTiming] || "quarterly")
+        : (fundingProfile === "charter_public_funded" ? "quarterly" : "monthly");
       return {
-        paymentFrequency: fundingProfile === "charter_public_funded" ? "quarterly" : "monthly",
+        paymentFrequency: freq,
         paymentTiming: fundingProfile === "charter_public_funded" ? "arrears" : "upfront",
       };
+    }
     case "school_choice":
       return {
         disbursementType: "direct",
@@ -326,7 +338,8 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
 
 export function generateDefaultRevenueRows(
   fundingProfile: FundingProfile,
-  yearCount: number = 5
+  yearCount: number = 5,
+  charterDepositTiming?: CharterDepositTiming
 ): RevenueRowData[] {
   return LINE_ITEM_CATALOG
     .filter((item) => item.enabledFor.includes(fundingProfile))
@@ -338,7 +351,7 @@ export function generateDefaultRevenueRows(
       driverType: item.driverType,
       amounts: new Array(yearCount).fill(0),
       ...(item.id === "scholarships_aid" ? { percentBase: "gross_tuition" } : {}),
-      ...getTimingDefaults(item.category, fundingProfile, item.id),
+      ...getTimingDefaults(item.category, fundingProfile, item.id, charterDepositTiming),
     }));
 }
 

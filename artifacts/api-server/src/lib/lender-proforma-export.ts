@@ -267,15 +267,29 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   const esaRows = revenueRows.filter(r =>
     r.enabled && (r.category === "public_funding" || r.category === "school_choice") && r.driverType === "per_student"
   );
-  let esaTotal = 0;
-  for (const row of esaRows) esaTotal += (row.amounts?.[0] ?? 0);
-  result.esaPerStudentY1 = esaTotal;
-  if (esaRows.length > 0 && esaTotal > 0) {
-    let esaY2 = 0;
-    for (const row of esaRows) esaY2 += (row.amounts?.[1] ?? row.amounts?.[0] ?? 0);
-    result.esaGrowthPct = esaTotal > 0 ? (esaY2 - esaTotal) / esaTotal : 0;
+  if (hasGradeBandDataLocal(sp as SchoolProfile)) {
+    const gbRevY1 = computeGradeBandRevenueLocal(sp as SchoolProfile, 0);
+    const nonGbEsa = esaRows.filter(r => r.id !== "state_local_perpupil");
+    let nonGbTotal = 0;
+    for (const row of nonGbEsa) nonGbTotal += (row.amounts?.[0] ?? 0);
+    const totalEsaY1 = enrollY1 > 0 ? (gbRevY1 / enrollY1) + nonGbTotal : nonGbTotal;
+    result.esaPerStudentY1 = totalEsaY1;
+    const gbRevY2 = computeGradeBandRevenueLocal(sp as SchoolProfile, 1);
+    let nonGbY2 = 0;
+    for (const row of nonGbEsa) nonGbY2 += (row.amounts?.[1] ?? row.amounts?.[0] ?? 0);
+    const totalEsaY2 = enrollY2 > 0 ? (gbRevY2 / enrollY2) + nonGbY2 : nonGbY2;
+    result.esaGrowthPct = totalEsaY1 > 0 ? (totalEsaY2 - totalEsaY1) / totalEsaY1 : 0;
   } else {
-    result.esaGrowthPct = 0;
+    let esaTotal = 0;
+    for (const row of esaRows) esaTotal += (row.amounts?.[0] ?? 0);
+    result.esaPerStudentY1 = esaTotal;
+    if (esaRows.length > 0 && esaTotal > 0) {
+      let esaY2 = 0;
+      for (const row of esaRows) esaY2 += (row.amounts?.[1] ?? row.amounts?.[0] ?? 0);
+      result.esaGrowthPct = esaTotal > 0 ? (esaY2 - esaTotal) / esaTotal : 0;
+    } else {
+      result.esaGrowthPct = 0;
+    }
   }
 
   const otherEarnedRows = revenueRows.filter(r =>

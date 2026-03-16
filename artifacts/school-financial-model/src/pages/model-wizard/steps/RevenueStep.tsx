@@ -257,7 +257,8 @@ export function RevenueStep() {
     } else if (formRows !== undefined && Array.isArray(formRows) && formRows.length === 0 && defaultsApplied) {
       setRows([]);
     } else if (!defaultsApplied) {
-      const defaults = generateDefaultRevenueRows(fundingProfile, yearCount);
+      const depositTiming = watch("schoolProfile.charterDepositTiming") as CharterDepositTiming | undefined;
+      const defaults = generateDefaultRevenueRows(fundingProfile, yearCount, depositTiming);
       setRows(defaults);
       const enabledCats = deriveEnabledCategories(defaults);
       setExpandedCategories(enabledCats);
@@ -381,6 +382,17 @@ export function RevenueStep() {
     () => computeMonthlyCashInflow(rows, 0, y1Students),
     [rows, y1Students]
   );
+
+  const gradeBandActive = useMemo(() => {
+    const gbe = watch("schoolProfile.gradeBandEnrollment");
+    const gbp = watch("schoolProfile.gradeBandPerPupil");
+    if (!gbe || !gbp) return false;
+    const hasEnrollment = [gbe.k5, gbe.m68, gbe.h912].some(
+      (arr: number[] | undefined) => arr && arr.some((v: number) => (v ?? 0) > 0),
+    );
+    const hasRates = (gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0;
+    return hasEnrollment && hasRates;
+  }, [watch("schoolProfile.gradeBandEnrollment"), watch("schoolProfile.gradeBandPerPupil")]);
 
   const hasAnyRevenue = rows.some((r) => r.enabled && r.amounts[0] > 0);
 
@@ -759,6 +771,8 @@ export function RevenueStep() {
                     onTimingChange={(field, val) => updateTimingField(row.id, field, val)}
                     onRemove={() => removeRow(row.id)}
                     y1Students={y1Students}
+                    locked={row.id === "state_local_perpupil" && gradeBandActive}
+                    lockedMessage="This amount is computed from your grade-band enrollment and per-pupil rates above. Edit those inputs to change funding."
                   />
                 ))}
 
@@ -792,6 +806,8 @@ interface RevenueLineItemProps {
   onTimingChange: (field: string, value: unknown) => void;
   onRemove: () => void;
   y1Students?: number;
+  locked?: boolean;
+  lockedMessage?: string;
 }
 
 function RevenueLineItem({
@@ -804,6 +820,8 @@ function RevenueLineItem({
   onTimingChange,
   onRemove,
   y1Students = 0,
+  locked = false,
+  lockedMessage,
 }: RevenueLineItemProps) {
   const [showTiming, setShowTiming] = useState(false);
 
@@ -883,7 +901,14 @@ function RevenueLineItem({
         </div>
       </div>
 
-      {row.enabled && (
+      {row.enabled && locked && lockedMessage && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 flex items-start gap-2 mb-2">
+          <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+          <span>{lockedMessage}</span>
+        </div>
+      )}
+
+      {row.enabled && !locked && (
         <>
           <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
             {Array.from({ length: yearCount }).map((_, yi) => (
