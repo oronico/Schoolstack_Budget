@@ -17,7 +17,7 @@ import { generateWorkbook } from "../lib/excel-export";
 import { generateProFormaPDF } from "../lib/pdf-proforma";
 import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
-import { generateUnderwritingWorkbook } from "../lib/underwriting-export";
+import { generateUnderwritingWorkbook, generateSingleYearBudget } from "../lib/underwriting-export";
 import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine } from "../lib/consultant-engine";
 
@@ -493,6 +493,51 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
   } catch (err) {
     console.error("Underwriting export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Underwriting Pro Forma workbook." });
+  }
+});
+
+router.get("/models/:id/export/single-year", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    const rawYear = parseInt(req.query.year as string || "0", 10);
+    const yearIndex = isNaN(rawYear) ? 0 : Math.max(0, Math.min(rawYear, 4));
+    const data = model.data as Record<string, unknown>;
+    const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
+    const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
+
+    const buffer = await generateSingleYearBudget(data, yearIndex);
+
+    await db.insert(exportsTable).values({
+      userId: req.userId!,
+      modelId: model.id,
+      format: "xlsx",
+    });
+
+    await trackEvent("exported_single_year", req.userId, { modelId: model.id, year: yearIndex + 1 });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Year_${yearIndex + 1}_Budget.xlsx"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error("Single-year budget export error:", err);
+    res.status(500).json({ error: "Something went wrong generating the single-year budget." });
   }
 });
 

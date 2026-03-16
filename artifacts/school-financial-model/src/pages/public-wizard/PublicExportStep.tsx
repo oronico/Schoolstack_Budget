@@ -1,21 +1,28 @@
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { Download, Loader2, PartyPopper, ArrowRight, ClipboardCheck } from "lucide-react";
+import { Download, Loader2, PartyPopper, ArrowRight, ClipboardCheck, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { getPublicExportUnderwritingUrl } from "@workspace/api-client-react";
 
+type ExportMode = "5year" | "singleYear";
+
 export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: number) => void; modelId: number | null }) {
-  const [loading, setLoading] = useState(false);
-  const [exported, setExported] = useState(false);
+  const [loading, setLoading] = useState<ExportMode | null>(null);
+  const [exported, setExported] = useState<Set<ExportMode>>(new Set());
+  const [singleYearIndex, setSingleYearIndex] = useState(0);
   const { getValues } = useFormContext();
 
-  const handleDownload = async () => {
+  const handleDownload = async (mode: ExportMode) => {
     if (loading) return;
-    setLoading(true);
+    setLoading(mode);
 
     try {
       const data = getValues();
-      const res = await fetch(getPublicExportUnderwritingUrl(), {
+      const url = mode === "singleYear"
+        ? `/api/public/export-single-year?year=${singleYearIndex}`
+        : getPublicExportUnderwritingUrl();
+
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -26,28 +33,33 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
-      const filename = filenameMatch?.[1] || "SchoolStack_Underwriting_Pro_Forma.xlsx";
-      const url = window.URL.createObjectURL(blob);
+      const fallback = mode === "singleYear"
+        ? `Year_${singleYearIndex + 1}_Budget.xlsx`
+        : "SchoolStack_Underwriting_Pro_Forma.xlsx";
+      const filename = filenameMatch?.[1] || fallback;
+      const urlObj = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = urlObj;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(urlObj);
       a.remove();
-      setExported(true);
+      setExported(prev => new Set(prev).add(mode));
     } catch (e) {
       console.error(e);
       alert("Failed to export. Please try again.");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   };
+
+  const anyExported = exported.size > 0;
 
   return (
     <div className="text-center py-12 px-4">
       <div className="mx-auto w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-8">
-        {exported ? (
+        {anyExported ? (
           <PartyPopper className="h-12 w-12 text-primary" />
         ) : (
           <Download className="h-12 w-12 text-primary" />
@@ -55,34 +67,62 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
       </div>
 
       <h2 className="font-display text-4xl font-bold text-foreground mb-4">
-        {exported ? "Your workbook is ready!" : "Ready to export your model?"}
+        {anyExported ? "Your workbook is ready!" : "Ready to export your model?"}
       </h2>
 
       <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
-        {exported
-          ? "Check your downloads folder. Your 14-tab underwriting workbook is fully formatted and lender-ready."
-          : "Download your financial model as a comprehensive 14-tab Excel underwriting workbook — ready for lender meetings."}
+        {anyExported
+          ? "Check your downloads folder. Your workbook is fully formatted and lender-ready."
+          : "Download your financial model as a comprehensive Excel workbook — ready for lender meetings."}
       </p>
 
-      <div className="max-w-sm mx-auto mb-8">
+      <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <button
-          onClick={handleDownload}
-          disabled={loading}
-          className="group w-full bg-white rounded-2xl border border-border/60 shadow-sm p-6 flex flex-col items-center gap-3 transition-all hover:shadow-lg hover:-translate-y-1 disabled:opacity-50 disabled:transform-none disabled:cursor-not-allowed"
+          onClick={() => handleDownload("5year")}
+          disabled={loading !== null && loading !== "5year"}
+          className="group bg-white rounded-2xl border border-border/60 shadow-sm p-6 flex flex-col items-center gap-3 transition-all hover:shadow-lg hover:-translate-y-1 disabled:opacity-50 disabled:transform-none disabled:cursor-not-allowed"
         >
-          <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${exported ? "bg-green-100 text-green-600" : "bg-primary/10 text-primary group-hover:bg-primary/20"}`}>
-            {loading ? <Loader2 className="h-7 w-7 animate-spin" /> : <ClipboardCheck className="h-7 w-7" />}
+          <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${exported.has("5year") ? "bg-green-100 text-green-600" : "bg-primary/10 text-primary group-hover:bg-primary/20"}`}>
+            {loading === "5year" ? <Loader2 className="h-7 w-7 animate-spin" /> : <ClipboardCheck className="h-7 w-7" />}
           </div>
           <span className="font-display font-bold text-sm text-foreground">
-            {exported ? "Underwriting Pro Forma ✓" : "Underwriting Pro Forma"}
+            {exported.has("5year") ? "5-Year Model ✓" : "5-Year Underwriting Model"}
           </span>
           <span className="text-xs text-muted-foreground leading-snug">
-            14-tab workbook with DSCR, covenants & balance sheet
+            14-tab workbook with DSCR, covenants, balance sheet & interactive formulas
           </span>
           <span className="mt-auto text-xs font-semibold text-primary group-hover:text-primary/80 transition-colors">
-            {loading ? "Generating..." : exported ? "Download Again" : "Download"}
+            {loading === "5year" ? "Generating..." : exported.has("5year") ? "Download Again" : "Download"}
           </span>
         </button>
+
+        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 flex flex-col items-center gap-3">
+          <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${exported.has("singleYear") ? "bg-green-100 text-green-600" : "bg-amber-50 text-amber-600"}`}>
+            {loading === "singleYear" ? <Loader2 className="h-7 w-7 animate-spin" /> : <Calendar className="h-7 w-7" />}
+          </div>
+          <span className="font-display font-bold text-sm text-foreground">
+            {exported.has("singleYear") ? "Single-Year Budget ✓" : "Single-Year Budget"}
+          </span>
+          <span className="text-xs text-muted-foreground leading-snug">
+            Monthly budget with Jul–Jun columns for one year
+          </span>
+          <select
+            value={singleYearIndex}
+            onChange={(e) => setSingleYearIndex(Number(e.target.value))}
+            className="w-full mt-1 px-3 py-1.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            {[0, 1, 2, 3, 4].map(i => (
+              <option key={i} value={i}>Year {i + 1}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => handleDownload("singleYear")}
+            disabled={loading !== null && loading !== "singleYear"}
+            className="mt-auto text-xs font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading === "singleYear" ? "Generating..." : exported.has("singleYear") ? "Download Again" : "Download"}
+          </button>
+        </div>
       </div>
 
       <p className="text-sm text-muted-foreground mb-4">
@@ -95,7 +135,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
         Create a Free Account <ArrowRight className="h-4 w-4" />
       </Link>
 
-      {exported && (
+      {anyExported && (
         <div className="mt-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="bg-accent/10 border border-accent/20 rounded-3xl p-8 max-w-xl mx-auto">
             <h3 className="font-display font-bold text-2xl text-foreground mb-3">Looking for capital?</h3>

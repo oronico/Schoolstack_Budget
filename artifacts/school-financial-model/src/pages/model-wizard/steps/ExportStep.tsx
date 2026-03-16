@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { getExportModelUrl, getExportProFormaPdfUrl, getExportLoanReadinessPdfUrl, getExportLenderProformaUrl, getExportUnderwritingUrl } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, FileText, ShieldCheck, Landmark, ClipboardCheck } from "lucide-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, FileText, ShieldCheck, Landmark, ClipboardCheck, Calendar } from "lucide-react";
 import { Link } from "wouter";
 
-type ExportType = "xlsx" | "proforma" | "loanReadiness" | "lenderProforma" | "underwriting";
+type ExportType = "xlsx" | "proforma" | "loanReadiness" | "lenderProforma" | "underwriting" | "singleYear";
 
 export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
   const [loading, setLoading] = useState<ExportType | null>(null);
   const [exported, setExported] = useState<Set<ExportType>>(new Set());
+  const [singleYearIndex, setSingleYearIndex] = useState(0);
 
   const handleDownload = async (type: ExportType) => {
     if (!modelId || loading) return;
@@ -20,6 +21,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         loanReadiness: getExportLoanReadinessPdfUrl(modelId),
         lenderProforma: getExportLenderProformaUrl(modelId),
         underwriting: getExportUnderwritingUrl(modelId),
+        singleYear: `/api/models/${modelId}/export/single-year?year=${singleYearIndex}`,
       };
 
       const token = localStorage.getItem('auth_token');
@@ -38,6 +40,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         loanReadiness: `Loan_Readiness_Report_${modelId}.pdf`,
         lenderProforma: `Lender_Pro_Forma_${modelId}.xlsx`,
         underwriting: `Underwriting_Pro_Forma_${modelId}.xlsx`,
+        singleYear: `Year_${singleYearIndex + 1}_Budget_${modelId}.xlsx`,
       };
       const filename = filenameMatch?.[1] || fallbackNames[type];
       const url = window.URL.createObjectURL(blob);
@@ -80,16 +83,43 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           : "Download your financial model as an Excel workbook or polished PDF reports — ready for lender meetings."}
       </p>
 
-      <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <ExportCard
-          icon={<FileSpreadsheet className="h-7 w-7" />}
-          title="Excel Workbook"
-          description="Full model with formulas across all tabs"
-          isLoading={loading === "xlsx"}
-          isExported={exported.has("xlsx")}
-          disabled={loading !== null && loading !== "xlsx"}
-          onClick={() => handleDownload("xlsx")}
+          icon={<ClipboardCheck className="h-7 w-7" />}
+          title="5-Year Underwriting Model"
+          description="14-tab workbook with DSCR, covenants, balance sheet & interactive formulas"
+          isLoading={loading === "underwriting"}
+          isExported={exported.has("underwriting")}
+          disabled={loading !== null && loading !== "underwriting"}
+          onClick={() => handleDownload("underwriting")}
         />
+        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 flex flex-col items-center gap-3">
+          <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${exported.has("singleYear") ? "bg-green-100 text-green-600" : "bg-amber-50 text-amber-600"}`}>
+            {loading === "singleYear" ? <Loader2 className="h-7 w-7 animate-spin" /> : <Calendar className="h-7 w-7" />}
+          </div>
+          <span className="font-display font-bold text-sm text-foreground">
+            {exported.has("singleYear") ? "Single-Year Budget ✓" : "Single-Year Budget"}
+          </span>
+          <span className="text-xs text-muted-foreground leading-snug">
+            Monthly budget with Jul–Jun columns for one year
+          </span>
+          <select
+            value={singleYearIndex}
+            onChange={(e) => setSingleYearIndex(Number(e.target.value))}
+            className="w-full mt-1 px-3 py-1.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            {[0, 1, 2, 3, 4].map(i => (
+              <option key={i} value={i}>Year {i + 1}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => handleDownload("singleYear")}
+            disabled={loading !== null && loading !== "singleYear"}
+            className="mt-auto text-xs font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading === "singleYear" ? "Generating..." : exported.has("singleYear") ? "Download Again" : "Download"}
+          </button>
+        </div>
         <ExportCard
           icon={<Landmark className="h-7 w-7" />}
           title="Lender Pro Forma"
@@ -100,13 +130,13 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           onClick={() => handleDownload("lenderProforma")}
         />
         <ExportCard
-          icon={<ClipboardCheck className="h-7 w-7" />}
-          title="Underwriting Pro Forma"
-          description="14-tab workbook with DSCR, covenants & balance sheet"
-          isLoading={loading === "underwriting"}
-          isExported={exported.has("underwriting")}
-          disabled={loading !== null && loading !== "underwriting"}
-          onClick={() => handleDownload("underwriting")}
+          icon={<FileSpreadsheet className="h-7 w-7" />}
+          title="Excel Workbook"
+          description="Full model with formulas across all tabs"
+          isLoading={loading === "xlsx"}
+          isExported={exported.has("xlsx")}
+          disabled={loading !== null && loading !== "xlsx"}
+          onClick={() => handleDownload("xlsx")}
         />
         <ExportCard
           icon={<FileText className="h-7 w-7" />}
