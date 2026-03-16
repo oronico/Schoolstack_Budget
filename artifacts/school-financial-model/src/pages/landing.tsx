@@ -49,8 +49,8 @@ export function LandingPage() {
               <p className="text-lg text-[#1E293B]/60 mb-10 leading-relaxed max-w-2xl">
                 Budgeting and financial modeling can be overwhelming — but it
                 doesn't have to be. Build a clear, lender-ready 5-year model
-                that reflects your mission, your values, and your plan. No
-                finance degree required.
+                that reflects your mission, your values, and your plan in under
+                an hour. No finance degree required.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -239,8 +239,8 @@ export function LandingPage() {
             </h2>
             <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
               You decided to build a school. Let's make sure the financial story
-              matches the vision. Start your 5-year model today — it takes about
-              15 minutes.
+              matches the vision. Start your 5-year model today — it takes less
+              than an hour.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
