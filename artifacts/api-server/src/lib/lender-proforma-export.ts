@@ -660,6 +660,6 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
 
   polishLenderWorkbook(workbook, String(input.schoolName || ""));
 
-  const buffer = await workbook.outputAsync();
-  return Buffer.from(buffer);
+  const buffer = await workbook.outputAsync("nodebuffer");
+  return buffer;
 }
