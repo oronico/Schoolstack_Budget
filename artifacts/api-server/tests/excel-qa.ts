@@ -328,18 +328,7 @@ function runUnderwritingV2TieOuts(wb: ExcelJS.Workbook): TestResult[] {
       if (bsCash !== null) break;
     }
     if (endingCash !== null && bsCash !== null) {
-      const diff = Math.abs(endingCash - bsCash);
-      const pctDiff = Math.abs(endingCash) > 0 ? (diff / Math.abs(endingCash)) * 100 : 0;
-      const exact = diff < 100;
-      results.push({
-        name: "Cash Flow Ending → Balance Sheet Cash (Y1)",
-        passed: true,
-        details: [
-          `Ending Cash: ${Math.round(endingCash)}, BS Cash: ${Math.round(bsCash)}, Diff: ${Math.round(diff)} (${pctDiff.toFixed(1)}%)`,
-          exact ? "Exact match" : "⚠ Discrepancy — monthly CF vs annual BS may use different opening balances (known issue for startup-heavy models)",
-        ],
-        errors: [],
-      });
+      results.push(tieOutCheck("Cash Flow Ending → Balance Sheet Cash (Y1)", endingCash, bsCash, 2));
     } else {
       results.push({
         name: "Cash Flow Ending → Balance Sheet Cash (Y1)",

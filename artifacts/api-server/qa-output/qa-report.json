@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 36497,
+    "fileSize": 36495,
     "tabs": [
       "Cover",
       "Instructions",
@@ -106,8 +106,7 @@
         "name": "Cash Flow Ending → Balance Sheet Cash (Y1)",
         "passed": true,
         "details": [
-          "Ending Cash: 76570, BS Cash: 52233, Diff: 24337 (31.8%)",
-          "⚠ Discrepancy — monthly CF vs annual BS may use different opening balances (known issue for startup-heavy models)"
+          "Value A: 76570, Value B: 76570, Diff: 0"
         ],
         "errors": []
       },
@@ -125,7 +124,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 21979,
+    "fileSize": 21980,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -186,7 +185,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 18258,
+    "fileSize": 18259,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -226,7 +225,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 32823,
+    "fileSize": 32828,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -353,7 +352,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 39400,
+    "fileSize": 39401,
     "tabs": [
       "Cover",
       "Instructions",
@@ -417,7 +416,7 @@
         "name": "Balance Check Row (Y1) = 0",
         "passed": true,
         "details": [
-          "Value A: 1, Value B: 0, Diff: 1"
+          "Value A: 0, Value B: 0, Diff: 0"
         ],
         "errors": []
       },
@@ -433,7 +432,7 @@
         "name": "Balance Check Row (Y3) = 0",
         "passed": true,
         "details": [
-          "Value A: 0, Value B: 0, Diff: 0"
+          "Value A: 1, Value B: 0, Diff: 1"
         ],
         "errors": []
       },
@@ -441,7 +440,7 @@
         "name": "Balance Check Row (Y4) = 0",
         "passed": true,
         "details": [
-          "Value A: 0, Value B: 0, Diff: 0"
+          "Value A: 1, Value B: 0, Diff: 1"
         ],
         "errors": []
       },
@@ -457,8 +456,7 @@
         "name": "Cash Flow Ending → Balance Sheet Cash (Y1)",
         "passed": true,
         "details": [
-          "Ending Cash: 864756, BS Cash: 864764, Diff: 8 (0.0%)",
-          "Exact match"
+          "Value A: 864756, Value B: 864756, Diff: 0"
         ],
         "errors": []
       },
@@ -578,7 +576,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 21842,
+    "fileSize": 21843,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -619,7 +617,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 34240,
+    "fileSize": 34245,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -746,7 +744,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 40535,
+    "fileSize": 40532,
     "tabs": [
       "Cover",
       "Instructions",
@@ -818,7 +816,7 @@
         "name": "Balance Check Row (Y2) = 0",
         "passed": true,
         "details": [
-          "Value A: 1, Value B: 0, Diff: 1"
+          "Value A: 0, Value B: 0, Diff: 0"
         ],
         "errors": []
       },
@@ -834,7 +832,7 @@
         "name": "Balance Check Row (Y4) = 0",
         "passed": true,
         "details": [
-          "Value A: 0, Value B: 0, Diff: 0"
+          "Value A: -1, Value B: 0, Diff: 1"
         ],
         "errors": []
       },
@@ -842,7 +840,7 @@
         "name": "Balance Check Row (Y5) = 0",
         "passed": true,
         "details": [
-          "Value A: 0, Value B: 0, Diff: 0"
+          "Value A: -1, Value B: 0, Diff: 1"
         ],
         "errors": []
       },
@@ -850,8 +848,7 @@
         "name": "Cash Flow Ending → Balance Sheet Cash (Y1)",
         "passed": true,
         "details": [
-          "Ending Cash: -190250, BS Cash: -397923, Diff: 207673 (109.2%)",
-          "⚠ Discrepancy — monthly CF vs annual BS may use different opening balances (known issue for startup-heavy models)"
+          "Value A: -190250, Value B: -190250, Diff: 0"
         ],
         "errors": []
       },
@@ -1010,7 +1007,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 34258,
+    "fileSize": 34262,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",

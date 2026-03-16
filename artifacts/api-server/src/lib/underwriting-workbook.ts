@@ -1289,7 +1289,7 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
   return { debtByYear, interestByYear, principalByYear, balanceByYear };
 }
 
-function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: number[], balanceByYear: number[], startingCash: number) {
+function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: number[], balanceByYear: number[], startingCash: number, endingCashY1?: number) {
   const ws = wb.addWorksheet("Balance Sheet");
   const sp = data.schoolProfile || {};
   const yLabels = yearLabels(sp.openingYear);
@@ -1314,10 +1314,19 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   const openAP = ob.accountsPayable ?? 0;
 
   const cashByYear: number[] = [];
-  let cumNI = 0;
-  for (let y = 0; y < 5; y++) {
-    cumNI += niByYear[y];
-    cashByYear.push(openCash + cumNI);
+  if (endingCashY1 !== undefined) {
+    cashByYear.push(endingCashY1);
+    let cumNI = 0;
+    for (let y = 1; y < 5; y++) {
+      cumNI += niByYear[y];
+      cashByYear.push(endingCashY1 + cumNI);
+    }
+  } else {
+    let cumNI = 0;
+    for (let y = 0; y < 5; y++) {
+      cumNI += niByYear[y];
+      cashByYear.push(openCash + cumNI);
+    }
   }
 
   r++;
@@ -1817,11 +1826,11 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   const { revByYear, persByYear, opexByYear, cdByYear } = buildBudgetDetail(wb, data, enrollment, salaryEsc, costInflPct, prorationFactor);
   const { niByYear } = buildBudgetSummary(wb, data, enrollment, revByYear, persByYear, opexByYear, cdByYear);
 
-  buildMonthlyCashFlowY1(wb, data, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
+  const { endingCashY1 } = buildMonthlyCashFlowY1(wb, data, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
   buildOperatingStatement(wb, data, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear);
 
   const { debtByYear: debtServiceByYear, balanceByYear } = buildDebtSchedule(wb, data);
-  const { cashByYear } = buildBalanceSheet(wb, data, niByYear, balanceByYear, startingCash);
+  const { cashByYear } = buildBalanceSheet(wb, data, niByYear, balanceByYear, startingCash, endingCashY1);
 
   buildDSCRCovenants(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear);
   buildSourcesAndUses(wb, data, startingCash);

@@ -22,6 +22,8 @@ The project is a pnpm workspace monorepo built with TypeScript.
   - `underwriting-export.ts` — Legacy 14-tab underwriting (to be deprecated)
   - `workbook-helpers.ts` — Shared types, constants, formatting, label, and computation functions used by all workbook exports
   - Schema extensions: `openingBalances`, `sourcesAndUses`, `scenarios`, `covenantThresholds` schemas; `purpose` field on capitalDebtRow; `debtIncluded` on schoolProfile
+  - **Financial integrity**: Balance Sheet Y1 cash is linked to Monthly Cash Flow ending cash to ensure exact tie-out. Years 2-5 project from that base plus cumulative net income.
+  - **Excel QA Suite** (`tests/excel-qa.ts`): Automated quality assurance testing 5 export types × 3 sample payloads (15 tests). Checks file integrity, tab presence, formula/value error scanning, and financial tie-outs (Balance Sheet A=L+E, Cash Flow→BS cash, Debt Schedule→BS debt, DSCR, Sources=Uses).
 - **Monorepo Structure**: Organized into `artifacts/` for deployable applications (`api-server`, `school-financial-model`), `lib/` for shared libraries, and `scripts/` for utilities.
 
 ## Core Features
