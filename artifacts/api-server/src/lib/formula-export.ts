@@ -841,10 +841,10 @@ function buildAssumptions(
 
     r++; ws.getCell(r, 1).value = "Net Income"; dc(ws.getCell(r, 1));
     if (prior?.totalRevenue !== undefined && prior?.totalExpenses !== undefined) {
-      setFormula(ws.getCell(r, 2), `${cn(r - 1, 2)}-${cn(r, 2)}`, "");
+      setFormula(ws.getCell(r, 2), `${cn(r - 1, 2)}-${cn(r, 2)}`, (prior.totalRevenue ?? 0) - (prior.totalExpenses ?? 0));
     }
     if (current?.projectedRevenue !== undefined && current?.projectedExpenses !== undefined) {
-      setFormula(ws.getCell(r, 3), `${cn(r - 1, 3)}-${cn(r, 3)}`, "");
+      setFormula(ws.getCell(r, 3), `${cn(r - 1, 3)}-${cn(r, 3)}`, (current.projectedRevenue ?? 0) - (current.projectedExpenses ?? 0));
     }
     ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
     ws.getCell(r, 3).numFmt = CUR; dc(ws.getCell(r, 3));
@@ -1677,23 +1677,40 @@ function buildProForma(
 
   r++; sec(ws, r, 14); ws.getCell(r, 1).value = "MONTHLY CASH FLOW";
 
+  const pfMonthlyPers = m => m < opMonths ? Math.round(monthlyPers) : 0;
+  const pfMonthlyOps = m => m < opMonths ? Math.round(monthlyOps) : 0;
+  const pfMonthlyDebt = Math.round(monthlyDebt);
+
+  const pfTotalExpMonthly: number[] = [];
+  const pfNetCashMonthly: number[] = [];
+  const pfCumCashMonthly: number[] = [];
+  for (let m = 0; m < 12; m++) {
+    const totalExp = pfMonthlyPers(m) + pfMonthlyOps(m) + pfMonthlyDebt;
+    pfTotalExpMonthly.push(totalExp);
+    const revM = Math.round(monthlyRevArr[m] || 0);
+    const netCash = revM - totalExp;
+    pfNetCashMonthly.push(netCash);
+    const cumCash = m === 0 ? startingCash + netCash : pfCumCashMonthly[m - 1] + netCash;
+    pfCumCashMonthly.push(cumCash);
+  }
+
   r++; ws.getCell(r, 1).value = "Total Expenses"; bc(ws.getCell(r, 1));
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    setFormula(cell, `${cn(pfPersTotalRow, m + 2)}+${cn(pfOpexTotalRow, m + 2)}+${cn(pfDebtRow, m + 2)}`, "0");
+    setFormula(cell, `${cn(pfPersTotalRow, m + 2)}+${cn(pfOpexTotalRow, m + 2)}+${cn(pfDebtRow, m + 2)}`, pfTotalExpMonthly[m]);
     cell.numFmt = CUR; bc(cell);
   }
-  setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, "0");
+  setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, pfTotalExpMonthly.reduce((a, b) => a + b, 0));
   ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
   const pfTotalExpRow = r;
 
   r++; ws.getCell(r, 1).value = "Net Cash Flow"; bc(ws.getCell(r, 1));
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    setFormula(cell, `${cn(pfRevTotalRow, m + 2)}-${cn(pfTotalExpRow, m + 2)}`, "0");
+    setFormula(cell, `${cn(pfRevTotalRow, m + 2)}-${cn(pfTotalExpRow, m + 2)}`, pfNetCashMonthly[m]);
     cell.numFmt = CUR; bc(cell);
   }
-  setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, "0");
+  setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, pfNetCashMonthly.reduce((a, b) => a + b, 0));
   ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
   const pfNetCashRow = r;
 
@@ -1701,13 +1718,13 @@ function buildProForma(
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
     if (m === 0) {
-      setFormula(cell, `${startingCash}+${cn(pfNetCashRow, m + 2)}`, "0");
+      setFormula(cell, `${startingCash}+${cn(pfNetCashRow, m + 2)}`, pfCumCashMonthly[m]);
     } else {
-      setFormula(cell, `${cn(r, m + 1)}+${cn(pfNetCashRow, m + 2)}`, "0");
+      setFormula(cell, `${cn(r, m + 1)}+${cn(pfNetCashRow, m + 2)}`, pfCumCashMonthly[m]);
     }
     cell.numFmt = CUR; bc(cell);
   }
-  setFormula(ws.getCell(r, 14), cn(r, 13), "0");
+  setFormula(ws.getCell(r, 14), cn(r, 13), pfCumCashMonthly[11]);
   ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
   const pfCumCashRow = r;
 
@@ -1718,11 +1735,11 @@ function buildProForma(
   ws.getCell(r, 2).value = startingCash; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
 
   r++; ws.getCell(r, 1).value = "Ending Cash (Month 12)"; dc(ws.getCell(r, 1));
-  setFormula(ws.getCell(r, 2), cn(pfCumCashRow, 13), "0");
+  setFormula(ws.getCell(r, 2), cn(pfCumCashRow, 13), pfCumCashMonthly[11]);
   ws.getCell(r, 2).numFmt = CUR; bc(ws.getCell(r, 2));
 
   r++; ws.getCell(r, 1).value = "Minimum Cash Month"; dc(ws.getCell(r, 1));
-  setFormula(ws.getCell(r, 2), `MIN(${cn(pfCumCashRow, 2)}:${cn(pfCumCashRow, 13)})`, "0");
+  setFormula(ws.getCell(r, 2), `MIN(${cn(pfCumCashRow, 2)}:${cn(pfCumCashRow, 13)})`, Math.min(...pfCumCashMonthly));
   ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
 
   r += 2;
