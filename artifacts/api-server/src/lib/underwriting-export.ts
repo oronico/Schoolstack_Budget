@@ -1,5 +1,11 @@
 import ExcelJS from "exceljs";
 
+function schoolYearLabel(baseYear: number | undefined, offset: number): string {
+  if (!baseYear) return `Year ${offset + 1}`;
+  const y = baseYear + offset;
+  return `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+}
+
 interface SchoolProfile {
   schoolName?: string;
   state?: string;
@@ -7,6 +13,7 @@ interface SchoolProfile {
   schoolTypeOther?: string;
   entityType?: string;
   ein?: string;
+  website?: string;
   schoolStage?: string;
   openingYear?: number;
   plannedOpeningYear?: string;
@@ -542,7 +549,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   wb.created = new Date();
   wb.calcProperties = { fullCalcOnLoad: true };
 
-  const yearHeaders = ["", ...Array.from({ length: yc }, (_, i) => `Year ${i + 1}`)];
+  const yearHeaders = ["", ...Array.from({ length: yc }, (_, i) => schoolYearLabel(sp.openingYear, i))];
   const cols = yc + 1;
 
   buildAssumptions(wb, sp, enrollment, yc, salaryEsc, costInflation, prorationFactor, data.tuitionTiers);
@@ -629,7 +636,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   wb.created = new Date();
   wb.calcProperties = { fullCalcOnLoad: true };
 
-  const yearHeaders = ["", ...Array.from({ length: yc }, (_, i) => `Year ${i + 1}`)];
+  const yearHeaders = ["", ...Array.from({ length: yc }, (_, i) => schoolYearLabel(sp.openingYear, i))];
   const cols = yc + 1;
 
   buildAssumptions(wb, sp, enrollment, yc, salaryEsc, costInflation, prorationFactor, data.tuitionTiers);
@@ -1688,7 +1695,7 @@ function buildSourcesUses(
     ws.getCell(r, 2).value = row.loanPrincipal || 0; ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = NF;
   }
 
-  r++; ws.getCell(r, 1).value = "Year 1 Revenue (Projected)"; ws.getCell(r, 1).font = NF;
+  r++; ws.getCell(r, 1).value = `${schoolYearLabel(sp?.openingYear, 0)} Revenue (Projected)`; ws.getCell(r, 1).font = NF;
   ws.getCell(r, 2).value = annualRev[0] || 0; ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = NF;
 
   r++; sec(ws, r, 2); ws.getCell(r, 1).value = "TOTAL SOURCES";
@@ -1734,13 +1741,14 @@ function buildSourcesUses(
 
   const usesItems: [string, number][] = [];
 
-  usesItems.push(["Year 1 Personnel", Math.round(y1Personnel)]);
+  const usesYrLbl = schoolYearLabel(sp?.openingYear, 0);
+  usesItems.push([`${usesYrLbl} Personnel`, Math.round(y1Personnel)]);
 
   if (depositsPrepaid > 0) {
     usesItems.push(["Deposits & Prepaid Occupancy (2 mo)", Math.round(depositsPrepaid)]);
   }
   if (occupancyY1 > 0) {
-    usesItems.push(["Occupancy / Facility Costs (Year 1)", Math.round(occupancyY1)]);
+    usesItems.push([`Occupancy / Facility Costs (${usesYrLbl})`, Math.round(occupancyY1)]);
   }
   if (equipmentFFE > 0) {
     usesItems.push(["Equipment / FF&E / Technology", Math.round(equipmentFFE)]);
@@ -1758,7 +1766,7 @@ function buildSourcesUses(
   }
 
   if (y1DebtSvc > 0) {
-    usesItems.push(["Year 1 Debt Service", Math.round(y1DebtSvc)]);
+    usesItems.push([`${usesYrLbl} Debt Service`, Math.round(y1DebtSvc)]);
   }
 
   if (workingCapReserve > 0) {
@@ -1793,7 +1801,7 @@ function buildSourcesUses(
     gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG } };
   }
 
-  r++; ws.getCell(r, 1).value = gap >= 0 ? "✓ Sources cover projected Year 1 uses" : "⚠ Funding gap — additional sources needed";
+  r++; ws.getCell(r, 1).value = gap >= 0 ? `✓ Sources cover projected ${usesYrLbl} uses` : "⚠ Funding gap — additional sources needed";
   ws.getCell(r, 1).font = { ...NF, italic: true, color: { argb: gap >= 0 ? "FF328555" : "FFD32F2F" } };
 }
 
@@ -1932,9 +1940,10 @@ function buildMonthlyCashFlowY1(
     monthLabels.push(MONTH_NAMES[mIdx]);
   }
   ws.columns = [{ width: 30 }, ...Array(12).fill({ width: 14 }), { width: 16 }];
+  const yr1Label = schoolYearLabel(sp?.openingYear, 0);
 
   let r = 1;
-  ws.getRow(r).values = [...monthLabels, "Year 1 Total"];
+  ws.getRow(r).values = [...monthLabels, `${yr1Label} Total`];
   hdr(ws, r, 14);
 
   const students = enrollment?.[0] ?? 0;
@@ -2448,25 +2457,26 @@ function buildUnderwritingSnapshot(
 
   const y1NOI = rev[0] - personnel[0] - ops[0];
   const y1DSCR = annualDebtSvc > 0 ? y1NOI / annualDebtSvc : 0;
+  const flagYr1 = schoolYearLabel(sp.openingYear, 0);
   if (annualDebtSvc > 0) {
-    flags.push(["DSCR ≥ 1.20x (Year 1)", y1DSCR >= 1.2, `${y1DSCR.toFixed(2)}x`]);
+    flags.push([`DSCR ≥ 1.20x (${flagYr1})`, y1DSCR >= 1.2, `${y1DSCR.toFixed(2)}x`]);
   }
 
   const y1Cash = startingCash + ni[0];
   const y1MonthlyOps = (personnel[0] + ops[0]) / 12;
   const y1Reserve = y1MonthlyOps > 0 ? y1Cash / y1MonthlyOps : 0;
-  flags.push(["Min 2 Months Cash Reserve (Year 1)", y1Reserve >= 2.0, `${y1Reserve.toFixed(1)} months`]);
+  flags.push([`Min 2 Months Cash Reserve (${flagYr1})`, y1Reserve >= 2.0, `${y1Reserve.toFixed(1)} months`]);
 
-  flags.push(["Positive Net Income (Year 1)", ni[0] >= 0, ni[0] >= 0 ? "Yes" : "No"]);
+  flags.push([`Positive Net Income (${flagYr1})`, ni[0] >= 0, ni[0] >= 0 ? "Yes" : "No"]);
 
   let breakEvenYear = -1;
   for (let y = 0; y < yc; y++) {
     if (ni[y] >= 0) { breakEvenYear = y + 1; break; }
   }
-  flags.push(["Break-Even Within Projection Period", breakEvenYear > 0, breakEvenYear > 0 ? `Year ${breakEvenYear}` : "Not Reached"]);
+  flags.push(["Break-Even Within Projection Period", breakEvenYear > 0, breakEvenYear > 0 ? schoolYearLabel(sp.openingYear, breakEvenYear - 1) : "Not Reached"]);
 
   const y1Util = maxCapacity > 0 ? enrollment[0] / maxCapacity : 0;
-  flags.push(["Enrollment ≥ 70% Capacity (Year 1)", y1Util >= 0.7, `${(y1Util * 100).toFixed(0)}%`]);
+  flags.push([`Enrollment ≥ 70% Capacity (${flagYr1})`, y1Util >= 0.7, `${(y1Util * 100).toFixed(0)}%`]);
 
   const endingCash = startingCash + cumNI[yc - 1];
   flags.push(["Positive Ending Cash (Final Year)", endingCash > 0, endingCash > 0 ? "Yes" : "No"]);
@@ -2494,19 +2504,20 @@ function buildUnderwritingSnapshot(
 
   r += 2; sec(ws, r, 3); ws.getCell(r, 1).value = "KEY METRICS SUMMARY";
 
+  const yr1Lbl = schoolYearLabel(sp.openingYear, 0);
   const metrics: [string, string | number, string][] = [
-    ["Year 1 Revenue", rev[0], CUR],
-    ["Year 1 Total Expenses", personnel[0] + ops[0] + capDebt[0], CUR],
-    ["Year 1 Net Income", ni[0], CUR],
-    ["Year 1 Net Margin", rev[0] > 0 ? ni[0] / rev[0] : 0, PCT],
+    [`${yr1Lbl} Revenue`, rev[0], CUR],
+    [`${yr1Lbl} Total Expenses`, personnel[0] + ops[0] + capDebt[0], CUR],
+    [`${yr1Lbl} Net Income`, ni[0], CUR],
+    [`${yr1Lbl} Net Margin`, rev[0] > 0 ? ni[0] / rev[0] : 0, PCT],
     ["Starting Cash", startingCash, CUR],
-    ["Year 1 Ending Cash", startingCash + ni[0], CUR],
+    [`${yr1Lbl} Ending Cash`, startingCash + ni[0], CUR],
     ["Total Debt", totalPrincipalFromLoans, CUR],
-    ["Year 1 DSCR", annualDebtSvc > 0 ? `${y1DSCR.toFixed(2)}x` : "N/A", ""],
-    ["Year 1 Cash Reserve (Months)", `${y1Reserve.toFixed(1)}`, ""],
-    ["Break-Even Year", breakEvenYear > 0 ? `Year ${breakEvenYear}` : "Not Reached", ""],
-    ["Revenue per Student (Year 1)", enrollment[0] > 0 ? Math.round(rev[0] / enrollment[0]) : 0, CUR],
-    ["Cost per Student (Year 1)", enrollment[0] > 0 ? Math.round((personnel[0] + ops[0] + capDebt[0]) / enrollment[0]) : 0, CUR],
+    [`${yr1Lbl} DSCR`, annualDebtSvc > 0 ? `${y1DSCR.toFixed(2)}x` : "N/A", ""],
+    [`${yr1Lbl} Cash Reserve (Months)`, `${y1Reserve.toFixed(1)}`, ""],
+    ["Break-Even Year", breakEvenYear > 0 ? schoolYearLabel(sp.openingYear, breakEvenYear - 1) : "Not Reached", ""],
+    [`Revenue per Student (${yr1Lbl})`, enrollment[0] > 0 ? Math.round(rev[0] / enrollment[0]) : 0, CUR],
+    [`Cost per Student (${yr1Lbl})`, enrollment[0] > 0 ? Math.round((personnel[0] + ops[0] + capDebt[0]) / enrollment[0]) : 0, CUR],
   ];
 
   for (const [label, val, fmt] of metrics) {

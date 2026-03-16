@@ -7,6 +7,7 @@ interface SchoolProfile {
   schoolTypeOther?: string;
   entityType?: string;
   ein?: string;
+  website?: string;
   schoolStage?: string;
   openingYear?: number;
   plannedOpeningYear?: string;
@@ -46,6 +47,17 @@ interface SchoolProfile {
   hasGeneralLiabilityInsurance?: boolean;
   insuranceCost?: number;
   fundingProfile?: string;
+}
+
+function schoolYearLabel(baseYear: number | undefined, offset: number): string {
+  if (!baseYear) return `Year ${offset + 1}`;
+  const y = baseYear + offset;
+  return `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+}
+
+function yearLabels(sp: SchoolProfile): string[] {
+  const base = sp.openingYear;
+  return [0, 1, 2, 3, 4].map(i => schoolYearLabel(base, i));
 }
 
 interface Enrollment { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number; }
@@ -506,6 +518,10 @@ function buildAssumptions(
   r++; ws.getCell(r, 1).value = "EIN"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = sp.ein || "N/A"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
 
+  r++; ws.getCell(r, 1).value = "Website"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = sp.website || "N/A"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+  ws.mergeCells(r, 2, r, 4);
+
   r++; ws.getCell(r, 1).value = "Fiscal Year Start"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = MONTH_NAMES[sp.fiscalYearStartMonth || 7]; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
 
@@ -524,11 +540,9 @@ function buildAssumptions(
 
   r += 2;
   const enrollStartRow = r;
+  const yLabels = yearLabels(sp);
   sec(ws, r, 7); ws.getCell(r, 1).value = "ENROLLMENT";
-  ws.getCell(r, 2).value = "Year 1"; ws.getCell(r, 3).value = "Year 2";
-  ws.getCell(r, 4).value = "Year 3"; ws.getCell(r, 5).value = "Year 4";
-  ws.getCell(r, 6).value = "Year 5";
-  for (let c = 2; c <= 6; c++) { ws.getCell(r, c).font = SECTION_FONT; ws.getCell(r, c).alignment = { horizontal: "center" }; }
+  for (let c = 2; c <= 6; c++) { ws.getCell(r, c).value = yLabels[c - 2]; ws.getCell(r, c).font = SECTION_FONT; ws.getCell(r, c).alignment = { horizontal: "center" }; }
 
   const enrollY1Col = 2;
   r++; ws.getCell(r, 1).value = "Students Enrolled"; dc(ws.getCell(r, 1));
@@ -876,6 +890,7 @@ function buildFiveYearModel(
   ws.columns = [{ width: 38 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }];
 
   const schoolName = sp.schoolName || "School";
+  const yLabels = yearLabels(sp);
 
   let r = 1;
   ws.mergeCells(r, 1, r, 6);
@@ -885,7 +900,7 @@ function buildFiveYearModel(
   ws.getRow(r).height = 32;
 
   r++;
-  ws.getRow(r).values = ["", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
+  ws.getRow(r).values = ["", yLabels[0], yLabels[1], yLabels[2], yLabels[3], yLabels[4]];
   hdr(ws, r, 6);
 
   const enrollRow = r + 1;
@@ -1347,16 +1362,17 @@ function buildProForma(
 
   ws.columns = [{ width: 36 }, ...Array(12).fill({ width: 14 }), { width: 16 }];
   const schoolName = sp.schoolName || "School";
+  const yr1Label = schoolYearLabel(sp.openingYear, 0);
 
   let r = 1;
   ws.mergeCells(r, 1, r, 14);
-  ws.getCell(r, 1).value = `${schoolName} — Year 1 Pro Forma`;
+  ws.getCell(r, 1).value = `${schoolName} — ${yr1Label} Pro Forma`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
   ws.getCell(r, 1).alignment = { horizontal: "left", vertical: "middle" };
   ws.getRow(r).height = 32;
 
   r++;
-  ws.getRow(r).values = [...monthLabels, "Year 1 Total"];
+  ws.getRow(r).values = [...monthLabels, `${yr1Label} Total`];
   hdr(ws, r, 14);
 
   const students = enrollment[0];
@@ -1584,12 +1600,17 @@ function buildActualsVsProjections(
 
   const ws = wb.addWorksheet("Actuals vs. Projections");
   const schoolName = sp.schoolName || "School";
+  const baseYear = sp.openingYear;
+  const yr1Lbl = schoolYearLabel(baseYear, 0);
+  const yr2Lbl = schoolYearLabel(baseYear, 1);
+  const priorLbl = baseYear ? schoolYearLabel(baseYear, -2) : "Prior Year";
+  const currentLbl = baseYear ? schoolYearLabel(baseYear, -1) : "Current Year";
 
   const colHeaders = [""];
-  if (hasPrior) colHeaders.push("Prior Year (Actual)");
-  if (hasCurrent) colHeaders.push("Current Year");
-  colHeaders.push("Year 1 (Projected)", "Year 2 (Projected)");
-  if (hasCurrent || hasPrior) colHeaders.push("Yr 1 vs Prior/Current");
+  if (hasPrior) colHeaders.push(`${priorLbl} (Actual)`);
+  if (hasCurrent) colHeaders.push(currentLbl);
+  colHeaders.push(`${yr1Lbl} (Projected)`, `${yr2Lbl} (Projected)`);
+  if (hasCurrent || hasPrior) colHeaders.push(`${yr1Lbl} vs ${hasCurrent ? currentLbl : priorLbl}`);
 
   const cols = colHeaders.length;
   ws.columns = Array(cols).fill({ width: 22 });
@@ -1667,23 +1688,19 @@ function buildActualsVsProjections(
   const priorNI = (prior?.totalRevenue ?? 0) - (prior?.totalExpenses ?? 0);
   const currentNI = (current?.projectedRevenue ?? 0) - (current?.projectedExpenses ?? 0);
 
-  r++; ws.getCell(r, 1).value = "Net Income"; bc(ws.getCell(r, 1));
+  r++; ws.getCell(r, 1).value = "Net Income (Surplus / Deficit)"; gc(ws.getCell(r, 1));
   c = 2;
-  if (hasPrior) {
-    ws.getCell(r, c).value = priorNI; ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c));
-    if (priorNI < 0) ws.getCell(r, c).font = { bold: true, size: 11, name: "Calibri", color: { argb: "FFDC2626" } };
-    c++;
+  const niVals = [] as { col: number; val: number }[];
+  if (hasPrior) { niVals.push({ col: c, val: priorNI }); c++; }
+  if (hasCurrent) { niVals.push({ col: c, val: currentNI }); c++; }
+  niVals.push({ col: c, val: ni0 }); c++;
+  niVals.push({ col: c, val: ni1 });
+  for (const nv of niVals) {
+    const cell = ws.getCell(r, nv.col);
+    cell.value = nv.val; cell.numFmt = CUR; gc(cell);
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: nv.val >= 0 ? GREEN_BG.replace("FF", "") : RED_BG.replace("FF", "") } };
+    if (nv.val < 0) cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: "FFDC2626" } };
   }
-  if (hasCurrent) {
-    ws.getCell(r, c).value = currentNI; ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c));
-    if (currentNI < 0) ws.getCell(r, c).font = { bold: true, size: 11, name: "Calibri", color: { argb: "FFDC2626" } };
-    c++;
-  }
-  ws.getCell(r, c).value = ni0; ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c));
-  if (ni0 < 0) ws.getCell(r, c).font = { bold: true, size: 11, name: "Calibri", color: { argb: "FFDC2626" } };
-  c++;
-  ws.getCell(r, c).value = ni1; ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c));
-  if (ni1 < 0) ws.getCell(r, c).font = { bold: true, size: 11, name: "Calibri", color: { argb: "FFDC2626" } };
 
   r++; ws.getCell(r, 1).value = "Cash Position"; bc(ws.getCell(r, 1));
   c = 2;
@@ -1693,7 +1710,7 @@ function buildActualsVsProjections(
   r += 2;
   sec(ws, r, cols); ws.getCell(r, 1).value = "PER-STUDENT METRICS";
 
-  r++; ws.getCell(r, 1).value = "Revenue Per Student"; dc(ws.getCell(r, 1));
+  r++; ws.getCell(r, 1).value = "Revenue Per Student"; bc(ws.getCell(r, 1));
   c = 2;
   if (hasPrior && priorEnroll > 0) {
     ws.getCell(r, c).value = Math.round((prior?.totalRevenue ?? 0) / priorEnroll);
@@ -1706,11 +1723,11 @@ function buildActualsVsProjections(
   if (enrollment[0] > 0) {
     ws.getCell(r, c).value = Math.round((rev0 * pf) / enrollment[0]);
     ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++;
-    ws.getCell(r, c).value = Math.round(rev1 / enrollment[1]);
+    ws.getCell(r, c).value = enrollment[1] > 0 ? Math.round(rev1 / enrollment[1]) : 0;
     ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c));
   }
 
-  r++; ws.getCell(r, 1).value = "Expense Per Student"; dc(ws.getCell(r, 1));
+  r++; ws.getCell(r, 1).value = "Expense Per Student"; bc(ws.getCell(r, 1));
   c = 2;
   if (hasPrior && priorEnroll > 0) {
     ws.getCell(r, c).value = Math.round((prior?.totalExpenses ?? 0) / priorEnroll);
@@ -1727,7 +1744,7 @@ function buildActualsVsProjections(
     ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c));
   }
 
-  r++; ws.getCell(r, 1).value = "Net Margin %"; dc(ws.getCell(r, 1));
+  r++; ws.getCell(r, 1).value = "Net Margin %"; bc(ws.getCell(r, 1));
   c = 2;
   if (hasPrior && (prior?.totalRevenue ?? 0) > 0) {
     ws.getCell(r, c).value = priorNI / (prior?.totalRevenue ?? 1);
@@ -1746,7 +1763,7 @@ function buildActualsVsProjections(
     ws.getCell(r, c).numFmt = PCT; dc(ws.getCell(r, c));
   }
 
-  r++; ws.getCell(r, 1).value = "Personnel as % of Revenue"; dc(ws.getCell(r, 1));
+  r++; ws.getCell(r, 1).value = "Personnel as % of Revenue"; bc(ws.getCell(r, 1));
   c = 2;
   if (hasPrior) { ws.getCell(r, c).value = "N/A"; dc(ws.getCell(r, c)); c++; }
   if (hasCurrent) { ws.getCell(r, c).value = "N/A"; dc(ws.getCell(r, c)); c++; }

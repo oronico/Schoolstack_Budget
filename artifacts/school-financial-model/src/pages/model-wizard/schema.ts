@@ -72,6 +72,7 @@ export const schoolProfileSchema = z.object({
   schoolTypeOther: z.string().optional(),
   entityType: entityTypeSchema,
   ein: z.string().optional(),
+  website: z.string().optional(),
   schoolStage: schoolStageSchema,
   fundingProfile: fundingProfileSchema.optional(),
   plannedOpeningYear: z.string().optional(),
