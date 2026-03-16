@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { Download, Loader2, PartyPopper, ArrowRight, ClipboardCheck, Calendar } from "lucide-react";
+import { Download, Loader2, PartyPopper, ArrowRight, ClipboardCheck, Calendar, Landmark, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { getPublicExportUnderwritingUrl } from "@workspace/api-client-react";
 
@@ -10,7 +10,8 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
   const [loading, setLoading] = useState<ExportMode | null>(null);
   const [exported, setExported] = useState<Set<ExportMode>>(new Set());
   const [singleYearIndex, setSingleYearIndex] = useState(0);
-  const { getValues } = useFormContext();
+  const { getValues, watch } = useFormContext();
+  const lendingLabIntent = watch("schoolProfile.lendingLabIntent");
 
   const handleDownload = async (mode: ExportMode) => {
     if (loading) return;
@@ -70,11 +71,33 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
         {anyExported ? "Your workbook is ready!" : "Ready to export your model?"}
       </h2>
 
-      <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
+      <p className="text-xl text-muted-foreground mb-6 max-w-lg mx-auto">
         {anyExported
           ? "Check your downloads folder. Your workbook is fully formatted and lender-ready."
           : "Download your budget model as a polished Excel workbook — ready for lender meetings."}
       </p>
+
+      {lendingLabIntent === "plan_to_apply" && (
+        <div className="max-w-lg mx-auto mb-8 bg-primary/5 border border-primary/20 rounded-2xl px-6 py-4 text-left">
+          <div className="flex items-start gap-3">
+            <Landmark className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-foreground">
+              This model can help you prepare for Lending Lab review. It does not replace the full application or diligence process.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {lendingLabIntent === "want_to_understand" && (
+        <div className="max-w-lg mx-auto mb-8 bg-accent/5 border border-accent/20 rounded-2xl px-6 py-4 text-left">
+          <div className="flex items-start gap-3">
+            <Landmark className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-foreground">
+              We'll highlight the kinds of information Lending Lab typically reviews. Your workbook covers the key areas lenders look for.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <button
@@ -135,7 +158,31 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
         Create a Free Account <ArrowRight className="h-4 w-4" />
       </Link>
 
-      {anyExported && (
+      {anyExported && lendingLabIntent === "plan_to_apply" && (
+        <div className="mt-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 max-w-xl mx-auto text-left">
+            <div className="flex items-center gap-3 mb-5">
+              <Landmark className="h-6 w-6 text-primary" />
+              <h3 className="font-display font-bold text-xl text-foreground">Next steps for Lending Lab</h3>
+            </div>
+            <ul className="space-y-3">
+              {[
+                "Review your assumptions carefully",
+                "Confirm staffing and facility costs are realistic",
+                "Save your workbook",
+                "Complete the Lending Lab application when ready",
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-foreground">{step}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {anyExported && lendingLabIntent !== "plan_to_apply" && (
         <div className="mt-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="bg-accent/10 border border-accent/20 rounded-3xl p-8 max-w-xl mx-auto">
             <h3 className="font-display font-bold text-2xl text-foreground mb-3">Looking for capital?</h3>
