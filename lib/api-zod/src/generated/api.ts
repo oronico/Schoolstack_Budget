@@ -190,6 +190,10 @@ export const CreateModelBody = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        debtIncluded: zod.boolean().optional(),
+        lendingLabIntent: zod
+          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .optional(),
       })
       .optional(),
     enrollment: zod
@@ -365,6 +369,7 @@ export const CreateModelBody = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
       .optional(),
@@ -374,6 +379,57 @@ export const CreateModelBody = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+      })
+      .optional(),
+    openingBalances: zod
+      .object({
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
+      })
+      .optional(),
+    sourcesAndUses: zod
+      .object({
+        sources: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+        uses: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
+    scenarios: zod
+      .array(
+        zod.object({
+          name: zod.string().optional(),
+          enrollmentAdjustment: zod.number().optional(),
+          tuitionAdjustment: zod.number().optional(),
+          expenseAdjustment: zod.number().optional(),
+        }),
+      )
+      .optional(),
+    covenantThresholds: zod
+      .object({
+        minDSCR: zod.number().optional(),
+        minDaysCashOnHand: zod.number().optional(),
+        minMonthsRunway: zod.number().optional(),
+        minCapacityUtil: zod.number().optional(),
       })
       .optional(),
   }),
@@ -474,6 +530,10 @@ export const GetModelResponse = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        debtIncluded: zod.boolean().optional(),
+        lendingLabIntent: zod
+          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .optional(),
       })
       .optional(),
     enrollment: zod
@@ -649,6 +709,7 @@ export const GetModelResponse = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
       .optional(),
@@ -658,6 +719,57 @@ export const GetModelResponse = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+      })
+      .optional(),
+    openingBalances: zod
+      .object({
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
+      })
+      .optional(),
+    sourcesAndUses: zod
+      .object({
+        sources: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+        uses: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
+    scenarios: zod
+      .array(
+        zod.object({
+          name: zod.string().optional(),
+          enrollmentAdjustment: zod.number().optional(),
+          tuitionAdjustment: zod.number().optional(),
+          expenseAdjustment: zod.number().optional(),
+        }),
+      )
+      .optional(),
+    covenantThresholds: zod
+      .object({
+        minDSCR: zod.number().optional(),
+        minDaysCashOnHand: zod.number().optional(),
+        minMonthsRunway: zod.number().optional(),
+        minCapacityUtil: zod.number().optional(),
       })
       .optional(),
   }),
@@ -759,6 +871,10 @@ export const UpdateModelBody = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        debtIncluded: zod.boolean().optional(),
+        lendingLabIntent: zod
+          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .optional(),
       })
       .optional(),
     enrollment: zod
@@ -934,6 +1050,7 @@ export const UpdateModelBody = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
       .optional(),
@@ -943,6 +1060,57 @@ export const UpdateModelBody = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+      })
+      .optional(),
+    openingBalances: zod
+      .object({
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
+      })
+      .optional(),
+    sourcesAndUses: zod
+      .object({
+        sources: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+        uses: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
+    scenarios: zod
+      .array(
+        zod.object({
+          name: zod.string().optional(),
+          enrollmentAdjustment: zod.number().optional(),
+          tuitionAdjustment: zod.number().optional(),
+          expenseAdjustment: zod.number().optional(),
+        }),
+      )
+      .optional(),
+    covenantThresholds: zod
+      .object({
+        minDSCR: zod.number().optional(),
+        minDaysCashOnHand: zod.number().optional(),
+        minMonthsRunway: zod.number().optional(),
+        minCapacityUtil: zod.number().optional(),
       })
       .optional(),
   }),
@@ -1036,6 +1204,10 @@ export const UpdateModelResponse = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        debtIncluded: zod.boolean().optional(),
+        lendingLabIntent: zod
+          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .optional(),
       })
       .optional(),
     enrollment: zod
@@ -1211,6 +1383,7 @@ export const UpdateModelResponse = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
       .optional(),
@@ -1220,6 +1393,57 @@ export const UpdateModelResponse = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+      })
+      .optional(),
+    openingBalances: zod
+      .object({
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
+      })
+      .optional(),
+    sourcesAndUses: zod
+      .object({
+        sources: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+        uses: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
+    scenarios: zod
+      .array(
+        zod.object({
+          name: zod.string().optional(),
+          enrollmentAdjustment: zod.number().optional(),
+          tuitionAdjustment: zod.number().optional(),
+          expenseAdjustment: zod.number().optional(),
+        }),
+      )
+      .optional(),
+    covenantThresholds: zod
+      .object({
+        minDSCR: zod.number().optional(),
+        minDaysCashOnHand: zod.number().optional(),
+        minMonthsRunway: zod.number().optional(),
+        minCapacityUtil: zod.number().optional(),
       })
       .optional(),
   }),
@@ -1340,6 +1564,10 @@ export const ArchiveModelResponse = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        debtIncluded: zod.boolean().optional(),
+        lendingLabIntent: zod
+          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .optional(),
       })
       .optional(),
     enrollment: zod
@@ -1515,6 +1743,7 @@ export const ArchiveModelResponse = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
       .optional(),
@@ -1524,6 +1753,57 @@ export const ArchiveModelResponse = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+      })
+      .optional(),
+    openingBalances: zod
+      .object({
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
+      })
+      .optional(),
+    sourcesAndUses: zod
+      .object({
+        sources: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+        uses: zod
+          .array(
+            zod.object({
+              lineItem: zod.string().optional(),
+              amount: zod.number().optional(),
+              category: zod.string().optional(),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
+    scenarios: zod
+      .array(
+        zod.object({
+          name: zod.string().optional(),
+          enrollmentAdjustment: zod.number().optional(),
+          tuitionAdjustment: zod.number().optional(),
+          expenseAdjustment: zod.number().optional(),
+        }),
+      )
+      .optional(),
+    covenantThresholds: zod
+      .object({
+        minDSCR: zod.number().optional(),
+        minDaysCashOnHand: zod.number().optional(),
+        minMonthsRunway: zod.number().optional(),
+        minCapacityUtil: zod.number().optional(),
       })
       .optional(),
   }),

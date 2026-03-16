@@ -900,12 +900,74 @@ components:
           type: number
         loanTermYears:
           type: number
+        purpose:
+          type: string
+          enum: [startup, operating, refinance]
       required:
         - id
         - lineItem
         - enabled
         - driverType
         - amounts
+    OpeningBalances:
+      type: object
+      properties:
+        cash:
+          type: number
+        accountsReceivable:
+          type: number
+        fixedAssets:
+          type: number
+        otherAssets:
+          type: number
+        accountsPayable:
+          type: number
+        currentDebtPortion:
+          type: number
+        longTermDebt:
+          type: number
+    SourcesAndUsesItem:
+      type: object
+      properties:
+        lineItem:
+          type: string
+        amount:
+          type: number
+        category:
+          type: string
+    SourcesAndUses:
+      type: object
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourcesAndUsesItem"
+        uses:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourcesAndUsesItem"
+    Scenario:
+      type: object
+      properties:
+        name:
+          type: string
+        enrollmentAdjustment:
+          type: number
+        tuitionAdjustment:
+          type: number
+        expenseAdjustment:
+          type: number
+    CovenantThresholds:
+      type: object
+      properties:
+        minDSCR:
+          type: number
+        minDaysCashOnHand:
+          type: number
+        minMonthsRunway:
+          type: number
+        minCapacityUtil:
+          type: number
     PriorYearSnapshot:
       type: object
       properties:
@@ -981,6 +1043,16 @@ components:
             $ref: "#/components/schemas/CapitalDebtRow"
         priorYearSnapshot:
           $ref: "#/components/schemas/PriorYearSnapshot"
+        openingBalances:
+          $ref: "#/components/schemas/OpeningBalances"
+        sourcesAndUses:
+          $ref: "#/components/schemas/SourcesAndUses"
+        scenarios:
+          type: array
+          items:
+            $ref: "#/components/schemas/Scenario"
+        covenantThresholds:
+          $ref: "#/components/schemas/CovenantThresholds"
     SchoolProfile:
       type: object
       properties:
@@ -1087,6 +1159,11 @@ components:
           type: number
         priorYearADA:
           type: number
+        debtIncluded:
+          type: boolean
+        lendingLabIntent:
+          type: string
+          enum: [explore, pre_qualified, active_application, refinance]
     Enrollment:
       type: object
       properties:

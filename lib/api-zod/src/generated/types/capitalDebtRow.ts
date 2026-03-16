@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CapitalDebtRowPurpose } from "./capitalDebtRowPurpose";
 import type { ExpenseDriverType } from "./expenseDriverType";
 
 export interface CapitalDebtRow {
@@ -18,4 +19,5 @@ export interface CapitalDebtRow {
   loanPrincipal?: number;
   loanRate?: number;
   loanTermYears?: number;
+  purpose?: CapitalDebtRowPurpose;
 }

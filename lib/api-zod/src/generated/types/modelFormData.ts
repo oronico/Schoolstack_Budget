@@ -6,13 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CapitalDebtRow } from "./capitalDebtRow";
+import type { CovenantThresholds } from "./covenantThresholds";
 import type { Enrollment } from "./enrollment";
 import type { ExpenseRow } from "./expenseRow";
 import type { Facilities } from "./facilities";
+import type { OpeningBalances } from "./openingBalances";
 import type { PriorYearSnapshot } from "./priorYearSnapshot";
 import type { Revenue } from "./revenue";
 import type { RevenueRow } from "./revenueRow";
+import type { Scenario } from "./scenario";
 import type { SchoolProfile } from "./schoolProfile";
+import type { SourcesAndUses } from "./sourcesAndUses";
 import type { Staffing } from "./staffing";
 import type { StaffingRow } from "./staffingRow";
 
@@ -27,4 +31,8 @@ export interface ModelFormData {
   expenseRows?: ExpenseRow[];
   capitalAndDebtRows?: CapitalDebtRow[];
   priorYearSnapshot?: PriorYearSnapshot;
+  openingBalances?: OpeningBalances;
+  sourcesAndUses?: SourcesAndUses;
+  scenarios?: Scenario[];
+  covenantThresholds?: CovenantThresholds;
 }

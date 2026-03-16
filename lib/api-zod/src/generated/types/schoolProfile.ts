@@ -11,6 +11,7 @@ import type { SchoolProfileEnrollmentRevenueMethod } from "./schoolProfileEnroll
 import type { SchoolProfileEntityType } from "./schoolProfileEntityType";
 import type { SchoolProfileGradeBandEnrollment } from "./schoolProfileGradeBandEnrollment";
 import type { SchoolProfileGradeBandPerPupil } from "./schoolProfileGradeBandPerPupil";
+import type { SchoolProfileLendingLabIntent } from "./schoolProfileLendingLabIntent";
 import type { SchoolProfileOwnershipType } from "./schoolProfileOwnershipType";
 import type { SchoolProfileSchoolType } from "./schoolProfileSchoolType";
 import type { SchoolStage } from "./schoolStage";
@@ -55,4 +56,6 @@ export interface SchoolProfile {
   charterDepositTiming?: SchoolProfileCharterDepositTiming;
   priorYearADM?: number;
   priorYearADA?: number;
+  debtIncluded?: boolean;
+  lendingLabIntent?: SchoolProfileLendingLabIntent;
 }

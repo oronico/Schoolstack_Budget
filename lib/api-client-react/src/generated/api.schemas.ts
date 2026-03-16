@@ -286,6 +286,15 @@ export interface ExpenseRow {
   escalationRate?: number;
 }
 
+export type CapitalDebtRowPurpose =
+  (typeof CapitalDebtRowPurpose)[keyof typeof CapitalDebtRowPurpose];
+
+export const CapitalDebtRowPurpose = {
+  startup: "startup",
+  operating: "operating",
+  refinance: "refinance",
+} as const;
+
 export interface CapitalDebtRow {
   id: string;
   lineItem: string;
@@ -297,6 +306,42 @@ export interface CapitalDebtRow {
   loanPrincipal?: number;
   loanRate?: number;
   loanTermYears?: number;
+  purpose?: CapitalDebtRowPurpose;
+}
+
+export interface OpeningBalances {
+  cash?: number;
+  accountsReceivable?: number;
+  fixedAssets?: number;
+  otherAssets?: number;
+  accountsPayable?: number;
+  currentDebtPortion?: number;
+  longTermDebt?: number;
+}
+
+export interface SourcesAndUsesItem {
+  lineItem?: string;
+  amount?: number;
+  category?: string;
+}
+
+export interface SourcesAndUses {
+  sources?: SourcesAndUsesItem[];
+  uses?: SourcesAndUsesItem[];
+}
+
+export interface Scenario {
+  name?: string;
+  enrollmentAdjustment?: number;
+  tuitionAdjustment?: number;
+  expenseAdjustment?: number;
+}
+
+export interface CovenantThresholds {
+  minDSCR?: number;
+  minDaysCashOnHand?: number;
+  minMonthsRunway?: number;
+  minCapacityUtil?: number;
 }
 
 export interface PriorYearSnapshot {
@@ -358,6 +403,16 @@ export const SchoolProfileCharterDepositTiming = {
   annual: "annual",
 } as const;
 
+export type SchoolProfileLendingLabIntent =
+  (typeof SchoolProfileLendingLabIntent)[keyof typeof SchoolProfileLendingLabIntent];
+
+export const SchoolProfileLendingLabIntent = {
+  explore: "explore",
+  pre_qualified: "pre_qualified",
+  active_application: "active_application",
+  refinance: "refinance",
+} as const;
+
 export type SchoolProfileGradeBandEnrollment = {
   k5?: number[];
   m68?: number[];
@@ -410,6 +465,8 @@ export interface SchoolProfile {
   charterDepositTiming?: SchoolProfileCharterDepositTiming;
   priorYearADM?: number;
   priorYearADA?: number;
+  debtIncluded?: boolean;
+  lendingLabIntent?: SchoolProfileLendingLabIntent;
 }
 
 export interface Enrollment {
@@ -474,6 +531,10 @@ export interface ModelFormData {
   expenseRows?: ExpenseRow[];
   capitalAndDebtRows?: CapitalDebtRow[];
   priorYearSnapshot?: PriorYearSnapshot;
+  openingBalances?: OpeningBalances;
+  sourcesAndUses?: SourcesAndUses;
+  scenarios?: Scenario[];
+  covenantThresholds?: CovenantThresholds;
 }
 
 export interface CreateFinancialModelData {
