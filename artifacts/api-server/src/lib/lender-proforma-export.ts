@@ -507,6 +507,12 @@ function polishLenderWorkbook(workbook: any, schoolName: string) {
     coverSheet.pageMargins("bottom", 1);
   }
 
+  const ACCT_FMT = '_("$"* #,##0_);_("$"* (#,##0);_("$"* "-"??_);_(@_)';
+  const PCT_FMT = "0.0%";
+  const GREEN_HEX = "E8F5E9";
+  const RED_HEX = "FCE4EC";
+  const AMBER_HEX = "FFF8E1";
+
   for (const sheet of workbook.sheets()) {
     if (sheet.name() === "Cover") continue;
     sheet.freezePanes(1, 1);
@@ -514,6 +520,106 @@ function polishLenderWorkbook(workbook: any, schoolName: string) {
     sheet.pageMargins("right", 0.25);
     sheet.pageMargins("top", 0.5);
     sheet.pageMargins("bottom", 0.5);
+    sheet.printGridLines(false);
+
+    const used = sheet.usedRange();
+    if (used) {
+      const addr = used.address();
+      try {
+        workbook.definedName(`${sheet.name()}!Print_Area`, sheet.range(addr));
+      } catch (_) {}
+    }
+  }
+
+  const pnlSheet = workbook.sheet("5-Year P&L");
+  if (pnlSheet) {
+    const used = pnlSheet.usedRange();
+    if (used) {
+      const endRow = used.endCell().rowNumber();
+      for (let row = 1; row <= endRow; row++) {
+        const label = pnlSheet.cell(`A${row}`).value();
+        if (typeof label !== "string") continue;
+        const lower = label.toLowerCase();
+
+        if (lower.includes("net income") || lower.includes("net surplus")) {
+          for (let col = 2; col <= 6; col++) {
+            const cell = pnlSheet.cell(row, col);
+            const val = cell.value();
+            if (typeof val === "number") {
+              cell.style("numberFormat", ACCT_FMT);
+              cell.style("fill", { type: "solid", color: val >= 0 ? GREEN_HEX : RED_HEX });
+            }
+          }
+        }
+
+        if (lower.includes("total revenue") || lower.includes("total expenses") || lower.includes("total operating")) {
+          for (let col = 2; col <= 6; col++) {
+            const cell = pnlSheet.cell(row, col);
+            cell.style("numberFormat", ACCT_FMT);
+            cell.style("bold", true);
+            cell.style("bottomBorder", true);
+            cell.style("bottomBorderStyle", "double");
+          }
+        }
+      }
+    }
+  }
+
+  const dscrSheet = workbook.sheet("Cash Flow & DSCR");
+  if (dscrSheet) {
+    const used = dscrSheet.usedRange();
+    if (used) {
+      const endRow = used.endCell().rowNumber();
+      for (let row = 1; row <= endRow; row++) {
+        const label = dscrSheet.cell(`A${row}`).value();
+        if (typeof label !== "string") continue;
+        const lower = label.toLowerCase();
+
+        if (lower.includes("dscr") || lower.includes("debt service coverage")) {
+          for (let col = 2; col <= 6; col++) {
+            const cell = dscrSheet.cell(row, col);
+            const val = cell.value();
+            if (typeof val === "number") {
+              cell.style("fill", { type: "solid", color: val >= 1.2 ? GREEN_HEX : val >= 1.0 ? AMBER_HEX : RED_HEX });
+            }
+          }
+        }
+
+        if (lower.includes("ending cash") || lower.includes("cash balance")) {
+          for (let col = 2; col <= 6; col++) {
+            const cell = dscrSheet.cell(row, col);
+            const val = cell.value();
+            if (typeof val === "number") {
+              cell.style("numberFormat", ACCT_FMT);
+              cell.style("fill", { type: "solid", color: val >= 0 ? GREEN_HEX : RED_HEX });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const summarySheet = workbook.sheet("Summary");
+  if (summarySheet) {
+    const used = summarySheet.usedRange();
+    if (used) {
+      const endRow = used.endCell().rowNumber();
+      for (let row = 1; row <= endRow; row++) {
+        const label = summarySheet.cell(`A${row}`).value();
+        if (typeof label !== "string") continue;
+        const lower = label.toLowerCase();
+
+        if (lower.includes("margin") || lower.includes("ratio")) {
+          for (let col = 2; col <= 6; col++) {
+            const cell = summarySheet.cell(row, col);
+            const val = cell.value();
+            if (typeof val === "number" && Math.abs(val) <= 1) {
+              cell.style("numberFormat", PCT_FMT);
+            }
+          }
+        }
+      }
+    }
   }
 }
 
