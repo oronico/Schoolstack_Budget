@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle } from "lucide-react";
+import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit } from "../schema";
 
@@ -143,6 +143,7 @@ export function SchoolProfileStep() {
   const schoolType = watch("schoolProfile.schoolType");
   const entityType = watch("schoolProfile.entityType");
   const isAccredited = watch("schoolProfile.isAccredited");
+  const lendingLabIntent = watch("schoolProfile.lendingLabIntent");
 
   const locationSecured = watch("schoolProfile.locationSecured");
   const ownershipType = watch("schoolProfile.ownershipType");
@@ -292,6 +293,41 @@ export function SchoolProfileStep() {
             />
           </div>
         )}
+      </div>
+
+      <div>
+        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4 flex items-center gap-2">
+          <Landmark className="h-5 w-5 text-primary" /> Are you building this model to support a Lending Lab microloan application?
+        </h3>
+        <div className="space-y-3">
+          <RadioCard
+            value="plan_to_apply"
+            selected={lendingLabIntent === "plan_to_apply"}
+            onSelect={() => setValue("schoolProfile.lendingLabIntent", "plan_to_apply", { shouldDirty: true })}
+            icon={<Rocket className="h-5 w-5" />}
+            title="Yes, I plan to apply"
+            description="I'm preparing my model for a Lending Lab microloan application"
+          />
+          <RadioCard
+            value="want_to_understand"
+            selected={lendingLabIntent === "want_to_understand"}
+            onSelect={() => setValue("schoolProfile.lendingLabIntent", "want_to_understand", { shouldDirty: true })}
+            icon={<HelpCircle className="h-5 w-5" />}
+            title="Maybe — I want to understand what would be needed"
+            description="I'd like to see what a lender-ready model looks like"
+          />
+          <RadioCard
+            value="budget_only"
+            selected={lendingLabIntent === "budget_only"}
+            onSelect={() => setValue("schoolProfile.lendingLabIntent", "budget_only", { shouldDirty: true })}
+            icon={<Building2 className="h-5 w-5" />}
+            title="No, I'm building a budget/model only"
+            description="I just need a financial plan for my school"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-3 italic">
+          Selecting yes helps tailor your export and next steps. It does not submit a loan application.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

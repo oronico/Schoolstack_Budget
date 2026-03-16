@@ -1134,6 +1134,41 @@ function buildFiveYearModel(
     cell.numFmt = CUR; gc(cell);
   }
 
+  const revArr: number[] = [];
+  const persArr: number[] = [];
+  const opexArr: number[] = [];
+  const cdArr: number[] = [];
+  const niArr: number[] = [];
+  const totalExpArr: number[] = [];
+  const cfadsArr: number[] = [];
+  const endCashArr: number[] = [];
+  const maxCap = sp.maxCapacity || 0;
+
+  for (let y = 0; y < yc; y++) {
+    const pf = y === 0 ? prorationFactor : 1;
+    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
+    const pers = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
+    const exp = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct) * pf;
+    const cd = computeCapDebtForYear(capDebtRows, y, enrollment[y]);
+    const revRounded = Math.round(rev * pf);
+    const persRounded = Math.round(pers);
+    const expRounded = Math.round(exp);
+    const cdRounded = Math.round(cd);
+    const totalExp = persRounded + expRounded + cdRounded;
+    const ni = revRounded - totalExp;
+    const cfads = revRounded - persRounded - expRounded;
+    const startCash = y === 0 ? startingCash : endCashArr[y - 1];
+    const endCash = startCash + ni;
+    revArr.push(revRounded);
+    persArr.push(persRounded);
+    opexArr.push(expRounded);
+    cdArr.push(cdRounded);
+    niArr.push(ni);
+    totalExpArr.push(totalExp);
+    cfadsArr.push(cfads);
+    endCashArr.push(endCash);
+  }
+
   r += 2;
   const plHeaderRow = r;
   sec(ws, r, 6); ws.getCell(r, 1).value = "INCOME STATEMENT SUMMARY";
@@ -1141,7 +1176,7 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Total Revenue"; bc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, cn(revTotalRow, y + 2), "0");
+    setFormula(cell, cn(revTotalRow, y + 2), revArr[y]);
     cell.numFmt = CUR; bc(cell);
   }
   const plRevRow = r;
@@ -1149,7 +1184,7 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Total Personnel"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, cn(persTotalRow, y + 2), "0");
+    setFormula(cell, cn(persTotalRow, y + 2), persArr[y]);
     cell.numFmt = CUR; dc(cell);
   }
   const plPersRow = r;
@@ -1157,7 +1192,7 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Total Operating Expenses"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, cn(opexTotalRow, y + 2), "0");
+    setFormula(cell, cn(opexTotalRow, y + 2), opexArr[y]);
     cell.numFmt = CUR; dc(cell);
   }
   const plOpexRow = r;
@@ -1165,7 +1200,7 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Total Capital & Debt Service"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, cn(capDebtTotalRow, y + 2), "0");
+    setFormula(cell, cn(capDebtTotalRow, y + 2), cdArr[y]);
     cell.numFmt = CUR; dc(cell);
   }
   const plCapRow = r;
@@ -1173,7 +1208,7 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Total Expenses"; bc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `${cn(plPersRow, y + 2)}+${cn(plOpexRow, y + 2)}+${cn(plCapRow, y + 2)}`, "0");
+    setFormula(cell, `${cn(plPersRow, y + 2)}+${cn(plOpexRow, y + 2)}+${cn(plCapRow, y + 2)}`, totalExpArr[y]);
     cell.numFmt = CUR; bc(cell);
   }
   const totalExpRow = r;
@@ -1187,31 +1222,28 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = niLabel; ws.getCell(r, 1).font = { bold: true, size: 12, name: "Calibri", color: { argb: NAVY } };
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct);
-    const pf = y === 0 ? prorationFactor : 1;
-    const pers = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
-    const exp = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct) * pf;
-    const cd = computeCapDebtForYear(capDebtRows, y, enrollment[y]);
-    const ni = Math.round(rev * pf) - Math.round(pers) - Math.round(exp) - Math.round(cd);
-    setFormula(cell, `${cn(plRevRow, y + 2)}-${cn(totalExpRow, y + 2)}`, ni);
+    setFormula(cell, `${cn(plRevRow, y + 2)}-${cn(totalExpRow, y + 2)}`, niArr[y]);
     cell.numFmt = CUR; gc(cell);
-    if (ni < 0) cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: "FFDC2626" } };
+    if (niArr[y] < 0) cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: "FFDC2626" } };
   }
 
   r++; ws.getCell(r, 1).value = isNonprofit ? "Net Margin %" : "Profit Margin %"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(plRevRow, y + 2)}=0,"",${cn(netIncomeRow, y + 2)}/${cn(plRevRow, y + 2)})`, "0");
+    const margin = revArr[y] === 0 ? "" : niArr[y] / revArr[y];
+    setFormula(cell, `IF(${cn(plRevRow, y + 2)}=0,"",${cn(netIncomeRow, y + 2)}/${cn(plRevRow, y + 2)})`, margin);
     cell.numFmt = PCT; dc(cell);
   }
 
   r++; ws.getCell(r, 1).value = isNonprofit ? "Cumulative Net Income" : "Cumulative Profit"; dc(ws.getCell(r, 1));
+  let cumNI = 0;
   for (let y = 0; y < yc; y++) {
+    cumNI += niArr[y];
     const cell = ws.getCell(r, y + 2);
     if (y === 0) {
-      setFormula(cell, cn(netIncomeRow, y + 2), "0");
+      setFormula(cell, cn(netIncomeRow, y + 2), cumNI);
     } else {
-      setFormula(cell, `${cn(r, y + 1)}+${cn(netIncomeRow, y + 2)}`, "0");
+      setFormula(cell, `${cn(r, y + 1)}+${cn(netIncomeRow, y + 2)}`, cumNI);
     }
     cell.numFmt = CUR; dc(cell);
   }
@@ -1224,14 +1256,14 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "CFADS (Cash Flow Available for Debt Service)"; bc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `${cn(plRevRow, y + 2)}-${cn(plPersRow, y + 2)}-${cn(plOpexRow, y + 2)}`, "0");
+    setFormula(cell, `${cn(plRevRow, y + 2)}-${cn(plPersRow, y + 2)}-${cn(plOpexRow, y + 2)}`, cfadsArr[y]);
     cell.numFmt = CUR; bc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Debt Service"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, cn(plCapRow, y + 2), "0");
+    setFormula(cell, cn(plCapRow, y + 2), cdArr[y]);
     cell.numFmt = CUR; dc(cell);
   }
   const dsDebtRow = r;
@@ -1240,17 +1272,19 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "DSCR (Debt Service Coverage Ratio)"; bc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(dsDebtRow, y + 2)}=0,"N/A",${cn(cfadsRow, y + 2)}/${cn(dsDebtRow, y + 2)})`, "0");
+    const dscrVal = cdArr[y] === 0 ? "N/A" : Math.round((cfadsArr[y] / cdArr[y]) * 100) / 100;
+    setFormula(cell, `IF(${cn(dsDebtRow, y + 2)}=0,"N/A",${cn(cfadsRow, y + 2)}/${cn(dsDebtRow, y + 2)})`, dscrVal);
     cell.numFmt = "0.00x"; bc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Starting Cash"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
+    const sc = y === 0 ? startingCash : endCashArr[y - 1];
     if (y === 0) {
-      setFormula(cell, `Assumptions!${cn(asm.startingCashRow, 2)}`, startingCash);
+      setFormula(cell, `Assumptions!${cn(asm.startingCashRow, 2)}`, sc);
     } else {
-      setFormula(cell, cn(r + 1, y + 1), "0");
+      setFormula(cell, cn(r + 1, y + 1), sc);
     }
     cell.numFmt = CUR; dc(cell);
   }
@@ -1260,28 +1294,31 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Ending Cash"; bc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `${cn(startCashRow, y + 2)}+${cn(netIncomeRow, y + 2)}`, "0");
+    setFormula(cell, `${cn(startCashRow, y + 2)}+${cn(netIncomeRow, y + 2)}`, endCashArr[y]);
     cell.numFmt = CUR; bc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Days Cash on Hand"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(totalExpRow, y + 2)}=0,"",${cn(endingCashRow, y + 2)}/${cn(totalExpRow, y + 2)}*365)`, "0");
+    const days = totalExpArr[y] === 0 ? "" : Math.round(endCashArr[y] / totalExpArr[y] * 365);
+    setFormula(cell, `IF(${cn(totalExpRow, y + 2)}=0,"",${cn(endingCashRow, y + 2)}/${cn(totalExpRow, y + 2)}*365)`, days);
     cell.numFmt = NUM; dc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Months of Runway"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(totalExpRow, y + 2)}=0,"",${cn(endingCashRow, y + 2)}/(${cn(totalExpRow, y + 2)}/12))`, "0");
+    const months = totalExpArr[y] === 0 ? "" : Math.round(endCashArr[y] / (totalExpArr[y] / 12) * 10) / 10;
+    setFormula(cell, `IF(${cn(totalExpRow, y + 2)}=0,"",${cn(endingCashRow, y + 2)}/(${cn(totalExpRow, y + 2)}/12))`, months);
     cell.numFmt = "0.0"; dc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Capacity Utilization %"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(Assumptions!${cn(asm.maxCapRow, 2)}=0,"",${cn(enrollRow, y + 2)}/Assumptions!${cn(asm.maxCapRow, 2)})`, "0");
+    const capUtil = maxCap === 0 ? "" : enrollment[y] / maxCap;
+    setFormula(cell, `IF(Assumptions!${cn(asm.maxCapRow, 2)}=0,"",${cn(enrollRow, y + 2)}/Assumptions!${cn(asm.maxCapRow, 2)})`, capUtil);
     cell.numFmt = PCT; dc(cell);
   }
 
@@ -1291,28 +1328,31 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "DSCR ≥ 1.20x"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(dsDebtRow, y + 2)}=0,"N/A",IF(${cn(dscrRow, y + 2)}>=1.2,"PASS","FAIL"))`, "");
+    const dscrChk = cdArr[y] === 0 ? "N/A" : (cfadsArr[y] / cdArr[y] >= 1.2 ? "PASS" : "FAIL");
+    setFormula(cell, `IF(${cn(dsDebtRow, y + 2)}=0,"N/A",IF(${cn(dscrRow, y + 2)}>=1.2,"PASS","FAIL"))`, dscrChk);
     dc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Positive Net Income"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(netIncomeRow, y + 2)}>0,"PASS","FAIL")`, "");
+    setFormula(cell, `IF(${cn(netIncomeRow, y + 2)}>0,"PASS","FAIL")`, niArr[y] > 0 ? "PASS" : "FAIL");
     dc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Enrollment ≥ 70% Capacity"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(Assumptions!${cn(asm.maxCapRow, 2)}=0,"N/A",IF(${cn(enrollRow, y + 2)}/Assumptions!${cn(asm.maxCapRow, 2)}>=0.7,"PASS","FAIL"))`, "");
+    const capChk = maxCap === 0 ? "N/A" : (enrollment[y] / maxCap >= 0.7 ? "PASS" : "FAIL");
+    setFormula(cell, `IF(Assumptions!${cn(asm.maxCapRow, 2)}=0,"N/A",IF(${cn(enrollRow, y + 2)}/Assumptions!${cn(asm.maxCapRow, 2)}>=0.7,"PASS","FAIL"))`, capChk);
     dc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Cash Reserve ≥ 2 Months"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(totalExpRow, y + 2)}=0,"N/A",IF(${cn(endingCashRow, y + 2)}/(${cn(totalExpRow, y + 2)}/12)>=2,"PASS","FAIL"))`, "");
+    const reserveChk = totalExpArr[y] === 0 ? "N/A" : (endCashArr[y] / (totalExpArr[y] / 12) >= 2 ? "PASS" : "FAIL");
+    setFormula(cell, `IF(${cn(totalExpRow, y + 2)}=0,"N/A",IF(${cn(endingCashRow, y + 2)}/(${cn(totalExpRow, y + 2)}/12)>=2,"PASS","FAIL"))`, reserveChk);
     dc(cell);
   }
 
@@ -1323,7 +1363,8 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Revenue Per Student"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(enrollRow, y + 2)}=0,"",${cn(revTotalRow, y + 2)}/${cn(enrollRow, y + 2)})`, "0");
+    const rps = enrollment[y] === 0 ? "" : Math.round(revArr[y] / enrollment[y]);
+    setFormula(cell, `IF(${cn(enrollRow, y + 2)}=0,"",${cn(revTotalRow, y + 2)}/${cn(enrollRow, y + 2)})`, rps);
     cell.numFmt = CUR; dc(cell);
   }
   const revPerStudRow = r;
@@ -1331,14 +1372,16 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Cost Per Student"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(enrollRow, y + 2)}=0,"",${cn(totalExpRow, y + 2)}/${cn(enrollRow, y + 2)})`, "0");
+    const cps = enrollment[y] === 0 ? "" : Math.round(totalExpArr[y] / enrollment[y]);
+    setFormula(cell, `IF(${cn(enrollRow, y + 2)}=0,"",${cn(totalExpRow, y + 2)}/${cn(enrollRow, y + 2)})`, cps);
     cell.numFmt = CUR; dc(cell);
   }
 
   r++; ws.getCell(r, 1).value = "Fixed Costs (Personnel + Debt)"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `${cn(plPersRow, y + 2)}+${cn(plCapRow, y + 2)}`, "0");
+    const fc = persArr[y] + cdArr[y];
+    setFormula(cell, `${cn(plPersRow, y + 2)}+${cn(plCapRow, y + 2)}`, fc);
     cell.numFmt = CUR; dc(cell);
   }
   const fixedCostRow = r;
@@ -1346,7 +1389,8 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Variable Cost Per Student"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(enrollRow, y + 2)}=0,"",${cn(plOpexRow, y + 2)}/${cn(enrollRow, y + 2)})`, "0");
+    const vcps = enrollment[y] === 0 ? "" : Math.round(opexArr[y] / enrollment[y]);
+    setFormula(cell, `IF(${cn(enrollRow, y + 2)}=0,"",${cn(plOpexRow, y + 2)}/${cn(enrollRow, y + 2)})`, vcps);
     cell.numFmt = CUR; dc(cell);
   }
   const varCostRow = r;
@@ -1354,7 +1398,10 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Contribution Margin Per Student"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(enrollRow, y + 2)}=0,"",${cn(revPerStudRow, y + 2)}-${cn(varCostRow, y + 2)})`, "0");
+    const rps = enrollment[y] === 0 ? 0 : revArr[y] / enrollment[y];
+    const vcps = enrollment[y] === 0 ? 0 : opexArr[y] / enrollment[y];
+    const cm = enrollment[y] === 0 ? "" : Math.round(rps - vcps);
+    setFormula(cell, `IF(${cn(enrollRow, y + 2)}=0,"",${cn(revPerStudRow, y + 2)}-${cn(varCostRow, y + 2)})`, cm);
     cell.numFmt = CUR; dc(cell);
   }
   const cmRow = r;
@@ -1363,7 +1410,12 @@ function buildFiveYearModel(
   ws.getCell(r, 1).font = { bold: true, size: 12, name: "Calibri", color: { argb: NAVY } };
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `IF(${cn(cmRow, y + 2)}<=0,"N/A",ROUNDUP(${cn(fixedCostRow, y + 2)}/${cn(cmRow, y + 2)},0))`, "0");
+    const fc = persArr[y] + cdArr[y];
+    const rps = enrollment[y] === 0 ? 0 : revArr[y] / enrollment[y];
+    const vcps = enrollment[y] === 0 ? 0 : opexArr[y] / enrollment[y];
+    const cm = rps - vcps;
+    const be = cm <= 0 ? "N/A" : Math.ceil(fc / cm);
+    setFormula(cell, `IF(${cn(cmRow, y + 2)}<=0,"N/A",ROUNDUP(${cn(fixedCostRow, y + 2)}/${cn(cmRow, y + 2)},0))`, be);
     cell.numFmt = NUM; gc(cell);
   }
 

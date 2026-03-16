@@ -60,6 +60,11 @@ export const revenueSourcesSchema = z.object({
   philanthropy: z.boolean().default(false),
 });
 
+export const lendingLabIntentSchema = z.enum(["plan_to_apply", "want_to_understand", "budget_only"], {
+  required_error: "Please let us know your intent",
+  invalid_type_error: "Please select an option",
+}).optional();
+
 export const ownershipTypeSchema = z.enum(["own", "rent"], {
   required_error: "Please tell us whether you own or rent your space",
   invalid_type_error: "Please select own or rent",
@@ -122,6 +127,7 @@ export const schoolProfileSchema = z.object({
   loanAmount: z.coerce.number(numMsg("loan amount")).min(0, "Please enter a positive loan amount").optional().default(0),
   loanRate: z.coerce.number(numMsg("interest rate")).min(0, "Please enter a rate of 0% or higher").max(100, "Interest rate can't exceed 100%").optional().default(0),
   loanTermYears: z.coerce.number(numMsg("loan term")).min(0, "Please enter a positive loan term").max(50, "Loan term can't exceed 50 years").optional().default(0),
+  lendingLabIntent: lendingLabIntentSchema,
 });
 
 export const priorYearSnapshotSchema = z.object({
