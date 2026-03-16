@@ -281,10 +281,9 @@ function setSheetOrder(ws: ExcelJS.Worksheet, order: number) {
 
 function polishWorkbook(wb: ExcelJS.Workbook) {
   const coverNames = new Set(["Cover"]);
-  const skipFreeze = new Set(["Cover", "Consultant Notes", "Prior-Year Snapshot"]);
 
   for (const ws of wb.worksheets) {
-    if (!skipFreeze.has(ws.name)) {
+    if (!coverNames.has(ws.name)) {
       ws.views = [{ state: "frozen" as const, xSplit: 1, ySplit: 1, topLeftCell: "B2", activeCell: "B2" }];
     }
 
@@ -324,6 +323,7 @@ function buildCoverSheet(
   yearCount: number,
   precomputed?: PrecomputedFinancials,
   consultantData?: ConsultantSummary,
+  enrollment?: number[],
 ) {
   const ws = wb.addWorksheet("Cover");
   ws.columns = [{ width: 5 }, { width: 35 }, { width: 30 }, { width: 5 }];
@@ -392,11 +392,13 @@ function buildCoverSheet(
       ? ((precomputed.cumulativeNI[lastYear] ?? 0) > 0 ? (precomputed.cumulativeNI[lastYear] ?? 0) / ((precomputed.totalAllExpenses[lastYear] ?? 0) / 12) : 0)
       : 0;
 
+    const finalEnrollment = enrollment ? (enrollment[lastYear] ?? 0) : 0;
     const highlights: [string, number | string, string][] = [
       [`Year ${yearCount} Revenue`, finalRev, CURRENCY_FORMAT],
       [`Year ${yearCount} Net Income`, finalNI, CURRENCY_FORMAT],
       [`Year ${yearCount} Net Margin`, finalMargin, PERCENT_FORMAT],
       ["Operating Reserve (Months)", finalReserve, "0.0"],
+      [`Year ${yearCount} Enrollment`, finalEnrollment, "#,##0"],
     ];
 
     for (const [label, value, fmt] of highlights) {
@@ -837,7 +839,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
       buildPriorYearTab(priorWs, data.priorYearSnapshot, sp.entityType);
     }
 
-    buildCoverSheet(wb, sp, yearCount, precomputed, consultantData);
+    buildCoverSheet(wb, sp, yearCount, precomputed, consultantData, enrollmentByYear);
     setPrintArea(revenueWs, revTotalRow, cols);
     setPrintArea(expensesWs, expTotalRow, cols);
     setPrintArea(capitalWs, capTotalRow, cols);
@@ -860,7 +862,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
       buildConsultantNotesTab(notesWs, consultantData);
     }
 
-    buildCoverSheet(wb, sp, yearCount, undefined, consultantData);
+    buildCoverSheet(wb, sp, yearCount, undefined, consultantData, enrollmentByYear);
   }
 
   polishWorkbook(wb);

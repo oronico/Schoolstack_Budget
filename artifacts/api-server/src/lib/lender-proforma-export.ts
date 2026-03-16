@@ -485,8 +485,8 @@ function polishLenderWorkbook(workbook: any, schoolName: string) {
     for (const sheet of tocSheets) {
       r++;
       coverSheet.cell(`B${r}`).value(sheet.name()).style({
-        fontFamily: "Calibri", fontSize: 10, fontColor: NAVY,
-      });
+        fontFamily: "Calibri", fontSize: 10, fontColor: "0563C1", underline: true,
+      }).hyperlink({ sheet: sheet.name(), cell: "A1" });
     }
 
     r += 3;
