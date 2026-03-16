@@ -354,8 +354,10 @@ function hasGradeBandFE(sp?: SchoolProfile): boolean {
   if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
   const gbe = sp.gradeBandEnrollment;
   const gbp = sp.gradeBandPerPupil;
-  return ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0) &&
-    ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+  const hasEnrollment = [gbe.k5, gbe.m68, gbe.h912].some(
+    (arr) => arr && arr.some((v) => (v ?? 0) > 0),
+  );
+  return hasEnrollment && ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
 }
 
 function computeRevenueForYear(
@@ -911,6 +913,10 @@ function buildAssumptions(
     r++;
     ws.getCell(r, 1).value = "Prior-Year ADA"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = sp.priorYearADA || 0; ws.getCell(r, 2).numFmt = NUM; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r++;
+    const adaRatioFE = (sp.priorYearADM || 0) > 0 ? Math.min((sp.priorYearADA || 0) / (sp.priorYearADM || 1), 1) : 0.95;
+    ws.getCell(r, 1).value = "Attendance Ratio (ADA ÷ ADM)"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = adaRatioFE; ws.getCell(r, 2).numFmt = "0.00%"; dc(ws.getCell(r, 2));
     r += 2;
     const yLbls = yearLabels(sp);
     ws.getRow(r).values = ["Per-Pupil Rate", "K-5", "6-8", "9-12"];

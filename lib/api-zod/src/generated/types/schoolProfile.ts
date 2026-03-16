@@ -6,7 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { FundingProfile } from "./fundingProfile";
+import type { SchoolProfileCharterDepositTiming } from "./schoolProfileCharterDepositTiming";
+import type { SchoolProfileEnrollmentRevenueMethod } from "./schoolProfileEnrollmentRevenueMethod";
 import type { SchoolProfileEntityType } from "./schoolProfileEntityType";
+import type { SchoolProfileGradeBandEnrollment } from "./schoolProfileGradeBandEnrollment";
+import type { SchoolProfileGradeBandPerPupil } from "./schoolProfileGradeBandPerPupil";
+import type { SchoolProfileOwnershipType } from "./schoolProfileOwnershipType";
 import type { SchoolProfileSchoolType } from "./schoolProfileSchoolType";
 import type { SchoolStage } from "./schoolStage";
 
@@ -30,7 +35,7 @@ export interface SchoolProfile {
   facilityCity?: string;
   facilityState?: string;
   facilityZip?: string;
-  ownershipType?: "own" | "rent";
+  ownershipType?: SchoolProfileOwnershipType;
   propertyTaxAnnual?: number;
   hasMortgage?: boolean;
   mortgageMonthlyPayment?: number;
@@ -44,4 +49,10 @@ export interface SchoolProfile {
   nnnMaintenance?: number;
   nnnUtilities?: number;
   estimatedMonthlyFacilityBudget?: number;
+  gradeBandEnrollment?: SchoolProfileGradeBandEnrollment;
+  gradeBandPerPupil?: SchoolProfileGradeBandPerPupil;
+  enrollmentRevenueMethod?: SchoolProfileEnrollmentRevenueMethod;
+  charterDepositTiming?: SchoolProfileCharterDepositTiming;
+  priorYearADM?: number;
+  priorYearADA?: number;
 }

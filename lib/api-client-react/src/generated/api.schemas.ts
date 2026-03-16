@@ -331,6 +331,45 @@ export const SchoolProfileEntityType = {
   nonprofit_501c3: "nonprofit_501c3",
 } as const;
 
+export type SchoolProfileOwnershipType =
+  (typeof SchoolProfileOwnershipType)[keyof typeof SchoolProfileOwnershipType];
+
+export const SchoolProfileOwnershipType = {
+  own: "own",
+  rent: "rent",
+} as const;
+
+export type SchoolProfileEnrollmentRevenueMethod =
+  (typeof SchoolProfileEnrollmentRevenueMethod)[keyof typeof SchoolProfileEnrollmentRevenueMethod];
+
+export const SchoolProfileEnrollmentRevenueMethod = {
+  count_days: "count_days",
+  adm: "adm",
+  ada: "ada",
+} as const;
+
+export type SchoolProfileCharterDepositTiming =
+  (typeof SchoolProfileCharterDepositTiming)[keyof typeof SchoolProfileCharterDepositTiming];
+
+export const SchoolProfileCharterDepositTiming = {
+  monthly: "monthly",
+  quarterly: "quarterly",
+  semi_annual: "semi_annual",
+  annual: "annual",
+} as const;
+
+export type SchoolProfileGradeBandEnrollment = {
+  k5?: number[];
+  m68?: number[];
+  h912?: number[];
+};
+
+export type SchoolProfileGradeBandPerPupil = {
+  k5?: number;
+  m68?: number;
+  h912?: number;
+};
+
 export interface SchoolProfile {
   schoolName?: string;
   state?: string;
@@ -346,6 +385,31 @@ export interface SchoolProfile {
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;
   year1OperatingMonths?: number;
+  locationSecured?: boolean;
+  facilityStreet?: string;
+  facilityCity?: string;
+  facilityState?: string;
+  facilityZip?: string;
+  ownershipType?: SchoolProfileOwnershipType;
+  propertyTaxAnnual?: number;
+  hasMortgage?: boolean;
+  mortgageMonthlyPayment?: number;
+  monthlyRent?: number;
+  annualRentEscalation?: number;
+  leaseExpirationMonth?: number;
+  leaseExpirationYear?: number;
+  postLeaseRenewalBump?: number;
+  isNNNLease?: boolean;
+  nnnCamCharges?: number;
+  nnnMaintenance?: number;
+  nnnUtilities?: number;
+  estimatedMonthlyFacilityBudget?: number;
+  gradeBandEnrollment?: SchoolProfileGradeBandEnrollment;
+  gradeBandPerPupil?: SchoolProfileGradeBandPerPupil;
+  enrollmentRevenueMethod?: SchoolProfileEnrollmentRevenueMethod;
+  charterDepositTiming?: SchoolProfileCharterDepositTiming;
+  priorYearADM?: number;
+  priorYearADA?: number;
 }
 
 export interface Enrollment {

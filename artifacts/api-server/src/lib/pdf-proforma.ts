@@ -180,8 +180,10 @@ function hasGradeBandPDF(sp?: SchoolProfile): boolean {
   if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
   const gbe = sp.gradeBandEnrollment;
   const gbp = sp.gradeBandPerPupil;
-  return ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0) &&
-    ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+  const hasEnrollment = [gbe.k5, gbe.m68, gbe.h912].some(
+    (arr) => arr && arr.some((v) => (v ?? 0) > 0),
+  );
+  return hasEnrollment && ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
 }
 
 function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number, tiers?: TuitionTier[], sp?: SchoolProfile): number {

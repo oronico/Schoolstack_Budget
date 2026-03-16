@@ -177,8 +177,10 @@ function hasGradeBandDataLocal(sp?: SchoolProfile): boolean {
   if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
   const gbe = sp.gradeBandEnrollment;
   const gbp = sp.gradeBandPerPupil;
-  return ((gbe.k5?.[0] ?? 0) + (gbe.m68?.[0] ?? 0) + (gbe.h912?.[0] ?? 0) > 0) &&
-    ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+  const hasEnrollment = [gbe.k5, gbe.m68, gbe.h912].some(
+    (arr) => arr && arr.some((v) => (v ?? 0) > 0),
+  );
+  return hasEnrollment && ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
 }
 
 function computeRevenueY(rows: RevenueRow[], yearIdx: number, students: number, sp?: SchoolProfile): number {
@@ -769,6 +771,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       { row: gbStartRow + 3, label: "Charter Deposit Timing", value: TIMING_LABELS[String(input.charterDepositTiming)] || String(input.charterDepositTiming) },
       { row: gbStartRow + 4, label: "Prior-Year ADM", value: Number(input.priorYearADM) || 0, fmt: NUM },
       { row: gbStartRow + 5, label: "Prior-Year ADA", value: Number(input.priorYearADA) || 0, fmt: NUM },
+      { row: gbStartRow + 6, label: "Attendance Ratio (ADA ÷ ADM)", value: (Number(input.priorYearADM) || 0) > 0 ? Math.min((Number(input.priorYearADA) || 0) / (Number(input.priorYearADM) || 1), 1) : 0.95, fmt: "0.00%" },
       { row: gbStartRow + 7, label: "Per-Pupil Rate — K-5", value: Number(input.gbK5PerPupil) || 0, fmt: CUR },
       { row: gbStartRow + 8, label: "Per-Pupil Rate — 6-8", value: Number(input.gbM68PerPupil) || 0, fmt: CUR },
       { row: gbStartRow + 9, label: "Per-Pupil Rate — 9-12", value: Number(input.gbH912PerPupil) || 0, fmt: CUR },

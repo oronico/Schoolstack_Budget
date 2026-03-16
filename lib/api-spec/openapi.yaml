@@ -1014,6 +1014,79 @@ components:
           type: boolean
         year1OperatingMonths:
           type: integer
+        locationSecured:
+          type: boolean
+        facilityStreet:
+          type: string
+        facilityCity:
+          type: string
+        facilityState:
+          type: string
+        facilityZip:
+          type: string
+        ownershipType:
+          type: string
+          enum: [own, rent]
+        propertyTaxAnnual:
+          type: number
+        hasMortgage:
+          type: boolean
+        mortgageMonthlyPayment:
+          type: number
+        monthlyRent:
+          type: number
+        annualRentEscalation:
+          type: number
+        leaseExpirationMonth:
+          type: integer
+        leaseExpirationYear:
+          type: integer
+        postLeaseRenewalBump:
+          type: number
+        isNNNLease:
+          type: boolean
+        nnnCamCharges:
+          type: number
+        nnnMaintenance:
+          type: number
+        nnnUtilities:
+          type: number
+        estimatedMonthlyFacilityBudget:
+          type: number
+        gradeBandEnrollment:
+          type: object
+          properties:
+            k5:
+              type: array
+              items:
+                type: number
+            m68:
+              type: array
+              items:
+                type: number
+            h912:
+              type: array
+              items:
+                type: number
+        gradeBandPerPupil:
+          type: object
+          properties:
+            k5:
+              type: number
+            m68:
+              type: number
+            h912:
+              type: number
+        enrollmentRevenueMethod:
+          type: string
+          enum: [count_days, adm, ada]
+        charterDepositTiming:
+          type: string
+          enum: [monthly, quarterly, semi_annual, annual]
+        priorYearADM:
+          type: number
+        priorYearADA:
+          type: number
     Enrollment:
       type: object
       properties:

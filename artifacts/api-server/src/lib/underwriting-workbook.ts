@@ -332,6 +332,10 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     r++;
     ws.getCell(r, 1).value = "Prior-Year ADA"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = sp.priorYearADA || 0; ws.getCell(r, 2).numFmt = NUM; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    r++;
+    const adaRatio = (sp.priorYearADM || 0) > 0 ? Math.min((sp.priorYearADA || 0) / (sp.priorYearADM || 1), 1) : 0.95;
+    ws.getCell(r, 1).value = "Attendance Ratio (ADA ÷ ADM)"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = adaRatio; ws.getCell(r, 2).numFmt = "0.00%"; dc(ws.getCell(r, 2));
     r += 2;
     ws.getRow(r).values = ["Per-Pupil Rate", ...yLabels.slice(0, 3).map((_, i) => ["K-5", "6-8", "9-12"][i])];
     hdr(ws, r, 4);
