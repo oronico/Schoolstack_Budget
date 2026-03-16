@@ -10,7 +10,7 @@ const router: IRouter = Router();
 const MAX_PAYLOAD_SIZE = 512 * 1024;
 const rateLimiter = createRateLimiter();
 
-router.post("/public/export-underwriting", rateLimiter, async (req: Request, res: Response) => {
+async function handleBudgetExport(req: Request, res: Response) {
   try {
     const contentLength = parseInt(req.headers["content-length"] || "0", 10);
     if (contentLength > MAX_PAYLOAD_SIZE) {
@@ -46,10 +46,13 @@ router.post("/public/export-underwriting", rateLimiter, async (req: Request, res
 
     return res.end(Buffer.from(buffer));
   } catch (err) {
-    console.error("Public underwriting export error:", err);
+    console.error("Public budget export error:", err);
     res.status(500).json({ error: "Something went wrong generating the workbook." });
   }
-});
+}
+
+router.post("/public/export-budget", rateLimiter, handleBudgetExport);
+router.post("/public/export-underwriting", rateLimiter, handleBudgetExport);
 
 router.post("/public/export-single-year", rateLimiter, async (req: Request, res: Response) => {
   try {
