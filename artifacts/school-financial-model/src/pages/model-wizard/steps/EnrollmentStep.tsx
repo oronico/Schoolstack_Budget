@@ -94,6 +94,75 @@ function EnrollmentChart({ enrollments, maxCapacity, yearLabels }: { enrollments
   );
 }
 
+function EnrollmentBenchmark({ schoolType, maxCapacity, isNewSchool }: { schoolType: string; maxCapacity: number; isNewSchool: boolean }) {
+  const benchmarks: { label: string; detail: string }[] = [];
+
+  if (isNewSchool) {
+    if (maxCapacity > 0) {
+      const lowPct = 40;
+      const highPct = 65;
+      const lowEst = Math.round(maxCapacity * lowPct / 100);
+      const highEst = Math.round(maxCapacity * highPct / 100);
+      benchmarks.push({
+        label: `Year 1: ${lowEst}–${highEst} students (${lowPct}–${highPct}% of your ${maxCapacity} capacity)`,
+        detail: "Most new schools fill 40–65% of capacity in their opening year. Conservative projections build lender confidence.",
+      });
+    } else {
+      benchmarks.push({
+        label: "Year 1: Plan for 40–65% of your target capacity",
+        detail: "Most new schools fill 40–65% of capacity in their opening year. Conservative projections build lender confidence.",
+      });
+    }
+    benchmarks.push({
+      label: "Growth: 15–25% per year is a strong, realistic ramp",
+      detail: "Lenders expect steady growth, not hockey sticks. Year-over-year increases above 25% will need a clear explanation.",
+    });
+  }
+
+  if (schoolType === "charter_school") {
+    benchmarks.push({
+      label: "Charter benchmark: 100+ students by Year 2 for financial viability",
+      detail: "Per-pupil funding models typically need 100+ students to cover fixed costs. Plan your enrollment ramp accordingly.",
+    });
+  } else if (schoolType === "private_school") {
+    benchmarks.push({
+      label: "Private school: Tuition revenue is your primary driver",
+      detail: "Aim for tuition to cover at least 60% of operating costs. Enrollment directly determines your financial health.",
+    });
+  } else if (schoolType === "microschool" || schoolType === "learning_pod") {
+    benchmarks.push({
+      label: "Microschool/pod: Small cohorts mean each student matters more",
+      detail: "With fewer students, per-student revenue needs to be higher. Make sure your tuition rates account for the smaller scale.",
+    });
+  }
+
+  if (maxCapacity > 0) {
+    benchmarks.push({
+      label: `Capacity target: Reach 80–95% utilization by Year 3–4`,
+      detail: "Underutilized facilities are expensive. Plan to approach full capacity by mid-model to show financial sustainability.",
+    });
+  }
+
+  if (benchmarks.length === 0) return null;
+
+  return (
+    <div className="bg-gradient-to-br from-teal-50/80 to-emerald-50/40 border border-teal-200/60 rounded-2xl p-5 shadow-sm mb-6">
+      <div className="flex items-start gap-2 mb-3">
+        <Info className="h-4 w-4 text-teal-700 mt-0.5 flex-shrink-0" />
+        <p className="text-sm font-bold text-teal-800">Enrollment benchmarks for your school type</p>
+      </div>
+      <div className="space-y-3">
+        {benchmarks.map((b, i) => (
+          <div key={i}>
+            <p className="text-sm font-semibold text-teal-900">{b.label}</p>
+            <p className="text-xs text-teal-700/80 mt-0.5">{b.detail}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function EnrollmentStep() {
   const { watch, setValue } = useFormContext();
   const schoolType = watch("schoolProfile.schoolType") || "other";
@@ -342,6 +411,8 @@ export function EnrollmentStep() {
                 ? "Enter last year's actual enrollment, current year, and your projections going forward."
                 : "Enter your current year enrollment and your projections going forward."}
           </p>
+
+          <EnrollmentBenchmark schoolType={schoolType} maxCapacity={maxCapacity} isNewSchool={isNewSchool} />
 
           <div className="overflow-x-auto -mx-4 px-4">
             <table className="w-full text-sm border-collapse min-w-[600px]">
