@@ -1,0 +1,269 @@
+[
+  {
+    "name": "Lender_Microschool: Tab Structure",
+    "passed": true,
+    "details": [
+      "Expected: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary",
+      "Actual: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: Assumptions Values",
+    "passed": true,
+    "details": [
+      "Checked 42 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: Drivers Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 85 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: P&L Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 55 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: Cash Flow Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 35 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: Staffing Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 15 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: Loan Snapshot",
+    "passed": true,
+    "details": [
+      "Checked 5 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: Summary",
+    "passed": true,
+    "details": [
+      "Checked 5 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: Formula Presence",
+    "passed": true,
+    "details": [
+      "Found 202 formula cells across 6 sheets"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: Cross-Tab Formula References",
+    "passed": true,
+    "details": [
+      "Checked 4 cross-tab formula chains, 0 broken"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Microschool: Formatting Quality",
+    "passed": true,
+    "details": [
+      "Checked labels, input fills, section headers, conditional formatting. 0 issues."
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Tab Structure",
+    "passed": true,
+    "details": [
+      "Expected: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary",
+      "Actual: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Assumptions Values",
+    "passed": true,
+    "details": [
+      "Checked 42 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Drivers Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 85 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: P&L Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 55 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Cash Flow Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 35 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Staffing Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 15 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Loan Snapshot",
+    "passed": true,
+    "details": [
+      "Checked 5 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Summary",
+    "passed": true,
+    "details": [
+      "Checked 5 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Formula Presence",
+    "passed": true,
+    "details": [
+      "Found 202 formula cells across 6 sheets"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Cross-Tab Formula References",
+    "passed": true,
+    "details": [
+      "Checked 4 cross-tab formula chains, 0 broken"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_PrivateESA: Formatting Quality",
+    "passed": true,
+    "details": [
+      "Checked labels, input fills, section headers, conditional formatting. 0 issues."
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Tab Structure",
+    "passed": true,
+    "details": [
+      "Expected: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary",
+      "Actual: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Assumptions Values",
+    "passed": true,
+    "details": [
+      "Checked 42 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Drivers Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 85 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: P&L Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 55 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Cash Flow Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 35 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Staffing Cached Results",
+    "passed": true,
+    "details": [
+      "Checked 15 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Loan Snapshot",
+    "passed": true,
+    "details": [
+      "Checked 5 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Summary",
+    "passed": true,
+    "details": [
+      "Checked 5 cells, 0 mismatches"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Formula Presence",
+    "passed": true,
+    "details": [
+      "Found 202 formula cells across 6 sheets"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Cross-Tab Formula References",
+    "passed": true,
+    "details": [
+      "Checked 4 cross-tab formula chains, 0 broken"
+    ],
+    "errors": []
+  },
+  {
+    "name": "Lender_Charter: Formatting Quality",
+    "passed": true,
+    "details": [
+      "Checked labels, input fills, section headers, conditional formatting. 0 issues."
+    ],
+    "errors": []
+  }
+]
