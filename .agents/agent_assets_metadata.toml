@@ -42,3 +42,15 @@ id = "_pyeqebjw1K3mPlUPuuwM"
 uri = "file://artifacts/api-server/debug-export.xlsx"
 type = "table"
 title = "debug-export.xlsx — raw bytes from server (26,667 bytes)"
+
+[[outputs]]
+id = "3wE2sjhgKUPie434ijhfI"
+uri = "file://.canvas/assets/Bright_Horizons_Microschool_Underwriting.xlsx"
+type = "table"
+title = "Microschool Underwriting Pro Forma (Philanthropy + Fundraising)"
+
+[[outputs]]
+id = "AISfQfhTpB6_ppWBORX_x"
+uri = "file://.canvas/assets/Freedom_Charter_Academy_Underwriting.xlsx"
+type = "table"
+title = "Charter School Underwriting Pro Forma (500 Students)"
