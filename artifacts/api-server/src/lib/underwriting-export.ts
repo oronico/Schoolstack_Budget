@@ -64,6 +64,22 @@ interface StaffingRow {
   notes: string;
 }
 
+function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
+  return {
+    id: String(raw.id ?? ""),
+    roleName: String(raw.roleName ?? raw.name ?? raw.title ?? "Unnamed"),
+    functionCategory: String(raw.functionCategory ?? raw.category ?? "other"),
+    employmentType: String(raw.employmentType ?? "full_time"),
+    fte: Number(raw.fte) || 0,
+    annualizedRate: Number(raw.annualizedRate ?? raw.salary ?? raw.rate) || 0,
+    benefitsEligible: Boolean(raw.benefitsEligible ?? true),
+    benefitsRate: Number(raw.benefitsRate) || 0,
+    payrollTaxRate: Number(raw.payrollTaxRate) || 0,
+    payrollLike: Boolean(raw.payrollLike ?? false),
+    notes: String(raw.notes ?? ""),
+  };
+}
+
 interface ExpenseRow {
   id: string;
   category: string;
@@ -488,7 +504,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   const sp = data.schoolProfile || {};
   const en = data.enrollment || {};
   const revenueRows = data.revenueRows || [];
-  const staffingRows = data.staffingRows || [];
+  const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const expenseRows = data.expenseRows || [];
   const capDebtRows = data.capitalAndDebtRows || [];
 
@@ -578,7 +594,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   const sp = data.schoolProfile || {};
   const en = data.enrollment || {};
   const revenueRows = data.revenueRows || [];
-  const staffingRows = data.staffingRows || [];
+  const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const expenseRows = data.expenseRows || [];
   const capDebtRows = data.capitalAndDebtRows || [];
 
@@ -671,7 +687,7 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
   const yi = Math.max(0, Math.min(yearIndex, yc - 1));
 
   const revenueRows = data.revenueRows || [];
-  const staffingRows = data.staffingRows || [];
+  const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const expenseRows = (data.expenseRows || []).filter((r: ExpenseRow) => r.enabled !== false);
   const capDebtRows = (data.capitalAndDebtRows || []).filter((r: CapitalDebtRow) => r.enabled !== false);
 

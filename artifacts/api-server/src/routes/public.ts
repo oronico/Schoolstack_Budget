@@ -31,7 +31,7 @@ router.post("/public/export-underwriting", rateLimiter, async (req: Request, res
     const sp = (data.schoolProfile || {}) as { schoolName?: string };
     const rawName = (sp.schoolName || "School").trim();
     const safeName = rawName.replace(/[^a-zA-Z0-9 _-]/g, "").replace(/\s+/g, "-");
-    const filename = `${safeName}-Financial-Model.xlsx`;
+    const filename = `${safeName}-Budget-Model.xlsx`;
 
     res.status(200);
     res.setHeader(

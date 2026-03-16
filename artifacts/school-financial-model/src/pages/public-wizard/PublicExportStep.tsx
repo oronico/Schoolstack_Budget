@@ -35,7 +35,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
       const fallback = mode === "singleYear"
         ? `Year_${singleYearIndex + 1}_Budget.xlsx`
-        : "SchoolStack_Underwriting_Pro_Forma.xlsx";
+        : "SchoolStack_Budget_Model.xlsx";
       const filename = filenameMatch?.[1] || fallback;
       const urlObj = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -73,7 +73,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
       <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
         {anyExported
           ? "Check your downloads folder. Your workbook is fully formatted and lender-ready."
-          : "Download your financial model as a comprehensive Excel workbook — ready for lender meetings."}
+          : "Download your budget model as a polished Excel workbook — ready for lender meetings."}
       </p>
 
       <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -86,10 +86,10 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
             {loading === "5year" ? <Loader2 className="h-7 w-7 animate-spin" /> : <ClipboardCheck className="h-7 w-7" />}
           </div>
           <span className="font-display font-bold text-sm text-foreground">
-            {exported.has("5year") ? "5-Year Model ✓" : "5-Year Underwriting Model"}
+            {exported.has("5year") ? "5-Year Budget ✓" : "5-Year Budget Model"}
           </span>
           <span className="text-xs text-muted-foreground leading-snug">
-            14-tab workbook with DSCR, covenants, balance sheet & interactive formulas
+            3-tab workbook with assumptions, projections & monthly pro forma
           </span>
           <span className="mt-auto text-xs font-semibold text-primary group-hover:text-primary/80 transition-colors">
             {loading === "5year" ? "Generating..." : exported.has("5year") ? "Download Again" : "Download"}

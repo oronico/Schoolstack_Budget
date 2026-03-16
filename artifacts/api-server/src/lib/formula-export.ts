@@ -77,6 +77,22 @@ interface StaffingRow {
   benefitsRate: number; payrollTaxRate: number; payrollLike: boolean; notes: string;
 }
 
+function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
+  return {
+    id: String(raw.id ?? ""),
+    roleName: String(raw.roleName ?? raw.name ?? raw.title ?? "Unnamed"),
+    functionCategory: String(raw.functionCategory ?? raw.category ?? "other"),
+    employmentType: String(raw.employmentType ?? "full_time"),
+    fte: Number(raw.fte) || 0,
+    annualizedRate: Number(raw.annualizedRate ?? raw.salary ?? raw.rate) || 0,
+    benefitsEligible: Boolean(raw.benefitsEligible ?? true),
+    benefitsRate: Number(raw.benefitsRate) || 0,
+    payrollTaxRate: Number(raw.payrollTaxRate) || 0,
+    payrollLike: Boolean(raw.payrollLike ?? false),
+    notes: String(raw.notes ?? ""),
+  };
+}
+
 interface ExpenseRow {
   id: string; category: string; lineItem: string; enabled: boolean;
   driverType: string; amounts: number[]; escalationRate?: number; note?: string;
@@ -475,7 +491,7 @@ function buildAssumptions(
   const ws = wb.addWorksheet("Assumptions");
   const sp = data.schoolProfile || {};
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
-  const staffingRows = data.staffingRows || [];
+  const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const expenseRows = (data.expenseRows || []).filter(r => r.enabled);
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
@@ -880,7 +896,7 @@ function buildFiveYearModel(
   const ws = wb.addWorksheet("5-Year Model");
   const sp = data.schoolProfile || {};
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
-  const staffingRows = data.staffingRows || [];
+  const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const expenseRows = (data.expenseRows || []).filter(r => r.enabled);
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
@@ -1386,7 +1402,7 @@ function buildProForma(
   const ws = wb.addWorksheet("Year 1 Pro Forma");
   const sp = data.schoolProfile || {};
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
-  const staffingRows = data.staffingRows || [];
+  const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const expenseRows = (data.expenseRows || []).filter(r => r.enabled);
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
@@ -1674,7 +1690,7 @@ function buildActualsVsProjections(
   const prior = data.priorYearSnapshot;
   const current = data.currentYearProjection;
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
-  const staffingRows = data.staffingRows || [];
+  const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const expenseRows = (data.expenseRows || []).filter(r => r.enabled);
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
@@ -1911,7 +1927,7 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   const sp = data.schoolProfile || {};
   const en = data.enrollment || {};
   const revenueRows = data.revenueRows || [];
-  const staffingRows = data.staffingRows || [];
+  const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const expenseRows = data.expenseRows || [];
   const capDebtRows = data.capitalAndDebtRows || [];
 
