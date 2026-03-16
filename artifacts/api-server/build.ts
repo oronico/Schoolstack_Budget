@@ -1,7 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import { build as esbuild } from "esbuild";
-import { rm, readFile, mkdir, copyFile } from "fs/promises";
+import { rm, readFile } from "fs/promises";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,7 +20,6 @@ const allowlist = [
   "resend",
   "pdfkit",
   "pg",
-  "xlsx-populate",
   "zod",
 ];
 
@@ -55,13 +54,6 @@ async function buildAll() {
     logLevel: "info",
   });
 
-  const templatesDir = path.resolve(distDir, "templates");
-  await mkdir(templatesDir, { recursive: true });
-  await copyFile(
-    path.resolve(__dirname, "src", "templates", "SchoolStack_Prelaunch_ProForma_Template_v1.xlsx"),
-    path.resolve(templatesDir, "SchoolStack_Prelaunch_ProForma_Template_v1.xlsx"),
-  );
-  console.log("copied template workbook to dist/templates/");
 }
 
 buildAll().catch((err) => {
