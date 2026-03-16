@@ -24,7 +24,7 @@ export function LandingPage() {
     <Layout>
       <section className="relative pt-20 pb-32 overflow-hidden">
         <div className="absolute top-0 right-0 -mr-40 -mt-40 w-96 h-96 bg-[#328555]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 -ml-40 -mb-40 w-[500px] h-[500px] bg-[#D97706]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 -ml-40 -mb-40 w-[500px] h-[500px] bg-[#328555]/10 rounded-full blur-3xl" />
 
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="max-w-3xl">
@@ -56,7 +56,7 @@ export function LandingPage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href="/underwriting"
-                  className="bg-[#D97706] hover:bg-[#B45309] text-white px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg shadow-[#D97706]/20 flex items-center justify-center gap-2"
+                  className="bg-[#328555] hover:bg-[#276844] text-white px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg shadow-[#328555]/20 flex items-center justify-center gap-2"
                 >
                   Build My Model
                   <ArrowRight className="w-5 h-5" />
