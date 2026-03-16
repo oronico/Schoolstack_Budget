@@ -1,18 +1,13 @@
 import { Link } from "wouter";
 import {
   Calculator,
-  LineChart,
-  Users,
-  Clock,
+  FileSpreadsheet,
+  ShieldCheck,
   ArrowRight,
   CheckCircle2,
-  FileSpreadsheet,
-  Settings,
-  Download,
-  Activity,
-  Briefcase,
-  Building,
   GraduationCap,
+  Building,
+  Briefcase,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { motion } from "framer-motion";
@@ -27,7 +22,6 @@ const fadeUp = {
 export function LandingPage() {
   return (
     <Layout>
-      {/* Hero */}
       <section className="relative pt-20 pb-32 overflow-hidden">
         <div className="absolute top-0 right-0 -mr-40 -mt-40 w-96 h-96 bg-[#328555]/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 -ml-40 -mb-40 w-[500px] h-[500px] bg-[#D97706]/10 rounded-full blur-3xl" />
@@ -44,18 +38,18 @@ export function LandingPage() {
               </div>
 
               <h1 className="font-display text-5xl md:text-6xl font-bold text-[#1E293B] leading-tight mb-6">
-                Build Your Budget and{" "}
-                <span className="text-[#328555]">Financial Model</span>
+                Your mission deserves a{" "}
+                <span className="text-[#328555]">financial story</span>.
               </h1>
 
               <p className="text-xl md:text-2xl text-[#1E293B]/70 mb-4 leading-relaxed font-medium">
-                Your budget is the financial story to fuel your mission.
+                For Every K-12 Entrepreneur
               </p>
 
               <p className="text-lg text-[#1E293B]/60 mb-10 leading-relaxed max-w-2xl">
-                An easy-to-follow, step-by-step guide designed specifically for
-                school founders to build robust pro forma and financial models
-                without needing a finance degree.
+                Whether you're starting a charter, private school, microschool,
+                learning pod, or something entirely new — build a 5-year budget
+                that brings your vision to life. No finance degree required.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -63,7 +57,7 @@ export function LandingPage() {
                   href="/underwriting"
                   className="bg-[#D97706] hover:bg-[#B45309] text-white px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg shadow-[#D97706]/20 flex items-center justify-center gap-2"
                 >
-                  Start Your Budget
+                  Build My Model
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <a
@@ -78,7 +72,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* What You'll Build */}
       <section className="py-24 bg-white border-y border-[#1E293B]/5">
         <div className="max-w-6xl mx-auto px-6">
           <motion.div
@@ -87,42 +80,38 @@ export function LandingPage() {
             className="text-center mb-16"
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
-              What You'll Build
+              A budget is just the financial story of your mission
             </h2>
             <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
-              A comprehensive financial package ready for authorizers, lenders,
-              and your founding board.
+              We all start somewhere. SchoolStack Budget walks you through each
+              step — from enrollment to expenses — so you can tell your story
+              with confidence.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                icon: <LineChart className="w-8 h-8 text-[#328555]" />,
-                title: "Revenue Projections",
-                desc: "Accurate forecasts based on per-pupil funding, categorical grants, and fundraising goals.",
-              },
-              {
                 icon: <Calculator className="w-8 h-8 text-[#D97706]" />,
-                title: "Expense Planning",
-                desc: "Detailed categorization of instructional, operational, and facility costs.",
+                title: "Guided Wizard",
+                desc: "We walk you through enrollment, staffing, and facility planning one step at a time. Your budget is a living document — it gets better every time you revisit it.",
               },
               {
-                icon: <Users className="w-8 h-8 text-[#0D9488]" />,
-                title: "Staffing Model",
-                desc: "Salary schedules, benefits, and hiring timelines aligned with enrollment growth.",
+                icon: <FileSpreadsheet className="w-8 h-8 text-[#328555]" />,
+                title: "Underwriting Ready",
+                desc: "When you're ready, export a polished, multi-tab Excel workbook with real formulas — designed to help lenders and investors see your vision.",
               },
               {
-                icon: <Clock className="w-8 h-8 text-[#5B7CFA]" />,
-                title: "Cash Flow Timeline",
-                desc: "Month-by-month cash flow analysis to identify and plan for funding gaps.",
+                icon: <ShieldCheck className="w-8 h-8 text-[#0D9488]" />,
+                title: "Consultant Guidance",
+                desc: "Get friendly, plain-English guidance on your model — with encouragement on what's working and constructive suggestions for areas to strengthen.",
               },
             ].map((item, i) => (
               <motion.div
                 key={i}
                 {...fadeUp}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="bg-[#FAF9F7] p-8 rounded-2xl border border-[#1E293B]/5 hover:shadow-lg transition group"
+                className="bg-[#FAF9F7] p-8 rounded-2xl border border-[#1E293B]/5 hover:shadow-lg transition group flex flex-col items-center text-center"
               >
                 <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   {item.icon}
@@ -137,84 +126,10 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-24 bg-[#1E293B] text-white overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#328555]/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3" />
-
-        <div className="max-w-6xl mx-auto px-6 relative z-10">
-          <motion.div
-            {...fadeUp}
-            transition={{ duration: 0.5 }}
-            className="mb-16 md:w-2/3"
-          >
-            <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-              Budgeting made for school founders.
-            </h2>
-            <p className="text-xl text-white/60">
-              Stop fighting with broken spreadsheet templates. SchoolStack
-              Budget guides you through the process with built-in education
-              finance logic.
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {[
-              {
-                icon: <Activity className="w-6 h-6 text-white" />,
-                color: "bg-[#328555]",
-                title: "Guided Walkthrough",
-                desc: "A step-by-step interview process that asks you questions in plain English and translates your answers into financial data.",
-              },
-              {
-                icon: <Settings className="w-6 h-6 text-white" />,
-                color: "bg-[#D97706]",
-                title: "Smart Defaults",
-                desc: "Start with pre-populated assumptions based on school benchmarks for your state and region.",
-              },
-              {
-                icon: <FileSpreadsheet className="w-6 h-6 text-white" />,
-                color: "bg-[#0D9488]",
-                title: "Real-Time Modeling",
-                desc: "Change an assumption—like student enrollment or teacher salaries—and instantly see how it ripples through your entire budget.",
-              },
-              {
-                icon: <Download className="w-6 h-6 text-white" />,
-                color: "bg-[#5B7CFA]",
-                title: "Export Ready",
-                desc: "Generate professional, presentation-ready reports for authorizer meetings, board presentations, and loan applications.",
-              },
-            ].map((feature, i) => (
-              <motion.div
-                key={i}
-                {...fadeUp}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="flex gap-6 p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition"
-              >
-                <div
-                  className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${feature.color}`}
-                >
-                  {feature.icon}
-                </div>
-                <div>
-                  <h3 className="font-display text-xl font-bold mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-white/60 leading-relaxed">
-                    {feature.desc}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Sample Model Showcase */}
       <div id="sample-model">
         <SampleModelShowcase />
       </div>
 
-      {/* Who It's For */}
       <section className="py-24 bg-[#FAF9F7]">
         <div className="max-w-6xl mx-auto px-6">
           <motion.div
@@ -223,11 +138,11 @@ export function LandingPage() {
             className="text-center mb-16"
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
-              Built for the crucial moments
+              Built for the moments that matter
             </h2>
             <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
-              SchoolStack Budget provides the financial credibility you need
-              when it matters most.
+              Every great school started with someone brave enough to take the
+              first step. We're here to walk alongside you.
             </p>
           </motion.div>
 
@@ -273,7 +188,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Cross-sell */}
       <section className="py-20 bg-white border-t border-[#1E293B]/5">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
@@ -303,7 +217,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-24 bg-[#328555] relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#1E293B]/20 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
@@ -311,19 +224,20 @@ export function LandingPage() {
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
             <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-6">
-              Ready to tell your financial story?
+              Ready to tell the financial story of your school?
             </h2>
             <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-              Join the Alpha program today and be among the first founders to
-              build a better budget with SchoolStack.
+              Join K-12 entrepreneurs building schools for families. Every great
+              school started with someone brave enough to take the first step.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/underwriting"
-                className="bg-white text-[#328555] hover:bg-gray-50 px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg flex items-center justify-center"
+                className="bg-white text-[#328555] hover:bg-gray-50 px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg flex items-center justify-center gap-2"
               >
-                Build Your First Budget
+                Get Started Free
+                <ArrowRight className="w-5 h-5" />
               </Link>
               <a
                 href="mailto:hello@schoolstack.ai"
