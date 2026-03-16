@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { PublicExportUnderwritingBody } from "@workspace/api-zod";
-import { generateUnderwritingWorkbook, generateSingleYearBudget } from "../lib/underwriting-export";
+import { generateSingleYearBudget } from "../lib/underwriting-export";
+import { generateFormulaWorkbook } from "../lib/formula-export";
 import { runConsultantEngine } from "../lib/consultant-engine";
 import { createRateLimiter } from "../lib/rate-limiter";
 
@@ -25,7 +26,7 @@ router.post("/public/export-underwriting", rateLimiter, async (req: Request, res
 
     const data = parsed.data as Record<string, unknown>;
 
-    const buffer = await generateUnderwritingWorkbook(data);
+    const buffer = await generateFormulaWorkbook(data);
 
     const sp = (data.schoolProfile || {}) as { schoolName?: string };
     const rawName = (sp.schoolName || "School").trim();

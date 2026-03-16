@@ -42,7 +42,7 @@ The project is built as a pnpm workspace monorepo using TypeScript (v5.9).
 - **Frontend**: React, Vite, Tailwind CSS v4. Route-based code splitting via React.lazy + Suspense; vendor chunks (recharts, framer-motion, react-hook-form) split via manualChunks. No single JS chunk exceeds 500KB.
 - **Authentication**: JWT-based (bcryptjs for passwords, jsonwebtoken for tokens).
 - **Build Tooling**: esbuild for CJS bundling.
-- **Export Capabilities**: ExcelJS for standard Excel exports (with pre-computed formula results for viewer compatibility), xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports. 5-year underwriting model uses cross-tab formulas (P&L references detail tab totals, Summary references P&L). Single-year budget export generates monthly Jul-Jun columns for any chosen year (1-5).
+- **Export Capabilities**: ExcelJS for standard Excel exports (with pre-computed formula results for viewer compatibility), xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports. Primary underwriting export is now a formula-driven 4-tab Wildflower-style workbook (`formula-export.ts`): Assumptions (massive input panel with yellow-highlighted editable cells), 5-Year Model (revenue/personnel/opex/debt/P&L/DSCR/break-even with formulas referencing Assumptions), Year 1 Pro Forma (monthly Jul-Jun columns), and Actuals vs. Projections (only for operating schools with prior/current year data, includes reality-check flags). Single-year budget export generates monthly Jul-Jun columns for any chosen year (1-5) and remains in `underwriting-export.ts`.
 
 ## Monorepo Structure
 
@@ -66,10 +66,10 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 - `/admin` — Admin analytics dashboard
 
 ### API Routes
-- `POST /api/public/export-underwriting` — Public endpoint, accepts full model JSON payload, returns 14-tab XLSX
+- `POST /api/public/export-underwriting` — Public endpoint, accepts full model JSON payload, returns 4-tab formula-driven XLSX (Assumptions, 5-Year Model, Year 1 Pro Forma, Actuals vs. Projections)
 - `POST /api/public/consultant` — Public endpoint, accepts full model JSON payload, returns consultant analysis JSON
 - `POST /api/public/export-single-year?year=N` — Public single-year monthly budget export (year 0-4)
-- `GET /api/models/:id/export/underwriting` — Authenticated 14-tab underwriting workbook export with cross-tab formulas
+- `GET /api/models/:id/export/underwriting` — Authenticated 4-tab formula-driven underwriting workbook export
 - `GET /api/models/:id/export/single-year?year=N` — Authenticated single-year monthly budget export (year 0-4)
 - `GET /api/models/:id/export` — Authenticated Excel workbook export
 - `GET /api/models/:id/export/lender-proforma` — Authenticated Lender Pro Forma XLSX
