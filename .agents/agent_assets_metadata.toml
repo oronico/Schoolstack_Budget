@@ -60,3 +60,21 @@ id = "vbwofrF7GWsBjGiTCS9VW"
 uri = "file://SchoolStack_Export.xlsx"
 type = "table"
 title = "SchoolStack Budget — Underwriting Pro Forma Export"
+
+[[outputs]]
+id = "n071E4LNYwuh-qidAN4cC"
+uri = "file://Lender_Microschool.xlsx"
+type = "table"
+title = "Lender Pro Forma — Microschool Startup"
+
+[[outputs]]
+id = "R77owwOJZY0vSZDZ4B1sf"
+uri = "file://Lender_PrivateESA.xlsx"
+type = "table"
+title = "Lender Pro Forma — Private School + ESA"
+
+[[outputs]]
+id = "wWxkVmeNbA-rDcAz5F7Gq"
+uri = "file://Lender_Charter.xlsx"
+type = "table"
+title = "Lender Pro Forma — Charter Public Funding"
