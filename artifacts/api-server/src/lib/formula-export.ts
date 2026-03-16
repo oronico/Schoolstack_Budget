@@ -1002,32 +1002,73 @@ function buildFiveYearModel(
   sec(ws, r, 6); ws.getCell(r, 1).value = "OPERATING EXPENSES";
   const opexFirstRow = r + 1;
 
-  for (const ex of expenseRows) {
-    r++;
-    ws.getCell(r, 1).value = `${ex.lineItem} (${driverLabel(ex.driverType)})`;
-    dc(ws.getCell(r, 1));
+  const opexCategories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const opexCatTotalRows: number[] = [];
 
+  for (const cat of opexCategories) {
+    const catRows = expenseRows.filter(ex => ex.category === cat);
+
+    r++; ws.getCell(r, 1).value = expCatLabel(cat); ws.getCell(r, 1).font = BF;
+    for (let ci = 1; ci <= yc + 1; ci++) dc(ws.getCell(r, ci));
+
+    for (const ex of catRows) {
+      r++;
+      ws.getCell(r, 1).value = `  ${ex.lineItem} (${driverLabel(ex.driverType)})`;
+      dc(ws.getCell(r, 1));
+
+      for (let y = 0; y < yc; y++) {
+        const cell = ws.getCell(r, y + 2);
+        const students = enrollment[y];
+        const pf = y === 0 ? prorationFactor : 1;
+        const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct);
+        let val: number;
+        if (ex.driverType === "percent_of_revenue") {
+          const esc = resolveEsc(ex.escalationRate, costInflPct);
+          let pct: number;
+          if (esc !== 0 && y > 0) {
+            pct = (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
+          } else {
+            pct = ex.amounts?.[y] ?? 0;
+          }
+          val = Math.round((pct / 100) * rev * pf);
+        } else {
+          val = Math.round(driverVal(ex.amounts, y, ex.driverType, students, ex.escalationRate, costInflPct) * pf);
+        }
+        cell.value = val;
+        cell.numFmt = CUR; dc(cell);
+      }
+    }
+
+    r++;
+    ws.getCell(r, 1).value = `Total ${expCatLabel(cat)}`; ws.getCell(r, 1).font = BF;
     for (let y = 0; y < yc; y++) {
       const cell = ws.getCell(r, y + 2);
-      const students = enrollment[y];
-      const pf = y === 0 ? prorationFactor : 1;
-      const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct);
-      let val: number;
-      if (ex.driverType === "percent_of_revenue") {
-        const esc = resolveEsc(ex.escalationRate, costInflPct);
-        let pct: number;
-        if (esc !== 0 && y > 0) {
-          pct = (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
-        } else {
-          pct = ex.amounts?.[y] ?? 0;
-        }
-        val = Math.round((pct / 100) * rev * pf);
+      if (catRows.length === 0) {
+        cell.value = 0;
       } else {
-        val = Math.round(driverVal(ex.amounts, y, ex.driverType, students, ex.escalationRate, costInflPct) * pf);
+        const students = enrollment[y];
+        const pf = y === 0 ? prorationFactor : 1;
+        const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct);
+        let catSum = 0;
+        for (const ex of catRows) {
+          if (ex.driverType === "percent_of_revenue") {
+            const esc = resolveEsc(ex.escalationRate, costInflPct);
+            let pct: number;
+            if (esc !== 0 && y > 0) {
+              pct = (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
+            } else {
+              pct = ex.amounts?.[y] ?? 0;
+            }
+            catSum += Math.round((pct / 100) * rev * pf);
+          } else {
+            catSum += Math.round(driverVal(ex.amounts, y, ex.driverType, students, ex.escalationRate, costInflPct) * pf);
+          }
+        }
+        cell.value = catSum;
       }
-      cell.value = val;
-      cell.numFmt = CUR; dc(cell);
+      cell.numFmt = CUR; bc(cell);
     }
+    opexCatTotalRows.push(r);
   }
 
   const opexTotalRow = r + 1;
@@ -1038,7 +1079,8 @@ function buildFiveYearModel(
     const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct);
     const pf = y === 0 ? prorationFactor : 1;
     const expVal = computeExpenseForYear(expenseRows, y, students, rev, costInflPct) * pf;
-    setFormula(cell, `SUM(${cn(opexFirstRow, y + 2)}:${cn(r - 1, y + 2)})`, Math.round(expVal));
+    const sumParts = opexCatTotalRows.map(tr => cn(tr, y + 2)).join("+");
+    setFormula(cell, sumParts, Math.round(expVal));
     cell.numFmt = CUR; gc(cell);
   }
 
@@ -1470,36 +1512,80 @@ function buildProForma(
   const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct) * prorationFactor;
   const monthlyOps = opex0 / (opMonths || 12);
 
-  for (const ex of expenseRows) {
-    r++;
-    ws.getCell(r, 1).value = ex.lineItem || "Unnamed"; dc(ws.getCell(r, 1));
-    let val: number;
-    if (ex.driverType === "percent_of_revenue") {
-      const pct = ex.amounts?.[0] ?? 0;
-      val = (pct / 100) * rev0 * prorationFactor;
-    } else {
-      val = driverVal(ex.amounts, 0, ex.driverType, students, ex.escalationRate, costInflPct) * prorationFactor;
-    }
-    const monthly = val / (opMonths || 12);
+  const pfOpexCategories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const pfOpexCatTotalRows: number[] = [];
 
-    for (let m = 0; m < 12; m++) {
-      const cell = ws.getCell(r, m + 2);
-      cell.value = m < opMonths ? Math.round(monthly) : 0;
-      cell.numFmt = CUR; dc(cell);
+  for (const cat of pfOpexCategories) {
+    const catRows = expenseRows.filter(ex => ex.category === cat);
+
+    r++; ws.getCell(r, 1).value = expCatLabel(cat); ws.getCell(r, 1).font = BF;
+    for (let ci = 1; ci <= 14; ci++) dc(ws.getCell(r, ci));
+
+    for (const ex of catRows) {
+      r++;
+      ws.getCell(r, 1).value = `  ${ex.lineItem || "Unnamed"}`; dc(ws.getCell(r, 1));
+      let val: number;
+      if (ex.driverType === "percent_of_revenue") {
+        const pct = ex.amounts?.[0] ?? 0;
+        val = (pct / 100) * rev0 * prorationFactor;
+      } else {
+        val = driverVal(ex.amounts, 0, ex.driverType, students, ex.escalationRate, costInflPct) * prorationFactor;
+      }
+      const monthly = val / (opMonths || 12);
+
+      for (let m = 0; m < 12; m++) {
+        const cell = ws.getCell(r, m + 2);
+        cell.value = m < opMonths ? Math.round(monthly) : 0;
+        cell.numFmt = CUR; dc(cell);
+      }
+      setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, Math.round(val));
+      ws.getCell(r, 14).numFmt = CUR; dc(ws.getCell(r, 14));
     }
-    setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, Math.round(val));
-    ws.getCell(r, 14).numFmt = CUR; dc(ws.getCell(r, 14));
+
+    r++;
+    ws.getCell(r, 1).value = `Total ${expCatLabel(cat)}`; ws.getCell(r, 1).font = BF;
+    if (catRows.length === 0) {
+      for (let m = 0; m < 12; m++) {
+        const cell = ws.getCell(r, m + 2);
+        cell.value = 0; cell.numFmt = CUR; bc(cell);
+      }
+      ws.getCell(r, 14).value = 0; ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
+    } else {
+      for (let m = 0; m < 12; m++) {
+        const cell = ws.getCell(r, m + 2);
+        let catMonthly = 0;
+        for (const ex of catRows) {
+          let val: number;
+          if (ex.driverType === "percent_of_revenue") {
+            val = ((ex.amounts?.[0] ?? 0) / 100) * rev0 * prorationFactor;
+          } else {
+            val = driverVal(ex.amounts, 0, ex.driverType, students, ex.escalationRate, costInflPct) * prorationFactor;
+          }
+          catMonthly += val / (opMonths || 12);
+        }
+        cell.value = m < opMonths ? Math.round(catMonthly) : 0;
+        cell.numFmt = CUR; bc(cell);
+      }
+      let catTotal = 0;
+      for (const ex of catRows) {
+        if (ex.driverType === "percent_of_revenue") {
+          catTotal += ((ex.amounts?.[0] ?? 0) / 100) * rev0 * prorationFactor;
+        } else {
+          catTotal += driverVal(ex.amounts, 0, ex.driverType, students, ex.escalationRate, costInflPct) * prorationFactor;
+        }
+      }
+      setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, Math.round(catTotal));
+      ws.getCell(r, 14).numFmt = CUR; bc(ws.getCell(r, 14));
+    }
+    pfOpexCatTotalRows.push(r);
   }
 
   const pfOpexTotalRow = r + 1;
   r++; sec(ws, r, 14); ws.getCell(r, 1).value = "TOTAL OPERATING EXPENSES";
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    if (expenseRows.length > 0) {
-      setFormula(cell, `SUM(${cn(pfOpexFirstRow, m + 2)}:${cn(r - 1, m + 2)})`, m < opMonths ? Math.round(monthlyOps) : 0);
-    } else {
-      cell.value = 0;
-    }
+    const sumParts = pfOpexCatTotalRows.map(tr => cn(tr, m + 2)).join("+");
+    setFormula(cell, sumParts, m < opMonths ? Math.round(monthlyOps) : 0);
     cell.numFmt = CUR; gc(cell);
   }
   setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, Math.round(opex0));
@@ -1715,11 +1801,11 @@ function buildActualsVsProjections(
   if (hasPrior && priorEnroll > 0) {
     ws.getCell(r, c).value = Math.round((prior?.totalRevenue ?? 0) / priorEnroll);
     ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++;
-  } else if (hasPrior) { ws.getCell(r, c).value = "N/A"; dc(ws.getCell(r, c)); c++; }
+  } else if (hasPrior) { ws.getCell(r, c).value = 0; ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++; }
   if (hasCurrent && currentEnroll > 0) {
     ws.getCell(r, c).value = Math.round((current?.projectedRevenue ?? 0) / currentEnroll);
     ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++;
-  } else if (hasCurrent) { ws.getCell(r, c).value = "N/A"; dc(ws.getCell(r, c)); c++; }
+  } else if (hasCurrent) { ws.getCell(r, c).value = 0; ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++; }
   if (enrollment[0] > 0) {
     ws.getCell(r, c).value = Math.round((rev0 * pf) / enrollment[0]);
     ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++;
@@ -1732,11 +1818,11 @@ function buildActualsVsProjections(
   if (hasPrior && priorEnroll > 0) {
     ws.getCell(r, c).value = Math.round((prior?.totalExpenses ?? 0) / priorEnroll);
     ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++;
-  } else if (hasPrior) { ws.getCell(r, c).value = "N/A"; dc(ws.getCell(r, c)); c++; }
+  } else if (hasPrior) { ws.getCell(r, c).value = 0; ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++; }
   if (hasCurrent && currentEnroll > 0) {
     ws.getCell(r, c).value = Math.round((current?.projectedExpenses ?? 0) / currentEnroll);
     ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++;
-  } else if (hasCurrent) { ws.getCell(r, c).value = "N/A"; dc(ws.getCell(r, c)); c++; }
+  } else if (hasCurrent) { ws.getCell(r, c).value = 0; ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++; }
   if (enrollment[0] > 0) {
     ws.getCell(r, c).value = Math.round(totalExp0 / enrollment[0]);
     ws.getCell(r, c).numFmt = CUR; dc(ws.getCell(r, c)); c++;
@@ -1749,11 +1835,11 @@ function buildActualsVsProjections(
   if (hasPrior && (prior?.totalRevenue ?? 0) > 0) {
     ws.getCell(r, c).value = priorNI / (prior?.totalRevenue ?? 1);
     ws.getCell(r, c).numFmt = PCT; dc(ws.getCell(r, c)); c++;
-  } else if (hasPrior) { ws.getCell(r, c).value = "N/A"; dc(ws.getCell(r, c)); c++; }
+  } else if (hasPrior) { ws.getCell(r, c).value = 0; ws.getCell(r, c).numFmt = PCT; dc(ws.getCell(r, c)); c++; }
   if (hasCurrent && (current?.projectedRevenue ?? 0) > 0) {
     ws.getCell(r, c).value = currentNI / (current?.projectedRevenue ?? 1);
     ws.getCell(r, c).numFmt = PCT; dc(ws.getCell(r, c)); c++;
-  } else if (hasCurrent) { ws.getCell(r, c).value = "N/A"; dc(ws.getCell(r, c)); c++; }
+  } else if (hasCurrent) { ws.getCell(r, c).value = 0; ws.getCell(r, c).numFmt = PCT; dc(ws.getCell(r, c)); c++; }
   const projRev0 = Math.round(rev0 * pf);
   const projRev1 = Math.round(rev1);
   if (projRev0 > 0) {

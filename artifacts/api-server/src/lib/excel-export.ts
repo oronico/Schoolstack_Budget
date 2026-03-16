@@ -1526,7 +1526,6 @@ function buildExpensesTab(
 
   for (const cat of categories) {
     const catRows = expenseRows.filter(row => row.category === cat && row.enabled);
-    if (catRows.length === 0) continue;
 
     r++;
     styleSectionRow(ws, r, cols);
@@ -1571,15 +1570,19 @@ function buildExpensesTab(
     ws.getCell(r, 1).font = BOLD_FONT;
     for (let y = 0; y < yearCount; y++) {
       const cell = ws.getCell(r, y + 2);
-      let catSubtotal = 0;
-      for (const cr of catRows) {
-        if (cr.driverType === "percent_of_revenue") {
-          catSubtotal += ((cr.amounts?.[y] ?? 0) / 100) * (precomputed?.totalRevenue[y] ?? 0);
-        } else {
-          catSubtotal += computeDriverValue(cr.amounts, y, cr.driverType, enrollment[y] || 0);
+      if (catRows.length === 0) {
+        cell.value = 0;
+      } else {
+        let catSubtotal = 0;
+        for (const cr of catRows) {
+          if (cr.driverType === "percent_of_revenue") {
+            catSubtotal += ((cr.amounts?.[y] ?? 0) / 100) * (precomputed?.totalRevenue[y] ?? 0);
+          } else {
+            catSubtotal += computeDriverValue(cr.amounts, y, cr.driverType, enrollment[y] || 0);
+          }
         }
+        cell.value = { formula: `SUM(${c(firstDataRow, y + 2)}:${c(r - 1, y + 2)})`, result: safeResult(Math.round(catSubtotal)) };
       }
-      cell.value = { formula: `SUM(${c(firstDataRow, y + 2)}:${c(r - 1, y + 2)})`, result: safeResult(Math.round(catSubtotal)) };
       cell.numFmt = CURRENCY_FORMAT;
       styleBoldDataCell(cell);
     }

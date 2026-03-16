@@ -1527,7 +1527,6 @@ function buildOperatingExpenses(
 
   for (const cat of categories) {
     const catRows = nonFacility.filter(ro => ro.enabled && ro.category === cat);
-    if (catRows.length === 0) continue;
 
     r++; sec(ws, r, cols); ws.getCell(r, 1).value = (EXP_CAT_LABELS[cat] || cat).toUpperCase();
     const firstData = r + 1;
@@ -1565,7 +1564,11 @@ function buildOperatingExpenses(
       }
       totals.push(catSum);
       const cell = ws.getCell(r, y + 2);
-      setFormula(cell, `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})`, catSum);
+      if (catRows.length === 0) {
+        cell.value = 0;
+      } else {
+        setFormula(cell, `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})`, catSum);
+      }
       cell.numFmt = CUR; bc(cell);
     }
     sec(ws, r, cols);
