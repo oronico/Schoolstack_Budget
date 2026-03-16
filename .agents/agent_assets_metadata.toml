@@ -54,3 +54,9 @@ id = "AISfQfhTpB6_ppWBORX_x"
 uri = "file://.canvas/assets/Freedom_Charter_Academy_Underwriting.xlsx"
 type = "table"
 title = "Charter School Underwriting Pro Forma (500 Students)"
+
+[[outputs]]
+id = "vbwofrF7GWsBjGiTCS9VW"
+uri = "file://SchoolStack_Export.xlsx"
+type = "table"
+title = "SchoolStack Budget — Underwriting Pro Forma Export"
