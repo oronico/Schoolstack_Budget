@@ -526,22 +526,6 @@ function polishLenderWorkbook(workbook: any, schoolName: string) {
     } catch (_) {}
     try { sheet.printGridLines(false); } catch (_) {}
 
-    const used = sheet.usedRange();
-    if (used) {
-      const addr = used.address();
-      try {
-        workbook.definedName(`${sheet.name()}!Print_Area`, sheet.range(addr));
-      } catch (err) {
-        console.warn(`Print area setup skipped for "${sheet.name()}":`, err instanceof Error ? err.message : err);
-      }
-      try {
-        const endCol = used.endCell().columnName();
-        workbook.definedName(`${sheet.name()}!Print_Titles`, sheet.range(`A1:${endCol}1`));
-      } catch (err) {
-        console.warn(`Print titles setup skipped for "${sheet.name()}":`, err instanceof Error ? err.message : err);
-      }
-    }
-
     try {
       sheet.headerFooter("oddHeader", `&L&10&B${schoolName}&R&8&I${sheet.name()}`);
       sheet.headerFooter("oddFooter", "&L&8Built by SchoolStack Budget  •  budget.schoolstack.ai&C&8Page &P of &N&R&8&D");
