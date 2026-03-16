@@ -16,7 +16,12 @@ The project is a pnpm workspace monorepo built with TypeScript.
 - **Backend**: Node.js (v24), Express 5 API server, PostgreSQL with Drizzle ORM, Zod for validation, and Orval for OpenAPI codegen.
 - **Frontend**: React, Vite, Tailwind CSS v4, with route-based code splitting.
 - **Authentication**: JWT-based (bcryptjs for passwords, jsonwebtoken for tokens).
-- **Export Capabilities**: ExcelJS for standard exports, xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports. All exports include print-ready formatting, school-specific branding, and detailed financial breakdowns (e.g., 15-tab underwriting workbook, 3-tab public budget export). All formula cells include pre-computed cached results for compatibility with Google Sheets and non-recalculating viewers.
+- **Export Capabilities**: ExcelJS for standard exports, xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports. All exports include print-ready formatting, school-specific branding, and detailed financial breakdowns. All formula cells include pre-computed cached results for compatibility with Google Sheets and non-recalculating viewers.
+  - `formula-export.ts` — 3-tab public wizard export (Assumptions, 5-Year Model, Year 1 Pro Forma)
+  - `underwriting-workbook.ts` — **21-tab full underwriting model** (Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot). Route: `/models/:id/export/underwriting-v2`
+  - `underwriting-export.ts` — Legacy 14-tab underwriting (to be deprecated)
+  - `workbook-helpers.ts` — Shared types, constants, formatting, label, and computation functions used by all workbook exports
+  - Schema extensions: `openingBalances`, `sourcesAndUses`, `scenarios`, `covenantThresholds` schemas; `purpose` field on capitalDebtRow; `debtIncluded` on schoolProfile
 - **Monorepo Structure**: Organized into `artifacts/` for deployable applications (`api-server`, `school-financial-model`), `lib/` for shared libraries, and `scripts/` for utilities.
 
 ## Core Features

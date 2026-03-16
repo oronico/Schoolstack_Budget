@@ -128,6 +128,7 @@ export const schoolProfileSchema = z.object({
   loanRate: z.coerce.number(numMsg("interest rate")).min(0, "Please enter a rate of 0% or higher").max(100, "Interest rate can't exceed 100%").optional().default(0),
   loanTermYears: z.coerce.number(numMsg("loan term")).min(0, "Please enter a positive loan term").max(50, "Loan term can't exceed 50 years").optional().default(0),
   lendingLabIntent: lendingLabIntentSchema,
+  debtIncluded: z.boolean().optional().default(true),
 });
 
 export const priorYearSnapshotSchema = z.object({
@@ -253,6 +254,42 @@ export const capitalDebtRowSchema = z.object({
   loanPrincipal: z.number().min(0, "Please enter a positive loan principal").default(0),
   loanRate: z.number().min(0, "Please enter a rate of 0% or higher").max(100, "Interest rate can't exceed 100%").default(0),
   loanTermYears: z.number().min(0, "Please enter a positive loan term").max(50, "Loan term can't exceed 50 years").default(0),
+  purpose: z.enum(["startup", "operating", "refinance"]).optional(),
+});
+
+export const openingBalancesSchema = z.object({
+  cash: z.coerce.number(numMsg("cash")).min(0).optional().default(0),
+  accountsReceivable: z.coerce.number(numMsg("accounts receivable")).min(0).optional().default(0),
+  fixedAssets: z.coerce.number(numMsg("fixed assets")).min(0).optional().default(0),
+  otherAssets: z.coerce.number(numMsg("other assets")).min(0).optional().default(0),
+  accountsPayable: z.coerce.number(numMsg("accounts payable")).min(0).optional().default(0),
+  currentDebtPortion: z.coerce.number(numMsg("current debt portion")).min(0).optional().default(0),
+  longTermDebt: z.coerce.number(numMsg("long-term debt")).min(0).optional().default(0),
+});
+
+export const sourcesAndUsesLineSchema = z.object({
+  lineItem: z.string(),
+  amount: z.coerce.number(numMsg("amount")).min(0),
+  category: z.string(),
+});
+
+export const sourcesAndUsesSchema = z.object({
+  sources: z.array(sourcesAndUsesLineSchema).optional().default([]),
+  uses: z.array(sourcesAndUsesLineSchema).optional().default([]),
+});
+
+export const scenarioDefSchema = z.object({
+  name: z.string(),
+  enrollmentAdjustment: z.number().default(0),
+  tuitionAdjustment: z.number().default(0),
+  expenseAdjustment: z.number().default(0),
+});
+
+export const covenantThresholdsSchema = z.object({
+  minDSCR: z.coerce.number(numMsg("minimum DSCR")).min(0).optional().default(1.25),
+  minDaysCashOnHand: z.coerce.number(numMsg("minimum days cash on hand")).min(0).optional().default(45),
+  minMonthsRunway: z.coerce.number(numMsg("minimum months runway")).min(0).optional().default(2),
+  minCapacityUtil: z.coerce.number(numMsg("minimum capacity utilization")).min(0).max(1).optional().default(0.7),
 });
 
 export const facilitiesSchema = z.object({
@@ -292,6 +329,10 @@ export const fullModelSchema = z.object({
   capitalAndDebtRows: z.array(capitalDebtRowSchema).optional(),
   priorYearSnapshot: priorYearSnapshotSchema.optional(),
   currentYearProjection: currentYearProjectionSchema.optional(),
+  openingBalances: openingBalancesSchema.optional(),
+  sourcesAndUses: sourcesAndUsesSchema.optional(),
+  scenarios: z.array(scenarioDefSchema).optional(),
+  covenantThresholds: covenantThresholdsSchema.optional(),
 });
 
 export type FullModelData = z.infer<typeof fullModelSchema>;
