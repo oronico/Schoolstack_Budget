@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 36495,
+    "fileSize": 36494,
     "tabs": [
       "Cover",
       "Instructions",
@@ -124,7 +124,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 21980,
+    "fileSize": 21979,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -185,7 +185,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 18259,
+    "fileSize": 18258,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -225,7 +225,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 32828,
+    "fileSize": 32823,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -293,7 +293,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 17152,
+    "fileSize": 19142,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -309,7 +309,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 16.8 KB",
+          "File size: 18.7 KB",
           "Successfully opened workbook",
           "Worksheets: 8"
         ],
@@ -333,17 +333,19 @@
         "errors": []
       },
       {
-        "name": "Lender Core Sheets Present",
+        "name": "P&L Has Revenue",
         "passed": true,
         "details": [
-          "Sheets: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+          "Total Revenue: 89000"
         ],
         "errors": []
       },
       {
-        "name": "Lender Workbook Has Data",
+        "name": "P&L Has Net Income Row",
         "passed": true,
-        "details": [],
+        "details": [
+          "Net Income: 0"
+        ],
         "errors": []
       }
     ],
@@ -352,7 +354,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 39401,
+    "fileSize": 39400,
     "tabs": [
       "Cover",
       "Instructions",
@@ -576,7 +578,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 21843,
+    "fileSize": 21841,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -617,7 +619,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 34245,
+    "fileSize": 34240,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -685,7 +687,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 17156,
+    "fileSize": 19383,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -701,7 +703,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 16.8 KB",
+          "File size: 18.9 KB",
           "Successfully opened workbook",
           "Worksheets: 8"
         ],
@@ -725,17 +727,19 @@
         "errors": []
       },
       {
-        "name": "Lender Core Sheets Present",
+        "name": "P&L Has Revenue",
         "passed": true,
         "details": [
-          "Sheets: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+          "Total Revenue: 995000"
         ],
         "errors": []
       },
       {
-        "name": "Lender Workbook Has Data",
+        "name": "P&L Has Net Income Row",
         "passed": true,
-        "details": [],
+        "details": [
+          "Net Income: 0"
+        ],
         "errors": []
       }
     ],
@@ -967,7 +971,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 20553,
+    "fileSize": 20552,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -1007,7 +1011,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 34262,
+    "fileSize": 34258,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1075,7 +1079,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 17164,
+    "fileSize": 19405,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1091,7 +1095,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 16.8 KB",
+          "File size: 19.0 KB",
           "Successfully opened workbook",
           "Worksheets: 8"
         ],
@@ -1115,17 +1119,19 @@
         "errors": []
       },
       {
-        "name": "Lender Core Sheets Present",
+        "name": "P&L Has Revenue",
         "passed": true,
         "details": [
-          "Sheets: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+          "Total Revenue: 1546000"
         ],
         "errors": []
       },
       {
-        "name": "Lender Workbook Has Data",
+        "name": "P&L Has Net Income Row",
         "passed": true,
-        "details": [],
+        "details": [
+          "Net Income: 0"
+        ],
         "errors": []
       }
     ],

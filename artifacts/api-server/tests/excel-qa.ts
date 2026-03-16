@@ -140,14 +140,18 @@ function scanSheetForErrors(ws: ExcelJS.Worksheet): { errors: string[]; cellCoun
 
 function findCellByLabel(ws: ExcelJS.Worksheet, label: string | RegExp, searchCol: number = 1): { row: number; col: number } | null {
   let found: { row: number; col: number } | null = null;
-  ws.eachRow((row, rowNumber) => {
-    if (found) return;
-    const cell = row.getCell(searchCol);
-    const val = extractTextValue(cell.value).trim();
-    if (typeof label === "string" ? val.toLowerCase().includes(label.toLowerCase()) : label.test(val)) {
-      found = { row: rowNumber, col: searchCol };
-    }
-  });
+  const colsToSearch = searchCol === 1 ? [1, 2] : [searchCol];
+  for (const col of colsToSearch) {
+    if (found) break;
+    ws.eachRow((row, rowNumber) => {
+      if (found) return;
+      const cell = row.getCell(col);
+      const val = extractTextValue(cell.value).trim();
+      if (typeof label === "string" ? val.toLowerCase().includes(label.toLowerCase()) : label.test(val)) {
+        found = { row: rowNumber, col };
+      }
+    });
+  }
   return found;
 }
 
@@ -620,7 +624,7 @@ const UNDERWRITING_V1_TABS = [
   "P&L", "Balance Sheet", "DSCR", "Snapshot", "Summary",
 ];
 
-const LENDER_TABS = ["Cover", "Assumptions", "Drivers", "P&L", "Cash Flow", "Staffing", "Summary"];
+const LENDER_TABS = ["Cover", "Assumptions", "Drivers", "P&L", "Cash Flow", "Staffing", "Loan Snapshot", "Summary"];
 
 async function main() {
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -648,7 +652,7 @@ async function main() {
     allResults.push(await testExport("Standard Export", payloadName, payload, genStandard, STANDARD_TABS, runStandardTieOuts));
     allResults.push(await testExport("Formula Export", payloadName, payload, genFormula, FORMULA_TABS, runFormulaTieOuts));
     allResults.push(await testExport("Underwriting V1 (14-tab)", payloadName, payload, genUWv1, UNDERWRITING_V1_TABS, runStandardTieOuts));
-    allResults.push(await testExport("Lender Pro Forma", payloadName, payload, genLender, LENDER_TABS, runLenderTieOuts));
+    allResults.push(await testExport("Lender Pro Forma", payloadName, payload, genLender, LENDER_TABS, runStandardTieOuts));
   }
 
   console.log("\n\n╔══════════════════════════════════════════════════════════════╗");

@@ -1,67 +1,31 @@
-import path from "path";
-import fs from "fs";
-// @ts-ignore — xlsx-populate has no type definitions
-import XlsxPopulate from "xlsx-populate";
+import ExcelJS from "exceljs";
+import {
+  NAVY, WHITE, LIGHT_GRAY, YELLOW_INPUT, GREEN_BG, RED_BG, AMBER_BG,
+  EVERGREEN, CREAM, TEAL,
+  HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT,
+  NF, BF, BORDER, SUBTOTAL_BORDER,
+  CUR, PCT, NUM,
+  hdr, sec, dc, bc, gc, cn, colLetter,
+  setFormula, inputCell, printSetup,
+  computeAnnualDebt,
+} from "./workbook-helpers.js";
 
-function resolveTemplatePath(): string {
-  const templateName = "SchoolStack_Prelaunch_ProForma_Template_v1.xlsx";
-  const candidates = [
-    path.join(process.cwd(), "artifacts", "api-server", "src", "templates", templateName),
-    path.join(process.cwd(), "src", "templates", templateName),
-    path.join(process.cwd(), "templates", templateName),
-    path.join(process.cwd(), "dist", "templates", templateName),
-  ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
-  }
-  return candidates[0];
-}
+const SCHOOL_TYPE_DISPLAY: Record<string, string> = {
+  charter_school: "Charter School",
+  homeschool_coop: "Homeschool Co-Op",
+  learning_pod: "Learning Pod",
+  microschool: "Microschool",
+  private_school: "Private School",
+  tutoring_center: "Tutoring Center",
+  other: "Other",
+};
 
-const TEMPLATE_PATH = resolveTemplatePath();
-
-const CELL_MAP: Record<string, string> = {
-  schoolName: "D5",
-  state: "D6",
-  schoolType: "D7",
-  firstOperatingYear: "D8",
-  enrollmentY1: "D12",
-  enrollmentY2: "D13",
-  enrollmentY3: "D14",
-  enrollmentY4: "D15",
-  enrollmentY5: "D16",
-  tuitionPerStudentY1: "D20",
-  tuitionGrowthPct: "D21",
-  esaPerStudentY1: "D22",
-  esaGrowthPct: "D23",
-  otherEarnedPerStudentY1: "D24",
-  otherEarnedGrowthPct: "D25",
-  collectionRatePct: "D26",
-  grantsY1: "D27",
-  grantsGrowthPct: "D28",
-  studentsPerTeacher: "D32",
-  teacherSalaryY1: "D33",
-  teacherSalaryGrowthPct: "D34",
-  adminFteY1: "D35",
-  adminFteY2: "D36",
-  adminFteY3: "D37",
-  adminFteY4: "D38",
-  adminFteY5: "D39",
-  adminSalaryY1: "D40",
-  adminSalaryGrowthPct: "D41",
-  benefitsBurdenPct: "D42",
-  annualRentY1: "D46",
-  rentGrowthPct: "D47",
-  otherFacilityCostY1: "D48",
-  otherFacilityCostGrowthPct: "D49",
-  programCostPerStudentY1: "D50",
-  programCostGrowthPct: "D51",
-  fixedOperatingCostY1: "D52",
-  fixedOperatingCostGrowthPct: "D53",
-  startingCash: "D57",
-  existingAnnualDebtService: "D58",
-  proposedLoanAmount: "D59",
-  interestRatePct: "D60",
-  termYears: "D61",
+const PAYMENT_TIMING_RATES: Record<string, number> = {
+  upfront: 1.0,
+  monthly: 0.95,
+  quarterly: 0.97,
+  semester: 0.98,
+  annual: 1.0,
 };
 
 interface SchoolProfile {
@@ -140,24 +104,6 @@ interface ModelData {
   priorYearSnapshot?: PriorYearSnapshot;
 }
 
-const SCHOOL_TYPE_DISPLAY: Record<string, string> = {
-  charter_school: "Charter School",
-  homeschool_coop: "Homeschool Co-Op",
-  learning_pod: "Learning Pod",
-  microschool: "Microschool",
-  private_school: "Private School",
-  tutoring_center: "Tutoring Center",
-  other: "Other",
-};
-
-const PAYMENT_TIMING_RATES: Record<string, number> = {
-  upfront: 1.0,
-  monthly: 0.95,
-  quarterly: 0.97,
-  semester: 0.98,
-  annual: 1.0,
-};
-
 function inferGrowthRate(amounts: number[], yearIdx0: number, yearIdx1: number): number {
   const v0 = amounts?.[yearIdx0] ?? 0;
   const v1 = amounts?.[yearIdx1] ?? 0;
@@ -231,6 +177,15 @@ function computeRevenueY(rows: RevenueRow[], yearIdx: number, students: number):
 
 const FACILITY_CATEGORIES = ["occupancy_facility"];
 const PROGRAM_CATEGORIES = ["instructional_program"];
+
+function computeAnnualDebtService(principal: number, annualRate: number, termYears: number): number {
+  if (principal <= 0 || termYears <= 0) return 0;
+  if (annualRate <= 0) return principal / termYears;
+  const monthlyRate = annualRate / 12;
+  const months = termYears * 12;
+  const mp = principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+  return mp * 12;
+}
 
 export function mapModelToTemplateInput(rawData: Record<string, unknown>): Record<string, string | number> {
   const data = rawData as unknown as ModelData;
@@ -430,220 +385,867 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   return result;
 }
 
-function computeAnnualDebtService(principal: number, annualRate: number, termYears: number): number {
-  if (principal <= 0 || termYears <= 0) return 0;
-  if (annualRate <= 0) return principal / termYears;
-  const monthlyRate = annualRate / 12;
-  const months = termYears * 12;
-  const mp = principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
-  return mp * 12;
+interface LenderResults {
+  enrollment: number[];
+  tuitionRevNet: number[];
+  tuitionCollected: number[];
+  esaRevenue: number[];
+  otherRevenue: number[];
+  grants: number[];
+  totalRevenue: number[];
+  teacherFte: number[];
+  teacherSalaries: number[];
+  adminSalaries: number[];
+  benefits: number[];
+  totalStaffing: number[];
+  rent: number[];
+  otherFacility: number[];
+  programCost: number[];
+  gaAndTech: number[];
+  totalOpEx: number[];
+  totalExpenses: number[];
+  noi: number[];
+  operatingMargin: number[];
+  existingDebtService: number;
+  proposedDebtService: number;
+  totalDebtService: number;
+  dscr: number[];
+  netIncomeAfterDebt: number[];
+  cumulativeCash: number[];
+  adminFte: number[];
 }
 
-function polishLenderWorkbook(workbook: any, schoolName: string) {
-  const sheets = workbook.sheets();
+function computeLenderResults(input: Record<string, string | number>): LenderResults {
+  const n = (k: string) => Number(input[k]) || 0;
+  const enrollment = [n("enrollmentY1"), n("enrollmentY2"), n("enrollmentY3"), n("enrollmentY4"), n("enrollmentY5")];
+  const tuitionPerStudent = n("tuitionPerStudentY1");
+  const tuitionGrowth = n("tuitionGrowthPct");
+  const esaPerStudent = n("esaPerStudentY1");
+  const esaGrowth = n("esaGrowthPct");
+  const otherPerStudent = n("otherEarnedPerStudentY1");
+  const otherGrowth = n("otherEarnedGrowthPct");
+  const collectionRate = n("collectionRatePct");
+  const grantsY1 = n("grantsY1");
+  const grantsGrowth = n("grantsGrowthPct");
+  const studentsPerTeacher = n("studentsPerTeacher") || 12;
+  const teacherSalary = n("teacherSalaryY1");
+  const teacherSalaryGrowth = n("teacherSalaryGrowthPct");
+  const adminSalary = n("adminSalaryY1");
+  const adminGrowth = n("adminSalaryGrowthPct");
+  const benefitsPct = n("benefitsBurdenPct");
+  const rentY1 = n("annualRentY1");
+  const rentGrowth = n("rentGrowthPct");
+  const otherFacilityY1 = n("otherFacilityCostY1");
+  const otherFacilityGrowth = n("otherFacilityCostGrowthPct");
+  const programPerStudent = n("programCostPerStudentY1");
+  const programGrowth = n("programCostGrowthPct");
+  const fixedOps = n("fixedOperatingCostY1");
+  const fixedGrowth = n("fixedOperatingCostGrowthPct");
+  const startingCash = n("startingCash");
+  const existingDebt = n("existingAnnualDebtService");
+  const loanAmount = n("proposedLoanAmount");
+  const loanRate = n("interestRatePct");
+  const loanTerm = n("termYears");
+  const adminFte = [n("adminFteY1"), n("adminFteY2"), n("adminFteY3"), n("adminFteY4"), n("adminFteY5")];
 
-  let coverSheet = sheets.find((s: any) => s.name() === "Cover");
-  if (!coverSheet) {
-    coverSheet = workbook.addSheet("Cover");
-    workbook.moveSheet("Cover", 0);
+  const tuitionRevNet: number[] = [];
+  const tuitionCollected: number[] = [];
+  const esaRevenue: number[] = [];
+  const otherRevenue: number[] = [];
+  const grants: number[] = [];
+  const totalRevenue: number[] = [];
+  const teacherFte: number[] = [];
+  const teacherSalaries: number[] = [];
+  const adminSalaries: number[] = [];
+  const benefits: number[] = [];
+  const totalStaffing: number[] = [];
+  const rent: number[] = [];
+  const otherFacility: number[] = [];
+  const programCost: number[] = [];
+  const gaAndTech: number[] = [];
+  const totalOpEx: number[] = [];
+  const totalExpenses: number[] = [];
+  const noi: number[] = [];
+  const operatingMargin: number[] = [];
 
-    const NAVY = "1E293B";
-    const GREEN = "328555";
-    const GRAY = "6B7280";
+  for (let y = 0; y < 5; y++) {
+    const e = enrollment[y];
+    const tuition = e * tuitionPerStudent * Math.pow(1 + tuitionGrowth, y);
+    tuitionRevNet.push(tuition);
+    tuitionCollected.push(tuition * collectionRate);
+    esaRevenue.push(e * esaPerStudent * Math.pow(1 + esaGrowth, y));
+    otherRevenue.push(e * otherPerStudent * Math.pow(1 + otherGrowth, y));
+    grants.push(grantsY1 * Math.pow(1 + grantsGrowth, y));
+    totalRevenue.push(tuition * collectionRate + esaRevenue[y] + otherRevenue[y] + grants[y]);
 
-    coverSheet.column("A").width(5);
-    coverSheet.column("B").width(35);
-    coverSheet.column("C").width(30);
-    coverSheet.column("D").width(5);
+    const tFte = Math.ceil(e / studentsPerTeacher);
+    teacherFte.push(tFte);
+    const tSal = tFte * teacherSalary * Math.pow(1 + teacherSalaryGrowth, y);
+    teacherSalaries.push(tSal);
+    const aSal = adminFte[y] * adminSalary * Math.pow(1 + adminGrowth, y);
+    adminSalaries.push(aSal);
+    const ben = (tSal + aSal) * benefitsPct;
+    benefits.push(ben);
+    totalStaffing.push(tSal + aSal + ben);
 
-    let r = 3;
-    coverSheet.cell(`B${r}`).value("SCHOOLSTACK BUDGET").style({
-      fontFamily: "Calibri", fontSize: 22, bold: true, fontColor: NAVY,
-    });
-    coverSheet.range(`B${r}:C${r}`).merged(true);
+    const r = rentY1 * Math.pow(1 + rentGrowth, y);
+    rent.push(r);
+    const of_ = otherFacilityY1 * Math.pow(1 + otherFacilityGrowth, y);
+    otherFacility.push(of_);
+    const pc = e * programPerStudent * Math.pow(1 + programGrowth, y);
+    programCost.push(pc);
+    const ga = fixedOps * Math.pow(1 + fixedGrowth, y);
+    gaAndTech.push(ga);
+    totalOpEx.push(r + of_ + pc + ga);
 
-    r += 1;
-    coverSheet.cell(`B${r}`).value("Lender-Ready Pro Forma").style({
-      fontFamily: "Calibri", fontSize: 14, fontColor: GREEN,
-    });
-    coverSheet.range(`B${r}:C${r}`).merged(true);
-
-    r += 2;
-    coverSheet.cell(`B${r}`).value(schoolName || "Financial Model").style({
-      fontFamily: "Calibri", fontSize: 16, bold: true, fontColor: NAVY,
-    });
-    coverSheet.range(`B${r}:C${r}`).merged(true);
-
-    r += 2;
-    coverSheet.cell(`B${r}`).value("TABLE OF CONTENTS").style({
-      fontFamily: "Calibri", fontSize: 11, bold: true, fontColor: NAVY,
-      bottomBorder: true, bottomBorderColor: GREEN, bottomBorderStyle: "medium",
-    });
-    coverSheet.range(`B${r}:C${r}`).merged(true);
-
-    const tocSheets = workbook.sheets().filter((s: any) => s.name() !== "Cover");
-    for (const sheet of tocSheets) {
-      r++;
-      coverSheet.cell(`B${r}`).value(sheet.name()).style({
-        fontFamily: "Calibri", fontSize: 10, fontColor: "0563C1", underline: true,
-      }).hyperlink({ sheet: sheet.name(), cell: "A1" });
-    }
-
-    r += 3;
-    coverSheet.cell(`B${r}`).value(`Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`).style({
-      fontFamily: "Calibri", fontSize: 9, italic: true, fontColor: GRAY,
-    });
-    coverSheet.range(`B${r}:C${r}`).merged(true);
-
-    r += 1;
-    coverSheet.cell(`B${r}`).value("Generated by SchoolStack Budget  •  budget.schoolstack.ai").style({
-      fontFamily: "Calibri", fontSize: 9, italic: true, fontColor: GRAY,
-    });
-    coverSheet.range(`B${r}:C${r}`).merged(true);
-
-    try {
-      coverSheet.pageMargins("left", 0.75);
-      coverSheet.pageMargins("right", 0.75);
-      coverSheet.pageMargins("top", 1);
-      coverSheet.pageMargins("bottom", 1);
-    } catch (_) {}
+    totalExpenses.push(totalStaffing[y] + totalOpEx[y]);
+    noi.push(totalRevenue[y] - totalExpenses[y]);
+    operatingMargin.push(totalRevenue[y] > 0 ? noi[y] / totalRevenue[y] : 0);
   }
 
-  const ACCT_FMT = '_("$"* #,##0_);_("$"* (#,##0);_("$"* "-"??_);_(@_)';
-  const PCT_FMT = "0.0%";
-  const GREEN_HEX = "E8F5E9";
-  const RED_HEX = "FCE4EC";
-  const AMBER_HEX = "FFF8E1";
+  const proposedDebtService = loanAmount > 0 ? computeAnnualDebtService(loanAmount, loanRate, loanTerm) : 0;
+  const totalDebtService = existingDebt + proposedDebtService;
 
-  for (const sheet of workbook.sheets()) {
-    if (sheet.name() === "Cover") continue;
-    try { sheet.freezePanes(1, 1); } catch (_) {}
-    try {
-      sheet.pageMargins("left", 0.25);
-      sheet.pageMargins("right", 0.25);
-      sheet.pageMargins("top", 0.5);
-      sheet.pageMargins("bottom", 0.5);
-    } catch (_) {}
-    try { sheet.printGridLines(false); } catch (_) {}
-
-    try {
-      sheet.headerFooter("oddHeader", `&L&10&B${schoolName}&R&8&I${sheet.name()}`);
-      sheet.headerFooter("oddFooter", "&L&8Built by SchoolStack Budget  •  budget.schoolstack.ai&C&8Page &P of &N&R&8&D");
-    } catch (err) {
-      console.warn(`Header/footer setup skipped for "${sheet.name()}":`, err instanceof Error ? err.message : err);
+  const dscr: number[] = [];
+  const netIncomeAfterDebt: number[] = [];
+  const cumulativeCash: number[] = [];
+  for (let y = 0; y < 5; y++) {
+    if (totalDebtService > 0) {
+      dscr.push(noi[y] / totalDebtService);
+    } else {
+      dscr.push(noi[y] > 0 ? 99.9 : 0);
     }
+    netIncomeAfterDebt.push(noi[y] - totalDebtService);
+    cumulativeCash.push(y === 0 ? startingCash + netIncomeAfterDebt[0] : cumulativeCash[y - 1] + netIncomeAfterDebt[y]);
   }
 
-  const pnlSheet = workbook.sheet("5-Year P&L");
-  if (pnlSheet) {
-    const used = pnlSheet.usedRange();
-    if (used) {
-      const endRow = used.endCell().rowNumber();
-      for (let row = 1; row <= endRow; row++) {
-        const label = pnlSheet.cell(`A${row}`).value();
-        if (typeof label !== "string") continue;
-        const lower = label.toLowerCase();
+  return {
+    enrollment, tuitionRevNet, tuitionCollected, esaRevenue, otherRevenue, grants, totalRevenue,
+    teacherFte, teacherSalaries, adminSalaries, benefits, totalStaffing,
+    rent, otherFacility, programCost, gaAndTech, totalOpEx, totalExpenses, noi, operatingMargin,
+    existingDebtService: existingDebt, proposedDebtService, totalDebtService,
+    dscr, netIncomeAfterDebt, cumulativeCash, adminFte,
+  };
+}
 
-        if (lower.includes("net income") || lower.includes("net surplus")) {
-          for (let col = 2; col <= 6; col++) {
-            const cell = pnlSheet.cell(row, col);
-            const val = cell.value();
-            if (typeof val === "number") {
-              cell.style("numberFormat", ACCT_FMT);
-              cell.style("fill", { type: "solid", color: val >= 0 ? GREEN_HEX : RED_HEX });
-            }
-          }
-        }
+const ACELLS: Record<string, string> = {
+  schoolName: "D5", state: "D6", schoolType: "D7", firstOperatingYear: "D8",
+  enrollmentY1: "D12", enrollmentY2: "D13", enrollmentY3: "D14", enrollmentY4: "D15", enrollmentY5: "D16",
+  tuitionPerStudentY1: "D20", tuitionGrowthPct: "D21",
+  esaPerStudentY1: "D22", esaGrowthPct: "D23",
+  otherEarnedPerStudentY1: "D24", otherEarnedGrowthPct: "D25",
+  collectionRatePct: "D26", grantsY1: "D27", grantsGrowthPct: "D28",
+  studentsPerTeacher: "D32", teacherSalaryY1: "D33", teacherSalaryGrowthPct: "D34",
+  adminFteY1: "D35", adminFteY2: "D36", adminFteY3: "D37", adminFteY4: "D38", adminFteY5: "D39",
+  adminSalaryY1: "D40", adminSalaryGrowthPct: "D41", benefitsBurdenPct: "D42",
+  annualRentY1: "D46", rentGrowthPct: "D47",
+  otherFacilityCostY1: "D48", otherFacilityCostGrowthPct: "D49",
+  programCostPerStudentY1: "D50", programCostGrowthPct: "D51",
+  fixedOperatingCostY1: "D52", fixedOperatingCostGrowthPct: "D53",
+  startingCash: "D57", existingAnnualDebtService: "D58",
+  proposedLoanAmount: "D59", interestRatePct: "D60", termYears: "D61",
+};
 
-        if (lower.includes("total revenue") || lower.includes("total expenses") || lower.includes("total operating")) {
-          for (let col = 2; col <= 6; col++) {
-            const cell = pnlSheet.cell(row, col);
-            cell.style("numberFormat", ACCT_FMT);
-            cell.style("bold", true);
-            cell.style("bottomBorder", true);
-            cell.style("bottomBorderStyle", "double");
-          }
-        }
+const ENROLLMENT_CELLS = ["D12", "D13", "D14", "D15", "D16"];
+const ADMIN_FTE_CELLS = ["D35", "D36", "D37", "D38", "D39"];
+
+const YEAR_COLS = ["C", "D", "E", "F", "G"];
+
+function buildCover(wb: ExcelJS.Workbook, schoolName: string) {
+  const ws = wb.addWorksheet("Cover", { properties: { tabColor: { argb: NAVY } } });
+  printSetup(ws);
+  ws.getColumn(1).width = 5;
+  ws.getColumn(2).width = 35;
+  ws.getColumn(3).width = 30;
+  ws.getColumn(4).width = 5;
+
+  let r = 3;
+  ws.getCell(`B${r}`).value = "SCHOOLSTACK BUDGET";
+  ws.getCell(`B${r}`).font = { name: "Calibri", size: 22, bold: true, color: { argb: "FF1E293B" } };
+  ws.mergeCells(`B${r}:C${r}`);
+
+  r++;
+  ws.getCell(`B${r}`).value = "Lender-Ready Pro Forma";
+  ws.getCell(`B${r}`).font = { name: "Calibri", size: 14, color: { argb: "FF328555" } };
+  ws.mergeCells(`B${r}:C${r}`);
+
+  r += 2;
+  ws.getCell(`B${r}`).value = schoolName || "Financial Model";
+  ws.getCell(`B${r}`).font = { name: "Calibri", size: 16, bold: true, color: { argb: "FF1E293B" } };
+  ws.mergeCells(`B${r}:C${r}`);
+
+  r += 2;
+  ws.getCell(`B${r}`).value = "TABLE OF CONTENTS";
+  ws.getCell(`B${r}`).font = { name: "Calibri", size: 11, bold: true, color: { argb: "FF1E293B" } };
+  ws.getCell(`B${r}`).border = { bottom: { style: "medium", color: { argb: "FF328555" } } };
+  ws.mergeCells(`B${r}:C${r}`);
+
+  const tabs = ["Assumptions", "Drivers", "5-Year P&L", "Cash Flow & DSCR", "Staffing", "Loan Snapshot", "Summary"];
+  for (const tab of tabs) {
+    r++;
+    ws.getCell(`B${r}`).value = { text: tab, hyperlink: `#'${tab}'!A1` };
+    ws.getCell(`B${r}`).font = { name: "Calibri", size: 10, color: { argb: "FF0563C1" }, underline: true };
+  }
+
+  r += 3;
+  ws.getCell(`B${r}`).value = `Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`;
+  ws.getCell(`B${r}`).font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF6B7280" } };
+  ws.mergeCells(`B${r}:C${r}`);
+
+  r++;
+  ws.getCell(`B${r}`).value = "Generated by SchoolStack Budget  •  budget.schoolstack.ai";
+  ws.getCell(`B${r}`).font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF6B7280" } };
+  ws.mergeCells(`B${r}:C${r}`);
+}
+
+function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | number>) {
+  const ws = wb.addWorksheet("Assumptions", { properties: { tabColor: { argb: "FFD97706" } } });
+  printSetup(ws);
+
+  ws.getColumn(1).width = 3;
+  ws.getColumn(2).width = 5;
+  ws.getColumn(3).width = 38;
+  ws.getColumn(4).width = 22;
+
+  const titleFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 14, bold: true, color: { argb: "FF1E293B" } };
+  const sectionFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, bold: true, color: { argb: "FFFFFFFF" } };
+  const sectionFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
+  const labelFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 10, color: { argb: "FF374151" } };
+  const valueFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 10, color: { argb: "FF1E293B" } };
+  const inputFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFDE8" } };
+  const thinBorder: Partial<ExcelJS.Borders> = {
+    bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+  };
+
+  ws.getCell("B1").value = "SchoolStack Budget — Lender Pro Forma Assumptions";
+  ws.getCell("B1").font = titleFont;
+  ws.mergeCells("B1:D1");
+
+  const sections: { row: number; label: string }[] = [
+    { row: 3, label: "SCHOOL PROFILE" },
+    { row: 10, label: "ENROLLMENT FORECAST" },
+    { row: 18, label: "REVENUE ASSUMPTIONS" },
+    { row: 30, label: "STAFFING ASSUMPTIONS" },
+    { row: 44, label: "OPERATING EXPENSE ASSUMPTIONS" },
+    { row: 55, label: "CAPITAL & DEBT" },
+  ];
+  for (const s of sections) {
+    ws.mergeCells(`B${s.row}:D${s.row}`);
+    ws.getCell(`B${s.row}`).value = s.label;
+    ws.getCell(`B${s.row}`).font = sectionFont;
+    ws.getCell(`B${s.row}`).fill = sectionFill;
+    ws.getCell(`B${s.row}`).alignment = { horizontal: "left", vertical: "middle" };
+    ws.getRow(s.row).height = 24;
+  }
+
+  const rows: { row: number; label: string; key: string; fmt?: string }[] = [
+    { row: 5, label: "School Name", key: "schoolName" },
+    { row: 6, label: "State", key: "state" },
+    { row: 7, label: "School Type", key: "schoolType" },
+    { row: 8, label: "First Operating Year", key: "firstOperatingYear" },
+    { row: 12, label: "Year 1 Enrollment", key: "enrollmentY1", fmt: NUM },
+    { row: 13, label: "Year 2 Enrollment", key: "enrollmentY2", fmt: NUM },
+    { row: 14, label: "Year 3 Enrollment", key: "enrollmentY3", fmt: NUM },
+    { row: 15, label: "Year 4 Enrollment", key: "enrollmentY4", fmt: NUM },
+    { row: 16, label: "Year 5 Enrollment", key: "enrollmentY5", fmt: NUM },
+    { row: 20, label: "Tuition per Student (Year 1)", key: "tuitionPerStudentY1", fmt: CUR },
+    { row: 21, label: "Tuition Annual Growth %", key: "tuitionGrowthPct", fmt: PCT },
+    { row: 22, label: "ESA per Student (Year 1)", key: "esaPerStudentY1", fmt: CUR },
+    { row: 23, label: "ESA Annual Growth %", key: "esaGrowthPct", fmt: PCT },
+    { row: 24, label: "Other Per-Student Revenue (Year 1)", key: "otherEarnedPerStudentY1", fmt: CUR },
+    { row: 25, label: "Other Revenue Growth %", key: "otherEarnedGrowthPct", fmt: PCT },
+    { row: 26, label: "Collection Rate %", key: "collectionRatePct", fmt: PCT },
+    { row: 27, label: "Grants & Contributions (Year 1)", key: "grantsY1", fmt: CUR },
+    { row: 28, label: "Grants Growth %", key: "grantsGrowthPct", fmt: PCT },
+    { row: 32, label: "Students per Teacher", key: "studentsPerTeacher", fmt: NUM },
+    { row: 33, label: "Avg Teacher Salary (Year 1)", key: "teacherSalaryY1", fmt: CUR },
+    { row: 34, label: "Teacher Salary Growth %", key: "teacherSalaryGrowthPct", fmt: PCT },
+    { row: 35, label: "Admin FTE — Year 1", key: "adminFteY1", fmt: NUM },
+    { row: 36, label: "Admin FTE — Year 2", key: "adminFteY2", fmt: NUM },
+    { row: 37, label: "Admin FTE — Year 3", key: "adminFteY3", fmt: NUM },
+    { row: 38, label: "Admin FTE — Year 4", key: "adminFteY4", fmt: NUM },
+    { row: 39, label: "Admin FTE — Year 5", key: "adminFteY5", fmt: NUM },
+    { row: 40, label: "Avg Admin Salary (Year 1)", key: "adminSalaryY1", fmt: CUR },
+    { row: 41, label: "Admin Salary Growth %", key: "adminSalaryGrowthPct", fmt: PCT },
+    { row: 42, label: "Benefits Burden %", key: "benefitsBurdenPct", fmt: PCT },
+    { row: 46, label: "Annual Rent (Year 1)", key: "annualRentY1", fmt: CUR },
+    { row: 47, label: "Rent Growth %", key: "rentGrowthPct", fmt: PCT },
+    { row: 48, label: "Other Facility Cost (Year 1)", key: "otherFacilityCostY1", fmt: CUR },
+    { row: 49, label: "Other Facility Growth %", key: "otherFacilityCostGrowthPct", fmt: PCT },
+    { row: 50, label: "Program Cost per Student (Year 1)", key: "programCostPerStudentY1", fmt: CUR },
+    { row: 51, label: "Program Cost Growth %", key: "programCostGrowthPct", fmt: PCT },
+    { row: 52, label: "Fixed Operating Costs (Year 1)", key: "fixedOperatingCostY1", fmt: CUR },
+    { row: 53, label: "Fixed Operating Growth %", key: "fixedOperatingCostGrowthPct", fmt: PCT },
+    { row: 57, label: "Starting Cash", key: "startingCash", fmt: CUR },
+    { row: 58, label: "Existing Annual Debt Service", key: "existingAnnualDebtService", fmt: CUR },
+    { row: 59, label: "Proposed Loan Amount", key: "proposedLoanAmount", fmt: CUR },
+    { row: 60, label: "Interest Rate %", key: "interestRatePct", fmt: PCT },
+    { row: 61, label: "Term (Years)", key: "termYears", fmt: NUM },
+  ];
+
+  for (const r of rows) {
+    const labelCell = ws.getCell(`C${r.row}`);
+    labelCell.value = r.label;
+    labelCell.font = labelFont;
+    labelCell.border = thinBorder;
+
+    const valCell = ws.getCell(`D${r.row}`);
+    valCell.value = input[r.key] ?? "";
+    valCell.font = valueFont;
+    valCell.fill = inputFill;
+    valCell.border = thinBorder;
+    if (r.fmt) valCell.numFmt = r.fmt;
+    valCell.alignment = { horizontal: "right" };
+  }
+
+  ws.views = [{ state: "frozen", xSplit: 0, ySplit: 1 }];
+}
+
+function buildDrivers(wb: ExcelJS.Workbook, input: Record<string, string | number>, res: LenderResults) {
+  const ws = wb.addWorksheet("Drivers", { properties: { tabColor: { argb: "FF0D9488" } } });
+  printSetup(ws);
+
+  ws.getColumn(1).width = 3;
+  ws.getColumn(2).width = 34;
+  for (let c = 3; c <= 7; c++) ws.getColumn(c).width = 16;
+
+  ws.getCell("B1").value = "Revenue & Expense Drivers";
+  ws.getCell("B1").font = { name: "Calibri", size: 14, bold: true, color: { argb: "FF1E293B" } };
+  ws.mergeCells("B1:G1");
+
+  for (let c = 3; c <= 7; c++) {
+    const cell = ws.getCell(3, c);
+    cell.value = `Year ${c - 2}`;
+    cell.font = HEADER_FONT;
+    cell.fill = HEADER_FILL;
+    cell.alignment = { horizontal: "center" };
+    cell.border = BORDER;
+  }
+  ws.getCell("B3").fill = HEADER_FILL;
+  ws.getCell("B3").border = BORDER;
+  ws.getRow(3).height = 24;
+
+  const labelCell = (r: number, label: string, isSection = false, isBold = false) => {
+    const c = ws.getCell(`B${r}`);
+    c.value = label;
+    if (isSection) {
+      c.font = SECTION_FONT;
+      c.fill = SECTION_FILL;
+      for (let col = 2; col <= 7; col++) {
+        ws.getCell(r, col).fill = SECTION_FILL;
+        ws.getCell(r, col).font = SECTION_FONT;
+        ws.getCell(r, col).border = BORDER;
+      }
+    } else {
+      c.font = isBold ? BF : NF;
+      c.border = BORDER;
+    }
+  };
+
+  const enrollRef = (y: number) => `Assumptions!${ENROLLMENT_CELLS[y]}`;
+  const adminRef = (y: number) => `Assumptions!${ADMIN_FTE_CELLS[y]}`;
+
+  const formulaRow = (r: number, formulas: string[], results: number[], fmt: string, bold = false) => {
+    for (let y = 0; y < 5; y++) {
+      const cell = ws.getCell(r, y + 3);
+      setFormula(cell, formulas[y], results[y]);
+      cell.numFmt = fmt;
+      cell.font = bold ? BF : NF;
+      cell.border = bold ? SUBTOTAL_BORDER : BORDER;
+      cell.alignment = { horizontal: "right" };
+    }
+  };
+
+  labelCell(4, "Enrollment");
+  formulaRow(4,
+    [0, 1, 2, 3, 4].map(y => `${enrollRef(y)}`),
+    res.enrollment, NUM);
+
+  labelCell(5, "Tuition Revenue (Net)");
+  formulaRow(5,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? `${enrollRef(0)}*Assumptions!D20`
+        : `${enrollRef(y)}*Assumptions!D20*(1+Assumptions!D21)^${y}`
+    ),
+    res.tuitionRevNet, CUR);
+
+  labelCell(6, "  × Collection Rate Applied");
+  formulaRow(6,
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}5*Assumptions!D26`),
+    res.tuitionCollected, CUR);
+
+  labelCell(7, "ESA / School Choice Revenue");
+  formulaRow(7,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? `${enrollRef(0)}*Assumptions!D22`
+        : `${enrollRef(y)}*Assumptions!D22*(1+Assumptions!D23)^${y}`
+    ),
+    res.esaRevenue, CUR);
+
+  labelCell(8, "Other Earned Revenue");
+  formulaRow(8,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? `${enrollRef(0)}*Assumptions!D24`
+        : `${enrollRef(y)}*Assumptions!D24*(1+Assumptions!D25)^${y}`
+    ),
+    res.otherRevenue, CUR);
+
+  labelCell(9, "Grants & Contributions");
+  formulaRow(9,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? "Assumptions!D27"
+        : `Assumptions!D27*(1+Assumptions!D28)^${y}`
+    ),
+    res.grants, CUR);
+
+  labelCell(10, "Total Revenue", false, true);
+  formulaRow(10,
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}6+${YEAR_COLS[y]}7+${YEAR_COLS[y]}8+${YEAR_COLS[y]}9`),
+    res.totalRevenue, CUR, true);
+
+  labelCell(12, "Teacher FTE (Enrollment ÷ Ratio)");
+  formulaRow(12,
+    [0, 1, 2, 3, 4].map(y => `CEILING(${enrollRef(y)}/Assumptions!D32,1)`),
+    res.teacherFte, NUM);
+
+  labelCell(13, "Teacher Salaries");
+  formulaRow(13,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? `${YEAR_COLS[0]}12*Assumptions!D33`
+        : `${YEAR_COLS[y]}12*Assumptions!D33*(1+Assumptions!D34)^${y}`
+    ),
+    res.teacherSalaries, CUR);
+
+  labelCell(14, "Admin Salaries");
+  formulaRow(14,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? `${adminRef(0)}*Assumptions!D40`
+        : `${adminRef(y)}*Assumptions!D40*(1+Assumptions!D41)^${y}`
+    ),
+    res.adminSalaries, CUR);
+
+  labelCell(15, "Benefits & Payroll Taxes");
+  formulaRow(15,
+    [0, 1, 2, 3, 4].map(y => `(${YEAR_COLS[y]}13+${YEAR_COLS[y]}14)*Assumptions!D42`),
+    res.benefits, CUR);
+
+  labelCell(16, "Total Staffing Cost", false, true);
+  formulaRow(16,
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}13+${YEAR_COLS[y]}14+${YEAR_COLS[y]}15`),
+    res.totalStaffing, CUR, true);
+
+  labelCell(18, "Rent / Lease");
+  formulaRow(18,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? "Assumptions!D46"
+        : `Assumptions!D46*(1+Assumptions!D47)^${y}`
+    ),
+    res.rent, CUR);
+
+  labelCell(19, "Other Facility Costs");
+  formulaRow(19,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? "Assumptions!D48"
+        : `Assumptions!D48*(1+Assumptions!D49)^${y}`
+    ),
+    res.otherFacility, CUR);
+
+  labelCell(20, "Program / Curriculum");
+  formulaRow(20,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? `${enrollRef(0)}*Assumptions!D50`
+        : `${enrollRef(y)}*Assumptions!D50*(1+Assumptions!D51)^${y}`
+    ),
+    res.programCost, CUR);
+
+  labelCell(21, "G&A / Technology");
+  formulaRow(21,
+    [0, 1, 2, 3, 4].map(y =>
+      y === 0
+        ? "Assumptions!D52"
+        : `Assumptions!D52*(1+Assumptions!D53)^${y}`
+    ),
+    res.gaAndTech, CUR);
+
+  labelCell(22, "Total Operating Expenses", false, true);
+  formulaRow(22,
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}18+${YEAR_COLS[y]}19+${YEAR_COLS[y]}20+${YEAR_COLS[y]}21`),
+    res.totalOpEx, CUR, true);
+
+  ws.views = [{ state: "frozen", xSplit: 2, ySplit: 3 }];
+}
+
+function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
+  const ws = wb.addWorksheet("5-Year P&L", { properties: { tabColor: { argb: "FF328555" } } });
+  printSetup(ws);
+
+  ws.getColumn(1).width = 3;
+  ws.getColumn(2).width = 34;
+  for (let c = 3; c <= 7; c++) ws.getColumn(c).width = 16;
+
+  ws.getCell("B1").value = "5-Year Pro Forma Profit & Loss";
+  ws.getCell("B1").font = { name: "Calibri", size: 14, bold: true, color: { argb: "FF1E293B" } };
+  ws.mergeCells("B1:G1");
+
+  for (let c = 3; c <= 7; c++) {
+    const cell = ws.getCell(3, c);
+    cell.value = `Year ${c - 2}`;
+    cell.font = HEADER_FONT; cell.fill = HEADER_FILL;
+    cell.alignment = { horizontal: "center" }; cell.border = BORDER;
+  }
+  ws.getCell("B3").fill = HEADER_FILL; ws.getCell("B3").border = BORDER;
+  ws.getRow(3).height = 24;
+
+  const lbl = (r: number, text: string, bold = false) => {
+    const c = ws.getCell(`B${r}`);
+    c.value = text; c.font = bold ? BF : NF; c.border = BORDER;
+  };
+
+  const fRow = (r: number, sheetRef: string, rowRef: number, results: number[], fmt: string, bold = false) => {
+    for (let y = 0; y < 5; y++) {
+      const cell = ws.getCell(r, y + 3);
+      setFormula(cell, `${sheetRef}!${YEAR_COLS[y]}${rowRef}`, results[y]);
+      cell.numFmt = fmt; cell.font = bold ? BF : NF;
+      cell.border = bold ? SUBTOTAL_BORDER : BORDER;
+      cell.alignment = { horizontal: "right" };
+    }
+  };
+
+  const localFormula = (r: number, formulas: string[], results: number[], fmt: string, bold = false, conditional = false) => {
+    for (let y = 0; y < 5; y++) {
+      const cell = ws.getCell(r, y + 3);
+      setFormula(cell, formulas[y], results[y]);
+      cell.numFmt = fmt; cell.font = bold ? BF : NF;
+      cell.border = bold ? SUBTOTAL_BORDER : BORDER;
+      cell.alignment = { horizontal: "right" };
+      if (conditional) {
+        const v = results[y];
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= 0 ? GREEN_BG : RED_BG } };
       }
     }
+  };
+
+  lbl(5, "Enrollment");
+  fRow(5, "Drivers", 4, res.enrollment, NUM);
+
+  lbl(6, "Tuition Revenue (Net)");
+  fRow(6, "Drivers", 6, res.tuitionCollected, CUR);
+
+  lbl(7, "ESA / School Choice");
+  fRow(7, "Drivers", 7, res.esaRevenue, CUR);
+
+  lbl(8, "Other Revenue");
+  fRow(8, "Drivers", 8, res.otherRevenue, CUR);
+
+  lbl(9, "Grants & Contributions");
+  fRow(9, "Drivers", 9, res.grants, CUR);
+
+  lbl(10, "Total Revenue", true);
+  fRow(10, "Drivers", 10, res.totalRevenue, CUR, true);
+
+  lbl(12, "Total Staffing");
+  fRow(12, "Drivers", 16, res.totalStaffing, CUR);
+
+  lbl(13, "Total Operating Expenses");
+  fRow(13, "Drivers", 22, res.totalOpEx, CUR);
+
+  lbl(15, "Total Expenses", true);
+  localFormula(15,
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}12+${YEAR_COLS[y]}13`),
+    res.totalExpenses, CUR, true);
+
+  lbl(16, "Net Operating Income (NOI)", true);
+  localFormula(16,
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}10-${YEAR_COLS[y]}15`),
+    res.noi, CUR, true, true);
+
+  lbl(17, "Operating Margin");
+  localFormula(17,
+    [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}16/${YEAR_COLS[y]}10,0)`),
+    res.operatingMargin, PCT);
+
+  ws.views = [{ state: "frozen", xSplit: 2, ySplit: 3 }];
+}
+
+function buildCashFlow(wb: ExcelJS.Workbook, res: LenderResults) {
+  const ws = wb.addWorksheet("Cash Flow & DSCR", { properties: { tabColor: { argb: "FFD97706" } } });
+  printSetup(ws);
+
+  ws.getColumn(1).width = 3;
+  ws.getColumn(2).width = 34;
+  for (let c = 3; c <= 7; c++) ws.getColumn(c).width = 16;
+
+  ws.getCell("B1").value = "Cash Flow & Debt Service Coverage";
+  ws.getCell("B1").font = { name: "Calibri", size: 14, bold: true, color: { argb: "FF1E293B" } };
+  ws.mergeCells("B1:G1");
+
+  for (let c = 3; c <= 7; c++) {
+    const cell = ws.getCell(3, c);
+    cell.value = `Year ${c - 2}`;
+    cell.font = HEADER_FONT; cell.fill = HEADER_FILL;
+    cell.alignment = { horizontal: "center" }; cell.border = BORDER;
+  }
+  ws.getCell("B3").fill = HEADER_FILL; ws.getCell("B3").border = BORDER;
+  ws.getRow(3).height = 24;
+
+  const lbl = (r: number, text: string, bold = false) => {
+    const c = ws.getCell(`B${r}`);
+    c.value = text; c.font = bold ? BF : NF; c.border = BORDER;
+  };
+
+  const pmtFormula = "IF(Assumptions!D59>0,PMT(Assumptions!D60/12,Assumptions!D61*12,-Assumptions!D59)*12,0)";
+
+  lbl(4, "Net Operating Income");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(4, y + 3);
+    setFormula(cell, `'5-Year P&L'!${YEAR_COLS[y]}16`, res.noi[y]);
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
   }
 
-  const dscrSheet = workbook.sheet("Cash Flow & DSCR");
-  if (dscrSheet) {
-    const used = dscrSheet.usedRange();
-    if (used) {
-      const endRow = used.endCell().rowNumber();
-      for (let row = 1; row <= endRow; row++) {
-        const label = dscrSheet.cell(`A${row}`).value();
-        if (typeof label !== "string") continue;
-        const lower = label.toLowerCase();
-
-        if (lower.includes("dscr") || lower.includes("debt service coverage")) {
-          for (let col = 2; col <= 6; col++) {
-            const cell = dscrSheet.cell(row, col);
-            const val = cell.value();
-            if (typeof val === "number") {
-              cell.style("fill", { type: "solid", color: val >= 1.2 ? GREEN_HEX : val >= 1.0 ? AMBER_HEX : RED_HEX });
-            }
-          }
-        }
-
-        if (lower.includes("ending cash") || lower.includes("cash balance")) {
-          for (let col = 2; col <= 6; col++) {
-            const cell = dscrSheet.cell(row, col);
-            const val = cell.value();
-            if (typeof val === "number") {
-              cell.style("numberFormat", ACCT_FMT);
-              cell.style("fill", { type: "solid", color: val >= 0 ? GREEN_HEX : RED_HEX });
-            }
-          }
-        }
-      }
-    }
+  lbl(6, "Existing Debt Service");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(6, y + 3);
+    setFormula(cell, "Assumptions!D58", res.existingDebtService);
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
   }
 
-  const summarySheet = workbook.sheet("Summary");
-  if (summarySheet) {
-    const used = summarySheet.usedRange();
-    if (used) {
-      const endRow = used.endCell().rowNumber();
-      for (let row = 1; row <= endRow; row++) {
-        const label = summarySheet.cell(`A${row}`).value();
-        if (typeof label !== "string") continue;
-        const lower = label.toLowerCase();
-
-        if (lower.includes("margin") || lower.includes("ratio")) {
-          for (let col = 2; col <= 6; col++) {
-            const cell = summarySheet.cell(row, col);
-            const val = cell.value();
-            if (typeof val === "number" && Math.abs(val) <= 1) {
-              cell.style("numberFormat", PCT_FMT);
-            }
-          }
-        }
-      }
-    }
+  lbl(7, "Proposed Loan Debt Service");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(7, y + 3);
+    setFormula(cell, pmtFormula, res.proposedDebtService);
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
   }
+
+  lbl(8, "Total Debt Service", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(8, y + 3);
+    setFormula(cell, `${YEAR_COLS[y]}6+${YEAR_COLS[y]}7`, res.totalDebtService);
+    cell.numFmt = CUR; cell.font = BF; cell.border = SUBTOTAL_BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(10, "DSCR (NOI ÷ Total Debt Service)", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(10, y + 3);
+    setFormula(cell,
+      `IF(${YEAR_COLS[y]}8>0,${YEAR_COLS[y]}4/${YEAR_COLS[y]}8,IF(${YEAR_COLS[y]}4>0,99.9,0))`,
+      res.dscr[y]);
+    cell.numFmt = "0.00x";
+    cell.font = BF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+    const v = res.dscr[y];
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= 1.2 ? GREEN_BG : v >= 1.0 ? AMBER_BG : RED_BG } };
+  }
+
+  lbl(12, "Net Income After Debt");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(12, y + 3);
+    setFormula(cell, `${YEAR_COLS[y]}4-${YEAR_COLS[y]}8`, res.netIncomeAfterDebt[y]);
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(14, "Cumulative Cash", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(14, y + 3);
+    const f = y === 0
+      ? `Assumptions!D57+${YEAR_COLS[0]}12`
+      : `${YEAR_COLS[y - 1]}14+${YEAR_COLS[y]}12`;
+    setFormula(cell, f, res.cumulativeCash[y]);
+    cell.numFmt = CUR; cell.font = BF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+    const v = res.cumulativeCash[y];
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= 0 ? GREEN_BG : RED_BG } };
+  }
+
+  ws.views = [{ state: "frozen", xSplit: 2, ySplit: 3 }];
+}
+
+function buildStaffing(wb: ExcelJS.Workbook, res: LenderResults) {
+  const ws = wb.addWorksheet("Staffing", { properties: { tabColor: { argb: "FF0D9488" } } });
+  printSetup(ws);
+
+  ws.getColumn(1).width = 3;
+  ws.getColumn(2).width = 34;
+  for (let c = 3; c <= 7; c++) ws.getColumn(c).width = 16;
+
+  ws.getCell("B1").value = "Staffing Detail";
+  ws.getCell("B1").font = { name: "Calibri", size: 14, bold: true, color: { argb: "FF1E293B" } };
+  ws.mergeCells("B1:G1");
+
+  for (let c = 3; c <= 7; c++) {
+    const cell = ws.getCell(3, c);
+    cell.value = `Year ${c - 2}`;
+    cell.font = HEADER_FONT; cell.fill = HEADER_FILL;
+    cell.alignment = { horizontal: "center" }; cell.border = BORDER;
+  }
+  ws.getCell("B3").fill = HEADER_FILL; ws.getCell("B3").border = BORDER;
+  ws.getRow(3).height = 24;
+
+  const lbl = (r: number, text: string, bold = false) => {
+    const c = ws.getCell(`B${r}`);
+    c.value = text; c.font = bold ? BF : NF; c.border = BORDER;
+  };
+
+  lbl(4, "Teacher FTE");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(4, y + 3);
+    setFormula(cell, `Drivers!${YEAR_COLS[y]}12`, res.teacherFte[y]);
+    cell.numFmt = NUM; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(5, "Admin FTE");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(5, y + 3);
+    setFormula(cell, `Assumptions!${ADMIN_FTE_CELLS[y]}`, res.adminFte[y]);
+    cell.numFmt = NUM; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(6, "Total FTE", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(6, y + 3);
+    setFormula(cell, `${YEAR_COLS[y]}4+${YEAR_COLS[y]}5`, res.teacherFte[y] + res.adminFte[y]);
+    cell.numFmt = NUM; cell.font = BF; cell.border = SUBTOTAL_BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  ws.views = [{ state: "frozen", xSplit: 2, ySplit: 3 }];
+}
+
+function buildLoanSnapshot(wb: ExcelJS.Workbook, input: Record<string, string | number>, res: LenderResults) {
+  const ws = wb.addWorksheet("Loan Snapshot", { properties: { tabColor: { argb: "FFD97706" } } });
+  printSetup(ws);
+
+  ws.getColumn(1).width = 3;
+  ws.getColumn(2).width = 34;
+  ws.getColumn(3).width = 22;
+
+  ws.getCell("B1").value = "Proposed Loan Summary";
+  ws.getCell("B1").font = { name: "Calibri", size: 14, bold: true, color: { argb: "FF1E293B" } };
+  ws.mergeCells("B1:C1");
+
+  const lbl = (r: number, text: string) => {
+    const c = ws.getCell(`B${r}`);
+    c.value = text; c.font = NF; c.border = BORDER;
+  };
+
+  lbl(3, "Loan Amount");
+  const c3 = ws.getCell("C3");
+  setFormula(c3, "Assumptions!D59", Number(input.proposedLoanAmount) || 0);
+  c3.numFmt = CUR; c3.font = NF; c3.border = BORDER; c3.alignment = { horizontal: "right" };
+
+  lbl(4, "Interest Rate");
+  const c4 = ws.getCell("C4");
+  setFormula(c4, "Assumptions!D60", Number(input.interestRatePct) || 0);
+  c4.numFmt = PCT; c4.font = NF; c4.border = BORDER; c4.alignment = { horizontal: "right" };
+
+  lbl(5, "Term (Years)");
+  const c5 = ws.getCell("C5");
+  setFormula(c5, "Assumptions!D61", Number(input.termYears) || 0);
+  c5.numFmt = NUM; c5.font = NF; c5.border = BORDER; c5.alignment = { horizontal: "right" };
+
+  lbl(6, "Annual Debt Service");
+  const c6 = ws.getCell("C6");
+  setFormula(c6, "IF(Assumptions!D59>0,PMT(Assumptions!D60/12,Assumptions!D61*12,-Assumptions!D59)*12,0)", res.proposedDebtService);
+  c6.numFmt = CUR; c6.font = BF; c6.border = BORDER; c6.alignment = { horizontal: "right" };
+
+  lbl(8, "Year 1 DSCR");
+  const c8 = ws.getCell("C8");
+  setFormula(c8, "'Cash Flow & DSCR'!C10", res.dscr[0]);
+  c8.numFmt = "0.00x"; c8.font = BF; c8.border = BORDER; c8.alignment = { horizontal: "right" };
+  const v = res.dscr[0];
+  c8.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= 1.2 ? GREEN_BG : v >= 1.0 ? AMBER_BG : RED_BG } };
+}
+
+function buildSummary(wb: ExcelJS.Workbook, input: Record<string, string | number>, res: LenderResults) {
+  const ws = wb.addWorksheet("Summary", { properties: { tabColor: { argb: "FF328555" } } });
+  printSetup(ws);
+
+  ws.getColumn(1).width = 3;
+  ws.getColumn(2).width = 34;
+  ws.getColumn(3).width = 30;
+
+  ws.getCell("B1").value = "Model Summary";
+  ws.getCell("B1").font = { name: "Calibri", size: 14, bold: true, color: { argb: "FF1E293B" } };
+  ws.mergeCells("B1:C1");
+
+  const lbl = (r: number, text: string) => {
+    const c = ws.getCell(`B${r}`);
+    c.value = text; c.font = NF; c.border = BORDER;
+  };
+
+  lbl(3, "School Name");
+  const s3 = ws.getCell("C3");
+  setFormula(s3, "Assumptions!D5", String(input.schoolName || ""));
+  s3.font = NF; s3.border = BORDER;
+
+  lbl(4, "School Type");
+  const s4 = ws.getCell("C4");
+  setFormula(s4, "Assumptions!D7", String(input.schoolType || ""));
+  s4.font = NF; s4.border = BORDER;
+
+  lbl(5, "State");
+  const s5 = ws.getCell("C5");
+  setFormula(s5, "Assumptions!D6", String(input.state || ""));
+  s5.font = NF; s5.border = BORDER;
+
+  lbl(6, "Opening Year");
+  const s6 = ws.getCell("C6");
+  setFormula(s6, "Assumptions!D8", Number(input.firstOperatingYear) || 0);
+  s6.font = NF; s6.border = BORDER;
+
+  lbl(8, "Year 5 Enrollment");
+  const s8 = ws.getCell("C8");
+  setFormula(s8, "Assumptions!D16", res.enrollment[4]);
+  s8.numFmt = NUM; s8.font = NF; s8.border = BORDER; s8.alignment = { horizontal: "right" };
+
+  lbl(9, "Year 5 Revenue");
+  const s9 = ws.getCell("C9");
+  setFormula(s9, "Drivers!G10", res.totalRevenue[4]);
+  s9.numFmt = CUR; s9.font = NF; s9.border = BORDER; s9.alignment = { horizontal: "right" };
+
+  lbl(10, "Year 5 NOI");
+  const s10 = ws.getCell("C10");
+  setFormula(s10, "'5-Year P&L'!G16", res.noi[4]);
+  s10.numFmt = CUR; s10.font = BF; s10.border = BORDER; s10.alignment = { horizontal: "right" };
+  s10.fill = { type: "pattern", pattern: "solid", fgColor: { argb: res.noi[4] >= 0 ? GREEN_BG : RED_BG } };
+
+  ws.getCell("B12").value = "Generated by SchoolStack Budget (budget.schoolstack.ai)";
+  ws.getCell("B12").font = { name: "Calibri", size: 9, italic: true, color: { argb: "FF6B7280" } };
+  ws.mergeCells("B12:C12");
 }
 
 export async function generateLenderProFormaWorkbook(rawData: Record<string, unknown>): Promise<Buffer> {
   const input = mapModelToTemplateInput(rawData);
+  const res = computeLenderResults(input);
 
-  const workbook = await XlsxPopulate.fromFileAsync(TEMPLATE_PATH);
-  const assumptions = workbook.sheet("Assumptions");
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "SchoolStack Budget";
+  wb.created = new Date();
 
-  if (!assumptions) {
-    throw new Error("Template missing 'Assumptions' sheet");
-  }
+  buildCover(wb, String(input.schoolName || ""));
+  buildAssumptions(wb, input);
+  buildDrivers(wb, input, res);
+  buildPnL(wb, res);
+  buildCashFlow(wb, res);
+  buildStaffing(wb, res);
+  buildLoanSnapshot(wb, input, res);
+  buildSummary(wb, input, res);
 
-  for (const [field, cellRef] of Object.entries(CELL_MAP)) {
-    if (Object.prototype.hasOwnProperty.call(input, field)) {
-      assumptions.cell(cellRef).value(input[field]);
-    }
-  }
-
-  polishLenderWorkbook(workbook, String(input.schoolName || ""));
-
-  const buffer = await workbook.outputAsync("nodebuffer");
-  return buffer;
+  const buffer = await wb.xlsx.writeBuffer();
+  return Buffer.from(buffer);
 }
