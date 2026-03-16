@@ -527,7 +527,9 @@ function polishLenderWorkbook(workbook: any, schoolName: string) {
       const addr = used.address();
       try {
         workbook.definedName(`${sheet.name()}!Print_Area`, sheet.range(addr));
-      } catch (_) {}
+      } catch (err) {
+        console.warn(`Print area setup skipped for "${sheet.name()}":`, err instanceof Error ? err.message : err);
+      }
     }
   }
 
