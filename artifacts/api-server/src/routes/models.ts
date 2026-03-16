@@ -522,7 +522,7 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const workbook = await generateUnderwritingWorkbookV2(data as any);
+    const workbook = await generateUnderwritingWorkbookV2(data);
     const buffer = await workbook.xlsx.writeBuffer();
 
     await db.insert(exportsTable).values({

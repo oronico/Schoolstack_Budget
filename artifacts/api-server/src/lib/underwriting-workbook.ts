@@ -884,7 +884,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
     ws.getCell(r, 1).value = `  ${cd.lineItem}`; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
       const val = cd.isLoan
-        ? computeAnnualDebt(cd.loanPrincipal || 0, (cd.loanRate || 0) / 100, cd.loanTermYears || 0)
+        ? computeAnnualDebtForYear(cd.loanPrincipal || 0, (cd.loanRate || 0) / 100, cd.loanTermYears || 0, y)
         : driverVal(cd.amounts, y, cd.driverType, enrollment[y]);
       ws.getCell(r, y + 2).value = Math.round(val); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
     }
@@ -1785,7 +1785,11 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
   ws.getCell(r, 1).alignment = { horizontal: "center" };
 }
 
-export async function generateUnderwritingWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
+export async function generateUnderwritingWorkbook(data: Record<string, unknown>): Promise<ExcelJS.Workbook> {
+  return generateWorkbook(data as ModelData);
+}
+
+async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   const wb = new ExcelJS.Workbook();
   wb.creator = "SchoolStack Budget";
   wb.created = new Date();

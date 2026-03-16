@@ -555,10 +555,19 @@ export function computeCapDebtForYear(rows: CapitalDebtRow[], y: number, student
   for (const r of rows) {
     if (!r.enabled) continue;
     if (r.isLoan) {
-      total += computeAnnualDebt(r.loanPrincipal || 0, (r.loanRate || 0) / 100, r.loanTermYears || 0);
+      total += computeAnnualDebtForYear(r.loanPrincipal || 0, (r.loanRate || 0) / 100, r.loanTermYears || 0, y);
     } else {
       total += driverVal(r.amounts, y, r.driverType, students);
     }
+  }
+  return total;
+}
+
+export function computeDebtServiceForYear(rows: CapitalDebtRow[], y: number): number {
+  let total = 0;
+  for (const r of rows) {
+    if (!r.enabled || !r.isLoan) continue;
+    total += computeAnnualDebtForYear(r.loanPrincipal || 0, (r.loanRate || 0) / 100, r.loanTermYears || 0, y);
   }
   return total;
 }
