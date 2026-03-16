@@ -59,6 +59,6 @@ Provides deterministic financial analysis including lender readiness scores, sch
 - **ORM**: Drizzle ORM
 - **Validation**: Zod
 - **API Codegen**: Orval
-- **Excel Export**: ExcelJS, xlsx-populate
+- **Excel Export**: ExcelJS
 - **PDF Export**: PDFKit
 - **Authentication**: bcryptjs, jsonwebtoken
