@@ -1,0 +1,106 @@
+We need to evolve SchoolStack Budget from a founder planning model into an underwriting-approved model architecture that mirrors the Wildflower workbook structure but is configurable across school programs and entity types.
+
+Do not build a one-off borrower model.
+Build a reusable underwriting model framework.
+
+Target outcome:
+One model architecture that supports:
+- charter schools
+- private schools
+- microschools
+- hybrid programs
+- nonprofit and for-profit entities
+- startup and operating schools
+
+Model design principles:
+1. Assumption-driven, not custom workbook-driven
+2. Formula-linked throughout
+3. Underwriting outputs, not just founder planning outputs
+4. Adaptable by program profile and entity type
+5. Professional, lender-trustworthy formatting
+
+Required workbook architecture:
+- Cover
+- Instructions
+- Assumptions
+- Program Profile
+- Enrollment Drivers
+- Tuition / Funding Drivers
+- Staffing Drivers
+- Operating Expense Drivers
+- Capital Stack / Loan Terms
+- Enrollment Tuition Forecast
+- Staffing Costs Forecast
+- Budget Detail
+- Budget Summary
+- Year 1 Monthly Cash Flow
+- 5-Year Operating Statement
+- Debt Schedule
+- Balance Sheet
+- DSCR & Covenant Checks
+- Sources & Uses
+- Scenarios
+- Underwriting Snapshot
+
+Program Profile controls must drive logic for:
+- school model: charter / private / microschool / hybrid
+- entity type: nonprofit_501c3 / llc_single / llc_partnership / s_corp / c_corp / sole_practitioner
+- stage: startup / year_1 / operating
+- funding mix: tuition / tuition+ESA / public funding / mixed
+- fiscal year start
+- first-year proration
+- debt included yes/no
+
+Behavior by school model:
+- charter schools must support public per-pupil funding and timing logic
+- private/microschool models must support tuition, discounts, collection timing, ESA/voucher funding
+- hybrid models must support both
+
+Behavior by entity type:
+- nonprofit models use “change in net assets” / “net assets”
+- for-profit models use “profit/loss” / “equity”
+- labels and summary presentation should adapt automatically
+
+Underwriting requirements:
+- monthly Year 1 cash flow
+- 5-year operating statement
+- balance sheet that ties
+- debt schedule that ties
+- DSCR
+- days cash on hand
+- runway
+- break-even enrollment
+- capacity utilization
+- sources & uses
+- covenant checks
+- underwriting snapshot
+
+Testing requirements:
+- sources = uses
+- balance check = 0
+- debt schedule ties to BS
+- cash flow ties to BS cash
+- no undefined / NaN / broken formulas
+- all key summary metrics have cached results for Excel and Google Sheets viewers
+
+Use the Wildflower workbook as the structural reference:
+- Budget Detail
+- Budget Summary
+- Cash Forecast
+- Enrollment Tuition Forecast
+- Staffing Costs Forecast
+- Scenarios
+
+But rebuild it as a generalized underwriting framework, not a borrower-specific workbook.
+
+Deliverables:
+1. architecture plan
+2. sheet-by-sheet spec
+3. data model / schema changes needed
+4. formula logic by sheet
+5. migration plan from current 3-tab/8-tab exports to full underwriting model
+6. phased build plan:
+   - Phase 1: stable founder model
+   - Phase 2: full underwriting workbook
+   - Phase 3: charter/public funding support
+   - Phase 4: scenario and covenant sophistication
