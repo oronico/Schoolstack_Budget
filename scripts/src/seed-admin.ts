@@ -3,9 +3,15 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "aserafin@gmail.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "@adm1n2026";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_NAME = process.env.ADMIN_NAME || "Admin";
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  console.error("ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required.");
+  console.error("Usage: ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=secret pnpm --filter @workspace/scripts run seed-admin");
+  process.exit(1);
+}
 
 async function seedAdmin() {
   console.log(`Seeding admin account: ${ADMIN_EMAIL}`);
