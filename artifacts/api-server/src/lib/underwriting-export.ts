@@ -236,8 +236,9 @@ function setSheetOrder(ws: ExcelJS.Worksheet, order: number) {
   Object.defineProperty(ws, "orderNo", { value: order, writable: true, configurable: true });
 }
 
-function polishWorkbookUW(wb: ExcelJS.Workbook) {
+function polishWorkbookUW(wb: ExcelJS.Workbook, schoolName?: string) {
   const coverNames = new Set(["Cover"]);
+  const name = schoolName || "School";
 
   for (const ws of wb.worksheets) {
     if (!coverNames.has(ws.name)) {
@@ -249,6 +250,7 @@ function polishWorkbookUW(wb: ExcelJS.Workbook) {
       ws.pageSetup = {
         ...(ws.pageSetup || {}),
         printArea: ws.pageSetup?.printArea || `A1:${endColLetter}${lastRow}`,
+        printTitlesRow: "1:1",
         orientation: ws.pageSetup?.orientation || "landscape",
         fitToPage: true,
         fitToWidth: 1,
@@ -256,9 +258,10 @@ function polishWorkbookUW(wb: ExcelJS.Workbook) {
         paperSize: 1 as unknown as undefined,
         margins: ws.pageSetup?.margins || { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
       };
-      if (!ws.headerFooter?.oddFooter) {
-        ws.headerFooter = { oddFooter: "&L&8SchoolStack Budget — Underwriting&C&8Page &P of &N&R&8&D" };
-      }
+      ws.headerFooter = {
+        oddHeader: `&L&10&B${name}&R&8&I${ws.name}`,
+        oddFooter: "&L&8Built by SchoolStack Budget  •  budget.schoolstack.ai&C&8Page &P of &N&R&8&D",
+      };
     }
   }
 
@@ -562,7 +565,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
 
   buildUWCoverSheet(wb, sp, yc, annualRevenue, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, maxCapacity);
 
-  polishWorkbookUW(wb);
+  polishWorkbookUW(wb, sp.schoolName);
   const arrayBuf = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuf as ArrayBuffer);
 }
@@ -649,7 +652,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
 
   buildUWCoverSheet(wb, sp, yc, annualRevenue, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, maxCapacity);
 
-  polishWorkbookUW(wb);
+  polishWorkbookUW(wb, sp.schoolName);
   await wb.xlsx.writeFile(filePath);
 }
 
@@ -711,7 +714,7 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
   const opsRow = buildSYExpenses(wb, expenseRows, students, annualRev, costInflation, prorationFactor, opMonths, cols, headers, yi);
   buildSYPL(wb, monthlyRev, annualPersonnel, annualOps, annualCapDebt, annualNI, opMonths, cols, headers, sp, staffRow, opsRow, revTotalRow);
 
-  polishWorkbookUW(wb);
+  polishWorkbookUW(wb, sp.schoolName);
   const arrayBuf = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuf as ArrayBuffer);
 }

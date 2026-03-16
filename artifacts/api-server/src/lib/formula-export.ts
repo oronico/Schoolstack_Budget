@@ -829,6 +829,11 @@ function buildAssumptions(
     }
   }
 
+  r += 2;
+  ws.mergeCells(r, 1, r, 7);
+  ws.getCell(r, 1).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
+  ws.getCell(r, 1).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+
   ws.views = [{ state: "frozen", ySplit: 3, xSplit: 1, topLeftCell: "B4", activeCell: "B4" }];
 
   return {
@@ -870,7 +875,16 @@ function buildFiveYearModel(
 
   ws.columns = [{ width: 38 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }];
 
+  const schoolName = sp.schoolName || "School";
+
   let r = 1;
+  ws.mergeCells(r, 1, r, 6);
+  ws.getCell(r, 1).value = `${schoolName} — 5-Year Financial Model`;
+  ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
+  ws.getCell(r, 1).alignment = { horizontal: "left", vertical: "middle" };
+  ws.getRow(r).height = 32;
+
+  r++;
   ws.getRow(r).values = ["", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
   hdr(ws, r, 6);
 
@@ -1280,7 +1294,12 @@ function buildFiveYearModel(
     cell.numFmt = NUM; gc(cell);
   }
 
-  ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1, topLeftCell: "B2", activeCell: "B2" }];
+  r += 2;
+  ws.mergeCells(r, 1, r, 6);
+  ws.getCell(r, 1).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
+  ws.getCell(r, 1).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+
+  ws.views = [{ state: "frozen", ySplit: 2, xSplit: 1, topLeftCell: "B3", activeCell: "B3" }];
 
   return {
     revTotalRow, persTotalRow: persTotalRow, opexTotalRow, facilTotalRow: 0,
@@ -1327,8 +1346,16 @@ function buildProForma(
   }
 
   ws.columns = [{ width: 36 }, ...Array(12).fill({ width: 14 }), { width: 16 }];
+  const schoolName = sp.schoolName || "School";
 
   let r = 1;
+  ws.mergeCells(r, 1, r, 14);
+  ws.getCell(r, 1).value = `${schoolName} — Year 1 Pro Forma`;
+  ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
+  ws.getCell(r, 1).alignment = { horizontal: "left", vertical: "middle" };
+  ws.getRow(r).height = 32;
+
+  r++;
   ws.getRow(r).values = [...monthLabels, "Year 1 Total"];
   hdr(ws, r, 14);
 
@@ -1528,7 +1555,12 @@ function buildProForma(
   setFormula(ws.getCell(r, 2), `MIN(${cn(pfCumCashRow, 2)}:${cn(pfCumCashRow, 13)})`, "0");
   ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
 
-  ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
+  r += 2;
+  ws.mergeCells(r, 1, r, 14);
+  ws.getCell(r, 1).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
+  ws.getCell(r, 1).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+
+  ws.views = [{ state: "frozen", ySplit: 2, xSplit: 1, topLeftCell: "B3", activeCell: "B3" }];
 }
 
 function buildActualsVsProjections(
@@ -1551,6 +1583,7 @@ function buildActualsVsProjections(
   if (!hasPrior && !hasCurrent) return;
 
   const ws = wb.addWorksheet("Actuals vs. Projections");
+  const schoolName = sp.schoolName || "School";
 
   const colHeaders = [""];
   if (hasPrior) colHeaders.push("Prior Year (Actual)");
@@ -1563,6 +1596,13 @@ function buildActualsVsProjections(
   ws.columns[0] = { width: 36 } as any;
 
   let r = 1;
+  ws.mergeCells(r, 1, r, cols);
+  ws.getCell(r, 1).value = `${schoolName} — Actuals vs. Projections`;
+  ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
+  ws.getCell(r, 1).alignment = { horizontal: "left", vertical: "middle" };
+  ws.getRow(r).height = 32;
+
+  r++;
   ws.getRow(r).values = colHeaders;
   hdr(ws, r, cols);
 
@@ -1755,7 +1795,12 @@ function buildActualsVsProjections(
     ws.getCell(r, yr1Col).font = { size: 11, name: "Calibri", color: { argb: "FF328555" } };
   }
 
-  ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
+  r += 2;
+  ws.mergeCells(r, 1, r, cols);
+  ws.getCell(r, 1).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
+  ws.getCell(r, 1).font = { italic: true, size: 9, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+
+  ws.views = [{ state: "frozen", ySplit: 2, xSplit: 1, topLeftCell: "B3", activeCell: "B3" }];
 }
 
 export async function generateFormulaWorkbook(rawData: Record<string, unknown>): Promise<Buffer> {
@@ -1790,22 +1835,29 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
 
   buildActualsVsProjections(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, fiveYr);
 
+  const schoolName = sp.schoolName || "School";
   for (const ws of wb.worksheets) {
-    ws.views = ws.views || [{ state: "frozen", ySplit: 1, xSplit: 1, topLeftCell: "B2", activeCell: "B2" }];
+    ws.views = ws.views || [{ state: "frozen", ySplit: 2, xSplit: 1, topLeftCell: "B3", activeCell: "B3" }];
     const lastRow = ws.rowCount || 1;
     const lastCol = ws.columnCount || 1;
     const endColLetter = lastCol <= 26 ? String.fromCharCode(64 + lastCol) : "Z";
+    const isAssumptions = ws.name === "Assumptions";
+    const headerRows = isAssumptions ? "1:3" : "1:2";
     ws.pageSetup = {
       ...(ws.pageSetup || {}),
       printArea: `A1:${endColLetter}${lastRow}`,
-      orientation: "landscape",
+      printTitlesRow: headerRows,
+      orientation: lastCol > 6 ? "landscape" : "portrait",
       fitToPage: true,
       fitToWidth: 1,
       fitToHeight: 0,
       paperSize: 1 as unknown as undefined,
       margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
     };
-    ws.headerFooter = { oddFooter: "&L&8SchoolStack Budget&C&8Page &P of &N&R&8&D" };
+    ws.headerFooter = {
+      oddHeader: `&L&10&B${schoolName}&R&8&I${ws.name}`,
+      oddFooter: "&L&8Built by SchoolStack Budget  •  budget.schoolstack.ai&C&8Page &P of &N&R&8&D",
+    };
   }
 
   const arrayBuf = await wb.xlsx.writeBuffer();

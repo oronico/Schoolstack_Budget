@@ -289,8 +289,9 @@ function setSheetOrder(ws: ExcelJS.Worksheet, order: number) {
   Object.defineProperty(ws, "orderNo", { value: order, writable: true, configurable: true });
 }
 
-function polishWorkbook(wb: ExcelJS.Workbook) {
+function polishWorkbook(wb: ExcelJS.Workbook, schoolName?: string) {
   const coverNames = new Set(["Cover"]);
+  const name = schoolName || "School";
 
   for (const ws of wb.worksheets) {
     if (!coverNames.has(ws.name)) {
@@ -304,6 +305,7 @@ function polishWorkbook(wb: ExcelJS.Workbook) {
       ws.pageSetup = {
         ...(ws.pageSetup || {}),
         printArea: ws.pageSetup?.printArea || `A1:${endColLetter}${lastRow}`,
+        printTitlesRow: "1:1",
         orientation: ws.pageSetup?.orientation || "landscape",
         fitToPage: true,
         fitToWidth: 1,
@@ -311,9 +313,10 @@ function polishWorkbook(wb: ExcelJS.Workbook) {
         paperSize: 1 as unknown as undefined,
         margins: ws.pageSetup?.margins || { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
       };
-      if (!ws.headerFooter?.oddFooter) {
-        ws.headerFooter = { oddFooter: "&L&8SchoolStack Budget&C&8Page &P of &N&R&8&D" };
-      }
+      ws.headerFooter = {
+        oddHeader: `&L&10&B${name}&R&8&I${ws.name}`,
+        oddFooter: "&L&8Built by SchoolStack Budget  •  budget.schoolstack.ai&C&8Page &P of &N&R&8&D",
+      };
     }
   }
 
@@ -875,7 +878,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     buildCoverSheet(wb, sp, yearCount, undefined, consultantData, enrollmentByYear);
   }
 
-  polishWorkbook(wb);
+  polishWorkbook(wb, sp.schoolName);
   const arrayBuffer = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuffer);
 }

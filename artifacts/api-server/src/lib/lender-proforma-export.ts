@@ -501,10 +501,12 @@ function polishLenderWorkbook(workbook: any, schoolName: string) {
     });
     coverSheet.range(`B${r}:C${r}`).merged(true);
 
-    coverSheet.pageMargins("left", 0.75);
-    coverSheet.pageMargins("right", 0.75);
-    coverSheet.pageMargins("top", 1);
-    coverSheet.pageMargins("bottom", 1);
+    try {
+      coverSheet.pageMargins("left", 0.75);
+      coverSheet.pageMargins("right", 0.75);
+      coverSheet.pageMargins("top", 1);
+      coverSheet.pageMargins("bottom", 1);
+    } catch (_) {}
   }
 
   const ACCT_FMT = '_("$"* #,##0_);_("$"* (#,##0);_("$"* "-"??_);_(@_)';
@@ -515,12 +517,14 @@ function polishLenderWorkbook(workbook: any, schoolName: string) {
 
   for (const sheet of workbook.sheets()) {
     if (sheet.name() === "Cover") continue;
-    sheet.freezePanes(1, 1);
-    sheet.pageMargins("left", 0.25);
-    sheet.pageMargins("right", 0.25);
-    sheet.pageMargins("top", 0.5);
-    sheet.pageMargins("bottom", 0.5);
-    sheet.printGridLines(false);
+    try { sheet.freezePanes(1, 1); } catch (_) {}
+    try {
+      sheet.pageMargins("left", 0.25);
+      sheet.pageMargins("right", 0.25);
+      sheet.pageMargins("top", 0.5);
+      sheet.pageMargins("bottom", 0.5);
+    } catch (_) {}
+    try { sheet.printGridLines(false); } catch (_) {}
 
     const used = sheet.usedRange();
     if (used) {
@@ -530,6 +534,19 @@ function polishLenderWorkbook(workbook: any, schoolName: string) {
       } catch (err) {
         console.warn(`Print area setup skipped for "${sheet.name()}":`, err instanceof Error ? err.message : err);
       }
+      try {
+        const endCol = used.endCell().columnName();
+        workbook.definedName(`${sheet.name()}!Print_Titles`, sheet.range(`A1:${endCol}1`));
+      } catch (err) {
+        console.warn(`Print titles setup skipped for "${sheet.name()}":`, err instanceof Error ? err.message : err);
+      }
+    }
+
+    try {
+      sheet.headerFooter("oddHeader", `&L&10&B${schoolName}&R&8&I${sheet.name()}`);
+      sheet.headerFooter("oddFooter", "&L&8Built by SchoolStack Budget  •  budget.schoolstack.ai&C&8Page &P of &N&R&8&D");
+    } catch (err) {
+      console.warn(`Header/footer setup skipped for "${sheet.name()}":`, err instanceof Error ? err.message : err);
     }
   }
 
