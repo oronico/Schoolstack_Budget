@@ -239,8 +239,10 @@ function setPrintAreaUW(ws: ExcelJS.Worksheet, lastRow: number, lastCol: number)
   };
 }
 
-function setSheetOrder(ws: ExcelJS.Worksheet, order: number) {
-  Object.defineProperty(ws, "orderNo", { value: order, writable: true, configurable: true });
+function normalizeAmounts(amounts: number[] | undefined, yc: number) {
+  if (!amounts) return;
+  const last = amounts.length > 0 ? amounts[amounts.length - 1] : 0;
+  while (amounts.length < yc) amounts.push(last);
 }
 
 function polishWorkbookUW(wb: ExcelJS.Workbook, schoolName?: string) {
@@ -269,15 +271,6 @@ function polishWorkbookUW(wb: ExcelJS.Workbook, schoolName?: string) {
         oddHeader: `&L&10&B${name}&R&8&I${ws.name}`,
         oddFooter: "&L&8Built by SchoolStack Budget  •  budget.schoolstack.ai&C&8Page &P of &N&R&8&D",
       };
-    }
-  }
-
-  const cover = wb.worksheets.find(s => coverNames.has(s.name));
-  if (cover) {
-    setSheetOrder(cover, 1);
-    let idx = 2;
-    for (const ws of wb.worksheets) {
-      if (!coverNames.has(ws.name)) { setSheetOrder(ws, idx++); }
     }
   }
 }
@@ -499,10 +492,9 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   const expenseRows = data.expenseRows || [];
   const capDebtRows = data.capitalAndDebtRows || [];
 
-  const yearCount = revenueRows[0]?.amounts?.length || expenseRows[0]?.amounts?.length || (sp.schoolStage === "operating_school" ? 5 : 3);
-  const yc = Math.min(yearCount, 5);
+  const yc = 5;
 
-  const enrollment = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0].slice(0, yc);
+  const enrollment = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0];
   const salaryEsc = (data.facilities as Record<string, unknown>)?.annualSalaryIncrease
     ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100 : 0;
   const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
@@ -511,6 +503,10 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   const isPartial = sp.isPartialFirstYear || false;
   const opMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
   const prorationFactor = opMonths / 12;
+
+  for (const row of revenueRows) { normalizeAmounts(row.amounts, yc); }
+  for (const row of expenseRows) { normalizeAmounts(row.amounts, yc); }
+  for (const row of capDebtRows) { normalizeAmounts(row.amounts, yc); }
 
   const annualRevenue: number[] = [];
   const annualPersonnel: number[] = [];
@@ -558,9 +554,9 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   const staffTotalRow = buildStaffingPlan(wb, staffingRows, salaryEsc, prorationFactor, yc, cols, yearHeaders);
   const opexGrandTotalRow = buildOperatingExpenses(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
   const facGrandTotalRow = buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
-  buildSourcesUses(wb, capDebtRows, startingCash, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, expenseRows, staffingRows, enrollment, totalPrincipal, yc);
+  buildSourcesUses(wb, sp, capDebtRows, startingCash, annualPersonnel, annualExpenses, annualCapDebt, expenseRows, enrollment, totalPrincipal);
   buildDebtSchedule(wb, capDebtRows, yc);
-  buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
+  buildMonthlyCashFlowY1(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
 
   const ctx: Partial<CrossTabCtx> = { revGrandTotalRow, staffTotalRow, opexGrandTotalRow, facGrandTotalRow };
   const plRows = buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType, ctx);
@@ -586,10 +582,9 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   const expenseRows = data.expenseRows || [];
   const capDebtRows = data.capitalAndDebtRows || [];
 
-  const yearCount = revenueRows[0]?.amounts?.length || expenseRows[0]?.amounts?.length || (sp.schoolStage === "operating_school" ? 5 : 3);
-  const yc = Math.min(yearCount, 5);
+  const yc = 5;
 
-  const enrollment = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0].slice(0, yc);
+  const enrollment = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0];
   const salaryEsc = (data.facilities as Record<string, unknown>)?.annualSalaryIncrease
     ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100 : 0;
   const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
@@ -598,6 +593,10 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   const isPartial = sp.isPartialFirstYear || false;
   const opMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
   const prorationFactor = opMonths / 12;
+
+  for (const row of revenueRows) { normalizeAmounts(row.amounts, yc); }
+  for (const row of expenseRows) { normalizeAmounts(row.amounts, yc); }
+  for (const row of capDebtRows) { normalizeAmounts(row.amounts, yc); }
 
   const annualRevenue: number[] = [];
   const annualPersonnel: number[] = [];
@@ -645,9 +644,9 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   const staffTotalRow2 = buildStaffingPlan(wb, staffingRows, salaryEsc, prorationFactor, yc, cols, yearHeaders);
   const opexGrandTotalRow2 = buildOperatingExpenses(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
   const facGrandTotalRow2 = buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
-  buildSourcesUses(wb, capDebtRows, startingCash, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, expenseRows, staffingRows, enrollment, totalPrincipal, yc);
+  buildSourcesUses(wb, sp, capDebtRows, startingCash, annualPersonnel, annualExpenses, annualCapDebt, expenseRows, enrollment, totalPrincipal);
   buildDebtSchedule(wb, capDebtRows, yc);
-  buildMonthlyCashFlowY1(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
+  buildMonthlyCashFlowY1(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
 
   const ctx2: Partial<CrossTabCtx> = { revGrandTotalRow: revGrandTotalRow2, staffTotalRow: staffTotalRow2, opexGrandTotalRow: opexGrandTotalRow2, facGrandTotalRow: facGrandTotalRow2 };
   const plRows2 = buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType, ctx2);
@@ -1669,24 +1668,25 @@ function buildFacilitiesOccupancy(
 }
 
 function buildSourcesUses(
-  wb: ExcelJS.Workbook, capDebtRows: CapitalDebtRow[], startingCash: number,
-  annualRev: number[], annualPersonnel: number[], annualExpenses: number[],
-  annualCapDebt: number[], annualNI: number[],
-  expenseRows: ExpenseRow[], staffingRows: StaffingRow[], enrollment: number[],
-  totalPrincipal: number, yc: number
+  wb: ExcelJS.Workbook, sp: SchoolProfile, capDebtRows: CapitalDebtRow[], startingCash: number,
+  annualPersonnel: number[], annualExpenses: number[],
+  annualCapDebt: number[],
+  expenseRows: ExpenseRow[], enrollment: number[],
+  totalPrincipal: number
 ) {
-  const ws = wb.addWorksheet("Sources & Uses");
+  const ws = wb.addWorksheet("Capital Stack & Startup Uses");
   ws.columns = [{ width: 44 }, { width: 22 }];
+  const yr1Lbl = schoolYearLabel(sp.openingYear, 0);
 
   let r = 1;
-  ws.getCell(r, 1).value = "SchoolStack — Sources & Uses";
+  ws.getCell(r, 1).value = `SchoolStack — Capital Stack (${yr1Lbl})`;
   ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: NAVY }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 2); ws.getRow(r).height = 32;
 
-  r = 3; sec(ws, r, 2); ws.getCell(r, 1).value = "SOURCES OF FUNDS";
+  r = 3; sec(ws, r, 2); ws.getCell(r, 1).value = "SOURCES OF CAPITAL";
   const sourcesStart = r + 1;
 
-  r++; ws.getCell(r, 1).value = "Starting Cash / Equity"; ws.getCell(r, 1).font = NF;
+  r++; ws.getCell(r, 1).value = "Founder Equity / Starting Cash"; ws.getCell(r, 1).font = NF;
   ws.getCell(r, 2).value = startingCash; ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = NF;
 
   for (const row of capDebtRows) {
@@ -1695,83 +1695,53 @@ function buildSourcesUses(
     ws.getCell(r, 2).value = row.loanPrincipal || 0; ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = NF;
   }
 
-  r++; ws.getCell(r, 1).value = `${schoolYearLabel(sp?.openingYear, 0)} Revenue (Projected)`; ws.getCell(r, 1).font = NF;
-  ws.getCell(r, 2).value = annualRev[0] || 0; ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = NF;
+  for (const row of capDebtRows) {
+    if (!row.enabled || row.isLoan) continue;
+    if ((row.amounts?.[0] ?? 0) < 0) {
+      r++; ws.getCell(r, 1).value = `Grant / In-Kind: ${row.lineItem}`; ws.getCell(r, 1).font = NF;
+      ws.getCell(r, 2).value = Math.abs(row.amounts?.[0] ?? 0); ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = NF;
+    }
+  }
 
-  r++; sec(ws, r, 2); ws.getCell(r, 1).value = "TOTAL SOURCES";
+  r++; sec(ws, r, 2); ws.getCell(r, 1).value = "TOTAL CAPITAL SOURCES";
   const srcTotal = r;
-  let totalSources = startingCash + (annualRev[0] || 0);
+  let totalSources = startingCash;
   for (const row of capDebtRows) { if (row.enabled && row.isLoan) totalSources += row.loanPrincipal || 0; }
+  for (const row of capDebtRows) { if (row.enabled && !row.isLoan && (row.amounts?.[0] ?? 0) < 0) totalSources += Math.abs(row.amounts?.[0] ?? 0); }
   setFormula(ws.getCell(r, 2), `SUM(${cn(sourcesStart, 2)}:${cn(r - 1, 2)})`, totalSources);
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
 
-  r += 2; sec(ws, r, 2); ws.getCell(r, 1).value = "USES OF FUNDS";
+  r += 2; sec(ws, r, 2); ws.getCell(r, 1).value = "STARTUP / PRE-OPENING USES";
   const usesStart = r + 1;
 
   const y1Personnel = annualPersonnel[0] || 0;
   const y1Expenses = annualExpenses[0] || 0;
   const y1CapDebt = annualCapDebt[0] || 0;
-  const y1TotalExp = y1Personnel + y1Expenses + y1CapDebt;
 
   const occupancyRows = expenseRows.filter(e => e.enabled && e.category === "occupancy_facility");
   const techRows = expenseRows.filter(e => e.enabled && e.category === "technology");
   const instructionalRows = expenseRows.filter(e => e.enabled && e.category === "instructional_program");
-  const adminRows = expenseRows.filter(e => e.enabled && e.category === "administrative_general");
 
-  const occupancyY1 = occupancyRows.reduce((s, e) => {
-    return s + driverVal(e.amounts, 0, e.driverType, enrollment[0]);
-  }, 0);
-  const techY1 = techRows.reduce((s, e) => {
-    return s + driverVal(e.amounts, 0, e.driverType, enrollment[0]);
-  }, 0);
-  const instructionalY1 = instructionalRows.reduce((s, e) => {
-    return s + driverVal(e.amounts, 0, e.driverType, enrollment[0]);
-  }, 0);
-  const adminY1 = adminRows.reduce((s, e) => {
-    return s + driverVal(e.amounts, 0, e.driverType, enrollment[0]);
-  }, 0);
-
+  const occupancyY1 = occupancyRows.reduce((s, e) => s + driverVal(e.amounts, 0, e.driverType, enrollment[0]), 0);
+  const equipmentFFE = Math.round(techRows.reduce((s, e) => s + driverVal(e.amounts, 0, e.driverType, enrollment[0]), 0) * 0.5);
+  const curriculumLaunch = Math.round(instructionalRows.reduce((s, e) => s + driverVal(e.amounts, 0, e.driverType, enrollment[0]), 0));
   const depositsPrepaid = Math.round(occupancyY1 / 12 * 2);
-  const equipmentFFE = Math.round(techY1 * 0.5);
-  const curriculumLaunch = Math.round(instructionalY1);
-  const professionalFees = Math.round(adminY1);
   const workingCapReserve = Math.round((y1Personnel + y1Expenses) / 12 * 2);
-  const y1DebtSvc = y1CapDebt;
-  const rampDeficit = Math.max(0, -(annualNI[0] || 0));
 
   const usesItems: [string, number][] = [];
 
-  const usesYrLbl = schoolYearLabel(sp?.openingYear, 0);
-  usesItems.push([`${usesYrLbl} Personnel`, Math.round(y1Personnel)]);
-
-  if (depositsPrepaid > 0) {
-    usesItems.push(["Deposits & Prepaid Occupancy (2 mo)", Math.round(depositsPrepaid)]);
-  }
-  if (occupancyY1 > 0) {
-    usesItems.push([`Occupancy / Facility Costs (${usesYrLbl})`, Math.round(occupancyY1)]);
-  }
-  if (equipmentFFE > 0) {
-    usesItems.push(["Equipment / FF&E / Technology", Math.round(equipmentFFE)]);
-  }
-  if (curriculumLaunch > 0) {
-    usesItems.push(["Curriculum & Program Launch Costs", Math.round(curriculumLaunch)]);
-  }
-  if (professionalFees > 0) {
-    usesItems.push(["Professional Fees & Administration", Math.round(professionalFees)]);
-  }
+  if (depositsPrepaid > 0) usesItems.push(["Deposits & Prepaid Occupancy (2 mo)", depositsPrepaid]);
+  if (equipmentFFE > 0) usesItems.push(["Equipment / FF&E / Technology", equipmentFFE]);
+  if (curriculumLaunch > 0) usesItems.push(["Curriculum & Program Launch Costs", curriculumLaunch]);
 
   for (const row of capDebtRows) {
     if (!row.enabled || row.isLoan) continue;
-    usesItems.push([row.lineItem, row.amounts?.[0] ?? 0]);
+    if ((row.amounts?.[0] ?? 0) >= 0) {
+      usesItems.push([row.lineItem, row.amounts?.[0] ?? 0]);
+    }
   }
 
-  if (y1DebtSvc > 0) {
-    usesItems.push([`${usesYrLbl} Debt Service`, Math.round(y1DebtSvc)]);
-  }
-
-  if (workingCapReserve > 0) {
-    usesItems.push(["Working Capital Reserve (2 mo)", Math.round(workingCapReserve)]);
-  }
+  if (workingCapReserve > 0) usesItems.push(["Working Capital Reserve (2 mo)", workingCapReserve]);
 
   const subtotal = usesItems.reduce((s, [, v]) => s + v, 0);
   const contingency = Math.round(subtotal * 0.05);
@@ -1784,24 +1754,20 @@ function buildSourcesUses(
     totalUses += val;
   }
 
-  r++; sec(ws, r, 2); ws.getCell(r, 1).value = "TOTAL USES";
+  r++; sec(ws, r, 2); ws.getCell(r, 1).value = "TOTAL STARTUP USES";
   const useTotal = r;
   setFormula(ws.getCell(r, 2), `SUM(${cn(usesStart, 2)}:${cn(r - 1, 2)})`, totalUses);
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
 
   r += 2;
-  ws.getCell(r, 1).value = "SOURCES − USES (SURPLUS / GAP)"; ws.getCell(r, 1).font = BF;
+  ws.getCell(r, 1).value = "CAPITAL SURPLUS / (GAP)"; ws.getCell(r, 1).font = BF;
   const gap = totalSources - totalUses;
   setFormula(ws.getCell(r, 2), `${cn(srcTotal, 2)}-${cn(useTotal, 2)}`, gap);
   ws.getCell(r, 2).numFmt = CUR; ws.getCell(r, 2).font = BF;
   const gapCell = ws.getCell(r, 2);
-  if (gap < 0) {
-    gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: RED_BG } };
-  } else {
-    gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG } };
-  }
+  gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: gap >= 0 ? GREEN_BG : RED_BG } };
 
-  r++; ws.getCell(r, 1).value = gap >= 0 ? `✓ Sources cover projected ${usesYrLbl} uses` : "⚠ Funding gap — additional sources needed";
+  r++; ws.getCell(r, 1).value = gap >= 0 ? "✓ Capital sources cover projected startup uses" : "⚠ Funding gap — additional capital needed";
   ws.getCell(r, 1).font = { ...NF, italic: true, color: { argb: gap >= 0 ? "FF328555" : "FFD32F2F" } };
 }
 
@@ -1926,8 +1892,19 @@ function computeExportMonthlyRevenue(
   return monthly;
 }
 
+function trueUpMonthly(monthlyArr: number[], annualTarget: number, activeMonths: number): number[] {
+  const result = [...monthlyArr];
+  const sum = result.reduce((s, v) => s + v, 0);
+  const diff = annualTarget - sum;
+  if (diff !== 0 && activeMonths > 0) {
+    const lastActive = activeMonths - 1;
+    result[lastActive] += diff;
+  }
+  return result;
+}
+
 function buildMonthlyCashFlowY1(
-  wb: ExcelJS.Workbook, annualRev: number[], annualPersonnel: number[],
+  wb: ExcelJS.Workbook, sp: SchoolProfile, annualRev: number[], annualPersonnel: number[],
   annualExpenses: number[], annualCapDebt: number[], startingCash: number, opMonths: number,
   revenueRows?: RevenueRow[], enrollment?: number[], tiers?: TuitionTier[],
   fiscalYearStartMonth?: number
@@ -1940,26 +1917,33 @@ function buildMonthlyCashFlowY1(
     monthLabels.push(MONTH_NAMES[mIdx]);
   }
   ws.columns = [{ width: 30 }, ...Array(12).fill({ width: 14 }), { width: 16 }];
-  const yr1Label = schoolYearLabel(sp?.openingYear, 0);
+  const yr1Label = schoolYearLabel(sp.openingYear, 0);
 
   let r = 1;
   ws.getRow(r).values = [...monthLabels, `${yr1Label} Total`];
   hdr(ws, r, 14);
 
   const students = enrollment?.[0] ?? 0;
-  const monthlyRevArray = revenueRows && revenueRows.length > 0
+  const rawRevMonthly = revenueRows && revenueRows.length > 0
     ? computeExportMonthlyRevenue(revenueRows, students, opMonths, tiers)
-    : Array.from({ length: 12 }, (_, m) => m < opMonths ? (annualRev[0] || 0) / (opMonths || 12) : 0);
-  const monthlyPersonnel = (annualPersonnel[0] || 0) / (opMonths || 12);
-  const monthlyOps = (annualExpenses[0] || 0) / (opMonths || 12);
-  const monthlyDebt = (annualCapDebt[0] || 0) / 12;
+    : Array.from({ length: 12 }, (_, m) => m < opMonths ? Math.round((annualRev[0] || 0) / (opMonths || 12)) : 0);
+  const monthlyRevArray = trueUpMonthly(rawRevMonthly.map(v => Math.round(v)), annualRev[0] || 0, opMonths);
+
+  const rawPers = Array.from({ length: 12 }, (_, m) => m < opMonths ? Math.round((annualPersonnel[0] || 0) / (opMonths || 12)) : 0);
+  const monthlyPersArray = trueUpMonthly(rawPers, annualPersonnel[0] || 0, opMonths);
+
+  const rawOps = Array.from({ length: 12 }, (_, m) => m < opMonths ? Math.round((annualExpenses[0] || 0) / (opMonths || 12)) : 0);
+  const monthlyOpsArray = trueUpMonthly(rawOps, annualExpenses[0] || 0, opMonths);
+
+  const rawDebt = Array.from({ length: 12 }, () => Math.round((annualCapDebt[0] || 0) / 12));
+  const monthlyDebtArray = trueUpMonthly(rawDebt, annualCapDebt[0] || 0, 12);
 
   const revRow = r + 1;
   r++; ws.getCell(r, 1).value = "Revenue"; ws.getCell(r, 1).font = BF;
   let revTotal = 0;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    const v = Math.round(monthlyRevArray[m] || 0);
+    const v = monthlyRevArray[m];
     revTotal += v;
     cell.value = v;
     cell.numFmt = CUR; dc(cell);
@@ -1971,7 +1955,7 @@ function buildMonthlyCashFlowY1(
   let persTotal = 0;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    const v = m < opMonths ? Math.round(monthlyPersonnel) : 0;
+    const v = monthlyPersArray[m];
     persTotal += v;
     cell.value = v;
     cell.numFmt = CUR; dc(cell);
@@ -1983,7 +1967,7 @@ function buildMonthlyCashFlowY1(
   let opsTotal = 0;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    const v = m < opMonths ? Math.round(monthlyOps) : 0;
+    const v = monthlyOpsArray[m];
     opsTotal += v;
     cell.value = v;
     cell.numFmt = CUR; dc(cell);
@@ -1995,7 +1979,7 @@ function buildMonthlyCashFlowY1(
   let debtTotal = 0;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    const v = Math.round(monthlyDebt);
+    const v = monthlyDebtArray[m];
     debtTotal += v;
     cell.value = v;
     cell.numFmt = CUR; dc(cell);
@@ -2008,10 +1992,7 @@ function buildMonthlyCashFlowY1(
   const monthlyExpTotals: number[] = [];
   let expGrandTotal = 0;
   for (let m = 0; m < 12; m++) {
-    const pv = m < opMonths ? Math.round(monthlyPersonnel) : 0;
-    const ov = m < opMonths ? Math.round(monthlyOps) : 0;
-    const dv = Math.round(monthlyDebt);
-    const total = pv + ov + dv;
+    const total = monthlyPersArray[m] + monthlyOpsArray[m] + monthlyDebtArray[m];
     monthlyExpTotals.push(total);
     expGrandTotal += total;
     const cell = ws.getCell(r, m + 2);
@@ -2328,6 +2309,7 @@ function buildDSCRCovenant(
   const dsRow = r;
 
   r++; ws.getCell(r, 1).value = "DSCR"; ws.getCell(r, 1).font = BF;
+  const dscrRow = r;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     const roundedDS = Math.round(annualDebtSvc);
@@ -2365,6 +2347,7 @@ function buildDSCRCovenant(
   const monthlyOpsRow = r;
 
   r++; ws.getCell(r, 1).value = "Cash Reserve (Months)"; ws.getCell(r, 1).font = BF;
+  const cashReserveRow = r;
   for (let y = 0; y < yc; y++) {
     const reserveMonths = monthlyOpsCosts[y] === 0 ? 0 : cashBalances[y] / monthlyOpsCosts[y];
     const cell = ws.getCell(r, y + 2);
@@ -2386,13 +2369,15 @@ function buildDSCRCovenant(
 
   r += 2; sec(ws, r, cols); ws.getCell(r, 1).value = "COVENANT CHECKS";
 
+  const dscrCheckRow = r + 1;
   r++; ws.getCell(r, 1).value = "DSCR ≥ 1.20x"; ws.getCell(r, 1).font = NF;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     if (annualDebtSvc > 0) {
       const noi = rev[y] - personnel[y] - ops[y];
       const dscr = noi / annualDebtSvc;
-      cell.value = dscr >= 1.2 ? "PASS" : "FAIL";
+      const dscrCellRef = cn(dscrRow, y + 2);
+      setFormula(cell, `IF(${dscrCellRef}>=1.2,"PASS","FAIL")`, dscr >= 1.2 ? "PASS" : "FAIL");
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscr >= 1.2 ? GREEN_BG : RED_BG } };
     } else {
       cell.value = "N/A";
@@ -2408,7 +2393,7 @@ function buildDSCRCovenant(
     const monthlyOps = (personnel[y] + ops[y]) / 12;
     const reserve = monthlyOps > 0 ? cash / monthlyOps : 0;
     const cell = ws.getCell(r, y + 2);
-    cell.value = reserve >= 2.0 ? "PASS" : "FAIL";
+    setFormula(cell, `IF(${cn(cashReserveRow, y + 2)}>=2,"PASS","FAIL")`, reserve >= 2.0 ? "PASS" : "FAIL");
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: reserve >= 2.0 ? GREEN_BG : RED_BG } };
     cell.font = BF; cell.alignment = { horizontal: "center" };
   }
