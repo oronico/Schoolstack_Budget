@@ -166,6 +166,9 @@ export const enrollmentSchema = z.object({
   year3: z.coerce.number(numMsg("Year 3 enrollment")).min(0, "Enter your projected enrollment for Year 3"),
   year4: z.coerce.number(numMsg("Year 4 enrollment")).min(0, "Enter your projected enrollment for Year 4"),
   year5: z.coerce.number(numMsg("Year 5 enrollment")).min(0, "Enter your projected enrollment for Year 5"),
+  retentionRate: z.coerce.number(numMsg("retention rate")).min(0, "Retention rate must be 0% or higher").max(100, "Retention rate can't exceed 100%").optional(),
+  applicationsReceived: z.coerce.number(numMsg("applications received")).min(0, "Please enter a positive number").optional(),
+  waitlistCount: z.coerce.number(numMsg("waitlist count")).min(0, "Please enter a positive number").optional(),
 });
 
 export const revenueRowSchema = z.object({

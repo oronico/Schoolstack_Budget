@@ -48,6 +48,9 @@ interface Enrollment {
   year3?: number;
   year4?: number;
   year5?: number;
+  retentionRate?: number;
+  applicationsReceived?: number;
+  waitlistCount?: number;
 }
 
 interface RevenueRow {
@@ -249,6 +252,9 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   result.enrollmentY3 = en.year3 || 0;
   result.enrollmentY4 = en.year4 || 0;
   result.enrollmentY5 = en.year5 || 0;
+  result.retentionRate = en.retentionRate ?? "";
+  result.applicationsReceived = en.applicationsReceived ?? "";
+  result.waitlistCount = en.waitlistCount ?? "";
 
   const grossTuitionRow = revenueRows.find(r => r.id === "gross_tuition" && r.enabled);
   const tuitionY1PerStudent = grossTuitionRow?.driverType === "per_student"
@@ -776,10 +782,62 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
     valCell.alignment = { horizontal: "right" };
   }
 
+  const hasRetentionDemand = (input.retentionRate !== "" && input.retentionRate !== undefined) ||
+    (input.applicationsReceived !== "" && input.applicationsReceived !== undefined) ||
+    (input.waitlistCount !== "" && input.waitlistCount !== undefined);
+
+  if (hasRetentionDemand) {
+    const rdStartRow = 63;
+    ws.mergeCells(`B${rdStartRow}:D${rdStartRow}`);
+    ws.getCell(`B${rdStartRow}`).value = "RETENTION & DEMAND SIGNALS";
+    ws.getCell(`B${rdStartRow}`).font = sectionFont;
+    ws.getCell(`B${rdStartRow}`).fill = sectionFill;
+    ws.getCell(`B${rdStartRow}`).alignment = { horizontal: "left", vertical: "middle" };
+    ws.getRow(rdStartRow).height = 24;
+
+    const rdRows: { row: number; label: string; key: string; fmt?: string }[] = [];
+    if (input.retentionRate !== "" && input.retentionRate !== undefined) {
+      rdRows.push({ row: rdStartRow + 2, label: "Student Retention Rate", key: "retentionRate", fmt: "0.0%" });
+    }
+    if (input.applicationsReceived !== "" && input.applicationsReceived !== undefined) {
+      rdRows.push({ row: rdStartRow + 3, label: "Applications Received (2026-27)", key: "applicationsReceived", fmt: NUM });
+    }
+    if (input.waitlistCount !== "" && input.waitlistCount !== undefined) {
+      rdRows.push({ row: rdStartRow + 4, label: "Waitlist Count (2026-27)", key: "waitlistCount", fmt: NUM });
+    }
+    const pipeline = (Number(input.applicationsReceived) || 0) + (Number(input.waitlistCount) || 0);
+    const y1Enroll = Number(input.enrollmentY1) || 0;
+    if (pipeline > 0 && y1Enroll > 0) {
+      const coveragePct = pipeline / y1Enroll;
+      const nextRow = rdStartRow + 5;
+      ws.getCell(`C${nextRow}`).value = "Pipeline Coverage (Apps + Waitlist ÷ Y1)";
+      ws.getCell(`C${nextRow}`).font = labelFont;
+      ws.getCell(`C${nextRow}`).border = thinBorder;
+      ws.getCell(`D${nextRow}`).value = coveragePct;
+      ws.getCell(`D${nextRow}`).font = { ...valueFont, bold: true, color: { argb: coveragePct >= 1 ? "FF16A34A" : "FFD97706" } };
+      ws.getCell(`D${nextRow}`).numFmt = "0.0%";
+      ws.getCell(`D${nextRow}`).border = thinBorder;
+      ws.getCell(`D${nextRow}`).alignment = { horizontal: "right" };
+    }
+    for (const r of rdRows) {
+      ws.getCell(`C${r.row}`).value = r.label;
+      ws.getCell(`C${r.row}`).font = labelFont;
+      ws.getCell(`C${r.row}`).border = thinBorder;
+      const val = input[r.key];
+      const displayVal = r.fmt === "0.0%" && typeof val === "number" ? val / 100 : val;
+      ws.getCell(`D${r.row}`).value = displayVal;
+      ws.getCell(`D${r.row}`).font = valueFont;
+      ws.getCell(`D${r.row}`).fill = inputFill;
+      ws.getCell(`D${r.row}`).border = thinBorder;
+      if (r.fmt) ws.getCell(`D${r.row}`).numFmt = r.fmt;
+      ws.getCell(`D${r.row}`).alignment = { horizontal: "right" };
+    }
+  }
+
   if (input.hasGradeBand === 1) {
     const METHOD_LABELS: Record<string, string> = { count_days: "Count Days", adm: "ADM (Avg Daily Membership)", ada: "ADA (Avg Daily Attendance)" };
     const TIMING_LABELS: Record<string, string> = { monthly: "Monthly", quarterly: "Quarterly", annual: "Annual", semi_annual: "Semi-Annual" };
-    const gbStartRow = 64;
+    const gbStartRow = hasRetentionDemand ? 70 : 64;
     ws.mergeCells(`B${gbStartRow}:D${gbStartRow}`);
     ws.getCell(`B${gbStartRow}`).value = "CHARTER FUNDING DETAILS";
     ws.getCell(`B${gbStartRow}`).font = sectionFont;

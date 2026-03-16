@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, TrendingUp, Info, School } from "lucide-react";
+import { Plus, Trash2, TrendingUp, Info, School, ShieldCheck, Users, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import type { Program } from "../schema";
@@ -106,17 +106,17 @@ function EnrollmentBenchmark({ schoolType, maxCapacity, isNewSchool }: { schoolT
       const highEst = Math.round(maxCapacity * highPct / 100);
       benchmarks.push({
         label: `Year 1: ${lowEst}–${highEst} students (${lowPct}–${highPct}% of your ${maxCapacity} capacity)`,
-        detail: "Most new schools fill 40–65% of capacity in their opening year. Conservative projections build lender confidence.",
+        detail: "Most new schools fill 40–65% of capacity in their opening year. Starting conservatively gives you a realistic baseline to build from.",
       });
     } else {
       benchmarks.push({
         label: "Year 1: Plan for 40–65% of your target capacity",
-        detail: "Most new schools fill 40–65% of capacity in their opening year. Conservative projections build lender confidence.",
+        detail: "Most new schools fill 40–65% of capacity in their opening year. Starting conservatively gives you a realistic baseline to build from.",
       });
     }
     benchmarks.push({
       label: "Growth: 15–25% per year is a strong, realistic ramp",
-      detail: "Lenders expect steady growth, not hockey sticks. Year-over-year increases above 25% will need a clear explanation.",
+      detail: "Steady growth is achievable growth. Year-over-year increases above 25% require a concrete recruitment plan — make sure yours is in place before projecting it.",
     });
   }
 
@@ -159,6 +159,211 @@ function EnrollmentBenchmark({ schoolType, maxCapacity, isNewSchool }: { schoolT
             <p className="text-xs text-teal-700/80 mt-0.5">{b.detail}</p>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function DemandConfidenceIndicator({ retentionRate, applicationsReceived, waitlistCount, year1Enrollment, isOperatingSchool }: {
+  retentionRate?: number;
+  applicationsReceived: number;
+  waitlistCount: number;
+  year1Enrollment: number;
+  isOperatingSchool: boolean;
+}) {
+  const pipeline = applicationsReceived + waitlistCount;
+  if (pipeline === 0 && (!retentionRate || retentionRate === 0)) return null;
+  if (year1Enrollment <= 0) return null;
+
+  const coveragePct = pipeline > 0 ? Math.round((pipeline / year1Enrollment) * 100) : 0;
+
+  let level: "strong" | "moderate" | "weak" = "moderate";
+  let message = "";
+
+  if (pipeline > 0) {
+    if (coveragePct >= 100) {
+      level = "strong";
+      message = `Strong demand — pipeline covers ${coveragePct}% of Year 1 seats`;
+    } else if (coveragePct >= 60) {
+      level = "moderate";
+      message = `Moderate demand — pipeline covers ${coveragePct}% of Year 1 seats`;
+    } else {
+      level = "weak";
+      message = `Building demand — pipeline covers ${coveragePct}% of Year 1 seats`;
+    }
+  }
+
+  if (isOperatingSchool && retentionRate !== undefined && retentionRate > 0) {
+    if (pipeline === 0) {
+      if (retentionRate >= 85) {
+        level = "strong";
+        message = `Strong retention — ${retentionRate}% of students expected to re-enroll`;
+      } else if (retentionRate >= 80) {
+        level = "moderate";
+        message = `Solid retention — ${retentionRate}% of students expected to re-enroll`;
+      } else {
+        level = "weak";
+        message = `${retentionRate}% retention means you'll need a stronger recruitment plan to hit your targets`;
+      }
+    } else {
+      if (retentionRate >= 85) {
+        if (level !== "strong") level = coveragePct >= 60 ? "strong" : "moderate";
+        message += ` with ${retentionRate}% retention`;
+      } else if (retentionRate < 80) {
+        if (level === "strong") level = "moderate";
+        message += ` — but ${retentionRate}% retention is a concern`;
+      }
+    }
+  }
+
+  const colors = {
+    strong: { bg: "from-emerald-50 to-green-50/50", border: "border-emerald-300", text: "text-emerald-800", icon: "text-emerald-600" },
+    moderate: { bg: "from-blue-50 to-sky-50/50", border: "border-blue-300", text: "text-blue-800", icon: "text-blue-600" },
+    weak: { bg: "from-amber-50 to-yellow-50/50", border: "border-amber-300", text: "text-amber-800", icon: "text-amber-600" },
+  };
+
+  const c = colors[level];
+
+  return (
+    <div className={`bg-gradient-to-br ${c.bg} border ${c.border} rounded-2xl p-5 shadow-sm`}>
+      <div className="flex items-center gap-3">
+        <div className={`rounded-full p-2 bg-white/70 ${c.icon}`}>
+          <ShieldCheck className="h-5 w-5" />
+        </div>
+        <div>
+          <p className={`text-sm font-bold ${c.text}`}>Demand Confidence</p>
+          <p className={`text-sm ${c.text} opacity-80`}>{message}</p>
+        </div>
+      </div>
+      {pipeline > 0 && (
+        <div className="mt-3 flex gap-4 text-xs">
+          {applicationsReceived > 0 && (
+            <span className={c.text}>
+              <strong>{applicationsReceived}</strong> applications
+            </span>
+          )}
+          {waitlistCount > 0 && (
+            <span className={c.text}>
+              <strong>{waitlistCount}</strong> waitlisted
+            </span>
+          )}
+          <span className={`${c.text} opacity-70`}>
+            {year1Enrollment} Year 1 seats
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOperatingSchool: boolean; isSecondYearPlus: boolean }) {
+  const { watch, setValue } = useFormContext();
+  const retentionRate = watch("enrollment.retentionRate");
+  const applicationsReceived = watch("enrollment.applicationsReceived");
+  const waitlistCount = watch("enrollment.waitlistCount");
+
+  const showRetention = isOperatingSchool && isSecondYearPlus;
+
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-border/60 shadow-sm space-y-5">
+      <div>
+        <h4 className="font-display font-bold text-sm text-foreground mb-1 flex items-center gap-2">
+          <ClipboardList className="h-4 w-4 text-primary" />
+          Retention & Demand Signals
+        </h4>
+        <p className="text-xs text-muted-foreground">
+          Strong projections start with real data. Knowing your retention rate, application pipeline, and waitlist helps you set realistic enrollment targets — and shows anyone reviewing your model that your numbers are grounded in evidence, not guesswork.
+        </p>
+      </div>
+
+      <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl border border-blue-200">
+        <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+        <p className="text-xs text-blue-700">
+          These fields are optional but highly encouraged. Taking stock of your demand pipeline is one of the most valuable steps in building a data-driven model — it turns your enrollment projections from estimates into evidence-backed targets. This is especially important for ESA-funded and charter schools where per-pupil revenue is the primary income stream.
+        </p>
+      </div>
+
+      {showRetention && (
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-1">
+            Year-over-Year Student Retention Rate
+          </label>
+          <p className="text-xs text-muted-foreground mb-2">
+            What percentage of current students are expected to re-enroll next year?
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={retentionRate ?? ""}
+              onChange={(e) => setValue("enrollment.retentionRate", e.target.value === "" ? undefined : parseFloat(e.target.value), { shouldDirty: true })}
+              className="w-24 text-sm text-center border-2 border-border rounded-xl px-3 py-2 bg-card outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+              placeholder="e.g. 85"
+              min={0}
+              max={100}
+              step={1}
+            />
+            <span className="text-sm text-muted-foreground">%</span>
+            <div className="flex gap-1 ml-2">
+              {[75, 80, 85, 90].map(rate => (
+                <button
+                  key={rate}
+                  type="button"
+                  onClick={() => setValue("enrollment.retentionRate", rate, { shouldDirty: true })}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors",
+                    retentionRate === rate
+                      ? "bg-primary text-white"
+                      : "bg-secondary text-foreground hover:bg-primary/10"
+                  )}
+                >
+                  {rate}%
+                </button>
+              ))}
+            </div>
+          </div>
+          {retentionRate !== undefined && retentionRate < 80 && (
+            <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
+              <span>&#9888;</span> Retention below 80% means you'll need a stronger recruitment pipeline to hit your enrollment targets. Consider what's driving attrition and how you'll address it.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-1 flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            Applications Received (2026-27)
+          </label>
+          <p className="text-xs text-muted-foreground mb-2">
+            How many applications have you received for the upcoming year?
+          </p>
+          <input
+            type="number"
+            value={applicationsReceived ?? ""}
+            onChange={(e) => setValue("enrollment.applicationsReceived", e.target.value === "" ? undefined : parseInt(e.target.value), { shouldDirty: true })}
+            className="w-full text-sm border-2 border-border rounded-xl px-3 py-2 bg-card outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+            placeholder="0"
+            min={0}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-1 flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            Waitlist Count (2026-27)
+          </label>
+          <p className="text-xs text-muted-foreground mb-2">
+            How many families are on your waitlist for the upcoming year?
+          </p>
+          <input
+            type="number"
+            value={waitlistCount ?? ""}
+            onChange={(e) => setValue("enrollment.waitlistCount", e.target.value === "" ? undefined : parseInt(e.target.value), { shouldDirty: true })}
+            className="w-full text-sm border-2 border-border rounded-xl px-3 py-2 bg-card outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+            placeholder="0"
+            min={0}
+          />
+        </div>
       </div>
     </div>
   );
@@ -264,6 +469,12 @@ export function EnrollmentStep() {
 
   const hasYear1Data = programs.some(p => p.year1 > 0);
 
+  const retentionRate = watch("enrollment.retentionRate");
+  const applicationsReceived = watch("enrollment.applicationsReceived") || 0;
+  const waitlistCount = watch("enrollment.waitlistCount") || 0;
+  const year1Total = totalsByYear["year1"] || 0;
+  const isOperatingSchool = !isNewSchool;
+
   const existingProgramNames = new Set(programs.map(p => p.name));
   const availableSuggestions = SUGGESTED_PROGRAMS.filter(s => !existingProgramNames.has(s));
 
@@ -290,7 +501,7 @@ export function EnrollmentStep() {
     if (prev > 0 && curr > 0) {
       const growth = (curr - prev) / prev;
       if (growth > 0.25) {
-        warnings.push(`${futureYearLabels[i - 1]} to ${futureYearLabels[i]} growth is ${Math.round(growth * 100)}% — over 25% year-over-year growth may concern lenders.`);
+        warnings.push(`${futureYearLabels[i - 1]} to ${futureYearLabels[i]} growth is ${Math.round(growth * 100)}% — over 25% year-over-year growth requires a concrete recruitment strategy to be achievable.`);
       }
     }
   }
@@ -553,6 +764,28 @@ export function EnrollmentStep() {
         </div>
       )}
 
+      {programs.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
+            <span className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-primary" />
+              Retention & Demand
+            </span>
+          </h3>
+          <RetentionDemandSection isOperatingSchool={isOperatingSchool} isSecondYearPlus={isSecondYearPlus} />
+        </div>
+      )}
+
+      {hasYear1Data && (
+        <DemandConfidenceIndicator
+          retentionRate={retentionRate}
+          applicationsReceived={applicationsReceived}
+          waitlistCount={waitlistCount}
+          year1Enrollment={year1Total}
+          isOperatingSchool={isOperatingSchool}
+        />
+      )}
+
       {hasYear1Data && (
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
@@ -566,7 +799,7 @@ export function EnrollmentStep() {
             <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl border border-blue-200">
               <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-blue-700">
-                We recommend a 3-5% annual tuition increase to keep pace with rising operating costs. This is standard across the industry and expected by lenders.
+                A 3-5% annual tuition increase keeps pace with rising operating costs and is standard across the industry. Building this into your model ensures your revenue projections stay realistic over time.
               </p>
             </div>
 

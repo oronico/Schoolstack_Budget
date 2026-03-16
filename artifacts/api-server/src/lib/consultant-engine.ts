@@ -70,6 +70,9 @@ interface Enrollment {
   year3?: number;
   year4?: number;
   year5?: number;
+  retentionRate?: number;
+  applicationsReceived?: number;
+  waitlistCount?: number;
 }
 
 interface LegacyRevenue {
@@ -917,6 +920,43 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     }
   }
 
+  const retentionRate = en.retentionRate;
+  const applicationsReceived = en.applicationsReceived || 0;
+  const waitlistCount = en.waitlistCount || 0;
+
+  if (retentionRate !== undefined && retentionRate < 80) {
+    enrollmentGuidance.push(
+      `Year-over-year retention of ${retentionRate}% is below 80%, which means you'll need to recruit more new families each year to hit your enrollment targets. Understanding what's driving attrition — and building a plan to improve it — will make your projections more achievable and your model more credible.`,
+    );
+  }
+
+  const pipeline = applicationsReceived + waitlistCount;
+  const y1Projected = enrollmentByYear[0] || 0;
+
+  if (pipeline > 0 && y1Projected > 0 && pipeline >= y1Projected) {
+    const coveragePct = Math.round((pipeline / y1Projected) * 100);
+    enrollmentGuidance.push(
+      `Strong demand signal: ${pipeline} applications + waitlist entries cover ${coveragePct}% of Year 1 projected enrollment (${y1Projected} seats). Your projections are backed by real demand — that's exactly the kind of evidence that makes a model credible.`,
+    );
+  }
+
+  if (y1Projected > 0) {
+    const isOperating = sp.schoolStage === "operating_school";
+    const retainedStudents = (isOperating && retentionRate !== undefined && retentionRate > 0 && (sp.currentStudents || 0) > 0)
+      ? Math.round((sp.currentStudents || 0) * retentionRate / 100)
+      : 0;
+    const evidencedStudents = retainedStudents + pipeline;
+    if (evidencedStudents > 0 && y1Projected > evidencedStudents) {
+      const gap = y1Projected - evidencedStudents;
+      const parts: string[] = [];
+      if (retainedStudents > 0) parts.push(`${retainedStudents} retained`);
+      if (pipeline > 0) parts.push(`${pipeline} applications/waitlist`);
+      enrollmentGuidance.push(
+        `Projected Year 1 enrollment (${y1Projected}) exceeds your documented pipeline of ${evidencedStudents} students (${parts.join(" + ")}) by ${gap}. To make these projections achievable, build out your recruitment strategy for the remaining ${gap} seats — marketing plan, open house schedule, community partnerships, or referral programs.`,
+      );
+    }
+  }
+
   let stressTests: StressScenario[];
 
   if (hasRowData) {
@@ -1057,11 +1097,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     status: lastYearNetMargin >= 0.15 ? "good" : lastYearNetMargin >= 0.05 ? "warning" : "danger",
     interpretation:
       lastYearNetMargin >= 0.15
-        ? `By Year ${lastYearNum} the model shows strong ${profitWord} — attractive to lenders.`
+        ? `By Year ${lastYearNum} the model shows strong ${profitWord} — your school is on track for financial sustainability.`
         : lastYearNetMargin >= 0.05
           ? `Year ${lastYearNum} margin is thin — a small revenue shortfall could push you into the red.`
-          : `Year ${lastYearNum} margin is concerning — lenders will want to see a clearer path to ${profitWord}.`,
-    benchmark: "Lender target: 10–15%+",
+          : `Year ${lastYearNum} margin is concerning — building a clearer path to ${profitWord} will strengthen your model.`,
+    benchmark: "Target: 10–15%+",
   });
 
   keyMetrics.push({
@@ -1099,11 +1139,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       status: dscr >= 1.25 ? "good" : dscr >= 1.0 ? "warning" : "danger",
       interpretation:
         dscr >= 1.25
-          ? "DSCR is above 1.25x — lenders typically want to see at least this level."
+          ? "DSCR is above 1.25x — your operating income comfortably covers debt payments."
           : dscr >= 1.0
-            ? "DSCR is above 1.0x but tight — lenders may require additional collateral or guarantees."
-            : "DSCR is below 1.0x — the school cannot cover debt payments from operating income alone.",
-      benchmark: "Lender minimum: 1.25x",
+            ? "DSCR is above 1.0x but tight — there's little margin if revenue dips. Look for ways to widen this buffer."
+            : "DSCR is below 1.0x — the school cannot cover debt payments from operating income alone. This needs to be addressed.",
+      benchmark: "Healthy minimum: 1.25x",
     });
   }
 
@@ -1117,7 +1157,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
           ? "Philanthropy supplements but doesn't dominate revenue — a sustainable mix."
           : philanthropyPct <= 0.30
             ? "Donations and grants make up a significant share of revenue — plan for donor diversification."
-            : "Heavy reliance on philanthropy — lenders view this as unpredictable revenue. Build toward earned revenue sustainability.",
+            : "Heavy reliance on philanthropy creates risk — donations can fluctuate year to year. Build toward earned revenue sustainability so your model isn't dependent on fundraising.",
       benchmark: "Sustainable: under 15%",
     });
   }
@@ -1145,7 +1185,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       status: lastReserve.reserveMonths >= 3 ? "good" : lastReserve.reserveMonths >= 1 ? "warning" : "danger",
       interpretation:
         lastReserve.reserveMonths >= 3
-          ? `By Year ${lastYearNum}, the school has built a healthy operating reserve of 3+ months — a strong signal to lenders.`
+          ? `By Year ${lastYearNum}, the school has built a healthy operating reserve of 3+ months — a strong foundation for long-term stability.`
           : lastReserve.reserveMonths >= 1
             ? "The reserve buffer is thin — target building at least 3 months of expenses as a cushion."
             : `No meaningful reserve has been built by Year ${lastYearNum} yet — this is an important area to strengthen as you grow.`,
@@ -1243,7 +1283,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (hasDebt && dscr < 1.25) {
     recommendations.push({
       title: "Strengthen Your Debt Service Coverage",
-      description: `Your DSCR of ${dscr.toFixed(2)}x is ${dscr < 1.0 ? "below 1.0x, meaning debt payments exceed operating income right now" : "below the 1.25x lenders typically look for"}. Some paths forward: reducing the loan amount, extending the term, or growing revenue. Getting this ratio up will make your financial story much stronger.`,
+      description: `Your DSCR of ${dscr.toFixed(2)}x is ${dscr < 1.0 ? "below 1.0x, meaning debt payments exceed operating income right now" : "below the 1.25x healthy target"}. Some paths forward: reducing the loan amount, extending the term, or growing revenue. Strengthening this ratio gives you more financial breathing room and makes your model more resilient.`,
       priority: "high",
     });
   }
@@ -1251,7 +1291,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (philanthropyPct > 0.30) {
     recommendations.push({
       title: "Build Toward More Earned Revenue",
-      description: `Donations and grants represent ${pct(philanthropyPct)} of Year 1 revenue — it's wonderful to have that support. Over time, lenders like to see earned revenue driving sustainability. Aim to shift the mix so philanthropy is below 20% by Year 3.`,
+      description: `Donations and grants represent ${pct(philanthropyPct)} of Year 1 revenue — it's wonderful to have that support. Over time, building earned revenue as your primary driver makes your model more resilient and predictable. Aim to shift the mix so philanthropy is below 20% by Year 3.`,
       priority: "high",
     });
   }
@@ -1508,7 +1548,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       if (founderComp < 50000 && founderComp > 0) {
         recommendations.push({
           title: "Founder Compensation May Be Unsustainably Low",
-          description: `Founder/leader compensation of ${fmt(founderComp)} is below market. While common in startup years, plan for competitive compensation by Year 2–3 to retain leadership and satisfy lender expectations.`,
+          description: `Founder/leader compensation of ${fmt(founderComp)} is below market. While common in startup years, plan for competitive compensation by Year 2–3 to retain leadership and build a sustainable operating model.`,
           priority: "low",
         });
       }
@@ -1573,7 +1613,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     if (programCost > 0 && adminCost > programCost * 0.8) {
       recommendations.push({
         title: "Administrative Overhead Exceeds Program Spending",
-        description: `Administrative costs (${fmt(adminCost)}) are approaching or exceeding program-related spending (${fmt(programCost)}). Lenders and boards typically expect the ratio to favor program delivery. Review marketing, professional development, and other admin line items for efficiency.`,
+        description: `Administrative costs (${fmt(adminCost)}) are approaching or exceeding program-related spending (${fmt(programCost)}). A sustainable school directs more resources toward program delivery. Review marketing, professional development, and other admin line items for efficiency.`,
         priority: "medium",
       });
     }
@@ -1586,7 +1626,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       if (debtToRevenue > 3) {
         recommendations.push({
           title: "Debt Load Is Heavy Relative to Revenue",
-          description: `Total debt of ${fmt(totalDebt)} is ${debtToRevenue.toFixed(1)}x Year 1 revenue. Lenders typically prefer total debt below 2–3x annual revenue for startup schools. Consider phasing capital expenditures or seeking grant funding for initial build-out.`,
+          description: `Total debt of ${fmt(totalDebt)} is ${debtToRevenue.toFixed(1)}x Year 1 revenue. Keeping total debt below 2–3x annual revenue gives you more flexibility as you grow. Consider phasing capital expenditures or seeking grant funding for initial build-out.`,
           priority: "high",
         });
       }
@@ -1698,7 +1738,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (!sp.locationSecured) {
     recommendations.push({
       title: "Secure Your Facility Location",
-      description: "Your model is based on an estimated facility budget. Once you have a signed lease or purchase agreement, update your model with actual numbers — lenders strongly prefer models backed by real lease terms.",
+      description: "Your model is based on an estimated facility budget. Once you have a signed lease or purchase agreement, update your model with actual numbers — real lease terms make your projections far more reliable.",
       priority: "high",
     });
   }
@@ -1712,14 +1752,14 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       const bump = sp.postLeaseRenewalBump || 15;
       recommendations.push({
         title: "Plan for Lease Renewal Risk",
-        description: `Your lease expires in ${leaseEndYear}, which falls within your ${yearCount}-year projection. At renewal, rent could jump ${bump}% or more. Start renewal conversations early, explore extension options, or budget for the increase. Lenders pay close attention to lease expiration timing.`,
+        description: `Your lease expires in ${leaseEndYear}, which falls within your ${yearCount}-year projection. At renewal, rent could jump ${bump}% or more. Start renewal conversations early, explore extension options, or budget for the increase — your model's accuracy depends on addressing this.`,
         priority: "high",
       });
     }
     if (yearsUntilExpiration < 2 && yearsUntilExpiration >= 0) {
       recommendations.push({
         title: "Short Remaining Lease Term",
-        description: `Your lease expires in ${leaseEndYear} — less than 2 years away. This is a red flag for lenders who want to see facility stability through the projection period. If possible, negotiate an extension or option to renew before approaching lenders.`,
+        description: `Your lease expires in ${leaseEndYear} — less than 2 years away. Facility stability is critical to a credible long-term projection. If possible, negotiate an extension or option to renew so your model reflects a secure operating environment.`,
         priority: "high",
       });
     }
@@ -1756,7 +1796,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       recommendations.push({
         title: "Build a Cash Reserve",
         description:
-          "Even with healthy projections, aim to build 3–6 months of operating expenses as a reserve fund. This signals financial maturity to lenders.",
+          "Even with healthy projections, aim to build 3–6 months of operating expenses as a reserve fund. This gives you a safety net for unexpected expenses and keeps your school financially resilient.",
         priority: "medium",
       });
     } else if (recommendations.length === 1) {
@@ -1770,7 +1810,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       recommendations.push({
         title: "Document Your Growth Strategy",
         description:
-          "Lenders want to see not just numbers, but the marketing and enrollment plan behind them. Prepare a narrative that explains how you'll hit these targets.",
+          "Great projections are backed by a clear plan. Document your marketing strategy, enrollment pipeline, and community outreach — this is the roadmap that turns your numbers into reality.",
         priority: "low",
       });
     }
@@ -1785,15 +1825,15 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (dangerMetrics === 0 && lastYearNetMargin >= 0.1 && breakEvenYear <= 1 && (!hasDebt || dscr >= 1.25)) {
     lenderReadiness = "Strong";
     lenderReadinessExplanation =
-      `This model shows the financial fundamentals lenders look for: a clear path to ${profitWord}, controlled costs, sustainable revenue mix, and adequate debt coverage.`;
+      `This model demonstrates strong financial fundamentals: a clear path to ${profitWord}, controlled costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded and achievable.`;
   } else if (dangerMetrics <= 1 && lastYearNetMargin >= 0) {
     lenderReadiness = "Needs Work";
     lenderReadinessExplanation =
-      "Your model has real promise — there are just a few areas to strengthen before approaching lenders. The recommendations above will help you get there, and every improvement makes your story more compelling.";
+      "Your model has real promise — there are just a few areas to strengthen. The recommendations above will help you build a more resilient financial plan, and every improvement makes your projections more achievable.";
   } else {
     lenderReadiness = "Not Yet Ready";
     lenderReadinessExplanation =
-      "Your model isn't quite lender-ready yet, but that's okay — you're building the foundation. Focus on the high-priority recommendations first, and you'll see real progress. Every great school's financial story started as a first draft.";
+      "Your model is a solid starting point — now it's time to refine it. Focus on the high-priority recommendations first, and you'll see real progress. Every great school's financial story started as a first draft.";
   }
 
   const schoolName = sp.schoolName || "Your school";

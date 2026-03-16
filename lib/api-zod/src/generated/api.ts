@@ -203,6 +203,9 @@ export const CreateModelBody = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
+        retentionRate: zod.number().optional(),
+        applicationsReceived: zod.number().optional(),
+        waitlistCount: zod.number().optional(),
       })
       .optional(),
     revenue: zod
@@ -543,6 +546,9 @@ export const GetModelResponse = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
+        retentionRate: zod.number().optional(),
+        applicationsReceived: zod.number().optional(),
+        waitlistCount: zod.number().optional(),
       })
       .optional(),
     revenue: zod
@@ -884,6 +890,9 @@ export const UpdateModelBody = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
+        retentionRate: zod.number().optional(),
+        applicationsReceived: zod.number().optional(),
+        waitlistCount: zod.number().optional(),
       })
       .optional(),
     revenue: zod
@@ -1217,6 +1226,9 @@ export const UpdateModelResponse = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
+        retentionRate: zod.number().optional(),
+        applicationsReceived: zod.number().optional(),
+        waitlistCount: zod.number().optional(),
       })
       .optional(),
     revenue: zod
@@ -1577,6 +1589,9 @@ export const ArchiveModelResponse = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
+        retentionRate: zod.number().optional(),
+        applicationsReceived: zod.number().optional(),
+        waitlistCount: zod.number().optional(),
       })
       .optional(),
     revenue: zod

@@ -1177,6 +1177,16 @@ components:
           type: integer
         year5:
           type: integer
+        retentionRate:
+          type: number
+          minimum: 0
+          maximum: 100
+        applicationsReceived:
+          type: integer
+          minimum: 0
+        waitlistCount:
+          type: integer
+          minimum: 0
     Revenue:
       type: object
       properties:
