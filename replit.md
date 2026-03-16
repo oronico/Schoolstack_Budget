@@ -45,7 +45,7 @@ The project is built as a pnpm workspace monorepo using TypeScript (v5.9).
 - **Build Tooling**: esbuild for CJS bundling.
 - **Export Capabilities**: ExcelJS for standard Excel exports (with pre-computed formula results for viewer compatibility), xlsx-populate for template-based Lender Pro Forma Excel exports with preserved formulas, and PDFKit for PDF exports.
   - **Authenticated underwriting export** (`/models/:id/export/underwriting`): 15-tab workbook via `generateUnderwritingWorkbook()` in `underwriting-export.ts` — Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover.
-  - **Public formula export** (`/public/export-underwriting`): 3-tab formula-driven workbook via `generateFormulaWorkbook()` in `formula-export.ts` — Assumptions, 5-Year Model, Year 1 Pro Forma.
+  - **Public Budget Export** (`/public/export-budget`, alias `/public/export-underwriting`): 3-tab formula-driven workbook via `generateFormulaWorkbook()` in `formula-export.ts` — Assumptions, 5-Year Model, Year 1 Pro Forma.
   - **Single-year budget** (`/models/:id/export/single-year`): Monthly Jul-Jun columns for any chosen year (1-5), via `underwriting-export.ts`.
   - **Lender Pro Forma** (`/models/:id/export/lender-proforma`): Template-based Excel with preserved formulas.
   - All exports feature print-ready setup: Letter 8.5×11, fit-to-width, `printTitlesRow` for repeating header rows, school name in each tab's title row, page headers (school name left, tab name right), page footers ("Built by SchoolStack Budget • budget.schoolstack.ai", page numbers, date), and a branded footer data row at the bottom of each sheet.
@@ -72,10 +72,10 @@ The monorepo is organized into `artifacts/` for deployable applications (`api-se
 - `/admin` — Admin analytics dashboard
 
 ### API Routes
-- `POST /api/public/export-underwriting` — Public endpoint, accepts full model JSON payload, returns 4-tab formula-driven XLSX (Assumptions, 5-Year Model, Year 1 Pro Forma, Actuals vs. Projections)
+- `POST /api/public/export-budget` — Public Budget Export endpoint (3-tab: Assumptions, 5-Year Model, Year 1 Pro Forma). Alias: `/api/public/export-underwriting` (backward compat)
 - `POST /api/public/consultant` — Public endpoint, accepts full model JSON payload, returns consultant analysis JSON
 - `POST /api/public/export-single-year?year=N` — Public single-year monthly budget export (year 0-4)
-- `GET /api/models/:id/export/underwriting` — Authenticated 4-tab formula-driven underwriting workbook export
+- `GET /api/models/:id/export/underwriting` — Authenticated 15-tab Underwriting Export via `generateUnderwritingWorkbook()`
 - `GET /api/models/:id/export/single-year?year=N` — Authenticated single-year monthly budget export (year 0-4)
 - `GET /api/models/:id/export` — Authenticated Excel workbook export
 - `GET /api/models/:id/export/lender-proforma` — Authenticated Lender Pro Forma XLSX
