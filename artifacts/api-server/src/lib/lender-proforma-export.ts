@@ -912,13 +912,24 @@ function buildDrivers(wb: ExcelJS.Workbook, input: Record<string, string | numbe
     res.tuitionCollected, CUR);
 
   labelCell(7, "ESA / School Choice Revenue");
-  formulaRow(7,
-    [0, 1, 2, 3, 4].map(y =>
-      y === 0
-        ? `${enrollRef(0)}*Assumptions!D22`
-        : `${enrollRef(y)}*Assumptions!D22*(1+Assumptions!D23)^${y}`
-    ),
-    res.esaRevenue, CUR);
+  if (Number(input.hasGradeBand) === 1) {
+    for (let y = 0; y < 5; y++) {
+      const cell = ws.getCell(7, y + 3);
+      cell.value = res.esaRevenue[y];
+      cell.numFmt = CUR;
+      cell.font = NF;
+      cell.border = BORDER;
+      cell.alignment = { horizontal: "right" };
+    }
+  } else {
+    formulaRow(7,
+      [0, 1, 2, 3, 4].map(y =>
+        y === 0
+          ? `${enrollRef(0)}*Assumptions!D22`
+          : `${enrollRef(y)}*Assumptions!D22*(1+Assumptions!D23)^${y}`
+      ),
+      res.esaRevenue, CUR);
+  }
 
   labelCell(8, "Other Earned Revenue");
   formulaRow(8,
