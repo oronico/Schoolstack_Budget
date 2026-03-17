@@ -1,0 +1,117 @@
+#81 - Decision Engine Foundation, Top 3 Issues Panel
+
+What & Why
+
+Epic 1 made the model builder trustworthy. Epic 2 should make it actionable.
+
+Build the first layer of the decision engine so founders do not just see metrics. They should see the top issues to fix first, why those issues matter, and where to go to address them.
+
+The goal is to move the product from “financial model builder” to “financial decision support.”
+
+Done looks like
+
+After running consultant analysis, the user sees a new section called What should I fix first?
+
+This panel:
+
+ranks the top 3 issues by severity
+
+explains each issue in plain English
+
+explains why it matters
+
+recommends an action
+
+includes a button to jump back to the relevant wizard section
+
+Initial rule set includes:
+
+negative ending cash in any month
+
+weak reserves
+
+staffing cost too high relative to revenue
+
+occupancy cost too high relative to revenue
+
+overly aggressive enrollment growth
+
+unrealistic tuition collection assumptions
+
+heavy reliance on grants for recurring operations
+
+weak DSCR / debt affordability
+
+The issue list should feel specific to the user’s model, not generic.
+
+Out of scope
+
+scenario comparison UI
+
+lender-ready packet generation
+
+board-ready packet generation
+
+benchmark comparisons
+
+automated narrative export
+
+Tasks
+
+Create a reusable decision rule framework in the backend or shared model logic layer
+
+Define an issue object shape with:
+
+id
+
+severity
+
+title
+
+summary
+
+whyItMatters
+
+recommendedAction
+
+relatedSection
+
+supportingMetrics
+
+Implement first-pass rules for the initial issue set
+
+Expose the generated issues in the consultant analysis response
+
+Add a What should I fix first? panel to the consultant analysis UI
+
+Add jump links back to the correct wizard step / section
+
+Ensure no more than 3 issues are shown initially, ordered by severity and usefulness
+
+Keep the tone calm, specific, and non-judgmental
+
+Relevant files
+
+artifacts/api-server/src/lib/consultant-engine.ts
+
+artifacts/school-financial-model/src/components/consultant/ConsultantAnalysisView.tsx
+
+artifacts/school-financial-model/src/pages/model-wizard/steps/ConsultantStep.tsx
+
+artifacts/school-financial-model/src/pages/model-wizard/index.tsx
+
+Suggested new files:
+
+artifacts/api-server/src/lib/decision-rules.ts
+
+artifacts/school-financial-model/src/lib/consultant/issues.ts
+
+artifacts/school-financial-model/src/components/consultant/TopIssuesPanel.tsx
+
+Dependencies
+
+Epic 1 close-out complete
+
+consultant analysis response stable
+
+coaching system stabilized
