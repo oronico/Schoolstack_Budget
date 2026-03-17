@@ -1856,6 +1856,41 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
   const niLabel = netIncomeLabel(sp.entityType);
   ws.columns = [{ width: 28 }, ...Array(5).fill({ width: 16 })];
   printSetup(ws);
+  const prorationFactor = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
+  const costInflPct = data.facilities?.generalCostInflation || 0;
+  const expenseRows = data.expenseRows || [];
+
+  const facByYear: number[] = [];
+  const otherOpexByYear: number[] = [];
+  for (let y = 0; y < 5; y++) {
+    const pf = y === 0 ? prorationFactor : 1;
+    let facTotal = 0;
+    let otherTotal = 0;
+    for (const r of expenseRows) {
+      if (!r.enabled) continue;
+      let val: number;
+      if (r.driverType === "percent_of_revenue") {
+        const esc = r.escalationRate ?? costInflPct ?? 0;
+        let pct: number;
+        if (esc !== 0 && y > 0) {
+          pct = (r.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
+        } else {
+          pct = r.amounts?.[y] ?? 0;
+        }
+        val = (pct / 100) * revByYear[y];
+      } else {
+        val = driverVal(r.amounts, y, r.driverType, enrollment[y], r.escalationRate, costInflPct);
+      }
+      val *= pf;
+      if (r.category === "occupancy_facility") {
+        facTotal += val;
+      } else {
+        otherTotal += val;
+      }
+    }
+    facByYear.push(facTotal);
+    otherOpexByYear.push(otherTotal);
+  }
 
   let r = 1;
   ws.mergeCells(r, 1, r, 6);
@@ -1895,7 +1930,9 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
     const adjEnroll = enrollment.map(e => Math.round(e * enrollFactor));
     const adjRev = revByYear.map(v => v * enrollFactor * revFactor);
     const adjPers = persByYear.map(v => v * (1 + staffAdj / 100));
-    const adjOpex = opexByYear.map(v => v * (1 + scenario.expenseAdjustment / 100 + facAdj / 100));
+    const adjFac = facByYear.map(v => v * (1 + facAdj / 100));
+    const adjOther = otherOpexByYear.map(v => v * (1 + scenario.expenseAdjustment / 100));
+    const adjOpex = adjFac.map((f, y) => f + adjOther[y]);
     const adjTotalExp = adjPers.map((p, y) => p + adjOpex[y] + cdByYear[y]);
     const adjNI = adjRev.map((rev, y) => rev - adjTotalExp[y]);
 

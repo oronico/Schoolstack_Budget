@@ -9,7 +9,7 @@ import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 
 import { fullModelSchema, type FullModelData } from "./schema";
-import { migrateGrantsToPhilanthropy } from "@/lib/revenue-defaults";
+import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
 import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
 import { RevenueStep } from "./steps/RevenueStep";
@@ -164,7 +164,7 @@ export function ModelWizardPage() {
       };
       if (Array.isArray(d.revenueRows)) {
         normalizeAmounts(d.revenueRows as Array<{ amounts?: number[] }>);
-        d.revenueRows = migrateGrantsToPhilanthropy(d.revenueRows as any) as any;
+        d.revenueRows = migrateGrantsToPhilanthropy(d.revenueRows as RevenueRowData[]);
       }
       if (Array.isArray(d.expenseRows)) normalizeAmounts(d.expenseRows as Array<{ amounts?: number[] }>);
       if (Array.isArray(d.capitalAndDebtRows)) normalizeAmounts(d.capitalAndDebtRows as Array<{ amounts?: number[] }>);

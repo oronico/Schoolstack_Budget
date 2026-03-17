@@ -448,6 +448,48 @@ export function ScenarioPage() {
                           colSpan={2 + results.scenarios.length}
                           className="py-2 px-4 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5"
                         >
+                          Net Income by Year
+                        </td>
+                      </tr>
+                      {[0, 1, 2, 3, 4].map((y) => (
+                        <MetricRow
+                          key={`ni-${y}`}
+                          label={`Year ${y + 1}`}
+                          base={results.base.metrics.netIncome[y]}
+                          scenarios={results.scenarios.map((s) => s.metrics.netIncome[y])}
+                          format={fmt}
+                          highlightBetter="higher"
+                        />
+                      ))}
+
+                      {results.base.metrics.dscr.some((d) => d > 0) && (
+                        <>
+                          <tr className="border-b border-border/40">
+                            <td
+                              colSpan={2 + results.scenarios.length}
+                              className="py-2 px-4 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5"
+                            >
+                              DSCR by Year
+                            </td>
+                          </tr>
+                          {[0, 1, 2, 3, 4].map((y) => (
+                            <MetricRow
+                              key={`dscr-${y}`}
+                              label={`Year ${y + 1}`}
+                              base={results.base.metrics.dscr[y]}
+                              scenarios={results.scenarios.map((s) => s.metrics.dscr[y])}
+                              format={(v) => (v > 0 ? `${v.toFixed(2)}x` : "N/A")}
+                              highlightBetter="higher"
+                            />
+                          ))}
+                        </>
+                      )}
+
+                      <tr className="border-b border-border/40">
+                        <td
+                          colSpan={2 + results.scenarios.length}
+                          className="py-2 px-4 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5"
+                        >
                           Key Indicators
                         </td>
                       </tr>
@@ -470,15 +512,6 @@ export function ScenarioPage() {
                         format={pct}
                         highlightBetter="lower"
                       />
-                      {results.base.metrics.dscr.some((d) => d > 0) && (
-                        <MetricRow
-                          label="Year 1 DSCR"
-                          base={results.base.metrics.dscr[0]}
-                          scenarios={results.scenarios.map((s) => s.metrics.dscr[0])}
-                          format={(v) => (v > 0 ? `${v.toFixed(2)}x` : "N/A")}
-                          highlightBetter="higher"
-                        />
-                      )}
                       <MetricRow
                         label="Cash Runway"
                         base={results.base.metrics.cashRunwayMonths}

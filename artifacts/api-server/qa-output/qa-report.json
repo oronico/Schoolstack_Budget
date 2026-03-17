@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 37693,
+    "fileSize": 37711,
     "tabs": [
       "Cover",
       "Instructions",
@@ -412,7 +412,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 40884,
+    "fileSize": 40885,
     "tabs": [
       "Cover",
       "Instructions",
@@ -864,7 +864,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 42071,
+    "fileSize": 42080,
     "tabs": [
       "Cover",
       "Instructions",
@@ -1087,7 +1087,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 20533,
+    "fileSize": 20532,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -1314,7 +1314,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 41443,
+    "fileSize": 41454,
     "tabs": [
       "Cover",
       "Instructions",
@@ -1537,7 +1537,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 20369,
+    "fileSize": 20368,
     "tabs": [
       "Assumptions",
       "5-Year Model",
