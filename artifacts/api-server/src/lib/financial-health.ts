@@ -82,8 +82,11 @@ const DIMENSIONS: {
     id: "liquidity",
     label: "Liquidity",
     compute: (input) => {
-      const { cashRunwayMonths, reserveMonths } = input;
-      if (cashRunwayMonths === 0 && reserveMonths >= 3) {
+      const { cashRunwayMonths, yearCount, reserveMonths } = input;
+      const totalMonths = yearCount * 12;
+      const neverDepleted = cashRunwayMonths >= totalMonths;
+
+      if (neverDepleted && reserveMonths >= 3) {
         return {
           dimension: "liquidity",
           status: "healthy",
@@ -92,7 +95,7 @@ const DIMENSIONS: {
           watchItem: "Maintain reserves as a buffer against seasonal revenue dips.",
         };
       }
-      if (cashRunwayMonths === 0 && reserveMonths >= 1) {
+      if (neverDepleted && reserveMonths >= 1) {
         return {
           dimension: "liquidity",
           status: "watch",
@@ -101,13 +104,20 @@ const DIMENSIONS: {
           watchItem: "Build reserves toward 3 months by controlling early-year spending.",
         };
       }
+      if (neverDepleted) {
+        return {
+          dimension: "liquidity",
+          status: "watch",
+          label: "Watch closely",
+          explanation: "Cash stays positive but reserves are thin. Build a buffer before unexpected costs arise.",
+          watchItem: "Target at least 1 month of operating reserves.",
+        };
+      }
       return {
         dimension: "liquidity",
         status: "at_risk",
         label: "Needs attention",
-        explanation: cashRunwayMonths > 0
-          ? `Cash runs out in month ${cashRunwayMonths}. The school will need outside funding to continue operating.`
-          : "No meaningful cash reserve has been built. The school is operating without a safety net.",
+        explanation: `Cash goes negative in month ${cashRunwayMonths}. The school will need outside funding to continue operating.`,
         watchItem: "Secure a line of credit or bridge funding before operations begin.",
       };
     },
