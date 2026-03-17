@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type ExpenseRowData,
@@ -20,13 +20,15 @@ import {
   getYearCount,
   mergeCanonicalExpenseRows,
   mergeCanonicalCapitalRows,
+  isCustomCategory,
+  generateCustomCategoryKey,
 } from "@/lib/expense-defaults";
 import {
   type StaffingRowData,
   calculatePersonnelCosts,
 } from "@/lib/staffing-defaults";
 
-const CATEGORY_ICONS: Record<ExpenseCategory, typeof DollarSign> = {
+const CATEGORY_ICONS: Record<string, typeof DollarSign> = {
   personnel: Users,
   instructional_program: BookOpen,
   technology: Monitor,
@@ -34,6 +36,14 @@ const CATEGORY_ICONS: Record<ExpenseCategory, typeof DollarSign> = {
   administrative_general: Briefcase,
   capital_financing: Landmark,
 };
+
+function getCategoryIcon(cat: string) {
+  return CATEGORY_ICONS[cat] || Tag;
+}
+
+function getCategoryLabel(cat: string, customLabels: Record<string, string>): string {
+  return customLabels[cat] || EXPENSE_CATEGORY_LABELS[cat] || cat;
+}
 
 const CATEGORY_GUIDANCE: Record<string, { tip: string; common: boolean }> = {
   instructional_program: {
@@ -148,6 +158,8 @@ export function ExpenseStep() {
   const y1Students = enrollment?.year1 || 0;
   const y5Students = enrollment?.year5 || 0;
 
+  const formCustomLabels = watch("customCategoryLabels") as Record<string, string> | undefined;
+
   const [expenseRows, setExpenseRows] = useState<ExpenseRowData[]>([]);
   const [capitalRows, setCapitalRows] = useState<CapitalDebtRowData[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -156,6 +168,68 @@ export function ExpenseStep() {
   const [enabledCategories, setEnabledCategories] = useState<Set<string>>(
     new Set(["instructional_program", "technology", "occupancy_facility", "administrative_general"])
   );
+  const [customCategoryLabels, setCustomCategoryLabels] = useState<Record<string, string>>(formCustomLabels || {});
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState("");
+
+  useEffect(() => {
+    if (formCustomLabels && Object.keys(formCustomLabels).length > 0) {
+      setCustomCategoryLabels(formCustomLabels);
+    }
+  }, [formCustomLabels]);
+
+  const syncCustomLabels = useCallback((labels: Record<string, string>) => {
+    setCustomCategoryLabels(labels);
+    setValue("customCategoryLabels", labels, { shouldDirty: true });
+  }, [setValue]);
+
+  const customCategories = useMemo(() => {
+    return Object.keys(customCategoryLabels);
+  }, [customCategoryLabels]);
+
+  const allOperatingCategories = useMemo(() => {
+    return [...OPERATING_CATEGORIES, ...customCategories];
+  }, [customCategories]);
+
+  const addCustomCategory = useCallback((name: string) => {
+    if (!name.trim()) return;
+    const key = generateCustomCategoryKey();
+    const newLabels = { ...customCategoryLabels, [key]: name.trim() };
+    syncCustomLabels(newLabels);
+    setEnabledCategories((prev) => new Set(prev).add(key));
+    setExpandedCategories((prev) => new Set(prev).add(key));
+    const newRow = createBlankExpenseRow(key, yearCount);
+    syncExpenseRows([...expenseRows, newRow]);
+    setNewCategoryName("");
+    setShowAddCategory(false);
+  }, [customCategoryLabels, yearCount, expenseRows, syncCustomLabels]);
+
+  const renameCustomCategory = useCallback((key: string, newName: string) => {
+    if (!newName.trim()) return;
+    const newLabels = { ...customCategoryLabels, [key]: newName.trim() };
+    syncCustomLabels(newLabels);
+    setEditingCategoryKey(null);
+    setEditingCategoryName("");
+  }, [customCategoryLabels, syncCustomLabels]);
+
+  const removeCustomCategory = useCallback((key: string) => {
+    const newLabels = { ...customCategoryLabels };
+    delete newLabels[key];
+    syncCustomLabels(newLabels);
+    setEnabledCategories((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    syncExpenseRows(expenseRows.filter((r) => r.category !== key));
+  }, [customCategoryLabels, expenseRows, syncCustomLabels]);
 
   useEffect(() => {
     if (formExpenseRows !== undefined && formExpenseRows.length > 0) {
@@ -427,22 +501,22 @@ export function ExpenseStep() {
 
   const categorySummaries = useMemo(() => {
     const sums: Record<string, number> = {};
-    for (const cat of OPERATING_CATEGORIES) {
+    for (const cat of allOperatingCategories) {
       const catRows = expenseRows.filter((r) => r.category === cat && r.enabled);
       sums[cat] = catRows.reduce((acc, r) => acc + annualize(r.amounts[0] || 0, r.driverType), 0);
     }
     const capitalEnabled = capitalRows.filter((r) => r.enabled);
     sums["capital_financing"] = capitalEnabled.reduce((acc, r) => acc + annualize(r.amounts[0] || 0, r.driverType), 0);
     return sums;
-  }, [expenseRows, capitalRows]);
+  }, [expenseRows, capitalRows, allOperatingCategories]);
 
   const totalOperating = useMemo(() => {
     let total = (personnelCosts?.grandTotal || 0);
-    for (const cat of OPERATING_CATEGORIES) {
+    for (const cat of allOperatingCategories) {
       total += categorySummaries[cat] || 0;
     }
     return total;
-  }, [personnelCosts, categorySummaries]);
+  }, [personnelCosts, categorySummaries, allOperatingCategories]);
 
   const costPerStudent = y1Students > 0 ? Math.round(totalOperating / y1Students) : 0;
 
@@ -470,7 +544,7 @@ export function ExpenseStep() {
 
         <div className="space-y-3">
           {([...OPERATING_CATEGORIES, "capital_financing" as ExpenseCategory]).map((cat) => {
-            const Icon = CATEGORY_ICONS[cat];
+            const Icon = getCategoryIcon(cat);
             const guidance = CATEGORY_GUIDANCE[cat];
             const isEnabled = enabledCategories.has(cat);
 
@@ -496,7 +570,7 @@ export function ExpenseStep() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={cn("font-bold text-lg", isEnabled ? "text-foreground" : "text-muted-foreground")}>
-                        {EXPENSE_CATEGORY_LABELS[cat]}
+                        {getCategoryLabel(cat, customCategoryLabels)}
                       </span>
                       {guidance?.common && (
                         <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
@@ -518,6 +592,101 @@ export function ExpenseStep() {
               </button>
             );
           })}
+
+          {customCategories.map((cat) => {
+            const isEnabled = enabledCategories.has(cat);
+            return (
+              <div key={cat} className={cn(
+                "w-full rounded-2xl border-2 p-5 text-left transition-all",
+                isEnabled
+                  ? "border-primary/40 bg-primary/5 shadow-sm"
+                  : "border-border bg-card hover:border-border/80"
+              )}>
+                <div className="flex items-center gap-4">
+                  <button type="button" onClick={() => toggleCategoryEnabled(cat)} className="flex items-center gap-4 flex-1 text-left">
+                    <div className={cn(
+                      "h-10 w-10 rounded-xl flex items-center justify-center transition-colors",
+                      isEnabled ? "bg-primary/10" : "bg-muted"
+                    )}>
+                      <Tag className={cn("h-5 w-5", isEnabled ? "text-primary" : "text-muted-foreground")} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className={cn("font-bold text-lg", isEnabled ? "text-foreground" : "text-muted-foreground")}>
+                        {customCategoryLabels[cat]}
+                      </span>
+                      <span className="text-[10px] font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full ml-2">
+                        Custom
+                      </span>
+                    </div>
+                    <div className={cn(
+                      "h-6 w-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                      isEnabled ? "border-primary bg-primary" : "border-border"
+                    )}>
+                      {isEnabled && <CheckCircle2 className="h-4 w-4 text-white" />}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeCustomCategory(cat)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                    title="Remove category"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {showAddCategory ? (
+            <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-5">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <FolderPlus className="h-5 w-5 text-primary" />
+                </div>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") addCustomCategory(newCategoryName); if (e.key === "Escape") { setShowAddCategory(false); setNewCategoryName(""); } }}
+                  placeholder="e.g. Fundraising, Transportation, Food Service..."
+                  className="flex-1 text-lg font-bold bg-transparent border-none outline-none placeholder:text-muted-foreground/50 placeholder:font-normal"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => addCustomCategory(newCategoryName)}
+                  disabled={!newCategoryName.trim()}
+                  className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAddCategory(false); setNewCategoryName(""); }}
+                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowAddCategory(true)}
+              className="w-full rounded-2xl border-2 border-dashed border-border p-5 text-left hover:border-primary/30 hover:bg-primary/5 transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-xl bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                  <FolderPlus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div>
+                  <span className="font-bold text-lg text-muted-foreground group-hover:text-foreground transition-colors">Add Custom Category</span>
+                  <p className="text-sm text-muted-foreground mt-0.5">Create your own expense category for costs specific to your school</p>
+                </div>
+              </div>
+            </button>
+          )}
         </div>
 
         <button
@@ -738,6 +907,9 @@ export function ExpenseStep() {
         <SummaryCard label="Technology" value={formatCurrency(categorySummaries["technology"] || 0)} color="text-violet-600" />
         <SummaryCard label="Facility" value={formatCurrency(categorySummaries["occupancy_facility"] || 0)} color="text-amber-600" />
         <SummaryCard label="Admin & Ops" value={formatCurrency(categorySummaries["administrative_general"] || 0)} color="text-rose-600" />
+        {customCategories.filter(c => enabledCategories.has(c)).map((cat) => (
+          <SummaryCard key={cat} label={customCategoryLabels[cat]} value={formatCurrency(categorySummaries[cat] || 0)} color="text-violet-600" />
+        ))}
         <SummaryCard label="Total Operating" value={formatCurrency(totalOperating)} color="text-foreground" bold sublabel={costPerStudent > 0 ? `${formatCurrency(costPerStudent)} / student` : undefined} />
       </div>
 
@@ -776,23 +948,69 @@ export function ExpenseStep() {
         </div>
       )}
 
-      {OPERATING_CATEGORIES.map((cat) => {
+      {allOperatingCategories.map((cat) => {
         if (!enabledCategories.has(cat)) return null;
         const catRows = expenseRows.filter((r) => r.category === cat);
-        const Icon = CATEGORY_ICONS[cat];
+        const Icon = getCategoryIcon(cat);
         const isExpanded = expandedCategories.has(cat);
         const enabledCount = catRows.filter((r) => r.enabled).length;
         const guidance = CATEGORY_GUIDANCE[cat];
+        const isCustom = isCustomCategory(cat);
+        const label = getCategoryLabel(cat, customCategoryLabels);
 
         return (
           <div key={cat} className="rounded-2xl border border-border bg-card overflow-hidden">
-            <button type="button" onClick={() => toggleCategory(cat)} className="flex items-center gap-3 w-full text-left p-5 hover:bg-muted/30 transition-colors">
-              {isExpanded ? <ChevronDown className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-              <Icon className="h-5 w-5 text-primary" />
-              <span className="font-bold text-lg text-foreground">{EXPENSE_CATEGORY_LABELS[cat]}</span>
-              <span className="text-xs text-muted-foreground ml-2">({enabledCount} active)</span>
-              <span className="ml-auto text-sm font-semibold text-primary">{formatCurrency(categorySummaries[cat] || 0)}</span>
-            </button>
+            <div className="flex items-center p-5 hover:bg-muted/30 transition-colors">
+              <button type="button" onClick={() => toggleCategory(cat)} className="flex items-center gap-3 flex-1 text-left">
+                {isExpanded ? <ChevronDown className="h-5 w-5 text-primary" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+                <Icon className="h-5 w-5 text-primary" />
+                <span className="font-bold text-lg text-foreground">{label}</span>
+                {isCustom && (
+                  <span className="text-[10px] font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">Custom</span>
+                )}
+                <span className="text-xs text-muted-foreground ml-2">({enabledCount} active)</span>
+                <span className="ml-auto text-sm font-semibold text-primary">{formatCurrency(categorySummaries[cat] || 0)}</span>
+              </button>
+              {isCustom && (
+                <div className="flex items-center gap-1 ml-2">
+                  <button
+                    type="button"
+                    onClick={() => { setEditingCategoryKey(cat); setEditingCategoryName(customCategoryLabels[cat] || ""); }}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title="Rename category"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeCustomCategory(cat)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+                    title="Remove category"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {editingCategoryKey === cat && (
+              <div className="px-5 pb-3 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editingCategoryName}
+                  onChange={(e) => setEditingCategoryName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") renameCustomCategory(cat, editingCategoryName); if (e.key === "Escape") { setEditingCategoryKey(null); setEditingCategoryName(""); } }}
+                  className="flex-1 text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+                  autoFocus
+                />
+                <button type="button" onClick={() => renameCustomCategory(cat, editingCategoryName)} className="px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
+                  Save
+                </button>
+                <button type="button" onClick={() => { setEditingCategoryKey(null); setEditingCategoryName(""); }} className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors">
+                  Cancel
+                </button>
+              </div>
+            )}
 
             {isExpanded && (
               <div className="px-5 pb-5 space-y-3">
@@ -813,6 +1031,51 @@ export function ExpenseStep() {
           </div>
         );
       })}
+
+      {!showAddCategory ? (
+        <button
+          type="button"
+          onClick={() => setShowAddCategory(true)}
+          className="w-full rounded-2xl border-2 border-dashed border-border p-4 text-center hover:border-primary/30 hover:bg-primary/5 transition-all group"
+        >
+          <div className="flex items-center justify-center gap-2">
+            <FolderPlus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            <span className="font-semibold text-muted-foreground group-hover:text-foreground transition-colors">Add Custom Category</span>
+          </div>
+        </button>
+      ) : (
+        <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <FolderPlus className="h-5 w-5 text-primary" />
+            </div>
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addCustomCategory(newCategoryName); if (e.key === "Escape") { setShowAddCategory(false); setNewCategoryName(""); } }}
+              placeholder="e.g. Fundraising, Transportation, Food Service..."
+              className="flex-1 text-sm font-medium bg-transparent border-b-2 border-primary/30 outline-none py-1.5 placeholder:text-muted-foreground/50"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => addCustomCategory(newCategoryName)}
+              disabled={!newCategoryName.trim()}
+              className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowAddCategory(false); setNewCategoryName(""); }}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {enabledCategories.has("capital_financing") && (
         <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/30 overflow-hidden">

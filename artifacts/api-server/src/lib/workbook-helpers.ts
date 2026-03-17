@@ -158,13 +158,13 @@ export function catLabel(cat: string): string {
   return map[cat] || cat;
 }
 
-export function expCatLabel(cat: string): string {
+export function expCatLabel(cat: string, customLabels?: Record<string, string>): string {
   const map: Record<string, string> = {
     instructional_program: "Instructional / Program", technology: "Technology",
     occupancy_facility: "Occupancy / Facility", administrative_general: "Administrative / General",
     capital_financing: "Capital / Financing", personnel: "Personnel",
   };
-  return map[cat] || cat;
+  return customLabels?.[cat] || map[cat] || cat;
 }
 
 export function driverLabel(dt: string): string {
@@ -436,6 +436,7 @@ export interface ModelData {
   staffingRows?: StaffingRow[];
   facilities?: Record<string, unknown>;
   expenseRows?: ExpenseRow[];
+  customCategoryLabels?: Record<string, string>;
   capitalAndDebtRows?: CapitalDebtRow[];
   priorYearSnapshot?: PriorYearSnapshot;
   currentYearProjection?: CurrentYearProjection;

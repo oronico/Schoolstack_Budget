@@ -173,6 +173,7 @@ interface ModelData {
   staffingRows?: StaffingRow[];
   facilities?: Record<string, unknown>;
   expenseRows?: ExpenseRow[];
+  customCategoryLabels?: Record<string, string>;
   capitalAndDebtRows?: CapitalDebtRow[];
   priorYearSnapshot?: PriorYearSnapshot;
 }
@@ -836,7 +837,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
 
     const revTotalRow = buildRevenueScheduleTab(revenueWs, revenueRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs, data.tuitionTiers, precomputed);
     const staffTotalRow = buildStaffingTab(staffingWs, staffingRows, salaryEscRate, prorationFactor, yearCount, cols, yearHeaders, aRefs);
-    const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revTotalRow, yearCount, cols, yearHeaders, aRefs, precomputed);
+    const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revTotalRow, yearCount, cols, yearHeaders, aRefs, precomputed, data.customCategoryLabels);
     const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
 
     buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow, sp.entityType, precomputed);
@@ -1509,6 +1510,7 @@ function buildExpensesTab(
   yearHeaders: string[],
   aRefs?: AssumptionRefs,
   precomputed?: PrecomputedFinancials,
+  customCategoryLabels?: Record<string, string>,
 ): number {
   ws.columns = [{ width: 42 }, ...Array(yearCount).fill({ width: 18 })];
   ws.getRow(1).values = yearHeaders;
@@ -1528,15 +1530,18 @@ function buildExpensesTab(
     styleDataCell(cell);
   }
 
-  const categories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const baseCategories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const customCats = [...new Set(expenseRows.map(r => r.category).filter(c => !baseCategories.includes(c) && c !== "personnel" && c !== "capital_financing"))];
+  const categories = [...baseCategories, ...customCats];
   const categoryTotalRows: number[] = [];
 
   for (const cat of categories) {
     const catRows = expenseRows.filter(row => row.category === cat && row.enabled);
+    if (catRows.length === 0) continue;
 
     r++;
     styleSectionRow(ws, r, cols);
-    ws.getCell(r, 1).value = EXPENSE_CATEGORY_LABELS[cat] || cat;
+    ws.getCell(r, 1).value = customCategoryLabels?.[cat] || EXPENSE_CATEGORY_LABELS[cat] || cat;
 
     const firstDataRow = r + 1;
 
@@ -1573,7 +1578,7 @@ function buildExpensesTab(
     }
 
     r++;
-    ws.getCell(r, 1).value = `Total ${(EXPENSE_CATEGORY_LABELS[cat] || cat).split("/")[0].trim()}`;
+    ws.getCell(r, 1).value = `Total ${(customCategoryLabels?.[cat] || EXPENSE_CATEGORY_LABELS[cat] || cat).split("/")[0].trim()}`;
     ws.getCell(r, 1).font = BOLD_FONT;
     for (let y = 0; y < yearCount; y++) {
       const cell = ws.getCell(r, y + 2);

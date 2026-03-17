@@ -143,6 +143,7 @@ interface ModelData {
   staffingRows?: StaffingRow[];
   facilities?: Record<string, unknown>;
   expenseRows?: ExpenseRow[];
+  customCategoryLabels?: Record<string, string>;
   capitalAndDebtRows?: CapitalDebtRow[];
   priorYearSnapshot?: PriorYearSnapshot;
   currentYearProjection?: CurrentYearProjection;
@@ -271,13 +272,13 @@ function catLabel(cat: string): string {
   return map[cat] || cat;
 }
 
-function expCatLabel(cat: string): string {
+function expCatLabel(cat: string, customLabels?: Record<string, string>): string {
   const map: Record<string, string> = {
     instructional_program: "Instructional / Program", technology: "Technology",
     occupancy_facility: "Occupancy / Facility", administrative_general: "Administrative / General",
     capital_financing: "Capital / Financing", personnel: "Personnel",
   };
-  return map[cat] || cat;
+  return customLabels?.[cat] || map[cat] || cat;
 }
 
 function driverLabel(dt: string): string {
@@ -1103,13 +1104,17 @@ function buildFiveYearModel(
   sec(ws, r, 6); ws.getCell(r, 1).value = "OPERATING EXPENSES";
   const opexFirstRow = r + 1;
 
-  const opexCategories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const baseOpexCategories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const customExpCats = [...new Set(expenseRows.map(e => e.category).filter(c => !baseOpexCategories.includes(c) && c !== "personnel" && c !== "capital_financing"))];
+  const opexCategories = [...baseOpexCategories, ...customExpCats];
+  const ccLabels = data.customCategoryLabels || {};
   const opexCatTotalRows: number[] = [];
 
   for (const cat of opexCategories) {
     const catRows = expenseRows.filter(ex => ex.category === cat);
+    if (catRows.length === 0) continue;
 
-    r++; ws.getCell(r, 1).value = expCatLabel(cat); ws.getCell(r, 1).font = BF;
+    r++; ws.getCell(r, 1).value = expCatLabel(cat, ccLabels); ws.getCell(r, 1).font = BF;
     for (let ci = 1; ci <= yc + 1; ci++) dc(ws.getCell(r, ci));
 
     for (const ex of catRows) {
@@ -1141,32 +1146,28 @@ function buildFiveYearModel(
     }
 
     r++;
-    ws.getCell(r, 1).value = `Total ${expCatLabel(cat)}`; ws.getCell(r, 1).font = BF;
+    ws.getCell(r, 1).value = `Total ${expCatLabel(cat, ccLabels)}`; ws.getCell(r, 1).font = BF;
     for (let y = 0; y < yc; y++) {
       const cell = ws.getCell(r, y + 2);
-      if (catRows.length === 0) {
-        cell.value = 0;
-      } else {
-        const students = enrollment[y];
-        const pf = y === 0 ? prorationFactor : 1;
-        const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct, sp);
-        let catSum = 0;
-        for (const ex of catRows) {
-          if (ex.driverType === "percent_of_revenue") {
-            const esc = resolveEsc(ex.escalationRate, costInflPct);
-            let pct: number;
-            if (esc !== 0 && y > 0) {
-              pct = (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
-            } else {
-              pct = ex.amounts?.[y] ?? 0;
-            }
-            catSum += Math.round((pct / 100) * rev * pf);
+      const students = enrollment[y];
+      const pf = y === 0 ? prorationFactor : 1;
+      const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct, sp);
+      let catSum = 0;
+      for (const ex of catRows) {
+        if (ex.driverType === "percent_of_revenue") {
+          const esc = resolveEsc(ex.escalationRate, costInflPct);
+          let pct: number;
+          if (esc !== 0 && y > 0) {
+            pct = (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
           } else {
-            catSum += Math.round(driverVal(ex.amounts, y, ex.driverType, students, ex.escalationRate, costInflPct) * pf);
+            pct = ex.amounts?.[y] ?? 0;
           }
+          catSum += Math.round((pct / 100) * rev * pf);
+        } else {
+          catSum += Math.round(driverVal(ex.amounts, y, ex.driverType, students, ex.escalationRate, costInflPct) * pf);
         }
-        cell.value = catSum;
       }
+      cell.value = catSum;
       cell.numFmt = CUR; bc(cell);
     }
     opexCatTotalRows.push(r);
@@ -1668,13 +1669,17 @@ function buildProForma(
   const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct) * prorationFactor;
   const monthlyOps = opex0 / (opMonths || 12);
 
-  const pfOpexCategories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const pfBaseOpexCats = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const pfCustomExpCats = [...new Set(expenseRows.map(e => e.category).filter(c => !pfBaseOpexCats.includes(c) && c !== "personnel" && c !== "capital_financing"))];
+  const pfOpexCategories = [...pfBaseOpexCats, ...pfCustomExpCats];
+  const pfCcLabels = data.customCategoryLabels || {};
   const pfOpexCatTotalRows: number[] = [];
 
   for (const cat of pfOpexCategories) {
     const catRows = expenseRows.filter(ex => ex.category === cat);
+    if (catRows.length === 0) continue;
 
-    r++; ws.getCell(r, 1).value = expCatLabel(cat); ws.getCell(r, 1).font = BF;
+    r++; ws.getCell(r, 1).value = expCatLabel(cat, pfCcLabels); ws.getCell(r, 1).font = BF;
     for (let ci = 1; ci <= 14; ci++) dc(ws.getCell(r, ci));
 
     for (const ex of catRows) {
@@ -1699,7 +1704,7 @@ function buildProForma(
     }
 
     r++;
-    ws.getCell(r, 1).value = `Total ${expCatLabel(cat)}`; ws.getCell(r, 1).font = BF;
+    ws.getCell(r, 1).value = `Total ${expCatLabel(cat, pfCcLabels)}`; ws.getCell(r, 1).font = BF;
     if (catRows.length === 0) {
       for (let m = 0; m < 12; m++) {
         const cell = ws.getCell(r, m + 2);

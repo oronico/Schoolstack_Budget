@@ -102,6 +102,7 @@ interface ModelData {
   revenueRows?: RevenueRow[];
   staffingRows?: StaffingRow[];
   expenseRows?: ExpenseRow[];
+  customCategoryLabels?: Record<string, string>;
   capitalAndDebtRows?: CapitalDebtRow[];
 }
 
@@ -397,7 +398,10 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   if (expenseRows.length > 0) {
     sectionTitle(doc, "Operating Expenses");
     const expCols: TableColumn[] = [{ header: "Category", width: 150 }, ...yearHeaders.map(h => ({ header: h, width: 80, align: "right" as const }))];
-    const catOrder = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+    const baseCatOrder = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+    const customCats = [...new Set(expenseRows.map(r => r.category).filter(c => !baseCatOrder.includes(c) && c !== "personnel" && c !== "capital_financing"))];
+    const catOrder = [...baseCatOrder, ...customCats];
+    const customLabels = data.customCategoryLabels || {};
     const expTableRows: string[][] = [];
     const yearTotals = new Array(yearCount).fill(0);
 
@@ -416,7 +420,7 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
         }
         yearTotals[y] += catAmounts[y];
       }
-      expTableRows.push([EXPENSE_CATEGORY_LABELS[cat] || cat, ...catAmounts.map(a => fmtCurrency(a))]);
+      expTableRows.push([customLabels[cat] || EXPENSE_CATEGORY_LABELS[cat] || cat, ...catAmounts.map(a => fmtCurrency(a))]);
     }
     expTableRows.push(["TOTAL OPERATING EXPENSES", ...yearTotals.map(t => fmtCurrency(t))]);
     drawTable(doc, expCols, expTableRows, { highlightLastRow: true });

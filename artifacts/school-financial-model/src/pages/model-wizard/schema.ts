@@ -241,10 +241,7 @@ export const staffingSchema = z.object({
 
 export const expenseRowSchema = z.object({
   id: z.string(),
-  category: z.enum(["personnel", "instructional_program", "technology", "occupancy_facility", "administrative_general", "capital_financing"], {
-    required_error: "Please select an expense category",
-    invalid_type_error: "Please select a valid expense category",
-  }),
+  category: z.string().min(1, "Please select an expense category"),
   lineItem: z.string(),
   enabled: z.boolean(),
   driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_revenue"], {
@@ -342,6 +339,7 @@ export const fullModelSchema = z.object({
   staffingRows: z.array(staffingRowSchema).optional(),
   facilities: facilitiesSchema.optional(),
   expenseRows: z.array(expenseRowSchema).optional(),
+  customCategoryLabels: z.record(z.string(), z.string()).optional(),
   capitalAndDebtRows: z.array(capitalDebtRowSchema).optional(),
   priorYearSnapshot: priorYearSnapshotSchema.optional(),
   currentYearProjection: currentYearProjectionSchema.optional(),

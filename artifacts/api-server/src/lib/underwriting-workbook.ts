@@ -262,7 +262,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   for (const ex of expenseRows) {
     r++;
     ws.getCell(r, 1).value = ex.lineItem || "Unnamed"; dc(ws.getCell(r, 1));
-    ws.getCell(r, 2).value = expCatLabel(ex.category); dc(ws.getCell(r, 2));
+    ws.getCell(r, 2).value = expCatLabel(ex.category, data.customCategoryLabels); dc(ws.getCell(r, 2));
     ws.getCell(r, 3).value = driverLabel(ex.driverType); dc(ws.getCell(r, 3));
     ws.getCell(r, 4).value = ex.amounts?.[0] ?? 0; ws.getCell(r, 4).numFmt = CUR; dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
     ws.getCell(r, 5).value = (ex.escalationRate ?? 0) / 100; ws.getCell(r, 5).numFmt = PCT; dc(ws.getCell(r, 5)); inputCell(ws.getCell(r, 5));
@@ -624,12 +624,16 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   ws.getRow(r).values = ["", ...yLabels];
   hdr(ws, r, 6);
 
-  const categories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const uwBaseCats = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const uwCustomCats = [...new Set(expenseRows.map(e => e.category).filter(c => !uwBaseCats.includes(c) && c !== "personnel" && c !== "capital_financing"))];
+  const categories = [...uwBaseCats, ...uwCustomCats];
+  const uwCcLabels = data.customCategoryLabels || {};
   const catTotalRows: number[] = [];
   for (const cat of categories) {
     const catRows = expenseRows.filter(e => e.category === cat);
+    if (catRows.length === 0) continue;
     r++;
-    sec(ws, r, 6); ws.getCell(r, 1).value = expCatLabel(cat);
+    sec(ws, r, 6); ws.getCell(r, 1).value = expCatLabel(cat, uwCcLabels);
     const catFirstRow = r + 1;
     for (const ex of catRows) {
       r++;
@@ -651,7 +655,7 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     const catLastRow = r;
     r++;
     catTotalRows.push(r);
-    ws.getCell(r, 1).value = `Total ${expCatLabel(cat)}`; bc(ws.getCell(r, 1));
+    ws.getCell(r, 1).value = `Total ${expCatLabel(cat, uwCcLabels)}`; bc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
       const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
       let catTotal = 0;
@@ -940,13 +944,16 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
 
   r += 2;
   sec(ws, r, 6); ws.getCell(r, 1).value = "OPERATING EXPENSES";
-  const expCategories = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const bdBaseCats = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
+  const bdCustomCats = [...new Set(expenseRows.map(e => e.category).filter(c => !bdBaseCats.includes(c) && c !== "personnel" && c !== "capital_financing"))];
+  const expCategories = [...bdBaseCats, ...bdCustomCats];
+  const bdCcLabels = data.customCategoryLabels || {};
   const bdCatSumRows: number[] = [];
   for (const cat of expCategories) {
     const catRows = expenseRows.filter(e => e.category === cat);
     if (catRows.length === 0) continue;
     r++;
-    ws.getCell(r, 1).value = expCatLabel(cat); ws.getCell(r, 1).font = BF;
+    ws.getCell(r, 1).value = expCatLabel(cat, bdCcLabels); ws.getCell(r, 1).font = BF;
     const catFirstRow = r + 1;
     for (const ex of catRows) {
       r++;
@@ -968,7 +975,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
     const catLastRow = r;
     if (catRows.length > 1) {
       r++;
-      ws.getCell(r, 1).value = `  Total ${expCatLabel(cat)}`; bc(ws.getCell(r, 1));
+      ws.getCell(r, 1).value = `  Total ${expCatLabel(cat, bdCcLabels)}`; bc(ws.getCell(r, 1));
       for (let y = 0; y < 5; y++) {
         const col = y + 2;
         const catTotal = catRows.reduce((sum, ex) => {

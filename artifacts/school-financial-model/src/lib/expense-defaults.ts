@@ -1,10 +1,12 @@
-export type ExpenseCategory =
+export type BuiltInExpenseCategory =
   | "personnel"
   | "instructional_program"
   | "technology"
   | "occupancy_facility"
   | "administrative_general"
   | "capital_financing";
+
+export type ExpenseCategory = BuiltInExpenseCategory | (string & {});
 
 export type ExpenseDriverType = "annual_fixed" | "monthly" | "per_student" | "percent_of_revenue";
 
@@ -34,7 +36,7 @@ export interface CapitalDebtRowData {
   loanTermYears?: number;
 }
 
-export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
   personnel: "People",
   instructional_program: "Program",
   technology: "Technology",
@@ -42,6 +44,25 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   administrative_general: "Admin & Operations",
   capital_financing: "Capital & Debt",
 };
+
+export const BUILT_IN_CATEGORIES: BuiltInExpenseCategory[] = [
+  "personnel",
+  "instructional_program",
+  "technology",
+  "occupancy_facility",
+  "administrative_general",
+  "capital_financing",
+];
+
+export function isCustomCategory(cat: string): boolean {
+  return !BUILT_IN_CATEGORIES.includes(cat as BuiltInExpenseCategory);
+}
+
+let customCategoryCounter = 0;
+export function generateCustomCategoryKey(): string {
+  customCategoryCounter++;
+  return `custom_${Date.now()}_${customCategoryCounter}`;
+}
 
 export const EXPENSE_CATEGORY_ORDER: ExpenseCategory[] = [
   "personnel",
