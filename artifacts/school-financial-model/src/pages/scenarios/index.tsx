@@ -14,8 +14,11 @@ import {
   CheckCircle2,
   XCircle,
   RotateCcw,
+  ArrowRightLeft,
 } from "lucide-react";
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
+import { compareScenarios } from "@/lib/scenario-compare";
+import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
 import type { FullModelData } from "@/pages/model-wizard/schema";
 
 const DEFAULT_SCENARIO: ScenarioAdjustments = {
@@ -130,6 +133,8 @@ export function ScenarioPage() {
   const [scenarios, setScenarios] = useState<ScenarioAdjustments[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [compareLeft, setCompareLeft] = useState<string>("base");
+  const [compareRight, setCompareRight] = useState<string>("");
 
   useEffect(() => {
     return () => {
@@ -167,6 +172,27 @@ export function ScenarioPage() {
     if (!initialized || !model) return null;
     return computeScenarios(modelData, scenarios);
   }, [modelData, scenarios, initialized, model]);
+
+  const comparisonResult = useMemo(() => {
+    if (!results || scenarios.length === 0) return null;
+    const leftIdx = compareLeft === "base" ? -1 : parseInt(compareLeft);
+    const rightIdx = compareRight === "" ? -1 : compareRight === "base" ? -1 : parseInt(compareRight);
+    if (compareRight === "") return null;
+    if (compareLeft === compareRight) return null;
+
+    const leftMetrics = leftIdx < 0 ? results.base.metrics : results.scenarios[leftIdx]?.metrics;
+    const rightMetrics = rightIdx < 0 ? results.base.metrics : results.scenarios[rightIdx]?.metrics;
+    if (!leftMetrics || !rightMetrics) return null;
+
+    const leftAdj = leftIdx < 0
+      ? { ...DEFAULT_SCENARIO, name: "Base Model" }
+      : results.scenarios[leftIdx]?.adjustments;
+    const rightAdj = rightIdx < 0
+      ? { ...DEFAULT_SCENARIO, name: "Base Model" }
+      : results.scenarios[rightIdx]?.adjustments;
+
+    return compareScenarios(leftMetrics, rightMetrics, leftAdj, rightAdj);
+  }, [results, compareLeft, compareRight, scenarios]);
 
   const persistScenarios = useCallback(
     (updated: ScenarioAdjustments[]) => {
@@ -574,6 +600,70 @@ export function ScenarioPage() {
                   );
                 })}
               </div>
+            </div>
+
+            <div className="mb-8">
+              <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <ArrowRightLeft className="h-5 w-5 text-primary" />
+                  <h2 className="font-display text-xl font-bold text-foreground">Deep Comparison</h2>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Pick two scenarios to see exactly what changed, what improved, and what worsened — in plain English.
+                </p>
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-foreground">Compare</label>
+                    <select
+                      value={compareLeft}
+                      onChange={(e) => setCompareLeft(e.target.value)}
+                      className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      <option value="base">Base Model</option>
+                      {scenarios.map((s, i) => (
+                        <option key={i} value={String(i)}>{s.name || `Scenario ${i + 1}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <span className="text-sm text-muted-foreground font-medium">vs</span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={compareRight}
+                      onChange={(e) => setCompareRight(e.target.value)}
+                      className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      <option value="">Select a scenario...</option>
+                      <option value="base" disabled={compareLeft === "base"}>Base Model</option>
+                      {scenarios.map((s, i) => (
+                        <option key={i} value={String(i)} disabled={compareLeft === String(i)}>
+                          {s.name || `Scenario ${i + 1}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {compareLeft === compareRight && compareRight !== "" && (
+                  <p className="text-xs text-amber-600 mt-2">You are comparing the same scenario — pick a different one to see differences.</p>
+                )}
+              </div>
+
+              {comparisonResult && (
+                <div className="mt-6">
+                  <ScenarioComparisonView
+                    comparison={comparisonResult}
+                    baseName={
+                      compareLeft === "base"
+                        ? "Base Model"
+                        : scenarios[parseInt(compareLeft)]?.name || `Scenario ${parseInt(compareLeft) + 1}`
+                    }
+                    compareName={
+                      compareRight === "base"
+                        ? "Base Model"
+                        : scenarios[parseInt(compareRight)]?.name || `Scenario ${parseInt(compareRight) + 1}`
+                    }
+                  />
+                </div>
+              )}
             </div>
           </>
         )}
