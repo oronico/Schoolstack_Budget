@@ -203,6 +203,7 @@ const ALLOWED_EVENTS = new Set([
   "explainer_collapsed",
   "explainer_dismissed",
   "kpi_formula_opened",
+  "kpi_formula_closed",
   "wizard_section_completed",
   "analysis_view_opened",
 ]);
@@ -215,7 +216,7 @@ router.post("/auth/track", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
     const safeMetadata = metadata && typeof metadata === "object" ? metadata : {};
-    await trackEvent(event, req.user!.id, safeMetadata);
+    await trackEvent(event, req.userId!, safeMetadata);
     res.json({ ok: true });
   } catch (err) {
     console.error("Track event error:", err);

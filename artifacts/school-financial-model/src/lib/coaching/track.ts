@@ -8,6 +8,7 @@ type CoachingEvent =
   | "explainer_collapsed"
   | "explainer_dismissed"
   | "kpi_formula_opened"
+  | "kpi_formula_closed"
   | "wizard_section_completed"
   | "analysis_view_opened";
 

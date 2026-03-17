@@ -16,10 +16,10 @@
   - `guidance_mode_changed`
   - `explainer_opened`
   - `explainer_collapsed`
-  - `kpi_formula_viewed`
+  - `kpi_formula_opened`
+  - `kpi_formula_closed`
   - `wizard_section_completed`
   - `analysis_view_opened`
-  - `kpi_formula_closed`
 - Events logged server-side via `console.log` (structured JSON)
 
 ### Frontend
@@ -34,7 +34,7 @@
 | GuidanceModeSelector | `guidance_mode_changed` |
 | InlineHelpCard | `explainer_opened`, `explainer_collapsed` |
 | ExplainerDrawer | `explainer_opened` |
-| KpiFormulaDrawer | `kpi_formula_viewed`, `kpi_formula_closed` |
+| KpiFormulaDrawer | `kpi_formula_opened`, `kpi_formula_closed` |
 | ConsultantAnalysisView | `analysis_view_opened` |
 | ModelWizardPage (handleNext) | `wizard_section_completed` |
 
@@ -62,11 +62,11 @@
   }
 }
 
-// kpi_formula_viewed
+// kpi_formula_opened
 {
-  "event": "kpi_formula_viewed",
+  "event": "kpi_formula_opened",
   "metadata": {
-    "formulaId": "dscr",
+    "kpiId": "dscr",
     "modelId": 52
   }
 }

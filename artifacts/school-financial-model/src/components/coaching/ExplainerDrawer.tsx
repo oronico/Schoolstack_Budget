@@ -26,7 +26,7 @@ export function KpiFormulaDrawer({ formula, values, open, onClose, modelId }: Kp
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={`How ${formula.title} is calculated`}>
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => { trackCoachingEvent("kpi_formula_closed", { kpiId: formula.id, modelId: modelId ?? null }); onClose(); }} aria-hidden="true" />
       <div className="relative w-full max-w-sm sm:max-w-md bg-background shadow-2xl border-l border-border animate-in slide-in-from-right duration-300 overflow-y-auto">
         <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border px-4 sm:px-6 py-3.5 flex items-center justify-between z-10">
           <div className="flex items-center gap-2">
