@@ -1,24 +1,3 @@
-// KPI FORMULA TRUST AUDIT — Task #79
-// Audited against consultant-engine.ts on 2026-03-17.
-// Each formula verified line-by-line against actual engine computation.
-//
-// QA verification: ran consultant engine against microschoolStartup and
-// privateSchoolWithESA sample payloads. Confirmed output KPI values match
-// formula descriptions (e.g. Microschool: Rev/Student $19,667, Staffing 50.4%,
-// OpCost 15.9%, Margin 33.7%, Reserve 62.6mo; Private: DSCR 18.51x,
-// Reserve 111.0mo, Margin 47.3%). E2E test confirmed formula drawer renders
-// correctly in consultant analysis view.
-//
-// Changes made:
-//   - operatingCostPct: clarified input label to include capital/debt + facility overlay
-//   - capacityUtilization: fixed to say "final year" enrollment (engine uses yLast.students)
-//   - reserveMonths: clarified that engine shows final-year reserve using cumulative net income
-//   - reserveMonths: added note about engine clamping negative values to zero
-//   - revenueGrowth: updated label to say "projection period" instead of hardcoded "five years"
-//   - revenueGrowth: removed hardcoded "five years" benchmark, made period-aware
-//   - netMargin: added note that engine shows both Y1 and final year margin separately
-//   - dscr: clarified denominator includes all capital/debt obligations (not just loan amortization)
-
 export interface KpiFormula {
   id: string;
   title: string;

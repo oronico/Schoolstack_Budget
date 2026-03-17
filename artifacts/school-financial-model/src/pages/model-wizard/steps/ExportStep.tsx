@@ -16,7 +16,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
     try {
       const urlMap: Record<ExportType, string> = {
         standard: getExportModelUrl(modelId),
-        formula: `/api/models/${modelId}/export/formula`,
+        formula: getExportModelUrl(modelId),
         underwritingV2: `/api/models/${modelId}/export/underwriting-v2`,
       };
 
