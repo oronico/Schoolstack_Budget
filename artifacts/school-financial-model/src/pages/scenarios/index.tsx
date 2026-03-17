@@ -480,6 +480,13 @@ export function ScenarioPage() {
                         />
                       )}
                       <MetricRow
+                        label="Cash Runway"
+                        base={results.base.metrics.cashRunwayMonths}
+                        scenarios={results.scenarios.map((s) => s.metrics.cashRunwayMonths)}
+                        format={(v) => (v >= 60 ? "60+ mo" : `${v.toFixed(0)} mo`)}
+                        highlightBetter="higher"
+                      />
+                      <MetricRow
                         label="Reserve Months (Yr 5)"
                         base={results.base.metrics.reserveMonths}
                         scenarios={results.scenarios.map((s) => s.metrics.reserveMonths)}

@@ -1874,8 +1874,8 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
     r += 2;
     sec(ws, r, 6); ws.getCell(r, 1).value = scenario.name.toUpperCase();
     r++;
-    const staffAdj = (scenario as any).staffingAdjustment || 0;
-    const facAdj = (scenario as any).facilityAdjustment || 0;
+    const staffAdj = scenario.staffingAdjustment || 0;
+    const facAdj = scenario.facilityAdjustment || 0;
     const parts = [
       `Enrollment: ${scenario.enrollmentAdjustment >= 0 ? "+" : ""}${scenario.enrollmentAdjustment}%`,
       `Revenue: ${scenario.tuitionAdjustment >= 0 ? "+" : ""}${scenario.tuitionAdjustment}%`,
@@ -1895,7 +1895,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
     const adjEnroll = enrollment.map(e => Math.round(e * enrollFactor));
     const adjRev = revByYear.map(v => v * enrollFactor * revFactor);
     const adjPers = persByYear.map(v => v * (1 + staffAdj / 100));
-    const adjOpex = opexByYear.map(v => v * (1 + scenario.expenseAdjustment / 100) * (1 + facAdj / 100));
+    const adjOpex = opexByYear.map(v => v * (1 + scenario.expenseAdjustment / 100 + facAdj / 100));
     const adjTotalExp = adjPers.map((p, y) => p + adjOpex[y] + cdByYear[y]);
     const adjNI = adjRev.map((rev, y) => rev - adjTotalExp[y]);
 

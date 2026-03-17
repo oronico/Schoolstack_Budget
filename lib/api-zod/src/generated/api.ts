@@ -425,6 +425,8 @@ export const CreateModelBody = zod.object({
           enrollmentAdjustment: zod.number().optional(),
           tuitionAdjustment: zod.number().optional(),
           expenseAdjustment: zod.number().optional(),
+          staffingAdjustment: zod.number().optional(),
+          facilityAdjustment: zod.number().optional(),
         }),
       )
       .optional(),
@@ -769,6 +771,8 @@ export const GetModelResponse = zod.object({
           enrollmentAdjustment: zod.number().optional(),
           tuitionAdjustment: zod.number().optional(),
           expenseAdjustment: zod.number().optional(),
+          staffingAdjustment: zod.number().optional(),
+          facilityAdjustment: zod.number().optional(),
         }),
       )
       .optional(),
@@ -1114,6 +1118,8 @@ export const UpdateModelBody = zod.object({
           enrollmentAdjustment: zod.number().optional(),
           tuitionAdjustment: zod.number().optional(),
           expenseAdjustment: zod.number().optional(),
+          staffingAdjustment: zod.number().optional(),
+          facilityAdjustment: zod.number().optional(),
         }),
       )
       .optional(),
@@ -1451,6 +1457,8 @@ export const UpdateModelResponse = zod.object({
           enrollmentAdjustment: zod.number().optional(),
           tuitionAdjustment: zod.number().optional(),
           expenseAdjustment: zod.number().optional(),
+          staffingAdjustment: zod.number().optional(),
+          facilityAdjustment: zod.number().optional(),
         }),
       )
       .optional(),
@@ -1815,6 +1823,8 @@ export const ArchiveModelResponse = zod.object({
           enrollmentAdjustment: zod.number().optional(),
           tuitionAdjustment: zod.number().optional(),
           expenseAdjustment: zod.number().optional(),
+          staffingAdjustment: zod.number().optional(),
+          facilityAdjustment: zod.number().optional(),
         }),
       )
       .optional(),
