@@ -40,7 +40,7 @@ A React-based SPA featuring:
 - Authentication pages (login, register, forgot/reset password).
 - A dashboard for model lifecycle management (with Scenarios link for step-8 models).
 - An 8-step authenticated wizard for detailed financial model setup.
-- A Scenario Planner (`/model/:id/scenarios`) - gated at step 8, allows up to 3 named what-if scenarios with 5 adjustment sliders (enrollment, tuition/revenue, staffing, facility, expenses). Shows side-by-side comparison table (Year 1, Year 5, Key Indicators) with color-coded viability nudges. Scenarios auto-persist and flow into the underwriting Excel export.
+- A Scenario Planner (`/model/:id/scenarios`) - gated at step 8, allows up to 3 named what-if scenarios with 5 adjustment sliders (enrollment, tuition/revenue, staffing, facility, expenses). Shows side-by-side comparison table (Year 1, Year 5, Key Indicators) with color-coded viability nudges. Scenarios auto-persist and flow into the underwriting Excel export. Includes a Deep Comparison mode (via `scenario-compare.ts`) that produces per-metric delta cards with plain-English explanations, verdict banners (stronger/weaker/mixed), biggest improvement/risk callouts, and assumption change tables.
 - A dedicated admin dashboard with analytics and feedback management tabs.
 - A floating feedback widget (bottom-right) visible on all pages via Layout, supporting category selection (like, dislike, bug, feature), free-text message, optional email for anonymous users, and auto-captured page URL. Submissions stored in `feedback` table.
 - Auth context with JWT stored in localStorage, `refetchUser` helper for re-fetching user data.
