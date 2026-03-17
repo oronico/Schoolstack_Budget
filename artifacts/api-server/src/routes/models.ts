@@ -454,7 +454,9 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
   }
 });
 
-// @deprecated — redirects to v2. Old route kept for backward compatibility.
+// QUARANTINED: v1 underwriting export route — kept as backward-compatible shim.
+// This handler calls generateUnderwritingWorkbookV2 (the shared-helper-based v2 engine).
+// No v1 math runs here. Remove this route once all clients migrate to /export/underwriting-v2.
 router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);

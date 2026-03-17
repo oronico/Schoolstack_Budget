@@ -449,6 +449,8 @@ async function testWorkbookKPIs() {
     y1Pers: number; y1Opex: number; y1CD: number;
     y1TotalExp: number; y1NI: number; y5NI: number;
     y1DebtSvc: number;
+    y1DSCR: number | "N/A";
+    y1EndingCash: number;
   }
 
   const expectations: [string, Record<string, unknown>, KPIExpected][] = [
@@ -456,25 +458,25 @@ async function testWorkbookKPIs() {
       y1Rev: 196667, y5Rev: 547279,
       y1Pers: 118934, y1Opex: 40500, y1CD: 0,
       y1TotalExp: 159434, y1NI: 37233, y5NI: 320240,
-      y1DebtSvc: 0,
+      y1DebtSvc: 0, y1DSCR: "N/A", y1EndingCash: 76570,
     }],
     ["Private+ESA", privateSchoolWithESA as unknown as Record<string, unknown>, {
       y1Rev: 1975000, y5Rev: 4361347,
       y1Pers: 854772, y1Opex: 271400, y1CD: 59064,
       y1TotalExp: 1185236, y1NI: 789764, y5NI: 2942215,
-      y1DebtSvc: 34064,
+      y1DebtSvc: 34064, y1DSCR: 24.92, y1EndingCash: 864756,
     }],
     ["Charter", charterPublicFunding as unknown as Record<string, unknown>, {
       y1Rev: 1288333, y5Rev: 5458718,
       y1Pers: 1026431, y1Opex: 545000, y1CD: 164825,
       y1TotalExp: 1736256, y1NI: -447923, y5NI: 2447131,
-      y1DebtSvc: 49825,
+      y1DebtSvc: 49825, y1DSCR: -5.68, y1EndingCash: -190250,
     }],
     ["Charter ADA", charterADAGradeBand as unknown as Record<string, unknown>, {
       y1Rev: 1178333, y5Rev: 5696361,
       y1Pers: 780535, y1Opex: 503333, y1CD: 106629,
       y1TotalExp: 1390497, y1NI: -212164, y5NI: 3114494,
-      y1DebtSvc: 46629,
+      y1DebtSvc: 46629, y1DSCR: -2.26, y1EndingCash: 74498,
     }],
   ];
 
@@ -518,6 +520,23 @@ async function testWorkbookKPIs() {
     if (dscr) {
       const dsRow = findRowByLabel(dscr, "Debt Service");
       if (dsRow > 0) check(`${name} WB: DSCR Debt Service`, cellNum(dscr, dsRow, 2), exp.y1DebtSvc);
+      const dscrRow = findRowByLabel(dscr, "DSCR");
+      if (dscrRow > 0) {
+        const dscrVal = dscr.getCell(dscrRow, 2).value;
+        if (exp.y1DSCR === "N/A") {
+          check(`${name} WB: DSCR N/A`, dscrVal === "N/A" || (typeof dscrVal === "object" && dscrVal !== null && (dscrVal as any).result === "N/A") ? 1 : 0, 1);
+        } else {
+          const actualDscr = cellNum(dscr, dscrRow, 2);
+          check(`${name} WB: Y1 DSCR`, Math.round(actualDscr * 100), Math.round((exp.y1DSCR as number) * 100));
+        }
+      }
+    }
+
+    const mcf = wb.getWorksheet("Monthly Cash Flow Y1");
+    if (mcf) {
+      let ecRow = findRowByLabel(mcf, "Ending Cash (Month 12)", 1, 25);
+      if (ecRow < 0) ecRow = findRowByLabel(mcf, "Ending Cash", 1, 25);
+      if (ecRow > 0) check(`${name} WB: Y1 Ending Cash`, cellNum(mcf, ecRow, 2), exp.y1EndingCash);
     }
 
     const balSheet = wb.getWorksheet("Balance Sheet");
