@@ -522,9 +522,12 @@ async function testWorkbookKPIs() {
       if (dsRow > 0) check(`${name} WB: DSCR Debt Service`, cellNum(dscr, dsRow, 2), exp.y1DebtSvc);
       const dscrRow = findRowByLabel(dscr, "DSCR");
       if (dscrRow > 0) {
-        const dscrVal = dscr.getCell(dscrRow, 2).value;
         if (exp.y1DSCR === "N/A") {
-          check(`${name} WB: DSCR N/A`, dscrVal === "N/A" || (typeof dscrVal === "object" && dscrVal !== null && (dscrVal as any).result === "N/A") ? 1 : 0, 1);
+          const dscrVal = dscr.getCell(dscrRow, 2).value;
+          const isNA = dscrVal === "N/A" ||
+            (typeof dscrVal === "object" && dscrVal !== null && "result" in dscrVal &&
+              (dscrVal as { result: unknown }).result === "N/A");
+          check(`${name} WB: DSCR N/A`, isNA ? 1 : 0, 1);
         } else {
           const actualDscr = cellNum(dscr, dscrRow, 2);
           check(`${name} WB: Y1 DSCR`, Math.round(actualDscr * 100), Math.round((exp.y1DSCR as number) * 100));

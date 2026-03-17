@@ -432,6 +432,8 @@ export interface ModelData {
   tuitionTiers?: TuitionTier[];
   programs?: Program[];
   tuitionEscalation?: { rate?: number };
+  salaryEscalationRate?: number;
+  costInflationRate?: number;
   revenue?: Record<string, unknown>;
   revenueRows?: RevenueRow[];
   staffing?: Record<string, unknown>;

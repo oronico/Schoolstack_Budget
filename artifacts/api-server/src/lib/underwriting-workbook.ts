@@ -2089,15 +2089,19 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
 
   const sp = data.schoolProfile || {};
   const enrollment = getEnrollmentArray(data.enrollment);
-  // POLICY: single escalation rate — salary escalation, cost inflation, and
-  // expense escalation all derive from the user's tuitionEscalation.rate input
-  // (default 3%). This is an intentional product decision so the model stays
-  // simple for school founders; individual line-item escalationRate overrides
-  // are still respected via resolveEsc() in each compute function.
-  const escalationRatePct = data.tuitionEscalation?.rate ?? 3;
-  const salaryEsc = escalationRatePct / 100;
-  const costInflation = escalationRatePct / 100;
-  const costInflPct = escalationRatePct;
+  // ESCALATION SOURCE RESOLUTION
+  // Each category resolves its own field, falling back to the shared rate:
+  //   salary  → data.salaryEscalationRate  ?? data.tuitionEscalation.rate ?? 3
+  //   opCost  → data.costInflationRate     ?? data.tuitionEscalation.rate ?? 3
+  //   revenue → data.tuitionEscalation.rate ?? 3
+  // Today the UI only exposes tuitionEscalation.rate, so all three resolve to
+  // the same value. When the UI adds per-category inputs, the math is ready.
+  // Per-line overrides are always respected via resolveEsc().
+  const sharedRate = data.tuitionEscalation?.rate ?? 3;
+  const salaryEscPct = data.salaryEscalationRate ?? sharedRate;
+  const costInflPct = data.costInflationRate ?? sharedRate;
+  const salaryEsc = salaryEscPct / 100;
+  const costInflation = costInflPct / 100;
   const prorationFactor = getProrationFactor(sp);
   const startingCash = data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0;
   const debtIncluded = sp.debtIncluded !== false;

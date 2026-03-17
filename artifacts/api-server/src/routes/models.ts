@@ -481,7 +481,8 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const buffer = await generateUnderwritingWorkbookV2(data);
+    const workbook = await generateUnderwritingWorkbookV2(data);
+    const buffer = await workbook.xlsx.writeBuffer();
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
