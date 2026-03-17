@@ -47,7 +47,13 @@ function pct(n: number): string {
 }
 
 function deltaPctSafe(base: number, compare: number): number {
-  if (base === 0) return compare === 0 ? 0 : compare > 0 ? 1 : -1;
+  if (base === 0 && compare === 0) return 0;
+  if (base === 0) {
+    const abs = Math.abs(compare);
+    if (abs < 1000) return compare > 0 ? 0.1 : -0.1;
+    if (abs < 10000) return compare > 0 ? 0.3 : -0.3;
+    return compare > 0 ? 0.5 : -0.5;
+  }
   return (compare - base) / Math.abs(base);
 }
 
@@ -235,24 +241,39 @@ export function compareScenarios(
     };
   });
 
+  const beBase = baseMetrics.breakEvenYear;
+  const beCompare = compareMetrics.breakEvenYear;
+  let beDirection: DeltaDirection = "unchanged";
+  let beDeltaPct = 0;
+  let beDelta = 0;
+
+  if (beCompare !== null && beBase === null) {
+    beDirection = "improved";
+    beDeltaPct = 0.4;
+  } else if (beCompare === null && beBase !== null) {
+    beDirection = "worsened";
+    beDeltaPct = 0.4;
+  } else if (beCompare !== null && beBase !== null) {
+    beDelta = beCompare - beBase;
+    if (beDelta < 0) {
+      beDirection = "improved";
+      beDeltaPct = Math.abs(beDelta) / 5 * 0.3;
+    } else if (beDelta > 0) {
+      beDirection = "worsened";
+      beDeltaPct = Math.abs(beDelta) / 5 * 0.3;
+    }
+  }
+
   const breakEvenDelta: MetricDelta = {
     id: "break_even",
     label: "Break-Even Year",
-    baseValue: baseMetrics.breakEvenYear ?? -1,
-    compareValue: compareMetrics.breakEvenYear ?? -1,
-    delta: (compareMetrics.breakEvenYear ?? 99) - (baseMetrics.breakEvenYear ?? 99),
-    deltaPct: 0,
-    direction: compareMetrics.breakEvenYear !== null && baseMetrics.breakEvenYear === null
-      ? "improved"
-      : compareMetrics.breakEvenYear === null && baseMetrics.breakEvenYear !== null
-        ? "worsened"
-        : compareMetrics.breakEvenYear !== null && baseMetrics.breakEvenYear !== null && compareMetrics.breakEvenYear < baseMetrics.breakEvenYear
-          ? "improved"
-          : compareMetrics.breakEvenYear !== null && baseMetrics.breakEvenYear !== null && compareMetrics.breakEvenYear > baseMetrics.breakEvenYear
-            ? "worsened"
-            : "unchanged",
-    severity: "moderate",
-    explanation: breakEvenExplanation(baseMetrics.breakEvenYear, compareMetrics.breakEvenYear),
+    baseValue: beBase ?? -1,
+    compareValue: beCompare ?? -1,
+    delta: beDelta,
+    deltaPct: beDeltaPct,
+    direction: beDirection,
+    severity: beDeltaPct >= 0.15 ? "major" : beDeltaPct >= 0.05 ? "moderate" : "minor",
+    explanation: breakEvenExplanation(beBase, beCompare),
     higherIsBetter: false,
   };
   metricDeltas.push(breakEvenDelta);

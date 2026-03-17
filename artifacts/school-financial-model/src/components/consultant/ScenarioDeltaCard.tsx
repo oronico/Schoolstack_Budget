@@ -38,9 +38,14 @@ function formatValue(id: string, value: number): string {
   return `$${value.toFixed(0)}`;
 }
 
-function formatDelta(id: string, delta: number): string {
+function formatDelta(id: string, delta: number, baseValue: number, compareValue: number): string {
   const sign = delta > 0 ? "+" : "";
-  if (id === "break_even") return delta === 0 ? "—" : `${sign}${delta} yr`;
+  if (id === "break_even") {
+    if (baseValue < 0 && compareValue >= 0) return "Now breaks even";
+    if (baseValue >= 0 && compareValue < 0) return "No longer breaks even";
+    if (delta === 0) return "—";
+    return `${sign}${delta} yr`;
+  }
   if (id === "cash_runway" || id === "reserve_months") return `${sign}${delta.toFixed(1)} mo`;
   if (id === "enrollment_y5") return `${sign}${Math.round(delta)}`;
   if (id.includes("margin")) return `${sign}${(delta * 100).toFixed(1)}pp`;
@@ -74,7 +79,7 @@ export function ScenarioDeltaCard({ delta }: ScenarioDeltaCardProps) {
         <span className="text-sm font-mono font-semibold text-foreground">{formatValue(delta.id, delta.compareValue)}</span>
         {delta.direction !== "unchanged" && (
           <span className={cn("text-xs font-mono font-bold", config.iconClass)}>
-            ({formatDelta(delta.id, delta.delta)})
+            ({formatDelta(delta.id, delta.delta, delta.baseValue, delta.compareValue)})
           </span>
         )}
       </div>
