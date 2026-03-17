@@ -663,6 +663,23 @@ export interface DecisionIssue {
   supportingMetrics: DecisionIssueSupportingMetricsItem[];
 }
 
+export type HealthSignalStatus =
+  (typeof HealthSignalStatus)[keyof typeof HealthSignalStatus];
+
+export const HealthSignalStatus = {
+  healthy: "healthy",
+  watch: "watch",
+  at_risk: "at_risk",
+} as const;
+
+export interface HealthSignal {
+  dimension: string;
+  status: HealthSignalStatus;
+  label: string;
+  explanation: string;
+  watchItem: string;
+}
+
 export interface ConsultantOutput {
   executiveSummary: string;
   biggestStrength: string;
@@ -679,6 +696,7 @@ export interface ConsultantOutput {
   cashRunwayMonths: number;
   enrollmentGuidance: string[];
   topIssues: DecisionIssue[];
+  healthSignals: HealthSignal[];
   generatedAt: string;
 }
 

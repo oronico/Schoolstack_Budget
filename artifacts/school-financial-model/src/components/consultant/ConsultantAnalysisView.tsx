@@ -39,6 +39,7 @@ import { KPI_FORMULAS } from "@/lib/coaching/kpi-formulas";
 import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { TopIssuesPanel } from "./TopIssuesPanel";
+import { HealthSignalsSection } from "./HealthSignalCard";
 
 function metricNameToKpiId(name: string): string | undefined {
   const lower = name.toLowerCase();
@@ -364,6 +365,10 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           onClose={() => setOpenKpi(null)}
           modelId={modelId}
         />
+      )}
+
+      {data.healthSignals && data.healthSignals.length > 0 && (
+        <HealthSignalsSection signals={data.healthSignals} />
       )}
 
       {revChartData && revChartData.length > 0 && (

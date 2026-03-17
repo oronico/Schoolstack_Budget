@@ -2010,6 +2010,15 @@ export const GetConsultantAnalysisResponse = zod.object({
       ),
     }),
   ),
+  healthSignals: zod.array(
+    zod.object({
+      dimension: zod.string(),
+      status: zod.enum(["healthy", "watch", "at_risk"]),
+      label: zod.string(),
+      explanation: zod.string(),
+      watchItem: zod.string(),
+    }),
+  ),
   generatedAt: zod.date(),
 });
 
@@ -2159,6 +2168,15 @@ export const PublicConsultantAnalysisResponse = zod.object({
           value: zod.string(),
         }),
       ),
+    }),
+  ),
+  healthSignals: zod.array(
+    zod.object({
+      dimension: zod.string(),
+      status: zod.enum(["healthy", "watch", "at_risk"]),
+      label: zod.string(),
+      explanation: zod.string(),
+      watchItem: zod.string(),
     }),
   ),
   generatedAt: zod.date(),

@@ -1390,6 +1390,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DecisionIssue"
+        healthSignals:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthSignal"
         generatedAt:
           type: string
           format: date-time
@@ -1409,6 +1413,7 @@ components:
         - cashRunwayMonths
         - enrollmentGuidance
         - topIssues
+        - healthSignals
         - generatedAt
     ConsultantRecommendation:
       type: object
@@ -1424,6 +1429,26 @@ components:
         - title
         - description
         - priority
+    HealthSignal:
+      type: object
+      properties:
+        dimension:
+          type: string
+        status:
+          type: string
+          enum: [healthy, watch, at_risk]
+        label:
+          type: string
+        explanation:
+          type: string
+        watchItem:
+          type: string
+      required:
+        - dimension
+        - status
+        - label
+        - explanation
+        - watchItem
     DecisionIssue:
       type: object
       properties:

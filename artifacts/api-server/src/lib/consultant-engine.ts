@@ -1,4 +1,5 @@
 import { generateTopIssues } from "./decision-rules";
+import { generateHealthSignals, type HealthSignal } from "./financial-health";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -263,6 +264,7 @@ export interface ConsultantOutput {
   cashRunwayMonths: number;
   enrollmentGuidance: string[];
   topIssues: import("./decision-rules").DecisionIssue[];
+  healthSignals: HealthSignal[];
   generatedAt: string;
 }
 
@@ -1913,6 +1915,27 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     }
   }
 
+  const facilityCostPct = y1.totalRevenue > 0 ? y1.facilityCost / y1.totalRevenue : 0;
+  const tuitionPct = y1.totalRevenue > 0 ? y1.tuitionRevenue / y1.totalRevenue : 0;
+  const lastReserveEntry = cumulativeFinancials[cumulativeFinancials.length - 1];
+
+  const healthSignals = generateHealthSignals({
+    y1NetMargin,
+    lastYearNetMargin,
+    breakEvenYear,
+    yearCount,
+    cashRunwayMonths,
+    reserveMonths: lastReserveEntry?.reserveMonths ?? 0,
+    staffingCostPct,
+    facilityCostPct,
+    dscr,
+    hasDebt,
+    philanthropyPct,
+    publicRevenuePct,
+    tuitionPct,
+    entityType: sp.entityType || "",
+  });
+
   const topIssues = generateTopIssues({
     yearFinancials,
     cumulativeFinancials,
@@ -1943,6 +1966,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     cashRunwayMonths,
     enrollmentGuidance,
     topIssues,
+    healthSignals,
     generatedAt: new Date().toISOString(),
   };
 }

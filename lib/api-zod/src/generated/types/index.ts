@@ -32,6 +32,8 @@ export * from "./financialModel";
 export * from "./financialModelSummary";
 export * from "./forgotPasswordRequest";
 export * from "./fundingProfile";
+export * from "./healthSignal";
+export * from "./healthSignalStatus";
 export * from "./healthStatus";
 export * from "./loginRequest";
 export * from "./messageResponse";
