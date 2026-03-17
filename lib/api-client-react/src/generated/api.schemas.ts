@@ -81,7 +81,6 @@ export interface UserResponse {
   id: number;
   email: string;
   name: string;
-  guidanceLevel?: string | null;
 }
 
 export interface AuthResponse {
@@ -479,6 +478,15 @@ export interface Enrollment {
   year3?: number;
   year4?: number;
   year5?: number;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  retentionRate?: number;
+  /** @minimum 0 */
+  applicationsReceived?: number;
+  /** @minimum 0 */
+  waitlistCount?: number;
 }
 
 export interface Revenue {
@@ -630,6 +638,31 @@ export interface ConsultantKeyMetric {
   benchmark?: string;
 }
 
+export type DecisionIssueSeverity =
+  (typeof DecisionIssueSeverity)[keyof typeof DecisionIssueSeverity];
+
+export const DecisionIssueSeverity = {
+  critical: "critical",
+  high: "high",
+  medium: "medium",
+} as const;
+
+export type DecisionIssueSupportingMetricsItem = {
+  label: string;
+  value: string;
+};
+
+export interface DecisionIssue {
+  id: string;
+  severity: DecisionIssueSeverity;
+  title: string;
+  summary: string;
+  whyItMatters: string;
+  recommendedAction: string;
+  relatedStep: number;
+  supportingMetrics: DecisionIssueSupportingMetricsItem[];
+}
+
 export interface ConsultantOutput {
   executiveSummary: string;
   biggestStrength: string;
@@ -645,6 +678,7 @@ export interface ConsultantOutput {
   sensitivityMatrix: SensitivityCell[];
   cashRunwayMonths: number;
   enrollmentGuidance: string[];
+  topIssues: DecisionIssue[];
   generatedAt: string;
 }
 

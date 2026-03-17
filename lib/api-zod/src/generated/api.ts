@@ -104,6 +104,13 @@ export const ListModelsResponse = zod.array(ListModelsResponseItem);
 /**
  * @summary Create a new financial model
  */
+export const createModelBodyDataEnrollmentRetentionRateMin = 0;
+export const createModelBodyDataEnrollmentRetentionRateMax = 100;
+
+export const createModelBodyDataEnrollmentApplicationsReceivedMin = 0;
+
+export const createModelBodyDataEnrollmentWaitlistCountMin = 0;
+
 export const CreateModelBody = zod.object({
   name: zod.string(),
   currentStep: zod.number().optional(),
@@ -203,9 +210,19 @@ export const CreateModelBody = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
-        retentionRate: zod.number().optional(),
-        applicationsReceived: zod.number().optional(),
-        waitlistCount: zod.number().optional(),
+        retentionRate: zod
+          .number()
+          .min(createModelBodyDataEnrollmentRetentionRateMin)
+          .max(createModelBodyDataEnrollmentRetentionRateMax)
+          .optional(),
+        applicationsReceived: zod
+          .number()
+          .min(createModelBodyDataEnrollmentApplicationsReceivedMin)
+          .optional(),
+        waitlistCount: zod
+          .number()
+          .min(createModelBodyDataEnrollmentWaitlistCountMin)
+          .optional(),
       })
       .optional(),
     revenue: zod
@@ -448,6 +465,13 @@ export const GetModelParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const getModelResponseDataEnrollmentRetentionRateMin = 0;
+export const getModelResponseDataEnrollmentRetentionRateMax = 100;
+
+export const getModelResponseDataEnrollmentApplicationsReceivedMin = 0;
+
+export const getModelResponseDataEnrollmentWaitlistCountMin = 0;
+
 export const GetModelResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
@@ -549,9 +573,19 @@ export const GetModelResponse = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
-        retentionRate: zod.number().optional(),
-        applicationsReceived: zod.number().optional(),
-        waitlistCount: zod.number().optional(),
+        retentionRate: zod
+          .number()
+          .min(getModelResponseDataEnrollmentRetentionRateMin)
+          .max(getModelResponseDataEnrollmentRetentionRateMax)
+          .optional(),
+        applicationsReceived: zod
+          .number()
+          .min(getModelResponseDataEnrollmentApplicationsReceivedMin)
+          .optional(),
+        waitlistCount: zod
+          .number()
+          .min(getModelResponseDataEnrollmentWaitlistCountMin)
+          .optional(),
       })
       .optional(),
     revenue: zod
@@ -796,6 +830,13 @@ export const UpdateModelParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const updateModelBodyDataEnrollmentRetentionRateMin = 0;
+export const updateModelBodyDataEnrollmentRetentionRateMax = 100;
+
+export const updateModelBodyDataEnrollmentApplicationsReceivedMin = 0;
+
+export const updateModelBodyDataEnrollmentWaitlistCountMin = 0;
+
 export const UpdateModelBody = zod.object({
   name: zod.string().optional(),
   currentStep: zod.number().optional(),
@@ -896,9 +937,19 @@ export const UpdateModelBody = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
-        retentionRate: zod.number().optional(),
-        applicationsReceived: zod.number().optional(),
-        waitlistCount: zod.number().optional(),
+        retentionRate: zod
+          .number()
+          .min(updateModelBodyDataEnrollmentRetentionRateMin)
+          .max(updateModelBodyDataEnrollmentRetentionRateMax)
+          .optional(),
+        applicationsReceived: zod
+          .number()
+          .min(updateModelBodyDataEnrollmentApplicationsReceivedMin)
+          .optional(),
+        waitlistCount: zod
+          .number()
+          .min(updateModelBodyDataEnrollmentWaitlistCountMin)
+          .optional(),
       })
       .optional(),
     revenue: zod
@@ -1134,6 +1185,13 @@ export const UpdateModelBody = zod.object({
   }),
 });
 
+export const updateModelResponseDataEnrollmentRetentionRateMin = 0;
+export const updateModelResponseDataEnrollmentRetentionRateMax = 100;
+
+export const updateModelResponseDataEnrollmentApplicationsReceivedMin = 0;
+
+export const updateModelResponseDataEnrollmentWaitlistCountMin = 0;
+
 export const UpdateModelResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
@@ -1235,9 +1293,19 @@ export const UpdateModelResponse = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
-        retentionRate: zod.number().optional(),
-        applicationsReceived: zod.number().optional(),
-        waitlistCount: zod.number().optional(),
+        retentionRate: zod
+          .number()
+          .min(updateModelResponseDataEnrollmentRetentionRateMin)
+          .max(updateModelResponseDataEnrollmentRetentionRateMax)
+          .optional(),
+        applicationsReceived: zod
+          .number()
+          .min(updateModelResponseDataEnrollmentApplicationsReceivedMin)
+          .optional(),
+        waitlistCount: zod
+          .number()
+          .min(updateModelResponseDataEnrollmentWaitlistCountMin)
+          .optional(),
       })
       .optional(),
     revenue: zod
@@ -1500,6 +1568,13 @@ export const ArchiveModelParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const archiveModelResponseDataEnrollmentRetentionRateMin = 0;
+export const archiveModelResponseDataEnrollmentRetentionRateMax = 100;
+
+export const archiveModelResponseDataEnrollmentApplicationsReceivedMin = 0;
+
+export const archiveModelResponseDataEnrollmentWaitlistCountMin = 0;
+
 export const ArchiveModelResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
@@ -1601,9 +1676,19 @@ export const ArchiveModelResponse = zod.object({
         year3: zod.number().optional(),
         year4: zod.number().optional(),
         year5: zod.number().optional(),
-        retentionRate: zod.number().optional(),
-        applicationsReceived: zod.number().optional(),
-        waitlistCount: zod.number().optional(),
+        retentionRate: zod
+          .number()
+          .min(archiveModelResponseDataEnrollmentRetentionRateMin)
+          .max(archiveModelResponseDataEnrollmentRetentionRateMax)
+          .optional(),
+        applicationsReceived: zod
+          .number()
+          .min(archiveModelResponseDataEnrollmentApplicationsReceivedMin)
+          .optional(),
+        waitlistCount: zod
+          .number()
+          .min(archiveModelResponseDataEnrollmentWaitlistCountMin)
+          .optional(),
       })
       .optional(),
     revenue: zod
@@ -1908,6 +1993,23 @@ export const GetConsultantAnalysisResponse = zod.object({
   ),
   cashRunwayMonths: zod.number(),
   enrollmentGuidance: zod.array(zod.string()),
+  topIssues: zod.array(
+    zod.object({
+      id: zod.string(),
+      severity: zod.enum(["critical", "high", "medium"]),
+      title: zod.string(),
+      summary: zod.string(),
+      whyItMatters: zod.string(),
+      recommendedAction: zod.string(),
+      relatedStep: zod.number(),
+      supportingMetrics: zod.array(
+        zod.object({
+          label: zod.string(),
+          value: zod.string(),
+        }),
+      ),
+    }),
+  ),
   generatedAt: zod.date(),
 });
 
@@ -2042,5 +2144,22 @@ export const PublicConsultantAnalysisResponse = zod.object({
   ),
   cashRunwayMonths: zod.number(),
   enrollmentGuidance: zod.array(zod.string()),
+  topIssues: zod.array(
+    zod.object({
+      id: zod.string(),
+      severity: zod.enum(["critical", "high", "medium"]),
+      title: zod.string(),
+      summary: zod.string(),
+      whyItMatters: zod.string(),
+      recommendedAction: zod.string(),
+      relatedStep: zod.number(),
+      supportingMetrics: zod.array(
+        zod.object({
+          label: zod.string(),
+          value: zod.string(),
+        }),
+      ),
+    }),
+  ),
   generatedAt: zod.date(),
 });

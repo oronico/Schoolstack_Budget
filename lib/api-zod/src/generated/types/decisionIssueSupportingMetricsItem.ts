@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface UserResponse {
-  id: number;
-  email: string;
-  name: string;
-}
+export type DecisionIssueSupportingMetricsItem = {
+  label: string;
+  value: string;
+};

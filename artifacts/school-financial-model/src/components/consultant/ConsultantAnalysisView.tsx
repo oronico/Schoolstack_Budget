@@ -249,9 +249,9 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         </div>
       </div>
 
-      {(data as Record<string, unknown>).topIssues && (
+      {data.topIssues && data.topIssues.length > 0 && (
         <TopIssuesPanel
-          issues={(data as Record<string, unknown>).topIssues as any[]}
+          issues={data.topIssues}
           jumpToStep={jumpToStep}
         />
       )}

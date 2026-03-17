@@ -1,16 +1,6 @@
 import { AlertTriangle, ArrowRight, ShieldAlert, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface DecisionIssue {
-  id: string;
-  severity: "critical" | "high" | "medium";
-  title: string;
-  summary: string;
-  whyItMatters: string;
-  recommendedAction: string;
-  relatedStep: number;
-  supportingMetrics: { label: string; value: string }[];
-}
+import type { DecisionIssue } from "@workspace/api-client-react";
 
 const STEP_LABELS: Record<number, string> = {
   1: "Profile",

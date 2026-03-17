@@ -10,6 +10,7 @@ import type { ConsultantOutputLenderReadiness } from "./consultantOutputLenderRe
 import type { ConsultantRecommendation } from "./consultantRecommendation";
 import type { CostComposition } from "./costComposition";
 import type { CumulativeYear } from "./cumulativeYear";
+import type { DecisionIssue } from "./decisionIssue";
 import type { RevenueComposition } from "./revenueComposition";
 import type { SensitivityCell } from "./sensitivityCell";
 import type { StressScenario } from "./stressScenario";
@@ -29,5 +30,6 @@ export interface ConsultantOutput {
   sensitivityMatrix: SensitivityCell[];
   cashRunwayMonths: number;
   enrollmentGuidance: string[];
+  topIssues: DecisionIssue[];
   generatedAt: Date;
 }

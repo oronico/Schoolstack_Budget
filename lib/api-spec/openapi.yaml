@@ -1386,6 +1386,10 @@ components:
           type: array
           items:
             type: string
+        topIssues:
+          type: array
+          items:
+            $ref: "#/components/schemas/DecisionIssue"
         generatedAt:
           type: string
           format: date-time
@@ -1404,6 +1408,7 @@ components:
         - sensitivityMatrix
         - cashRunwayMonths
         - enrollmentGuidance
+        - topIssues
         - generatedAt
     ConsultantRecommendation:
       type: object
@@ -1419,6 +1424,45 @@ components:
         - title
         - description
         - priority
+    DecisionIssue:
+      type: object
+      properties:
+        id:
+          type: string
+        severity:
+          type: string
+          enum: [critical, high, medium]
+        title:
+          type: string
+        summary:
+          type: string
+        whyItMatters:
+          type: string
+        recommendedAction:
+          type: string
+        relatedStep:
+          type: integer
+        supportingMetrics:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: string
+            required:
+              - label
+              - value
+      required:
+        - id
+        - severity
+        - title
+        - summary
+        - whyItMatters
+        - recommendedAction
+        - relatedStep
+        - supportingMetrics
     ConsultantKeyMetric:
       type: object
       properties:

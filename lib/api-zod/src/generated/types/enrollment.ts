@@ -12,4 +12,13 @@ export interface Enrollment {
   year3?: number;
   year4?: number;
   year5?: number;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  retentionRate?: number;
+  /** @minimum 0 */
+  applicationsReceived?: number;
+  /** @minimum 0 */
+  waitlistCount?: number;
 }
