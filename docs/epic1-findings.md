@@ -170,13 +170,18 @@ analysis_view_opened
 | E2E (Playwright) — login, wizard flow, consultant, KPI drawers | **All pass** |
 
 ### E2E Test Coverage (2026-03-17)
-- Login as admin → dashboard loads
-- Create new model → wizard Step 1 loads
-- Navigate forward through all 8 wizard steps (Profile → Export)
-- Navigate backward with Back button
-- Open existing demo model (id:52), load Consultant Analysis view
+- Login as admin (user id:50) → dashboard loads
+- Created new model (id:53) → wizard Step 1 loads
+- Navigated forward through all 8 wizard steps (Profile → Export)
+- Navigated backward with Back button; step indicator updated correctly
+- Opened existing demo model (id:52), loaded Consultant Analysis view
 - KPI "How is this calculated?" drawer opens correctly
 - No JavaScript console errors observed throughout
+
+### Evidence Locations
+- Golden test output: `artifacts/api-server/qa-output/qa-report.json` (24 export suites)
+- Golden model assertions: run `pnpm --filter @workspace/api-server run qa:golden` (115 assertions)
+- Export file samples: `artifacts/api-server/qa-output/*.xlsx`
 
 ### Event Tracking Verification
 15 distinct event types recorded in production DB:
