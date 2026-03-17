@@ -15,6 +15,8 @@ export interface Explainer {
   relatedSection: string;
   dismissible: boolean;
   autoExpandFor: GuidanceLevel[];
+  order: number;
+  highFriction: boolean;
 }
 
 export const EXPLAINERS: Record<string, Explainer> = {
@@ -31,6 +33,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "revenue",
     dismissible: true,
     autoExpandFor: ["basics", "extra"],
+    order: 1,
+    highFriction: true,
   },
   enrollment_assumptions: {
     id: "enrollment_assumptions",
@@ -45,6 +49,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "enrollment",
     dismissible: true,
     autoExpandFor: ["basics", "extra"],
+    order: 2,
+    highFriction: true,
   },
   tuition_assumptions: {
     id: "tuition_assumptions",
@@ -59,6 +65,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "revenue",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 3,
+    highFriction: false,
   },
   grants_fundraising: {
     id: "grants_fundraising",
@@ -73,6 +81,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "revenue",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 4,
+    highFriction: false,
   },
   payroll: {
     id: "payroll",
@@ -87,6 +97,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "staffing",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 5,
+    highFriction: true,
   },
   occupancy_rent: {
     id: "occupancy_rent",
@@ -101,6 +113,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "expenses",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 6,
+    highFriction: false,
   },
   program_expenses: {
     id: "program_expenses",
@@ -115,6 +129,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "expenses",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 7,
+    highFriction: false,
   },
   operating_surplus_deficit: {
     id: "operating_surplus_deficit",
@@ -129,6 +145,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "review",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 8,
+    highFriction: false,
   },
   cash_flow: {
     id: "cash_flow",
@@ -143,6 +161,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "review",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 9,
+    highFriction: false,
   },
   ending_cash: {
     id: "ending_cash",
@@ -157,6 +177,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "review",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 10,
+    highFriction: false,
   },
   reserves: {
     id: "reserves",
@@ -171,6 +193,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "review",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 11,
+    highFriction: false,
   },
   budget_vs_actual: {
     id: "budget_vs_actual",
@@ -185,6 +209,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "review",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 12,
+    highFriction: false,
   },
   fixed_vs_variable: {
     id: "fixed_vs_variable",
@@ -199,13 +225,15 @@ export const EXPLAINERS: Record<string, Explainer> = {
     relatedSection: "expenses",
     dismissible: true,
     autoExpandFor: ["extra"],
+    order: 13,
+    highFriction: false,
   },
 };
 
 export function getExplainersForSection(section: string, level: GuidanceLevel): Explainer[] {
-  return Object.values(EXPLAINERS).filter(
-    (e) => e.relatedSection === section && e.audienceLevel.includes(level)
-  );
+  return Object.values(EXPLAINERS)
+    .filter((e) => e.relatedSection === section && e.audienceLevel.includes(level))
+    .sort((a, b) => a.order - b.order);
 }
 
 export function getExplainerById(id: string): Explainer | undefined {
