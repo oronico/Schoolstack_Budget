@@ -43,6 +43,7 @@ export function GuidanceModePrompt({ onComplete }: GuidanceModePromptProps) {
   const { refetchUser } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     trackCoachingEvent("guidance_mode_prompt_shown");
@@ -51,6 +52,7 @@ export function GuidanceModePrompt({ onComplete }: GuidanceModePromptProps) {
   const handleSave = async () => {
     if (!selected) return;
     setSaving(true);
+    setError(null);
     try {
       await customFetch("/api/auth/guidance-level", {
         method: "PATCH",
@@ -61,7 +63,7 @@ export function GuidanceModePrompt({ onComplete }: GuidanceModePromptProps) {
       await refetchUser();
       onComplete();
     } catch {
-      onComplete();
+      setError("Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -106,6 +108,9 @@ export function GuidanceModePrompt({ onComplete }: GuidanceModePromptProps) {
         </div>
 
         <div className="px-6 pb-6">
+          {error && (
+            <p className="text-sm text-red-600 text-center mb-3">{error}</p>
+          )}
           <button
             type="button"
             onClick={handleSave}
