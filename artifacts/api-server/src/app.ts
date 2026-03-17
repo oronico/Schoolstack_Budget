@@ -30,6 +30,16 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+app.post("/admin/migrate-guidance", async (_req, res) => {
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS guidance_level VARCHAR(20)`);
+    res.json({ status: "ok", message: "guidance_level column added" });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ status: "error", error: message });
+  }
+});
+
 app.use("/api", router);
 
 export default app;
