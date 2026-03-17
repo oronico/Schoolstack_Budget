@@ -53,14 +53,18 @@ export function ModelWizardPage() {
   const [stepInitialized, setStepInitialized] = useState(false);
   const stepStartTime = useRef(Date.now());
   const completedSteps = useRef<Set<number>>(new Set());
-  const completedStepsLoaded = useRef(false);
-  if (!completedStepsLoaded.current && modelId) {
-    completedStepsLoaded.current = true;
+
+  useEffect(() => {
+    if (!modelId) return;
     try {
       const stored = localStorage.getItem(`wizard_completed_${modelId}`);
-      if (stored) completedSteps.current = new Set(JSON.parse(stored) as number[]);
-    } catch { /* ignore */ }
-  }
+      completedSteps.current = stored
+        ? new Set(JSON.parse(stored) as number[])
+        : new Set();
+    } catch {
+      completedSteps.current = new Set();
+    }
+  }, [modelId]);
   const { user } = useAuth();
 
   const { data: initialData, isLoading: isLoadingModel } = useGetModel(modelId || 0, {
@@ -346,6 +350,8 @@ export function ModelWizardPage() {
     };
     methods.reset(emptyData as FullModelData);
     setCurrentStep(1);
+    completedSteps.current = new Set();
+    localStorage.removeItem(`wizard_completed_${modelId}`);
     try {
       await updateMutation.mutateAsync({
         id: modelId,
