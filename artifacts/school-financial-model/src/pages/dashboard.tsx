@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
-import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive } from "lucide-react";
+import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive, Sparkles, ArrowRight, BarChart3, CheckCircle2, Lightbulb } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
 
@@ -10,6 +10,19 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   complete: { label: "Complete", className: "bg-green-100 text-green-800" },
   archived: { label: "Archived", className: "bg-gray-100 text-gray-500" },
 };
+
+const STEP_LABELS = ["Profile", "Enrollment", "Revenue", "Staffing", "Expenses", "Review", "Analysis", "Export"];
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getFirstName(name: string): string {
+  return name.split(" ")[0] || name;
+}
 
 export function DashboardPage() {
   const [, setLocation] = useLocation();
@@ -22,6 +35,11 @@ export function DashboardPage() {
   const archiveMutation = useArchiveModel();
 
   if (!user) return null;
+
+  const activeModels = models?.filter(m => m.status !== "archived") || [];
+  const completedModels = activeModels.filter(m => m.status === "complete");
+  const draftModels = activeModels.filter(m => m.status !== "complete");
+  const archivedModels = models?.filter(m => m.status === "archived") || [];
 
   const handleCreate = async () => {
     try {
@@ -63,20 +81,45 @@ export function DashboardPage() {
 
   return (
     <Layout>
-      <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
-          <div>
-            <h1 className="font-display text-4xl font-bold text-foreground tracking-tight">Your Models</h1>
-            <p className="text-muted-foreground mt-2">Manage your saved financial models and drafts.</p>
+      <div className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+            <div>
+              <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
+                {getGreeting()}, {getFirstName(user.name)}
+              </h1>
+              <p className="text-muted-foreground mt-2">Here's where your financial models live. Pick up where you left off or start something new.</p>
+            </div>
+            <button
+              onClick={handleCreate}
+              disabled={createMutation.isPending}
+              className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none"
+            >
+              {createMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+              New Model
+            </button>
           </div>
-          <button
-            onClick={handleCreate}
-            disabled={createMutation.isPending}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none"
-          >
-            {createMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
-            Create New Model
-          </button>
+
+          {!isLoading && models && models.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+              <div className="bg-card border border-border/60 rounded-2xl p-4 text-center">
+                <p className="text-2xl font-bold text-foreground">{activeModels.length}</p>
+                <p className="text-xs text-muted-foreground font-medium mt-1">Active Models</p>
+              </div>
+              <div className="bg-card border border-border/60 rounded-2xl p-4 text-center">
+                <p className="text-2xl font-bold text-primary">{completedModels.length}</p>
+                <p className="text-xs text-muted-foreground font-medium mt-1">Completed</p>
+              </div>
+              <div className="bg-card border border-border/60 rounded-2xl p-4 text-center">
+                <p className="text-2xl font-bold text-amber-600">{draftModels.length}</p>
+                <p className="text-xs text-muted-foreground font-medium mt-1">In Progress</p>
+              </div>
+              <div className="bg-card border border-border/60 rounded-2xl p-4 text-center">
+                <p className="text-2xl font-bold text-muted-foreground">{archivedModels.length}</p>
+                <p className="text-xs text-muted-foreground font-medium mt-1">Archived</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {isLoading ? (
@@ -84,88 +127,123 @@ export function DashboardPage() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : models?.length === 0 ? (
-          <div className="bg-card border border-border border-dashed rounded-3xl p-16 text-center shadow-sm">
-            <div className="mx-auto w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center mb-6">
-              <FileSpreadsheet className="h-8 w-8 text-primary/60" />
+          <div className="space-y-8">
+            <div className="bg-gradient-to-br from-primary/5 via-card to-card border border-primary/20 rounded-3xl p-10 sm:p-16 text-center shadow-sm">
+              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
+                <Sparkles className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="font-display text-2xl font-bold mb-3">Let's build your first financial model</h3>
+              <p className="text-muted-foreground max-w-md mx-auto mb-8 leading-relaxed">
+                In about 30-45 minutes, you'll have a lender-ready 5-year projection. We'll walk you through it step by step.
+              </p>
+              <button
+                onClick={handleCreate}
+                disabled={createMutation.isPending}
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-lg shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+              >
+                {createMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><ArrowRight className="h-5 w-5" /> Start My Model</>}
+              </button>
             </div>
-            <h3 className="font-display text-xl font-bold mb-2">No models yet</h3>
-            <p className="text-muted-foreground max-w-sm mx-auto mb-8">
-              Create your first financial model to see how your school's finances project over the next 5 years.
-            </p>
-            <button
-              onClick={handleCreate}
-              className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-secondary text-secondary-foreground font-semibold hover:bg-secondary/80 transition-colors"
-            >
-              Start Building
-            </button>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="bg-card border border-border/60 rounded-2xl p-6">
+                <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center mb-4">
+                  <Lightbulb className="h-5 w-5" />
+                </div>
+                <h4 className="font-display font-bold text-foreground mb-2">Answer questions, not formulas</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">We ask about your school in plain English — enrollment, staffing, rent — and build the spreadsheet for you.</p>
+              </div>
+              <div className="bg-card border border-border/60 rounded-2xl p-6">
+                <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-4">
+                  <BarChart3 className="h-5 w-5" />
+                </div>
+                <h4 className="font-display font-bold text-foreground mb-2">Get a consultant-level review</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">Before you export, we'll analyze your model and flag anything a lender or authorizer might question.</p>
+              </div>
+              <div className="bg-card border border-border/60 rounded-2xl p-6">
+                <div className="w-10 h-10 bg-teal-100 text-teal-700 rounded-xl flex items-center justify-center mb-4">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <h4 className="font-display font-bold text-foreground mb-2">Export a real Excel workbook</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">Download a multi-tab spreadsheet with live formulas — ready for your authorizer, lender, or board.</p>
+              </div>
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {models?.map(model => {
-              const status = statusConfig[model.status] || statusConfig.draft;
-              const isArchived = model.status === "archived";
+          <div>
+            <h2 className="font-display text-lg font-bold text-foreground mb-4">Your Models</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {models?.map(model => {
+                const status = statusConfig[model.status] || statusConfig.draft;
+                const isArchived = model.status === "archived";
+                const stepProgress = Math.round(((model.currentStep || 1) / 8) * 100);
 
-              return (
-                <div key={model.id} className={`group flex flex-col bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 ${isArchived ? "opacity-70" : ""}`}>
-                  <div className="flex-1 cursor-pointer" onClick={() => setLocation(`/model/${model.id}`)}>
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                        <FileSpreadsheet className="h-6 w-6" />
-                      </div>
-                      <div className="flex items-center gap-2">
+                return (
+                  <div key={model.id} className={`group flex flex-col bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 ${isArchived ? "opacity-70" : ""}`}>
+                    <div className="flex-1 cursor-pointer" onClick={() => setLocation(`/model/${model.id}`)}>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="p-3 bg-primary/10 text-primary rounded-xl">
+                          <FileSpreadsheet className="h-6 w-6" />
+                        </div>
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${status.className}`}>
                           {status.label}
                         </span>
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-secondary text-xs font-medium text-muted-foreground">
-                          Step {model.currentStep} of 7
-                        </span>
+                      </div>
+                      <h3 className="font-display text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
+                        {model.name || "Untitled Model"}
+                      </h3>
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+                          <span>{STEP_LABELS[(model.currentStep || 1) - 1] || "Profile"}</span>
+                          <span>Step {model.currentStep || 1} of 8</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${stepProgress}%` }} />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" />
+                        Updated {format(new Date(model.updatedAt), "MMM d, yyyy")}
                       </div>
                     </div>
-                    <h3 className="font-display text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
-                      {model.name || "Untitled Model"}
-                    </h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      Last updated {format(new Date(model.updatedAt), "MMM d, yyyy")}
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
-                    <button 
-                      onClick={() => setLocation(`/model/${model.id}`)}
-                      className="text-sm font-semibold text-primary hover:underline"
-                    >
-                      Open Model
-                    </button>
-                    <div className="flex items-center gap-1">
+                    
+                    <div className="mt-5 pt-4 border-t border-border flex items-center justify-between">
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleDuplicate(model.id); }}
-                        className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                        title="Duplicate model"
+                        onClick={() => setLocation(`/model/${model.id}`)}
+                        className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
                       >
-                        <Copy className="h-4 w-4" />
+                        {model.currentStep >= 8 ? "View Model" : "Continue Building"} <ArrowRight className="h-3.5 w-3.5" />
                       </button>
-                      {!isArchived && (
+                      <div className="flex items-center gap-1">
                         <button 
-                          onClick={(e) => { e.stopPropagation(); handleArchive(model.id); }}
-                          className="p-2 text-muted-foreground hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                          title="Archive model"
+                          onClick={(e) => { e.stopPropagation(); handleDuplicate(model.id); }}
+                          className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                          title="Duplicate model"
                         >
-                          <Archive className="h-4 w-4" />
+                          <Copy className="h-4 w-4" />
                         </button>
-                      )}
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDelete(model.id); }}
-                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                        title="Delete model"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                        {!isArchived && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleArchive(model.id); }}
+                            className="p-2 text-muted-foreground hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                            title="Archive model"
+                          >
+                            <Archive className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDelete(model.id); }}
+                          className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                          title="Delete model"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

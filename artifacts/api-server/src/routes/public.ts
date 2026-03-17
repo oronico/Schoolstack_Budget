@@ -4,6 +4,7 @@ import { generateSingleYearBudget } from "../lib/underwriting-export";
 import { generateFormulaWorkbook } from "../lib/formula-export";
 import { runConsultantEngine } from "../lib/consultant-engine";
 import { createRateLimiter } from "../lib/rate-limiter";
+import { trackEvent } from "../lib/track-event";
 
 const router: IRouter = Router();
 
@@ -110,6 +111,27 @@ router.post("/public/consultant", rateLimiter, async (req: Request, res: Respons
   } catch (err) {
     console.error("Public consultant analysis error:", err);
     res.status(500).json({ error: "Something went wrong running the analysis." });
+  }
+});
+
+router.post("/public/timing", rateLimiter, async (req: Request, res: Response) => {
+  try {
+    const { step, stepName, durationSeconds, sessionId, wizard } = req.body;
+    if (typeof step !== "number" || typeof durationSeconds !== "number") {
+      res.status(400).json({ error: "Invalid timing data." });
+      return;
+    }
+    await trackEvent("wizard_step_timing", null, {
+      step,
+      stepName: String(stepName || ""),
+      durationSeconds: Math.round(durationSeconds),
+      sessionId: String(sessionId || ""),
+      wizard: String(wizard || "public"),
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Timing event error:", err);
+    res.status(500).json({ error: "Failed to record timing." });
   }
 });
 

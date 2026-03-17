@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
@@ -49,10 +49,22 @@ function saveToStorage(data: Record<string, unknown>, step: number) {
   }
 }
 
+const SESSION_ID = `pub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+function sendStepTiming(step: number, stepName: string, durationSeconds: number) {
+  if (durationSeconds < 2) return;
+  fetch("/api/public/timing", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ step, stepName, durationSeconds, sessionId: SESSION_ID, wizard: "public" }),
+  }).catch(() => {});
+}
+
 export function PublicWizardPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveFlash, setSaveFlash] = useState(false);
+  const stepStartTime = useRef(Date.now());
 
   const savedData = loadFromStorage();
   const savedStep = parseInt(localStorage.getItem(STORAGE_KEY + "_step") || "1", 10);
@@ -118,6 +130,16 @@ export function PublicWizardPage() {
       setCurrentStep(savedStep);
     }
   }, []);
+
+  useEffect(() => {
+    const prevStart = stepStartTime.current;
+    stepStartTime.current = Date.now();
+    return () => {
+      const elapsed = (Date.now() - prevStart) / 1000;
+      const stepName = STEPS[currentStep - 1]?.title || "";
+      sendStepTiming(currentStep, stepName, elapsed);
+    };
+  }, [currentStep]);
 
   const formValues = methods.watch();
   const [debouncedValues] = useDebounce(formValues, 1000);
@@ -228,24 +250,38 @@ export function PublicWizardPage() {
               className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full -z-10 transition-all duration-500"
               style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
             />
-            {STEPS.map((step) => (
-              <div key={step.id} className="flex flex-col items-center gap-2">
-                <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300",
-                  currentStep === step.id ? "bg-primary border-primary text-primary-foreground scale-110 shadow-md shadow-primary/30" :
-                  currentStep > step.id ? "bg-primary border-primary text-primary-foreground" :
-                  "bg-card border-border text-muted-foreground"
-                )}>
-                  {currentStep > step.id ? <CheckCircle2 className="h-4 w-4" /> : step.id}
+            {STEPS.map((step) => {
+              const isClickable = step.id <= currentStep;
+              return (
+                <div key={step.id} className="flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={!isClickable}
+                    onClick={() => {
+                      if (isClickable) {
+                        setCurrentStep(step.id);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                    }}
+                    className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300",
+                      currentStep === step.id ? "bg-primary border-primary text-primary-foreground scale-110 shadow-md shadow-primary/30" :
+                      currentStep > step.id ? "bg-primary border-primary text-primary-foreground hover:scale-110 hover:shadow-md hover:shadow-primary/30" :
+                      "bg-card border-border text-muted-foreground",
+                      isClickable ? "cursor-pointer" : "cursor-default"
+                    )}
+                  >
+                    {currentStep > step.id ? <CheckCircle2 className="h-4 w-4" /> : step.id}
+                  </button>
+                  <span className={cn(
+                    "text-[10px] uppercase tracking-wider font-semibold hidden md:block absolute mt-10",
+                    currentStep >= step.id ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {step.title}
+                  </span>
                 </div>
-                <span className={cn(
-                  "text-[10px] uppercase tracking-wider font-semibold hidden md:block absolute mt-10",
-                  currentStep >= step.id ? "text-primary" : "text-muted-foreground"
-                )}>
-                  {step.title}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
