@@ -151,7 +151,7 @@ export function DashboardPage() {
                   <Lightbulb className="h-5 w-5" />
                 </div>
                 <h4 className="font-display font-bold text-foreground mb-2">Answer questions, not formulas</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">We ask about your school in plain English — enrollment, staffing, rent — and build the spreadsheet for you.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">We ask about your school in plain English - enrollment, staffing, rent - and build the spreadsheet for you.</p>
               </div>
               <div className="bg-card border border-border/60 rounded-2xl p-6">
                 <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-4">
@@ -165,7 +165,7 @@ export function DashboardPage() {
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <h4 className="font-display font-bold text-foreground mb-2">Export a real Excel workbook</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">Download a multi-tab spreadsheet with live formulas — ready for your authorizer, lender, or board.</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">Download a multi-tab spreadsheet with live formulas - ready for your authorizer, lender, or board.</p>
               </div>
             </div>
           </div>

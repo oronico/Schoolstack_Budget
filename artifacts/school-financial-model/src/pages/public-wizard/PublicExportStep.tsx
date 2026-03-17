@@ -74,7 +74,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
       <p className="text-xl text-muted-foreground mb-6 max-w-lg mx-auto">
         {anyExported
           ? "Check your downloads folder. Your workbook is fully formatted and lender-ready."
-          : "Download your budget model as a polished Excel workbook — ready for lender meetings."}
+          : "Download your budget model as a polished Excel workbook - ready for lender meetings."}
       </p>
 
       {lendingLabIntent === "plan_to_apply" && (

@@ -53,7 +53,7 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
     tip: "Your primary income: tuition, registration fees, activity fees, and other charges families pay.",
     common: true,
     fundingHint: {
-      tuition_based: "This is typically your largest revenue source — 70-90% of total revenue for private and micro schools.",
+      tuition_based: "This is typically your largest revenue source - 70-90% of total revenue for private and micro schools.",
       charter_public_funded: "Charter schools may charge fees for extracurriculars and materials, but tuition is not the main source.",
       hybrid_mixed: "Tuition supplements your public funding. Common for schools with both public per-pupil funding and family-paid tuition.",
     },
@@ -75,9 +75,9 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
     tip: "ESA vouchers, tax-credit scholarships, and education savings accounts families use to pay tuition.",
     common: false,
     fundingHint: {
-      tuition_based: "Growing revenue source — check if your state has an ESA or voucher program.",
+      tuition_based: "Growing revenue source - check if your state has an ESA or voucher program.",
       charter_public_funded: "Generally not applicable to charter schools receiving per-pupil funding.",
-      hybrid_mixed: "A key supplemental source — ESA/voucher funds can bridge the gap between public funding and full cost.",
+      hybrid_mixed: "A key supplemental source - ESA/voucher funds can bridge the gap between public funding and full cost.",
     },
   },
   philanthropy: {
@@ -414,7 +414,7 @@ export function RevenueStep() {
             Where Does Your Money Come From?
           </h2>
           <p className="text-muted-foreground text-lg">
-            Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget. Most founders start with just one or two sources — you can always add more as your school grows.
+            Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget. Most founders start with just one or two sources - you can always add more as your school grows.
           </p>
         </div>
 
@@ -430,7 +430,7 @@ export function RevenueStep() {
             <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-foreground">
               <span className="font-semibold">Revenue needs to cover {y1Students} students in Year 1{y5Students > y1Students ? `, growing to ${y5Students} by Year 5` : ""}.</span>{" "}
-              Lenders want to see diversified revenue — schools with 2+ income streams are considered lower risk.
+              Lenders want to see diversified revenue - schools with 2+ income streams are considered lower risk.
             </div>
           </div>
         )}
@@ -498,7 +498,7 @@ export function RevenueStep() {
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Revenue by Source</h2>
         <p className="text-muted-foreground text-lg">
-          Enter your expected amounts for each year. We've filled in smart defaults — adjust them to match your school.
+          Enter your expected amounts for each year. We've filled in smart defaults - adjust them to match your school.
         </p>
       </div>
 
@@ -511,7 +511,7 @@ export function RevenueStep() {
               err?.message ? <p key={key} className="text-sm text-destructive mt-1">{err.message}</p> : null
             ))}
             {hasRowErrors && (
-              <p className="text-sm text-destructive mt-1">One or more revenue line items have issues — check the highlighted rows below.</p>
+              <p className="text-sm text-destructive mt-1">One or more revenue line items have issues - check the highlighted rows below.</p>
             )}
           </div>
         </div>
@@ -524,7 +524,7 @@ export function RevenueStep() {
             <span className="font-semibold">Building capacity: {maxCapacity} students.</span>{" "}
             Your enrollment grows from {y1Students} to {y5Students} over 5 years
             {y5Students > (maxCapacity || 0) ? (
-              <span className="text-amber-700 font-semibold"> — that exceeds your building capacity. Revenue projections beyond capacity aren't credible to lenders.</span>
+              <span className="text-amber-700 font-semibold"> - that exceeds your building capacity. Revenue projections beyond capacity aren't credible to lenders.</span>
             ) : (
               <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5).</span>
             )}
@@ -557,7 +557,7 @@ export function RevenueStep() {
                 {watch("schoolProfile.enrollmentRevenueMethod") === "ada"
                   ? "Funding is based on actual student attendance. Requires prior-year ADA data."
                   : watch("schoolProfile.enrollmentRevenueMethod") === "count_days"
-                    ? "Funding is based on student count days — students enrolled on specific reporting dates."
+                    ? "Funding is based on student count days - students enrolled on specific reporting dates."
                     : "Funding is based on average daily membership (enrolled students), regardless of attendance."}
               </p>
             </div>
@@ -584,7 +584,7 @@ export function RevenueStep() {
                 <div>
                   <p className="text-sm font-semibold text-amber-800">ADA Attendance Ratio</p>
                   <p className="text-xs text-amber-700">
-                    When your state uses ADA, funding is adjusted by the ratio of actual attendance to enrollment. Enter your prior-year data below — or leave blank to default to 95% attendance.
+                    When your state uses ADA, funding is adjusted by the ratio of actual attendance to enrollment. Enter your prior-year data below - or leave blank to default to 95% attendance.
                   </p>
                 </div>
               </div>
@@ -626,7 +626,7 @@ export function RevenueStep() {
                       {(ratio * 100).toFixed(1)}%
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {adm > 0 ? "(from your data)" : "(default — enter prior-year data for accuracy)"}
+                      {adm > 0 ? "(from your data)" : "(default - enter prior-year data for accuracy)"}
                     </span>
                   </div>
                 );
@@ -1114,7 +1114,7 @@ function RevenueLineItem({
                 <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 flex items-start gap-2 mt-2">
                   <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                   <span>
-                    <strong>${row.amounts[0].toLocaleString()}</strong> per student seems high — did you enter an annual total instead of a per-student amount?
+                    <strong>${row.amounts[0].toLocaleString()}</strong> per student seems high - did you enter an annual total instead of a per-student amount?
                     {y1Students > 0 && (
                       <> A per-student amount of <strong>${Math.round(row.amounts[0] / y1Students).toLocaleString()}</strong> would give the same ${row.amounts[0].toLocaleString()} total.</>
                     )}

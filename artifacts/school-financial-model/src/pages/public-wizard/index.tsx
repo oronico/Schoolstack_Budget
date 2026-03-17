@@ -45,7 +45,7 @@ function saveToStorage(data: Record<string, unknown>, step: number) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     localStorage.setItem(STORAGE_KEY + "_step", String(step));
   } catch {
-    // Storage full or unavailable — silently skip
+    // Storage full or unavailable - silently skip
   }
 }
 

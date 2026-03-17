@@ -23,7 +23,7 @@ export async function sendPasswordResetEmail(
 
   if (!resend) {
     console.warn(
-      `[mailer] Resend not configured — password reset email not sent. ` +
+      `[mailer] Resend not configured - password reset email not sent. ` +
       `Set RESEND_API_KEY to enable. ` +
       `Reset link: ${resetUrl}`,
     );
@@ -45,7 +45,7 @@ export async function sendPasswordResetEmail(
         "",
         "If you did not request this, you can safely ignore this email.",
         "",
-        "— The SchoolStack Budget Team",
+        " - The SchoolStack Budget Team",
       ].join("\n"),
       html: `
         <div style="font-family: 'Nunito', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">

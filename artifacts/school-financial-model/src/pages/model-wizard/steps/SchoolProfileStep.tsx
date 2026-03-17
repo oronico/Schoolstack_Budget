@@ -222,7 +222,7 @@ export function SchoolProfileStep() {
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Tell Us About Your School</h2>
-        <p className="text-muted-foreground text-lg">We'll tailor everything to your school's type, stage, and structure. There are no wrong answers here — just tell us where you are today, and we'll meet you there.</p>
+        <p className="text-muted-foreground text-lg">We'll tailor everything to your school's type, stage, and structure. There are no wrong answers here - just tell us where you are today, and we'll meet you there.</p>
       </div>
 
       <div>
@@ -329,7 +329,7 @@ export function SchoolProfileStep() {
             selected={lendingLabIntent === "want_to_understand"}
             onSelect={() => setValue("schoolProfile.lendingLabIntent", "want_to_understand", { shouldDirty: true })}
             icon={<HelpCircle className="h-5 w-5" />}
-            title="Maybe — I want to understand what would be needed"
+            title="Maybe - I want to understand what would be needed"
             description="I'd like to see what a lender-ready model looks like"
           />
           <RadioCard
@@ -380,7 +380,7 @@ export function SchoolProfileStep() {
           <MapPin className="h-5 w-5 text-primary" /> Facility & Location
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Your facility situation affects how we project expenses — especially rent escalation, lease renewals, and property costs.
+          Your facility situation affects how we project expenses - especially rent escalation, lease renewals, and property costs.
         </p>
 
         <div className="space-y-5">
@@ -395,7 +395,7 @@ export function SchoolProfileStep() {
               <div className="flex items-start gap-3">
                 <HelpCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-foreground">
-                  <span className="font-semibold">No worries — an estimate is fine.</span>{" "}
+                  <span className="font-semibold">No worries - an estimate is fine.</span>{" "}
                   {schoolType && FACILITY_BENCHMARKS[schoolType]
                     ? `Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${FACILITY_BENCHMARKS[schoolType]} for rent.`
                     : "Most small schools budget $2,000–$8,000/month for facility costs."}
@@ -490,7 +490,7 @@ export function SchoolProfileStep() {
                   )}
                   {!forProfit && !hasMortgage && (
                     <p className="text-sm text-muted-foreground italic">
-                      Great — owning your space with no mortgage means lower facility costs in your model.
+                      Great - owning your space with no mortgage means lower facility costs in your model.
                     </p>
                   )}
                 </div>
@@ -518,7 +518,7 @@ export function SchoolProfileStep() {
                   <div>
                     <h4 className="text-sm font-bold text-foreground mb-3">When does your lease expire?</h4>
                     <p className="text-xs text-muted-foreground mb-3">
-                      This matters — for years beyond your lease, we'll model a conservative rent increase to reflect renewal risk.
+                      This matters - for years beyond your lease, we'll model a conservative rent increase to reflect renewal risk.
                     </p>
                     <div className="grid grid-cols-2 gap-4 max-w-sm">
                       <FormSelect
@@ -708,7 +708,7 @@ export function SchoolProfileStep() {
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Prior-Year Actuals</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Last year's real numbers are the foundation for credible projections — they help us stress-test assumptions and give lenders confidence in your plan.
+            Last year's real numbers are the foundation for credible projections - they help us stress-test assumptions and give lenders confidence in your plan.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput

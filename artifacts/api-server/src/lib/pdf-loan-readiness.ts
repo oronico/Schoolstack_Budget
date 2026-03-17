@@ -9,7 +9,7 @@ import type { ConsultantOutput, KeyMetric, Recommendation, StressScenario } from
 export async function generateLoanReadinessPDF(consultantData: ConsultantOutput, schoolName: string, entityType?: string): Promise<Buffer> {
   const doc = createDoc();
 
-  drawHeader(doc, `${schoolName} — Loan Readiness Report`, "SchoolStack Budget Consultant Analysis");
+  drawHeader(doc, `${schoolName} - Loan Readiness Report`, "SchoolStack Budget Consultant Analysis");
 
   sectionTitle(doc, "Executive Summary");
   bodyText(doc, consultantData.executiveSummary);

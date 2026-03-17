@@ -139,7 +139,7 @@ export function StaffingStep() {
           Who Runs Your School?
         </h2>
         <p className="text-muted-foreground text-lg">
-          Add every person on your team — teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small — many great schools launch with just a founder and one or two team members.
+          Add every person on your team - teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
         </p>
       </div>
 
@@ -216,7 +216,7 @@ export function StaffingStep() {
                 <span>
                   {" · "}
                   <span className="font-medium text-foreground">Year 5:</span> You'll have{" "}
-                  {y5Students} students — consider whether you'll need additional hires.
+                  {y5Students} students - consider whether you'll need additional hires.
                   {y5Students / totalFTE > 15 && (
                     <span className="text-amber-600 font-medium"> Ratio would stretch to {Math.round(y5Students / totalFTE * 10) / 10}:1 without new hires.</span>
                   )}

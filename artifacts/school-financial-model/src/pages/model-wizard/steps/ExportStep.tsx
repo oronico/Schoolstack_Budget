@@ -73,7 +73,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
         {anyExported
           ? "Check your downloads folder. All documents are lender-ready and fully formatted."
-          : "Download your financial model as a polished Excel workbook — ready for lender meetings."}
+          : "Download your financial model as a polished Excel workbook - ready for lender meetings."}
       </p>
 
       <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
@@ -90,7 +90,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <ExportCard
           icon={<FileSpreadsheet className="h-7 w-7" />}
           title="Formula Workbook"
-          description="Assumptions page with live formulas — lenders can test the math"
+          description="Assumptions page with live formulas - lenders can test the math"
           isLoading={loading === "formula"}
           isExported={exported.has("formula")}
           disabled={loading !== null && loading !== "formula"}

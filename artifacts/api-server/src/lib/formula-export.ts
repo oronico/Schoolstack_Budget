@@ -541,7 +541,7 @@ function buildAssumptions(
 
   let r = 1;
   ws.mergeCells(r, 1, r, 7);
-  ws.getCell(r, 1).value = `${sp.schoolName || "School"} — Financial Model Assumptions`;
+  ws.getCell(r, 1).value = `${sp.schoolName || "School"} - Financial Model Assumptions`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
   ws.getCell(r, 1).alignment = { horizontal: "left", vertical: "middle" };
   ws.getRow(r).height = 32;
@@ -996,7 +996,7 @@ function buildFiveYearModel(
 
   let r = 1;
   ws.mergeCells(r, 1, r, 6);
-  ws.getCell(r, 1).value = `${schoolName} — 5-Year Financial Model`;
+  ws.getCell(r, 1).value = `${schoolName} - 5-Year Financial Model`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
   ws.getCell(r, 1).alignment = { horizontal: "left", vertical: "middle" };
   ws.getRow(r).height = 32;
@@ -1565,7 +1565,7 @@ function buildProForma(
 
   let r = 1;
   ws.mergeCells(r, 1, r, 14);
-  ws.getCell(r, 1).value = `${schoolName} — ${yr1Label} Pro Forma`;
+  ws.getCell(r, 1).value = `${schoolName} - ${yr1Label} Pro Forma`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
   ws.getCell(r, 1).alignment = { horizontal: "left", vertical: "middle" };
   ws.getRow(r).height = 32;
@@ -1882,7 +1882,7 @@ function buildActualsVsProjections(
 
   let r = 1;
   ws.mergeCells(r, 1, r, cols);
-  ws.getCell(r, 1).value = `${schoolName} — Actuals vs. Projections`;
+  ws.getCell(r, 1).value = `${schoolName} - Actuals vs. Projections`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
   ws.getCell(r, 1).alignment = { horizontal: "left", vertical: "middle" };
   ws.getRow(r).height = 32;
@@ -2066,10 +2066,10 @@ function buildActualsVsProjections(
   r++; ws.getCell(r, 1).value = "⚠ First-year positive income (rare)"; dc(ws.getCell(r, 1));
   ws.getCell(r, 1).font = { size: 11, name: "Calibri", color: { argb: "FFD97706" } };
   if (sp.schoolStage === "operating_school") {
-    ws.getCell(r, yr1Col).value = "Operating school — less unusual";
+    ws.getCell(r, yr1Col).value = "Operating school - less unusual";
     ws.getCell(r, yr1Col).font = { size: 11, name: "Calibri", color: { argb: "FF328555" } };
   } else if (ni0 > 0) {
-    ws.getCell(r, yr1Col).value = "New school showing Year 1 profit — verify assumptions";
+    ws.getCell(r, yr1Col).value = "New school showing Year 1 profit - verify assumptions";
     ws.getCell(r, yr1Col).font = { size: 11, name: "Calibri", color: { argb: "FFD97706" }, bold: true };
   } else {
     ws.getCell(r, yr1Col).value = "Typical startup loss pattern";
@@ -2104,7 +2104,7 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   const startingCash = data.priorYearSnapshot?.endingCash || data.currentYearProjection?.currentCash || 0;
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "SchoolStack Budget — Formula Model";
+  wb.creator = "SchoolStack Budget - Formula Model";
   wb.created = new Date();
   wb.calcProperties = { fullCalcOnLoad: true };
 

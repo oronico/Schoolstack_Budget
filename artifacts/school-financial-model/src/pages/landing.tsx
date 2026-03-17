@@ -51,7 +51,7 @@ export function LandingPage() {
               </p>
 
               <p className="text-lg text-[#1E293B]/60 mb-10 leading-relaxed max-w-2xl">
-                Budgeting and financial modeling can be overwhelming — but it
+                Budgeting and financial modeling can be overwhelming - but it
                 doesn't have to be. Build a clear, lender-ready 5-year model
                 that reflects your mission, your values, and your plan in under
                 an hour. No finance degree required.
@@ -88,7 +88,7 @@ export function LandingPage() {
               Your mission, vision, and values live in your budget
             </h2>
             <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
-              A 5-year financial model isn't just numbers on a spreadsheet — it's
+              A 5-year financial model isn't just numbers on a spreadsheet - it's
               how you show the world what you're building and why it will work.
               We'll help you build one step at a time.
             </p>
@@ -99,7 +99,7 @@ export function LandingPage() {
               {
                 icon: <Calculator className="w-8 h-8 text-[#D97706]" />,
                 title: "Guided Wizard",
-                desc: "Not sure where to start? We ask you questions in plain English about enrollment, staffing, and facilities — then translate your answers into a financial model. One step at a time.",
+                desc: "Not sure where to start? We ask you questions in plain English about enrollment, staffing, and facilities - then translate your answers into a financial model. One step at a time.",
               },
               {
                 icon: <FileSpreadsheet className="w-8 h-8 text-[#328555]" />,
@@ -109,7 +109,7 @@ export function LandingPage() {
               {
                 icon: <ShieldCheck className="w-8 h-8 text-[#0D9488]" />,
                 title: "Consultant Guidance",
-                desc: "Wondering if your numbers make sense? Get plain-English feedback on your model — what's working, what to watch, and where to strengthen before you present it.",
+                desc: "Wondering if your numbers make sense? Get plain-English feedback on your model - what's working, what to watch, and where to strengthen before you present it.",
               },
             ].map((item, i) => (
               <motion.div
@@ -148,7 +148,7 @@ export function LandingPage() {
               Built for the high-stakes moments
             </h2>
             <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
-              When someone asks "can this school sustain itself?" — your model
+              When someone asks "can this school sustain itself?" - your model
               needs to answer clearly. These are the moments it's built for.
             </p>
           </motion.div>
@@ -207,7 +207,7 @@ export function LandingPage() {
             <p className="text-lg text-[#1E293B]/60 mb-8">
               SchoolStack Budget works seamlessly alongside SchoolStack Space
               (facility planning) and the flagship SchoolStack back office
-              platform — coming Fall 2026 — to keep your entire founding
+              platform - coming Fall 2026 - to keep your entire founding
               journey aligned.
             </p>
             <div className="flex justify-center gap-6 text-sm font-bold">
@@ -245,7 +245,7 @@ export function LandingPage() {
             </h2>
             <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
               You decided to build a school. Let's make sure the financial story
-              matches the vision. Start your 5-year model today — it takes less
+              matches the vision. Start your 5-year model today - it takes less
               than an hour.
             </p>
 

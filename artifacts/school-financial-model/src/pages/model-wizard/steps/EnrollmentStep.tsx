@@ -116,7 +116,7 @@ function EnrollmentBenchmark({ schoolType, maxCapacity, isNewSchool }: { schoolT
     }
     benchmarks.push({
       label: "Growth: 15–25% per year is a strong, realistic ramp",
-      detail: "Steady growth is achievable growth. Year-over-year increases above 25% require a concrete recruitment plan — make sure yours is in place before projecting it.",
+      detail: "Steady growth is achievable growth. Year-over-year increases above 25% require a concrete recruitment plan - make sure yours is in place before projecting it.",
     });
   }
 
@@ -183,13 +183,13 @@ function DemandConfidenceIndicator({ retentionRate, applicationsReceived, waitli
   if (pipeline > 0) {
     if (coveragePct >= 100) {
       level = "strong";
-      message = `Strong demand — pipeline covers ${coveragePct}% of Year 1 seats`;
+      message = `Strong demand - pipeline covers ${coveragePct}% of Year 1 seats`;
     } else if (coveragePct >= 60) {
       level = "moderate";
-      message = `Moderate demand — pipeline covers ${coveragePct}% of Year 1 seats`;
+      message = `Moderate demand - pipeline covers ${coveragePct}% of Year 1 seats`;
     } else {
       level = "weak";
-      message = `Building demand — pipeline covers ${coveragePct}% of Year 1 seats`;
+      message = `Building demand - pipeline covers ${coveragePct}% of Year 1 seats`;
     }
   }
 
@@ -197,10 +197,10 @@ function DemandConfidenceIndicator({ retentionRate, applicationsReceived, waitli
     if (pipeline === 0) {
       if (retentionRate >= 85) {
         level = "strong";
-        message = `Strong retention — ${retentionRate}% of students expected to re-enroll`;
+        message = `Strong retention - ${retentionRate}% of students expected to re-enroll`;
       } else if (retentionRate >= 80) {
         level = "moderate";
-        message = `Solid retention — ${retentionRate}% of students expected to re-enroll`;
+        message = `Solid retention - ${retentionRate}% of students expected to re-enroll`;
       } else {
         level = "weak";
         message = `${retentionRate}% retention means you'll need a stronger recruitment plan to hit your targets`;
@@ -211,7 +211,7 @@ function DemandConfidenceIndicator({ retentionRate, applicationsReceived, waitli
         message += ` with ${retentionRate}% retention`;
       } else if (retentionRate < 80) {
         if (level === "strong") level = "moderate";
-        message += ` — but ${retentionRate}% retention is a concern`;
+        message += ` - but ${retentionRate}% retention is a concern`;
       }
     }
   }
@@ -272,14 +272,14 @@ function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOpe
           Retention & Demand Signals
         </h4>
         <p className="text-xs text-muted-foreground">
-          Strong projections start with real data. Knowing your retention rate, application pipeline, and waitlist helps you set realistic enrollment targets — and shows anyone reviewing your model that your numbers are grounded in evidence, not guesswork.
+          Strong projections start with real data. Knowing your retention rate, application pipeline, and waitlist helps you set realistic enrollment targets - and shows anyone reviewing your model that your numbers are grounded in evidence, not guesswork.
         </p>
       </div>
 
       <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl border border-blue-200">
         <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
         <p className="text-xs text-blue-700">
-          These fields are optional but highly encouraged. Taking stock of your demand pipeline is one of the most valuable steps in building a data-driven model — it turns your enrollment projections from estimates into evidence-backed targets. This is especially important for ESA-funded and charter schools where per-pupil revenue is the primary income stream.
+          These fields are optional but highly encouraged. Taking stock of your demand pipeline is one of the most valuable steps in building a data-driven model - it turns your enrollment projections from estimates into evidence-backed targets. This is especially important for ESA-funded and charter schools where per-pupil revenue is the primary income stream.
         </p>
       </div>
 
@@ -501,7 +501,7 @@ export function EnrollmentStep() {
     if (prev > 0 && curr > 0) {
       const growth = (curr - prev) / prev;
       if (growth > 0.25) {
-        warnings.push(`${futureYearLabels[i - 1]} to ${futureYearLabels[i]} growth is ${Math.round(growth * 100)}% — over 25% year-over-year growth requires a concrete recruitment strategy to be achievable.`);
+        warnings.push(`${futureYearLabels[i - 1]} to ${futureYearLabels[i]} growth is ${Math.round(growth * 100)}% - over 25% year-over-year growth requires a concrete recruitment strategy to be achievable.`);
       }
     }
   }
@@ -519,7 +519,7 @@ export function EnrollmentStep() {
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Programs & Enrollment</h2>
         <p className="text-muted-foreground text-lg">
-          Define every program you offer — each with its own tuition and enrollment. Full day, half day, drop-in, after school, four-day week — whatever you run. Don't worry about getting this perfect — your budget is a living document you'll refine over time.
+          Define every program you offer - each with its own tuition and enrollment. Full day, half day, drop-in, after school, four-day week - whatever you run. Don't worry about getting this perfect - your budget is a living document you'll refine over time.
         </p>
       </div>
 
@@ -530,7 +530,7 @@ export function EnrollmentStep() {
             {SCHOOL_TYPE_LABELS[schoolType] ? SCHOOL_TYPE_LABELS[schoolType].toLowerCase() : "school"} offer?
           </p>
           <p className="text-sm text-muted-foreground mb-4">
-            Every school is different. Add each program you run — they can be grade bands, schedule types, or specialty offerings. Each gets its own tuition rate and enrollment numbers.
+            Every school is different. Add each program you run - they can be grade bands, schedule types, or specialty offerings. Each gets its own tuition rate and enrollment numbers.
           </p>
           <div className="flex flex-wrap gap-2 mb-4">
             {availableSuggestions.map(name => (

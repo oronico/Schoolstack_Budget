@@ -51,11 +51,11 @@ const CATEGORY_GUIDANCE: Record<string, { tip: string; common: boolean }> = {
     common: true,
   },
   technology: {
-    tip: "Devices, software, internet. Even small schools need SIS/LMS tools — budget $150–$300 per student.",
+    tip: "Devices, software, internet. Even small schools need SIS/LMS tools - budget $150–$300 per student.",
     common: true,
   },
   occupancy_facility: {
-    tip: "Rent, utilities, insurance. This is often the biggest non-personnel expense — typically 15–25% of revenue.",
+    tip: "Rent, utilities, insurance. This is often the biggest non-personnel expense - typically 15–25% of revenue.",
     common: true,
   },
   administrative_general: {
@@ -530,7 +530,7 @@ export function ExpenseStep() {
             What Does Your School Spend On?
           </h2>
           <p className="text-muted-foreground text-lg">
-            Check the categories that apply to your school. We'll show you just those sections with smart defaults filled in. You can always add or remove categories later. Best guesses are perfectly fine — budgeting is about practice, not perfection.
+            Check the categories that apply to your school. We'll show you just those sections with smart defaults filled in. You can always add or remove categories later. Best guesses are perfectly fine - budgeting is about practice, not perfection.
           </p>
         </div>
 
@@ -538,7 +538,7 @@ export function ExpenseStep() {
           <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
           <div className="text-sm text-foreground">
             <span className="font-semibold">Don't overthink it.</span>{" "}
-            Start with the categories you know about. Most small schools have costs in all four main areas — program, tech, facility, and admin. You can always come back and adjust.
+            Start with the categories you know about. Most small schools have costs in all four main areas - program, tech, facility, and admin. You can always come back and adjust.
           </div>
         </div>
 
@@ -848,7 +848,7 @@ export function ExpenseStep() {
               {(loanAmount || 0) > 0 && (loanTermYears || 0) > 0 && (
                 <div className="text-xs text-muted-foreground bg-amber-50 rounded-lg px-3 py-2">
                   Annual debt service: <span className="font-semibold text-amber-700">{formatCurrency(calculateLoanPayment(loanAmount || 0, loanRate || 0, loanTermYears || 0))}</span>
-                  <span className="text-muted-foreground"> — auto-added to Capital & Debt below</span>
+                  <span className="text-muted-foreground"> - auto-added to Capital & Debt below</span>
                 </div>
               )}
             </div>
@@ -893,9 +893,9 @@ export function ExpenseStep() {
             <span className="font-semibold">Building capacity: {maxCapacity} students.</span>{" "}
             Your enrollment grows from {y1Students} to {y5Students} over 5 years
             {y5Students > (maxCapacity || 0) ? (
-              <span className="text-amber-700 font-semibold"> — that exceeds your building capacity. Lenders will flag this.</span>
+              <span className="text-amber-700 font-semibold"> - that exceeds your building capacity. Lenders will flag this.</span>
             ) : (
-              <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5 — good for underwriting).</span>
+              <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5 - good for underwriting).</span>
             )}
           </div>
         </div>

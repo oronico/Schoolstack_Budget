@@ -701,7 +701,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
     bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
   };
 
-  ws.getCell("B1").value = "SchoolStack Budget — Lender Pro Forma Assumptions";
+  ws.getCell("B1").value = "SchoolStack Budget - Lender Pro Forma Assumptions";
   ws.getCell("B1").font = titleFont;
   ws.mergeCells("B1:D1");
 
@@ -744,11 +744,11 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
     { row: 32, label: "Students per Teacher", key: "studentsPerTeacher", fmt: NUM },
     { row: 33, label: "Avg Teacher Salary (Year 1)", key: "teacherSalaryY1", fmt: CUR },
     { row: 34, label: "Teacher Salary Growth %", key: "teacherSalaryGrowthPct", fmt: PCT },
-    { row: 35, label: "Admin FTE — Year 1", key: "adminFteY1", fmt: NUM },
-    { row: 36, label: "Admin FTE — Year 2", key: "adminFteY2", fmt: NUM },
-    { row: 37, label: "Admin FTE — Year 3", key: "adminFteY3", fmt: NUM },
-    { row: 38, label: "Admin FTE — Year 4", key: "adminFteY4", fmt: NUM },
-    { row: 39, label: "Admin FTE — Year 5", key: "adminFteY5", fmt: NUM },
+    { row: 35, label: "Admin FTE - Year 1", key: "adminFteY1", fmt: NUM },
+    { row: 36, label: "Admin FTE - Year 2", key: "adminFteY2", fmt: NUM },
+    { row: 37, label: "Admin FTE - Year 3", key: "adminFteY3", fmt: NUM },
+    { row: 38, label: "Admin FTE - Year 4", key: "adminFteY4", fmt: NUM },
+    { row: 39, label: "Admin FTE - Year 5", key: "adminFteY5", fmt: NUM },
     { row: 40, label: "Avg Admin Salary (Year 1)", key: "adminSalaryY1", fmt: CUR },
     { row: 41, label: "Admin Salary Growth %", key: "adminSalaryGrowthPct", fmt: PCT },
     { row: 42, label: "Benefits Burden %", key: "benefitsBurdenPct", fmt: PCT },
@@ -851,9 +851,9 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       { row: gbStartRow + 4, label: "Prior-Year ADM", value: Number(input.priorYearADM) || 0, fmt: NUM },
       { row: gbStartRow + 5, label: "Prior-Year ADA", value: Number(input.priorYearADA) || 0, fmt: NUM },
       { row: gbStartRow + 6, label: "Attendance Ratio (ADA ÷ ADM)", value: (Number(input.priorYearADM) || 0) > 0 ? Math.min((Number(input.priorYearADA) || 0) / (Number(input.priorYearADM) || 1), 1) : 0.95, fmt: "0.00%" },
-      { row: gbStartRow + 7, label: "Per-Pupil Rate — K-5", value: Number(input.gbK5PerPupil) || 0, fmt: CUR },
-      { row: gbStartRow + 8, label: "Per-Pupil Rate — 6-8", value: Number(input.gbM68PerPupil) || 0, fmt: CUR },
-      { row: gbStartRow + 9, label: "Per-Pupil Rate — 9-12", value: Number(input.gbH912PerPupil) || 0, fmt: CUR },
+      { row: gbStartRow + 7, label: "Per-Pupil Rate - K-5", value: Number(input.gbK5PerPupil) || 0, fmt: CUR },
+      { row: gbStartRow + 8, label: "Per-Pupil Rate - 6-8", value: Number(input.gbM68PerPupil) || 0, fmt: CUR },
+      { row: gbStartRow + 9, label: "Per-Pupil Rate - 9-12", value: Number(input.gbH912PerPupil) || 0, fmt: CUR },
     ];
     for (const gr of gbRows) {
       ws.getCell(`C${gr.row}`).value = gr.label;

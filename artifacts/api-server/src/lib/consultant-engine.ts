@@ -926,7 +926,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   if (retentionRate !== undefined && retentionRate < 80) {
     enrollmentGuidance.push(
-      `Year-over-year retention of ${retentionRate}% is below 80%, which means you'll need to recruit more new families each year to hit your enrollment targets. Understanding what's driving attrition — and building a plan to improve it — will make your projections more achievable and your model more credible.`,
+      `Year-over-year retention of ${retentionRate}% is below 80%, which means you'll need to recruit more new families each year to hit your enrollment targets. Understanding what's driving attrition - and building a plan to improve it - will make your projections more achievable and your model more credible.`,
     );
   }
 
@@ -936,7 +936,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (pipeline > 0 && y1Projected > 0 && pipeline >= y1Projected) {
     const coveragePct = Math.round((pipeline / y1Projected) * 100);
     enrollmentGuidance.push(
-      `Strong demand signal: ${pipeline} applications + waitlist entries cover ${coveragePct}% of Year 1 projected enrollment (${y1Projected} seats). Your projections are backed by real demand — that's exactly the kind of evidence that makes a model credible.`,
+      `Strong demand signal: ${pipeline} applications + waitlist entries cover ${coveragePct}% of Year 1 projected enrollment (${y1Projected} seats). Your projections are backed by real demand - that's exactly the kind of evidence that makes a model credible.`,
     );
   }
 
@@ -952,7 +952,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       if (retainedStudents > 0) parts.push(`${retainedStudents} retained`);
       if (pipeline > 0) parts.push(`${pipeline} applications/waitlist`);
       enrollmentGuidance.push(
-        `Projected Year 1 enrollment (${y1Projected}) exceeds your documented pipeline of ${evidencedStudents} students (${parts.join(" + ")}) by ${gap}. To make these projections achievable, build out your recruitment strategy for the remaining ${gap} seats — marketing plan, open house schedule, community partnerships, or referral programs.`,
+        `Projected Year 1 enrollment (${y1Projected}) exceeds your documented pipeline of ${evidencedStudents} students (${parts.join(" + ")}) by ${gap}. To make these projections achievable, build out your recruitment strategy for the remaining ${gap} seats - marketing plan, open house schedule, community partnerships, or referral programs.`,
       );
     }
   }
@@ -1044,8 +1044,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       revenuePerStudent >= 10000
         ? "Healthy per-student revenue provides a solid foundation for sustainability."
         : revenuePerStudent >= 7000
-          ? "Per-student revenue is moderate — consider whether tuition or supplemental funding can increase."
-          : "Per-student revenue is low — this may make it difficult to cover costs as you scale.",
+          ? "Per-student revenue is moderate - consider whether tuition or supplemental funding can increase."
+          : "Per-student revenue is low - this may make it difficult to cover costs as you scale.",
     benchmark: isCharterBenchmark ? "Charter avg: $10,000–$15,000" : "Private avg: $12,000–$25,000",
   });
 
@@ -1055,10 +1055,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     status: staffingCostPct <= 0.55 ? "good" : staffingCostPct <= 0.65 ? "warning" : "danger",
     interpretation:
       staffingCostPct <= 0.55
-        ? "Staffing costs are well-controlled — you have room for other priorities."
+        ? "Staffing costs are well-controlled - you have room for other priorities."
         : staffingCostPct <= 0.65
-          ? `Payroll is ${pct(staffingCostPct)} of revenue — most sustainable schools keep this under 65%.`
-          : `Payroll is ${pct(staffingCostPct)} of revenue — this is high and could threaten financial stability.`,
+          ? `Payroll is ${pct(staffingCostPct)} of revenue - most sustainable schools keep this under 65%.`
+          : `Payroll is ${pct(staffingCostPct)} of revenue - this is high and could threaten financial stability.`,
     benchmark: "Industry avg: 50–65% of revenue",
   });
 
@@ -1070,8 +1070,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       opexCostPct <= 0.30
         ? "Operating costs are lean relative to revenue."
         : opexCostPct <= 0.40
-          ? `Operating costs are moderate — watch rent escalation and service costs over the ${yearCount}-year period.`
-          : "Operating costs are consuming a large share of revenue — review each cost center for savings.",
+          ? `Operating costs are moderate - watch rent escalation and service costs over the ${yearCount}-year period.`
+          : "Operating costs are consuming a large share of revenue - review each cost center for savings.",
     benchmark: "Target: under 30% of revenue",
   });
 
@@ -1084,10 +1084,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     status: y1NetMargin >= 0.1 ? "good" : y1NetMargin >= 0 ? "warning" : "danger",
     interpretation:
       y1NetMargin >= 0.1
-        ? "Year 1 shows a healthy surplus — a strong start for a new school."
+        ? "Year 1 shows a healthy surplus - a strong start for a new school."
         : y1NetMargin >= 0
-          ? "Year 1 is near break-even — typical for startup schools, but leaves little room for surprises."
-          : `Year 1 projects a ${fmt(Math.abs(y1.netIncome))} deficit — plan for how this will be funded.`,
+          ? "Year 1 is near break-even - typical for startup schools, but leaves little room for surprises."
+          : `Year 1 projects a ${fmt(Math.abs(y1.netIncome))} deficit - plan for how this will be funded.`,
     benchmark: "Startup target: 0–5%; mature: 10%+",
   });
 
@@ -1097,10 +1097,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     status: lastYearNetMargin >= 0.15 ? "good" : lastYearNetMargin >= 0.05 ? "warning" : "danger",
     interpretation:
       lastYearNetMargin >= 0.15
-        ? `By Year ${lastYearNum} the model shows strong ${profitWord} — your school is on track for financial sustainability.`
+        ? `By Year ${lastYearNum} the model shows strong ${profitWord} - your school is on track for financial sustainability.`
         : lastYearNetMargin >= 0.05
-          ? `Year ${lastYearNum} margin is thin — a small revenue shortfall could push you into the red.`
-          : `Year ${lastYearNum} margin is concerning — building a clearer path to ${profitWord} will strengthen your model.`,
+          ? `Year ${lastYearNum} margin is thin - a small revenue shortfall could push you into the red.`
+          : `Year ${lastYearNum} margin is concerning - building a clearer path to ${profitWord} will strengthen your model.`,
     benchmark: "Target: 10–15%+",
   });
 
@@ -1112,8 +1112,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       revenueGrowth >= 0.5
         ? `Strong projected revenue growth over the ${yearCount}-year period.`
         : revenueGrowth >= 0.2
-          ? "Moderate growth — consider whether enrollment targets are ambitious enough."
-          : "Low projected growth — this could signal difficulty scaling the school.",
+          ? "Moderate growth - consider whether enrollment targets are ambitious enough."
+          : "Low projected growth - this could signal difficulty scaling the school.",
     benchmark: "Healthy schools: 30–80% over 5 years",
   });
 
@@ -1124,10 +1124,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       status: capacityUtilLastYear >= 0.8 ? "good" : capacityUtilLastYear >= 0.6 ? "warning" : "danger",
       interpretation:
         capacityUtilLastYear >= 0.8
-          ? `Year ${lastYearNum} enrollment approaches facility capacity — efficient use of space.`
+          ? `Year ${lastYearNum} enrollment approaches facility capacity - efficient use of space.`
           : capacityUtilLastYear >= 0.6
-            ? "You have room to grow into your facility — plan marketing to fill seats."
-            : `Facility will be underutilized by Year ${lastYearNum} — consider a smaller space or higher enrollment targets.`,
+            ? "You have room to grow into your facility - plan marketing to fill seats."
+            : `Facility will be underutilized by Year ${lastYearNum} - consider a smaller space or higher enrollment targets.`,
       benchmark: "Optimal: 80–95% utilization",
     });
   }
@@ -1139,10 +1139,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       status: dscr >= 1.25 ? "good" : dscr >= 1.0 ? "warning" : "danger",
       interpretation:
         dscr >= 1.25
-          ? "DSCR is above 1.25x — your operating income comfortably covers debt payments."
+          ? "DSCR is above 1.25x - your operating income comfortably covers debt payments."
           : dscr >= 1.0
-            ? "DSCR is above 1.0x but tight — there's little margin if revenue dips. Look for ways to widen this buffer."
-            : "DSCR is below 1.0x — the school cannot cover debt payments from operating income alone. This needs to be addressed.",
+            ? "DSCR is above 1.0x but tight - there's little margin if revenue dips. Look for ways to widen this buffer."
+            : "DSCR is below 1.0x - the school cannot cover debt payments from operating income alone. This needs to be addressed.",
       benchmark: "Healthy minimum: 1.25x",
     });
   }
@@ -1154,10 +1154,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       status: philanthropyPct <= 0.15 ? "good" : philanthropyPct <= 0.30 ? "warning" : "danger",
       interpretation:
         philanthropyPct <= 0.15
-          ? "Philanthropy supplements but doesn't dominate revenue — a sustainable mix."
+          ? "Philanthropy supplements but doesn't dominate revenue - a sustainable mix."
           : philanthropyPct <= 0.30
-            ? "Donations and grants make up a significant share of revenue — plan for donor diversification."
-            : "Heavy reliance on philanthropy creates risk — donations can fluctuate year to year. Build toward earned revenue sustainability so your model isn't dependent on fundraising.",
+            ? "Donations and grants make up a significant share of revenue - plan for donor diversification."
+            : "Heavy reliance on philanthropy creates risk - donations can fluctuate year to year. Build toward earned revenue sustainability so your model isn't dependent on fundraising.",
       benchmark: "Sustainable: under 15%",
     });
   }
@@ -1171,8 +1171,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         publicRevenuePct <= 0.50
           ? "Public funding is a meaningful revenue stream without creating over-dependency."
           : publicRevenuePct <= 0.70
-            ? "Significant reliance on public funding — changes in state policy could materially impact revenue."
-            : "The model is heavily dependent on public funding — develop contingency plans for policy changes.",
+            ? "Significant reliance on public funding - changes in state policy could materially impact revenue."
+            : "The model is heavily dependent on public funding - develop contingency plans for policy changes.",
       benchmark: "Charter avg: 60–80% public",
     });
   }
@@ -1185,10 +1185,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       status: lastReserve.reserveMonths >= 3 ? "good" : lastReserve.reserveMonths >= 1 ? "warning" : "danger",
       interpretation:
         lastReserve.reserveMonths >= 3
-          ? `By Year ${lastYearNum}, the school has built a healthy operating reserve of 3+ months — a strong foundation for long-term stability.`
+          ? `By Year ${lastYearNum}, the school has built a healthy operating reserve of 3+ months - a strong foundation for long-term stability.`
           : lastReserve.reserveMonths >= 1
-            ? "The reserve buffer is thin — target building at least 3 months of expenses as a cushion."
-            : `No meaningful reserve has been built by Year ${lastYearNum} yet — this is an important area to strengthen as you grow.`,
+            ? "The reserve buffer is thin - target building at least 3 months of expenses as a cushion."
+            : `No meaningful reserve has been built by Year ${lastYearNum} yet - this is an important area to strengthen as you grow.`,
       benchmark: "Best practice: 3–6 months reserves",
     });
   }
@@ -1208,30 +1208,30 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (philanthropyPct > 0 && philanthropyPct <= 0.15) strengths.push("Supplemental philanthropy without over-reliance");
   if (lastReserve && lastReserve.reserveMonths >= 3) strengths.push(`Healthy operating reserve by Year ${lastYearNum}`);
 
-  if (y1NetMargin < 0) risks.push(`Year 1 projects a ${fmt(Math.abs(y1.netIncome))} shortfall — very common for early-stage schools and worth planning around`);
+  if (y1NetMargin < 0) risks.push(`Year 1 projects a ${fmt(Math.abs(y1.netIncome))} shortfall - very common for early-stage schools and worth planning around`);
   if (staffingCostPct > 0.65) risks.push(`Staffing costs at ${pct(staffingCostPct)} of revenue are an area to work on bringing down over time`);
   if (revenuePerStudent < 7000) risks.push("Per-student revenue has room to grow toward sustainable levels");
-  if (opexCostPct > 0.40) risks.push("Operating costs are on the higher side — an opportunity to find efficiencies");
-  if (lastYearNetMargin < 0.05) risks.push(`Year ${lastYearNum} margin is quite thin — strengthening this will make the model more resilient`);
-  if (breakEvenYear < 0) risks.push(`The model doesn't yet reach break-even within ${yearCount} years — adjusting revenue or costs can help close the gap`);
+  if (opexCostPct > 0.40) risks.push("Operating costs are on the higher side - an opportunity to find efficiencies");
+  if (lastYearNetMargin < 0.05) risks.push(`Year ${lastYearNum} margin is quite thin - strengthening this will make the model more resilient`);
+  if (breakEvenYear < 0) risks.push(`The model doesn't yet reach break-even within ${yearCount} years - adjusting revenue or costs can help close the gap`);
   if (capacityUtilLastYear < 0.6 && sp.maxCapacity && sp.maxCapacity > 0)
-    risks.push("Facility capacity is underutilized — a smaller space could improve your cost structure");
+    risks.push("Facility capacity is underutilized - a smaller space could improve your cost structure");
   if (hasDebt && dscr < 1.0)
-    risks.push("Debt service currently exceeds operating income — consider adjusting loan terms or boosting revenue before taking on this debt");
+    risks.push("Debt service currently exceeds operating income - consider adjusting loan terms or boosting revenue before taking on this debt");
   if (philanthropyPct > 0.30)
     risks.push(`Philanthropy at ${pct(philanthropyPct)} of revenue is a generous foundation, but building more earned revenue will add stability`);
   if (publicRevenuePct > 0.70)
-    risks.push("Heavy reliance on public funding — developing additional revenue streams will add resilience");
+    risks.push("Heavy reliance on public funding - developing additional revenue streams will add resilience");
   if (lastReserve && lastReserve.reserveMonths < 1)
     risks.push(`Building an operating reserve by Year ${lastYearNum} is an important next goal to work toward`);
 
   if (sp.locationSecured && sp.ownershipType === "own") {
-    strengths.push("Facility is owned — no lease renewal risk");
+    strengths.push("Facility is owned - no lease renewal risk");
   }
 
   const facilityRisks: string[] = [];
   if (!sp.locationSecured) {
-    facilityRisks.push("No facility location secured yet — facility costs are estimated");
+    facilityRisks.push("No facility location secured yet - facility costs are estimated");
   }
   if (sp.locationSecured && sp.ownershipType === "rent" && sp.leaseExpirationYear) {
     const curYear = new Date().getFullYear();
@@ -1239,7 +1239,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     const yearsUntilExpiration = sp.leaseExpirationYear - projStart;
     if (yearsUntilExpiration >= 0 && yearsUntilExpiration < yearCount) {
       const bump = sp.postLeaseRenewalBump || 15;
-      facilityRisks.push(`Lease expires in Year ${yearsUntilExpiration + 1} — rent may increase ${bump}% at renewal`);
+      facilityRisks.push(`Lease expires in Year ${yearsUntilExpiration + 1} - rent may increase ${bump}% at renewal`);
     }
   }
   risks.unshift(...facilityRisks);
@@ -1247,19 +1247,19 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   const biggestStrength =
     strengths.length > 0
       ? strengths[0]
-      : "The model captures a complete financial picture — a great starting point.";
+      : "The model captures a complete financial picture - a great starting point.";
 
   const biggestRisk =
     risks.length > 0
       ? risks[0]
-      : "No major red flags detected — continue refining assumptions as you gather real data.";
+      : "No major red flags detected - continue refining assumptions as you gather real data.";
 
   const recommendations: Recommendation[] = [];
 
   if (y1NetMargin < 0) {
     recommendations.push({
       title: "Plan for Your Year 1 Startup Phase",
-      description: `Your model projects a ${fmt(Math.abs(y1.netIncome))} shortfall in Year 1 — this is completely normal for a new school. Start identifying sources to bridge this gap: startup grants, personal investment, or a small line of credit. Many successful schools began exactly this way.`,
+      description: `Your model projects a ${fmt(Math.abs(y1.netIncome))} shortfall in Year 1 - this is completely normal for a new school. Start identifying sources to bridge this gap: startup grants, personal investment, or a small line of credit. Many successful schools began exactly this way.`,
       priority: "high",
     });
   }
@@ -1267,7 +1267,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (staffingCostPct > 0.65) {
     recommendations.push({
       title: "Explore Ways to Optimize Staffing Costs",
-      description: `At ${pct(staffingCostPct)} of revenue, staffing is above the 65% target most schools aim for. Some options to explore: adjusting student-teacher ratios, phasing in admin hires as enrollment grows, or slightly increasing class sizes. Your team is your greatest asset — this is about finding the right balance.`,
+      description: `At ${pct(staffingCostPct)} of revenue, staffing is above the 65% target most schools aim for. Some options to explore: adjusting student-teacher ratios, phasing in admin hires as enrollment grows, or slightly increasing class sizes. Your team is your greatest asset - this is about finding the right balance.`,
       priority: "high",
     });
   }
@@ -1291,7 +1291,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (philanthropyPct > 0.30) {
     recommendations.push({
       title: "Build Toward More Earned Revenue",
-      description: `Donations and grants represent ${pct(philanthropyPct)} of Year 1 revenue — it's wonderful to have that support. Over time, building earned revenue as your primary driver makes your model more resilient and predictable. Aim to shift the mix so philanthropy is below 20% by Year 3.`,
+      description: `Donations and grants represent ${pct(philanthropyPct)} of Year 1 revenue - it's wonderful to have that support. Over time, building earned revenue as your primary driver makes your model more resilient and predictable. Aim to shift the mix so philanthropy is below 20% by Year 3.`,
       priority: "high",
     });
   }
@@ -1299,7 +1299,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (opexCostPct > 0.40) {
     recommendations.push({
       title: "Look for Opportunities in Operating Costs",
-      description: `Operating costs at ${pct(opexCostPct)} of revenue are on the higher side. Take a fresh look at each area — facility, student services, and administration — for creative savings. Shared space, volunteer programs, or phasing in services over time are all strategies founders use.`,
+      description: `Operating costs at ${pct(opexCostPct)} of revenue are on the higher side. Take a fresh look at each area - facility, student services, and administration - for creative savings. Shared space, volunteer programs, or phasing in services over time are all strategies founders use.`,
       priority: "medium",
     });
   }
@@ -1323,7 +1323,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (publicRevenuePct > 0.50) {
     recommendations.push({
       title: "Add Revenue Streams Beyond Public Funding",
-      description: `Public funding represents ${pct(publicRevenuePct)} of revenue — a great foundation. To add resilience, consider developing supplementary revenue streams so that changes in state policy don't put your mission at risk.`,
+      description: `Public funding represents ${pct(publicRevenuePct)} of revenue - a great foundation. To add resilience, consider developing supplementary revenue streams so that changes in state policy don't put your mission at risk.`,
       priority: "medium",
     });
   }
@@ -1352,21 +1352,21 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     if (publicRevenuePct < 0.5) {
       recommendations.push({
         title: "Verify Charter Funding Assumptions",
-        description: "Charter schools typically receive 50–80% of revenue from per-pupil public funding. Your model shows less than 50% from public sources — confirm your per-pupil allocation matches your state's formula and that you're capturing all eligible funding streams.",
+        description: "Charter schools typically receive 50–80% of revenue from per-pupil public funding. Your model shows less than 50% from public sources - confirm your per-pupil allocation matches your state's formula and that you're capturing all eligible funding streams.",
         priority: "medium",
       });
     }
     if (y1.students < 100) {
       recommendations.push({
         title: "Check Charter Minimum Enrollment Requirements",
-        description: "Many charter authorizers look for 100+ students to demonstrate viability. Your Year 1 enrollment is on the smaller side — it's worth checking whether your authorizer has minimum enrollment requirements so you can plan accordingly.",
+        description: "Many charter authorizers look for 100+ students to demonstrate viability. Your Year 1 enrollment is on the smaller side - it's worth checking whether your authorizer has minimum enrollment requirements so you can plan accordingly.",
         priority: "medium",
       });
     }
     if (publicRevenuePct > 0.7) {
       recommendations.push({
         title: "Charter Revenue Concentration & Timing Risk",
-        description: `${pct(publicRevenuePct)} of revenue comes from public per-pupil funding. Charter funding is typically disbursed on a state-defined schedule — ensure you have cash reserves or a line of credit to cover timing gaps between enrollment counts and payment receipt. Also consider diversifying into supplemental revenue (fees, grants) to reduce concentration risk.`,
+        description: `${pct(publicRevenuePct)} of revenue comes from public per-pupil funding. Charter funding is typically disbursed on a state-defined schedule - ensure you have cash reserves or a line of credit to cover timing gaps between enrollment counts and payment receipt. Also consider diversifying into supplemental revenue (fees, grants) to reduce concentration risk.`,
         priority: "medium",
       });
     }
@@ -1377,7 +1377,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     if (tuitionPct < 0.6) {
       recommendations.push({
         title: "Strengthen Tuition Revenue Base",
-        description: `Private schools typically derive 60–85% of revenue from tuition. At ${pct(tuitionPct)}, your tuition revenue share is lower than typical — ensure your pricing reflects the full cost of education and is competitive for your market.`,
+        description: `Private schools typically derive 60–85% of revenue from tuition. At ${pct(tuitionPct)}, your tuition revenue share is lower than typical - ensure your pricing reflects the full cost of education and is competitive for your market.`,
         priority: "medium",
       });
     }
@@ -1414,8 +1414,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         mgmtFeePct <= 7
           ? "Management fee is within the typical range for network-managed schools."
           : mgmtFeePct <= 12
-            ? "Management fee is on the higher end — ensure the services provided justify the cost."
-            : "Management fee is well above typical levels — worth reviewing to ensure the services justify the cost.",
+            ? "Management fee is on the higher end - ensure the services provided justify the cost."
+            : "Management fee is well above typical levels - worth reviewing to ensure the services justify the cost.",
     });
   }
 
@@ -1440,7 +1440,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     if (y1.students > 0 && y1.students > 15) {
       recommendations.push({
         title: "Learning Pod Size Consideration",
-        description: `Learning pods typically serve 5–15 students for personalized instruction. At ${y1.students} students, consider whether your model is structured as a single pod or multiple pods — this affects staffing needs and space requirements.`,
+        description: `Learning pods typically serve 5–15 students for personalized instruction. At ${y1.students} students, consider whether your model is structured as a single pod or multiple pods - this affects staffing needs and space requirements.`,
         priority: "low",
       });
     }
@@ -1467,7 +1467,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     if (y1.students > 0 && revenuePerStudent < 3000) {
       recommendations.push({
         title: "Tutoring Center Revenue per Student",
-        description: `At ${fmt(revenuePerStudent)} per student, verify your pricing structure. Tutoring centers often charge hourly or by session — ensure your annual per-student revenue projection reflects realistic session frequency and pricing.`,
+        description: `At ${fmt(revenuePerStudent)} per student, verify your pricing structure. Tutoring centers often charge hourly or by session - ensure your annual per-student revenue projection reflects realistic session frequency and pricing.`,
         priority: "medium",
       });
     }
@@ -1479,7 +1479,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     if (tutoringOccPct > 0.25) {
       recommendations.push({
         title: "Tutoring Center Occupancy Costs",
-        description: `Occupancy costs are ${pct(tutoringOccPct)} of revenue. Tutoring centers can often operate from shared or flexible spaces — consider whether a smaller footprint or shared-use arrangement could reduce facility costs.`,
+        description: `Occupancy costs are ${pct(tutoringOccPct)} of revenue. Tutoring centers can often operate from shared or flexible spaces - consider whether a smaller footprint or shared-use arrangement could reduce facility costs.`,
         priority: "low",
       });
     }
@@ -1490,7 +1490,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     if (revenueSourceCount < 2) {
       recommendations.push({
         title: "Diversify Revenue Sources for Hybrid Model",
-        description: "A hybrid funding model benefits from balancing tuition, public funding, and grants. Currently only one revenue source is active — adding a second stream improves financial resilience against policy changes or enrollment fluctuations.",
+        description: "A hybrid funding model benefits from balancing tuition, public funding, and grants. Currently only one revenue source is active - adding a second stream improves financial resilience against policy changes or enrollment fluctuations.",
         priority: "medium",
       });
     }
@@ -1498,7 +1498,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     if (tuitionPct > 0 && publicRevenuePct > 0) {
       recommendations.push({
         title: "Manage Hybrid Funding Complexity",
-        description: `Your model blends tuition (${pct(tuitionPct)}) with public funding (${pct(publicRevenuePct)}). Hybrid models add compliance complexity — ensure you're tracking each funding stream's reporting requirements separately, especially if public funds have restricted-use provisions.`,
+        description: `Your model blends tuition (${pct(tuitionPct)}) with public funding (${pct(publicRevenuePct)}). Hybrid models add compliance complexity - ensure you're tracking each funding stream's reporting requirements separately, especially if public funds have restricted-use provisions.`,
         priority: "low",
       });
     }
@@ -1531,7 +1531,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       if (contractedPct > 0.15) {
         recommendations.push({
           title: "High Contracted Personnel Costs",
-          description: `Contracted (non-payroll) personnel represent ${pct(contractedPct)} of revenue (${fmt(contractedTotal)}). This is unusual for schools — verify these aren't roles that should be full-time hires with benefits, which may be more cost-effective long-term.`,
+          description: `Contracted (non-payroll) personnel represent ${pct(contractedPct)} of revenue (${fmt(contractedTotal)}). This is unusual for schools - verify these aren't roles that should be full-time hires with benefits, which may be more cost-effective long-term.`,
           priority: "medium",
         });
       }
@@ -1644,7 +1644,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       if (reimbursementPct > 0.4) {
         recommendations.push({
           title: "Cash Flow Risk: Heavy Reimbursement Revenue",
-          description: `${pct(reimbursementPct)} of Year 1 revenue (${fmt(reimbursementRevenue)}) comes from reimbursement-based sources with payment delays. This creates cash flow gaps — ensure you have a line of credit or startup reserves to cover 2–3 months of operating expenses while awaiting reimbursements.`,
+          description: `${pct(reimbursementPct)} of Year 1 revenue (${fmt(reimbursementRevenue)}) comes from reimbursement-based sources with payment delays. This creates cash flow gaps - ensure you have a line of credit or startup reserves to cover 2–3 months of operating expenses while awaiting reimbursements.`,
           priority: "high",
         });
         risks.push(`${pct(reimbursementPct)} of revenue is reimbursement-based with payment delays`);
@@ -1696,7 +1696,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       if (revChange > 0.3) {
         recommendations.push({
           title: "Revenue Projection Jump from Prior Year",
-          description: `Year 1 projects ${pct(revChange)} revenue growth over last year's actual ${fmt(priorYear.totalRevenue)}. Growth over 30% in a single year requires clear justification — enrollment surge, new funding stream, or tuition increase.`,
+          description: `Year 1 projects ${pct(revChange)} revenue growth over last year's actual ${fmt(priorYear.totalRevenue)}. Growth over 30% in a single year requires clear justification - enrollment surge, new funding stream, or tuition increase.`,
           priority: "medium",
         });
       }
@@ -1719,7 +1719,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         risks.push(`Prior year ended with only ${priorReserveMonths.toFixed(1)} months of cash reserves`);
         recommendations.push({
           title: "Address Cash Reserve Deficit from Prior Year",
-          description: `Last year ended with ${fmt(priorYear.endingCash)} in cash — only ${priorReserveMonths.toFixed(1)} months of expenses. Building reserves to 3+ months should be a priority. Consider a bridge line of credit while growing into ${profitWord}.`,
+          description: `Last year ended with ${fmt(priorYear.endingCash)} in cash - only ${priorReserveMonths.toFixed(1)} months of expenses. Building reserves to 3+ months should be a priority. Consider a bridge line of credit while growing into ${profitWord}.`,
           priority: "high",
         });
       }
@@ -1738,7 +1738,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (!sp.locationSecured) {
     recommendations.push({
       title: "Secure Your Facility Location",
-      description: "Your model is based on an estimated facility budget. Once you have a signed lease or purchase agreement, update your model with actual numbers — real lease terms make your projections far more reliable.",
+      description: "Your model is based on an estimated facility budget. Once you have a signed lease or purchase agreement, update your model with actual numbers - real lease terms make your projections far more reliable.",
       priority: "high",
     });
   }
@@ -1752,14 +1752,14 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       const bump = sp.postLeaseRenewalBump || 15;
       recommendations.push({
         title: "Plan for Lease Renewal Risk",
-        description: `Your lease expires in ${leaseEndYear}, which falls within your ${yearCount}-year projection. At renewal, rent could jump ${bump}% or more. Start renewal conversations early, explore extension options, or budget for the increase — your model's accuracy depends on addressing this.`,
+        description: `Your lease expires in ${leaseEndYear}, which falls within your ${yearCount}-year projection. At renewal, rent could jump ${bump}% or more. Start renewal conversations early, explore extension options, or budget for the increase - your model's accuracy depends on addressing this.`,
         priority: "high",
       });
     }
     if (yearsUntilExpiration < 2 && yearsUntilExpiration >= 0) {
       recommendations.push({
         title: "Short Remaining Lease Term",
-        description: `Your lease expires in ${leaseEndYear} — less than 2 years away. Facility stability is critical to a credible long-term projection. If possible, negotiate an extension or option to renew so your model reflects a secure operating environment.`,
+        description: `Your lease expires in ${leaseEndYear} - less than 2 years away. Facility stability is critical to a credible long-term projection. If possible, negotiate an extension or option to renew so your model reflects a secure operating environment.`,
         priority: "high",
       });
     }
@@ -1773,7 +1773,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       if (nnnPct > 0.05) {
         recommendations.push({
           title: "NNN Lease Costs Add Up",
-          description: `Your triple-net charges (CAM, maintenance, utilities) total ${fmt(nnnAnnual)}/year — ${pct(nnnPct)} of Year 1 revenue. These costs escalate with inflation. Make sure they're fully reflected in your expense projections and consider negotiating caps on CAM increases.`,
+          description: `Your triple-net charges (CAM, maintenance, utilities) total ${fmt(nnnAnnual)}/year - ${pct(nnnPct)} of Year 1 revenue. These costs escalate with inflation. Make sure they're fully reflected in your expense projections and consider negotiating caps on CAM increases.`,
           priority: "medium",
         });
       }
@@ -1810,7 +1810,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       recommendations.push({
         title: "Document Your Growth Strategy",
         description:
-          "Great projections are backed by a clear plan. Document your marketing strategy, enrollment pipeline, and community outreach — this is the roadmap that turns your numbers into reality.",
+          "Great projections are backed by a clear plan. Document your marketing strategy, enrollment pipeline, and community outreach - this is the roadmap that turns your numbers into reality.",
         priority: "low",
       });
     }
@@ -1829,22 +1829,22 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   } else if (dangerMetrics <= 1 && lastYearNetMargin >= 0) {
     lenderReadiness = "Needs Work";
     lenderReadinessExplanation =
-      "Your model has real promise — there are just a few areas to strengthen. The recommendations above will help you build a more resilient financial plan, and every improvement makes your projections more achievable.";
+      "Your model has real promise - there are just a few areas to strengthen. The recommendations above will help you build a more resilient financial plan, and every improvement makes your projections more achievable.";
   } else {
     lenderReadiness = "Not Yet Ready";
     lenderReadinessExplanation =
-      "Your model is a solid starting point — now it's time to refine it. Focus on the high-priority recommendations first, and you'll see real progress. Every great school's financial story started as a first draft.";
+      "Your model is a solid starting point - now it's time to refine it. Focus on the high-priority recommendations first, and you'll see real progress. Every great school's financial story started as a first draft.";
   }
 
   const schoolName = sp.schoolName || "Your school";
   let executiveSummary: string;
 
   if (lenderReadiness === "Strong") {
-    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} ${marginLabel}. The model tells a strong financial story with ${goodMetrics} of ${keyMetrics.length} key metrics in healthy range — a great foundation for your mission.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} ${marginLabel}. The model tells a strong financial story with ${goodMetrics} of ${keyMetrics.length} key metrics in healthy range - a great foundation for your mission.`;
   } else if (lenderReadiness === "Needs Work") {
-    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} ${marginLabel}. ${dangerMetrics > 0 ? `There ${dangerMetrics === 1 ? "is" : "are"} ${dangerMetrics} area${dangerMetrics > 1 ? "s" : ""} to strengthen` : "Margins are on the thinner side"} — the recommendations below will help you build a more compelling financial story.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue with a ${pct(lastYearNetMargin)} ${marginLabel}. ${dangerMetrics > 0 ? `There ${dangerMetrics === 1 ? "is" : "are"} ${dangerMetrics} area${dangerMetrics > 1 ? "s" : ""} to strengthen` : "Margins are on the thinner side"} - the recommendations below will help you build a more compelling financial story.`;
   } else {
-    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, with ${dangerMetrics} of ${keyMetrics.length} key metrics that need attention. This is a starting point — working through the recommendations below will help you build the financial story your mission deserves.`;
+    executiveSummary = `${schoolName} projects ${fmt(yLast.totalRevenue)} in Year ${lastYearNum} revenue, with ${dangerMetrics} of ${keyMetrics.length} key metrics that need attention. This is a starting point - working through the recommendations below will help you build the financial story your mission deserves.`;
   }
 
   const sensitivityMatrix: SensitivityCell[] = [];

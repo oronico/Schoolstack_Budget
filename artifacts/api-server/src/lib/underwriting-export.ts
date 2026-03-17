@@ -257,7 +257,7 @@ function setPrintAreaUW(ws: ExcelJS.Worksheet, lastRow: number, lastCol: number)
     margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
   };
   ws.headerFooter = {
-    oddFooter: "&L&8SchoolStack Budget — Underwriting&C&8Page &P of &N&R&8&D",
+    oddFooter: "&L&8SchoolStack Budget - Underwriting&C&8Page &P of &N&R&8&D",
   };
 }
 
@@ -593,7 +593,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   const maxCapacity = sp.maxCapacity || enrollment[yc - 1] || 100;
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "SchoolStack Budget — Underwriting Export";
+  wb.creator = "SchoolStack Budget - Underwriting Export";
   wb.created = new Date();
   wb.calcProperties = { fullCalcOnLoad: true };
 
@@ -683,7 +683,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   const maxCapacity = sp.maxCapacity || enrollment[yc - 1] || 100;
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "SchoolStack Budget — Underwriting Export";
+  wb.creator = "SchoolStack Budget - Underwriting Export";
   wb.created = new Date();
   wb.calcProperties = { fullCalcOnLoad: true };
 
@@ -1170,7 +1170,7 @@ function buildAssumptions(
   ws.columns = [{ width: 38 }, ...Array(Math.max(1, yc)).fill({ width: 18 })];
 
   let r = 1;
-  ws.getCell(r, 1).value = "SchoolStack — Assumptions & Drivers";
+  ws.getCell(r, 1).value = "SchoolStack - Assumptions & Drivers";
   ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: NAVY }, name: "Calibri" };
   ws.mergeCells(r, 1, r, colCount);
   ws.getRow(r).height = 32;
@@ -1278,11 +1278,11 @@ function buildEnrollmentRevDrivers(
   r++; ws.getCell(r, 1).value = "Enrollment Growth %"; ws.getCell(r, 1).font = NF;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    if (y === 0) { cell.value = "—"; dc(cell); }
+    if (y === 0) { cell.value = "-"; dc(cell); }
     else {
       const prev = enrollment[y - 1];
       const cur = enrollment[y];
-      setFormula(cell, `IF(${cn(r - 1, y + 1)}=0,"—",(${cn(r - 1, y + 2)}-${cn(r - 1, y + 1)})/${cn(r - 1, y + 1)})`, prev === 0 ? "—" : (cur - prev) / prev);
+      setFormula(cell, `IF(${cn(r - 1, y + 1)}=0,"-",(${cn(r - 1, y + 2)}-${cn(r - 1, y + 1)})/${cn(r - 1, y + 1)})`, prev === 0 ? "-" : (cur - prev) / prev);
       cell.numFmt = PCT; dc(cell);
     }
   }
@@ -1455,7 +1455,7 @@ function buildStaffingPlan(
   ws.columns = rosterCols;
 
   let r = 1;
-  ws.getCell(r, 1).value = "SchoolStack — Staffing Plan";
+  ws.getCell(r, 1).value = "SchoolStack - Staffing Plan";
   ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: NAVY }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 8); ws.getRow(r).height = 32;
 
@@ -1734,7 +1734,7 @@ function buildSourcesUses(
   const yr1Lbl = schoolYearLabel(sp.openingYear, 0);
 
   let r = 1;
-  ws.getCell(r, 1).value = `SchoolStack — Capital Stack (${yr1Lbl})`;
+  ws.getCell(r, 1).value = `SchoolStack - Capital Stack (${yr1Lbl})`;
   ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: NAVY }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 2); ws.getRow(r).height = 32;
 
@@ -1822,7 +1822,7 @@ function buildSourcesUses(
   const gapCell = ws.getCell(r, 2);
   gapCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: gap >= 0 ? GREEN_BG : RED_BG } };
 
-  r++; ws.getCell(r, 1).value = gap >= 0 ? "✓ Capital sources cover projected startup uses" : "⚠ Funding gap — additional capital needed";
+  r++; ws.getCell(r, 1).value = gap >= 0 ? "✓ Capital sources cover projected startup uses" : "⚠ Funding gap - additional capital needed";
   ws.getCell(r, 1).font = { ...NF, italic: true, color: { argb: gap >= 0 ? "FF328555" : "FFD32F2F" } };
 }
 
@@ -1831,7 +1831,7 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, capDebtRows: CapitalDebtRow[], 
   ws.columns = [{ width: 30 }, { width: 18 }, { width: 14 }, { width: 14 }, { width: 18 }, { width: 18 }, { width: 18 }];
 
   let r = 1;
-  ws.getCell(r, 1).value = "SchoolStack — Debt Schedule";
+  ws.getCell(r, 1).value = "SchoolStack - Debt Schedule";
   ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: NAVY }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 7); ws.getRow(r).height = 32;
 
@@ -2483,7 +2483,7 @@ function buildUnderwritingSnapshot(
   ws.columns = [{ width: 42 }, { width: 25 }, { width: 16 }];
 
   let r = 1;
-  ws.getCell(r, 1).value = "SchoolStack — Underwriting Snapshot";
+  ws.getCell(r, 1).value = "SchoolStack - Underwriting Snapshot";
   ws.getCell(r, 1).font = { bold: true, size: 16, color: { argb: NAVY }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 3); ws.getRow(r).height = 36;
 

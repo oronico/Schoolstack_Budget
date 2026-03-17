@@ -298,7 +298,7 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   const doc = createDoc();
 
   const schoolName = sp.schoolName || "School";
-  drawHeader(doc, `${schoolName} — Pro Forma Financial Model`, "Multi-Year Financial Projections");
+  drawHeader(doc, `${schoolName} - Pro Forma Financial Model`, "Multi-Year Financial Projections");
 
   sectionTitle(doc, "School Profile");
   labelValue(doc, "School Name", schoolName);

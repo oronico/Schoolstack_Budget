@@ -82,8 +82,8 @@ function profitMarginLabel(entityType?: string): string {
 function entityTypeDisplay(entityType?: string): string {
   switch (entityType) {
     case "sole_practitioner": return "Sole Practitioner";
-    case "llc_single": return "LLC — Single Member";
-    case "llc_partnership": return "LLC — Partnership";
+    case "llc_single": return "LLC - Single Member";
+    case "llc_partnership": return "LLC - Partnership";
     case "c_corp": return "C Corporation";
     case "s_corp": return "S Corporation";
     case "nonprofit_501c3": return "501(c)(3) Nonprofit";
@@ -911,7 +911,7 @@ function buildAssumptionsTab(
   ws.columns = [{ width: 35 }, { width: 25 }];
 
   let r = 1;
-  ws.getCell(r, 1).value = "SchoolStack Budget — Assumptions";
+  ws.getCell(r, 1).value = "SchoolStack Budget - Assumptions";
   ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: "FF1E293B" }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 2);
   ws.getRow(r).height = 32;
@@ -1044,17 +1044,17 @@ function buildAssumptionsTab(
 
   const riskFlags: string[] = [];
   if (sp.locationSecured === false) {
-    riskFlags.push("No facility location secured — costs are estimated");
+    riskFlags.push("No facility location secured - costs are estimated");
   }
   if (sp.locationSecured && sp.ownershipType === "rent" && sp.leaseExpirationYear) {
     const curYear = new Date().getFullYear();
     const projStartYear = Math.max(sp.openingYear || curYear, curYear);
     const yearsUntilExpiry = sp.leaseExpirationYear - projStartYear;
     if (yearsUntilExpiry >= 0 && yearsUntilExpiry < yearCount) {
-      riskFlags.push(`Lease expires in Year ${yearsUntilExpiry + 1} (${sp.leaseExpirationYear}) — renewal bump of ${sp.postLeaseRenewalBump || 15}% modeled`);
+      riskFlags.push(`Lease expires in Year ${yearsUntilExpiry + 1} (${sp.leaseExpirationYear}) - renewal bump of ${sp.postLeaseRenewalBump || 15}% modeled`);
     }
     if (yearsUntilExpiry < 2 && yearsUntilExpiry >= 0) {
-      riskFlags.push("Short remaining lease term — less than 2 years until expiration");
+      riskFlags.push("Short remaining lease term - less than 2 years until expiration");
     }
   }
   if (sp.locationSecured && sp.ownershipType === "rent" && sp.isNNNLease) {
@@ -1087,7 +1087,7 @@ function buildConsultantNotesTab(ws: ExcelJS.Worksheet, consultant: ConsultantSu
   ws.columns = [{ width: 25 }, { width: 80 }];
 
   let r = 1;
-  ws.getCell(r, 1).value = "SchoolStack Budget — Consultant Notes";
+  ws.getCell(r, 1).value = "SchoolStack Budget - Consultant Notes";
   ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: "FF1E293B" }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 2);
   ws.getRow(r).height = 32;
@@ -1349,7 +1349,7 @@ function buildStaffingTab(
   ];
 
   let r = 1;
-  ws.getCell(r, 1).value = "SchoolStack Budget — Staffing & Personnel";
+  ws.getCell(r, 1).value = "SchoolStack Budget - Staffing & Personnel";
   ws.getCell(r, 1).font = { bold: true, size: 14, color: { argb: "FF1E293B" }, name: "Calibri" };
   ws.mergeCells(r, 1, r, 8);
   ws.getRow(r).height = 32;
@@ -1876,7 +1876,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
   for (let y = 0; y < yearCount; y++) {
     const cell = ws.getCell(r, y + 2);
     if (y === 0) {
-      cell.value = "—"; cell.font = NORMAL_FONT;
+      cell.value = "-"; cell.font = NORMAL_FONT;
     } else {
       const prev = enrollment?.[y - 1] ?? 0;
       const curr = enrollment?.[y] ?? 0;

@@ -5,7 +5,7 @@ export function FacilitiesStep() {
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Operations & Expenses</h2>
-        <p className="text-muted-foreground text-lg">Define your facility costs, student services, and any outstanding debt. If you're not sure about some of these numbers yet, use your best estimate — you can always come back and update them.</p>
+        <p className="text-muted-foreground text-lg">Define your facility costs, student services, and any outstanding debt. If you're not sure about some of these numbers yet, use your best estimate - you can always come back and update them.</p>
       </div>
 
       <div className="space-y-8">

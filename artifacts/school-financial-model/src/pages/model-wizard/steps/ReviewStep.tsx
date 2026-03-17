@@ -234,7 +234,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   const Item = ({ label, value }: { label: string; value: string | number | undefined }) => (
     <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <span className="text-sm font-semibold text-foreground">{value !== undefined && value !== "" ? value : "—"}</span>
+      <span className="text-sm font-semibold text-foreground">{value !== undefined && value !== "" ? value : "-"}</span>
     </div>
   );
 
@@ -244,7 +244,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Does Everything Look Right?</h2>
-        <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime. Remember, this is your first draft — every version of your budget gets stronger.</p>
+        <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime. Remember, this is your first draft - every version of your budget gets stronger.</p>
       </div>
 
       {hasRowData && (
@@ -335,7 +335,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             return (
               <div key={key} className="text-center py-3 px-2 rounded-xl bg-secondary/30">
                 <p className="text-xs font-medium text-muted-foreground mb-1">Year {i + 1}</p>
-                <p className="font-display font-bold text-xl text-foreground">{val || "—"}</p>
+                <p className="font-display font-bold text-xl text-foreground">{val || "-"}</p>
               </div>
             );
           })}

@@ -52,10 +52,10 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
 
   r += 3;
   const info = [
-    ["School Name", sp.schoolName || "—"],
+    ["School Name", sp.schoolName || "-"],
     ["School Type", schoolTypeLabel(sp.schoolType, sp.schoolTypeOther)],
     ["Entity Type", entityLabel(sp.entityType)],
-    ["State", sp.state || "—"],
+    ["State", sp.state || "-"],
     ["Fiscal Year Start", sp.fiscalYearStartMonth ? `Month ${sp.fiscalYearStartMonth}` : "July"],
     ["Model Date", new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })],
     ["Stage", stageLabel(sp.schoolStage)],
@@ -84,7 +84,7 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
 
   r += 2;
   ws.mergeCells(r, 2, r, 3);
-  ws.getCell(r, 2).value = "CONFIDENTIAL — Prepared by SchoolStack Budget (budget.schoolstack.ai)";
+  ws.getCell(r, 2).value = "CONFIDENTIAL - Prepared by SchoolStack Budget (budget.schoolstack.ai)";
   ws.getCell(r, 2).font = { size: 11, name: "Calibri", color: { argb: "FF999999" }, italic: true };
   ws.getCell(r, 2).alignment = { horizontal: "center" };
 }
@@ -101,12 +101,12 @@ function buildInstructions(wb: ExcelJS.Workbook) {
   r += 2;
   const instructions = [
     ["Color Legend", ""],
-    ["", "Yellow cells are editable inputs — change these to update your model."],
-    ["", "Gray cells contain formulas — do not edit."],
+    ["", "Yellow cells are editable inputs - change these to update your model."],
+    ["", "Gray cells contain formulas - do not edit."],
     ["", "Green cells are key outputs and summary metrics."],
     ["", ""],
     ["Navigation", "Use the Cover tab's Table of Contents to jump between sheets."],
-    ["", "The Assumptions tab is the central control panel — all other tabs reference it."],
+    ["", "The Assumptions tab is the central control panel - all other tabs reference it."],
     ["", ""],
     ["Structure", "Tabs 1-4: Profile & setup"],
     ["", "Tabs 5-9: Drivers & inputs"],
@@ -163,7 +163,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
 
   let r = 1;
   ws.mergeCells(r, 1, r, 7);
-  ws.getCell(r, 1).value = `${sp.schoolName || "School"} — Assumptions`;
+  ws.getCell(r, 1).value = `${sp.schoolName || "School"} - Assumptions`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
   ws.getRow(r).height = 32;
 
@@ -389,7 +389,7 @@ function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
     ["Proration Factor", `${(getProrationFactor(sp) * 100).toFixed(1)}%`],
     ["Debt Included", sp.debtIncluded !== false ? "Yes" : "No"],
     ["Max Capacity", String(sp.maxCapacity || "N/A")],
-    ["Accredited", sp.isAccredited ? `Yes — ${sp.accreditingBody || ""}` : "No"],
+    ["Accredited", sp.isAccredited ? `Yes - ${sp.accreditingBody || ""}` : "No"],
     ["Location", sp.locationSecured ? `${sp.facilityStreet || ""}, ${sp.facilityCity || ""}, ${sp.facilityState || ""} ${sp.facilityZip || ""}`.trim() : "Not yet secured"],
     ["Facility", sp.ownershipType === "own" ? "Owned" : "Leased"],
   ];
@@ -472,7 +472,7 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   for (let y = 0; y < 5; y++) {
     const cell = ws.getCell(r, startCol + y);
     if (y === 0) {
-      cell.value = "—"; dc(cell);
+      cell.value = "-"; dc(cell);
     } else {
       const prev = enrollment[y - 1];
       cell.value = prev > 0 ? (enrollment[y] - prev) / prev : 0;
@@ -881,7 +881,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
 
   let r = 1;
   ws.mergeCells(r, 1, r, 6);
-  ws.getCell(r, 1).value = `${sp.schoolName || "School"} — Budget Detail`;
+  ws.getCell(r, 1).value = `${sp.schoolName || "School"} - Budget Detail`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
@@ -1060,7 +1060,7 @@ function buildBudgetSummary(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
 
   let r = 1;
   ws.mergeCells(r, 1, r, 6);
-  ws.getCell(r, 1).value = `${sp.schoolName || "School"} — Budget Summary`;
+  ws.getCell(r, 1).value = `${sp.schoolName || "School"} - Budget Summary`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
@@ -1172,7 +1172,7 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
 
   let r = 1;
   ws.mergeCells(r, 1, r, 14);
-  ws.getCell(r, 1).value = `${sp.schoolName || "School"} — Year 1 Monthly Cash Flow`;
+  ws.getCell(r, 1).value = `${sp.schoolName || "School"} - Year 1 Monthly Cash Flow`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r++;
@@ -1322,7 +1322,7 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
 
   let r = 1;
   ws.mergeCells(r, 1, r, 6);
-  ws.getCell(r, 1).value = `${sp.schoolName || "School"} — 5-Year Operating Statement`;
+  ws.getCell(r, 1).value = `${sp.schoolName || "School"} - 5-Year Operating Statement`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
@@ -1490,7 +1490,7 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
 
   let r = 1;
   ws.mergeCells(r, 1, r, 6);
-  ws.getCell(r, 1).value = `${sp.schoolName || "School"} — Balance Sheet`;
+  ws.getCell(r, 1).value = `${sp.schoolName || "School"} - Balance Sheet`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
@@ -1936,17 +1936,17 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
 
   let r = 1;
   ws.mergeCells(r, 1, r, 8);
-  ws.getCell(r, 1).value = "Underwriting Snapshot — Loan Committee Summary";
+  ws.getCell(r, 1).value = "Underwriting Snapshot - Loan Committee Summary";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   sec(ws, r, 2); ws.getCell(r, 1).value = "SCHOOL PROFILE";
   const profileInfo: [string, string][] = [
-    ["School Name", sp.schoolName || "—"],
+    ["School Name", sp.schoolName || "-"],
     ["Type", schoolTypeLabel(sp.schoolType, sp.schoolTypeOther)],
     ["Entity", entityLabel(sp.entityType)],
     ["Stage", stageLabel(sp.schoolStage)],
-    ["State", sp.state || "—"],
+    ["State", sp.state || "-"],
     ["Funding", fundingLabel(sp.fundingProfile)],
   ];
   for (const [label, val] of profileInfo) {
@@ -2013,7 +2013,7 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
 
   r += 2;
   ws.mergeCells(r, 1, r, 8);
-  ws.getCell(r, 1).value = "Prepared by SchoolStack Budget — budget.schoolstack.ai";
+  ws.getCell(r, 1).value = "Prepared by SchoolStack Budget - budget.schoolstack.ai";
   ws.getCell(r, 1).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF999999" } };
   ws.getCell(r, 1).alignment = { horizontal: "center" };
 }

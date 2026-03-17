@@ -362,8 +362,8 @@ export type TuitionEscalation = z.infer<typeof tuitionEscalationSchema>;
 
 export const ENTITY_TYPE_LABELS: Record<string, string> = {
   sole_practitioner: "Sole Practitioner (no EIN)",
-  llc_single: "LLC — Single Member",
-  llc_partnership: "LLC — Partnership",
+  llc_single: "LLC - Single Member",
+  llc_partnership: "LLC - Partnership",
   c_corp: "C Corporation",
   s_corp: "S Corporation",
   nonprofit_501c3: "501(c)(3) Nonprofit",

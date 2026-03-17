@@ -189,7 +189,7 @@ export function drawFooter(doc: PDFDoc) {
 
     doc.save();
     doc.font("Helvetica").fontSize(7).fillColor(BRAND.gray);
-    doc.text(`SchoolStack Budget — Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, margin, bottomY, { width: pageW - margin * 2, align: "left" });
+    doc.text(`SchoolStack Budget - Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, margin, bottomY, { width: pageW - margin * 2, align: "left" });
     doc.text(`Page ${i + 1} of ${pages.count}`, margin, bottomY, { width: pageW - margin * 2, align: "right" });
     doc.restore();
   }
@@ -233,8 +233,8 @@ export function profitMarginLabel(entityType?: string): string {
 export function entityTypeDisplay(entityType?: string): string {
   switch (entityType) {
     case "sole_practitioner": return "Sole Practitioner";
-    case "llc_single": return "LLC — Single Member";
-    case "llc_partnership": return "LLC — Partnership";
+    case "llc_single": return "LLC - Single Member";
+    case "llc_partnership": return "LLC - Partnership";
     case "c_corp": return "C Corporation";
     case "s_corp": return "S Corporation";
     case "nonprofit_501c3": return "501(c)(3) Nonprofit";

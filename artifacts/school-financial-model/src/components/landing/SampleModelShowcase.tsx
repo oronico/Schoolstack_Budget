@@ -103,7 +103,7 @@ export function SampleModelShowcase() {
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Here's a preview of a completed financial analysis for a fictional early-stage school.
-            Your model will look just like this — tailored to your school's unique story.
+            Your model will look just like this - tailored to your school's unique story.
           </p>
         </motion.div>
 
