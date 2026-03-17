@@ -666,7 +666,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel }: Consultant
                   ? "Cash remains positive for 3+ years. A solid foundation, but continue building reserves."
                   : data.cashRunwayMonths >= 12
                     ? "Cash runway is limited. Focus on building reserves and securing backup funding sources."
-                    : "Cash runs out within the first year. Immediate action needed - secure additional funding or reduce costs."}
+                    : "Cash runs out within the first year. Immediate action needed: secure additional funding or reduce costs."}
             </p>
           </div>
         </div>
