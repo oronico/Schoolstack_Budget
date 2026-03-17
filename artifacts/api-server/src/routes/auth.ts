@@ -80,8 +80,10 @@ router.post("/auth/login", async (req, res) => {
       token,
     });
   } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ error: "Something went wrong. Please try again." });
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : "";
+    console.error("Login error:", msg, stack);
+    res.status(500).json({ error: "Something went wrong. Please try again.", debug: msg });
   }
 });
 
