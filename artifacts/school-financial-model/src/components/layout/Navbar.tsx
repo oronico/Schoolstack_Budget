@@ -27,10 +27,11 @@ export function Navbar() {
                 </div>
                 <button
                   onClick={logout}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-black/5 text-muted-foreground hover:bg-black/10 hover:text-foreground transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                   title="Log out"
                 >
                   <LogOut className="h-4 w-4" />
+                  <span>Log out</span>
                 </button>
               </div>
             </>
