@@ -31,9 +31,25 @@ import {
   ChevronUp,
   Grid3X3,
   Clock,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ConsultantOutput } from "@workspace/api-client-react";
+import { KPI_FORMULAS } from "@/lib/coaching/kpi-formulas";
+import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
+
+function metricNameToKpiId(name: string): string | undefined {
+  const lower = name.toLowerCase();
+  if (lower.includes("revenue per student")) return "revenuePerStudent";
+  if (lower.includes("staffing cost")) return "staffingCostPct";
+  if (lower.includes("operating cost")) return "operatingCostPct";
+  if (lower.includes("margin") || lower.includes("surplus") || lower.includes("profit")) return "netMargin";
+  if (lower.includes("revenue growth")) return "revenueGrowth";
+  if (lower.includes("capacity utilization")) return "capacityUtilization";
+  if (lower.includes("debt service") || lower.includes("dscr")) return "dscr";
+  if (lower.includes("reserve")) return "reserveMonths";
+  return undefined;
+}
 
 function fmtCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
@@ -103,6 +119,8 @@ interface ConsultantAnalysisViewProps {
 }
 
 export function ConsultantAnalysisView({ data, niLabel, cumNiLabel }: ConsultantAnalysisViewProps) {
+  const [openKpi, setOpenKpi] = useState<string | null>(null);
+
   const lenderColor =
     data.lenderReadiness === "Strong"
       ? "text-green-700"
@@ -306,11 +324,29 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel }: Consultant
                     {metric.benchmark}
                   </p>
                 )}
+                {metricNameToKpiId(metric.name) && KPI_FORMULAS[metricNameToKpiId(metric.name)!] && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenKpi(metricNameToKpiId(metric.name)!)}
+                    className="flex items-center gap-1 text-xs text-primary/70 hover:text-primary font-medium mt-2 pt-2 border-t border-border/40 transition-colors"
+                  >
+                    <HelpCircle className="h-3 w-3" aria-hidden="true" />
+                    How is this calculated?
+                  </button>
+                )}
               </div>
             );
           })}
         </div>
       </div>
+
+      {openKpi && KPI_FORMULAS[openKpi] && (
+        <KpiFormulaDrawer
+          formula={KPI_FORMULAS[openKpi]}
+          open
+          onClose={() => setOpenKpi(null)}
+        />
+      )}
 
       {revChartData && revChartData.length > 0 && (
         <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">

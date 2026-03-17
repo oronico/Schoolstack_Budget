@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
   type StaffingRowData,
   type StaffingFunctionCategory,
@@ -141,6 +142,7 @@ export function StaffingStep() {
         <p className="text-muted-foreground text-lg">
           Add every person on your team - teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
         </p>
+        <SectionExplainers section="staffing" className="mt-4" />
       </div>
 
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">

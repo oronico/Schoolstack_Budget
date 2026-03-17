@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 import { useGetMe, UserResponse } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 
@@ -7,6 +7,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (token: string, user: UserResponse) => void;
   logout: () => void;
+  refetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -23,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const login = (newToken: string, newUser: UserResponse) => {
+  const login = (newToken: string, _newUser: UserResponse) => {
     localStorage.setItem('auth_token', newToken);
     setToken(newToken);
     refetch();
@@ -46,8 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLocation("/login");
   };
 
+  const refetchUser = async () => {
+    await refetch();
+  };
+
   return (
-    <AuthContext.Provider value={{ user: user || null, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user: user || null, isLoading, login, logout, refetchUser }}>
       {children}
     </AuthContext.Provider>
   );

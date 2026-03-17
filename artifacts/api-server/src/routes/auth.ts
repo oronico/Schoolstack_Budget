@@ -107,9 +107,33 @@ router.get("/auth/me", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
     await db.update(usersTable).set({ lastSeenAt: new Date() }).where(eq(usersTable.id, user.id));
-    res.json({ id: user.id, email: user.email, name: user.name });
+    res.json({ id: user.id, email: user.email, name: user.name, guidanceLevel: user.guidanceLevel ?? null });
   } catch (err) {
     console.error("Get me error:", err);
+    res.status(500).json({ error: "Something went wrong." });
+  }
+});
+
+const VALID_GUIDANCE_LEVELS = ["advanced", "basics", "extra"];
+
+router.patch("/auth/guidance-level", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { guidanceLevel } = req.body;
+    if (!guidanceLevel || !VALID_GUIDANCE_LEVELS.includes(guidanceLevel)) {
+      res.status(400).json({ error: "guidanceLevel must be one of: advanced, basics, extra" });
+      return;
+    }
+    const [updated] = await db.update(usersTable)
+      .set({ guidanceLevel, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.userId!))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "User not found." });
+      return;
+    }
+    res.json({ id: updated.id, email: updated.email, name: updated.name, guidanceLevel: updated.guidanceLevel ?? null });
+  } catch (err) {
+    console.error("Update guidance level error:", err);
     res.status(500).json({ error: "Something went wrong." });
   }
 });

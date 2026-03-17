@@ -1,9 +1,23 @@
 import { Link } from "wouter";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { LogOut, LayoutDashboard } from "lucide-react";
+import { LogOut, LayoutDashboard, Settings } from "lucide-react";
+import { GuidanceModeSelector } from "@/components/coaching/GuidanceModeSelector";
 
 export function Navbar() {
   const { user, logout } = useAuth();
+  const [showSettings, setShowSettings] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setShowSettings(false);
+      }
+    }
+    if (showSettings) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSettings]);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -25,14 +39,29 @@ export function Navbar() {
                   <p className="text-sm font-semibold leading-none">{user.name}</p>
                   <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
                 </div>
-                <button
-                  onClick={logout}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  title="Log out"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Log out</span>
-                </button>
+                <div className="relative" ref={settingsRef}>
+                  <button
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
+                    title="Settings"
+                    aria-expanded={showSettings}
+                  >
+                    <Settings className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  {showSettings && (
+                    <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-background shadow-xl animate-in fade-in slide-in-from-top-1 duration-150 z-50">
+                      <GuidanceModeSelector />
+                      <div className="border-t border-border mx-2" />
+                      <button
+                        onClick={logout}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-b-xl transition-colors"
+                      >
+                        <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+                        Log out
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           ) : (

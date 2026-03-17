@@ -1,0 +1,270 @@
+#70 - Coaching System Foundation + Phase 1
+
+## Summary
+Build the reusable budgeting co-pilot foundation and ship Phase 1 of contextual finance guidance inside Budget.schoolstack.ai.
+
+This phase includes:
+1. guidance mode preference
+2. inline explainers on major budgeting concepts
+3. KPI transparency for consultant analysis
+
+This work should help beginner and intermediate school leaders understand core budgeting concepts in context, without forcing webinars, tours, or external training.
+
+---
+
+## Product goal
+Teach users just enough finance inside the workflow so they can complete a credible school budget with confidence.
+
+Key principle: **teach in context, not before use.**
+
+---
+
+## Scope for this issue
+
+### In scope
+- Guidance mode preference stored on the user record
+- Non-blocking first-time guidance selection prompt
+- Shared frontend content model for explainers
+- Shared reusable explainer UI components
+- Explainers wired into major wizard sections and review/consultant views
+- KPI transparency layer in ConsultantAnalysisView
+
+### Out of scope
+- Diagnostics engine / “What should I fix first?” panel
+- Contextual micro-lessons triggered by behavior
+- Optional 5-minute budgeting primer
+- Interaction analytics
+- Full copy overhaul across the app
+
+Those belong to later phases.
+
+---
+
+## Done looks like
+
+### 1) Guidance mode preference
+On first entry into the product, if the user has no saved preference, show a non-blocking prompt asking:
+
+- I know school finance
+- I know some basics
+- I want extra guidance
+
+Map these to:
+- `advanced`
+- `basics`
+- `extra`
+
+Requirements:
+- Store on the user record as `guidanceLevel`
+- Add new DB column on `users`
+- Return it in `/auth/me`
+- Expose it in frontend auth context
+- Allow users to change it later from navbar/profile/settings UI
+- Prompt should only appear when `guidanceLevel` is null
+- User can dismiss temporarily, but it should continue to appear on future visits until a selection is made
+
+### 2) Structured explainer content model
+Create a shared TypeScript content registry for explainers.
+
+Each explainer entry must include:
+- `id`
+- `title`
+- `body`
+  - `whatThisMeans`
+  - `whyItMatters`
+  - `healthyVsRisky`
+  - `whatToDoNext`
+- `audienceLevel`
+- `relatedSection`
+- `dismissible`
+
+Explainers must be pre-populated for all 13 concepts:
+1. Revenue
+2. Enrollment assumptions
+3. Tuition assumptions
+4. Grants and fundraising
+5. Payroll
+6. Occupancy / rent
+7. Program expenses
+8. Operating surplus / deficit
+9. Cash flow
+10. Ending cash
+11. Reserves
+12. Budget vs actual
+13. Fixed vs variable costs
+
+Content tone:
+- plain English
+- warm
+- practical
+- non-judgmental
+- never academic or patronizing
+
+### 3) Reusable explainer components
+Build reusable shared components that later phases can extend:
+
+- `InlineHelpCard`
+- `ExplainerDrawer`
+
+Behavior requirements:
+- mobile responsive
+- accessible
+- dismissible where appropriate
+- use progressive disclosure
+- respect guidance mode for default visibility
+
+Guidance behavior:
+- `advanced`: all explainers collapsed by default
+- `basics`: key explainers expanded by default in major sections
+- `extra`: explainers expanded by default and eligible for additional nudges later
+
+Important:
+- do not introduce blocking walkthroughs
+- do not bury essential concepts behind tiny tooltip-only interactions
+
+### 4) Explainers wired into key product surfaces
+Add a visible “Explain this” trigger to all major budgeting sections across:
+- School Profile
+- Enrollment
+- Revenue
+- Staffing
+- Expenses
+- Review / Consultant views
+
+Expected UX:
+- user sees help where they need it
+- advanced users are not slowed down
+- beginners can expand or view deeper explanation without leaving the page
+
+### 5) KPI transparency
+In `ConsultantAnalysisView`, add a visible “How is this calculated?” control for each major KPI.
+
+Initial KPI targets:
+- revenue per student
+- staffing cost %
+- net margin
+- DSCR
+- reserve months
+- other major top-line metrics already shown in the analysis view
+
+Each KPI detail view must show:
+- formula
+- actual inputs used
+- linked assumptions / source values
+- plain-English interpretation
+
+Example:
+**Ending cash**  
+Formula: Beginning cash + cash inflows - cash outflows  
+Interpretation: This tells the user how much cash remains after money in and money out for the period.
+
+Goal:
+Build trust and teach users how the product thinks.
+
+---
+
+## Technical requirements
+
+### Backend
+#### Database
+Add a new nullable column to users:
+- `guidance_level` varchar
+- allowed values: `advanced`, `basics`, `extra`
+- default: `null`
+
+#### API
+- include `guidanceLevel` in `/auth/me`
+- add PATCH endpoint to update it
+- validate allowed values
+- return updated user payload
+
+### Frontend
+- surface `guidanceLevel` in auth context
+- build a first-visit prompt component
+- build settings control in navbar/profile area
+- create shared explainer registry module
+- build shared explainer UI components
+- add KPI explanation UI with structured formula data
+
+### Architecture
+Do not hardcode explainer text inline across multiple components.
+
+Use:
+- a central content registry
+- reusable components
+- reusable mapping layer from section/KPI to explainer content
+
+This should be clean enough for Phase 2 diagnostics and Phase 3 primer features to build on top of it.
+
+---
+
+## Suggested file touch list
+
+### Backend
+- `lib/db/src/schema/users.ts`
+- `artifacts/api-server/src/routes/auth.ts`
+- `artifacts/api-server/src/routes/models.ts` if needed for shared types / response shapes
+
+### Frontend
+- `artifacts/school-financial-model/src/lib/auth-context.tsx`
+- `artifacts/school-financial-model/src/components/layout/Layout.tsx`
+- `artifacts/school-financial-model/src/components/layout/Navbar.tsx`
+- `artifacts/school-financial-model/src/pages/dashboard.tsx`
+- `artifacts/school-financial-model/src/pages/model-wizard/index.tsx`
+- `artifacts/school-financial-model/src/pages/model-wizard/steps/SchoolProfileStep.tsx`
+- `artifacts/school-financial-model/src/pages/model-wizard/steps/EnrollmentStep.tsx`
+- `artifacts/school-financial-model/src/pages/model-wizard/steps/RevenueStep.tsx`
+- `artifacts/school-financial-model/src/pages/model-wizard/steps/StaffingStep.tsx`
+- `artifacts/school-financial-model/src/pages/model-wizard/steps/ExpenseStep.tsx`
+- `artifacts/school-financial-model/src/components/consultant/ConsultantAnalysisView.tsx`
+
+Suggested new files:
+- `artifacts/school-financial-model/src/lib/coaching/explainers.ts`
+- `artifacts/school-financial-model/src/lib/coaching/kpi-formulas.ts`
+- `artifacts/school-financial-model/src/components/coaching/InlineHelpCard.tsx`
+- `artifacts/school-financial-model/src/components/coaching/ExplainerDrawer.tsx`
+- `artifacts/school-financial-model/src/components/coaching/GuidanceModePrompt.tsx`
+- `artifacts/school-financial-model/src/components/coaching/GuidanceModeSelector.tsx`
+
+---
+
+## Acceptance criteria
+
+### Guidance mode
+- [ ] New users with `guidanceLevel = null` see the non-blocking prompt
+- [ ] Selecting an option persists to backend and updates auth context
+- [ ] Existing users can change guidance mode later in navbar/profile/settings
+- [ ] Prompt no longer appears after a selection is saved
+
+### Explainers
+- [ ] Shared explainer registry exists with all 13 concepts
+- [ ] Each explainer includes all required content sections
+- [ ] Every major wizard section has a visible help trigger
+- [ ] Explainers render correctly in shared reusable components
+- [ ] Guidance mode controls default expand/collapse behavior
+
+### KPI transparency
+- [ ] Major KPIs in `ConsultantAnalysisView` have a visible “How is this calculated?” control
+- [ ] Clicking a KPI explanation shows formula, inputs, assumptions, and interpretation
+- [ ] Explanations use actual model values, not placeholder text
+
+### UX quality
+- [ ] Advanced users can ignore guidance and move quickly
+- [ ] Beginner users can understand key concepts without leaving the product
+- [ ] Mobile layout remains usable
+- [ ] No mandatory walkthrough or training flow is introduced
+
+---
+
+## Implementation notes
+- Keep this phase lightweight and modular
+- Prefer drawer or inline expansion over modal-heavy patterns
+- Avoid overloading the screen with open help content
+- Treat this as a reusable coaching system foundation, not a one-off copy project
+
+---
+
+## Definition of success
+A beginner should be able to move through the budgeting workflow, understand the major concepts, and interpret the main KPI outputs without leaving the app or needing outside training.
+
+An advanced user should feel almost no added friction.

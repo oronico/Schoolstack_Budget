@@ -1,0 +1,214 @@
+We need to add frictionless budgeting education into Budget.schoolstack.ai without slowing users down or forcing them through training.
+
+Objective
+Build an in-product “budgeting co-pilot” for beginner and intermediate school leaders. The product should teach just enough finance in context so users can complete their budget confidently. Do not build a webinar flow, long tutorial, or heavy onboarding course.
+
+Design principles
+1. Teach in context, not before use.
+2. Keep users moving.
+3. Explanations must be plain English, never jargon-heavy.
+4. Guidance should feel supportive, not remedial.
+5. Advanced users should not feel buried in help text.
+6. Critical information should not be hidden behind tiny tooltips only.
+
+Features to build
+
+1) Beginner Guidance Mode
+Add a simple user preference at first entry into the Budget product:
+- “I know school finance”
+- “I know some basics”
+- “I want extra guidance”
+
+Store this preference in user settings and use it to control how much instructional help appears by default.
+
+Behavior:
+- Advanced mode: compact UI, explainers collapsed by default
+- Basics mode: key explainers expanded for major sections
+- Extra guidance mode: explainers expanded, more nudges, more diagnostics
+
+2) Inline “Explain this” help on every major budgeting concept
+For all major cards, metrics, and input sections, add a visible “Explain this” link or icon that opens a side panel or expandable inline card.
+
+Each explainer must include:
+- What this means
+- Why it matters
+- What healthy vs risky looks like
+- What to do next
+
+Start with these concepts:
+- Revenue
+- Enrollment assumptions
+- Tuition assumptions
+- Grants and fundraising
+- Payroll
+- Occupancy / rent
+- Program expenses
+- Operating surplus / deficit
+- Cash flow
+- Ending cash
+- Reserves
+- Budget vs actual
+- Fixed vs variable costs
+
+Example style:
+Operating margin
+What this means: This shows whether your school brings in more money than it spends from normal operations.
+Why it matters: A negative margin over time can signal that your model is not sustainable.
+What healthy vs risky looks like: Small positive margins are generally healthier than repeated losses.
+What to do next: Review staffing, rent, and enrollment assumptions first.
+
+3) Micro-lessons triggered by user behavior
+Create small contextual coaching cards that appear only when relevant. These should be dismissible, non-modal, and short enough to read in under 45 seconds.
+
+Trigger examples:
+- First time entering revenue assumptions
+- First time user sees a negative cash month
+- First time payroll exceeds a defined threshold of revenue
+- First time user confuses budget and cash flow views
+- First time assumptions create unrealistic growth patterns
+
+Example cards:
+- “Budget vs Cash Flow”
+- “What makes enrollment assumptions realistic?”
+- “Why timing matters even if your annual budget looks positive”
+- “How to think about fixed vs variable costs”
+
+Do not show all micro-lessons at once. Only trigger them contextually.
+
+4) Budget diagnostics engine
+Add a rules-based diagnostics panel that scans the user’s budget and surfaces the top issues in plain English.
+
+Label the section:
+“What should I fix first?”
+
+Show only the top 3 highest-priority issues.
+
+Each issue should include:
+- Headline
+- Short explanation
+- Why it matters
+- Recommended action
+- Direct link/button to the relevant section
+
+Example:
+Issue: Cash goes negative in November
+Why it matters: You may not be able to cover payroll and bills even if your annual budget looks balanced.
+Recommended action: Review payment timing, reserves, and large fall expenses.
+Action button: “Review cash flow assumptions”
+
+Initial diagnostic rules to include:
+- Negative ending cash in any month
+- Payroll exceeds recommended threshold relative to revenue
+- Enrollment growth jumps too fast
+- Tuition collection assumptions are unusually high
+- Rent / occupancy costs too high relative to revenue
+- Grants make up too much of recurring operating revenue
+- Expenses growing faster than revenue
+- No reserve cushion
+- Large mismatch between annual surplus and monthly cash position
+
+Architect this so we can add more rules later.
+
+5) KPI transparency
+For each major KPI, allow users to click “How is this calculated?”
+
+Show:
+- Formula
+- Inputs used
+- Linked assumptions
+- Plain-English interpretation
+
+Example:
+Ending Cash = Beginning Cash + Cash Inflows - Cash Outflows
+
+The goal is to build trust and teach users how the product thinks.
+
+6) Optional 5-minute primer
+Add one optional entry-point called:
+“Budgeting basics for school founders”
+
+This should be a short, skimmable experience with 4-6 cards max:
+- Revenue
+- Expenses
+- Budget vs cash flow
+- Reserves
+- Common budgeting mistakes
+- What lenders and funders care about
+
+This should be optional, easy to skip, and accessible later from Help.
+
+Do not make this a required onboarding flow.
+
+7) Section-level coaching language
+Throughout the app, revise UX copy so it sounds like a smart finance coach:
+- calm
+- clear
+- non-judgmental
+- practical
+
+Avoid language that sounds academic, condescending, or overly technical.
+
+Bad:
+“Your assumptions are incorrect.”
+Better:
+“This assumption may be hard to sustain for a school at your current size.”
+
+UX requirements
+- No blocking modals except the initial guidance mode selection, and that should be skippable
+- No forced product walkthrough
+- No long walls of text
+- Explanations must be mobile-responsive and readable
+- Use progressive disclosure
+- Important concepts should be visible, not buried
+- Dismissed coaching cards should stay dismissed unless the underlying issue changes materially
+
+Engineering requirements
+- Build this as a reusable coaching/help system, not one-off hardcoded text scattered across the app
+- Create a structured content model for explainers and micro-lessons:
+  - id
+  - title
+  - body
+  - trigger condition
+  - audience level
+  - related section
+  - dismissible status
+- Create a reusable diagnostics engine with configurable thresholds
+- Keep thresholds easy to adjust
+- Track user interactions so we can later analyze:
+  - which explainers are opened
+  - which lessons are dismissed
+  - which diagnostics are most common
+  - whether users who engage with guidance complete budgets at higher rates
+
+Suggested UI components
+- ExplainerDrawer
+- InlineHelpCard
+- DiagnosticPanel
+- KpiFormulaModal or Drawer
+- BeginnerModeToggle
+- MicroLessonCard
+- HelpCenter entry for “Budgeting basics”
+
+Suggested rollout order
+Phase 1
+- Beginner Guidance Mode
+- Inline Explain This on core sections
+- KPI transparency on top metrics
+
+Phase 2
+- Diagnostics panel
+- Contextual micro-lessons
+
+Phase 3
+- Optional 5-minute primer
+- Analytics and refinement
+
+Acceptance criteria
+- A beginner can understand key budgeting concepts without leaving the product
+- An advanced user can move quickly without too much friction
+- The app surfaces problems in plain English
+- The UI teaches through use, not through mandatory training
+- Guidance feels like a co-pilot, not a class
+- The system is reusable and scalable across Budget.schoolstack.ai
+
+Please implement this in a clean, modular way and preserve the SchoolStack brand: warm, professional, modern, supportive, never patronizing.

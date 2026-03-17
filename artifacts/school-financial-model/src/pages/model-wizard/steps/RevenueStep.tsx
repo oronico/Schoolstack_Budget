@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
   type RevenueRowData,
   type RevenueCategory,
@@ -500,6 +501,7 @@ export function RevenueStep() {
         <p className="text-muted-foreground text-lg">
           Enter your expected amounts for each year. We've filled in smart defaults - adjust them to match your school.
         </p>
+        <SectionExplainers section="revenue" className="mt-4" />
       </div>
 
       {(hasRevenueErrors || hasRowErrors) && (

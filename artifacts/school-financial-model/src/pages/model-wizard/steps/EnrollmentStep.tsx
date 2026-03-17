@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, TrendingUp, Info, School, ShieldCheck, Users, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
+import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import type { Program } from "../schema";
 import { GRADE_BAND_LABELS } from "@/lib/revenue-defaults";
 import {
@@ -521,6 +522,7 @@ export function EnrollmentStep() {
         <p className="text-muted-foreground text-lg">
           Define every program you offer - each with its own tuition and enrollment. Full day, half day, drop-in, after school, four-day week - whatever you run. Don't worry about getting this perfect - your budget is a living document you'll refine over time.
         </p>
+        <SectionExplainers section="enrollment" className="mt-4" />
       </div>
 
       {programs.length === 0 && (
