@@ -132,6 +132,12 @@ export function ScenarioPage() {
   const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    return () => {
+      if (saveTimeout) clearTimeout(saveTimeout);
+    };
+  }, [saveTimeout]);
+
+  useEffect(() => {
     if (model && !initialized) {
       const modelData = model.data as FullModelData | undefined;
       if (model.currentStep < 8) {
