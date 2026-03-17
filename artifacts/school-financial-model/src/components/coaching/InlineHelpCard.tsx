@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Explainer } from "@/lib/coaching/explainers";
@@ -18,6 +18,16 @@ export function InlineHelpCard({ explainer, className, defaultOpen, section }: I
   const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const autoExpand = defaultOpen ?? shouldAutoExpand(level, explainer);
   const [isOpen, setIsOpen] = useState(autoExpand);
+  const prevLevel = useRef(level);
+
+  useEffect(() => {
+    if (prevLevel.current !== level) {
+      prevLevel.current = level;
+      if (defaultOpen === undefined) {
+        setIsOpen(shouldAutoExpand(level, explainer));
+      }
+    }
+  }, [level, explainer, defaultOpen]);
 
   const toggle = useCallback(() => {
     const next = !isOpen;

@@ -18,7 +18,7 @@ export function SectionExplainers({ section, className }: SectionExplainersProps
     <div className={className}>
       <div className="space-y-2">
         {explainers.map((e) => (
-          <InlineHelpCard key={e.id} explainer={e} />
+          <InlineHelpCard key={e.id} explainer={e} section={section} />
         ))}
       </div>
     </div>

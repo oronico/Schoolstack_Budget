@@ -86,7 +86,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "staffing",
     dismissible: true,
-    autoExpandFor: ["basics", "extra"],
+    autoExpandFor: ["extra"],
   },
   occupancy_rent: {
     id: "occupancy_rent",

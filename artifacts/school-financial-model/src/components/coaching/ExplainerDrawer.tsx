@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { HelpCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { KpiFormula } from "@/lib/coaching/kpi-formulas";
@@ -22,27 +22,35 @@ export function KpiFormulaDrawer({ formula, values, open, onClose, modelId }: Kp
     }
   }, [open, formula.id, modelId]);
 
+  const handleClose = useCallback(() => {
+    trackCoachingEvent("kpi_formula_closed", {
+      kpiId: formula.id,
+      modelId: modelId ?? null,
+    });
+    onClose();
+  }, [formula.id, modelId, onClose]);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={`How ${formula.title} is calculated`}>
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => { trackCoachingEvent("kpi_formula_closed", { kpiId: formula.id, modelId: modelId ?? null }); onClose(); }} aria-hidden="true" />
-      <div className="relative w-full max-w-sm sm:max-w-md bg-background shadow-2xl border-l border-border animate-in slide-in-from-right duration-300 overflow-y-auto">
-        <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border px-4 sm:px-6 py-3.5 flex items-center justify-between z-10">
-          <div className="flex items-center gap-2">
-            <HelpCircle className="h-4 w-4 text-primary" aria-hidden="true" />
-            <h2 className="font-display text-base font-bold text-foreground">How is this calculated?</h2>
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={handleClose} aria-hidden="true" />
+      <div className="relative w-full max-w-[calc(100vw-1rem)] sm:max-w-md bg-background shadow-2xl border-l border-border animate-in slide-in-from-right duration-300 overflow-y-auto">
+        <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between z-10">
+          <div className="flex items-center gap-2 min-w-0">
+            <HelpCircle className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+            <h2 className="font-display text-sm sm:text-base font-bold text-foreground truncate">How is this calculated?</h2>
           </div>
           <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            onClick={handleClose}
+            className="p-2.5 -mr-1 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             aria-label="Close"
           >
-            <X className="h-4 w-4" aria-hidden="true" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
-        <div className="px-4 sm:px-6 py-5 space-y-5">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 space-y-4 sm:space-y-5">
           <div>
             <h3 className="text-sm font-bold text-foreground">{formula.title}</h3>
           </div>
