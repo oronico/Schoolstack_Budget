@@ -470,6 +470,40 @@ function runLenderGradeBandTieOuts(wb: ExcelJS.Workbook): TestResult[] {
   return results;
 }
 
+function runSingleYearTieOuts(wb: ExcelJS.Workbook): TestResult[] {
+  const results: TestResult[] = [];
+
+  const pnlSheet = wb.worksheets.find((ws) => ws.name.toLowerCase().includes("p&l"));
+
+  if (pnlSheet) {
+    const totalRev = findValueByLabel(pnlSheet, /total.*revenue|revenue.*total/i, 14);
+    const netIncome = findValueByLabel(pnlSheet, /net\s*(income|surplus|operating)|profit/i, 14);
+
+    results.push({
+      name: "P&L Has Revenue",
+      passed: totalRev !== null,
+      details: [`Total Revenue (Annual): ${totalRev !== null ? Math.round(totalRev) : "not found"}`],
+      errors: totalRev === null ? ["No revenue found in P&L Summary total column"] : [],
+    });
+
+    results.push({
+      name: "P&L Has Net Income Row",
+      passed: netIncome !== null,
+      details: [`Net Income (Annual): ${netIncome !== null ? Math.round(netIncome) : "not found"}`],
+      errors: netIncome === null ? ["Net Income row not found in P&L Summary"] : [],
+    });
+  } else {
+    results.push({
+      name: "P&L Sheet Found",
+      passed: false,
+      details: [`Available sheets: ${wb.worksheets.map(w => w.name).join(", ")}`],
+      errors: ["No P&L sheet found"],
+    });
+  }
+
+  return results;
+}
+
 function runStandardTieOuts(wb: ExcelJS.Workbook): TestResult[] {
   const results: TestResult[] = [];
 
@@ -701,6 +735,8 @@ const UNDERWRITING_V1_TABS = [
 
 const LENDER_TABS = ["Cover", "Assumptions", "Drivers", "P&L", "Cash Flow", "Staffing", "Loan Snapshot", "Summary"];
 
+const SINGLE_YEAR_TABS = ["Assumptions", "Revenue", "Personnel", "Operating Expenses", "P&L Summary"];
+
 async function main() {
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -710,7 +746,7 @@ async function main() {
 
   const { generateWorkbook: genStandard } = await import("../src/lib/excel-export.js");
   const { generateUnderwritingWorkbook: genUWv2 } = await import("../src/lib/underwriting-workbook.js");
-  const { generateUnderwritingWorkbook: genUWv1 } = await import("../src/lib/underwriting-export.js");
+  const { generateUnderwritingWorkbook: genUWv1, generateSingleYearBudget: genSingleYear } = await import("../src/lib/underwriting-export.js");
   const { generateFormulaWorkbook: genFormula } = await import("../src/lib/formula-export.js");
   const { generateLenderProFormaWorkbook: genLender } = await import("../src/lib/lender-proforma-export.js");
 
@@ -730,6 +766,7 @@ async function main() {
     allResults.push(await testExport("Underwriting V1 (14-tab)", payloadName, payload, genUWv1, UNDERWRITING_V1_TABS, runStandardTieOuts));
     const lenderTieOut = payloadName.includes("Grade-Band") ? runLenderGradeBandTieOuts : runStandardTieOuts;
     allResults.push(await testExport("Lender Pro Forma", payloadName, payload, genLender, LENDER_TABS, lenderTieOut));
+    allResults.push(await testExport("Single-Year Pro Forma", payloadName, payload, (d) => genSingleYear(d, 0), SINGLE_YEAR_TABS, runSingleYearTieOuts));
   }
 
   console.log("\n\n╔══════════════════════════════════════════════════════════════╗");

@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 36480,
+    "fileSize": 36481,
     "tabs": [
       "Cover",
       "Instructions",
@@ -124,7 +124,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 21962,
+    "fileSize": 21963,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -185,7 +185,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 18251,
+    "fileSize": 18250,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -293,7 +293,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 19289,
+    "fileSize": 19290,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -352,9 +352,67 @@
     "overallPass": true
   },
   {
+    "exportType": "Single-Year Pro Forma",
+    "payload": "Microschool Startup",
+    "fileSize": 13827,
+    "tabs": [
+      "Assumptions",
+      "Revenue",
+      "Personnel",
+      "Operating Expenses",
+      "P&L Summary"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 13.5 KB",
+          "Successfully opened workbook",
+          "Worksheets: 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 378 cells across 5 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue (Annual): 236000"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income (Annual): 37233"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 39386,
+    "fileSize": 39387,
     "tabs": [
       "Cover",
       "Instructions",
@@ -516,7 +574,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 24001,
+    "fileSize": 24002,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -578,7 +636,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 21839,
+    "fileSize": 21838,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -687,7 +745,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 19600,
+    "fileSize": 19601,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -746,9 +804,67 @@
     "overallPass": true
   },
   {
+    "exportType": "Single-Year Pro Forma",
+    "payload": "Private School + ESA",
+    "fileSize": 14410,
+    "tabs": [
+      "Assumptions",
+      "Revenue",
+      "Personnel",
+      "Operating Expenses",
+      "P&L Summary"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 14.1 KB",
+          "Successfully opened workbook",
+          "Worksheets: 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 504 cells across 5 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue (Annual): 1975004"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income (Annual): 789764"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 40519,
+    "fileSize": 40520,
     "tabs": [
       "Cover",
       "Instructions",
@@ -971,7 +1087,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 20548,
+    "fileSize": 20547,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -1011,7 +1127,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 34239,
+    "fileSize": 34240,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1131,6 +1247,64 @@
         "passed": true,
         "details": [
           "Net Income: 0"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Single-Year Pro Forma",
+    "payload": "Charter Public Funding",
+    "fileSize": 14768,
+    "tabs": [
+      "Assumptions",
+      "Revenue",
+      "Personnel",
+      "Operating Expenses",
+      "P&L Summary"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 14.4 KB",
+          "Successfully opened workbook",
+          "Worksheets: 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 560 cells across 5 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue (Annual): 1546000"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income (Annual): -447923"
         ],
         "errors": []
       }
@@ -1363,7 +1537,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 20384,
+    "fileSize": 20383,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -1403,7 +1577,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 34037,
+    "fileSize": 34038,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1579,6 +1753,64 @@
         "passed": true,
         "details": [
           "Y5: $4,456,000 (K5: 260×$8200, 6-8: 140×$9100, 9-12: 100×$10500)"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Single-Year Pro Forma",
+    "payload": "Charter ADA Grade-Band",
+    "fileSize": 14515,
+    "tabs": [
+      "Assumptions",
+      "Revenue",
+      "Personnel",
+      "Operating Expenses",
+      "P&L Summary"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 14.2 KB",
+          "Successfully opened workbook",
+          "Worksheets: 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 504 cells across 5 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue (Annual): 1465000"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income (Annual): -212164"
         ],
         "errors": []
       }
