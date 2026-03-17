@@ -1,0 +1,109 @@
+We are narrowing the product and building toward one clear outcome:
+
+SchoolStack Budget should become the best budgeting and financial model builder for K-12 entrepreneurs in America. It should take a founder who feels overwhelmed by finance, guide them step by step through building a realistic model, help them understand what the numbers mean, show them what to fix, and generate lender-ready outputs they can actually use.
+
+We are not trying to become the full SchoolStack operating system right now.
+We are making Budget an exceptional wedge product first.
+
+Core product loop
+1. founder enters assumptions
+2. product explains what they mean
+3. product analyzes viability and risk
+4. product identifies the top 3 issues to fix
+5. founder revises assumptions
+6. product compares scenarios
+7. founder generates lender-ready and board-ready outputs
+
+Product principles
+- teach in context, not before use
+- reduce fear and math avoidance
+- plain English first, formulas second
+- trust is a product feature
+- every major screen should answer: what does this mean, why does it matter, what should I do next
+- no unnecessary complexity, no spreadsheet chaos, no jargon-heavy UX
+
+Build plan
+We are executing this in 3 epics.
+
+EPIC 1. Alpha hardening and trust layer
+Goal: make the model and exports trustworthy enough for alpha users and lender-facing outputs.
+
+Scope:
+- centralize financial logic as much as possible
+- reduce export-to-export drift
+- quarantine or deprecate legacy export paths
+- verify escalation / inflation input wiring
+- clarify debtIncluded behavior
+- add deterministic golden-model regression tests with exact expected outputs
+- document monthly cash flow timing assumptions
+- preserve and refine KPI formula transparency
+- complete Phase 1 coaching stabilization and instrumentation
+
+Definition of done:
+- one clear source of truth for core math
+- exact regression tests pass for key sample school models
+- exports tie out and are consistent
+- formulas shown in the UI are trustworthy
+- coaching events are captured
+- product is defensible for alpha
+
+EPIC 2. Decision engine
+Goal: transform Budget from a model builder into a decision-support product.
+
+Scope:
+- add a “What should I fix first?” panel after analysis
+- rank the top 3 issues in plain English
+- each issue includes why it matters and a direct link to the relevant assumption section
+- add scenario comparison view
+- show what changed between scenarios and what improved or worsened
+- make clear distinction between annual profitability and monthly cash stress
+- strengthen founder-facing interpretations in the consultant analysis view
+
+Initial decision rules should include:
+- negative ending cash in any month
+- staffing cost too high relative to revenue
+- occupancy cost too high relative to revenue
+- overly aggressive enrollment growth
+- unrealistic collection assumptions
+- weak reserves
+- heavy reliance on grants for recurring operations
+- poor DSCR or weak debt coverage
+
+Definition of done:
+- a founder can finish a model and immediately understand the top risks
+- users can compare two scenarios and see the impact clearly
+- the product recommends actions, not just metrics
+
+EPIC 3. Lender-ready output productization
+Goal: make reports and outputs feel like a real underwriting and board communication product, not just exports.
+
+Scope:
+- separate lender-ready packet from board-ready packet
+- lender packet should include executive summary, assumptions snapshot, 3-5 year forecast, monthly cash flow, DSCR/reserves, key risks and mitigants, and supporting exhibits
+- board packet should be simpler, more visual, and decision-oriented
+- improve narrative summaries generated from the model
+- ensure the product “shows its work” with linked assumptions and formulas where needed
+
+Definition of done:
+- output looks professional and coherent
+- lender packet feels underwriting-aware
+- board packet feels founder-friendly and strategic
+- exports tell a financial story, not just dump numbers
+
+Not in scope right now
+- full SIS
+- CRM
+- broad facilities OS expansion
+- messaging automation
+- benchmark engine
+- heavy integrations beyond what is required for the wedge
+- broad redesign of the whole product
+
+Working style
+- do one epic at a time
+- no scope creep
+- every epic needs acceptance criteria, QA notes, and a short findings memo
+- propose architecture before major refactors
+- preserve modularity and avoid duplicate math logic
+
+Please start by breaking Epic 1 into 3-5 tightly scoped implementation tickets in the right order, with dependencies, acceptance criteria, and suggested files.

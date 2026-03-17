@@ -1,0 +1,73 @@
+This is the right close-out plan for Epic 1.
+
+Please do not reopen or duplicate stale tasks #70 and #73. Those should be marked superseded by the work already completed plus the remaining close-out tickets below.
+
+We are now in Epic 1 close-out mode. No new features. No scope creep. The goal is to make the product defensible for alpha.
+
+Please create the remaining Epic 1 tickets in this order:
+
+1. KPI Formula Trust Check
+Purpose:
+Verify that every KPI formula shown in the consultant analysis UI matches the actual consultant-engine.ts logic and uses accurate labels, inputs, and plain-English interpretation.
+
+Scope:
+- compare each displayed KPI formula against consultant-engine.ts
+- fix any discrepancies in formula wording, input naming, or interpretation copy
+- note where the UI uses a simplified display formula and ensure it is still substantively correct
+- pay special attention to DSCR, reserve months, net margin, staffing cost %, revenue per student, operating cost %, revenue growth, and capacity utilization
+
+Definition of done:
+- all KPI explanations are trustworthy and aligned with engine logic
+- labels are user-facing and plain English
+- any simplifications are documented
+
+2. Coaching Stabilization
+Purpose:
+Stabilize the existing coaching system so it is measurable, behaves correctly by guidance mode, and feels polished across desktop and mobile.
+
+Scope:
+- wire coaching-specific tracking events into the existing event infrastructure
+- include metadata such as guidance level, explainer ID, related section, KPI ID, wizard step, and model ID where available
+- validate guidance mode behavior end to end
+- “I Know My Stuff” stays low-friction
+- “Just the Basics” expands only key high-friction explainers
+- “The Full Picture” expands broader guidance without creating clutter
+- null guidance level continues to show the prompt until selection
+- changing mode in navbar/settings updates behavior immediately
+- tighten mobile responsiveness, spacing, readability, touch targets, and help trigger consistency
+- do not redesign the whole wizard
+
+Definition of done:
+- coaching events fire correctly with useful metadata
+- guidance mode behavior matches intended product behavior
+- coaching surfaces feel cleaner and more consistent on mobile and desktop
+
+3. Alpha QA Pass & Findings Memo
+Purpose:
+Run a full end-to-end validation of the founder workflow and confirm the product is defensible for alpha.
+
+Scope:
+- test full flow from wizard entry through assumptions, analysis, scenario use if applicable, and export generation
+- verify lender-ready and workbook export paths that are still active
+- confirm KPI explanations, coaching behavior, and events all work in real flows
+- confirm no regressions in golden-model behavior or export integrity
+- produce a short findings memo
+
+Findings memo must include:
+- what was verified
+- what was tightened or fixed
+- any unresolved risks
+- 3 to 5 sample event payloads
+- top 3 recommendations for Epic 2
+
+Guardrails:
+- do not build diagnostics yet
+- do not build micro-lessons yet
+- do not redesign the product
+- do not create a new analytics system if the existing event infrastructure works
+- do not revive deprecated export paths
+
+After creating the tickets, please also:
+- mark stale overlapping tasks #70 and #73 as superseded or closed
+- note dependencies clearly
+- include acceptance criteria and QA notes for each ticket
