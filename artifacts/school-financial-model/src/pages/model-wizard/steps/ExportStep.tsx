@@ -1,21 +1,28 @@
 import { useState } from "react";
 import { getExportModelUrl } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText } from "lucide-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3 } from "lucide-react";
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
+import { BoardPacketPreview } from "../../../components/export/BoardPacketPreview";
 
-type ExportType = "formula" | "underwritingV2" | "lenderPacketPdf";
+type ExportType = "formula" | "underwritingV2" | "lenderPacketPdf" | "boardPacketPdf";
 
 export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
   const [loading, setLoading] = useState<ExportType | null>(null);
   const [exported, setExported] = useState<Set<ExportType>>(new Set());
   const [showPacketPreview, setShowPacketPreview] = useState(false);
+  const [showBoardPreview, setShowBoardPreview] = useState(false);
 
   const handleDownload = async (type: ExportType) => {
     if (!modelId || loading) return;
 
     if (type === "lenderPacketPdf") {
       setShowPacketPreview(true);
+      return;
+    }
+
+    if (type === "boardPacketPdf") {
+      setShowBoardPreview(true);
       return;
     }
 
@@ -26,6 +33,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         formula: getExportModelUrl(modelId),
         underwritingV2: `/api/models/${modelId}/export/underwriting-v2`,
         lenderPacketPdf: `/api/models/${modelId}/export/lender-packet-pdf`,
+        boardPacketPdf: `/api/models/${modelId}/export/board-packet-pdf`,
       };
 
       const token = localStorage.getItem('auth_token');
@@ -42,6 +50,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         formula: `School_Budget_Formulas_${modelId}.xlsx`,
         underwritingV2: `Underwriting_Package_${modelId}.xlsx`,
         lenderPacketPdf: `Lender_Packet_${modelId}.pdf`,
+        boardPacketPdf: `Board_Summary_${modelId}.pdf`,
       };
       const filename = filenameMatch?.[1] || fallbackNames[type];
       const url = window.URL.createObjectURL(blob);
@@ -84,7 +93,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           : "Download your financial model as a polished workbook or lender packet - ready for financing conversations."}
       </p>
 
-      <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <ExportCard
           icon={<FileText className="h-7 w-7" />}
           title="Lender-Ready Packet"
@@ -93,6 +102,16 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           isExported={exported.has("lenderPacketPdf")}
           disabled={loading !== null && loading !== "lenderPacketPdf"}
           onClick={() => handleDownload("lenderPacketPdf")}
+          highlight
+        />
+        <ExportCard
+          icon={<BarChart3 className="h-7 w-7" />}
+          title="Board Summary"
+          description="Financial outlook, top risks, cash runway, scenario comparison & next steps for board review"
+          isLoading={loading === "boardPacketPdf"}
+          isExported={exported.has("boardPacketPdf")}
+          disabled={loading !== null && loading !== "boardPacketPdf"}
+          onClick={() => handleDownload("boardPacketPdf")}
           highlight
         />
         <ExportCard
@@ -136,6 +155,13 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <LenderPacketPreview
           modelId={modelId}
           onClose={() => setShowPacketPreview(false)}
+        />
+      )}
+
+      {showBoardPreview && modelId && (
+        <BoardPacketPreview
+          modelId={modelId}
+          onClose={() => setShowBoardPreview(false)}
         />
       )}
     </div>
