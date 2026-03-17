@@ -291,11 +291,13 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   r++;
   ws.getCell(r, 1).value = "Salary Escalation Rate"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = salaryEsc; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+  ws.getCell(r, 3).value = "Derived from tuition escalation rate"; ws.getCell(r, 3).font = { ...NF, italic: true, color: { argb: "FF808080" } };
   const salaryEscRow = r;
 
   r++;
   ws.getCell(r, 1).value = "Cost Inflation Rate"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = costInflation; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+  ws.getCell(r, 3).value = "Derived from tuition escalation rate"; ws.getCell(r, 3).font = { ...NF, italic: true, color: { argb: "FF808080" } };
   const costInflRow = r;
 
   r++;
@@ -1179,6 +1181,14 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   ws.getRow(r).values = [...monthLabels, "Annual Total"];
   hdr(ws, r, 14);
 
+  // MONTHLY TIMING MODEL:
+  // Annual totals are computed first, then spread into months:
+  //   - Revenue: tuition spread over billingMonths (default 10, starting month 1);
+  //     non-tuition revenue spread evenly over opMonths.
+  //   - Personnel: spread evenly over opMonths (not 12 — staff aren't paid in non-operating months).
+  //   - OpEx: spread evenly over opMonths.
+  //   - Debt service: spread over 12 months (lenders require year-round payments).
+  //   - Cumulative cash starts from startingCash and compounds monthly.
   const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp);
   const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0);
   const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct) * prorationFactor;
@@ -1857,7 +1867,8 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
   ws.columns = [{ width: 28 }, ...Array(5).fill({ width: 16 })];
   printSetup(ws);
   const prorationFactor = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
-  const costInflPct = data.facilities?.generalCostInflation || 0;
+  // Use single escalation rate consistent with generateWorkbook() policy
+  const costInflPct = data.tuitionEscalation?.rate ?? 3;
   const expenseRows = data.expenseRows || [];
 
   const facByYear: number[] = [];
@@ -2078,9 +2089,15 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
 
   const sp = data.schoolProfile || {};
   const enrollment = getEnrollmentArray(data.enrollment);
-  const salaryEsc = (data.tuitionEscalation?.rate ?? 3) / 100;
-  const costInflation = (data.tuitionEscalation?.rate ?? 3) / 100;
-  const costInflPct = data.tuitionEscalation?.rate ?? 3;
+  // POLICY: single escalation rate — salary escalation, cost inflation, and
+  // expense escalation all derive from the user's tuitionEscalation.rate input
+  // (default 3%). This is an intentional product decision so the model stays
+  // simple for school founders; individual line-item escalationRate overrides
+  // are still respected via resolveEsc() in each compute function.
+  const escalationRatePct = data.tuitionEscalation?.rate ?? 3;
+  const salaryEsc = escalationRatePct / 100;
+  const costInflation = escalationRatePct / 100;
+  const costInflPct = escalationRatePct;
   const prorationFactor = getProrationFactor(sp);
   const startingCash = data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0;
 
@@ -2103,7 +2120,13 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   const { endingCashY1 } = buildMonthlyCashFlowY1(wb, data, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
   buildOperatingStatement(wb, data, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear);
 
-  const { debtByYear: debtServiceByYear, balanceByYear } = buildDebtSchedule(wb, data);
+  const debtIncluded = sp.debtIncluded !== false;
+  const debtResult = buildDebtSchedule(wb, data);
+  // When debtIncluded is false, zero out debt service and balances so
+  // DSCR, balance sheet, and scenarios all reflect a no-debt model.
+  const debtServiceByYear = debtIncluded ? debtResult.debtByYear : [0, 0, 0, 0, 0];
+  const balanceByYear = debtIncluded ? debtResult.balanceByYear : [0, 0, 0, 0, 0];
+
   const { cashByYear } = buildBalanceSheet(wb, data, niByYear, balanceByYear, startingCash, endingCashY1);
 
   buildDSCRCovenants(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear);

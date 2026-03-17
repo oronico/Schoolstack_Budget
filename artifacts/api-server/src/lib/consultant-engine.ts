@@ -42,6 +42,7 @@ interface SchoolProfile {
   charterDepositTiming?: string;
   priorYearADM?: number;
   priorYearADA?: number;
+  debtIncluded?: boolean;
 }
 
 interface TuitionTier {
@@ -817,6 +818,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   const tuitionTiers = data.tuitionTiers;
 
+  const debtIncluded = sp.debtIncluded !== false;
+
   if (hasRowData) {
     const revenueRows = data.revenueRows || [];
     const staffingRows = data.staffingRows || [];
@@ -825,8 +828,13 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
     const costInflationPct = data.facilities?.generalCostInflation || 0;
 
+    // When debtIncluded is false, pass only non-loan capital rows
+    const effectiveCapDebtRows = debtIncluded
+      ? capDebtRows
+      : capDebtRows.filter(r => !r.isLoan);
+
     yearFinancials = computeAllYearsFromRows(
-      enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows,
+      enrollmentByYear, revenueRows, staffingRows, expenseRows, effectiveCapDebtRows,
       salaryEscRate, prorationFactor, tuitionTiers, costInflationPct, sp,
     );
   } else {

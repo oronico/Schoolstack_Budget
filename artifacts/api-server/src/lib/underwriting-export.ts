@@ -1,3 +1,6 @@
+// @deprecated — This module is superseded by underwriting-workbook.ts (v2).
+// The /export/underwriting route has been removed; only /export/underwriting-v2 is active.
+// Retained for reference only — do not add new code here.
 import ExcelJS from "exceljs";
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {

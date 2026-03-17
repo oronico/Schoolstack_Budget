@@ -16,7 +16,7 @@ import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 import { generateProFormaPDF } from "../lib/pdf-proforma";
 import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
-import { generateSingleYearBudget, generateUnderwritingWorkbook } from "../lib/underwriting-export";
+import { generateSingleYearBudget } from "../lib/underwriting-export";
 import { generateUnderwritingWorkbook as generateUnderwritingWorkbookV2 } from "../lib/underwriting-workbook";
 import { generateFormulaWorkbook } from "../lib/formula-export";
 import { trackEvent } from "../lib/track-event";
@@ -454,6 +454,7 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
   }
 });
 
+// @deprecated — redirects to v2. Old route kept for backward compatibility.
 router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
@@ -478,7 +479,7 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const buffer = await generateUnderwritingWorkbook(data);
+    const buffer = await generateUnderwritingWorkbookV2(data);
 
     await db.insert(exportsTable).values({
       userId: req.userId!,

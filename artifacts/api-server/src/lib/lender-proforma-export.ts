@@ -8,6 +8,10 @@ import {
   hdr, sec, dc, bc, gc, cn, colLetter,
   setFormula, inputCell, printSetup,
   computeAnnualDebt,
+  driverVal,
+  computeGradeBandRevenue,
+  hasGradeBandData,
+  computeRevenueForYear as computeRevenueForYearShared,
 } from "./workbook-helpers.js";
 
 const SCHOOL_TYPE_DISPLAY: Record<string, string> = {
@@ -120,14 +124,11 @@ function inferGrowthRate(amounts: number[], yearIdx0: number, yearIdx1: number):
   return (v1 - v0) / v0;
 }
 
+// computeDriverValue delegates to shared driverVal from workbook-helpers.
+// The lender-proforma version intentionally omits escalation (no escalationRate / fallback
+// params) because each call site in mapModelToTemplateInput only reads Y0 values.
 function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number): number {
-  const base = amounts?.[yearIdx] ?? 0;
-  switch (driverType) {
-    case "monthly": return base * 12;
-    case "per_student": return base * students;
-    case "annual_fixed": return base;
-    default: return base;
-  }
+  return driverVal(amounts, yearIdx, driverType, students);
 }
 
 function sumExpenseCategoryY1(rows: ExpenseRow[], category: string, students: number, totalRevenue: number): number {
@@ -159,72 +160,27 @@ function avgExpenseGrowth(rows: ExpenseRow[], categories: string[], students1: n
   return (sum1 - sum0) / sum0;
 }
 
+// Delegates to shared helpers from workbook-helpers.ts.
+// SchoolProfile shapes are compatible (both have gradeBandEnrollment, gradeBandPerPupil, etc.)
 function computeGradeBandRevenueLocal(sp: SchoolProfile, y: number): number {
-  const gbe = sp.gradeBandEnrollment;
-  const gbp = sp.gradeBandPerPupil;
-  if (!gbe || !gbp) return 0;
-  const k5e = gbe.k5?.[y] ?? 0;
-  const m68e = gbe.m68?.[y] ?? 0;
-  const h912e = gbe.h912?.[y] ?? 0;
-  if (k5e + m68e + h912e === 0) return 0;
-  let total = k5e * (gbp.k5 || 0) + m68e * (gbp.m68 || 0) + h912e * (gbp.h912 || 0);
-  if (sp.enrollmentRevenueMethod === "ada") {
-    const adm = sp.priorYearADM || 0;
-    const ada = sp.priorYearADA || 0;
-    total *= adm > 0 ? Math.min(ada / adm, 1) : 0.95;
-  }
-  return total;
+  return computeGradeBandRevenue(sp as any, y);
 }
 
 function hasGradeBandDataLocal(sp?: SchoolProfile): boolean {
-  if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
-  const gbe = sp.gradeBandEnrollment;
-  const gbp = sp.gradeBandPerPupil;
-  const hasEnrollment = [gbe.k5, gbe.m68, gbe.h912].some(
-    (arr) => arr && arr.some((v) => (v ?? 0) > 0),
-  );
-  return hasEnrollment && ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+  return hasGradeBandData(sp as any);
 }
 
+// Delegates to shared computeRevenueForYear from workbook-helpers.ts.
 function computeRevenueY(rows: RevenueRow[], yearIdx: number, students: number, sp?: SchoolProfile): number {
-  const rowValues = new Map<string, number>();
-  for (const row of rows) {
-    if (!row.enabled || row.driverType === "percent_of_base") continue;
-    if (row.id === "state_local_perpupil" && sp && hasGradeBandDataLocal(sp)) {
-      rowValues.set(row.id, computeGradeBandRevenueLocal(sp, yearIdx));
-    } else {
-      rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students));
-    }
-  }
-  for (const row of rows) {
-    if (!row.enabled || row.driverType !== "percent_of_base") continue;
-    const baseVal = rowValues.get(row.percentBase || "") || 0;
-    const pctVal = (row.amounts?.[yearIdx] ?? 0) / 100;
-    rowValues.set(row.id, baseVal * pctVal);
-  }
-  let total = 0;
-  for (const row of rows) {
-    if (!row.enabled) continue;
-    const val = rowValues.get(row.id) || 0;
-    if (row.category === "tuition_offsets") {
-      total -= val;
-    } else {
-      total += val;
-    }
-  }
-  return total;
+  return computeRevenueForYearShared(rows as any[], yearIdx, students, undefined, undefined, sp as any);
 }
 
 const FACILITY_CATEGORIES = ["occupancy_facility"];
 const PROGRAM_CATEGORIES = ["instructional_program"];
 
+// Delegates to shared computeAnnualDebt from workbook-helpers.ts.
 function computeAnnualDebtService(principal: number, annualRate: number, termYears: number): number {
-  if (principal <= 0 || termYears <= 0) return 0;
-  if (annualRate <= 0) return principal / termYears;
-  const monthlyRate = annualRate / 12;
-  const months = termYears * 12;
-  const mp = principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
-  return mp * 12;
+  return computeAnnualDebt(principal, annualRate, termYears);
 }
 
 export function mapModelToTemplateInput(rawData: Record<string, unknown>): Record<string, string | number> {
