@@ -574,7 +574,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 23995,
+    "fileSize": 23996,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -745,7 +745,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 19595,
+    "fileSize": 19596,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -806,7 +806,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 14409,
+    "fileSize": 14410,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -864,7 +864,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 42113,
+    "fileSize": 42114,
     "tabs": [
       "Cover",
       "Instructions",
@@ -1026,7 +1026,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter Public Funding",
-    "fileSize": 22987,
+    "fileSize": 22988,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1762,7 +1762,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 14516,
+    "fileSize": 14515,
     "tabs": [
       "Assumptions",
       "Revenue",

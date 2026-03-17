@@ -291,13 +291,13 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   r++;
   ws.getCell(r, 1).value = "Salary Escalation Rate"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = salaryEsc; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
-  ws.getCell(r, 3).value = "Derived from tuition escalation rate"; ws.getCell(r, 3).font = { ...NF, italic: true, color: { argb: "FF808080" } };
+  ws.getCell(r, 3).value = "Salary input or tuition escalation fallback"; ws.getCell(r, 3).font = { ...NF, italic: true, color: { argb: "FF808080" } };
   const salaryEscRow = r;
 
   r++;
   ws.getCell(r, 1).value = "Cost Inflation Rate"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = costInflation; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
-  ws.getCell(r, 3).value = "Derived from tuition escalation rate"; ws.getCell(r, 3).font = { ...NF, italic: true, color: { argb: "FF808080" } };
+  ws.getCell(r, 3).value = "Cost inflation input or tuition escalation fallback"; ws.getCell(r, 3).font = { ...NF, italic: true, color: { argb: "FF808080" } };
   const costInflRow = r;
 
   r++;
