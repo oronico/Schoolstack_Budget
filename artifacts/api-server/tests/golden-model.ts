@@ -14,6 +14,7 @@ import {
   type ExpenseRow,
   type CapitalDebtRow,
 } from "../src/lib/workbook-helpers.js";
+import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
 import { microschoolStartup, privateSchoolWithESA, charterPublicFunding, charterADAGradeBand } from "./sample-payloads.js";
 
 interface GoldenValue {
@@ -415,6 +416,112 @@ function testDriverValEdgeCases() {
   check("ExpenseRow percent_of_revenue", computeExpenseForYear([pctRevRow], 0, 100, 1000000, 0), 50000);
 }
 
+function cellNum(ws: import("exceljs").Worksheet, row: number, col: number): number {
+  const cell = ws.getCell(row, col);
+  const v = cell.value;
+  if (v === null || v === undefined) return 0;
+  if (typeof v === "number") return v;
+  if (typeof v === "object" && v !== null) {
+    const obj = v as Record<string, unknown>;
+    if ("result" in obj && typeof obj.result === "number") return obj.result;
+    if ("result" in obj && typeof obj.result === "object" && obj.result !== null) {
+      const inner = obj.result as Record<string, unknown>;
+      if ("result" in inner && typeof inner.result === "number") return inner.result;
+    }
+    if ("sharedFormula" in obj && "result" in obj) return Number(obj.result) || 0;
+  }
+  return Number(v) || 0;
+}
+
+function findRowByLabel(ws: import("exceljs").Worksheet, label: string, startRow = 1, endRow = 80): number {
+  for (let r = startRow; r <= endRow; r++) {
+    const v = ws.getCell(r, 1).value;
+    if (typeof v === "string" && v.trim() === label) return r;
+  }
+  return -1;
+}
+
+async function testWorkbookKPIs() {
+  console.log("\n— Workbook-Level KPIs —");
+
+  const payloads: [string, Record<string, unknown>][] = [
+    ["Microschool", microschoolStartup as unknown as Record<string, unknown>],
+    ["Private+ESA", privateSchoolWithESA as unknown as Record<string, unknown>],
+    ["Charter", charterPublicFunding as unknown as Record<string, unknown>],
+    ["Charter ADA", charterADAGradeBand as unknown as Record<string, unknown>],
+  ];
+
+  for (const [name, payload] of payloads) {
+    const wb = await generateUnderwritingWorkbook(payload);
+    const summary = wb.getWorksheet("Budget Summary");
+    if (!summary) { failed++; failures.push(`  FAIL: ${name} — Budget Summary tab missing`); continue; }
+
+    const revRow = findRowByLabel(summary, "Total Revenue");
+    const persRow = findRowByLabel(summary, "Total Personnel");
+    const opexRow = findRowByLabel(summary, "Total Operating Expenses");
+    const cdRow = findRowByLabel(summary, "Total Capital & Debt Service");
+    const expRow = findRowByLabel(summary, "Total Expenses");
+
+    if (revRow < 0 || persRow < 0 || expRow < 0) {
+      failed++; failures.push(`  FAIL: ${name} — Missing Budget Summary rows`); continue;
+    }
+
+    const y1Rev = cellNum(summary, revRow, 2);
+    const y5Rev = cellNum(summary, revRow, 6);
+    const y1Pers = cellNum(summary, persRow, 2);
+    const y1Opex = cellNum(summary, opexRow, 2);
+    const y1CD = cdRow > 0 ? cellNum(summary, cdRow, 2) : 0;
+    const y1TotalExp = cellNum(summary, expRow, 2);
+
+    check(`${name} WB: Y1 Rev > 0`, y1Rev > 0 ? 1 : 0, 1);
+    check(`${name} WB: Y5 Rev > Y1 Rev`, y5Rev > y1Rev ? 1 : 0, 1);
+    check(`${name} WB: Y1 Personnel > 0`, y1Pers > 0 ? 1 : 0, 1);
+
+    const computedTotalExp = y1Pers + y1Opex + y1CD;
+    check(`${name} WB: Total Exp tie-out`, y1TotalExp, computedTotalExp, 2);
+
+    const niLabel = ["Net Income", "Net Surplus", "Change in Net Assets"];
+    let niRow = -1;
+    for (const l of niLabel) { niRow = findRowByLabel(summary, l); if (niRow > 0) break; }
+    if (niRow > 0) {
+      const y1NI = cellNum(summary, niRow, 2);
+      const y5NI = cellNum(summary, niRow, 6);
+      check(`${name} WB: Y1 NI = Rev - Exp`, y1NI, y1Rev - y1TotalExp, 2);
+      check(`${name} WB: Y5 NI computed`, y5NI, cellNum(summary, revRow, 6) - cellNum(summary, expRow, 6), 2);
+    }
+
+    const opStmt = wb.getWorksheet("Operating Statement");
+    if (opStmt) {
+      const osRevRow = findRowByLabel(opStmt, "Total Revenue");
+      const osExpRow = findRowByLabel(opStmt, "Total Expenses");
+      if (osRevRow > 0) check(`${name} WB: OpStmt Rev matches Summary`, cellNum(opStmt, osRevRow, 2), y1Rev, 2);
+      if (osExpRow > 0) check(`${name} WB: OpStmt Exp matches Summary`, cellNum(opStmt, osExpRow, 2), y1TotalExp, 2);
+    }
+
+    const dscr = wb.getWorksheet("DSCR & Covenants");
+    if (dscr) {
+      const dsRow = findRowByLabel(dscr, "Debt Service");
+      if (dsRow > 0) {
+        const dsY1 = cellNum(dscr, dsRow, 2);
+        if (name === "Microschool") {
+          check(`${name} WB: DSCR Debt Service = 0 (no debt)`, dsY1, 0);
+        } else if (name === "Private+ESA") {
+          check(`${name} WB: DSCR Debt Service > 0`, dsY1 > 0 ? 1 : 0, 1);
+        }
+      }
+    }
+
+    const balSheet = wb.getWorksheet("Balance Sheet");
+    if (balSheet) {
+      const taRow = findRowByLabel(balSheet, "Total Assets");
+      const tlRow = findRowByLabel(balSheet, "Total Liabilities & Equity") || findRowByLabel(balSheet, "Total Liabilities & Net Assets");
+      if (taRow > 0 && tlRow > 0) {
+        check(`${name} WB: Balance Sheet ties`, cellNum(balSheet, taRow, 2), cellNum(balSheet, tlRow, 2), 2);
+      }
+    }
+  }
+}
+
 async function main() {
   console.log("╔══════════════════════════════════════════════════════════════╗");
   console.log("║               GOLDEN MODEL REGRESSION TESTS                ║");
@@ -429,6 +536,7 @@ async function main() {
   testDebtIncludedExclusion();
   testGradeBandEdgeCases();
   testDriverValEdgeCases();
+  await testWorkbookKPIs();
 
   console.log("\n╔══════════════════════════════════════════════════════════════╗");
   console.log("║                      FINAL REPORT                          ║");
