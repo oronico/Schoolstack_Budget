@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -15,6 +15,12 @@ import {
   GraduationCap,
   DollarSign,
   CalendarRange,
+  MessageSquare,
+  ThumbsUp,
+  ThumbsDown,
+  Bug,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -49,6 +55,31 @@ interface AnalyticsData {
     exported: number;
   };
 }
+
+interface FeedbackItem {
+  id: number;
+  category: string;
+  message: string;
+  pageUrl: string | null;
+  email: string | null;
+  userName: string | null;
+  userId: number | null;
+  createdAt: string;
+}
+
+interface FeedbackResponse {
+  items: FeedbackItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  like: { label: "What I like", icon: ThumbsUp, color: "text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30" },
+  dislike: { label: "What I don't like", icon: ThumbsDown, color: "text-orange-600 bg-orange-100 dark:text-orange-400 dark:bg-orange-900/30" },
+  bug: { label: "Bug report", icon: Bug, color: "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30" },
+  feature: { label: "Feature request", icon: Sparkles, color: "text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30" },
+};
 
 const SCHOOL_TYPE_LABELS: Record<string, string> = {
   charter_school: "Charter School",
@@ -165,12 +196,170 @@ function RankedList({
   );
 }
 
+function FeedbackSection() {
+  const [feedbackData, setFeedbackData] = useState<FeedbackResponse | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(true);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [page, setPage] = useState(1);
+
+  const fetchFeedback = useCallback(async () => {
+    setFeedbackLoading(true);
+    setFeedbackError(null);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", "20");
+      if (categoryFilter) params.set("category", categoryFilter);
+      const res = await fetch(`/api/admin/feedback?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch feedback");
+      const json = await res.json();
+      setFeedbackData(json);
+    } catch {
+      setFeedbackError("Failed to load feedback.");
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }, [page, categoryFilter]);
+
+  useEffect(() => {
+    fetchFeedback();
+  }, [fetchFeedback]);
+
+  const totalPages = feedbackData ? Math.ceil(feedbackData.total / feedbackData.limit) : 0;
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <button
+          onClick={() => { setCategoryFilter(""); setPage(1); }}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            !categoryFilter
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          All
+        </button>
+        {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => {
+          const Icon = cfg.icon;
+          return (
+            <button
+              key={key}
+              onClick={() => { setCategoryFilter(key); setPage(1); }}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                categoryFilter === key
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {cfg.label}
+            </button>
+          );
+        })}
+        {feedbackData && (
+          <span className="text-sm text-muted-foreground ml-auto">
+            {feedbackData.total} total
+          </span>
+        )}
+      </div>
+
+      {feedbackLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : feedbackError ? (
+        <p className="text-destructive text-center py-12">{feedbackError}</p>
+      ) : !feedbackData || feedbackData.items.length === 0 ? (
+        <div className="text-center py-12">
+          <MessageSquare className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-muted-foreground">No feedback submissions yet.</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-3">
+            {feedbackData.items.map((item) => {
+              const cfg = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.like;
+              const CatIcon = cfg.icon;
+              return (
+                <div
+                  key={item.id}
+                  className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`p-2 rounded-xl flex-shrink-0 ${cfg.color}`}>
+                      <CatIcon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {cfg.label}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(item.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground whitespace-pre-wrap mb-2">
+                        {item.message}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                        {(item.userName || item.email) && (
+                          <span>
+                            {item.userName || item.email}
+                          </span>
+                        )}
+                        {!item.userName && !item.email && (
+                          <span className="italic">Anonymous</span>
+                        )}
+                        {item.pageUrl && (
+                          <span className="flex items-center gap-1 truncate max-w-[200px]">
+                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                            {item.pageUrl.replace(/^https?:\/\/[^/]+/, "")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-4 py-2 rounded-xl text-sm font-medium bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-4 py-2 rounded-xl text-sm font-medium bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function AdminPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"analytics" | "feedback">("analytics");
 
   useEffect(() => {
     async function fetchAnalytics() {
@@ -243,13 +432,41 @@ export function AdminPage() {
       <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="mb-10">
           <h1 className="font-display text-4xl font-bold text-foreground tracking-tight">
-            Admin Analytics
+            Admin Dashboard
           </h1>
           <p className="text-muted-foreground mt-2">
             Platform usage overview and key metrics.
           </p>
+          <div className="flex gap-2 mt-6">
+            <button
+              onClick={() => setActiveTab("analytics")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "analytics"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab("feedback")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "feedback"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Feedback
+            </button>
+          </div>
         </div>
 
+        {activeTab === "feedback" ? (
+          <FeedbackSection />
+        ) : (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <MetricCard title="Total Users" value={data.totalUsers} icon={Users} />
           <MetricCard title="Total Models" value={data.totalModels} icon={FileSpreadsheet} />
@@ -461,6 +678,8 @@ export function AdminPage() {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
     </Layout>
   );

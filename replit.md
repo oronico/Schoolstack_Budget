@@ -40,7 +40,8 @@ A React-based SPA featuring:
 - Authentication pages (login, register, forgot/reset password).
 - A dashboard for model lifecycle management.
 - An 8-step authenticated wizard for detailed financial model setup.
-- A dedicated admin analytics page for key metrics.
+- A dedicated admin dashboard with analytics and feedback management tabs.
+- A floating feedback widget (bottom-right) visible on all pages via Layout, supporting category selection (like, dislike, bug, feature), free-text message, optional email for anonymous users, and auto-captured page URL. Submissions stored in `feedback` table.
 - Auth context with JWT stored in localStorage.
 
 ### Consultant Engine
