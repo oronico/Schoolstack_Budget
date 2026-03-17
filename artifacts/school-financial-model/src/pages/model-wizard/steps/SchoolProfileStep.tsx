@@ -156,27 +156,19 @@ export function SchoolProfileStep() {
 
   const allowedEntityTypes = useMemo(() => {
     const all = Object.entries(ENTITY_TYPE_LABELS);
-    if (isCharter) {
-      return all.filter(([v]) => v === "nonprofit_501c3");
-    }
-    if (isPrivate || schoolType === "homeschool_coop") {
+    if (isCharter || isPrivate || schoolType === "homeschool_coop") {
       return all.filter(([v]) => v !== "sole_practitioner");
     }
     return all;
   }, [schoolType, isCharter, isPrivate]);
 
   useEffect(() => {
-    if (!schoolType) return;
-    if (isCharter && entityType !== "nonprofit_501c3") {
-      setValue("schoolProfile.entityType", "nonprofit_501c3");
-      return;
-    }
-    if (!entityType) return;
+    if (!schoolType || !entityType) return;
     const allowed = allowedEntityTypes.map(([v]) => v);
     if (!allowed.includes(entityType)) {
       setValue("schoolProfile.entityType", undefined);
     }
-  }, [schoolType, entityType, allowedEntityTypes, isCharter, setValue]);
+  }, [schoolType, entityType, allowedEntityTypes, setValue]);
 
   const prevLocationSecured = useRef(locationSecured);
   useEffect(() => {
