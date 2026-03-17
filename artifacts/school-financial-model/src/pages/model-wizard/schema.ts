@@ -172,7 +172,7 @@ export const enrollmentSchema = z.object({
 
 export const revenueRowSchema = z.object({
   id: z.string(),
-  category: z.enum(["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "grants_contributions", "other_revenue"], {
+  category: z.enum(["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "grants_contributions", "philanthropy", "other_revenue"], {
     required_error: "Please select a revenue category",
     invalid_type_error: "Please select a valid revenue category",
   }),
