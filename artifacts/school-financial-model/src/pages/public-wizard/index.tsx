@@ -176,9 +176,14 @@ export function PublicWizardPage() {
       <div className="bg-card border-b border-border sticky top-20 z-40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display font-bold text-lg text-foreground">
-              Build Your Financial Model
-            </h2>
+            <div>
+              <h2 className="font-display font-bold text-lg text-foreground">
+                Build Your Financial Model
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5 md:hidden">
+                Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1].title}
+              </p>
+            </div>
             <div className="flex items-center text-xs font-medium text-muted-foreground">
               {lastSaved ? (
                 <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved locally</span>
