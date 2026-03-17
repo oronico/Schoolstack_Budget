@@ -43,7 +43,8 @@ A React-based SPA featuring:
 - A Scenario Planner (`/model/:id/scenarios`) - gated at step 8, allows up to 3 named what-if scenarios with 5 adjustment sliders (enrollment, tuition/revenue, staffing, facility, expenses). Shows side-by-side comparison table (Year 1, Year 5, Key Indicators) with color-coded viability nudges. Scenarios auto-persist and flow into the underwriting Excel export.
 - A dedicated admin dashboard with analytics and feedback management tabs.
 - A floating feedback widget (bottom-right) visible on all pages via Layout, supporting category selection (like, dislike, bug, feature), free-text message, optional email for anonymous users, and auto-captured page URL. Submissions stored in `feedback` table.
-- Auth context with JWT stored in localStorage.
+- Auth context with JWT stored in localStorage, `refetchUser` helper for re-fetching user data.
+- Budgeting Co-Pilot Phase 1: guidance mode preference (advanced/basics/extra stored in `guidance_level` on users table, PATCH `/api/auth/guidance-level`), inline explainer cards on wizard steps (13 explainers across enrollment/revenue/staffing/expenses/review sections), KPI formula transparency on consultant analysis metric cards (8 KPI formulas with "How is this calculated?" drawers). Components: `InlineHelpCard`, `ExplainerDrawer`/`KpiFormulaDrawer`, `GuidanceModePrompt`, `GuidanceModeSelector`, `SectionExplainers`. Content registries: `src/lib/coaching/explainers.ts`, `src/lib/coaching/kpi-formulas.ts`.
 
 ### Consultant Engine
 Provides deterministic financial analysis including lender readiness scores, school-type-aware heuristics, management fee analysis, five stress test scenarios, a 5x5 sensitivity matrix, cash runway calculation, industry benchmark comparisons, and prior-year variance analysis.
