@@ -76,27 +76,41 @@ interface ExpenseLineItemDef {
 }
 
 const EXPENSE_LINE_ITEMS: ExpenseLineItemDef[] = [
+  // ── Instructional Program ──
   { id: "curriculum_materials", category: "instructional_program", lineItem: "Curriculum & Instructional Materials", driverType: "per_student", defaultAmount: 300, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "classroom_supplies", category: "instructional_program", lineItem: "Classroom Supplies", driverType: "per_student", defaultAmount: 100, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "testing_assessment", category: "instructional_program", lineItem: "Testing & Assessment", driverType: "per_student", defaultAmount: 50, enabledFor: ["charter_public_funded", "hybrid_mixed"] },
   { id: "special_education", category: "instructional_program", lineItem: "Special Education Services", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "contracted_services", category: "instructional_program", lineItem: "Contracted Services (Speech, OT, Nursing)", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
   { id: "professional_development", category: "instructional_program", lineItem: "Professional Development", driverType: "annual_fixed", defaultAmount: 3000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "enrichment_programs", category: "instructional_program", lineItem: "Enrichment / After-School Programs", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
   { id: "food_service", category: "instructional_program", lineItem: "Food / Meal Service", driverType: "per_student", defaultAmount: 0, enabledFor: [] },
   { id: "transportation", category: "instructional_program", lineItem: "Student Transportation", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "uniforms_student_supplies", category: "instructional_program", lineItem: "Uniforms / Student Supplies", driverType: "per_student", defaultAmount: 0, enabledFor: [] },
+  { id: "printing_copying", category: "instructional_program", lineItem: "Printing & Copying", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "health_safety_supplies", category: "instructional_program", lineItem: "Health & Safety Supplies", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "parent_communication", category: "instructional_program", lineItem: "Parent Communication Tools", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
 
+  // ── Technology ──
   { id: "student_devices", category: "technology", lineItem: "Student Devices & Hardware", driverType: "per_student", defaultAmount: 150, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "software_licenses", category: "technology", lineItem: "Software & Subscriptions (SIS, LMS)", driverType: "annual_fixed", defaultAmount: 5000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "internet_telecom", category: "technology", lineItem: "Internet & Telecommunications", driverType: "monthly", defaultAmount: 300, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "tech_support", category: "technology", lineItem: "IT Support / Managed Services", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
 
+  // ── Facility ──
   { id: "rent_lease", category: "occupancy_facility", lineItem: "Rent / Lease", driverType: "monthly", defaultAmount: 5000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "utilities", category: "occupancy_facility", lineItem: "Utilities", driverType: "annual_fixed", defaultAmount: 8000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "insurance", category: "occupancy_facility", lineItem: "Property & Liability Insurance", driverType: "annual_fixed", defaultAmount: 3500, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
-  { id: "maintenance_repairs", category: "occupancy_facility", lineItem: "Maintenance & Repairs", driverType: "annual_fixed", defaultAmount: 2000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
+  { id: "maintenance_repairs", category: "occupancy_facility", lineItem: "Maintenance & Repairs (General)", driverType: "annual_fixed", defaultAmount: 2000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
+  { id: "pest_control", category: "occupancy_facility", lineItem: "Pest Control", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "fire_safety_inspections", category: "occupancy_facility", lineItem: "Fire Marshal / Safety Inspections", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "hvac_mechanical", category: "occupancy_facility", lineItem: "HVAC / Mechanical Service", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "landscaping_grounds", category: "occupancy_facility", lineItem: "Landscaping / Grounds", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
+  { id: "trash_waste", category: "occupancy_facility", lineItem: "Trash / Waste Removal", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
   { id: "janitorial", category: "occupancy_facility", lineItem: "Janitorial / Cleaning", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
   { id: "security", category: "occupancy_facility", lineItem: "Security", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
 
+  // ── Admin & Operations ──
   { id: "bookkeeper", category: "administrative_general", lineItem: "Bookkeeper", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
   { id: "lawyer", category: "administrative_general", lineItem: "Lawyer / Legal Counsel", driverType: "monthly", defaultAmount: 0, enabledFor: [] },
   { id: "general_liability_insurance", category: "occupancy_facility", lineItem: "General Liability Insurance", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
@@ -104,6 +118,11 @@ const EXPENSE_LINE_ITEMS: ExpenseLineItemDef[] = [
   { id: "legal_accounting", category: "administrative_general", lineItem: "Legal & Accounting", driverType: "annual_fixed", defaultAmount: 8000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "office_supplies", category: "administrative_general", lineItem: "Office Supplies & Postage", driverType: "annual_fixed", defaultAmount: 2000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"] },
   { id: "bank_merchant_fees", category: "administrative_general", lineItem: "Bank & Merchant Processing Fees", driverType: "percent_of_revenue", defaultAmount: 2.5, enabledFor: ["tuition_based", "hybrid_mixed"] },
+  { id: "payroll_processing", category: "administrative_general", lineItem: "Payroll Processing Fees", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "workers_comp", category: "administrative_general", lineItem: "Workers' Compensation Insurance", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "background_checks", category: "administrative_general", lineItem: "Background Checks / Fingerprinting", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "travel_conferences", category: "administrative_general", lineItem: "Travel & Conferences", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
+  { id: "dues_memberships", category: "administrative_general", lineItem: "Dues & Memberships", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },
   { id: "authorizer_fee", category: "administrative_general", lineItem: "Authorizer / Management Fee", driverType: "percent_of_revenue", defaultAmount: 3, enabledFor: [] },
   { id: "audit_compliance", category: "administrative_general", lineItem: "Audit & Compliance", driverType: "annual_fixed", defaultAmount: 5000, enabledFor: ["charter_public_funded"] },
   { id: "board_governance", category: "administrative_general", lineItem: "Board & Governance", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [] },

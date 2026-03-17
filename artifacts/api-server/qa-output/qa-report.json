@@ -185,7 +185,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 18251,
+    "fileSize": 18252,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -225,7 +225,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 32799,
+    "fileSize": 32804,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -636,7 +636,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 21839,
+    "fileSize": 21840,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -677,7 +677,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 34218,
+    "fileSize": 34219,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1087,7 +1087,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 20548,
+    "fileSize": 20549,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -1577,7 +1577,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 34034,
+    "fileSize": 34038,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1645,7 +1645,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 20118,
+    "fileSize": 20119,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1762,7 +1762,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 14515,
+    "fileSize": 14516,
     "tabs": [
       "Assumptions",
       "Revenue",
