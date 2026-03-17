@@ -10,9 +10,9 @@
 Epic 1 delivers the coaching foundation for SchoolStack Budget:
 
 - **Guidance mode system** — three tiers (Advanced / Basics / Extra Guidance) that control explainer visibility, auto-expansion behavior, and inline help density
-- **Section explainers** — contextual help cards for 14 budget concepts (enrollment, revenue, payroll, occupancy, etc.) with structured content: "What this means," "Why it matters," "Healthy vs. risky," and "What to do next"
+- **Section explainers** — contextual help cards for 13 budget concepts (enrollment, revenue, payroll, occupancy, etc.) with structured content: "What this means," "Why it matters," "Healthy vs. risky," and "What to do next"
 - **KPI formula transparency** — "How is this calculated?" drawers on all consultant analysis metrics showing plain-English formulas with healthy-range benchmarks
-- **Event tracking infrastructure** — 11 coaching event types persisted to the `events` table via `POST /api/auth/track`
+- **Event tracking infrastructure** — 10 coaching event types persisted to the `events` table via `POST /api/auth/track`
 - **115 golden-model regression tests** covering the financial engine
 
 ---
@@ -155,7 +155,7 @@ analysis_view_opened
 1. **Client-local dedupe only** — Wizard section completion events can re-fire if the user clears localStorage or uses a different browser. Acceptable for alpha; consider server-side idempotency for production analytics.
 2. **Some explainer events omit `guidanceLevel`** — The `explainer_opened` event fired from the manual expand button in `InlineHelpCard` does not include `guidanceLevel` in metadata (only the `useEffect`-driven auto-open variant does). Not a blocker, but normalizing all explainer events would improve analytics quality.
 3. **`analysis_view_opened` omits `guidanceLevel`** — Adding `useAuth` to `ConsultantAnalysisView` just for one metadata field was deferred. If needed, this can be threaded through props.
-4. **No server-side validation of `guidanceLevel` values** — The `PATCH /api/auth/guidance-level` endpoint accepts any string. Adding an enum check (`advanced | basics | extra`) would harden this.
+4. **~~No server-side validation of `guidanceLevel` values~~ (RESOLVED)** — The `PATCH /api/auth/guidance-level` endpoint now enforces an enum check (`advanced | basics | extra`) via `VALID_GUIDANCE_LEVELS` in `auth.ts`.
 
 ---
 
@@ -164,8 +164,23 @@ analysis_view_opened
 | Suite | Result |
 |-------|--------|
 | `qa:golden` — 115 financial model assertions | **All pass** |
-| `qa:excel` — Export generation | **All pass** |
-| Frontend build | **Clean** (no TS errors, no unused imports) |
+| `qa:excel` — 24 export generation tests | **All pass** |
+| Frontend build (`vite build`) | **Clean** (builds successfully, no runtime errors) |
+| Frontend typecheck (`tsc --noEmit`) | **19 type errors** — mostly missing `guidanceLevel` on `UserResponse` type and `customFetch` export. These are type-definition gaps in the shared `api-client-react` package, not runtime errors. |
+| E2E (Playwright) — login, wizard flow, consultant, KPI drawers | **All pass** |
+
+### E2E Test Coverage (2026-03-17)
+- Login as admin → dashboard loads
+- Create new model → wizard Step 1 loads
+- Navigate forward through all 8 wizard steps (Profile → Export)
+- Navigate backward with Back button
+- Open existing demo model (id:52), load Consultant Analysis view
+- KPI "How is this calculated?" drawer opens correctly
+- No JavaScript console errors observed throughout
+
+### Event Tracking Verification
+15 distinct event types recorded in production DB:
+`analysis_view_opened`, `created_model`, `exported_lender_proforma`, `exported_loan_readiness_pdf`, `exported_single_year`, `exported_underwriting`, `exported_xlsx`, `guidance_mode_changed`, `kpi_formula_opened`, `logged_in`, `requested_password_reset`, `signed_up`, `updated_model`, `wizard_section_completed`, `wizard_step_timing`
 
 ---
 
