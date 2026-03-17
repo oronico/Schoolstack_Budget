@@ -49,6 +49,9 @@ A React-based SPA featuring:
 ### Consultant Engine
 Provides deterministic financial analysis including lender readiness scores, school-type-aware heuristics, management fee analysis, five stress test scenarios, a 5x5 sensitivity matrix, cash runway calculation, industry benchmark comparisons, and prior-year variance analysis.
 
+### Packet Architecture (Epic 3 Foundation)
+Shared packet-generation layer in `artifacts/api-server/src/lib/packets/` supporting lender-ready and board-ready deliverables. Core files: `packet-types.ts` (PacketData, PacketSection, NarrativeSummary, LinkedAssumption/LinkedMetric, 18 section IDs, lender/board templates, FormatRules), `build-narrative.ts` (generates headline, summary, keyRisks, keyStrengths, recommendedFocus from ConsultantOutput), `build-packet-data.ts` (assembles full PacketData using canonical workbook-helpers for all math — no duplicated business logic). Each section references source assumptions and source metrics for traceability.
+
 ### Decision Engine (Epic 2)
 Top 3 Issues Panel ("What should I fix first?") surfaces the most critical financial issues from 8 decision rules: negative cash, weak reserves, high staffing cost, high occupancy cost, aggressive enrollment, grant dependency, weak DSCR, short cash runway. Issues are ranked by severity (critical/high/medium) and include model-specific summaries, "Why this matters" explanations, recommended actions, supporting metrics, and jump-to-step navigation. Rules engine: `artifacts/api-server/src/lib/decision-rules.ts`. Panel component: `artifacts/school-financial-model/src/components/consultant/TopIssuesPanel.tsx`. OpenAPI schema: `DecisionIssue` in `lib/api-spec/openapi.yaml`.
 
