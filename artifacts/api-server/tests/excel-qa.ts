@@ -38,6 +38,19 @@ function isHyperlink(val: unknown): boolean {
   return typeof val === "object" && val !== null && "hyperlink" in val;
 }
 
+function extractNumericValue(val: unknown): number | null {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "number") return val;
+  if (typeof val === "string") { const n = parseFloat(val); return isNaN(n) ? null : n; }
+  if (isFormulaObj(val)) {
+    const f = val as { result?: unknown };
+    if (typeof f.result === "number") return f.result;
+    if (typeof f.result === "string") { const n = parseFloat(f.result); return isNaN(n) ? null : n; }
+    return null;
+  }
+  return null;
+}
+
 function extractTextValue(val: unknown): string {
   if (val === null || val === undefined) return "";
   if (typeof val === "string") return val;
@@ -364,14 +377,14 @@ function runUnderwritingV2TieOuts(wb: ExcelJS.Workbook): TestResult[] {
       if (label.includes("dscr") || label.includes("debt service coverage")) {
         hasDSCRRow = true;
         for (let c = 2; c <= 6; c++) {
-          const val = row.getCell(c).value;
-          if (typeof val === "number" && val > 0) hasDSCRValues = true;
+          const num = extractNumericValue(row.getCell(c).value);
+          if (num !== null && num > 0) hasDSCRValues = true;
         }
       }
       if (label.includes("debt service") && !label.includes("coverage") && !label.includes("ratio")) {
         for (let c = 2; c <= 6; c++) {
-          const val = row.getCell(c).value;
-          if (typeof val === "number" && val > 0) hasDebt = true;
+          const num = extractNumericValue(row.getCell(c).value);
+          if (num !== null && num > 0) hasDebt = true;
         }
       }
     });

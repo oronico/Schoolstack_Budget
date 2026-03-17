@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { getExportModelUrl, getExportProFormaPdfUrl, getExportLoanReadinessPdfUrl, getExportLenderProformaUrl, getExportUnderwritingUrl } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, FileText, ShieldCheck, Landmark, ClipboardCheck, Calendar } from "lucide-react";
+import { getExportModelUrl } from "@workspace/api-client-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, Table } from "lucide-react";
 import { Link } from "wouter";
 
-type ExportType = "xlsx" | "proforma" | "loanReadiness" | "lenderProforma" | "underwriting" | "singleYear";
+type ExportType = "standard" | "formula" | "underwritingV2";
 
 export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
   const [loading, setLoading] = useState<ExportType | null>(null);
   const [exported, setExported] = useState<Set<ExportType>>(new Set());
-  const [singleYearIndex, setSingleYearIndex] = useState(0);
 
   const handleDownload = async (type: ExportType) => {
     if (!modelId || loading) return;
@@ -16,12 +15,9 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
 
     try {
       const urlMap: Record<ExportType, string> = {
-        xlsx: getExportModelUrl(modelId),
-        proforma: getExportProFormaPdfUrl(modelId),
-        loanReadiness: getExportLoanReadinessPdfUrl(modelId),
-        lenderProforma: getExportLenderProformaUrl(modelId),
-        underwriting: getExportUnderwritingUrl(modelId),
-        singleYear: `/api/models/${modelId}/export/single-year?year=${singleYearIndex}`,
+        standard: getExportModelUrl(modelId),
+        formula: `/api/models/${modelId}/export/formula`,
+        underwritingV2: `/api/models/${modelId}/export/underwriting-v2`,
       };
 
       const token = localStorage.getItem('auth_token');
@@ -35,12 +31,9 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
       const fallbackNames: Record<ExportType, string> = {
-        xlsx: `School_Financial_Model_${modelId}.xlsx`,
-        proforma: `Pro_Forma_${modelId}.pdf`,
-        loanReadiness: `Loan_Readiness_Report_${modelId}.pdf`,
-        lenderProforma: `Lender_Pro_Forma_${modelId}.xlsx`,
-        underwriting: `Underwriting_Pro_Forma_${modelId}.xlsx`,
-        singleYear: `Year_${singleYearIndex + 1}_Budget_${modelId}.xlsx`,
+        standard: `School_Budget_${modelId}.xlsx`,
+        formula: `School_Budget_Formulas_${modelId}.xlsx`,
+        underwritingV2: `Underwriting_Package_${modelId}.xlsx`,
       };
       const filename = filenameMatch?.[1] || fallbackNames[type];
       const url = window.URL.createObjectURL(blob);
@@ -80,81 +73,37 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
         {anyExported
           ? "Check your downloads folder. All documents are lender-ready and fully formatted."
-          : "Download your financial model as an Excel workbook or polished PDF reports — ready for lender meetings."}
+          : "Download your financial model as a polished Excel workbook — ready for lender meetings."}
       </p>
 
-      <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <ExportCard
           icon={<ClipboardCheck className="h-7 w-7" />}
-          title="5-Year Underwriting Model"
-          description="14-tab workbook with DSCR, covenants, balance sheet & interactive formulas"
-          isLoading={loading === "underwriting"}
-          isExported={exported.has("underwriting")}
-          disabled={loading !== null && loading !== "underwriting"}
-          onClick={() => handleDownload("underwriting")}
-        />
-        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 flex flex-col items-center gap-3">
-          <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${exported.has("singleYear") ? "bg-green-100 text-green-600" : "bg-amber-50 text-amber-600"}`}>
-            {loading === "singleYear" ? <Loader2 className="h-7 w-7 animate-spin" /> : <Calendar className="h-7 w-7" />}
-          </div>
-          <span className="font-display font-bold text-sm text-foreground">
-            {exported.has("singleYear") ? "Single-Year Budget ✓" : "Single-Year Budget"}
-          </span>
-          <span className="text-xs text-muted-foreground leading-snug">
-            Monthly budget with Jul–Jun columns for one year
-          </span>
-          <select
-            value={singleYearIndex}
-            onChange={(e) => setSingleYearIndex(Number(e.target.value))}
-            className="w-full mt-1 px-3 py-1.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
-            {[0, 1, 2, 3, 4].map(i => (
-              <option key={i} value={i}>Year {i + 1}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => handleDownload("singleYear")}
-            disabled={loading !== null && loading !== "singleYear"}
-            className="mt-auto text-xs font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading === "singleYear" ? "Generating..." : exported.has("singleYear") ? "Download Again" : "Download"}
-          </button>
-        </div>
-        <ExportCard
-          icon={<Landmark className="h-7 w-7" />}
-          title="Lender Pro Forma"
-          description="Template workbook with live P&L, DSCR & loan snapshot"
-          isLoading={loading === "lenderProforma"}
-          isExported={exported.has("lenderProforma")}
-          disabled={loading !== null && loading !== "lenderProforma"}
-          onClick={() => handleDownload("lenderProforma")}
+          title="Underwriting Package"
+          description="21-tab workbook with DSCR, covenants, balance sheet, debt schedule & full formulas"
+          isLoading={loading === "underwritingV2"}
+          isExported={exported.has("underwritingV2")}
+          disabled={loading !== null && loading !== "underwritingV2"}
+          onClick={() => handleDownload("underwritingV2")}
+          highlight
         />
         <ExportCard
           icon={<FileSpreadsheet className="h-7 w-7" />}
-          title="Excel Workbook"
-          description="Full model with formulas across all tabs"
-          isLoading={loading === "xlsx"}
-          isExported={exported.has("xlsx")}
-          disabled={loading !== null && loading !== "xlsx"}
-          onClick={() => handleDownload("xlsx")}
+          title="Formula Workbook"
+          description="Assumptions page with live formulas — lenders can test the math"
+          isLoading={loading === "formula"}
+          isExported={exported.has("formula")}
+          disabled={loading !== null && loading !== "formula"}
+          onClick={() => handleDownload("formula")}
         />
         <ExportCard
-          icon={<FileText className="h-7 w-7" />}
-          title="Pro Forma PDF"
-          description="Financial projections summary for presentations"
-          isLoading={loading === "proforma"}
-          isExported={exported.has("proforma")}
-          disabled={loading !== null && loading !== "proforma"}
-          onClick={() => handleDownload("proforma")}
-        />
-        <ExportCard
-          icon={<ShieldCheck className="h-7 w-7" />}
-          title="Loan Readiness PDF"
-          description="Consultant analysis with lender readiness assessment"
-          isLoading={loading === "loanReadiness"}
-          isExported={exported.has("loanReadiness")}
-          disabled={loading !== null && loading !== "loanReadiness"}
-          onClick={() => handleDownload("loanReadiness")}
+          icon={<Table className="h-7 w-7" />}
+          title="Standard Export"
+          description="Clean workbook with static values for presentations and records"
+          isLoading={loading === "standard"}
+          isExported={exported.has("standard")}
+          disabled={loading !== null && loading !== "standard"}
+          onClick={() => handleDownload("standard")}
         />
       </div>
 
@@ -179,7 +128,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
 }
 
 function ExportCard({
-  icon, title, description, isLoading, isExported, disabled, onClick
+  icon, title, description, isLoading, isExported, disabled, onClick, highlight
 }: {
   icon: React.ReactNode;
   title: string;
@@ -188,12 +137,13 @@ function ExportCard({
   isExported: boolean;
   disabled: boolean;
   onClick: () => void;
+  highlight?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="group bg-white rounded-2xl border border-border/60 shadow-sm p-6 flex flex-col items-center gap-3 transition-all hover:shadow-lg hover:-translate-y-1 disabled:opacity-50 disabled:transform-none disabled:cursor-not-allowed"
+      className={`group bg-white rounded-2xl border shadow-sm p-6 flex flex-col items-center gap-3 transition-all hover:shadow-lg hover:-translate-y-1 disabled:opacity-50 disabled:transform-none disabled:cursor-not-allowed ${highlight ? 'border-primary/40 ring-1 ring-primary/20' : 'border-border/60'}`}
     >
       <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${isExported ? 'bg-green-100 text-green-600' : 'bg-primary/10 text-primary group-hover:bg-primary/20'}`}>
         {isLoading ? <Loader2 className="h-7 w-7 animate-spin" /> : icon}
