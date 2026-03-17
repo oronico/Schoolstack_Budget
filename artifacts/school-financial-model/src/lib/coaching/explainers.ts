@@ -14,6 +14,7 @@ export interface Explainer {
   audienceLevel: GuidanceLevel[];
   relatedSection: string;
   dismissible: boolean;
+  autoExpandFor: GuidanceLevel[];
 }
 
 export const EXPLAINERS: Record<string, Explainer> = {
@@ -29,6 +30,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "revenue",
     dismissible: true,
+    autoExpandFor: ["basics", "extra"],
   },
   enrollment_assumptions: {
     id: "enrollment_assumptions",
@@ -42,6 +44,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "enrollment",
     dismissible: true,
+    autoExpandFor: ["basics", "extra"],
   },
   tuition_assumptions: {
     id: "tuition_assumptions",
@@ -55,6 +58,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "revenue",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
   grants_fundraising: {
     id: "grants_fundraising",
@@ -68,6 +72,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "revenue",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
   payroll: {
     id: "payroll",
@@ -81,6 +86,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "staffing",
     dismissible: true,
+    autoExpandFor: ["basics", "extra"],
   },
   occupancy_rent: {
     id: "occupancy_rent",
@@ -94,6 +100,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "expenses",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
   program_expenses: {
     id: "program_expenses",
@@ -107,6 +114,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "expenses",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
   operating_surplus_deficit: {
     id: "operating_surplus_deficit",
@@ -120,6 +128,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "review",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
   cash_flow: {
     id: "cash_flow",
@@ -133,6 +142,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "review",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
   ending_cash: {
     id: "ending_cash",
@@ -146,6 +156,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "review",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
   reserves: {
     id: "reserves",
@@ -159,6 +170,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "review",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
   budget_vs_actual: {
     id: "budget_vs_actual",
@@ -172,6 +184,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["extra"],
     relatedSection: "review",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
   fixed_vs_variable: {
     id: "fixed_vs_variable",
@@ -185,6 +198,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["extra"],
     relatedSection: "expenses",
     dismissible: true,
+    autoExpandFor: ["extra"],
   },
 };
 
@@ -198,11 +212,6 @@ export function getExplainerById(id: string): Explainer | undefined {
   return EXPLAINERS[id];
 }
 
-const HIGH_FRICTION_SECTIONS = new Set(["enrollment", "revenue"]);
-
 export function shouldAutoExpand(level: GuidanceLevel, explainer: Explainer): boolean {
-  if (level === "advanced") return false;
-  if (level === "extra") return true;
-  if (level === "basics") return HIGH_FRICTION_SECTIONS.has(explainer.relatedSection);
-  return false;
+  return explainer.autoExpandFor.includes(level);
 }

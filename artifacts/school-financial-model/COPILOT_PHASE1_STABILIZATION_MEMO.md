@@ -90,10 +90,12 @@
 ## 2. UI/UX Polish (T002)
 
 ### Changes Made
-- **shouldAutoExpand**: Refined so "basics" only auto-expands enrollment + revenue sections (HIGH_FRICTION_SECTIONS)
+- **Explainer auto-expansion redesigned**: Each explainer now has an explicit `autoExpandFor: GuidanceLevel[]` field instead of relying on section membership. `shouldAutoExpand()` checks `explainer.autoExpandFor.includes(level)`.
+- **"basics" curated subset**: Only 3 high-friction explainers auto-expand: `enrollment_assumptions`, `revenue`, `payroll`. All other explainers stay collapsed.
+- **"extra" mode**: All 13 explainers auto-expand. Reviewed for clutter — compact card design keeps this usable.
+- **"advanced" mode**: No explainers auto-expand (no explainer includes "advanced" in `autoExpandFor`).
 - **InlineHelpCard**: Tightened spacing (px-3 py-2.5, text-[13px] body, smaller chevron icon)
 - **ExplainerDrawer**: Mobile-responsive width (max-w-sm on mobile, smaller padding, reduced font sizes)
-- **"Extra" mode clutter**: Reviewed — cards are compact enough that broad expansion remains usable
 
 ### Mobile Notes
 - ExplainerDrawer: max-w-sm on screens < 640px, px-4 py-4 padding
