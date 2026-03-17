@@ -4,7 +4,7 @@ import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { Loader2, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 
@@ -302,20 +302,64 @@ export function ModelWizardPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleStartOver = async () => {
+    if (!confirm("Start over? This will reset all data in this model back to a blank slate.")) return;
+    if (!modelId) return;
+    const emptyData = {
+      schoolProfile: {
+        fiscalYearStartMonth: 7,
+        isPartialFirstYear: false,
+        year1OperatingMonths: 12,
+      },
+      enrollment: {},
+      programs: [],
+      revenue: {},
+      revenueRows: [],
+      staffing: {},
+      staffingRows: [],
+      expenses: {},
+      expenseRows: [],
+    };
+    methods.reset(emptyData as FullModelData);
+    setCurrentStep(1);
+    try {
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { currentStep: 1, data: emptyData }
+      });
+    } catch {}
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <Layout>
       <div className="bg-card border-b border-border sticky top-20 z-40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display font-bold text-lg text-foreground">
-              {initialData?.name || "Untitled Model"}
-            </h2>
-            <div className="flex items-center text-xs font-medium text-muted-foreground">
-              {isSaving ? (
-                <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</span>
-              ) : lastSaved ? (
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved</span>
-              ) : null}
+            <div>
+              <h2 className="font-display font-bold text-lg text-foreground">
+                {initialData?.name || "Untitled Model"}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5 md:hidden">
+                Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1].title}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="text-xs font-medium text-muted-foreground">
+                {isSaving ? (
+                  <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</span>
+                ) : lastSaved ? (
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved</span>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={handleStartOver}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Start Over</span>
+              </button>
             </div>
           </div>
           
@@ -349,7 +393,8 @@ export function ModelWizardPage() {
                     {currentStep > step.id ? <CheckCircle2 className="h-4 w-4" /> : step.id}
                   </button>
                   <span className={cn(
-                    "text-[10px] uppercase tracking-wider font-semibold hidden md:block absolute mt-10",
+                    "text-[10px] uppercase tracking-wider font-semibold absolute mt-10",
+                    currentStep === step.id ? "block" : "hidden md:block",
                     currentStep >= step.id ? "text-primary" : "text-muted-foreground"
                   )}>
                     {step.title}

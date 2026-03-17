@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { ArrowLeft, ArrowRight, CheckCircle2, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Save, RotateCcw } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 
@@ -159,6 +159,33 @@ export function PublicWizardPage() {
     setTimeout(() => setSaveFlash(false), 2500);
   }, [methods, currentStep]);
 
+  const handleStartOver = useCallback(() => {
+    if (!confirm("Start over? This will clear all your wizard data and reset to step 1.")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY + "_step");
+    methods.reset({
+      schoolProfile: {
+        fiscalYearStartMonth: 7,
+        isPartialFirstYear: false,
+        year1OperatingMonths: 12,
+        schoolStage: undefined as string | undefined,
+        entityType: undefined as string | undefined,
+        schoolTypeOther: "",
+        ein: "",
+      },
+      enrollment: {},
+      programs: [],
+      revenue: {},
+      revenueRows: [],
+      staffing: {},
+      staffingRows: [],
+      expenses: {},
+      expenseRows: [],
+    } as FullModelData);
+    setCurrentStep(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [methods]);
+
   const ActiveStepComponent = STEPS[currentStep - 1].component;
   const isExportStep = currentStep === STEPS.length;
 
@@ -215,7 +242,7 @@ export function PublicWizardPage() {
                 Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1].title}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <span className={cn(
                 "flex items-center gap-1.5 text-xs font-medium transition-all duration-300",
                 saveFlash ? "text-primary scale-105" : "text-muted-foreground"
@@ -228,6 +255,14 @@ export function PublicWizardPage() {
                   </>
                 ) : null}
               </span>
+              <button
+                type="button"
+                onClick={handleStartOver}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Start Over</span>
+              </button>
               <button
                 type="button"
                 onClick={handleSave}
@@ -274,7 +309,8 @@ export function PublicWizardPage() {
                     {currentStep > step.id ? <CheckCircle2 className="h-4 w-4" /> : step.id}
                   </button>
                   <span className={cn(
-                    "text-[10px] uppercase tracking-wider font-semibold hidden md:block absolute mt-10",
+                    "text-[10px] uppercase tracking-wider font-semibold absolute mt-10",
+                    currentStep === step.id ? "block" : "hidden md:block",
                     currentStep >= step.id ? "text-primary" : "text-muted-foreground"
                   )}>
                     {step.title}
