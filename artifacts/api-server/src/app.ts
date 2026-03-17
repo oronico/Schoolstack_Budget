@@ -31,23 +31,6 @@ app.get("/health", async (_req, res) => {
 });
 
 
-app.post("/admin/reset-pw", async (req, res) => {
-  try {
-    const { email, newPassword, secret } = req.body;
-    if (secret !== "schoolstack-reset-2026") {
-      res.status(403).json({ error: "forbidden" });
-      return;
-    }
-    const bcrypt = await import("bcryptjs");
-    const hash = await bcrypt.default.hash(newPassword, 12);
-    await pool.query(`UPDATE users SET password_hash = $1 WHERE email = $2`, [hash, email]);
-    res.json({ status: "ok" });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: message });
-  }
-});
-
 app.use("/api", router);
 
 export default app;
