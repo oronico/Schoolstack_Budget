@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <img src={`${import.meta.env.BASE_URL}logos/schoolstack-mark.svg`} alt="SchoolStack" className="h-9 w-9" />
+              <img src={`${import.meta.env.BASE_URL}logos/schoolstack-mark.svg`} alt="SchoolStack" className="h-14 w-14" />
               <p className="font-display text-lg font-bold text-white leading-none">SchoolStack Budget</p>
             </div>
             <p className="text-sm text-white/60 leading-relaxed max-w-xs">
