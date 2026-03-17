@@ -74,6 +74,7 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
       data={data}
       niLabel={niLabel}
       cumNiLabel={cumNiLabel}
+      modelId={modelId ?? undefined}
     />
   );
 }

@@ -198,8 +198,11 @@ export function getExplainerById(id: string): Explainer | undefined {
   return EXPLAINERS[id];
 }
 
+const HIGH_FRICTION_SECTIONS = new Set(["enrollment", "revenue"]);
+
 export function shouldAutoExpand(level: GuidanceLevel, explainer: Explainer): boolean {
   if (level === "advanced") return false;
   if (level === "extra") return true;
-  return explainer.audienceLevel.includes("basics");
+  if (level === "basics") return HIGH_FRICTION_SECTIONS.has(explainer.relatedSection);
+  return false;
 }

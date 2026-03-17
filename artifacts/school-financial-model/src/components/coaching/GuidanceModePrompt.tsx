@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BookOpen, Zap, GraduationCap, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { customFetch } from "@workspace/api-client-react";
+import { trackCoachingEvent } from "@/lib/coaching/track";
 
 const OPTIONS = [
   {
@@ -44,6 +45,10 @@ export function GuidanceModePrompt({ onComplete }: GuidanceModePromptProps) {
   const [saving, setSaving] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  useEffect(() => {
+    trackCoachingEvent("guidance_mode_prompt_shown");
+  }, []);
+
   if (dismissed) return null;
 
   const handleSave = async () => {
@@ -55,6 +60,7 @@ export function GuidanceModePrompt({ onComplete }: GuidanceModePromptProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ guidanceLevel: selected }),
       });
+      trackCoachingEvent("guidance_mode_selected", { level: selected });
       await refetchUser();
       onComplete();
     } catch {

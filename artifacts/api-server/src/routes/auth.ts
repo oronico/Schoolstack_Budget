@@ -195,4 +195,32 @@ router.post("/auth/reset-password", async (req, res) => {
   }
 });
 
+const ALLOWED_EVENTS = new Set([
+  "guidance_mode_prompt_shown",
+  "guidance_mode_selected",
+  "guidance_mode_changed",
+  "explainer_opened",
+  "explainer_collapsed",
+  "explainer_dismissed",
+  "kpi_formula_opened",
+  "wizard_section_completed",
+  "analysis_view_opened",
+]);
+
+router.post("/auth/track", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { event, metadata } = req.body;
+    if (!event || typeof event !== "string" || !ALLOWED_EVENTS.has(event)) {
+      res.status(400).json({ error: "Invalid event name." });
+      return;
+    }
+    const safeMetadata = metadata && typeof metadata === "object" ? metadata : {};
+    await trackEvent(event, req.user!.id, safeMetadata);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Track event error:", err);
+    res.status(500).json({ error: "Failed to track event." });
+  }
+});
+
 export default router;

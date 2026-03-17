@@ -3,6 +3,7 @@ import { BookOpen, Zap, GraduationCap, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { customFetch } from "@workspace/api-client-react";
+import { trackCoachingEvent } from "@/lib/coaching/track";
 
 const LEVELS = [
   { value: "advanced", icon: Zap, label: "Compact", color: "text-teal-600" },
@@ -17,12 +18,17 @@ export function GuidanceModeSelector() {
 
   const handleChange = async (level: string) => {
     if (level === current || saving) return;
+    const oldLevel = current;
     setSaving(true);
     try {
       await customFetch("/api/auth/guidance-level", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ guidanceLevel: level }),
+      });
+      trackCoachingEvent("guidance_mode_changed", {
+        oldLevel,
+        newLevel: level,
       });
       await refetchUser();
     } catch {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AreaChart,
   Area,
@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import type { ConsultantOutput } from "@workspace/api-client-react";
 import { KPI_FORMULAS } from "@/lib/coaching/kpi-formulas";
 import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
+import { trackCoachingEvent } from "@/lib/coaching/track";
 
 function metricNameToKpiId(name: string): string | undefined {
   const lower = name.toLowerCase();
@@ -116,10 +117,17 @@ interface ConsultantAnalysisViewProps {
   data: ConsultantOutput;
   niLabel: string;
   cumNiLabel: string;
+  modelId?: number;
 }
 
-export function ConsultantAnalysisView({ data, niLabel, cumNiLabel }: ConsultantAnalysisViewProps) {
+export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
+
+  useEffect(() => {
+    trackCoachingEvent("analysis_view_opened", {
+      modelId: modelId ?? null,
+    });
+  }, [modelId]);
 
   const lenderColor =
     data.lenderReadiness === "Strong"
@@ -345,6 +353,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel }: Consultant
           formula={KPI_FORMULAS[openKpi]}
           open
           onClose={() => setOpenKpi(null)}
+          modelId={modelId}
         />
       )}
 

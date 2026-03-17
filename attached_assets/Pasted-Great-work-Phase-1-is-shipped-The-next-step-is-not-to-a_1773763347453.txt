@@ -1,0 +1,82 @@
+Great work. Phase 1 is shipped. The next step is not to add more features yet. The next step is to harden, validate, and refine what we just built so we know whether it is actually helping users.
+
+Please focus on Phase 1 stabilization and validation before starting Phase 2.
+
+Priority 1. Instrumentation
+Add lightweight event tracking for the new coaching system so we can measure usage and impact.
+
+Track at minimum:
+- guidance_mode_prompt_shown
+- guidance_mode_selected
+- guidance_mode_changed
+- explainer_opened
+- explainer_collapsed
+- explainer_dismissed if applicable
+- kpi_formula_opened
+- wizard_section_completed
+- analysis_view_opened
+
+Include metadata where useful:
+- user guidance level
+- section name
+- explainer id
+- KPI id
+- model id if available
+
+We do not need a full analytics dashboard yet, but we do need event hooks in place so we can evaluate whether the system is working.
+
+Priority 2. QA and polish pass
+Please do a focused UI/UX refinement pass on the coaching system.
+
+Review and tighten:
+- spacing and readability of inline explainer cards
+- mobile behavior for help cards and formula drawers
+- whether expanded explainers create too much visual clutter
+- drawer width and readability on smaller screens
+- consistency of “Explain this” and “How is this calculated?” placement
+- any copy that feels too long, too generic, or too technical
+
+Goal:
+Advanced users should feel almost no friction.
+Beginners should feel more oriented, not overwhelmed.
+
+Priority 3. Trust check on KPI formulas
+Please manually verify every KPI explanation against the actual calculation logic used in the model.
+
+For each KPI, confirm:
+- the displayed formula matches the live calculation
+- the inputs shown are the actual inputs used
+- labels are understandable and accurate
+- plain-English interpretation is correct and does not overstate certainty
+
+Pay special attention to:
+- DSCR
+- reserve months
+- net margin
+- staffing cost percentage
+
+If any displayed explanation is simplified for UX reasons, make sure it is still substantively correct.
+
+Priority 4. Guidance mode behavior review
+Please review whether the guidance levels are behaving correctly and usefully in practice.
+
+Validate:
+- “I Know My Stuff” keeps guidance mostly tucked away
+- “The Full Picture” does not feel too noisy or overwhelming
+- “Just the Basics” surfaces enough support in the highest-friction places
+- users with null guidanceLevel continue to see the prompt until they choose a preference
+- users can easily change their guidance mode later in the navbar/settings area
+
+Priority 5. Prepare a short findings memo
+After instrumentation and polish are complete, provide a short internal memo with:
+- what was tightened
+- any formula logic discrepancies found and fixed
+- any UX clutter or readability issues found
+- recommended top 3 priorities for Phase 2 based on observed risk and likely user need
+
+Important:
+Do not redesign the full wizard.
+Do not start building diagnostics or micro-lessons yet.
+Do not add new major product surface area.
+
+This is a stabilization, trust, and measurement pass on Phase 1.

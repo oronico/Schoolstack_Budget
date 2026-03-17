@@ -7,6 +7,8 @@ import { useDebounce } from "use-debounce";
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
+import { trackCoachingEvent } from "@/lib/coaching/track";
+import { useAuth } from "@/lib/auth-context";
 
 import { fullModelSchema, type FullModelData } from "./schema";
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
@@ -50,6 +52,8 @@ export function ModelWizardPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [stepInitialized, setStepInitialized] = useState(false);
   const stepStartTime = useRef(Date.now());
+  const completedSteps = useRef(new Set<number>());
+  const { user } = useAuth();
 
   const { data: initialData, isLoading: isLoadingModel } = useGetModel(modelId || 0, {
     query: { queryKey: [`/api/models/${modelId || 0}`], enabled: !!modelId }
@@ -285,6 +289,15 @@ export function ModelWizardPage() {
     };
     const isValid = await validateStep(currentStep);
     if (isValid) {
+      if (!completedSteps.current.has(currentStep)) {
+        completedSteps.current.add(currentStep);
+        trackCoachingEvent("wizard_section_completed", {
+          section: STEPS[currentStep - 1].title.toLowerCase(),
+          step: currentStep,
+          modelId: modelId ?? null,
+          guidanceLevel: user?.guidanceLevel ?? null,
+        });
+      }
       setCurrentStep(s => Math.min(s + 1, STEPS.length));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
