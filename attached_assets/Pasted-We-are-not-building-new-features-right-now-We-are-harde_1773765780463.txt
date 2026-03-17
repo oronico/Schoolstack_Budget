@@ -1,0 +1,86 @@
+We are not building new features right now. We are hardening the financial model builder for alpha.
+
+Goal
+Make the financial model math trustworthy, reduce export-to-export drift, and lock down a small set of exact regression tests before wider alpha exposure.
+
+Priority 1. Fix the inflation / escalation source logic in underwriting-workbook.ts
+Please review the current generateWorkbook() setup in underwriting-workbook.ts.
+
+Right now, salaryEsc, costInflation, and costInflPct appear to default from tuitionEscalation.rate. That is likely wrong or at least too implicit for alpha.
+
+We need to confirm the intended source of truth for:
+- salary escalation
+- operating cost inflation
+- tuition escalation
+
+If these are supposed to come from different inputs, fix the wiring now.
+If this is intentional product policy, document it clearly in comments and in the workbook assumptions language.
+
+Do not leave this ambiguous.
+
+Priority 2. Reduce duplicated financial logic across exports
+We currently have too much duplicate math living in different export files.
+
+Please do the following:
+- treat workbook-helpers.ts as the primary source of truth for shared financial calculations
+- refactor lender-proforma-export.ts to use shared helper logic wherever possible
+- where lender-proforma-export.ts must intentionally simplify or differ, document the difference inline and add test coverage
+- quarantine or deprecate underwriting-export.ts so it does not remain a competing logic path
+
+I do not want three parallel versions of the same financial math drifting over time.
+
+Priority 3. Clarify whether debtIncluded is informational or behavioral
+The workbook surfaces “Debt Included” in the assumptions/profile sections, but I need verification on whether that flag actually changes calculations.
+
+Please confirm:
+- does debtIncluded suppress debt service, debt schedule, DSCR, and balance sheet debt
+- or is it currently display-only
+
+If it is display-only, either wire it into the model properly or relabel/remove it so it does not imply behavior that does not exist.
+
+Priority 4. Add deterministic golden-model regression tests
+The existing QA suite is good, but it mostly checks structure, formula integrity, and tie-outs.
+That is necessary but not sufficient for alpha.
+
+Add exact-value regression tests for a small set of known payloads.
+For each one, assert exact expected values for at least:
+- Year 1 total revenue
+- Year 1 total personnel
+- Year 1 total operating expenses
+- Year 1 ending cash
+- Year 1 debt service
+- Year 1 DSCR
+- Year 5 total revenue
+- Year 5 net income / change in net assets
+- balance sheet tie-out
+
+Use at least these payload types:
+- microschool startup
+- private school with ESA
+- charter public funding
+- charter ADA / grade-band case
+
+This should become the alpha math safety net.
+
+Priority 5. Make the monthly cash flow assumptions explicit
+The current monthly cash flow logic is usable for alpha, but it is based on simplified timing assumptions.
+
+Please do two things:
+- document the timing assumptions clearly in code comments and workbook/help copy
+- add targeted tests for tuition billing months, operating months, debt timing, and charter / grade-band revenue cases
+
+Users should not mistake these timing mechanics for fully bespoke cash accounting logic.
+
+Guardrails
+- do not redesign the workbook
+- do not add major new product features
+- do not rewrite the whole engine unless necessary
+- do not introduce another parallel math layer
+
+Definition of done
+- inflation / escalation inputs are unambiguous and correctly wired
+- shared math is centralized as much as practical
+- legacy underwriting export is clearly quarantined or deprecated
+- debtIncluded behavior is explicit and correct
+- golden-model regression tests exist and pass
+- monthly cash timing assumptions are documented and tested
