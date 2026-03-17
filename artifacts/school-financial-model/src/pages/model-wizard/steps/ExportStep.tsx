@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { getExportModelUrl } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, Table } from "lucide-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck } from "lucide-react";
 import { Link } from "wouter";
 
-type ExportType = "standard" | "formula" | "underwritingV2";
+type ExportType = "formula" | "underwritingV2";
 
 export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
   const [loading, setLoading] = useState<ExportType | null>(null);
@@ -15,7 +15,6 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
 
     try {
       const urlMap: Record<ExportType, string> = {
-        standard: getExportModelUrl(modelId),
         formula: getExportModelUrl(modelId),
         underwritingV2: `/api/models/${modelId}/export/underwriting-v2`,
       };
@@ -31,7 +30,6 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
       const fallbackNames: Record<ExportType, string> = {
-        standard: `School_Budget_${modelId}.xlsx`,
         formula: `School_Budget_Formulas_${modelId}.xlsx`,
         underwritingV2: `Underwriting_Package_${modelId}.xlsx`,
       };
@@ -76,7 +74,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           : "Download your financial model as a polished Excel workbook - ready for lender meetings."}
       </p>
 
-      <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <ExportCard
           icon={<ClipboardCheck className="h-7 w-7" />}
           title="Underwriting Package"
@@ -90,20 +88,11 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <ExportCard
           icon={<FileSpreadsheet className="h-7 w-7" />}
           title="Formula Workbook"
-          description="Assumptions page with live formulas - lenders can test the math"
+          description="Assumptions page with live formulas — lenders can test the math"
           isLoading={loading === "formula"}
           isExported={exported.has("formula")}
           disabled={loading !== null && loading !== "formula"}
           onClick={() => handleDownload("formula")}
-        />
-        <ExportCard
-          icon={<Table className="h-7 w-7" />}
-          title="Standard Export"
-          description="Clean workbook with static values for presentations and records"
-          isLoading={loading === "standard"}
-          isExported={exported.has("standard")}
-          disabled={loading !== null && loading !== "standard"}
-          onClick={() => handleDownload("standard")}
         />
       </div>
 
