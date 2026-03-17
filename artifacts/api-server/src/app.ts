@@ -31,30 +31,6 @@ app.get("/health", async (_req, res) => {
 });
 
 
-app.post("/admin/test-email", async (req, res) => {
-  try {
-    const { Resend } = await import("resend");
-    const apiKey = process.env.RESEND_API_KEY;
-    const fromAddr = process.env.EMAIL_FROM || "SchoolStack Budget <onboarding@resend.dev>";
-    const appUrl = process.env.APP_URL || "not-set";
-    if (!apiKey) {
-      res.json({ status: "error", reason: "RESEND_API_KEY not set" });
-      return;
-    }
-    const resend = new Resend(apiKey);
-    const { data, error } = await resend.emails.send({
-      from: fromAddr,
-      to: ["aserafin@gmail.com"],
-      subject: "SchoolStack Budget - Email Test",
-      text: "If you see this, email delivery is working.",
-    });
-    res.json({ status: error ? "error" : "ok", fromAddr, appUrl, data, error });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ status: "exception", error: msg });
-  }
-});
-
 app.use("/api", router);
 
 export default app;

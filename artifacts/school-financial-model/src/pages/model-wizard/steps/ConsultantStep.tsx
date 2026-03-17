@@ -10,7 +10,7 @@ interface ConsultantStepProps {
   modelId: number | null;
 }
 
-export function ConsultantStep({ modelId }: ConsultantStepProps) {
+export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
   const { watch } = useFormContext();
   const entityType = watch("schoolProfile.entityType");
   const niLabel = profitLabel(entityType);
@@ -75,6 +75,7 @@ export function ConsultantStep({ modelId }: ConsultantStepProps) {
       niLabel={niLabel}
       cumNiLabel={cumNiLabel}
       modelId={modelId ?? undefined}
+      jumpToStep={jumpToStep}
     />
   );
 }

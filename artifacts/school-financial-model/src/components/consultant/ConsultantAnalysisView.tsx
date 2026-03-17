@@ -38,6 +38,7 @@ import type { ConsultantOutput } from "@workspace/api-client-react";
 import { KPI_FORMULAS } from "@/lib/coaching/kpi-formulas";
 import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
 import { trackCoachingEvent } from "@/lib/coaching/track";
+import { TopIssuesPanel } from "./TopIssuesPanel";
 
 function metricNameToKpiId(name: string): string | undefined {
   const lower = name.toLowerCase();
@@ -118,9 +119,10 @@ interface ConsultantAnalysisViewProps {
   niLabel: string;
   cumNiLabel: string;
   modelId?: number;
+  jumpToStep?: (step: number) => void;
 }
 
-export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId }: ConsultantAnalysisViewProps) {
+export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
 
   useEffect(() => {
@@ -246,6 +248,13 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId }: C
           <p className="text-rose-900 font-medium text-[15px]">{data.biggestRisk}</p>
         </div>
       </div>
+
+      {(data as Record<string, unknown>).topIssues && (
+        <TopIssuesPanel
+          issues={(data as Record<string, unknown>).topIssues as any[]}
+          jumpToStep={jumpToStep}
+        />
+      )}
 
       <div className={cn("rounded-2xl p-6 border shadow-sm", lenderBg)}>
         <div className="flex items-center gap-4 mb-3">

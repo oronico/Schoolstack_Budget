@@ -1,3 +1,5 @@
+import { generateTopIssues } from "./decision-rules";
+
 interface SchoolProfile {
   schoolName?: string;
   state?: string;
@@ -260,6 +262,7 @@ export interface ConsultantOutput {
   sensitivityMatrix: SensitivityCell[];
   cashRunwayMonths: number;
   enrollmentGuidance: string[];
+  topIssues: import("./decision-rules").DecisionIssue[];
   generatedAt: string;
 }
 
@@ -1910,6 +1913,20 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     }
   }
 
+  const topIssues = generateTopIssues({
+    yearFinancials,
+    cumulativeFinancials,
+    enrollmentByYear,
+    cashRunwayMonths,
+    maxCapacity: sp.maxCapacity || 0,
+    schoolType: sp.schoolType || "",
+    fundingProfile: sp.fundingProfile || "",
+    entityType: sp.entityType || "",
+    hasDebt,
+    dscr,
+    retentionRate: en.retentionRate,
+  });
+
   return {
     executiveSummary,
     biggestStrength,
@@ -1925,6 +1942,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     sensitivityMatrix,
     cashRunwayMonths,
     enrollmentGuidance,
+    topIssues,
     generatedAt: new Date().toISOString(),
   };
 }
