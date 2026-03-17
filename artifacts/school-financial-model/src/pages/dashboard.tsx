@@ -1,5 +1,4 @@
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
 import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive, Sparkles, ArrowRight, BarChart3, CheckCircle2, Lightbulb, GitBranch, Lock } from "lucide-react";
@@ -29,7 +28,6 @@ function getFirstName(name: string): string {
 export function DashboardPage() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const [showGuidancePrompt, setShowGuidancePrompt] = useState(true);
   
   const { data: models, isLoading, refetch } = useListModels();
   const createMutation = useCreateModel();
@@ -84,8 +82,8 @@ export function DashboardPage() {
 
   return (
     <Layout>
-      {showGuidancePrompt && user && !user.guidanceLevel && (
-        <GuidanceModePrompt onComplete={() => setShowGuidancePrompt(false)} />
+      {user && !user.guidanceLevel && (
+        <GuidanceModePrompt onComplete={() => {}} />
       )}
       <div className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="mb-10">
