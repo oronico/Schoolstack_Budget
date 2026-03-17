@@ -540,7 +540,7 @@ export function ScenarioPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm">
                   <h3 className="font-display font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <SignalDot signal="green" /> Base Model
+                    <SignalDot signal={results.base.nudges.some((n) => n.signal === "red") ? "red" : results.base.nudges.some((n) => n.signal === "amber") ? "amber" : "green"} /> Base Model
                   </h3>
                   <div className="space-y-2">
                     {results.base.nudges.map((n, i) => (
