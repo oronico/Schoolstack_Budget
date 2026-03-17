@@ -124,7 +124,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 21956,
+    "fileSize": 21957,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -185,7 +185,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 18236,
+    "fileSize": 18240,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -293,7 +293,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 19284,
+    "fileSize": 19285,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -354,7 +354,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 13826,
+    "fileSize": 13827,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -412,7 +412,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 40909,
+    "fileSize": 40910,
     "tabs": [
       "Cover",
       "Instructions",
@@ -574,7 +574,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 23995,
+    "fileSize": 23996,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -636,7 +636,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 21824,
+    "fileSize": 21828,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -1087,7 +1087,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 20532,
+    "fileSize": 20536,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -1537,7 +1537,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 20368,
+    "fileSize": 20372,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -1645,7 +1645,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 20111,
+    "fileSize": 20112,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1762,7 +1762,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 14515,
+    "fileSize": 14516,
     "tabs": [
       "Assumptions",
       "Revenue",

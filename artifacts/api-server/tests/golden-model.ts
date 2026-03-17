@@ -444,14 +444,41 @@ function findRowByLabel(ws: import("exceljs").Worksheet, label: string, startRow
 async function testWorkbookKPIs() {
   console.log("\n— Workbook-Level KPIs —");
 
-  const payloads: [string, Record<string, unknown>][] = [
-    ["Microschool", microschoolStartup as unknown as Record<string, unknown>],
-    ["Private+ESA", privateSchoolWithESA as unknown as Record<string, unknown>],
-    ["Charter", charterPublicFunding as unknown as Record<string, unknown>],
-    ["Charter ADA", charterADAGradeBand as unknown as Record<string, unknown>],
+  interface KPIExpected {
+    y1Rev: number; y5Rev: number;
+    y1Pers: number; y1Opex: number; y1CD: number;
+    y1TotalExp: number; y1NI: number; y5NI: number;
+    y1DebtSvc: number;
+  }
+
+  const expectations: [string, Record<string, unknown>, KPIExpected][] = [
+    ["Microschool", microschoolStartup as unknown as Record<string, unknown>, {
+      y1Rev: 196667, y5Rev: 547279,
+      y1Pers: 118934, y1Opex: 40500, y1CD: 0,
+      y1TotalExp: 159434, y1NI: 37233, y5NI: 320240,
+      y1DebtSvc: 0,
+    }],
+    ["Private+ESA", privateSchoolWithESA as unknown as Record<string, unknown>, {
+      y1Rev: 1975000, y5Rev: 4361347,
+      y1Pers: 854772, y1Opex: 271400, y1CD: 59064,
+      y1TotalExp: 1185236, y1NI: 789764, y5NI: 2942215,
+      y1DebtSvc: 34064,
+    }],
+    ["Charter", charterPublicFunding as unknown as Record<string, unknown>, {
+      y1Rev: 1288333, y5Rev: 5458718,
+      y1Pers: 1026431, y1Opex: 545000, y1CD: 164825,
+      y1TotalExp: 1736256, y1NI: -447923, y5NI: 2447131,
+      y1DebtSvc: 49825,
+    }],
+    ["Charter ADA", charterADAGradeBand as unknown as Record<string, unknown>, {
+      y1Rev: 1178333, y5Rev: 5696361,
+      y1Pers: 780535, y1Opex: 503333, y1CD: 106629,
+      y1TotalExp: 1390497, y1NI: -212164, y5NI: 3114494,
+      y1DebtSvc: 46629,
+    }],
   ];
 
-  for (const [name, payload] of payloads) {
+  for (const [name, payload, exp] of expectations) {
     const wb = await generateUnderwritingWorkbook(payload);
     const summary = wb.getWorksheet("Budget Summary");
     if (!summary) { failed++; failures.push(`  FAIL: ${name} — Budget Summary tab missing`); continue; }
@@ -461,65 +488,100 @@ async function testWorkbookKPIs() {
     const opexRow = findRowByLabel(summary, "Total Operating Expenses");
     const cdRow = findRowByLabel(summary, "Total Capital & Debt Service");
     const expRow = findRowByLabel(summary, "Total Expenses");
-
-    if (revRow < 0 || persRow < 0 || expRow < 0) {
-      failed++; failures.push(`  FAIL: ${name} — Missing Budget Summary rows`); continue;
-    }
-
-    const y1Rev = cellNum(summary, revRow, 2);
-    const y5Rev = cellNum(summary, revRow, 6);
-    const y1Pers = cellNum(summary, persRow, 2);
-    const y1Opex = cellNum(summary, opexRow, 2);
-    const y1CD = cdRow > 0 ? cellNum(summary, cdRow, 2) : 0;
-    const y1TotalExp = cellNum(summary, expRow, 2);
-
-    check(`${name} WB: Y1 Rev > 0`, y1Rev > 0 ? 1 : 0, 1);
-    check(`${name} WB: Y5 Rev > Y1 Rev`, y5Rev > y1Rev ? 1 : 0, 1);
-    check(`${name} WB: Y1 Personnel > 0`, y1Pers > 0 ? 1 : 0, 1);
-
-    const computedTotalExp = y1Pers + y1Opex + y1CD;
-    check(`${name} WB: Total Exp tie-out`, y1TotalExp, computedTotalExp, 2);
-
-    const niLabel = ["Net Income", "Net Surplus", "Change in Net Assets"];
+    const niLabels = ["Net Income", "Net Surplus", "Change in Net Assets"];
     let niRow = -1;
-    for (const l of niLabel) { niRow = findRowByLabel(summary, l); if (niRow > 0) break; }
+    for (const l of niLabels) { niRow = findRowByLabel(summary, l); if (niRow > 0) break; }
+
+    check(`${name} WB: Y1 Revenue`, cellNum(summary, revRow, 2), exp.y1Rev);
+    check(`${name} WB: Y5 Revenue`, cellNum(summary, revRow, 6), exp.y5Rev);
+    check(`${name} WB: Y1 Personnel`, cellNum(summary, persRow, 2), exp.y1Pers);
+    check(`${name} WB: Y1 OpEx`, cellNum(summary, opexRow, 2), exp.y1Opex);
+    check(`${name} WB: Y1 Cap&Debt`, cellNum(summary, cdRow, 2), exp.y1CD);
+    check(`${name} WB: Y1 Total Expenses`, cellNum(summary, expRow, 2), exp.y1TotalExp);
     if (niRow > 0) {
-      const y1NI = cellNum(summary, niRow, 2);
-      const y5NI = cellNum(summary, niRow, 6);
-      check(`${name} WB: Y1 NI = Rev - Exp`, y1NI, y1Rev - y1TotalExp, 2);
-      check(`${name} WB: Y5 NI computed`, y5NI, cellNum(summary, revRow, 6) - cellNum(summary, expRow, 6), 2);
+      check(`${name} WB: Y1 Net Income`, cellNum(summary, niRow, 2), exp.y1NI);
+      check(`${name} WB: Y5 Net Income`, cellNum(summary, niRow, 6), exp.y5NI);
     }
+
+    const computedTotalExp = cellNum(summary, persRow, 2) + cellNum(summary, opexRow, 2) + cellNum(summary, cdRow, 2);
+    check(`${name} WB: Total Exp tie-out`, cellNum(summary, expRow, 2), computedTotalExp, 2);
 
     const opStmt = wb.getWorksheet("Operating Statement");
     if (opStmt) {
       const osRevRow = findRowByLabel(opStmt, "Total Revenue");
       const osExpRow = findRowByLabel(opStmt, "Total Expenses");
-      if (osRevRow > 0) check(`${name} WB: OpStmt Rev matches Summary`, cellNum(opStmt, osRevRow, 2), y1Rev, 2);
-      if (osExpRow > 0) check(`${name} WB: OpStmt Exp matches Summary`, cellNum(opStmt, osExpRow, 2), y1TotalExp, 2);
+      if (osRevRow > 0) check(`${name} WB: OpStmt Rev matches`, cellNum(opStmt, osRevRow, 2), exp.y1Rev, 2);
+      if (osExpRow > 0) check(`${name} WB: OpStmt Exp matches`, cellNum(opStmt, osExpRow, 2), exp.y1TotalExp, 2);
     }
 
     const dscr = wb.getWorksheet("DSCR & Covenants");
     if (dscr) {
       const dsRow = findRowByLabel(dscr, "Debt Service");
-      if (dsRow > 0) {
-        const dsY1 = cellNum(dscr, dsRow, 2);
-        if (name === "Microschool") {
-          check(`${name} WB: DSCR Debt Service = 0 (no debt)`, dsY1, 0);
-        } else if (name === "Private+ESA") {
-          check(`${name} WB: DSCR Debt Service > 0`, dsY1 > 0 ? 1 : 0, 1);
-        }
-      }
+      if (dsRow > 0) check(`${name} WB: DSCR Debt Service`, cellNum(dscr, dsRow, 2), exp.y1DebtSvc);
     }
 
     const balSheet = wb.getWorksheet("Balance Sheet");
     if (balSheet) {
       const taRow = findRowByLabel(balSheet, "Total Assets");
-      const tlRow = findRowByLabel(balSheet, "Total Liabilities & Equity") || findRowByLabel(balSheet, "Total Liabilities & Net Assets");
+      let tlRow = findRowByLabel(balSheet, "Total Liabilities & Equity");
+      if (tlRow < 0) tlRow = findRowByLabel(balSheet, "Total Liabilities & Net Assets");
       if (taRow > 0 && tlRow > 0) {
         check(`${name} WB: Balance Sheet ties`, cellNum(balSheet, taRow, 2), cellNum(balSheet, tlRow, 2), 2);
       }
     }
   }
+}
+
+async function testMonthlyTimingWorkbook() {
+  console.log("\n— Monthly Timing Workbook Assertions —");
+
+  // Microschool: partial year (10 opMonths), tuition billed over 10 months starting month 1
+  const microWb = await generateUnderwritingWorkbook(microschoolStartup as unknown as Record<string, unknown>);
+  const microMcf = microWb.getWorksheet("Monthly Cash Flow Y1")!;
+  const mRevRow = findRowByLabel(microMcf, "Total Revenue", 1, 20);
+  const mPersRow = findRowByLabel(microMcf, "Personnel", 1, 20);
+  const mOpsRow = findRowByLabel(microMcf, "Operating Expenses", 1, 20);
+  const mDebtRow = findRowByLabel(microMcf, "Debt Service", 1, 20);
+
+  // Personnel spread over 10 opMonths: M1-M10 = 11893, M11-M12 = 0
+  check("Micro MCF: Personnel M1", cellNum(microMcf, mPersRow, 2), 11893);
+  check("Micro MCF: Personnel M10", cellNum(microMcf, mPersRow, 11), 11893);
+  check("Micro MCF: Personnel M11 (zero)", cellNum(microMcf, mPersRow, 12), 0);
+  check("Micro MCF: Personnel M12 (zero)", cellNum(microMcf, mPersRow, 13), 0);
+
+  // OpEx spread over 10 opMonths: M1-M10 = 4050, M11-M12 = 0
+  check("Micro MCF: OpEx M1", cellNum(microMcf, mOpsRow, 2), 4050);
+  check("Micro MCF: OpEx M11 (zero)", cellNum(microMcf, mOpsRow, 12), 0);
+
+  // Debt service: zero (no debt) — all 12 months
+  check("Micro MCF: Debt M1 (zero)", cellNum(microMcf, mDebtRow, 2), 0);
+  check("Micro MCF: Debt M6 (zero)", cellNum(microMcf, mDebtRow, 7), 0);
+
+  // Revenue M1 (non-tuition only, tuition starts M2): 9150
+  check("Micro MCF: Rev M1", cellNum(microMcf, mRevRow, 2), 9150);
+  // Revenue M2-M10 (tuition + non-tuition): 23550
+  check("Micro MCF: Rev M2", cellNum(microMcf, mRevRow, 3), 23550);
+  // Annual total: 236000
+  check("Micro MCF: Rev Annual", cellNum(microMcf, mRevRow, 14), 236000);
+
+  // Private+ESA: full year (12 opMonths), debt service spread over 12 months
+  const privWb = await generateUnderwritingWorkbook(privateSchoolWithESA as unknown as Record<string, unknown>);
+  const privMcf = privWb.getWorksheet("Monthly Cash Flow Y1")!;
+  const pPersRow = findRowByLabel(privMcf, "Personnel", 1, 20);
+  const pDebtRow = findRowByLabel(privMcf, "Debt Service", 1, 20);
+
+  // Personnel spread over 12 months (full year)
+  check("Priv MCF: Personnel M1", cellNum(privMcf, pPersRow, 2), 71231);
+  check("Priv MCF: Personnel M12", cellNum(privMcf, pPersRow, 13), 71231);
+
+  // Debt service spread over 12 months always (4922/month)
+  check("Priv MCF: Debt M1", cellNum(privMcf, pDebtRow, 2), 4922);
+  check("Priv MCF: Debt M12", cellNum(privMcf, pDebtRow, 13), 4922);
+  check("Priv MCF: Debt Annual", cellNum(privMcf, pDebtRow, 14), 59064);
+
+  // Ending cash metric
+  const pEndRow = findRowByLabel(privMcf, "Ending Cash (Month 12)", 1, 25);
+  if (pEndRow > 0) check("Priv MCF: Ending Cash", cellNum(privMcf, pEndRow, 2), 864756);
 }
 
 async function main() {
@@ -537,6 +599,7 @@ async function main() {
   testGradeBandEdgeCases();
   testDriverValEdgeCases();
   await testWorkbookKPIs();
+  await testMonthlyTimingWorkbook();
 
   console.log("\n╔══════════════════════════════════════════════════════════════╗");
   console.log("║                      FINAL REPORT                          ║");

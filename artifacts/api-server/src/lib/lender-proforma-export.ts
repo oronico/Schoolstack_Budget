@@ -126,13 +126,6 @@ function inferGrowthRate(amounts: number[], yearIdx0: number, yearIdx1: number):
   return (v1 - v0) / v0;
 }
 
-// computeDriverValue delegates to shared driverVal from workbook-helpers.
-// The lender-proforma version intentionally omits escalation (no escalationRate / fallback
-// params) because each call site in mapModelToTemplateInput only reads Y0 values.
-function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number): number {
-  return driverVal(amounts, yearIdx, driverType, students);
-}
-
 function sumExpenseCategoryY1(rows: ExpenseRow[], category: string, students: number, totalRevenue: number): number {
   let total = 0;
   for (const row of rows) {
@@ -140,7 +133,7 @@ function sumExpenseCategoryY1(rows: ExpenseRow[], category: string, students: nu
     if (row.driverType === "percent_of_revenue") {
       total += ((row.amounts?.[0] ?? 0) / 100) * totalRevenue;
     } else {
-      total += computeDriverValue(row.amounts, 0, row.driverType, students);
+      total += driverVal(row.amounts, 0, row.driverType, students);
     }
   }
   return total;
@@ -154,33 +147,16 @@ function avgExpenseGrowth(rows: ExpenseRow[], categories: string[], students1: n
       sum0 += ((row.amounts?.[0] ?? 0) / 100) * rev1;
       sum1 += ((row.amounts?.[1] ?? 0) / 100) * rev2;
     } else {
-      sum0 += computeDriverValue(row.amounts, 0, row.driverType, students1);
-      sum1 += computeDriverValue(row.amounts, 1, row.driverType, students2);
+      sum0 += driverVal(row.amounts, 0, row.driverType, students1);
+      sum1 += driverVal(row.amounts, 1, row.driverType, students2);
     }
   }
   if (sum0 <= 0 || sum1 <= 0) return 0.03;
   return (sum1 - sum0) / sum0;
 }
 
-function computeGradeBandRevenueLocal(sp: SchoolProfile, y: number): number {
-  return computeGradeBandRevenue(sp as SharedSchoolProfile, y);
-}
-
-function hasGradeBandDataLocal(sp?: SchoolProfile): boolean {
-  return hasGradeBandData(sp as SharedSchoolProfile | undefined);
-}
-
-function computeRevenueY(rows: RevenueRow[], yearIdx: number, students: number, sp?: SchoolProfile): number {
-  return computeRevenueForYearShared(rows as SharedRevenueRow[], yearIdx, students, undefined, undefined, sp as SharedSchoolProfile | undefined);
-}
-
 const FACILITY_CATEGORIES = ["occupancy_facility"];
 const PROGRAM_CATEGORIES = ["instructional_program"];
-
-// Delegates to shared computeAnnualDebt from workbook-helpers.ts.
-function computeAnnualDebtService(principal: number, annualRate: number, termYears: number): number {
-  return computeAnnualDebt(principal, annualRate, termYears);
-}
 
 export function mapModelToTemplateInput(rawData: Record<string, unknown>): Record<string, string | number> {
   const data = rawData as unknown as ModelData;
@@ -215,7 +191,7 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   const tuitionY1PerStudent = grossTuitionRow?.driverType === "per_student"
     ? (grossTuitionRow.amounts?.[0] ?? 0)
     : (grossTuitionRow && enrollY1 > 0
-      ? computeDriverValue(grossTuitionRow.amounts, 0, grossTuitionRow.driverType, enrollY1) / enrollY1
+      ? driverVal(grossTuitionRow.amounts, 0, grossTuitionRow.driverType, enrollY1) / enrollY1
       : 0);
   result.tuitionPerStudentY1 = tuitionY1PerStudent;
 
@@ -228,13 +204,13 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   const esaRows = revenueRows.filter(r =>
     r.enabled && (r.category === "public_funding" || r.category === "school_choice") && r.driverType === "per_student"
   );
-  if (hasGradeBandDataLocal(sp as SchoolProfile)) {
+  if (hasGradeBandData(sp as SharedSchoolProfile)) {
     const nonGbEsa = esaRows.filter(r => r.id !== "state_local_perpupil");
     const enrollments = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0];
     for (let y = 0; y < 5; y++) {
-      const gbRev = computeGradeBandRevenueLocal(sp as SchoolProfile, y);
+      const gbRev = computeGradeBandRevenue(sp as SharedSchoolProfile, y);
       let nonGbRev = 0;
-      for (const row of nonGbEsa) nonGbRev += computeDriverValue(row.amounts, y, row.driverType, enrollments[y]);
+      for (const row of nonGbEsa) nonGbRev += driverVal(row.amounts, y, row.driverType, enrollments[y]);
       result[`gbEsaRevenueY${y + 1}`] = gbRev + nonGbRev;
     }
     result.esaPerStudentY1 = 0;
@@ -279,10 +255,10 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
     if (!row.enabled || (row.category !== "grants_contributions" && row.category !== "philanthropy")) continue;
     if (row.driverType === "percent_of_base") {
       const baseRow = revenueRows.find(r => r.id === row.percentBase);
-      const baseVal = baseRow ? computeDriverValue(baseRow.amounts, 0, baseRow.driverType, enrollY1) : 0;
+      const baseVal = baseRow ? driverVal(baseRow.amounts, 0, baseRow.driverType, enrollY1) : 0;
       grantsY1 += baseVal * ((row.amounts?.[0] ?? 0) / 100);
     } else {
-      grantsY1 += computeDriverValue(row.amounts, 0, row.driverType, enrollY1);
+      grantsY1 += driverVal(row.amounts, 0, row.driverType, enrollY1);
     }
   }
   result.grantsY1 = grantsY1;
@@ -319,13 +295,13 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
     : 10;
   result.benefitsBurdenPct = avgBenefits / 100;
 
-  const revY1 = revenueRows.length > 0 ? computeRevenueY(revenueRows, 0, enrollY1, sp) : 0;
-  const revY2 = revenueRows.length > 0 ? computeRevenueY(revenueRows, 1, enrollY2, sp) : 0;
+  const revY1 = revenueRows.length > 0 ? computeRevenueForYearShared(revenueRows as SharedRevenueRow[], 0, enrollY1, undefined, undefined, sp as SharedSchoolProfile) : 0;
+  const revY2 = revenueRows.length > 0 ? computeRevenueForYearShared(revenueRows as SharedRevenueRow[], 1, enrollY2, undefined, undefined, sp as SharedSchoolProfile) : 0;
 
   const facilityY1 = sumExpenseCategoryY1(expenseRows, "occupancy_facility", enrollY1, revY1);
   const rentRow = expenseRows.find(r => r.enabled && r.category === "occupancy_facility" && r.lineItem.toLowerCase().includes("rent"));
   result.annualRentY1 = rentRow
-    ? computeDriverValue(rentRow.amounts, 0, rentRow.driverType, enrollY1)
+    ? driverVal(rentRow.amounts, 0, rentRow.driverType, enrollY1)
     : facilityY1;
   const otherFacility = rentRow ? facilityY1 - (result.annualRentY1 as number) : 0;
   result.otherFacilityCostY1 = Math.max(0, otherFacility);
@@ -381,10 +357,10 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
       } else {
         const rate = (row.loanRate || 0) / 100;
         const term = row.loanTermYears || 0;
-        existingDebt += computeAnnualDebtService(row.loanPrincipal, rate, term);
+        existingDebt += computeAnnualDebt(row.loanPrincipal, rate, term);
       }
     } else {
-      existingDebt += computeDriverValue(row.amounts, 0, row.driverType, enrollY1);
+      existingDebt += driverVal(row.amounts, 0, row.driverType, enrollY1);
     }
   }
 
@@ -542,7 +518,7 @@ function computeLenderResults(input: Record<string, string | number>): LenderRes
     operatingMargin.push(totalRevenue[y] > 0 ? noi[y] / totalRevenue[y] : 0);
   }
 
-  const proposedDebtService = loanAmount > 0 ? computeAnnualDebtService(loanAmount, loanRate, loanTerm) : 0;
+  const proposedDebtService = loanAmount > 0 ? computeAnnualDebt(loanAmount, loanRate, loanTerm) : 0;
   const totalDebtService = existingDebt + proposedDebtService;
 
   const dscr: number[] = [];
