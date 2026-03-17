@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
 import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark } from "lucide-react";
@@ -153,6 +153,30 @@ export function SchoolProfileStep() {
 
   const isCharter = schoolType === "charter_school";
   const isPrivate = schoolType === "private_school";
+
+  const allowedEntityTypes = useMemo(() => {
+    const all = Object.entries(ENTITY_TYPE_LABELS);
+    if (isCharter) {
+      return all.filter(([v]) => v === "nonprofit_501c3");
+    }
+    if (isPrivate || schoolType === "homeschool_coop") {
+      return all.filter(([v]) => v !== "sole_practitioner");
+    }
+    return all;
+  }, [schoolType, isCharter, isPrivate]);
+
+  useEffect(() => {
+    if (!schoolType) return;
+    if (isCharter && entityType !== "nonprofit_501c3") {
+      setValue("schoolProfile.entityType", "nonprofit_501c3");
+      return;
+    }
+    if (!entityType) return;
+    const allowed = allowedEntityTypes.map(([v]) => v);
+    if (!allowed.includes(entityType)) {
+      setValue("schoolProfile.entityType", undefined);
+    }
+  }, [schoolType, entityType, allowedEntityTypes, isCharter, setValue]);
 
   const prevLocationSecured = useRef(locationSecured);
   useEffect(() => {
@@ -601,7 +625,7 @@ export function SchoolProfileStep() {
           <FormSelect
             name="schoolProfile.entityType"
             label="Entity Type"
-            options={Object.entries(ENTITY_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+            options={allowedEntityTypes.map(([value, label]) => ({ value, label }))}
           />
           {entityType && entityType !== "sole_practitioner" && (
             <EINInput />
