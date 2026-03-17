@@ -170,7 +170,7 @@ function getYearLabel(index: number, schoolStage: string | undefined): string {
 const MONTH_LABELS = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun"];
 
 export function RevenueStep() {
-  const { watch, setValue, getValues } = useFormContext();
+  const { watch, setValue, getValues, formState: { errors } } = useFormContext();
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolStage = watch("schoolProfile.schoolStage") as string | undefined;
   const schoolType = watch("schoolProfile.schoolType") as string | undefined;
@@ -488,6 +488,11 @@ export function RevenueStep() {
     );
   }
 
+  const revenueErrors = errors.revenue as Record<string, { message?: string }> | undefined;
+  const revenueRowsErrors = errors.revenueRows;
+  const hasRevenueErrors = !!(revenueErrors && Object.keys(revenueErrors).length > 0);
+  const hasRowErrors = !!(revenueRowsErrors && Object.keys(revenueRowsErrors).length > 0);
+
   return (
     <div className="space-y-6">
       <div>
@@ -496,6 +501,21 @@ export function RevenueStep() {
           Enter your expected amounts for each year. We've filled in smart defaults — adjust them to match your school.
         </p>
       </div>
+
+      {(hasRevenueErrors || hasRowErrors) && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-destructive">Please fix the following errors to continue</p>
+            {hasRevenueErrors && Object.entries(revenueErrors!).map(([key, err]) => (
+              err?.message ? <p key={key} className="text-sm text-destructive mt-1">{err.message}</p> : null
+            ))}
+            {hasRowErrors && (
+              <p className="text-sm text-destructive mt-1">One or more revenue line items have issues — check the highlighted rows below.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {y1Students > 0 && maxCapacity && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 flex items-start gap-3">
@@ -748,7 +768,10 @@ export function RevenueStep() {
                   <p className="text-sm text-muted-foreground py-2">No line items in this category yet.</p>
                 )}
 
-                {catRows.map((row) => (
+                {catRows.map((row) => {
+                  const rowIndex = rows.findIndex((r) => r.id === row.id);
+                  const rowErrors = (errors.revenueRows as Record<string, unknown>)?.[rowIndex] as Record<string, { message?: string }> | undefined;
+                  return (
                   <RevenueLineItem
                     key={row.id}
                     row={row}
@@ -762,8 +785,10 @@ export function RevenueStep() {
                     y1Students={y1Students}
                     locked={row.id === "state_local_perpupil" && gradeBandActive}
                     lockedMessage="This amount is computed from your grade-band enrollment and per-pupil rates above. Edit those inputs to change funding."
+                    rowErrors={rowErrors}
                   />
-                ))}
+                  );
+                })}
 
                 {availableItems.length > 0 && (
                   <AddLineItemDropdown
@@ -947,6 +972,7 @@ interface RevenueLineItemProps {
   y1Students?: number;
   locked?: boolean;
   lockedMessage?: string;
+  rowErrors?: Record<string, { message?: string }>;
 }
 
 function RevenueLineItem({
@@ -961,6 +987,7 @@ function RevenueLineItem({
   y1Students = 0,
   locked = false,
   lockedMessage,
+  rowErrors,
 }: RevenueLineItemProps) {
   const [showTiming, setShowTiming] = useState(false);
 
@@ -970,13 +997,17 @@ function RevenueLineItem({
     || row.category === "school_choice"
     || row.category === "philanthropy";
 
+  const hasErrors = rowErrors && Object.keys(rowErrors).length > 0;
+
   return (
     <div
       className={cn(
         "rounded-xl border-2 p-4 transition-all",
-        row.enabled
-          ? "border-primary/20 bg-primary/[0.02]"
-          : "border-border bg-secondary/20 opacity-60"
+        hasErrors
+          ? "border-destructive/50 bg-destructive/[0.02]"
+          : row.enabled
+            ? "border-primary/20 bg-primary/[0.02]"
+            : "border-border bg-secondary/20 opacity-60"
       )}
     >
       <div className="flex items-center justify-between mb-3">
@@ -1020,7 +1051,10 @@ function RevenueLineItem({
               <select
                 value={row.driverType}
                 onChange={(e) => onDriverChange(e.target.value as RevenueDriverType)}
-                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground cursor-pointer"
+                className={cn(
+                  "text-xs border rounded-lg px-2 py-1.5 bg-card text-foreground cursor-pointer",
+                  rowErrors?.driverType ? "border-destructive" : "border-border"
+                )}
               >
                 {(Object.keys(DRIVER_TYPE_LABELS) as RevenueDriverType[]).map((dt) => (
                   <option key={dt} value={dt}>{DRIVER_TYPE_LABELS[dt]}</option>
@@ -1089,6 +1123,16 @@ function RevenueLineItem({
                 </div>
               )}
             </>
+          )}
+
+          {rowErrors?.amounts && (
+            <p className="text-sm text-destructive font-medium animate-in fade-in mt-1">{rowErrors.amounts.message || "Please check the amounts entered"}</p>
+          )}
+          {rowErrors?.driverType && (
+            <p className="text-sm text-destructive font-medium animate-in fade-in mt-1">{rowErrors.driverType.message || "Please select a calculation method"}</p>
+          )}
+          {rowErrors?.category && (
+            <p className="text-sm text-destructive font-medium animate-in fade-in mt-1">{rowErrors.category.message || "Please select a revenue category"}</p>
           )}
 
           {showTiming && hasTimingControls && (
@@ -1331,23 +1375,23 @@ function CashFlowTimingSummary({ monthlyInflow }: CashFlowTimingSummaryProps) {
       </div>
 
       <div className="px-5 py-5">
-        <div className="flex items-end gap-1.5 h-40">
+        <div className="flex items-end gap-1.5" style={{ height: "160px" }}>
           {monthlyInflow.map((amount, i) => {
             const heightPct = maxInflow > 0 ? (amount / maxInflow) * 100 : 0;
             const isBelowAvg = amount < avgMonthly * 0.5;
             return (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full relative flex-1 flex items-end">
+              <div key={i} className="flex-1 flex flex-col items-center gap-1" style={{ height: "100%" }}>
+                <div className="w-full relative" style={{ flex: "1 1 0%", minHeight: 0 }}>
                   <div
                     className={cn(
-                      "w-full rounded-t-md transition-all",
+                      "absolute bottom-0 left-0 right-0 rounded-t-md transition-all",
                       isBelowAvg ? "bg-amber-400/70" : "bg-primary/70"
                     )}
                     style={{ height: `${Math.max(heightPct, 2)}%` }}
                     title={`$${Math.round(amount).toLocaleString()}`}
                   />
                 </div>
-                <span className="text-[9px] text-muted-foreground font-medium">{MONTH_LABELS[i]}</span>
+                <span className="text-[9px] text-muted-foreground font-medium flex-shrink-0">{MONTH_LABELS[i]}</span>
               </div>
             );
           })}
