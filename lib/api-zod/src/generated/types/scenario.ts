@@ -11,4 +11,6 @@ export interface Scenario {
   enrollmentAdjustment?: number;
   tuitionAdjustment?: number;
   expenseAdjustment?: number;
+  staffingAdjustment?: number;
+  facilityAdjustment?: number;
 }

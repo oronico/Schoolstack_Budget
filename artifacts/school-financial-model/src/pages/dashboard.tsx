@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
-import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive, Sparkles, ArrowRight, BarChart3, CheckCircle2, Lightbulb } from "lucide-react";
+import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive, Sparkles, ArrowRight, BarChart3, CheckCircle2, Lightbulb, GitBranch, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
 
@@ -208,12 +208,26 @@ export function DashboardPage() {
                     </div>
                     
                     <div className="mt-5 pt-4 border-t border-border flex items-center justify-between">
-                      <button 
-                        onClick={() => setLocation(`/model/${model.id}`)}
-                        className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
-                      >
-                        {model.currentStep >= 8 ? "View Model" : "Continue Building"} <ArrowRight className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={() => setLocation(`/model/${model.id}`)}
+                          className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
+                        >
+                          {model.currentStep >= 8 ? "View Model" : "Continue Building"} <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                        {model.currentStep >= 8 ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setLocation(`/model/${model.id}/scenarios`); }}
+                            className="text-sm font-medium text-teal-700 hover:underline flex items-center gap-1"
+                          >
+                            <GitBranch className="h-3.5 w-3.5" /> Scenarios
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1" title="Complete all 8 steps to unlock scenarios">
+                            <Lock className="h-3 w-3" /> Scenarios
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1">
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleDuplicate(model.id); }}

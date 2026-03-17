@@ -38,8 +38,9 @@ Manages authentication, CRUD operations for financial models, admin analytics, a
 A React-based SPA featuring:
 - A public 8-step underwriting wizard (`/underwriting`) with localStorage persistence, consultant analysis, and public export, requiring no account. Profile step includes a Lending Lab intent branching question (plan_to_apply / want_to_understand / budget_only).
 - Authentication pages (login, register, forgot/reset password).
-- A dashboard for model lifecycle management.
+- A dashboard for model lifecycle management (with Scenarios link for step-8 models).
 - An 8-step authenticated wizard for detailed financial model setup.
+- A Scenario Planner (`/model/:id/scenarios`) - gated at step 8, allows up to 3 named what-if scenarios with 5 adjustment sliders (enrollment, tuition/revenue, staffing, facility, expenses). Shows side-by-side comparison table (Year 1, Year 5, Key Indicators) with color-coded viability nudges. Scenarios auto-persist and flow into the underwriting Excel export.
 - A dedicated admin dashboard with analytics and feedback management tabs.
 - A floating feedback widget (bottom-right) visible on all pages via Layout, supporting category selection (like, dislike, bug, feature), free-text message, optional email for anonymous users, and auto-captured page URL. Submissions stored in `feedback` table.
 - Auth context with JWT stored in localStorage.

@@ -296,6 +296,8 @@ export const scenarioDefSchema = z.object({
   enrollmentAdjustment: z.number().default(0),
   tuitionAdjustment: z.number().default(0),
   expenseAdjustment: z.number().default(0),
+  staffingAdjustment: z.number().default(0),
+  facilityAdjustment: z.number().default(0),
 });
 
 export const covenantThresholdsSchema = z.object({

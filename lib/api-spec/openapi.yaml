@@ -958,6 +958,10 @@ components:
           type: number
         expenseAdjustment:
           type: number
+        staffingAdjustment:
+          type: number
+        facilityAdjustment:
+          type: number
     CovenantThresholds:
       type: object
       properties:

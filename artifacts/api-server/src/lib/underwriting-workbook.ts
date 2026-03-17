@@ -1874,17 +1874,29 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
     r += 2;
     sec(ws, r, 6); ws.getCell(r, 1).value = scenario.name.toUpperCase();
     r++;
-    ws.getCell(r, 1).value = `Enrollment: ${scenario.enrollmentAdjustment >= 0 ? "+" : ""}${scenario.enrollmentAdjustment}%  |  Revenue: ${scenario.tuitionAdjustment >= 0 ? "+" : ""}${scenario.tuitionAdjustment}%  |  Expenses: ${scenario.expenseAdjustment >= 0 ? "+" : ""}${scenario.expenseAdjustment}%`;
+    const staffAdj = (scenario as any).staffingAdjustment || 0;
+    const facAdj = (scenario as any).facilityAdjustment || 0;
+    const parts = [
+      `Enrollment: ${scenario.enrollmentAdjustment >= 0 ? "+" : ""}${scenario.enrollmentAdjustment}%`,
+      `Revenue: ${scenario.tuitionAdjustment >= 0 ? "+" : ""}${scenario.tuitionAdjustment}%`,
+      `Staffing: ${staffAdj >= 0 ? "+" : ""}${staffAdj}%`,
+      `Facility: ${facAdj >= 0 ? "+" : ""}${facAdj}%`,
+      `Expenses: ${scenario.expenseAdjustment >= 0 ? "+" : ""}${scenario.expenseAdjustment}%`,
+    ];
+    ws.getCell(r, 1).value = parts.join("  |  ");
     ws.getCell(r, 1).font = { ...NF, italic: true, color: { argb: "FF666666" } };
 
     r++;
     ws.getRow(r).values = ["", ...yLabels];
     hdr(ws, r, 6);
 
-    const adjEnroll = enrollment.map(e => Math.round(e * (1 + scenario.enrollmentAdjustment / 100)));
-    const adjRev = revByYear.map(v => v * (1 + scenario.tuitionAdjustment / 100));
-    const adjOpex = opexByYear.map(v => v * (1 + scenario.expenseAdjustment / 100));
-    const adjTotalExp = persByYear.map((p, y) => p + adjOpex[y] + cdByYear[y]);
+    const enrollFactor = 1 + scenario.enrollmentAdjustment / 100;
+    const revFactor = 1 + scenario.tuitionAdjustment / 100;
+    const adjEnroll = enrollment.map(e => Math.round(e * enrollFactor));
+    const adjRev = revByYear.map(v => v * enrollFactor * revFactor);
+    const adjPers = persByYear.map(v => v * (1 + staffAdj / 100));
+    const adjOpex = opexByYear.map(v => v * (1 + scenario.expenseAdjustment / 100) * (1 + facAdj / 100));
+    const adjTotalExp = adjPers.map((p, y) => p + adjOpex[y] + cdByYear[y]);
     const adjNI = adjRev.map((rev, y) => rev - adjTotalExp[y]);
 
     r++;
@@ -1909,7 +1921,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
     r++;
     ws.getCell(r, 1).value = "DSCR"; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const cfads = adjRev[y] - persByYear[y] - adjOpex[y];
+      const cfads = adjRev[y] - adjPers[y] - adjOpex[y];
       ws.getCell(r, y + 2).value = cdByYear[y] > 0 ? Math.round(cfads / cdByYear[y] * 100) / 100 : "N/A";
       ws.getCell(r, y + 2).numFmt = "0.00x"; dc(ws.getCell(r, y + 2));
     }
@@ -1920,7 +1932,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
       const rps = adjEnroll[y] > 0 ? adjRev[y] / adjEnroll[y] : 0;
       const vcps = adjEnroll[y] > 0 ? adjOpex[y] / adjEnroll[y] : 0;
       const cm = rps - vcps;
-      const fc = persByYear[y] + cdByYear[y];
+      const fc = adjPers[y] + cdByYear[y];
       ws.getCell(r, y + 2).value = cm > 0 ? Math.ceil(fc / cm) : "N/A"; ws.getCell(r, y + 2).numFmt = NUM; dc(ws.getCell(r, y + 2));
     }
   }

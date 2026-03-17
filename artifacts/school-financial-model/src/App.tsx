@@ -15,6 +15,7 @@ const ResetPasswordPage = lazy(() => import("@/pages/auth/reset-password").then(
 const DashboardPage = lazy(() => import("@/pages/dashboard").then(m => ({ default: m.DashboardPage })));
 const ModelWizardPage = lazy(() => import("@/pages/model-wizard").then(m => ({ default: m.ModelWizardPage })));
 const PublicWizardPage = lazy(() => import("@/pages/public-wizard").then(m => ({ default: m.PublicWizardPage })));
+const ScenarioPage = lazy(() => import("@/pages/scenarios").then(m => ({ default: m.ScenarioPage })));
 const AdminPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPage })));
 const TermsPage = lazy(() => import("@/pages/legal/terms").then(m => ({ default: m.TermsPage })));
 const PrivacyPolicyPage = lazy(() => import("@/pages/legal/privacy").then(m => ({ default: m.PrivacyPolicyPage })));
@@ -67,6 +68,9 @@ function AppRouter() {
 
         <Route path="/dashboard">
           {() => <ProtectedRoute component={DashboardPage} />}
+        </Route>
+        <Route path="/model/:id/scenarios">
+          {() => <ProtectedRoute component={ScenarioPage} />}
         </Route>
         <Route path="/model/:id">
           {() => <ProtectedRoute component={ModelWizardPage} />}
