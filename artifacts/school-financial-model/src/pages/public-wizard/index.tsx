@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Save } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +52,7 @@ function saveToStorage(data: Record<string, unknown>, step: number) {
 export function PublicWizardPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [saveFlash, setSaveFlash] = useState(false);
 
   const savedData = loadFromStorage();
   const savedStep = parseInt(localStorage.getItem(STORAGE_KEY + "_step") || "1", 10);
@@ -128,6 +129,14 @@ export function PublicWizardPage() {
     }
   }, [debouncedValues, currentStep]);
 
+  const handleSave = useCallback(() => {
+    const currentValues = methods.getValues();
+    saveToStorage(currentValues as Record<string, unknown>, currentStep);
+    setLastSaved(new Date());
+    setSaveFlash(true);
+    setTimeout(() => setSaveFlash(false), 2500);
+  }, [methods, currentStep]);
+
   const ActiveStepComponent = STEPS[currentStep - 1].component;
   const isExportStep = currentStep === STEPS.length;
 
@@ -184,10 +193,32 @@ export function PublicWizardPage() {
                 Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1].title}
               </p>
             </div>
-            <div className="flex items-center text-xs font-medium text-muted-foreground">
-              {lastSaved ? (
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved locally</span>
-              ) : null}
+            <div className="flex items-center gap-3">
+              <span className={cn(
+                "flex items-center gap-1.5 text-xs font-medium transition-all duration-300",
+                saveFlash ? "text-primary scale-105" : "text-muted-foreground"
+              )}>
+                {lastSaved ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Progress saved</span>
+                    <span className="sm:hidden">Saved</span>
+                  </>
+                ) : null}
+              </span>
+              <button
+                type="button"
+                onClick={handleSave}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 border",
+                  saveFlash
+                    ? "bg-primary/10 text-primary border-primary/30"
+                    : "bg-background text-muted-foreground border-border hover:bg-black/5 hover:text-foreground"
+                )}
+              >
+                <Save className="h-3.5 w-3.5" />
+                Save
+              </button>
             </div>
           </div>
 
@@ -235,12 +266,29 @@ export function PublicWizardPage() {
                 <ArrowLeft className="h-5 w-5" /> Back
               </button>
 
-              <button
-                onClick={handleNext}
-                className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-              >
-                {currentStep === STEPS.length - 1 ? "Export Your Model" : "Continue"} <ArrowRight className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className={cn(
+                    "flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all duration-300 border",
+                    saveFlash
+                      ? "bg-primary/10 text-primary border-primary/30 shadow-md shadow-primary/10"
+                      : "text-muted-foreground border-border hover:bg-black/5 hover:text-foreground"
+                  )}
+                >
+                  {saveFlash ? <CheckCircle2 className="h-5 w-5" /> : <Save className="h-5 w-5" />}
+                  <span className="hidden sm:inline">{saveFlash ? "Saved!" : "Save Progress"}</span>
+                  <span className="sm:hidden">{saveFlash ? "Saved!" : "Save"}</span>
+                </button>
+
+                <button
+                  onClick={handleNext}
+                  className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                >
+                  {currentStep === STEPS.length - 1 ? "Export Your Model" : "Continue"} <ArrowRight className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           )}
         </FormProvider>
