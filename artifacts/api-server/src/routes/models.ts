@@ -21,6 +21,8 @@ import { generateUnderwritingWorkbook as generateUnderwritingWorkbookV2 } from "
 import { generateFormulaWorkbook } from "../lib/formula-export";
 import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine } from "../lib/consultant-engine";
+import { buildLenderPacket } from "../lib/packets/build-lender-packet";
+import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 
 const router: IRouter = Router();
 
@@ -451,6 +453,81 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
   } catch (err) {
     console.error("Lender Pro Forma export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Lender Pro Forma workbook." });
+  }
+});
+
+router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    const data = model.data as Record<string, unknown>;
+    const consultantOutput = runConsultantEngine(data);
+    const packet = buildLenderPacket(data as any, consultantOutput, model.id);
+
+    res.json(packet);
+  } catch (err) {
+    console.error("Lender packet JSON error:", err);
+    res.status(500).json({ error: "Something went wrong generating the lender packet." });
+  }
+});
+
+router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    const data = model.data as Record<string, unknown>;
+    const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
+    const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
+
+    const consultantOutput = runConsultantEngine(data);
+    const packet = buildLenderPacket(data as any, consultantOutput, model.id);
+    const buffer = await generateLenderPacketPDF(packet);
+
+    await db.insert(exportsTable).values({
+      userId: req.userId!,
+      modelId: model.id,
+      format: "pdf",
+    });
+
+    await trackEvent("exported_lender_packet_pdf", req.userId, { modelId: model.id });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Lender_Packet.pdf"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error("Lender packet PDF error:", err);
+    res.status(500).json({ error: "Something went wrong generating the Lender Packet PDF." });
   }
 });
 

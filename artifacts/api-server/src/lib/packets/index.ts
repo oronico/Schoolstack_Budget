@@ -1,5 +1,8 @@
 export { buildPacketData } from "./build-packet-data";
 export { buildNarrative } from "./build-narrative";
+export { buildLenderPacket } from "./build-lender-packet";
+export type { LenderPacket, RiskMitigant, DSCRSummary } from "./build-lender-packet";
+export { generateLenderPacketPDF } from "./lender-packet-pdf";
 export type {
   PacketData,
   PacketInput,

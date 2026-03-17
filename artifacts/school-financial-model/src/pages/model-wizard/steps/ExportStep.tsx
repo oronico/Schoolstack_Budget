@@ -1,22 +1,31 @@
 import { useState } from "react";
 import { getExportModelUrl } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck } from "lucide-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText } from "lucide-react";
 import { Link } from "wouter";
+import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
 
-type ExportType = "formula" | "underwritingV2";
+type ExportType = "formula" | "underwritingV2" | "lenderPacketPdf";
 
 export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
   const [loading, setLoading] = useState<ExportType | null>(null);
   const [exported, setExported] = useState<Set<ExportType>>(new Set());
+  const [showPacketPreview, setShowPacketPreview] = useState(false);
 
   const handleDownload = async (type: ExportType) => {
     if (!modelId || loading) return;
+
+    if (type === "lenderPacketPdf") {
+      setShowPacketPreview(true);
+      return;
+    }
+
     setLoading(type);
 
     try {
       const urlMap: Record<ExportType, string> = {
         formula: getExportModelUrl(modelId),
         underwritingV2: `/api/models/${modelId}/export/underwriting-v2`,
+        lenderPacketPdf: `/api/models/${modelId}/export/lender-packet-pdf`,
       };
 
       const token = localStorage.getItem('auth_token');
@@ -32,6 +41,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       const fallbackNames: Record<ExportType, string> = {
         formula: `School_Budget_Formulas_${modelId}.xlsx`,
         underwritingV2: `Underwriting_Package_${modelId}.xlsx`,
+        lenderPacketPdf: `Lender_Packet_${modelId}.pdf`,
       };
       const filename = filenameMatch?.[1] || fallbackNames[type];
       const url = window.URL.createObjectURL(blob);
@@ -71,10 +81,20 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
         {anyExported
           ? "Check your downloads folder. All documents are lender-ready and fully formatted."
-          : "Download your financial model as a polished Excel workbook - ready for lender meetings."}
+          : "Download your financial model as a polished workbook or lender packet - ready for financing conversations."}
       </p>
 
-      <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+      <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <ExportCard
+          icon={<FileText className="h-7 w-7" />}
+          title="Lender-Ready Packet"
+          description="Executive summary, 5-year forecast, DSCR analysis, risk/mitigant assessment & supporting exhibits as PDF"
+          isLoading={loading === "lenderPacketPdf"}
+          isExported={exported.has("lenderPacketPdf")}
+          disabled={loading !== null && loading !== "lenderPacketPdf"}
+          onClick={() => handleDownload("lenderPacketPdf")}
+          highlight
+        />
         <ExportCard
           icon={<ClipboardCheck className="h-7 w-7" />}
           title="Underwriting Package"
@@ -83,7 +103,6 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           isExported={exported.has("underwritingV2")}
           disabled={loading !== null && loading !== "underwritingV2"}
           onClick={() => handleDownload("underwritingV2")}
-          highlight
         />
         <ExportCard
           icon={<FileSpreadsheet className="h-7 w-7" />}
@@ -111,6 +130,13 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
             </Link>
           </div>
         </div>
+      )}
+
+      {showPacketPreview && modelId && (
+        <LenderPacketPreview
+          modelId={modelId}
+          onClose={() => setShowPacketPreview(false)}
+        />
       )}
     </div>
   );
@@ -140,7 +166,7 @@ function ExportCard({
       <span className="font-display font-bold text-sm text-foreground">{isExported ? `${title} ✓` : title}</span>
       <span className="text-xs text-muted-foreground leading-snug">{description}</span>
       <span className="mt-auto text-xs font-semibold text-primary group-hover:text-primary/80 transition-colors">
-        {isLoading ? "Generating..." : isExported ? "Download Again" : "Download"}
+        {isLoading ? "Generating..." : isExported ? "Download Again" : highlight ? "Preview & Download" : "Download"}
       </span>
     </button>
   );
