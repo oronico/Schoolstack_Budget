@@ -12,6 +12,8 @@ import {
   computeGradeBandRevenue,
   hasGradeBandData,
   computeRevenueForYear as computeRevenueForYearShared,
+  type SchoolProfile as SharedSchoolProfile,
+  type RevenueRow as SharedRevenueRow,
 } from "./workbook-helpers.js";
 
 const SCHOOL_TYPE_DISPLAY: Record<string, string> = {
@@ -160,19 +162,16 @@ function avgExpenseGrowth(rows: ExpenseRow[], categories: string[], students1: n
   return (sum1 - sum0) / sum0;
 }
 
-// Delegates to shared helpers from workbook-helpers.ts.
-// SchoolProfile shapes are compatible (both have gradeBandEnrollment, gradeBandPerPupil, etc.)
 function computeGradeBandRevenueLocal(sp: SchoolProfile, y: number): number {
-  return computeGradeBandRevenue(sp as any, y);
+  return computeGradeBandRevenue(sp as SharedSchoolProfile, y);
 }
 
 function hasGradeBandDataLocal(sp?: SchoolProfile): boolean {
-  return hasGradeBandData(sp as any);
+  return hasGradeBandData(sp as SharedSchoolProfile | undefined);
 }
 
-// Delegates to shared computeRevenueForYear from workbook-helpers.ts.
 function computeRevenueY(rows: RevenueRow[], yearIdx: number, students: number, sp?: SchoolProfile): number {
-  return computeRevenueForYearShared(rows as any[], yearIdx, students, undefined, undefined, sp as any);
+  return computeRevenueForYearShared(rows as SharedRevenueRow[], yearIdx, students, undefined, undefined, sp as SharedSchoolProfile | undefined);
 }
 
 const FACILITY_CATEGORIES = ["occupancy_facility"];

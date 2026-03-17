@@ -2100,6 +2100,16 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   const costInflPct = escalationRatePct;
   const prorationFactor = getProrationFactor(sp);
   const startingCash = data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0;
+  const debtIncluded = sp.debtIncluded !== false;
+
+  // When debtIncluded is false, filter out loan rows from the data object so
+  // every downstream function (Budget Detail, Monthly Cash Flow, Operating
+  // Statement, DSCR, Balance Sheet, Scenarios) consistently excludes loan
+  // debt service. Non-loan capital expenditure rows are always kept.
+  const effectiveData = debtIncluded ? data : {
+    ...data,
+    capitalAndDebtRows: (data.capitalAndDebtRows || []).filter(r => !r.isLoan),
+  };
 
   buildCover(wb, data);
   buildInstructions(wb);
@@ -2113,19 +2123,16 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   buildEnrollmentTuitionForecast(wb, data, enrollment);
   buildStaffingCostsForecast(wb, data, enrollment, salaryEsc, prorationFactor);
 
-  const { revByYear, persByYear, opexByYear, cdByYear, revTotalRow, persTotalRow, opexTotalRow, cdTotalRow } = buildBudgetDetail(wb, data, enrollment, salaryEsc, costInflPct, prorationFactor);
+  const { revByYear, persByYear, opexByYear, cdByYear, revTotalRow, persTotalRow, opexTotalRow, cdTotalRow } = buildBudgetDetail(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor);
   const bdRefs: BudgetDetailRefs = { revTotalRow, persTotalRow, opexTotalRow, cdTotalRow };
-  const { niByYear } = buildBudgetSummary(wb, data, enrollment, revByYear, persByYear, opexByYear, cdByYear, bdRefs);
+  const { niByYear } = buildBudgetSummary(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, bdRefs);
 
-  const { endingCashY1 } = buildMonthlyCashFlowY1(wb, data, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
-  buildOperatingStatement(wb, data, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear);
+  const { endingCashY1 } = buildMonthlyCashFlowY1(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
+  buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear);
 
-  const debtIncluded = sp.debtIncluded !== false;
-  const debtResult = buildDebtSchedule(wb, data);
-  // When debtIncluded is false, zero out debt service and balances so
-  // DSCR, balance sheet, and scenarios all reflect a no-debt model.
-  const debtServiceByYear = debtIncluded ? debtResult.debtByYear : [0, 0, 0, 0, 0];
-  const balanceByYear = debtIncluded ? debtResult.balanceByYear : [0, 0, 0, 0, 0];
+  const debtResult = buildDebtSchedule(wb, effectiveData);
+  const debtServiceByYear = debtResult.debtByYear;
+  const balanceByYear = debtResult.balanceByYear;
 
   const { cashByYear } = buildBalanceSheet(wb, data, niByYear, balanceByYear, startingCash, endingCashY1);
 
