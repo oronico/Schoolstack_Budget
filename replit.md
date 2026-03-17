@@ -49,6 +49,9 @@ A React-based SPA featuring:
 ### Consultant Engine
 Provides deterministic financial analysis including lender readiness scores, school-type-aware heuristics, management fee analysis, five stress test scenarios, a 5x5 sensitivity matrix, cash runway calculation, industry benchmark comparisons, and prior-year variance analysis.
 
+### Decision Engine (Epic 2)
+Top 3 Issues Panel ("What should I fix first?") surfaces the most critical financial issues from 8 decision rules: negative cash, weak reserves, high staffing cost, high occupancy cost, aggressive enrollment, grant dependency, weak DSCR, short cash runway. Issues are ranked by severity (critical/high/medium) and include model-specific summaries, "Why this matters" explanations, recommended actions, supporting metrics, and jump-to-step navigation. Rules engine: `artifacts/api-server/src/lib/decision-rules.ts`. Panel component: `artifacts/school-financial-model/src/components/consultant/TopIssuesPanel.tsx`. OpenAPI schema: `DecisionIssue` in `lib/api-spec/openapi.yaml`.
+
 ## Deployment Architecture
 - **Development**: Replit
 - **Source of truth**: GitHub
