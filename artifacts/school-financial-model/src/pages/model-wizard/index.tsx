@@ -52,7 +52,15 @@ export function ModelWizardPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [stepInitialized, setStepInitialized] = useState(false);
   const stepStartTime = useRef(Date.now());
-  const completedSteps = useRef(new Set<number>());
+  const completedSteps = useRef<Set<number>>(new Set());
+  const completedStepsLoaded = useRef(false);
+  if (!completedStepsLoaded.current && modelId) {
+    completedStepsLoaded.current = true;
+    try {
+      const stored = localStorage.getItem(`wizard_completed_${modelId}`);
+      if (stored) completedSteps.current = new Set(JSON.parse(stored) as number[]);
+    } catch { /* ignore */ }
+  }
   const { user } = useAuth();
 
   const { data: initialData, isLoading: isLoadingModel } = useGetModel(modelId || 0, {
@@ -291,6 +299,9 @@ export function ModelWizardPage() {
     if (isValid) {
       if (!completedSteps.current.has(currentStep)) {
         completedSteps.current.add(currentStep);
+        try {
+          localStorage.setItem(`wizard_completed_${modelId}`, JSON.stringify([...completedSteps.current]));
+        } catch { /* ignore */ }
         trackCoachingEvent("wizard_section_completed", {
           section: STEPS[currentStep - 1].title.toLowerCase(),
           step: currentStep,

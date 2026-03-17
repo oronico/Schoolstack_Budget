@@ -27,8 +27,8 @@ export function GuidanceModeSelector() {
         body: JSON.stringify({ guidanceLevel: level }),
       });
       trackCoachingEvent("guidance_mode_changed", {
-        oldLevel,
-        newLevel: level,
+        previousGuidanceLevel: oldLevel,
+        guidanceLevel: level,
       });
       await refetchUser();
     } catch {

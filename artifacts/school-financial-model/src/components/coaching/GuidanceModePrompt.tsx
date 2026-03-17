@@ -60,7 +60,7 @@ export function GuidanceModePrompt({ onComplete }: GuidanceModePromptProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ guidanceLevel: selected }),
       });
-      trackCoachingEvent("guidance_mode_selected", { level: selected });
+      trackCoachingEvent("guidance_mode_selected", { guidanceLevel: selected });
       await refetchUser();
       onComplete();
     } catch {
