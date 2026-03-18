@@ -1,7 +1,8 @@
 import ExcelJS from "exceljs";
 import { generateWorkbook } from "../src/lib/excel-export.js";
 import { generateUnderwritingWorkbook } from "../src/lib/underwriting-export.js";
-import { microschoolStartup } from "./sample-payloads.js";
+import { generateUnderwritingWorkbook as generateUnderwritingV2 } from "../src/lib/underwriting-workbook.js";
+import { microschoolStartup, charterPublicFunding } from "./sample-payloads.js";
 
 interface FormulaCheck {
   address: string;
@@ -49,6 +50,17 @@ function findRowByLabel(ws: ExcelJS.Worksheet, pattern: string | RegExp): number
     if (found) return;
     const label = String(ws.getCell(rn, 1).value || "");
     if (typeof pattern === "string" ? label.includes(pattern) : pattern.test(label)) {
+      found = rn;
+    }
+  });
+  return found;
+}
+
+function findLastRowByLabel(ws: ExcelJS.Worksheet, pattern: string): number | null {
+  let found: number | null = null;
+  ws.eachRow((_row, rn) => {
+    const label = String(ws.getCell(rn, 1).value || "");
+    if (label.includes(pattern)) {
       found = rn;
     }
   });
@@ -353,9 +365,126 @@ async function testUnderwritingExport(): Promise<{ passed: boolean; errors: stri
   return { passed: errors.length === 0, errors };
 }
 
+async function testUnderwritingV2CrossTab(): Promise<{ passed: boolean; errors: string[] }> {
+  const errors: string[] = [];
+  const data = charterPublicFunding as unknown as Record<string, unknown>;
+
+  const rawWb = await generateUnderwritingV2(data);
+  const buffer = await rawWb.xlsx.writeBuffer();
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buffer as Buffer);
+
+  const tabs = wb.worksheets.map(w => w.name);
+  console.log(`  Tabs: ${tabs.join(", ")}`);
+
+  const formulas = scanFormulaCells(wb);
+  console.log(`  Total formula cells: ${formulas.length}`);
+  const missing = formulas.filter(f => !f.hasResult);
+  if (missing.length > 0) {
+    for (const m of missing.slice(0, 5)) errors.push(`V2 Missing result: ${m.address}`);
+    if (missing.length > 5) errors.push(`... and ${missing.length - 5} more`);
+  }
+
+  const cfWs = wb.getWorksheet("Monthly Cash Flow Y1");
+  const bsWs = wb.getWorksheet("Balance Sheet");
+  const dsWs = wb.getWorksheet("Debt Schedule");
+  const osWs = wb.getWorksheet("5-Year Operating Stmt");
+  const dscrWs = wb.getWorksheet("DSCR & Covenants");
+
+  if (!cfWs) { errors.push("Monthly Cash Flow Y1 tab not found"); return { passed: false, errors }; }
+  if (!bsWs) { errors.push("Balance Sheet tab not found"); return { passed: false, errors }; }
+  if (!dsWs) { errors.push("Debt Schedule tab not found"); return { passed: false, errors }; }
+  if (!osWs) { errors.push("5-Year Operating Stmt tab not found"); return { passed: false, errors }; }
+
+  const cfEndCashRow = findRowByLabel(cfWs, /Ending Cash.*Month 12/);
+  const cfCumCashRow = findRowByLabel(cfWs, "Cumulative Cash");
+  const bsCashRow = findRowByLabel(bsWs, "Cash & Equivalents");
+  const bsLtdRow = findRowByLabel(bsWs, "Long-Term Debt");
+  const bsTaRow = findRowByLabel(bsWs, "Total Assets");
+  const bsTlRow = findRowByLabel(bsWs, "Total Liabilities");
+  const bsEqRow = findRowByLabel(bsWs, /Equity|Net Assets/);
+  const bsCheckRow = findRowByLabel(bsWs, /Balance Check/);
+  let dsEbRow = findRowByLabel(dsWs, "Total Outstanding Debt");
+  if (!dsEbRow) dsEbRow = findLastRowByLabel(dsWs, "Ending Balance");
+  const osNiRow = findRowByLabel(osWs, /Net Income|Change in Net Assets|Profit.*Loss|Surplus/);
+
+  if (!cfEndCashRow) errors.push("CF: Ending Cash row not found");
+  if (!cfCumCashRow) errors.push("CF: Cumulative Cash row not found");
+  if (!bsCashRow) errors.push("BS: Cash row not found");
+  if (!bsLtdRow) errors.push("BS: Long-Term Debt row not found");
+  if (!bsTaRow) errors.push("BS: Total Assets row not found");
+  if (!bsTlRow) errors.push("BS: Total Liabilities row not found");
+  if (!bsEqRow) errors.push("BS: Equity row not found");
+  if (!dsEbRow) errors.push("DS: Ending Balance row not found");
+  if (!osNiRow) errors.push("OS: Net Income row not found");
+
+  if (errors.length > 0) return { passed: false, errors };
+
+  const cfEndingCash = getCellValue(cfWs, cfEndCashRow!, 2);
+  const cfCumCashM12 = getCellValue(cfWs, cfCumCashRow!, 13);
+
+  console.log(`  CF Ending Cash: $${Math.round(cfEndingCash).toLocaleString()}`);
+  console.log(`  CF Cumulative Cash M12: $${Math.round(cfCumCashM12).toLocaleString()}`);
+
+  assertClose("CROSS-TAB: CF Ending Cash = CF Cumulative M12", cfEndingCash, cfCumCashM12, TOL, errors);
+
+  const bsCashY1 = getCellValue(bsWs, bsCashRow!, 2);
+  assertClose("CROSS-TAB: CF Ending Cash = BS Cash Y1", cfEndingCash, bsCashY1, TOL, errors);
+
+  for (let y = 0; y < 5; y++) {
+    const col = y + 2;
+    const dsDebt = getCellValue(dsWs, dsEbRow!, col);
+    const bsDebt = getCellValue(bsWs, bsLtdRow!, col);
+    assertClose(`CROSS-TAB: DS Ending Balance = BS LTD Y${y + 1}`, dsDebt, bsDebt, TOL, errors);
+  }
+
+  for (let y = 0; y < 5; y++) {
+    const col = y + 2;
+    const ta = getCellValue(bsWs, bsTaRow!, col);
+    const tl = getCellValue(bsWs, bsTlRow!, col);
+    const eq = getCellValue(bsWs, bsEqRow!, col);
+    assertClose(`BS A=L+E Y${y + 1}`, ta, tl + eq, TOL, errors);
+
+    const check = getCellValue(bsWs, bsCheckRow!, col);
+    assertClose(`BS Balance Check Y${y + 1}`, check, 0, TOL, errors);
+  }
+
+  let cumNI = 0;
+  for (let y = 1; y < 5; y++) {
+    const col = y + 2;
+    cumNI += getCellValue(osWs, osNiRow!, col);
+    const bsCash = getCellValue(bsWs, bsCashRow!, col);
+    assertClose(`CROSS-TAB: BS Cash Y${y + 1} = CF Y1 Cash + cum NI`, bsCash, bsCashY1 + cumNI, TOL, errors);
+  }
+
+  if (dscrWs) {
+    const dscrCashRow = findRowByLabel(dscrWs, /Ending Cash|Cash Balance/);
+    if (dscrCashRow) {
+      for (let y = 0; y < 5; y++) {
+        const col = y + 2;
+        const dscrCash = getCellValue(dscrWs, dscrCashRow, col);
+        const bsCash = getCellValue(bsWs, bsCashRow!, col);
+        assertClose(`CROSS-TAB: DSCR Cash = BS Cash Y${y + 1}`, dscrCash, bsCash, TOL, errors);
+      }
+    }
+  }
+
+  const crossTabFormulas = formulas.filter(f =>
+    f.formula.includes("'Monthly Cash Flow Y1'!") ||
+    f.formula.includes("'5-Year Operating Stmt'!") ||
+    f.formula.includes("'Debt Schedule'!")
+  );
+  console.log(`  Cross-tab formula cells: ${crossTabFormulas.length}`);
+  if (crossTabFormulas.length === 0) {
+    errors.push("No cross-tab formulas found — Balance Sheet should reference other tabs");
+  }
+
+  return { passed: errors.length === 0, errors };
+}
+
 async function main() {
   console.log("\n=== E2E Excel Export Formula Results Verification ===");
-  console.log("  Fixture: microschoolStartup (per_student, monthly, annual_fixed, percent_of_base drivers + 1 loan)\n");
+  console.log("  Fixture: microschoolStartup (std/UW v1), charterSchool (UW v2 cross-tab)\n");
 
   let totalPass = 0;
   let totalFail = 0;
@@ -371,7 +500,7 @@ async function main() {
     totalFail++;
   }
 
-  console.log("\n--- Underwriting Export ---");
+  console.log("\n--- Underwriting Export (v1) ---");
   const uwResult = await testUnderwritingExport();
   if (uwResult.passed) {
     console.log("  PASS: All formula cells cached, full 5-year P&L/BS/DSCR/Cash verified");
@@ -379,6 +508,17 @@ async function main() {
   } else {
     console.log("  FAIL:");
     uwResult.errors.forEach(e => console.log(`    - ${e}`));
+    totalFail++;
+  }
+
+  console.log("\n--- Underwriting V2 Cross-Tab Consistency ---");
+  const v2Result = await testUnderwritingV2CrossTab();
+  if (v2Result.passed) {
+    console.log("  PASS: All cross-tab assertions verified (CF↔BS cash, DS↔BS debt, BS A=L+E, NI accumulation)");
+    totalPass++;
+  } else {
+    console.log("  FAIL:");
+    v2Result.errors.forEach(e => console.log(`    - ${e}`));
     totalFail++;
   }
 
