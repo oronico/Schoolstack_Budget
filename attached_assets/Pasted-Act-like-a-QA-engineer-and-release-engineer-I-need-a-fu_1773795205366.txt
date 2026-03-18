@@ -1,0 +1,115 @@
+Act like a QA engineer and release engineer.
+
+I need a full end-to-end test pass for SchoolStack Budget before launch.
+Do not change product scope. Do not redesign. Test the existing app and report evidence.
+
+Test targets:
+- live site: https://budget.schoolstack.ai
+- public underwriting flow
+- workbook export flows
+- critical auth routes
+- API health
+
+E2E test requirements:
+
+1. Public site health
+- verify homepage loads
+- verify core branding and CTA render
+- verify no blocking JS errors
+- verify mobile responsiveness at 375px width
+
+2. Route coverage
+Test these exact routes:
+- /
+- /underwriting
+- /login
+- /register
+- /terms
+- /privacy
+- /forgot-password
+- /reset-password
+
+For each route:
+- confirm HTTP status
+- confirm visual load
+- confirm refresh on nested route does not 404
+- note any console or runtime errors
+
+3. Public underwriting flow
+- complete the full 8-step wizard without auth
+- test required field validation
+- test back/next navigation
+- test local persistence if present
+- confirm no broken labels, undefined values, or dead UI states
+
+4. Lending Lab intent branch
+- test all three responses:
+  - Yes, I plan to apply
+  - Maybe — I want to understand what would be needed
+  - No, I’m building a budget/model only
+- confirm each path saves correctly
+- confirm export still works on each path
+- report any UI or data differences
+
+5. Export testing
+Test every public export path that is live.
+At minimum:
+- public underwriting export
+- public single-year export, if enabled
+
+For each export:
+- confirm HTTP 200
+- confirm correct content-type
+- confirm workbook downloads
+- confirm workbook is a valid xlsx
+- confirm workbook opens in Excel without repair warning
+- confirm formulas exist
+- confirm expected tabs exist
+- confirm no undefined, NaN, #REF!, #DIV/0!, #VALUE!, or blank critical fields
+
+6. Workbook financial checks
+For each exported workbook, verify:
+- formulas exist in summary/model sheets
+- revenue totals tie
+- expense totals tie
+- net income calculates
+- DSCR logic appears if debt exists
+- no-debt case handled cleanly
+- summary cells show cached values in non-recalculating viewers
+
+7. Regression sample payloads
+Run at least these 3 scenarios:
+- microschool startup
+- private school with ESA
+- charter/public funding school
+
+8. Auth smoke tests
+- confirm register page loads
+- confirm login page loads
+- confirm auth API health
+- if production seed/admin is unavailable, state that clearly
+- do not block release on missing admin seed unless it breaks public alpha
+
+9. API health
+Test:
+- /api/healthz
+- public export endpoint
+- public consultant endpoint if live
+- verify whether frontend uses Netlify proxy or direct Railway base URL
+- note architecture clearly
+
+10. Report format
+Return:
+- pass/fail by section
+- exact URLs tested
+- exact errors found
+- screenshots where useful
+- workbook tab lists
+- alpha verdict: go / conditional go / no-go
+- top 5 fixes by severity:
+  - launch blocker
+  - week 1 fix
+  - beta fix
+
+Do not say “done” without actual evidence.
+Do not guess.
