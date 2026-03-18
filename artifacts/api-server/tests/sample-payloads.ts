@@ -35,6 +35,7 @@ export const microschoolStartup = {
     { id: "r2", category: "tuition_and_fees", lineItem: "Registration Fee", enabled: true, driverType: "per_student", amounts: [250, 250, 250, 250, 250], billingMonths: 12 },
     { id: "r3", category: "school_choice", lineItem: "AZ ESA Funds", enabled: true, driverType: "per_student", amounts: [7000, 7210, 7426, 7649, 7878], billingMonths: 12 },
     { id: "r4", category: "grants_contributions", lineItem: "Annual Fundraising", enabled: true, driverType: "annual_fixed", amounts: [5000, 6000, 7000, 8000, 9000] },
+    { id: "r5", category: "tuition_offsets", lineItem: "Scholarship Discount", enabled: true, driverType: "percent_of_base", amounts: [10, 10, 10, 10, 10], percentBase: "r1" },
   ],
   staffing: {
     studentsPerTeacher: 8,
@@ -66,7 +67,9 @@ export const microschoolStartup = {
     { id: "e5", category: "technology", lineItem: "Technology", enabled: true, driverType: "per_student", amounts: [300, 309, 318, 328, 338] },
     { id: "e6", category: "administrative_general", lineItem: "Marketing", enabled: true, driverType: "annual_fixed", amounts: [3000, 3075, 3152, 3231, 3312] },
   ],
-  capitalAndDebtRows: [],
+  capitalAndDebtRows: [
+    { id: "cd1", lineItem: "Equipment Loan", enabled: true, driverType: "annual_fixed", amounts: [0, 0, 0, 0, 0], isLoan: true, loanPrincipal: 30000, loanRate: 6, loanTermYears: 5, purpose: "startup" },
+  ],
   openingBalances: { cash: 15000, accountsReceivable: 0, fixedAssets: 5000, otherAssets: 0, accountsPayable: 0, currentDebtPortion: 0, longTermDebt: 0 },
   sourcesAndUses: {
     sources: [
