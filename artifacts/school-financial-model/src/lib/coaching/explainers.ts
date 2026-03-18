@@ -7,6 +7,8 @@ export interface ExplainerBody {
   whatToDoNext: string;
 }
 
+export type ExplainerPriority = "high" | "standard";
+
 export interface Explainer {
   id: string;
   title: string;
@@ -17,6 +19,7 @@ export interface Explainer {
   autoExpandFor: GuidanceLevel[];
   order: number;
   highFriction: boolean;
+  priority: ExplainerPriority;
 }
 
 export const EXPLAINERS: Record<string, Explainer> = {
@@ -35,6 +38,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     autoExpandFor: ["basics", "extra"],
     order: 1,
     highFriction: true,
+    priority: "high",
   },
   enrollment_assumptions: {
     id: "enrollment_assumptions",
@@ -51,6 +55,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     autoExpandFor: ["basics", "extra"],
     order: 2,
     highFriction: true,
+    priority: "high",
   },
   tuition_assumptions: {
     id: "tuition_assumptions",
@@ -67,6 +72,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     autoExpandFor: ["extra"],
     order: 3,
     highFriction: false,
+    priority: "standard",
   },
   grants_fundraising: {
     id: "grants_fundraising",
@@ -80,9 +86,10 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "revenue",
     dismissible: true,
-    autoExpandFor: ["extra"],
+    autoExpandFor: [],
     order: 4,
     highFriction: false,
+    priority: "standard",
   },
   payroll: {
     id: "payroll",
@@ -99,6 +106,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     autoExpandFor: ["extra"],
     order: 5,
     highFriction: true,
+    priority: "high",
   },
   occupancy_rent: {
     id: "occupancy_rent",
@@ -112,9 +120,10 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "expenses",
     dismissible: true,
-    autoExpandFor: ["extra"],
+    autoExpandFor: [],
     order: 6,
     highFriction: false,
+    priority: "standard",
   },
   program_expenses: {
     id: "program_expenses",
@@ -128,9 +137,10 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "expenses",
     dismissible: true,
-    autoExpandFor: ["extra"],
+    autoExpandFor: [],
     order: 7,
     highFriction: false,
+    priority: "standard",
   },
   operating_surplus_deficit: {
     id: "operating_surplus_deficit",
@@ -147,6 +157,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     autoExpandFor: ["extra"],
     order: 8,
     highFriction: false,
+    priority: "high",
   },
   cash_flow: {
     id: "cash_flow",
@@ -160,9 +171,10 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "review",
     dismissible: true,
-    autoExpandFor: ["extra"],
+    autoExpandFor: [],
     order: 9,
     highFriction: false,
+    priority: "standard",
   },
   ending_cash: {
     id: "ending_cash",
@@ -176,9 +188,10 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "review",
     dismissible: true,
-    autoExpandFor: ["extra"],
+    autoExpandFor: [],
     order: 10,
     highFriction: false,
+    priority: "standard",
   },
   reserves: {
     id: "reserves",
@@ -192,9 +205,10 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["basics", "extra"],
     relatedSection: "review",
     dismissible: true,
-    autoExpandFor: ["extra"],
+    autoExpandFor: [],
     order: 11,
     highFriction: false,
+    priority: "standard",
   },
   budget_vs_actual: {
     id: "budget_vs_actual",
@@ -208,9 +222,10 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["extra"],
     relatedSection: "review",
     dismissible: true,
-    autoExpandFor: ["extra"],
+    autoExpandFor: [],
     order: 12,
     highFriction: false,
+    priority: "standard",
   },
   fixed_vs_variable: {
     id: "fixed_vs_variable",
@@ -224,9 +239,10 @@ export const EXPLAINERS: Record<string, Explainer> = {
     audienceLevel: ["extra"],
     relatedSection: "expenses",
     dismissible: true,
-    autoExpandFor: ["extra"],
+    autoExpandFor: [],
     order: 13,
     highFriction: false,
+    priority: "standard",
   },
 };
 
@@ -241,5 +257,6 @@ export function getExplainerById(id: string): Explainer | undefined {
 }
 
 export function shouldAutoExpand(level: GuidanceLevel, explainer: Explainer): boolean {
+  if (level === "advanced") return false;
   return explainer.autoExpandFor.includes(level);
 }
