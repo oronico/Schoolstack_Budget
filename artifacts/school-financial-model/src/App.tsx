@@ -19,7 +19,7 @@ const ScenarioPage = lazy(() => import("@/pages/scenarios").then(m => ({ default
 const AdminPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPage })));
 const TermsPage = lazy(() => import("@/pages/legal/terms").then(m => ({ default: m.TermsPage })));
 const PrivacyPolicyPage = lazy(() => import("@/pages/legal/privacy").then(m => ({ default: m.PrivacyPolicyPage })));
-import NotFound from "@/pages/not-found";
+const NotFound = lazy(() => import("@/pages/not-found"));
 
 setupFetchInterceptor();
 
@@ -33,7 +33,11 @@ const queryClient = new QueryClient({
 });
 
 function PageLoader() {
-  return <div className="min-h-screen bg-background" />;
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
 }
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
