@@ -78,3 +78,9 @@ id = "wWxkVmeNbA-rDcAz5F7Gq"
 uri = "file://Lender_Charter.xlsx"
 type = "table"
 title = "Lender Pro Forma — Charter Public Funding"
+
+[[outputs]]
+id = "ZoBDlXtjR8R4A3RwZwNso"
+uri = "file://artifacts/school-financial-model/public/alpha-readiness-memo.md"
+type = "text"
+title = "SchoolStack Budget — Alpha Readiness Memo"
