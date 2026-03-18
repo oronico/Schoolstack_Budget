@@ -53,7 +53,16 @@ docker run -p 3000:3000 \
 | `EMAIL_FROM` | Sender address for outgoing emails (e.g. `SchoolStack Budget <noreply@schoolstack.ai>`). | `SchoolStack Budget <onboarding@resend.dev>` |
 | `ADMIN_EMAILS` | Comma-separated list of email addresses with admin privileges. | No users have admin access. |
 
-> **Note on SMTP:** This application uses [Resend](https://resend.com) as its email provider rather than raw SMTP. Traditional `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` variables are **not needed**. If you need to switch to a different email provider, replace the Resend client in `src/lib/mailer.ts`.
+### Deprecated / Unused
+
+| Variable | Status |
+|---|---|
+| `SMTP_HOST` | **Not used.** Email is handled by Resend, not SMTP. |
+| `SMTP_PORT` | **Not used.** See above. |
+| `SMTP_USER` | **Not used.** See above. |
+| `SMTP_PASS` | **Not used.** See above. |
+
+> **Note on SMTP:** This application uses [Resend](https://resend.com) as its email provider rather than raw SMTP. The `SMTP_*` variables listed above are **not needed** and are ignored. If you need to switch to a different email provider, replace the Resend client in `src/lib/mailer.ts`.
 
 ## Health Check
 
