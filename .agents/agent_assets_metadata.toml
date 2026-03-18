@@ -84,3 +84,9 @@ id = "ZoBDlXtjR8R4A3RwZwNso"
 uri = "file://artifacts/school-financial-model/public/alpha-readiness-memo.md"
 type = "text"
 title = "SchoolStack Budget — Alpha Readiness Memo"
+
+[[outputs]]
+id = "njUaDf8_IBmePbtjr9gts"
+uri = "file://LAUNCH_PROOF_PACK.md"
+type = "text"
+title = "SchoolStack Budget — Launch Proof Pack"
