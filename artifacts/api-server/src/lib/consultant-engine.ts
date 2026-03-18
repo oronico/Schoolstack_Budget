@@ -1234,7 +1234,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   if (philanthropyPct > 0.30)
     risks.push(`Philanthropy at ${pct(philanthropyPct)} of revenue is a generous foundation, but building more earned revenue will add stability`);
   if (publicRevenuePct > 0.70)
-    risks.push("Heavy reliance on public funding, so developing additional revenue streams will add resilience");
+    risks.push("Public funding is the primary revenue source — model disbursement timing carefully and maintain cash reserves for funding gaps");
   if (lastReserve && lastReserve.reserveMonths < 1)
     risks.push(`Building an operating reserve by Year ${lastYearNum} is an important next goal to work toward`);
 
@@ -1303,8 +1303,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   if (philanthropyPct > 0.30) {
     recommendations.push({
-      title: "Build Toward More Earned Revenue",
-      description: `Donations and grants represent ${pct(philanthropyPct)} of Year 1 revenue, and it's wonderful to have that support. Over time, building earned revenue as your primary driver makes your model more resilient and predictable. Aim to shift the mix so philanthropy is below 20% by Year 3.`,
+      title: "Anchor Revenue to Enrollment-Driven Income",
+      description: `Grants and donations represent ${pct(philanthropyPct)} of Year 1 revenue. Philanthropy is inherently unpredictable — anchor your model to earned revenue (tuition, per-pupil funding) that scales with enrollment. Aim for philanthropy below 20% by Year 3 so fundraising supplements your model rather than sustaining it.`,
       priority: "high",
     });
   }
@@ -1333,10 +1333,14 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
-  if (publicRevenuePct > 0.50) {
+  const schoolType = sp.schoolType || "";
+  const fundingProfile = sp.fundingProfile || "";
+  const isCharterSchool = schoolType === "charter_school" || fundingProfile === "charter_public_funded";
+
+  if (publicRevenuePct > 0.70 && !isCharterSchool) {
     recommendations.push({
-      title: "Add Revenue Streams Beyond Public Funding",
-      description: `Public funding represents ${pct(publicRevenuePct)} of revenue, a great foundation. To add resilience, consider developing supplementary revenue streams so that changes in state policy don't put your mission at risk.`,
+      title: "Plan for Public Funding Timing Risk",
+      description: `Public funding represents ${pct(publicRevenuePct)} of revenue — a strong enrollment-driven foundation. The key risk isn't concentration, it's disbursement timing and policy shifts. Maintain cash reserves or a line of credit to bridge gaps between enrollment counts and payment receipt, and track legislative changes that could affect per-pupil allocations.`,
       priority: "medium",
     });
   }
@@ -1349,10 +1353,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
-  const schoolType = sp.schoolType || "";
-  const fundingProfile = sp.fundingProfile || "";
-
-  const isCharter = schoolType === "charter_school" || fundingProfile === "charter_public_funded";
+  const isCharter = isCharterSchool;
   const isPrivate = schoolType === "private_school" || fundingProfile === "tuition_based";
   const isMicroschool = schoolType === "microschool";
   const isLearningPod = schoolType === "learning_pod";
@@ -1378,8 +1379,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     }
     if (publicRevenuePct > 0.7) {
       recommendations.push({
-        title: "Charter Revenue Concentration & Timing Risk",
-        description: `${pct(publicRevenuePct)} of revenue comes from public per-pupil funding. Charter funding is typically disbursed on a state-defined schedule, so ensure you have cash reserves or a line of credit to cover timing gaps between enrollment counts and payment receipt. Also consider diversifying into supplemental revenue (fees, grants) to reduce concentration risk.`,
+        title: "Charter Funding Timing & Cash Flow Risk",
+        description: `${pct(publicRevenuePct)} of revenue comes from public per-pupil funding — this is enrollment-driven income and a strong foundation. The primary risk is disbursement timing: charter funding follows a state-defined schedule, so ensure you have cash reserves or a line of credit to cover gaps between enrollment counts and payment receipt.`,
         priority: "medium",
       });
     }
@@ -1499,19 +1500,11 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
   }
 
   if (isHybridFunding) {
-    const revenueSourceCount = [y1.tuitionRevenue, y1.publicRevenue, y1.philanthropyRevenue].filter(v => v > 0).length;
-    if (revenueSourceCount < 2) {
-      recommendations.push({
-        title: "Diversify Revenue Sources for Hybrid Model",
-        description: "A hybrid funding model benefits from balancing tuition, public funding, and grants. Currently only one revenue source is active, and adding a second stream improves financial resilience against policy changes or enrollment fluctuations.",
-        priority: "medium",
-      });
-    }
     const tuitionPct = y1.totalRevenue > 0 ? y1.tuitionRevenue / y1.totalRevenue : 0;
     if (tuitionPct > 0 && publicRevenuePct > 0) {
       recommendations.push({
         title: "Manage Hybrid Funding Complexity",
-        description: `Your model blends tuition (${pct(tuitionPct)}) with public funding (${pct(publicRevenuePct)}). Hybrid models add compliance complexity, so ensure you're tracking each funding stream's reporting requirements separately, especially if public funds have restricted-use provisions.`,
+        description: `Your model blends tuition (${pct(tuitionPct)}) with public funding (${pct(publicRevenuePct)}). Both are enrollment-driven — a strong foundation. The complexity is operational: ensure you're tracking each funding stream's reporting requirements separately, especially if public funds have restricted-use provisions.`,
         priority: "low",
       });
     }

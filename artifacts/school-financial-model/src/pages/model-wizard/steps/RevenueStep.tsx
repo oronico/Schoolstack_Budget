@@ -431,7 +431,7 @@ export function RevenueStep() {
             <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-foreground">
               <span className="font-semibold">Revenue needs to cover {y1Students} students in Year 1{y5Students > y1Students ? `, growing to ${y5Students} by Year 5` : ""}.</span>{" "}
-              Lenders want to see diversified revenue - schools with 2+ income streams are considered lower risk.
+              Demand is the engine — lenders focus on whether your revenue is anchored to enrollment-driven income that grows reliably as you fill seats.
             </div>
           </div>
         )}

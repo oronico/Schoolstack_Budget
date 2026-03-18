@@ -187,14 +187,88 @@ const aggressiveEnrollmentRule: RuleFn = (input) => {
   return {
     id: "aggressive_enrollment",
     severity: overCapacity ? "high" : "medium",
-    title: "Enrollment growth may be overly aggressive",
+    title: "Enrollment growth needs demand evidence",
     summary: summaryParts.join(", and ") + ".",
-    whyItMatters: "Unrealistic enrollment targets undermine the entire model. If you miss enrollment, every revenue and staffing assumption downstream breaks.",
-    recommendedAction: "Base enrollment targets on documented demand — applications, waitlist, community surveys. Growth over 25% per year typically requires an exceptional marketing engine or facility expansion.",
+    whyItMatters: "Demand is the engine of your financial model. Every revenue line, staffing decision, and cost assumption depends on filling seats. If enrollment falls short, the entire model breaks downstream.",
+    recommendedAction: "Back every enrollment target with documented demand — signed letters of intent, waitlist depth, community survey results, or recruitment pipeline data. Growth over 25% per year typically requires an exceptional recruitment engine or facility expansion.",
     relatedStep: 2,
     supportingMetrics: [
       ...enrollmentByYear.map((e, i) => ({ label: `Year ${i + 1}`, value: `${e} students` })),
       ...(maxCapacity > 0 ? [{ label: "Capacity", value: `${maxCapacity}` }] : []),
+    ],
+  };
+};
+
+const breakEvenNearCapacityRule: RuleFn = (input) => {
+  const { yearFinancials, enrollmentByYear, maxCapacity } = input;
+  if (maxCapacity <= 0) return null;
+
+  let breakEvenEnrollment = 0;
+  for (let i = 0; i < yearFinancials.length; i++) {
+    const yf = yearFinancials[i];
+    if (yf.netIncome >= 0 && enrollmentByYear[i] > 0) {
+      const revenuePerStudent = yf.totalRevenue / enrollmentByYear[i];
+      const fixedCosts = yf.totalStaffingCost + yf.debtService;
+      const variableOpex = yf.totalOpex - yf.debtService;
+      const variableCostPerStudent = enrollmentByYear[i] > 0 ? variableOpex / enrollmentByYear[i] : 0;
+      const cm = revenuePerStudent - variableCostPerStudent;
+      if (cm > 0) {
+        breakEvenEnrollment = Math.ceil(fixedCosts / cm);
+        break;
+      }
+    }
+  }
+
+  if (breakEvenEnrollment <= 0) return null;
+  const utilizationAtBE = breakEvenEnrollment / maxCapacity;
+  if (utilizationAtBE <= 0.85) return null;
+
+  return {
+    id: "breakeven_near_capacity",
+    severity: utilizationAtBE > 0.95 ? "critical" : "high",
+    title: "Break-even enrollment is dangerously close to capacity",
+    summary: `You need ${breakEvenEnrollment} students to break even, which is ${pct(utilizationAtBE)} of your ${maxCapacity}-student capacity. There's almost no margin for enrollment shortfalls.`,
+    whyItMatters: "When break-even requires near-full enrollment, you have no room for a slow enrollment year, mid-year withdrawals, or delayed recruitment. The model only works at peak demand.",
+    recommendedAction: "Reduce fixed costs (phased hiring, smaller facility) or increase per-student revenue so break-even occurs at 70-80% of capacity. This gives your enrollment room to breathe.",
+    relatedStep: 6,
+    supportingMetrics: [
+      { label: "Break-even enrollment", value: `${breakEvenEnrollment} students` },
+      { label: "Capacity", value: `${maxCapacity} students` },
+      { label: "Utilization at break-even", value: pct(utilizationAtBE) },
+    ],
+  };
+};
+
+const staffingAheadOfDemandRule: RuleFn = (input) => {
+  const { yearFinancials, enrollmentByYear } = input;
+  if (yearFinancials.length < 2) return null;
+
+  const flaggedYears: number[] = [];
+  for (let i = 1; i < yearFinancials.length; i++) {
+    const enrollGrowth = enrollmentByYear[i - 1] > 0
+      ? (enrollmentByYear[i] - enrollmentByYear[i - 1]) / enrollmentByYear[i - 1]
+      : 0;
+    const staffGrowth = yearFinancials[i - 1].totalStaffingCost > 0
+      ? (yearFinancials[i].totalStaffingCost - yearFinancials[i - 1].totalStaffingCost) / yearFinancials[i - 1].totalStaffingCost
+      : 0;
+    if (staffGrowth > enrollGrowth + 0.10 && staffGrowth > 0.10) {
+      flaggedYears.push(i + 1);
+    }
+  }
+
+  if (flaggedYears.length === 0) return null;
+
+  return {
+    id: "staffing_ahead_of_demand",
+    severity: flaggedYears.length >= 2 ? "high" : "medium",
+    title: "Staffing costs growing faster than enrollment",
+    summary: `In Year${flaggedYears.length > 1 ? "s" : ""} ${flaggedYears.join(", ")}, staffing cost growth outpaces enrollment growth by more than 10 percentage points.`,
+    whyItMatters: "Hiring ahead of demand locks in fixed costs before the revenue to support them arrives. If enrollment doesn't materialize as planned, staffing becomes an unsustainable burden.",
+    recommendedAction: "Align staffing additions to enrollment milestones. Hire when students are enrolled, not when you hope they will be. Use part-time or contract roles to bridge gaps.",
+    relatedStep: 4,
+    supportingMetrics: [
+      ...flaggedYears.map(y => ({ label: `Year ${y} enrollment`, value: `${enrollmentByYear[y - 1]} students` })),
+      ...flaggedYears.map(y => ({ label: `Year ${y} staffing cost`, value: fmt(yearFinancials[y - 1].totalStaffingCost) })),
     ],
   };
 };
@@ -276,6 +350,8 @@ const ALL_RULES: RuleFn[] = [
   grantDependencyRule,
   highOccupancyCostRule,
   aggressiveEnrollmentRule,
+  breakEvenNearCapacityRule,
+  staffingAheadOfDemandRule,
   weakReservesRule,
 ];
 

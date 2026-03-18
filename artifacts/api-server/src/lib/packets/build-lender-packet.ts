@@ -111,7 +111,7 @@ function buildSignalMitigant(dimension: string): string {
     staffing_burden: "Evaluate staffing ratios against enrollment growth and consider phased hiring aligned to revenue milestones.",
     facility_burden: "Negotiate facility costs or explore co-location to keep occupancy below 15-20% of total revenue.",
     debt_affordability: "Restructure debt terms, extend maturities, or increase operating income to improve Debt Service Coverage Ratio.",
-    revenue_concentration: "Diversify revenue sources across tuition, public funding, and philanthropy to reduce concentration risk.",
+    revenue_concentration: "Strengthen enrollment pipeline evidence (waitlist, LOIs, retention data) and ensure revenue is anchored to demand-driven income rather than uncertain grants.",
     reserve_strength: "Establish a reserve fund policy targeting 3-6 months of operating expenses.",
   };
   return mitigants[dimension] || "Monitor this metric and develop a remediation plan if trends persist.";

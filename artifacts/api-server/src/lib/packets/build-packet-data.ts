@@ -289,7 +289,7 @@ function buildRevenueModel(
     if (revComp.philanthropyPct > 0.3) parts.push(`with significant philanthropic support (${pct(revComp.philanthropyPct)})`);
   }
 
-  const narrative = `The revenue model is ${parts.length > 0 ? parts.join(", ") : "diversified across multiple sources"}. Year 1 total revenue is projected at ${fmt(yearlyData[0]?.totalRevenue || 0)}, growing to ${fmt(yearlyData[4]?.totalRevenue || 0)} by Year 5.`;
+  const narrative = `The revenue model is ${parts.length > 0 ? parts.join(", ") : "anchored to enrollment-driven income"}. Year 1 total revenue is projected at ${fmt(yearlyData[0]?.totalRevenue || 0)}, growing to ${fmt(yearlyData[4]?.totalRevenue || 0)} by Year 5.`;
 
   const rows: PacketTableRow[] = yearlyData.map((yd) => ({
     label: yearLabel(yd.year),
