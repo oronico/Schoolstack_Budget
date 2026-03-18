@@ -5,21 +5,34 @@ import { pool } from "@workspace/db";
 
 const app: Express = express();
 
-const corsOrigin = process.env.CORS_ORIGIN;
+const allowedOrigins = process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN;
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction && !allowedOrigins) {
+  console.warn(
+    "[cors] WARNING: ALLOWED_ORIGINS is not set in production. " +
+    "CORS will reject all cross-origin requests. " +
+    "Set ALLOWED_ORIGINS to a comma-separated list of allowed origins.",
+  );
+}
+
 app.use(
   cors(
-    corsOrigin
+    allowedOrigins
       ? {
-          origin: corsOrigin.split(",").map((o) => o.trim()),
+          origin: allowedOrigins.split(",").map((o) => o.trim()),
           credentials: true,
         }
-      : undefined,
+      : isProduction
+        ? { origin: false }
+        : undefined,
   ),
 );
+
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/health", async (_req, res) => {
+async function handleHealthCheck(_req: express.Request, res: express.Response) {
   try {
     const result = await pool.query("SELECT 1 AS ok");
     res.json({ status: "ok", db: result.rows[0]?.ok === 1 ? "connected" : "unexpected" });
@@ -28,8 +41,10 @@ app.get("/health", async (_req, res) => {
     console.error("Health check DB error:", message);
     res.status(503).json({ status: "error", db: "disconnected", error: message });
   }
-});
+}
 
+app.get("/health", handleHealthCheck);
+app.get("/api/health", handleHealthCheck);
 
 app.use("/api", router);
 
