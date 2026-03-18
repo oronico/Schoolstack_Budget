@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense, type ComponentType } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
@@ -14,22 +14,25 @@ import { fullModelSchema, type FullModelData } from "./schema";
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
 import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
-import { RevenueStep } from "./steps/RevenueStep";
-import { StaffingStep } from "./steps/StaffingStep";
-import { ExpenseStep } from "./steps/ExpenseStep";
-import { ReviewStep } from "./steps/ReviewStep";
-import { ConsultantStep } from "./steps/ConsultantStep";
-import { ExportStep } from "./steps/ExportStep";
 
-const STEPS = [
+const RevenueStep = lazy(() => import("./steps/RevenueStep").then(m => ({ default: m.RevenueStep })));
+const StaffingStep = lazy(() => import("./steps/StaffingStep").then(m => ({ default: m.StaffingStep })));
+const ExpenseStep = lazy(() => import("./steps/ExpenseStep").then(m => ({ default: m.ExpenseStep })));
+const ReviewStep = lazy(() => import("./steps/ReviewStep").then(m => ({ default: m.ReviewStep })));
+const ConsultantStep = lazy(() => import("./steps/ConsultantStep").then(m => ({ default: m.ConsultantStep })));
+const ExportStep = lazy(() => import("./steps/ExportStep").then(m => ({ default: m.ExportStep })));
+
+type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null };
+
+const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[] = [
   { id: 1, title: "Profile", component: SchoolProfileStep },
   { id: 2, title: "Enrollment", component: EnrollmentStep },
-  { id: 3, title: "Revenue", component: RevenueStep },
-  { id: 4, title: "Staffing", component: StaffingStep },
-  { id: 5, title: "Expenses", component: ExpenseStep },
-  { id: 6, title: "Review", component: ReviewStep },
-  { id: 7, title: "Consultant", component: ConsultantStep },
-  { id: 8, title: "Export", component: ExportStep },
+  { id: 3, title: "Revenue", component: RevenueStep as ComponentType<StepProps> },
+  { id: 4, title: "Staffing", component: StaffingStep as ComponentType<StepProps> },
+  { id: 5, title: "Expenses", component: ExpenseStep as ComponentType<StepProps> },
+  { id: 6, title: "Review", component: ReviewStep as ComponentType<StepProps> },
+  { id: 7, title: "Consultant", component: ConsultantStep as ComponentType<StepProps> },
+  { id: 8, title: "Export", component: ExportStep as ComponentType<StepProps> },
 ];
 
 function sendModelTiming(step: number, stepName: string, durationSeconds: number, modelId: number) {
@@ -439,7 +442,9 @@ export function ModelWizardPage() {
       <div className="flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto w-full">
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <ActiveStepComponent jumpToStep={setCurrentStep} modelId={modelId} />
+            <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
+              <ActiveStepComponent jumpToStep={setCurrentStep} modelId={modelId} />
+            </Suspense>
           </div>
 
           {!isExportStep && (
