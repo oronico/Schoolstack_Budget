@@ -32,19 +32,23 @@ app.use(
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-async function handleHealthCheck(_req: express.Request, res: express.Response) {
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
+app.get("/api/ready", async (_req, res) => {
   try {
     const result = await pool.query("SELECT 1 AS ok");
     res.json({ status: "ok", db: result.rows[0]?.ok === 1 ? "connected" : "unexpected" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("Health check DB error:", message);
+    console.error("Readiness check DB error:", message);
     res.status(503).json({ status: "error", db: "disconnected", error: message });
   }
-}
-
-app.get("/health", handleHealthCheck);
-app.get("/api/health", handleHealthCheck);
+});
 
 app.use("/api", router);
 

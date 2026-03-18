@@ -49,16 +49,24 @@ docker run -p 3000:3000 \
 
 | Variable | Description | Behavior if missing |
 |---|---|---|
-| `RESEND_API_KEY` | API key for Resend (transactional email service). | Password reset emails are logged to console instead of sent. |
-| `EMAIL_FROM` | Sender address for outgoing emails. | `SchoolStack Budget <onboarding@resend.dev>` |
+| `RESEND_API_KEY` | API key for [Resend](https://resend.com) (transactional email service). This replaces traditional SMTP — Resend handles delivery via its API. | Password reset emails are logged to console instead of sent. The server starts normally without it. |
+| `EMAIL_FROM` | Sender address for outgoing emails (e.g. `SchoolStack Budget <noreply@schoolstack.ai>`). | `SchoolStack Budget <onboarding@resend.dev>` |
 | `ADMIN_EMAILS` | Comma-separated list of email addresses with admin privileges. | No users have admin access. |
+
+> **Note on SMTP:** This application uses [Resend](https://resend.com) as its email provider rather than raw SMTP. Traditional `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` variables are **not needed**. If you need to switch to a different email provider, replace the Resend client in `src/lib/mailer.ts`.
 
 ## Health Check
 
-The server exposes health check endpoints for load balancer probes:
+The server exposes liveness and readiness endpoints:
 
-- `GET /health` — Returns `200 { status: "ok", db: "connected" }` when healthy, `503` when the database is unreachable.
-- `GET /api/health` — Same endpoint, available under the `/api` prefix for convenience.
+### Liveness (for load balancer probes)
+
+- `GET /health` — Always returns `200 { status: "ok" }`. Use this for load balancer health checks.
+- `GET /api/health` — Same response, available under the `/api` prefix.
+
+### Readiness (for deployment checks)
+
+- `GET /api/ready` — Returns `200 { status: "ok", db: "connected" }` when the database is reachable, or `503 { status: "error", db: "disconnected" }` when it is not.
 
 ### Railway Configuration
 
