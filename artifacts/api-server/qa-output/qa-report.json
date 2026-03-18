@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 37780,
+    "fileSize": 38439,
     "tabs": [
       "Cover",
       "Instructions",
@@ -31,7 +31,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 36.9 KB",
+          "File size: 37.5 KB",
           "Successfully opened workbook",
           "Worksheets: 21"
         ],
@@ -49,7 +49,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1436 cells across 21 sheets",
+          "Scanned 1483 cells across 21 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -106,7 +106,7 @@
         "name": "Cash Flow Ending → Balance Sheet Cash (Y1)",
         "passed": true,
         "details": [
-          "Value A: 76570, Value B: 76570, Diff: 0"
+          "Value A: 62170, Value B: 62170, Diff: 0"
         ],
         "errors": []
       },
@@ -124,7 +124,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 21956,
+    "fileSize": 22208,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -140,7 +140,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 21.4 KB",
+          "File size: 21.7 KB",
           "Successfully opened workbook",
           "Worksheets: 8"
         ],
@@ -158,7 +158,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 526 cells across 8 sheets",
+          "Scanned 539 cells across 8 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -167,7 +167,7 @@
         "name": "P&L Has Revenue",
         "passed": true,
         "details": [
-          "Total Revenue: 236000"
+          "Total Revenue: 221600"
         ],
         "errors": []
       },
@@ -175,7 +175,7 @@
         "name": "P&L Has Net Income Row",
         "passed": true,
         "details": [
-          "Net Income: 68466"
+          "Net Income: 47106"
         ],
         "errors": []
       }
@@ -185,7 +185,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 18235,
+    "fileSize": 18588,
     "tabs": [
       "Assumptions",
       "5-Year Model",
@@ -196,7 +196,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 17.8 KB",
+          "File size: 18.2 KB",
           "Successfully opened workbook",
           "Worksheets: 3"
         ],
@@ -214,7 +214,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 918 cells across 3 sheets",
+          "Scanned 960 cells across 3 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -225,7 +225,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 32782,
+    "fileSize": 33428,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -248,7 +248,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 32.0 KB",
+          "File size: 32.6 KB",
           "Successfully opened workbook",
           "Worksheets: 15"
         ],
@@ -266,7 +266,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 900 cells across 15 sheets",
+          "Scanned 948 cells across 15 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -275,7 +275,7 @@
         "name": "P&L Has Revenue",
         "passed": true,
         "details": [
-          "Total Revenue: 196667"
+          "Total Revenue: 184667"
         ],
         "errors": []
       },
@@ -283,7 +283,7 @@
         "name": "P&L Has Net Income Row",
         "passed": true,
         "details": [
-          "Net Income: 37233"
+          "Net Income: 18273"
         ],
         "errors": []
       }
@@ -293,7 +293,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 19283,
+    "fileSize": 19409,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -309,7 +309,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 18.8 KB",
+          "File size: 19.0 KB",
           "Successfully opened workbook",
           "Worksheets: 8"
         ],
@@ -354,7 +354,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 13826,
+    "fileSize": 13904,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -367,7 +367,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 13.5 KB",
+          "File size: 13.6 KB",
           "Successfully opened workbook",
           "Worksheets: 5"
         ],
@@ -385,7 +385,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 378 cells across 5 sheets",
+          "Scanned 392 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -394,7 +394,7 @@
         "name": "P&L Has Revenue",
         "passed": true,
         "details": [
-          "Total Revenue (Annual): 236000"
+          "Total Revenue (Annual): 221600"
         ],
         "errors": []
       },
@@ -402,7 +402,7 @@
         "name": "P&L Has Net Income Row",
         "passed": true,
         "details": [
-          "Net Income (Annual): 37233"
+          "Net Income (Annual): 18273"
         ],
         "errors": []
       }
@@ -412,7 +412,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 40930,
+    "fileSize": 41657,
     "tabs": [
       "Cover",
       "Instructions",
@@ -441,7 +441,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 40.0 KB",
+          "File size: 40.7 KB",
           "Successfully opened workbook",
           "Worksheets: 21"
         ],
@@ -459,7 +459,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1775 cells across 21 sheets",
+          "Scanned 1793 cells across 21 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -864,7 +864,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 42143,
+    "fileSize": 42850,
     "tabs": [
       "Cover",
       "Instructions",
@@ -893,7 +893,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 41.2 KB",
+          "File size: 41.8 KB",
           "Successfully opened workbook",
           "Worksheets: 21"
         ],
@@ -911,7 +911,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1930 cells across 21 sheets",
+          "Scanned 1948 cells across 21 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1314,7 +1314,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 41491,
+    "fileSize": 42222,
     "tabs": [
       "Cover",
       "Instructions",
@@ -1343,7 +1343,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 40.5 KB",
+          "File size: 41.2 KB",
           "Successfully opened workbook",
           "Worksheets: 21"
         ],
@@ -1361,7 +1361,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1815 cells across 21 sheets",
+          "Scanned 1833 cells across 21 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []

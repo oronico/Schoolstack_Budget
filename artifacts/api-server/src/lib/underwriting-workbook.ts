@@ -100,19 +100,26 @@ function buildInstructions(wb: ExcelJS.Workbook) {
 
   r += 2;
   const instructions = [
-    ["Color Legend", ""],
-    ["", "Yellow cells are editable inputs - change these to update your model."],
-    ["", "Gray cells contain formulas - do not edit."],
+    ["Cell Color Legend", ""],
+    ["", "Yellow cells are editable inputs — change these to update your model."],
+    ["", "White cells contain formulas — do not edit (they recalculate automatically)."],
     ["", "Green cells are key outputs and summary metrics."],
     ["", ""],
     ["Navigation", "Use the Cover tab's Table of Contents to jump between sheets."],
-    ["", "The Assumptions tab is the central control panel - all other tabs reference it."],
+    ["", "The Assumptions tab is the central control panel — all other tabs reference it."],
     ["", ""],
     ["Structure", "Tabs 1-4: Profile & setup"],
     ["", "Tabs 5-9: Drivers & inputs"],
     ["", "Tabs 10-13: Forecasts & budgets"],
     ["", "Tabs 14-17: Financial statements"],
     ["", "Tabs 18-21: Analysis & underwriting"],
+    ["", ""],
+    ["Debt Service Convention", "This model treats full debt service (interest + principal) as an"],
+    ["", "operating expense on the 5-Year Operating Statement. This is a standard"],
+    ["", "simplification used in school financial underwriting that ensures internal"],
+    ["", "consistency across all tabs: the Cash Flow, Balance Sheet, and DSCR"],
+    ["", "schedules all reference the same debt service figures. The Debt Schedule"],
+    ["", "tab breaks out interest and principal separately for detailed analysis."],
     ["", ""],
     ["Tips", "Start with the Assumptions tab to verify your inputs."],
     ["", "Review the Budget Summary for a high-level view."],
@@ -1418,57 +1425,121 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
   ws.getRow(r).values = ["", ...yLabels];
   hdr(ws, r, 6);
 
+  r++;
+  sec(ws, r, 6); ws.getCell(r, 1).value = "LOAN TERMS";
+  r++;
+  ws.getCell(r, 1).value = "Loan Name"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = "Principal"; dc(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = CUR;
+  ws.getCell(r, 3).value = "Annual Rate"; dc(ws.getCell(r, 3)); ws.getCell(r, 3).numFmt = PCT;
+  ws.getCell(r, 4).value = "Term (Years)"; dc(ws.getCell(r, 4));
+  ws.getCell(r, 5).value = "Annual Payment"; dc(ws.getCell(r, 5)); ws.getCell(r, 5).numFmt = CUR;
+  for (let c = 1; c <= 5; c++) { ws.getCell(r, c).font = { ...BF, color: { argb: NAVY } }; ws.getCell(r, c).border = BORDER; }
+
+  const loanTermRows: { nameRow: number; principalCol: number; rateCol: number; termCol: number; pmtCol: number }[] = [];
+  for (const loan of loans) {
+    r++;
+    const principal = loan.loanPrincipal || 0;
+    const rate = (loan.loanRate || 0) / 100;
+    const term = loan.loanTermYears || 0;
+    const annualPmt = computeAnnualDebt(principal, rate, term);
+
+    ws.getCell(r, 1).value = loan.lineItem || "Loan"; dc(ws.getCell(r, 1)); inputCell(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = principal; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    ws.getCell(r, 3).value = rate; ws.getCell(r, 3).numFmt = PCT; dc(ws.getCell(r, 3)); inputCell(ws.getCell(r, 3));
+    ws.getCell(r, 4).value = term; dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
+    const pmtFormula = `IF(OR(${cn(r, 2)}=0,${cn(r, 4)}=0),0,IF(${cn(r, 3)}=0,${cn(r, 2)}/${cn(r, 4)},-PMT(${cn(r, 3)}/12,${cn(r, 4)}*12,${cn(r, 2)})*12))`;
+    setFormula(ws.getCell(r, 5), pmtFormula, Math.round(annualPmt));
+    ws.getCell(r, 5).numFmt = CUR; dc(ws.getCell(r, 5));
+    loanTermRows.push({ nameRow: r, principalCol: 2, rateCol: 3, termCol: 4, pmtCol: 5 });
+  }
+
   const debtByYear: number[] = [0, 0, 0, 0, 0];
   const interestByYear: number[] = [0, 0, 0, 0, 0];
   const principalByYear: number[] = [0, 0, 0, 0, 0];
   const balanceByYear: number[] = [0, 0, 0, 0, 0];
 
-  for (const loan of loans) {
-    const principal = loan.loanPrincipal || 0;
-    const rate = (loan.loanRate || 0) / 100;
-    const term = loan.loanTermYears || 0;
+  const loanBlocks: { bbRow: number; intRow: number; prinRow: number; pmtRow: number; ebRow: number }[] = [];
+
+  for (let li = 0; li < loans.length; li++) {
+    const loan = loans[li];
+    const loanPrincipal = loan.loanPrincipal || 0;
+    const loanRate = (loan.loanRate || 0) / 100;
+    const loanTerm = loan.loanTermYears || 0;
+    const termRef = loanTermRows[li];
+    const pRef = cn(termRef.nameRow, termRef.principalCol);
+    const rRef = cn(termRef.nameRow, termRef.rateCol);
+    const tRef = cn(termRef.nameRow, termRef.termCol);
+    const pmtRef = cn(termRef.nameRow, termRef.pmtCol);
+
+    r += 2;
+    sec(ws, r, 6); ws.getCell(r, 1).value = `AMORTIZATION: ${loan.lineItem || "Loan"}`;
 
     r++;
-    sec(ws, r, 6); ws.getCell(r, 1).value = loan.lineItem || "Loan";
-
-    r++;
+    const bbRow = r;
     ws.getCell(r, 1).value = "Beginning Balance"; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const bal = y === 0 ? principal : computeRemainingBalance(principal, rate, term, y - 1);
-      ws.getCell(r, y + 2).value = Math.round(bal); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+      const col = y + 2;
+      const bal = y === 0 ? loanPrincipal : computeRemainingBalance(loanPrincipal, loanRate, loanTerm, y - 1);
+      if (y === 0) {
+        setFormula(ws.getCell(r, col), `${pRef}`, Math.round(bal));
+      } else {
+        const prevEbCol = col - 1;
+        setFormula(ws.getCell(r, col), `${cn(bbRow + 4, prevEbCol)}`, Math.round(bal));
+      }
+      ws.getCell(r, col).numFmt = CUR; dc(ws.getCell(r, col));
     }
 
     r++;
+    const intRow = r;
     ws.getCell(r, 1).value = "Interest"; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const interest = computeInterestPortion(principal, rate, term, y);
+      const col = y + 2;
+      const interest = computeInterestPortion(loanPrincipal, loanRate, loanTerm, y);
       interestByYear[y] += interest;
-      ws.getCell(r, y + 2).value = Math.round(interest); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+      const startPeriod = y * 12 + 1;
+      const endPeriod = (y + 1) * 12;
+      const formula = `IF(OR(${tRef}=0,${startPeriod}>${tRef}*12),0,IF(${rRef}=0,0,-CUMIPMT(${rRef}/12,${tRef}*12,${pRef},${startPeriod},${endPeriod},0)))`;
+      setFormula(ws.getCell(r, col), formula, Math.round(interest));
+      ws.getCell(r, col).numFmt = CUR; dc(ws.getCell(r, col));
     }
 
     r++;
+    const prinRow = r;
     ws.getCell(r, 1).value = "Principal Payment"; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const prinPay = computePrincipalPortion(principal, rate, term, y);
+      const col = y + 2;
+      const prinPay = computePrincipalPortion(loanPrincipal, loanRate, loanTerm, y);
       principalByYear[y] += prinPay;
-      ws.getCell(r, y + 2).value = Math.round(prinPay); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+      const startPeriod = y * 12 + 1;
+      const endPeriod = (y + 1) * 12;
+      const formula = `IF(OR(${tRef}=0,${startPeriod}>${tRef}*12),0,IF(${rRef}=0,${pRef}/${tRef},-CUMPRINC(${rRef}/12,${tRef}*12,${pRef},${startPeriod},${endPeriod},0)))`;
+      setFormula(ws.getCell(r, col), formula, Math.round(prinPay));
+      ws.getCell(r, col).numFmt = CUR; dc(ws.getCell(r, col));
     }
 
     r++;
+    const pmtRow = r;
     ws.getCell(r, 1).value = "Total Payment"; bc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const total = computeAnnualDebtForYear(principal, rate, term, y);
+      const col = y + 2;
+      const total = computeAnnualDebtForYear(loanPrincipal, loanRate, loanTerm, y);
       debtByYear[y] += total;
-      ws.getCell(r, y + 2).value = Math.round(total); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
+      setFormula(ws.getCell(r, col), `${cn(intRow, col)}+${cn(prinRow, col)}`, Math.round(total));
+      ws.getCell(r, col).numFmt = CUR; bc(ws.getCell(r, col));
     }
 
     r++;
+    const ebRow = r;
     ws.getCell(r, 1).value = "Ending Balance"; bc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const bal = computeRemainingBalance(principal, rate, term, y);
+      const col = y + 2;
+      const bal = computeRemainingBalance(loanPrincipal, loanRate, loanTerm, y);
       balanceByYear[y] += bal;
-      ws.getCell(r, y + 2).value = Math.round(bal); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2)); outputCell(ws.getCell(r, y + 2));
+      setFormula(ws.getCell(r, col), `MAX(0,${cn(bbRow, col)}-${cn(prinRow, col)})`, Math.round(bal));
+      ws.getCell(r, col).numFmt = CUR; bc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
     }
+
+    loanBlocks.push({ bbRow, intRow, prinRow, pmtRow, ebRow });
   }
 
   if (loans.length > 1) {
@@ -1477,12 +1548,18 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     r++;
     ws.getCell(r, 1).value = "Total Debt Service"; bc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      ws.getCell(r, y + 2).value = Math.round(debtByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2));
+      const col = y + 2;
+      const parts = loanBlocks.map(lb => cn(lb.pmtRow, col));
+      setFormula(ws.getCell(r, col), parts.join("+"), Math.round(debtByYear[y]));
+      ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
     }
     r++;
     ws.getCell(r, 1).value = "Total Outstanding Debt"; bc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      ws.getCell(r, y + 2).value = Math.round(balanceByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2)); outputCell(ws.getCell(r, y + 2));
+      const col = y + 2;
+      const parts = loanBlocks.map(lb => cn(lb.ebRow, col));
+      setFormula(ws.getCell(r, col), parts.join("+"), Math.round(balanceByYear[y]));
+      ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
     }
   }
 
