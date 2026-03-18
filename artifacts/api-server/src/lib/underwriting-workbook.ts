@@ -2086,6 +2086,7 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   const wb = new ExcelJS.Workbook();
   wb.creator = "SchoolStack Budget";
   wb.created = new Date();
+  wb.calcProperties = { fullCalcOnLoad: true };
 
   const sp = data.schoolProfile || {};
   const enrollment = getEnrollmentArray(data.enrollment);

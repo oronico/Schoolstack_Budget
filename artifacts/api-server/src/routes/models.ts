@@ -19,6 +19,7 @@ import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
 import { generateSingleYearBudget } from "../lib/underwriting-export";
 import { generateUnderwritingWorkbook as generateUnderwritingWorkbookV2 } from "../lib/underwriting-workbook";
 import { generateFormulaWorkbook } from "../lib/formula-export";
+import { generateWorkbook } from "../lib/excel-export";
 import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine } from "../lib/consultant-engine";
 import { buildLenderPacket } from "../lib/packets/build-lender-packet";
@@ -777,7 +778,8 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
       : 5;
     const fileName = `${schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_${yearCount}-Year_Financial_Model.xlsx`;
 
-    const buffer = await generateFormulaWorkbook(data);
+    const consultantOutput = runConsultantEngine(data);
+    const buffer = await generateWorkbook(data, consultantOutput);
 
     await db.update(financialModelsTable)
       .set({ lastExportedAt: new Date() })
