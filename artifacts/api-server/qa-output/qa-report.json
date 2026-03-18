@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 38439,
+    "fileSize": 38744,
     "tabs": [
       "Cover",
       "Instructions",
@@ -31,7 +31,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 37.5 KB",
+          "File size: 37.8 KB",
           "Successfully opened workbook",
           "Worksheets: 21"
         ],
@@ -412,7 +412,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 41657,
+    "fileSize": 41958,
     "tabs": [
       "Cover",
       "Instructions",
@@ -441,7 +441,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 40.7 KB",
+          "File size: 41.0 KB",
           "Successfully opened workbook",
           "Worksheets: 21"
         ],
@@ -864,7 +864,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 42850,
+    "fileSize": 43151,
     "tabs": [
       "Cover",
       "Instructions",
@@ -893,7 +893,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 41.8 KB",
+          "File size: 42.1 KB",
           "Successfully opened workbook",
           "Worksheets: 21"
         ],
@@ -1314,7 +1314,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 42222,
+    "fileSize": 42517,
     "tabs": [
       "Cover",
       "Instructions",
@@ -1343,7 +1343,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 41.2 KB",
+          "File size: 41.5 KB",
           "Successfully opened workbook",
           "Worksheets: 21"
         ],
