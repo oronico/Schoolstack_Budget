@@ -62,6 +62,14 @@ Top 3 Issues Panel ("What should I fix first?") surfaces the most critical finan
 - **Public domain**: Squarespace DNS pointing to Netlify.
 - Netlify is configured via `netlify.toml` for build commands, publish directory (`artifacts/school-financial-model/dist/public`), cache headers, and API proxy redirects (`/api/*` to Railway API server).
 
+## Release Documentation (`docs/`)
+- `ALPHA_RELEASE_CHECKLIST.md` — Launch gates and pre-launch verification checklist
+- `DEPLOYMENT_GUIDE.md` — Railway + Netlify deployment procedures, env vars, rollback
+- `QA_REPORT.md` — Full test results from alpha QA pass (29 tests, 100% pass)
+- `EXPORT_QA_CHECKLIST.md` — Workbook validation criteria and sample payloads
+- `UNDERWRITING_REVIEW_SOP.md` — How to review submitted financial models
+- `RELEASE_NOTES.md` — Alpha feature list, known limitations, roadmap
+
 # External Dependencies
 
 - **Database**: PostgreSQL
