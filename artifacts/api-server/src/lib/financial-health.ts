@@ -223,44 +223,50 @@ const DIMENSIONS: {
   },
   {
     id: "revenue_concentration",
-    label: "Revenue concentration",
+    label: "Enrollment & demand reliability",
     compute: (input) => {
-      const { philanthropyPct, publicRevenuePct, tuitionPct } = input;
-      const dominant = Math.max(philanthropyPct, publicRevenuePct, tuitionPct);
-      if (dominant <= 0.60) {
+      const { philanthropyPct, publicRevenuePct } = input;
+
+      const philanthropyHeavy = philanthropyPct > 0.40;
+      const singleGrantRisk = philanthropyPct > 0.30;
+      const publicFundingVolatile = publicRevenuePct > 0.70;
+
+      if (philanthropyHeavy) {
         return {
           dimension: "revenue_concentration",
-          status: "healthy",
-          label: "Healthy",
-          explanation: "Revenue is reasonably diversified across sources, reducing dependency on any single stream.",
-          watchItem: "Continue building multiple revenue channels as the school grows.",
+          status: "at_risk",
+          label: "Needs attention",
+          explanation: `${pct(philanthropyPct)} of revenue depends on grants and donations, which are inherently unpredictable. A focused revenue model is fine — but it should be anchored to dependable, demand-driven income, not fundraising.`,
+          watchItem: "Shift toward earned revenue (tuition, per-pupil funding) so philanthropy becomes supplemental rather than foundational.",
         };
       }
-      if (dominant <= 0.80) {
-        const source = philanthropyPct >= publicRevenuePct && philanthropyPct >= tuitionPct
-          ? "philanthropy"
-          : publicRevenuePct >= tuitionPct
-            ? "public funding"
-            : "tuition";
+
+      if (singleGrantRisk) {
         return {
           dimension: "revenue_concentration",
           status: "watch",
           label: "Watch closely",
-          explanation: `${pct(dominant)} of revenue comes from ${source}. This creates moderate concentration risk.`,
-          watchItem: `Develop supplementary revenue streams so a disruption in ${source} doesn't threaten operations.`,
+          explanation: `Grants and donations account for ${pct(philanthropyPct)} of revenue. This is manageable, but grants are competitive and time-limited — pressure-test whether this support is renewable.`,
+          watchItem: "Confirm grant renewal expectations and build a plan to grow earned revenue so the model isn't dependent on fundraising cycles.",
         };
       }
-      const source = philanthropyPct >= publicRevenuePct && philanthropyPct >= tuitionPct
-        ? "philanthropy"
-        : publicRevenuePct >= tuitionPct
-          ? "public funding"
-          : "tuition";
+
+      if (publicFundingVolatile) {
+        return {
+          dimension: "revenue_concentration",
+          status: "watch",
+          label: "Watch closely",
+          explanation: `${pct(publicRevenuePct)} of revenue comes from public funding. This is typical for charter schools, but disbursement timing and policy changes can create cash flow gaps.`,
+          watchItem: "Model disbursement timing carefully, maintain cash reserves for funding gaps, and track legislative changes that could affect per-pupil allocations.",
+        };
+      }
+
       return {
         dimension: "revenue_concentration",
-        status: "at_risk",
-        label: "Needs attention",
-        explanation: `${pct(dominant)} of revenue depends on ${source}. A single policy change, enrollment dip, or funding cut could be devastating.`,
-        watchItem: `Urgently diversify revenue — no school should depend on one source for more than 70% of its budget.`,
+        status: "healthy",
+        label: "Healthy",
+        explanation: "Revenue is anchored to enrollment-driven income — the strongest foundation for a school model. A focused revenue stream is a strength when backed by dependable demand.",
+        watchItem: "Continue to pressure-test enrollment assumptions: recruitment pipeline, waitlist depth, retention rates, and collection reliability.",
       };
     },
   },

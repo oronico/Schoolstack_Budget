@@ -1,0 +1,77 @@
+Important correction: this product cannot be simplified into a flat assumptions form.
+
+The founder experience must remain guided and non-financial.
+Users answer plain-language operational questions, and the app translates those answers into a normalized financial model.
+
+We need to design this as a layered system:
+
+1. Guided Intake Layer
+Founder-facing question flow with conditional branching.
+This is where users answer questions about:
+- entity type / nonprofit status
+- property tax applicability
+- school type
+- number of programs
+- tuition by program
+- discount policies (sibling, staff, need-based, etc.)
+- funding sources (private pay, ESA, reimbursements, grants, charter/public funding)
+- revenue timing / reimbursement lag
+- staffing structure
+- facility structure
+
+2. Rules Engine Layer
+A separate rules / decision layer determines:
+- which questions appear
+- which assumptions are required
+- which logic paths are enabled
+- which warnings should display
+- which financial treatments apply
+
+Examples:
+- nonprofits default to no property tax
+- for-profits surface property tax assumptions
+- multi-program schools generate per-program tuition schedules
+- sibling/staff/need-based discounts feed discount logic
+- ESA / reimbursements / public funding drive timing assumptions
+- charter schools use different funding logic than microschools
+
+3. Canonical Financial Model Layer
+The questionnaire should compile into a normalized internal schema, not directly into workbook cells.
+
+Examples of canonical structures:
+- programs[]
+- discountPolicies[]
+- revenueStreams[]
+- fundingTimingRules[]
+- staffingRoles[]
+- facilityCostRules[]
+- taxTreatmentRules[]
+
+4. Output Layer
+Workbook tabs and model outputs should render from the canonical model:
+- Assumptions
+- Enrollment / Program Drivers
+- Tuition / Funding Detail
+- Staffing
+- Budget Detail
+- Cash Flow
+- 5-Year Model
+- Underwriting Summary
+
+Critical design principle:
+The Assumptions sheet is the single source of truth for the workbook, but it is NOT the user interface.
+It is the compiled output of the guided intake flow.
+
+Do not flatten this product into a giant assumptions form.
+Instead:
+- preserve the guided experience
+- centralize the logic tree
+- normalize the data model
+- generate outputs from the normalized model
+
+Please propose an architecture for:
+A. intake questions
+B. branching rules engine
+C. canonical data schema
+D. workbook output mapping
+E. phased refactor plan from the current implementation

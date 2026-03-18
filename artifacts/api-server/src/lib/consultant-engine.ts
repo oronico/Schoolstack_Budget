@@ -1167,10 +1167,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       status: philanthropyPct <= 0.15 ? "good" : philanthropyPct <= 0.30 ? "warning" : "danger",
       interpretation:
         philanthropyPct <= 0.15
-          ? "Philanthropy supplements but doesn't dominate revenue, a sustainable mix."
+          ? "Philanthropy supplements earned revenue — a healthy mix."
           : philanthropyPct <= 0.30
-            ? "Donations and grants make up a significant share of revenue, so plan for donor diversification."
-            : "Heavy reliance on philanthropy creates risk because donations can fluctuate year to year. Build toward earned revenue sustainability so your model isn't dependent on fundraising.",
+            ? "Grants and donations are a meaningful share of revenue. Confirm renewal expectations and ensure the model isn't dependent on any single uncertain grant."
+            : "Heavy reliance on philanthropy creates risk because donations can fluctuate year to year. Anchor the model to enrollment-driven earned revenue so philanthropy is supplemental, not foundational.",
       benchmark: "Sustainable: under 15%",
     });
   }
