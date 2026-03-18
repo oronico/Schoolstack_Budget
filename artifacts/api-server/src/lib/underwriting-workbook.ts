@@ -1355,7 +1355,7 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   setFormula(ws.getCell(r, 2), `MIN(${cn(cumCashRow, 2)}:${cn(cumCashRow, 13)})`, Math.round(Math.min(...cumCashMonthly)));
   ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
 
-  return { endingCashY1: cumCashMonthly[11] };
+  return { endingCashY1: cumCashMonthly[11], cumCashRow };
 }
 
 function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[]) {
@@ -1434,6 +1434,8 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
     setFormula(ws.getCell(r, col), `IF(${cn(revRow, col)}=0,0,${cn(niRow, col)}/${cn(revRow, col)})`, revByYear[y] > 0 ? niByYear[y] / revByYear[y] : 0);
     ws.getCell(r, col).numFmt = PCT; dc(ws.getCell(r, col));
   }
+
+  return { niRow };
 }
 
 function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
@@ -1592,10 +1594,25 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     }
   }
 
-  return { debtByYear, interestByYear, principalByYear, balanceByYear };
+  let debtBalanceRow: number;
+  if (loans.length > 1) {
+    debtBalanceRow = r;
+  } else if (loanBlocks.length === 1) {
+    debtBalanceRow = loanBlocks[0].ebRow;
+  } else {
+    debtBalanceRow = -1;
+  }
+
+  return { debtByYear, interestByYear, principalByYear, balanceByYear, debtBalanceRow };
 }
 
-function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: number[], balanceByYear: number[], startingCash: number, endingCashY1?: number) {
+interface CrossTabRefs {
+  cfCumCashRow: number;
+  opStmtNiRow: number;
+  debtBalanceRow: number;
+}
+
+function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: number[], balanceByYear: number[], startingCash: number, crossRefs: CrossTabRefs, endingCashY1?: number) {
   const ws = wb.addWorksheet("Balance Sheet");
   const sp = data.schoolProfile || {};
   const yLabels = yearLabels(sp.openingYear);
@@ -1603,6 +1620,13 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   const ob = data.openingBalances || {};
   ws.columns = [{ width: 36 }, ...Array(5).fill({ width: 16 })];
   printSetup(ws);
+
+  const cfTab = "'Monthly Cash Flow Y1'";
+  const osTab = "'5-Year Operating Stmt'";
+  const dsTab = "'Debt Schedule'";
+  const hasCfRef = crossRefs.cfCumCashRow > 0;
+  const hasNiRef = crossRefs.opStmtNiRow > 0;
+  const hasDebtRef = crossRefs.debtBalanceRow > 0;
 
   let r = 1;
   ws.mergeCells(r, 1, r, 6);
@@ -1638,74 +1662,108 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   r++;
   sec(ws, r, 6); ws.getCell(r, 1).value = "ASSETS";
   r++;
+  const cashRow = r;
   ws.getCell(r, 1).value = "Cash & Equivalents"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
-    ws.getCell(r, y + 2).value = Math.round(cashByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2)); outputCell(ws.getCell(r, y + 2));
+    const col = y + 2;
+    if (y === 0 && hasCfRef) {
+      setFormula(ws.getCell(r, col), `${cfTab}!${cn(crossRefs.cfCumCashRow, 13)}`, Math.round(cashByYear[y]));
+    } else if (y > 0 && hasCfRef && hasNiRef) {
+      const niRefs: string[] = [];
+      for (let yi = 1; yi <= y; yi++) {
+        niRefs.push(`${osTab}!${cn(crossRefs.opStmtNiRow, yi + 2)}`);
+      }
+      setFormula(ws.getCell(r, col), `${cn(cashRow, 2)}+${niRefs.join("+")}`, Math.round(cashByYear[y]));
+    } else {
+      ws.getCell(r, col).value = Math.round(cashByYear[y]);
+    }
+    ws.getCell(r, col).numFmt = CUR; dc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
   }
   r++;
+  const arRow = r;
   ws.getCell(r, 1).value = "Accounts Receivable"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
     ws.getCell(r, y + 2).value = Math.round(openAR); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
+  const faRow = r;
   ws.getCell(r, 1).value = "Fixed Assets"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
     ws.getCell(r, y + 2).value = Math.round(openFA); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
+  const oaRow = r;
   ws.getCell(r, 1).value = "Other Assets"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
     ws.getCell(r, y + 2).value = Math.round(openOA); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
+  const taRow = r;
   ws.getCell(r, 1).value = "Total Assets"; bc(ws.getCell(r, 1));
   const totalAssets: number[] = [];
   for (let y = 0; y < 5; y++) {
+    const col = y + 2;
     const ta = cashByYear[y] + openAR + openFA + openOA;
     totalAssets.push(ta);
-    ws.getCell(r, y + 2).value = Math.round(ta); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2));
+    setFormula(ws.getCell(r, col), `SUM(${cn(cashRow, col)}:${cn(oaRow, col)})`, Math.round(ta));
+    ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
   }
 
   r += 2;
   sec(ws, r, 6); ws.getCell(r, 1).value = "LIABILITIES";
   r++;
+  const apRow = r;
   ws.getCell(r, 1).value = "Accounts Payable"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
     ws.getCell(r, y + 2).value = Math.round(openAP); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
+  const ltdRow = r;
   ws.getCell(r, 1).value = "Long-Term Debt"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
-    ws.getCell(r, y + 2).value = Math.round(balanceByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+    const col = y + 2;
+    if (hasDebtRef) {
+      setFormula(ws.getCell(r, col), `${dsTab}!${cn(crossRefs.debtBalanceRow, col)}`, Math.round(balanceByYear[y]));
+    } else {
+      ws.getCell(r, col).value = Math.round(balanceByYear[y]);
+    }
+    ws.getCell(r, col).numFmt = CUR; dc(ws.getCell(r, col));
   }
   r++;
+  const tlRow = r;
   ws.getCell(r, 1).value = "Total Liabilities"; bc(ws.getCell(r, 1));
   const totalLiabilities: number[] = [];
   for (let y = 0; y < 5; y++) {
+    const col = y + 2;
     const tl = openAP + balanceByYear[y];
     totalLiabilities.push(tl);
-    ws.getCell(r, y + 2).value = Math.round(tl); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2));
+    setFormula(ws.getCell(r, col), `SUM(${cn(apRow, col)}:${cn(ltdRow, col)})`, Math.round(tl));
+    ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
   }
 
   r += 2;
   sec(ws, r, 6); ws.getCell(r, 1).value = eqLabel.toUpperCase();
   r++;
-  const openEquity = (openCash + openAR + openFA + openOA) - (openAP + (ob.longTermDebt ?? 0));
+  const eqRow = r;
   ws.getCell(r, 1).value = eqLabel; bc(ws.getCell(r, 1));
   const equityByYear: number[] = [];
   for (let y = 0; y < 5; y++) {
+    const col = y + 2;
     const eq = totalAssets[y] - totalLiabilities[y];
     equityByYear.push(eq);
-    ws.getCell(r, y + 2).value = Math.round(eq); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2)); outputCell(ws.getCell(r, y + 2));
+    setFormula(ws.getCell(r, col), `${cn(taRow, col)}-${cn(tlRow, col)}`, Math.round(eq));
+    ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
   }
 
   r += 2;
   ws.getCell(r, 1).value = "Balance Check (should = 0)"; bc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
+    const col = y + 2;
     const check = Math.round(totalAssets[y]) - Math.round(totalLiabilities[y]) - Math.round(equityByYear[y]);
-    ws.getCell(r, y + 2).value = check; ws.getCell(r, y + 2).numFmt = CUR;
-    ws.getCell(r, y + 2).font = { ...BF, color: { argb: check === 0 ? EVERGREEN : "FFFF0000" } };
-    ws.getCell(r, y + 2).border = BORDER;
+    setFormula(ws.getCell(r, col), `${cn(taRow, col)}-${cn(tlRow, col)}-${cn(eqRow, col)}`, check);
+    ws.getCell(r, col).numFmt = CUR;
+    ws.getCell(r, col).font = { ...BF, color: { argb: check === 0 ? EVERGREEN : "FFFF0000" } };
+    ws.getCell(r, col).border = BORDER;
   }
 
   return { cashByYear, totalAssets, totalLiabilities, equityByYear };
@@ -2238,14 +2296,16 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   const bdRefs: BudgetDetailRefs = { revTotalRow, persTotalRow, opexTotalRow, cdTotalRow };
   const { niByYear } = buildBudgetSummary(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, bdRefs);
 
-  const { endingCashY1 } = buildMonthlyCashFlowY1(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
-  buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear);
+  const { endingCashY1, cumCashRow: cfCumCashRow } = buildMonthlyCashFlowY1(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
+  const { niRow: opStmtNiRow } = buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear);
 
   const debtResult = buildDebtSchedule(wb, effectiveData);
   const debtServiceByYear = debtResult.debtByYear;
   const balanceByYear = debtResult.balanceByYear;
+  const debtBalanceRow = debtResult.debtBalanceRow;
 
-  const { cashByYear } = buildBalanceSheet(wb, data, niByYear, balanceByYear, startingCash, endingCashY1);
+  const crossRefs: CrossTabRefs = { cfCumCashRow, opStmtNiRow, debtBalanceRow };
+  const { cashByYear } = buildBalanceSheet(wb, data, niByYear, balanceByYear, startingCash, crossRefs, endingCashY1);
 
   buildDSCRCovenants(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear);
   buildSourcesAndUses(wb, data, startingCash);
