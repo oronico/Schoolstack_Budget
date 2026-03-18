@@ -1,0 +1,78 @@
+File Map — oronico/School-Finance-Mod
+Public Wizard Flow
+File	Role
+artifacts/school-financial-model/src/pages/public-wizard/index.tsx	Public wizard container, 8-step flow, localStorage persistence
+artifacts/school-financial-model/src/pages/public-wizard/PublicConsultantStep.tsx	Public analysis step → POST /api/public/consultant
+artifacts/school-financial-model/src/pages/public-wizard/PublicExportStep.tsx	Public export step → POST /api/public/export-budget and export-underwriting
+artifacts/api-server/src/routes/public.ts	API routes: /api/public/export-budget, /export-underwriting, /export-single-year, /consultant
+Export Routes (Authenticated)
+File	Role
+artifacts/api-server/src/routes/models.ts	All authenticated export endpoints (/export, /export/underwriting, /export/underwriting-v2, /export/single-year, /export/lender-proforma, /lender-packet, /board-packet, PDF routes)
+Export Generators
+File	Role
+artifacts/api-server/src/lib/formula-export.ts	Public planning workbook — formula-driven 5-year model (used by public wizard)
+artifacts/api-server/src/lib/underwriting-workbook.ts	Underwriting workbook V2 — 21-tab lender-grade workbook (authenticated)
+artifacts/api-server/src/lib/underwriting-export.ts	Legacy V1 — shim now redirects to V2; still provides generateSingleYearBudget
+artifacts/api-server/src/lib/excel-export.ts	Standard export — simpler budget workbook
+artifacts/api-server/src/lib/lender-proforma-export.ts	Lender pro-forma workbook
+artifacts/api-server/src/lib/workbook-helpers.ts	Shared computation engine: computeRevenueForYear, computePersonnelForYear, setFormula, safeFormulaValue, formatting constants
+artifacts/api-server/src/lib/packets/build-lender-packet.ts	Lender packet JSON/PDF generation
+artifacts/api-server/src/lib/packets/build-packet-data.ts	Shared packet data assembly
+QA Suite
+File	Role
+artifacts/api-server/tests/export-formula-results.ts	E2E formula verification — generates workbooks, verifies cached values match expected vectors (±$1 tolerance)
+artifacts/api-server/tests/excel-qa.ts	Structural integrity scanner — tab presence, formula errors, balance sheet tie-outs
+artifacts/api-server/tests/lender-parity-check.ts	Lender pro-forma correctness checks
+artifacts/api-server/tests/golden-model.ts	Unit tests for workbook-helpers.ts computation engine
+artifacts/api-server/tests/sample-payloads.ts	Test fixtures: microschoolStartup, privateSchoolWithESA, charterPublicFunding, charterADAGradeBand
+Deployment Config
+File	Role
+netlify.toml	Frontend build + /api/* proxy → Railway
+Dockerfile (root)	API production image (node:22-alpine, esbuild bundle)
+artifacts/api-server/Dockerfile	Alternative API Dockerfile (node:22-slim)
+DEPLOYMENT_GUIDE.md	Manual deployment reference
+Confirmed Bug: Balance Sheet Cash Overstated in Years 2–5
+The investigation confirmed a real discrepancy in underwriting-workbook.ts:
+
+Root cause: buildBalanceSheet calculates Years 2–5 cash as endingCashY1 + cumulative Net Income. But Net Income only subtracts interest, not principal repayments (principal is a balance sheet movement, not a P&L expense). So Years 2–5 cash is overstated by the cumulative principal paid.
+
+Impact chain:
+
+Balance Sheet "Cash & Equivalents" is inflated
+The "Balance Check" still passes because Equity is computed as a plug (Assets − Liabilities), masking the error
+DSCR tab's "Days Cash on Hand" and "Months of Runway" inherit the inflated values
+A school could appear to have healthy liquidity when it's actually cash-strapped
+Why the QA suite doesn't catch it: The QA verifies that Assets = Liabilities + Equity (which is true by construction since equity is derived), but doesn't independently verify that cash is consistent with the monthly cash flow tab.
+
+Recommended Next 5 Tasks (in order)
+Task 1: Fix Balance Sheet Cash Calculation — LAUNCH BLOCKER
+Severity: Launch blocker
+Files: underwriting-workbook.ts (lines 1516–1530), export-formula-results.ts
+
+Subtract principal repayments from the cash accumulation in Years 2–5. The fix: pass principalByYear from buildDebtSchedule into buildBalanceSheet and compute cashByYear[y] = endingCashY1 + cumNI - cumPrincipal. Update the QA suite to add a cross-tab assertion: Balance Sheet Y1 cash must equal Monthly Cash Flow ending cash, and outer-year cash must be consistent with debt amortization. This is the one bug a lender would catch in 60 seconds.
+
+Task 2: Add Debt Schedule Formulas — WEEK 1
+Severity: Week 1
+Files: underwriting-workbook.ts (lines 1403–1490)
+
+The Debt Schedule tab is entirely values-only — amortization is computed in TypeScript and written as flat numbers. For lender diligence, this tab must show live formulas: Beginning Balance = Prior Year Ending Balance, Interest = BB × Rate, Principal = PMT − Interest, Ending = BB − Principal. Use setFormula with cached results exactly like the DSCR tab already does. This is the tab lenders will trace first.
+
+Task 3: Add Monthly Cash Flow Formulas — WEEK 1
+Severity: Week 1
+Files: underwriting-workbook.ts (lines 1154–1323)
+
+The Monthly Cash Flow Y1 tab writes all values as flat numbers with no formulas. Add SUM formulas for the "Annual Total" column, formulas for "Total Expenses" (sum of personnel + opex + debt rows), "Net Cash Flow" (revenue − expenses), and "Cumulative Cash" (prior month + net). These are the first formulas a lender audits to understand monthly timing risk.
+
+Task 4: Add Balance Sheet Cross-Tab Formulas — WEEK 1
+Severity: Week 1
+Files: underwriting-workbook.ts (lines 1492–1606)
+
+Currently the Balance Sheet writes flat values for individual line items and only uses formulas for totals and checks. For lender transparency: "Long-Term Debt" should reference the Debt Schedule's ending balance row, "Total Assets" and "Total Liabilities" should use SUM formulas, and "Equity" should be Total Assets − Total Liabilities via formula. The Balance Check should use formula references, not hardcoded values.
+
+Task 5: QA Suite — Add Cross-Tab Cash Consistency Assertion — BETA
+Severity: Beta
+Files: export-formula-results.ts, excel-qa.ts
+
+Add a new QA check that independently verifies: (a) Monthly Cash Flow Y1 ending cash equals Balance Sheet Y1 Cash & Equivalents, (b) Balance Sheet Year N cash equals Year N−1 cash + Net Income − Principal Repayment, (c) DSCR tab's "Ending Cash" row matches Balance Sheet. This prevents the class of bug we just found from recurring.
+
+These 5 tasks are ordered by dependency: Task 1 fixes the data correctness issue (must ship before any lender sees this), Tasks 2–4 add the formula transparency lenders need for diligence (independent of each other, all Week 1), and Task 5 locks it all down with automated regression checks. Want me to start on Task 1 now?
