@@ -5,28 +5,50 @@ import { pool } from "@workspace/db";
 
 const app: Express = express();
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN;
-const isProduction = process.env.NODE_ENV === "production";
+const SCHOOLSTACK_ORIGINS = [
+  "https://space.schoolstack.ai",
+  "https://budget.schoolstack.ai",
+  "https://schoolstack.ai",
+];
 
-if (isProduction && !allowedOrigins) {
-  console.warn(
-    "[cors] WARNING: ALLOWED_ORIGINS is not set in production. " +
-    "CORS will reject all cross-origin requests. " +
-    "Set ALLOWED_ORIGINS to a comma-separated list of allowed origins.",
-  );
+const extraOrigins = (process.env.ALLOWED_ORIGINS || process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const staticAllowed = new Set([...SCHOOLSTACK_ORIGINS, ...extraOrigins]);
+
+function isLocalhost(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return (
+      url.protocol === "http:" &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedOrigin(origin: string | undefined): string | false {
+  if (!origin) return false;
+  if (staticAllowed.has(origin)) return origin;
+  if (isLocalhost(origin)) return origin;
+  return false;
 }
 
 app.use(
-  cors(
-    allowedOrigins
-      ? {
-          origin: allowedOrigins.split(",").map((o) => o.trim()),
-          credentials: true,
-        }
-      : isProduction
-        ? { origin: false }
-        : undefined,
-  ),
+  cors({
+    origin: (origin, callback) => {
+      const allowed = isAllowedOrigin(origin);
+      if (!origin || allowed) {
+        callback(null, allowed || true);
+      } else {
+        callback(null, false);
+      }
+    },
+    credentials: true,
+  }),
 );
 
 app.use(express.json({ limit: "5mb" }));
