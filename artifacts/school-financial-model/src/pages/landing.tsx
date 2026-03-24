@@ -229,6 +229,32 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section className="py-20 bg-white border-t border-[#1E293B]/5">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
+            <p className="text-sm font-bold tracking-widest text-[#1E293B]/40 uppercase mb-4">
+              From the SchoolStack suite
+            </p>
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-[#1E293B] mb-6">
+              Need help with your building too?
+            </h2>
+            <p className="text-lg text-[#1E293B]/60 mb-8 max-w-2xl mx-auto">
+              SchoolStack Space helps you figure out how much space your school needs
+              and what a lease will really cost before you commit.
+            </p>
+            <a
+              href="https://space.schoolstack.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-[#4A7CB8] hover:text-[#3A6AA0] font-bold text-lg transition"
+            >
+              Try SchoolStack Space
+              <ExternalLink className="w-5 h-5" />
+            </a>
+          </motion.div>
+        </div>
+      </section>
+
       <section className="py-24 bg-[#328555] relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#1E293B]/20 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
@@ -252,33 +278,13 @@ export function LandingPage() {
                 Get Started Free
                 <ArrowRight className="w-5 h-5" />
               </Link>
+              <a
+                href="mailto:hello@schoolstack.ai"
+                className="bg-transparent border border-white/30 text-white hover:bg-white/10 px-8 py-4 rounded-xl font-bold text-lg transition flex items-center justify-center"
+              >
+                Talk to Sales
+              </a>
             </div>
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="py-20 bg-white border-t border-[#1E293B]/5">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
-            <p className="text-sm font-bold tracking-widest text-[#1E293B]/40 uppercase mb-4">
-              From the SchoolStack suite
-            </p>
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-[#1E293B] mb-6">
-              Need help with your building too?
-            </h2>
-            <p className="text-lg text-[#1E293B]/60 mb-8 max-w-2xl mx-auto">
-              SchoolStack Space helps you figure out how much space your school needs
-              and what a lease will really cost before you commit.
-            </p>
-            <a
-              href="https://space.schoolstack.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-[#4A7CB8] hover:text-[#3A6AA0] font-bold text-lg transition"
-            >
-              Try SchoolStack Space
-              <ExternalLink className="w-5 h-5" />
-            </a>
           </motion.div>
         </div>
       </section>
