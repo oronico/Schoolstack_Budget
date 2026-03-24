@@ -24,6 +24,9 @@ export const RegisterBody = zod.object({
   email: zod.string().email(),
   password: zod.string().min(registerBodyPasswordMin),
   name: zod.string(),
+  schoolName: zod.string().optional(),
+  role: zod.string().optional(),
+  planningStage: zod.string().optional(),
 });
 
 /**

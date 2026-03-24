@@ -23,7 +23,7 @@ router.post("/auth/register", async (req, res) => {
       res.status(400).json({ error: "Invalid input. Email, password (min 8 chars), and name are required." });
       return;
     }
-    const { email, password, name } = parsed.data;
+    const { email, password, name, schoolName, role, planningStage } = parsed.data;
 
     const existing = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
     if (existing.length > 0) {
@@ -36,6 +36,9 @@ router.post("/auth/register", async (req, res) => {
       email: email.toLowerCase(),
       name,
       passwordHash,
+      ...(schoolName && { schoolName }),
+      ...(role && { profileRole: role }),
+      ...(planningStage && { planningStage }),
     }).returning();
 
     const token = generateToken(user.id, user.tokenVersion);
