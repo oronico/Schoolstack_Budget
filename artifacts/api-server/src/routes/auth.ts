@@ -36,9 +36,9 @@ router.post("/auth/register", async (req, res) => {
       email: email.toLowerCase(),
       name,
       passwordHash,
-      ...(schoolName && { schoolName }),
-      ...(role && { profileRole: role }),
-      ...(planningStage && { planningStage }),
+      ...(schoolName !== undefined && { schoolName: schoolName || null }),
+      ...(role !== undefined && { profileRole: role || null }),
+      ...(planningStage !== undefined && { planningStage: planningStage || null }),
     }).returning();
 
     const token = generateToken(user.id, user.tokenVersion);
