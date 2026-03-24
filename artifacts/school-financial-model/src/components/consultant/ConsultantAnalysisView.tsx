@@ -257,28 +257,6 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         />
       )}
 
-      <div className={cn("rounded-2xl p-6 border shadow-sm", lenderBg)}>
-        <div className="flex items-center gap-4 mb-3">
-          <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center",
-            data.lenderReadiness === "Strong" ? "bg-green-100" :
-            data.lenderReadiness === "Needs Work" ? "bg-amber-100" : "bg-rose-100"
-          )}>
-            <LenderIcon className={cn("h-6 w-6", lenderColor)} />
-          </div>
-          <div>
-            <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
-              Lender Readiness
-            </h4>
-            <p className={cn("font-display font-bold text-2xl", lenderColor)}>
-              {data.lenderReadiness}
-            </p>
-          </div>
-        </div>
-        <p className="text-foreground/70 leading-relaxed text-[15px]">
-          {data.lenderReadinessExplanation}
-        </p>
-      </div>
-
       <div>
         <div className="flex items-center gap-2 mb-5">
           <TrendingUp className="h-5 w-5 text-primary" />
@@ -775,6 +753,33 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
             );
           })}
         </div>
+      </div>
+
+      <div className={cn("rounded-2xl p-6 border shadow-sm", lenderBg)}>
+        <div className="flex items-center gap-4 mb-3">
+          <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center",
+            data.lenderReadiness === "Strong" ? "bg-green-100" :
+            data.lenderReadiness === "Needs Work" ? "bg-amber-100" : "bg-rose-100"
+          )}>
+            <LenderIcon className={cn("h-6 w-6", lenderColor)} />
+          </div>
+          <div>
+            <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
+              Lending Lab Readiness
+            </h4>
+            <p className={cn("font-display font-bold text-2xl", lenderColor)}>
+              {data.lenderReadiness}
+            </p>
+          </div>
+        </div>
+        <p className="text-foreground/50 text-sm leading-relaxed mb-3 italic">
+          {data.lenderReadiness !== "Not Applicable"
+            ? "Thinking about a loan? The Building Hope Impact Fund Lending Lab offers small, affordable loans for early-stage schools. Here\u2019s how your model stacks up against their criteria."
+            : "Not looking for a loan? That\u2019s fine \u2014 these benchmarks are still useful as general financial health targets for any small school."}
+        </p>
+        <p className="text-foreground/70 leading-relaxed text-[15px]">
+          {data.lenderReadinessExplanation}
+        </p>
       </div>
     </div>
   );
