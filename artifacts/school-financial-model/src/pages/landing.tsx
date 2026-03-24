@@ -81,8 +81,8 @@ export function LandingPage() {
               </div>
 
               <h1 className="font-display text-5xl md:text-6xl font-bold text-[#1E293B] leading-tight mb-6">
-                The budget tool for{" "}
-                <span className="text-[#328555]">people who didn't go to business school.</span>
+                Every school deserves a{" "}
+                <span className="text-[#328555]">clear financial plan.</span>
               </h1>
 
               <p className="text-lg text-[#1E293B]/70 mb-10 leading-relaxed max-w-2xl">
