@@ -1,0 +1,28 @@
+Update the landing page copy in artifacts/school-financial-model/src/pages/landing.tsx. Change the following text:
+Hero section:
+	∙	Change the h1 from: ‘Launch your school with <span>confidence</span>.’ to: ‘Build a financial model your lender will <span>take seriously</span>.’
+	∙	Change the subtitle paragraph to: “SchoolStack Budget walks you through a 5-year pro forma for your school, step by step. No finance degree required. When you’re done, export a lender-ready Excel workbook, a loan readiness report, and CFO-level analysis of your numbers.”
+	∙	Change “Build My Model” button text to stay as is (it’s good)
+	∙	Change the badge from “Built for School Founders” to “Free During Beta”
+Feature cards section:
+	∙	Change the section h2 from “Everything you need to plan your school’s finances” to “Everything you need to plan your school’s finances” (keep it, it’s fine)
+	∙	Change the subtitle to “From enrollment projections to lender-ready exports. Built for charters, microschools, pods, co-ops, and private schools.”
+Card 1 - Guided Wizard:
+	∙	Change title to “Every line item, guided.”
+	∙	Change description to “Walk through enrollment, tuition tiers, staffing plans with FTE and benefits, facility costs, grant revenue, and debt service. Built for every school type.”
+Card 2 - Underwriting Ready:
+	∙	Change title to “Four exports. All lender-ready.”
+	∙	Change description to “Download a full Excel workbook with live formulas, a lender pro forma with P&L and DSCR, a pro forma PDF for presentations, and a loan readiness report.”
+Card 3 - CFO Guidance:
+	∙	Change title to “See what a lender sees.”
+	∙	Change description to “The CFO Consultant analyzes your model and flags staffing ratios, margin risks, revenue concentration, and cash flow gaps in plain English.”
+Bottom CTA section:
+	∙	Keep “Ready to build your financial model?”
+	∙	Change the paragraph to: “Join school founders who use SchoolStack Budget to plan with clarity and walk into lender meetings prepared. Free during beta.”
+After the bottom CTA, add a new section before the footer:
+	∙	Use the same centered layout as the suite section on Space
+	∙	Small label: “From the SchoolStack suite”
+	∙	h2: “Already know your facility needs? Start there.”
+	∙	Paragraph: “SchoolStack Space helps you figure out how much building your school needs and what it will cost before you sign a lease.”
+	∙	Link to https://space.schoolstack.ai with text “Try SchoolStack Space →” styled in the Space Blue color (#4A7CB8)
+Do not change any styling, layout, or structure except adding the new suite section.

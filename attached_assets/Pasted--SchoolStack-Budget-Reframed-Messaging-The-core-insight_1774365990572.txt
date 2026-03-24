@@ -1,0 +1,270 @@
+# SchoolStack Budget: Reframed Messaging
+## The core insight: most users have zero business experience
+
+---
+
+## THE SHIFT
+
+**Before (lender-first):** "Build a financial model your lender will take seriously."
+**After (educator-first):** "The budget tool for people who didn't go to business school."
+
+The old framing assumed users wanted capital. Most don't, at least not yet. What they want is to stop feeling lost. They opened a school because they're great educators, and now they're drowning in financial decisions nobody prepared them for. Budget is their CFO, their business partner, and their teacher all at once.
+
+The Lending Lab readiness feature is still there. It's a powerful bonus for the subset pursuing capital. But it's Step 7 in the wizard, not the headline.
+
+---
+
+## LANDING PAGE COPY (Revised)
+
+### Hero
+
+```
+Badge: FREE DURING BETA
+
+Headline: The budget tool for people who
+didn't go to business school.
+
+Subhead: You started a school because you're a great educator, not
+because you love spreadsheets. SchoolStack Budget walks you through
+a 5-year financial model, step by step, in plain English. When you're
+done, you'll actually understand your numbers.
+
+CTA: Build My Budget
+Secondary: Log into existing
+```
+
+### Features Section
+
+```
+Section header: We'll walk you through the whole thing.
+
+Subtitle: No finance degree. No accountant. No 47-tab spreadsheet
+you inherited from someone who left. Just clear steps and honest
+guidance.
+```
+
+**Card 1: "Start with what you know."**
+"How many students? What do you charge? What do you pay your teachers?
+You already know more than you think. The wizard turns what's in your
+head into a real financial model, one question at a time."
+
+**Card 2: "A CFO who speaks your language."**
+"After you enter your numbers, Budget tells you what they mean. Where
+you're healthy, where you're at risk, and what to do about it. No jargon.
+No judgment. Just clear, practical guidance."
+
+**Card 3: "Take it with you."**
+"Export a polished Excel workbook, a pro forma PDF, or a loan readiness
+report. Whether you need it for your board, your authorizer, a funder,
+or just for your own peace of mind, your numbers are ready to share."
+
+### How It Works Section (NEW — add this)
+
+```
+Section header: What you'll build in about 20 minutes.
+
+Step 1: "Tell us about your school."
+Charter, private, microschool, pod, co-op, or tutoring center. New or
+already operating. We adjust everything based on your school type.
+
+Step 2: "Enter your revenue."
+Tuition, ESA funding, charter allocations, grants, donations. We help
+you think through all of it, including discount tiers and collection timing.
+
+Step 3: "Plan your team."
+Add every role: teachers, admin, support staff, founder salary. Set FTE,
+benefits, and payroll. Budget shows you what percentage of your spending
+goes to people, so you can make sure there's enough left for everything else.
+
+Step 4: "Add your costs."
+Rent, utilities, curriculum, technology, insurance, marketing. Line by line.
+Budget flags anything that looks off.
+
+Step 5: "See the whole picture."
+Revenue vs. expenses across five years. Where you break even. How much
+cash you have on hand. Whether your school can sustain itself. All of it,
+in charts and plain English.
+
+Step 6: "Get your CFO's take."
+Budget analyzes your model and gives you specific, practical recommendations.
+Not generic advice. Guidance based on YOUR numbers.
+
+Step 7: "Export and share."
+Four formats: Excel workbook with live formulas, lender pro forma, pro forma
+PDF, and a loan readiness report. Take them to your board, your bank, your
+authorizer, or your kitchen table.
+```
+
+### Who It's For Section (NEW)
+
+```
+Section header: Built for the people actually running the school.
+
+"You might be a former teacher who just opened a microschool in a
+strip mall. A charter founder three years in who has never been sure
+if the math actually works. A parent who started a learning pod and
+it grew into something bigger than you expected.
+
+You don't have a CFO. You might not even have a bookkeeper. You're
+making financial decisions every week that determine whether your
+school survives or doesn't.
+
+SchoolStack Budget was built for you."
+```
+
+### Cross-sell Section
+
+```
+Section header: Need help with your building too?
+
+"SchoolStack Space helps you figure out how much space your school
+needs and what a lease will really cost before you commit."
+
+Link: "Try SchoolStack Space →" (in Space Blue #4A7CB8)
+```
+
+### Bottom CTA
+
+```
+Headline: "You already know how to teach.
+Let's make sure you know your numbers."
+
+Subhead: "20 minutes. No credit card. No spreadsheet experience
+required."
+
+Button: "Build My Budget"
+```
+
+---
+
+## REVISED EMAIL SECTION FOR BUDGET
+
+Replace the Budget paragraph in the 100-person email with:
+
+```
+**SchoolStack Budget** (budget.schoolstack.ai)
+A guided tool that walks you through building a 5-year financial model
+for your school, step by step. You enter what you know — enrollment,
+tuition, staff, facility costs — and Budget turns it into a clear
+picture of your school's financial health. It tells you in plain
+English where you're strong, where you're at risk, and what to
+adjust. When you're done, you can export an Excel workbook, a pro
+forma PDF, or a loan readiness report. Works for any school type:
+charter, private, microschool, pod, or co-op.
+```
+
+---
+
+## REVISED REPLIT DIRECTIVE 9 (Budget landing page copy)
+
+```
+Update the landing page copy in artifacts/school-financial-model/src/pages/landing.tsx.
+
+Hero section:
+- Change the h1 from current text to: 'The budget tool for <span>people who didn't go to business school.</span>'
+- Change the subtitle paragraph to: "You started a school because you're a great educator, not because you love spreadsheets. SchoolStack Budget walks you through a 5-year financial model, step by step, in plain English. When you're done, you'll actually understand your numbers."
+- Change the badge from "Built for School Founders" to "Free During Beta"
+- Keep "Build My Model" button text
+
+Feature cards section:
+- Change the section h2 to "We'll walk you through the whole thing."
+- Change the subtitle to "No finance degree. No accountant. No 47-tab spreadsheet you inherited from someone who left. Just clear steps and honest guidance."
+
+Card 1:
+- Change title to "Start with what you know."
+- Change description to "How many students? What do you charge? What do you pay your teachers? You already know more than you think. The wizard turns what's in your head into a real financial model."
+
+Card 2:
+- Change title to "A CFO who speaks your language."
+- Change description to "Budget tells you what your numbers mean. Where you're healthy, where you're at risk, and what to do about it. No jargon. No judgment. Just clear, practical guidance."
+
+Card 3:
+- Change title to "Take it with you."
+- Change description to "Export a polished Excel workbook, a pro forma PDF, or a loan readiness report. For your board, your authorizer, a funder, or just for your own peace of mind."
+
+Change the bottom CTA section:
+- h2: "You already know how to teach. Let's make sure you know your numbers."
+- paragraph: "20 minutes. No credit card. No spreadsheet experience required."
+- Keep "Get Started Free" button
+
+After the bottom CTA, add a new section before the footer with the same centered layout:
+- Small label: "From the SchoolStack suite"
+- h2: "Need help with your building too?"
+- Paragraph: "SchoolStack Space helps you figure out how much space your school needs and what a lease will really cost before you commit."
+- Link to https://space.schoolstack.ai styled in Space Blue (#4A7CB8): "Try SchoolStack Space →"
+
+Do not change any styling, layout, colors, or component structure. Only change the text content and add the new suite section.
+```
+
+---
+
+## REVISED REPLIT DIRECTIVE 4 NOTE
+
+The Lending Lab Readiness assessment is still built as specified, but update how it's framed in the UI:
+
+```
+ADDENDUM TO DIRECTIVE 4:
+
+The Lending Lab Readiness card should NOT be the first thing users see in the Consultant step. Reorder the ConsultantStep display:
+
+1. FIRST: Overall Financial Health summary (the existing key metrics, charts, and recommendations)
+2. SECOND: The expense allocation visualization (people / building / everything else pie chart)
+3. THIRD: Specific recommendations with actionable guidance
+4. FOURTH (at the bottom): Lending Lab Readiness assessment
+
+Frame the Lending Lab section with this intro text:
+"Thinking about a loan? The Building Hope Impact Fund Lending Lab offers small, affordable loans for early-stage schools. Here's how your model stacks up against their criteria."
+
+If the user has NOT entered any debt/loan in their model, show a softer version:
+"Not looking for a loan? That's fine — these benchmarks are still useful as general financial health targets for any small school."
+
+This way, every user gets value from the consultant analysis regardless of whether they're pursuing capital. The Lending Lab assessment is a bonus, not the headline.
+```
+
+---
+
+## REVISED LINKEDIN POST (Week 3)
+
+```
+I asked a microschool founder: "What percentage of your budget goes to people?"
+
+She said: "I have no idea."
+
+This is someone who left a career in nursing to open a school. 
+Who spent her own savings on curriculum and furniture.
+Who has 34 students whose parents trust her with their children's education.
+
+She's not bad with money. She just never had a tool that showed her 
+where her money goes.
+
+That's the gap. Not intelligence. Not effort. Access.
+
+We built SchoolStack Budget for people like her. It walks you through
+a financial model for your school in about 20 minutes. No spreadsheet
+experience needed. And at the end, it tells you — in plain English —
+whether your school is healthy, where you're at risk, and what to fix.
+
+It's free during beta. budget.schoolstack.ai
+```
+
+---
+
+## THE VOICE RULE
+
+Every piece of Budget copy should pass this test:
+
+"Would a former teacher who just opened a 30-student microschool
+feel WELCOMED or INTIMIDATED by this sentence?"
+
+If intimidated, rewrite it. Always.
+
+Terms to avoid in primary copy: underwriting, debt service coverage ratio,
+DSCR, pro forma (use "financial model" or "budget"), net margin (use
+"whether you break even"), revenue per pupil (use "revenue per student").
+
+Terms that are fine: budget, expenses, revenue, payroll, rent, cash on hand
+(explain as "cash runway"), break-even, healthy/at risk.
+
+The technical terms (DSCR, net margin, etc.) belong in the CFO Consultant
+step and the export documents, where users have opted into the detail.
+They do NOT belong in the landing page, onboarding, or marketing.

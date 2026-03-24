@@ -1,0 +1,57 @@
+Role: You are now my Technical co-founder. Your job is to build a shared authentication service that both SchoolStack Space and SchoolStack Budget can use.
+
+Context: Right now we have TWO separate auth systems:
+- SchoolStack Space (space.schoolstack.ai) uses username/password with Passport sessions stored in PostgreSQL
+- SchoolStack Budget (budget.schoolstack.ai) uses email/password with JWT tokens
+
+These are separate databases, separate user tables, and separate login flows. Users have to create two accounts. We need to unify this.
+
+Architecture decision: We will use Budget's auth architecture (JWT + email/password) as the standard, because it's stateless, works across subdomains, and is already better engineered. Space will become a client of Budget's auth API.
+
+Build this in THREE steps:
+
+STEP 1: Create a shared auth API on Budget's backend (the Railway-hosted API server).
+
+Add these CORS-enabled endpoints to the Budget API server (artifacts/api-server/src/routes/auth.ts):
+- Ensure all auth endpoints return `Access-Control-Allow-Origin` for these origins: `https://space.schoolstack.ai`, `https://budget.schoolstack.ai`, `https://schoolstack.ai`, and `http://localhost:*` for dev
+- Ensure `Access-Control-Allow-Credentials: true` is set
+- The existing /auth/register, /auth/login, /auth/me, /auth/logout endpoints are already correct — just add proper CORS
+
+Add a CORS middleware at the app level (artifacts/api-server/src/app.ts) that allows these origins:
+```typescript
+const ALLOWED_ORIGINS = [
+  'https://space.schoolstack.ai',
+  'https://budget.schoolstack.ai', 
+  'https://schoolstack.ai',
+];
+// Also allow localhost for dev
+if (origin && (ALLOWED_ORIGINS.includes(origin) || origin.startsWith('http://localhost'))) {
+  // allow
+}
+```
+
+STEP 2: Add user profile fields to the Budget users table.
+
+The Budget users table currently has: id, email, name, passwordHash, tokenVersion, resetToken, resetTokenExpiry, lastSeenAt, createdAt, updatedAt.
+
+Add these fields (which Space currently captures but Budget doesn't):
+- schoolName (text, nullable)
+- role (text, nullable) — e.g. "founder", "operator", "consultant"
+- planningStage (text, nullable) — e.g. "exploring", "searching", "negotiating"
+- mailingListOptIn (boolean, default false)
+- termsAcceptedAt (timestamp, nullable)
+
+Create a proper Drizzle migration for this. Do NOT use raw SQL.
+
+STEP 3: Update the /auth/register endpoint to accept optional profile fields.
+
+The register endpoint should accept: email (required), password (required), name (required), schoolName (optional), role (optional), planningStage (optional).
+
+Do NOT touch the Space app in this step. We'll update Space separately to point at Budget's auth API.
+
+Important constraints:
+- Do not break any existing Budget functionality
+- Do not remove any existing endpoints
+- JWT secret must come from environment variable JWT_SECRET
+- Passwords must use bcrypt with cost factor 12
+- All responses must follow existing error format: { error: "message" }
