@@ -609,9 +609,9 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
   }
 });
 
-// QUARANTINED: v1 underwriting export route — kept as backward-compatible shim.
-// This handler calls generateUnderwritingWorkbookV2 (the shared-helper-based v2 engine).
-// No v1 math runs here. Remove this route once all clients migrate to /export/underwriting-v2.
+// QUARANTINED: v1 underwriting export route — backward-compatible shim only.
+// Calls generateUnderwritingWorkbookV2 (v2 engine); no v1 math runs here.
+// TARGET REMOVAL: Q3 2026 — remove once all clients have migrated to /export/underwriting-v2.
 router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
@@ -771,7 +771,7 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
     const hasRevenueRows = Array.isArray(data?.revenueRows) && (data.revenueRows as unknown[]).length > 0;
     const hasStaffingRows = Array.isArray(data?.staffingRows) && (data.staffingRows as unknown[]).length > 0;
     const hasExpenseRows = Array.isArray(data?.expenseRows) && (data.expenseRows as unknown[]).length > 0;
-    console.log(`[Excel Export] Model ${model.id}: revenueRows=${hasRevenueRows ? (data.revenueRows as unknown[]).length : 0}, staffingRows=${hasStaffingRows ? (data.staffingRows as unknown[]).length : 0}, expenseRows=${hasExpenseRows ? (data.expenseRows as unknown[]).length : 0}, dataKeys=${Object.keys(data || {}).join(",")}`);
+
 
     const yearCount = hasRevenueRows
       ? ((data.revenueRows as Array<{ amounts: number[] }>)[0]?.amounts?.length || 3)

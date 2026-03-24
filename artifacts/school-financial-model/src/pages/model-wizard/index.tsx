@@ -308,7 +308,9 @@ export function ModelWizardPage() {
         completedSteps.current.add(currentStep);
         try {
           localStorage.setItem(`wizard_completed_${modelId}`, JSON.stringify([...completedSteps.current]));
-        } catch { /* ignore */ }
+        } catch (err) {
+          console.warn("Failed to persist wizard progress:", err);
+        }
         trackCoachingEvent("wizard_section_completed", {
           section: STEPS[currentStep - 1].title.toLowerCase(),
           step: currentStep,
@@ -360,7 +362,9 @@ export function ModelWizardPage() {
         id: modelId,
         data: { currentStep: 1, data: emptyData }
       });
-    } catch {}
+    } catch (err) {
+      console.warn("Failed to reset model:", err);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

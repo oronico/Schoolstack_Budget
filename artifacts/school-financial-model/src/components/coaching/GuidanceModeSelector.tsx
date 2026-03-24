@@ -31,8 +31,8 @@ export function GuidanceModeSelector() {
         guidanceLevel: level,
       });
       await refetchUser();
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.warn("Failed to update guidance level:", err);
     } finally {
       setSaving(false);
     }

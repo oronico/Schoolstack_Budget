@@ -1,27 +1,35 @@
 # SchoolStack Budget
 
-A full-stack financial modeling platform for school founders to create lender-ready 5-year projections. Built for microschools, private schools, and charter schools.
+**Every school deserves a clear financial plan.**
 
-![License](https://img.shields.io/badge/license-MIT-blue)
+A full-stack financial modeling platform for school founders to create lender-ready 5-year projections. Built for microschools, private schools, charter schools, pods, and co-ops.
+
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6)
 ![React](https://img.shields.io/badge/React-19-61DAFB)
-![Node.js](https://img.shields.io/badge/Node.js-20+-339933)
+![Node.js](https://img.shields.io/badge/Node.js-24-339933)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
+**Production:** [budget.schoolstack.ai](https://budget.schoolstack.ai)
 
 ---
 
 ## Overview
 
-SchoolStack Budget helps school founders build comprehensive financial models through an intuitive step-by-step wizard. The platform generates investor-grade Excel workbooks and PDF reports that are ready for lender review.
+SchoolStack Budget walks school founders through a comprehensive 5-year financial model, step by step, in plain English. The platform generates investor-grade Excel workbooks and PDF reports ready for lender review, board presentations, and strategic planning.
 
 ### Key Features
 
-- **8-Step Financial Model Wizard** — Profile, Enrollment, Revenue, Staffing, Expenses, Review, Consultant Analysis, and Export
-- **Public Underwriting Wizard** — Try the full tool without creating an account (localStorage-backed)
-- **Consultant Engine** — Automated lender-readiness scoring, stress testing, and sensitivity analysis with industry benchmarks
-- **Excel Export** — 14-tab workbook with live formulas, formatted for lender presentations
-- **PDF Reports** — Printable financial summaries
-- **Admin Dashboard** — Usage analytics and model tracking
-- **Authentication** — JWT-based registration and login with persistent data
+- **8-Step Financial Model Wizard** — Profile, Enrollment, Revenue, Staffing, Expenses, Review, Consultant Analysis, Export
+- **Public Underwriting Wizard** — Try the full tool at `/underwriting` without creating an account (localStorage-backed)
+- **Scenario Planner** — Up to 3 named what-if scenarios with adjustment sliders and deep comparison mode
+- **Decision Engine** — "What should I fix first?" panel surfacing the top 3 financial issues with severity ranking and fix-it navigation
+- **Budgeting Co-Pilot** — Three guidance levels (basics/advanced/extra), inline explainer cards, and KPI formula transparency drawers
+- **Consultant Engine** — Lender-readiness scoring, 5 stress tests, 5×5 sensitivity matrix, cash runway, industry benchmarks, Lending Lab readiness assessment
+- **4 Excel Export Formats** — Formula (3-tab), Lender Pro Forma (8-tab), Underwriting V2 (21-tab), Legacy (14-tab, deprecated)
+- **Lender Packet** — Branded PDF + JSON deliverable with risk/mitigant pairs, DSCR summary, and operating reserve analysis
+- **PDF Reports** — Printable pro forma summaries and board-ready packets
+- **Admin Dashboard** — Usage analytics, model tracking, feedback management
+- **Authentication** — JWT-based registration/login with persistent data
 
 ---
 
@@ -30,12 +38,13 @@ SchoolStack Budget helps school founders build comprehensive financial models th
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19, Vite 7, Tailwind CSS v4, Radix UI, Recharts |
-| Backend | Node.js, Express 5, TypeScript |
+| Backend | Node.js 24, Express 5, TypeScript |
 | Database | PostgreSQL, Drizzle ORM |
 | Auth | JWT (bcrypt + jsonwebtoken) |
 | Export | ExcelJS, PDFKit |
+| Email | Resend (transactional) |
 | API Layer | OpenAPI spec → Orval → Zod schemas + React Query hooks |
-| Monorepo | pnpm workspaces |
+| Monorepo | pnpm workspaces with catalog version management |
 
 ---
 
@@ -52,7 +61,8 @@ SchoolStack Budget helps school founders build comprehensive financial models th
 │   ├── api-zod/                  # Auto-generated Zod schemas
 │   └── api-client-react/         # Auto-generated React Query hooks
 ├── scripts/                      # Build & deploy utilities
-└── attached_assets/              # Brand assets & templates
+├── docs/                         # Release docs, QA reports, SOPs
+└── attached_assets/              # Brand assets & reference materials
 ```
 
 ---
@@ -61,22 +71,17 @@ SchoolStack Budget helps school founders build comprehensive financial models th
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - pnpm 9+
 - PostgreSQL database
 
 ### Installation
 
 ```bash
-# Install dependencies
 pnpm install
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your DATABASE_URL and JWT_SECRET
-
-# Push database schema
-pnpm --filter @workspace/db run db:push
+# Push database schema (no migration files — uses drizzle-kit push)
+pnpm --filter @workspace/db run push
 
 # Start development servers
 pnpm --filter @workspace/api-server run dev
@@ -85,11 +90,16 @@ pnpm --filter @workspace/school-financial-model run dev
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Secret key for JWT token signing |
-| `PORT` | API server port (default: 3000) |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `JWT_SECRET` | Yes | Secret key for JWT token signing |
+| `PORT` | No | API server port (default: 8080) |
+| `RESEND_API_KEY` | No | Resend API key for transactional emails |
+| `ALLOWED_ORIGINS` | No | Comma-separated CORS allowed origins |
+| `EMAIL_FROM` | No | Sender address for outgoing emails |
+| `APP_URL` | No | Public URL of the frontend application |
+| `VITE_API_BASE_URL` | No | API base URL for the frontend (production only) |
 
 ---
 
@@ -97,33 +107,26 @@ pnpm --filter @workspace/school-financial-model run dev
 
 The wizard walks school founders through eight steps:
 
-1. **School Profile** — Type (charter, private, microschool), state, stage, funding profile
+1. **School Profile** — Type (charter, private, microschool, pod, co-op), state, stage, funding profile, Lending Lab intent
 2. **Enrollment** — 5-year student count projections with growth modeling
-3. **Revenue** — Row-based scheduling with per-student, fixed, and custom drivers
+3. **Revenue** — Row-based scheduling across 6 categories with per-student, fixed, and custom drivers
 4. **Staffing** — FTE-based roster with function categories, benefits, and payroll taxes
-5. **Operating Expenses** — Category-based expense tracking across 5 years
+5. **Operating Expenses** — Category-based expense tracking with flexible drivers across 5 years
 6. **Review** — Input validation and summary before analysis
-7. **Consultant Analysis** — Lender-readiness score, cash runway, stress tests, benchmarks
-8. **Export** — 14-tab Excel workbook and PDF report generation
+7. **Consultant Analysis** — Lender-readiness score, cash runway, stress tests, sensitivity matrix, benchmarks, Decision Engine
+8. **Export** — Excel workbooks and PDF reports
 
-### Excel Workbook Tabs
+**Post-wizard:** Scenario Planner (accessible from dashboard for completed models) with side-by-side comparison and deep comparison mode.
 
-| Tab | Contents |
-|-----|----------|
-| Assumptions | School profile and model parameters |
-| Enrollment & Rev Drivers | Student growth and revenue driver details |
-| Tuition & Funding Detail | Revenue line items by year |
-| Staffing Plan | Full compensation schedule with benefits |
-| Operating Expenses | Expense categories across 5 years |
-| Facilities & Occupancy | Facility-related costs |
-| Sources & Uses | Startup capital structure |
-| Debt Schedule | Loan amortization tables |
-| Cash Flow Monthly Y1 | Month-by-month Year 1 cash flow |
-| 5-Year P&L | Income statement with margins |
-| 5-Year Balance Sheet | Assets, liabilities, and equity |
-| DSCR & Covenants | Debt service coverage ratios |
-| Underwriting Snapshot | Key metrics summary |
-| Summary | Executive overview |
+### Export Formats
+
+| Format | Tabs | Description |
+|--------|------|-------------|
+| Formula Export | 3 | Assumptions, 5-Year Model, Year 1 Pro Forma (public, no auth required) |
+| Lender Pro Forma | 8 | Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary |
+| Underwriting V2 | 21 | Full underwriting model with monthly cash flow, balance sheet, debt schedule, scenarios |
+| Lender Packet | PDF/JSON | Branded deliverable with risk/mitigant analysis, DSCR summary, reserve analysis |
+| Legacy Underwriting | 14 | Deprecated — scheduled for removal Q3 2026 |
 
 ---
 
@@ -131,40 +134,72 @@ The wizard walks school founders through eight steps:
 
 ### Public (No Auth)
 
-- `POST /api/public/export-underwriting` — Generate Excel workbook from wizard data
-- `POST /api/public/consultant` — Run consultant analysis engine
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/public/export-underwriting` | Generate Formula Export workbook |
+| `POST` | `/api/public/consultant` | Run consultant analysis engine |
 
 ### Authenticated
 
-- `POST /api/auth/register` — Create account
-- `POST /api/auth/login` — Sign in
-- `GET /api/models` — List saved models
-- `POST /api/models` — Save a financial model
-- `GET /api/admin/analytics` — Admin usage dashboard
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/register` | Create account |
+| `POST` | `/api/auth/login` | Sign in |
+| `POST` | `/api/auth/forgot-password` | Request password reset |
+| `POST` | `/api/auth/reset-password` | Reset password with token |
+| `PATCH` | `/api/auth/guidance-level` | Update guidance mode preference |
+| `GET` | `/api/models` | List saved models |
+| `POST` | `/api/models` | Save a financial model |
+| `GET` | `/api/models/:id/export/excel` | Standard Excel export |
+| `GET` | `/api/models/:id/export/lender-proforma` | 8-tab Lender Pro Forma |
+| `GET` | `/api/models/:id/export/underwriting-v2` | 21-tab Underwriting workbook |
+| `GET` | `/api/models/:id/export/lender-packet` | Lender Packet (JSON) |
+| `GET` | `/api/models/:id/export/lender-packet-pdf` | Lender Packet (PDF) |
+| `GET/PUT` | `/api/models/:id/scenarios` | Scenario Planner CRUD |
+| `POST` | `/api/feedback` | Submit user feedback |
+| `GET` | `/api/admin/analytics` | Admin usage dashboard |
+| `GET` | `/api/admin/feedback` | Admin feedback management |
 
 ---
 
 ## Deployment
 
-- **Frontend**: Netlify (static build from `artifacts/school-financial-model`)
-- **API Server**: Railway or any Docker-compatible host
-- **Database**: Railway PostgreSQL or any managed Postgres
+| Component | Platform | Details |
+|-----------|----------|---------|
+| Frontend | Netlify | Static build from GitHub, proxies `/api/*` to Railway |
+| API Server | Railway | Docker-based deployment |
+| Database | Railway | Managed PostgreSQL |
+| DNS | Squarespace | Points `budget.schoolstack.ai` to Netlify |
 
-See `DEPLOYMENT_GUIDE.md` for detailed deployment instructions.
+Build configuration is in `netlify.toml`. See `docs/DEPLOYMENT_GUIDE.md` for detailed procedures.
 
 ---
 
 ## Brand
 
-| Element | Value |
-|---------|-------|
-| Primary | Amber `#D97706` |
-| Secondary | Evergreen `#328555` |
-| Dark | Deep Navy `#1E293B` |
-| Background | Cream `#FAF9F7` |
-| Accent | Teal `#0D9488` |
-| Headings | Quicksand Bold |
-| Body | Nunito |
+| Element | Value | Hex |
+|---------|-------|-----|
+| Evergreen (product primary) | ![#328555](https://via.placeholder.com/12/328555/328555.png) | `#328555` |
+| Amber (parent brand accent) | ![#D97706](https://via.placeholder.com/12/D97706/D97706.png) | `#D97706` |
+| Deep Navy (foreground) | ![#1E293B](https://via.placeholder.com/12/1E293B/1E293B.png) | `#1E293B` |
+| Cream (background) | ![#FAF9F7](https://via.placeholder.com/12/FAF9F7/FAF9F7.png) | `#FAF9F7` |
+| Teal (accent) | ![#0D9488](https://via.placeholder.com/12/0D9488/0D9488.png) | `#0D9488` |
+| Space Blue (cross-sell) | ![#4A7CB8](https://via.placeholder.com/12/4A7CB8/4A7CB8.png) | `#4A7CB8` |
+| Headings | Quicksand Bold | — |
+| Body | Nunito | — |
+
+---
+
+## Documentation
+
+| File | Contents |
+|------|----------|
+| `docs/DEPLOYMENT_GUIDE.md` | Railway + Netlify deployment procedures |
+| `docs/ALPHA_RELEASE_CHECKLIST.md` | Launch gates and verification checklist |
+| `docs/QA_REPORT.md` | Full test results from alpha QA pass |
+| `docs/EXPORT_QA_CHECKLIST.md` | Workbook validation criteria |
+| `docs/UNDERWRITING_REVIEW_SOP.md` | How to review submitted financial models |
+| `docs/RELEASE_NOTES.md` | Feature list, known limitations, roadmap |
 
 ---
 

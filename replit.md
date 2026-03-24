@@ -1,6 +1,6 @@
 # Overview
 
-SchoolStack Budget is a full-stack web application designed for school founders to create comprehensive, lender-ready 5-year financial models. It offers a universal model adaptable to various school types (microschool, private, charter) and stages (new or operating), incorporating FTE-based staffing, accounting-category expenses, and sophisticated revenue scheduling. The platform's key capability is its assumption-driven Excel export functionality, complete with cross-tab formulas, providing robust financial projections and analysis for strategic planning and securing funding. The project's vision is to empower school leaders with powerful financial tools to ensure sustainability and growth.
+SchoolStack Budget — "Every school deserves a clear financial plan." A full-stack web application for school founders to create comprehensive, lender-ready 5-year financial models. Built for microschools, private schools, charter schools, pods, and co-ops at any stage (new or operating). The platform walks educators through financial modeling step by step, in plain English, and generates investor-grade Excel workbooks and PDF reports. Production domain: budget.schoolstack.ai (Netlify frontend + Railway API/DB).
 
 # User Preferences
 
@@ -20,7 +20,7 @@ The project is a pnpm workspace monorepo built with TypeScript.
   - `lender-proforma-export.ts` - **8-tab Lender Pro Forma** (Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary). Pure ExcelJS build with cross-tab formulas referencing Assumptions tab. `mapModelToTemplateInput()` maps model data → flat assumptions; `computeLenderResults()` pre-computes all downstream values for cached formula results. Route: `/models/:id/export/lender-proforma`
   - `formula-export.ts` - 3-tab public wizard export (Assumptions, 5-Year Model, Year 1 Pro Forma)
   - `underwriting-workbook.ts` - **21-tab full underwriting model** (Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot). Route: `/models/:id/export/underwriting-v2`
-  - `underwriting-export.ts` - Legacy 14-tab underwriting (to be deprecated)
+  - `underwriting-export.ts` - Legacy 14-tab underwriting (deprecated, target removal Q3 2026; still imported by public.ts and models.ts shim route)
   - `workbook-helpers.ts` - Shared types, constants, formatting, label, and computation functions used by all workbook exports
   - Schema extensions: `openingBalances`, `sourcesAndUses`, `scenarios`, `covenantThresholds` schemas; `purpose` field on capitalDebtRow; `debtIncluded` on schoolProfile
   - **Financial integrity**: Balance Sheet Y1 cash is linked to Monthly Cash Flow ending cash to ensure exact tie-out. Years 2-5 project from that base plus cumulative net income.
@@ -32,7 +32,7 @@ The project is a pnpm workspace monorepo built with TypeScript.
 Supports various school configurations (type, stage, funding profiles) and projects 5 years, accommodating partial first years. Includes flexible programs & enrollment with tuition escalation, a comprehensive revenue model with 6 categories (Tuition & Fees, Tuition Offsets, Public Funding, School Choice, Philanthropy, Other Revenue) and various driver types, an FTE-based staffing model with configurable benefits, an expense model across 4 built-in accounting categories (plus user-created custom categories) with flexible drivers, and a capital & debt model with a loan calculator. Features include contextual guidance, benchmark comparisons, capacity warnings, and a tuition discount tier editor for private/tuition-based schools allowing custom discount tiers with per-year student counts. Note: The former "Grants & Fundraising" category has been merged into "Philanthropy" - backend code handles both `philanthropy` and legacy `grants_contributions` category values for backward compatibility.
 
 ### API Server (`api-server`)
-Manages authentication, CRUD operations for financial models, admin analytics, and a consultant rules engine. It orchestrates advanced Excel and PDF export functionalities, including a branded Lender Pro Forma and a 14-tab Underwriting Pro Forma workbook. Includes a public export endpoint. Deployment uses a multi-stage Dockerfile and includes PostgreSQL-backed rate limiting for public endpoints.
+Manages authentication (with profile fields: schoolName, profileRole, planningStage, mailingListOptIn, termsAcceptedAt), CRUD operations for financial models, admin analytics, feedback management, and a consultant rules engine. It orchestrates 4 Excel export formats (Formula 3-tab, Lender Pro Forma 8-tab, Underwriting V2 21-tab, Legacy 14-tab deprecated) plus PDF exports (lender packet, board packet). Includes public export and consultant endpoints with PostgreSQL-backed rate limiting. CORS hardened with URL-parsed origin allowlist for *.schoolstack.ai domains. Deployment uses a multi-stage Dockerfile on Railway.
 
 ### Frontend (`school-financial-model`)
 A React-based SPA featuring:
@@ -57,10 +57,12 @@ Top 3 Issues Panel ("What should I fix first?") surfaces the most critical finan
 
 ## Deployment Architecture
 - **Development**: Replit
-- **Source of truth**: GitHub
-- **Production build/deploy**: Netlify (builds from GitHub)
-- **Public domain**: Squarespace DNS pointing to Netlify.
-- Netlify is configured via `netlify.toml` for build commands, publish directory (`artifacts/school-financial-model/dist/public`), cache headers, and API proxy redirects (`/api/*` to Railway API server).
+- **Source of truth**: GitHub (`oronico/School-Finance-Mod`)
+- **Frontend**: Netlify (builds from GitHub, publishes `artifacts/school-financial-model/dist/public`)
+- **API + DB**: Railway (Express API server + managed PostgreSQL)
+- **DNS**: Squarespace → `budget.schoolstack.ai` → Netlify
+- **Proxy**: Netlify `netlify.toml` rewrites `/api/*` → Railway API server (`https://schoolstackbudget.up.railway.app`)
+- **Schema management**: `drizzle-kit push` (no migration files)
 
 ## Release Documentation (`docs/`)
 - `ALPHA_RELEASE_CHECKLIST.md` — Launch gates and pre-launch verification checklist
@@ -79,3 +81,7 @@ Top 3 Issues Panel ("What should I fix first?") surfaces the most critical finan
 - **Excel Export**: ExcelJS
 - **PDF Export**: PDFKit
 - **Authentication**: bcryptjs, jsonwebtoken
+- **Email**: Resend (transactional emails via RESEND_API_KEY)
+
+# Landing Page
+The landing page (`landing.tsx`) uses educator-first messaging: hero headline "Every school deserves a clear financial plan.", 3 feature cards, 7-step "How It Works" section, "Who It's For" empathetic copy, cross-sell to SchoolStack Space (space.schoolstack.ai), and bottom CTA with "Get Started Free" + "Talk to Sales". Badge: "FREE DURING BETA".
