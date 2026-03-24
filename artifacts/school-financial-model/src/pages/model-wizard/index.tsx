@@ -69,9 +69,9 @@ export function ModelWizardPage() {
       completedSteps.current = new Set();
     }
     const importKey = `space_import_${modelId}`;
-    if (sessionStorage.getItem(importKey)) {
+    const dismissedKey = `space_import_dismissed_${modelId}`;
+    if (sessionStorage.getItem(importKey) && !sessionStorage.getItem(dismissedKey)) {
       setShowImportBanner(true);
-      sessionStorage.removeItem(importKey);
     }
   }, [modelId]);
   const { user } = useAuth();
@@ -389,7 +389,10 @@ export function ModelWizardPage() {
             </div>
             <button
               type="button"
-              onClick={() => setShowImportBanner(false)}
+              onClick={() => {
+                setShowImportBanner(false);
+                sessionStorage.setItem(`space_import_dismissed_${modelId}`, "1");
+              }}
               className="p-1 rounded-lg text-teal-600 hover:bg-teal-100 transition-colors"
             >
               <X className="h-4 w-4" />
