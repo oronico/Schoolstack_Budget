@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, varchar, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, varchar, integer, boolean } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -10,6 +10,11 @@ export const usersTable = pgTable("users", {
   resetToken: varchar("reset_token", { length: 255 }),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   guidanceLevel: varchar("guidance_level", { length: 20 }),
+  schoolName: text("school_name"),
+  profileRole: text("profile_role"),
+  planningStage: text("planning_stage"),
+  mailingListOptIn: boolean("mailing_list_opt_in").default(false).notNull(),
+  termsAcceptedAt: timestamp("terms_accepted_at"),
   lastSeenAt: timestamp("last_seen_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
