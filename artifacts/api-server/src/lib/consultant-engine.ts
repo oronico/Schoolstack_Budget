@@ -1830,7 +1830,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
       title: "Your school reaches sustainability by Year 3",
       description: "This is a common pattern for early-stage schools. Make sure your facility lease terms give you flexibility during the startup period. SchoolStack Space can help you model lease escalations and TI amortization.",
       priority: "low",
-      jumpToStep: null,
+      jumpToStep: 5,
     });
   }
 
