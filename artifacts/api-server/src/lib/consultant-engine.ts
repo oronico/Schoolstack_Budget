@@ -215,6 +215,7 @@ export interface Recommendation {
   title: string;
   description: string;
   priority: "high" | "medium" | "low";
+  jumpToStep?: number | null;
 }
 
 export interface RevenueComposition {
@@ -1795,6 +1796,42 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
         priority: "medium",
       });
     }
+  }
+
+  const spaceOccupancyThreshold = 0.25;
+  for (let yi = 0; yi < yearFinancials.length; yi++) {
+    const yf = yearFinancials[yi];
+    if (yf.totalExpenses > 0) {
+      const occPct = yf.facilityCost / yf.totalExpenses;
+      if (occPct > spaceOccupancyThreshold) {
+        recommendations.push({
+          title: "Facility costs are above the 25% benchmark",
+          description: `Your occupancy costs represent ${pct(occPct)} of total expenses in Year ${yi + 1}, which is above the recommended 25% threshold for small schools. Consider using SchoolStack Space (space.schoolstack.ai) to evaluate alternative properties and model different lease scenarios before committing.`,
+          priority: "medium",
+          jumpToStep: 5,
+        });
+        break;
+      }
+    }
+  }
+
+  const hasFacilityCostAnywhere = y1.facilityCost > 0 || (sp.monthlyRent && sp.monthlyRent > 0) || (sp.estimatedMonthlyFacilityBudget && sp.estimatedMonthlyFacilityBudget > 0) || (sp.ownershipType === "own" && ((sp.propertyTaxAnnual && sp.propertyTaxAnnual > 0) || (sp.hasMortgage && sp.mortgageMonthlyPayment && sp.mortgageMonthlyPayment > 0)));
+  if (!hasFacilityCostAnywhere) {
+    recommendations.push({
+      title: "No facility costs in your model",
+      description: "Your model doesn't include rent or facility expenses. Use SchoolStack Space (space.schoolstack.ai) to calculate how much space your school needs and estimate facility costs before finalizing your budget.",
+      priority: "high",
+      jumpToStep: 5,
+    });
+  }
+
+  if (yearFinancials.length >= 3 && yearFinancials[0].netIncome < 0 && yearFinancials[2].netIncome > 0) {
+    recommendations.push({
+      title: "Your school reaches sustainability by Year 3",
+      description: "This is a common pattern for early-stage schools. Make sure your facility lease terms give you flexibility during the startup period. SchoolStack Space can help you model lease escalations and TI amortization.",
+      priority: "low",
+      jumpToStep: null,
+    });
   }
 
   while (recommendations.length < 3) {

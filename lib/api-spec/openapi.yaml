@@ -1425,6 +1425,9 @@ components:
         priority:
           type: string
           enum: [high, medium, low]
+        jumpToStep:
+          type: integer
+          nullable: true
       required:
         - title
         - description
