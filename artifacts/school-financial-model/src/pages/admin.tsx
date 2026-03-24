@@ -21,6 +21,9 @@ import {
   Bug,
   Sparkles,
   ExternalLink,
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -353,13 +356,145 @@ function FeedbackSection() {
   );
 }
 
+interface ErrorLogItem {
+  id: number;
+  userId: string | null;
+  errorMessage: string;
+  errorStack: string | null;
+  route: string | null;
+  requestBody: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+function ErrorsSection() {
+  const [errors, setErrors] = useState<ErrorLogItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    async function fetchErrors() {
+      try {
+        const res = await fetch("/api/admin/errors");
+        if (!res.ok) throw new Error("Failed to fetch errors");
+        const json = await res.json();
+        setErrors(json.items || []);
+      } catch {
+        setLoadError("Failed to load error logs.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchErrors();
+  }, []);
+
+  const toggleExpand = (id: number) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return <p className="text-destructive text-center py-12">{loadError}</p>;
+  }
+
+  if (errors.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+        <p className="text-muted-foreground">No errors logged yet. That's a good thing!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground mb-4">
+        Showing the {errors.length} most recent errors
+      </p>
+      {errors.map((err) => {
+        const isExpanded = expandedIds.has(err.id);
+        const source = err.requestBody && typeof err.requestBody === "object" && "source" in err.requestBody
+          ? (err.requestBody as Record<string, unknown>).source
+          : "server";
+        return (
+          <div
+            key={err.id}
+            className="bg-card border border-border/60 rounded-2xl shadow-sm overflow-hidden"
+          >
+            <button
+              onClick={() => toggleExpand(err.id)}
+              className="w-full text-left p-5 flex items-start gap-3 hover:bg-secondary/30 transition-colors"
+            >
+              <div className={`p-2 rounded-xl flex-shrink-0 ${
+                source === "frontend"
+                  ? "bg-amber-100 text-amber-600"
+                  : "bg-red-100 text-red-600"
+              }`}>
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {source === "frontend" ? "Client" : "Server"}
+                  </span>
+                  {err.route && (
+                    <span className="text-xs text-muted-foreground font-mono truncate max-w-[250px]">
+                      {err.route}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground ml-auto flex-shrink-0">
+                    {format(new Date(err.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                  </span>
+                </div>
+                <p className="text-sm text-foreground line-clamp-2">
+                  {err.errorMessage}
+                </p>
+                {err.userId && (
+                  <span className="text-xs text-muted-foreground mt-1 inline-block">
+                    User #{err.userId}
+                  </span>
+                )}
+              </div>
+              <div className="flex-shrink-0 mt-1">
+                {isExpanded
+                  ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+              </div>
+            </button>
+
+            {isExpanded && err.errorStack && (
+              <div className="px-5 pb-5 pt-0">
+                <pre className="bg-secondary/50 rounded-xl p-4 text-xs font-mono text-foreground/70 overflow-x-auto whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+                  {err.errorStack}
+                </pre>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AdminPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"analytics" | "feedback">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "feedback" | "errors">("analytics");
 
   useEffect(() => {
     async function fetchAnalytics() {
@@ -460,10 +595,23 @@ export function AdminPage() {
               <MessageSquare className="h-4 w-4" />
               Feedback
             </button>
+            <button
+              onClick={() => setActiveTab("errors")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "errors"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Errors
+            </button>
           </div>
         </div>
 
-        {activeTab === "feedback" ? (
+        {activeTab === "errors" ? (
+          <ErrorsSection />
+        ) : activeTab === "feedback" ? (
           <FeedbackSection />
         ) : (
         <>

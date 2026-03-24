@@ -1,7 +1,8 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import router from "./routes";
-import { pool } from "@workspace/db";
+import { pool, db, errorLogsTable } from "@workspace/db";
+import { stripSensitive } from "./routes/errors";
 
 const app: Express = express();
 
@@ -73,5 +74,28 @@ app.get("/api/ready", async (_req, res) => {
 });
 
 app.use("/api", router);
+
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  console.error(`[Unhandled Error] ${req.method} ${req.originalUrl}:`, err.message);
+
+  const sanitizedBody = req.body ? stripSensitive(req.body) : null;
+  const headers = { ...req.headers };
+  delete headers.authorization;
+  delete headers.cookie;
+
+  db.insert(errorLogsTable)
+    .values({
+      userId: (req as Record<string, unknown>).userId ? String((req as Record<string, unknown>).userId) : null,
+      errorMessage: String(err.message).slice(0, 2000),
+      errorStack: err.stack ? String(err.stack).slice(0, 5000) : null,
+      route: `${req.method} ${req.originalUrl}`.slice(0, 500),
+      requestBody: sanitizedBody as Record<string, unknown>,
+    })
+    .catch((logErr) => console.error("Failed to persist error log:", logErr));
+
+  if (!res.headersSent) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export default app;
