@@ -249,6 +249,38 @@ export interface SensitivityCell {
   netIncome: number;
 }
 
+export interface LendingLabCriterion {
+  name: string;
+  status: "pass" | "warn" | "fail" | "na";
+  threshold: string;
+  actual: string;
+  detail: string;
+  jumpToStep?: number;
+}
+
+export interface PhilanthropyYearData {
+  year: number;
+  dependency: number;
+  withinLimit: boolean;
+}
+
+export interface LendingLabAssessment {
+  ready: boolean;
+  score: number;
+  criteriaCount: number;
+  passCount: number;
+  warnCount: number;
+  failCount: number;
+  criteria: LendingLabCriterion[];
+  summary: string;
+  philanthropyByYear?: PhilanthropyYearData[];
+  expenseAllocation?: {
+    personnelPct: number;
+    facilityPct: number;
+    otherPct: number;
+  };
+}
+
 export interface ConsultantOutput {
   executiveSummary: string;
   biggestStrength: string;
@@ -266,6 +298,7 @@ export interface ConsultantOutput {
   enrollmentGuidance: string[];
   topIssues: import("./decision-rules").DecisionIssue[];
   healthSignals: HealthSignal[];
+  lendingLabAssessment: LendingLabAssessment;
   generatedAt: string;
 }
 
@@ -790,6 +823,460 @@ function runStressScenarioLegacy(
     y1NetIncome: financials[0].netIncome,
     y5NetIncome: financials[financials.length - 1].netIncome,
     breakEvenYear: beIdx >= 0 ? beIdx + 1 : null,
+  };
+}
+
+function assessLendingLabReadiness(
+  data: ModelData,
+  yearFinancials: YearFinancials[],
+  enrollmentByYear: number[],
+): LendingLabAssessment {
+  const sp = data.schoolProfile || {};
+  const staffingRows = (data.staffingRows || []) as StaffingRow[];
+  const revenueRows = (data.revenueRows || []) as RevenueRow[];
+  const expenseRows = (data.expenseRows || []) as ExpenseRow[];
+  const capDebtRows = (data.capitalAndDebtRows || []) as CapitalDebtRow[];
+  const hasRowData = staffingRows.length > 0 || revenueRows.length > 0 || expenseRows.length > 0;
+  const y1 = yearFinancials[0];
+  const criteria: LendingLabCriterion[] = [];
+
+  // --- 1. Leader Compensation ---
+  if (!hasRowData || staffingRows.length === 0) {
+    criteria.push({
+      name: "Leader Compensation",
+      status: "na",
+      threshold: "Leader must draw a salary",
+      actual: "No staffing data entered",
+      detail: "Not enough data — complete the Staffing step to evaluate this.",
+      jumpToStep: 4,
+    });
+  } else {
+    const leaderRow = staffingRows.find(
+      r => r.functionCategory === "school_leadership" && r.annualizedRate > 0,
+    );
+    if (leaderRow) {
+      criteria.push({
+        name: "Leader Compensation",
+        status: "pass",
+        threshold: "Leader must draw a salary",
+        actual: `${fmt(leaderRow.annualizedRate)}/year`,
+        detail: "School leader draws a salary. This is a fundamental requirement for sustainable operations.",
+      });
+    } else {
+      criteria.push({
+        name: "Leader Compensation",
+        status: "fail",
+        threshold: "Leader must draw a salary",
+        actual: "No leader salary found",
+        detail: "Every school leader must draw a salary. Operating without compensation is not sustainable and signals financial distress to lenders.",
+        jumpToStep: 4,
+      });
+    }
+  }
+
+  // --- 2. Philanthropy Dependency ---
+  const philanthropyByYear: PhilanthropyYearData[] = [];
+  if (yearFinancials.length === 0 || y1.totalRevenue === 0) {
+    criteria.push({
+      name: "Philanthropy Dependency",
+      status: "na",
+      threshold: "≤25% in every year, decreasing over time",
+      actual: "No revenue data",
+      detail: "Not enough data — complete the Revenue step to evaluate this.",
+      jumpToStep: 3,
+    });
+  } else {
+    let philStatus: "pass" | "warn" | "fail" = "pass";
+    let philDetail = "";
+    let anyExceeds25 = false;
+    let isDecreasing = true;
+
+    for (let i = 0; i < yearFinancials.length; i++) {
+      const yf = yearFinancials[i];
+      const dep = yf.totalRevenue > 0 ? (yf.philanthropyRevenue / yf.totalRevenue) * 100 : 0;
+      const within = dep <= 25;
+      philanthropyByYear.push({ year: i + 1, dependency: Math.round(dep * 10) / 10, withinLimit: within });
+      if (!within) anyExceeds25 = true;
+      if (i > 0) {
+        const prevDep = yearFinancials[i - 1].totalRevenue > 0
+          ? yearFinancials[i - 1].philanthropyRevenue / yearFinancials[i - 1].totalRevenue
+          : 0;
+        const curDep = yf.totalRevenue > 0 ? yf.philanthropyRevenue / yf.totalRevenue : 0;
+        if (curDep >= prevDep && prevDep > 0) isDecreasing = false;
+      }
+    }
+
+    if (anyExceeds25) {
+      philStatus = "fail";
+      const worstYear = philanthropyByYear.reduce((a, b) => a.dependency > b.dependency ? a : b);
+      philDetail = `Philanthropy dependency reaches ${worstYear.dependency}% in Year ${worstYear.year}, exceeding the 25% maximum. `;
+    }
+
+    if (!isDecreasing && philanthropyByYear.some(p => p.dependency > 0)) {
+      if (philStatus !== "fail") philStatus = "warn";
+      philDetail += "Philanthropy dependency does not decrease over the projection period. ";
+    }
+
+    const maxCap = sp.maxCapacity || 0;
+    const fullEnrollmentYearIdx = maxCap > 0
+      ? enrollmentByYear.findIndex(e => e >= maxCap)
+      : -1;
+    const checkYearIdx = fullEnrollmentYearIdx >= 0 ? fullEnrollmentYearIdx : yearFinancials.length - 1;
+    const checkYf = yearFinancials[checkYearIdx];
+
+    if (checkYf && checkYf.totalRevenue > 0 && checkYf.philanthropyRevenue > 0) {
+      const niWithoutPhil = checkYf.netIncome + checkYf.philanthropyRevenue - checkYf.philanthropyRevenue;
+      const revenueWithoutPhil = checkYf.totalRevenue - checkYf.philanthropyRevenue;
+      const netWithoutGrants = revenueWithoutPhil - checkYf.totalExpenses;
+      if (netWithoutGrants < 0) {
+        if (philStatus !== "fail") philStatus = "fail";
+        const yearLabel = fullEnrollmentYearIdx >= 0
+          ? `at full enrollment (Year ${checkYearIdx + 1})`
+          : `in the final projected year (Year ${checkYearIdx + 1})`;
+        philDetail += `Without philanthropy revenue, the school shows a ${fmt(Math.abs(netWithoutGrants))} shortfall ${yearLabel}. Your budget must balance on earned revenue alone at capacity. `;
+        if (fullEnrollmentYearIdx < 0) {
+          philDetail += "Your model does not reach full enrollment within the projection window. ";
+        }
+      }
+    }
+
+    philDetail += "Fundraising is healthy and encouraged. But your school must be able to keep the lights on without it. At full enrollment, your budget should balance on earned revenue alone. Grants should fund growth and mission extras, not basic operations.";
+
+    const y1Dep = philanthropyByYear[0]?.dependency ?? 0;
+    criteria.push({
+      name: "Philanthropy Dependency",
+      status: philStatus,
+      threshold: "≤25% in every year, decreasing over time",
+      actual: `${y1Dep}% in Year 1`,
+      detail: philDetail.trim(),
+      jumpToStep: 3,
+    });
+  }
+
+  // --- 3. Personnel Cost Ratio ---
+  if (y1.totalExpenses === 0) {
+    criteria.push({
+      name: "Personnel Cost Ratio",
+      status: "na",
+      threshold: "≤60% of total expenses",
+      actual: "No expense data",
+      detail: "Not enough data — complete the Staffing and Expenses steps to evaluate this.",
+      jumpToStep: 4,
+    });
+  } else {
+    let worstPersRatio = 0;
+    let worstPersYear = 1;
+    let anyExceeds60 = false;
+    let anyAbove55 = false;
+    for (let i = 0; i < yearFinancials.length; i++) {
+      const yf = yearFinancials[i];
+      if (yf.totalExpenses > 0) {
+        const ratio = yf.totalStaffingCost / yf.totalExpenses;
+        if (ratio > worstPersRatio) { worstPersRatio = ratio; worstPersYear = i + 1; }
+        if (ratio > 0.60) anyExceeds60 = true;
+        if (ratio > 0.55) anyAbove55 = true;
+      }
+    }
+    const pctStr = `${(worstPersRatio * 100).toFixed(1)}%`;
+    if (anyExceeds60) {
+      criteria.push({
+        name: "Personnel Cost Ratio",
+        status: "fail",
+        threshold: "≤60% of total expenses",
+        actual: `${pctStr} in Year ${worstPersYear}`,
+        detail: "Personnel costs exceed 60% of total expenses. This leaves too little room for facilities, curriculum, and contingency. A well-run school allocates no more than 60 cents of every dollar spent to people.",
+        jumpToStep: 4,
+      });
+    } else if (anyAbove55) {
+      criteria.push({
+        name: "Personnel Cost Ratio",
+        status: "warn",
+        threshold: "≤60% of total expenses (ideal <55%)",
+        actual: `${pctStr} in Year ${worstPersYear}`,
+        detail: "Personnel costs are within range but approaching the 60% ceiling.",
+        jumpToStep: 4,
+      });
+    } else {
+      criteria.push({
+        name: "Personnel Cost Ratio",
+        status: "pass",
+        threshold: "≤60% of total expenses (ideal <55%)",
+        actual: `${pctStr} in Year ${worstPersYear}`,
+        detail: "Personnel costs are well within the target range, leaving healthy room for facilities, curriculum, and operations.",
+      });
+    }
+  }
+
+  // --- 4. Facility Cost Ratio ---
+  if (y1.totalExpenses === 0) {
+    criteria.push({
+      name: "Facility Cost Ratio",
+      status: "na",
+      threshold: "≤25% of total expenses",
+      actual: "No expense data",
+      detail: "Not enough data — complete the Expenses and Facilities steps to evaluate this.",
+      jumpToStep: 5,
+    });
+  } else {
+    let worstFacRatio = 0;
+    let worstFacYear = 1;
+    let anyExceeds25 = false;
+    let anyAbove20 = false;
+    for (let i = 0; i < yearFinancials.length; i++) {
+      const yf = yearFinancials[i];
+      if (yf.totalExpenses > 0) {
+        const ratio = yf.facilityCost / yf.totalExpenses;
+        if (ratio > worstFacRatio) { worstFacRatio = ratio; worstFacYear = i + 1; }
+        if (ratio > 0.25) anyExceeds25 = true;
+        if (ratio > 0.20) anyAbove20 = true;
+      }
+    }
+    const pctStr = `${(worstFacRatio * 100).toFixed(1)}%`;
+    if (anyExceeds25) {
+      criteria.push({
+        name: "Facility Cost Ratio",
+        status: "fail",
+        threshold: "≤25% of total expenses",
+        actual: `${pctStr} in Year ${worstFacYear}`,
+        detail: "Facility costs exceed 25% of total expenses. Your building is consuming too large a share of your budget. Use SchoolStack Space to model lower-cost alternatives.",
+        jumpToStep: 5,
+      });
+    } else if (anyAbove20) {
+      criteria.push({
+        name: "Facility Cost Ratio",
+        status: "warn",
+        threshold: "≤25% of total expenses (ideal <20%)",
+        actual: `${pctStr} in Year ${worstFacYear}`,
+        detail: "Facility costs are within range but above the ideal 20% target. Consider using SchoolStack Space (space.schoolstack.ai) to evaluate alternative properties.",
+        jumpToStep: 5,
+      });
+    } else {
+      criteria.push({
+        name: "Facility Cost Ratio",
+        status: "pass",
+        threshold: "≤25% of total expenses (ideal <20%)",
+        actual: `${pctStr} in Year ${worstFacYear}`,
+        detail: "Facility costs are well within the target range, leaving healthy budget room for personnel and programming.",
+      });
+    }
+  }
+
+  // --- 5. DSCR ---
+  const hasLoan = capDebtRows.some(r => r.enabled && r.isLoan);
+  if (!hasLoan) {
+    criteria.push({
+      name: "Debt Service Coverage",
+      status: "na",
+      threshold: "≥1.15x DSCR",
+      actual: "No loans in model",
+      detail: "No debt in your model, so DSCR is not applicable. This criterion only applies when you include a loan.",
+    });
+  } else if (y1.debtService <= 0) {
+    criteria.push({
+      name: "Debt Service Coverage",
+      status: "na",
+      threshold: "≥1.15x DSCR",
+      actual: "No debt service calculated",
+      detail: "Loan exists but no debt service payments are calculated. Verify your loan terms.",
+      jumpToStep: 6,
+    });
+  } else {
+    const dscrVal = (y1.netIncome + y1.debtService) / y1.debtService;
+    const dscrStr = `${dscrVal.toFixed(2)}x`;
+    if (dscrVal < 1.15) {
+      criteria.push({
+        name: "Debt Service Coverage",
+        status: "fail",
+        threshold: "≥1.15x DSCR",
+        actual: dscrStr,
+        detail: `DSCR of ${dscrStr} is below the 1.15x minimum. The school's operating income does not sufficiently cover loan payments. Increase revenue, reduce expenses, or restructure debt terms.`,
+        jumpToStep: 6,
+      });
+    } else if (dscrVal < 1.30) {
+      criteria.push({
+        name: "Debt Service Coverage",
+        status: "warn",
+        threshold: "≥1.15x DSCR (ideal ≥1.30x)",
+        actual: dscrStr,
+        detail: "DSCR meets minimum but has limited cushion. Consider strengthening operating margins for more financial breathing room.",
+        jumpToStep: 6,
+      });
+    } else {
+      criteria.push({
+        name: "Debt Service Coverage",
+        status: "pass",
+        threshold: "≥1.15x DSCR (ideal ≥1.30x)",
+        actual: dscrStr,
+        detail: `DSCR of ${dscrStr} provides strong debt service coverage with healthy cushion.`,
+      });
+    }
+  }
+
+  // --- 6. Net Margin Trajectory ---
+  if (yearFinancials.length < 3) {
+    criteria.push({
+      name: "Net Margin Trajectory",
+      status: "na",
+      threshold: "≥0% by Year 3, ≥5% by Year 5",
+      actual: "Insufficient projection years",
+      detail: "Not enough projection years to evaluate net margin trajectory.",
+    });
+  } else {
+    const y3 = yearFinancials[2];
+    const y3Margin = y3.totalRevenue > 0 ? y3.netIncome / y3.totalRevenue : 0;
+    const maxCap = sp.maxCapacity || 0;
+    const fullYearIdx = maxCap > 0
+      ? enrollmentByYear.findIndex(e => e >= maxCap)
+      : -1;
+    const targetYearIdx = fullYearIdx >= 0 && fullYearIdx < yearFinancials.length
+      ? fullYearIdx
+      : yearFinancials.length - 1;
+    const targetYf = yearFinancials[targetYearIdx];
+    const targetMargin = targetYf.totalRevenue > 0 ? targetYf.netIncome / targetYf.totalRevenue : 0;
+
+    if (y3Margin < 0) {
+      criteria.push({
+        name: "Net Margin Trajectory",
+        status: "fail",
+        threshold: "≥0% by Year 3, ≥5% by Year 5",
+        actual: `${(y3Margin * 100).toFixed(1)}% in Year 3`,
+        detail: `Year 3 net margin is ${(y3Margin * 100).toFixed(1)}%, still negative. The school must reach at least break-even by Year 3 to demonstrate a viable business model.`,
+        jumpToStep: 7,
+      });
+    } else if (targetMargin < 0.05) {
+      criteria.push({
+        name: "Net Margin Trajectory",
+        status: "warn",
+        threshold: "≥0% by Year 3, ≥5% by Year 5",
+        actual: `${(y3Margin * 100).toFixed(1)}% in Y3, ${(targetMargin * 100).toFixed(1)}% in Y${targetYearIdx + 1}`,
+        detail: `Year 3 is break-even or better, but Year ${targetYearIdx + 1} margin of ${(targetMargin * 100).toFixed(1)}% is below the 5% target. Continue growing revenue relative to expenses.`,
+      });
+    } else {
+      criteria.push({
+        name: "Net Margin Trajectory",
+        status: "pass",
+        threshold: "≥0% by Year 3, ≥5% by Year 5",
+        actual: `${(y3Margin * 100).toFixed(1)}% in Y3, ${(targetMargin * 100).toFixed(1)}% in Y${targetYearIdx + 1}`,
+        detail: "Net margin trajectory is healthy, reaching break-even by Year 3 and growing to a sustainable level.",
+      });
+    }
+  }
+
+  // --- 7. Minimum Enrollment ---
+  if (y1.students === 0) {
+    criteria.push({
+      name: "Minimum Enrollment",
+      status: "na",
+      threshold: "≥10 students in Year 1",
+      actual: "No enrollment data",
+      detail: "Not enough data — complete the Enrollment step to evaluate this.",
+      jumpToStep: 2,
+    });
+  } else if (y1.students < 10) {
+    criteria.push({
+      name: "Minimum Enrollment",
+      status: "fail",
+      threshold: "≥10 students in Year 1",
+      actual: `${y1.students} students`,
+      detail: `Year 1 enrollment of ${y1.students} students is below the minimum viability threshold of 10. A school needs a baseline cohort to sustain basic operations.`,
+      jumpToStep: 2,
+    });
+  } else {
+    criteria.push({
+      name: "Minimum Enrollment",
+      status: "pass",
+      threshold: "≥10 students in Year 1",
+      actual: `${y1.students} students`,
+      detail: `Year 1 enrollment of ${y1.students} students meets the minimum viability threshold.`,
+    });
+  }
+
+  // --- 8. Revenue Per Pupil ---
+  if (y1.students === 0 || y1.totalRevenue === 0) {
+    criteria.push({
+      name: "Revenue Per Pupil",
+      status: "na",
+      threshold: "≥$5,000 per pupil",
+      actual: "No data",
+      detail: "Not enough data — complete the Enrollment and Revenue steps to evaluate this.",
+      jumpToStep: 3,
+    });
+  } else {
+    let worstRpp = Infinity;
+    let worstRppYear = 1;
+    let anyBelow5k = false;
+    for (let i = 0; i < yearFinancials.length; i++) {
+      const yf = yearFinancials[i];
+      if (yf.students > 0) {
+        const rpp = yf.totalRevenue / yf.students;
+        if (rpp < worstRpp) { worstRpp = rpp; worstRppYear = i + 1; }
+        if (rpp < 5000) anyBelow5k = true;
+      }
+    }
+    if (worstRpp === Infinity) worstRpp = 0;
+    if (anyBelow5k) {
+      criteria.push({
+        name: "Revenue Per Pupil",
+        status: "fail",
+        threshold: "≥$5,000 per pupil",
+        actual: `${fmt(worstRpp)} in Year ${worstRppYear}`,
+        detail: `Revenue per pupil of ${fmt(worstRpp)} in Year ${worstRppYear} is below the $5,000 minimum. Below this threshold, the school cannot sustain basic operations.`,
+        jumpToStep: 3,
+      });
+    } else {
+      criteria.push({
+        name: "Revenue Per Pupil",
+        status: "pass",
+        threshold: "≥$5,000 per pupil",
+        actual: `${fmt(worstRpp)} in Year ${worstRppYear}`,
+        detail: `Revenue per pupil of ${fmt(worstRpp)} meets the minimum threshold for sustainable operations.`,
+      });
+    }
+  }
+
+  // --- Compute totals ---
+  const evaluated = criteria.filter(c => c.status !== "na");
+  const passCount = evaluated.filter(c => c.status === "pass").length;
+  const warnCount = evaluated.filter(c => c.status === "warn").length;
+  const failCount = evaluated.filter(c => c.status === "fail").length;
+  const criteriaCount = evaluated.length;
+  const ready = failCount === 0 && criteriaCount > 0;
+  const score = criteriaCount > 0 ? Math.round((passCount / criteriaCount) * 100) : 0;
+
+  // Expense allocation
+  let expenseAllocation: LendingLabAssessment["expenseAllocation"];
+  if (y1.totalExpenses > 0) {
+    const persPct = Math.round((y1.totalStaffingCost / y1.totalExpenses) * 1000) / 10;
+    const facPct = Math.round((y1.facilityCost / y1.totalExpenses) * 1000) / 10;
+    expenseAllocation = {
+      personnelPct: persPct,
+      facilityPct: facPct,
+      otherPct: Math.round((100 - persPct - facPct) * 10) / 10,
+    };
+  }
+
+  let summary: string;
+  if (criteriaCount === 0) {
+    summary = "Not enough data to assess Lending Lab readiness. Complete more wizard steps to get your assessment.";
+  } else if (ready && score === 100) {
+    summary = "Your model meets all Lending Lab criteria with no flags. You're in strong shape to apply.";
+  } else if (ready) {
+    summary = `Your model meets all Lending Lab criteria. ${warnCount} area${warnCount > 1 ? "s" : ""} could be strengthened but won't prevent an application.`;
+  } else {
+    summary = `${failCount} area${failCount > 1 ? "s" : ""} need${failCount === 1 ? "s" : ""} attention before applying. Most founders need 2–3 iterations to get here. Adjust your model and the assessment updates automatically.`;
+  }
+
+  return {
+    ready,
+    score,
+    criteriaCount,
+    passCount,
+    warnCount,
+    failCount,
+    criteria,
+    summary,
+    philanthropyByYear: philanthropyByYear.length > 0 ? philanthropyByYear : undefined,
+    expenseAllocation,
   };
 }
 
@@ -1980,6 +2467,8 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     retentionRate: en.retentionRate,
   });
 
+  const lendingLabAssessment = assessLendingLabReadiness(data, yearFinancials, enrollmentByYear);
+
   return {
     executiveSummary,
     biggestStrength,
@@ -1997,6 +2486,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     enrollmentGuidance,
     topIssues,
     healthSignals,
+    lendingLabAssessment,
     generatedAt: new Date().toISOString(),
   };
 }

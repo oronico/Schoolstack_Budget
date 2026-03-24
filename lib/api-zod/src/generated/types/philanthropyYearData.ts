@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ResetPasswordRequest {
-  token: string;
-  /** @minLength 8 */
-  password: string;
+export interface PhilanthropyYearData {
+  year: number;
+  dependency: number;
+  withinLimit: boolean;
 }

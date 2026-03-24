@@ -1,0 +1,131 @@
+Role: You are my Technical co-founder. Add a "Lending Lab Readiness" assessment to the Budget consultant engine and display it prominently in the ConsultantStep.
+
+In the consultant engine (artifacts/api-server/src/lib/consultant-engine.ts), add a new function called assessLendingLabReadiness that evaluates the model against our actual underwriting criteria.
+
+## Lending Lab Underwriting Criteria
+
+These are the REAL criteria we use to evaluate loan applications at the Building Hope Impact Fund. The assessment must check ALL of these:
+
+### 1. Leader Compensation (Pass/Fail)
+- The school leader / founder MUST draw a salary.
+- Check: At least one staffing row in the "school_leadership" function category must have annualizedRate > 0 and be enabled.
+- If no leader salary exists, this is an automatic fail.
+- Fail message: "Every school leader must draw a salary. Operating without compensation is not sustainable and signals financial distress to lenders."
+
+### 2. Philanthropy Dependency (Three-part check)
+- Philanthropy dependency = (grants_contributions revenue category total) / (total revenue) for each year
+- Rule A: Philanthropy dependency must NEVER exceed 25% in any year. If it does, fail.
+- Rule B: Philanthropy dependency must DECREASE over the projection period (Year 1 > Year 3 > Year 5). If it increases or stays flat between consecutive years, flag as warning.
+- Rule C: Find the FIRST year where enrollment equals maxCapacity (from school profile). In that year, the school must achieve net income >= 0 WITHOUT any philanthropy revenue. To check: recalculate net income for that year with all grants_contributions revenue set to zero. If net income is negative, fail. If the school never reaches maxCapacity within the projection period, use the final projected year and note: "Your model does not reach full enrollment within the projection window."
+- The message should explain: "Fundraising is healthy and encouraged. But your school must be able to keep the lights on without it. At full enrollment, your budget should balance on earned revenue alone. Grants should fund growth and mission extras, not basic operations."
+
+### 3. Personnel Cost Ratio (Hard cap)
+- Personnel costs = total staffing costs (salaries + benefits + payroll taxes for all enabled staffing rows)
+- Personnel cost ratio = personnel costs / TOTAL EXPENSES
+- MUST be <= 60% in every projected year
+- Ideal is < 55%
+- If any year exceeds 60%, fail.
+- If between 55-60%, pass with warning: "Personnel costs are within range but approaching the 60% ceiling."
+- Fail message: "Personnel costs exceed 60% of total expenses. This leaves too little room for facilities, curriculum, and contingency. A well-run school allocates no more than 60 cents of every dollar spent to people."
+
+### 4. Facility Cost Ratio (Hard cap + ideal target)
+- Facility costs = occupancy_facility expense category total (rent + utilities + insurance + maintenance + any other facility line items)
+- Facility cost ratio = facility costs / TOTAL EXPENSES (not revenue — both ratios use expenses as the denominator so founders learn to think about how they allocate every dollar they spend)
+- MUST be <= 25% in EVERY projected year. If any year exceeds 25%, fail.
+- Ideal target is < 20%
+- If between 20-25%, pass with note: "Facility costs are within range but above the ideal 20% target. Consider using SchoolStack Space (space.schoolstack.ai) to evaluate alternative properties."
+- If > 25%, fail message: "Facility costs exceed 25% of total expenses. Your building is consuming too large a share of your budget. Use SchoolStack Space to model lower-cost alternatives."
+- NOTE TO DEVELOPER: Both personnel (criterion 3) and facility (criterion 4) ratios use TOTAL EXPENSES as the denominator. This is intentional. We want founders to understand expense allocation: of every dollar you spend, how much goes to people, how much goes to your building, and what's left for everything else (curriculum, technology, operations, contingency). Display a simple pie chart or bar showing the three buckets when these criteria are evaluated.
+
+### 5. DSCR — Debt Service Coverage Ratio (Conditional)
+- Only evaluate if the model includes a loan (any capitalAndDebtRow with isLoan === true)
+- DSCR = net operating income / annual debt service
+- Must be >= 1.15x
+- Ideal is >= 1.30x
+- If < 1.15x, fail.
+- If between 1.15x and 1.30x, pass with note: "DSCR meets minimum but has limited cushion."
+
+### 6. Net Margin Trajectory
+- Net margin = net income / total revenue for each year
+- By Year 3, net margin must be >= 0% (break-even or positive)
+- By Year 5 (or full enrollment year, whichever comes first), net margin should be >= 5%
+- If Year 3 net margin is negative, fail.
+- If Year 5 net margin is < 5%, pass with warning.
+
+### 7. Minimum Enrollment
+- Year 1 enrollment must be >= 10 students
+- This is a basic viability threshold.
+
+### 8. Revenue Per Pupil
+- Total revenue / enrollment for each year
+- Must be >= $5,000 per pupil in every year
+- Below this threshold, the school cannot sustain basic operations.
+
+## Return Type
+```typescript
+interface LendingLabAssessment {
+  ready: boolean;           // true ONLY if ALL criteria pass (no fails)
+  score: number;            // 0-100, percentage of criteria fully passed (no warnings)
+  criteriaCount: number;    // total criteria evaluated
+  passCount: number;        // criteria that fully passed
+  warnCount: number;        // criteria that passed with warnings
+  failCount: number;        // criteria that failed
+  criteria: {
+    name: string;           // e.g. "Leader Compensation"
+    status: 'pass' | 'warn' | 'fail' | 'na';
+    threshold: string;      // e.g. "Leader must draw a salary"
+    actual: string;         // e.g. "$65,000/year" or "No leader salary found"
+    detail: string;         // Plain English explanation
+    jumpToStep?: number;    // Which wizard step to fix this (1-indexed)
+  }[];
+  summary: string;          // Overall plain English assessment
+  philanthropyByYear?: {    // Show the trajectory
+    year: number;
+    dependency: number;     // as percentage
+    withinLimit: boolean;
+  }[];
+}
+```
+
+Add this to the ConsultantOutput interface and return it from runConsultantEngine.
+
+## Frontend Display (ConsultantStep.tsx)
+
+Display the assessment as a prominent card at the TOP of the consultant analysis, before key metrics.
+
+### If ready === true (all pass, no fails):
+- Green border (#328555), green shield-check icon
+- Title: "Lending Lab Ready"
+- Subtitle: "This model meets the underwriting requirements for a Building Hope Impact Fund loan application."
+- Show all criteria as a compact grid/checklist with green checkmarks
+- Any warnings should show as amber dots with their detail text
+- Add a subtle callout: "Meeting these criteria does not guarantee approval. The Lending Lab also evaluates your team, community need, and school model."
+
+### If ready === false (any fails):
+- Amber border (#D97706), alert-triangle icon
+- Title: "Not Yet Lending Lab Ready"
+- Subtitle: "[failCount] area(s) need attention before applying."
+- Show ALL criteria in order: passing ones with green checks, warnings with amber dots, failures with red X marks
+- For each failing criterion, show the detail message and a "Fix this →" link that calls jumpToStep to navigate to the relevant wizard step
+- At the bottom, add encouraging text: "Most founders need 2-3 iterations to get here. Adjust your model and the assessment updates automatically."
+
+### If score === 100 (all pass, no warnings):
+- Same as ready === true, but add a small celebration element (confetti icon or similar)
+- Change subtitle to: "Your model meets all Lending Lab criteria with no flags. You're in strong shape to apply."
+
+### Philanthropy trajectory visualization:
+- If philanthropyByYear data exists, show a small inline bar chart or sparkline showing the dependency percentage decreasing over the projection years
+- Label it: "Philanthropy dependency trend"
+- Green bars for years within limit, amber for years approaching 25%
+
+### Link to Lending Lab:
+- Below the assessment, add: "The Lending Lab loan window opens May 6." with a link (use placeholder href="#lending-lab" for now)
+
+## Important Implementation Notes:
+- The assessment must be purely deterministic — no AI calls, no API calls. Use the consultant engine's existing financial calculation logic.
+- If data is insufficient to evaluate a criterion (e.g., no staffing rows entered yet), mark it as status: 'na' with detail: "Not enough data — complete the [relevant step] to evaluate this."
+- N/A criteria should NOT count as failures. They should show as gray with a note.
+- The philanthropy "balanced budget without grants" check is the most complex. To implement: find the first year where enrollment >= maxCapacity. Clone that year's financials, zero out all revenue rows where category === "grants_contributions", recalculate total revenue and net income, check if net income >= 0.
+- BOTH personnel cost ratio AND facility cost ratio use TOTAL EXPENSES as the denominator. This is intentional. We want founders to learn expense allocation: of every dollar you spend, what share goes to people, what share goes to your building, and what's left for everything else. This is how you teach someone to run a business.
+- The criteria order in the UI should match the order listed above (Leader Compensation first, Revenue Per Pupil last).
+- When displaying the expense allocation, add a simple stacked bar or pie showing three buckets: Personnel (target ≤60%), Facilities (target ≤20%), and Everything Else (target ≥20%). This visual reinforces the mental model we want founders to internalize.

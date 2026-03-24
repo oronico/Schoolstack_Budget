@@ -40,6 +40,7 @@ import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { TopIssuesPanel } from "./TopIssuesPanel";
 import { HealthSignalsSection } from "./HealthSignalCard";
+import { LendingLabCard } from "./LendingLabCard";
 
 function metricNameToKpiId(name: string): string | undefined {
   const lower = name.toLowerCase();
@@ -216,6 +217,13 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           </div>
         </div>
       </div>
+
+      {data.lendingLabAssessment && (
+        <LendingLabCard
+          assessment={data.lendingLabAssessment}
+          jumpToStep={jumpToStep}
+        />
+      )}
 
       <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
         <h3 className="font-display font-bold text-lg text-foreground mb-3">

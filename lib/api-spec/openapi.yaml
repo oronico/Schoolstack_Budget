@@ -1394,6 +1394,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/HealthSignal"
+        lendingLabAssessment:
+          $ref: "#/components/schemas/LendingLabAssessment"
         generatedAt:
           type: string
           format: date-time
@@ -1414,6 +1416,7 @@ components:
         - enrollmentGuidance
         - topIssues
         - healthSignals
+        - lendingLabAssessment
         - generatedAt
     ConsultantRecommendation:
       type: object
@@ -1567,3 +1570,87 @@ components:
         - data
         - updatedAt
         - createdAt
+    LendingLabCriterion:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [pass, warn, fail, na]
+        threshold:
+          type: string
+        actual:
+          type: string
+        detail:
+          type: string
+        jumpToStep:
+          type: integer
+      required:
+        - name
+        - status
+        - threshold
+        - actual
+        - detail
+    PhilanthropyYearData:
+      type: object
+      properties:
+        year:
+          type: integer
+        dependency:
+          type: number
+        withinLimit:
+          type: boolean
+      required:
+        - year
+        - dependency
+        - withinLimit
+    ExpenseAllocation:
+      type: object
+      properties:
+        personnelPct:
+          type: number
+        facilityPct:
+          type: number
+        otherPct:
+          type: number
+      required:
+        - personnelPct
+        - facilityPct
+        - otherPct
+    LendingLabAssessment:
+      type: object
+      properties:
+        ready:
+          type: boolean
+        score:
+          type: integer
+        criteriaCount:
+          type: integer
+        passCount:
+          type: integer
+        warnCount:
+          type: integer
+        failCount:
+          type: integer
+        criteria:
+          type: array
+          items:
+            $ref: "#/components/schemas/LendingLabCriterion"
+        summary:
+          type: string
+        philanthropyByYear:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhilanthropyYearData"
+        expenseAllocation:
+          $ref: "#/components/schemas/ExpenseAllocation"
+      required:
+        - ready
+        - score
+        - criteriaCount
+        - passCount
+        - warnCount
+        - failCount
+        - criteria
+        - summary
