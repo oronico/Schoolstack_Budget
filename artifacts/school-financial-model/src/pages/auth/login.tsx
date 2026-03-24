@@ -22,7 +22,14 @@ export function LoginPage() {
     try {
       const res = await loginMutation.mutateAsync({ data: { email, password } });
       login(res.token, res.user);
-      setLocation("/dashboard");
+      const returnTo = sessionStorage.getItem("auth_return_to");
+      sessionStorage.removeItem("auth_return_to");
+      if (returnTo && returnTo.includes("?")) {
+        const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+        window.location.href = base + returnTo;
+      } else {
+        setLocation(returnTo || "/dashboard");
+      }
     } catch (err) {
       setError(getApiErrorMessage(err, "Invalid email or password"));
     }

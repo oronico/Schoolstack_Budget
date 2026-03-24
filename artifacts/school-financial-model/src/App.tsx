@@ -13,6 +13,7 @@ const RegisterPage = lazy(() => import("@/pages/auth/register").then(m => ({ def
 const ForgotPasswordPage = lazy(() => import("@/pages/auth/forgot-password").then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/auth/reset-password").then(m => ({ default: m.ResetPasswordPage })));
 const DashboardPage = lazy(() => import("@/pages/dashboard").then(m => ({ default: m.DashboardPage })));
+const NewModelPage = lazy(() => import("@/pages/model-new").then(m => ({ default: m.NewModelPage })));
 const ModelWizardPage = lazy(() => import("@/pages/model-wizard").then(m => ({ default: m.ModelWizardPage })));
 const PublicWizardPage = lazy(() => import("@/pages/public-wizard").then(m => ({ default: m.PublicWizardPage })));
 const ScenarioPage = lazy(() => import("@/pages/scenarios").then(m => ({ default: m.ScenarioPage })));
@@ -46,6 +47,12 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   useEffect(() => {
     if (!isLoading && !user) {
+      const currentPath = window.location.pathname + window.location.search;
+      const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+      const relative = base && currentPath.startsWith(base) ? currentPath.slice(base.length) : currentPath;
+      if (relative && relative !== "/" && relative !== "/login" && relative !== "/register") {
+        sessionStorage.setItem("auth_return_to", relative);
+      }
       setLocation("/login");
     }
   }, [user, isLoading, setLocation]);
@@ -72,6 +79,9 @@ function AppRouter() {
 
         <Route path="/dashboard">
           {() => <ProtectedRoute component={DashboardPage} />}
+        </Route>
+        <Route path="/model/new">
+          {() => <ProtectedRoute component={NewModelPage} />}
         </Route>
         <Route path="/model/:id/scenarios">
           {() => <ProtectedRoute component={ScenarioPage} />}

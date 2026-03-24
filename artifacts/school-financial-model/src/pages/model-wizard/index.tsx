@@ -4,7 +4,7 @@ import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 import { trackCoachingEvent } from "@/lib/coaching/track";
@@ -54,6 +54,7 @@ export function ModelWizardPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [stepInitialized, setStepInitialized] = useState(false);
+  const [showImportBanner, setShowImportBanner] = useState(false);
   const stepStartTime = useRef(Date.now());
   const completedSteps = useRef<Set<number>>(new Set());
 
@@ -66,6 +67,11 @@ export function ModelWizardPage() {
         : new Set();
     } catch {
       completedSteps.current = new Set();
+    }
+    const importKey = `space_import_${modelId}`;
+    if (sessionStorage.getItem(importKey)) {
+      setShowImportBanner(true);
+      sessionStorage.removeItem(importKey);
     }
   }, [modelId]);
   const { user } = useAuth();
@@ -370,6 +376,27 @@ export function ModelWizardPage() {
 
   return (
     <Layout>
+      {showImportBanner && (
+        <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-teal-200">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-teal-100 rounded-lg">
+                <Building2 className="h-4 w-4 text-teal-700" />
+              </div>
+              <p className="text-sm font-medium text-teal-800">
+                Facility data imported from SchoolStack Space
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowImportBanner(false)}
+              className="p-1 rounded-lg text-teal-600 hover:bg-teal-100 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
       <div className="bg-card border-b border-border sticky top-20 z-40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">

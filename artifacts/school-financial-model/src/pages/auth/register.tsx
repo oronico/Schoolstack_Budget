@@ -25,6 +25,19 @@ export function RegisterPage() {
     try {
       const res = await registerMutation.mutateAsync({ data: { name, email, password } });
       login(res.token, res.user);
+
+      const returnTo = sessionStorage.getItem("auth_return_to");
+      if (returnTo) {
+        sessionStorage.removeItem("auth_return_to");
+        if (returnTo.includes("?")) {
+          const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+          window.location.href = base + returnTo;
+        } else {
+          setLocation(returnTo);
+        }
+        return;
+      }
+
       try {
         const newModel = await createModelMutation.mutateAsync({
           data: { name: "Untitled Model", currentStep: 1, data: {} }
