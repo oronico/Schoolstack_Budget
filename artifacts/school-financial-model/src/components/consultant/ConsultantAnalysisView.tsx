@@ -781,9 +781,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           </div>
         </div>
         <p className="text-foreground/50 text-sm leading-relaxed mb-3 italic">
-          {(data.lenderReadiness as string) !== "Not Applicable"
-            ? "Thinking about a loan? The Building Hope Impact Fund Lending Lab offers small, affordable loans for early-stage schools. Here\u2019s how your model stacks up against their criteria."
-            : "Not looking for a loan? That\u2019s fine \u2014 these benchmarks are still useful as general financial health targets for any small school."}
+          Thinking about a loan? The Building Hope Impact Fund Lending Lab offers small, affordable loans for early-stage schools. Here&rsquo;s how your model stacks up against their criteria.
         </p>
         <p className="text-foreground/70 leading-relaxed text-[15px]">
           {data.lenderReadinessExplanation}
