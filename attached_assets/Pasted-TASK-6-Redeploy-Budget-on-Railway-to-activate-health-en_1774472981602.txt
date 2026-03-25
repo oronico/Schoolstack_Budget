@@ -1,0 +1,51 @@
+TASK 6: Redeploy Budget on Railway to activate health endpoints
+App: Budget
+Priority: P0
+Why: The new /api/health and /api/ready endpoints exist in code but Railway is still running the old build. Also activates any other pending code changes.
+Action:
+
+In Railway dashboard, trigger a new deployment
+After deploy completes, verify:
+
+bash# New health endpoint (currently 404)
+curl -s https://schoolstackbudget.up.railway.app/api/health
+
+# New readiness endpoint (checks DB)
+curl -s https://schoolstackbudget.up.railway.app/api/ready
+
+# Legacy health (should still work)
+curl -s https://schoolstackbudget.up.railway.app/health
+All three should return JSON 200 responses.
+
+TASK 7: Test all cross-app links
+App: Both
+Priority: P0
+Why: The Space-to-Budget handoff is your primary lead-gen loop. If any link is broken or loses data, you lose the conversion signal.
+Links to test manually:
+From Space landing page (/):
+
+Suite section link to budget.schoolstack.ai -- click it, confirm Budget landing page loads
+Suite section link to schoolstack.ai -- click it, confirm the waitlist/landing page loads and can capture an email
+
+From Space calculator (after completing a calculation):
+3. "Build a financial model" button (data-testid="button-export-to-budget") -- this opens budget.schoolstack.ai/model/new?sqft=X&students=Y&monthlyRent=Z&nnnAnnual=W&schoolName=Name
+
+Confirm Budget loads
+If not logged in, confirm you're redirected to login/register
+After logging in, confirm the model is pre-filled with the Space data
+Confirm the teal banner "Facility data imported from SchoolStack Space" appears
+
+From Space contact page (/contact):
+4. Link to schoolstack.ai -- confirm it loads
+From Space footer:
+5. SchoolStack.ai link -- confirm it loads
+From Budget landing page:
+6. Cross-sell link to space.schoolstack.ai -- confirm Space loads
+From Budget footer/contact:
+7. Any links back to Space or schoolstack.ai
+What to look for:
+
+No 404s
+No CORS errors in browser console
+Budget preserves query params through the auth flow (stored in sessionStorage under auth_return_to)
+schoolstack.ai actually has a working email capture form
