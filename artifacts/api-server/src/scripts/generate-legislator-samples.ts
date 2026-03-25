@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { financialModelsTable, exportsTable } from "@workspace/db";
+import { financialModelsTable, exportsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { runConsultantEngine } from "../lib/consultant-engine.js";
 import { generateWorkbook } from "../lib/excel-export.js";
@@ -8,6 +8,7 @@ import { buildLenderPacket } from "../lib/packets/build-lender-packet.js";
 import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf.js";
 import { buildBoardPacket } from "../lib/packets/build-board-packet.js";
 import { generateBoardPacketPDF } from "../lib/packets/board-packet-pdf.js";
+import type { ModelData } from "../lib/workbook-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -219,7 +220,7 @@ const SAMPLES = [MICROSCHOOL, PRIVATE_SCHOOL, CHARTER_SCHOOL];
 
 async function exportModel(modelData: Record<string, unknown>, slug: string, outDir: string, modelId: number) {
   const consultantOutput = runConsultantEngine(modelData);
-  const typedData = modelData as unknown as Parameters<typeof buildLenderPacket>[0];
+  const typedData = modelData as unknown as ModelData;
 
   const formulaBuffer = await generateWorkbook(modelData, consultantOutput);
   fs.writeFileSync(path.join(outDir, `${slug}_Formula_Workbook.xlsx`), formulaBuffer);
@@ -247,13 +248,25 @@ async function main() {
     fs.mkdirSync(outDir, { recursive: true });
   }
 
-  console.log("Generating legislator sample models and exports...\n");
+  const adminEmail = process.env.ADMIN_EMAILS?.split(",")[0]?.trim();
+  if (!adminEmail) {
+    console.error("ADMIN_EMAILS env var not set. Cannot determine owner user.");
+    process.exit(1);
+  }
+  const [adminUser] = await db.select().from(usersTable).where(eq(usersTable.email, adminEmail)).limit(1);
+  if (!adminUser) {
+    console.error(`Admin user not found for email: ${adminEmail}`);
+    process.exit(1);
+  }
+  const userId = adminUser.id;
+
+  console.log(`Generating legislator sample models as user ${userId} (${adminEmail})...\n`);
 
   for (const sample of SAMPLES) {
     console.log(`\n=== ${sample.name} ===`);
 
     const [model] = await db.insert(financialModelsTable).values({
-      userId: 49,
+      userId,
       name: sample.name,
       currentStep: 7,
       data: sample.data,
@@ -267,7 +280,7 @@ async function main() {
 
     for (const format of ["xlsx", "xlsx", "pdf", "pdf"]) {
       await db.insert(exportsTable).values({
-        userId: 49,
+        userId,
         modelId: model.id,
         format,
       });
