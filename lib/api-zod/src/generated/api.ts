@@ -24,6 +24,9 @@ export const RegisterBody = zod.object({
   email: zod.string().email(),
   password: zod.string().min(registerBodyPasswordMin),
   name: zod.string(),
+  schoolName: zod.string().nullish(),
+  role: zod.string().nullish(),
+  planningStage: zod.string().nullish(),
 });
 
 /**
@@ -39,6 +42,7 @@ export const LoginResponse = zod.object({
     id: zod.number(),
     email: zod.string(),
     name: zod.string(),
+    guidanceLevel: zod.enum(["advanced", "basics", "extra"]).nullish(),
   }),
   token: zod.string(),
 });
@@ -57,6 +61,7 @@ export const GetMeResponse = zod.object({
   id: zod.number(),
   email: zod.string(),
   name: zod.string(),
+  guidanceLevel: zod.enum(["advanced", "basics", "extra"]).nullish(),
 });
 
 /**
@@ -199,7 +204,7 @@ export const CreateModelBody = zod.object({
         priorYearADA: zod.number().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
-          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
       })
       .optional(),
@@ -562,7 +567,7 @@ export const GetModelResponse = zod.object({
         priorYearADA: zod.number().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
-          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
       })
       .optional(),
@@ -926,7 +931,7 @@ export const UpdateModelBody = zod.object({
         priorYearADA: zod.number().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
-          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
       })
       .optional(),
@@ -1282,7 +1287,7 @@ export const UpdateModelResponse = zod.object({
         priorYearADA: zod.number().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
-          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
       })
       .optional(),
@@ -1665,7 +1670,7 @@ export const ArchiveModelResponse = zod.object({
         priorYearADA: zod.number().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
-          .enum(["explore", "pre_qualified", "active_application", "refinance"])
+          .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
       })
       .optional(),

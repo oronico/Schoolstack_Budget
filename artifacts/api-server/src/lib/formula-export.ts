@@ -1770,8 +1770,8 @@ function buildProForma(
 
   r++; sec(ws, r, 14); ws.getCell(r, 1).value = "MONTHLY CASH FLOW";
 
-  const pfMonthlyPers = m => m < opMonths ? Math.round(monthlyPers) : 0;
-  const pfMonthlyOps = m => m < opMonths ? Math.round(monthlyOps) : 0;
+  const pfMonthlyPers = (m: number) => m < opMonths ? Math.round(monthlyPers) : 0;
+  const pfMonthlyOps = (m: number) => m < opMonths ? Math.round(monthlyOps) : 0;
   const pfMonthlyDebt = Math.round(monthlyDebt);
 
   const pfTotalExpMonthly: number[] = [];

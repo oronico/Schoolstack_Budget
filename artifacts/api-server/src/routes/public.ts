@@ -45,7 +45,8 @@ async function handleBudgetExport(req: Request, res: Response) {
     );
     res.setHeader("Content-Length", String(buffer.length));
 
-    return res.end(Buffer.from(buffer));
+    res.end(Buffer.from(buffer));
+    return;
   } catch (err) {
     console.error("Public budget export error:", err);
     res.status(500).json({ error: "Something went wrong generating the workbook." });
@@ -84,7 +85,8 @@ router.post("/public/export-single-year", rateLimiter, async (req: Request, res:
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Content-Length", String(buffer.length));
-    return res.end(Buffer.from(buffer));
+    res.end(Buffer.from(buffer));
+    return;
   } catch (err) {
     console.error("Public single-year export error:", err);
     res.status(500).json({ error: "Something went wrong generating the single-year budget." });

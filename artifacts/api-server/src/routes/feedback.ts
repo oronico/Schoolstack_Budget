@@ -1,7 +1,6 @@
 import { Router, type IRouter, type Response, type NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { db } from "@workspace/db";
-import { feedbackTable, usersTable } from "@workspace/db/schema";
+import { db, feedbackTable, usersTable } from "@workspace/db";
 import { desc, eq, count } from "drizzle-orm";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 import { adminMiddleware } from "../middlewares/admin";

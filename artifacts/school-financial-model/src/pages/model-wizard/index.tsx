@@ -359,7 +359,7 @@ export function ModelWizardPage() {
       expenses: {},
       expenseRows: [],
     };
-    methods.reset(emptyData as FullModelData);
+    methods.reset(emptyData as unknown as FullModelData);
     setCurrentStep(1);
     completedSteps.current = new Set();
     localStorage.removeItem(`wizard_completed_${modelId}`);

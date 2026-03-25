@@ -85,7 +85,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 
   db.insert(errorLogsTable)
     .values({
-      userId: (req as Record<string, unknown>).userId ? String((req as Record<string, unknown>).userId) : null,
+      userId: (req as unknown as Record<string, unknown>).userId ? String((req as unknown as Record<string, unknown>).userId) : null,
       errorMessage: String(err.message).slice(0, 2000),
       errorStack: err.stack ? String(err.stack).slice(0, 5000) : null,
       route: `${req.method} ${req.originalUrl}`.slice(0, 500),

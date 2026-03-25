@@ -5,9 +5,11 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { UserResponseGuidanceLevel } from "./userResponseGuidanceLevel";
 
 export interface UserResponse {
   id: number;
   email: string;
   name: string;
+  guidanceLevel?: UserResponseGuidanceLevel;
 }

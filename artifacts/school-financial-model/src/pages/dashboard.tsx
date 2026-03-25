@@ -217,9 +217,9 @@ export function DashboardPage() {
                           onClick={() => setLocation(`/model/${model.id}`)}
                           className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
                         >
-                          {model.currentStep >= 8 ? "View Model" : "Continue Building"} <ArrowRight className="h-3.5 w-3.5" />
+                          {(model.currentStep ?? 0) >= 8 ? "View Model" : "Continue Building"} <ArrowRight className="h-3.5 w-3.5" />
                         </button>
-                        {model.currentStep >= 8 ? (
+                        {(model.currentStep ?? 0) >= 8 ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); setLocation(`/model/${model.id}/scenarios`); }}
                             className="text-sm font-medium text-teal-700 hover:underline flex items-center gap-1"

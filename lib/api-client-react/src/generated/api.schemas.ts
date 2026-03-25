@@ -60,6 +60,9 @@ export interface RegisterRequest {
   /** @minLength 8 */
   password: string;
   name: string;
+  schoolName?: string | null;
+  role?: string | null;
+  planningStage?: string | null;
 }
 
 export interface LoginRequest {
@@ -77,10 +80,21 @@ export interface ResetPasswordRequest {
   password: string;
 }
 
+export type UserResponseGuidanceLevel =
+  | (typeof UserResponseGuidanceLevel)[keyof typeof UserResponseGuidanceLevel]
+  | null;
+
+export const UserResponseGuidanceLevel = {
+  advanced: "advanced",
+  basics: "basics",
+  extra: "extra",
+} as const;
+
 export interface UserResponse {
   id: number;
   email: string;
   name: string;
+  guidanceLevel?: UserResponseGuidanceLevel;
 }
 
 export interface AuthResponse {
@@ -410,10 +424,9 @@ export type SchoolProfileLendingLabIntent =
   (typeof SchoolProfileLendingLabIntent)[keyof typeof SchoolProfileLendingLabIntent];
 
 export const SchoolProfileLendingLabIntent = {
-  explore: "explore",
-  pre_qualified: "pre_qualified",
-  active_application: "active_application",
-  refinance: "refinance",
+  plan_to_apply: "plan_to_apply",
+  want_to_understand: "want_to_understand",
+  budget_only: "budget_only",
 } as const;
 
 export type SchoolProfileGradeBandEnrollment = {

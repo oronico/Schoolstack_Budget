@@ -11,4 +11,7 @@ export interface RegisterRequest {
   /** @minLength 8 */
   password: string;
   name: string;
+  schoolName?: string | null;
+  role?: string | null;
+  planningStage?: string | null;
 }

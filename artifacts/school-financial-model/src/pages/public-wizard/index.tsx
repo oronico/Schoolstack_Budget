@@ -181,7 +181,7 @@ export function PublicWizardPage() {
       staffingRows: [],
       expenses: {},
       expenseRows: [],
-    } as FullModelData);
+    } as unknown as FullModelData);
     setCurrentStep(1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [methods]);

@@ -145,7 +145,7 @@ export function ScenarioPage() {
   useEffect(() => {
     if (model && !initialized) {
       const modelData = model.data as FullModelData | undefined;
-      if (model.currentStep < 8) {
+      if ((model.currentStep ?? 0) < 8) {
         setLocation(`/model/${modelId}`);
         return;
       }
@@ -202,7 +202,7 @@ export function ScenarioPage() {
         updateMutation.mutate({
           id: modelId,
           data: {
-            data: { ...modelData, scenarios: updated },
+            data: { ...modelData, scenarios: updated } as Record<string, unknown>,
           },
         });
       }, 800);

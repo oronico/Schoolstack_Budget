@@ -93,3 +93,4 @@ export * from "./staffingRow";
 export * from "./stressScenario";
 export * from "./updateFinancialModelData";
 export * from "./userResponse";
+export * from "./userResponseGuidanceLevel";

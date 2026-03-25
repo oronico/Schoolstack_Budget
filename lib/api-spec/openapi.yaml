@@ -658,6 +658,15 @@ components:
           minLength: 8
         name:
           type: string
+        schoolName:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        planningStage:
+          type: string
+          nullable: true
       required:
         - email
         - password
@@ -711,6 +720,13 @@ components:
           type: string
         name:
           type: string
+        guidanceLevel:
+          type: string
+          nullable: true
+          enum:
+            - advanced
+            - basics
+            - extra
       required:
         - id
         - email
@@ -1168,7 +1184,7 @@ components:
           type: boolean
         lendingLabIntent:
           type: string
-          enum: [explore, pre_qualified, active_application, refinance]
+          enum: [plan_to_apply, want_to_understand, budget_only]
     Enrollment:
       type: object
       properties:

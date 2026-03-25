@@ -10,8 +10,7 @@ export type SchoolProfileLendingLabIntent =
   (typeof SchoolProfileLendingLabIntent)[keyof typeof SchoolProfileLendingLabIntent];
 
 export const SchoolProfileLendingLabIntent = {
-  explore: "explore",
-  pre_qualified: "pre_qualified",
-  active_application: "active_application",
-  refinance: "refinance",
+  plan_to_apply: "plan_to_apply",
+  want_to_understand: "want_to_understand",
+  budget_only: "budget_only",
 } as const;

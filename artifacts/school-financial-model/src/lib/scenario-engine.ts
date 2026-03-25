@@ -66,8 +66,8 @@ function driverVal(
 
 function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const sp = data.schoolProfile;
-  const en = data.enrollment || {};
-  const enrollment = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0];
+  const en = (data.enrollment || {}) as Record<string, unknown>;
+  const enrollment = [(en.year1 as number) || 0, (en.year2 as number) || 0, (en.year3 as number) || 0, (en.year4 as number) || 0, (en.year5 as number) || 0];
   const prorationFactor = sp?.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
   const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
   const costInflation = data.facilities?.generalCostInflation || 0;
