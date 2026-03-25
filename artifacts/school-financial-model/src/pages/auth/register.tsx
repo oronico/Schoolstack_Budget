@@ -57,7 +57,13 @@ export function RegisterPage() {
         <div className="w-full max-w-md">
           <div className="bg-card rounded-3xl p-8 sm:p-10 shadow-xl shadow-black/5 border border-border/50">
             <h1 className="font-display text-3xl font-bold text-foreground mb-2">Create Account</h1>
-            <p className="text-muted-foreground mb-8">Start building your school's financial model.</p>
+            <p className="text-muted-foreground mb-4">Start building your school's financial model.</p>
+            <p className="text-xs text-muted-foreground text-center mb-8">
+              SchoolStack Space and Budget use separate accounts during alpha.{" "}
+              <a href="https://space.schoolstack.ai" className="text-primary hover:underline">
+                Need a Space account?
+              </a>
+            </p>
             
             {error && (
               <div className="mb-6 p-4 rounded-xl bg-destructive/10 text-destructive text-sm font-medium border border-destructive/20">
