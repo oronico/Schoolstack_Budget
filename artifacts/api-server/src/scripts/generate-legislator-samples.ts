@@ -217,23 +217,25 @@ const CHARTER_SCHOOL: SampleModel = {
 
 const SAMPLES = [MICROSCHOOL, PRIVATE_SCHOOL, CHARTER_SCHOOL];
 
-async function exportModel(modelData: Record<string, unknown>, slug: string, outDir: string) {
+async function exportModel(modelData: Record<string, unknown>, slug: string, outDir: string, modelId: number) {
   const consultantOutput = runConsultantEngine(modelData);
+  const typedData = modelData as unknown as Parameters<typeof buildLenderPacket>[0];
 
   const formulaBuffer = await generateWorkbook(modelData, consultantOutput);
   fs.writeFileSync(path.join(outDir, `${slug}_Formula_Workbook.xlsx`), formulaBuffer);
   console.log(`  ✓ Formula Workbook (${formulaBuffer.length} bytes)`);
 
-  const uwBuffer = await generateUnderwritingWorkbook(modelData, consultantOutput);
+  const uwWorkbook = await generateUnderwritingWorkbook(modelData);
+  const uwBuffer = Buffer.from(await uwWorkbook.xlsx.writeBuffer());
   fs.writeFileSync(path.join(outDir, `${slug}_Underwriting_Package.xlsx`), uwBuffer);
   console.log(`  ✓ Underwriting Package (${uwBuffer.length} bytes)`);
 
-  const lenderPacket = buildLenderPacket(modelData, consultantOutput);
+  const lenderPacket = buildLenderPacket(typedData, consultantOutput, modelId);
   const lenderPdf = await generateLenderPacketPDF(lenderPacket);
   fs.writeFileSync(path.join(outDir, `${slug}_Lender_Packet.pdf`), lenderPdf);
   console.log(`  ✓ Lender Packet PDF (${lenderPdf.length} bytes)`);
 
-  const boardPacket = buildBoardPacket(modelData, consultantOutput);
+  const boardPacket = buildBoardPacket(typedData, consultantOutput, modelId);
   const boardPdf = await generateBoardPacketPDF(boardPacket);
   fs.writeFileSync(path.join(outDir, `${slug}_Board_Summary.pdf`), boardPdf);
   console.log(`  ✓ Board Summary PDF (${boardPdf.length} bytes)`);
@@ -261,7 +263,7 @@ async function main() {
 
     console.log(`  Created model ID: ${model.id}`);
 
-    await exportModel(sample.data, sample.slug, outDir);
+    await exportModel(sample.data, sample.slug, outDir, model.id);
 
     for (const format of ["xlsx", "xlsx", "pdf", "pdf"]) {
       await db.insert(exportsTable).values({
