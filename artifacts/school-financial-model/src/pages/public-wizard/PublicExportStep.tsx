@@ -1,27 +1,46 @@
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { Download, Loader2, PartyPopper, ArrowRight, ClipboardCheck, Calendar, Landmark, CheckCircle2 } from "lucide-react";
+import {
+  Download, Loader2, ArrowRight, Landmark, CheckCircle2,
+  Lock, Check, FileSpreadsheet, Crown, Sparkles,
+} from "lucide-react";
 import { Link } from "wouter";
 import { getPublicExportUnderwritingUrl } from "@workspace/api-client-react";
 
-type ExportMode = "5year" | "singleYear";
+const STARTER_FEATURES = [
+  "5-year budget projections",
+  "Color-coded assumptions tab",
+  "Live Excel formulas",
+  "Financial Health scorecard",
+  "Monthly pro forma view",
+];
+
+const FULL_MODEL_FEATURES = [
+  "21-tab underwriting workbook",
+  "Program-level revenue drivers",
+  "Monthly cash flow forecast",
+  "Balance sheet & net assets",
+  "DSCR & covenant analysis",
+  "Scenario comparison engine",
+  "Lender-ready PDF packet",
+  "Board summary PDF",
+  "Debt schedule & amortization",
+  "Decision engine insights",
+];
 
 export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: number) => void; modelId: number | null }) {
-  const [loading, setLoading] = useState<ExportMode | null>(null);
-  const [exported, setExported] = useState<Set<ExportMode>>(new Set());
-  const [singleYearIndex, setSingleYearIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [exported, setExported] = useState(false);
   const { getValues, watch } = useFormContext();
   const lendingLabIntent = watch("schoolProfile.lendingLabIntent");
 
-  const handleDownload = async (mode: ExportMode) => {
+  const handleDownload = async () => {
     if (loading) return;
-    setLoading(mode);
+    setLoading(true);
 
     try {
       const data = getValues();
-      const url = mode === "singleYear"
-        ? `/api/public/export-single-year?year=${singleYearIndex}`
-        : getPublicExportUnderwritingUrl();
+      const url = getPublicExportUnderwritingUrl();
 
       const res = await fetch(url, {
         method: "POST",
@@ -34,10 +53,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
-      const fallback = mode === "singleYear"
-        ? `Year_${singleYearIndex + 1}_Budget.xlsx`
-        : "SchoolStack_Budget_Model.xlsx";
-      const filename = filenameMatch?.[1] || fallback;
+      const filename = filenameMatch?.[1] || "SchoolStack_Budget_Model.xlsx";
       const urlObj = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = urlObj;
@@ -46,39 +62,28 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
       a.click();
       window.URL.revokeObjectURL(urlObj);
       a.remove();
-      setExported(prev => new Set(prev).add(mode));
+      setExported(true);
     } catch (e) {
       console.error(e);
       alert("Failed to export. Please try again.");
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   };
 
-  const anyExported = exported.size > 0;
-
   return (
-    <div className="text-center py-12 px-4">
-      <div className="mx-auto w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-8">
-        {anyExported ? (
-          <PartyPopper className="h-12 w-12 text-primary" />
-        ) : (
-          <Download className="h-12 w-12 text-primary" />
-        )}
+    <div className="py-8 px-2">
+      <div className="text-center mb-10">
+        <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-3">
+          Your financial model is ready
+        </h2>
+        <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+          Download your starter workbook now, or create a free account for the full underwriting package.
+        </p>
       </div>
 
-      <h2 className="font-display text-4xl font-bold text-foreground mb-4">
-        {anyExported ? "Your workbook is ready!" : "Ready to export your model?"}
-      </h2>
-
-      <p className="text-xl text-muted-foreground mb-6 max-w-lg mx-auto">
-        {anyExported
-          ? "Check your downloads folder. Your workbook is fully formatted and lender-ready."
-          : "Download your budget model as a polished Excel workbook - ready for lender meetings."}
-      </p>
-
       {lendingLabIntent === "plan_to_apply" && (
-        <div className="max-w-lg mx-auto mb-8 bg-primary/5 border border-primary/20 rounded-2xl px-6 py-4 text-left">
+        <div className="max-w-2xl mx-auto mb-8 bg-primary/5 border border-primary/20 rounded-2xl px-6 py-4 text-left">
           <div className="flex items-start gap-3">
             <Landmark className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <p className="text-sm text-foreground">
@@ -88,92 +93,118 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
         </div>
       )}
 
-      {lendingLabIntent === "want_to_understand" && (
-        <div className="max-w-lg mx-auto mb-8 bg-accent/5 border border-accent/20 rounded-2xl px-6 py-4 text-left">
-          <div className="flex items-start gap-3">
-            <Landmark className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-foreground">
-              We'll highlight the kinds of information Lending Lab typically reviews. Your workbook covers the key areas lenders look for.
+      <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+        <div className="relative bg-white rounded-2xl border border-border/60 shadow-sm flex flex-col overflow-hidden">
+          <div className="px-6 pt-6 pb-4">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                <FileSpreadsheet className="h-5 w-5 text-slate-600" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-lg text-foreground">Starter Export</h3>
+                <p className="text-xs text-muted-foreground">Available now</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 pb-4 flex-1">
+            <p className="text-sm text-muted-foreground mb-4">
+              A polished 5-tab Excel workbook with your key projections and assumptions.
             </p>
+            <ul className="space-y-2.5">
+              {STARTER_FEATURES.map((feature) => (
+                <li key={feature} className="flex items-start gap-2.5">
+                  <Check className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-foreground">{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="px-6 pb-6 pt-2">
+            <button
+              onClick={handleDownload}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 text-white font-semibold shadow-sm hover:bg-slate-800 hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</>
+              ) : exported ? (
+                <><CheckCircle2 className="h-4 w-4" /> Download Again</>
+              ) : (
+                <><Download className="h-4 w-4" /> Download Starter</>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className="relative bg-gradient-to-b from-amber-50/80 to-white rounded-2xl border-2 border-amber-400/60 shadow-lg shadow-amber-100/50 flex flex-col overflow-hidden">
+          <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-bl-xl">
+            Recommended
+          </div>
+
+          <div className="px-6 pt-6 pb-4">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Crown className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-lg text-foreground">Full Underwriting Model</h3>
+                <p className="text-xs text-amber-600 font-medium">Free with account</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 pb-4 flex-1">
+            <p className="text-sm text-muted-foreground mb-4">
+              Everything in Starter, plus a comprehensive 21-tab underwriting package lenders expect to see.
+            </p>
+            <ul className="space-y-2.5">
+              {FULL_MODEL_FEATURES.map((feature) => (
+                <li key={feature} className="flex items-start gap-2.5">
+                  <Lock className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-foreground">{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="px-6 pb-6 pt-2">
+            <Link
+              href="/register"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-500 text-white font-semibold shadow-lg shadow-amber-500/25 hover:bg-amber-600 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+            >
+              <Sparkles className="h-4 w-4" /> Create Free Account <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {exported && (
+        <div className="mt-10 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-5 py-2.5 text-sm font-medium">
+            <CheckCircle2 className="h-4 w-4" />
+            Starter workbook downloaded — check your downloads folder
           </div>
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <button
-          onClick={() => handleDownload("5year")}
-          disabled={loading !== null && loading !== "5year"}
-          className="group bg-white rounded-2xl border border-border/60 shadow-sm p-6 flex flex-col items-center gap-3 transition-all hover:shadow-lg hover:-translate-y-1 disabled:opacity-50 disabled:transform-none disabled:cursor-not-allowed"
-        >
-          <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${exported.has("5year") ? "bg-green-100 text-green-600" : "bg-primary/10 text-primary group-hover:bg-primary/20"}`}>
-            {loading === "5year" ? <Loader2 className="h-7 w-7 animate-spin" /> : <ClipboardCheck className="h-7 w-7" />}
-          </div>
-          <span className="font-display font-bold text-sm text-foreground">
-            {exported.has("5year") ? "5-Year Budget ✓" : "5-Year Budget Model"}
-          </span>
-          <span className="text-xs text-muted-foreground leading-snug">
-            3-tab workbook with assumptions, projections & monthly pro forma
-          </span>
-          <span className="mt-auto text-xs font-semibold text-primary group-hover:text-primary/80 transition-colors">
-            {loading === "5year" ? "Generating..." : exported.has("5year") ? "Download Again" : "Download"}
-          </span>
-        </button>
-
-        <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-6 flex flex-col items-center gap-3">
-          <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${exported.has("singleYear") ? "bg-green-100 text-green-600" : "bg-amber-50 text-amber-600"}`}>
-            {loading === "singleYear" ? <Loader2 className="h-7 w-7 animate-spin" /> : <Calendar className="h-7 w-7" />}
-          </div>
-          <span className="font-display font-bold text-sm text-foreground">
-            {exported.has("singleYear") ? "Single-Year Budget ✓" : "Single-Year Budget"}
-          </span>
-          <span className="text-xs text-muted-foreground leading-snug">
-            Monthly budget with Jul–Jun columns for one year
-          </span>
-          <select
-            value={singleYearIndex}
-            onChange={(e) => setSingleYearIndex(Number(e.target.value))}
-            className="w-full mt-1 px-3 py-1.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
-            {[0, 1, 2, 3, 4].map(i => (
-              <option key={i} value={i}>Year {i + 1}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => handleDownload("singleYear")}
-            disabled={loading !== null && loading !== "singleYear"}
-            className="mt-auto text-xs font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading === "singleYear" ? "Generating..." : exported.has("singleYear") ? "Download Again" : "Download"}
-          </button>
-        </div>
-      </div>
-
-      <p className="text-sm text-muted-foreground mb-4">
-        Want to save your model and unlock all export formats?
-      </p>
-      <Link
-        href="/register"
-        className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-      >
-        Create a Free Account <ArrowRight className="h-4 w-4" />
-      </Link>
-
-      {anyExported && lendingLabIntent === "plan_to_apply" && (
-        <div className="mt-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
-          <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 max-w-xl mx-auto text-left">
-            <div className="flex items-center gap-3 mb-5">
-              <Landmark className="h-6 w-6 text-primary" />
-              <h3 className="font-display font-bold text-xl text-foreground">Next steps for Lending Lab</h3>
+      {exported && lendingLabIntent === "plan_to_apply" && (
+        <div className="mt-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 max-w-xl mx-auto text-left">
+            <div className="flex items-center gap-3 mb-4">
+              <Landmark className="h-5 w-5 text-primary" />
+              <h3 className="font-display font-bold text-lg text-foreground">Next steps for Lending Lab</h3>
             </div>
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {[
                 "Review your assumptions carefully",
                 "Confirm staffing and facility costs are realistic",
-                "Save your workbook",
+                "Create a free account to unlock the full underwriting package",
                 "Complete the Lending Lab application when ready",
               ].map((step, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <li key={i} className="flex items-start gap-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                   <span className="text-sm text-foreground">{step}</span>
                 </li>
               ))}
@@ -182,16 +213,16 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
         </div>
       )}
 
-      {anyExported && lendingLabIntent !== "plan_to_apply" && (
-        <div className="mt-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
-          <div className="bg-accent/10 border border-accent/20 rounded-3xl p-8 max-w-xl mx-auto">
-            <h3 className="font-display font-bold text-2xl text-foreground mb-3">Looking for capital?</h3>
-            <p className="text-muted-foreground mb-6">
+      {exported && lendingLabIntent !== "plan_to_apply" && (
+        <div className="mt-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="bg-accent/10 border border-accent/20 rounded-2xl p-6 max-w-xl mx-auto text-center">
+            <h3 className="font-display font-bold text-xl text-foreground mb-2">Looking for capital?</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Now that you have a solid financial model, you might be ready to explore funding options to launch or grow your school.
             </p>
             <Link
               href="/"
-              className="inline-flex items-center justify-center gap-2 text-accent font-bold hover:text-accent/80 transition-colors"
+              className="inline-flex items-center justify-center gap-2 text-accent font-bold hover:text-accent/80 transition-colors text-sm"
             >
               Learn about our loan program <ArrowRight className="h-4 w-4" />
             </Link>
