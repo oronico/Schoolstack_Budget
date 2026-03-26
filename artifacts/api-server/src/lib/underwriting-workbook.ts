@@ -369,7 +369,13 @@ function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
   }
 }
 
-function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[]) {
+interface EnrollmentDriverRefs {
+  programRows: Map<string, number>;
+  startCol: number;
+  sheetName: string;
+}
+
+function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[]): EnrollmentDriverRefs {
   const ws = wb.addWorksheet("Enrollment Drivers");
   const sp = data.schoolProfile || {};
   const yLabels = yearLabels(sp.openingYear);
@@ -391,12 +397,15 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
 
   let programFirstRow = 0;
   let programLastRow = 0;
+  const programRows = new Map<string, number>();
   if (programs.length > 0) {
     r++;
     sec(ws, r, cols); ws.getCell(r, 1).value = "BY PROGRAM";
     programFirstRow = r + 1;
-    for (const p of programs) {
+    for (let pi = 0; pi < programs.length; pi++) {
+      const p = programs[pi];
       r++;
+      programRows.set(String(pi), r);
       ws.getCell(r, 1).value = p.name || "Program"; dc(ws.getCell(r, 1));
       let c = 2;
       if (hasHistory) {
@@ -469,9 +478,11 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
       cell.numFmt = PCT; dc(cell);
     }
   }
+
+  return { programRows, startCol, sheetName: "Enrollment Drivers" };
 }
 
-function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[]) {
+function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], edRefs: EnrollmentDriverRefs) {
   const ws = wb.addWorksheet("Tuition & Funding");
   const sp = data.schoolProfile || {};
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
@@ -522,6 +533,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
     ws.getCell(r, 1).value = catLabel(cat).toUpperCase();
 
     const catLineFirstRow = r + 1;
+    const lineSubtotalRows: number[] = [];
 
     for (const rv of rows) {
       const sign = cat === "tuition_offsets" ? -1 : 1;
@@ -534,34 +546,51 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         const rateRow = r + 1;
         r++;
         ws.getCell(r, 1).value = "  Rate / Student"; dc(ws.getCell(r, 1));
+        const esc = resolveEsc(rv.escalationRate, costInflPct);
+        const base = rv.amounts?.[0] ?? 0;
+        const hasEsc = esc > 0;
+        const escRow = hasEsc ? rateRow + 1 : 0;
         for (let y = 0; y < 5; y++) {
-          const cell = ws.getCell(r, y + 2);
-          const esc = resolveEsc(rv.escalationRate, costInflPct);
-          const base = rv.amounts?.[0] ?? 0;
+          const cell = ws.getCell(rateRow, y + 2);
           const rate = y === 0 ? base : base * Math.pow(1 + esc / 100, y);
-          cell.value = Math.round(rate); cell.numFmt = CUR; dc(cell);
-          if (y === 0) inputCell(cell);
+          if (y === 0) {
+            cell.value = Math.round(rate); inputCell(cell);
+          } else if (hasEsc) {
+            const prevRateAddr = cn(rateRow, y + 1);
+            const escAddr = `$B$${escRow}`;
+            setFormula(cell, `ROUND(${prevRateAddr}*(1+${escAddr}),0)`, Math.round(rate));
+          } else {
+            cell.value = Math.round(rate); dc(cell);
+          }
+          cell.numFmt = CUR; dc(cell);
         }
 
-        if (rv.escalationRate !== undefined && rv.escalationRate !== 0) {
+        if (hasEsc) {
           r++;
           ws.getCell(r, 1).value = "  Escalation Rate"; dc(ws.getCell(r, 1));
-          ws.getCell(r, 2).value = (rv.escalationRate ?? 0) / 100;
+          const displayEsc = rv.escalationRate !== undefined && rv.escalationRate !== 0 ? rv.escalationRate : costInflPct;
+          ws.getCell(r, 2).value = displayEsc / 100;
           ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
         }
 
         const progDetailFirstRow = r + 1;
-        for (const p of programs) {
+        for (let pi = 0; pi < programs.length; pi++) {
+          const p = programs[pi];
           r++;
           ws.getCell(r, 1).value = `  ${p.name || "Program"}`; dc(ws.getCell(r, 1));
+          const edProgRow = edRefs.programRows.get(String(pi));
           for (let y = 0; y < 5; y++) {
             const cell = ws.getCell(r, y + 2);
             const progEnroll = [p.year1, p.year2, p.year3, p.year4, p.year5][y] ?? 0;
             const rateAddr = cn(rateRow, y + 2);
-            const val = progEnroll * (rv.amounts?.[0] ?? 0);
-            const esc = resolveEsc(rv.escalationRate, costInflPct);
-            const escalated = y === 0 ? val : progEnroll * (rv.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
-            setFormula(cell, `${rateAddr}*${progEnroll}`, Math.round(escalated * sign));
+            const escalated = y === 0 ? (progEnroll * base) : (progEnroll * base * Math.pow(1 + esc / 100, y));
+            if (edProgRow) {
+              const enrollCol = edRefs.startCol + y;
+              const enrollAddr = `'${edRefs.sheetName}'!${colLetter(enrollCol)}${edProgRow}`;
+              setFormula(cell, `${rateAddr}*${enrollAddr}`, Math.round(escalated * sign));
+            } else {
+              setFormula(cell, `${rateAddr}*${progEnroll}`, Math.round(escalated * sign));
+            }
             cell.numFmt = CUR; dc(cell);
           }
         }
@@ -569,6 +598,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
 
         r++;
         ws.getCell(r, 1).value = `  Subtotal: ${rv.lineItem}`; bc(ws.getCell(r, 1));
+        lineSubtotalRows.push(r);
         for (let y = 0; y < 5; y++) {
           const col = y + 2;
           const cell = ws.getCell(r, col);
@@ -580,6 +610,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
       } else {
         r++;
         ws.getCell(r, 1).value = rv.lineItem; dc(ws.getCell(r, 1));
+        lineSubtotalRows.push(r);
         for (let y = 0; y < 5; y++) {
           const students = enrollment[y];
           const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp);
@@ -589,7 +620,6 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         }
       }
     }
-    const catLineLastRow = r;
 
     r++;
     const catTotalLabel = `Total ${catLabel(cat)}`;
@@ -602,7 +632,8 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         const s = cat === "tuition_offsets" ? -1 : 1;
         catTotal += computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp) * s;
       }
-      setFormula(cell, `SUBTOTAL(9,${cn(catLineFirstRow, col)}:${cn(catLineLastRow, col)})`, Math.round(catTotal));
+      const sumParts = lineSubtotalRows.map(sr => cn(sr, col)).join(",");
+      setFormula(cell, `SUM(${sumParts})`, Math.round(catTotal));
       cell.numFmt = CUR; gc(cell);
     }
     categorySubtotalRows.push(r);
@@ -2368,8 +2399,8 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   buildCover(wb, data);
   buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
   buildProgramProfile(wb, data);
-  buildEnrollmentDrivers(wb, data, enrollment);
-  buildTuitionFunding(wb, data, enrollment);
+  const edRefs = buildEnrollmentDrivers(wb, data, enrollment);
+  buildTuitionFunding(wb, data, enrollment, edRefs);
   buildStaffingDrivers(wb, data, enrollment, salaryEsc, prorationFactor);
   buildOpExDrivers(wb, data, enrollment);
   buildCapitalStack(wb, data);
