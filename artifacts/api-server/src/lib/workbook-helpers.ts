@@ -15,6 +15,17 @@ export const DASHBOARD_GREEN = "FF16A34A";
 export const DASHBOARD_AMBER = "FFD97706";
 export const DASHBOARD_RED = "FFDC2626";
 
+export const BENCHMARK_PAYROLL_GREEN = 0.55;
+export const BENCHMARK_PAYROLL_AMBER = 0.65;
+export const BENCHMARK_FACILITY_GREEN = 0.15;
+export const BENCHMARK_FACILITY_AMBER = 0.25;
+export const BENCHMARK_DSCR_GREEN = 1.25;
+export const BENCHMARK_DSCR_AMBER = 1.0;
+export const BENCHMARK_REV_PER_STUDENT_GREEN = 10000;
+export const BENCHMARK_REV_PER_STUDENT_AMBER = 7000;
+export const BENCHMARK_REV_SOURCES_GREEN = 3;
+export const BENCHMARK_REV_SOURCES_AMBER = 2;
+
 export const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
 export const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: WHITE }, size: 11, name: "Calibri" };
 export const SECTION_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: LIGHT_GRAY } };
@@ -947,10 +958,10 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.numFmt = CUR;
     dc(cell);
     cell.alignment = { horizontal: "right" };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: rps >= 10000 ? GREEN_BG : rps >= 7000 ? AMBER_BG : RED_BG } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: rps >= BENCHMARK_REV_PER_STUDENT_GREEN ? GREEN_BG : rps >= BENCHMARK_REV_PER_STUDENT_AMBER ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = "≥ $10,000"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
-  cfRules.push({ row: rpsRow, greenThreshold: "10000", amberThreshold: "7000", mode: "gte" });
+  ws.getCell(r, 8).value = `≥ $${BENCHMARK_REV_PER_STUDENT_GREEN.toLocaleString()}`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  cfRules.push({ row: rpsRow, greenThreshold: String(BENCHMARK_REV_PER_STUDENT_GREEN), amberThreshold: String(BENCHMARK_REV_PER_STUDENT_AMBER), mode: "gte" });
 
   r++;
   const payrollRow = r;
@@ -963,10 +974,10 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.numFmt = PCT;
     gc(cell);
     cell.alignment = { horizontal: "right" };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: pPct <= 0.55 ? GREEN_BG : pPct <= 0.65 ? AMBER_BG : RED_BG } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: pPct <= BENCHMARK_PAYROLL_GREEN ? GREEN_BG : pPct <= BENCHMARK_PAYROLL_AMBER ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = "≤ 55%"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
-  cfRules.push({ row: payrollRow, greenThreshold: "0.55", amberThreshold: "0.65", mode: "lte" });
+  ws.getCell(r, 8).value = `≤ ${Math.round(BENCHMARK_PAYROLL_GREEN * 100)}%`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  cfRules.push({ row: payrollRow, greenThreshold: String(BENCHMARK_PAYROLL_GREEN), amberThreshold: String(BENCHMARK_PAYROLL_AMBER), mode: "lte" });
 
   r++;
   const facilityRow = r;
@@ -979,10 +990,10 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.numFmt = PCT;
     gc(cell);
     cell.alignment = { horizontal: "right" };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fPct <= 0.15 ? GREEN_BG : fPct <= 0.25 ? AMBER_BG : RED_BG } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fPct <= BENCHMARK_FACILITY_GREEN ? GREEN_BG : fPct <= BENCHMARK_FACILITY_AMBER ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = "≤ 15%"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
-  cfRules.push({ row: facilityRow, greenThreshold: "0.15", amberThreshold: "0.25", mode: "lte" });
+  ws.getCell(r, 8).value = `≤ ${Math.round(BENCHMARK_FACILITY_GREEN * 100)}%`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  cfRules.push({ row: facilityRow, greenThreshold: String(BENCHMARK_FACILITY_GREEN), amberThreshold: String(BENCHMARK_FACILITY_AMBER), mode: "lte" });
 
   r++;
   const opMarginRow = r;
@@ -1016,10 +1027,10 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   const rsCell = ws.getCell(r, 3);
   rsCell.value = revSourceCount;
   rsCell.numFmt = NUM;
-  rsCell.font = { ...BF, color: { argb: revSourceCount >= 3 ? DASHBOARD_GREEN : revSourceCount >= 2 ? DASHBOARD_AMBER : DASHBOARD_RED } };
+  rsCell.font = { ...BF, color: { argb: revSourceCount >= BENCHMARK_REV_SOURCES_GREEN ? DASHBOARD_GREEN : revSourceCount >= BENCHMARK_REV_SOURCES_AMBER ? DASHBOARD_AMBER : DASHBOARD_RED } };
   rsCell.border = BORDER;
   ws.mergeCells(r, 3, r, 7);
-  ws.getCell(r, 8).value = "≥ 3 sources"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, 8).value = `≥ ${BENCHMARK_REV_SOURCES_GREEN} sources`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
 
   const totalExpByYear = input.revenueByYear.map((_, i) =>
     input.personnelByYear[i] + input.opexByYear[i] + input.debtServiceByYear[i]
@@ -1039,12 +1050,12 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     gc(cell);
     cell.alignment = { horizontal: "right" };
     if (input.hasDebt) {
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: yDSCR >= 1.25 ? GREEN_BG : yDSCR >= 1.0 ? AMBER_BG : RED_BG } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: yDSCR >= BENCHMARK_DSCR_GREEN ? GREEN_BG : yDSCR >= BENCHMARK_DSCR_AMBER ? AMBER_BG : RED_BG } };
     }
   }
-  ws.getCell(r, 8).value = input.hasDebt ? "≥ 1.25x" : "N/A"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, 8).value = input.hasDebt ? `≥ ${BENCHMARK_DSCR_GREEN.toFixed(2)}x` : "N/A"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
   if (input.hasDebt) {
-    cfRules.push({ row: dscrRow, greenThreshold: "1.25", amberThreshold: "1.0", mode: "gte" });
+    cfRules.push({ row: dscrRow, greenThreshold: String(BENCHMARK_DSCR_GREEN), amberThreshold: String(BENCHMARK_DSCR_AMBER), mode: "gte" });
   }
 
   r++;

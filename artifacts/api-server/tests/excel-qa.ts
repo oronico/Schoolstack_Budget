@@ -652,6 +652,7 @@ function runDashboardTieOuts(wb: ExcelJS.Workbook): TestResult[] {
     "Revenue per Student",
     "Revenue Sources",
     "Break-even",
+    "Cash Runway",
   ];
 
   const foundLabels: string[] = [];
@@ -684,6 +685,36 @@ function runDashboardTieOuts(wb: ExcelJS.Workbook): TestResult[] {
     passed: hasBenchmark,
     details: [hasBenchmark ? "Benchmark header found in column H" : ""],
     errors: hasBenchmark ? [] : ["Benchmark column header not found"],
+  });
+
+  const GREEN_BG_ARGB = "FFE8F5E9";
+  const AMBER_BG_ARGB = "FFFFF3E0";
+  const RED_BG_ARGB = "FFFCE4EC";
+  const GREEN_FONT = "FF16A34A";
+  const AMBER_FONT = "FFD97706";
+  const RED_FONT = "FFDC2626";
+  const scorecardMetrics = ["Payroll %", "Facility %", "Operating Margin", "DSCR", "Revenue per Student", "Revenue Sources"];
+  let coloredMetricCount = 0;
+  ds.eachRow((row) => {
+    const label = extractTextValue(row.getCell(2).value).trim();
+    if (!scorecardMetrics.some((m) => label.toLowerCase().includes(m.toLowerCase()))) return;
+    for (let c = 3; c <= 7; c++) {
+      const cell = row.getCell(c);
+      const fontColor = (cell.font as { color?: { argb?: string } })?.color?.argb;
+      const fillColor = (cell.fill as { fgColor?: { argb?: string } })?.fgColor?.argb;
+      const hasConditionalFont = fontColor === GREEN_FONT || fontColor === AMBER_FONT || fontColor === RED_FONT;
+      const hasConditionalFill = fillColor === GREEN_BG_ARGB || fillColor === AMBER_BG_ARGB || fillColor === RED_BG_ARGB;
+      if (hasConditionalFont || hasConditionalFill) {
+        coloredMetricCount++;
+        break;
+      }
+    }
+  });
+  results.push({
+    name: "Dashboard Conditional Formatting",
+    passed: coloredMetricCount >= 3,
+    details: [`${coloredMetricCount} scorecard metrics have conditional color formatting`],
+    errors: coloredMetricCount < 3 ? [`Only ${coloredMetricCount} metrics have conditional formatting (expected ≥3)`] : [],
   });
 
   return results;
