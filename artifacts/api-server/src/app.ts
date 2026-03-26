@@ -75,6 +75,10 @@ app.get("/api/ready", async (_req, res) => {
 
 app.use("/api", router);
 
+app.use("/api", (_req: Request, res: Response) => {
+  res.status(404).json({ message: "Not found" });
+});
+
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   console.error(`[Unhandled Error] ${req.method} ${req.originalUrl}:`, err.message);
 
