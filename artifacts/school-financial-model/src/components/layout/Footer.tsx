@@ -34,11 +34,12 @@ export function Footer() {
 
           <div>
             <h4 className="font-display text-sm font-bold uppercase tracking-wider text-white/50 mb-4">Built By</h4>
-            <p className="text-sm text-white/70 leading-relaxed">
-              A product of{" "}
-              <span className="font-semibold text-white">Building Hope Impact Fund</span>
-            </p>
-            <p className="text-sm text-white/50 mt-2 leading-relaxed">
+            <img
+              src={`${import.meta.env.BASE_URL}logos/building-hope.png`}
+              alt="Building Hope Impact Fund"
+              className="h-20 w-auto mb-3 brightness-0 invert"
+            />
+            <p className="text-sm text-white/50 leading-relaxed max-w-xs">
               Supporting school founders with the tools they need to launch and sustain great schools.
             </p>
           </div>
