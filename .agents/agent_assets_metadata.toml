@@ -90,3 +90,21 @@ id = "njUaDf8_IBmePbtjr9gts"
 uri = "file://LAUNCH_PROOF_PACK.md"
 type = "text"
 title = "SchoolStack Budget — Launch Proof Pack"
+
+[[outputs]]
+id = "mW3TC7Uv_zBs8CuHmRx8q"
+uri = "file://artifacts/api-server/qa-output/Underwriting_V2_(21-tab)_Private_School_+_ESA.xlsx"
+type = "table"
+title = "21-Tab Underwriting Workbook — Private School + ESA"
+
+[[outputs]]
+id = "_zU3LipiMlCnnyRGAdPAH"
+uri = "file://artifacts/api-server/qa-output/Underwriting_V2_(21-tab)_Microschool_Startup.xlsx"
+type = "table"
+title = "21-Tab Underwriting Workbook — Microschool Startup"
+
+[[outputs]]
+id = "IxfFn0jHQL_QgN81RL5Ft"
+uri = "file://artifacts/api-server/qa-output/Underwriting_V2_(21-tab)_Charter_Public_Funding.xlsx"
+type = "table"
+title = "21-Tab Underwriting Workbook — Charter Public Funding"
