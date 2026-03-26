@@ -41,6 +41,35 @@ function PageLoader() {
   );
 }
 
+function SpaceAwareRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (user) return;
+
+    const search = window.location.search;
+    if (search && search.includes("sqft") || search && search.includes("students") || search && search.includes("monthlyRent") || search && search.includes("schoolName")) {
+      setLocation(`/underwriting${search}`);
+    } else {
+      const currentPath = window.location.pathname + search;
+      const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+      const relative = base && currentPath.startsWith(base) ? currentPath.slice(base.length) : currentPath;
+      if (relative && relative !== "/" && relative !== "/login" && relative !== "/register") {
+        sessionStorage.setItem("auth_return_to", relative);
+      }
+      setLocation("/login");
+    }
+  }, [user, isLoading, setLocation]);
+
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
+  return user ? <Component /> : null;
+}
+
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -81,7 +110,7 @@ function AppRouter() {
           {() => <ProtectedRoute component={DashboardPage} />}
         </Route>
         <Route path="/model/new">
-          {() => <ProtectedRoute component={NewModelPage} />}
+          {() => <SpaceAwareRoute component={NewModelPage} />}
         </Route>
         <Route path="/model/:id/scenarios">
           {() => <ProtectedRoute component={ScenarioPage} />}

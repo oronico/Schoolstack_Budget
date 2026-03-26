@@ -126,6 +126,72 @@ export function PublicWizardPage() {
   });
 
   useEffect(() => {
+    const search = window.location.search;
+    if (search) {
+      const params = new URLSearchParams(search);
+      const hasSpaceParams = params.has("sqft") || params.has("students") || params.has("monthlyRent") || params.has("schoolName");
+      if (hasSpaceParams) {
+        const updates: Record<string, unknown> = {};
+        const sp: Record<string, unknown> = { ...methods.getValues("schoolProfile") };
+
+        const schoolName = params.get("schoolName");
+        if (schoolName) sp.schoolName = schoolName;
+
+        const monthlyRent = parseFloat(params.get("monthlyRent") || "");
+        if (monthlyRent > 0) {
+          sp.locationSecured = true;
+          sp.ownershipType = "rent";
+          sp.monthlyRent = monthlyRent;
+        }
+
+        const nnnAnnual = parseFloat(params.get("nnnAnnual") || "");
+        if (nnnAnnual > 0) {
+          sp.isNNNLease = true;
+          sp.nnnCamCharges = Math.round(nnnAnnual / 12);
+        }
+
+        updates.schoolProfile = sp;
+
+        const sqft = parseFloat(params.get("sqft") || "");
+        const students = parseFloat(params.get("students") || "");
+
+        if (monthlyRent > 0) {
+          updates.facilities = { ...methods.getValues("facilities"), monthlyRent };
+        }
+        if (sqft > 0) {
+          const fac = (updates.facilities || methods.getValues("facilities")) as Record<string, unknown>;
+          fac.annualUtilities = Math.round(sqft * 2.5);
+          fac.annualInsurance = Math.round(sqft * 1.5);
+          updates.facilities = fac;
+        }
+
+        if (students > 0) {
+          updates.programs = [{
+            id: `prog_${Date.now()}`,
+            name: "General Enrollment",
+            annualTuition: 0,
+            priorYear: 0,
+            currentYear: 0,
+            year1: students,
+            year2: Math.round(students * 1.15),
+            year3: Math.round(students * 1.30),
+            year4: Math.round(students * 1.40),
+            year5: Math.round(students * 1.50),
+          }];
+          if (sqft > 0) {
+            (sp as Record<string, unknown>).maxCapacity = Math.max(students, Math.round(sqft / 50));
+          }
+        }
+
+        for (const [key, val] of Object.entries(updates)) {
+          methods.setValue(key as any, val as any, { shouldDirty: true });
+        }
+
+        window.history.replaceState({}, "", window.location.pathname);
+        return;
+      }
+    }
+
     if (savedData && savedStep > 1) {
       setCurrentStep(savedStep);
     }
