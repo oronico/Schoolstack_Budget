@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 43554,
+    "fileSize": 43588,
     "tabs": [
       "Instructions",
       "Cover",
@@ -32,7 +32,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 42.5 KB",
+          "File size: 42.6 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -139,7 +139,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "5 scorecard metrics have conditional color formatting"
+          "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -149,7 +149,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 26579,
+    "fileSize": 26625,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -225,7 +225,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -235,7 +235,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 24786,
+    "fileSize": 24824,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -291,7 +291,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -301,7 +301,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 37653,
+    "fileSize": 37685,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -384,7 +384,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -394,7 +394,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 25662,
+    "fileSize": 25674,
     "tabs": [
       "Instructions",
       "Cover",
@@ -539,7 +539,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 47192,
+    "fileSize": 47251,
     "tabs": [
       "Instructions",
       "Cover",
@@ -716,7 +716,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -726,7 +726,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 28339,
+    "fileSize": 28400,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -803,7 +803,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -813,7 +813,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 27906,
+    "fileSize": 27959,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -870,7 +870,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -880,7 +880,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 38388,
+    "fileSize": 38429,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -963,7 +963,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -973,7 +973,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 25846,
+    "fileSize": 25849,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1050,7 +1050,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -1118,7 +1118,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 48410,
+    "fileSize": 48453,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1295,7 +1295,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -1305,7 +1305,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter Public Funding",
-    "fileSize": 27388,
+    "fileSize": 27431,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1322,7 +1322,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 26.7 KB",
+          "File size: 26.8 KB",
           "Successfully opened workbook",
           "Worksheets: 9"
         ],
@@ -1381,7 +1381,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -1391,7 +1391,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 26734,
+    "fileSize": 26768,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1447,7 +1447,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -1457,7 +1457,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 38505,
+    "fileSize": 38555,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1481,7 +1481,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 37.6 KB",
+          "File size: 37.7 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -1540,7 +1540,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -1550,7 +1550,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 25937,
+    "fileSize": 25951,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1627,7 +1627,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -1695,7 +1695,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 47728,
+    "fileSize": 47775,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1725,7 +1725,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 46.6 KB",
+          "File size: 46.7 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -1872,7 +1872,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -1882,7 +1882,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 27131,
+    "fileSize": 27162,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1958,7 +1958,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -1968,7 +1968,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26580,
+    "fileSize": 26615,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -2024,7 +2024,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -2034,7 +2034,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 38291,
+    "fileSize": 38332,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -2117,7 +2117,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -2127,7 +2127,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26374,
+    "fileSize": 26382,
     "tabs": [
       "Instructions",
       "Cover",
@@ -2260,7 +2260,7 @@
         "name": "Dashboard Conditional Formatting",
         "passed": true,
         "details": [
-          "6 scorecard metrics have conditional color formatting"
+          "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }

@@ -928,7 +928,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor, data.tuitionTiers);
 
     const pnlWs = wb.addWorksheet("Financial Model");
-    buildLegacyPnLTab(pnlWs, data, enrollmentByYear, yearCount, cols, yearHeaders, prorationFactor);
+    const legacyResult = buildLegacyPnLTab(pnlWs, data, enrollmentByYear, yearCount, cols, yearHeaders, prorationFactor);
 
     const summaryWs = wb.addWorksheet("Summary");
     buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders, {
@@ -943,6 +943,32 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     }
 
     buildCoverSheet(wb, sp, yearCount, undefined, consultantData, enrollmentByYear);
+
+    {
+      const fac = (data.facilities || {}) as Record<string, number>;
+      const hasDebt = (fac.loanAmount || 0) > 0;
+      const cashArr: number[] = [];
+      let runCash = 0;
+      for (let y = 0; y < yearCount; y++) {
+        runCash += (legacyResult.niByYr[y] || 0);
+        cashArr.push(runCash);
+      }
+      await addDashboardSheet(wb, {
+        schoolName: sp.schoolName || "School",
+        entityType: sp.entityType || "",
+        enrollment: enrollmentByYear,
+        revenueByYear: legacyResult.revenueByYr,
+        personnelByYear: legacyResult.staffByYr,
+        opexByYear: legacyResult.expByYr,
+        debtServiceByYear: new Array(yearCount).fill(0),
+        netIncomeByYear: legacyResult.niByYr,
+        cashByYear: cashArr,
+        startingCash: 0,
+        hasDebt,
+        revenueCategories: {},
+        cumNIRef: { sheetName: "Financial Model", row: 8, startCol: 2 },
+      });
+    }
   }
 
   polishWorkbook(wb, sp.schoolName);
@@ -2326,4 +2352,6 @@ function buildLegacyPnLTab(
   styleSectionRow(ws, 7, cols);
 
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
+
+  return { revenueByYr, staffByYr, expByYr, niByYr, cumNIByYr };
 }

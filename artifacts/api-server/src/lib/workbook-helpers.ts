@@ -1013,24 +1013,29 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   cfRules.push({ row: opMarginRow, greenThreshold: "0.10", amberThreshold: "0", mode: "gte" });
 
   r++;
-  let revSourceCount = 0;
-  const catTotals = new Map<string, number>();
+  const revSourcesByYear: number[] = new Array(5).fill(0);
   if (input.revenueCategories) {
-    for (const [cat, vals] of Object.entries(input.revenueCategories)) {
-      const total = vals.reduce((a: number, b: number) => a + b, 0);
-      if (total > 0) { revSourceCount++; catTotals.set(cat, total); }
+    for (let y = 0; y < 5; y++) {
+      for (const [, vals] of Object.entries(input.revenueCategories)) {
+        if ((vals[y] || 0) > 0) revSourcesByYear[y]++;
+      }
     }
   } else {
-    revSourceCount = input.revenueByYear.some(v => v > 0) ? 1 : 0;
+    for (let y = 0; y < 5; y++) {
+      revSourcesByYear[y] = (input.revenueByYear[y] || 0) > 0 ? 1 : 0;
+    }
   }
   ws.getCell(r, 2).value = "Revenue Sources"; bc(ws.getCell(r, 2));
   ws.getCell(r, 2).border = BORDER;
-  const rsCell = ws.getCell(r, 3);
-  rsCell.value = revSourceCount;
-  rsCell.numFmt = NUM;
-  rsCell.font = { ...BF, color: { argb: revSourceCount >= BENCHMARK_REV_SOURCES_GREEN ? DASHBOARD_GREEN : revSourceCount >= BENCHMARK_REV_SOURCES_AMBER ? DASHBOARD_AMBER : DASHBOARD_RED } };
-  rsCell.border = BORDER;
-  ws.mergeCells(r, 3, r, 7);
+  for (let y = 0; y < 5; y++) {
+    const cnt = revSourcesByYear[y];
+    const cell = ws.getCell(r, y + 3);
+    cell.value = cnt;
+    cell.numFmt = NUM;
+    gc(cell);
+    cell.alignment = { horizontal: "right" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cnt >= BENCHMARK_REV_SOURCES_GREEN ? GREEN_BG : cnt >= BENCHMARK_REV_SOURCES_AMBER ? AMBER_BG : RED_BG } };
+  }
   ws.getCell(r, 8).value = `≥ ${BENCHMARK_REV_SOURCES_GREEN} sources`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
 
   const totalExpByYear = input.revenueByYear.map((_, i) =>
@@ -1077,7 +1082,13 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     if (input.cumNIRef) {
       const refCol = colLetter(input.cumNIRef.startCol + y);
       const cumRef = `'${input.cumNIRef.sheetName}'!${refCol}${input.cumNIRef.row}`;
-      setFormula(cell, `IF(${cumRef}>=0,"✓ Break-even","")`, y === breakEvenYear ? "✓ Break-even" : "");
+      if (y === 0) {
+        setFormula(cell, `IF(${cumRef}>=0,"✓ Break-even","")`, y === breakEvenYear ? "✓ Break-even" : "");
+      } else {
+        const prevRefCol = colLetter(input.cumNIRef.startCol + y - 1);
+        const prevCumRef = `'${input.cumNIRef.sheetName}'!${prevRefCol}${input.cumNIRef.row}`;
+        setFormula(cell, `IF(AND(${cumRef}>=0,${prevCumRef}<0),"✓ Break-even","")`, y === breakEvenYear ? "✓ Break-even" : "");
+      }
     } else {
       cell.value = y === breakEvenYear ? "✓ Break-even" : "";
     }
@@ -1090,24 +1101,33 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   ws.getCell(r, 8).value = "Year 1"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
 
   r++;
-  let cashRunwayMonths = 60;
-  let runningCash = input.startingCash;
-  for (let y = 0; y < 5; y++) {
-    const monthlyNI = input.netIncomeByYear[y] / 12;
-    for (let m = 0; m < 12; m++) {
-      runningCash += monthlyNI;
-      if (runningCash < 0) { cashRunwayMonths = y * 12 + m; break; }
-    }
-    if (runningCash < 0) break;
-  }
-  ws.getCell(r, 2).value = "Cash Runway"; bc(ws.getCell(r, 2));
+  ws.getCell(r, 2).value = "Cash Runway (Months)"; bc(ws.getCell(r, 2));
   ws.getCell(r, 2).border = BORDER;
-  const crCell = ws.getCell(r, 3);
-  crCell.value = cashRunwayMonths >= 60 ? "60+ months" : `${cashRunwayMonths} months`;
-  crCell.font = { ...BF, color: { argb: cashRunwayMonths >= 24 ? DASHBOARD_GREEN : cashRunwayMonths >= 12 ? DASHBOARD_AMBER : DASHBOARD_RED } };
-  crCell.border = BORDER;
-  ws.mergeCells(r, 3, r, 7);
-  ws.getCell(r, 8).value = "60+ months"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  for (let y = 0; y < 5; y++) {
+    const cashBal = input.cashByYear[y] || 0;
+    const totalExp = totalExpByYear[y] || 0;
+    const monthlyBurnY = totalExp / 12;
+    const runwayM = monthlyBurnY > 0 ? Math.round(cashBal / monthlyBurnY) : (cashBal >= 0 ? 60 : 0);
+    const cappedM = Math.min(runwayM, 60);
+    const cell = ws.getCell(r, y + 3);
+    cell.value = cappedM >= 60 ? "60+" : cappedM;
+    cell.numFmt = cappedM >= 60 ? "@" : NUM;
+    gc(cell);
+    cell.alignment = { horizontal: "right" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cappedM >= 24 ? GREEN_BG : cappedM >= 12 ? AMBER_BG : RED_BG } };
+  }
+  ws.getCell(r, 8).value = "≥ 24 months"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+
+  let cashRunwayMonths = 60;
+  let _runCash = input.startingCash;
+  for (let y = 0; y < 5; y++) {
+    const mNI = input.netIncomeByYear[y] / 12;
+    for (let m = 0; m < 12; m++) {
+      _runCash += mNI;
+      if (_runCash < 0) { cashRunwayMonths = y * 12 + m; break; }
+    }
+    if (_runCash < 0) break;
+  }
 
   const y5Rev = input.revenueByYear[4] || 1;
   const y5Pers = input.personnelByYear[4];

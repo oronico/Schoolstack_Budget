@@ -693,7 +693,7 @@ function runDashboardTieOuts(wb: ExcelJS.Workbook): TestResult[] {
   const GREEN_FONT = "FF16A34A";
   const AMBER_FONT = "FFD97706";
   const RED_FONT = "FFDC2626";
-  const scorecardMetrics = ["Payroll %", "Facility %", "Operating Margin", "DSCR", "Revenue per Student", "Revenue Sources"];
+  const scorecardMetrics = ["Payroll %", "Facility %", "Operating Margin", "DSCR", "Revenue per Student", "Revenue Sources", "Cash Runway", "Break-even"];
   let coloredMetricCount = 0;
   ds.eachRow((row) => {
     const label = extractTextValue(row.getCell(2).value).trim();
