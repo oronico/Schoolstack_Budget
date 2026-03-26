@@ -18,7 +18,7 @@ export const DASHBOARD_RED = "FFDC2626";
 export const BENCHMARK_PAYROLL_GREEN = 0.55;
 export const BENCHMARK_PAYROLL_AMBER = 0.65;
 export const BENCHMARK_FACILITY_GREEN = 0.15;
-export const BENCHMARK_FACILITY_AMBER = 0.25;
+export const BENCHMARK_FACILITY_AMBER = 0.22;
 export const BENCHMARK_DSCR_GREEN = 1.25;
 export const BENCHMARK_DSCR_AMBER = 1.0;
 export const BENCHMARK_REV_PER_STUDENT_GREEN = 10000;
@@ -797,6 +797,7 @@ export interface DashboardInput {
   startingCash: number;
   hasDebt: boolean;
   revenueCategories?: Record<string, number[]>;
+  cumNIRef?: { sheetName: string; row: number; startCol: number };
 }
 
 function statusColor(status: string): string {
@@ -1071,11 +1072,21 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   }
   ws.getCell(r, 2).value = "Break-even Year"; bc(ws.getCell(r, 2));
   ws.getCell(r, 2).border = BORDER;
-  const beCell = ws.getCell(r, 3);
-  beCell.value = breakEvenYear >= 0 ? `Year ${breakEvenYear + 1}` : "Not reached";
-  beCell.font = { ...BF, color: { argb: breakEvenYear >= 0 ? DASHBOARD_GREEN : DASHBOARD_RED } };
-  beCell.border = BORDER;
-  ws.mergeCells(r, 3, r, 7);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(r, y + 3);
+    if (input.cumNIRef) {
+      const refCol = colLetter(input.cumNIRef.startCol + y);
+      const cumRef = `'${input.cumNIRef.sheetName}'!${refCol}${input.cumNIRef.row}`;
+      setFormula(cell, `IF(${cumRef}>=0,"✓ Break-even","")`, y === breakEvenYear ? "✓ Break-even" : "");
+    } else {
+      cell.value = y === breakEvenYear ? "✓ Break-even" : "";
+    }
+    cell.font = y === breakEvenYear
+      ? { bold: true, size: 11, name: "Calibri", color: { argb: DASHBOARD_GREEN } }
+      : NF;
+    cell.border = BORDER;
+    cell.alignment = { horizontal: "center" };
+  }
   ws.getCell(r, 8).value = "Year 1"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
 
   r++;

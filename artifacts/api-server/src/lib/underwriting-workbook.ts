@@ -1589,7 +1589,7 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
     cell.alignment = { horizontal: "center" };
   }
 
-  return { niRow };
+  return { niRow, cumNIRow };
 }
 
 function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
@@ -2451,7 +2451,7 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   const { niByYear } = buildBudgetSummary(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, bdRefs);
 
   const { endingCashY1, cumCashRow: cfCumCashRow } = buildMonthlyCashFlowY1(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
-  const { niRow: opStmtNiRow } = buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear);
+  const { niRow: opStmtNiRow, cumNIRow: opStmtCumNIRow } = buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear);
 
   const debtResult = buildDebtSchedule(wb, effectiveData);
   const debtServiceByYear = debtResult.debtByYear;
@@ -2492,6 +2492,7 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
     startingCash,
     hasDebt,
     revenueCategories: revCatsUW,
+    cumNIRef: { sheetName: "5-Year Operating Stmt", row: opStmtCumNIRow, startCol: 2 },
   });
 
   return wb;

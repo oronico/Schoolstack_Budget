@@ -920,6 +920,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
         startingCash: data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0,
         hasDebt,
         revenueCategories: revCats,
+        cumNIRef: { sheetName: "Financial Model", row: 8, startCol: 2 },
       });
     }
   } else {

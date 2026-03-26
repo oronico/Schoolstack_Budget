@@ -987,6 +987,7 @@ interface FiveYearResult {
   facilTotalRow: number;
   capDebtTotalRow: number;
   netIncomeRow: number;
+  cumNIRow: number;
   cfadsRow: number;
   endingCashRow: number;
   dscrRow: number;
@@ -1551,7 +1552,7 @@ function buildFiveYearModel(
 
   return {
     revTotalRow, persTotalRow: persTotalRow, opexTotalRow, facilTotalRow: 0,
-    capDebtTotalRow, netIncomeRow, cfadsRow: cfadsRow,
+    capDebtTotalRow, netIncomeRow, cumNIRow, cfadsRow: cfadsRow,
     endingCashRow, dscrRow: dscrRow, breakEvenRow: r,
   };
 }
@@ -2218,6 +2219,7 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     startingCash,
     hasDebt,
     revenueCategories: revCatsF,
+    cumNIRef: { sheetName: "5-Year Model", row: fiveYr.cumNIRow, startCol: 2 },
   });
   }
 

@@ -624,6 +624,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
 
   const ctx: Partial<CrossTabCtx> = { revGrandTotalRow, staffTotalRow, opexGrandTotalRow, facGrandTotalRow };
   const plRows = buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType, ctx);
+  const plCumNIRow = plRows.cumNIRow;
 
   buildFiveYearBS(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, cashAtOpen, totalPrincipal, capDebtRows, yc, cols, yearHeaders);
   buildDSCRCovenant(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualDebtSvc, cashAtOpen, enrollment, maxCapacity, yc, cols, yearHeaders);
@@ -667,6 +668,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
       startingCash: cashAtOpen,
       hasDebt,
       revenueCategories: revCatsV1,
+      cumNIRef: { sheetName: "5-Year P&L", row: plCumNIRow, startCol: 2 },
     });
   }
 
@@ -752,6 +754,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
 
   const ctx2: Partial<CrossTabCtx> = { revGrandTotalRow: revGrandTotalRow2, staffTotalRow: staffTotalRow2, opexGrandTotalRow: opexGrandTotalRow2, facGrandTotalRow: facGrandTotalRow2 };
   const plRows2 = buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType, ctx2);
+  const plCumNIRow2 = plRows2.cumNIRow;
 
   buildFiveYearBS(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, cashAtOpen, totalPrincipal, capDebtRows, yc, cols, yearHeaders);
   buildDSCRCovenant(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualDebtSvc, cashAtOpen, enrollment, maxCapacity, yc, cols, yearHeaders);
@@ -795,6 +798,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
       startingCash: cashAtOpen,
       hasDebt,
       revenueCategories: revCatsV1b,
+      cumNIRef: { sheetName: "5-Year P&L", row: plCumNIRow2, startCol: 2 },
     });
   }
 
@@ -2332,7 +2336,7 @@ function buildFiveYearPL(
   }
 
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
-  return { revRow: revRowPL, totalExpRow, niRow };
+  return { revRow: revRowPL, totalExpRow, niRow, cumNIRow: cumNIRowPL };
 }
 
 

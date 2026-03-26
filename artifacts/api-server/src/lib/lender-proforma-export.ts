@@ -1447,6 +1447,7 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
     startingCash: Number(input.startingCash) || 0,
     hasDebt: res.totalDebtService > 0,
     revenueCategories: lenderRevCats,
+    cumNIRef: { sheetName: "5-Year P&L", row: 19, startCol: 3 },
   });
 
   const buffer = await wb.xlsx.writeBuffer();

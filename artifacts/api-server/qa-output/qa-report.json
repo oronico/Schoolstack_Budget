@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 43440,
+    "fileSize": 43554,
     "tabs": [
       "Instructions",
       "Cover",
@@ -32,7 +32,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 42.4 KB",
+          "File size: 42.5 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -149,7 +149,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 26480,
+    "fileSize": 26579,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -166,7 +166,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.9 KB",
+          "File size: 26.0 KB",
           "Successfully opened workbook",
           "Worksheets: 9"
         ],
@@ -235,7 +235,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 24678,
+    "fileSize": 24786,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -248,7 +248,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 24.1 KB",
+          "File size: 24.2 KB",
           "Successfully opened workbook",
           "Worksheets: 5"
         ],
@@ -301,7 +301,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 37550,
+    "fileSize": 37653,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -325,7 +325,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 36.7 KB",
+          "File size: 36.8 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -394,7 +394,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 25566,
+    "fileSize": 25662,
     "tabs": [
       "Instructions",
       "Cover",
@@ -412,7 +412,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.0 KB",
+          "File size: 25.1 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -481,7 +481,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 14057,
+    "fileSize": 14056,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -539,7 +539,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 47088,
+    "fileSize": 47192,
     "tabs": [
       "Instructions",
       "Cover",
@@ -569,7 +569,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 46.0 KB",
+          "File size: 46.1 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -726,7 +726,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 28241,
+    "fileSize": 28339,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -744,7 +744,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 27.6 KB",
+          "File size: 27.7 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -813,7 +813,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 27802,
+    "fileSize": 27906,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -827,7 +827,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 27.2 KB",
+          "File size: 27.3 KB",
           "Successfully opened workbook",
           "Worksheets: 6"
         ],
@@ -880,7 +880,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 38287,
+    "fileSize": 38388,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -904,7 +904,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 37.4 KB",
+          "File size: 37.5 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -973,7 +973,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 25756,
+    "fileSize": 25846,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1060,7 +1060,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 14569,
+    "fileSize": 14568,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -1118,7 +1118,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 48305,
+    "fileSize": 48410,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1148,7 +1148,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 47.2 KB",
+          "File size: 47.3 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -1305,7 +1305,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter Public Funding",
-    "fileSize": 27300,
+    "fileSize": 27388,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1391,7 +1391,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 26638,
+    "fileSize": 26734,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1404,7 +1404,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 26.0 KB",
+          "File size: 26.1 KB",
           "Successfully opened workbook",
           "Worksheets: 5"
         ],
@@ -1457,7 +1457,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 38411,
+    "fileSize": 38505,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1481,7 +1481,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 37.5 KB",
+          "File size: 37.6 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -1550,7 +1550,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 25851,
+    "fileSize": 25937,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1568,7 +1568,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.2 KB",
+          "File size: 25.3 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -1695,7 +1695,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 47621,
+    "fileSize": 47728,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1725,7 +1725,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 46.5 KB",
+          "File size: 46.6 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -1882,7 +1882,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 27046,
+    "fileSize": 27131,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1899,7 +1899,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 26.4 KB",
+          "File size: 26.5 KB",
           "Successfully opened workbook",
           "Worksheets: 9"
         ],
@@ -1968,7 +1968,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26484,
+    "fileSize": 26580,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1981,7 +1981,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.9 KB",
+          "File size: 26.0 KB",
           "Successfully opened workbook",
           "Worksheets: 5"
         ],
@@ -2034,7 +2034,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 38193,
+    "fileSize": 38291,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -2058,7 +2058,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 37.3 KB",
+          "File size: 37.4 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -2127,7 +2127,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26283,
+    "fileSize": 26374,
     "tabs": [
       "Instructions",
       "Cover",
@@ -2145,7 +2145,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.7 KB",
+          "File size: 25.8 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
