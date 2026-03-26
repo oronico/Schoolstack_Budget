@@ -1,0 +1,32 @@
+Here are the states where homeschool families can access state revenue, organized by mechanism:
+ESA funds available to homeschoolers (biggest $):
+	∙	Arizona - ~$7,000-$8,000/student, universal eligibility
+	∙	Arkansas - ~$6,600-$7,600/student, universal by 2025
+	∙	Florida - PEP scholarship for homeschoolers, ~$8,000
+	∙	Iowa - ~$8,000/student, universal eligibility
+	∙	Louisiana - GATOR program, transitioning from voucher to ESA
+	∙	Mississippi - Special needs ESA, ~$6,500
+	∙	New Hampshire - ~$4,600/student, income-capped at 350% FPL
+	∙	North Carolina - ESA+ for special needs students only, ~$9,000-$17,000
+	∙	South Carolina - Exceptional needs students
+	∙	Tennessee - $7,000/student, limited geographic eligibility currently
+	∙	Texas - Launching 2026-27 with $2,000 for homeschoolers specifically, $10,000 for private school, up to $30,000 for students with disabilities 
+	∙	Utah - Fits All, ~$8,000 (court challenges pending)
+	∙	West Virginia - Hope Scholarship, ~$5,300, expanding to all homeschoolers in 2026 
+	∙	Wyoming - ~$6,000 (blocked by judge, status uncertain)
+Refundable tax credits usable by homeschoolers:
+	∙	Alabama - CHOOSE Act, up to $2,000 per kid for homeschoolers 
+	∙	Idaho - Parental Choice Tax Credit, up to $5,000/student (upheld by Supreme Court Feb 2026)
+	∙	Oklahoma - Parental Choice Tax Credit, $5,000-$7,500/student
+Tax deductions/credits (smaller amounts):
+	∙	Illinois - 25% credit on qualifying expenses, max ~$250
+	∙	Indiana - ~$1,000/child tax deduction
+	∙	Louisiana - School expense deduction
+	∙	Minnesota - Education deduction/credit
+Correspondence/charter-based funding:
+	∙	Alaska - ~$2,700/student through correspondence programs
+	∙	California - $2,800-$3,200 through charter school enrollment (not a direct homeschool payment)
+	∙	Oregon - Charter school enrollment pathway
+Not yet launched but enacted:
+	∙	Georgia - Promise Scholarship, $6,500 for students in lowest-performing districts
+That’s roughly 20-25 states where homeschool families can access some form of state dollars, with the ESA states being by far the most significant for SchoolStack’s market. Want me to build this into a spreadsheet cross-referenced with the student count methods?​​​​​​​​​​​​​​​​
