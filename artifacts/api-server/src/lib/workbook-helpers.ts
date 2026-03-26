@@ -161,7 +161,8 @@ export function entityLabel(e?: string): string {
   const map: Record<string, string> = {
     sole_practitioner: "Sole Practitioner", llc_single: "LLC (Single Member)",
     llc_partnership: "LLC (Partnership)", c_corp: "C Corporation",
-    s_corp: "S Corporation", nonprofit_501c3: "501(c)(3) Nonprofit"
+    s_corp: "S Corporation", nonprofit_501c3: "501(c)(3) Nonprofit",
+    undetermined: "Undetermined"
   };
   return map[e || ""] || e || "";
 }

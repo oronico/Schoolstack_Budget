@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark } from "lucide-react";
+import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit } from "../schema";
 
@@ -65,9 +65,11 @@ function EINInput() {
         className="w-full rounded-xl border-2 border-border bg-card px-4 py-3 text-base text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10 tracking-widest font-mono"
         placeholder="XX-XXXXXXX"
       />
-      {display && !isComplete && (
+      {display && !isComplete ? (
         <p className="text-xs text-muted-foreground">{raw.replace(/\D/g, "").length}/9 digits</p>
-      )}
+      ) : !display ? (
+        <p className="text-xs text-muted-foreground">Optional — you can add this later</p>
+      ) : null}
     </div>
   );
 }
@@ -118,6 +120,121 @@ function RadioCard({ selected, onSelect, icon, title, description, disabled }: R
 
 
 
+
+const ENTITY_TYPE_GUIDE = [
+  {
+    key: "sole_practitioner",
+    name: "Sole Practitioner",
+    pros: "Simplest to set up, no paperwork or fees to form, full control over decisions",
+    cons: "Personal liability for debts, harder to get loans, no EIN separation",
+    goodFor: "Tutoring businesses, solo micro-pods, getting started quickly",
+  },
+  {
+    key: "llc_single",
+    name: "LLC (Single Member)",
+    pros: "Separates personal and business assets, simple pass-through taxes, credibility with vendors",
+    cons: "State filing fees, annual reports in some states, slightly more paperwork",
+    goodFor: "Solo founders starting a microschool or learning pod",
+  },
+  {
+    key: "llc_partnership",
+    name: "LLC (Partnership)",
+    pros: "Same liability protection as single-member LLC, flexible profit sharing, pass-through taxes",
+    cons: "Need an operating agreement, potential for partner disagreements, more complex tax filing",
+    goodFor: "Co-founded schools with two or more partners",
+  },
+  {
+    key: "c_corp",
+    name: "C Corporation",
+    pros: "Can raise investment capital, issue stock, unlimited growth potential",
+    cons: "Double taxation on profits, more regulatory requirements, higher accounting costs",
+    goodFor: "Schools planning to scale significantly or take outside investment",
+  },
+  {
+    key: "s_corp",
+    name: "S Corporation",
+    pros: "Pass-through taxation like an LLC, corporate structure, potential payroll tax savings",
+    cons: "Limited to 100 shareholders, restrictions on ownership types, more paperwork than an LLC",
+    goodFor: "Small school businesses wanting corporate structure without double taxation",
+  },
+  {
+    key: "nonprofit_501c3",
+    name: "501(c)(3) Nonprofit",
+    pros: "Tax-exempt, eligible for grants and donations, donors get tax deductions, access to public funding",
+    cons: "No owners or shareholders, strict governance rules, longer setup process, public reporting",
+    goodFor: "Mission-driven schools, charter schools, required for most government and foundation funding",
+  },
+  {
+    key: "undetermined",
+    name: "Undetermined",
+    pros: "No pressure to decide right now — your financial model works with any entity type",
+    cons: "You'll want to choose before applying for loans, grants, or opening a bank account",
+    goodFor: "Early-stage founders still exploring options — you can update this anytime",
+  },
+];
+
+function EntityTypeSection({ allowedEntityTypes, entityType }: { allowedEntityTypes: [string, string][]; entityType?: string }) {
+  const [guideOpen, setGuideOpen] = useState(false);
+
+  return (
+    <div>
+      <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Entity Type</h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        This helps us use the right financial terminology in your model and reports. There's no wrong answer here.
+      </p>
+
+      <button
+        type="button"
+        onClick={() => setGuideOpen(!guideOpen)}
+        className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 mb-4 transition-colors"
+      >
+        <Info className="h-4 w-4" />
+        {guideOpen ? "Hide" : "Which entity type is right for my school?"}
+        {guideOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+      </button>
+
+      {guideOpen && (
+        <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/[0.02] p-5 animate-in fade-in slide-in-from-top-2 duration-300">
+          <p className="text-sm text-muted-foreground mb-4">
+            Every school is different, and there's no single right answer. Here's a quick overview to help you think through your options. You can always change this later.
+          </p>
+          <div className="space-y-4">
+            {ENTITY_TYPE_GUIDE.filter(g => allowedEntityTypes.some(([k]) => k === g.key)).map((guide) => (
+              <div key={guide.key} className="rounded-xl border border-border bg-card p-4">
+                <h4 className="font-semibold text-sm text-foreground mb-2">{guide.name}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span className="font-medium text-green-600">Pros: </span>
+                    <span className="text-muted-foreground">{guide.pros}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-amber-600">Cons: </span>
+                    <span className="text-muted-foreground">{guide.cons}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-primary">Good for: </span>
+                    <span className="text-muted-foreground">{guide.goodFor}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <FormSelect
+          name="schoolProfile.entityType"
+          label="Entity Type"
+          options={allowedEntityTypes.map(([value, label]) => ({ value, label }))}
+        />
+        {entityType && entityType !== "sole_practitioner" && entityType !== "undetermined" && (
+          <EINInput />
+        )}
+      </div>
+    </div>
+  );
+}
 
 const FACILITY_BENCHMARKS: Record<string, string> = {
   microschool: "$1,500–$4,000/mo",
@@ -610,20 +727,10 @@ export function SchoolProfileStep() {
         </div>
       )}
 
-      <div>
-        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Entity Type</h3>
-        <p className="text-sm text-muted-foreground mb-4">This helps us use the right financial terminology in your model and reports.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormSelect
-            name="schoolProfile.entityType"
-            label="Entity Type"
-            options={allowedEntityTypes.map(([value, label]) => ({ value, label }))}
-          />
-          {entityType && entityType !== "sole_practitioner" && (
-            <EINInput />
-          )}
-        </div>
-      </div>
+      <EntityTypeSection
+        allowedEntityTypes={allowedEntityTypes}
+        entityType={entityType}
+      />
 
       <div>
         <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Fiscal Year</h3>

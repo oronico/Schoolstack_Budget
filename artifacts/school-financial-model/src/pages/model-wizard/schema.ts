@@ -17,7 +17,7 @@ export const schoolTypeSchema = z.enum(["charter_school", "homeschool_coop", "le
   required_error: "Please select the type of school you're building",
   invalid_type_error: "Please select a valid school type",
 });
-export const entityTypeSchema = z.enum(["sole_practitioner", "llc_single", "llc_partnership", "c_corp", "s_corp", "nonprofit_501c3"], {
+export const entityTypeSchema = z.enum(["sole_practitioner", "llc_single", "llc_partnership", "c_corp", "s_corp", "nonprofit_501c3", "undetermined"], {
   required_error: "Please select your school's legal entity type",
   invalid_type_error: "Please select a valid entity type",
 });
@@ -369,6 +369,7 @@ export const ENTITY_TYPE_LABELS: Record<string, string> = {
   c_corp: "C Corporation",
   s_corp: "S Corporation",
   nonprofit_501c3: "501(c)(3) Nonprofit",
+  undetermined: "Undetermined \u2014 I haven't decided yet",
 };
 
 export const SCHOOL_TYPE_LABELS: Record<string, string> = {
@@ -386,7 +387,7 @@ export function isNonprofit(entityType?: string): boolean {
 }
 
 export function isForProfit(entityType?: string): boolean {
-  return !!entityType && entityType !== "nonprofit_501c3";
+  return !!entityType && entityType !== "nonprofit_501c3" && entityType !== "undetermined";
 }
 
 export function profitLabel(entityType?: string): string {

@@ -148,6 +148,7 @@ export const CreateModelBody = zod.object({
             "c_corp",
             "s_corp",
             "nonprofit_501c3",
+            "undetermined",
           ])
           .optional(),
         ein: zod.string().optional(),
@@ -511,6 +512,7 @@ export const GetModelResponse = zod.object({
             "c_corp",
             "s_corp",
             "nonprofit_501c3",
+            "undetermined",
           ])
           .optional(),
         ein: zod.string().optional(),
@@ -875,6 +877,7 @@ export const UpdateModelBody = zod.object({
             "c_corp",
             "s_corp",
             "nonprofit_501c3",
+            "undetermined",
           ])
           .optional(),
         ein: zod.string().optional(),
@@ -1231,6 +1234,7 @@ export const UpdateModelResponse = zod.object({
             "c_corp",
             "s_corp",
             "nonprofit_501c3",
+            "undetermined",
           ])
           .optional(),
         ein: zod.string().optional(),
@@ -1614,6 +1618,7 @@ export const ArchiveModelResponse = zod.object({
             "c_corp",
             "s_corp",
             "nonprofit_501c3",
+            "undetermined",
           ])
           .optional(),
         ein: zod.string().optional(),

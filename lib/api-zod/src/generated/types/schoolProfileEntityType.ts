@@ -16,4 +16,5 @@ export const SchoolProfileEntityType = {
   c_corp: "c_corp",
   s_corp: "s_corp",
   nonprofit_501c3: "nonprofit_501c3",
+  undetermined: "undetermined",
 } as const;

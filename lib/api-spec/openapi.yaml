@@ -1088,7 +1088,7 @@ components:
           type: string
         entityType:
           type: string
-          enum: [sole_practitioner, llc_single, llc_partnership, c_corp, s_corp, nonprofit_501c3]
+          enum: [sole_practitioner, llc_single, llc_partnership, c_corp, s_corp, nonprofit_501c3, undetermined]
         ein:
           type: string
         schoolStage:
