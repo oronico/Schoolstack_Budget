@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
@@ -23,11 +23,13 @@ import {
   mergeCanonicalCapitalRows,
   isCustomCategory,
   generateCustomCategoryKey,
+  COA_CATEGORY_RANGES,
 } from "@/lib/expense-defaults";
 import {
   type StaffingRowData,
   calculatePersonnelCosts,
 } from "@/lib/staffing-defaults";
+import { GUIDED_EXPENSE_QUESTIONS } from "@/lib/expense-guided-questions";
 
 const CATEGORY_ICONS: Record<string, typeof DollarSign> = {
   personnel: Users,
@@ -68,6 +70,40 @@ const CATEGORY_GUIDANCE: Record<string, { tip: string; common: boolean }> = {
     common: false,
   },
 };
+
+function exportChartOfAccounts(
+  expenseRows: ExpenseRowData[],
+  capitalRows: CapitalDebtRowData[],
+  customCategoryLabels: Record<string, string>,
+) {
+  const lines: string[] = ["Account Code,Account Name,Category,Type"];
+  const catLabel = (cat: string) =>
+    customCategoryLabels[cat] || EXPENSE_CATEGORY_LABELS[cat] || cat;
+
+  for (const row of expenseRows) {
+    if (!row.lineItem) continue;
+    const code = row.accountCode || "";
+    const escaped = row.lineItem.includes(",") ? `"${row.lineItem}"` : row.lineItem;
+    lines.push(`${code},${escaped},${catLabel(row.category)},Expense`);
+  }
+  for (const row of capitalRows) {
+    if (!row.lineItem) continue;
+    const code = row.accountCode || "";
+    const escaped = row.lineItem.includes(",") ? `"${row.lineItem}"` : row.lineItem;
+    lines.push(`${code},${escaped},Capital & Debt,${row.isLoan ? "Liability" : "Asset"}`);
+  }
+
+  const csv = lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Chart_of_Accounts.csv";
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(url);
+  a.remove();
+}
 
 function formatCurrency(val: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
@@ -174,6 +210,8 @@ export function ExpenseStep() {
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
+  const [guidedCategories, setGuidedCategories] = useState<Set<string>>(new Set());
+  const [answeredQuestions, setAnsweredQuestions] = useState<Record<string, "yes" | "no" | null>>({});
 
   useEffect(() => {
     if (formCustomLabels && Object.keys(formCustomLabels).length > 0) {
@@ -474,6 +512,30 @@ export function ExpenseStep() {
       return next;
     });
   }, []);
+
+  const toggleGuidedMode = useCallback((cat: string) => {
+    setGuidedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  }, []);
+
+  const answerQuestion = useCallback((questionId: string, answer: "yes" | "no", relatedLineItems: string[]) => {
+    setAnsweredQuestions((prev) => ({ ...prev, [questionId]: answer }));
+    if (answer === "yes") {
+      const updated = expenseRows.map((r) => {
+        const matchKey = r.canonicalKey || r.lineItem;
+        if (relatedLineItems.includes(matchKey) && !r.enabled) {
+          return { ...r, enabled: true };
+        }
+        return r;
+      });
+      const changed = updated.some((r, i) => r.enabled !== expenseRows[i].enabled);
+      if (changed) syncExpenseRows(updated);
+    }
+  }, [expenseRows, syncExpenseRows]);
 
   const applyCategories = useCallback(() => {
     const updated = expenseRows.map((row) => {
@@ -929,6 +991,35 @@ export function ExpenseStep() {
         </button>
       </div>
 
+      <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <BookOpenCheck className="h-5 w-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground space-y-2">
+            <p>
+              <span className="font-semibold">Build your Chart of Accounts as you go.</span>{" "}
+              Each expense line has an optional account code (the <Hash className="h-3 w-3 inline text-muted-foreground" /> field). We've pre-filled standard codes used by most schools — you can customize them to match your accounting software.
+            </p>
+            <p className="text-muted-foreground">
+              A chart of accounts is how QuickBooks, Xero, and other accounting software organize your money. By setting codes now, your budget will align with your bookkeeping from day one. When you're done, you can export your chart of accounts to import directly into your accounting software.
+            </p>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {Object.entries(COA_CATEGORY_RANGES).map(([, info]) => (
+                <span key={info.range} className="text-[10px] font-medium text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+                  {info.range}: {info.label}
+                </span>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => exportChartOfAccounts(expenseRows, capitalRows, customCategoryLabels)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors mt-1"
+            >
+              <FileDown className="h-3.5 w-3.5" /> Export Chart of Accounts (CSV)
+            </button>
+          </div>
+        </div>
+      </div>
+
       {personnelCosts && (
         <div className="rounded-2xl border border-border bg-blue-50/50 p-5">
           <button type="button" onClick={() => toggleCategory("personnel")} className="flex items-center gap-3 w-full text-left">
@@ -1021,6 +1112,30 @@ export function ExpenseStep() {
                     <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                     <span>{guidance.tip}</span>
                   </div>
+                )}
+                {!isCustom && GUIDED_EXPENSE_QUESTIONS.some((cq) => cq.category === cat) && (
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => toggleGuidedMode(cat)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 transition-colors",
+                        guidedCategories.has(cat)
+                          ? "bg-violet-100 text-violet-700 hover:bg-violet-200"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      )}
+                    >
+                      <MessageCircleQuestion className="h-3.5 w-3.5" />
+                      {guidedCategories.has(cat) ? "Guided mode on" : "Help me think through this"}
+                    </button>
+                  </div>
+                )}
+                {guidedCategories.has(cat) && (
+                  <GuidedQuestionPanel
+                    category={cat}
+                    answeredQuestions={answeredQuestions}
+                    onAnswer={answerQuestion}
+                  />
                 )}
                 {catRows.map((row) => (
                   <ExpenseLineCard key={row.id} row={row} yearCount={yearCount} yearLabels={yearLabels} onUpdate={updateExpenseRow} onRemove={removeExpenseRow} y1Students={y1Students} />
@@ -1116,6 +1231,90 @@ function SummaryCard({ label, value, color, bold, sublabel }: { label: string; v
   );
 }
 
+function GuidedQuestionPanel({
+  category,
+  answeredQuestions,
+  onAnswer,
+}: {
+  category: string;
+  answeredQuestions: Record<string, "yes" | "no" | null>;
+  onAnswer: (questionId: string, answer: "yes" | "no", relatedLineItems: string[]) => void;
+}) {
+  const catQuestions = GUIDED_EXPENSE_QUESTIONS.find((cq) => cq.category === category);
+  if (!catQuestions) return null;
+
+  const totalQuestions = catQuestions.questions.length;
+  const answeredCount = catQuestions.questions.filter((q) => answeredQuestions[q.id] != null).length;
+
+  return (
+    <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 space-y-3">
+      <div className="flex items-start gap-2">
+        <HelpCircle className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-sm font-medium text-violet-900">{catQuestions.intro}</p>
+          <p className="text-xs text-violet-600 mt-0.5">
+            {answeredCount} of {totalQuestions} answered — say "Yes" to auto-enable related expense lines
+          </p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {catQuestions.questions.map((q) => {
+          const answer = answeredQuestions[q.id];
+          return (
+            <div key={q.id} className={cn(
+              "rounded-lg border p-3 transition-all",
+              answer === "yes" ? "border-green-200 bg-green-50/50" :
+              answer === "no" ? "border-gray-200 bg-gray-50/50" :
+              "border-violet-100 bg-white"
+            )}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">{q.question}</p>
+                  {q.hint && (
+                    <p className="text-xs text-muted-foreground mt-1">{q.hint}</p>
+                  )}
+                  {answer === "yes" && (
+                    <p className="text-[10px] text-green-700 mt-1 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Enabled: {q.relatedLineItems.join(", ")}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onAnswer(q.id, "yes", q.relatedLineItems)}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-xs font-semibold transition-colors",
+                      answer === "yes"
+                        ? "bg-green-600 text-white"
+                        : "bg-muted text-muted-foreground hover:bg-green-100 hover:text-green-700"
+                    )}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onAnswer(q.id, "no", q.relatedLineItems)}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-xs font-semibold transition-colors",
+                      answer === "no"
+                        ? "bg-gray-600 text-white"
+                        : "bg-muted text-muted-foreground hover:bg-gray-100 hover:text-gray-700"
+                    )}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ExpenseLineCard({
   row,
   yearCount,
@@ -1167,6 +1366,7 @@ function ExpenseLineCard({
             />
           </div>
         </button>
+        {row.accountCode && <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">#{row.accountCode}</span>}
         <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{DRIVER_TYPE_LABELS[row.driverType]}</span>
         <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
           <Trash2 className="h-4 w-4" />
@@ -1175,17 +1375,30 @@ function ExpenseLineCard({
 
       {isOpen && row.enabled && (
         <div className="mt-4 space-y-4">
-          <div className="flex items-center gap-4">
-            <label className="text-xs text-muted-foreground w-24">Driver Type</label>
-            <select
-              value={row.driverType}
-              onChange={(e) => onUpdate(row.id, "driverType", e.target.value)}
-              className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
-            >
-              {Object.entries(DRIVER_TYPE_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <label className="text-xs text-muted-foreground w-24">Driver Type</label>
+              <select
+                value={row.driverType}
+                onChange={(e) => onUpdate(row.id, "driverType", e.target.value)}
+                className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+              >
+                {Object.entries(DRIVER_TYPE_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={row.accountCode || ""}
+                onChange={(e) => onUpdate(row.id, "accountCode", e.target.value)}
+                className="w-20 text-sm text-center border border-border rounded-lg px-2 py-1.5 bg-background font-mono"
+                placeholder="Code"
+                title="Chart of accounts code"
+              />
+            </div>
           </div>
 
           <div>
@@ -1301,6 +1514,7 @@ function CapitalLineCard({
           </div>
         </button>
         {row.isLoan && <span className="text-[10px] font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full whitespace-nowrap">Loan</span>}
+        {row.accountCode && <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">#{row.accountCode}</span>}
         <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{DRIVER_TYPE_LABELS[row.driverType]}</span>
         <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
           <Trash2 className="h-4 w-4" />
@@ -1309,17 +1523,30 @@ function CapitalLineCard({
 
       {isOpen && row.enabled && (
         <div className="mt-4 space-y-4">
-          <div className="flex items-center gap-4">
-            <label className="text-xs text-muted-foreground w-16">Type</label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <label className="text-xs text-muted-foreground w-16">Type</label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={row.isLoan || false}
+                  onChange={(e) => onUpdate(row.id, "isLoan", e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-amber-600 focus:ring-amber-500"
+                />
+                <span className="text-muted-foreground">This is a loan (calculate debt service)</span>
+              </label>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <Hash className="h-3.5 w-3.5 text-muted-foreground" />
               <input
-                type="checkbox"
-                checked={row.isLoan || false}
-                onChange={(e) => onUpdate(row.id, "isLoan", e.target.checked)}
-                className="h-4 w-4 rounded border-border text-amber-600 focus:ring-amber-500"
+                type="text"
+                value={row.accountCode || ""}
+                onChange={(e) => onUpdate(row.id, "accountCode", e.target.value)}
+                className="w-20 text-sm text-center border border-border rounded-lg px-2 py-1.5 bg-background font-mono"
+                placeholder="Code"
+                title="Chart of accounts code"
               />
-              <span className="text-muted-foreground">This is a loan (calculate debt service)</span>
-            </label>
+            </div>
           </div>
 
           {row.isLoan && (

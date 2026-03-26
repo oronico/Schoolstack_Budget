@@ -2,30 +2,33 @@ import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import {
   Download, Loader2, ArrowRight, Landmark, CheckCircle2,
-  Lock, Check, FileSpreadsheet, Crown, Sparkles,
+  Lock, Check, FileSpreadsheet, Crown, Sparkles, Zap,
 } from "lucide-react";
 import { Link } from "wouter";
 import { getPublicExportUnderwritingUrl } from "@workspace/api-client-react";
 
 const STARTER_FEATURES = [
-  "5-year budget projections",
-  "Color-coded assumptions tab",
-  "Live Excel formulas",
+  "4 tabs: Instructions, Assumptions, 5-Year Model, Year 1 Pro Forma",
+  "Live Excel formulas throughout",
+  "Color-coded assumptions",
   "Financial Health scorecard",
-  "Monthly pro forma view",
 ];
 
 const FULL_MODEL_FEATURES = [
-  "21-tab underwriting workbook",
-  "Program-level revenue drivers",
-  "Monthly cash flow forecast",
-  "Balance sheet & net assets",
+  "Program-level enrollment & tuition drivers",
+  "Position-by-position staffing forecast",
+  "Monthly cash flow (Year 1)",
+  "Balance sheet & debt schedule",
   "DSCR & covenant analysis",
-  "Scenario comparison engine",
+  "Sources & uses",
+  "Scenario comparison",
+  "Underwriting snapshot",
+];
+
+const PLUS_FEATURES = [
   "Lender-ready PDF packet",
-  "Board summary PDF",
-  "Debt schedule & amortization",
-  "Decision engine insights",
+  "Scenario planner (what-if analysis)",
+  "Decision engine — \"What should I fix first?\"",
 ];
 
 export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: number) => void; modelId: number | null }) {
@@ -109,7 +112,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
 
           <div className="px-6 pb-4 flex-1">
             <p className="text-sm text-muted-foreground mb-4">
-              A polished Excel workbook with your key projections, assumptions, and financial health scorecard.
+              A clean Excel workbook — great for exploring your numbers and sharing early projections.
             </p>
             <ul className="space-y-2.5">
               {STARTER_FEATURES.map((feature) => (
@@ -157,9 +160,10 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
 
           <div className="px-6 pb-4 flex-1">
             <p className="text-sm text-muted-foreground mb-4">
-              Everything in Starter, plus a comprehensive 21-tab underwriting package lenders expect to see.
+              The package you'd hand to a lender — 21 tabs covering every angle of your school's financials.
             </p>
-            <ul className="space-y-2.5">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">21-tab workbook includes</p>
+            <ul className="space-y-2">
               {FULL_MODEL_FEATURES.map((feature) => (
                 <li key={feature} className="flex items-start gap-2.5">
                   <Lock className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -167,6 +171,17 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
                 </li>
               ))}
             </ul>
+            <div className="mt-4 pt-4 border-t border-amber-200/60">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">Plus</p>
+              <ul className="space-y-2">
+                {PLUS_FEATURES.map((feature) => (
+                  <li key={feature} className="flex items-start gap-2.5">
+                    <Zap className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm font-medium text-foreground">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           <div className="px-6 pb-6 pt-2">

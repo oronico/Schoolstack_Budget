@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
@@ -137,10 +137,10 @@ export function StaffingStep() {
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">
-          Who Runs Your School?
+          Tell Us About Your Leadership and Staff
         </h2>
         <p className="text-muted-foreground text-lg">
-          Add every person on your team - teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
+          Add every person on your team — full-time, part-time, and contract. Include teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small — many great schools launch with just a founder and one or two team members.
         </p>
         <SectionExplainers section="staffing" className="mt-4" />
       </div>
@@ -161,6 +161,23 @@ export function StaffingStep() {
               Typical {schoolType.replace(/_/g, " ")} ratio: <span className="font-medium text-foreground">{benchmark.ratio}</span> (student-to-staff). Current staffing benchmark: {benchmark.staff}.
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-start gap-3">
+        <ShieldCheck className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-foreground space-y-1">
+          <p>
+            <span className="font-semibold">Use a payroll provider.</span>{" "}
+            Lenders and auditors expect to see a real payroll system in place. Services like{" "}
+            <span className="font-semibold">Gusto</span>,{" "}
+            <span className="font-semibold">ADP</span>, or{" "}
+            <span className="font-semibold">Paychex</span>{" "}
+            handle tax withholding, benefits, and compliance automatically.
+          </p>
+          <p className="text-muted-foreground">
+            Paying staff through Venmo, Zelle, or Cash App creates serious tax and legal risk — and is a red flag for any lender reviewing your financials.
+          </p>
         </div>
       </div>
 
