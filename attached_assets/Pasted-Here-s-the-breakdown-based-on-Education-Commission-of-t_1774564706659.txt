@@ -1,0 +1,15 @@
+Here’s the breakdown based on Education Commission of the States data:
+Single Count Day (13 states):
+Colorado, Connecticut, Georgia, Indiana, Iowa, Kansas, Maryland, Massachusetts, Nevada, New Hampshire, New Jersey, Utah, and West Virginia. 
+Multiple Count Dates (7 states):
+Alaska, Arizona, Louisiana, Maine, Michigan, Montana, and Wisconsin. 
+Average Daily Attendance / ADA (~7 states):
+California, Texas, Mississippi, and Missouri still use ADA.  Idaho and Kentucky have had proposals to move away from it. ADA is the average number of students in seats calculated over a state-determined period of time , so districts lose funding for absent students.
+Average Daily Membership / ADM (~16 states):
+Arkansas, Delaware, Florida, Minnesota, Nebraska, North Carolina, North Dakota, Oklahoma, Oregon, Pennsylvania, Rhode Island, and South Carolina  use ADM, among others. ADM counts students each day they are enrolled in the district , regardless of whether they attend on a given day.
+Single Count Period (3 states):
+Alabama, New Mexico, and Wyoming. 
+Multiple Count Periods (2 states):
+Illinois uses ADA of the three-month period with the highest student attendance; Ohio uses ADM of the first full week in October and the first full week in February. 
+Other: Washington funds districts based on the number of teachers required to staff schools. Hawaii has only one school district, so the issue isn’t directly applicable. 
+This matters a lot for the microschool and school choice work you’re doing. ADM is generally considered more favorable for innovative models because, as the Aurora Institute notes, ADM is more conducive to competency-based education than ADA, since ADA formulas require students to be in their seats for specific amounts of time to generate funding.  Count-day states can create vulnerability for new schools that haven’t yet hit full enrollment by the count date. Want me to dig deeper into any particular state or how this intersects with the Lending Lab or SchoolStack work?​​​​​​​​​​​​​​​​
