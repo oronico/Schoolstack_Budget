@@ -833,7 +833,7 @@ function buildSYAssumptions(
   applyInputStyle(costCell);
 
   r++; ws.getCell(r, 1).value = "Year 1 Proration Factor"; ws.getCell(r, 1).font = NF;
-  ws.getCell(r, 2).value = proration; ws.getCell(r, 2).numFmt = "0.00";
+  ws.getCell(r, 2).value = proration; ws.getCell(r, 2).numFmt = "0.00"; applyInputStyle(ws.getCell(r, 2));
 
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 0 }];
 }
