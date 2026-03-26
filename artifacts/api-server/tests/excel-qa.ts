@@ -409,7 +409,7 @@ function runUnderwritingV2TieOuts(wb: ExcelJS.Workbook): TestResult[] {
 }
 
 function runLenderGradeBandTieOuts(wb: ExcelJS.Workbook): TestResult[] {
-  const results = runStandardTieOuts(wb);
+  const results = runLenderTieOuts(wb);
 
   const assumptionsSheet = wb.worksheets.find(ws => ws.name.toLowerCase().includes("assumptions"));
   if (!assumptionsSheet) return results;
@@ -568,15 +568,19 @@ function runLenderTieOuts(wb: ExcelJS.Workbook): TestResult[] {
   const results: TestResult[] = [];
   const sheets = wb.worksheets.map((ws) => ws.name);
 
+  const hasCover = sheets.some((n) => n.toLowerCase().includes("cover"));
+  const hasAssumptions = sheets.some((n) => n.toLowerCase().includes("assumptions"));
   const hasPnL = sheets.some((n) => n.toLowerCase().includes("p&l"));
   const hasCashFlow = sheets.some((n) => n.toLowerCase().includes("cash flow"));
   const hasSummary = sheets.some((n) => n.toLowerCase().includes("summary"));
 
   results.push({
     name: "Lender Core Sheets Present",
-    passed: hasPnL && hasCashFlow && hasSummary,
+    passed: hasCover && hasAssumptions && hasPnL && hasCashFlow && hasSummary,
     details: [`Sheets: ${sheets.join(", ")}`],
     errors: [
+      !hasCover ? "Missing Cover sheet" : "",
+      !hasAssumptions ? "Missing Assumptions sheet" : "",
       !hasPnL ? "Missing P&L sheet" : "",
       !hasCashFlow ? "Missing Cash Flow sheet" : "",
       !hasSummary ? "Missing Summary sheet" : "",
@@ -597,6 +601,130 @@ function runLenderTieOuts(wb: ExcelJS.Workbook): TestResult[] {
     details: [],
     errors: hasData ? [] : ["No populated sheets found (template may not have been filled)"],
   });
+
+  const pnlSheet = wb.worksheets.find((ws) => ws.name.toLowerCase().includes("p&l"));
+  if (pnlSheet) {
+    for (let col = 3; col <= 7; col++) {
+      const yr = col - 2;
+      const totalRev = findValueByLabel(pnlSheet, /total\s*revenue/i, col);
+      const totalStaffing = findValueByLabel(pnlSheet, /total\s*staffing/i, col);
+      const totalOpEx = findValueByLabel(pnlSheet, /total\s*operating\s*expense/i, col);
+      const totalExpenses = findValueByLabel(pnlSheet, /total\s*expenses/i, col);
+      const noi = findValueByLabel(pnlSheet, /net\s*operating\s*income/i, col);
+
+      if (totalStaffing !== null && totalOpEx !== null && totalExpenses !== null) {
+        results.push(tieOutCheck(
+          `Lender P&L Y${yr}: Total Expenses = Staffing + OpEx`,
+          totalExpenses, totalStaffing + totalOpEx, 2
+        ));
+      }
+
+      if (totalRev !== null && totalExpenses !== null && noi !== null) {
+        results.push(tieOutCheck(
+          `Lender P&L Y${yr}: NOI = Revenue - Expenses`,
+          noi, totalRev - totalExpenses, 2
+        ));
+      }
+
+      const netIncome = findValueByLabel(pnlSheet, /^net\s*income$/i, col);
+      const capDebt = findValueByLabel(pnlSheet, /capital.*debt\s*service/i, col);
+      if (noi !== null && capDebt !== null && netIncome !== null) {
+        results.push(tieOutCheck(
+          `Lender P&L Y${yr}: Net Income = NOI - Debt Service`,
+          netIncome, noi - capDebt, 2
+        ));
+      }
+    }
+
+    let blankFormulaCount = 0;
+    pnlSheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        const val = cell.value;
+        if (val && typeof val === "object" && "formula" in val) {
+          const f = val as { formula: string; result?: unknown };
+          if (f.result === undefined || f.result === null || f.result === "") {
+            blankFormulaCount++;
+          }
+        }
+      });
+    });
+    results.push({
+      name: "Lender P&L: All formula cells have cached results",
+      passed: blankFormulaCount === 0,
+      details: blankFormulaCount === 0 ? ["All formulas have cached results"] : [],
+      errors: blankFormulaCount > 0 ? [`${blankFormulaCount} formula cells have blank/missing cached results`] : [],
+    });
+  }
+
+  const cfSheet = wb.worksheets.find((ws) => ws.name.toLowerCase().includes("cash flow"));
+  if (cfSheet) {
+    for (let col = 3; col <= 7; col++) {
+      const yr = col - 2;
+      const begCash = findValueByLabel(cfSheet, /beginning\s*cash/i, col);
+      const netCashFlow = findValueByLabel(cfSheet, /net\s*cash\s*flow/i, col);
+      const endCash = findValueByLabel(cfSheet, /ending\s*cash/i, col);
+
+      if (begCash !== null && netCashFlow !== null && endCash !== null) {
+        results.push(tieOutCheck(
+          `Lender Cash Flow Y${yr}: Ending Cash = Beginning + Net Cash Flow`,
+          endCash, begCash + netCashFlow, 2
+        ));
+      }
+
+      const noiCF = findValueByLabel(cfSheet, /net\s*operating\s*income/i, col);
+      const totalDebt = findValueByLabel(cfSheet, /total\s*debt\s*service/i, col);
+      const dscrVal = findValueByLabel(cfSheet, /dscr/i, col);
+      if (noiCF !== null && totalDebt !== null && totalDebt > 0 && dscrVal !== null) {
+        results.push(tieOutCheck(
+          `Lender Cash Flow Y${yr}: DSCR = NOI / Debt Service`,
+          dscrVal, noiCF / totalDebt, 0.01
+        ));
+      }
+    }
+
+    let blankFormulaCount = 0;
+    cfSheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        const val = cell.value;
+        if (val && typeof val === "object" && "formula" in val) {
+          const f = val as { formula: string; result?: unknown };
+          if (f.result === undefined || f.result === null || f.result === "") {
+            blankFormulaCount++;
+          }
+        }
+      });
+    });
+    results.push({
+      name: "Lender Cash Flow: All formula cells have cached results",
+      passed: blankFormulaCount === 0,
+      details: blankFormulaCount === 0 ? ["All formulas have cached results"] : [],
+      errors: blankFormulaCount > 0 ? [`${blankFormulaCount} formula cells have blank/missing cached results`] : [],
+    });
+  }
+
+  const summarySheet = wb.worksheets.find((ws) => ws.name.toLowerCase() === "summary");
+  if (summarySheet) {
+    const expectedLabels = ["net margin", "personnel %", "revenue per student", "expense per student", "dscr"];
+    const foundLabels: string[] = [];
+    summarySheet.eachRow((row) => {
+      for (let c = 1; c <= 3; c++) {
+        const v = extractTextValue(row.getCell(c).value).trim().toLowerCase();
+        if (v) foundLabels.push(v);
+      }
+    });
+    const missing: string[] = [];
+    for (const label of expectedLabels) {
+      if (!foundLabels.some((l) => l.includes(label))) {
+        missing.push(label);
+      }
+    }
+    results.push({
+      name: "Lender Summary: Key Ratios Present",
+      passed: missing.length === 0,
+      details: missing.length === 0 ? ["All key ratios found: " + expectedLabels.join(", ")] : [],
+      errors: missing.length > 0 ? [`Missing ratios: ${missing.join(", ")}`] : [],
+    });
+  }
 
   return results;
 }
@@ -862,7 +990,7 @@ async function main() {
     allResults.push(await testExport("Standard Export", payloadName, payload, genStandard, STANDARD_TABS, runStandardTieOuts));
     allResults.push(await testExport("Formula Export", payloadName, payload, genFormula, FORMULA_TABS, runFormulaTieOuts));
     allResults.push(await testExport("Underwriting V1 (14-tab)", payloadName, payload, genUWv1, UNDERWRITING_V1_TABS, runStandardTieOuts));
-    const lenderTieOut = payloadName.includes("Grade-Band") ? runLenderGradeBandTieOuts : runStandardTieOuts;
+    const lenderTieOut = payloadName.includes("Grade-Band") ? runLenderGradeBandTieOuts : runLenderTieOuts;
     allResults.push(await testExport("Lender Pro Forma", payloadName, payload, genLender, LENDER_TABS, lenderTieOut));
     allResults.push(await testExport("Single-Year Pro Forma", payloadName, payload, (d) => genSingleYear(d, 0), SINGLE_YEAR_TABS, runSingleYearTieOuts));
   }

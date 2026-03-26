@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 43589,
+    "fileSize": 43591,
     "tabs": [
       "Instructions",
       "Cover",
@@ -149,7 +149,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 26634,
+    "fileSize": 26636,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -235,7 +235,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 24843,
+    "fileSize": 24844,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -301,7 +301,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 37686,
+    "fileSize": 37687,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -394,7 +394,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 25669,
+    "fileSize": 26337,
     "tabs": [
       "Instructions",
       "Cover",
@@ -412,7 +412,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.1 KB",
+          "File size: 25.7 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -430,24 +430,246 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 673 cells across 10 sheets",
+          "Scanned 716 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
       },
       {
-        "name": "P&L Has Revenue",
+        "name": "Lender Core Sheets Present",
         "passed": true,
         "details": [
-          "Total Revenue: 89000"
+          "Sheets: Instructions, Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
         ],
         "errors": []
       },
       {
-        "name": "P&L Has Net Income Row",
+        "name": "Lender Workbook Has Data",
+        "passed": true,
+        "details": [],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Total Expenses = Staffing + OpEx",
         "passed": true,
         "details": [
-          "Net Income: 0"
+          "Value A: 202200, Value B: 202200, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -113200, Value B: -113200, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -120160, Value B: -120160, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 262920, Value B: 262920, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -128140, Value B: -128140, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -135100, Value B: -135100, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 285125, Value B: 285125, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -116746, Value B: -116746, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -123706, Value B: -123706, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 363718, Value B: 363718, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -167491, Value B: -167491, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -174451, Value B: -174451, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 402466, Value B: 402466, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -200502, Value B: -200502, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -207462, Value B: -207462, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -120160, Value B: -120160, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -16, Value B: -16, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -255260, Value B: -255260, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -18, Value B: -18, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -378965, Value B: -378965, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -17, Value B: -17, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -553416, Value B: -553416, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -24, Value B: -24, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -760878, Value B: -760878, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -29, Value B: -29, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Summary: Key Ratios Present",
+        "passed": true,
+        "details": [
+          "All key ratios found: net margin, personnel %, revenue per student, expense per student, dscr"
         ],
         "errors": []
       },
@@ -481,7 +703,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 14056,
+    "fileSize": 14057,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -539,7 +761,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 47242,
+    "fileSize": 47243,
     "tabs": [
       "Instructions",
       "Cover",
@@ -880,7 +1102,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 38413,
+    "fileSize": 38422,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -973,7 +1195,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 25851,
+    "fileSize": 26516,
     "tabs": [
       "Instructions",
       "Cover",
@@ -991,7 +1213,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.2 KB",
+          "File size: 25.9 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -1009,24 +1231,246 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 673 cells across 10 sheets",
+          "Scanned 716 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
       },
       {
-        "name": "P&L Has Revenue",
+        "name": "Lender Core Sheets Present",
         "passed": true,
         "details": [
-          "Total Revenue: 995000"
+          "Sheets: Instructions, Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
         ],
         "errors": []
       },
       {
-        "name": "P&L Has Net Income Row",
+        "name": "Lender Workbook Has Data",
+        "passed": true,
+        "details": [],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Total Expenses = Staffing + OpEx",
         "passed": true,
         "details": [
-          "Net Income: 0"
+          "Value A: 1095867, Value B: 1095867, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -100867, Value B: -100867, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -159931, Value B: -159931, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 1286058, Value B: 1286058, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 20822, Value B: 20822, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -38242, Value B: -38242, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 1562027, Value B: 1562027, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 74618, Value B: 74618, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 15554, Value B: 15554, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 1824272, Value B: 1824272, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 110549, Value B: 110549, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 51485, Value B: 51485, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 2123156, Value B: 2123156, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 22780, Value B: 22780, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -36284, Value B: -36284, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -84931, Value B: -84931, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -2, Value B: -2, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -123173, Value B: -123173, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -107620, Value B: -107620, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 1, Value B: 1, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -56135, Value B: -56135, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 2, Value B: 2, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -92419, Value B: -92419, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Summary: Key Ratios Present",
+        "passed": true,
+        "details": [
+          "All key ratios found: net margin, personnel %, revenue per student, expense per student, dscr"
         ],
         "errors": []
       },
@@ -1457,7 +1901,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 38552,
+    "fileSize": 38567,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1481,7 +1925,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 37.6 KB",
+          "File size: 37.7 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -1550,7 +1994,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 25944,
+    "fileSize": 26631,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1568,7 +2012,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.3 KB",
+          "File size: 26.0 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -1586,24 +2030,246 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 673 cells across 10 sheets",
+          "Scanned 716 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
       },
       {
-        "name": "P&L Has Revenue",
+        "name": "Lender Core Sheets Present",
         "passed": true,
         "details": [
-          "Total Revenue: 1546000"
+          "Sheets: Instructions, Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
         ],
         "errors": []
       },
       {
-        "name": "P&L Has Net Income Row",
+        "name": "Lender Workbook Has Data",
+        "passed": true,
+        "details": [],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Total Expenses = Staffing + OpEx",
         "passed": true,
         "details": [
-          "Net Income: 0"
+          "Value A: 1854167, Value B: 1854167, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -308167, Value B: -308167, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -472992, Value B: -472992, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 2637593, Value B: 2637593, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -99793, Value B: -99793, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -264617, Value B: -264617, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 3825772, Value B: 3825772, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -10911, Value B: -10911, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -175735, Value B: -175735, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 5461618, Value B: 5461618, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -632227, Value B: -632227, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -797052, Value B: -797052, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 7429701, Value B: 7429701, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -2185452, Value B: -2185452, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -2350276, Value B: -2350276, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -472992, Value B: -472992, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -2, Value B: -2, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -737609, Value B: -737609, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -1, Value B: -1, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -913345, Value B: -913345, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -1710396, Value B: -1710396, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -4, Value B: -4, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -4060673, Value B: -4060673, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -13, Value B: -13, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Summary: Key Ratios Present",
+        "passed": true,
+        "details": [
+          "All key ratios found: net margin, personnel %, revenue per student, expense per student, dscr"
         ],
         "errors": []
       },
@@ -1968,7 +2634,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26613,
+    "fileSize": 26614,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -2034,7 +2700,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 38328,
+    "fileSize": 38335,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -2127,7 +2793,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26368,
+    "fileSize": 27050,
     "tabs": [
       "Instructions",
       "Cover",
@@ -2145,7 +2811,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.8 KB",
+          "File size: 26.4 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -2163,24 +2829,246 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 700 cells across 10 sheets",
+          "Scanned 743 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
       },
       {
-        "name": "P&L Has Revenue",
+        "name": "Lender Core Sheets Present",
         "passed": true,
         "details": [
-          "Total Revenue: 1414000"
+          "Sheets: Instructions, Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
         ],
         "errors": []
       },
       {
-        "name": "P&L Has Net Income Row",
+        "name": "Lender Workbook Has Data",
+        "passed": true,
+        "details": [],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Total Expenses = Staffing + OpEx",
         "passed": true,
         "details": [
-          "Net Income: 0"
+          "Value A: 1589486, Value B: 1589486, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -175486, Value B: -175486, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -282115, Value B: -282115, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 2214644, Value B: 2214644, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 38006, Value B: 38006, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -68623, Value B: -68623, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 3237353, Value B: 3237353, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 108355, Value B: 108355, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 1726, Value B: 1726, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 4702711, Value B: 4702711, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -239825, Value B: -239825, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -346454, Value B: -346454, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 7150537, Value B: 7150537, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -1515735, Value B: -1515735, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -1622364, Value B: -1622364, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -282115, Value B: -282115, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -2, Value B: -2, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -350738, Value B: -350738, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -349012, Value B: -349012, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 1, Value B: 1, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -695465, Value B: -695465, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -2, Value B: -2, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -2317829, Value B: -2317829, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -14, Value B: -14, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Summary: Key Ratios Present",
+        "passed": true,
+        "details": [
+          "All key ratios found: net margin, personnel %, revenue per student, expense per student, dscr"
         ],
         "errors": []
       },

@@ -1119,28 +1119,46 @@ function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
     [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}16/${YEAR_COLS[y]}10,0)`),
     res.operatingMargin, PCT);
 
-  lbl(19, "Cumulative Net Income", true);
+  lbl(19, "Capital & Debt Service");
   for (let y = 0; y < 5; y++) {
     const cell = ws.getCell(19, y + 3);
+    setFormula(cell, `'Cash Flow & DSCR'!${YEAR_COLS[y]}9`, res.totalDebtService);
+    cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(21, "Net Income", true);
+  localFormula(21,
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}16-${YEAR_COLS[y]}19`),
+    res.netIncomeAfterDebt, CUR, true, true);
+
+  lbl(22, "Net Margin");
+  localFormula(22,
+    [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}21/${YEAR_COLS[y]}10,0)`),
+    res.totalRevenue.map((rev, i) => rev > 0 ? res.netIncomeAfterDebt[i] / rev : 0), PCT);
+
+  lbl(24, "Cumulative Net Income", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(24, y + 3);
     if (y === 0) {
-      setFormula(cell, `${YEAR_COLS[0]}16`, res.noi[0]);
+      setFormula(cell, `${YEAR_COLS[0]}21`, res.netIncomeAfterDebt[0]);
     } else {
-      const cumVal = res.noi.slice(0, y + 1).reduce((a, b) => a + b, 0);
-      setFormula(cell, `${YEAR_COLS[y - 1]}19+${YEAR_COLS[y]}16`, cumVal);
+      const cumVal = res.netIncomeAfterDebt.slice(0, y + 1).reduce((a, b) => a + b, 0);
+      setFormula(cell, `${YEAR_COLS[y - 1]}24+${YEAR_COLS[y]}21`, cumVal);
     }
     cell.numFmt = CUR; cell.font = BF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
-  lbl(20, "Break-even", true);
+  lbl(25, "Break-even", true);
   let lenderBeYear = -1;
   let lenderCumNI = 0;
   for (let y = 0; y < 5; y++) {
-    lenderCumNI += res.noi[y];
+    lenderCumNI += res.netIncomeAfterDebt[y];
     if (lenderBeYear < 0 && lenderCumNI >= 0) lenderBeYear = y;
   }
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(20, y + 3);
+    const cell = ws.getCell(25, y + 3);
     if (y === lenderBeYear) {
       cell.value = "✓ Break-even";
       cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: DASHBOARD_GREEN } };
@@ -1180,44 +1198,58 @@ function buildCashFlow(wb: ExcelJS.Workbook, res: LenderResults) {
   };
 
   const pmtFormula = "IF(Assumptions!D59>0,PMT(Assumptions!D60/12,Assumptions!D61*12,-Assumptions!D59)*12,0)";
+  const startingCash = Number(res.cumulativeCash[0]) - res.netIncomeAfterDebt[0];
 
-  lbl(4, "Net Operating Income");
+  lbl(4, "Beginning Cash", true);
   for (let y = 0; y < 5; y++) {
     const cell = ws.getCell(4, y + 3);
+    const begCash = y === 0 ? startingCash : res.cumulativeCash[y - 1];
+    if (y === 0) {
+      setFormula(cell, "Assumptions!D57", begCash);
+    } else {
+      setFormula(cell, `${YEAR_COLS[y - 1]}16`, begCash);
+    }
+    cell.numFmt = CUR; cell.font = BF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(5, "Net Operating Income");
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(5, y + 3);
     setFormula(cell, `'5-Year P&L'!${YEAR_COLS[y]}16`, res.noi[y]);
     cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
-  lbl(6, "Existing Debt Service");
+  lbl(7, "Existing Debt Service");
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(6, y + 3);
+    const cell = ws.getCell(7, y + 3);
     setFormula(cell, "Assumptions!D58", res.existingDebtService);
     cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
-  lbl(7, "Proposed Loan Debt Service");
+  lbl(8, "Proposed Loan Debt Service");
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(7, y + 3);
+    const cell = ws.getCell(8, y + 3);
     setFormula(cell, pmtFormula, res.proposedDebtService);
     cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
-  lbl(8, "Total Debt Service", true);
+  lbl(9, "Total Debt Service", true);
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(8, y + 3);
-    setFormula(cell, `${YEAR_COLS[y]}6+${YEAR_COLS[y]}7`, res.totalDebtService);
+    const cell = ws.getCell(9, y + 3);
+    setFormula(cell, `${YEAR_COLS[y]}7+${YEAR_COLS[y]}8`, res.totalDebtService);
     cell.numFmt = CUR; cell.font = BF; cell.border = SUBTOTAL_BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
-  lbl(10, "DSCR (NOI ÷ Total Debt Service)", true);
+  lbl(11, "DSCR (NOI ÷ Total Debt Service)", true);
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(10, y + 3);
+    const cell = ws.getCell(11, y + 3);
     setFormula(cell,
-      `IF(${YEAR_COLS[y]}8>0,${YEAR_COLS[y]}4/${YEAR_COLS[y]}8,IF(${YEAR_COLS[y]}4>0,99.9,0))`,
+      `IF(${YEAR_COLS[y]}9>0,${YEAR_COLS[y]}5/${YEAR_COLS[y]}9,IF(${YEAR_COLS[y]}5>0,99.9,0))`,
       res.dscr[y]);
     cell.numFmt = "0.00x";
     cell.font = BF; cell.border = BORDER;
@@ -1226,22 +1258,27 @@ function buildCashFlow(wb: ExcelJS.Workbook, res: LenderResults) {
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= 1.2 ? GREEN_BG : v >= 1.0 ? AMBER_BG : RED_BG } };
   }
 
-  lbl(12, "Net Income After Debt");
+  lbl(13, "Net Income After Debt");
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(12, y + 3);
-    setFormula(cell, `${YEAR_COLS[y]}4-${YEAR_COLS[y]}8`, res.netIncomeAfterDebt[y]);
+    const cell = ws.getCell(13, y + 3);
+    setFormula(cell, `${YEAR_COLS[y]}5-${YEAR_COLS[y]}9`, res.netIncomeAfterDebt[y]);
     cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
-  lbl(14, "Cumulative Cash", true);
+  lbl(14, "Net Cash Flow", true);
   for (let y = 0; y < 5; y++) {
     const cell = ws.getCell(14, y + 3);
-    const f = y === 0
-      ? `Assumptions!D57+${YEAR_COLS[0]}12`
-      : `${YEAR_COLS[y - 1]}14+${YEAR_COLS[y]}12`;
-    setFormula(cell, f, res.cumulativeCash[y]);
+    setFormula(cell, `${YEAR_COLS[y]}5-${YEAR_COLS[y]}9`, res.netIncomeAfterDebt[y]);
     cell.numFmt = CUR; cell.font = BF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(16, "Ending Cash", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(16, y + 3);
+    setFormula(cell, `${YEAR_COLS[y]}4+${YEAR_COLS[y]}14`, res.cumulativeCash[y]);
+    cell.numFmt = CUR; cell.font = BF; cell.border = SUBTOTAL_BORDER;
     cell.alignment = { horizontal: "right" };
     const v = res.cumulativeCash[y];
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= 0 ? GREEN_BG : RED_BG } };
@@ -1342,7 +1379,7 @@ function buildLoanSnapshot(wb: ExcelJS.Workbook, input: Record<string, string | 
 
   lbl(8, "Year 1 DSCR");
   const c8 = ws.getCell("C8");
-  setFormula(c8, "'Cash Flow & DSCR'!C10", res.dscr[0]);
+  setFormula(c8, "'Cash Flow & DSCR'!C11", res.dscr[0]);
   c8.numFmt = "0.00x"; c8.font = BF; c8.border = BORDER; c8.alignment = { horizontal: "right" };
   const v = res.dscr[0];
   c8.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= 1.2 ? GREEN_BG : v >= 1.0 ? AMBER_BG : RED_BG } };
@@ -1401,9 +1438,59 @@ function buildSummary(wb: ExcelJS.Workbook, input: Record<string, string | numbe
   s10.numFmt = CUR; s10.font = BF; s10.border = BORDER; s10.alignment = { horizontal: "right" };
   s10.fill = { type: "pattern", pattern: "solid", fgColor: { argb: res.noi[4] >= 0 ? GREEN_BG : RED_BG } };
 
-  ws.getCell("B12").value = "Generated by SchoolStack Budget (budget.schoolstack.ai)";
-  ws.getCell("B12").font = { name: "Calibri", size: 11, italic: true, color: { argb: "FF6B7280" } };
-  ws.mergeCells("B12:C12");
+  ws.getCell("B12").value = "KEY RATIOS";
+  ws.getCell("B12").font = { name: "Calibri", size: 11, bold: true, color: { argb: WHITE } };
+  ws.getCell("B12").fill = HEADER_FILL;
+  ws.getCell("C12").fill = HEADER_FILL;
+  ws.getCell("B12").border = BORDER;
+  ws.getCell("C12").border = BORDER;
+  ws.getRow(12).height = 24;
+
+  const y5Rev = res.totalRevenue[4];
+  const y5NI = res.netIncomeAfterDebt[4];
+  const y5NetMargin = y5Rev > 0 ? y5NI / y5Rev : 0;
+
+  lbl(13, "Net Margin (Year 5)");
+  const s13 = ws.getCell("C13");
+  setFormula(s13, `IF(Drivers!G10>0,'5-Year P&L'!G21/Drivers!G10,0)`, y5NetMargin);
+  s13.numFmt = PCT; s13.font = NF; s13.border = BORDER; s13.alignment = { horizontal: "right" };
+  s13.fill = { type: "pattern", pattern: "solid", fgColor: { argb: y5NetMargin >= 0 ? GREEN_BG : RED_BG } };
+
+  const y5PersonnelPct = y5Rev > 0 ? res.totalStaffing[4] / y5Rev : 0;
+  lbl(14, "Personnel % of Revenue (Year 5)");
+  const s14 = ws.getCell("C14");
+  setFormula(s14, `IF(Drivers!G10>0,Drivers!G16/Drivers!G10,0)`, y5PersonnelPct);
+  s14.numFmt = PCT; s14.font = NF; s14.border = BORDER; s14.alignment = { horizontal: "right" };
+
+  const y5RevPerStudent = res.enrollment[4] > 0 ? Math.round(y5Rev / res.enrollment[4]) : 0;
+  lbl(15, "Revenue per Student (Year 5)");
+  const s15 = ws.getCell("C15");
+  setFormula(s15, `IF(Assumptions!D16>0,Drivers!G10/Assumptions!D16,0)`, y5RevPerStudent);
+  s15.numFmt = CUR; s15.font = NF; s15.border = BORDER; s15.alignment = { horizontal: "right" };
+
+  const y5ExpPerStudent = res.enrollment[4] > 0 ? Math.round(res.totalExpenses[4] / res.enrollment[4]) : 0;
+  lbl(16, "Expense per Student (Year 5)");
+  const s16 = ws.getCell("C16");
+  setFormula(s16, `IF(Assumptions!D16>0,('5-Year P&L'!G12+'5-Year P&L'!G13)/Assumptions!D16,0)`, y5ExpPerStudent);
+  s16.numFmt = CUR; s16.font = NF; s16.border = BORDER; s16.alignment = { horizontal: "right" };
+
+  lbl(17, "DSCR (Year 1)");
+  const s17 = ws.getCell("C17");
+  setFormula(s17, `'Cash Flow & DSCR'!C11`, res.dscr[0]);
+  s17.numFmt = "0.00x"; s17.font = BF; s17.border = BORDER; s17.alignment = { horizontal: "right" };
+  const dscrV = res.dscr[0];
+  s17.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscrV >= 1.2 ? GREEN_BG : dscrV >= 1.0 ? AMBER_BG : RED_BG } };
+
+  lbl(18, "DSCR (Year 5)");
+  const s18 = ws.getCell("C18");
+  setFormula(s18, `'Cash Flow & DSCR'!G11`, res.dscr[4]);
+  s18.numFmt = "0.00x"; s18.font = BF; s18.border = BORDER; s18.alignment = { horizontal: "right" };
+  const dscrV5 = res.dscr[4];
+  s18.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscrV5 >= 1.2 ? GREEN_BG : dscrV5 >= 1.0 ? AMBER_BG : RED_BG } };
+
+  ws.getCell("B20").value = "Generated by SchoolStack Budget (budget.schoolstack.ai)";
+  ws.getCell("B20").font = { name: "Calibri", size: 11, italic: true, color: { argb: "FF6B7280" } };
+  ws.mergeCells("B20:C20");
 }
 
 export async function generateLenderProFormaWorkbook(rawData: Record<string, unknown>): Promise<Buffer> {
@@ -1450,7 +1537,7 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
     startingCash: Number(input.startingCash) || 0,
     hasDebt: res.totalDebtService > 0,
     revenueCategories: lenderRevCats,
-    cumNIRef: { sheetName: "5-Year P&L", row: 19, startCol: 3 },
+    cumNIRef: { sheetName: "5-Year P&L", row: 24, startCol: 3 },
   });
 
   const buffer = await wb.xlsx.writeBuffer();
