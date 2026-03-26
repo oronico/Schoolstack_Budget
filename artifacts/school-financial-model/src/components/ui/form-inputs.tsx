@@ -39,6 +39,7 @@ export function FormInput({ name, label, helperText, prefix, suffix, className, 
         <input
           id={name}
           type={type}
+          aria-invalid={!!error}
           className={cn(
             "w-full rounded-xl border-2 border-border bg-card px-4 py-3 text-base text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10",
             prefix && "pl-8",
@@ -52,7 +53,7 @@ export function FormInput({ name, label, helperText, prefix, suffix, className, 
           <span className="absolute right-4 text-muted-foreground font-medium">{suffix}</span>
         )}
       </div>
-      {error && <p className="text-sm text-destructive font-medium animate-in fade-in">{error}</p>}
+      {error && <p className="text-sm text-destructive font-medium animate-in fade-in" data-error="true">{error}</p>}
       {helperText && !error && <p className="text-sm text-muted-foreground">{helperText}</p>}
     </div>
   );
@@ -105,6 +106,7 @@ export function FormSelect({ name, label, options, helperText, className, valueA
       </label>
       <select
         id={name}
+        aria-invalid={!!error}
         className={cn(
           "w-full rounded-xl border-2 border-border bg-card px-4 py-3 text-base text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 appearance-none cursor-pointer",
           error && "border-destructive focus:border-destructive focus:ring-destructive/10"
@@ -118,7 +120,7 @@ export function FormSelect({ name, label, options, helperText, className, valueA
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
-      {error && <p className="text-sm text-destructive font-medium animate-in fade-in">{error}</p>}
+      {error && <p className="text-sm text-destructive font-medium animate-in fade-in" data-error="true">{error}</p>}
       {helperText && !error && <p className="text-sm text-muted-foreground">{helperText}</p>}
     </div>
   );

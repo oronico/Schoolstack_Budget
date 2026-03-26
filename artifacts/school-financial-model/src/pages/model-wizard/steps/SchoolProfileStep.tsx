@@ -257,7 +257,7 @@ export function SchoolProfileStep() {
 
       <div>
         <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">What stage is your school?</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl", stageError && "ring-2 ring-destructive/50 p-1")}>
           <RadioCard
             value="new_school"
             selected={schoolStage === "new_school"}
@@ -277,7 +277,7 @@ export function SchoolProfileStep() {
         </div>
 
         {stageError && (
-          <div className="flex items-center gap-2 mt-3 text-destructive">
+          <div className="flex items-center gap-2 mt-3 text-destructive" data-error="true">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
             <p className="text-sm font-medium">{stageError}</p>
           </div>
