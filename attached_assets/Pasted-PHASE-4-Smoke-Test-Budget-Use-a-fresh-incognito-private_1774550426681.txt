@@ -1,0 +1,92 @@
+PHASE 4: Smoke Test -- Budget
+Use a fresh incognito/private window.
+Test 4.1: Registration
+
+Go to https://budget.schoolstack.ai
+Click "Get Started" or navigate to the register page
+Register with a test email
+Verify: Account created, redirected to dashboard
+Verify: Auth page showed the "SchoolStack Space and Budget use separate accounts during alpha" note
+
+Record result: [ ] PASS / [ ] FAIL — describe issue: ___
+Test 4.2: Wizard (steps 1-8)
+
+Create a new model
+Step 1 (Profile): Enter "Smoke Test Academy", select Private/Independent, select your state, Pre-opening, 501(c)(3)
+Step 2 (Enrollment): Enter Year 1 = 50, Year 2 = 75, add at least 2 programs (e.g., "K-5 General Ed" with 30 students and "6-8 STEM" with 20 students)
+Step 3 (Revenue): Add tuition source ($10K/student), add a philanthropy source ($25K fixed)
+Step 4 (Staffing): Add 2-3 positions (e.g., Head of School $85K, Teacher $55K, Admin $40K)
+Step 5 (Expenses): Add at least one expense in occupancy and one in supplies
+Step 6 (Review): Verify: Financial summary renders with revenue, expenses, net income. No "undefined" or "NaN"
+Step 7 (Analysis): Verify: Consultant analysis loads with key metrics, health indicators, and recommendations
+Step 8 (Export): Verify: Export options are visible
+
+Record result: [ ] PASS / [ ] FAIL — describe issue: ___
+Test 4.3: 21-tab underwriting workbook export
+
+On Step 8, click to download the 21-tab Underwriting Model
+Open the file in Excel or Google Sheets
+Verify checklist:
+
+ First tab is "Instructions" with SchoolStack branding and color-coding legend
+ Assumptions tab has blue-shaded cells for editable inputs (enrollment, rates, salaries)
+ Assumptions tab has a legend: blue = editable, white = formula
+ Enrollment Drivers tab shows EACH PROGRAM as a separate row (not blended)
+
+e.g., "K-5 General Ed: 30" and "6-8 STEM: 20" as distinct rows
+Total Enrollment row is a SUM formula
+
+
+ Tuition & Funding tab shows per-program revenue:
+
+Each program has Students, Rate per Student, Escalation Rate, and Subtotal rows
+Y1 rate is blue (editable), Y2-Y5 rates are formulas using escalation
+Category totals SUM only the subtotal rows
+
+
+ Financial Health tab exists (last or near-last tab)
+
+Shows 7-8 metrics with Year 1-5 columns
+Green/yellow/red conditional formatting visible
+Benchmark column shows target values
+
+
+ No #REF!, #DIV/0!, #VALUE!, NaN, or "undefined" in any cell
+ Change a blue cell on Assumptions tab (e.g., enrollment number) → formulas recalculate
+
+
+
+Record result: [ ] PASS / [ ] FAIL — describe issue: ___
+Test 4.4: Public underwriting wizard
+
+Open a fresh incognito window
+Go to https://budget.schoolstack.ai/underwriting
+Complete the wizard with minimal test data (just enough to get through all 8 steps)
+On the Export step:
+Verify: Two cards are visible side by side:
+
+"Starter Export" with a download button (available now)
+"Full Underwriting Model" with a "Create Free Account" button
+
+
+Verify: The Full Model card lists the 21-tab breakdown and additional features
+Download the Starter Export
+Open in Excel/Sheets
+Verify: Instructions tab is present, blue cells visible, Financial Health tab present
+Click "Create Free Account"
+Verify: Navigates to registration page
+
+Record result: [ ] PASS / [ ] FAIL — describe issue: ___
+Test 4.5: Password reset
+
+Log out of Budget
+Click "Forgot password"
+Enter the email you registered with
+Verify: Success message
+Check email
+Verify: Email arrives with reset code/link
+Record delivery time: ___ seconds/minutes
+Complete the reset and log back in
+Verify: Login succeeds
+
+Record result: [ ] PASS / [ ] FAIL — describe issue: ___
