@@ -5,6 +5,7 @@ import {
   computePersonnelForYear as sharedComputePersonnel,
   computeExpenseForYear as sharedComputeExpense,
   computeDebtServiceForYear as sharedComputeDebtService,
+  computeFacilityCostByYear,
   type RevenueRow as SharedRevenueRow, type StaffingRow as SharedStaffingRow,
   type ExpenseRow as SharedExpenseRow, type CapitalDebtRow as SharedCapDebtRow,
   type TuitionTier as SharedTuitionTier, type SchoolProfile as SharedSchoolProfile,
@@ -2206,6 +2207,8 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     }
   }
 
+  const facCostByYrF = computeFacilityCostByYear(dbExpRows as any, enrollment, revByYear, 5, costInflPct);
+
   await addDashboardSheet(wb, {
     schoolName: sp.schoolName || "School",
     entityType: sp.entityType || "",
@@ -2213,6 +2216,7 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     revenueByYear: revByYear,
     personnelByYear: persByYear,
     opexByYear: opexByYear,
+    facilityCostByYear: facCostByYrF,
     debtServiceByYear: debtByYear,
     netIncomeByYear: niByYear,
     cashByYear,

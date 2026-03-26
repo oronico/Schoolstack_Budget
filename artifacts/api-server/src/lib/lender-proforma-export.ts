@@ -1434,6 +1434,8 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
   if (res.otherRevenue.some(v => v > 0)) lenderRevCats["other_revenue"] = res.otherRevenue;
   if (res.grants.some(v => v > 0)) lenderRevCats["grants_contributions"] = res.grants;
 
+  const lenderFacCost = res.rent.map((r: number, i: number) => r + (res.otherFacility[i] || 0));
+
   await addDashboardSheet(wb, {
     schoolName: String(input.schoolName || "School"),
     entityType: String(input.entityType || ""),
@@ -1441,6 +1443,7 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
     revenueByYear: res.totalRevenue,
     personnelByYear: res.totalStaffing,
     opexByYear: res.totalOpEx,
+    facilityCostByYear: lenderFacCost,
     debtServiceByYear: res.dscr.map(() => res.totalDebtService),
     netIncomeByYear: res.netIncomeAfterDebt,
     cashByYear: res.cumulativeCash,

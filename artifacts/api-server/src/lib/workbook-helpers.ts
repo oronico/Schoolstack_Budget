@@ -622,6 +622,17 @@ export function computeExpenseForYear(
   return total;
 }
 
+export function computeFacilityCostByYear(
+  expenseRows: ExpenseRow[], enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number
+): number[] {
+  const facilRows = expenseRows.filter(r => r.enabled && r.category === "occupancy_facility");
+  const result: number[] = [];
+  for (let y = 0; y < yearCount; y++) {
+    result.push(computeExpenseForYear(facilRows, y, enrollment[y], revenueByYear[y], costInflationPct));
+  }
+  return result;
+}
+
 export function computeCapDebtForYear(rows: CapitalDebtRow[], y: number, students: number): number {
   let total = 0;
   for (const r of rows) {
@@ -791,6 +802,7 @@ export interface DashboardInput {
   revenueByYear: number[];
   personnelByYear: number[];
   opexByYear: number[];
+  facilityCostByYear?: number[];
   debtServiceByYear: number[];
   netIncomeByYear: number[];
   cashByYear: number[];
@@ -985,7 +997,8 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   ws.getCell(r, 2).value = "Facility %"; bc(ws.getCell(r, 2));
   for (let y = 0; y < 5; y++) {
     const rev = input.revenueByYear[y];
-    const fPct = rev > 0 ? (input.opexByYear[y] * 0.3) / rev : 0;
+    const facCost = input.facilityCostByYear ? (input.facilityCostByYear[y] || 0) : (input.opexByYear[y] * 0.3);
+    const fPct = rev > 0 ? facCost / rev : 0;
     const cell = ws.getCell(r, y + 3);
     cell.value = fPct;
     cell.numFmt = PCT;
@@ -1134,8 +1147,8 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   const y5TotalExp = totalExpByYear[4];
   const staffPct = y5Pers / y5Rev;
 
-  const facilityCost = input.opexByYear[4] * 0.3;
-  const facPct = facilityCost / y5Rev;
+  const facilityCostY5 = input.facilityCostByYear ? (input.facilityCostByYear[4] || 0) : (input.opexByYear[4] * 0.3);
+  const facPct = facilityCostY5 / y5Rev;
 
   const y5NI = input.netIncomeByYear[4];
   const y5Margin = y5Rev > 0 ? y5NI / y5Rev : 0;

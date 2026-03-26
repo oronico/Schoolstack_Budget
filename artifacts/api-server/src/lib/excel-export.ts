@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { addDashboardSheet } from "./workbook-helpers.js";
+import { addDashboardSheet, computeFacilityCostByYear } from "./workbook-helpers.js";
 
 function safeResult(v: unknown): number | string {
   if (v === null || v === undefined) return "0";
@@ -907,6 +907,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
           for (let y = 0; y < yearCount; y++) revCats[cat][y] += rowVals[y] ?? 0;
         }
       }
+      const facCostArr = computeFacilityCostByYear(expenseRows as any, enrollmentByYear, precomputed.totalRevenue, yearCount);
       await addDashboardSheet(wb, {
         schoolName: sp.schoolName || "School",
         entityType: sp.entityType || "",
@@ -914,6 +915,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
         revenueByYear: precomputed.totalRevenue,
         personnelByYear: precomputed.totalPersonnel,
         opexByYear: precomputed.totalExpenses,
+        facilityCostByYear: facCostArr,
         debtServiceByYear: debtSvcArr,
         netIncomeByYear: precomputed.netIncome,
         cashByYear: cashArr,
@@ -953,6 +955,18 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
         runCash += (legacyResult.niByYr[y] || 0);
         cashArr.push(runCash);
       }
+      const costInfl = (fac.generalCostInflation || 0) / 100;
+      const rentInc = (fac.annualRentIncrease || 0) / 100;
+      const legacyFacCost: number[] = [];
+      for (let y = 0; y < yearCount; y++) {
+        const pf = y === 0 ? prorationFactor : 1;
+        const infEsc = Math.pow(1 + costInfl, y);
+        const rent = (fac.monthlyRent || 0) * 12 * Math.pow(1 + rentInc, y) * pf;
+        const utils = (fac.annualUtilities || 0) * infEsc * pf;
+        const ins = (fac.annualInsurance || 0) * infEsc * pf;
+        const maint = (fac.facilityMaintenance || 0) * infEsc * pf;
+        legacyFacCost.push(rent + utils + ins + maint);
+      }
       await addDashboardSheet(wb, {
         schoolName: sp.schoolName || "School",
         entityType: sp.entityType || "",
@@ -960,6 +974,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
         revenueByYear: legacyResult.revenueByYr,
         personnelByYear: legacyResult.staffByYr,
         opexByYear: legacyResult.expByYr,
+        facilityCostByYear: legacyFacCost,
         debtServiceByYear: new Array(yearCount).fill(0),
         netIncomeByYear: legacyResult.niByYr,
         cashByYear: cashArr,

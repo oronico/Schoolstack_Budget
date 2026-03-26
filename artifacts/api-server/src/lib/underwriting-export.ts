@@ -2,7 +2,7 @@
 // The /export/underwriting route has been removed; only /export/underwriting-v2 is active.
 // Retained for reference only — do not add new code here.
 import ExcelJS from "exceljs";
-import { addDashboardSheet, DASHBOARD_GREEN } from "./workbook-helpers.js";
+import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear } from "./workbook-helpers.js";
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
   if (!baseYear) return `Year ${offset + 1}`;
@@ -655,6 +655,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
       }
     }
 
+    const facCostV1 = computeFacilityCostByYear(expenseRows as any, enrollment, annualRevenue, yc, costInflation * 100);
     await addDashboardSheet(wb, {
       schoolName: sp.schoolName || "School",
       entityType: sp.entityType || "",
@@ -662,6 +663,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
       revenueByYear: annualRevenue,
       personnelByYear: annualPersonnel,
       opexByYear: annualExpenses,
+      facilityCostByYear: facCostV1,
       debtServiceByYear: annualCapDebt,
       netIncomeByYear: annualNetIncome,
       cashByYear: cashArr,
@@ -792,6 +794,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
       revenueByYear: annualRevenue,
       personnelByYear: annualPersonnel,
       opexByYear: annualExpenses,
+      facilityCostByYear: computeFacilityCostByYear(expenseRows as any, enrollment, annualRevenue, yc, costInflation * 100),
       debtServiceByYear: annualCapDebt,
       netIncomeByYear: annualNetIncome,
       cashByYear: cashArr,
