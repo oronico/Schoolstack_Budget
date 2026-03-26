@@ -389,7 +389,8 @@ function filterProgramsForSchoolType(programs: ProgramInfo[], schoolType: School
         p.type === "esa" ||
         p.type === "voucher" ||
         p.type === "tax_credit_scholarship" ||
-        p.type === "refundable_tax_credit"
+        p.type === "refundable_tax_credit" ||
+        p.type === "individual_tax_credit"
       );
 
     case "other":

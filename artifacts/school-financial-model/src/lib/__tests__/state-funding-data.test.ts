@@ -162,6 +162,20 @@ describe("getStateFundingConfig - Private schools", () => {
     expect(config.schoolChoiceCoachingText).toContain("does not currently have");
   });
 
+  it("IN → includes individual tax credit for private schools", () => {
+    const config = getStateFundingConfig("private_school", "IN");
+    const itc = config.availablePrograms.find(p => p.type === "individual_tax_credit");
+    expect(itc).toBeDefined();
+    expect(itc!.maxPerStudent).toBe(1000);
+  });
+
+  it("IL → includes individual tax credit for private schools", () => {
+    const config = getStateFundingConfig("private_school", "IL");
+    const itc = config.availablePrograms.find(p => p.type === "individual_tax_credit");
+    expect(itc).toBeDefined();
+    expect(itc!.maxPerStudent).toBe(250);
+  });
+
   it("FL → ESA + voucher", () => {
     const config = getStateFundingConfig("private_school", "FL");
     expect(config.availablePrograms.some(p => p.type === "esa")).toBe(true);
@@ -251,6 +265,12 @@ describe("getStateFundingConfig - Microschools", () => {
     for (const pp of privateConfig.availablePrograms) {
       expect(microConfig.availablePrograms.some(p => p.type === pp.type)).toBe(true);
     }
+  });
+
+  it("microschool + IL includes individual tax credit", () => {
+    const config = getStateFundingConfig("microschool", "IL");
+    const itc = config.availablePrograms.find(p => p.type === "individual_tax_credit");
+    expect(itc).toBeDefined();
   });
 });
 
