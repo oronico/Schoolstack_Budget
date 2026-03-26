@@ -26,6 +26,14 @@ import { buildLenderPacket } from "../lib/packets/build-lender-packet";
 import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
 import { generateBoardPacketPDF } from "../lib/packets/board-packet-pdf";
+import { normalizeRevenueRows } from "../lib/workbook-helpers";
+
+function normalizeModelData(data: Record<string, unknown>): Record<string, unknown> {
+  if (Array.isArray(data.revenueRows)) {
+    return { ...data, revenueRows: normalizeRevenueRows(data.revenueRows as any) };
+  }
+  return data;
+}
 
 const router: IRouter = Router();
 
@@ -309,7 +317,7 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = runConsultantEngine(data);
 
     await db
@@ -346,7 +354,7 @@ router.get("/models/:id/export/pro-forma-pdf", authMiddleware, async (req: AuthR
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
@@ -389,7 +397,7 @@ router.get("/models/:id/export/loan-readiness-pdf", authMiddleware, async (req: 
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const entityType = typeof profile?.entityType === "string" ? profile.entityType : undefined;
@@ -435,7 +443,7 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
@@ -478,7 +486,7 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = runConsultantEngine(data);
     const packet = buildLenderPacket(data as any, consultantOutput, model.id);
 
@@ -508,7 +516,7 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
@@ -553,7 +561,7 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = runConsultantEngine(data);
     const packet = buildBoardPacket(data as any, consultantOutput, model.id);
 
@@ -583,7 +591,7 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
@@ -631,7 +639,7 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
@@ -675,7 +683,7 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
@@ -721,7 +729,7 @@ router.get("/models/:id/export/single-year", authMiddleware, async (req: AuthReq
 
     const rawYear = parseInt(req.query.year as string || "0", 10);
     const yearIndex = isNaN(rawYear) ? 0 : Math.max(0, Math.min(rawYear, 4));
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
@@ -764,7 +772,7 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
       return;
     }
 
-    const data = model.data as Record<string, unknown>;
+    const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
 

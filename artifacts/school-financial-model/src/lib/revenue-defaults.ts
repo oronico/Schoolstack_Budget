@@ -291,7 +291,7 @@ interface LineItemDef {
 const ALL_PROFILES: FundingProfile[] = ["tuition_based", "charter_public_funded", "hybrid_mixed"];
 
 const LINE_ITEM_CATALOG: LineItemDef[] = [
-  { id: "gross_tuition", category: "tuition_and_fees", lineItem: "Gross Tuition", driverType: "per_student", enabledFor: ["tuition_based", "hybrid_mixed"] },
+  { id: "gross_tuition", category: "tuition_and_fees", lineItem: "Private Pay / Tuition", driverType: "per_student", enabledFor: ["tuition_based", "hybrid_mixed"] },
   { id: "registration_fees", category: "tuition_and_fees", lineItem: "Registration / Enrollment Fees", driverType: "per_student", enabledFor: ["tuition_based", "hybrid_mixed"] },
   { id: "student_fees", category: "tuition_and_fees", lineItem: "Student Fees", driverType: "per_student", enabledFor: [] },
   { id: "aftercare", category: "tuition_and_fees", lineItem: "Aftercare / Extended Day", driverType: "annual_fixed", enabledFor: [] },
@@ -311,6 +311,7 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
   { id: "voucher_revenue", category: "school_choice", lineItem: "Voucher Revenue", driverType: "per_student", enabledFor: [] },
   { id: "scholarship_org", category: "school_choice", lineItem: "Scholarship Organization Revenue", driverType: "per_student", enabledFor: [] },
 
+  { id: "private_scholarships", category: "philanthropy", lineItem: "Private Scholarships", driverType: "annual_fixed", enabledFor: ["tuition_based", "hybrid_mixed"] },
   { id: "grants", category: "philanthropy", lineItem: "Grants", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
   { id: "donations_fundraising", category: "philanthropy", lineItem: "Donations / Fundraising", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
   { id: "fundraising_events", category: "philanthropy", lineItem: "Fundraising Events", driverType: "annual_fixed", enabledFor: [] },
@@ -374,10 +375,14 @@ export function getCategoryOrder(fundingProfile: FundingProfile, schoolType?: st
 
 export function migrateGrantsToPhilanthropy(rows: RevenueRowData[]): RevenueRowData[] {
   return rows.map(r => {
+    let updated = r;
     if ((r.category as string) === "grants_contributions") {
-      return { ...r, category: "philanthropy" as RevenueCategory };
+      updated = { ...updated, category: "philanthropy" as RevenueCategory };
     }
-    return r;
+    if (r.id === "gross_tuition" && r.lineItem === "Gross Tuition") {
+      updated = { ...updated, lineItem: "Private Pay / Tuition" };
+    }
+    return updated;
   });
 }
 

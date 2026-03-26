@@ -60,7 +60,7 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
     },
   },
   tuition_offsets: {
-    tip: "Financial aid, sibling discounts, and staff discounts reduce gross tuition. Include these so lenders see the realistic net tuition.",
+    tip: "Financial aid, sibling discounts, and staff discounts reduce private pay / tuition. Include these so lenders see the realistic net tuition.",
     common: true,
   },
   public_funding: {
@@ -770,7 +770,62 @@ export function RevenueStep() {
                   <p className="text-sm text-muted-foreground py-2">No line items in this category yet.</p>
                 )}
 
-                {catRows.map((row) => {
+                {cat === "tuition_and_fees" ? (() => {
+                  const FEE_IDS = new Set(["registration_fees", "student_fees", "aftercare", "summer_program", "other_student_revenue"]);
+                  const tuitionRows = catRows.filter(r => !FEE_IDS.has(r.id));
+                  const feeRows = catRows.filter(r => FEE_IDS.has(r.id));
+                  return (
+                    <>
+                      {tuitionRows.map((row) => {
+                        const rowIndex = rows.findIndex((r) => r.id === row.id);
+                        const rowErrors = (errors.revenueRows as Record<string, unknown>)?.[rowIndex] as Record<string, { message?: string }> | undefined;
+                        return (
+                          <RevenueLineItem
+                            key={row.id}
+                            row={row}
+                            yearCount={yearCount}
+                            schoolStage={schoolStage}
+                            onToggle={() => toggleRow(row.id)}
+                            onDriverChange={(dt) => updateDriver(row.id, dt)}
+                            onAmountChange={(yi, val) => updateAmount(row.id, yi, val)}
+                            onTimingChange={(field, val) => updateTimingField(row.id, field, val)}
+                            onRemove={() => removeRow(row.id)}
+                            y1Students={y1Students}
+                            locked={false}
+                            rowErrors={rowErrors}
+                          />
+                        );
+                      })}
+                      {feeRows.length > 0 && (
+                        <div className="flex items-center gap-2 pt-2 pb-1">
+                          <div className="h-px flex-1 bg-border/60" />
+                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fees</span>
+                          <div className="h-px flex-1 bg-border/60" />
+                        </div>
+                      )}
+                      {feeRows.map((row) => {
+                        const rowIndex = rows.findIndex((r) => r.id === row.id);
+                        const rowErrors = (errors.revenueRows as Record<string, unknown>)?.[rowIndex] as Record<string, { message?: string }> | undefined;
+                        return (
+                          <RevenueLineItem
+                            key={row.id}
+                            row={row}
+                            yearCount={yearCount}
+                            schoolStage={schoolStage}
+                            onToggle={() => toggleRow(row.id)}
+                            onDriverChange={(dt) => updateDriver(row.id, dt)}
+                            onAmountChange={(yi, val) => updateAmount(row.id, yi, val)}
+                            onTimingChange={(field, val) => updateTimingField(row.id, field, val)}
+                            onRemove={() => removeRow(row.id)}
+                            y1Students={y1Students}
+                            locked={false}
+                            rowErrors={rowErrors}
+                          />
+                        );
+                      })}
+                    </>
+                  );
+                })() : catRows.map((row) => {
                   const rowIndex = rows.findIndex((r) => r.id === row.id);
                   const rowErrors = (errors.revenueRows as Record<string, unknown>)?.[rowIndex] as Record<string, { message?: string }> | undefined;
                   return (

@@ -540,6 +540,19 @@ export function tuitionWithTiers(gross: number, y: number, students: number, tie
   return total;
 }
 
+export function normalizeRevenueRows(rows: RevenueRow[]): RevenueRow[] {
+  return rows.map(r => {
+    let updated = r;
+    if ((r.category as string) === "grants_contributions") {
+      updated = { ...updated, category: "philanthropy" };
+    }
+    if (r.id === "gross_tuition" && r.lineItem === "Gross Tuition") {
+      updated = { ...updated, lineItem: "Private Pay / Tuition" };
+    }
+    return updated;
+  });
+}
+
 export function computeRevLineItem(
   r: RevenueRow, y: number, students: number, tiers?: TuitionTier[], costInflPct?: number, sp?: SchoolProfile
 ): number {
