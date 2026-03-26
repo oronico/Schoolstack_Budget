@@ -1870,6 +1870,32 @@ function buildPnLTab(
     if (item.section) styleSectionRow(ws, r, cols);
   }
 
+  const beRow = pnlRows.length + 2;
+  ws.getCell(beRow, 1).value = "Break-even";
+  ws.getCell(beRow, 1).font = BOLD_FONT;
+  let beCumNI = 0;
+  let beYearIdx = -1;
+  for (let y = 0; y < yearCount; y++) {
+    beCumNI += precomputed?.netIncome[y] ?? 0;
+    if (beYearIdx < 0 && beCumNI >= 0) beYearIdx = y;
+  }
+  for (let y = 0; y < yearCount; y++) {
+    const cell = ws.getCell(beRow, y + 2);
+    if (y === beYearIdx) {
+      cell.value = "✓ Break-even";
+      cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: "FF16A34A" } };
+    } else {
+      cell.value = "";
+    }
+    cell.border = {
+      top: { style: "thin", color: { argb: "FFD0D0D0" } },
+      bottom: { style: "thin", color: { argb: "FFD0D0D0" } },
+      left: { style: "thin", color: { argb: "FFD0D0D0" } },
+      right: { style: "thin", color: { argb: "FFD0D0D0" } },
+    };
+    cell.alignment = { horizontal: "center" };
+  }
+
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
 }
 

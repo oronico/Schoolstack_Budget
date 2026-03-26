@@ -639,6 +639,56 @@ function runFormulaTieOuts(wb: ExcelJS.Workbook): TestResult[] {
   return results;
 }
 
+function runDashboardTieOuts(wb: ExcelJS.Workbook): TestResult[] {
+  const results: TestResult[] = [];
+  const ds = wb.worksheets.find((ws) => ws.name === "Financial Health");
+  if (!ds) return results;
+
+  const expectedMetrics = [
+    "Payroll %",
+    "Facility %",
+    "Operating Margin",
+    "DSCR",
+    "Revenue per Student",
+    "Revenue Sources",
+    "Break-even",
+  ];
+
+  const foundLabels: string[] = [];
+  ds.eachRow((row) => {
+    const v = extractTextValue(row.getCell(2).value).trim();
+    if (v) foundLabels.push(v);
+  });
+
+  const missing: string[] = [];
+  for (const metric of expectedMetrics) {
+    if (!foundLabels.some((l) => l.toLowerCase().includes(metric.toLowerCase()))) {
+      missing.push(metric);
+    }
+  }
+
+  results.push({
+    name: "Dashboard Metrics Present",
+    passed: missing.length === 0,
+    details: [`Found ${expectedMetrics.length - missing.length}/${expectedMetrics.length} metrics`],
+    errors: missing.length > 0 ? [`Missing metrics: ${missing.join(", ")}`] : [],
+  });
+
+  let hasBenchmark = false;
+  ds.eachRow((row) => {
+    const v = extractTextValue(row.getCell(8).value).trim().toLowerCase();
+    if (v.includes("benchmark")) hasBenchmark = true;
+  });
+  results.push({
+    name: "Dashboard Benchmark Column",
+    passed: hasBenchmark,
+    details: [hasBenchmark ? "Benchmark header found in column H" : ""],
+    errors: hasBenchmark ? [] : ["Benchmark column header not found"],
+  });
+
+  return results;
+}
+
 async function testExport(
   exportName: string,
   payloadName: string,
@@ -696,6 +746,10 @@ async function testExport(
     const tieOuts = tieOutFn(wb);
     qaResult.results.push(...tieOuts);
     for (const t of tieOuts) logResult(t);
+
+    const dashboardResults = runDashboardTieOuts(wb);
+    qaResult.results.push(...dashboardResults);
+    for (const t of dashboardResults) logResult(t);
 
   } catch (err) {
     const errorResult: TestResult = {

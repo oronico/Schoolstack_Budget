@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import {
-  NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM, INPUT_CELL_FILL,
+  NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM, INPUT_CELL_FILL, DASHBOARD_GREEN,
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT, NF, BF,
   CUR, PCT, NUM, BORDER, SUBTOTAL_BORDER, MONTH_NAMES,
   hdr, sec, dc, bc, gc, cn, colLetter, setFormula, inputCell, outputCell, printSetup,
@@ -1555,6 +1555,40 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
     ws.getCell(r, col).numFmt = PCT; dc(ws.getCell(r, col));
   }
 
+  r++;
+  const cumNIRow = r;
+  ws.getCell(r, 1).value = niLabel.includes("Net Income") ? "Cumulative Net Income" : "Cumulative Profit"; bc(ws.getCell(r, 1));
+  let cumNIVal = 0;
+  for (let y = 0; y < 5; y++) {
+    cumNIVal += niByYear[y];
+    const col = y + 2;
+    const cell = ws.getCell(r, col);
+    if (y === 0) setFormula(cell, cn(niRow, col), Math.round(cumNIVal));
+    else setFormula(cell, `${cn(cumNIRow, col - 1)}+${cn(niRow, col)}`, Math.round(cumNIVal));
+    cell.numFmt = CUR; bc(cell);
+  }
+
+  r++;
+  ws.getCell(r, 1).value = "Break-even"; bc(ws.getCell(r, 1));
+  let beYear = -1;
+  let cumCheck = 0;
+  for (let y = 0; y < 5; y++) {
+    cumCheck += niByYear[y];
+    if (beYear < 0 && cumCheck >= 0) beYear = y;
+  }
+  for (let y = 0; y < 5; y++) {
+    const col = y + 2;
+    const cell = ws.getCell(r, col);
+    if (y === beYear) {
+      cell.value = "✓ Break-even";
+      cell.font = { ...BF, color: { argb: DASHBOARD_GREEN } };
+    } else {
+      cell.value = "";
+    }
+    cell.border = BORDER;
+    cell.alignment = { horizontal: "center" };
+  }
+
   return { niRow };
 }
 
@@ -2433,6 +2467,18 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   buildUnderwritingSnapshot(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear, balanceByYear);
 
   const hasDebt = debtIncluded && (data.capitalAndDebtRows || []).some(r => r.isLoan && r.enabled !== false);
+
+  const revCatsUW: Record<string, number[]> = {};
+  for (const rv of (effectiveData.revenueRows || []).filter(r => r.enabled)) {
+    const cat = rv.category || "other";
+    if (!revCatsUW[cat]) revCatsUW[cat] = new Array(5).fill(0);
+    for (let y = 0; y < 5; y++) {
+      const students = enrollment[y];
+      const val = computeRevLineItem(rv, y, students, effectiveData.tuitionTiers || [], costInflPct, sp);
+      revCatsUW[cat][y] += rv.category === "tuition_offsets" ? -Math.abs(val) : val;
+    }
+  }
+
   await addDashboardSheet(wb, {
     schoolName: sp.schoolName || "School",
     entityType: sp.entityType || "",
@@ -2445,6 +2491,7 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
     cashByYear,
     startingCash,
     hasDebt,
+    revenueCategories: revCatsUW,
   });
 
   return wb;

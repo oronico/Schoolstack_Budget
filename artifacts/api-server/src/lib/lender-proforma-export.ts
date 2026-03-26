@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import {
-  NAVY, WHITE, LIGHT_GRAY, GREEN_BG, RED_BG, AMBER_BG,
+  NAVY, WHITE, LIGHT_GRAY, GREEN_BG, RED_BG, AMBER_BG, DASHBOARD_GREEN,
   EVERGREEN, CREAM, TEAL,
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT,
   NF, BF, BORDER, SUBTOTAL_BORDER,
@@ -1119,6 +1119,37 @@ function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
     [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}16/${YEAR_COLS[y]}10,0)`),
     res.operatingMargin, PCT);
 
+  lbl(19, "Cumulative Net Income", true);
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(19, y + 3);
+    if (y === 0) {
+      setFormula(cell, `${YEAR_COLS[0]}16`, res.noi[0]);
+    } else {
+      const cumVal = res.noi.slice(0, y + 1).reduce((a, b) => a + b, 0);
+      setFormula(cell, `${YEAR_COLS[y - 1]}19+${YEAR_COLS[y]}16`, cumVal);
+    }
+    cell.numFmt = CUR; cell.font = BF; cell.border = BORDER;
+    cell.alignment = { horizontal: "right" };
+  }
+
+  lbl(20, "Break-even", true);
+  let lenderBeYear = -1;
+  let lenderCumNI = 0;
+  for (let y = 0; y < 5; y++) {
+    lenderCumNI += res.noi[y];
+    if (lenderBeYear < 0 && lenderCumNI >= 0) lenderBeYear = y;
+  }
+  for (let y = 0; y < 5; y++) {
+    const cell = ws.getCell(20, y + 3);
+    if (y === lenderBeYear) {
+      cell.value = "✓ Break-even";
+      cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: DASHBOARD_GREEN } };
+    } else {
+      cell.value = "";
+    }
+    cell.border = BORDER; cell.alignment = { horizontal: "center" };
+  }
+
   ws.views = [{ state: "frozen", xSplit: 2, ySplit: 3 }];
 }
 
@@ -1397,6 +1428,12 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
   buildLoanSnapshot(wb, input, res);
   buildSummary(wb, input, res);
 
+  const lenderRevCats: Record<string, number[]> = {};
+  if (res.tuitionCollected.some(v => v > 0)) lenderRevCats["tuition_and_fees"] = res.tuitionCollected;
+  if (res.esaRevenue.some(v => v > 0)) lenderRevCats["public_funding"] = res.esaRevenue;
+  if (res.otherRevenue.some(v => v > 0)) lenderRevCats["other_revenue"] = res.otherRevenue;
+  if (res.grants.some(v => v > 0)) lenderRevCats["grants_contributions"] = res.grants;
+
   await addDashboardSheet(wb, {
     schoolName: String(input.schoolName || "School"),
     entityType: String(input.entityType || ""),
@@ -1409,6 +1446,7 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
     cashByYear: res.cumulativeCash,
     startingCash: Number(input.startingCash) || 0,
     hasDebt: res.totalDebtService > 0,
+    revenueCategories: lenderRevCats,
   });
 
   const buffer = await wb.xlsx.writeBuffer();

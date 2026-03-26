@@ -1048,9 +1048,15 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   }
 
   r++;
+  const cumNI: number[] = [];
+  let cumSum = 0;
+  for (let y = 0; y < 5; y++) {
+    cumSum += input.netIncomeByYear[y];
+    cumNI.push(cumSum);
+  }
   let breakEvenYear = -1;
   for (let y = 0; y < 5; y++) {
-    if (input.netIncomeByYear[y] >= 0) { breakEvenYear = y; break; }
+    if (cumNI[y] >= 0) { breakEvenYear = y; break; }
   }
   ws.getCell(r, 2).value = "Break-even Year"; bc(ws.getCell(r, 2));
   ws.getCell(r, 2).border = BORDER;

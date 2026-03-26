@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import {
-  addInstructionsSheet, addDashboardSheet, type DashboardInput,
+  addInstructionsSheet, addDashboardSheet, type DashboardInput, DASHBOARD_GREEN,
   computeRevenueForYear as sharedComputeRevenue,
   computePersonnelForYear as sharedComputePersonnel,
   computeExpenseForYear as sharedComputeExpense,
@@ -1354,6 +1354,24 @@ function buildFiveYearModel(
   }
   const cumNIRow = r;
 
+  r++; ws.getCell(r, 1).value = "Break-even"; ws.getCell(r, 1).font = BF;
+  let beYrF = -1;
+  let cumChkF = 0;
+  for (let y = 0; y < yc; y++) {
+    cumChkF += niArr[y];
+    if (beYrF < 0 && cumChkF >= 0) beYrF = y;
+  }
+  for (let y = 0; y < yc; y++) {
+    const cell = ws.getCell(r, y + 2);
+    if (y === beYrF) {
+      cell.value = "✓ Break-even";
+      cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: DASHBOARD_GREEN } };
+    } else {
+      cell.value = "";
+    }
+    cell.border = BORDER; cell.alignment = { horizontal: "center" };
+  }
+
   r += 2;
   const cfadsRow = r + 1;
   sec(ws, r, 6); ws.getCell(r, 1).value = "CASH FLOW & DEBT COVERAGE";
@@ -2174,6 +2192,19 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   }
 
   const hasDebt = dbCapRows.some(r => r.isLoan && r.enabled !== false);
+
+  const revCatsF: Record<string, number[]> = {};
+  for (const rv of dbRevRows) {
+    if (rv.enabled === false) continue;
+    const cat = rv.category || "other";
+    if (!revCatsF[cat]) revCatsF[cat] = new Array(5).fill(0);
+    for (let y = 0; y < 5; y++) {
+      const students = enrollment[y];
+      const val = computeRevLineItem(rv as unknown as RevenueRow, y, students, dbTiers as unknown as TuitionTier[], costInflPct, sp as unknown as SchoolProfile);
+      revCatsF[cat][y] += rv.category === "tuition_offsets" ? -Math.abs(val) : val;
+    }
+  }
+
   await addDashboardSheet(wb, {
     schoolName: sp.schoolName || "School",
     entityType: sp.entityType || "",
@@ -2186,6 +2217,7 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     cashByYear,
     startingCash,
     hasDebt,
+    revenueCategories: revCatsF,
   });
   }
 

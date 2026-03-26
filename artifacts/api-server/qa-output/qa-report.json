@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 43292,
+    "fileSize": 43441,
     "tabs": [
       "Instructions",
       "Cover",
@@ -32,7 +32,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 42.3 KB",
+          "File size: 42.4 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -50,7 +50,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1709 cells across 22 sheets",
+          "Scanned 1721 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -118,6 +118,22 @@
           "DSCR row present — N/A or 0 is correct when no debt exists"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -125,7 +141,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 26414,
+    "fileSize": 26482,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -142,7 +158,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.8 KB",
+          "File size: 25.9 KB",
           "Successfully opened workbook",
           "Worksheets: 9"
         ],
@@ -160,7 +176,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 739 cells across 9 sheets",
+          "Scanned 745 cells across 9 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -180,6 +196,22 @@
           "Net Income: 47106"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -187,7 +219,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 24622,
+    "fileSize": 24679,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -200,7 +232,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 24.0 KB",
+          "File size: 24.1 KB",
           "Successfully opened workbook",
           "Worksheets: 5"
         ],
@@ -218,8 +250,24 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1194 cells across 5 sheets",
+          "Scanned 1200 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
         ],
         "errors": []
       }
@@ -229,7 +277,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 37495,
+    "fileSize": 37551,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -253,7 +301,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 36.6 KB",
+          "File size: 36.7 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -271,7 +319,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1142 cells across 16 sheets",
+          "Scanned 1148 cells across 16 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -291,6 +339,22 @@
           "Net Income: 18273"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -298,7 +362,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 25416,
+    "fileSize": 25566,
     "tabs": [
       "Instructions",
       "Cover",
@@ -316,7 +380,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 24.8 KB",
+          "File size: 25.0 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -334,7 +398,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 661 cells across 10 sheets",
+          "Scanned 673 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -352,6 +416,22 @@
         "passed": true,
         "details": [
           "Net Income: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
         ],
         "errors": []
       }
@@ -419,7 +499,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 46938,
+    "fileSize": 47089,
     "tabs": [
       "Instructions",
       "Cover",
@@ -449,7 +529,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 45.8 KB",
+          "File size: 46.0 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -467,7 +547,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 2033 cells across 22 sheets",
+          "Scanned 2045 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -575,6 +655,22 @@
           "DSCR values found and populated"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -582,7 +678,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 28172,
+    "fileSize": 28242,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -600,7 +696,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 27.5 KB",
+          "File size: 27.6 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -618,7 +714,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 822 cells across 10 sheets",
+          "Scanned 828 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -638,6 +734,22 @@
           "Net Income: 789764"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -645,7 +757,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 27735,
+    "fileSize": 27802,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -659,7 +771,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 27.1 KB",
+          "File size: 27.2 KB",
           "Successfully opened workbook",
           "Worksheets: 6"
         ],
@@ -677,8 +789,24 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1506 cells across 6 sheets",
+          "Scanned 1512 cells across 6 sheets",
           "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
         ],
         "errors": []
       }
@@ -688,7 +816,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 38226,
+    "fileSize": 38290,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -712,7 +840,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 37.3 KB",
+          "File size: 37.4 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -730,7 +858,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1223 cells across 16 sheets",
+          "Scanned 1229 cells across 16 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -750,6 +878,22 @@
           "Net Income: 789764"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -757,7 +901,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 25590,
+    "fileSize": 25756,
     "tabs": [
       "Instructions",
       "Cover",
@@ -775,7 +919,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.0 KB",
+          "File size: 25.2 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -793,7 +937,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 661 cells across 10 sheets",
+          "Scanned 673 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -811,6 +955,22 @@
         "passed": true,
         "details": [
           "Net Income: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
         ],
         "errors": []
       }
@@ -878,7 +1038,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 48105,
+    "fileSize": 48306,
     "tabs": [
       "Instructions",
       "Cover",
@@ -908,7 +1068,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 47.0 KB",
+          "File size: 47.2 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -926,7 +1086,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 2174 cells across 22 sheets",
+          "Scanned 2186 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1034,6 +1194,22 @@
           "DSCR values found and populated"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1041,7 +1217,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter Public Funding",
-    "fileSize": 27243,
+    "fileSize": 27300,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1058,7 +1234,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 26.6 KB",
+          "File size: 26.7 KB",
           "Successfully opened workbook",
           "Worksheets: 9"
         ],
@@ -1076,7 +1252,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 828 cells across 9 sheets",
+          "Scanned 834 cells across 9 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1096,6 +1272,22 @@
           "Net Income: -299256"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1103,7 +1295,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 26572,
+    "fileSize": 26637,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1116,7 +1308,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.9 KB",
+          "File size: 26.0 KB",
           "Successfully opened workbook",
           "Worksheets: 5"
         ],
@@ -1134,8 +1326,24 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1554 cells across 5 sheets",
+          "Scanned 1560 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
         ],
         "errors": []
       }
@@ -1145,7 +1353,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 38320,
+    "fileSize": 38413,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1169,7 +1377,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 37.4 KB",
+          "File size: 37.5 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -1187,7 +1395,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1223 cells across 16 sheets",
+          "Scanned 1229 cells across 16 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1207,6 +1415,22 @@
           "Net Income: -447923"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1214,7 +1438,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 25697,
+    "fileSize": 25853,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1232,7 +1456,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.1 KB",
+          "File size: 25.2 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -1250,7 +1474,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 661 cells across 10 sheets",
+          "Scanned 673 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1268,6 +1492,22 @@
         "passed": true,
         "details": [
           "Net Income: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
         ],
         "errors": []
       }
@@ -1335,7 +1575,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 47488,
+    "fileSize": 47622,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1365,7 +1605,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 46.4 KB",
+          "File size: 46.5 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -1383,7 +1623,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 2059 cells across 22 sheets",
+          "Scanned 2071 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1491,6 +1731,22 @@
           "DSCR values found and populated"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1498,7 +1754,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26988,
+    "fileSize": 27048,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1533,7 +1789,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 794 cells across 9 sheets",
+          "Scanned 800 cells across 9 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1553,6 +1809,22 @@
           "Net Income: -26164"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1560,7 +1832,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26429,
+    "fileSize": 26488,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1573,7 +1845,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.8 KB",
+          "File size: 25.9 KB",
           "Successfully opened workbook",
           "Worksheets: 5"
         ],
@@ -1591,8 +1863,24 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1473 cells across 5 sheets",
+          "Scanned 1479 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
         ],
         "errors": []
       }
@@ -1602,7 +1890,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 38124,
+    "fileSize": 38194,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1626,7 +1914,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 37.2 KB",
+          "File size: 37.3 KB",
           "Successfully opened workbook",
           "Worksheets: 16"
         ],
@@ -1644,7 +1932,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1193 cells across 16 sheets",
+          "Scanned 1199 cells across 16 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1664,6 +1952,22 @@
           "Net Income: -212164"
         ],
         "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1671,7 +1975,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26123,
+    "fileSize": 26284,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1689,7 +1993,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.5 KB",
+          "File size: 25.7 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -1707,7 +2011,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 688 cells across 10 sheets",
+          "Scanned 700 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1781,6 +2085,22 @@
         "passed": true,
         "details": [
           "Y5: $4,456,000 (K5: 260×$8200, 6-8: 140×$9100, 9-12: 100×$10500)"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 7/7 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
         ],
         "errors": []
       }

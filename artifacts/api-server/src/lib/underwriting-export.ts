@@ -2,7 +2,7 @@
 // The /export/underwriting route has been removed; only /export/underwriting-v2 is active.
 // Retained for reference only — do not add new code here.
 import ExcelJS from "exceljs";
-import { addDashboardSheet } from "./workbook-helpers.js";
+import { addDashboardSheet, DASHBOARD_GREEN } from "./workbook-helpers.js";
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
   if (!baseYear) return `Year ${offset + 1}`;
@@ -640,6 +640,20 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
       runCash += annualNetIncome[y];
       cashArr.push(runCash);
     }
+
+    const revCatsV1: Record<string, number[]> = {};
+    for (const rv of revenueRows) {
+      if (!rv.enabled) continue;
+      const cat = rv.category || "other";
+      if (!revCatsV1[cat]) revCatsV1[cat] = new Array(yc).fill(0);
+      for (let y = 0; y < yc; y++) {
+        const students = enrollment[y];
+        const pf = y === 0 ? prorationFactor : 1;
+        const val = driverVal(rv.amounts, y, rv.driverType, students, rv.escalationRate) * pf;
+        revCatsV1[cat][y] += rv.category === "tuition_offsets" ? -Math.abs(val) : val;
+      }
+    }
+
     await addDashboardSheet(wb, {
       schoolName: sp.schoolName || "School",
       entityType: sp.entityType || "",
@@ -652,6 +666,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
       cashByYear: cashArr,
       startingCash: cashAtOpen,
       hasDebt,
+      revenueCategories: revCatsV1,
     });
   }
 
@@ -753,6 +768,20 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
       rc += annualNetIncome[y];
       cashArr.push(rc);
     }
+
+    const revCatsV1b: Record<string, number[]> = {};
+    for (const rv of revenueRows) {
+      if (!rv.enabled) continue;
+      const cat = rv.category || "other";
+      if (!revCatsV1b[cat]) revCatsV1b[cat] = new Array(yc).fill(0);
+      for (let y = 0; y < yc; y++) {
+        const students = enrollment[y];
+        const pf = y === 0 ? prorationFactor : 1;
+        const val = driverVal(rv.amounts, y, rv.driverType, students, rv.escalationRate) * pf;
+        revCatsV1b[cat][y] += rv.category === "tuition_offsets" ? -Math.abs(val) : val;
+      }
+    }
+
     await addDashboardSheet(wb, {
       schoolName: sp.schoolName || "School",
       entityType: sp.entityType || "",
@@ -765,6 +794,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
       cashByYear: cashArr,
       startingCash: cashAtOpen,
       hasDebt,
+      revenueCategories: revCatsV1b,
     });
   }
 
@@ -2272,6 +2302,7 @@ function buildFiveYearPL(
   }
 
   r++; ws.getCell(r, 1).value = "Cumulative Net Income"; ws.getCell(r, 1).font = BF;
+  const cumNIRowPL = r;
   let cumNI = 0;
   for (let y = 0; y < yc; y++) {
     cumNI += ni[y] || 0;
@@ -2279,6 +2310,25 @@ function buildFiveYearPL(
     if (y === 0) setFormula(cell, cn(niRow, 2), cumNI);
     else setFormula(cell, `${cn(r, y + 1)}+${cn(niRow, y + 2)}`, cumNI);
     cell.numFmt = CUR; bc(cell);
+  }
+
+  r++; ws.getCell(r, 1).value = "Break-even"; ws.getCell(r, 1).font = BF;
+  let beYr = -1;
+  let cumChk = 0;
+  for (let y = 0; y < yc; y++) {
+    cumChk += ni[y] || 0;
+    if (beYr < 0 && cumChk >= 0) beYr = y;
+  }
+  for (let y = 0; y < yc; y++) {
+    const cell = ws.getCell(r, y + 2);
+    if (y === beYr) {
+      cell.value = "✓ Break-even";
+      cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: DASHBOARD_GREEN } };
+    } else {
+      cell.value = "";
+    }
+    cell.border = BORDER;
+    cell.alignment = { horizontal: "center" };
   }
 
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
