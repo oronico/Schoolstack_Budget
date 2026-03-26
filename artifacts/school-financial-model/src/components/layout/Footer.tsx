@@ -39,7 +39,13 @@ export function Footer() {
               alt="Building Hope Impact Fund"
               className="h-20 w-auto mb-3 brightness-0 invert"
             />
-            <p className="text-sm text-white/50 leading-relaxed max-w-xs">
+            <p className="text-sm text-white/70 leading-relaxed max-w-xs">
+              Building Hope Impact Fund
+            </p>
+            <p className="text-xs text-white/40 mt-1">
+              EIN 88-2703870
+            </p>
+            <p className="text-sm text-white/50 mt-3 leading-relaxed max-w-xs">
               Supporting school founders with the tools they need to launch and sustain great schools.
             </p>
           </div>
