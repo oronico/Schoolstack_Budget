@@ -40,6 +40,7 @@ interface SchoolProfile {
   state?: string;
   schoolType?: string;
   schoolTypeOther?: string;
+  entityType?: string;
   openingYear?: number;
   gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
   gradeBandPerPupil?: { k5: number; m68: number; h912: number };
@@ -161,7 +162,7 @@ const PROGRAM_CATEGORIES = ["instructional_program"];
 
 export function mapModelToTemplateInput(rawData: Record<string, unknown>): Record<string, string | number> {
   const data = rawData as unknown as ModelData;
-  const sp = data.schoolProfile || {};
+  const sp = data.schoolProfile || ({} as SchoolProfile);
   const en = data.enrollment || {};
   const revenueRows = data.revenueRows || [];
   const staffingRows = data.staffingRows || [];
@@ -177,6 +178,7 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   result.schoolName = sp.schoolName || "";
   result.state = sp.state || "";
   result.schoolType = SCHOOL_TYPE_DISPLAY[sp.schoolType || ""] || sp.schoolTypeOther || sp.schoolType || "";
+  result.entityType = sp.entityType || "";
   result.firstOperatingYear = sp.openingYear || new Date().getFullYear();
 
   result.enrollmentY1 = en.year1 || 0;
