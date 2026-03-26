@@ -68,18 +68,20 @@ function testMicroschoolStartup() {
   // r2 reg fee: 250 × 12 = 3,000
   // r3 ESA: 7000 × 12 = 84,000
   // r4 fundraising: 5,000
-  // Total = 236,000
+  // r5 scholarship: -10% × r1 = -14,400
+  // Total = 221,600
   const revY1 = computeRevenueForYear(revenueRows, 0, enrollment[0]);
-  check("Micro Y1 Revenue", revY1, 236000);
+  check("Micro Y1 Revenue", revY1, 221600);
 
   // Y3: 22 students
   // r1 tuition: 12731 × 22 = 280,082
   // r2 reg: 250 × 22 = 5,500
   // r3 ESA: 7426 × 22 = 163,372
   // r4 fundraising: 7,000
-  // Total = 455,954
+  // r5 scholarship: -10% × r1 = -28,008
+  // Total = 427,946
   const revY3 = computeRevenueForYear(revenueRows, 2, enrollment[2]);
-  check("Micro Y3 Revenue", revY3, 455954);
+  check("Micro Y3 Revenue", revY3, 427946);
 
   // Personnel Y1: prorationFactor = 10/12
   // s1: 55000 * (1 + 0.20 + 0.0765) = 55000 * 1.2765 = 70207.50
@@ -96,9 +98,9 @@ function testMicroschoolStartup() {
   const persY2 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 1);
   check("Micro Y2 Personnel", persY2, 147003, 2);
 
-  // No capDebtRows → zero debt
+  // cd1: Equipment Loan $30K at 6%/5yr = ~$6,960/yr debt service
   const cdY1 = computeCapDebtForYear(capDebtRows, 0, enrollment[0]);
-  check("Micro Y1 CapDebt", cdY1, 0);
+  check("Micro Y1 CapDebt", cdY1, 6960);
 
   // OpEx Y1 (check a few line items):
   // e1 Rent: 2500 * 12 = 30,000  (monthly driver, amounts[0]=2500)
@@ -455,10 +457,10 @@ async function testWorkbookKPIs() {
 
   const expectations: [string, Record<string, unknown>, KPIExpected][] = [
     ["Microschool", microschoolStartup as unknown as Record<string, unknown>, {
-      y1Rev: 196667, y5Rev: 547279,
+      y1Rev: 184667, y5Rev: 513513,
       y1Pers: 118934, y1Opex: 40500, y1CD: 0,
-      y1TotalExp: 159434, y1NI: 37233, y5NI: 320240,
-      y1DebtSvc: 0, y1DSCR: "N/A", y1EndingCash: 76570,
+      y1TotalExp: 159434, y1NI: 25233, y5NI: 286475,
+      y1DebtSvc: 0, y1DSCR: "N/A", y1EndingCash: 62170,
     }],
     ["Private+ESA", privateSchoolWithESA as unknown as Record<string, unknown>, {
       y1Rev: 1975000, y5Rev: 4361347,
@@ -581,10 +583,10 @@ async function testMonthlyTimingWorkbook() {
 
   // Revenue M1 (non-tuition only, tuition starts M2): 9150
   check("Micro MCF: Rev M1", cellNum(microMcf, mRevRow, 2), 9150);
-  // Revenue M2-M10 (tuition + non-tuition): 23550
-  check("Micro MCF: Rev M2", cellNum(microMcf, mRevRow, 3), 23550);
-  // Annual total: 236000
-  check("Micro MCF: Rev Annual", cellNum(microMcf, mRevRow, 14), 236000);
+  // Revenue M2-M10 (tuition + non-tuition, net of scholarship): 22110
+  check("Micro MCF: Rev M2", cellNum(microMcf, mRevRow, 3), 22110);
+  // Annual total: 221600 (includes 10% scholarship offset on tuition)
+  check("Micro MCF: Rev Annual", cellNum(microMcf, mRevRow, 14), 221600);
 
   // Private+ESA: full year (12 opMonths), debt service spread over 12 months
   const privWb = await generateUnderwritingWorkbook(privateSchoolWithESA as unknown as Record<string, unknown>);
