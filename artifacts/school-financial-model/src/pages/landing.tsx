@@ -9,7 +9,6 @@ import {
   BarChart3,
   MessageCircle,
   Download,
-  ExternalLink,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { motion } from "framer-motion";
@@ -229,28 +228,56 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-white border-t border-[#1E293B]/5">
+      <section className="py-20 bg-[#FAF9F7] border-t border-[#1E293B]/5">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
-            <p className="text-sm font-bold tracking-widest text-[#1E293B]/40 uppercase mb-4">
-              From the SchoolStack suite
+            <p className="text-sm font-bold tracking-widest text-[#1E293B]/40 uppercase mb-6">
+              From the SchoolStack Suite
             </p>
-            <h2 className="font-display text-2xl md:text-3xl font-bold text-[#1E293B] mb-6">
-              Need help with your building too?
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-[#1E293B] mb-5">
+              Connecting your facilities, budget, and back office.
             </h2>
-            <p className="text-lg text-[#1E293B]/60 mb-8 max-w-2xl mx-auto">
-              SchoolStack Space helps you figure out how much space your school needs
-              and what a lease will really cost before you commit.
+            <p className="text-lg text-[#1E293B]/60 mb-10 max-w-2xl mx-auto">
+              SchoolStack Space works alongside <span className="font-semibold text-[#1E293B]">SchoolStack Budget</span> (financial modeling) and the
+              flagship <a href="https://schoolstack.ai" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#D97706] hover:text-[#B45309] transition">SchoolStack</a> back
+              office platform to keep your entire founding journey aligned.
             </p>
-            <a
-              href="https://space.schoolstack.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-[#4A7CB8] hover:text-[#3A6AA0] font-bold text-lg transition"
-            >
-              Try SchoolStack Space
-              <ExternalLink className="w-5 h-5" />
-            </a>
+
+            <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+              <a
+                href="https://space.schoolstack.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 group"
+              >
+                <span className="w-7 h-7 rounded-full border-2 border-[#328555] flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-[#328555]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </span>
+                <span className="font-semibold text-[#1E293B] group-hover:text-[#328555] transition text-lg">Space</span>
+                <span className="text-sm font-medium text-[#328555]">Beta</span>
+              </a>
+
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-full border-2 border-[#1E293B] flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-[#1E293B]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </span>
+                <span className="font-semibold text-[#1E293B] text-lg">Budget</span>
+                <span className="text-sm font-medium text-[#4A7CB8]">Alpha</span>
+              </div>
+
+              <a
+                href="https://schoolstack.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 group"
+              >
+                <span className="w-7 h-7 rounded-full border-2 border-[#D97706] flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-[#D97706]" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </span>
+                <span className="font-semibold text-[#1E293B] group-hover:text-[#D97706] transition text-lg">SchoolStack</span>
+                <span className="text-sm font-medium text-[#D97706]">Fall 2026</span>
+              </a>
+            </div>
           </motion.div>
         </div>
       </section>
