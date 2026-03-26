@@ -1,0 +1,562 @@
+# SchoolStack Budget: Consultant-Grade Workbook Tasks
+
+**Goal:** Make the exported workbook the product. When a founder opens it in Excel, it should feel like a $20K consultant deliverable, not a web app download.
+
+**Files that will be modified:**
+
+- `artifacts/api-server/src/lib/exports/workbook-helpers.ts` (shared formatting)
+- `artifacts/api-server/src/lib/exports/formula-export.ts` (3-tab public)
+- `artifacts/api-server/src/lib/exports/lender-proforma-export.ts` (8-tab)
+- `artifacts/api-server/src/lib/exports/underwriting-workbook.ts` (21-tab)
+- `artifacts/school-financial-model/src/components/export/ExportStep.tsx` (frontend UI)
+
+**Sequencing:** Tasks 1-3 can ship together as one PR. Task 4 is standalone. Task 5 is the deepest change and should be its own PR.
+
+**Testing:** After each task, run `pnpm --filter @workspace/api-server run qa:golden` and `pnpm --filter @workspace/api-server run qa:excel` to confirm no regressions.
+
+-----
+
+## TASK 1: Input cell formatting (blue = editable)
+
+**Priority:** Highest. This is the single most recognizable signal that a workbook is professionally built. Every consultant model uses this convention.
+
+### The convention
+
+- **Blue (or light blue) background + blue font** = editable input assumption
+- **White/no background + black font** = formula-driven output (do not touch)
+- **Light gray background** = label/header row
+
+### Implementation
+
+#### Step A: Define shared styles in `workbook-helpers.ts`
+
+Add these constants near the top of the file (alongside existing formatting constants):
+
+```typescript
+// Consultant-grade cell formatting conventions
+export const INPUT_CELL_FILL: ExcelJS.Fill = {
+  type: "pattern",
+  pattern: "solid",
+  fgColor: { argb: "FFDCE6F1" },  // light steel blue
+};
+
+export const INPUT_CELL_FONT: Partial<ExcelJS.Font> = {
+  color: { argb: "FF1F4E79" },  // dark navy blue
+  bold: false,
+};
+
+export const INPUT_CELL_BORDER: Partial<ExcelJS.Borders> = {
+  bottom: { style: "thin", color: { argb: "FF8DB4E2" } },  // subtle blue underline
+};
+
+// Combined style object for easy application
+export const INPUT_STYLE = {
+  fill: INPUT_CELL_FILL,
+  font: INPUT_CELL_FONT,
+  border: INPUT_CELL_BORDER,
+};
+
+export const FORMULA_CELL_FONT: Partial<ExcelJS.Font> = {
+  color: { argb: "FF000000" },  // black
+};
+```
+
+#### Step B: Apply to the Assumptions tab on ALL export formats
+
+The Assumptions tab exists on every export format. Every cell that contains a user-entered value (enrollment counts, tuition rates, salary amounts, escalation percentages, etc.) should get `INPUT_STYLE`. Every cell that contains a calculated value should get `FORMULA_CELL_FONT`.
+
+In each export file, find where assumption values are written to cells. For example, in the lender pro forma:
+
+```typescript
+// BEFORE
+cell.value = enrollmentYear1;
+
+// AFTER
+cell.value = enrollmentYear1;
+cell.fill = INPUT_CELL_FILL;
+cell.font = INPUT_CELL_FONT;
+cell.border = INPUT_CELL_BORDER;
+```
+
+Or create a helper function:
+
+```typescript
+function applyInputStyle(cell: ExcelJS.Cell) {
+  cell.fill = INPUT_CELL_FILL;
+  cell.font = INPUT_CELL_FONT;
+  cell.border = INPUT_CELL_BORDER;
+}
+
+// Usage
+const cell = ws.getCell("B5");
+cell.value = enrollmentYear1;
+applyInputStyle(cell);
+```
+
+#### Step C: Apply to other tabs where assumptions are referenced
+
+On the 5-Year Model, Drivers, and forecast tabs, cells that REFERENCE the Assumptions tab via formula should remain black (formula output). But any direct-entry values on those tabs (if any exist) should also get input styling.
+
+#### Step D: Add a legend row
+
+On the Assumptions tab (all formats), add a legend row near the top:
+
+```
+Row 2: [Blue cell] = "Editable assumption - change this value"    [White cell] = "Calculated - driven by formula"
+```
+
+This takes 2 cells and instantly communicates the convention to anyone opening the file.
+
+### What this looks like
+
+Open the workbook. Every blue cell is something you can change. Every black cell recalculates automatically. A lender looking at the model can immediately see “if I change enrollment from 100 to 80, what happens to the P&L?” That’s the consultant experience.
+
+### Verify
+
+- Open each export format in Excel
+- Confirm assumption values are blue-on-light-blue
+- Confirm formula cells are black-on-white
+- Confirm the legend row appears on the Assumptions tab
+- Change a blue cell value and confirm formulas recalculate
+- Run `qa:golden` and `qa:excel` – all pass
+
+-----
+
+## TASK 2: Instructions tab on all export formats
+
+**Priority:** High. A workbook without instructions is a spreadsheet. A workbook with instructions is a deliverable.
+
+### What to build
+
+Add a new “Instructions” tab as Tab 1 (first tab) on ALL export formats. The 21-tab model already has one – use that as the template but make it work across all formats.
+
+### Content for the Instructions tab
+
+```
+ROW 1: [SchoolStack Budget logo area]
+       School Name: {schoolName}
+       Prepared: {date}
+       Model Type: {schoolType} | {schoolStage}
+
+ROW 4: HOW TO USE THIS MODEL
+
+ROW 6: 1. UNDERSTAND THE COLOR CODING
+       Blue cells (shaded) are editable assumptions. Change these to test different scenarios.
+       Black cells are formulas. They recalculate automatically. Do not overwrite them.
+
+ROW 9: 2. START WITH ASSUMPTIONS
+       Go to the Assumptions tab first. Review each input: enrollment, tuition rates,
+       staffing, and expenses. These drive everything else in the model.
+
+ROW 12: 3. REVIEW THE 5-YEAR PROJECTION
+        The 5-Year Model tab shows your full P&L. Look for:
+        - Does revenue grow faster than expenses?
+        - Is there a surplus (positive net income) by Year 2-3?
+        - Are facility costs under 15% of revenue?
+
+ROW 17: 4. KEY RATIOS TO WATCH
+        - Payroll as % of Revenue: Target under 65%. Over 80% is critical.
+        - Operating Surplus Margin: Target over 5%. Negative means you're losing money.
+        - DSCR (if you have debt): Target over 1.25x. Under 1.0x means you can't cover payments.
+        - Revenue per Student: Varies by model, but under $5,000/student is very tight.
+
+ROW 23: 5. WHAT TO DO NEXT
+        - Adjust assumptions and watch the model recalculate
+        - Share this workbook with your board, lender, or advisor
+        - Visit budget.schoolstack.ai to update your model online
+        - Questions? Email allison@schoolstack.ai
+
+ROW 28: DISCLAIMER
+        This model is for planning purposes. It does not constitute financial advice.
+        Projections are based on the assumptions you entered and may not reflect actual results.
+        SchoolStack is a product of Building Hope Impact Fund.
+```
+
+### Implementation
+
+Create a shared function in `workbook-helpers.ts`:
+
+```typescript
+export function addInstructionsSheet(
+  workbook: ExcelJS.Workbook,
+  schoolName: string,
+  schoolType: string,
+  schoolStage: string,
+  tabCount: string,  // e.g., "3-tab", "8-tab", "21-tab"
+): ExcelJS.Worksheet {
+  const ws = workbook.addWorksheet("Instructions", {
+    properties: { tabColor: { argb: "FF328555" } },  // Evergreen
+  });
+
+  ws.getColumn(1).width = 4;   // gutter
+  ws.getColumn(2).width = 80;  // content
+  ws.getColumn(3).width = 30;  // secondary
+
+  // ... write the content rows above using ws.getCell() ...
+  // Use Quicksand-style bold for headings, Nunito for body
+  // Apply SchoolStack brand colors
+
+  ws.pageSetup = {
+    orientation: "portrait",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    printArea: "A1:C35",
+  };
+
+  return ws;
+}
+```
+
+Then call it from each export file, inserting the Instructions tab BEFORE the existing tabs:
+
+```typescript
+// In formula-export.ts, lender-proforma-export.ts, underwriting-workbook.ts
+addInstructionsSheet(workbook, schoolName, schoolType, schoolStage, "3-tab");
+// ... then add the other tabs as usual
+```
+
+### Tab order after this change
+
+**Public (currently 3-tab, becomes 4):**
+Instructions | Assumptions | 5-Year Model | Year 1 Pro Forma
+
+**Lender Pro Forma (currently 8-tab, becomes 9):**
+Instructions | Cover | Assumptions | Drivers | 5-Year P&L | Cash Flow & DSCR | Staffing | Loan Snapshot | Summary
+
+**21-tab model:**
+Already has Instructions. Review it for consistency with the content above and add the color-coding legend if missing.
+
+### Verify
+
+- Open each export format
+- Instructions tab is the first tab (leftmost)
+- Content is readable, well-formatted, branded
+- No formula errors introduced on other tabs
+- Run `qa:golden` and `qa:excel`
+
+**Note:** The qa tests check tab counts and tab names. Update the test assertions to account for the new Instructions tab.
+
+-----
+
+## TASK 3: Benchmark dashboard tab
+
+**Priority:** High. This is what makes the workbook replace a consultant’s opinion. The numbers speak for themselves with green/yellow/red formatting.
+
+### What to build
+
+A new “Financial Health” tab (or “Dashboard”) that shows 7-8 key ratios with conditional formatting. Place it as the LAST tab so it feels like a summary/scorecard.
+
+### Metrics to include
+
+These come directly from the consultant engine thresholds (already defined in the codebase):
+
+|Row|Metric                  |Formula source                        |Healthy (green)|Watch (yellow)|Critical (red)  |
+|---|------------------------|--------------------------------------|---------------|--------------|----------------|
+|1  |Revenue per Student     |Total Rev Y1 / Enrollment Y1          |> $8,000       |$5,000-$8,000 |< $5,000        |
+|2  |Payroll % of Revenue    |Total Payroll Y1 / Total Rev Y1       |< 65%          |65-80%        |> 80%           |
+|3  |Facility % of Revenue   |Facility Cost Y1 / Total Rev Y1       |< 15%          |15-25%        |> 25%           |
+|4  |Operating Surplus Margin|Net Income Y1 / Total Rev Y1          |> 5%           |0-5%          |< 0%            |
+|5  |Revenue Sources         |Count of non-zero categories          |3+             |2             |1               |
+|6  |Cash Runway (months)    |Cash reserve / monthly burn           |> 3 months     |1-3 months    |< 1 month       |
+|7  |DSCR (if debt)          |NOI / Debt Service                    |> 1.25x        |1.0-1.25x     |< 1.0x          |
+|8  |Break-even Year         |First year with cumulative positive NI|Year 1-2       |Year 3-4      |Year 5+ or never|
+
+### Implementation
+
+```typescript
+export function addDashboardSheet(
+  workbook: ExcelJS.Workbook,
+  computedMetrics: {
+    revenuePerStudent: number[];      // per year
+    payrollPctOfRevenue: number[];
+    facilityPctOfRevenue: number[];
+    operatingMargin: number[];
+    revenueSourceCount: number;
+    cashRunwayMonths: number;
+    dscr: number | null;              // null if no debt
+    breakEvenYear: number | null;     // null if never
+    totalRevenue: number[];
+    totalExpenses: number[];
+    netIncome: number[];
+  }
+): ExcelJS.Worksheet {
+  const ws = workbook.addWorksheet("Financial Health", {
+    properties: { tabColor: { argb: "FF328555" } },
+  });
+
+  // Header
+  // Row 1: "Financial Health Scorecard"
+  // Row 2: "Green = healthy | Yellow = monitor | Red = action needed"
+
+  // For each metric, create a row with:
+  // Col A: Metric name
+  // Col B: Year 1 value
+  // Col C: Year 2 value  
+  // Col D: Year 3 value
+  // Col E: Year 4 value
+  // Col F: Year 5 value
+  // Col G: Benchmark / target
+
+  // Apply conditional formatting using ExcelJS:
+  // ws.addConditionalFormatting({
+  //   ref: 'B5:F5',  // e.g., payroll % row
+  //   rules: [
+  //     { type: 'cellIs', operator: 'lessThan', formulae: [0.65],
+  //       style: { fill: { type: 'pattern', pattern: 'solid',
+  //                         fgColor: { argb: 'FFE2EFDA' } } } },  // green
+  //     { type: 'cellIs', operator: 'between', formulae: [0.65, 0.80],
+  //       style: { fill: { type: 'pattern', pattern: 'solid',
+  //                         fgColor: { argb: 'FFFFF2CC' } } } },  // yellow
+  //     { type: 'cellIs', operator: 'greaterThan', formulae: [0.80],
+  //       style: { fill: { type: 'pattern', pattern: 'solid',
+  //                         fgColor: { argb: 'FFFCE4EC' } } } },  // red
+  //   ]
+  // });
+
+  return ws;
+}
+```
+
+### Where the metric values come from
+
+The `workbook-helpers.ts` file already has computation functions (`computeLenderResults`, etc.) that calculate these values. The consultant engine also computes them. Use the SAME functions – do not duplicate business logic.
+
+For each export:
+
+- **3-tab public:** Compute from the model data passed in. Add as a 5th tab (Instructions, Assumptions, 5-Year, Pro Forma, Financial Health).
+- **8-tab lender pro forma:** `computeLenderResults()` already has most of these. Add as a 10th tab.
+- **21-tab underwriting:** The Underwriting Snapshot tab has some of this. Either enhance it or add a separate Financial Health tab.
+
+### The break-even row
+
+Add an explicit break-even calculation. In the 5-Year Operating Stmt or Monthly Cash Flow tab, add a row:
+
+```
+Cumulative Net Income:  -$45,000  |  -$12,000  |  $28,000  |  $95,000  |  $180,000
+Break-even:                                        ← Year 3
+```
+
+On the Financial Health tab, reference this with a formula:
+
+```
+=IF(cumulative_Y1>0, "Year 1", IF(cumulative_Y2>0, "Year 2", ...))
+```
+
+### Verify
+
+- Open each export, navigate to Financial Health tab
+- Confirm 7-8 metrics show with 5-year columns
+- Confirm green/yellow/red formatting appears based on thresholds
+- Change an assumption (e.g., enrollment) on the Assumptions tab
+- Confirm Financial Health tab recalculates and colors update
+- Run `qa:golden` and `qa:excel`
+
+-----
+
+## TASK 4: Upgrade the public export experience
+
+**Priority:** High. This is a frontend change, not a workbook change. The goal: make it impossible for someone using the public wizard to think the 3-tab export is all SchoolStack can do.
+
+### The problem
+
+A founder uses `/underwriting`, downloads 3 tabs, and thinks “this is a nice template.” They never create an account to discover the 21-tab model, the scenario planner, the decision engine, or the lender packet.
+
+### The fix: Redesign the Export step (Step 8) to show a clear comparison
+
+#### In the public wizard export step, show two cards side by side:
+
+**Card 1: “Starter Export” (available now)**
+
+- 4 tabs: Instructions, Assumptions, 5-Year Model, Year 1 Pro Forma
+- Live Excel formulas
+- Color-coded assumptions
+- Financial Health scorecard
+- [Download] button
+
+**Card 2: “Full Underwriting Model” (create free account)**
+
+- 21 tabs including:
+  - Program-level enrollment & tuition drivers
+  - Position-by-position staffing forecast
+  - Monthly cash flow (Year 1)
+  - Balance sheet & debt schedule
+  - DSCR & covenant analysis
+  - Sources & uses
+  - Scenario comparison
+  - Underwriting snapshot
+- Plus: Lender-ready PDF packet
+- Plus: Scenario planner (what-if analysis)
+- Plus: Decision engine (“What should I fix first?”)
+- [Create Free Account] button
+
+The visual should make it obvious that the authenticated model is 7x more comprehensive. Use a feature checklist with checkmarks vs. lock icons. The left card should feel “good enough for exploring.” The right card should feel “this is what I’d hand to a lender.”
+
+### File: `artifacts/school-financial-model/src/components/export/ExportStep.tsx`
+
+This is a React component. Modify the rendering for the public (unauthenticated) variant to show the two-card comparison. The authenticated variant already shows all export options.
+
+### Verify
+
+- Go to `/underwriting`, complete the wizard through Step 8
+- See both export cards with clear visual distinction
+- Download the starter export – confirm it works
+- Click “Create Free Account” – confirm it navigates to registration
+- After registering, confirm all authenticated exports are available
+
+-----
+
+## TASK 5: Un-flatten program-level revenue in the 21-tab export
+
+**Priority:** Highest complexity, highest long-term value. This is the edit that makes the model genuinely flexible by program.
+
+### The problem
+
+The wizard captures per-program data:
+
+- Program name (e.g., “K-5 General Ed”, “6-8 STEM Academy”)
+- Enrollment per year per program
+- Tuition rate per program with escalation
+- Per-pupil funding per program
+- Discount tiers per program (for private/tuition-based)
+
+But the 21-tab export’s Enrollment Drivers and Tuition & Funding tabs blend everything into aggregated totals. A lender can’t see that Program A has 30 students at $12K tuition while Program B has 20 students at $8K ESA funding. They can’t stress-test “what if Program B enrollment drops 30%?”
+
+### What it should look like
+
+**Enrollment Drivers tab:**
+
+```
+                        Year 1    Year 2    Year 3    Year 4    Year 5
+K-5 General Ed             30        40        50        55        60    [blue cells]
+6-8 STEM Academy           20        30        40        45        50    [blue cells]
+TOTAL ENROLLMENT           50        70        90       100       110    [formula: SUM]
+Max Capacity              120       120       120       120       120    [blue cell]
+Utilization               42%       58%       75%       83%       92%    [formula]
+```
+
+**Tuition & Funding tab:**
+
+```
+                        Year 1    Year 2    Year 3    Year 4    Year 5
+TUITION REVENUE
+K-5 General Ed
+  Students                 30        40        50        55        60    [ref to Enrollment]
+  Rate per Student     $12,000   $12,360   $12,731   $13,113   $13,506  [blue Y1, formula Y2-5]
+  Escalation Rate         3.0%      3.0%      3.0%      3.0%      3.0%  [blue cell]
+  Subtotal            $360,000  $494,400  $636,540  $721,191  $810,360  [formula]
+
+6-8 STEM Academy
+  Students                 20        30        40        45        50    [ref to Enrollment]
+  Rate per Student      $8,000    $8,240    $8,487    $8,742    $9,004  [blue Y1, formula Y2-5]
+  Escalation Rate         3.0%      3.0%      3.0%      3.0%      3.0%  [blue cell]
+  Subtotal            $160,000  $247,200  $339,480  $393,378  $450,216  [formula]
+
+TOTAL TUITION         $520,000  $741,600  $976,020 $1,114,569 $1,260,576 [formula: SUM subtotals]
+
+PER-PUPIL FUNDING
+  Per-pupil amount      $9,000    $9,270    $9,548    $9,835   $10,130  [blue Y1, formula Y2-5]
+  Eligible students        50        70        90       100       110    [ref to total enrollment]
+  Subtotal            $450,000  $648,900  $859,334  $983,450 $1,114,250 [formula]
+
+PHILANTHROPY
+  Annual giving        $25,000   $25,000   $25,000   $25,000   $25,000  [blue cells]
+  Startup grant       $100,000        $0        $0        $0        $0  [blue cells]
+  Subtotal            $125,000   $25,000   $25,000   $25,000   $25,000  [formula: SUM]
+
+TOTAL REVENUE       $1,095,000 $1,415,500 $1,860,354 $2,123,019 $2,399,826 [formula]
+```
+
+### Implementation approach
+
+The model data (`ModelFormData`) already has `revenueRows[]` with each row containing:
+
+- `name` (the revenue source name)
+- `category` (tuition_fees, public_funding, philanthropy, etc.)
+- `driverType` (per_student, fixed, etc.)
+- `perStudentAmount` or `fixedAmount`
+- `escalationRate`
+- `startYear`, `endYear`
+- `programId` (links to a specific enrollment program)
+
+The un-flattening requires:
+
+1. **Group revenueRows by category and programId**
+1. **For each program-linked row**, render enrollment ref + rate + escalation + subtotal as separate Excel rows with formulas
+1. **For non-program rows** (fixed grants, philanthropy), render as simple rows
+1. **SUM formulas** roll up subtotals to category totals to grand total
+
+#### Key files to modify:
+
+**`underwriting-workbook.ts`** – the `buildEnrollmentDriversTab()` and `buildTuitionFundingTab()` functions (or wherever these tabs are generated). Instead of writing a single blended enrollment row, iterate over `enrollment.programs[]` and write a row per program.
+
+**`workbook-helpers.ts`** – may need helper functions to group revenue rows by program and compute per-program totals.
+
+#### Critical: Maintain formula integrity
+
+The 5-Year Operating Statement, Monthly Cash Flow, and Budget Summary tabs reference revenue totals. Currently they probably reference a single blended total cell. After un-flattening:
+
+- Each program subtotal should be a SUM formula
+- Category totals should SUM the subtotals
+- Grand total should SUM the categories
+- Downstream tabs should reference the grand total cell (same cell address if possible)
+
+If the grand total cell address changes, update all cross-tab references.
+
+### What about the 3-tab and 8-tab exports?
+
+The 3-tab public export is intentionally simpler. Blended totals are fine there. The 8-tab lender pro forma should ideally show program-level breakdown on the Drivers tab if feasible, but this is lower priority than the 21-tab model.
+
+**Recommended scope for alpha:** Un-flatten the 21-tab model only. The 3-tab and 8-tab can remain blended for now.
+
+### Verify
+
+- Create a model with 2+ programs in the wizard
+- Export the 21-tab underwriting workbook
+- Open Enrollment Drivers tab – confirm each program appears as a separate row
+- Open Tuition & Funding tab – confirm program-level revenue breakdown
+- Change a program enrollment number (blue cell) – confirm subtotals and totals recalculate
+- Change a tuition rate – confirm downstream P&L updates
+- Confirm the 5-Year Operating Statement still shows correct totals
+- Confirm Monthly Cash Flow Y1 is correct
+- Confirm Balance Sheet ties (A = L + E)
+- Run `qa:golden` and `qa:excel`
+
+-----
+
+## Execution order
+
+### Batch 1 (ship together, ~2-3 days)
+
+1. **Task 1: Blue cell formatting** – most visible, lowest risk
+1. **Task 2: Instructions tab** – static content, no formula risk
+1. **Task 4: Export step UI redesign** – frontend only, no backend risk
+
+### Batch 2 (~1-2 days)
+
+1. **Task 3: Financial Health dashboard tab** – new tab, uses existing computations
+
+### Batch 3 (~2-3 days)
+
+1. **Task 5: Program-level un-flattening** – deepest change, highest formula risk, needs careful testing
+
+### After each batch
+
+- Run `qa:golden` (115 golden model tests)
+- Run `qa:excel` (15 export structural tests)
+- Download one workbook of each type and open in Excel manually
+- Redeploy to Railway + Netlify
+
+-----
+
+## What this achieves
+
+After all 5 tasks, a founder downloads a workbook that:
+
+1. **Looks professional on first open** – branded Instructions tab, color-coded cells, clear legend
+1. **Is immediately usable** – blue cells tell you what to change, instructions tell you how to read it
+1. **Shows program-level detail** – a lender can stress-test each revenue stream independently
+1. **Gives a financial health verdict** – green/yellow/red dashboard answers “is this model viable?” without needing a consultant
+1. **Drives account creation** – the public export is good, but the authenticated export is visibly 5x better
+
+That’s the gap between “free web app” and “this replaces my $20K consultant.”
