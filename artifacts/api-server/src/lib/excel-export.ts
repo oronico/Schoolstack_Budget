@@ -2351,6 +2351,27 @@ function buildLegacyPnLTab(
   styleSectionRow(ws, 6, cols);
   styleSectionRow(ws, 7, cols);
 
+  const beRow = rows.length + 2;
+  ws.getCell(beRow, 1).value = "Break-even";
+  ws.getCell(beRow, 1).font = BOLD_FONT;
+  let beYear = -1;
+  for (let y = 0; y < yearCount; y++) {
+    if ((cumNIByYr[y] || 0) >= 0) { beYear = y; break; }
+  }
+  for (let y = 0; y < yearCount; y++) {
+    const cell = ws.getCell(beRow, y + 2);
+    if (y === 0) {
+      cell.value = { formula: `IF(${c(8, y + 2)}>=0,"✓ Break-even","")`, result: safeResult(y === beYear ? "✓ Break-even" : "") };
+    } else {
+      cell.value = { formula: `IF(AND(${c(8, y + 2)}>=0,${c(8, y + 1)}<0),"✓ Break-even","")`, result: safeResult(y === beYear ? "✓ Break-even" : "") };
+    }
+    cell.font = y === beYear
+      ? { bold: true, size: 11, name: "Calibri", color: { argb: "FF16A34A" } }
+      : NORMAL_FONT;
+    cell.alignment = { horizontal: "center" };
+    cell.border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+  }
+
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
 
   return { revenueByYr, staffByYr, expByYr, niByYr, cumNIByYr };
