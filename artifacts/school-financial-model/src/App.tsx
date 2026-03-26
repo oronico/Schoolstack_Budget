@@ -50,8 +50,11 @@ function SpaceAwareRoute({ component: Component }: { component: React.ComponentT
     if (user) return;
 
     const search = window.location.search;
-    if (search && search.includes("sqft") || search && search.includes("students") || search && search.includes("monthlyRent") || search && search.includes("schoolName")) {
-      setLocation(`/underwriting${search}`);
+    const hasSpaceParams = search && (search.includes("sqft") || search.includes("students") || search.includes("monthlyRent") || search.includes("schoolName"));
+    if (hasSpaceParams) {
+      const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+      window.location.replace(`${base}/underwriting${search}`);
+      return;
     } else {
       const currentPath = window.location.pathname + search;
       const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");

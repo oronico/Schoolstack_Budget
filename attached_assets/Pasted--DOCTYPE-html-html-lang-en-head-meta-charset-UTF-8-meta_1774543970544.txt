@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#1F2A44" />
+    <title>SchoolStack Space - Facilities Planning Tool for School Founders</title>
+    <meta name="description" content="Free facilities planning tools for K-12 school founders. Calculate space needs, research sites, compare properties, and analyze lease terms before you commit to a building." />
+    <link rel="canonical" href="https://space.schoolstack.ai" />
+
+    <meta property="og:title" content="SchoolStack Space | Facilities Planning for School Founders" />
+    <meta property="og:description" content="Stop guessing whether a building will work for your school. Calculate space needs, research demographics, and review lease terms -- all in one free tool built for K-12 founders." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://space.schoolstack.ai" />
+    <meta property="og:site_name" content="SchoolStack Space" />
+    <meta property="og:image" content="https://space.schoolstack.ai/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="675" />
+    <meta property="og:image:alt" content="SchoolStack Space -- facilities planning tools for school founders" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SchoolStack Space | Facilities Planning for School Founders" />
+    <meta name="twitter:description" content="Free facilities planning tools for K-12 school founders. Space calculator, site research, lease analysis, and more." />
+    <meta name="twitter:image" content="https://space.schoolstack.ai/og-image.png" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "SchoolStack Space",
+      "url": "https://space.schoolstack.ai",
+      "description": "Free facilities planning tools for K-12 school founders. Calculate space needs, research candidate sites, compare properties, and analyze lease terms before committing to a building.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "audience": {
+        "@type": "Audience",
+        "audienceType": "K-12 school founders, charter school operators, educational entrepreneurs"
+      },
+      "featureList": [
+        "School space calculator",
+        "Site research and demographics",
+        "Property comparison",
+        "Lease term analysis",
+        "Site visit checklists"
+      ],
+      "creator": {
+        "@type": "Organization",
+        "name": "SchoolStack",
+        "url": "https://schoolstack.ai"
+      }
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "SchoolStack Space",
+      "url": "https://space.schoolstack.ai",
+      "description": "Facilities planning tools for K-12 school founders",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://space.schoolstack.ai/site-finder?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script type="module" crossorigin src="/assets/index-C8kZsuGk.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D9GwlgMF.css">
+  </head>
+  <body>
+    <div id="root">
+      <div id="static-fallback" style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Nunito,system-ui,sans-serif;background:#FFFFFF;padding:24px">
+        <div style="text-align:center;max-width:400px">
+          <div style="width:48px;height:48px;margin:0 auto 16px;border-radius:12px;background:#1F2A44;display:flex;align-items:center;justify-content:center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+          </div>
+          <p style="color:#1F2A44;font-size:14px;margin:0;opacity:0.6">Loading SchoolStack Space...</p>
+        </div>
+      </div>
+    </div>
+    <script>
+      window.addEventListener('error', function(e) {
+        if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+          var fb = document.getElementById('static-fallback');
+          if (fb) {
+            fb.innerHTML = '<div style="text-align:center;max-width:400px"><div style="width:48px;height:48px;margin:0 auto 16px;border-radius:12px;background:#CF7F00;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div><h2 style="color:#1F2A44;font-size:18px;margin:0 0 8px;font-family:Quicksand,sans-serif">Unable to load SchoolStack Space</h2><p style="color:#1F2A44;font-size:14px;margin:0 0 16px;opacity:0.6">Please check your connection and try again.</p><button onclick="location.reload()" style="padding:10px 24px;background:#CF7F00;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:Nunito,sans-serif;font-weight:600">Reload Page</button><p style="color:#1F2A44;font-size:11px;margin:16px 0 0;opacity:0.4">Powered by Building Hope Impact Fund</p></div>';
+          }
+        }
+      }, true);
+    </script>
+  </body>
+</html>
