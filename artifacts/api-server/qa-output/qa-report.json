@@ -1391,7 +1391,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 26782,
+    "fileSize": 26781,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1457,7 +1457,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 38566,
+    "fileSize": 38567,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1968,7 +1968,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26613,
+    "fileSize": 26614,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -2034,7 +2034,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 38334,
+    "fileSize": 38335,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -2127,7 +2127,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26369,
+    "fileSize": 26368,
     "tabs": [
       "Instructions",
       "Cover",
@@ -2270,7 +2270,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 14667,
+    "fileSize": 14666,
     "tabs": [
       "Assumptions",
       "Revenue",

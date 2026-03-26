@@ -2207,7 +2207,7 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     }
   }
 
-  const facCostByYrF = computeFacilityCostByYear(dbExpRows as any, enrollment, revByYear, 5, costInflPct);
+  const facCostByYrF = computeFacilityCostByYear(dbExpRows, enrollment, revByYear, 5, costInflPct);
 
   await addDashboardSheet(wb, {
     schoolName: sp.schoolName || "School",

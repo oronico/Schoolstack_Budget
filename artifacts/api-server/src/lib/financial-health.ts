@@ -1,3 +1,10 @@
+import {
+  BENCHMARK_PAYROLL_GREEN,
+  BENCHMARK_PAYROLL_AMBER,
+  BENCHMARK_FACILITY_GREEN,
+  BENCHMARK_FACILITY_AMBER,
+} from "./benchmark-thresholds.js";
+
 export type HealthStatus = "healthy" | "watch" | "at_risk";
 
 export interface HealthSignal {
@@ -127,7 +134,7 @@ const DIMENSIONS: {
     label: "Staffing burden",
     compute: (input) => {
       const { staffingCostPct } = input;
-      if (staffingCostPct <= 0.55) {
+      if (staffingCostPct <= BENCHMARK_PAYROLL_GREEN) {
         return {
           dimension: "staffing_burden",
           status: "healthy",
@@ -136,7 +143,7 @@ const DIMENSIONS: {
           watchItem: "As you add staff, ensure staffing stays below 60% of revenue.",
         };
       }
-      if (staffingCostPct <= 0.65) {
+      if (staffingCostPct <= BENCHMARK_PAYROLL_AMBER) {
         return {
           dimension: "staffing_burden",
           status: "watch",
@@ -159,7 +166,7 @@ const DIMENSIONS: {
     label: "Facility burden",
     compute: (input) => {
       const { facilityCostPct } = input;
-      if (facilityCostPct <= 0.15) {
+      if (facilityCostPct <= BENCHMARK_FACILITY_GREEN) {
         return {
           dimension: "facility_burden",
           status: "healthy",
@@ -168,7 +175,7 @@ const DIMENSIONS: {
           watchItem: "Watch for rent escalation clauses that could push this higher over time.",
         };
       }
-      if (facilityCostPct <= 0.22) {
+      if (facilityCostPct <= BENCHMARK_FACILITY_AMBER) {
         return {
           dimension: "facility_burden",
           status: "watch",

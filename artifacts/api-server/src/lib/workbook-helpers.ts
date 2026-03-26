@@ -15,16 +15,30 @@ export const DASHBOARD_GREEN = "FF16A34A";
 export const DASHBOARD_AMBER = "FFD97706";
 export const DASHBOARD_RED = "FFDC2626";
 
-export const BENCHMARK_PAYROLL_GREEN = 0.55;
-export const BENCHMARK_PAYROLL_AMBER = 0.65;
-export const BENCHMARK_FACILITY_GREEN = 0.15;
-export const BENCHMARK_FACILITY_AMBER = 0.22;
-export const BENCHMARK_DSCR_GREEN = 1.25;
-export const BENCHMARK_DSCR_AMBER = 1.0;
-export const BENCHMARK_REV_PER_STUDENT_GREEN = 10000;
-export const BENCHMARK_REV_PER_STUDENT_AMBER = 7000;
-export const BENCHMARK_REV_SOURCES_GREEN = 3;
-export const BENCHMARK_REV_SOURCES_AMBER = 2;
+import {
+  BENCHMARK_PAYROLL_GREEN,
+  BENCHMARK_PAYROLL_AMBER,
+  BENCHMARK_FACILITY_GREEN,
+  BENCHMARK_FACILITY_AMBER,
+  BENCHMARK_DSCR_GREEN,
+  BENCHMARK_DSCR_AMBER,
+  BENCHMARK_REV_PER_STUDENT_GREEN,
+  BENCHMARK_REV_PER_STUDENT_AMBER,
+  BENCHMARK_REV_SOURCES_GREEN,
+  BENCHMARK_REV_SOURCES_AMBER,
+} from "./benchmark-thresholds.js";
+export {
+  BENCHMARK_PAYROLL_GREEN,
+  BENCHMARK_PAYROLL_AMBER,
+  BENCHMARK_FACILITY_GREEN,
+  BENCHMARK_FACILITY_AMBER,
+  BENCHMARK_DSCR_GREEN,
+  BENCHMARK_DSCR_AMBER,
+  BENCHMARK_REV_PER_STUDENT_GREEN,
+  BENCHMARK_REV_PER_STUDENT_AMBER,
+  BENCHMARK_REV_SOURCES_GREEN,
+  BENCHMARK_REV_SOURCES_AMBER,
+};
 
 export const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
 export const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: WHITE }, size: 11, name: "Calibri" };
@@ -623,9 +637,10 @@ export function computeExpenseForYear(
 }
 
 export function computeFacilityCostByYear(
-  expenseRows: ExpenseRow[], enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number
+  expenseRows: Pick<ExpenseRow, "enabled" | "category" | "driverType" | "amounts" | "escalationRate" | "lineItem">[],
+  enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number
 ): number[] {
-  const facilRows = expenseRows.filter(r => r.enabled && r.category === "occupancy_facility");
+  const facilRows = (expenseRows as ExpenseRow[]).filter(r => r.enabled && r.category === "occupancy_facility");
   const result: number[] = [];
   for (let y = 0; y < yearCount; y++) {
     result.push(computeExpenseForYear(facilRows, y, enrollment[y], revenueByYear[y], costInflationPct));

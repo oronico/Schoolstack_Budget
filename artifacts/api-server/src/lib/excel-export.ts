@@ -907,7 +907,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
           for (let y = 0; y < yearCount; y++) revCats[cat][y] += rowVals[y] ?? 0;
         }
       }
-      const facCostArr = computeFacilityCostByYear(expenseRows as any, enrollmentByYear, precomputed.totalRevenue, yearCount);
+      const facCostArr = computeFacilityCostByYear(expenseRows, enrollmentByYear, precomputed.totalRevenue, yearCount);
       await addDashboardSheet(wb, {
         schoolName: sp.schoolName || "School",
         entityType: sp.entityType || "",
