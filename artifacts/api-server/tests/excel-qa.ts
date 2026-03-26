@@ -724,7 +724,7 @@ function logResult(r: TestResult) {
 }
 
 const UNDERWRITING_V2_TABS = [
-  "Cover", "Instructions", "Assumptions", "Program Profile",
+  "Instructions", "Cover", "Assumptions", "Program Profile",
   "Enrollment", "Tuition", "Staffing", "OpEx", "Capital",
   "Enrollment", "Staffing Costs",
   "Budget Detail", "Budget Summary", "Cash Flow",
@@ -746,7 +746,7 @@ const UNDERWRITING_V1_TABS = [
   "P&L", "Balance Sheet", "DSCR", "Snapshot", "Summary",
 ];
 
-const LENDER_TABS = ["Cover", "Instructions", "Assumptions", "Drivers", "P&L", "Cash Flow", "Staffing", "Loan Snapshot", "Summary", "Financial Health"];
+const LENDER_TABS = ["Instructions", "Cover", "Assumptions", "Drivers", "P&L", "Cash Flow", "Staffing", "Loan Snapshot", "Summary", "Financial Health"];
 
 const SINGLE_YEAR_TABS = ["Assumptions", "Revenue", "Personnel", "Operating Expenses", "P&L Summary"];
 

@@ -1382,12 +1382,12 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
   wb.creator = "SchoolStack Budget";
   wb.created = new Date();
 
-  buildCover(wb, String(input.schoolName || ""));
   addInstructionsSheet(wb, {
     workbookType: "lender",
     schoolName: String(input.schoolName || ""),
     schoolType: String(input.entityType || ""),
   });
+  buildCover(wb, String(input.schoolName || ""));
   buildAssumptions(wb, input);
   buildDrivers(wb, input, res);
   buildPnL(wb, res);

@@ -16,7 +16,7 @@ import {
 } from "./workbook-helpers.js";
 
 const TAB_NAMES = [
-  "Cover", "Instructions", "Assumptions", "Program Profile",
+  "Instructions", "Cover", "Assumptions", "Program Profile",
   "Enrollment Drivers", "Tuition & Funding", "Staffing Drivers", "OpEx Drivers", "Capital Stack",
   "Enrollment Tuition Fcst", "Staffing Costs Fcst", "Budget Detail", "Budget Summary",
   "Monthly Cash Flow Y1", "5-Year Operating Stmt", "Debt Schedule", "Balance Sheet",
@@ -2238,8 +2238,8 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
     capitalAndDebtRows: (data.capitalAndDebtRows || []).filter(r => !r.isLoan),
   };
 
-  buildCover(wb, data);
   buildInstructions(wb, data);
+  buildCover(wb, data);
   buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
   buildProgramProfile(wb, data);
   buildEnrollmentDrivers(wb, data, enrollment);
