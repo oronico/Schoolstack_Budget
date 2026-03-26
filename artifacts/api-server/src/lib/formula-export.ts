@@ -561,8 +561,13 @@ function buildAssumptions(
   r++;
   ws.getCell(r, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE_INPUT_BG } };
   ws.getCell(r, 1).value = "";
-  ws.getCell(r, 2).value = "Blue cells are editable inputs. All other cells in this workbook are formulas.";
+  ws.getCell(r, 2).value = "Editable assumption \u2014 change this value";
   ws.getCell(r, 2).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF666666" } };
+  ws.getCell(r, 4).value = "";
+  ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+  ws.getCell(r, 4).border = { bottom: { style: "thin", color: { argb: "FFD0D0D0" } } };
+  ws.getCell(r, 5).value = "Calculated \u2014 driven by formula";
+  ws.getCell(r, 5).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF666666" } };
 
   r += 2;
   const profileStartRow = r;

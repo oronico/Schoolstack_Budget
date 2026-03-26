@@ -642,8 +642,12 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
   inputCell(legendCell);
   legendCell.value = "";
   const legendLabel = ws.getCell("C2");
-  legendLabel.value = "Blue cells are editable inputs";
+  legendLabel.value = "Editable assumption \u2014 change this value";
   legendLabel.font = { name: "Calibri", size: 10, italic: true, color: { argb: "FF666666" } };
+  ws.getCell("D2").value = "Calculated \u2014 driven by formula";
+  ws.getCell("D2").font = { name: "Calibri", size: 10, italic: true, color: { argb: "FF666666" } };
+  ws.getCell("D2").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+  ws.getCell("D2").border = { bottom: { style: "thin", color: { argb: "FFD0D0D0" } } };
 
   const sections: { row: number; label: string }[] = [
     { row: 3, label: "SCHOOL PROFILE" },

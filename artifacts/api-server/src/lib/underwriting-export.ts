@@ -799,6 +799,13 @@ function buildSYAssumptions(
   ws.getCell(r, 1).value = `${yearLabel} Budget Assumptions`; ws.getCell(r, 1).font = BF;
   sec(ws, r, 2);
 
+  r = 2;
+  ws.getCell(r, 1).fill = INPUT_CELL_FILL;
+  ws.getCell(r, 1).value = "";
+  ws.getCell(r, 1).border = INPUT_CELL_BORDER;
+  ws.getCell(r, 2).value = "Editable assumption \u2014 change this value";
+  ws.getCell(r, 2).font = { italic: true, size: 11, color: { argb: "FF666666" }, name: "Calibri" };
+
   r += 2; ws.getCell(r, 1).value = "School Name"; ws.getCell(r, 1).font = NF;
   ws.getCell(r, 2).value = sp.schoolName || "";
   r++; ws.getCell(r, 1).value = "School Type"; ws.getCell(r, 1).font = NF;
@@ -1186,9 +1193,17 @@ function buildAssumptions(
   ws.mergeCells(r, 1, r, colCount);
   ws.getRow(r).height = 32;
 
-  r++; ws.getCell(r, 1).value = "Edit the highlighted cells below to update the entire model";
-  ws.getCell(r, 1).font = { italic: true, size: 11, color: { argb: "FF6B7280" }, name: "Calibri" };
-  ws.mergeCells(r, 1, r, colCount);
+  r++;
+  ws.getCell(r, 1).fill = INPUT_CELL_FILL;
+  ws.getCell(r, 1).value = "";
+  ws.getCell(r, 1).border = INPUT_CELL_BORDER;
+  ws.getCell(r, 2).value = "Editable assumption \u2014 change this value";
+  ws.getCell(r, 2).font = { italic: true, size: 11, color: { argb: "FF666666" }, name: "Calibri" };
+  ws.getCell(r, 4).value = "";
+  ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+  ws.getCell(r, 4).border = { bottom: { style: "thin", color: { argb: "FFD0D0D0" } } };
+  ws.getCell(r, 5).value = "Calculated \u2014 driven by formula";
+  ws.getCell(r, 5).font = { italic: true, size: 11, color: { argb: "FF666666" }, name: "Calibri" };
 
   r = 3; sec(ws, r, colCount);
   ws.getCell(r, 1).value = "SCHOOL INFORMATION";
@@ -1495,10 +1510,10 @@ function buildStaffingPlan(
     ws.getCell(r, 2).value = funcLabel(row.functionCategory); ws.getCell(r, 2).font = NF;
     ws.getCell(r, 3).value = row.employmentType === "full_time" ? "FT" : row.employmentType === "part_time" ? "PT" : "Contract";
     ws.getCell(r, 3).font = NF;
-    ws.getCell(r, 4).value = row.fte; ws.getCell(r, 4).font = NF; ws.getCell(r, 4).numFmt = "0.00";
-    ws.getCell(r, 5).value = row.annualizedRate; ws.getCell(r, 5).font = NF; ws.getCell(r, 5).numFmt = CUR;
-    ws.getCell(r, 6).value = row.benefitsEligible ? row.benefitsRate / 100 : 0; ws.getCell(r, 6).font = NF; ws.getCell(r, 6).numFmt = PCT;
-    ws.getCell(r, 7).value = row.payrollTaxRate / 100; ws.getCell(r, 7).font = NF; ws.getCell(r, 7).numFmt = PCT;
+    ws.getCell(r, 4).value = row.fte; ws.getCell(r, 4).font = NF; ws.getCell(r, 4).numFmt = "0.00"; applyInputStyle(ws.getCell(r, 4));
+    ws.getCell(r, 5).value = row.annualizedRate; ws.getCell(r, 5).font = NF; ws.getCell(r, 5).numFmt = CUR; applyInputStyle(ws.getCell(r, 5));
+    ws.getCell(r, 6).value = row.benefitsEligible ? row.benefitsRate / 100 : 0; ws.getCell(r, 6).font = NF; ws.getCell(r, 6).numFmt = PCT; applyInputStyle(ws.getCell(r, 6));
+    ws.getCell(r, 7).value = row.payrollTaxRate / 100; ws.getCell(r, 7).font = NF; ws.getCell(r, 7).numFmt = PCT; applyInputStyle(ws.getCell(r, 7));
     ws.getCell(r, 8).value = Math.round(tc); ws.getCell(r, 8).font = BF; ws.getCell(r, 8).numFmt = CUR;
   }
 
@@ -1859,9 +1874,9 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, capDebtRows: CapitalDebtRow[], 
       totalAnnual += annualPmt;
 
       ws.getCell(r, 1).value = loan.lineItem; ws.getCell(r, 1).font = NF;
-      ws.getCell(r, 2).value = p; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
-      ws.getCell(r, 3).value = rate; ws.getCell(r, 3).numFmt = PCT; dc(ws.getCell(r, 3));
-      ws.getCell(r, 4).value = term; ws.getCell(r, 4).numFmt = "0"; dc(ws.getCell(r, 4));
+      ws.getCell(r, 2).value = p; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); applyInputStyle(ws.getCell(r, 2));
+      ws.getCell(r, 3).value = rate; ws.getCell(r, 3).numFmt = PCT; dc(ws.getCell(r, 3)); applyInputStyle(ws.getCell(r, 3));
+      ws.getCell(r, 4).value = term; ws.getCell(r, 4).numFmt = "0"; dc(ws.getCell(r, 4)); applyInputStyle(ws.getCell(r, 4));
       ws.getCell(r, 5).value = Math.round(annualPmt); ws.getCell(r, 5).numFmt = CUR; dc(ws.getCell(r, 5));
       ws.getCell(r, 6).value = Math.round(annualPmt / 12); ws.getCell(r, 6).numFmt = CUR; dc(ws.getCell(r, 6));
       ws.getCell(r, 7).value = Math.round(annualPmt * term - p); ws.getCell(r, 7).numFmt = CUR; dc(ws.getCell(r, 7));

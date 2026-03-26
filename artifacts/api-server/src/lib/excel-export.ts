@@ -929,6 +929,13 @@ function buildAssumptionsTab(
   ws.mergeCells(r, 1, r, 2);
   ws.getRow(r).height = 32;
 
+  r = 2;
+  ws.getCell(r, 1).fill = INPUT_FILL;
+  ws.getCell(r, 1).value = "";
+  ws.getCell(r, 1).border = INPUT_BORDER;
+  ws.getCell(r, 2).value = "Editable assumption \u2014 change this value";
+  ws.getCell(r, 2).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF666666" } };
+
   r = 3;
   styleSectionRow(ws, r, 2);
   ws.getCell(r, 1).value = "SCHOOL INFORMATION";
@@ -1406,11 +1413,11 @@ function buildStaffingTab(
     ws.getCell(r, 1).value = row.roleName; ws.getCell(r, 1).font = NORMAL_FONT;
     ws.getCell(r, 2).value = funcCategoryLabel(row.functionCategory); ws.getCell(r, 2).font = NORMAL_FONT;
     ws.getCell(r, 3).value = empTypeLabel(row.employmentType); ws.getCell(r, 3).font = NORMAL_FONT;
-    ws.getCell(r, 4).value = row.fte; ws.getCell(r, 4).font = NORMAL_FONT; ws.getCell(r, 4).numFmt = "0.00";
-    ws.getCell(r, 5).value = row.annualizedRate; ws.getCell(r, 5).font = NORMAL_FONT; ws.getCell(r, 5).numFmt = CURRENCY_FORMAT;
-    ws.getCell(r, 6).value = row.benefitsEligible ? row.benefitsRate / 100 : 0; ws.getCell(r, 6).font = NORMAL_FONT; ws.getCell(r, 6).numFmt = PERCENT_FORMAT;
-    ws.getCell(r, 7).value = row.payrollTaxRate / 100; ws.getCell(r, 7).font = NORMAL_FONT; ws.getCell(r, 7).numFmt = PERCENT_FORMAT;
-    ws.getCell(r, 8).value = totalCost; ws.getCell(r, 8).font = BOLD_FONT; ws.getCell(r, 8).numFmt = CURRENCY_FORMAT;
+    ws.getCell(r, 4).value = row.fte; applyInput(ws.getCell(r, 4)); ws.getCell(r, 4).numFmt = "0.00";
+    ws.getCell(r, 5).value = row.annualizedRate; applyInput(ws.getCell(r, 5)); ws.getCell(r, 5).numFmt = CURRENCY_FORMAT;
+    ws.getCell(r, 6).value = row.benefitsEligible ? row.benefitsRate / 100 : 0; applyInput(ws.getCell(r, 6)); ws.getCell(r, 6).numFmt = PERCENT_FORMAT;
+    ws.getCell(r, 7).value = row.payrollTaxRate / 100; applyInput(ws.getCell(r, 7)); ws.getCell(r, 7).numFmt = PERCENT_FORMAT;
+    ws.getCell(r, 8).value = totalCost; applyCalc(ws.getCell(r, 8)); ws.getCell(r, 8).numFmt = CURRENCY_FORMAT;
   }
 
   const grandTotal = totalSalaries + totalBenefits + totalPayrollTax + totalContracted;

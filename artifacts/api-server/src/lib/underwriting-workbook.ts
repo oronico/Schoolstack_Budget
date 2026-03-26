@@ -135,8 +135,13 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   r++;
   ws.getCell(r, 1).fill = INPUT_CELL_FILL;
   ws.getCell(r, 1).value = "";
-  ws.getCell(r, 2).value = "Blue cells are editable inputs. All other cells are formulas.";
+  ws.getCell(r, 2).value = "Editable assumption \u2014 change this value";
   ws.getCell(r, 2).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF666666" } };
+  ws.getCell(r, 4).value = "";
+  ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+  ws.getCell(r, 4).border = { bottom: { style: "thin", color: { argb: "FFD0D0D0" } } };
+  ws.getCell(r, 5).value = "Calculated \u2014 driven by formula";
+  ws.getCell(r, 5).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF666666" } };
 
   r += 2;
   sec(ws, r, 7); ws.getCell(r, 1).value = "SCHOOL PROFILE";
@@ -683,10 +688,10 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
     r++;
     ws.getCell(r, 1).value = sr.roleName; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = funcLabel(sr.functionCategory); dc(ws.getCell(r, 2));
-    ws.getCell(r, 3).value = sr.fte; ws.getCell(r, 3).numFmt = "0.00"; dc(ws.getCell(r, 3));
-    ws.getCell(r, 4).value = sr.annualizedRate; ws.getCell(r, 4).numFmt = CUR; dc(ws.getCell(r, 4));
-    ws.getCell(r, 5).value = sr.benefitsRate / 100; ws.getCell(r, 5).numFmt = PCT; dc(ws.getCell(r, 5));
-    ws.getCell(r, 6).value = sr.payrollTaxRate / 100; ws.getCell(r, 6).numFmt = PCT; dc(ws.getCell(r, 6));
+    ws.getCell(r, 3).value = sr.fte; ws.getCell(r, 3).numFmt = "0.00"; dc(ws.getCell(r, 3)); inputCell(ws.getCell(r, 3));
+    ws.getCell(r, 4).value = sr.annualizedRate; ws.getCell(r, 4).numFmt = CUR; dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
+    ws.getCell(r, 5).value = sr.benefitsRate / 100; ws.getCell(r, 5).numFmt = PCT; dc(ws.getCell(r, 5)); inputCell(ws.getCell(r, 5));
+    ws.getCell(r, 6).value = sr.payrollTaxRate / 100; ws.getCell(r, 6).numFmt = PCT; dc(ws.getCell(r, 6)); inputCell(ws.getCell(r, 6));
     ws.getCell(r, 7).value = Math.round(computeStaffingLoaded(sr)); ws.getCell(r, 7).numFmt = CUR; bc(ws.getCell(r, 7));
   }
 
@@ -843,9 +848,9 @@ function buildCapitalStack(wb: ExcelJS.Workbook, data: ModelData) {
     ws.getCell(r, 3).value = cd.isLoan ? (cd.loanPrincipal || 0) : (cd.amounts?.[0] ?? 0);
     ws.getCell(r, 3).numFmt = CUR; dc(ws.getCell(r, 3)); inputCell(ws.getCell(r, 3));
     ws.getCell(r, 4).value = cd.isLoan ? ((cd.loanRate || 0) / 100) : 0;
-    ws.getCell(r, 4).numFmt = PCT; dc(ws.getCell(r, 4));
+    ws.getCell(r, 4).numFmt = PCT; dc(ws.getCell(r, 4)); if (cd.isLoan) inputCell(ws.getCell(r, 4));
     ws.getCell(r, 5).value = cd.isLoan ? (cd.loanTermYears || 0) : 0;
-    ws.getCell(r, 5).numFmt = NUM; dc(ws.getCell(r, 5));
+    ws.getCell(r, 5).numFmt = NUM; dc(ws.getCell(r, 5)); if (cd.isLoan) inputCell(ws.getCell(r, 5));
     const annual = cd.isLoan ? computeAnnualDebt(cd.loanPrincipal || 0, (cd.loanRate || 0) / 100, cd.loanTermYears || 0) : (cd.amounts?.[0] ?? 0);
     ws.getCell(r, 6).value = Math.round(annual); ws.getCell(r, 6).numFmt = CUR; bc(ws.getCell(r, 6));
   }
