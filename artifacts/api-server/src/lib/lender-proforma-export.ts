@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import {
-  NAVY, WHITE, LIGHT_GRAY, YELLOW_INPUT, GREEN_BG, RED_BG, AMBER_BG,
+  NAVY, WHITE, LIGHT_GRAY, GREEN_BG, RED_BG, AMBER_BG,
   EVERGREEN, CREAM, TEAL,
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT,
   NF, BF, BORDER, SUBTOTAL_BORDER,
@@ -628,7 +628,8 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
   const sectionFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
   const labelFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: "FF374151" } };
   const valueFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: "FF1E293B" } };
-  const inputFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFDE8" } };
+  const inputFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBEAFE" } };
+  const inputFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: "FF1E3A5F" } };
   const thinBorder: Partial<ExcelJS.Borders> = {
     bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
   };
@@ -636,6 +637,13 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
   ws.getCell("B1").value = "SchoolStack Budget - Lender Pro Forma Assumptions";
   ws.getCell("B1").font = titleFont;
   ws.mergeCells("B1:D1");
+
+  const legendCell = ws.getCell("B2");
+  legendCell.fill = inputFill;
+  legendCell.value = "";
+  const legendLabel = ws.getCell("C2");
+  legendLabel.value = "Blue cells are editable inputs";
+  legendLabel.font = { name: "Calibri", size: 10, italic: true, color: { argb: "FF666666" } };
 
   const sections: { row: number; label: string }[] = [
     { row: 3, label: "SCHOOL PROFILE" },
@@ -707,7 +715,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
 
     const valCell = ws.getCell(`D${r.row}`);
     valCell.value = input[r.key] ?? "";
-    valCell.font = valueFont;
+    valCell.font = inputFont;
     valCell.fill = inputFill;
     valCell.border = thinBorder;
     if (r.fmt) valCell.numFmt = r.fmt;
@@ -758,7 +766,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       const val = input[r.key];
       const displayVal = r.fmt === "0.0%" && typeof val === "number" ? val / 100 : val;
       ws.getCell(`D${r.row}`).value = displayVal;
-      ws.getCell(`D${r.row}`).font = valueFont;
+      ws.getCell(`D${r.row}`).font = inputFont;
       ws.getCell(`D${r.row}`).fill = inputFill;
       ws.getCell(`D${r.row}`).border = thinBorder;
       if (r.fmt) ws.getCell(`D${r.row}`).numFmt = r.fmt;
@@ -792,7 +800,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       ws.getCell(`C${gr.row}`).font = labelFont;
       ws.getCell(`C${gr.row}`).border = thinBorder;
       ws.getCell(`D${gr.row}`).value = gr.value;
-      ws.getCell(`D${gr.row}`).font = valueFont;
+      ws.getCell(`D${gr.row}`).font = inputFont;
       ws.getCell(`D${gr.row}`).fill = inputFill;
       ws.getCell(`D${gr.row}`).border = thinBorder;
       if (gr.fmt) ws.getCell(`D${gr.row}`).numFmt = gr.fmt;
@@ -817,7 +825,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       const vals = [];
       for (let y = 1; y <= 5; y++) vals.push(Number(input[`${band.prefix}Y${y}`]) || 0);
       ws.getCell(`D${gbr}`).value = vals.join("  /  ");
-      ws.getCell(`D${gbr}`).font = valueFont;
+      ws.getCell(`D${gbr}`).font = inputFont;
       ws.getCell(`D${gbr}`).fill = inputFill;
       ws.getCell(`D${gbr}`).border = thinBorder;
       gbr++;

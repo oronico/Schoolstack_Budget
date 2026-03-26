@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import {
-  NAVY, WHITE, LIGHT_GRAY, GREEN_BG, YELLOW_INPUT, EVERGREEN, CREAM,
+  NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM,
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT, NF, BF,
   CUR, PCT, NUM, BORDER, SUBTOTAL_BORDER, MONTH_NAMES,
   hdr, sec, dc, bc, gc, cn, colLetter, setFormula, inputCell, outputCell, printSetup,
