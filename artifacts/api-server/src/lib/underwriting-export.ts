@@ -2,6 +2,7 @@
 // The /export/underwriting route has been removed; only /export/underwriting-v2 is active.
 // Retained for reference only — do not add new code here.
 import ExcelJS from "exceljs";
+import { addDashboardSheet } from "./workbook-helpers.js";
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
   if (!baseYear) return `Year ${offset + 1}`;
@@ -631,6 +632,29 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
 
   buildUWCoverSheet(wb, sp, yc, annualRevenue, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, maxCapacity);
 
+  {
+    const hasDebt = capDebtRows.some(r => r.isLoan && r.enabled !== false);
+    const cashArr: number[] = [];
+    let runCash = cashAtOpen;
+    for (let y = 0; y < yc; y++) {
+      runCash += annualNetIncome[y];
+      cashArr.push(runCash);
+    }
+    await addDashboardSheet(wb, {
+      schoolName: sp.schoolName || "School",
+      entityType: sp.entityType || "",
+      enrollment,
+      revenueByYear: annualRevenue,
+      personnelByYear: annualPersonnel,
+      opexByYear: annualExpenses,
+      debtServiceByYear: annualCapDebt,
+      netIncomeByYear: annualNetIncome,
+      cashByYear: cashArr,
+      startingCash: cashAtOpen,
+      hasDebt,
+    });
+  }
+
   polishWorkbookUW(wb, sp.schoolName);
   const arrayBuf = await wb.xlsx.writeBuffer();
   return Buffer.from(arrayBuf as ArrayBuffer);
@@ -720,6 +744,29 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   buildSummary(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, annualDebtSvc, cashAtOpen, enrollment, yc, cols, yearHeaders, plRows2);
 
   buildUWCoverSheet(wb, sp, yc, annualRevenue, annualNetIncome, annualCumNI, annualDebtSvc, startingCash, enrollment, maxCapacity);
+
+  {
+    const hasDebt = capDebtRows.some(r => r.isLoan && r.enabled !== false);
+    const cashArr: number[] = [];
+    let rc = cashAtOpen;
+    for (let y = 0; y < yc; y++) {
+      rc += annualNetIncome[y];
+      cashArr.push(rc);
+    }
+    await addDashboardSheet(wb, {
+      schoolName: sp.schoolName || "School",
+      entityType: sp.entityType || "",
+      enrollment,
+      revenueByYear: annualRevenue,
+      personnelByYear: annualPersonnel,
+      opexByYear: annualExpenses,
+      debtServiceByYear: annualCapDebt,
+      netIncomeByYear: annualNetIncome,
+      cashByYear: cashArr,
+      startingCash: cashAtOpen,
+      hasDebt,
+    });
+  }
 
   polishWorkbookUW(wb, sp.schoolName);
   await wb.xlsx.writeFile(filePath);

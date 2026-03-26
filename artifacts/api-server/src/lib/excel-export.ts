@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { addDashboardSheet } from "./workbook-helpers.js";
 
 function safeResult(v: unknown): number | string {
   if (v === null || v === undefined) return "0";
@@ -877,6 +878,50 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     setPrintArea(revenueWs, revTotalRow, cols);
     setPrintArea(expensesWs, expTotalRow, cols);
     setPrintArea(capitalWs, capTotalRow, cols);
+
+    {
+      const dbCapDebt = capDebtRows;
+      const hasDebt = dbCapDebt.some(r => r.isLoan && r.enabled !== false);
+      const cashArr: number[] = [];
+      let runCash = data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0;
+      const debtSvcArr: number[] = [];
+      for (let y = 0; y < yearCount; y++) {
+        let yDebt = 0;
+        for (const row of dbCapDebt) {
+          if (!row.enabled) continue;
+          if (row.isLoan && row.loanPrincipal && row.loanPrincipal > 0) {
+            yDebt += computeAnnualDebtService(row.loanPrincipal, (row.loanRate || 0) / 100, row.loanTermYears || 0);
+          }
+        }
+        debtSvcArr.push(yDebt);
+        runCash += (precomputed.netIncome[y] ?? 0);
+        cashArr.push(runCash);
+      }
+      const revCats: Record<string, number[]> = {};
+      for (const row of revenueRows) {
+        if (!row.enabled) continue;
+        const cat = row.category || "other";
+        if (!revCats[cat]) revCats[cat] = new Array(yearCount).fill(0);
+        const rowVals = precomputed.revenueByRow.get(row.id);
+        if (rowVals) {
+          for (let y = 0; y < yearCount; y++) revCats[cat][y] += rowVals[y] ?? 0;
+        }
+      }
+      await addDashboardSheet(wb, {
+        schoolName: sp.schoolName || "School",
+        entityType: sp.entityType || "",
+        enrollment: enrollmentByYear,
+        revenueByYear: precomputed.totalRevenue,
+        personnelByYear: precomputed.totalPersonnel,
+        opexByYear: precomputed.totalExpenses,
+        debtServiceByYear: debtSvcArr,
+        netIncomeByYear: precomputed.netIncome,
+        cashByYear: cashArr,
+        startingCash: data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0,
+        hasDebt,
+        revenueCategories: revCats,
+      });
+    }
   } else {
     const assumptionsWs = wb.addWorksheet("Assumptions");
     buildAssumptionsTab(assumptionsWs, sp, enrollmentByYear, yearCount, salaryEscRate, costInflation, prorationFactor, data.tuitionTiers);

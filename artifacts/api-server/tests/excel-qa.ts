@@ -733,7 +733,7 @@ const UNDERWRITING_V2_TABS = [
 ];
 
 const STANDARD_TABS = [
-  "Cover", "Assumptions", "Revenue Schedule", "Staffing", "Operating Expenses", "Financial Model", "Summary",
+  "Cover", "Assumptions", "Revenue Schedule", "Staffing", "Operating Expenses", "Financial Model", "Summary", "Financial Health",
 ];
 
 const FORMULA_TABS = [
@@ -743,7 +743,7 @@ const FORMULA_TABS = [
 const UNDERWRITING_V1_TABS = [
   "Cover", "Assumptions", "Enrollment", "Tuition", "Staffing",
   "Operating", "Capital Stack", "Debt Schedule", "Cash Flow",
-  "P&L", "Balance Sheet", "DSCR", "Snapshot", "Summary",
+  "P&L", "Balance Sheet", "DSCR", "Snapshot", "Summary", "Financial Health",
 ];
 
 const LENDER_TABS = ["Instructions", "Cover", "Assumptions", "Drivers", "P&L", "Cash Flow", "Staffing", "Loan Snapshot", "Summary", "Financial Health"];
