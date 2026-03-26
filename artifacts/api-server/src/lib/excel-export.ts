@@ -88,6 +88,7 @@ function entityTypeDisplay(entityType?: string): string {
     case "c_corp": return "C Corporation";
     case "s_corp": return "S Corporation";
     case "nonprofit_501c3": return "501(c)(3) Nonprofit";
+    case "undetermined": return "Undetermined";
     default: return entityType || "";
   }
 }
