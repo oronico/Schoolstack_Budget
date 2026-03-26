@@ -347,6 +347,14 @@ describe("getAllStatesWithProgram", () => {
     expect(esaStates.length).toBeGreaterThanOrEqual(14);
   });
 
+  it("finds federal tax credit SGO states via the flag", () => {
+    const sgoStates = getAllStatesWithProgram("federal_tax_credit_sgo");
+    expect(sgoStates).toContain("FL");
+    expect(sgoStates).toContain("AZ");
+    expect(sgoStates).toContain("IN");
+    expect(sgoStates.length).toBeGreaterThanOrEqual(10);
+  });
+
   it("finds voucher states", () => {
     const voucherStates = getAllStatesWithProgram("voucher");
     expect(voucherStates).toContain("IN");

@@ -453,6 +453,12 @@ export function getStateFundingConfig(
 }
 
 export function getAllStatesWithProgram(programType: SchoolChoiceProgramType): string[] {
+  if (programType === "federal_tax_credit_sgo") {
+    return Object.entries(STATE_FUNDING_MAP)
+      .filter(([, data]) => data.federalTaxCreditSGO)
+      .map(([code]) => code)
+      .sort();
+  }
   return Object.entries(STATE_FUNDING_MAP)
     .filter(([, data]) => data.programs.some(p => p.type === programType))
     .map(([code]) => code)

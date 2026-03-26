@@ -148,7 +148,7 @@ export const schoolProfileSchema = z.object({
   enrollmentGrowthRate: z.coerce.number().min(-100).max(100).optional(),
   schoolFteCount: z.coerce.number().min(0).optional(),
   newFteCount: z.coerce.number().min(0).optional(),
-  stateFundingMethodology: z.string().optional(),
+  stateFundingMethodology: z.enum(["ada", "adm", "single_count_day", "multiple_count_dates", "single_count_period", "multiple_count_periods", "other"]).optional(),
 });
 
 export const priorYearSnapshotSchema = z.object({
