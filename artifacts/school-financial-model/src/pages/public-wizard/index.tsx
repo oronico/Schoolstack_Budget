@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { ArrowLeft, ArrowRight, CheckCircle2, Save, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Save, RotateCcw, Shield, X } from "lucide-react";
+import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 
 import { fullModelSchema, type FullModelData } from "@/pages/model-wizard/schema";
 import { migrateGrantsToPhilanthropy } from "@/lib/revenue-defaults";
@@ -64,6 +66,8 @@ export function PublicWizardPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveFlash, setSaveFlash] = useState(false);
+  const [accountBannerDismissed, setAccountBannerDismissed] = useState(false);
+  const { user } = useAuth();
   const stepStartTime = useRef(Date.now());
 
   const savedData = loadFromStorage();
@@ -400,6 +404,46 @@ export function PublicWizardPage() {
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <ActiveStepComponent jumpToStep={setCurrentStep} modelId={0} />
           </div>
+
+          {!user && !accountBannerDismissed && currentStep >= 3 && !isExportStep && (
+            <div className="mt-6 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-2xl p-5 flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-foreground text-sm">Save your model to the cloud?</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Create a free account to access your model from any device, compare scenarios, and never lose your work.
+                </p>
+                <div className="flex items-center gap-3 mt-3">
+                  <Link
+                    href="/register"
+                    onClick={() => {
+                      const currentValues = methods.getValues();
+                      saveToStorage(currentValues as Record<string, unknown>, currentStep);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition"
+                  >
+                    Create Free Account
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setAccountBannerDismissed(true)}
+                    className="text-sm text-muted-foreground hover:text-foreground transition"
+                  >
+                    Maybe later
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAccountBannerDismissed(true)}
+                className="flex-shrink-0 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-black/5 transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
           {!isExportStep && (
             <div className="mt-8 flex items-center justify-between">
