@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 42957,
+    "fileSize": 42956,
     "tabs": [
       "Instructions",
       "Cover",
@@ -32,7 +32,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 42.0 KB",
+          "File size: 41.9 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -125,7 +125,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 22316,
+    "fileSize": 22362,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -159,7 +159,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 541 cells across 8 sheets",
+          "Scanned 543 cells across 8 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -186,7 +186,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 24258,
+    "fileSize": 24256,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -296,7 +296,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 25048,
+    "fileSize": 25055,
     "tabs": [
       "Instructions",
       "Cover",
@@ -332,7 +332,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 630 cells across 10 sheets",
+          "Scanned 631 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -359,7 +359,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 13995,
+    "fileSize": 14061,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -390,7 +390,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 394 cells across 5 sheets",
+          "Scanned 396 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -580,7 +580,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 24096,
+    "fileSize": 24143,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -597,7 +597,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 23.5 KB",
+          "File size: 23.6 KB",
           "Successfully opened workbook",
           "Worksheets: 9"
         ],
@@ -615,7 +615,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 624 cells across 9 sheets",
+          "Scanned 626 cells across 9 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -642,7 +642,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 27394,
+    "fileSize": 27392,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -753,7 +753,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 25199,
+    "fileSize": 25206,
     "tabs": [
       "Instructions",
       "Cover",
@@ -789,7 +789,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 630 cells across 10 sheets",
+          "Scanned 631 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -816,7 +816,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 14495,
+    "fileSize": 14573,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -847,7 +847,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 506 cells across 5 sheets",
+          "Scanned 508 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -874,7 +874,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 47745,
+    "fileSize": 47744,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1037,7 +1037,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter Public Funding",
-    "fileSize": 23101,
+    "fileSize": 23128,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1071,7 +1071,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 630 cells across 8 sheets",
+          "Scanned 632 cells across 8 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1208,7 +1208,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 25329,
+    "fileSize": 25336,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1244,7 +1244,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 630 cells across 10 sheets",
+          "Scanned 631 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1271,7 +1271,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 14852,
+    "fileSize": 14914,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -1284,7 +1284,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 14.5 KB",
+          "File size: 14.6 KB",
           "Successfully opened workbook",
           "Worksheets: 5"
         ],
@@ -1302,7 +1302,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 562 cells across 5 sheets",
+          "Scanned 564 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1329,7 +1329,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 47120,
+    "fileSize": 47119,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1492,7 +1492,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 22830,
+    "fileSize": 22865,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1526,7 +1526,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 596 cells across 8 sheets",
+          "Scanned 598 cells across 8 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1663,7 +1663,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 25749,
+    "fileSize": 25756,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1681,7 +1681,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.1 KB",
+          "File size: 25.2 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -1699,7 +1699,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 657 cells across 10 sheets",
+          "Scanned 658 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1782,7 +1782,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 14600,
+    "fileSize": 14671,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -1813,7 +1813,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 506 cells across 5 sheets",
+          "Scanned 508 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []

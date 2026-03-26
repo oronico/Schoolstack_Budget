@@ -805,6 +805,11 @@ function buildSYAssumptions(
   ws.getCell(r, 1).border = INPUT_CELL_BORDER;
   ws.getCell(r, 2).value = "Editable assumption \u2014 change this value";
   ws.getCell(r, 2).font = { italic: true, size: 11, color: { argb: "FF666666" }, name: "Calibri" };
+  ws.getCell(r, 4).value = "";
+  ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
+  ws.getCell(r, 4).border = { bottom: { style: "thin", color: { argb: "FFD0D0D0" } } };
+  ws.getCell(r, 5).value = "Calculated \u2014 driven by formula";
+  ws.getCell(r, 5).font = { italic: true, size: 11, color: { argb: "FF666666" }, name: "Calibri" };
 
   r += 2; ws.getCell(r, 1).value = "School Name"; ws.getCell(r, 1).font = NF;
   ws.getCell(r, 2).value = sp.schoolName || "";
