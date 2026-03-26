@@ -261,7 +261,7 @@ export function SchoolProfileStep() {
           <RadioCard
             value="new_school"
             selected={schoolStage === "new_school"}
-            onSelect={() => setValue("schoolProfile.schoolStage", "new_school", { shouldDirty: true })}
+            onSelect={() => setValue("schoolProfile.schoolStage", "new_school", { shouldDirty: true, shouldValidate: true })}
             icon={<Rocket className="h-5 w-5" />}
             title="We're planning a new school"
             description="We do not currently enroll students and are planning to open"
@@ -269,7 +269,7 @@ export function SchoolProfileStep() {
           <RadioCard
             value="operating_school"
             selected={schoolStage === "operating_school"}
-            onSelect={() => setValue("schoolProfile.schoolStage", "operating_school", { shouldDirty: true })}
+            onSelect={() => setValue("schoolProfile.schoolStage", "operating_school", { shouldDirty: true, shouldValidate: true })}
             icon={<Building2 className="h-5 w-5" />}
             title="We're already operating"
             description="We currently enroll students and are planning ahead"

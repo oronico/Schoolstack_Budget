@@ -66,7 +66,9 @@ export function PublicWizardPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveFlash, setSaveFlash] = useState(false);
-  const [accountBannerDismissed, setAccountBannerDismissed] = useState(false);
+  const [accountBannerDismissed, setAccountBannerDismissed] = useState(() => {
+    return localStorage.getItem(STORAGE_KEY + "_account_banner_dismissed") === "true";
+  });
   const { user } = useAuth();
   const stepStartTime = useRef(Date.now());
 
@@ -428,7 +430,7 @@ export function PublicWizardPage() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => setAccountBannerDismissed(true)}
+                    onClick={() => { setAccountBannerDismissed(true); localStorage.setItem(STORAGE_KEY + "_account_banner_dismissed", "true"); }}
                     className="text-sm text-muted-foreground hover:text-foreground transition"
                   >
                     Maybe later
@@ -437,7 +439,7 @@ export function PublicWizardPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setAccountBannerDismissed(true)}
+                onClick={() => { setAccountBannerDismissed(true); localStorage.setItem(STORAGE_KEY + "_account_banner_dismissed", "true"); }}
                 className="flex-shrink-0 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-black/5 transition"
               >
                 <X className="h-4 w-4" />
