@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 42511,
+    "fileSize": 42987,
     "tabs": [
       "Instructions",
       "Cover",
@@ -32,7 +32,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 41.5 KB",
+          "File size: 42.0 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -50,7 +50,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1651 cells across 22 sheets",
+          "Scanned 1678 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -125,7 +125,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 22209,
+    "fileSize": 22208,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -186,7 +186,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 24196,
+    "fileSize": 24195,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -228,7 +228,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 33429,
+    "fileSize": 33428,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -296,7 +296,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 24998,
+    "fileSize": 24997,
     "tabs": [
       "Instructions",
       "Cover",
@@ -359,7 +359,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 13905,
+    "fileSize": 13904,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -417,7 +417,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 46050,
+    "fileSize": 46609,
     "tabs": [
       "Instructions",
       "Cover",
@@ -447,7 +447,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 45.0 KB",
+          "File size: 45.5 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -465,7 +465,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1967 cells across 22 sheets",
+          "Scanned 2001 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -580,7 +580,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 23995,
+    "fileSize": 23994,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -642,7 +642,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 27340,
+    "fileSize": 27339,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -685,7 +685,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 34199,
+    "fileSize": 34198,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -753,7 +753,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 25161,
+    "fileSize": 25160,
     "tabs": [
       "Instructions",
       "Cover",
@@ -816,7 +816,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 14410,
+    "fileSize": 14409,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -874,7 +874,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 47343,
+    "fileSize": 47723,
     "tabs": [
       "Instructions",
       "Cover",
@@ -904,7 +904,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 46.2 KB",
+          "File size: 46.6 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -922,7 +922,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 2122 cells across 22 sheets",
+          "Scanned 2142 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1037,7 +1037,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter Public Funding",
-    "fileSize": 22988,
+    "fileSize": 22987,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1098,7 +1098,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 26159,
+    "fileSize": 26158,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1140,7 +1140,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 34222,
+    "fileSize": 34221,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1208,7 +1208,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 25277,
+    "fileSize": 25276,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1271,7 +1271,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 14769,
+    "fileSize": 14768,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -1329,7 +1329,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 46724,
+    "fileSize": 47080,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1359,7 +1359,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 45.6 KB",
+          "File size: 46.0 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -1377,7 +1377,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 2007 cells across 22 sheets",
+          "Scanned 2027 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1492,7 +1492,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 22714,
+    "fileSize": 22713,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1553,7 +1553,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 26003,
+    "fileSize": 26002,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1595,7 +1595,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 34019,
+    "fileSize": 34018,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1663,7 +1663,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 25707,
+    "fileSize": 25706,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1782,7 +1782,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 14516,
+    "fileSize": 14515,
     "tabs": [
       "Assumptions",
       "Revenue",

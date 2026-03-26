@@ -389,9 +389,12 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   ws.getRow(r).values = headers;
   hdr(ws, r, cols);
 
+  let programFirstRow = 0;
+  let programLastRow = 0;
   if (programs.length > 0) {
     r++;
     sec(ws, r, cols); ws.getCell(r, 1).value = "BY PROGRAM";
+    programFirstRow = r + 1;
     for (const p of programs) {
       r++;
       ws.getCell(r, 1).value = p.name || "Program"; dc(ws.getCell(r, 1));
@@ -406,45 +409,63 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
         c++;
       }
     }
+    programLastRow = r;
   }
 
   r += 2;
   sec(ws, r, cols); ws.getCell(r, 1).value = "TOTAL ENROLLMENT";
   r++;
+  const totalStudentsRow = r;
   ws.getCell(r, 1).value = "Total Students"; bc(ws.getCell(r, 1));
+  const startCol = hasHistory ? 4 : 2;
   let c = 2;
   if (hasHistory) {
     ws.getCell(r, c).value = data.priorYearSnapshot?.endingEnrollment ?? 0; ws.getCell(r, c).numFmt = NUM; bc(ws.getCell(r, c)); c++;
     ws.getCell(r, c).value = data.currentYearProjection?.currentEnrollment ?? 0; ws.getCell(r, c).numFmt = NUM; bc(ws.getCell(r, c)); c++;
   }
   for (let y = 0; y < 5; y++) {
-    ws.getCell(r, c).value = enrollment[y]; ws.getCell(r, c).numFmt = NUM; gc(ws.getCell(r, c)); outputCell(ws.getCell(r, c));
+    const cell = ws.getCell(r, c);
+    if (programs.length > 0 && programFirstRow > 0 && programLastRow > 0) {
+      setFormula(cell, `SUM(${cn(programFirstRow, c)}:${cn(programLastRow, c)})`, enrollment[y]);
+    } else {
+      cell.value = enrollment[y];
+    }
+    cell.numFmt = NUM; gc(cell); outputCell(cell);
     c++;
   }
 
   r++;
   ws.getCell(r, 1).value = "Max Capacity"; dc(ws.getCell(r, 1));
-  ws.getCell(r, 2).value = sp.maxCapacity || 0; ws.getCell(r, 2).numFmt = NUM; dc(ws.getCell(r, 2));
+  ws.getCell(r, 2).value = sp.maxCapacity || 0; ws.getCell(r, 2).numFmt = NUM; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
 
   r++;
   ws.getCell(r, 1).value = "Capacity Utilization"; dc(ws.getCell(r, 1));
   const cap = sp.maxCapacity || 0;
-  const startCol = hasHistory ? 4 : 2;
+  const capCellAddr = `$${colLetter(2)}$${r - 1}`;
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(r, startCol + y);
-    cell.value = cap > 0 ? enrollment[y] / cap : 0;
+    const col = startCol + y;
+    const cell = ws.getCell(r, col);
+    const totalAddr = cn(totalStudentsRow, col);
+    if (cap > 0) {
+      setFormula(cell, `${totalAddr}/${capCellAddr}`, enrollment[y] / cap);
+    } else {
+      cell.value = 0;
+    }
     cell.numFmt = PCT; dc(cell); outputCell(cell);
   }
 
   r += 2;
   ws.getCell(r, 1).value = "Enrollment Growth Rate"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(r, startCol + y);
+    const col = startCol + y;
+    const cell = ws.getCell(r, col);
     if (y === 0) {
       cell.value = "-"; dc(cell);
     } else {
+      const prevAddr = cn(totalStudentsRow, col - 1);
+      const curAddr = cn(totalStudentsRow, col);
       const prev = enrollment[y - 1];
-      cell.value = prev > 0 ? (enrollment[y] - prev) / prev : 0;
+      setFormula(cell, `IF(${prevAddr}=0,0,(${curAddr}-${prevAddr})/${prevAddr})`, prev > 0 ? (enrollment[y] - prev) / prev : 0);
       cell.numFmt = PCT; dc(cell);
     }
   }
@@ -455,9 +476,11 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
   const sp = data.schoolProfile || {};
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
+  const programs = data.programs || [];
   const yLabels = yearLabels(sp.openingYear);
   const costInflPct = (data.tuitionEscalation?.rate ?? 3);
-  ws.columns = [{ width: 32 }, ...Array(6).fill({ width: 16 })];
+  const hasProgramBreakdown = programs.length > 0;
+  ws.columns = [{ width: 36 }, ...Array(6).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
@@ -469,29 +492,130 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
   ws.getRow(r).values = ["", ...yLabels];
   hdr(ws, r, 6);
 
-  r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "REVENUE BY LINE ITEM";
-  const tfFirstRow = r + 1;
-  for (const rv of revenueRows) {
-    r++;
-    ws.getCell(r, 1).value = `${rv.lineItem} (${catLabel(rv.category)})`; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
-      const students = enrollment[y];
-      const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp);
-      const sign = rv.category === "tuition_offsets" ? -1 : 1;
-      const cell = ws.getCell(r, y + 2);
-      cell.value = Math.round(val * sign); cell.numFmt = CUR; dc(cell);
-    }
-  }
-  const tfLastRow = r;
+  const CATEGORY_ORDER = [
+    "tuition_and_fees", "tuition_offsets", "school_choice",
+    "public_funding", "grants_contributions", "philanthropy",
+    "other_revenue",
+  ];
 
-  r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL REVENUE";
+  const catMap = new Map<string, RevenueRow[]>();
+  for (const rv of revenueRows) {
+    const cat = rv.category || "other_revenue";
+    if (!catMap.has(cat)) catMap.set(cat, []);
+    catMap.get(cat)!.push(rv);
+  }
+
+  const orderedCats = [...CATEGORY_ORDER];
+  for (const cat of catMap.keys()) {
+    if (!orderedCats.includes(cat)) orderedCats.push(cat);
+  }
+
+  const isPerStudent = (dt: string) => dt === "per_student" || dt === "percent_of_base";
+  const categorySubtotalRows: number[] = [];
+
+  for (const cat of orderedCats) {
+    const rows = catMap.get(cat);
+    if (!rows || rows.length === 0) continue;
+
+    r++;
+    sec(ws, r, 6);
+    ws.getCell(r, 1).value = catLabel(cat).toUpperCase();
+
+    const catLineFirstRow = r + 1;
+
+    for (const rv of rows) {
+      const sign = cat === "tuition_offsets" ? -1 : 1;
+
+      if (hasProgramBreakdown && isPerStudent(rv.driverType) && rv.driverType !== "percent_of_base") {
+        r++;
+        ws.getCell(r, 1).value = rv.lineItem;
+        ws.getCell(r, 1).font = { ...BF, italic: true, color: { argb: NAVY } };
+
+        const rateRow = r + 1;
+        r++;
+        ws.getCell(r, 1).value = "  Rate / Student"; dc(ws.getCell(r, 1));
+        for (let y = 0; y < 5; y++) {
+          const cell = ws.getCell(r, y + 2);
+          const esc = resolveEsc(rv.escalationRate, costInflPct);
+          const base = rv.amounts?.[0] ?? 0;
+          const rate = y === 0 ? base : base * Math.pow(1 + esc / 100, y);
+          cell.value = Math.round(rate); cell.numFmt = CUR; dc(cell);
+          if (y === 0) inputCell(cell);
+        }
+
+        if (rv.escalationRate !== undefined && rv.escalationRate !== 0) {
+          r++;
+          ws.getCell(r, 1).value = "  Escalation Rate"; dc(ws.getCell(r, 1));
+          ws.getCell(r, 2).value = (rv.escalationRate ?? 0) / 100;
+          ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+        }
+
+        const progDetailFirstRow = r + 1;
+        for (const p of programs) {
+          r++;
+          ws.getCell(r, 1).value = `  ${p.name || "Program"}`; dc(ws.getCell(r, 1));
+          for (let y = 0; y < 5; y++) {
+            const cell = ws.getCell(r, y + 2);
+            const progEnroll = [p.year1, p.year2, p.year3, p.year4, p.year5][y] ?? 0;
+            const rateAddr = cn(rateRow, y + 2);
+            const val = progEnroll * (rv.amounts?.[0] ?? 0);
+            const esc = resolveEsc(rv.escalationRate, costInflPct);
+            const escalated = y === 0 ? val : progEnroll * (rv.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
+            setFormula(cell, `${rateAddr}*${progEnroll}`, Math.round(escalated * sign));
+            cell.numFmt = CUR; dc(cell);
+          }
+        }
+        const progDetailLastRow = r;
+
+        r++;
+        ws.getCell(r, 1).value = `  Subtotal: ${rv.lineItem}`; bc(ws.getCell(r, 1));
+        for (let y = 0; y < 5; y++) {
+          const col = y + 2;
+          const cell = ws.getCell(r, col);
+          const students = enrollment[y];
+          const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp);
+          setFormula(cell, `SUM(${cn(progDetailFirstRow, col)}:${cn(progDetailLastRow, col)})`, Math.round(val * sign));
+          cell.numFmt = CUR; gc(cell);
+        }
+      } else {
+        r++;
+        ws.getCell(r, 1).value = rv.lineItem; dc(ws.getCell(r, 1));
+        for (let y = 0; y < 5; y++) {
+          const students = enrollment[y];
+          const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp);
+          const cell = ws.getCell(r, y + 2);
+          cell.value = Math.round(val * sign); cell.numFmt = CUR; dc(cell);
+          if (rv.driverType === "annual_fixed" && y === 0) inputCell(cell);
+        }
+      }
+    }
+    const catLineLastRow = r;
+
+    r++;
+    const catTotalLabel = `Total ${catLabel(cat)}`;
+    ws.getCell(r, 1).value = catTotalLabel; bc(ws.getCell(r, 1));
+    for (let y = 0; y < 5; y++) {
+      const col = y + 2;
+      const cell = ws.getCell(r, col);
+      let catTotal = 0;
+      for (const rv of rows) {
+        const s = cat === "tuition_offsets" ? -1 : 1;
+        catTotal += computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp) * s;
+      }
+      setFormula(cell, `SUBTOTAL(9,${cn(catLineFirstRow, col)}:${cn(catLineLastRow, col)})`, Math.round(catTotal));
+      cell.numFmt = CUR; gc(cell);
+    }
+    categorySubtotalRows.push(r);
+  }
+
+  r += 2;
+  sec(ws, r, 6); ws.getCell(r, 1).value = "GRAND TOTAL REVENUE";
   for (let y = 0; y < 5; y++) {
-    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     const col = y + 2;
     const cell = ws.getCell(r, col);
-    setFormula(cell, `SUM(${cn(tfFirstRow, col)}:${cn(tfLastRow, col)})`, Math.round(val));
+    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
+    const sumParts = categorySubtotalRows.map(sr => cn(sr, col)).join(",");
+    setFormula(cell, `SUM(${sumParts})`, Math.round(val));
     cell.numFmt = CUR; gc(cell); outputCell(cell);
   }
 
