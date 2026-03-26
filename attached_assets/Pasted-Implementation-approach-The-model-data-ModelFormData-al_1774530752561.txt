@@ -1,0 +1,38 @@
+Implementation approach
+The model data (ModelFormData) already has revenueRows[] with each row containing:
+	∙	name (the revenue source name)
+	∙	category (tuition_fees, public_funding, philanthropy, etc.)
+	∙	driverType (per_student, fixed, etc.)
+	∙	perStudentAmount or fixedAmount
+	∙	escalationRate
+	∙	startYear, endYear
+	∙	programId (links to a specific enrollment program)
+The un-flattening requires:
+	1.	Group revenueRows by category and programId
+	2.	For each program-linked row, render enrollment ref + rate + escalation + subtotal as separate Excel rows with formulas
+	3.	For non-program rows (fixed grants, philanthropy), render as simple rows
+	4.	SUM formulas roll up subtotals to category totals to grand total
+Key files to modify:
+underwriting-workbook.ts – the buildEnrollmentDriversTab() and buildTuitionFundingTab() functions (or wherever these tabs are generated). Instead of writing a single blended enrollment row, iterate over enrollment.programs[] and write a row per program.
+workbook-helpers.ts – may need helper functions to group revenue rows by program and compute per-program totals.
+Critical: Maintain formula integrity
+The 5-Year Operating Statement, Monthly Cash Flow, and Budget Summary tabs reference revenue totals. Currently they probably reference a single blended total cell. After un-flattening:
+	∙	Each program subtotal should be a SUM formula
+	∙	Category totals should SUM the subtotals
+	∙	Grand total should SUM the categories
+	∙	Downstream tabs should reference the grand total cell (same cell address if possible)
+If the grand total cell address changes, update all cross-tab references.
+What about the 3-tab and 8-tab exports?
+The 3-tab public export is intentionally simpler. Blended totals are fine there. The 8-tab lender pro forma should ideally show program-level breakdown on the Drivers tab if feasible, but this is lower priority than the 21-tab model.
+Recommended scope for alpha: Un-flatten the 21-tab model only. The 3-tab and 8-tab can remain blended for now.
+Verify
+	∙	Create a model with 2+ programs in the wizard
+	∙	Export the 21-tab underwriting workbook
+	∙	Open Enrollment Drivers tab – confirm each program appears as a separate row
+	∙	Open Tuition & Funding tab – confirm program-level revenue breakdown
+	∙	Change a program enrollment number (blue cell) – confirm subtotals and totals recalculate
+	∙	Change a tuition rate – confirm downstream P&L updates
+	∙	Confirm the 5-Year Operating Statement still shows correct totals
+	∙	Confirm Monthly Cash Flow Y1 is correct
+	∙	Confirm Balance Sheet ties (A = L + E)
+	∙	Run qa:golden and qa:excel
