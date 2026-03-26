@@ -202,6 +202,19 @@ const SECTION_FONT: Partial<ExcelJS.Font> = {
 };
 const NORMAL_FONT: Partial<ExcelJS.Font> = { size: 11, name: "Calibri" };
 const BOLD_FONT: Partial<ExcelJS.Font> = { size: 11, name: "Calibri", bold: true };
+const INPUT_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBEAFE" } };
+const INPUT_FONT: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: "FF1E3A5F" } };
+const INPUT_BORDER: Partial<ExcelJS.Borders> = { bottom: { style: "thin", color: { argb: "FF93C5FD" } } };
+const CALC_FONT: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: "FF1E293B" } };
+
+function applyInput(cell: ExcelJS.Cell) {
+  cell.fill = INPUT_FILL;
+  cell.font = INPUT_FONT;
+  cell.border = INPUT_BORDER;
+}
+function applyCalc(cell: ExcelJS.Cell) {
+  cell.font = CALC_FONT;
+}
 const CURRENCY_FORMAT = '_("$"* #,##0_);_("$"* (#,##0);_("$"* "-"??_);_(@_)';
 const PERCENT_FORMAT = '0.0%;[Red](0.0%);"-"';
 const NUMBER_FORMAT = '#,##0;#,##0;"-"';
@@ -989,7 +1002,7 @@ function buildAssumptionsTab(
     ws.getCell(r, 1).value = label;
     ws.getCell(r, 1).font = NORMAL_FONT;
     ws.getCell(r, 2).value = value;
-    ws.getCell(r, 2).font = BOLD_FONT;
+    applyInput(ws.getCell(r, 2));
   }
 
   r += 2;
@@ -1003,7 +1016,7 @@ function buildAssumptionsTab(
     ws.getCell(r, 1).value = `Year ${y + 1} Students`;
     ws.getCell(r, 1).font = NORMAL_FONT;
     ws.getCell(r, 2).value = enrollment[y];
-    ws.getCell(r, 2).font = BOLD_FONT;
+    applyInput(ws.getCell(r, 2));
     ws.getCell(r, 2).numFmt = NUMBER_FORMAT;
   }
 
@@ -1018,7 +1031,7 @@ function buildAssumptionsTab(
       ws.getCell(r, 1).font = NORMAL_FONT;
       const totalStudents = tier.studentCounts.reduce((s, n) => s + n, 0);
       ws.getCell(r, 2).value = `${totalStudents} total students across years`;
-      ws.getCell(r, 2).font = BOLD_FONT;
+      applyCalc(ws.getCell(r, 2));
     }
   }
 
@@ -1029,18 +1042,18 @@ function buildAssumptionsTab(
   r++;
   const salaryEscRow = r;
   ws.getCell(r, 1).value = "Annual Salary Escalation"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = salaryEscRate; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
+  ws.getCell(r, 2).value = salaryEscRate; applyInput(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
   r++;
   const costInflationRow = r;
   ws.getCell(r, 1).value = "General Cost Inflation"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = costInflation; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
+  ws.getCell(r, 2).value = costInflation; applyInput(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = PERCENT_FORMAT;
   r++;
   const prorationRow = r;
   ws.getCell(r, 1).value = "Year 1 Proration Factor"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = prorationFactor; ws.getCell(r, 2).font = BOLD_FONT; ws.getCell(r, 2).numFmt = "0.00";
+  ws.getCell(r, 2).value = prorationFactor; applyInput(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = "0.00";
   r++;
   ws.getCell(r, 1).value = "Projection Period"; ws.getCell(r, 1).font = NORMAL_FONT;
-  ws.getCell(r, 2).value = `${yearCount} Years`; ws.getCell(r, 2).font = BOLD_FONT;
+  ws.getCell(r, 2).value = `${yearCount} Years`; applyCalc(ws.getCell(r, 2));
 
   const riskFlags: string[] = [];
   if (sp.locationSecured === false) {

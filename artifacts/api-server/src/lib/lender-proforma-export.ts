@@ -630,8 +630,6 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
   const sectionFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
   const labelFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: "FF374151" } };
   const valueFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: "FF1E293B" } };
-  const inputFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBEAFE" } };
-  const inputFont: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: "FF1E3A5F" } };
   const thinBorder: Partial<ExcelJS.Borders> = {
     bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
   };
@@ -641,7 +639,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
   ws.mergeCells("B1:D1");
 
   const legendCell = ws.getCell("B2");
-  legendCell.fill = inputFill;
+  inputCell(legendCell);
   legendCell.value = "";
   const legendLabel = ws.getCell("C2");
   legendLabel.value = "Blue cells are editable inputs";
@@ -717,8 +715,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
 
     const valCell = ws.getCell(`D${r.row}`);
     valCell.value = input[r.key] ?? "";
-    valCell.font = inputFont;
-    valCell.fill = inputFill;
+    inputCell(valCell);
     valCell.border = thinBorder;
     if (r.fmt) valCell.numFmt = r.fmt;
     valCell.alignment = { horizontal: "right" };
@@ -768,8 +765,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       const val = input[r.key];
       const displayVal = r.fmt === "0.0%" && typeof val === "number" ? val / 100 : val;
       ws.getCell(`D${r.row}`).value = displayVal;
-      ws.getCell(`D${r.row}`).font = inputFont;
-      ws.getCell(`D${r.row}`).fill = inputFill;
+      inputCell(ws.getCell(`D${r.row}`));
       ws.getCell(`D${r.row}`).border = thinBorder;
       if (r.fmt) ws.getCell(`D${r.row}`).numFmt = r.fmt;
       ws.getCell(`D${r.row}`).alignment = { horizontal: "right" };
@@ -802,8 +798,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       ws.getCell(`C${gr.row}`).font = labelFont;
       ws.getCell(`C${gr.row}`).border = thinBorder;
       ws.getCell(`D${gr.row}`).value = gr.value;
-      ws.getCell(`D${gr.row}`).font = inputFont;
-      ws.getCell(`D${gr.row}`).fill = inputFill;
+      inputCell(ws.getCell(`D${gr.row}`));
       ws.getCell(`D${gr.row}`).border = thinBorder;
       if (gr.fmt) ws.getCell(`D${gr.row}`).numFmt = gr.fmt;
       ws.getCell(`D${gr.row}`).alignment = { horizontal: "right" };
@@ -827,8 +822,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       const vals = [];
       for (let y = 1; y <= 5; y++) vals.push(Number(input[`${band.prefix}Y${y}`]) || 0);
       ws.getCell(`D${gbr}`).value = vals.join("  /  ");
-      ws.getCell(`D${gbr}`).font = inputFont;
-      ws.getCell(`D${gbr}`).fill = inputFill;
+      inputCell(ws.getCell(`D${gbr}`));
       ws.getCell(`D${gbr}`).border = thinBorder;
       gbr++;
     }

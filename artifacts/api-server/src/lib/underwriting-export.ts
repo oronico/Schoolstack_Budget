@@ -164,6 +164,14 @@ const BORDER: Partial<ExcelJS.Borders> = {
   left: { style: "thin", color: { argb: "FFD0D0D0" } },
   right: { style: "thin", color: { argb: "FFD0D0D0" } },
 };
+const INPUT_CELL_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDBEAFE" } };
+const INPUT_CELL_FONT: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: "FF1E3A5F" } };
+const INPUT_CELL_BORDER: Partial<ExcelJS.Borders> = { bottom: { style: "thin", color: { argb: "FF93C5FD" } } };
+function applyInputStyle(cell: ExcelJS.Cell) {
+  cell.fill = INPUT_CELL_FILL;
+  cell.font = INPUT_CELL_FONT;
+  cell.border = INPUT_CELL_BORDER;
+}
 
 const MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -800,17 +808,17 @@ function buildSYAssumptions(
   r++; ws.getCell(r, 1).value = "Enrollment"; ws.getCell(r, 1).font = NF;
   const enrollCell = ws.getCell(r, 2);
   enrollCell.value = students; enrollCell.numFmt = NUM;
-  enrollCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
+  applyInputStyle(enrollCell);
 
   r++; ws.getCell(r, 1).value = "Salary Escalation"; ws.getCell(r, 1).font = NF;
   const salCell = ws.getCell(r, 2);
   salCell.value = salaryEsc; salCell.numFmt = "0.0%";
-  salCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
+  applyInputStyle(salCell);
 
   r++; ws.getCell(r, 1).value = "Cost Inflation"; ws.getCell(r, 1).font = NF;
   const costCell = ws.getCell(r, 2);
   costCell.value = costInfl; costCell.numFmt = "0.0%";
-  costCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
+  applyInputStyle(costCell);
 
   r++; ws.getCell(r, 1).value = "Year 1 Proration Factor"; ws.getCell(r, 1).font = NF;
   ws.getCell(r, 2).value = proration; ws.getCell(r, 2).numFmt = "0.00";
@@ -1185,8 +1193,6 @@ function buildAssumptions(
   r = 3; sec(ws, r, colCount);
   ws.getCell(r, 1).value = "SCHOOL INFORMATION";
 
-  const EDITABLE_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFDE8" } };
-
   const infoItems: [string, string | number][] = [
     ["School Name", sp.schoolName || ""],
     ["State", sp.state || ""],
@@ -1223,8 +1229,7 @@ function buildAssumptions(
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     cell.value = enrollment[y]; cell.numFmt = NUM; bc(cell);
-    cell.fill = EDITABLE_FILL;
-    cell.border = { ...BORDER, bottom: { style: "medium", color: { argb: "FFD97706" } } };
+    applyInputStyle(cell);
   }
 
   r = 19; sec(ws, r, colCount);
@@ -1232,21 +1237,18 @@ function buildAssumptions(
 
   r = ASM.SALARY_ESC_ROW;
   ws.getCell(r, 1).value = "Salary Escalation"; ws.getCell(r, 1).font = NF;
-  ws.getCell(r, 2).value = salaryEsc; ws.getCell(r, 2).font = BF; ws.getCell(r, 2).numFmt = PCT;
-  ws.getCell(r, 2).fill = EDITABLE_FILL;
-  ws.getCell(r, 2).border = { ...BORDER, bottom: { style: "medium", color: { argb: "FFD97706" } } };
+  ws.getCell(r, 2).value = salaryEsc; ws.getCell(r, 2).numFmt = PCT;
+  applyInputStyle(ws.getCell(r, 2));
 
   r = ASM.COST_INFL_ROW;
   ws.getCell(r, 1).value = "Cost Inflation"; ws.getCell(r, 1).font = NF;
-  ws.getCell(r, 2).value = costInflation; ws.getCell(r, 2).font = BF; ws.getCell(r, 2).numFmt = PCT;
-  ws.getCell(r, 2).fill = EDITABLE_FILL;
-  ws.getCell(r, 2).border = { ...BORDER, bottom: { style: "medium", color: { argb: "FFD97706" } } };
+  ws.getCell(r, 2).value = costInflation; ws.getCell(r, 2).numFmt = PCT;
+  applyInputStyle(ws.getCell(r, 2));
 
   r = ASM.PRORATION_ROW;
   ws.getCell(r, 1).value = "Year 1 Proration Factor"; ws.getCell(r, 1).font = NF;
-  ws.getCell(r, 2).value = proration; ws.getCell(r, 2).font = BF; ws.getCell(r, 2).numFmt = "0.00";
-  ws.getCell(r, 2).fill = EDITABLE_FILL;
-  ws.getCell(r, 2).border = { ...BORDER, bottom: { style: "medium", color: { argb: "FFD97706" } } };
+  ws.getCell(r, 2).value = proration; ws.getCell(r, 2).numFmt = "0.00";
+  applyInputStyle(ws.getCell(r, 2));
 
   r = 23;
   ws.getCell(r, 1).value = "Projection Period"; ws.getCell(r, 1).font = NF;
