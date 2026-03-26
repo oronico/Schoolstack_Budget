@@ -186,6 +186,7 @@ function EntityTypeSection({ allowedEntityTypes, entityType }: { allowedEntityTy
       <button
         type="button"
         onClick={() => setGuideOpen(!guideOpen)}
+        aria-expanded={guideOpen}
         className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 mb-4 transition-colors"
       >
         <Info className="h-4 w-4" />
