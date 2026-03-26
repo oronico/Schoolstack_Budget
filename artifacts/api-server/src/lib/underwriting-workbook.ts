@@ -4,12 +4,13 @@ import {
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT, NF, BF,
   CUR, PCT, NUM, BORDER, SUBTOTAL_BORDER, MONTH_NAMES,
   hdr, sec, dc, bc, gc, cn, colLetter, setFormula, inputCell, outputCell, printSetup,
+  addInstructionsSheet, addDashboardSheet,
   schoolYearLabel, yearLabels, schoolTypeLabel, entityLabel, funcLabel, catLabel, expCatLabel, driverLabel,
   fundingLabel, stageLabel, schoolModelFromType, isNonprofit, netIncomeLabel, equityLabel,
   normalizeStaffingRow, getEnrollmentArray,
   computeAnnualDebt, computeAnnualDebtForYear, computeInterestPortion, computePrincipalPortion, computeRemainingBalance,
   computeRevLineItem, computeRevenueForYear, computePersonnelForYear, computeStaffingLoaded,
-  computeExpenseForYear, computeCapDebtForYear,
+  computeExpenseForYear, computeCapDebtForYear, computeDebtServiceForYear,
   driverVal, resolveEsc, tuitionWithTiers,
   ModelData, SchoolProfile, RevenueRow, StaffingRow, ExpenseRow, CapitalDebtRow, TuitionTier,
 } from "./workbook-helpers.js";
@@ -19,7 +20,7 @@ const TAB_NAMES = [
   "Enrollment Drivers", "Tuition & Funding", "Staffing Drivers", "OpEx Drivers", "Capital Stack",
   "Enrollment Tuition Fcst", "Staffing Costs Fcst", "Budget Detail", "Budget Summary",
   "Monthly Cash Flow Y1", "5-Year Operating Stmt", "Debt Schedule", "Balance Sheet",
-  "DSCR & Covenants", "Sources & Uses", "Scenarios", "Underwriting Snapshot",
+  "DSCR & Covenants", "Sources & Uses", "Scenarios", "Underwriting Snapshot", "Financial Health",
 ];
 
 function getProrationFactor(sp: SchoolProfile): number {
@@ -90,56 +91,7 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
 }
 
 function buildInstructions(wb: ExcelJS.Workbook) {
-  const ws = wb.addWorksheet("Instructions");
-  ws.columns = [{ width: 4 }, { width: 80 }];
-  printSetup(ws);
-
-  let r = 2;
-  ws.getCell(r, 2).value = "How to Use This Workbook";
-  ws.getCell(r, 2).font = { bold: true, size: 16, name: "Calibri", color: { argb: NAVY } };
-
-  r += 2;
-  const instructions = [
-    ["Cell Color Legend", ""],
-    ["", "Yellow cells are editable inputs — change these to update your model."],
-    ["", "White cells contain formulas — do not edit (they recalculate automatically)."],
-    ["", "Green cells are key outputs and summary metrics."],
-    ["", ""],
-    ["Navigation", "Use the Cover tab's Table of Contents to jump between sheets."],
-    ["", "The Assumptions tab is the central control panel — all other tabs reference it."],
-    ["", ""],
-    ["Structure", "Tabs 1-4: Profile & setup"],
-    ["", "Tabs 5-9: Drivers & inputs"],
-    ["", "Tabs 10-13: Forecasts & budgets"],
-    ["", "Tabs 14-17: Financial statements"],
-    ["", "Tabs 18-21: Analysis & underwriting"],
-    ["", ""],
-    ["Debt Service Convention", "This model treats full debt service (interest + principal) as an"],
-    ["", "operating expense on the 5-Year Operating Statement. This is a standard"],
-    ["", "simplification used in school financial underwriting that ensures internal"],
-    ["", "consistency across all tabs: the Cash Flow, Balance Sheet, and DSCR"],
-    ["", "schedules all reference the same debt service figures. The Debt Schedule"],
-    ["", "tab breaks out interest and principal separately for detailed analysis."],
-    ["", ""],
-    ["Tips", "Start with the Assumptions tab to verify your inputs."],
-    ["", "Review the Budget Summary for a high-level view."],
-    ["", "Check DSCR & Covenants for lender readiness."],
-    ["", "The Underwriting Snapshot provides a one-page summary."],
-    ["", ""],
-    ["Disclaimer", "This model is a planning tool. It does not constitute financial advice,"],
-    ["", "a loan commitment, or a guarantee of funding. All projections are based on"],
-    ["", "user-provided assumptions and should be independently verified."],
-  ];
-  for (const [label, text] of instructions) {
-    if (label) {
-      ws.getCell(r, 2).value = label;
-      ws.getCell(r, 2).font = { ...BF, color: { argb: NAVY } };
-    } else {
-      ws.getCell(r, 2).value = text;
-      ws.getCell(r, 2).font = NF;
-    }
-    r++;
-  }
+  addInstructionsSheet(wb, { workbookType: "underwriting", tabNames: TAB_NAMES });
 }
 
 interface AsmReg {
@@ -175,7 +127,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   ws.getRow(r).height = 32;
 
   r++;
-  ws.getCell(r, 1).value = "Yellow cells are editable inputs. All other cells are formulas.";
+  ws.getCell(r, 1).value = "Blue cells are editable inputs. All other cells are formulas.";
   ws.getCell(r, 1).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF666666" } };
 
   r += 2;
@@ -2311,6 +2263,21 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   buildSourcesAndUses(wb, data, startingCash);
   buildScenarios(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear);
   buildUnderwritingSnapshot(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear, balanceByYear);
+
+  const hasDebt = debtIncluded && (data.capitalAndDebtRows || []).some(r => r.isLoan && r.enabled !== false);
+  await addDashboardSheet(wb, {
+    schoolName: sp.schoolName || "School",
+    entityType: sp.entityType || "",
+    enrollment,
+    revenueByYear: revByYear,
+    personnelByYear: persByYear,
+    opexByYear: opexByYear,
+    debtServiceByYear: debtServiceByYear,
+    netIncomeByYear: niByYear,
+    cashByYear,
+    startingCash,
+    hasDebt,
+  });
 
   return wb;
 }

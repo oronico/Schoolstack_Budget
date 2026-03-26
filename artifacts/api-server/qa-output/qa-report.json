@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 38963,
+    "fileSize": 41464,
     "tabs": [
       "Cover",
       "Instructions",
@@ -24,16 +24,17 @@
       "DSCR & Covenants",
       "Sources & Uses",
       "Scenarios",
-      "Underwriting Snapshot"
+      "Underwriting Snapshot",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 38.0 KB",
+          "File size: 40.5 KB",
           "Successfully opened workbook",
-          "Worksheets: 21"
+          "Worksheets: 22"
         ],
         "errors": []
       },
@@ -41,7 +42,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 21 tabs: Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot"
+          "Found 22 tabs: Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot, Financial Health"
         ],
         "errors": []
       },
@@ -49,7 +50,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1483 cells across 21 sheets",
+          "Scanned 1600 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -124,7 +125,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 22209,
+    "fileSize": 22208,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -185,20 +186,22 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 18588,
+    "fileSize": 23025,
     "tabs": [
+      "Instructions",
       "Assumptions",
       "5-Year Model",
-      "Year 1 Pro Forma"
+      "Year 1 Pro Forma",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 18.2 KB",
+          "File size: 22.5 KB",
           "Successfully opened workbook",
-          "Worksheets: 3"
+          "Worksheets: 5"
         ],
         "errors": []
       },
@@ -206,7 +209,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 3 tabs: Assumptions, 5-Year Model, Year 1 Pro Forma"
+          "Found 5 tabs: Instructions, Assumptions, 5-Year Model, Year 1 Pro Forma, Financial Health"
         ],
         "errors": []
       },
@@ -214,7 +217,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 960 cells across 3 sheets",
+          "Scanned 1111 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -293,25 +296,27 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 19409,
+    "fileSize": 23818,
     "tabs": [
       "Cover",
+      "Instructions",
       "Assumptions",
       "Drivers",
       "5-Year P&L",
       "Cash Flow & DSCR",
       "Staffing",
       "Loan Snapshot",
-      "Summary"
+      "Summary",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 19.0 KB",
+          "File size: 23.3 KB",
           "Successfully opened workbook",
-          "Worksheets: 8"
+          "Worksheets: 10"
         ],
         "errors": []
       },
@@ -319,7 +324,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 8 tabs: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+          "Found 10 tabs: Cover, Instructions, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
         ],
         "errors": []
       },
@@ -327,7 +332,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 426 cells across 8 sheets",
+          "Scanned 577 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -412,7 +417,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 42192,
+    "fileSize": 44851,
     "tabs": [
       "Cover",
       "Instructions",
@@ -434,16 +439,17 @@
       "DSCR & Covenants",
       "Sources & Uses",
       "Scenarios",
-      "Underwriting Snapshot"
+      "Underwriting Snapshot",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 41.2 KB",
+          "File size: 43.8 KB",
           "Successfully opened workbook",
-          "Worksheets: 21"
+          "Worksheets: 22"
         ],
         "errors": []
       },
@@ -451,7 +457,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 21 tabs: Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot"
+          "Found 22 tabs: Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot, Financial Health"
         ],
         "errors": []
       },
@@ -459,7 +465,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1793 cells across 21 sheets",
+          "Scanned 1916 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -574,7 +580,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 23995,
+    "fileSize": 23994,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -636,21 +642,23 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 21824,
+    "fileSize": 26189,
     "tabs": [
+      "Instructions",
       "Assumptions",
       "5-Year Model",
       "Year 1 Pro Forma",
-      "Actuals vs. Projections"
+      "Actuals vs. Projections",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 21.3 KB",
+          "File size: 25.6 KB",
           "Successfully opened workbook",
-          "Worksheets: 4"
+          "Worksheets: 6"
         ],
         "errors": []
       },
@@ -658,7 +666,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 4 tabs: Assumptions, 5-Year Model, Year 1 Pro Forma, Actuals vs. Projections"
+          "Found 6 tabs: Instructions, Assumptions, 5-Year Model, Year 1 Pro Forma, Actuals vs. Projections, Financial Health"
         ],
         "errors": []
       },
@@ -666,7 +674,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1272 cells across 4 sheets",
+          "Scanned 1423 cells across 6 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -745,25 +753,27 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 19595,
+    "fileSize": 23991,
     "tabs": [
       "Cover",
+      "Instructions",
       "Assumptions",
       "Drivers",
       "5-Year P&L",
       "Cash Flow & DSCR",
       "Staffing",
       "Loan Snapshot",
-      "Summary"
+      "Summary",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 19.1 KB",
+          "File size: 23.4 KB",
           "Successfully opened workbook",
-          "Worksheets: 8"
+          "Worksheets: 10"
         ],
         "errors": []
       },
@@ -771,7 +781,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 8 tabs: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+          "Found 10 tabs: Cover, Instructions, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
         ],
         "errors": []
       },
@@ -779,7 +789,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 426 cells across 8 sheets",
+          "Scanned 577 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -864,7 +874,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 43394,
+    "fileSize": 46135,
     "tabs": [
       "Cover",
       "Instructions",
@@ -886,16 +896,17 @@
       "DSCR & Covenants",
       "Sources & Uses",
       "Scenarios",
-      "Underwriting Snapshot"
+      "Underwriting Snapshot",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 42.4 KB",
+          "File size: 45.1 KB",
           "Successfully opened workbook",
-          "Worksheets: 21"
+          "Worksheets: 22"
         ],
         "errors": []
       },
@@ -903,7 +914,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 21 tabs: Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot"
+          "Found 22 tabs: Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot, Financial Health"
         ],
         "errors": []
       },
@@ -911,7 +922,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1948 cells across 21 sheets",
+          "Scanned 2071 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1026,7 +1037,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter Public Funding",
-    "fileSize": 22986,
+    "fileSize": 22987,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1087,20 +1098,22 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 20532,
+    "fileSize": 24976,
     "tabs": [
+      "Instructions",
       "Assumptions",
       "5-Year Model",
-      "Year 1 Pro Forma"
+      "Year 1 Pro Forma",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 20.1 KB",
+          "File size: 24.4 KB",
           "Successfully opened workbook",
-          "Worksheets: 3"
+          "Worksheets: 5"
         ],
         "errors": []
       },
@@ -1108,7 +1121,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 3 tabs: Assumptions, 5-Year Model, Year 1 Pro Forma"
+          "Found 5 tabs: Instructions, Assumptions, 5-Year Model, Year 1 Pro Forma, Financial Health"
         ],
         "errors": []
       },
@@ -1116,7 +1129,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1320 cells across 3 sheets",
+          "Scanned 1471 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1195,25 +1208,27 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 19640,
+    "fileSize": 24077,
     "tabs": [
       "Cover",
+      "Instructions",
       "Assumptions",
       "Drivers",
       "5-Year P&L",
       "Cash Flow & DSCR",
       "Staffing",
       "Loan Snapshot",
-      "Summary"
+      "Summary",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 19.2 KB",
+          "File size: 23.5 KB",
           "Successfully opened workbook",
-          "Worksheets: 8"
+          "Worksheets: 10"
         ],
         "errors": []
       },
@@ -1221,7 +1236,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 8 tabs: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+          "Found 10 tabs: Cover, Instructions, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
         ],
         "errors": []
       },
@@ -1229,7 +1244,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 426 cells across 8 sheets",
+          "Scanned 577 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1256,7 +1271,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 14768,
+    "fileSize": 14769,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -1314,7 +1329,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 42760,
+    "fileSize": 45496,
     "tabs": [
       "Cover",
       "Instructions",
@@ -1336,16 +1351,17 @@
       "DSCR & Covenants",
       "Sources & Uses",
       "Scenarios",
-      "Underwriting Snapshot"
+      "Underwriting Snapshot",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 41.8 KB",
+          "File size: 44.4 KB",
           "Successfully opened workbook",
-          "Worksheets: 21"
+          "Worksheets: 22"
         ],
         "errors": []
       },
@@ -1353,7 +1369,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 21 tabs: Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot"
+          "Found 22 tabs: Cover, Instructions, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot, Financial Health"
         ],
         "errors": []
       },
@@ -1361,7 +1377,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1833 cells across 21 sheets",
+          "Scanned 1956 cells across 22 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1476,7 +1492,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 22713,
+    "fileSize": 22714,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1537,20 +1553,22 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 20368,
+    "fileSize": 24832,
     "tabs": [
+      "Instructions",
       "Assumptions",
       "5-Year Model",
-      "Year 1 Pro Forma"
+      "Year 1 Pro Forma",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 19.9 KB",
+          "File size: 24.3 KB",
           "Successfully opened workbook",
-          "Worksheets: 3"
+          "Worksheets: 5"
         ],
         "errors": []
       },
@@ -1558,7 +1576,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 3 tabs: Assumptions, 5-Year Model, Year 1 Pro Forma"
+          "Found 5 tabs: Instructions, Assumptions, 5-Year Model, Year 1 Pro Forma, Financial Health"
         ],
         "errors": []
       },
@@ -1566,7 +1584,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 1239 cells across 3 sheets",
+          "Scanned 1390 cells across 5 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1577,7 +1595,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 34019,
+    "fileSize": 34018,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1645,25 +1663,27 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 20111,
+    "fileSize": 24486,
     "tabs": [
       "Cover",
+      "Instructions",
       "Assumptions",
       "Drivers",
       "5-Year P&L",
       "Cash Flow & DSCR",
       "Staffing",
       "Loan Snapshot",
-      "Summary"
+      "Summary",
+      "Financial Health"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 19.6 KB",
+          "File size: 23.9 KB",
           "Successfully opened workbook",
-          "Worksheets: 8"
+          "Worksheets: 10"
         ],
         "errors": []
       },
@@ -1671,7 +1691,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 8 tabs: Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary"
+          "Found 10 tabs: Cover, Instructions, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
         ],
         "errors": []
       },
@@ -1679,7 +1699,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 453 cells across 8 sheets",
+          "Scanned 604 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []

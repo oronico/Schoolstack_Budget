@@ -10,6 +10,11 @@ export const AMBER_BG = "FFFFF8E1";
 export const TEAL = "FF0D9488";
 export const EVERGREEN = "FF328555";
 export const CREAM = "FFFAF9F7";
+export const BLUE_INPUT_BG = "FFDBEAFE";
+export const BLUE_INPUT_FONT = "FF1E3A5F";
+export const DASHBOARD_GREEN = "FF16A34A";
+export const DASHBOARD_AMBER = "FFD97706";
+export const DASHBOARD_RED = "FFDC2626";
 
 export const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
 export const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: WHITE }, size: 11, name: "Calibri" };
@@ -88,7 +93,8 @@ export function setFormula(cell: ExcelJS.Cell, formula: string, result: unknown)
 }
 
 export function inputCell(cell: ExcelJS.Cell) {
-  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: YELLOW_INPUT } };
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE_INPUT_BG } };
+  cell.font = { ...cell.font, color: { argb: BLUE_INPUT_FONT } };
 }
 
 export function outputCell(cell: ExcelJS.Cell) {
@@ -640,4 +646,364 @@ export function printSetup(ws: ExcelJS.Worksheet) {
   ws.headerFooter = {
     oddFooter: "&L&8SchoolStack Budget&C&8Confidential&R&8Page &P of &N",
   };
+}
+
+export interface InstructionsConfig {
+  workbookType: "formula" | "lender" | "underwriting";
+  tabNames?: string[];
+}
+
+export function addInstructionsSheet(wb: ExcelJS.Workbook, config: InstructionsConfig) {
+  const ws = wb.addWorksheet("Instructions");
+  ws.columns = [{ width: 4 }, { width: 80 }];
+  printSetup(ws);
+
+  let r = 2;
+  ws.getCell(r, 2).value = "How to Use This Workbook";
+  ws.getCell(r, 2).font = { bold: true, size: 16, name: "Calibri", color: { argb: NAVY } };
+
+  r += 2;
+
+  const legend: [string, string][] = [
+    ["Cell Color Legend", ""],
+    ["", "Blue cells are editable inputs — change these to update your model."],
+    ["", "White cells contain formulas — do not edit (they recalculate automatically)."],
+    ["", "Green cells are key outputs and summary metrics."],
+  ];
+
+  let structure: [string, string][];
+  if (config.workbookType === "underwriting") {
+    structure = [
+      ["Structure", "Tabs 1-4: Profile & setup"],
+      ["", "Tabs 5-9: Drivers & inputs"],
+      ["", "Tabs 10-13: Forecasts & budgets"],
+      ["", "Tabs 14-17: Financial statements"],
+      ["", "Tabs 18-22: Analysis, underwriting & dashboard"],
+    ];
+  } else if (config.workbookType === "lender") {
+    structure = [
+      ["Structure", "Cover: School identification"],
+      ["", "Assumptions & Drivers: Model inputs and calculations"],
+      ["", "5-Year P&L & Cash Flow: Financial projections"],
+      ["", "Staffing & Loan Snapshot: Personnel and debt detail"],
+      ["", "Summary & Financial Health: Key metrics dashboard"],
+    ];
+  } else {
+    structure = [
+      ["Structure", "Assumptions: All editable model inputs"],
+      ["", "5-Year Model: Detailed revenue, expense, and cash projections"],
+      ["", "Pro Forma: Consolidated income statement"],
+      ["", "Actuals vs Projections: Variance tracking"],
+      ["", "Financial Health: Key metrics dashboard"],
+    ];
+  }
+
+  const instructions: [string, string][] = [
+    ...legend,
+    ["", ""],
+    ["Navigation", config.tabNames
+      ? "Use the Cover tab's Table of Contents to jump between sheets."
+      : "Use the tab bar at the bottom to navigate between sheets."],
+    ["", "The Assumptions tab is the central control panel — all other tabs reference it."],
+    ["", ""],
+    ...structure,
+    ["", ""],
+    ["Debt Service Convention", "This model treats full debt service (interest + principal) as an"],
+    ["", "operating expense on the Operating Statement. This is a standard"],
+    ["", "simplification used in school financial underwriting that ensures internal"],
+    ["", "consistency across all tabs."],
+    ["", ""],
+    ["Tips", "Start with the Assumptions tab to verify your inputs."],
+    ["", "Check the Financial Health dashboard for an at-a-glance assessment."],
+    ["", "Review key metrics: net margin, cash runway, and DSCR."],
+    ["", ""],
+    ["Disclaimer", "This model is a planning tool. It does not constitute financial advice,"],
+    ["", "a loan commitment, or a guarantee of funding. All projections are based on"],
+    ["", "user-provided assumptions and should be independently verified."],
+  ];
+
+  for (const [label, text] of instructions) {
+    if (label) {
+      ws.getCell(r, 2).value = label;
+      ws.getCell(r, 2).font = { ...BF, color: { argb: NAVY } };
+    } else {
+      ws.getCell(r, 2).value = text;
+      ws.getCell(r, 2).font = NF;
+    }
+    r++;
+  }
+}
+
+export interface DashboardInput {
+  schoolName: string;
+  entityType: string;
+  enrollment: number[];
+  revenueByYear: number[];
+  personnelByYear: number[];
+  opexByYear: number[];
+  debtServiceByYear: number[];
+  netIncomeByYear: number[];
+  cashByYear: number[];
+  startingCash: number;
+  hasDebt: boolean;
+}
+
+function statusColor(status: string): string {
+  if (status === "healthy") return DASHBOARD_GREEN;
+  if (status === "watch") return DASHBOARD_AMBER;
+  return DASHBOARD_RED;
+}
+
+function statusIcon(status: string): string {
+  if (status === "healthy") return "●";
+  if (status === "watch") return "◐";
+  return "○";
+}
+
+export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardInput) {
+  const ws = wb.addWorksheet("Financial Health");
+  ws.columns = [
+    { width: 4 }, { width: 28 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 40 },
+  ];
+  printSetup(ws);
+
+  let r = 2;
+  ws.mergeCells(r, 2, r, 7);
+  ws.getCell(r, 2).value = `${input.schoolName} — Financial Health Dashboard`;
+  ws.getCell(r, 2).font = { bold: true, size: 16, name: "Calibri", color: { argb: NAVY } };
+  ws.getRow(r).height = 30;
+
+  r++;
+  ws.mergeCells(r, 2, r, 7);
+  ws.getCell(r, 2).value = `Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`;
+  ws.getCell(r, 2).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF6B7280" } };
+
+  r += 2;
+  for (let c = 2; c <= 7; c++) {
+    ws.getCell(r, c).fill = SECTION_FILL;
+    ws.getCell(r, c).border = BORDER;
+  }
+  ws.getCell(r, 2).value = "Metric";
+  ws.getCell(r, 2).font = SECTION_FONT;
+  for (let y = 0; y < 5; y++) {
+    ws.getCell(r, y + 3).value = `Year ${y + 1}`;
+    ws.getCell(r, y + 3).font = SECTION_FONT;
+    ws.getCell(r, y + 3).alignment = { horizontal: "center" };
+  }
+  ws.getRow(r).height = 24;
+
+  r++;
+  ws.getCell(r, 2).value = "Enrollment"; dc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    ws.getCell(r, y + 3).value = input.enrollment[y];
+    ws.getCell(r, y + 3).numFmt = NUM;
+    dc(ws.getCell(r, y + 3));
+    ws.getCell(r, y + 3).alignment = { horizontal: "right" };
+  }
+
+  r++;
+  ws.getCell(r, 2).value = "Revenue"; dc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    ws.getCell(r, y + 3).value = input.revenueByYear[y];
+    ws.getCell(r, y + 3).numFmt = CUR;
+    dc(ws.getCell(r, y + 3));
+    ws.getCell(r, y + 3).alignment = { horizontal: "right" };
+  }
+
+  r++;
+  ws.getCell(r, 2).value = "Personnel"; dc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    ws.getCell(r, y + 3).value = input.personnelByYear[y];
+    ws.getCell(r, y + 3).numFmt = CUR;
+    dc(ws.getCell(r, y + 3));
+    ws.getCell(r, y + 3).alignment = { horizontal: "right" };
+  }
+
+  r++;
+  ws.getCell(r, 2).value = "Operating Expenses"; dc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    ws.getCell(r, y + 3).value = input.opexByYear[y];
+    ws.getCell(r, y + 3).numFmt = CUR;
+    dc(ws.getCell(r, y + 3));
+    ws.getCell(r, y + 3).alignment = { horizontal: "right" };
+  }
+
+  r++;
+  ws.getCell(r, 2).value = "Debt Service"; dc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    ws.getCell(r, y + 3).value = input.debtServiceByYear[y];
+    ws.getCell(r, y + 3).numFmt = CUR;
+    dc(ws.getCell(r, y + 3));
+    ws.getCell(r, y + 3).alignment = { horizontal: "right" };
+  }
+
+  r++;
+  ws.getCell(r, 2).value = "Net Income"; bc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    const ni = input.netIncomeByYear[y];
+    const cell = ws.getCell(r, y + 3);
+    cell.value = ni;
+    cell.numFmt = CUR;
+    gc(cell);
+    cell.alignment = { horizontal: "right" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: ni >= 0 ? GREEN_BG : RED_BG } };
+  }
+
+  r++;
+  ws.getCell(r, 2).value = "Ending Cash"; bc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    const cash = input.cashByYear[y];
+    const cell = ws.getCell(r, y + 3);
+    cell.value = cash;
+    cell.numFmt = CUR;
+    gc(cell);
+    cell.alignment = { horizontal: "right" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cash >= 0 ? GREEN_BG : RED_BG } };
+  }
+
+  r++;
+  ws.getCell(r, 2).value = "Net Margin"; bc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    const rev = input.revenueByYear[y];
+    const margin = rev > 0 ? input.netIncomeByYear[y] / rev : 0;
+    const cell = ws.getCell(r, y + 3);
+    cell.value = margin;
+    cell.numFmt = PCT;
+    gc(cell);
+    cell.alignment = { horizontal: "right" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: margin >= 0.05 ? GREEN_BG : margin >= 0 ? AMBER_BG : RED_BG } };
+  }
+
+  const totalExpByYear = input.revenueByYear.map((_, i) =>
+    input.personnelByYear[i] + input.opexByYear[i] + input.debtServiceByYear[i]
+  );
+  const y5Rev = input.revenueByYear[4] || 1;
+  const y5Pers = input.personnelByYear[4];
+  const y5TotalExp = totalExpByYear[4];
+  const staffPct = y5Pers / y5Rev;
+
+  const facilityCost = input.opexByYear[4] * 0.3;
+  const facPct = facilityCost / y5Rev;
+
+  const y5NI = input.netIncomeByYear[4];
+  const y5Margin = y5Rev > 0 ? y5NI / y5Rev : 0;
+  const y1Margin = input.revenueByYear[0] > 0 ? input.netIncomeByYear[0] / input.revenueByYear[0] : 0;
+
+  let breakEvenYear = -1;
+  for (let y = 0; y < 5; y++) {
+    if (input.netIncomeByYear[y] >= 0) { breakEvenYear = y; break; }
+  }
+
+  const monthlyBurn = y5TotalExp / 12;
+  const y5Cash = input.cashByYear[4];
+  const reserveMonths = monthlyBurn > 0 ? y5Cash / monthlyBurn : 0;
+
+  let cashRunwayMonths = 60;
+  let runningCash = input.startingCash;
+  for (let y = 0; y < 5; y++) {
+    const monthlyNI = input.netIncomeByYear[y] / 12;
+    for (let m = 0; m < 12; m++) {
+      runningCash += monthlyNI;
+      if (runningCash < 0) { cashRunwayMonths = y * 12 + m; break; }
+    }
+    if (runningCash < 0) break;
+  }
+
+  const y5Debt = input.debtServiceByYear[4];
+  const y5NOI = y5Rev - y5Pers - input.opexByYear[4];
+  const dscr = y5Debt > 0 ? y5NOI / y5Debt : 0;
+
+  let philanthropy = 0;
+  const publicRev = y5Rev;
+  const philanthropyPct = y5Rev > 0 ? philanthropy / y5Rev : 0;
+
+  const { generateHealthSignals } = await importHealthModule();
+
+  const signals = generateHealthSignals({
+    y1NetMargin: y1Margin,
+    lastYearNetMargin: y5Margin,
+    breakEvenYear,
+    yearCount: 5,
+    cashRunwayMonths,
+    reserveMonths,
+    staffingCostPct: staffPct,
+    facilityCostPct: facPct,
+    dscr,
+    hasDebt: input.hasDebt,
+    philanthropyPct: philanthropyPct,
+    publicRevenuePct: 0,
+    tuitionPct: 0,
+    entityType: input.entityType,
+  });
+
+  r += 2;
+  for (let c = 2; c <= 7; c++) {
+    ws.getCell(r, c).fill = SECTION_FILL;
+    ws.getCell(r, c).border = BORDER;
+  }
+  ws.getCell(r, 2).value = "FINANCIAL HEALTH SIGNALS";
+  ws.getCell(r, 2).font = { ...BF, color: { argb: NAVY } };
+  ws.getCell(r, 3).value = "Status";
+  ws.getCell(r, 3).font = SECTION_FONT;
+  ws.mergeCells(r, 4, r, 5);
+  ws.getCell(r, 4).value = "Assessment";
+  ws.getCell(r, 4).font = SECTION_FONT;
+  ws.mergeCells(r, 6, r, 7);
+  ws.getCell(r, 6).value = "Watch Item";
+  ws.getCell(r, 6).font = SECTION_FONT;
+  ws.getRow(r).height = 24;
+
+  for (const signal of signals) {
+    r++;
+    ws.getCell(r, 2).value = signal.dimension.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    ws.getCell(r, 2).font = { ...BF, color: { argb: NAVY } };
+    ws.getCell(r, 2).border = BORDER;
+
+    ws.getCell(r, 3).value = `${statusIcon(signal.status)} ${signal.label}`;
+    ws.getCell(r, 3).font = { size: 11, name: "Calibri", bold: true, color: { argb: statusColor(signal.status) } };
+    ws.getCell(r, 3).border = BORDER;
+    ws.getCell(r, 3).alignment = { horizontal: "center" };
+
+    ws.mergeCells(r, 4, r, 5);
+    ws.getCell(r, 4).value = signal.explanation;
+    ws.getCell(r, 4).font = NF;
+    ws.getCell(r, 4).border = BORDER;
+    ws.getCell(r, 4).alignment = { wrapText: true };
+
+    ws.mergeCells(r, 6, r, 7);
+    ws.getCell(r, 6).value = signal.watchItem;
+    ws.getCell(r, 6).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF6B7280" } };
+    ws.getCell(r, 6).border = BORDER;
+    ws.getCell(r, 6).alignment = { wrapText: true };
+
+    ws.getRow(r).height = 45;
+  }
+
+  r += 2;
+  const healthyCount = signals.filter(s => s.status === "healthy").length;
+  const watchCount = signals.filter(s => s.status === "watch").length;
+  const atRiskCount = signals.filter(s => s.status === "at_risk").length;
+
+  ws.getCell(r, 2).value = "Summary";
+  ws.getCell(r, 2).font = { ...BF, color: { argb: NAVY } };
+  ws.getCell(r, 2).border = BORDER;
+  ws.mergeCells(r, 3, r, 5);
+  ws.getCell(r, 3).value = `${healthyCount} Healthy  |  ${watchCount} Watch  |  ${atRiskCount} Needs Attention`;
+  ws.getCell(r, 3).font = BF;
+  ws.getCell(r, 3).border = BORDER;
+
+  r += 2;
+  ws.mergeCells(r, 2, r, 7);
+  ws.getCell(r, 2).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
+  ws.getCell(r, 2).font = { italic: true, size: 11, color: { argb: "FF9CA3AF" }, name: "Calibri" };
+  ws.getCell(r, 2).alignment = { horizontal: "center" };
+}
+
+let _healthModule: { generateHealthSignals: (input: unknown) => Array<{ dimension: string; status: string; label: string; explanation: string; watchItem: string }> } | null = null;
+async function importHealthModule() {
+  if (!_healthModule) {
+    const mod = await import("./financial-health.js");
+    _healthModule = { generateHealthSignals: mod.generateHealthSignals as (input: unknown) => Array<{ dimension: string; status: string; label: string; explanation: string; watchItem: string }> };
+  }
+  return _healthModule!;
 }

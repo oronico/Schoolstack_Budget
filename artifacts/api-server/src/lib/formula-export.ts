@@ -1,4 +1,14 @@
 import ExcelJS from "exceljs";
+import {
+  addInstructionsSheet, addDashboardSheet, type DashboardInput,
+  computeRevenueForYear as sharedComputeRevenue,
+  computePersonnelForYear as sharedComputePersonnel,
+  computeExpenseForYear as sharedComputeExpense,
+  computeDebtServiceForYear as sharedComputeDebtService,
+  type RevenueRow as SharedRevenueRow, type StaffingRow as SharedStaffingRow,
+  type ExpenseRow as SharedExpenseRow, type CapitalDebtRow as SharedCapDebtRow,
+  type TuitionTier as SharedTuitionTier, type SchoolProfile as SharedSchoolProfile,
+} from "./workbook-helpers.js";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -156,6 +166,8 @@ const GREEN_BG = "FFE8F5E9";
 const RED_BG = "FFFCE4EC";
 const YELLOW_INPUT = "FFFFFDE8";
 const AMBER_BG = "FFFFF8E1";
+const BLUE_INPUT_BG = "FFDBEAFE";
+const BLUE_INPUT_FONT = "FF1E3A5F";
 
 const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
 const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: WHITE }, size: 11, name: "Calibri" };
@@ -233,7 +245,8 @@ function setFormula(cell: ExcelJS.Cell, formula: string, result: unknown) {
 }
 
 function inputCell(cell: ExcelJS.Cell) {
-  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: YELLOW_INPUT } };
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE_INPUT_BG } };
+  cell.font = { ...cell.font, color: { argb: BLUE_INPUT_FONT } };
 }
 
 function schoolTypeLabel(t?: string, o?: string): string {
@@ -547,7 +560,7 @@ function buildAssumptions(
   ws.getRow(r).height = 32;
 
   r++;
-  ws.getCell(r, 1).value = "Yellow cells are editable inputs. All other cells in this workbook are formulas.";
+  ws.getCell(r, 1).value = "Blue cells are editable inputs. All other cells in this workbook are formulas.";
   ws.getCell(r, 1).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF666666" } };
 
   r += 2;
@@ -2108,6 +2121,8 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   wb.created = new Date();
   wb.calcProperties = { fullCalcOnLoad: true };
 
+  addInstructionsSheet(wb, { workbookType: "formula" });
+
   const asm = buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
 
   const fiveYr = buildFiveYearModel(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, asm);
@@ -2115,6 +2130,54 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   buildProForma(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, fiveYr);
 
   buildActualsVsProjections(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, fiveYr);
+
+  {
+  const dbRevRows = data.revenueRows || [];
+  const dbStaffRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
+  const dbExpRows = data.expenseRows || [];
+  const dbCapRows = data.capitalAndDebtRows || [];
+  const dbTiers = data.tuitionTiers || [];
+  const costInflPct = costInflation * 100;
+
+  const revByYear: number[] = [];
+  const persByYear: number[] = [];
+  const opexByYear: number[] = [];
+  const debtByYear: number[] = [];
+  const niByYear: number[] = [];
+  const cashByYear: number[] = [];
+  let runCash = startingCash;
+  for (let y = 0; y < 5; y++) {
+    const students = enrollment[y];
+    const pf = y === 0 ? prorationFactor : 1;
+    const rev = sharedComputeRevenue(dbRevRows as unknown as SharedRevenueRow[], y, students, dbTiers as unknown as SharedTuitionTier[], costInflPct, sp as unknown as SharedSchoolProfile);
+    const pers = sharedComputePersonnel(dbStaffRows as unknown as SharedStaffingRow[], salaryEsc, pf, y);
+    const opex = sharedComputeExpense(dbExpRows as unknown as SharedExpenseRow[], y, students, rev, costInflPct);
+    const debt = sharedComputeDebtService(dbCapRows as unknown as SharedCapDebtRow[], y);
+    const ni = rev - pers - opex - debt;
+    runCash += ni;
+    revByYear.push(rev);
+    persByYear.push(pers);
+    opexByYear.push(opex);
+    debtByYear.push(debt);
+    niByYear.push(ni);
+    cashByYear.push(runCash);
+  }
+
+  const hasDebt = dbCapRows.some(r => r.isLoan && r.enabled !== false);
+  await addDashboardSheet(wb, {
+    schoolName: sp.schoolName || "School",
+    entityType: sp.entityType || "",
+    enrollment,
+    revenueByYear: revByYear,
+    personnelByYear: persByYear,
+    opexByYear: opexByYear,
+    debtServiceByYear: debtByYear,
+    netIncomeByYear: niByYear,
+    cashByYear,
+    startingCash,
+    hasDebt,
+  });
+  }
 
   const schoolName = sp.schoolName || "School";
   for (const ws of wb.worksheets) {

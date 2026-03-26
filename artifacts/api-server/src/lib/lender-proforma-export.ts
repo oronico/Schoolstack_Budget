@@ -7,6 +7,7 @@ import {
   CUR, PCT, NUM,
   hdr, sec, dc, bc, gc, cn, colLetter,
   setFormula, inputCell, printSetup,
+  addInstructionsSheet, addDashboardSheet,
   computeAnnualDebt,
   driverVal,
   computeGradeBandRevenue,
@@ -1374,6 +1375,7 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
   wb.created = new Date();
 
   buildCover(wb, String(input.schoolName || ""));
+  addInstructionsSheet(wb, { workbookType: "lender" });
   buildAssumptions(wb, input);
   buildDrivers(wb, input, res);
   buildPnL(wb, res);
@@ -1381,6 +1383,20 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
   buildStaffing(wb, res);
   buildLoanSnapshot(wb, input, res);
   buildSummary(wb, input, res);
+
+  await addDashboardSheet(wb, {
+    schoolName: String(input.schoolName || "School"),
+    entityType: String(input.entityType || ""),
+    enrollment: res.enrollment,
+    revenueByYear: res.totalRevenue,
+    personnelByYear: res.totalStaffing,
+    opexByYear: res.totalOpEx,
+    debtServiceByYear: res.dscr.map(() => res.totalDebtService),
+    netIncomeByYear: res.netIncomeAfterDebt,
+    cashByYear: res.cumulativeCash,
+    startingCash: Number(input.startingCash) || 0,
+    hasDebt: res.totalDebtService > 0,
+  });
 
   const buffer = await wb.xlsx.writeBuffer();
   return Buffer.from(buffer);
