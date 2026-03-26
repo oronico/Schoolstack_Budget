@@ -287,6 +287,13 @@ export function PublicWizardPage() {
     if (isValid) {
       setCurrentStep(s => Math.min(s + 1, STEPS.length));
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      requestAnimationFrame(() => {
+        const firstError = document.querySelector('[data-error="true"], .text-destructive, .text-red-500, [aria-invalid="true"]');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
     }
   };
 
