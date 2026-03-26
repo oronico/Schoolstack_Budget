@@ -656,6 +656,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
     }
 
     const facCostV1 = computeFacilityCostByYear(expenseRows, enrollment, annualRevenue, yc, costInflation * 100);
+    const debtSvcByYear = Array.from({ length: yc }, () => Math.round(annualDebtSvc));
     await addDashboardSheet(wb, {
       schoolName: sp.schoolName || "School",
       entityType: sp.entityType || "",
@@ -664,7 +665,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
       personnelByYear: annualPersonnel,
       opexByYear: annualExpenses,
       facilityCostByYear: facCostV1,
-      debtServiceByYear: annualCapDebt,
+      debtServiceByYear: debtSvcByYear,
       netIncomeByYear: annualNetIncome,
       cashByYear: cashArr,
       startingCash: cashAtOpen,
@@ -795,7 +796,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
       personnelByYear: annualPersonnel,
       opexByYear: annualExpenses,
       facilityCostByYear: computeFacilityCostByYear(expenseRows, enrollment, annualRevenue, yc, costInflation * 100),
-      debtServiceByYear: annualCapDebt,
+      debtServiceByYear: Array.from({ length: yc }, () => Math.round(annualDebtSvc)),
       netIncomeByYear: annualNetIncome,
       cashByYear: cashArr,
       startingCash: cashAtOpen,
