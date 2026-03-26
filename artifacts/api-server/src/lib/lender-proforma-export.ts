@@ -1383,7 +1383,11 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
   wb.created = new Date();
 
   buildCover(wb, String(input.schoolName || ""));
-  addInstructionsSheet(wb, { workbookType: "lender" });
+  addInstructionsSheet(wb, {
+    workbookType: "lender",
+    schoolName: String(input.schoolName || ""),
+    schoolType: String(input.entityType || ""),
+  });
   buildAssumptions(wb, input);
   buildDrivers(wb, input, res);
   buildPnL(wb, res);

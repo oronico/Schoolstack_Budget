@@ -2120,7 +2120,11 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   wb.created = new Date();
   wb.calcProperties = { fullCalcOnLoad: true };
 
-  addInstructionsSheet(wb, { workbookType: "formula" });
+  addInstructionsSheet(wb, {
+    workbookType: "formula",
+    schoolName: sp.schoolName || undefined,
+    schoolType: sp.entityType || sp.schoolType || undefined,
+  });
 
   const asm = buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
 

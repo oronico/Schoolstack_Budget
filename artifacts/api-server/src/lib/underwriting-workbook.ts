@@ -90,8 +90,14 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
   ws.getCell(r, 2).alignment = { horizontal: "center" };
 }
 
-function buildInstructions(wb: ExcelJS.Workbook) {
-  addInstructionsSheet(wb, { workbookType: "underwriting", tabNames: TAB_NAMES });
+function buildInstructions(wb: ExcelJS.Workbook, data: Record<string, any>) {
+  const sp = data.schoolProfile || {};
+  addInstructionsSheet(wb, {
+    workbookType: "underwriting",
+    tabNames: TAB_NAMES,
+    schoolName: sp.schoolName || undefined,
+    schoolType: sp.entityType || undefined,
+  });
 }
 
 interface AsmReg {
@@ -2233,7 +2239,7 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   };
 
   buildCover(wb, data);
-  buildInstructions(wb);
+  buildInstructions(wb, data);
   buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
   buildProgramProfile(wb, data);
   buildEnrollmentDrivers(wb, data, enrollment);

@@ -62,6 +62,19 @@ export function dc(cell: ExcelJS.Cell) { cell.font = NF; cell.border = BORDER; }
 export function bc(cell: ExcelJS.Cell) { cell.font = BF; cell.border = BORDER; }
 export function gc(cell: ExcelJS.Cell) { cell.font = BF; cell.border = SUBTOTAL_BORDER; }
 
+export const INPUT_CELL_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE_INPUT_BG } };
+export const INPUT_CELL_FONT: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: BLUE_INPUT_FONT } };
+export const INPUT_CELL_BORDER: Partial<ExcelJS.Borders> = {
+  bottom: { style: "thin", color: { argb: "FFB0C4DE" } },
+};
+export const FORMULA_CELL_FONT: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: NAVY } };
+
+export function applyInputStyle(cell: ExcelJS.Cell) {
+  cell.fill = INPUT_CELL_FILL;
+  cell.font = INPUT_CELL_FONT;
+  cell.border = INPUT_CELL_BORDER;
+}
+
 export function cn(row: number, col: number): string {
   let s = "";
   let c = col;
@@ -650,25 +663,47 @@ export function printSetup(ws: ExcelJS.Worksheet) {
 export interface InstructionsConfig {
   workbookType: "formula" | "lender" | "underwriting";
   tabNames?: string[];
+  schoolName?: string;
+  schoolType?: string;
 }
 
 export function addInstructionsSheet(wb: ExcelJS.Workbook, config: InstructionsConfig) {
   const ws = wb.addWorksheet("Instructions");
   ws.columns = [{ width: 4 }, { width: 80 }];
+  ws.properties.tabColor = { argb: EVERGREEN };
   printSetup(ws);
 
   let r = 2;
   ws.getCell(r, 2).value = "How to Use This Workbook";
   ws.getCell(r, 2).font = { bold: true, size: 16, name: "Calibri", color: { argb: NAVY } };
 
+  if (config.schoolName) {
+    r++;
+    ws.getCell(r, 2).value = config.schoolName;
+    ws.getCell(r, 2).font = { size: 12, name: "Calibri", color: { argb: NAVY } };
+  }
+  r++;
+  const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  ws.getCell(r, 2).value = `Generated ${dateStr}${config.schoolType ? ` · ${config.schoolType}` : ""}`;
+  ws.getCell(r, 2).font = { size: 10, italic: true, name: "Calibri", color: { argb: "FF6B7280" } };
+
   r += 2;
 
-  const legend: [string, string][] = [
-    ["Cell Color Legend", ""],
-    ["", "Blue cells are editable inputs — change these to update your model."],
-    ["", "White cells contain formulas — do not edit (they recalculate automatically)."],
-    ["", "Green cells are key outputs and summary metrics."],
-  ];
+  const legendSample = ws.getCell(r, 2);
+  legendSample.value = "Cell Color Legend";
+  legendSample.font = { ...BF, color: { argb: NAVY } };
+  r++;
+  ws.getCell(r, 2).fill = INPUT_CELL_FILL;
+  ws.getCell(r, 2).value = "  Blue cells are editable inputs — change these to update your model.";
+  ws.getCell(r, 2).font = INPUT_CELL_FONT;
+  r++;
+  ws.getCell(r, 2).value = "  White cells contain formulas — do not edit (they recalculate automatically).";
+  ws.getCell(r, 2).font = NF;
+  r++;
+  ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG } };
+  ws.getCell(r, 2).value = "  Green cells are key outputs and summary metrics.";
+  ws.getCell(r, 2).font = NF;
+  r++;
 
   let structure: [string, string][];
   if (config.workbookType === "underwriting") {
@@ -698,7 +733,6 @@ export function addInstructionsSheet(wb: ExcelJS.Workbook, config: InstructionsC
   }
 
   const instructions: [string, string][] = [
-    ...legend,
     ["", ""],
     ["Navigation", config.tabNames
       ? "Use the Cover tab's Table of Contents to jump between sheets."
@@ -715,6 +749,12 @@ export function addInstructionsSheet(wb: ExcelJS.Workbook, config: InstructionsC
     ["Tips", "Start with the Assumptions tab to verify your inputs."],
     ["", "Check the Financial Health dashboard for an at-a-glance assessment."],
     ["", "Review key metrics: net margin, cash runway, and DSCR."],
+    ["", ""],
+    ["Next Steps", "1. Review all blue input cells on the Assumptions tab."],
+    ["", "2. Verify enrollment and revenue projections match your plan."],
+    ["", "3. Check the Financial Health dashboard for risk signals."],
+    ["", "4. Share this workbook with your lender or financial advisor."],
+    ["", "5. Update inputs as your school's plan evolves."],
     ["", ""],
     ["Disclaimer", "This model is a planning tool. It does not constitute financial advice,"],
     ["", "a loan commitment, or a guarantee of funding. All projections are based on"],
@@ -764,7 +804,10 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   ws.columns = [
     { width: 4 }, { width: 28 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 40 },
   ];
+  ws.properties.tabColor = { argb: TEAL };
   printSetup(ws);
+
+  const cfRules: { row: number; greenThreshold: string; amberThreshold: string; mode: "gte" | "lte" }[] = [];
 
   let r = 2;
   ws.mergeCells(r, 2, r, 7);
@@ -837,6 +880,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   }
 
   r++;
+  const netIncomeRow = r;
   ws.getCell(r, 2).value = "Net Income"; bc(ws.getCell(r, 2));
   for (let y = 0; y < 5; y++) {
     const ni = input.netIncomeByYear[y];
@@ -847,8 +891,10 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: ni >= 0 ? GREEN_BG : RED_BG } };
   }
+  cfRules.push({ row: netIncomeRow, greenThreshold: "0", amberThreshold: "-1", mode: "gte" });
 
   r++;
+  const endingCashRow = r;
   ws.getCell(r, 2).value = "Ending Cash"; bc(ws.getCell(r, 2));
   for (let y = 0; y < 5; y++) {
     const cash = input.cashByYear[y];
@@ -859,8 +905,10 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cash >= 0 ? GREEN_BG : RED_BG } };
   }
+  cfRules.push({ row: endingCashRow, greenThreshold: "0", amberThreshold: "-1", mode: "gte" });
 
   r++;
+  const netMarginRow = r;
   ws.getCell(r, 2).value = "Net Margin"; bc(ws.getCell(r, 2));
   for (let y = 0; y < 5; y++) {
     const rev = input.revenueByYear[y];
@@ -872,6 +920,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: margin >= 0.05 ? GREEN_BG : margin >= 0 ? AMBER_BG : RED_BG } };
   }
+  cfRules.push({ row: netMarginRow, greenThreshold: "0.05", amberThreshold: "0", mode: "gte" });
 
   r++;
   ws.getCell(r, 2).value = "Revenue per Student"; bc(ws.getCell(r, 2));
@@ -885,6 +934,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   }
 
   r++;
+  const payrollRow = r;
   ws.getCell(r, 2).value = "Payroll %"; bc(ws.getCell(r, 2));
   for (let y = 0; y < 5; y++) {
     const rev = input.revenueByYear[y];
@@ -896,8 +946,10 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: pPct <= 0.55 ? GREEN_BG : pPct <= 0.65 ? AMBER_BG : RED_BG } };
   }
+  cfRules.push({ row: payrollRow, greenThreshold: "0.55", amberThreshold: "0.65", mode: "lte" });
 
   r++;
+  const facilityRow = r;
   ws.getCell(r, 2).value = "Facility %"; bc(ws.getCell(r, 2));
   for (let y = 0; y < 5; y++) {
     const rev = input.revenueByYear[y];
@@ -909,8 +961,10 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fPct <= 0.15 ? GREEN_BG : fPct <= 0.25 ? AMBER_BG : RED_BG } };
   }
+  cfRules.push({ row: facilityRow, greenThreshold: "0.15", amberThreshold: "0.25", mode: "lte" });
 
   r++;
+  const opMarginRow = r;
   ws.getCell(r, 2).value = "Operating Margin"; bc(ws.getCell(r, 2));
   for (let y = 0; y < 5; y++) {
     const rev = input.revenueByYear[y];
@@ -922,12 +976,14 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: opMargin >= 0.10 ? GREEN_BG : opMargin >= 0 ? AMBER_BG : RED_BG } };
   }
+  cfRules.push({ row: opMarginRow, greenThreshold: "0.10", amberThreshold: "0", mode: "gte" });
 
   const totalExpByYear = input.revenueByYear.map((_, i) =>
     input.personnelByYear[i] + input.opexByYear[i] + input.debtServiceByYear[i]
   );
 
   r++;
+  const dscrRow = r;
   ws.getCell(r, 2).value = "DSCR"; bc(ws.getCell(r, 2));
   for (let y = 0; y < 5; y++) {
     const yRev = input.revenueByYear[y];
@@ -942,6 +998,9 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     if (input.hasDebt) {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: yDSCR >= 1.25 ? GREEN_BG : yDSCR >= 1.0 ? AMBER_BG : RED_BG } };
     }
+  }
+  if (input.hasDebt) {
+    cfRules.push({ row: dscrRow, greenThreshold: "1.25", amberThreshold: "1.0", mode: "gte" });
   }
 
   r++;
@@ -1080,6 +1139,33 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   ws.getCell(r, 2).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
   ws.getCell(r, 2).font = { italic: true, size: 11, color: { argb: "FF9CA3AF" }, name: "Calibri" };
   ws.getCell(r, 2).alignment = { horizontal: "center" };
+
+  for (const rule of cfRules) {
+    const range = `C${rule.row}:G${rule.row}`;
+    const greenFill = { fill: { type: "pattern" as const, pattern: "solid" as const, bgColor: { argb: GREEN_BG } } };
+    const amberFill = { fill: { type: "pattern" as const, pattern: "solid" as const, bgColor: { argb: AMBER_BG } } };
+    const redFill = { fill: { type: "pattern" as const, pattern: "solid" as const, bgColor: { argb: RED_BG } } };
+
+    if (rule.mode === "gte") {
+      ws.addConditionalFormatting({
+        ref: range,
+        rules: [
+          { type: "expression", formulae: [`C${rule.row}>=${rule.greenThreshold}`], priority: 1, style: greenFill },
+          { type: "expression", formulae: [`C${rule.row}>=${rule.amberThreshold}`], priority: 2, style: amberFill },
+          { type: "expression", formulae: [`C${rule.row}<${rule.amberThreshold}`], priority: 3, style: redFill },
+        ],
+      });
+    } else {
+      ws.addConditionalFormatting({
+        ref: range,
+        rules: [
+          { type: "expression", formulae: [`C${rule.row}<=${rule.greenThreshold}`], priority: 1, style: greenFill },
+          { type: "expression", formulae: [`C${rule.row}<=${rule.amberThreshold}`], priority: 2, style: amberFill },
+          { type: "expression", formulae: [`C${rule.row}>${rule.amberThreshold}`], priority: 3, style: redFill },
+        ],
+      });
+    }
+  }
 }
 
 let _healthModule: { generateHealthSignals: (input: unknown) => Array<{ dimension: string; status: string; label: string; explanation: string; watchItem: string }> } | null = null;
