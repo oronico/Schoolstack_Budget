@@ -559,8 +559,10 @@ function buildAssumptions(
   ws.getRow(r).height = 32;
 
   r++;
-  ws.getCell(r, 1).value = "Blue cells are editable inputs. All other cells in this workbook are formulas.";
-  ws.getCell(r, 1).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF666666" } };
+  ws.getCell(r, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: BLUE_INPUT_BG } };
+  ws.getCell(r, 1).value = "";
+  ws.getCell(r, 2).value = "Blue cells are editable inputs. All other cells in this workbook are formulas.";
+  ws.getCell(r, 2).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF666666" } };
 
   r += 2;
   const profileStartRow = r;

@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import {
-  NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM,
+  NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM, INPUT_CELL_FILL,
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT, NF, BF,
   CUR, PCT, NUM, BORDER, SUBTOTAL_BORDER, MONTH_NAMES,
   hdr, sec, dc, bc, gc, cn, colLetter, setFormula, inputCell, outputCell, printSetup,
@@ -90,8 +90,8 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
   ws.getCell(r, 2).alignment = { horizontal: "center" };
 }
 
-function buildInstructions(wb: ExcelJS.Workbook, data: Record<string, any>) {
-  const sp = data.schoolProfile || {};
+function buildInstructions(wb: ExcelJS.Workbook, data: ModelData) {
+  const sp = data.schoolProfile || {} as SchoolProfile;
   addInstructionsSheet(wb, {
     workbookType: "underwriting",
     tabNames: TAB_NAMES,
@@ -133,8 +133,10 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   ws.getRow(r).height = 32;
 
   r++;
-  ws.getCell(r, 1).value = "Blue cells are editable inputs. All other cells are formulas.";
-  ws.getCell(r, 1).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF666666" } };
+  ws.getCell(r, 1).fill = INPUT_CELL_FILL;
+  ws.getCell(r, 1).value = "";
+  ws.getCell(r, 2).value = "Blue cells are editable inputs. All other cells are formulas.";
+  ws.getCell(r, 2).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF666666" } };
 
   r += 2;
   sec(ws, r, 7); ws.getCell(r, 1).value = "SCHOOL PROFILE";
