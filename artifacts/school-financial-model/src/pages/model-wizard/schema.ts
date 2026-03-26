@@ -142,6 +142,13 @@ export const schoolProfileSchema = z.object({
   charterDepositTiming: z.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
   priorYearADM: z.coerce.number().min(0).optional(),
   priorYearADA: z.coerce.number().min(0).optional(),
+  spedCount: z.array(z.coerce.number().min(0)).optional(),
+  ellCount: z.array(z.coerce.number().min(0)).optional(),
+  ecoDisCount: z.array(z.coerce.number().min(0)).optional(),
+  enrollmentGrowthRate: z.coerce.number().min(-100).max(100).optional(),
+  schoolFteCount: z.coerce.number().min(0).optional(),
+  newFteCount: z.coerce.number().min(0).optional(),
+  stateFundingMethodology: z.string().optional(),
 });
 
 export const priorYearSnapshotSchema = z.object({
