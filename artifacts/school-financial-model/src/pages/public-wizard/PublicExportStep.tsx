@@ -109,7 +109,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
 
           <div className="px-6 pb-4 flex-1">
             <p className="text-sm text-muted-foreground mb-4">
-              A polished 5-tab Excel workbook with your key projections and assumptions.
+              A polished Excel workbook with your key projections, assumptions, and financial health scorecard.
             </p>
             <ul className="space-y-2.5">
               {STARTER_FEATURES.map((feature) => (
