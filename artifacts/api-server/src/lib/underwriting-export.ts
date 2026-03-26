@@ -2220,7 +2220,7 @@ function buildFiveYearPL(
   wb: ExcelJS.Workbook, rev: number[], personnel: number[], ops: number[],
   capDebt: number[], ni: number[], yc: number, cols: number, yearHeaders: string[],
   entityType?: string, ctx?: Partial<CrossTabCtx>
-): { revRow: number; totalExpRow: number; niRow: number } {
+): { revRow: number; totalExpRow: number; niRow: number; cumNIRow: number } {
   const ws = wb.addWorksheet("5-Year P&L");
   ws.columns = [{ width: 35 }, ...Array(yc).fill({ width: 18 })];
 

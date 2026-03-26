@@ -177,6 +177,7 @@ interface ModelData {
   customCategoryLabels?: Record<string, string>;
   capitalAndDebtRows?: CapitalDebtRow[];
   priorYearSnapshot?: PriorYearSnapshot;
+  currentYearProjection?: { currentCash?: number };
 }
 
 const HEADER_FILL: ExcelJS.Fill = {
