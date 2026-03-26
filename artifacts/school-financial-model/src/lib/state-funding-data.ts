@@ -404,7 +404,8 @@ export function getStateFundingConfig(
   stateCode: string,
   openingYear?: number
 ): StateFundingConfig {
-  const stateData = STATE_FUNDING_MAP[stateCode.toUpperCase()];
+  const normalized = stateCode.toUpperCase();
+  const stateData = STATE_FUNDING_MAP[normalized];
 
   if (!stateData) {
     return {
@@ -415,7 +416,7 @@ export function getStateFundingConfig(
       availablePrograms: [],
       schoolChoiceCoachingText: `We don't have funding data for "${stateCode}". Please enter your revenue sources manually.`,
       federalTaxCreditSGO: false,
-      stateCode,
+      stateCode: normalized,
     };
   }
 
@@ -446,9 +447,9 @@ export function getStateFundingConfig(
     charterCoachingText: isCharter ? stateData.charterCoachingText : null,
     enrollmentRevenueMethod: isCharter ? methodologyToEnrollmentMethod(stateData.charterMethodology) : null,
     availablePrograms: filteredPrograms,
-    schoolChoiceCoachingText: buildSchoolChoiceCoaching(filteredPrograms, schoolType, stateCode),
+    schoolChoiceCoachingText: buildSchoolChoiceCoaching(filteredPrograms, schoolType, normalized),
     federalTaxCreditSGO: stateData.federalTaxCreditSGO,
-    stateCode,
+    stateCode: normalized,
   };
 }
 
