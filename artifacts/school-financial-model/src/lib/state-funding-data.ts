@@ -422,7 +422,8 @@ export function getStateFundingConfig(
 
   let filteredPrograms = filterProgramsForSchoolType(stateData.programs, schoolType);
 
-  if (stateData.federalTaxCreditSGO && openingYear && openingYear >= 2027 && schoolType !== "charter_school") {
+  const schoolTypesEligibleForSGO: SchoolType[] = ["private_school", "microschool", "learning_pod", "tutoring_center", "homeschool_coop"];
+  if (stateData.federalTaxCreditSGO && openingYear && openingYear >= 2027 && schoolTypesEligibleForSGO.includes(schoolType)) {
     filteredPrograms = [
       ...filteredPrograms,
       {

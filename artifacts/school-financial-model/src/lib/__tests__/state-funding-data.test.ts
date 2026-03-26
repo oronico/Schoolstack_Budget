@@ -267,6 +267,12 @@ describe("getStateFundingConfig - Other school type", () => {
     const config = getStateFundingConfig("other", "AZ");
     expect(config.availablePrograms).toHaveLength(0);
   });
+
+  it("'other' school type gets no SGO even with opening year >= 2027", () => {
+    const config = getStateFundingConfig("other", "AZ", 2027);
+    expect(config.availablePrograms).toHaveLength(0);
+    expect(config.availablePrograms.some(p => p.type === "federal_tax_credit_sgo")).toBe(false);
+  });
 });
 
 describe("getStateFundingConfig - unknown state", () => {
