@@ -119,13 +119,13 @@ title = "Formula Export (XLSX, 19KB)"
 id = "31SGySJyl-128l5c4U2Ay"
 uri = "file://artifacts/api-server/qa-output/export-samples/Pro_Forma.pdf"
 type = "pdf"
-title = "Pro Forma (PDF, 3KB)"
+title = "Pro Forma - FIXED (1 page, 2.5KB)"
 
 [[outputs]]
 id = "0ZO-e9ok-ml1kMTPxIg9n"
 uri = "file://artifacts/api-server/qa-output/export-samples/Loan_Readiness_Report.pdf"
 type = "pdf"
-title = "Loan Readiness Report (PDF, 10KB)"
+title = "Loan Readiness Report - FIXED (3 pages, 7.5KB)"
 
 [[outputs]]
 id = "NOGSmraH34P8A3Mv63fC4"
@@ -137,13 +137,13 @@ title = "Lender Pro Forma (XLSX, 24KB)"
 id = "Mh0Xarg3J_2pqJKYkeO3W"
 uri = "file://artifacts/api-server/qa-output/export-samples/Lender_Packet.pdf"
 type = "pdf"
-title = "Lender Packet (PDF, 22KB)"
+title = "Lender Packet - FIXED (7 pages, 15.5KB)"
 
 [[outputs]]
 id = "W2UBHvkh9LaSBw0_XceKU"
 uri = "file://artifacts/api-server/qa-output/export-samples/Board_Summary.pdf"
 type = "pdf"
-title = "Board Summary (PDF, 13KB)"
+title = "Board Summary - FIXED (4 pages, 9KB)"
 
 [[outputs]]
 id = "GbxvSW_2e7FjtcFCDO4hi"

@@ -181,17 +181,25 @@ export function statusBadge(doc: PDFDoc, label: string, status: "good" | "warnin
 
 export function drawFooter(doc: PDFDoc) {
   const pages = doc.bufferedPageRange();
+  const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
   for (let i = 0; i < pages.count; i++) {
     doc.switchToPage(i);
     const pageW = doc.page.width;
     const margin = doc.page.margins.left;
     const bottomY = doc.page.height - 30;
+    const contentW = pageW - margin * 2;
+
+    const savedBottom = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
 
     doc.save();
     doc.font("Helvetica").fontSize(7).fillColor(BRAND.gray);
-    doc.text(`SchoolStack Budget - Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, margin, bottomY, { width: pageW - margin * 2, align: "left" });
-    doc.text(`Page ${i + 1} of ${pages.count}`, margin, bottomY, { width: pageW - margin * 2, align: "right" });
+    doc.text(`SchoolStack Budget - Generated ${dateStr}`, margin, bottomY, { width: contentW, align: "left", lineBreak: false });
+    doc.text(`Page ${i + 1} of ${pages.count}`, margin, bottomY, { width: contentW, align: "right", lineBreak: false });
     doc.restore();
+
+    doc.page.margins.bottom = savedBottom;
   }
 }
 
