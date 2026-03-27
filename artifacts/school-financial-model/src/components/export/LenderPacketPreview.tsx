@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { trackExport } from "@/hooks/useExportTracker";
 
 interface LinkedMetric {
   label: string;
@@ -125,6 +126,7 @@ export function LenderPacketPreview({
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
+      trackExport();
     } catch {
       alert("Failed to download PDF. Please try again.");
     } finally {

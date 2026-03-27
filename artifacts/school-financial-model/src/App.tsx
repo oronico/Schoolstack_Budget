@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { NpsModal } from "@/components/NpsModal";
+import { useExportTracker } from "@/hooks/useExportTracker";
 
 import { setupFetchInterceptor } from "@/lib/fetch-patch";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
@@ -97,9 +99,15 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return user ? <Component /> : null;
 }
 
+function NpsWrapper() {
+  const { exportCount } = useExportTracker();
+  return <NpsModal exportCount={exportCount} />;
+}
+
 function AppRouter() {
   return (
     <Suspense fallback={<PageLoader />}>
+      <NpsWrapper />
       <Switch>
         <Route path="/" component={LandingPage} />
         <Route path="/login" component={LoginPage} />

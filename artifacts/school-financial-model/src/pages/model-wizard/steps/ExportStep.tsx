@@ -4,6 +4,7 @@ import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardC
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
 import { BoardPacketPreview } from "../../../components/export/BoardPacketPreview";
+import { trackExport } from "@/hooks/useExportTracker";
 
 type ExportType = "formula" | "underwritingV2" | "lenderPacketPdf" | "boardPacketPdf";
 
@@ -63,6 +64,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       a.remove();
 
       setExported(prev => new Set(prev).add(type));
+      trackExport();
     } catch (e) {
       console.error(e);
       alert("Failed to export. Please try again.");

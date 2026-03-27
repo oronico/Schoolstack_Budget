@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
+  Star,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -63,6 +64,7 @@ interface FeedbackItem {
   id: number;
   category: string;
   message: string;
+  score: number | null;
   pageUrl: string | null;
   email: string | null;
   userName: string | null;
@@ -77,11 +79,24 @@ interface FeedbackResponse {
   limit: number;
 }
 
+function getNpsLabel(score: number): string {
+  if (score >= 9) return "Promoter";
+  if (score >= 7) return "Passive";
+  return "Detractor";
+}
+
+function getNpsColor(score: number): string {
+  if (score >= 9) return "text-green-600";
+  if (score >= 7) return "text-amber-600";
+  return "text-red-600";
+}
+
 const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   like: { label: "What I like", icon: ThumbsUp, color: "text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30" },
   dislike: { label: "What I don't like", icon: ThumbsDown, color: "text-orange-600 bg-orange-100 dark:text-orange-400 dark:bg-orange-900/30" },
   bug: { label: "Bug report", icon: Bug, color: "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30" },
   feature: { label: "Feature request", icon: Sparkles, color: "text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30" },
+  nps: { label: "NPS", icon: Star, color: "text-violet-600 bg-violet-100 dark:text-violet-400 dark:bg-violet-900/30" },
 };
 
 const SCHOOL_TYPE_LABELS: Record<string, string> = {
@@ -299,6 +314,11 @@ function FeedbackSection() {
                         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                           {cfg.label}
                         </span>
+                        {item.category === "nps" && item.score != null && Number.isFinite(item.score) && (
+                          <span className={`text-xs font-bold ${getNpsColor(item.score)}`}>
+                            {item.score}/10 ({getNpsLabel(item.score)})
+                          </span>
+                        )}
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(item.createdAt), "MMM d, yyyy 'at' h:mm a")}
                         </span>

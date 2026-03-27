@@ -38,6 +38,7 @@ A React-based SPA featuring:
 - A Scenario Planner (`/model/:id/scenarios`) for creating up to 3 what-if scenarios with adjustment sliders, side-by-side comparisons, and viability nudges. Includes a Deep Comparison mode for detailed metric deltas.
 - An admin dashboard with analytics and feedback management.
 - A floating feedback widget for user submissions.
+    - NPS survey modal: triggered 2s after a user's first export, with 90-day per-user cooldown (localStorage). 0-10 score buttons color-coded red/amber/green, optional comment, posts to `/api/feedback` with `category: "nps"` and integer `score`. Admin dashboard shows NPS entries with violet badge and "9/10 (Promoter)" labels.
 - Budgeting Co-Pilot Phase 1: Provides guidance mode preferences, inline explainer cards on wizard steps, and KPI formula transparency on consultant analysis metric cards.
 - SchoolStack Space pre-fill integration (`/model/new`): Allows auto-creation of models with pre-filled facility data from URL query parameters.
 

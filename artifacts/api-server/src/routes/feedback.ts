@@ -31,10 +31,18 @@ router.post("/feedback", optionalAuthMiddleware, async (req: AuthRequest, res: R
       return;
     }
 
-    const validCategories = ["like", "dislike", "bug", "feature"];
+    const validCategories = ["like", "dislike", "bug", "feature", "nps"];
     if (!validCategories.includes(category)) {
       res.status(400).json({ error: "Invalid category." });
       return;
+    }
+
+    const { score } = req.body;
+    if (category === "nps") {
+      if (!Number.isInteger(score) || score < 0 || score > 10) {
+        res.status(400).json({ error: "NPS score must be an integer between 0 and 10." });
+        return;
+      }
     }
 
     if (typeof message !== "string" || message.trim().length === 0 || message.length > 5000) {
@@ -57,6 +65,7 @@ router.post("/feedback", optionalAuthMiddleware, async (req: AuthRequest, res: R
       .values({
         category,
         message: message.trim(),
+        score: category === "nps" && Number.isFinite(score) ? Math.round(score) : null,
         pageUrl: typeof pageUrl === "string" ? pageUrl.substring(0, 2000) : null,
         userId: req.userId || null,
         email: typeof email === "string" && email.length > 0 ? email.substring(0, 255) : null,
@@ -88,6 +97,7 @@ router.get(
           id: feedbackTable.id,
           category: feedbackTable.category,
           message: feedbackTable.message,
+          score: feedbackTable.score,
           pageUrl: feedbackTable.pageUrl,
           userId: feedbackTable.userId,
           email: feedbackTable.email,
@@ -107,7 +117,7 @@ router.get(
         .from(feedbackTable)
         .$dynamic();
 
-      if (category && ["like", "dislike", "bug", "feature"].includes(category)) {
+      if (category && ["like", "dislike", "bug", "feature", "nps"].includes(category)) {
         query = query.where(eq(feedbackTable.category, category));
         countQuery = countQuery.where(eq(feedbackTable.category, category));
       }
@@ -119,6 +129,7 @@ router.get(
           id: f.id,
           category: f.category,
           message: f.message,
+          score: f.score,
           pageUrl: f.pageUrl,
           email: f.email || f.userEmail || null,
           userName: f.userName || null,

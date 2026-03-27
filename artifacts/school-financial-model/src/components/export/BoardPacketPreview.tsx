@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Download, Loader2, TrendingUp, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Lightbulb, BarChart3 } from "lucide-react";
+import { trackExport } from "@/hooks/useExportTracker";
 
 interface LinkedMetric {
   label: string;
@@ -136,6 +137,7 @@ export function BoardPacketPreview({
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
+      trackExport();
     } catch {
       alert("Failed to download PDF. Please try again.");
     } finally {

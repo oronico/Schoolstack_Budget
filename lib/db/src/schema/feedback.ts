@@ -5,6 +5,7 @@ export const feedbackTable = pgTable("feedback", {
   id: serial("id").primaryKey(),
   category: varchar("category", { length: 50 }).notNull(),
   message: text("message").notNull(),
+  score: integer("score"),
   pageUrl: text("page_url"),
   userId: integer("user_id").references(() => usersTable.id, { onDelete: "set null" }),
   email: varchar("email", { length: 255 }),
