@@ -1180,6 +1180,22 @@ components:
           type: number
         priorYearADA:
           type: number
+        spedCount:
+          type: array
+          items:
+            type: number
+        ellCount:
+          type: array
+          items:
+            type: number
+        ecoDisCount:
+          type: array
+          items:
+            type: number
+        enrollmentGrowthRate:
+          type: number
+        stateFundingMethodology:
+          type: string
         debtIncluded:
           type: boolean
         lendingLabIntent:

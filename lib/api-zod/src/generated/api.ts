@@ -203,6 +203,11 @@ export const CreateModelBody = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        spedCount: zod.array(zod.number()).optional(),
+        ellCount: zod.array(zod.number()).optional(),
+        ecoDisCount: zod.array(zod.number()).optional(),
+        enrollmentGrowthRate: zod.number().optional(),
+        stateFundingMethodology: zod.string().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
@@ -567,6 +572,11 @@ export const GetModelResponse = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        spedCount: zod.array(zod.number()).optional(),
+        ellCount: zod.array(zod.number()).optional(),
+        ecoDisCount: zod.array(zod.number()).optional(),
+        enrollmentGrowthRate: zod.number().optional(),
+        stateFundingMethodology: zod.string().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
@@ -932,6 +942,11 @@ export const UpdateModelBody = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        spedCount: zod.array(zod.number()).optional(),
+        ellCount: zod.array(zod.number()).optional(),
+        ecoDisCount: zod.array(zod.number()).optional(),
+        enrollmentGrowthRate: zod.number().optional(),
+        stateFundingMethodology: zod.string().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
@@ -1289,6 +1304,11 @@ export const UpdateModelResponse = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        spedCount: zod.array(zod.number()).optional(),
+        ellCount: zod.array(zod.number()).optional(),
+        ecoDisCount: zod.array(zod.number()).optional(),
+        enrollmentGrowthRate: zod.number().optional(),
+        stateFundingMethodology: zod.string().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
@@ -1673,6 +1693,11 @@ export const ArchiveModelResponse = zod.object({
           .optional(),
         priorYearADM: zod.number().optional(),
         priorYearADA: zod.number().optional(),
+        spedCount: zod.array(zod.number()).optional(),
+        ellCount: zod.array(zod.number()).optional(),
+        ecoDisCount: zod.array(zod.number()).optional(),
+        enrollmentGrowthRate: zod.number().optional(),
+        stateFundingMethodology: zod.string().optional(),
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])

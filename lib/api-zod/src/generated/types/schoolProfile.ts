@@ -56,6 +56,11 @@ export interface SchoolProfile {
   charterDepositTiming?: SchoolProfileCharterDepositTiming;
   priorYearADM?: number;
   priorYearADA?: number;
+  spedCount?: number[];
+  ellCount?: number[];
+  ecoDisCount?: number[];
+  enrollmentGrowthRate?: number;
+  stateFundingMethodology?: string;
   debtIncluded?: boolean;
   lendingLabIntent?: SchoolProfileLendingLabIntent;
 }
