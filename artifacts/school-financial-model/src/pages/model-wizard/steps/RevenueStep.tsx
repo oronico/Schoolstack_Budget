@@ -301,7 +301,7 @@ export function RevenueStep() {
     });
   }, [schoolType, defaultsApplied, setValue]);
 
-  const AUTO_GENERATED_IDS = new Set(["esa_revenue", "voucher_revenue", "scholarship_org", "refundable_tax_credit", "individual_tax_credit", "federal_tax_credit_sgo", "correspondence_charter"]);
+  const stateFundingAppliedKeyRef = useMemo(() => ({ current: null as string | null }), []);
 
   useEffect(() => {
     if (!defaultsApplied) return;
@@ -316,25 +316,29 @@ export function RevenueStep() {
       }
     }
 
+    if (isCharterType || !stateFundingConfig || stateFundingConfig.availablePrograms.length === 0) {
+      return;
+    }
+
+    const configKey = `${schoolType}:${stateCode}:${openingYear || ""}`;
+    if (stateFundingAppliedKeyRef.current === configKey) return;
+    stateFundingAppliedKeyRef.current = configKey;
+
     setRows(currentRows => {
-      const manualRows = currentRows.filter(r => !AUTO_GENERATED_IDS.has(r.id));
+      const existingIds = new Set(currentRows.map(r => r.id));
 
-      if (isCharterType || !stateFundingConfig || stateFundingConfig.availablePrograms.length === 0) {
-        if (manualRows.length === currentRows.length) return currentRows;
-        setValue("revenueRows", manualRows, { shouldDirty: true });
-        return manualRows;
-      }
-
-      const desiredRows = generateSchoolChoiceRows(
+      const newRows = generateSchoolChoiceRows(
         stateFundingConfig.availablePrograms,
         yearCount,
         fundingProfile,
-      );
+      ).filter(r => !existingIds.has(r.id));
 
-      const updated = [...manualRows, ...desiredRows];
+      if (newRows.length === 0) return currentRows;
+
+      const updated = [...currentRows, ...newRows];
       setValue("revenueRows", updated, { shouldDirty: true });
 
-      if (desiredRows.some(r => r.enabled)) {
+      if (newRows.some(r => r.enabled)) {
         if (!revenueSources?.schoolChoice) {
           handleRevenueSourceChange("schoolChoice", true);
         }
@@ -352,7 +356,7 @@ export function RevenueStep() {
 
       return updated;
     });
-  }, [stateFundingConfig, defaultsApplied, isCharterType, yearCount, fundingProfile, revenueSources, handleRevenueSourceChange]);
+  }, [stateFundingConfig, defaultsApplied, isCharterType, schoolType, stateCode, openingYear, yearCount, fundingProfile, revenueSources, handleRevenueSourceChange]);
 
   const syncToForm = useCallback((updatedRows: RevenueRowData[]) => {
     setRows(updatedRows);
@@ -615,6 +619,32 @@ export function RevenueStep() {
           </div>
         </div>
       )}
+
+      <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-primary" />
+          <h4 className="text-sm font-semibold text-foreground">Enrollment Growth Assumption</h4>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Annual enrollment growth rate used for out-year revenue projections. This is applied after your explicit year-by-year enrollment inputs.
+        </p>
+        <div className="flex items-center gap-3 max-w-xs">
+          <input
+            type="number"
+            value={watch("schoolProfile.enrollmentGrowthRate") ?? ""}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              setValue("schoolProfile.enrollmentGrowthRate", isNaN(val) ? undefined : val, { shouldDirty: true });
+            }}
+            className="w-24 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+            placeholder="e.g. 10"
+            step={1}
+            min={0}
+            max={100}
+          />
+          <span className="text-sm text-muted-foreground">% per year</span>
+        </div>
+      </div>
 
       {isCharter && (
         <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-5">
