@@ -115,7 +115,7 @@ export const homeschoolCoopMixed = {
     ellCount: [2, 3, 4, 5, 5],
     ecoDisCount: [5, 7, 9, 10, 12],
     enrollmentGrowthRate: 15,
-    stateFundingMethodology: "esa_direct",
+    stateFundingMethodology: "other",
   },
   enrollment: { year1: 15, year2: 22, year3: 30, year4: 36, year5: 40 },
   revenue: {
