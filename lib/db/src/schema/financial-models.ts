@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, jsonb, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, jsonb, varchar, index } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 import { schoolsTable } from "./schools";
 
@@ -21,7 +21,9 @@ export const financialModelsTable = pgTable("financial_models", {
   consultantSummaryJson: jsonb("consultant_summary_json").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("financial_models_user_id_idx").on(table.userId),
+]);
 
 export type InsertFinancialModel = typeof financialModelsTable.$inferInsert;
 export type FinancialModel = typeof financialModelsTable.$inferSelect;

@@ -27,7 +27,7 @@ Supports diverse school configurations and projects 5 years, accommodating parti
 Staffing can be `fixed` or `ratio`-based, where FTE is computed from enrollment ÷ studentRatio, ceiled to nearest 0.5. This logic is consistently applied across workbook helpers, engines, and exports, with frontend support for configuration and preview.
 
 ### API Server (`api-server`)
-Manages authentication, CRUD operations for financial models, admin analytics, feedback, and a consultant rules engine. It orchestrates all Excel and PDF export formats, including public and consultant endpoints with PostgreSQL-backed rate limiting. CORS is hardened with explicit origin allowlisting.
+Manages authentication, CRUD operations for financial models, admin analytics, feedback, and a consultant rules engine. It orchestrates all Excel and PDF export formats, including public and consultant endpoints with PostgreSQL-backed rate limiting. CORS is hardened with explicit origin allowlisting. Production-hardened with `helmet` (security headers) and `compression` (gzip). DB performance indexes on `financial_models(user_id)`, `exports(user_id, model_id)`, and `events(user_id, event_name)`.
 
 ### Frontend (`school-financial-model`)
 A React-based SPA featuring:

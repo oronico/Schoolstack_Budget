@@ -11,11 +11,13 @@ const __dirname = path.dirname(__filename);
 // packages that are not bundle compatible
 const allowlist = [
   "bcryptjs",
+  "compression",
   "cookie-parser",
   "cors",
   "drizzle-orm",
   "exceljs",
   "express",
+  "helmet",
   "jsonwebtoken",
   "resend",
   "pdfkit",

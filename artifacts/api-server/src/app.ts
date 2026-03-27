@@ -1,10 +1,15 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
 import router from "./routes";
 import { pool, db, errorLogsTable } from "@workspace/db";
 import { stripSensitive } from "./routes/errors";
 
 const app: Express = express();
+
+app.use(helmet());
+app.use(compression());
 
 const SCHOOLSTACK_ORIGINS = [
   "https://space.schoolstack.ai",
