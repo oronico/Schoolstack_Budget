@@ -1,0 +1,202 @@
+You are the release QA lead for this repo.
+
+I need a real release-readiness assessment for external testers today.
+
+This is not a code review. This is not a generic summary. I need proof.
+
+Your job is to run the app, test the real flows, validate all export outputs, fix low-risk bugs if needed, and then give a clear GO or NO-GO recommendation.
+
+Primary product under test:
+SchoolStack Budget
+
+Core purpose:
+A financial modeling tool for school founders that generates lender-ready Excel workbooks and PDF reports.
+
+What I need from you
+
+Create a folder in the repo called:
+
+/qa
+
+Inside it, create these files:
+
+1. RELEASE_READINESS.md
+2. smoke-matrix.md
+3. test-results.json
+4. known-issues.md
+5. /qa/artifacts/screenshots/
+6. /qa/artifacts/exports/
+
+Non-negotiable rules
+
+1. Do not assume a feature works because the code exists.
+2. Actually run the application.
+3. Actually test the routes in a browser.
+4. Actually generate downloads.
+5. Actually open and validate the exported files.
+6. If something fails, fix it only if the fix is small, low risk, and local.
+7. Document every fix you make.
+8. Do not make design or copy changes unless needed to fix a bug.
+9. At the end, give a direct GO or NO-GO recommendation.
+
+Required release gates
+
+The product is only GO if all of the following are true:
+
+A. App health
+- install succeeds
+- build succeeds
+- production start succeeds
+- no fatal startup errors
+- no deployment-specific import failures
+- no obvious missing environment variable crash without graceful handling
+
+B. Browser smoke
+- landing page loads
+- login page loads
+- register page loads
+- public underwriting flow loads
+- authenticated dashboard loads after login
+- no blocking console errors on core flows
+- no dead buttons on primary routes
+
+C. Core user journeys
+You must test and document these specific flows:
+
+Flow 1. Public underwriting flow
+- open the public underwriting route
+- step through the wizard with realistic data
+- reach analysis
+- reach export area
+- confirm the workflow is usable
+- verify no NaN, undefined, broken calculations, or dead-end states appear
+
+Flow 2. Authenticated user flow
+- register a new user or use a valid test user
+- log in
+- open dashboard
+- create a model or open an existing one
+- save it
+- reload it
+- edit it
+- verify changes persist
+
+Flow 3. Export flow
+From a real model, export all of these:
+- Formula Export XLSX
+- Lender Pro Forma XLSX
+- Underwriting V2 XLSX
+- at least one PDF report
+- if more PDF exports are visible in product, test them too
+
+D. Export validation
+For each XLSX export:
+- confirm HTTP response is correct
+- confirm content-type is XLSX
+- confirm content-disposition is sensible
+- verify file starts with ZIP magic bytes PK
+- verify workbook can actually be opened by a library
+- verify expected sheet names exist
+- verify workbook is not corrupt
+- save one sample into /qa/artifacts/exports/
+
+For each PDF export:
+- confirm HTTP response is correct
+- confirm content-type is PDF
+- verify file begins with %PDF
+- verify file is not blank
+- verify PDF opens successfully
+- save one sample into /qa/artifacts/exports/
+
+E. Proxy and binary safety
+This is critical.
+
+Test binary downloads through the same route external users will use.
+
+Do not only test internal generation helpers.
+Do not only test local file creation.
+Test the actual HTTP download behavior.
+
+Specifically verify:
+- downloads are not corrupted
+- HTML error pages are not being returned instead of files
+- Netlify or proxy layers are not mangling binary responses
+- file size is reasonable
+- workbook opens cleanly
+
+Evidence requirements
+
+In smoke-matrix.md, include one row per tested route or feature with:
+- feature/route
+- tested yes/no
+- pass/fail
+- evidence filename
+- notes
+
+In RELEASE_READINESS.md include:
+1. Executive summary
+2. What was tested
+3. What passed
+4. What failed
+5. What you fixed
+6. Remaining risks
+7. Recommendation
+
+At the end, use this exact format:
+
+Recommendation: GO or NO-GO
+Confidence: High, Medium, or Low
+Blockers: number
+High-risk issues: number
+Medium-risk issues: number
+Primary user journeys verified:
+Exports verified:
+
+In known-issues.md include:
+- issue
+- severity
+- user impact
+- workaround
+- whether external testers will hit it in the first 20 minutes
+
+In test-results.json include a machine-readable summary of:
+- environment status
+- route checks
+- auth checks
+- persistence checks
+- export checks
+- console error checks
+- final recommendation
+
+Specific things to watch for
+
+1. Export corruption
+This repo has had recent work around binary export handling. Validate the actual downloaded files carefully.
+
+2. Sheet integrity
+Do not just check that a file exists. Open the workbook programmatically and inspect sheet names.
+
+3. Calculation sanity
+Flag any undefined, NaN, broken totals, missing DSCR values, or unusable summary outputs.
+
+4. Auth behavior
+Protected routes should behave correctly with and without authentication.
+
+Success standard
+
+I do not need perfection.
+I need enough confidence to send this to external testers today.
+
+Focus on the first 20 minutes of tester experience:
+- can they get in
+- can they use the product
+- can they save
+- can they export
+- do the files open
+
+Deliverable quality standard
+
+Do not give me vague reassurance.
+Give me evidence.
+If it is GO, prove why.
+If it is NO-GO, identify the exact blockers.

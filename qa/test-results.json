@@ -1,0 +1,83 @@
+{
+  "meta": {
+    "date": "2026-03-27",
+    "product": "SchoolStack Budget",
+    "environment": "Replit dev",
+    "apiPort": 8080,
+    "frontendPort": 22092,
+    "testUser": "qatest@schoolstack.test",
+    "testModelId": 65
+  },
+  "environment": {
+    "apiHealth": "PASS",
+    "dbConnected": "PASS",
+    "frontendServing": "PASS",
+    "helmetHeaders": "PASS",
+    "compressionActive": "PASS",
+    "noFatalStartupErrors": "PASS"
+  },
+  "routeChecks": {
+    "landingPage": { "status": "PASS", "httpCode": 200, "evidence": "screenshots/01-landing-page.jpg" },
+    "loginPage": { "status": "PASS", "httpCode": 200, "evidence": "screenshots/02-login-page.jpg" },
+    "registerPage": { "status": "PASS", "httpCode": 200, "evidence": "screenshots/03-register-page.jpg" },
+    "underwritingWizard": { "status": "PASS", "httpCode": 200, "evidence": "screenshots/04-underwriting-wizard.jpg" },
+    "consoleErrors": { "status": "PASS", "blockingErrors": 0 }
+  },
+  "authChecks": {
+    "register": { "status": "PASS", "httpCode": 201 },
+    "login": { "status": "PASS", "httpCode": 200, "tokenLength": 167 },
+    "protectedRouteNoToken": { "status": "PASS", "blocked": true },
+    "protectedRouteBadToken": { "status": "PASS", "blocked": true }
+  },
+  "persistenceChecks": {
+    "createModel": { "status": "PASS", "modelId": 65 },
+    "reloadModel": { "status": "PASS", "allFieldsPresent": true },
+    "updateModel": { "status": "PASS", "changePersisted": true },
+    "listModels": { "status": "PASS", "modelInList": true }
+  },
+  "exportChecks": {
+    "authXlsx": {
+      "underwritingV2": { "status": "PASS", "httpCode": 200, "sizeBytes": 43967, "sheets": 22, "nanUndefined": 0 },
+      "underwritingV1": { "status": "PASS", "httpCode": 200, "sizeBytes": 43967, "sheets": 22, "nanUndefined": 0 },
+      "lenderProforma": { "status": "PASS", "httpCode": 200, "sizeBytes": 26141, "sheets": 10, "nanUndefined": 0 },
+      "formulaDefault": { "status": "PASS", "httpCode": 200, "sizeBytes": 28364, "sheets": 10, "nanUndefined": 0 },
+      "singleYear": { "status": "PASS", "httpCode": 200, "sizeBytes": 13800, "sheets": 5, "nanUndefined": 0 }
+    },
+    "authPdf": {
+      "proForma": { "status": "PASS", "httpCode": 200, "sizeBytes": 5206, "magicBytes": "%PDF-" },
+      "lenderPacket": { "status": "PASS", "httpCode": 200, "sizeBytes": 15181, "magicBytes": "%PDF-" },
+      "boardPacket": { "status": "PASS", "httpCode": 200, "sizeBytes": 9560, "magicBytes": "%PDF-" },
+      "loanReadiness": { "status": "PASS", "httpCode": 200, "sizeBytes": 7666, "magicBytes": "%PDF-" }
+    },
+    "authJson": {
+      "lenderPacketJson": { "status": "PASS", "httpCode": 200, "sizeBytes": 19072 },
+      "boardPacketJson": { "status": "PASS", "httpCode": 200, "sizeBytes": 14859 },
+      "consultantAnalysis": { "status": "PASS", "httpCode": 200, "sizeBytes": 14445 }
+    },
+    "publicXlsx": {
+      "publicBudget": { "status": "PASS", "httpCode": 200, "sizeBytes": 20261, "sheets": 5, "nanUndefined": 0 },
+      "publicUnderwriting": { "status": "PASS", "httpCode": 200, "sizeBytes": 20261, "sheets": 5, "nanUndefined": 0 },
+      "publicSingleYear": { "status": "PASS", "httpCode": 200, "sizeBytes": 12853, "sheets": 5, "nanUndefined": 0 }
+    }
+  },
+  "consoleErrorChecks": {
+    "landingPage": { "blockingErrors": 0 },
+    "loginPage": { "blockingErrors": 0 },
+    "registerPage": { "blockingErrors": 0 },
+    "underwritingWizard": { "blockingErrors": 0 }
+  },
+  "automatedTestSuites": {
+    "frontendVitest": { "total": 51, "passed": 51, "failed": 0 },
+    "excelQa": { "total": 30, "passed": 30, "failed": 0 },
+    "goldenAssertions": { "total": 133, "passed": 133, "failed": 0 }
+  },
+  "recommendation": {
+    "verdict": "GO",
+    "confidence": "High",
+    "blockers": 0,
+    "highRiskIssues": 0,
+    "mediumRiskIssues": 1,
+    "primaryJourneysVerified": "3/3",
+    "exportsVerified": "16/16"
+  }
+}

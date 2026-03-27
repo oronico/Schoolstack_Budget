@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 44035,
+    "fileSize": 44036,
     "tabs": [
       "Instructions",
       "Cover",
@@ -235,7 +235,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 25273,
+    "fileSize": 25270,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -301,7 +301,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 38062,
+    "fileSize": 38059,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -994,7 +994,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 24084,
+    "fileSize": 24081,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1060,7 +1060,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 37057,
+    "fileSize": 37054,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1754,7 +1754,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 28356,
+    "fileSize": 28353,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1821,7 +1821,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 38778,
+    "fileSize": 38775,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -2554,7 +2554,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 27247,
+    "fileSize": 27244,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -2620,7 +2620,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 38961,
+    "fileSize": 38958,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -3353,7 +3353,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 27026,
+    "fileSize": 27023,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -3419,7 +3419,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 38699,
+    "fileSize": 38696,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
