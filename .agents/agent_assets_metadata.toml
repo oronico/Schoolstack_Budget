@@ -108,3 +108,57 @@ id = "IxfFn0jHQL_QgN81RL5Ft"
 uri = "file://artifacts/api-server/qa-output/Underwriting_V2_(21-tab)_Charter_Public_Funding.xlsx"
 type = "table"
 title = "21-Tab Underwriting Workbook — Charter Public Funding"
+
+[[outputs]]
+id = "bs59FYVZ1vocjYkFdZxCd"
+uri = "file://artifacts/api-server/qa-output/export-samples/Formula_Export.xlsx"
+type = "table"
+title = "Formula Export (XLSX, 19KB)"
+
+[[outputs]]
+id = "31SGySJyl-128l5c4U2Ay"
+uri = "file://artifacts/api-server/qa-output/export-samples/Pro_Forma.pdf"
+type = "pdf"
+title = "Pro Forma (PDF, 3KB)"
+
+[[outputs]]
+id = "0ZO-e9ok-ml1kMTPxIg9n"
+uri = "file://artifacts/api-server/qa-output/export-samples/Loan_Readiness_Report.pdf"
+type = "pdf"
+title = "Loan Readiness Report (PDF, 10KB)"
+
+[[outputs]]
+id = "NOGSmraH34P8A3Mv63fC4"
+uri = "file://artifacts/api-server/qa-output/export-samples/Lender_Pro_Forma.xlsx"
+type = "table"
+title = "Lender Pro Forma (XLSX, 24KB)"
+
+[[outputs]]
+id = "Mh0Xarg3J_2pqJKYkeO3W"
+uri = "file://artifacts/api-server/qa-output/export-samples/Lender_Packet.pdf"
+type = "pdf"
+title = "Lender Packet (PDF, 22KB)"
+
+[[outputs]]
+id = "W2UBHvkh9LaSBw0_XceKU"
+uri = "file://artifacts/api-server/qa-output/export-samples/Board_Summary.pdf"
+type = "pdf"
+title = "Board Summary (PDF, 13KB)"
+
+[[outputs]]
+id = "GbxvSW_2e7FjtcFCDO4hi"
+uri = "file://artifacts/api-server/qa-output/export-samples/Underwriting_Pro_Forma.xlsx"
+type = "table"
+title = "Underwriting Pro Forma (XLSX, 38KB)"
+
+[[outputs]]
+id = "LNgmVMqjfjycSrhksg7GG"
+uri = "file://artifacts/api-server/qa-output/export-samples/Underwriting_Model_V2.xlsx"
+type = "table"
+title = "Underwriting Model V2 (XLSX, 38KB)"
+
+[[outputs]]
+id = "HoNbciVrr_y8PE52n_LeF"
+uri = "file://artifacts/api-server/qa-output/export-samples/Year_1_Budget.xlsx"
+type = "table"
+title = "Year 1 Budget (XLSX, 12KB)"
