@@ -647,8 +647,20 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   buildDebtSchedule(wb, capDebtRows, yc);
   buildMonthlyCashFlowY1(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
 
+  const mgmtFeeByYear: number[] = [];
+  if (sp.hasManagementFee) {
+    const feeRow = expenseRows.find(ex => ex.id === "authorizer_fee" && ex.enabled);
+    if (feeRow && feeRow.driverType === "percent_of_revenue") {
+      for (let y = 0; y < yc; y++) {
+        const pf = y === 0 ? prorationFactor : 1;
+        const rev = computeRevenueForYear(revenueRows, y, enrollment[y], data.tuitionTiers, sp);
+        mgmtFeeByYear.push(Math.round(((feeRow.amounts?.[y] ?? 0) / 100) * rev * pf));
+      }
+    }
+  }
+
   const ctx: Partial<CrossTabCtx> = { revGrandTotalRow, staffTotalRow, opexGrandTotalRow, facGrandTotalRow };
-  const plRows = buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType, ctx);
+  const plRows = buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType, ctx, mgmtFeeByYear.length > 0 ? mgmtFeeByYear : undefined);
   const plCumNIRow = plRows.cumNIRow;
 
   buildFiveYearBS(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, cashAtOpen, totalPrincipal, capDebtRows, yc, cols, yearHeaders);
@@ -697,6 +709,8 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
       hasDebt,
       revenueCategories: revCatsV1,
       cumNIRef: { sheetName: "5-Year P&L", row: plCumNIRow, startCol: 2 },
+      hasManagementFee: sp.hasManagementFee,
+      managementFeePercent: sp.managementFeePercent,
     });
   }
 
@@ -780,8 +794,20 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   buildDebtSchedule(wb, capDebtRows, yc);
   buildMonthlyCashFlowY1(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
 
+  const mgmtFeeByYear2: number[] = [];
+  if (sp.hasManagementFee) {
+    const feeRow = expenseRows.find(ex => ex.id === "authorizer_fee" && ex.enabled);
+    if (feeRow && feeRow.driverType === "percent_of_revenue") {
+      for (let y = 0; y < yc; y++) {
+        const pf = y === 0 ? prorationFactor : 1;
+        const rev = computeRevenueForYear(revenueRows, y, enrollment[y], data.tuitionTiers, sp);
+        mgmtFeeByYear2.push(Math.round(((feeRow.amounts?.[y] ?? 0) / 100) * rev * pf));
+      }
+    }
+  }
+
   const ctx2: Partial<CrossTabCtx> = { revGrandTotalRow: revGrandTotalRow2, staffTotalRow: staffTotalRow2, opexGrandTotalRow: opexGrandTotalRow2, facGrandTotalRow: facGrandTotalRow2 };
-  const plRows2 = buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType, ctx2);
+  const plRows2 = buildFiveYearPL(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, yc, cols, yearHeaders, sp.entityType, ctx2, mgmtFeeByYear2.length > 0 ? mgmtFeeByYear2 : undefined);
   const plCumNIRow2 = plRows2.cumNIRow;
 
   buildFiveYearBS(wb, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, annualNetIncome, annualCumNI, cashAtOpen, totalPrincipal, capDebtRows, yc, cols, yearHeaders);
@@ -829,6 +855,8 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
       hasDebt,
       revenueCategories: revCatsV1b,
       cumNIRef: { sheetName: "5-Year P&L", row: plCumNIRow2, startCol: 2 },
+      hasManagementFee: sp.hasManagementFee,
+      managementFeePercent: sp.managementFeePercent,
     });
   }
 
@@ -892,7 +920,14 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
   const revTotalRow = buildSYRevenue(wb, revenueRows, monthlyRev, opMonths, students, cols, headers, data.tuitionTiers, yi);
   const staffRow = buildSYStaffing(wb, staffingRows, salaryEsc, prorationFactor, opMonths, cols, headers, yi);
   const opsRow = buildSYExpenses(wb, expenseRows, students, annualRev, costInflation, prorationFactor, opMonths, cols, headers, yi);
-  buildSYPL(wb, monthlyRev, annualPersonnel, annualOps, annualCapDebt, annualNI, opMonths, cols, headers, sp, staffRow, opsRow, revTotalRow);
+  let syMgmtFee = 0;
+  if (sp.hasManagementFee) {
+    const feeRow = expenseRows.find(ex => ex.id === "authorizer_fee" && ex.enabled);
+    if (feeRow && feeRow.driverType === "percent_of_revenue") {
+      syMgmtFee = Math.round(((feeRow.amounts?.[yi] ?? 0) / 100) * annualRevRaw * pf);
+    }
+  }
+  buildSYPL(wb, monthlyRev, annualPersonnel, annualOps, annualCapDebt, annualNI, opMonths, cols, headers, sp, staffRow, opsRow, revTotalRow, syMgmtFee);
 
   polishWorkbookUW(wb, sp.schoolName);
   const arrayBuf = await wb.xlsx.writeBuffer();
@@ -1102,7 +1137,8 @@ function buildSYExpenses(
 function buildSYPL(
   wb: ExcelJS.Workbook, monthlyRev: number[], annualPers: number, annualOps: number,
   annualCapDebt: number, annualNI: number, opMonths: number, cols: number, headers: string[],
-  sp: SchoolProfile, staffTotalRow: number, opsTotalRow: number, revTotalRow: number
+  sp: SchoolProfile, staffTotalRow: number, opsTotalRow: number, revTotalRow: number,
+  mgmtFeeAmt: number = 0,
 ) {
   const ws = wb.addWorksheet("P&L Summary");
   ws.columns = [{ width: 30 }, ...Array(12).fill({ width: 14 }), { width: 16 }];
@@ -1130,14 +1166,29 @@ function buildSYPL(
   setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, Math.round(annualPers));
   ws.getCell(r, 14).numFmt = CUR; dc(ws.getCell(r, 14));
 
+  const displayOps = sp.hasManagementFee ? annualOps - mgmtFeeAmt : annualOps;
   r++; ws.getCell(r, 1).value = "Operating Expenses"; ws.getCell(r, 1).font = NF;
   for (let m = 0; m < 12; m++) {
     const cell = ws.getCell(r, m + 2);
-    setFormula(cell, `'Operating Expenses'!${cn(opsTotalRow, m + 2)}`, m < opMonths ? Math.round(annualOps / (opMonths || 12)) : 0);
+    setFormula(cell, `'Operating Expenses'!${cn(opsTotalRow, m + 2)}`, m < opMonths ? Math.round(displayOps / (opMonths || 12)) : 0);
     cell.numFmt = CUR; dc(cell);
   }
-  setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, Math.round(annualOps));
+  setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, Math.round(displayOps));
   ws.getCell(r, 14).numFmt = CUR; dc(ws.getCell(r, 14));
+
+  let mgmtFeeRowNum = 0;
+  if (sp.hasManagementFee && mgmtFeeAmt > 0) {
+    r++; ws.getCell(r, 1).value = "Authorizer / Management Fee"; ws.getCell(r, 1).font = NF;
+    mgmtFeeRowNum = r;
+    const monthlyFee = Math.round(mgmtFeeAmt / (opMonths || 12));
+    for (let m = 0; m < 12; m++) {
+      const cell = ws.getCell(r, m + 2);
+      cell.value = m < opMonths ? monthlyFee : 0;
+      cell.numFmt = CUR; dc(cell);
+    }
+    setFormula(ws.getCell(r, 14), `SUM(${cn(r, 2)}:${cn(r, 13)})`, Math.round(mgmtFeeAmt));
+    ws.getCell(r, 14).numFmt = CUR; dc(ws.getCell(r, 14));
+  }
 
   r++; ws.getCell(r, 1).value = "Capital & Debt"; ws.getCell(r, 1).font = NF;
   const monthlyDebt = Math.round(annualCapDebt / 12);
@@ -2246,8 +2297,9 @@ function buildMonthlyCashFlowY1(
 function buildFiveYearPL(
   wb: ExcelJS.Workbook, rev: number[], personnel: number[], ops: number[],
   capDebt: number[], ni: number[], yc: number, cols: number, yearHeaders: string[],
-  entityType?: string, ctx?: Partial<CrossTabCtx>
+  entityType?: string, ctx?: Partial<CrossTabCtx>, mgmtFeeAmounts?: number[]
 ): { revRow: number; totalExpRow: number; niRow: number; cumNIRow: number } {
+  const hasMgmtFee = mgmtFeeAmounts && mgmtFeeAmounts.some(v => v > 0);
   const ws = wb.addWorksheet("5-Year P&L");
   ws.columns = [{ width: 35 }, ...Array(yc).fill({ width: 18 })];
 
@@ -2286,14 +2338,24 @@ function buildFiveYearPL(
   r++; ws.getCell(r, 1).value = "Operating Expenses"; ws.getCell(r, 1).font = NF;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
+    const displayOps = hasMgmtFee ? (ops[y] || 0) - (mgmtFeeAmounts![y] || 0) : (ops[y] || 0);
     if (opexGT && facGT) {
-      setFormula(cell, `'Operating Expenses'!${cn(opexGT, y + 2)}+'Facilities & Occupancy'!${cn(facGT, y + 2)}`, ops[y] || 0);
+      setFormula(cell, `'Operating Expenses'!${cn(opexGT, y + 2)}+'Facilities & Occupancy'!${cn(facGT, y + 2)}`, displayOps);
     } else if (opexGT) {
-      setFormula(cell, `'Operating Expenses'!${cn(opexGT, y + 2)}`, ops[y] || 0);
+      setFormula(cell, `'Operating Expenses'!${cn(opexGT, y + 2)}`, displayOps);
     } else {
-      cell.value = ops[y] || 0;
+      cell.value = displayOps;
     }
     cell.numFmt = CUR; dc(cell);
+  }
+
+  if (hasMgmtFee) {
+    r++; ws.getCell(r, 1).value = "Authorizer / Management Fee"; ws.getCell(r, 1).font = NF;
+    for (let y = 0; y < yc; y++) {
+      const cell = ws.getCell(r, y + 2);
+      cell.value = mgmtFeeAmounts![y] || 0;
+      cell.numFmt = CUR; dc(cell);
+    }
   }
 
   r++; ws.getCell(r, 1).value = "Capital & Debt Service"; ws.getCell(r, 1).font = NF;

@@ -1309,13 +1309,42 @@ function buildFiveYearModel(
   }
   const plPersRow = r;
 
+  const mgmtFeeRow = expenseRows.find(ex => ex.id === "authorizer_fee" && ex.enabled);
+  const mgmtFeeAmounts: number[] = [];
+  if (sp.hasManagementFee && mgmtFeeRow) {
+    for (let y = 0; y < yc; y++) {
+      const pf = y === 0 ? prorationFactor : 1;
+      const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
+      const esc = resolveEsc(mgmtFeeRow.escalationRate, costInflPct);
+      let pct: number;
+      if (esc !== 0 && y > 0) {
+        pct = (mgmtFeeRow.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
+      } else {
+        pct = mgmtFeeRow.amounts?.[y] ?? 0;
+      }
+      mgmtFeeAmounts.push(Math.round((pct / 100) * rev * pf));
+    }
+  }
+
   r++; ws.getCell(r, 1).value = "Total Operating Expenses"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, cn(opexTotalRow, y + 2), opexArr[y]);
+    const displayVal = sp.hasManagementFee ? opexArr[y] - (mgmtFeeAmounts[y] || 0) : opexArr[y];
+    setFormula(cell, cn(opexTotalRow, y + 2), displayVal);
     cell.numFmt = CUR; dc(cell);
   }
   const plOpexRow = r;
+
+  let plMgmtFeeRow = 0;
+  if (sp.hasManagementFee && mgmtFeeAmounts.length > 0) {
+    r++; ws.getCell(r, 1).value = "Authorizer / Management Fee"; dc(ws.getCell(r, 1));
+    plMgmtFeeRow = r;
+    for (let y = 0; y < yc; y++) {
+      const cell = ws.getCell(r, y + 2);
+      cell.value = mgmtFeeAmounts[y] || 0;
+      cell.numFmt = CUR; dc(cell);
+    }
+  }
 
   r++; ws.getCell(r, 1).value = "Total Capital & Debt Service"; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
@@ -1328,7 +1357,9 @@ function buildFiveYearModel(
   r++; ws.getCell(r, 1).value = "Total Expenses"; bc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    setFormula(cell, `${cn(plPersRow, y + 2)}+${cn(plOpexRow, y + 2)}+${cn(plCapRow, y + 2)}`, totalExpArr[y]);
+    const parts = [cn(plPersRow, y + 2), cn(plOpexRow, y + 2), cn(plCapRow, y + 2)];
+    if (plMgmtFeeRow > 0) parts.push(cn(plMgmtFeeRow, y + 2));
+    setFormula(cell, parts.join("+"), totalExpArr[y]);
     cell.numFmt = CUR; bc(cell);
   }
   const totalExpRow = r;
@@ -2233,6 +2264,8 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     hasDebt,
     revenueCategories: revCatsF,
     cumNIRef: { sheetName: "5-Year Model", row: fiveYr.cumNIRow, startCol: 2 },
+    hasManagementFee: sp.hasManagementFee,
+    managementFeePercent: sp.managementFeePercent,
   });
   }
 

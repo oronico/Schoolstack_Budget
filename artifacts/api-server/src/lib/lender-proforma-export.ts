@@ -54,6 +54,8 @@ interface SchoolProfile {
   ecoDisCount?: number[];
   enrollmentGrowthRate?: number;
   stateFundingMethodology?: string;
+  hasManagementFee?: boolean;
+  managementFeePercent?: number;
 }
 
 interface Enrollment {
@@ -185,6 +187,8 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   result.state = sp.state || "";
   result.schoolType = SCHOOL_TYPE_DISPLAY[sp.schoolType || ""] || sp.schoolTypeOther || sp.schoolType || "";
   result.entityType = sp.entityType || "";
+  result.hasManagementFee = sp.hasManagementFee ? 1 : 0;
+  result.managementFeePercent = sp.managementFeePercent || 0;
   result.firstOperatingYear = sp.openingYear || new Date().getFullYear();
 
   result.enrollmentY1 = en.year1 || 0;
@@ -437,6 +441,9 @@ interface LenderResults {
   netIncomeAfterDebt: number[];
   cumulativeCash: number[];
   adminFte: number[];
+  managementFee: number[];
+  hasManagementFee: boolean;
+  managementFeePercent: number;
 }
 
 function computeLenderResults(input: Record<string, string | number>): LenderResults {
@@ -535,6 +542,19 @@ function computeLenderResults(input: Record<string, string | number>): LenderRes
     operatingMargin.push(totalRevenue[y] > 0 ? noi[y] / totalRevenue[y] : 0);
   }
 
+  const mgmtFeePctVal = n("managementFeePercent") / 100;
+  const hasMgmtFee = n("hasManagementFee") === 1 && mgmtFeePctVal > 0;
+  const managementFee: number[] = [];
+  if (hasMgmtFee) {
+    for (let y = 0; y < 5; y++) {
+      const fee = Math.round(totalRevenue[y] * mgmtFeePctVal);
+      managementFee.push(fee);
+      totalExpenses[y] += fee;
+      noi[y] = totalRevenue[y] - totalExpenses[y];
+      operatingMargin[y] = totalRevenue[y] > 0 ? noi[y] / totalRevenue[y] : 0;
+    }
+  }
+
   const proposedDebtService = loanAmount > 0 ? computeAnnualDebt(loanAmount, loanRate, loanTerm) : 0;
   const totalDebtService = existingDebt + proposedDebtService;
 
@@ -556,6 +576,7 @@ function computeLenderResults(input: Record<string, string | number>): LenderRes
     teacherFte, teacherSalaries, adminSalaries, benefits, totalStaffing,
     rent, otherFacility, programCost, gaAndTech, totalOpEx, totalExpenses, noi, operatingMargin,
     existingDebtService: existingDebt, proposedDebtService, totalDebtService,
+    managementFee, hasManagementFee: hasMgmtFee, managementFeePercent: n("managementFeePercent"),
     dscr, netIncomeAfterDebt, cumulativeCash, adminFte,
   };
 }
@@ -1215,53 +1236,79 @@ function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
   lbl(13, "Total Operating Expenses");
   fRow(13, "Drivers", 22, res.totalOpEx, CUR);
 
-  lbl(15, "Total Expenses", true);
-  localFormula(15,
-    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}12+${YEAR_COLS[y]}13`),
-    res.totalExpenses, CUR, true);
+  const mgmtOffset = res.hasManagementFee ? 1 : 0;
 
-  lbl(16, "Net Operating Income (NOI)", true);
-  localFormula(16,
-    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}10-${YEAR_COLS[y]}15`),
+  if (res.hasManagementFee) {
+    lbl(14, "Authorizer / Management Fee");
+    for (let y = 0; y < 5; y++) {
+      const cell = ws.getCell(14, y + 3);
+      cell.value = res.managementFee[y] || 0;
+      cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
+      cell.alignment = { horizontal: "right" };
+    }
+  }
+
+  const totExpRow = 15 + mgmtOffset;
+  lbl(totExpRow, "Total Expenses", true);
+  if (res.hasManagementFee) {
+    localFormula(totExpRow,
+      [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}12+${YEAR_COLS[y]}13+${YEAR_COLS[y]}14`),
+      res.totalExpenses, CUR, true);
+  } else {
+    localFormula(totExpRow,
+      [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}12+${YEAR_COLS[y]}13`),
+      res.totalExpenses, CUR, true);
+  }
+
+  const noiRow = totExpRow + 1;
+  lbl(noiRow, "Net Operating Income (NOI)", true);
+  localFormula(noiRow,
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}10-${YEAR_COLS[y]}${totExpRow}`),
     res.noi, CUR, true, true);
 
-  lbl(17, "Operating Margin");
-  localFormula(17,
-    [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}16/${YEAR_COLS[y]}10,0)`),
+  const marginRow = noiRow + 1;
+  lbl(marginRow, "Operating Margin");
+  localFormula(marginRow,
+    [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}${noiRow}/${YEAR_COLS[y]}10,0)`),
     res.operatingMargin, PCT);
 
-  lbl(19, "Capital & Debt Service");
+  const debtRow = marginRow + 2;
+  lbl(debtRow, "Capital & Debt Service");
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(19, y + 3);
+    const cell = ws.getCell(debtRow, y + 3);
     setFormula(cell, `'Cash Flow & DSCR'!${YEAR_COLS[y]}9`, res.totalDebtService);
     cell.numFmt = CUR; cell.font = NF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
-  lbl(21, "Net Income", true);
-  localFormula(21,
-    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}16-${YEAR_COLS[y]}19`),
+  const niRow = debtRow + 2;
+  lbl(niRow, "Net Income", true);
+  localFormula(niRow,
+    [0, 1, 2, 3, 4].map(y => `${YEAR_COLS[y]}${noiRow}-${YEAR_COLS[y]}${debtRow}`),
     res.netIncomeAfterDebt, CUR, true, true);
 
-  lbl(22, "Net Margin");
-  localFormula(22,
-    [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}21/${YEAR_COLS[y]}10,0)`),
+  const niMarginRow = niRow + 1;
+  lbl(niMarginRow, "Net Margin");
+  localFormula(niMarginRow,
+    [0, 1, 2, 3, 4].map(y => `IF(${YEAR_COLS[y]}10>0,${YEAR_COLS[y]}${niRow}/${YEAR_COLS[y]}10,0)`),
     res.totalRevenue.map((rev, i) => rev > 0 ? res.netIncomeAfterDebt[i] / rev : 0), PCT);
 
-  lbl(24, "Cumulative Net Income", true);
+  const cumRow = niMarginRow + 2;
+  lbl(cumRow, "Cumulative Net Income", true);
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(24, y + 3);
+    const cell = ws.getCell(cumRow, y + 3);
     if (y === 0) {
-      setFormula(cell, `${YEAR_COLS[0]}21`, res.netIncomeAfterDebt[0]);
+      setFormula(cell, `${YEAR_COLS[0]}${niRow}`, res.netIncomeAfterDebt[0]);
     } else {
       const cumVal = res.netIncomeAfterDebt.slice(0, y + 1).reduce((a, b) => a + b, 0);
-      setFormula(cell, `${YEAR_COLS[y - 1]}24+${YEAR_COLS[y]}21`, cumVal);
+      setFormula(cell, `${YEAR_COLS[y - 1]}${cumRow}+${YEAR_COLS[y]}${niRow}`, cumVal);
     }
     cell.numFmt = CUR; cell.font = BF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
   }
 
-  lbl(25, "Break-even", true);
+  const beRow = cumRow + 1;
+  lbl(beRow, "Break-even", true);
   let lenderBeYear = -1;
   let lenderCumNI = 0;
   for (let y = 0; y < 5; y++) {
@@ -1269,7 +1316,7 @@ function buildPnL(wb: ExcelJS.Workbook, res: LenderResults) {
     if (lenderBeYear < 0 && lenderCumNI >= 0) lenderBeYear = y;
   }
   for (let y = 0; y < 5; y++) {
-    const cell = ws.getCell(25, y + 3);
+    const cell = ws.getCell(beRow, y + 3);
     if (y === lenderBeYear) {
       cell.value = "✓ Break-even";
       cell.font = { bold: true, size: 11, name: "Calibri", color: { argb: DASHBOARD_GREEN } };
@@ -1657,7 +1704,9 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
     startingCash: Number(input.startingCash) || 0,
     hasDebt: res.totalDebtService > 0,
     revenueCategories: lenderRevCats,
-    cumNIRef: { sheetName: "5-Year P&L", row: 24, startCol: 3 },
+    cumNIRef: { sheetName: "5-Year P&L", row: res.hasManagementFee ? 25 : 24, startCol: 3 },
+    hasManagementFee: res.hasManagementFee,
+    managementFeePercent: res.managementFeePercent,
   });
 
   const buffer = await wb.xlsx.writeBuffer();

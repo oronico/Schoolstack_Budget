@@ -689,6 +689,7 @@ interface PrecomputedFinancials {
   totalAllExpenses: number[];
   netIncome: number[];
   cumulativeNI: number[];
+  managementFee: number[];
 }
 
 function precomputeFinancials(
@@ -711,6 +712,7 @@ function precomputeFinancials(
   const totalAllExpenses: number[] = [];
   const netIncome: number[] = [];
   const cumulativeNI: number[] = [];
+  const managementFee: number[] = [];
 
   for (let y = 0; y < yearCount; y++) {
     const students = enrollment[y] || 0;
@@ -760,13 +762,19 @@ function precomputeFinancials(
     const yearPersonnel = Math.round(grandTotalBase * personnelEsc * pf);
 
     let yearExpenses = 0;
+    let yearMgmtFee = 0;
     for (const row of expenseRows) {
       if (!row.enabled) continue;
+      let val = 0;
       if (row.driverType === "percent_of_revenue") {
-        yearExpenses += ((row.amounts?.[y] ?? 0) / 100) * yearTotalRev;
+        val = ((row.amounts?.[y] ?? 0) / 100) * yearTotalRev;
       } else {
-        yearExpenses += computeDriverValue(row.amounts, y, row.driverType, students);
+        val = computeDriverValue(row.amounts, y, row.driverType, students);
       }
+      if (row.id === "authorizer_fee") {
+        yearMgmtFee = val;
+      }
+      yearExpenses += val;
     }
     yearExpenses = Math.round(yearExpenses);
 
@@ -792,9 +800,10 @@ function precomputeFinancials(
     totalAllExpenses.push(yearAllExp);
     netIncome.push(yearNI);
     cumulativeNI.push((cumulativeNI[y - 1] || 0) + yearNI);
+    managementFee.push(Math.round(yearMgmtFee));
   }
 
-  return { revenueByRow, revenueCategoryTotals, totalRevenue, totalPersonnel, totalExpenses, totalCapDebt, totalAllExpenses, netIncome, cumulativeNI };
+  return { revenueByRow, revenueCategoryTotals, totalRevenue, totalPersonnel, totalExpenses, totalCapDebt, totalAllExpenses, netIncome, cumulativeNI, managementFee };
 }
 
 export async function generateWorkbook(rawData: Record<string, unknown>, consultantData?: ConsultantSummary): Promise<Buffer> {
@@ -861,12 +870,13 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
     const expTotalRow = buildExpensesTab(expensesWs, expenseRows, enrollmentByYear, revTotalRow, yearCount, cols, yearHeaders, aRefs, precomputed, data.customCategoryLabels);
     const capTotalRow = buildCapitalDebtTab(capitalWs, capDebtRows, enrollmentByYear, yearCount, cols, yearHeaders, aRefs);
 
-    buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow, sp.entityType, precomputed);
+    buildPnLTab(pnlWs, yearCount, cols, yearHeaders, revTotalRow, staffTotalRow, expTotalRow, capTotalRow, sp.entityType, precomputed, sp.hasManagementFee);
 
     const revenueMix = computeRevenueMixForExport(revenueRows, enrollmentByYear, yearCount, data.tuitionTiers);
+    const mgmtOffset = sp.hasManagementFee ? 1 : 0;
     buildSummaryTabNew(summaryWs, sp, yearCount, cols, yearHeaders, {
-      fmRevenueRow: 2, fmStaffRow: 3, fmExpenseRow: 4, fmCapDebtRow: 5,
-      fmTotalExpRow: 6, fmNIRow: 7, fmCumNIRow: 8, fmReserveRow: 9,
+      fmRevenueRow: 2, fmStaffRow: 3, fmExpenseRow: 4, fmCapDebtRow: 5 + mgmtOffset,
+      fmTotalExpRow: 6 + mgmtOffset, fmNIRow: 7 + mgmtOffset, fmCumNIRow: 8 + mgmtOffset, fmReserveRow: 9 + mgmtOffset,
       studentsRef: (cl) => `'Revenue Schedule'!${cl}2`,
       revenueMix,
     }, consultantData, precomputed, enrollmentByYear);
@@ -931,7 +941,9 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
         startingCash: data.priorYearSnapshot?.endingCash ?? data.currentYearProjection?.currentCash ?? 0,
         hasDebt,
         revenueCategories: revCats,
-        cumNIRef: { sheetName: "Financial Model", row: 8, startCol: 2 },
+        cumNIRef: { sheetName: "Financial Model", row: 8 + (sp.hasManagementFee ? 1 : 0), startCol: 2 },
+        hasManagementFee: sp.hasManagementFee,
+        managementFeePercent: sp.managementFeePercent,
       });
     }
   } else {
@@ -1902,6 +1914,7 @@ function buildPnLTab(
   capTotalRow: number,
   entityType?: string,
   precomputed?: PrecomputedFinancials,
+  hasManagementFee?: boolean,
 ) {
   const niLabel = profitLabel(entityType);
   const cumNiLabel = cumulativeProfitLabel(entityType);
@@ -1914,6 +1927,7 @@ function buildPnLTab(
   const ROW_TOTAL_REV = "Total Revenue";
   const ROW_PERSONNEL = "Personnel Costs";
   const ROW_OPEX = "Operating Expenses";
+  const ROW_MGMT_FEE = "Authorizer / Management Fee";
   const ROW_CAPDEBT = "Capital & Debt";
   const ROW_TOTAL_EXP = "Total Expenses";
   const ROW_RESERVE = "Operating Reserve (Months)";
@@ -1922,12 +1936,18 @@ function buildPnLTab(
     { label: ROW_TOTAL_REV, bold: false, key: "totalrev" },
     { label: ROW_PERSONNEL, bold: false, key: "personnel" },
     { label: ROW_OPEX, bold: false, key: "opex" },
+    ...(hasManagementFee ? [{ label: ROW_MGMT_FEE, bold: false, key: "mgmtfee" }] : []),
     { label: ROW_CAPDEBT, bold: false, key: "capdebt" },
     { label: ROW_TOTAL_EXP, bold: true, section: true, key: "totalexp" },
     { label: niLabel, bold: true, section: true, key: "ni" },
     { label: cumNiLabel, bold: false, key: "cumni" },
     { label: ROW_RESERVE, bold: false, key: "reserve" },
   ];
+
+  const rowMap: Record<string, number> = {};
+  for (let idx = 0; idx < pnlRows.length; idx++) {
+    rowMap[pnlRows[idx].key] = idx + 2;
+  }
 
   for (let idx = 0; idx < pnlRows.length; idx++) {
     const item = pnlRows[idx];
@@ -1946,24 +1966,37 @@ function buildPnLTab(
         case "personnel":
           cell.value = { formula: `'Staffing & Personnel'!${colLetter}${staffTotalRow}`, result: safeResult(precomputed?.totalPersonnel[y] ?? 0) };
           break;
-        case "opex":
-          cell.value = { formula: `'Operating Expenses'!${colLetter}${expTotalRow}`, result: safeResult(precomputed?.totalExpenses[y] ?? 0) };
+        case "opex": {
+          if (hasManagementFee) {
+            const opexVal = (precomputed?.totalExpenses[y] ?? 0) - (precomputed?.managementFee[y] ?? 0);
+            cell.value = { formula: `'Operating Expenses'!${colLetter}${expTotalRow}-${c(rowMap["mgmtfee"], y + 2)}`, result: safeResult(opexVal) };
+          } else {
+            cell.value = { formula: `'Operating Expenses'!${colLetter}${expTotalRow}`, result: safeResult(precomputed?.totalExpenses[y] ?? 0) };
+          }
+          break;
+        }
+        case "mgmtfee":
+          cell.value = precomputed?.managementFee[y] ?? 0;
           break;
         case "capdebt":
           cell.value = { formula: `'Capital & Debt'!${colLetter}${capTotalRow}`, result: safeResult(precomputed?.totalCapDebt[y] ?? 0) };
           break;
-        case "totalexp":
-          cell.value = { formula: `${c(3, y + 2)}+${c(4, y + 2)}+${c(5, y + 2)}`, result: safeResult(precomputed?.totalAllExpenses[y] ?? 0) };
+        case "totalexp": {
+          const expParts = [rowMap["personnel"], rowMap["opex"], rowMap["capdebt"]];
+          if (hasManagementFee) expParts.push(rowMap["mgmtfee"]);
+          const formula = expParts.map(pr => c(pr, y + 2)).join("+");
+          cell.value = { formula, result: safeResult(precomputed?.totalAllExpenses[y] ?? 0) };
           break;
+        }
         case "ni":
-          cell.value = { formula: `${c(2, y + 2)}-${c(6, y + 2)}`, result: safeResult(precomputed?.netIncome[y] ?? 0) };
+          cell.value = { formula: `${c(rowMap["totalrev"], y + 2)}-${c(rowMap["totalexp"], y + 2)}`, result: safeResult(precomputed?.netIncome[y] ?? 0) };
           break;
         case "cumni": {
           const cumVal = precomputed?.cumulativeNI[y] ?? 0;
           if (y === 0) {
-            cell.value = { formula: `${c(7, y + 2)}`, result: safeResult(cumVal) };
+            cell.value = { formula: `${c(rowMap["ni"], y + 2)}`, result: safeResult(cumVal) };
           } else {
-            cell.value = { formula: `${c(8, y + 1)}+${c(7, y + 2)}`, result: safeResult(cumVal) };
+            cell.value = { formula: `${c(rowMap["cumni"], y + 1)}+${c(rowMap["ni"], y + 2)}`, result: safeResult(cumVal) };
           }
           break;
         }
@@ -1971,7 +2004,7 @@ function buildPnLTab(
           const totalExp = precomputed?.totalAllExpenses[y] ?? 0;
           const cumNI = precomputed?.cumulativeNI[y] ?? 0;
           const reserveVal = totalExp === 0 ? 0 : (cumNI > 0 ? cumNI / (totalExp / 12) : 0);
-          cell.value = { formula: `IF(${c(6, y + 2)}=0,0,IF(${c(8, y + 2)}>0,${c(8, y + 2)}/(${c(6, y + 2)}/12),0))`, result: safeResult(reserveVal) };
+          cell.value = { formula: `IF(${c(rowMap["totalexp"], y + 2)}=0,0,IF(${c(rowMap["cumni"], y + 2)}>0,${c(rowMap["cumni"], y + 2)}/(${c(rowMap["totalexp"], y + 2)}/12),0))`, result: safeResult(reserveVal) };
           break;
         }
       }

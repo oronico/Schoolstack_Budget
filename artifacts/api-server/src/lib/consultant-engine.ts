@@ -1959,11 +1959,19 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   if (sp.hasManagementFee && sp.managementFeePercent && sp.managementFeePercent > 0) {
     const mgmtFeePct = sp.managementFeePercent;
-    if (mgmtFeePct > 10) {
+    if (mgmtFeePct > 15) {
       recommendations.push({
         title: "Review Management Fee Level",
-        description: `Your management fee of ${mgmtFeePct}% of revenue is above the typical 5–10% range for charter management organizations and back-office providers. Ensure the services received justify this rate and consider negotiating or comparing with alternative providers.`,
+        description: `Your management fee of ${mgmtFeePct}% of revenue exceeds the 15% threshold commonly used as an upper bound by authorizers and lenders. Ensure the services received justify this rate and consider negotiating or comparing with alternative providers.`,
         priority: "medium",
+      });
+    }
+    const isCharter = sp.schoolType === "charter_school" || sp.fundingProfile === "charter_public_funded";
+    if (!isCharter) {
+      recommendations.push({
+        title: "Management Fee on a Non-Charter School",
+        description: `Your school has an authorizer/management fee of ${mgmtFeePct}% enabled. This fee is most common among charter schools paying an authorizer or CMO. For a non-charter school, this typically represents a back-office or management services contract. Verify the fee accurately reflects your arrangement and that the services provided justify the ongoing cost.`,
+        priority: "low",
       });
     }
     keyMetrics.push({

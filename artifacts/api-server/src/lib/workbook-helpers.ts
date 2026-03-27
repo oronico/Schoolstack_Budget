@@ -908,6 +908,8 @@ export interface DashboardInput {
   hasDebt: boolean;
   revenueCategories?: Record<string, number[]>;
   cumNIRef?: { sheetName: string; row: number; startCol: number };
+  hasManagementFee?: boolean;
+  managementFeePercent?: number;
 }
 
 function statusColor(status: string): string {
@@ -1156,6 +1158,24 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   }
   ws.getCell(r, 8).value = `≤ ${Math.round(BENCHMARK_FACILITY_GREEN * 100)}%`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
   cfRules.push({ row: facilityRow, greenThreshold: String(BENCHMARK_FACILITY_GREEN), amberThreshold: String(BENCHMARK_FACILITY_AMBER), mode: "lte" });
+
+  if (input.hasManagementFee) {
+    r++;
+    const mgmtFeeRow = r;
+    ws.getCell(r, 2).value = "Management Fee %"; bc(ws.getCell(r, 2));
+    for (let y = 0; y < 5; y++) {
+      const rev = input.revenueByYear[y];
+      const feePct = rev > 0 ? (input.managementFeePercent || 0) / 100 : 0;
+      const cell = ws.getCell(r, y + 3);
+      cell.value = feePct;
+      cell.numFmt = PCT;
+      gc(cell);
+      cell.alignment = { horizontal: "right" };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: feePct <= 0.10 ? GREEN_BG : feePct <= 0.15 ? AMBER_BG : RED_BG } };
+    }
+    ws.getCell(r, 8).value = "≤ 15%"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+    cfRules.push({ row: mgmtFeeRow, greenThreshold: "0.10", amberThreshold: "0.15", mode: "lte" });
+  }
 
   r++;
   const opMarginRow = r;

@@ -454,9 +454,31 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     cumNIs.push(cumNI);
   }
 
+  let mgmtFeeTotals: number[] | null = null;
+  if (sp.hasManagementFee) {
+    const feeRow = expenseRows.find(ex => ex.id === "authorizer_fee" && ex.enabled);
+    if (feeRow) {
+      mgmtFeeTotals = [];
+      for (let y = 0; y < yearCount; y++) {
+        const rev = computeRevenueForYear(revenueRows, y, enrollment[y], data.tuitionTiers, sp);
+        if (feeRow.driverType === "percent_of_revenue") {
+          mgmtFeeTotals.push(((feeRow.amounts?.[y] ?? 0) / 100) * rev);
+        } else {
+          mgmtFeeTotals.push(computeDriverValue(feeRow.amounts, y, feeRow.driverType, enrollment[y]));
+        }
+      }
+    }
+  }
+
   pnlRows.push(["Total Revenue", ...revTotals.map(v => fmtCurrency(v))]);
   pnlRows.push(["Total Staffing", ...staffTotals.map(v => `(${fmtCurrency(v)})`)]);
-  pnlRows.push(["Total Operating Expenses", ...opexTotals.map(v => `(${fmtCurrency(v)})`)]);
+  if (mgmtFeeTotals) {
+    const opsMinusFee = opexTotals.map((v, i) => v - (mgmtFeeTotals![i] || 0));
+    pnlRows.push(["Total Operating Expenses", ...opsMinusFee.map(v => `(${fmtCurrency(v)})`)]);
+    pnlRows.push(["Authorizer / Management Fee", ...mgmtFeeTotals.map(v => `(${fmtCurrency(v)})`)]);
+  } else {
+    pnlRows.push(["Total Operating Expenses", ...opexTotals.map(v => `(${fmtCurrency(v)})`)]);
+  }
   if (capDebtRows.length > 0) {
     pnlRows.push(["Capital & Debt Service", ...capDebtTotals.map(v => `(${fmtCurrency(v)})`)]);
   }
