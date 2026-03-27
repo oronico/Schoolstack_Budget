@@ -1650,6 +1650,7 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
     personnelByYear: res.totalStaffing,
     opexByYear: res.totalOpEx,
     facilityCostByYear: lenderFacCost,
+    instructionalByYear: res.programCost,
     debtServiceByYear: res.dscr.map(() => res.totalDebtService),
     netIncomeByYear: res.netIncomeAfterDebt,
     cashByYear: res.cumulativeCash,

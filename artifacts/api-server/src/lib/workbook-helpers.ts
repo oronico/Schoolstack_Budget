@@ -717,6 +717,18 @@ export function computeFacilityCostByYear(
   return result;
 }
 
+export function computeInstructionalCostByYear(
+  expenseRows: Pick<ExpenseRow, "enabled" | "category" | "driverType" | "amounts" | "escalationRate" | "lineItem">[],
+  enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number
+): number[] {
+  const instrRows = (expenseRows as ExpenseRow[]).filter(r => r.enabled && r.category === "instructional_program");
+  const result: number[] = [];
+  for (let y = 0; y < yearCount; y++) {
+    result.push(computeExpenseForYear(instrRows, y, enrollment[y], revenueByYear[y], costInflationPct));
+  }
+  return result;
+}
+
 export function computeCapDebtForYear(rows: CapitalDebtRow[], y: number, students: number): number {
   let total = 0;
   for (const r of rows) {
@@ -887,6 +899,8 @@ export interface DashboardInput {
   personnelByYear: number[];
   opexByYear: number[];
   facilityCostByYear?: number[];
+  instructionalByYear?: number[];
+  adminByYear?: number[];
   debtServiceByYear: number[];
   netIncomeByYear: number[];
   cashByYear: number[];
@@ -1059,6 +1073,56 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   }
   ws.getCell(r, 8).value = `≥ $${BENCHMARK_REV_PER_STUDENT_GREEN.toLocaleString()}`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
   cfRules.push({ row: rpsRow, greenThreshold: String(BENCHMARK_REV_PER_STUDENT_GREEN), amberThreshold: String(BENCHMARK_REV_PER_STUDENT_AMBER), mode: "gte" });
+
+  r++;
+  ws.getCell(r, 2).value = "Cost per Student"; bc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    const totalCost = input.personnelByYear[y] + input.opexByYear[y] + input.debtServiceByYear[y];
+    const cps = input.enrollment[y] > 0 ? totalCost / input.enrollment[y] : 0;
+    const cell = ws.getCell(r, y + 3);
+    cell.value = cps;
+    cell.numFmt = CUR;
+    bc(cell);
+    cell.alignment = { horizontal: "right" };
+  }
+
+  r++;
+  ws.getCell(r, 2).value = "  Instructional / Student"; dc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    const instrCost = input.instructionalByYear ? (input.instructionalByYear[y] || 0) : 0;
+    const ips = input.enrollment[y] > 0 ? instrCost / input.enrollment[y] : 0;
+    const cell = ws.getCell(r, y + 3);
+    cell.value = ips;
+    cell.numFmt = CUR;
+    dc(cell);
+    cell.alignment = { horizontal: "right" };
+  }
+
+  r++;
+  ws.getCell(r, 2).value = "  Facility / Student"; dc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    const facCost = input.facilityCostByYear ? (input.facilityCostByYear[y] || 0) : (input.opexByYear[y] * 0.3);
+    const fps = input.enrollment[y] > 0 ? facCost / input.enrollment[y] : 0;
+    const cell = ws.getCell(r, y + 3);
+    cell.value = fps;
+    cell.numFmt = CUR;
+    dc(cell);
+    cell.alignment = { horizontal: "right" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fps <= 2000 ? GREEN_BG : fps <= 3500 ? AMBER_BG : RED_BG } };
+  }
+  ws.getCell(r, 8).value = "≤ $2,000 / $2k–$3.5k / > $3,500"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+
+  r++;
+  ws.getCell(r, 2).value = "Surplus per Student"; bc(ws.getCell(r, 2));
+  for (let y = 0; y < 5; y++) {
+    const sps = input.enrollment[y] > 0 ? input.netIncomeByYear[y] / input.enrollment[y] : 0;
+    const cell = ws.getCell(r, y + 3);
+    cell.value = sps;
+    cell.numFmt = CUR;
+    bc(cell);
+    cell.alignment = { horizontal: "right" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: sps >= 0 ? GREEN_BG : RED_BG } };
+  }
 
   r++;
   const payrollRow = r;

@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { addDashboardSheet, computeFacilityCostByYear, setFormula } from "./workbook-helpers.js";
+import { addDashboardSheet, computeFacilityCostByYear, computeInstructionalCostByYear, setFormula } from "./workbook-helpers.js";
 
 function safeResult(v: unknown): number | string {
   if (v === null || v === undefined) return "0";
@@ -915,6 +915,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
         }
       }
       const facCostArr = computeFacilityCostByYear(expenseRows, enrollmentByYear, precomputed.totalRevenue, yearCount);
+      const instrCostArr = computeInstructionalCostByYear(expenseRows, enrollmentByYear, precomputed.totalRevenue, yearCount);
       await addDashboardSheet(wb, {
         schoolName: sp.schoolName || "School",
         entityType: sp.entityType || "",
@@ -923,6 +924,7 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
         personnelByYear: precomputed.totalPersonnel,
         opexByYear: precomputed.totalExpenses,
         facilityCostByYear: facCostArr,
+        instructionalByYear: instrCostArr,
         debtServiceByYear: debtSvcArr,
         netIncomeByYear: precomputed.netIncome,
         cashByYear: cashArr,

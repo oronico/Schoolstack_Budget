@@ -10,7 +10,7 @@ import {
   normalizeStaffingRow, getEnrollmentArray,
   computeAnnualDebt, computeAnnualDebtForYear, computeInterestPortion, computePrincipalPortion, computeRemainingBalance, computeDaysCashOnHand,
   computeRevLineItem, computeRevenueForYear, computePersonnelForYear, computeStaffingLoaded,
-  computeExpenseForYear, computeFacilityCostByYear, computeCapDebtForYear, computeDebtServiceForYear,
+  computeExpenseForYear, computeFacilityCostByYear, computeInstructionalCostByYear, computeCapDebtForYear, computeDebtServiceForYear,
   driverVal, resolveEsc, tuitionWithTiers,
   ModelData, SchoolProfile, RevenueRow, StaffingRow, ExpenseRow, CapitalDebtRow, TuitionTier,
 } from "./workbook-helpers.js";
@@ -2565,6 +2565,7 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
   }
 
   const facCostByYearUW = computeFacilityCostByYear(effectiveData.expenseRows || [], enrollment, revByYear, 5, costInflPct);
+  const instrCostByYearUW = computeInstructionalCostByYear(effectiveData.expenseRows || [], enrollment, revByYear, 5, costInflPct);
 
   await addDashboardSheet(wb, {
     schoolName: sp.schoolName || "School",
@@ -2574,6 +2575,7 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
     personnelByYear: persByYear,
     opexByYear: opexByYear,
     facilityCostByYear: facCostByYearUW,
+    instructionalByYear: instrCostByYearUW,
     debtServiceByYear: debtServiceByYear,
     netIncomeByYear: niByYear,
     cashByYear,

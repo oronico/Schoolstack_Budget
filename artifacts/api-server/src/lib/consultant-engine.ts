@@ -1572,6 +1572,23 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     benchmark: isCharterBenchmark ? "Charter avg: $10,000–$15,000" : "Private avg: $12,000–$25,000",
   });
 
+  const totalCostY1 = y1.totalStaffingCost + y1.totalOpex + y1.debtService;
+  const costPerStudent = y1.students > 0 ? totalCostY1 / y1.students : 0;
+  const costToRevRatio = revenuePerStudent > 0 ? costPerStudent / revenuePerStudent : 0;
+
+  keyMetrics.push({
+    name: "Cost per Student (Year 1)",
+    value: fmt(costPerStudent),
+    status: costToRevRatio <= 0.85 ? "good" : costToRevRatio <= 0.90 ? "warning" : "danger",
+    interpretation:
+      costToRevRatio <= 0.85
+        ? `Total cost per student is ${fmt(costPerStudent)}, well within revenue per student of ${fmt(revenuePerStudent)}, leaving a healthy margin.`
+        : costToRevRatio <= 0.90
+          ? `Cost per student (${fmt(costPerStudent)}) is approaching revenue per student (${fmt(revenuePerStudent)}). Monitor expenses closely to maintain a sustainable margin.`
+          : `Cost per student (${fmt(costPerStudent)}) exceeds 90% of revenue per student (${fmt(revenuePerStudent)}), leaving very little margin for unexpected expenses.`,
+    benchmark: "Target: ≤ 85% of revenue per student",
+  });
+
   keyMetrics.push({
     name: "Staffing Cost (% of Revenue)",
     value: pct(staffingCostPct),
