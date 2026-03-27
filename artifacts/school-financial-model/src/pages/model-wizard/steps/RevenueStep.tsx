@@ -301,7 +301,15 @@ export function RevenueStep() {
     });
   }, [schoolType, defaultsApplied, setValue]);
 
-  const stateFundingAppliedKeyRef = useMemo(() => ({ current: null as string | null }), []);
+  const PROGRAM_TYPE_TO_ROW_ID: Record<string, string> = useMemo(() => ({
+    esa: "esa_revenue", voucher: "voucher_revenue", tax_credit_scholarship: "scholarship_org",
+    refundable_tax_credit: "refundable_tax_credit", individual_tax_credit: "individual_tax_credit",
+    federal_tax_credit_sgo: "federal_tax_credit_sgo", correspondence_charter: "correspondence_charter",
+  }), []);
+
+  const AUTO_GENERATED_IDS = useMemo(() => new Set(Object.values(PROGRAM_TYPE_TO_ROW_ID)), [PROGRAM_TYPE_TO_ROW_ID]);
+
+  const lastStateFundingKeyRef = useMemo(() => ({ current: null as string | null }), []);
 
   useEffect(() => {
     if (!defaultsApplied) return;
@@ -316,26 +324,40 @@ export function RevenueStep() {
       }
     }
 
-    if (isCharterType || !stateFundingConfig || stateFundingConfig.availablePrograms.length === 0) {
-      return;
-    }
+    if (isCharterType) return;
 
     const configKey = `${schoolType}:${stateCode}:${openingYear || ""}`;
-    if (stateFundingAppliedKeyRef.current === configKey) return;
-    stateFundingAppliedKeyRef.current = configKey;
+    if (lastStateFundingKeyRef.current === configKey) return;
+    lastStateFundingKeyRef.current = configKey;
+
+    const eligibleIds = new Set(
+      (stateFundingConfig?.availablePrograms || [])
+        .filter(p => p.status !== "blocked")
+        .map(p => PROGRAM_TYPE_TO_ROW_ID[p.type] || `sc_${p.type}`)
+    );
 
     setRows(currentRows => {
-      const existingIds = new Set(currentRows.map(r => r.id));
+      let changed = false;
 
-      const newRows = generateSchoolChoiceRows(
-        stateFundingConfig.availablePrograms,
-        yearCount,
-        fundingProfile,
-      ).filter(r => !existingIds.has(r.id));
+      const reconciled = currentRows.filter(r => {
+        if (!AUTO_GENERATED_IDS.has(r.id)) return true;
+        if (eligibleIds.has(r.id)) return true;
+        changed = true;
+        return false;
+      });
 
-      if (newRows.length === 0) return currentRows;
+      const existingIds = new Set(reconciled.map(r => r.id));
+      const newRows = stateFundingConfig
+        ? generateSchoolChoiceRows(
+            stateFundingConfig.availablePrograms,
+            yearCount,
+            fundingProfile,
+          ).filter(r => !existingIds.has(r.id))
+        : [];
 
-      const updated = [...currentRows, ...newRows];
+      if (!changed && newRows.length === 0) return currentRows;
+
+      const updated = [...reconciled, ...newRows];
       setValue("revenueRows", updated, { shouldDirty: true });
 
       if (newRows.some(r => r.enabled)) {
@@ -836,7 +858,16 @@ export function RevenueStep() {
         const enabledCount = catRows.filter((r) => r.enabled).length;
         const isExpanded = expandedCategories.has(cat);
         const total = getCategoryTotal(cat);
-        const availableItems = getAvailableLineItems(cat, rows.map((r) => r.id));
+        let availableItems = getAvailableLineItems(cat, rows.map((r) => r.id));
+        if (cat === "school_choice" && stateFundingConfig && !isCharter) {
+          const stateProgIds = new Set(stateFundingConfig.availablePrograms
+            .filter(p => p.status !== "blocked")
+            .map(p => {
+              const map: Record<string, string> = { esa: "esa_revenue", voucher: "voucher_revenue", tax_credit_scholarship: "scholarship_org", refundable_tax_credit: "refundable_tax_credit", individual_tax_credit: "individual_tax_credit", federal_tax_credit_sgo: "federal_tax_credit_sgo", correspondence_charter: "correspondence_charter" };
+              return map[p.type] || `sc_${p.type}`;
+            }));
+          availableItems = availableItems.filter(item => stateProgIds.has(item.id));
+        }
         const Icon = CATEGORY_ICONS[cat];
         const guidance = CATEGORY_GUIDANCE[cat];
 
