@@ -743,8 +743,10 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
     (input.applicationsReceived !== "" && input.applicationsReceived !== undefined) ||
     (input.waitlistCount !== "" && input.waitlistCount !== undefined);
 
+  let nextAvailableRow = 63;
+
   if (hasRetentionDemand) {
-    const rdStartRow = 63;
+    const rdStartRow = nextAvailableRow;
     ws.mergeCells(`B${rdStartRow}:D${rdStartRow}`);
     ws.getCell(`B${rdStartRow}`).value = "RETENTION & DEMAND SIGNALS";
     ws.getCell(`B${rdStartRow}`).font = sectionFont;
@@ -752,6 +754,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
     ws.getCell(`B${rdStartRow}`).alignment = { horizontal: "left", vertical: "middle" };
     ws.getRow(rdStartRow).height = 24;
 
+    let lastRdRow = rdStartRow;
     const rdRows: { row: number; label: string; key: string; fmt?: string }[] = [];
     if (input.retentionRate !== "" && input.retentionRate !== undefined) {
       rdRows.push({ row: rdStartRow + 2, label: "Student Retention Rate", key: "retentionRate", fmt: "0.0%" });
@@ -775,6 +778,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       ws.getCell(`D${nextRow}`).numFmt = "0.0%";
       ws.getCell(`D${nextRow}`).border = thinBorder;
       ws.getCell(`D${nextRow}`).alignment = { horizontal: "right" };
+      lastRdRow = nextRow;
     }
     for (const r of rdRows) {
       ws.getCell(`C${r.row}`).value = r.label;
@@ -787,13 +791,15 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       ws.getCell(`D${r.row}`).border = thinBorder;
       if (r.fmt) ws.getCell(`D${r.row}`).numFmt = r.fmt;
       ws.getCell(`D${r.row}`).alignment = { horizontal: "right" };
+      if (r.row > lastRdRow) lastRdRow = r.row;
     }
+    nextAvailableRow = lastRdRow + 2;
   }
 
   if (input.hasGradeBand === 1) {
     const METHOD_LABELS: Record<string, string> = { count_days: "Count Days", adm: "ADM (Avg Daily Membership)", ada: "ADA (Avg Daily Attendance)" };
     const TIMING_LABELS: Record<string, string> = { monthly: "Monthly", quarterly: "Quarterly", annual: "Annual", semi_annual: "Semi-Annual" };
-    const gbStartRow = hasRetentionDemand ? 70 : 64;
+    const gbStartRow = nextAvailableRow;
     ws.mergeCells(`B${gbStartRow}:D${gbStartRow}`);
     ws.getCell(`B${gbStartRow}`).value = "CHARTER FUNDING DETAILS";
     ws.getCell(`B${gbStartRow}`).font = sectionFont;
@@ -844,6 +850,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       ws.getCell(`D${gbr}`).border = thinBorder;
       gbr++;
     }
+    nextAvailableRow = gbr + 1;
   }
 
   const hasWeightedEnrollment = [1, 2, 3, 4, 5].some(y =>
@@ -852,7 +859,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
     (Number(input[`ecoDisCountY${y}`]) || 0) > 0
   );
   if (hasWeightedEnrollment) {
-    const weStartRow = input.hasGradeBand === 1 ? (hasRetentionDemand ? 85 : 79) : (hasRetentionDemand ? 72 : 66);
+    const weStartRow = nextAvailableRow;
     ws.mergeCells(`B${weStartRow}:H${weStartRow}`);
     ws.getCell(`B${weStartRow}`).value = "WEIGHTED ENROLLMENT POPULATIONS";
     ws.getCell(`B${weStartRow}`).font = sectionFont;

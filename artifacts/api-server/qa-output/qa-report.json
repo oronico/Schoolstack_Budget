@@ -235,7 +235,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool Startup",
-    "fileSize": 24841,
+    "fileSize": 24842,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -301,7 +301,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 37686,
+    "fileSize": 37687,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -994,7 +994,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 23668,
+    "fileSize": 23669,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1060,7 +1060,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 36680,
+    "fileSize": 36681,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1153,7 +1153,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 26399,
+    "fileSize": 26397,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1754,7 +1754,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 27955,
+    "fileSize": 27956,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -3512,7 +3512,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 27050,
+    "fileSize": 27052,
     "tabs": [
       "Instructions",
       "Cover",
@@ -3877,7 +3877,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 14666,
+    "fileSize": 14667,
     "tabs": [
       "Assumptions",
       "Revenue",
