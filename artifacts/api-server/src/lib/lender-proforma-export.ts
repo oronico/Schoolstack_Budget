@@ -48,6 +48,11 @@ interface SchoolProfile {
   charterDepositTiming?: string;
   priorYearADM?: number;
   priorYearADA?: number;
+  spedCount?: number[];
+  ellCount?: number[];
+  ecoDisCount?: number[];
+  enrollmentGrowthRate?: number;
+  stateFundingMethodology?: string;
 }
 
 interface Enrollment {
