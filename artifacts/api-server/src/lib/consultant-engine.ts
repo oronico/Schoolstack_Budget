@@ -1,5 +1,6 @@
 import { generateTopIssues } from "./decision-rules";
 import { generateHealthSignals, type HealthSignal } from "./financial-health";
+import { computeDaysCashOnHand, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER } from "./workbook-helpers.js";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -1654,6 +1655,25 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     });
   }
 
+  const priorSnapshot = (data as Record<string, unknown>).priorYearSnapshot as Record<string, number> | undefined;
+  const y1StartingCash = priorSnapshot?.endingCash || 0;
+  const y1EndingCash = y1StartingCash + y1.netIncome;
+  const y1Dcoh = computeDaysCashOnHand(y1EndingCash, y1.totalExpenses);
+  const y1DcohRounded = Math.round(y1Dcoh);
+
+  keyMetrics.push({
+    name: "Days Cash on Hand (Year 1)",
+    value: `${y1DcohRounded} days`,
+    status: y1DcohRounded >= BENCHMARK_DCOH_GREEN ? "good" : y1DcohRounded >= BENCHMARK_DCOH_AMBER ? "warning" : "danger",
+    interpretation:
+      y1DcohRounded >= BENCHMARK_DCOH_GREEN
+        ? "Cash reserves cover 90+ days of expenses — a strong liquidity position."
+        : y1DcohRounded >= BENCHMARK_DCOH_AMBER
+          ? `${y1DcohRounded} days of cash on hand is above the minimum but below the 90-day target. Build reserves to create a larger buffer.`
+          : `Only ${y1DcohRounded} days of cash on hand — well below the 45-day minimum. Secure bridge funding or reduce early costs.`,
+    benchmark: `Healthy: ≥ ${BENCHMARK_DCOH_GREEN} days; minimum: ${BENCHMARK_DCOH_AMBER} days`,
+  });
+
   if (hasDebt) {
     keyMetrics.push({
       name: "Debt Service Coverage Ratio (Year 1)",
@@ -2472,6 +2492,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     publicRevenuePct,
     tuitionPct,
     entityType: sp.entityType || "",
+    daysCashOnHand: y1Dcoh,
   });
 
   const topIssues = generateTopIssues({

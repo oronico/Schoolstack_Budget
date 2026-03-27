@@ -26,6 +26,8 @@ import {
   BENCHMARK_REV_PER_STUDENT_AMBER,
   BENCHMARK_REV_SOURCES_GREEN,
   BENCHMARK_REV_SOURCES_AMBER,
+  BENCHMARK_DCOH_GREEN,
+  BENCHMARK_DCOH_AMBER,
 } from "./benchmark-thresholds.js";
 export {
   BENCHMARK_PAYROLL_GREEN,
@@ -38,7 +40,14 @@ export {
   BENCHMARK_REV_PER_STUDENT_AMBER,
   BENCHMARK_REV_SOURCES_GREEN,
   BENCHMARK_REV_SOURCES_AMBER,
+  BENCHMARK_DCOH_GREEN,
+  BENCHMARK_DCOH_AMBER,
 };
+
+export function computeDaysCashOnHand(endingCash: number, totalAnnualExpenses: number): number {
+  if (totalAnnualExpenses <= 0) return endingCash >= 0 ? 365 : 0;
+  return Math.max(0, (endingCash / totalAnnualExpenses) * 365);
+}
 
 export const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
 export const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: WHITE }, size: 11, name: "Calibri" };
@@ -1205,6 +1214,21 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cappedM >= 24 ? GREEN_BG : cappedM >= 12 ? AMBER_BG : RED_BG } };
   }
   ws.getCell(r, 8).value = "≥ 24 months"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+
+  r++;
+  ws.getCell(r, 2).value = "Days Cash on Hand"; bc(ws.getCell(r, 2));
+  ws.getCell(r, 2).border = BORDER;
+  for (let y = 0; y < 5; y++) {
+    const dcohVal = computeDaysCashOnHand(input.cashByYear[y] || 0, totalExpByYear[y] || 0);
+    const rounded = Math.round(dcohVal);
+    const cell = ws.getCell(r, y + 3);
+    cell.value = rounded;
+    cell.numFmt = NUM;
+    gc(cell);
+    cell.alignment = { horizontal: "right" };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: rounded >= BENCHMARK_DCOH_GREEN ? GREEN_BG : rounded >= BENCHMARK_DCOH_AMBER ? AMBER_BG : RED_BG } };
+  }
+  ws.getCell(r, 8).value = `≥ ${BENCHMARK_DCOH_GREEN} days`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
 
   let cashRunwayMonths = 60;
   let _runCash = input.startingCash;

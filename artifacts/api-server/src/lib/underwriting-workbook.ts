@@ -8,7 +8,7 @@ import {
   schoolYearLabel, yearLabels, schoolTypeLabel, entityLabel, funcLabel, catLabel, expCatLabel, driverLabel,
   fundingLabel, stageLabel, schoolModelFromType, isNonprofit, netIncomeLabel, equityLabel,
   normalizeStaffingRow, getEnrollmentArray,
-  computeAnnualDebt, computeAnnualDebtForYear, computeInterestPortion, computePrincipalPortion, computeRemainingBalance,
+  computeAnnualDebt, computeAnnualDebtForYear, computeInterestPortion, computePrincipalPortion, computeRemainingBalance, computeDaysCashOnHand,
   computeRevLineItem, computeRevenueForYear, computePersonnelForYear, computeStaffingLoaded,
   computeExpenseForYear, computeFacilityCostByYear, computeCapDebtForYear, computeDebtServiceForYear,
   driverVal, resolveEsc, tuitionWithTiers,
@@ -2167,7 +2167,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
     [`Days Cash ≥ ${minDaysCash}`, (y) => {
       const te = totalExp[y];
       if (te <= 0) return "N/A";
-      return (cashByYear[y] / te) * 365 >= minDaysCash ? "PASS" : "FAIL";
+      return computeDaysCashOnHand(cashByYear[y], te) >= minDaysCash ? "PASS" : "FAIL";
     }],
   ];
 

@@ -3,6 +3,8 @@ import {
   BENCHMARK_PAYROLL_AMBER,
   BENCHMARK_FACILITY_GREEN,
   BENCHMARK_FACILITY_AMBER,
+  BENCHMARK_DCOH_GREEN,
+  BENCHMARK_DCOH_AMBER,
 } from "./benchmark-thresholds.js";
 
 export type HealthStatus = "healthy" | "watch" | "at_risk";
@@ -30,6 +32,7 @@ interface HealthInput {
   publicRevenuePct: number;
   tuitionPct: number;
   entityType: string;
+  daysCashOnHand?: number;
 }
 
 function profitTerm(entityType: string): string {
@@ -274,6 +277,40 @@ const DIMENSIONS: {
         label: "Healthy",
         explanation: "Revenue is anchored to enrollment-driven income — the strongest foundation for a school model. A focused revenue stream is a strength when backed by dependable demand.",
         watchItem: "Continue to pressure-test enrollment assumptions: recruitment pipeline, waitlist depth, retention rates, and collection reliability.",
+      };
+    },
+  },
+  {
+    id: "days_cash",
+    label: "Days cash on hand",
+    compute: (input) => {
+      const dcoh = input.daysCashOnHand;
+      if (dcoh === undefined || dcoh === null) return null;
+      const rounded = Math.round(dcoh);
+      if (rounded >= BENCHMARK_DCOH_GREEN) {
+        return {
+          dimension: "days_cash",
+          status: "healthy",
+          label: "Healthy",
+          explanation: `${rounded} days of cash on hand exceeds the 90-day benchmark, providing a strong liquidity cushion.`,
+          watchItem: "Maintain this buffer to weather seasonal revenue dips or unexpected expenses.",
+        };
+      }
+      if (rounded >= BENCHMARK_DCOH_AMBER) {
+        return {
+          dimension: "days_cash",
+          status: "watch",
+          label: "Watch closely",
+          explanation: `${rounded} days of cash on hand is above the minimum but below the 90-day target. A large unexpected cost could create a cash crunch.`,
+          watchItem: "Build toward 90+ days of cash on hand by controlling early-year spending and building reserves.",
+        };
+      }
+      return {
+        dimension: "days_cash",
+        status: "at_risk",
+        label: "Needs attention",
+        explanation: `Only ${rounded} days of cash on hand — well below the 45-day minimum. The school is at risk of running out of cash.`,
+        watchItem: "Secure a line of credit or bridge funding, and prioritize building cash reserves.",
       };
     },
   },
