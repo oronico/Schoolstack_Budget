@@ -48,7 +48,7 @@ const MICROSCHOOL: SampleModel = {
     revenueRows: [
       { id: "r1", category: "tuition_and_fees", lineItem: "Annual Tuition", enabled: true, driverType: "per_student", amounts: [8500, 8500, 8500, 8500, 8500], escalationRate: 3 },
       { id: "r2", category: "philanthropy", lineItem: "Community Donations", enabled: true, driverType: "annual_fixed", amounts: [25000, 20000, 15000, 12000, 10000], escalationRate: 0 },
-      { id: "r3", category: "grants_contributions", lineItem: "Startup Grant", enabled: true, driverType: "annual_fixed", amounts: [15000, 10000, 5000, 0, 0], escalationRate: 0 },
+      { id: "r3", category: "philanthropy", lineItem: "Startup Grant", enabled: true, driverType: "annual_fixed", amounts: [15000, 10000, 5000, 0, 0], escalationRate: 0 },
     ],
     staffingRows: [
       { id: "s1", roleName: "Lead Teacher / Founder", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 52000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false, notes: "" },
@@ -107,7 +107,7 @@ const PRIVATE_SCHOOL: SampleModel = {
       { id: "r1", category: "tuition_and_fees", lineItem: "Annual Tuition (K-8)", enabled: true, driverType: "per_student", amounts: [12500, 12500, 12500, 12500, 12500], escalationRate: 4 },
       { id: "r2", category: "tuition_and_fees", lineItem: "Registration & Activity Fees", enabled: true, driverType: "per_student", amounts: [750, 750, 750, 750, 750], escalationRate: 2 },
       { id: "r3", category: "philanthropy", lineItem: "Annual Fund Donations", enabled: true, driverType: "annual_fixed", amounts: [75000, 85000, 95000, 100000, 110000], escalationRate: 0 },
-      { id: "r4", category: "grants_contributions", lineItem: "Foundation Grants", enabled: true, driverType: "annual_fixed", amounts: [50000, 40000, 30000, 25000, 20000], escalationRate: 0 },
+      { id: "r4", category: "philanthropy", lineItem: "Foundation Grants", enabled: true, driverType: "annual_fixed", amounts: [50000, 40000, 30000, 25000, 20000], escalationRate: 0 },
       { id: "r5", category: "other_revenue", lineItem: "After-School Programs", enabled: true, driverType: "per_student", amounts: [500, 500, 500, 500, 500], escalationRate: 3 },
     ],
     staffingRows: [
@@ -178,7 +178,7 @@ const CHARTER_SCHOOL: SampleModel = {
       { id: "r1", category: "public_funding", lineItem: "State Per-Pupil Funding (K-5)", enabled: true, driverType: "per_student", amounts: [8200, 8200, 8200, 8200, 8200], escalationRate: 2 },
       { id: "r2", category: "public_funding", lineItem: "State Per-Pupil Funding (6-8)", enabled: true, driverType: "per_student", amounts: [8800, 8800, 8800, 8800, 8800], escalationRate: 2 },
       { id: "r3", category: "public_funding", lineItem: "Title I Federal Funding", enabled: true, driverType: "per_student", amounts: [1200, 1200, 1200, 1200, 1200], escalationRate: 0 },
-      { id: "r4", category: "grants_contributions", lineItem: "Charter Startup Grant (CSPP)", enabled: true, driverType: "annual_fixed", amounts: [250000, 150000, 0, 0, 0], escalationRate: 0 },
+      { id: "r4", category: "philanthropy", lineItem: "Charter Startup Grant (CSPP)", enabled: true, driverType: "annual_fixed", amounts: [250000, 150000, 0, 0, 0], escalationRate: 0 },
       { id: "r5", category: "other_revenue", lineItem: "After-School & Summer Programs", enabled: true, driverType: "per_student", amounts: [300, 300, 300, 300, 300], escalationRate: 2 },
     ],
     staffingRows: [
