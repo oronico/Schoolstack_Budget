@@ -1,0 +1,95 @@
+# FIX: Corrupt Excel Exports — Binary Response Encoding
+
+**Priority:** P0 — all authenticated Excel exports are corrupt when downloaded through Netlify proxy
+
+**Root cause:** The Netlify reverse proxy re-encodes binary response bodies as UTF-8 when `Content-Length` is not set and `res.send()` is used instead of `res.end()` with an explicit `Buffer`. This replaces bytes ≥ 0x80 with UTF-8 sequences, inflating file sizes by ~29% and corrupting the ZIP structure.
+
+**Evidence:**
+- QA output files in the repo are all valid (30/30 pass)
+- Downloaded files are ~29% larger than originals (48,456 → 62,623 bytes)
+- Byte-level analysis shows U+FFFD replacement characters (0xEFBFBD) where single bytes should be
+- The public export route (`/api/public/export-budget`) already uses the correct pattern and likely works fine
+
+---
+
+## The Fix
+
+**File: `artifacts/api-server/src/routes/models.ts`**
+
+Every `res.send(buffer)` call for binary exports must be replaced with the safe pattern. There are 9 occurrences.
+
+### Pattern to find (9 occurrences):
+
+```typescript
+res.send(buffer);
+```
+
+### Replace each with:
+
+```typescript
+const safeBuf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+res.setHeader("Content-Length", String(safeBuf.length));
+res.end(safeBuf);
+```
+
+### Specific locations (line numbers from current HEAD):
+
+1. **Line 374** — Pro Forma PDF export
+2. **Line 420** — Loan Readiness PDF export  
+3. **Line 463** — Lender Pro Forma XLSX
+4. **Line 538** — Lender Packet PDF
+5. **Line 613** — Board Packet PDF
+6. **Line 660** — Underwriting v1 XLSX (quarantined)
+7. **Line 704** — Underwriting v2 XLSX
+8. **Line 749** — Single-year XLSX
+9. **Line 806** — Standard export XLSX
+
+### Why this works:
+
+1. `Buffer.from()` ensures we have a proper Node.js Buffer (not ArrayBuffer or Uint8Array)
+2. `Content-Length` tells Netlify the exact byte count, preventing chunked-encoding text processing
+3. `res.end()` writes raw bytes without Express's content-type sniffing
+
+### Helper (optional but cleaner):
+
+Add this at the top of `models.ts`:
+
+```typescript
+function sendBinary(res: Response, buffer: Buffer | ArrayBuffer | Uint8Array, contentType: string, filename: string) {
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  res.setHeader("Content-Type", contentType);
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Content-Length", String(buf.length));
+  res.end(buf);
+}
+```
+
+Then each route simplifies to:
+
+```typescript
+sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Lender_Pro_Forma.xlsx`);
+```
+
+or for PDFs:
+
+```typescript
+sendBinary(res, buffer, "application/pdf", `${safeName}_Pro_Forma.pdf`);
+```
+
+---
+
+## Also fix: Duplicate proxy targets
+
+**netlify.toml** proxies to: `https://schoolstackbudget.up.railway.app`
+**_redirects** proxies to: `https://workspaceapi-server-production-bffd.up.railway.app`
+
+These are different Railway URLs. `netlify.toml` takes precedence, but having both is confusing and could cause issues if one is stale. Remove the `/api/*` line from `_redirects` since `netlify.toml` handles it.
+
+---
+
+## Verify
+
+After deploying, test by downloading any authenticated export and checking:
+1. File opens in Excel / Google Sheets without errors
+2. File size is reasonable (not ~29% larger than expected)
+3. `python3 -c "import zipfile; zipfile.ZipFile('file.xlsx').testzip()"` returns None

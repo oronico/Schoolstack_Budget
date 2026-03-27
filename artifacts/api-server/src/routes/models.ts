@@ -27,6 +27,15 @@ import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
 import { generateBoardPacketPDF } from "../lib/packets/board-packet-pdf";
 import { normalizeRevenueRows } from "../lib/workbook-helpers";
+import type { Response } from "express";
+
+function sendBinary(res: Response, buffer: Buffer | ArrayBuffer | Uint8Array, contentType: string, filename: string) {
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer as unknown as ArrayLike<number>);
+  res.setHeader("Content-Type", contentType);
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Content-Length", String(buf.length));
+  res.end(buf);
+}
 
 function normalizeModelData(data: Record<string, unknown>): Record<string, unknown> {
   if (Array.isArray(data.revenueRows)) {
@@ -369,9 +378,7 @@ router.get("/models/:id/export/pro-forma-pdf", authMiddleware, async (req: AuthR
 
     await trackEvent("exported_proforma_pdf", req.userId, { modelId: model.id });
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Pro_Forma.pdf"`);
-    res.send(buffer);
+    sendBinary(res, buffer, "application/pdf", `${safeName}_Pro_Forma.pdf`);
   } catch (err) {
     console.error("Pro Forma PDF export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Pro Forma PDF." });
@@ -415,9 +422,7 @@ router.get("/models/:id/export/loan-readiness-pdf", authMiddleware, async (req: 
 
     await trackEvent("exported_loan_readiness_pdf", req.userId, { modelId: model.id });
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Loan_Readiness_Report.pdf"`);
-    res.send(buffer);
+    sendBinary(res, buffer, "application/pdf", `${safeName}_Loan_Readiness_Report.pdf`);
   } catch (err) {
     console.error("Loan Readiness PDF export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Loan Readiness PDF." });
@@ -458,9 +463,7 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
 
     await trackEvent("exported_lender_proforma", req.userId, { modelId: model.id });
 
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Lender_Pro_Forma.xlsx"`);
-    res.send(buffer);
+    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Lender_Pro_Forma.xlsx`);
   } catch (err) {
     console.error("Lender Pro Forma export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Lender Pro Forma workbook." });
@@ -533,9 +536,7 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
 
     await trackEvent("exported_lender_packet_pdf", req.userId, { modelId: model.id });
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Lender_Packet.pdf"`);
-    res.send(buffer);
+    sendBinary(res, buffer, "application/pdf", `${safeName}_Lender_Packet.pdf`);
   } catch (err) {
     console.error("Lender packet PDF error:", err);
     res.status(500).json({ error: "Something went wrong generating the Lender Packet PDF." });
@@ -608,9 +609,7 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
 
     await trackEvent("exported_board_packet_pdf", req.userId, { modelId: model.id });
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Board_Summary.pdf"`);
-    res.send(buffer);
+    sendBinary(res, buffer, "application/pdf", `${safeName}_Board_Summary.pdf`);
   } catch (err) {
     console.error("Board packet PDF error:", err);
     res.status(500).json({ error: "Something went wrong generating the Board Summary PDF." });
@@ -655,9 +654,7 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
 
     await trackEvent("exported_underwriting", req.userId, { modelId: model.id });
 
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Underwriting_Pro_Forma.xlsx"`);
-    res.send(buffer);
+    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Underwriting_Pro_Forma.xlsx`);
   } catch (err) {
     console.error("Underwriting export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Underwriting Pro Forma workbook." });
@@ -699,9 +696,7 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
 
     await trackEvent("exported_underwriting_v2", req.userId, { modelId: model.id });
 
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Underwriting_Model.xlsx"`);
-    res.send(buffer);
+    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Underwriting_Model.xlsx`);
   } catch (err) {
     console.error("Underwriting V2 export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Underwriting Model workbook." });
@@ -744,9 +739,7 @@ router.get("/models/:id/export/single-year", authMiddleware, async (req: AuthReq
 
     await trackEvent("exported_single_year", req.userId, { modelId: model.id, year: yearIndex + 1 });
 
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}_Year_${yearIndex + 1}_Budget.xlsx"`);
-    res.send(buffer);
+    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Year_${yearIndex + 1}_Budget.xlsx`);
   } catch (err) {
     console.error("Single-year budget export error:", err);
     res.status(500).json({ error: "Something went wrong generating the single-year budget." });
@@ -801,9 +794,7 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
 
     await trackEvent("exported_xlsx", req.userId, { modelId: model.id });
 
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-    res.send(buffer);
+    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
   } catch (err) {
     console.error("Export model error:", err);
     res.status(500).json({ error: "Something went wrong generating the workbook." });
