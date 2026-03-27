@@ -48,8 +48,7 @@ check_xlsx() {
   if [ "$magic" != "504b0304" ]; then
     echo -e "  ${RED}❌ $label — not ZIP (magic: $magic, ${size}B)${NC}"
     FAIL=$((FAIL+1)); return; fi
-  if command -v python3 &>/dev/null; then
-    local result; result=$(python3 -c "
+  local result; result=$(python3 -c "
 import zipfile
 try:
     z = zipfile.ZipFile('$file')
@@ -58,15 +57,12 @@ try:
 except Exception as e:
     print(f'ERROR:{e}')
 " 2>&1)
-    local status="${result%%:*}" detail="${result#*:}"
-    case "$status" in
-      OK)      echo -e "  ${GREEN}✅ $label — valid (${size}B, ${detail} entries)${NC}"; PASS=$((PASS+1)) ;;
-      CORRUPT) echo -e "  ${RED}❌ $label — corrupt: ${detail} (${size}B)${NC}"; FAIL=$((FAIL+1)) ;;
-      ERROR)   echo -e "  ${RED}❌ $label — error: ${detail} (${size}B)${NC}"; FAIL=$((FAIL+1)) ;;
-    esac
-  else
-    echo -e "  ${GREEN}✅ $label — ZIP magic OK (${size}B, python3 unavailable for deep check)${NC}"; PASS=$((PASS+1))
-  fi
+  local status="${result%%:*}" detail="${result#*:}"
+  case "$status" in
+    OK)      echo -e "  ${GREEN}✅ $label — valid (${size}B, ${detail} entries)${NC}"; PASS=$((PASS+1)) ;;
+    CORRUPT) echo -e "  ${RED}❌ $label — corrupt: ${detail} (${size}B)${NC}"; FAIL=$((FAIL+1)) ;;
+    ERROR)   echo -e "  ${RED}❌ $label — error: ${detail} (${size}B)${NC}"; FAIL=$((FAIL+1)) ;;
+  esac
 }
 
 check_pdf() {
@@ -95,10 +91,10 @@ check_json() {
   if is_html "$file"; then
     echo -e "  ${RED}❌ $label — got HTML instead of JSON (${size}B)${NC}"
     FAIL=$((FAIL+1)); return; fi
-  if node -e "const d=JSON.parse(require('fs').readFileSync('$file','utf8')); if(d.error) process.exit(1)" 2>/dev/null; then
+  if python3 -c "import json; d=json.load(open('$file')); exit(1 if 'error' in d else 0)" 2>/dev/null; then
     echo -e "  ${GREEN}✅ $label — valid JSON (${size}B)${NC}"; PASS=$((PASS+1))
-  elif node -e "JSON.parse(require('fs').readFileSync('$file','utf8'))" 2>/dev/null; then
-    local err; err=$(node -e "const d=JSON.parse(require('fs').readFileSync('$file','utf8')); console.log(d.error||'?')" 2>/dev/null)
+  elif python3 -c "import json; json.load(open('$file'))" 2>/dev/null; then
+    local err; err=$(python3 -c "import json; print(json.load(open('$file')).get('error','?'))" 2>/dev/null)
     echo -e "  ${RED}❌ $label — error response: ${err}${NC}"; FAIL=$((FAIL+1))
   else
     echo -e "  ${RED}❌ $label — not JSON (${size}B)${NC}"; FAIL=$((FAIL+1))
@@ -203,7 +199,7 @@ if [ -z "$TOKEN" ] || [ -z "$MODEL_ID" ]; then
 else
   AUTH="Authorization: Bearer $TOKEN"
 
-  # ── 5 Auth XLSX ──
+  # ── 5 XLSX ──
 
   AUTH_XLSX=(
     "export:Standard"
@@ -236,7 +232,7 @@ else
   done
   echo ""
 
-  # ── 4 Auth PDF ──
+  # ── 4 PDF ──
 
   AUTH_PDF=(
     "export/pro-forma-pdf:Pro Forma PDF"
@@ -268,7 +264,7 @@ else
   done
   echo ""
 
-  # ── 2 Auth JSON ──
+  # ── 2 JSON ──
 
   AUTH_JSON=(
     "export/lender-packet:Lender Packet JSON"
@@ -304,6 +300,7 @@ echo "  Files: $OUT_DIR/"
 echo ""
 
 if [ "$FAIL" -gt 0 ]; then
+  # Diagnosis
   nf=0; df=0; nh=0
   for f in "$OUT_DIR"/*_Netlify*; do
     [ -f "$f" ] || continue
@@ -324,12 +321,15 @@ if [ "$FAIL" -gt 0 ]; then
     echo "    Fix: Add Content-Length + use res.end(Buffer.from(buffer)) in models.ts"
   elif [ "$df" -gt 0 ]; then
     echo -e "  ${RED}→ Railway failing — server-side export error${NC}"
-    echo "    Check Railway logs for stack traces"
+    echo "    Check Railway logs for error details"
+  else
+    echo -e "  ${RED}→ Binary corruption detected — check size comparison above${NC}"
+    echo "    Fix: Add Content-Length + use res.end(Buffer.from(buffer)) in models.ts"
   fi
   echo ""
   exit 1
-elif [ "$PASS" -gt 0 ]; then
-  echo -e "  ${GREEN}${BOLD}✅  All exports valid.${NC}"
+else
+  echo -e "  ${GREEN}${BOLD}✅ All exports valid.${NC}"
   echo ""
   exit 0
 fi
