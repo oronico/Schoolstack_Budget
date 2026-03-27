@@ -20,6 +20,7 @@ PASS=0
 FAIL=0
 SKIP=0
 
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -48,6 +49,7 @@ check_xlsx() {
     return
   fi
 
+  # Check ZIP magic bytes (PK\x03\x04)
   local magic
   magic=$(od -A n -t x1 -N 4 "$file" | tr -d ' ')
   if [ "$magic" != "504b0304" ]; then
@@ -59,9 +61,9 @@ check_xlsx() {
     return
   fi
 
-  if command -v python3 &>/dev/null; then
-    local result
-    result=$(python3 -c "
+  # Python ZIP validation
+  local result
+  result=$(python3 -c "
 import zipfile, sys
 try:
     z = zipfile.ZipFile('$file')
@@ -74,52 +76,23 @@ except Exception as e:
     print(f'ERROR:{e}')
 " 2>&1)
 
-    local status="${result%%:*}"
-    local detail="${result#*:}"
+  local status="${result%%:*}"
+  local detail="${result#*:}"
 
-    case "$status" in
-      OK)
-        echo -e "  ${GREEN}✅ $label — valid XLSX (${size} bytes, ${detail} entries)${NC}"
-        PASS=$((PASS + 1))
-        ;;
-      CORRUPT)
-        echo -e "  ${RED}❌ $label — ZIP corrupt at: ${detail} (${size} bytes)${NC}"
-        FAIL=$((FAIL + 1))
-        ;;
-      ERROR)
-        echo -e "  ${RED}❌ $label — ZIP error: ${detail} (${size} bytes)${NC}"
-        FAIL=$((FAIL + 1))
-        ;;
-    esac
-  else
-    local node_check
-    node_check=$(node -e "
-const fs = require('fs');
-const buf = fs.readFileSync('$file');
-const sig = buf.slice(0,4).toString('hex');
-if (sig !== '504b0304') { console.log('BAD_SIG:' + sig); process.exit(0); }
-const { execSync } = require('child_process');
-try {
-  const AdmZip = require('adm-zip');
-  const z = new AdmZip(buf);
-  console.log('OK:' + z.getEntries().length);
-} catch(e) {
-  console.log('OK:zip-magic-valid');
-}
-" 2>&1)
-    local status="${node_check%%:*}"
-    local detail="${node_check#*:}"
-    case "$status" in
-      OK)
-        echo -e "  ${GREEN}✅ $label — valid XLSX (${size} bytes, ${detail} entries)${NC}"
-        PASS=$((PASS + 1))
-        ;;
-      *)
-        echo -e "  ${GREEN}✅ $label — XLSX magic OK (${size} bytes)${NC}"
-        PASS=$((PASS + 1))
-        ;;
-    esac
-  fi
+  case "$status" in
+    OK)
+      echo -e "  ${GREEN}✅ $label — valid XLSX (${size} bytes, ${detail} entries)${NC}"
+      PASS=$((PASS + 1))
+      ;;
+    CORRUPT)
+      echo -e "  ${RED}❌ $label — ZIP corrupt at: ${detail} (${size} bytes)${NC}"
+      FAIL=$((FAIL + 1))
+      ;;
+    ERROR)
+      echo -e "  ${RED}❌ $label — ZIP error: ${detail} (${size} bytes)${NC}"
+      FAIL=$((FAIL + 1))
+      ;;
+  esac
 }
 
 check_pdf() {
@@ -137,8 +110,6 @@ check_pdf() {
 
   if [ "$size" -lt 100 ]; then
     echo -e "  ${RED}❌ $label — too small (${size} bytes)${NC}"
-    head -c 200 "$file"
-    echo ""
     FAIL=$((FAIL + 1))
     return
   fi
@@ -149,7 +120,7 @@ check_pdf() {
     echo -e "  ${GREEN}✅ $label — valid PDF (${size} bytes)${NC}"
     PASS=$((PASS + 1))
   else
-    echo -e "  ${RED}❌ $label — not a valid PDF (magic: '${magic}', ${size} bytes)${NC}"
+    echo -e "  ${RED}❌ $label — not a valid PDF (${size} bytes)${NC}"
     FAIL=$((FAIL + 1))
   fi
 }
@@ -167,18 +138,15 @@ compare_sizes() {
   d_size=$(wc -c < "$direct" | tr -d ' ')
   p_size=$(wc -c < "$proxy" | tr -d ' ')
 
-  if [ "$d_size" -eq 0 ]; then
-    return
-  fi
-
   if [ "$d_size" -eq "$p_size" ]; then
-    echo -e "     ${GREEN}↳ Sizes match: direct=${d_size} proxy=${p_size}${NC}"
+    echo -e "  ${GREEN}   ↳ Sizes match: direct=${d_size} proxy=${p_size}${NC}"
   else
     local pct=$(( (p_size - d_size) * 100 / d_size ))
-    echo -e "     ${RED}↳ SIZE MISMATCH: direct=${d_size} proxy=${p_size} (${pct}%) — proxy is corrupting binary data${NC}"
+    echo -e "  ${RED}   ↳ SIZE MISMATCH: direct=${d_size} proxy=${p_size} (+${pct}%) — proxy is corrupting binary data${NC}"
   fi
 }
 
+# Minimal test payload for public endpoints
 PAYLOAD='{
   "schoolProfile": {
     "schoolName": "Smoke Test School",
@@ -217,6 +185,8 @@ echo "  Railway:  $RAILWAY_BASE"
 echo "  Output:   $OUT_DIR"
 echo ""
 
+# ── PUBLIC EXPORTS (no auth needed) ──────────────────────────
+
 echo -e "${BOLD}── Public Exports (via Netlify proxy) ──${NC}"
 echo ""
 
@@ -225,12 +195,6 @@ curl -s -X POST "$NETLIFY_BASE/api/public/export-budget" \
   -d "$PAYLOAD" \
   -o "$OUT_DIR/public_budget_netlify.xlsx"
 check_xlsx "$OUT_DIR/public_budget_netlify.xlsx" "Public Budget (Netlify)"
-
-curl -s -X POST "$NETLIFY_BASE/api/public/export-underwriting" \
-  -H "Content-Type: application/json" \
-  -d "$PAYLOAD" \
-  -o "$OUT_DIR/public_underwriting_netlify.xlsx"
-check_xlsx "$OUT_DIR/public_underwriting_netlify.xlsx" "Public Underwriting (Netlify)"
 
 curl -s -X POST "$NETLIFY_BASE/api/public/export-single-year" \
   -H "Content-Type: application/json" \
@@ -248,12 +212,6 @@ curl -s -X POST "$RAILWAY_BASE/api/public/export-budget" \
   -o "$OUT_DIR/public_budget_direct.xlsx"
 check_xlsx "$OUT_DIR/public_budget_direct.xlsx" "Public Budget (Direct)"
 
-curl -s -X POST "$RAILWAY_BASE/api/public/export-underwriting" \
-  -H "Content-Type: application/json" \
-  -d "$PAYLOAD" \
-  -o "$OUT_DIR/public_underwriting_direct.xlsx"
-check_xlsx "$OUT_DIR/public_underwriting_direct.xlsx" "Public Underwriting (Direct)"
-
 curl -s -X POST "$RAILWAY_BASE/api/public/export-single-year" \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD" \
@@ -263,38 +221,29 @@ check_xlsx "$OUT_DIR/public_single_year_direct.xlsx" "Public Single-Year (Direct
 echo ""
 echo -e "${CYAN}  Size comparison — public exports:${NC}"
 compare_sizes "$OUT_DIR/public_budget_direct.xlsx" "$OUT_DIR/public_budget_netlify.xlsx" "Budget"
-compare_sizes "$OUT_DIR/public_underwriting_direct.xlsx" "$OUT_DIR/public_underwriting_netlify.xlsx" "Underwriting"
 compare_sizes "$OUT_DIR/public_single_year_direct.xlsx" "$OUT_DIR/public_single_year_netlify.xlsx" "Single-Year"
+
+# ── AUTHENTICATED EXPORTS ────────────────────────────────────
 
 if [ -n "$TOKEN" ] && [ -n "$MODEL_ID" ]; then
   AUTH="Authorization: Bearer $TOKEN"
 
+  echo ""
+  echo -e "${BOLD}── Authenticated Exports (via Netlify proxy) ──${NC}"
+  echo ""
+
   XLSX_ROUTES=(
-    "export:Standard Export"
+    "export:Standard"
     "export/lender-proforma:Lender Pro Forma"
-    "export/underwriting:Underwriting V1 (14-tab)"
     "export/underwriting-v2:Underwriting V2 (21-tab)"
-    "export/single-year?year=0:Single-Year Budget"
-    "export/lender-packet:Lender Packet XLSX"
-    "export/board-packet:Board Summary XLSX"
+    "export/single-year:Single-Year"
   )
-
-  PDF_ROUTES=(
-    "export/pro-forma-pdf:Pro Forma PDF"
-    "export/loan-readiness-pdf:Loan Readiness PDF"
-    "export/lender-packet-pdf:Lender Packet PDF"
-    "export/board-packet-pdf:Board Summary PDF"
-  )
-
-  echo ""
-  echo -e "${BOLD}── Authenticated XLSX Exports (via Netlify proxy) ──${NC}"
-  echo ""
 
   for entry in "${XLSX_ROUTES[@]}"; do
     route="${entry%%:*}"
     label="${entry#*:}"
     slug=$(echo "$label" | tr ' ' '_' | tr '(' '_' | tr ')' '_' | tr -d '/')
-
+    
     curl -s -H "$AUTH" \
       "$NETLIFY_BASE/api/models/$MODEL_ID/$route" \
       -o "$OUT_DIR/auth_${slug}_netlify.xlsx"
@@ -302,14 +251,14 @@ if [ -n "$TOKEN" ] && [ -n "$MODEL_ID" ]; then
   done
 
   echo ""
-  echo -e "${BOLD}── Authenticated XLSX Exports (direct to Railway) ──${NC}"
+  echo -e "${BOLD}── Authenticated Exports (direct to Railway) ──${NC}"
   echo ""
 
   for entry in "${XLSX_ROUTES[@]}"; do
     route="${entry%%:*}"
     label="${entry#*:}"
     slug=$(echo "$label" | tr ' ' '_' | tr '(' '_' | tr ')' '_' | tr -d '/')
-
+    
     curl -s -H "$AUTH" \
       "$RAILWAY_BASE/api/models/$MODEL_ID/$route" \
       -o "$OUT_DIR/auth_${slug}_direct.xlsx"
@@ -317,16 +266,22 @@ if [ -n "$TOKEN" ] && [ -n "$MODEL_ID" ]; then
   done
 
   echo ""
-  echo -e "${CYAN}  Size comparison — authenticated XLSX:${NC}"
+  echo -e "${CYAN}  Size comparison — authenticated exports:${NC}"
   for entry in "${XLSX_ROUTES[@]}"; do
     label="${entry#*:}"
     slug=$(echo "$label" | tr ' ' '_' | tr '(' '_' | tr ')' '_' | tr -d '/')
     compare_sizes "$OUT_DIR/auth_${slug}_direct.xlsx" "$OUT_DIR/auth_${slug}_netlify.xlsx" "$label"
   done
 
+  # PDF exports
   echo ""
-  echo -e "${BOLD}── PDF Exports (via Netlify proxy) ──${NC}"
+  echo -e "${BOLD}── PDF Exports ──${NC}"
   echo ""
+
+  PDF_ROUTES=(
+    "export/pro-forma-pdf:Pro Forma PDF"
+    "export/lender-packet-pdf:Lender Packet PDF"
+  )
 
   for entry in "${PDF_ROUTES[@]}"; do
     route="${entry%%:*}"
@@ -337,29 +292,11 @@ if [ -n "$TOKEN" ] && [ -n "$MODEL_ID" ]; then
       "$NETLIFY_BASE/api/models/$MODEL_ID/$route" \
       -o "$OUT_DIR/auth_${slug}_netlify.pdf"
     check_pdf "$OUT_DIR/auth_${slug}_netlify.pdf" "$label (Netlify)"
-  done
-
-  echo ""
-  echo -e "${BOLD}── PDF Exports (direct to Railway) ──${NC}"
-  echo ""
-
-  for entry in "${PDF_ROUTES[@]}"; do
-    route="${entry%%:*}"
-    label="${entry#*:}"
-    slug=$(echo "$label" | tr ' ' '_' | tr -d '/')
 
     curl -s -H "$AUTH" \
       "$RAILWAY_BASE/api/models/$MODEL_ID/$route" \
       -o "$OUT_DIR/auth_${slug}_direct.pdf"
     check_pdf "$OUT_DIR/auth_${slug}_direct.pdf" "$label (Direct)"
-  done
-
-  echo ""
-  echo -e "${CYAN}  Size comparison — PDF exports:${NC}"
-  for entry in "${PDF_ROUTES[@]}"; do
-    label="${entry#*:}"
-    slug=$(echo "$label" | tr ' ' '_' | tr -d '/')
-    compare_sizes "$OUT_DIR/auth_${slug}_direct.pdf" "$OUT_DIR/auth_${slug}_netlify.pdf" "$label"
   done
 
 else
@@ -369,6 +306,8 @@ else
   echo "     Get your token from browser DevTools > Application > localStorage > auth_token"
   SKIP=1
 fi
+
+# ── SUMMARY ──────────────────────────────────────────────────
 
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════════════════════════╗${NC}"
@@ -383,10 +322,10 @@ echo ""
 if [ "$FAIL" -gt 0 ]; then
   echo -e "  ${RED}${BOLD}⚠️  FAILURES DETECTED${NC}"
   echo ""
-  echo "  If Netlify exports fail but Direct exports pass:"
-  echo "    → The Netlify proxy is corrupting binary responses."
-  echo "    → Check _redirects has the /api/* rule BEFORE /* catch-all."
-  echo "    → Verify sendBinary() is used (not res.send) for all exports."
+  echo "  If Netlify exports are corrupt but Direct exports are valid,"
+  echo "  apply the fix in FIX_Corrupt_Excel_Exports.md:"
+  echo "    Replace res.send(buffer) with res.end(Buffer.from(buffer))"
+  echo "    and add Content-Length header on all binary export routes."
   echo ""
   exit 1
 elif [ "$PASS" -gt 0 ]; then
