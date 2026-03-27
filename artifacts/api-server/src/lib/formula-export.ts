@@ -9,6 +9,8 @@ import {
   computeDebtServiceForYear as sharedComputeDebtService,
   computeFacilityCostByYear,
   computeInstructionalCostByYear,
+  computeNewStudents,
+  computeReturningStudents,
   type RevenueRow as SharedRevenueRow, type StaffingRow as SharedStaffingRow,
   type ExpenseRow as SharedExpenseRow, type CapitalDebtRow as SharedCapDebtRow,
   type TuitionTier as SharedTuitionTier, type SchoolProfile as SharedSchoolProfile,
@@ -80,7 +82,7 @@ function yearLabels(sp: SchoolProfile): string[] {
   return [0, 1, 2, 3, 4].map(i => schoolYearLabel(base, i));
 }
 
-interface Enrollment { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number; }
+interface Enrollment { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number; retentionRate?: number; }
 
 interface RevenueRow {
   id: string; category: string; lineItem: string; enabled: boolean;
@@ -330,7 +332,7 @@ function resolveEsc(rowEsc?: number, fallback?: number): number {
   return fallback ?? 0;
 }
 
-function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number): number {
+function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number): number {
   let base = amounts?.[y] ?? 0;
   const esc = resolveEsc(escalationRate, fallbackInflation);
   if (esc !== 0 && y > 0) {
@@ -340,6 +342,8 @@ function driverVal(amounts: number[] | undefined, y: number, dt: string, student
   switch (dt) {
     case "monthly": return base * 12;
     case "per_student": return base * students;
+    case "per_new_student": return base * (newStudents ?? students);
+    case "per_returning_student": return base * (returningStudents ?? 0);
     case "annual_fixed": return base;
     default: return base;
   }
@@ -450,7 +454,7 @@ function computePersonnelForYear(
 }
 
 function computeExpenseForYear(
-  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number
+  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number
 ): number {
   let total = 0;
   const fallback = costInflationPct ?? 0;
@@ -466,7 +470,7 @@ function computeExpenseForYear(
       }
       total += (pct / 100) * totalRevenue;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback);
+      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents);
     }
   }
   return total;
@@ -1029,6 +1033,7 @@ function buildFiveYearModel(
   const tiers = data.tuitionTiers || [];
   const yc = 5;
   const costInflPct = costInflation * 100;
+  const rr = data.enrollment?.retentionRate ?? 85;
 
   ws.columns = [{ width: 38 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }];
 
@@ -1172,7 +1177,7 @@ function buildFiveYearModel(
           }
           val = Math.round((pct / 100) * rev * pf);
         } else {
-          val = Math.round(driverVal(ex.amounts, y, ex.driverType, students, ex.escalationRate, costInflPct) * pf);
+          val = Math.round(driverVal(ex.amounts, y, ex.driverType, students, ex.escalationRate, costInflPct, computeNewStudents(enrollment, rr, y), computeReturningStudents(enrollment, rr, y)) * pf);
         }
         cell.value = val;
         cell.numFmt = CUR; dc(cell);
@@ -1198,7 +1203,7 @@ function buildFiveYearModel(
           }
           catSum += Math.round((pct / 100) * rev * pf);
         } else {
-          catSum += Math.round(driverVal(ex.amounts, y, ex.driverType, students, ex.escalationRate, costInflPct) * pf);
+          catSum += Math.round(driverVal(ex.amounts, y, ex.driverType, students, ex.escalationRate, costInflPct, computeNewStudents(enrollment, rr, y), computeReturningStudents(enrollment, rr, y)) * pf);
         }
       }
       cell.value = catSum;
@@ -1214,7 +1219,7 @@ function buildFiveYearModel(
     const students = enrollment[y];
     const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct, sp);
     const pf = y === 0 ? prorationFactor : 1;
-    const expVal = computeExpenseForYear(expenseRows, y, students, rev, costInflPct) * pf;
+    const expVal = computeExpenseForYear(expenseRows, y, students, rev, costInflPct, computeNewStudents(enrollment, rr, y), computeReturningStudents(enrollment, rr, y)) * pf;
     const sumParts = opexCatTotalRows.map(tr => cn(tr, y + 2)).join("+");
     setFormula(cell, sumParts, Math.round(expVal));
     cell.numFmt = CUR; gc(cell);
@@ -1268,7 +1273,7 @@ function buildFiveYearModel(
     const pf = y === 0 ? prorationFactor : 1;
     const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     const pers = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, enrollment[y]);
-    const exp = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct) * pf;
+    const exp = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct, computeNewStudents(enrollment, rr, y), computeReturningStudents(enrollment, rr, y)) * pf;
     const cd = computeCapDebtForYear(capDebtRows, y, enrollment[y]);
     const revRounded = Math.round(rev * pf);
     const persRounded = Math.round(pers);
@@ -1631,6 +1636,7 @@ function buildProForma(
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
   const costInflPct = costInflation * 100;
+  const rr2 = data.enrollment?.retentionRate ?? 85;
 
   const isPartial = sp.isPartialFirstYear || false;
   const opMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
@@ -1743,7 +1749,7 @@ function buildProForma(
   const pfOpexFirstRow = r + 1;
 
   const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp);
-  const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct) * prorationFactor;
+  const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct, computeNewStudents(enrollment, rr2, 0), computeReturningStudents(enrollment, rr2, 0)) * prorationFactor;
   const monthlyOps = opex0 / (opMonths || 12);
 
   const pfBaseOpexCats = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
@@ -1934,6 +1940,7 @@ function buildActualsVsProjections(
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
   const costInflPct = costInflation * 100;
+  const rr3 = data.enrollment?.retentionRate ?? 85;
 
   const hasPrior = prior && (prior.totalRevenue || prior.endingEnrollment || prior.totalExpenses);
   const hasCurrent = current && (current.projectedRevenue || current.currentEnrollment || current.projectedExpenses);
@@ -1973,8 +1980,8 @@ function buildActualsVsProjections(
   const pf = prorationFactor;
   const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, enrollment[0]);
   const pers1 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 1, enrollment[1]);
-  const exp0 = computeExpenseForYear(expenseRows, 0, enrollment[0], rev0, costInflPct) * pf;
-  const exp1 = computeExpenseForYear(expenseRows, 1, enrollment[1], rev1, costInflPct);
+  const exp0 = computeExpenseForYear(expenseRows, 0, enrollment[0], rev0, costInflPct, computeNewStudents(enrollment, rr3, 0), computeReturningStudents(enrollment, rr3, 0)) * pf;
+  const exp1 = computeExpenseForYear(expenseRows, 1, enrollment[1], rev1, costInflPct, computeNewStudents(enrollment, rr3, 1), computeReturningStudents(enrollment, rr3, 1));
   const cd0 = computeCapDebtForYear(capDebtRows, 0, enrollment[0]);
   const cd1 = computeCapDebtForYear(capDebtRows, 1, enrollment[1]);
   const totalExp0 = Math.round(pers0) + Math.round(exp0) + Math.round(cd0);
@@ -2171,6 +2178,7 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   const capDebtRows = data.capitalAndDebtRows || [];
 
   const enrollment = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0];
+  const retentionRate = en.retentionRate ?? 85;
   const salaryEsc = (data.facilities as Record<string, unknown>)?.annualSalaryIncrease
     ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100 : 0;
   const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
@@ -2245,7 +2253,7 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     }
   }
 
-  const facCostByYrF = computeFacilityCostByYear(dbExpRows, enrollment, revByYear, 5, costInflPct);
+  const facCostByYrF = computeFacilityCostByYear(dbExpRows, enrollment, revByYear, 5, costInflPct, retentionRate);
   const instrCostByYrF = computeInstructionalCostByYear(dbExpRows, enrollment, revByYear, 5, costInflPct);
 
   await addDashboardSheet(wb, {

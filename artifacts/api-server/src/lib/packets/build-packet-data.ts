@@ -16,6 +16,8 @@ import {
   computeDebtServiceForYear,
   normalizeStaffingRow,
   netIncomeLabel,
+  computeNewStudents,
+  computeReturningStudents,
 } from "../workbook-helpers";
 import { buildNarrative } from "./build-narrative";
 import {
@@ -112,12 +114,15 @@ function computeYearlyData(
   const prorationFactor = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 12) / 12 : 1;
   const salaryEsc = (sp as Record<string, unknown>).salaryEscalation as number | undefined;
   const costInflPct = (sp as Record<string, unknown>).costInflationPct as number | undefined;
+  const pktRR = (md.enrollment as Record<string, unknown> | undefined)?.retentionRate as number | undefined ?? 85;
 
   for (let y = 0; y < yearCount; y++) {
     const students = enrollment[y] || 0;
+    const ns = computeNewStudents(enrollment, pktRR, y);
+    const rs = computeReturningStudents(enrollment, pktRR, y);
     const totalRevenue = computeRevenueForYear(md.revenueRows || [], y, students, md.tuitionTiers, costInflPct, sp);
     const totalStaffing = computePersonnelForYear(normalized, salaryEsc || 0, prorationFactor, y, students);
-    const opex = computeExpenseForYear(md.expenseRows || [], y, students, totalRevenue, costInflPct);
+    const opex = computeExpenseForYear(md.expenseRows || [], y, students, totalRevenue, costInflPct, ns, rs);
     const capDebt = computeCapDebtForYear(md.capitalAndDebtRows || [], y, students);
     const debtService = computeDebtServiceForYear(md.capitalAndDebtRows || [], y);
     const totalExpenses = totalStaffing + opex + capDebt;

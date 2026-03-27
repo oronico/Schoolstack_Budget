@@ -8,7 +8,7 @@ export type BuiltInExpenseCategory =
 
 export type ExpenseCategory = BuiltInExpenseCategory | (string & {});
 
-export type ExpenseDriverType = "annual_fixed" | "monthly" | "per_student" | "percent_of_revenue";
+export type ExpenseDriverType = "annual_fixed" | "monthly" | "per_student" | "per_new_student" | "per_returning_student" | "percent_of_revenue";
 
 export type SchoolStage = "new_school" | "operating_school";
 export type FundingProfile = "tuition_based" | "charter_public_funded" | "hybrid_mixed";
@@ -87,6 +87,8 @@ export const DRIVER_TYPE_LABELS: Record<ExpenseDriverType, string> = {
   annual_fixed: "Annual Fixed",
   monthly: "Monthly",
   per_student: "Per Student",
+  per_new_student: "Per New Student",
+  per_returning_student: "Per Returning Student",
   percent_of_revenue: "% of Revenue",
 };
 
@@ -102,7 +104,8 @@ interface ExpenseLineItemDef {
 
 const EXPENSE_LINE_ITEMS: ExpenseLineItemDef[] = [
   // ── Instructional Program (5xxx) ──
-  { id: "curriculum_materials", category: "instructional_program", lineItem: "Curriculum & Instructional Materials", driverType: "per_student", defaultAmount: 300, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "5100" },
+  { id: "curriculum_materials", category: "instructional_program", lineItem: "Curriculum & Instructional Materials (New)", driverType: "per_new_student", defaultAmount: 500, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "5100" },
+  { id: "curriculum_materials_returning", category: "instructional_program", lineItem: "Curriculum & Instructional Materials (Returning)", driverType: "per_returning_student", defaultAmount: 100, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "5101" },
   { id: "classroom_supplies", category: "instructional_program", lineItem: "Classroom Supplies", driverType: "per_student", defaultAmount: 100, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "5110" },
   { id: "testing_assessment", category: "instructional_program", lineItem: "Testing & Assessment", driverType: "per_student", defaultAmount: 50, enabledFor: ["charter_public_funded", "hybrid_mixed"], accountCode: "5120" },
   { id: "special_education", category: "instructional_program", lineItem: "Special Education Services", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "5130" },
@@ -119,7 +122,8 @@ const EXPENSE_LINE_ITEMS: ExpenseLineItemDef[] = [
   { id: "parent_communication", category: "instructional_program", lineItem: "Parent Communication Tools", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "5420" },
 
   // ── Technology (6xxx) ──
-  { id: "student_devices", category: "technology", lineItem: "Student Devices & Hardware", driverType: "per_student", defaultAmount: 150, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "6100" },
+  { id: "student_devices", category: "technology", lineItem: "Student Devices & Hardware (New)", driverType: "per_new_student", defaultAmount: 400, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "6100" },
+  { id: "student_devices_returning", category: "technology", lineItem: "Student Devices & Hardware (Returning)", driverType: "per_returning_student", defaultAmount: 50, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "6101" },
   { id: "software_licenses", category: "technology", lineItem: "Software & Subscriptions (SIS, LMS)", driverType: "annual_fixed", defaultAmount: 5000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "6200" },
   { id: "internet_telecom", category: "technology", lineItem: "Internet & Telecommunications", driverType: "monthly", defaultAmount: 300, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "6300" },
   { id: "website_hosting", category: "technology", lineItem: "Website & Domain Hosting", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "6350" },

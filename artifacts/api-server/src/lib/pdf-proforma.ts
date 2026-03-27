@@ -37,6 +37,7 @@ interface Enrollment {
   year3?: number;
   year4?: number;
   year5?: number;
+  retentionRate?: number;
 }
 
 interface RevenueRow {
@@ -134,11 +135,24 @@ const FUNC_CATEGORY_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number): number {
+function localNewStudentsPDF(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return enrollment[0] || 0;
+  const returning = Math.round((enrollment[y - 1] || 0) * (retentionRate / 100));
+  return Math.max(0, (enrollment[y] || 0) - Math.min(returning, enrollment[y] || 0));
+}
+
+function localReturningStudentsPDF(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return 0;
+  return Math.min(enrollment[y] || 0, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
+}
+
+function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number, newStudents?: number, returningStudents?: number): number {
   const base = amounts?.[yearIdx] ?? 0;
   switch (driverType) {
     case "monthly": return base * 12;
     case "per_student": return base * students;
+    case "per_new_student": return base * (newStudents ?? students);
+    case "per_returning_student": return base * (returningStudents ?? 0);
     case "annual_fixed": return base;
     default: return base;
   }
@@ -258,14 +272,14 @@ function computeStaffingCost(rows: StaffingRow[], salaryEsc: number, pf: number)
   return total * salaryEsc * pf;
 }
 
-function computeExpensesCost(rows: ExpenseRow[], yearIdx: number, students: number, totalRev: number): number {
+function computeExpensesCost(rows: ExpenseRow[], yearIdx: number, students: number, totalRev: number, newStudents?: number, returningStudents?: number): number {
   let total = 0;
   for (const r of rows) {
     if (!r.enabled) continue;
     if (r.driverType === "percent_of_revenue") {
       total += ((r.amounts?.[yearIdx] ?? 0) / 100) * totalRev;
     } else {
-      total += computeDriverValue(r.amounts, yearIdx, r.driverType, students);
+      total += computeDriverValue(r.amounts, yearIdx, r.driverType, students, newStudents, returningStudents);
     }
   }
   return total;
@@ -325,6 +339,7 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   ];
 
   const salaryEscRate = ((rawData.facilities as Record<string, unknown>)?.annualSalaryIncrease as number || 0) / 100;
+  const pdfRR = en.retentionRate ?? 85;
   const isPartial = sp.isPartialFirstYear || false;
   const opMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
   const prorationFactor = opMonths / 12;
@@ -415,7 +430,7 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
           if (r.driverType === "percent_of_revenue") {
             catAmounts[y] += ((r.amounts?.[y] ?? 0) / 100) * totalRev;
           } else {
-            catAmounts[y] += computeDriverValue(r.amounts, y, r.driverType, enrollment[y]);
+            catAmounts[y] += computeDriverValue(r.amounts, y, r.driverType, enrollment[y], localNewStudentsPDF(enrollment, pdfRR, y), localReturningStudentsPDF(enrollment, pdfRR, y));
           }
         }
         yearTotals[y] += catAmounts[y];
@@ -442,7 +457,7 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     const salaryEsc = Math.pow(1 + salaryEscRate, y);
     const rev = computeRevenueForYear(revenueRows, y, enrollment[y], data.tuitionTiers, sp);
     const staff = computeStaffingCost(staffingRows, salaryEsc, pf);
-    const opex = computeExpensesCost(expenseRows, y, enrollment[y], rev);
+    const opex = computeExpensesCost(expenseRows, y, enrollment[y], rev, localNewStudentsPDF(enrollment, pdfRR, y), localReturningStudentsPDF(enrollment, pdfRR, y));
     const capDebt = computeCapDebt(capDebtRows, y, enrollment[y]);
     const ni = rev - staff - opex - capDebt;
     cumNI += ni;

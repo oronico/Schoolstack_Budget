@@ -1345,9 +1345,13 @@ function ExpenseLineCard({
 
   const perStudentHint = row.driverType === "per_student" && y1Students > 0
     ? `Y1 total: ${formatCurrency((row.amounts[0] || 0) * y1Students)}`
-    : row.driverType === "annual_fixed" && y1Students > 0 && row.amounts[0] > 0
-      ? `≈ ${formatCurrency(Math.round(row.amounts[0] / y1Students))} / student`
-      : null;
+    : row.driverType === "per_new_student" && y1Students > 0
+      ? `Y1 total: ${formatCurrency((row.amounts[0] || 0) * y1Students)} (all students are new in Year 1)`
+      : row.driverType === "per_returning_student"
+        ? "Y1 total: $0 (no returning students in Year 1)"
+        : row.driverType === "annual_fixed" && y1Students > 0 && row.amounts[0] > 0
+          ? `≈ ${formatCurrency(Math.round(row.amounts[0] / y1Students))} / student`
+          : null;
 
   return (
     <div className={cn("rounded-xl border p-4 transition-all", row.enabled ? "border-border bg-white" : "border-border/50 bg-muted/30 opacity-60")}>

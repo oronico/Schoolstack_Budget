@@ -38,13 +38,26 @@ export interface ScenarioResult {
   nudges: NudgeItem[];
 }
 
+function seNewStudents(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return enrollment[0] || 0;
+  const returning = Math.round((enrollment[y - 1] || 0) * (retentionRate / 100));
+  return Math.max(0, (enrollment[y] || 0) - Math.min(returning, enrollment[y] || 0));
+}
+
+function seReturningStudents(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return 0;
+  return Math.min(enrollment[y] || 0, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
+}
+
 function driverVal(
   amounts: number[] | undefined,
   y: number,
   driverType: string,
   students: number,
   escalationRate?: number,
-  fallbackEsc?: number
+  fallbackEsc?: number,
+  newStudents?: number,
+  returningStudents?: number
 ): number {
   const raw = amounts?.[y] ?? amounts?.[0] ?? 0;
   const esc = escalationRate ?? fallbackEsc ?? 0;
@@ -59,6 +72,10 @@ function driverVal(
       return base * 12;
     case "per_student":
       return base * students;
+    case "per_new_student":
+      return base * (newStudents ?? students);
+    case "per_returning_student":
+      return base * (returningStudents ?? 0);
     default:
       return base;
   }
@@ -68,6 +85,7 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const sp = data.schoolProfile;
   const en = (data.enrollment || {}) as Record<string, unknown>;
   const enrollment = [(en.year1 as number) || 0, (en.year2 as number) || 0, (en.year3 as number) || 0, (en.year4 as number) || 0, (en.year5 as number) || 0];
+  const seRR = (en.retentionRate as number) ?? 85;
   const prorationFactor = sp?.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
   const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
   const costInflation = data.facilities?.generalCostInflation || 0;
@@ -157,7 +175,7 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
         }
         val = (pct / 100) * revTotal;
       } else {
-        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation);
+        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, seNewStudents(enrollment, seRR, y), seReturningStudents(enrollment, seRR, y));
       }
       if (r.category === "occupancy_facility") {
         facTotal += val;

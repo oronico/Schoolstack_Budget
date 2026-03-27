@@ -310,7 +310,18 @@ export function resolveEsc(rowEsc?: number, fallback?: number): number {
   return fallback ?? 0;
 }
 
-export function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number): number {
+export function computeNewStudents(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return enrollment[0] || 0;
+  const returning = Math.round((enrollment[y - 1] || 0) * (retentionRate / 100));
+  return Math.max(0, (enrollment[y] || 0) - Math.min(returning, enrollment[y] || 0));
+}
+
+export function computeReturningStudents(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return 0;
+  return Math.min(enrollment[y] || 0, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
+}
+
+export function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number): number {
   let base = amounts?.[y] ?? 0;
   const esc = resolveEsc(escalationRate, fallbackInflation);
   if (esc !== 0 && y > 0) {
@@ -320,6 +331,8 @@ export function driverVal(amounts: number[] | undefined, y: number, dt: string, 
   switch (dt) {
     case "monthly": return base * 12;
     case "per_student": return base * students;
+    case "per_new_student": return base * (newStudents ?? students);
+    case "per_returning_student": return base * (returningStudents ?? 0);
     case "annual_fixed": return base;
     default: return base;
   }
@@ -387,7 +400,7 @@ export interface SchoolProfile {
   stateFundingMethodology?: string;
 }
 
-export interface Enrollment { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number; }
+export interface Enrollment { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number; retentionRate?: number; }
 
 export interface RevenueRow {
   id: string; category: string; lineItem: string; enabled: boolean;
@@ -683,7 +696,7 @@ export function computeTotalFte(rows: StaffingRow[], y: number, enrollment: numb
 }
 
 export function computeExpenseForYear(
-  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number
+  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number
 ): number {
   let total = 0;
   const fallback = costInflationPct ?? 0;
@@ -699,7 +712,7 @@ export function computeExpenseForYear(
       }
       total += (pct / 100) * totalRevenue;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback);
+      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents);
     }
   }
   return total;
@@ -707,12 +720,15 @@ export function computeExpenseForYear(
 
 export function computeFacilityCostByYear(
   expenseRows: Pick<ExpenseRow, "enabled" | "category" | "driverType" | "amounts" | "escalationRate" | "lineItem">[],
-  enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number
+  enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number, retentionRate?: number
 ): number[] {
   const facilRows = (expenseRows as ExpenseRow[]).filter(r => r.enabled && r.category === "occupancy_facility");
   const result: number[] = [];
+  const rr = retentionRate ?? 85;
   for (let y = 0; y < yearCount; y++) {
-    result.push(computeExpenseForYear(facilRows, y, enrollment[y], revenueByYear[y], costInflationPct));
+    const ns = computeNewStudents(enrollment, rr, y);
+    const rs = computeReturningStudents(enrollment, rr, y);
+    result.push(computeExpenseForYear(facilRows, y, enrollment[y], revenueByYear[y], costInflationPct, ns, rs));
   }
   return result;
 }

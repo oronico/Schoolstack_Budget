@@ -9,6 +9,8 @@ import {
   computeGradeBandRevenue,
   hasGradeBandData,
   computeEffectiveFte,
+  computeNewStudents,
+  computeReturningStudents,
   type SchoolProfile,
   type StaffingRow,
   type RevenueRow,
@@ -627,6 +629,50 @@ async function testMonthlyTimingWorkbook() {
   if (pEndRow > 0) check("Priv MCF: Ending Cash", cellNum(privMcf, pEndRow, 2), 864756);
 }
 
+function testNewReturningStudents() {
+  console.log("\n— New / Returning Student Helpers & Driver Types —");
+  const enrollment = [100, 120, 140, 150, 160];
+  const rr = 85;
+
+  check("NewStudents Y0", computeNewStudents(enrollment, rr, 0), 100);
+  check("ReturningStudents Y0", computeReturningStudents(enrollment, rr, 0), 0);
+
+  const retY1 = Math.min(120, Math.round(100 * 0.85));
+  check("ReturningStudents Y1", computeReturningStudents(enrollment, rr, 1), retY1);
+  check("NewStudents Y1", computeNewStudents(enrollment, rr, 1), 120 - retY1);
+
+  const retY2 = Math.min(140, Math.round(120 * 0.85));
+  check("ReturningStudents Y2", computeReturningStudents(enrollment, rr, 2), retY2);
+  check("NewStudents Y2", computeNewStudents(enrollment, rr, 2), 140 - retY2);
+
+  check("driverVal per_new_student Y0", driverVal([500], 0, "per_new_student", 100, undefined, undefined, 100, 0), 500 * 100);
+  check("driverVal per_returning_student Y0", driverVal([300], 0, "per_returning_student", 100, undefined, undefined, 100, 0), 0);
+
+  check("driverVal per_new_student Y1", driverVal([500, 500], 1, "per_new_student", 120, undefined, undefined, 35, 85), 500 * 35);
+  check("driverVal per_returning_student Y1", driverVal([300, 300], 1, "per_returning_student", 120, undefined, undefined, 35, 85), 300 * 85);
+
+  check("driverVal per_new_student defaults (no params)", driverVal([500], 0, "per_new_student", 100), 500 * 100);
+  check("driverVal per_returning_student defaults (no params)", driverVal([300], 0, "per_returning_student", 100), 0);
+
+  const newStudentRow: ExpenseRow = {
+    id: "test_new", category: "technology", lineItem: "New Student Device", enabled: true,
+    driverType: "per_new_student", amounts: [400, 400, 400, 400, 400],
+  };
+  const returningStudentRow: ExpenseRow = {
+    id: "test_ret", category: "technology", lineItem: "Returning Student Device", enabled: true,
+    driverType: "per_returning_student", amounts: [100, 100, 100, 100, 100],
+  };
+  const testRows = [newStudentRow, returningStudentRow];
+
+  const expY0 = computeExpenseForYear(testRows, 0, 100, 0, 0, 100, 0);
+  check("computeExpenseForYear new+ret Y0", expY0, 400 * 100 + 100 * 0);
+
+  const ns1 = computeNewStudents(enrollment, rr, 1);
+  const rs1 = computeReturningStudents(enrollment, rr, 1);
+  const expY1 = computeExpenseForYear(testRows, 1, 120, 0, 0, ns1, rs1);
+  check("computeExpenseForYear new+ret Y1", expY1, 400 * ns1 + 100 * rs1);
+}
+
 async function main() {
   console.log("╔══════════════════════════════════════════════════════════════╗");
   console.log("║               GOLDEN MODEL REGRESSION TESTS                ║");
@@ -641,6 +687,7 @@ async function main() {
   testDebtIncludedExclusion();
   testGradeBandEdgeCases();
   testDriverValEdgeCases();
+  testNewReturningStudents();
   await testWorkbookKPIs();
   await testMonthlyTimingWorkbook();
 

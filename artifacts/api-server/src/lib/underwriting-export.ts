@@ -45,6 +45,7 @@ interface Enrollment {
   year3?: number;
   year4?: number;
   year5?: number;
+  retentionRate?: number;
 }
 
 interface RevenueRow {
@@ -357,7 +358,7 @@ function resolveEsc(rowEsc?: number): number {
   return _globalCostInflationPct;
 }
 
-function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number): number {
+function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number): number {
   let base = amounts?.[y] ?? 0;
   const esc = (escalationRate !== undefined && escalationRate !== 0) ? escalationRate : (fallbackInflation ?? 0);
   if (esc !== 0 && y > 0) {
@@ -367,9 +368,22 @@ function driverVal(amounts: number[] | undefined, y: number, dt: string, student
   switch (dt) {
     case "monthly": return base * 12;
     case "per_student": return base * students;
+    case "per_new_student": return base * (newStudents ?? students);
+    case "per_returning_student": return base * (returningStudents ?? 0);
     case "annual_fixed": return base;
     default: return base;
   }
+}
+
+function localNewStudents(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return enrollment[0] || 0;
+  const returning = Math.round((enrollment[y - 1] || 0) * (retentionRate / 100));
+  return Math.max(0, (enrollment[y] || 0) - Math.min(returning, enrollment[y] || 0));
+}
+
+function localReturningStudents(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return 0;
+  return Math.min(enrollment[y] || 0, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
 }
 
 function resolveAmount(amounts: number[] | undefined, y: number, rowEsc?: number): number {
@@ -470,7 +484,7 @@ function computeRevenueForYear(
 }
 
 function computeExpenseForYear(
-  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number
+  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number
 ): number {
   let total = 0;
   const fallback = costInflationPct ?? 0;
@@ -486,7 +500,7 @@ function computeExpenseForYear(
       }
       total += (pct / 100) * totalRevenue;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback);
+      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents);
     }
   }
   return total;
@@ -584,6 +598,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   const yc = 5;
 
   const enrollment = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0];
+  const uwRR = en.retentionRate ?? 85;
   const salaryEsc = (data.facilities as Record<string, unknown>)?.annualSalaryIncrease
     ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100 : 0;
   const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
@@ -610,7 +625,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
     const pf = y === 0 ? prorationFactor : 1;
     const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, students);
     const costInflPct = costInflation * 100;
-    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct) * (y === 0 ? prorationFactor : 1);
+    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct, localNewStudents(enrollment, uwRR, y), localReturningStudents(enrollment, uwRR, y)) * (y === 0 ? prorationFactor : 1);
     const capDebt = computeCapDebtForYear(capDebtRows, y, students);
     const totalExp = personnel + ops + capDebt;
     const ni = (rev * pf) - totalExp;
@@ -731,6 +746,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   const yc = 5;
 
   const enrollment = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0];
+  const uwRR = en.retentionRate ?? 85;
   const salaryEsc = (data.facilities as Record<string, unknown>)?.annualSalaryIncrease
     ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100 : 0;
   const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
@@ -757,7 +773,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
     const pf = y === 0 ? prorationFactor : 1;
     const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, students);
     const costInflPct = costInflation * 100;
-    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct) * (y === 0 ? prorationFactor : 1);
+    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct, localNewStudents(enrollment, uwRR, y), localReturningStudents(enrollment, uwRR, y)) * (y === 0 ? prorationFactor : 1);
     const capDebt = computeCapDebtForYear(capDebtRows, y, students);
     const totalExp = personnel + ops + capDebt;
     const ni = (rev * pf) - totalExp;
@@ -869,6 +885,7 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
   const sp = data.schoolProfile || {};
   const enr = data.enrollment || {};
   const enrollment = [enr.year1 || 0, enr.year2 || 0, enr.year3 || 0, enr.year4 || 0, enr.year5 || 0];
+  const sybRR = enr.retentionRate ?? 85;
   const yc = 5;
   const yi = Math.max(0, Math.min(yearIndex, yc - 1));
 
@@ -893,7 +910,7 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
   const annualRevRaw = computeRevenueForYear(revenueRows, yi, students, data.tuitionTiers, sp);
   const annualRev = Math.round(annualRevRaw * pf);
   const annualPersonnel = Math.round(computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, yi, students));
-  const annualOps = Math.round(computeExpenseForYear(expenseRows, yi, students, annualRevRaw, costInflPct) * pf);
+  const annualOps = Math.round(computeExpenseForYear(expenseRows, yi, students, annualRevRaw, costInflPct, localNewStudents(enrollment, sybRR, yi), localReturningStudents(enrollment, sybRR, yi)) * pf);
   const annualCapDebt = Math.round(computeCapDebtForYear(capDebtRows, yi, students));
   const annualNI = annualRev - annualPersonnel - annualOps - annualCapDebt;
 

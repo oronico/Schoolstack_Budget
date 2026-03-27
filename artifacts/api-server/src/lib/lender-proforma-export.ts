@@ -10,7 +10,7 @@ import {
   addInstructionsSheet, addDashboardSheet,
   computeAnnualDebt, computeDaysCashOnHand,
   BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER,
-  driverVal,
+  driverVal, computeNewStudents, computeReturningStudents,
   computeGradeBandRevenue,
   hasGradeBandData,
   computeRevenueForYear as computeRevenueForYearShared,
@@ -136,20 +136,20 @@ function inferGrowthRate(amounts: number[], yearIdx0: number, yearIdx1: number):
   return (v1 - v0) / v0;
 }
 
-function sumExpenseCategoryY1(rows: ExpenseRow[], category: string, students: number, totalRevenue: number): number {
+function sumExpenseCategoryY1(rows: ExpenseRow[], category: string, students: number, totalRevenue: number, newStudents?: number, returningStudents?: number): number {
   let total = 0;
   for (const row of rows) {
     if (!row.enabled || row.category !== category) continue;
     if (row.driverType === "percent_of_revenue") {
       total += ((row.amounts?.[0] ?? 0) / 100) * totalRevenue;
     } else {
-      total += driverVal(row.amounts, 0, row.driverType, students);
+      total += driverVal(row.amounts, 0, row.driverType, students, undefined, undefined, newStudents, returningStudents);
     }
   }
   return total;
 }
 
-function avgExpenseGrowth(rows: ExpenseRow[], categories: string[], students1: number, students2: number, rev1: number, rev2: number): number {
+function avgExpenseGrowth(rows: ExpenseRow[], categories: string[], students1: number, students2: number, rev1: number, rev2: number, newStudents0?: number, returningStudents0?: number, newStudents1?: number, returningStudents1?: number): number {
   let sum0 = 0, sum1 = 0;
   for (const row of rows) {
     if (!row.enabled || !categories.includes(row.category)) continue;
@@ -157,8 +157,8 @@ function avgExpenseGrowth(rows: ExpenseRow[], categories: string[], students1: n
       sum0 += ((row.amounts?.[0] ?? 0) / 100) * rev1;
       sum1 += ((row.amounts?.[1] ?? 0) / 100) * rev2;
     } else {
-      sum0 += driverVal(row.amounts, 0, row.driverType, students1);
-      sum1 += driverVal(row.amounts, 1, row.driverType, students2);
+      sum0 += driverVal(row.amounts, 0, row.driverType, students1, undefined, undefined, newStudents0, returningStudents0);
+      sum1 += driverVal(row.amounts, 1, row.driverType, students2, undefined, undefined, newStudents1, returningStudents1);
     }
   }
   if (sum0 <= 0 || sum1 <= 0) return 0.03;
@@ -180,6 +180,8 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
 
   const enrollY1 = en.year1 || 0;
   const enrollY2 = en.year2 || 0;
+  const enrollments = [en.year1 || 0, en.year2 || 0, en.year3 || 0, en.year4 || 0, en.year5 || 0];
+  const lpRR = en.retentionRate ?? 85;
 
   const result: Record<string, string | number> = {};
 
@@ -319,7 +321,11 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   const revY1 = revenueRows.length > 0 ? computeRevenueForYearShared(revenueRows as SharedRevenueRow[], 0, enrollY1, undefined, undefined, sp as SharedSchoolProfile) : 0;
   const revY2 = revenueRows.length > 0 ? computeRevenueForYearShared(revenueRows as SharedRevenueRow[], 1, enrollY2, undefined, undefined, sp as SharedSchoolProfile) : 0;
 
-  const facilityY1 = sumExpenseCategoryY1(expenseRows, "occupancy_facility", enrollY1, revY1);
+  const lpNew0 = computeNewStudents(enrollments, lpRR, 0);
+  const lpRet0 = computeReturningStudents(enrollments, lpRR, 0);
+  const lpNew1 = computeNewStudents(enrollments, lpRR, 1);
+  const lpRet1 = computeReturningStudents(enrollments, lpRR, 1);
+  const facilityY1 = sumExpenseCategoryY1(expenseRows, "occupancy_facility", enrollY1, revY1, lpNew0, lpRet0);
   const rentRow = expenseRows.find(r => r.enabled && r.category === "occupancy_facility" && r.lineItem.toLowerCase().includes("rent"));
   result.annualRentY1 = rentRow
     ? driverVal(rentRow.amounts, 0, rentRow.driverType, enrollY1)
@@ -328,17 +334,17 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   result.otherFacilityCostY1 = Math.max(0, otherFacility);
 
   if (expenseRows.some(r => r.enabled && r.category === "occupancy_facility" && r.amounts?.length >= 2)) {
-    result.rentGrowthPct = avgExpenseGrowth(expenseRows, ["occupancy_facility"], enrollY1, enrollY2, revY1, revY2);
+    result.rentGrowthPct = avgExpenseGrowth(expenseRows, ["occupancy_facility"], enrollY1, enrollY2, revY1, revY2, lpNew0, lpRet0, lpNew1, lpRet1);
     result.otherFacilityCostGrowthPct = result.rentGrowthPct as number;
   } else {
     result.rentGrowthPct = 0.03;
     result.otherFacilityCostGrowthPct = 0.03;
   }
 
-  const programY1 = sumExpenseCategoryY1(expenseRows, "instructional_program", enrollY1, revY1);
+  const programY1 = sumExpenseCategoryY1(expenseRows, "instructional_program", enrollY1, revY1, lpNew0, lpRet0);
   result.programCostPerStudentY1 = enrollY1 > 0 ? Math.round(programY1 / enrollY1) : 0;
   if (expenseRows.some(r => r.enabled && r.category === "instructional_program" && r.amounts?.length >= 2)) {
-    result.programCostGrowthPct = avgExpenseGrowth(expenseRows, ["instructional_program"], enrollY1, enrollY2, revY1, revY2);
+    result.programCostGrowthPct = avgExpenseGrowth(expenseRows, ["instructional_program"], enrollY1, enrollY2, revY1, revY2, lpNew0, lpRet0, lpNew1, lpRet1);
   } else {
     result.programCostGrowthPct = 0.03;
   }
@@ -349,12 +355,12 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
 
   let fixedOpsY1 = 0;
   for (const cat of fixedOpsCategories) {
-    fixedOpsY1 += sumExpenseCategoryY1(expenseRows, cat, enrollY1, revY1);
+    fixedOpsY1 += sumExpenseCategoryY1(expenseRows, cat, enrollY1, revY1, lpNew0, lpRet0);
   }
   result.fixedOperatingCostY1 = Math.round(fixedOpsY1);
 
   if (fixedOpsCategories.length > 0 && expenseRows.some(r => r.enabled && fixedOpsCategories.includes(r.category) && r.amounts?.length >= 2)) {
-    result.fixedOperatingCostGrowthPct = avgExpenseGrowth(expenseRows, fixedOpsCategories, enrollY1, enrollY2, revY1, revY2);
+    result.fixedOperatingCostGrowthPct = avgExpenseGrowth(expenseRows, fixedOpsCategories, enrollY1, enrollY2, revY1, revY2, lpNew0, lpRet0, lpNew1, lpRet1);
   } else {
     result.fixedOperatingCostGrowthPct = 0.03;
   }

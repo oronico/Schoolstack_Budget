@@ -7,6 +7,8 @@ import {
   computeExpenseForYear,
   computeCapDebtForYear,
   normalizeStaffingRow,
+  computeNewStudents,
+  computeReturningStudents,
 } from "../workbook-helpers";
 import { buildPacketData } from "./build-packet-data";
 import type { PacketData, PacketSection, PacketTable, PacketTableRow, LinkedMetric, SectionId } from "./packet-types";
@@ -173,17 +175,20 @@ function buildScenarioSnapshots(md: ModelData, co: ConsultantOutput): ScenarioSn
   const prorationFactor = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 12) / 12 : 1;
   const salaryEsc = (sp as Record<string, unknown>).salaryEscalation as number | undefined;
   const costInflPct = (sp as Record<string, unknown>).costInflationPct as number | undefined;
+  const boardRR = (md.enrollment as Record<string, unknown> | undefined)?.retentionRate as number | undefined ?? 85;
 
   for (const scenario of scenarios.slice(0, 3)) {
     try {
       const adjEnrollment = enrollment.map((e) => Math.round(e * (1 + (scenario.enrollmentAdjustment || 0) / 100)));
       const y = 4;
       const students = adjEnrollment[y] || 0;
+      const bns = computeNewStudents(adjEnrollment, boardRR, y);
+      const brs = computeReturningStudents(adjEnrollment, boardRR, y);
       const baseRevenue = computeRevenueForYear(md.revenueRows || [], y, students, md.tuitionTiers, costInflPct, sp);
       const revenue = baseRevenue * (1 + (scenario.tuitionAdjustment || 0) / 100);
       const baseStaffing = computePersonnelForYear(normalized, salaryEsc || 0, prorationFactor, y, students);
       const staffing = baseStaffing * (1 + (scenario.staffingAdjustment || 0) / 100);
-      const baseOpex = computeExpenseForYear(md.expenseRows || [], y, students, revenue, costInflPct);
+      const baseOpex = computeExpenseForYear(md.expenseRows || [], y, students, revenue, costInflPct, bns, brs);
       const opex = baseOpex * (1 + (scenario.expenseAdjustment || 0) / 100);
       const baseCapDebt = computeCapDebtForYear(md.capitalAndDebtRows || [], y, students);
       const capDebt = baseCapDebt * (1 + (scenario.facilityAdjustment || 0) / 100);
