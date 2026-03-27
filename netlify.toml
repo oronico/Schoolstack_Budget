@@ -18,10 +18,10 @@
     Cache-Control = "public, max-age=86400"
 
 [[redirects]]
-from = "/api/*"
-to = "https://schoolstackbudget.up.railway.app/api/:splat"
-status = 200
-force = true
+  from = "/api/*"
+  to = "https://schoolstackbudget.up.railway.app/api/:splat"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
