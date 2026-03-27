@@ -401,3 +401,67 @@ export function getAvailableLineItems(
     .filter((item) => item.category === category && !existingIds.includes(item.id))
     .map(({ id, category, lineItem, driverType }) => ({ id, category, lineItem, driverType }));
 }
+
+export interface SchoolChoiceLineItem {
+  id: string;
+  category: RevenueCategory;
+  lineItem: string;
+  driverType: RevenueDriverType;
+  defaultAmount: number;
+  note?: string;
+  statusNote?: string;
+}
+
+export function generateSchoolChoiceRows(
+  programs: Array<{
+    type: string;
+    label: string;
+    minPerStudent: number;
+    maxPerStudent: number;
+    status: string;
+    notes?: string;
+  }>,
+  yearCount: number = 5,
+  fundingProfile: FundingProfile = "tuition_based",
+): RevenueRowData[] {
+  const PROGRAM_TYPE_TO_ROW_ID: Record<string, string> = {
+    esa: "esa_revenue",
+    voucher: "voucher_revenue",
+    tax_credit_scholarship: "scholarship_org",
+    refundable_tax_credit: "refundable_tax_credit",
+    individual_tax_credit: "individual_tax_credit",
+    federal_tax_credit_sgo: "federal_tax_credit_sgo",
+    correspondence_charter: "correspondence_charter",
+  };
+
+  const PROGRAM_TYPE_TO_LABEL: Record<string, string> = {
+    esa: "ESA Revenue",
+    voucher: "Voucher Revenue",
+    tax_credit_scholarship: "Tax-Credit Scholarship Revenue",
+    refundable_tax_credit: "Refundable Tax Credit",
+    individual_tax_credit: "Individual Tax Credit / Deduction",
+    federal_tax_credit_sgo: "Federal Tax Credit (SGO)",
+    correspondence_charter: "Correspondence / Charter Pathway",
+  };
+
+  return programs
+    .filter(p => p.status !== "blocked")
+    .map(p => {
+      const id = PROGRAM_TYPE_TO_ROW_ID[p.type] || `sc_${p.type}`;
+      const defaultAmount = Math.round((p.minPerStudent + p.maxPerStudent) / 2);
+      const statusNote = p.status === "litigated" ? " (legal challenge pending)" :
+                         p.status === "pending" ? " (not yet launched)" : "";
+      const note = p.notes ? `${p.notes}${statusNote}` : statusNote || undefined;
+
+      return {
+        id,
+        category: "school_choice" as RevenueCategory,
+        lineItem: PROGRAM_TYPE_TO_LABEL[p.type] || p.label,
+        enabled: p.status === "active",
+        driverType: "per_student" as RevenueDriverType,
+        amounts: new Array(yearCount).fill(defaultAmount),
+        note,
+        ...getTimingDefaults("school_choice", fundingProfile),
+      };
+    });
+}

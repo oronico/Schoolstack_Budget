@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
@@ -31,8 +31,10 @@ import {
   getTimingDefaults,
   computeMonthlyCashInflow,
   migrateGrantsToPhilanthropy,
+  generateSchoolChoiceRows,
 } from "@/lib/revenue-defaults";
 import { type TuitionTier, getDefaultTuitionTiers } from "@/pages/model-wizard/schema";
+import { getStateFundingConfig, type StateFundingConfig, type SchoolType } from "@/lib/state-funding-data";
 
 const CATEGORY_ICONS: Record<RevenueCategory, React.ComponentType<{ className?: string }>> = {
   tuition_and_fees: GraduationCap,
@@ -175,6 +177,8 @@ export function RevenueStep() {
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolStage = watch("schoolProfile.schoolStage") as string | undefined;
   const schoolType = watch("schoolProfile.schoolType") as string | undefined;
+  const stateCode = watch("schoolProfile.state") as string | undefined;
+  const openingYear = watch("schoolProfile.openingYear") as number | undefined;
   const maxCapacity = watch("schoolProfile.maxCapacity") as number | undefined;
   const yearCount = getYearCount(schoolStage);
 
@@ -185,6 +189,11 @@ export function RevenueStep() {
   const revenueSources = watch("revenueSources") as RevenueSources | undefined;
 
   const isCharterType = schoolType === "charter_school";
+
+  const stateFundingConfig = useMemo<StateFundingConfig | null>(() => {
+    if (!schoolType || !stateCode || stateCode.length < 2) return null;
+    return getStateFundingConfig(schoolType as SchoolType, stateCode, openingYear);
+  }, [schoolType, stateCode, openingYear]);
 
   const handleRevenueSourceChange = useCallback((source: string, checked: boolean) => {
     const updated = { ...revenueSources, [source]: checked };
@@ -208,7 +217,7 @@ export function RevenueStep() {
         setValue("schoolProfile.fundingProfile", "charter_public_funded", { shouldDirty: true });
       }
     }
-  }, [isCharterType]);
+  }, [isCharterType, revenueSources, fundingProfile, setValue]);
 
   const formRows = watch("revenueRows") as RevenueRowData[] | undefined;
   const [rows, setRows] = useState<RevenueRowData[]>([]);
@@ -291,6 +300,59 @@ export function RevenueStep() {
       return currentRows;
     });
   }, [schoolType, defaultsApplied, setValue]);
+
+  const AUTO_GENERATED_IDS = new Set(["esa_revenue", "voucher_revenue", "scholarship_org", "refundable_tax_credit", "individual_tax_credit", "federal_tax_credit_sgo", "correspondence_charter"]);
+
+  useEffect(() => {
+    if (!defaultsApplied) return;
+
+    if (isCharterType && stateFundingConfig?.enrollmentRevenueMethod) {
+      const currentMethod = getValues("schoolProfile.enrollmentRevenueMethod");
+      if (!currentMethod) {
+        setValue("schoolProfile.enrollmentRevenueMethod", stateFundingConfig.enrollmentRevenueMethod, { shouldDirty: true });
+      }
+      if (stateFundingConfig.charterMethodology) {
+        setValue("schoolProfile.stateFundingMethodology", stateFundingConfig.charterMethodology, { shouldDirty: true });
+      }
+    }
+
+    setRows(currentRows => {
+      const manualRows = currentRows.filter(r => !AUTO_GENERATED_IDS.has(r.id));
+
+      if (isCharterType || !stateFundingConfig || stateFundingConfig.availablePrograms.length === 0) {
+        if (manualRows.length === currentRows.length) return currentRows;
+        setValue("revenueRows", manualRows, { shouldDirty: true });
+        return manualRows;
+      }
+
+      const desiredRows = generateSchoolChoiceRows(
+        stateFundingConfig.availablePrograms,
+        yearCount,
+        fundingProfile,
+      );
+
+      const updated = [...manualRows, ...desiredRows];
+      setValue("revenueRows", updated, { shouldDirty: true });
+
+      if (desiredRows.some(r => r.enabled)) {
+        if (!revenueSources?.schoolChoice) {
+          handleRevenueSourceChange("schoolChoice", true);
+        }
+        setEnabledCategories(prev => {
+          const next = new Set(prev);
+          next.add("school_choice");
+          return next;
+        });
+        setExpandedCategories(prev => {
+          const next = new Set(prev);
+          next.add("school_choice");
+          return next;
+        });
+      }
+
+      return updated;
+    });
+  }, [stateFundingConfig, defaultsApplied, isCharterType, yearCount, fundingProfile, revenueSources, handleRevenueSourceChange]);
 
   const syncToForm = useCallback((updatedRows: RevenueRowData[]) => {
     setRows(updatedRows);
@@ -504,6 +566,26 @@ export function RevenueStep() {
         <SectionExplainers section="revenue" className="mt-4" />
       </div>
 
+      {stateFundingConfig && stateCode && (
+        <div className="rounded-2xl border border-teal-200 bg-teal-50/50 p-4 flex items-start gap-3">
+          <MapPin className="h-5 w-5 text-teal-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground space-y-1">
+            <span className="font-semibold text-teal-800">
+              {stateCode.toUpperCase()} Funding Overview
+            </span>
+            {isCharterType && stateFundingConfig.charterCoachingText && (
+              <p className="text-xs text-teal-700">{stateFundingConfig.charterCoachingText}</p>
+            )}
+            {!isCharterType && stateFundingConfig.availablePrograms.length > 0 && (
+              <p className="text-xs text-teal-700">{stateFundingConfig.schoolChoiceCoachingText}</p>
+            )}
+            {!isCharterType && stateFundingConfig.availablePrograms.length === 0 && (
+              <p className="text-xs text-teal-700">{stateFundingConfig.schoolChoiceCoachingText}</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {(hasRevenueErrors || hasRowErrors) && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
@@ -635,6 +717,8 @@ export function RevenueStep() {
               })()}
             </div>
           )}
+
+          <WeightedEnrollmentInputs yearCount={yearCount} schoolStage={schoolStage} />
 
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Per-Pupil Rate by Grade Band</h4>
@@ -867,6 +951,74 @@ export function RevenueStep() {
       {hasAnyRevenue && (
         <CashFlowTimingSummary monthlyInflow={monthlyCashInflow} />
       )}
+    </div>
+  );
+}
+
+interface WeightedEnrollmentInputsProps {
+  yearCount: number;
+  schoolStage: string | undefined;
+}
+
+function WeightedEnrollmentInputs({ yearCount, schoolStage }: WeightedEnrollmentInputsProps) {
+  const { watch, setValue } = useFormContext();
+  const spedCount = (watch("schoolProfile.spedCount") as number[] | undefined) || new Array(yearCount).fill(0);
+  const ellCount = (watch("schoolProfile.ellCount") as number[] | undefined) || new Array(yearCount).fill(0);
+  const ecoDisCount = (watch("schoolProfile.ecoDisCount") as number[] | undefined) || new Array(yearCount).fill(0);
+
+  const updateCount = (field: string, yearIndex: number, value: number) => {
+    const current = (watch(`schoolProfile.${field}`) as number[] | undefined) || new Array(yearCount).fill(0);
+    const updated = [...current];
+    updated[yearIndex] = value;
+    setValue(`schoolProfile.${field}`, updated, { shouldDirty: true });
+  };
+
+  const getYearLabel = (index: number): string => {
+    if (schoolStage === "operating_school" && index === 0) return "Current";
+    return `Y${index + 1}`;
+  };
+
+  const categories = [
+    { field: "spedCount", label: "Special Education (SPED)", data: spedCount, hint: "Students with IEPs who generate additional weighted funding" },
+    { field: "ellCount", label: "English Language Learners (ELL)", data: ellCount, hint: "Students receiving ELL services with supplemental funding" },
+    { field: "ecoDisCount", label: "Economically Disadvantaged", data: ecoDisCount, hint: "Students qualifying for free/reduced lunch (Title I eligible)" },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Users className="h-4 w-4 text-primary" />
+        <h4 className="text-sm font-semibold text-foreground">Weighted Enrollment Populations</h4>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Many states provide additional per-pupil funding for SPED, ELL, and economically disadvantaged students.
+        Enter headcounts so your model reflects weighted funding accurately.
+      </p>
+      {categories.map(({ field, label, data, hint }) => (
+        <div key={field} className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-foreground">{label}</span>
+            <span className="text-[10px] text-muted-foreground">({hint})</span>
+          </div>
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
+            {Array.from({ length: yearCount }).map((_, yi) => (
+              <div key={yi} className="flex flex-col gap-1">
+                <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                  {getYearLabel(yi)}
+                </label>
+                <input
+                  type="number"
+                  value={data[yi] ?? 0}
+                  onChange={(e) => updateCount(field, yi, Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-full rounded-lg border border-border bg-card px-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  placeholder="0"
+                  min={0}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

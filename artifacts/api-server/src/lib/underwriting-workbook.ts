@@ -336,6 +336,29 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     }
   }
 
+  const hasWeighted = (sp.spedCount?.some(v => v > 0)) || (sp.ellCount?.some(v => v > 0)) || (sp.ecoDisCount?.some(v => v > 0));
+  if (hasWeighted) {
+    r += 2;
+    sec(ws, r, 7); ws.getCell(r, 1).value = "WEIGHTED ENROLLMENT POPULATIONS";
+    r++;
+    ws.getRow(r).values = ["Population", ...yLabels];
+    hdr(ws, r, 6);
+    const weightedGroups = [
+      { label: "Special Education (SPED)", data: sp.spedCount },
+      { label: "English Language Learners (ELL)", data: sp.ellCount },
+      { label: "Economically Disadvantaged", data: sp.ecoDisCount },
+    ];
+    for (const group of weightedGroups) {
+      if (!group.data?.some(v => v > 0)) continue;
+      r++;
+      ws.getCell(r, 1).value = group.label; dc(ws.getCell(r, 1));
+      for (let y = 0; y < 5; y++) {
+        const cell = ws.getCell(r, y + 2);
+        cell.value = group.data?.[y] ?? 0; cell.numFmt = NUM; dc(cell); inputCell(cell);
+      }
+    }
+  }
+
   return { enrollRow, revStartRow, staffStartRow, expStartRow, capStartRow, salaryEscRow, costInflRow, prorationRow, startCashRow, maxCapRow, debtIncRow };
 }
 

@@ -371,6 +371,11 @@ export interface SchoolProfile {
   charterDepositTiming?: string;
   priorYearADM?: number;
   priorYearADA?: number;
+  spedCount?: number[];
+  ellCount?: number[];
+  ecoDisCount?: number[];
+  enrollmentGrowthRate?: number;
+  stateFundingMethodology?: string;
 }
 
 export interface Enrollment { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number; }
