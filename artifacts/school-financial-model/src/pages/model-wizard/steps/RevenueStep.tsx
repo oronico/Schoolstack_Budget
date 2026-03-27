@@ -436,7 +436,16 @@ export function RevenueStep() {
 
   const addLineItem = (category: RevenueCategory, itemId: string) => {
     const available = getAvailableLineItems(category, rows.map((r) => r.id));
-    const item = available.find((a) => a.id === itemId);
+    let item = available.find((a) => a.id === itemId);
+    if (!item && category === "school_choice" && stateFundingConfig) {
+      const prog = stateFundingConfig.availablePrograms.find(p => {
+        const mappedId = PROGRAM_TYPE_TO_ROW_ID[p.type] || `sc_${p.type}`;
+        return mappedId === itemId;
+      });
+      if (prog) {
+        item = { id: itemId, category: "school_choice", lineItem: prog.label, driverType: "per_student" };
+      }
+    }
     if (!item) return;
     const newRow: RevenueRowData = {
       id: item.id,
