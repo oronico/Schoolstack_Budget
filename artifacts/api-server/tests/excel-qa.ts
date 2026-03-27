@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { microschoolStartup, privateSchoolWithESA, charterPublicFunding, charterADAGradeBand } from "./sample-payloads.js";
+import { microschoolStartup, homeschoolCoopMixed, privateSchoolWithESA, charterPublicFunding, charterADAGradeBand } from "./sample-payloads.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, "..", "qa-output");
@@ -978,6 +978,7 @@ async function main() {
 
   const payloads: [string, Record<string, unknown>][] = [
     ["Microschool Startup", microschoolStartup as unknown as Record<string, unknown>],
+    ["Homeschool Co-Op Mixed", homeschoolCoopMixed as unknown as Record<string, unknown>],
     ["Private School + ESA", privateSchoolWithESA as unknown as Record<string, unknown>],
     ["Charter Public Funding", charterPublicFunding as unknown as Record<string, unknown>],
     ["Charter ADA Grade-Band", charterADAGradeBand as unknown as Record<string, unknown>],

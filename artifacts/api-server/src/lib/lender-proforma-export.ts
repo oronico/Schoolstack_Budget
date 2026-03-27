@@ -190,6 +190,14 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   result.applicationsReceived = en.applicationsReceived ?? "";
   result.waitlistCount = en.waitlistCount ?? "";
 
+  for (let y = 0; y < 5; y++) {
+    result[`spedCountY${y + 1}`] = sp.spedCount?.[y] ?? 0;
+    result[`ellCountY${y + 1}`] = sp.ellCount?.[y] ?? 0;
+    result[`ecoDisCountY${y + 1}`] = sp.ecoDisCount?.[y] ?? 0;
+  }
+  result.enrollmentGrowthRate = sp.enrollmentGrowthRate ?? 0;
+  result.stateFundingMethodology = sp.stateFundingMethodology ?? "";
+
   const grossTuitionRow = revenueRows.find(r => r.id === "gross_tuition" && r.enabled);
   const tuitionY1PerStudent = grossTuitionRow?.driverType === "per_student"
     ? (grossTuitionRow.amounts?.[0] ?? 0)
@@ -831,6 +839,66 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
       ws.getCell(`D${gbr}`).border = thinBorder;
       gbr++;
     }
+  }
+
+  const hasWeightedEnrollment = [1, 2, 3, 4, 5].some(y =>
+    (Number(input[`spedCountY${y}`]) || 0) > 0 ||
+    (Number(input[`ellCountY${y}`]) || 0) > 0 ||
+    (Number(input[`ecoDisCountY${y}`]) || 0) > 0
+  );
+  if (hasWeightedEnrollment) {
+    const weStartRow = input.hasGradeBand === 1 ? (hasRetentionDemand ? 85 : 79) : (hasRetentionDemand ? 72 : 66);
+    ws.mergeCells(`B${weStartRow}:D${weStartRow}`);
+    ws.getCell(`B${weStartRow}`).value = "WEIGHTED ENROLLMENT POPULATIONS";
+    ws.getCell(`B${weStartRow}`).font = sectionFont;
+    ws.getCell(`B${weStartRow}`).fill = sectionFill;
+    ws.getCell(`B${weStartRow}`).alignment = { horizontal: "left", vertical: "middle" };
+    ws.getRow(weStartRow).height = 24;
+
+    const popTypes = [
+      { label: "Special Education (SPED)", prefix: "spedCount" },
+      { label: "English Language Learners (ELL)", prefix: "ellCount" },
+      { label: "Economically Disadvantaged", prefix: "ecoDisCount" },
+    ];
+    let weRow = weStartRow + 2;
+    for (const pop of popTypes) {
+      ws.getCell(`C${weRow}`).value = pop.label;
+      ws.getCell(`C${weRow}`).font = labelFont;
+      ws.getCell(`C${weRow}`).border = thinBorder;
+      const vals = [];
+      for (let y = 1; y <= 5; y++) vals.push(Number(input[`${pop.prefix}Y${y}`]) || 0);
+      ws.getCell(`D${weRow}`).value = vals.join("  /  ");
+      inputCell(ws.getCell(`D${weRow}`));
+      ws.getCell(`D${weRow}`).border = thinBorder;
+      weRow++;
+    }
+    ws.getCell(`C${weRow}`).value = "Total Weighted Students";
+    ws.getCell(`C${weRow}`).font = { ...labelFont, bold: true };
+    ws.getCell(`C${weRow}`).border = thinBorder;
+    const totals = [];
+    for (let y = 1; y <= 5; y++) {
+      totals.push(
+        (Number(input[`spedCountY${y}`]) || 0) +
+        (Number(input[`ellCountY${y}`]) || 0) +
+        (Number(input[`ecoDisCountY${y}`]) || 0)
+      );
+    }
+    ws.getCell(`D${weRow}`).value = totals.join("  /  ");
+    ws.getCell(`D${weRow}`).font = { ...valueFont, bold: true };
+    ws.getCell(`D${weRow}`).border = thinBorder;
+    weRow++;
+    ws.getCell(`C${weRow}`).value = "Weighted % of Enrollment";
+    ws.getCell(`C${weRow}`).font = { ...labelFont, italic: true };
+    ws.getCell(`C${weRow}`).border = thinBorder;
+    const pcts = [];
+    for (let y = 0; y < 5; y++) {
+      const enroll = Number(input[`enrollmentY${y + 1}`]) || 0;
+      const pct = enroll > 0 ? Math.round((totals[y] / enroll) * 100) : 0;
+      pcts.push(`${pct}%`);
+    }
+    ws.getCell(`D${weRow}`).value = pcts.join("  /  ");
+    ws.getCell(`D${weRow}`).font = { ...valueFont, italic: true };
+    ws.getCell(`D${weRow}`).border = thinBorder;
   }
 
   ws.views = [{ state: "frozen", xSplit: 0, ySplit: 1 }];

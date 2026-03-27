@@ -1121,6 +1121,42 @@ function buildAssumptionsTab(
     ws.getCell(r, 2).numFmt = NUMBER_FORMAT;
   }
 
+  const hasWeightedEnroll = (sp.spedCount?.some((v: number) => v > 0)) || (sp.ellCount?.some((v: number) => v > 0)) || (sp.ecoDisCount?.some((v: number) => v > 0));
+  if (hasWeightedEnroll) {
+    r += 2;
+    styleSectionRow(ws, r, 2);
+    ws.getCell(r, 1).value = "WEIGHTED ENROLLMENT POPULATIONS";
+    const popTypes = [
+      { label: "Special Education (SPED)", data: sp.spedCount },
+      { label: "English Language Learners (ELL)", data: sp.ellCount },
+      { label: "Economically Disadvantaged", data: sp.ecoDisCount },
+    ];
+    for (const pop of popTypes) {
+      r++;
+      ws.getCell(r, 1).value = pop.label;
+      ws.getCell(r, 1).font = NORMAL_FONT;
+      const vals = [];
+      for (let y = 0; y < yearCount; y++) vals.push(pop.data?.[y] ?? 0);
+      ws.getCell(r, 2).value = vals.join("  /  ");
+      applyInput(ws.getCell(r, 2));
+    }
+    r++;
+    ws.getCell(r, 1).value = "Total Weighted Students";
+    ws.getCell(r, 1).font = { ...NORMAL_FONT, bold: true };
+    const totals: number[] = [];
+    for (let y = 0; y < yearCount; y++) {
+      totals.push((sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0));
+    }
+    ws.getCell(r, 2).value = totals.join("  /  ");
+    ws.getCell(r, 2).font = { ...NORMAL_FONT, bold: true };
+    r++;
+    ws.getCell(r, 1).value = "Weighted % of Enrollment";
+    ws.getCell(r, 1).font = { ...NORMAL_FONT, italic: true };
+    const pcts = enrollment.map((e, y) => e > 0 ? `${Math.round((totals[y] / e) * 100)}%` : "0%");
+    ws.getCell(r, 2).value = pcts.join("  /  ");
+    ws.getCell(r, 2).font = { ...NORMAL_FONT, italic: true };
+  }
+
   if (tuitionTiers && tuitionTiers.length > 0 && sp.schoolType !== "charter_school") {
     r += 2;
     styleSectionRow(ws, r, 2);

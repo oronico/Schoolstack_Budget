@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 43590,
+    "fileSize": 43591,
     "tabs": [
       "Instructions",
       "Cover",
@@ -149,7 +149,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 26635,
+    "fileSize": 26636,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -301,7 +301,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 37686,
+    "fileSize": 37687,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -394,7 +394,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 26336,
+    "fileSize": 26337,
     "tabs": [
       "Instructions",
       "Cover",
@@ -703,7 +703,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 14056,
+    "fileSize": 14057,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -760,8 +760,727 @@
   },
   {
     "exportType": "Underwriting V2 (21-tab)",
+    "payload": "Homeschool Co-Op Mixed",
+    "fileSize": 43317,
+    "tabs": [
+      "Instructions",
+      "Cover",
+      "Assumptions",
+      "Program Profile",
+      "Enrollment Drivers",
+      "Tuition & Funding",
+      "Staffing Drivers",
+      "OpEx Drivers",
+      "Capital Stack",
+      "Enrollment Tuition Fcst",
+      "Staffing Costs Fcst",
+      "Budget Detail",
+      "Budget Summary",
+      "Monthly Cash Flow Y1",
+      "5-Year Operating Stmt",
+      "Debt Schedule",
+      "Balance Sheet",
+      "DSCR & Covenants",
+      "Sources & Uses",
+      "Scenarios",
+      "Underwriting Snapshot",
+      "Financial Health"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 42.3 KB",
+          "Successfully opened workbook",
+          "Worksheets: 22"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 22 tabs: Instructions, Cover, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 1683 cells across 22 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Sources = Uses",
+        "passed": true,
+        "details": [
+          "Sources: 12000, Uses: N/A — no S&U data entered or partial data"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y1) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y2) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y3) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y4) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y5) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Cash Flow Ending → Balance Sheet Cash (Y1)",
+        "passed": true,
+        "details": [
+          "Value A: 106850, Value B: 106850, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "DSCR Values (No Debt)",
+        "passed": true,
+        "details": [
+          "DSCR row present — N/A or 0 is correct when no debt exists"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "7 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Standard Export",
+    "payload": "Homeschool Co-Op Mixed",
+    "fileSize": 26136,
+    "tabs": [
+      "Cover",
+      "Assumptions",
+      "Revenue Schedule",
+      "Staffing & Personnel",
+      "Operating Expenses",
+      "Capital & Debt",
+      "Financial Model",
+      "Summary",
+      "Financial Health"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 25.5 KB",
+          "Successfully opened workbook",
+          "Worksheets: 9"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 9 tabs: Cover, Assumptions, Revenue Schedule, Staffing & Personnel, Operating Expenses, Capital & Debt, Financial Model, Summary, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 715 cells across 9 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue: 201000"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income: 100934"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "7 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Formula Export",
+    "payload": "Homeschool Co-Op Mixed",
+    "fileSize": 23669,
+    "tabs": [
+      "Instructions",
+      "Assumptions",
+      "5-Year Model",
+      "Year 1 Pro Forma",
+      "Financial Health"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 23.1 KB",
+          "Successfully opened workbook",
+          "Worksheets: 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 5 tabs: Instructions, Assumptions, 5-Year Model, Year 1 Pro Forma, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 1074 cells across 5 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "7 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Underwriting V1 (14-tab)",
+    "payload": "Homeschool Co-Op Mixed",
+    "fileSize": 36681,
+    "tabs": [
+      "Assumptions",
+      "Enrollment & Rev Drivers",
+      "Tuition & Funding Detail",
+      "Staffing Plan",
+      "Operating Expenses",
+      "Facilities & Occupancy",
+      "Capital Stack & Startup Uses",
+      "Debt Schedule",
+      "Cash Flow Monthly Y1",
+      "5-Year P&L",
+      "5-Year Balance Sheet",
+      "DSCR & Covenants",
+      "Underwriting Snapshot",
+      "Summary",
+      "Cover",
+      "Financial Health"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 35.8 KB",
+          "Successfully opened workbook",
+          "Worksheets: 16"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 16 tabs: Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 1079 cells across 16 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue: 167500"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income: 73359"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "7 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Lender Pro Forma",
+    "payload": "Homeschool Co-Op Mixed",
+    "fileSize": 26170,
+    "tabs": [
+      "Instructions",
+      "Cover",
+      "Assumptions",
+      "Drivers",
+      "5-Year P&L",
+      "Cash Flow & DSCR",
+      "Staffing",
+      "Loan Snapshot",
+      "Summary",
+      "Financial Health"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 25.6 KB",
+          "Successfully opened workbook",
+          "Worksheets: 10"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 10 tabs: Instructions, Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 722 cells across 10 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Core Sheets Present",
+        "passed": true,
+        "details": [
+          "Sheets: Instructions, Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Workbook Has Data",
+        "passed": true,
+        "details": [],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 129150, Value B: 129150, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -21150, Value B: -21150, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -21150, Value B: -21150, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 141931, Value B: 141931, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 19689, Value B: 19689, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 19689, Value B: 19689, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 162605, Value B: 162605, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 63184, Value B: 63184, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 63184, Value B: 63184, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 232391, Value B: 232391, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 45976, Value B: 45976, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 45976, Value B: 45976, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 277823, Value B: 277823, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: 40319, Value B: 40319, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: 40319, Value B: 40319, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -21150, Value B: -21150, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -1461, Value B: -1461, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: 61723, Value B: 61723, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: 107700, Value B: 107700, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: 148019, Value B: 148019, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Summary: Key Ratios Present",
+        "passed": true,
+        "details": [
+          "All key ratios found: net margin, personnel %, revenue per student, expense per student, dscr"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "5 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Single-Year Pro Forma",
+    "payload": "Homeschool Co-Op Mixed",
+    "fileSize": 13931,
+    "tabs": [
+      "Assumptions",
+      "Revenue",
+      "Personnel",
+      "Operating Expenses",
+      "P&L Summary"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 13.6 KB",
+          "Successfully opened workbook",
+          "Worksheets: 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 368 cells across 5 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue (Annual): 201000"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income (Annual): 73359"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Underwriting V2 (21-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 47242,
+    "fileSize": 47243,
     "tabs": [
       "Instructions",
       "Cover",
@@ -948,7 +1667,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Private School + ESA",
-    "fileSize": 28393,
+    "fileSize": 28394,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -1035,7 +1754,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 27955,
+    "fileSize": 27956,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1102,7 +1821,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 38413,
+    "fileSize": 38414,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1835,7 +2554,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 26780,
+    "fileSize": 26781,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1994,7 +2713,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 26632,
+    "fileSize": 26631,
     "tabs": [
       "Instructions",
       "Cover",
@@ -2303,7 +3022,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 14910,
+    "fileSize": 14909,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -2361,7 +3080,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 47773,
+    "fileSize": 47772,
     "tabs": [
       "Instructions",
       "Cover",
