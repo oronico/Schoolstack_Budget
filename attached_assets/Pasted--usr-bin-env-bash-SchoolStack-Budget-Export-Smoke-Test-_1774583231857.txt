@@ -1,0 +1,335 @@
+#!/usr/bin/env bash
+# SchoolStack Budget — Export Smoke Test
+# Usage: ./scripts/smoke-test-exports.sh [TOKEN] [MODEL_ID]
+#
+# Examples:
+#   ./scripts/smoke-test-exports.sh                          # Public exports only
+#   ./scripts/smoke-test-exports.sh eyJhbGci... 42           # Public + authenticated
+#   RAILWAY_URL=https://my-app.up.railway.app ./scripts/smoke-test-exports.sh eyJ... 42
+
+set -euo pipefail
+
+TOKEN="${1:-}"
+MODEL_ID="${2:-}"
+NETLIFY_BASE="${NETLIFY_URL:-https://budget.schoolstack.ai}"
+RAILWAY_BASE="${RAILWAY_URL:-https://schoolstackbudget.up.railway.app}"
+OUT_DIR="/tmp/schoolstack-smoke-$(date +%s)"
+mkdir -p "$OUT_DIR"
+
+PASS=0
+FAIL=0
+SKIP=0
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+check_xlsx() {
+  local file="$1"
+  local label="$2"
+
+  if [ ! -f "$file" ]; then
+    echo -e "  ${RED}❌ $label — file not created${NC}"
+    FAIL=$((FAIL + 1))
+    return
+  fi
+
+  local size
+  size=$(wc -c < "$file" | tr -d ' ')
+
+  if [ "$size" -lt 100 ]; then
+    echo -e "  ${RED}❌ $label — too small (${size} bytes), likely an error response:${NC}"
+    head -c 200 "$file"
+    echo ""
+    FAIL=$((FAIL + 1))
+    return
+  fi
+
+  # Check ZIP magic bytes (PK\x03\x04)
+  local magic
+  magic=$(od -A n -t x1 -N 4 "$file" | tr -d ' ')
+  if [ "$magic" != "504b0304" ]; then
+    echo -e "  ${RED}❌ $label — not a valid ZIP/XLSX (magic: $magic, ${size} bytes)${NC}"
+    echo "     First 100 bytes:"
+    head -c 100 "$file" | cat -v
+    echo ""
+    FAIL=$((FAIL + 1))
+    return
+  fi
+
+  # Python ZIP validation
+  local result
+  result=$(python3 -c "
+import zipfile, sys
+try:
+    z = zipfile.ZipFile('$file')
+    bad = z.testzip()
+    if bad:
+        print(f'CORRUPT:{bad}')
+    else:
+        print(f'OK:{len(z.namelist())}')
+except Exception as e:
+    print(f'ERROR:{e}')
+" 2>&1)
+
+  local status="${result%%:*}"
+  local detail="${result#*:}"
+
+  case "$status" in
+    OK)
+      echo -e "  ${GREEN}✅ $label — valid XLSX (${size} bytes, ${detail} entries)${NC}"
+      PASS=$((PASS + 1))
+      ;;
+    CORRUPT)
+      echo -e "  ${RED}❌ $label — ZIP corrupt at: ${detail} (${size} bytes)${NC}"
+      FAIL=$((FAIL + 1))
+      ;;
+    ERROR)
+      echo -e "  ${RED}❌ $label — ZIP error: ${detail} (${size} bytes)${NC}"
+      FAIL=$((FAIL + 1))
+      ;;
+  esac
+}
+
+check_pdf() {
+  local file="$1"
+  local label="$2"
+
+  if [ ! -f "$file" ]; then
+    echo -e "  ${RED}❌ $label — file not created${NC}"
+    FAIL=$((FAIL + 1))
+    return
+  fi
+
+  local size
+  size=$(wc -c < "$file" | tr -d ' ')
+
+  if [ "$size" -lt 100 ]; then
+    echo -e "  ${RED}❌ $label — too small (${size} bytes)${NC}"
+    FAIL=$((FAIL + 1))
+    return
+  fi
+
+  local magic
+  magic=$(head -c 5 "$file")
+  if [ "$magic" = "%PDF-" ]; then
+    echo -e "  ${GREEN}✅ $label — valid PDF (${size} bytes)${NC}"
+    PASS=$((PASS + 1))
+  else
+    echo -e "  ${RED}❌ $label — not a valid PDF (${size} bytes)${NC}"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+compare_sizes() {
+  local direct="$1"
+  local proxy="$2"
+  local label="$3"
+
+  if [ ! -f "$direct" ] || [ ! -f "$proxy" ]; then
+    return
+  fi
+
+  local d_size p_size
+  d_size=$(wc -c < "$direct" | tr -d ' ')
+  p_size=$(wc -c < "$proxy" | tr -d ' ')
+
+  if [ "$d_size" -eq "$p_size" ]; then
+    echo -e "  ${GREEN}   ↳ Sizes match: direct=${d_size} proxy=${p_size}${NC}"
+  else
+    local pct=$(( (p_size - d_size) * 100 / d_size ))
+    echo -e "  ${RED}   ↳ SIZE MISMATCH: direct=${d_size} proxy=${p_size} (+${pct}%) — proxy is corrupting binary data${NC}"
+  fi
+}
+
+# Minimal test payload for public endpoints
+PAYLOAD='{
+  "schoolProfile": {
+    "schoolName": "Smoke Test School",
+    "state": "TX",
+    "schoolType": "microschool",
+    "entityType": "llc_single",
+    "schoolStage": "new_school",
+    "fundingProfile": "tuition_based",
+    "openingYear": 2026,
+    "maxCapacity": 25,
+    "fiscalYearStartMonth": 7,
+    "isPartialFirstYear": true,
+    "year1OperatingMonths": 10,
+    "debtIncluded": false
+  },
+  "enrollment": { "year1": 12, "year2": 18, "year3": 22, "year4": 25, "year5": 25 },
+  "revenueRows": [
+    { "id": "r1", "category": "tuition_and_fees", "lineItem": "Tuition", "enabled": true, "driverType": "per_student", "amounts": [10000, 10300, 10609, 10927, 11255] }
+  ],
+  "staffingRows": [
+    { "id": "s1", "roleName": "Teacher", "functionCategory": "instructional", "employmentType": "full_time", "fte": 1, "annualizedRate": 45000, "benefitsEligible": true, "benefitsRate": 20, "payrollTaxRate": 7.65, "payrollLike": false, "notes": "" }
+  ],
+  "expenseRows": [
+    { "id": "e1", "category": "occupancy_facility", "lineItem": "Rent", "enabled": true, "driverType": "monthly", "amounts": [2500, 2575, 2652, 2732, 2814] }
+  ],
+  "capitalAndDebtRows": []
+}'
+
+echo ""
+echo -e "${BOLD}╔══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}║        SchoolStack Budget — Export Smoke Test           ║${NC}"
+echo -e "${BOLD}╚══════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo "  Netlify:  $NETLIFY_BASE"
+echo "  Railway:  $RAILWAY_BASE"
+echo "  Output:   $OUT_DIR"
+echo ""
+
+# ── PUBLIC EXPORTS (no auth needed) ──────────────────────────
+
+echo -e "${BOLD}── Public Exports (via Netlify proxy) ──${NC}"
+echo ""
+
+curl -s -X POST "$NETLIFY_BASE/api/public/export-budget" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD" \
+  -o "$OUT_DIR/public_budget_netlify.xlsx"
+check_xlsx "$OUT_DIR/public_budget_netlify.xlsx" "Public Budget (Netlify)"
+
+curl -s -X POST "$NETLIFY_BASE/api/public/export-single-year" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD" \
+  -o "$OUT_DIR/public_single_year_netlify.xlsx"
+check_xlsx "$OUT_DIR/public_single_year_netlify.xlsx" "Public Single-Year (Netlify)"
+
+echo ""
+echo -e "${BOLD}── Public Exports (direct to Railway) ──${NC}"
+echo ""
+
+curl -s -X POST "$RAILWAY_BASE/api/public/export-budget" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD" \
+  -o "$OUT_DIR/public_budget_direct.xlsx"
+check_xlsx "$OUT_DIR/public_budget_direct.xlsx" "Public Budget (Direct)"
+
+curl -s -X POST "$RAILWAY_BASE/api/public/export-single-year" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD" \
+  -o "$OUT_DIR/public_single_year_direct.xlsx"
+check_xlsx "$OUT_DIR/public_single_year_direct.xlsx" "Public Single-Year (Direct)"
+
+echo ""
+echo -e "${CYAN}  Size comparison — public exports:${NC}"
+compare_sizes "$OUT_DIR/public_budget_direct.xlsx" "$OUT_DIR/public_budget_netlify.xlsx" "Budget"
+compare_sizes "$OUT_DIR/public_single_year_direct.xlsx" "$OUT_DIR/public_single_year_netlify.xlsx" "Single-Year"
+
+# ── AUTHENTICATED EXPORTS ────────────────────────────────────
+
+if [ -n "$TOKEN" ] && [ -n "$MODEL_ID" ]; then
+  AUTH="Authorization: Bearer $TOKEN"
+
+  echo ""
+  echo -e "${BOLD}── Authenticated Exports (via Netlify proxy) ──${NC}"
+  echo ""
+
+  XLSX_ROUTES=(
+    "export:Standard"
+    "export/lender-proforma:Lender Pro Forma"
+    "export/underwriting-v2:Underwriting V2 (21-tab)"
+    "export/single-year:Single-Year"
+  )
+
+  for entry in "${XLSX_ROUTES[@]}"; do
+    route="${entry%%:*}"
+    label="${entry#*:}"
+    slug=$(echo "$label" | tr ' ' '_' | tr '(' '_' | tr ')' '_' | tr -d '/')
+    
+    curl -s -H "$AUTH" \
+      "$NETLIFY_BASE/api/models/$MODEL_ID/$route" \
+      -o "$OUT_DIR/auth_${slug}_netlify.xlsx"
+    check_xlsx "$OUT_DIR/auth_${slug}_netlify.xlsx" "$label (Netlify)"
+  done
+
+  echo ""
+  echo -e "${BOLD}── Authenticated Exports (direct to Railway) ──${NC}"
+  echo ""
+
+  for entry in "${XLSX_ROUTES[@]}"; do
+    route="${entry%%:*}"
+    label="${entry#*:}"
+    slug=$(echo "$label" | tr ' ' '_' | tr '(' '_' | tr ')' '_' | tr -d '/')
+    
+    curl -s -H "$AUTH" \
+      "$RAILWAY_BASE/api/models/$MODEL_ID/$route" \
+      -o "$OUT_DIR/auth_${slug}_direct.xlsx"
+    check_xlsx "$OUT_DIR/auth_${slug}_direct.xlsx" "$label (Direct)"
+  done
+
+  echo ""
+  echo -e "${CYAN}  Size comparison — authenticated exports:${NC}"
+  for entry in "${XLSX_ROUTES[@]}"; do
+    label="${entry#*:}"
+    slug=$(echo "$label" | tr ' ' '_' | tr '(' '_' | tr ')' '_' | tr -d '/')
+    compare_sizes "$OUT_DIR/auth_${slug}_direct.xlsx" "$OUT_DIR/auth_${slug}_netlify.xlsx" "$label"
+  done
+
+  # PDF exports
+  echo ""
+  echo -e "${BOLD}── PDF Exports ──${NC}"
+  echo ""
+
+  PDF_ROUTES=(
+    "export/pro-forma-pdf:Pro Forma PDF"
+    "export/lender-packet-pdf:Lender Packet PDF"
+  )
+
+  for entry in "${PDF_ROUTES[@]}"; do
+    route="${entry%%:*}"
+    label="${entry#*:}"
+    slug=$(echo "$label" | tr ' ' '_' | tr -d '/')
+
+    curl -s -H "$AUTH" \
+      "$NETLIFY_BASE/api/models/$MODEL_ID/$route" \
+      -o "$OUT_DIR/auth_${slug}_netlify.pdf"
+    check_pdf "$OUT_DIR/auth_${slug}_netlify.pdf" "$label (Netlify)"
+
+    curl -s -H "$AUTH" \
+      "$RAILWAY_BASE/api/models/$MODEL_ID/$route" \
+      -o "$OUT_DIR/auth_${slug}_direct.pdf"
+    check_pdf "$OUT_DIR/auth_${slug}_direct.pdf" "$label (Direct)"
+  done
+
+else
+  echo ""
+  echo -e "${YELLOW}  ⏭  Skipping authenticated exports (no TOKEN/MODEL_ID provided)${NC}"
+  echo "     Usage: $0 <JWT_TOKEN> <MODEL_ID>"
+  echo "     Get your token from browser DevTools > Application > localStorage > auth_token"
+  SKIP=1
+fi
+
+# ── SUMMARY ──────────────────────────────────────────────────
+
+echo ""
+echo -e "${BOLD}╔══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}║                       RESULTS                          ║${NC}"
+echo -e "${BOLD}╚══════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "  ${GREEN}Passed: $PASS${NC}  |  ${RED}Failed: $FAIL${NC}  |  ${YELLOW}Skipped: $SKIP${NC}"
+echo ""
+echo "  Files saved to: $OUT_DIR"
+echo ""
+
+if [ "$FAIL" -gt 0 ]; then
+  echo -e "  ${RED}${BOLD}⚠️  FAILURES DETECTED${NC}"
+  echo ""
+  echo "  If Netlify exports are corrupt but Direct exports are valid,"
+  echo "  apply the fix in FIX_Corrupt_Excel_Exports.md:"
+  echo "    Replace res.send(buffer) with res.end(Buffer.from(buffer))"
+  echo "    and add Content-Length header on all binary export routes."
+  echo ""
+  exit 1
+elif [ "$PASS" -gt 0 ]; then
+  echo -e "  ${GREEN}${BOLD}✅  All exports valid.${NC}"
+  echo ""
+  exit 0
+fi

@@ -62,14 +62,14 @@ export function sectionTitle(doc: PDFDoc, text: string) {
   const margin = doc.page.margins.left;
   const w = doc.page.width - margin * 2;
 
-  ensureSpace(doc, 40);
-  doc.moveDown(0.5);
+  ensureSpace(doc, 45);
+  doc.moveDown(0.3);
   doc.save();
-  doc.rect(margin, doc.y, w, 24).fill(BRAND.navy);
+  doc.rect(margin, doc.y, w, 22).fill(BRAND.navy);
   doc.font("Helvetica-Bold").fontSize(11).fillColor(BRAND.white);
-  doc.text(text, margin + 8, doc.y + 6, { width: w - 16 });
+  doc.text(text, margin + 8, doc.y + 5, { width: w - 16, lineBreak: false });
   doc.restore();
-  doc.y += 30;
+  doc.y += 26;
 }
 
 export function subSection(doc: PDFDoc, text: string) {
@@ -105,6 +105,7 @@ export function drawTable(doc: PDFDoc, columns: TableColumn[], rows: string[][],
   const margin = doc.page.margins.left;
   const rowH = 20;
   const headerH = 22;
+  const totalW = columns.reduce((s, c) => s + c.width, 0);
 
   ensureSpace(doc, headerH + rowH * Math.min(rows.length, 3));
 
@@ -112,18 +113,17 @@ export function drawTable(doc: PDFDoc, columns: TableColumn[], rows: string[][],
   const startY = doc.y;
 
   doc.save();
-  doc.rect(x, startY, columns.reduce((s, c) => s + c.width, 0), headerH).fill(BRAND.lightGray);
-
+  doc.rect(x, startY, totalW, headerH).fill(BRAND.lightGray);
   doc.font("Helvetica-Bold").fontSize(8).fillColor(BRAND.navy);
   for (const col of columns) {
-    doc.text(col.header, x + 4, startY + 6, { width: col.width - 8, align: col.align || "left" });
+    doc.text(col.header, x + 4, startY + 6, { width: col.width - 8, align: col.align || "left", lineBreak: false });
     x += col.width;
   }
   doc.restore();
 
   let y = startY + headerH;
   for (let r = 0; r < rows.length; r++) {
-    ensureSpace(doc, rowH + 10);
+    ensureSpace(doc, rowH + 4);
     if (doc.y > y + 5) {
       y = doc.y;
     }
@@ -132,23 +132,28 @@ export function drawTable(doc: PDFDoc, columns: TableColumn[], rows: string[][],
     const isZebra = options?.zebra && r % 2 === 1;
 
     if (isLast || isZebra) {
-      const totalW = columns.reduce((s, c) => s + c.width, 0);
       doc.save();
       doc.rect(margin, y, totalW, rowH).fill(isLast ? BRAND.lightGray : "#F8FAFC");
       doc.restore();
     }
 
-    x = margin;
-    const row = rows[r];
-    for (let c = 0; c < columns.length; c++) {
-      const col = columns[c];
-      doc.font(isLast ? "Helvetica-Bold" : "Helvetica").fontSize(8).fillColor(BRAND.black);
-      const cellVal = row[c] || "";
-      if (cellVal.startsWith("-") || cellVal.startsWith("(")) {
-        doc.fillColor(BRAND.red);
+    const savedBottom = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
+    try {
+      x = margin;
+      const row = rows[r];
+      for (let c = 0; c < columns.length; c++) {
+        const col = columns[c];
+        doc.font(isLast ? "Helvetica-Bold" : "Helvetica").fontSize(8).fillColor(BRAND.black);
+        const cellVal = row[c] || "";
+        if (cellVal.startsWith("-") || cellVal.startsWith("(")) {
+          doc.fillColor(BRAND.red);
+        }
+        doc.text(cellVal, x + 4, y + 5, { width: col.width - 8, align: col.align || "left" });
+        x += col.width;
       }
-      doc.text(cellVal, x + 4, y + 5, { width: col.width - 8, align: col.align || "left" });
-      x += col.width;
+    } finally {
+      doc.page.margins.bottom = savedBottom;
     }
     y += rowH;
   }
@@ -192,14 +197,15 @@ export function drawFooter(doc: PDFDoc) {
 
     const savedBottom = doc.page.margins.bottom;
     doc.page.margins.bottom = 0;
-
-    doc.save();
-    doc.font("Helvetica").fontSize(7).fillColor(BRAND.gray);
-    doc.text(`SchoolStack Budget - Generated ${dateStr}`, margin, bottomY, { width: contentW, align: "left", lineBreak: false });
-    doc.text(`Page ${i + 1} of ${pages.count}`, margin, bottomY, { width: contentW, align: "right", lineBreak: false });
-    doc.restore();
-
-    doc.page.margins.bottom = savedBottom;
+    try {
+      doc.save();
+      doc.font("Helvetica").fontSize(7).fillColor(BRAND.gray);
+      doc.text(`SchoolStack Budget - Generated ${dateStr}`, margin, bottomY, { width: contentW, align: "left", lineBreak: false });
+      doc.text(`Page ${i + 1} of ${pages.count}`, margin, bottomY, { width: contentW, align: "right", lineBreak: false });
+      doc.restore();
+    } finally {
+      doc.page.margins.bottom = savedBottom;
+    }
   }
 }
 
