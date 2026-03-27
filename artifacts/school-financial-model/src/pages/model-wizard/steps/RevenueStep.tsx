@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -309,16 +309,13 @@ export function RevenueStep() {
 
   const AUTO_GENERATED_IDS = useMemo(() => new Set(Object.values(PROGRAM_TYPE_TO_ROW_ID)), [PROGRAM_TYPE_TO_ROW_ID]);
 
-  const lastStateFundingKeyRef = useMemo(() => ({ current: null as string | null }), []);
+  const lastStateFundingKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!defaultsApplied) return;
 
     if (isCharterType && stateFundingConfig?.enrollmentRevenueMethod) {
-      const currentMethod = getValues("schoolProfile.enrollmentRevenueMethod");
-      if (!currentMethod) {
-        setValue("schoolProfile.enrollmentRevenueMethod", stateFundingConfig.enrollmentRevenueMethod, { shouldDirty: true });
-      }
+      setValue("schoolProfile.enrollmentRevenueMethod", stateFundingConfig.enrollmentRevenueMethod, { shouldDirty: true });
       if (stateFundingConfig.charterMethodology) {
         setValue("schoolProfile.stateFundingMethodology", stateFundingConfig.charterMethodology, { shouldDirty: true });
       }
@@ -860,13 +857,19 @@ export function RevenueStep() {
         const total = getCategoryTotal(cat);
         let availableItems = getAvailableLineItems(cat, rows.map((r) => r.id));
         if (cat === "school_choice" && stateFundingConfig && !isCharter) {
-          const stateProgIds = new Set(stateFundingConfig.availablePrograms
-            .filter(p => p.status !== "blocked")
+          const existingRowIds = new Set(rows.map(r => r.id));
+          const statePrograms = stateFundingConfig.availablePrograms.filter(p => p.status !== "blocked");
+          const stateProgIds = new Set(statePrograms.map(p => PROGRAM_TYPE_TO_ROW_ID[p.type] || `sc_${p.type}`));
+          const catalogFiltered = availableItems.filter(item => stateProgIds.has(item.id));
+          const extraItems = statePrograms
             .map(p => {
-              const map: Record<string, string> = { esa: "esa_revenue", voucher: "voucher_revenue", tax_credit_scholarship: "scholarship_org", refundable_tax_credit: "refundable_tax_credit", individual_tax_credit: "individual_tax_credit", federal_tax_credit_sgo: "federal_tax_credit_sgo", correspondence_charter: "correspondence_charter" };
-              return map[p.type] || `sc_${p.type}`;
-            }));
-          availableItems = availableItems.filter(item => stateProgIds.has(item.id));
+              const id = PROGRAM_TYPE_TO_ROW_ID[p.type] || `sc_${p.type}`;
+              if (existingRowIds.has(id)) return null;
+              if (catalogFiltered.some(ci => ci.id === id)) return null;
+              return { id, category: "school_choice" as RevenueCategory, lineItem: p.label, driverType: "per_student" as const };
+            })
+            .filter(Boolean) as { id: string; category: RevenueCategory; lineItem: string; driverType: "per_student" }[];
+          availableItems = [...catalogFiltered, ...extraItems];
         }
         const Icon = CATEGORY_ICONS[cat];
         const guidance = CATEGORY_GUIDANCE[cat];
