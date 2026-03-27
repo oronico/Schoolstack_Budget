@@ -327,8 +327,10 @@ export function RevenueStep() {
     if (lastStateFundingKeyRef.current === configKey) return;
     lastStateFundingKeyRef.current = configKey;
 
+    if (!stateFundingConfig || !stateCode) return;
+
     const eligibleIds = new Set(
-      (stateFundingConfig?.availablePrograms || [])
+      (stateFundingConfig.availablePrograms || [])
         .filter(p => p.status !== "blocked")
         .map(p => PROGRAM_TYPE_TO_ROW_ID[p.type] || `sc_${p.type}`)
     );
