@@ -853,57 +853,87 @@ function buildAssumptions(wb: ExcelJS.Workbook, input: Record<string, string | n
   );
   if (hasWeightedEnrollment) {
     const weStartRow = input.hasGradeBand === 1 ? (hasRetentionDemand ? 85 : 79) : (hasRetentionDemand ? 72 : 66);
-    ws.mergeCells(`B${weStartRow}:D${weStartRow}`);
+    ws.mergeCells(`B${weStartRow}:H${weStartRow}`);
     ws.getCell(`B${weStartRow}`).value = "WEIGHTED ENROLLMENT POPULATIONS";
     ws.getCell(`B${weStartRow}`).font = sectionFont;
     ws.getCell(`B${weStartRow}`).fill = sectionFill;
     ws.getCell(`B${weStartRow}`).alignment = { horizontal: "left", vertical: "middle" };
     ws.getRow(weStartRow).height = 24;
 
+    for (let c = 5; c <= 8; c++) {
+      if (ws.getColumn(c).width === undefined || (ws.getColumn(c).width as number) < 14)
+        ws.getColumn(c).width = 14;
+    }
+
+    const weHdrRow = weStartRow + 1;
+    ws.getCell(`C${weHdrRow}`).value = "Population";
+    ws.getCell(`C${weHdrRow}`).font = { ...labelFont, bold: true };
+    const weCols = ["D", "E", "F", "G", "H"];
+    for (let y = 0; y < 5; y++) {
+      ws.getCell(`${weCols[y]}${weHdrRow}`).value = `Year ${y + 1}`;
+      ws.getCell(`${weCols[y]}${weHdrRow}`).font = { ...labelFont, bold: true };
+      ws.getCell(`${weCols[y]}${weHdrRow}`).alignment = { horizontal: "right" };
+    }
+
+    const enrollmentRowMap: Record<number, string> = { 1: "D12", 2: "D13", 3: "D14", 4: "D15", 5: "D16" };
+
     const popTypes = [
       { label: "Special Education (SPED)", prefix: "spedCount" },
       { label: "English Language Learners (ELL)", prefix: "ellCount" },
       { label: "Economically Disadvantaged", prefix: "ecoDisCount" },
     ];
-    let weRow = weStartRow + 2;
+    let weRow = weHdrRow + 1;
+    const popRowAddrs: string[][] = [];
     for (const pop of popTypes) {
       ws.getCell(`C${weRow}`).value = pop.label;
       ws.getCell(`C${weRow}`).font = labelFont;
       ws.getCell(`C${weRow}`).border = thinBorder;
-      const vals = [];
-      for (let y = 1; y <= 5; y++) vals.push(Number(input[`${pop.prefix}Y${y}`]) || 0);
-      ws.getCell(`D${weRow}`).value = vals.join("  /  ");
-      inputCell(ws.getCell(`D${weRow}`));
-      ws.getCell(`D${weRow}`).border = thinBorder;
+      const addrs: string[] = [];
+      for (let y = 0; y < 5; y++) {
+        const cellAddr = `${weCols[y]}${weRow}`;
+        const cell = ws.getCell(cellAddr);
+        cell.value = Number(input[`${pop.prefix}Y${y + 1}`]) || 0;
+        cell.numFmt = NUM;
+        inputCell(cell);
+        cell.border = thinBorder;
+        cell.alignment = { horizontal: "right" };
+        addrs.push(cellAddr);
+      }
+      popRowAddrs.push(addrs);
       weRow++;
     }
     ws.getCell(`C${weRow}`).value = "Total Weighted Students";
     ws.getCell(`C${weRow}`).font = { ...labelFont, bold: true };
     ws.getCell(`C${weRow}`).border = thinBorder;
-    const totals = [];
-    for (let y = 1; y <= 5; y++) {
-      totals.push(
-        (Number(input[`spedCountY${y}`]) || 0) +
-        (Number(input[`ellCountY${y}`]) || 0) +
-        (Number(input[`ecoDisCountY${y}`]) || 0)
-      );
+    const totalRowAddrs: string[] = [];
+    for (let y = 0; y < 5; y++) {
+      const cellAddr = `${weCols[y]}${weRow}`;
+      const cell = ws.getCell(cellAddr);
+      const parts = popRowAddrs.map(addrs => addrs[y]).join("+");
+      const total = (Number(input[`spedCountY${y + 1}`]) || 0) + (Number(input[`ellCountY${y + 1}`]) || 0) + (Number(input[`ecoDisCountY${y + 1}`]) || 0);
+      setFormula(cell, parts, total);
+      cell.numFmt = NUM;
+      cell.font = { ...valueFont, bold: true };
+      cell.border = thinBorder;
+      cell.alignment = { horizontal: "right" };
+      totalRowAddrs.push(cellAddr);
     }
-    ws.getCell(`D${weRow}`).value = totals.join("  /  ");
-    ws.getCell(`D${weRow}`).font = { ...valueFont, bold: true };
-    ws.getCell(`D${weRow}`).border = thinBorder;
     weRow++;
     ws.getCell(`C${weRow}`).value = "Weighted % of Enrollment";
     ws.getCell(`C${weRow}`).font = { ...labelFont, italic: true };
     ws.getCell(`C${weRow}`).border = thinBorder;
-    const pcts = [];
     for (let y = 0; y < 5; y++) {
+      const cellAddr = `${weCols[y]}${weRow}`;
+      const cell = ws.getCell(cellAddr);
       const enroll = Number(input[`enrollmentY${y + 1}`]) || 0;
-      const pct = enroll > 0 ? Math.round((totals[y] / enroll) * 100) : 0;
-      pcts.push(`${pct}%`);
+      const total = (Number(input[`spedCountY${y + 1}`]) || 0) + (Number(input[`ellCountY${y + 1}`]) || 0) + (Number(input[`ecoDisCountY${y + 1}`]) || 0);
+      const pct = enroll > 0 ? total / enroll : 0;
+      setFormula(cell, `IF(${enrollmentRowMap[y + 1]}=0,0,${totalRowAddrs[y]}/${enrollmentRowMap[y + 1]})`, pct);
+      cell.numFmt = PCT;
+      cell.font = { ...valueFont, italic: true };
+      cell.border = thinBorder;
+      cell.alignment = { horizontal: "right" };
     }
-    ws.getCell(`D${weRow}`).value = pcts.join("  /  ");
-    ws.getCell(`D${weRow}`).font = { ...valueFont, italic: true };
-    ws.getCell(`D${weRow}`).border = thinBorder;
   }
 
   ws.views = [{ state: "frozen", xSplit: 0, ySplit: 1 }];

@@ -112,6 +112,9 @@ interface AsmReg {
   startCashRow: number;
   maxCapRow: number;
   debtIncRow: number;
+  spedRow?: number;
+  ellRow?: number;
+  ecoDisRow?: number;
 }
 
 function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, costInflation: number, prorationFactor: number, startingCash: number): AsmReg {
@@ -336,6 +339,10 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     }
   }
 
+  let spedRow: number | undefined;
+  let ellRow: number | undefined;
+  let ecoDisRow: number | undefined;
+
   const hasWeighted = (sp.spedCount?.some(v => v > 0)) || (sp.ellCount?.some(v => v > 0)) || (sp.ecoDisCount?.some(v => v > 0));
   if (hasWeighted) {
     r += 2;
@@ -343,14 +350,15 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     r++;
     ws.getRow(r).values = ["Population", ...yLabels];
     hdr(ws, r, 6);
-    const weightedGroups = [
-      { label: "Special Education (SPED)", data: sp.spedCount },
-      { label: "English Language Learners (ELL)", data: sp.ellCount },
-      { label: "Economically Disadvantaged", data: sp.ecoDisCount },
+    const weightedGroups: { label: string; data: number[] | undefined; setRow: (row: number) => void }[] = [
+      { label: "Special Education (SPED)", data: sp.spedCount, setRow: (row: number) => { spedRow = row; } },
+      { label: "English Language Learners (ELL)", data: sp.ellCount, setRow: (row: number) => { ellRow = row; } },
+      { label: "Economically Disadvantaged", data: sp.ecoDisCount, setRow: (row: number) => { ecoDisRow = row; } },
     ];
     for (const group of weightedGroups) {
       if (!group.data?.some(v => v > 0)) continue;
       r++;
+      group.setRow(r);
       ws.getCell(r, 1).value = group.label; dc(ws.getCell(r, 1));
       for (let y = 0; y < 5; y++) {
         const cell = ws.getCell(r, y + 2);
@@ -359,7 +367,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     }
   }
 
-  return { enrollRow, revStartRow, staffStartRow, expStartRow, capStartRow, salaryEscRow, costInflRow, prorationRow, startCashRow, maxCapRow, debtIncRow };
+  return { enrollRow, revStartRow, staffStartRow, expStartRow, capStartRow, salaryEscRow, costInflRow, prorationRow, startCashRow, maxCapRow, debtIncRow, spedRow, ellRow, ecoDisRow };
 }
 
 function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
@@ -403,7 +411,7 @@ interface EnrollmentDriverRefs {
   sheetName: string;
 }
 
-function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[]): EnrollmentDriverRefs {
+function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], asmReg: AsmReg): EnrollmentDriverRefs {
   const ws = wb.addWorksheet("Enrollment Drivers");
   const sp = data.schoolProfile || {};
   const yLabels = yearLabels(sp.openingYear);
@@ -507,42 +515,54 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
     }
   }
 
-  const hasWeightedEnrollment = (sp.spedCount?.some((v: number) => v > 0)) || (sp.ellCount?.some((v: number) => v > 0)) || (sp.ecoDisCount?.some((v: number) => v > 0));
+  const hasWeightedEnrollment = asmReg.spedRow || asmReg.ellRow || asmReg.ecoDisRow;
   if (hasWeightedEnrollment) {
     r += 2;
     sec(ws, r, cols); ws.getCell(r, 1).value = "WEIGHTED ENROLLMENT POPULATIONS";
     r++;
-    const weightedGroups = [
-      { label: "Special Education (SPED)", data: sp.spedCount as number[] | undefined },
-      { label: "English Language Learners (ELL)", data: sp.ellCount as number[] | undefined },
-      { label: "Economically Disadvantaged", data: sp.ecoDisCount as number[] | undefined },
+    const weightedGroups: { label: string; asmRow: number | undefined; data: number[] | undefined }[] = [
+      { label: "Special Education (SPED)", asmRow: asmReg.spedRow, data: sp.spedCount as number[] | undefined },
+      { label: "English Language Learners (ELL)", asmRow: asmReg.ellRow, data: sp.ellCount as number[] | undefined },
+      { label: "Economically Disadvantaged", asmRow: asmReg.ecoDisRow, data: sp.ecoDisCount as number[] | undefined },
     ];
+    const weightedPopRows: number[] = [];
     for (const group of weightedGroups) {
-      if (!group.data?.some((v: number) => v > 0)) continue;
+      if (!group.asmRow) continue;
       r++;
+      weightedPopRows.push(r);
       ws.getCell(r, 1).value = group.label; dc(ws.getCell(r, 1));
       for (let y = 0; y < 5; y++) {
         const col = startCol + y;
         const cell = ws.getCell(r, col);
-        cell.value = group.data?.[y] ?? 0; cell.numFmt = NUM; dc(cell); inputCell(cell);
+        const asmCol = y + 2;
+        const val = group.data?.[y] ?? 0;
+        setFormula(cell, `Assumptions!${cn(group.asmRow, asmCol)}`, val);
+        cell.numFmt = NUM; dc(cell); outputCell(cell);
       }
     }
-    r++;
-    ws.getCell(r, 1).value = "Total Weighted Population"; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
-      const col = startCol + y;
-      const cell = ws.getCell(r, col);
-      const total = (sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0);
-      cell.value = total; cell.numFmt = NUM; gc(cell); outputCell(cell);
-    }
-    r++;
-    ws.getCell(r, 1).value = "Weighted % of Total"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
-      const col = startCol + y;
-      const cell = ws.getCell(r, col);
-      const total = (sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0);
-      const pct = enrollment[y] > 0 ? total / enrollment[y] : 0;
-      cell.value = pct; cell.numFmt = PCT; dc(cell); outputCell(cell);
+    if (weightedPopRows.length > 0) {
+      r++;
+      ws.getCell(r, 1).value = "Total Weighted Population"; bc(ws.getCell(r, 1));
+      for (let y = 0; y < 5; y++) {
+        const col = startCol + y;
+        const cell = ws.getCell(r, col);
+        const sumParts = weightedPopRows.map(wr => cn(wr, col)).join("+");
+        const total = (sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0);
+        setFormula(cell, sumParts, total);
+        cell.numFmt = NUM; gc(cell); outputCell(cell);
+      }
+      const totalRow = r;
+      r++;
+      ws.getCell(r, 1).value = "Weighted % of Total"; dc(ws.getCell(r, 1));
+      for (let y = 0; y < 5; y++) {
+        const col = startCol + y;
+        const cell = ws.getCell(r, col);
+        const enrollAddr = cn(totalStudentsRow, col);
+        const totalAddr = cn(totalRow, col);
+        const pct = enrollment[y] > 0 ? ((sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0)) / enrollment[y] : 0;
+        setFormula(cell, `IF(${enrollAddr}=0,0,${totalAddr}/${enrollAddr})`, pct);
+        cell.numFmt = PCT; dc(cell); outputCell(cell);
+      }
     }
   }
 
@@ -2498,9 +2518,9 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
 
   buildInstructions(wb, data);
   buildCover(wb, data);
-  buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
+  const asmReg = buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
   buildProgramProfile(wb, data);
-  const edRefs = buildEnrollmentDrivers(wb, data, enrollment);
+  const edRefs = buildEnrollmentDrivers(wb, data, enrollment, asmReg);
   buildTuitionFunding(wb, data, enrollment, edRefs);
   buildStaffingDrivers(wb, data, enrollment, salaryEsc, prorationFactor);
   buildOpExDrivers(wb, data, enrollment);

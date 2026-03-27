@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { addDashboardSheet, computeFacilityCostByYear } from "./workbook-helpers.js";
+import { addDashboardSheet, computeFacilityCostByYear, setFormula } from "./workbook-helpers.js";
 
 function safeResult(v: unknown): number | string {
   if (v === null || v === undefined) return "0";
@@ -1129,37 +1129,68 @@ function buildAssumptionsTab(
   const hasWeightedEnroll = (sp.spedCount?.some((v: number) => v > 0)) || (sp.ellCount?.some((v: number) => v > 0)) || (sp.ecoDisCount?.some((v: number) => v > 0));
   if (hasWeightedEnroll) {
     r += 2;
-    styleSectionRow(ws, r, 2);
+    styleSectionRow(ws, r, yearCount + 1);
     ws.getCell(r, 1).value = "WEIGHTED ENROLLMENT POPULATIONS";
+
+    for (let c = 2; c <= yearCount + 1; c++) {
+      if (!ws.getColumn(c).width || (ws.getColumn(c).width as number) < 14)
+        ws.getColumn(c).width = 14;
+    }
+
+    r++;
+    ws.getCell(r, 1).value = ""; ws.getCell(r, 1).font = NORMAL_FONT;
+    for (let y = 0; y < yearCount; y++) {
+      ws.getCell(r, y + 2).value = `Year ${y + 1}`;
+      ws.getCell(r, y + 2).font = { ...NORMAL_FONT, bold: true };
+      ws.getCell(r, y + 2).alignment = { horizontal: "right" };
+    }
+
     const popTypes = [
       { label: "Special Education (SPED)", data: sp.spedCount },
       { label: "English Language Learners (ELL)", data: sp.ellCount },
       { label: "Economically Disadvantaged", data: sp.ecoDisCount },
     ];
+    const popDataRows: number[] = [];
     for (const pop of popTypes) {
       r++;
+      popDataRows.push(r);
       ws.getCell(r, 1).value = pop.label;
       ws.getCell(r, 1).font = NORMAL_FONT;
-      const vals = [];
-      for (let y = 0; y < yearCount; y++) vals.push(pop.data?.[y] ?? 0);
-      ws.getCell(r, 2).value = vals.join("  /  ");
-      applyInput(ws.getCell(r, 2));
+      for (let y = 0; y < yearCount; y++) {
+        const cell = ws.getCell(r, y + 2);
+        cell.value = pop.data?.[y] ?? 0;
+        cell.numFmt = "#,##0";
+        applyInput(cell);
+      }
     }
     r++;
     ws.getCell(r, 1).value = "Total Weighted Students";
     ws.getCell(r, 1).font = { ...NORMAL_FONT, bold: true };
-    const totals: number[] = [];
+    const totalRow = r;
     for (let y = 0; y < yearCount; y++) {
-      totals.push((sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0));
+      const col = y + 2;
+      const cell = ws.getCell(r, col);
+      const colLtr = String.fromCharCode(64 + col);
+      const sumParts = popDataRows.map(pr => `${colLtr}${pr}`).join("+");
+      const total = (sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0);
+      setFormula(cell, sumParts, total);
+      cell.numFmt = "#,##0";
+      cell.font = { ...NORMAL_FONT, bold: true };
     }
-    ws.getCell(r, 2).value = totals.join("  /  ");
-    ws.getCell(r, 2).font = { ...NORMAL_FONT, bold: true };
     r++;
     ws.getCell(r, 1).value = "Weighted % of Enrollment";
     ws.getCell(r, 1).font = { ...NORMAL_FONT, italic: true };
-    const pcts = enrollment.map((e, y) => e > 0 ? `${Math.round((totals[y] / e) * 100)}%` : "0%");
-    ws.getCell(r, 2).value = pcts.join("  /  ");
-    ws.getCell(r, 2).font = { ...NORMAL_FONT, italic: true };
+    for (let y = 0; y < yearCount; y++) {
+      const col = y + 2;
+      const cell = ws.getCell(r, col);
+      const colLtr = String.fromCharCode(64 + col);
+      const enrollAddr = `${colLtr}${enrollmentRows[y]}`;
+      const totalAddr = `${colLtr}${totalRow}`;
+      const pct = enrollment[y] > 0 ? ((sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0)) / enrollment[y] : 0;
+      setFormula(cell, `IF(${enrollAddr}=0,0,${totalAddr}/${enrollAddr})`, pct);
+      cell.numFmt = "0%";
+      cell.font = { ...NORMAL_FONT, italic: true };
+    }
   }
 
   if (tuitionTiers && tuitionTiers.length > 0 && sp.schoolType !== "charter_school") {

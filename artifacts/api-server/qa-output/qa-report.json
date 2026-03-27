@@ -761,7 +761,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 43316,
+    "fileSize": 43453,
     "tabs": [
       "Instructions",
       "Cover",
@@ -791,7 +791,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 42.3 KB",
+          "File size: 42.4 KB",
           "Successfully opened workbook",
           "Worksheets: 22"
         ],
@@ -908,7 +908,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 26135,
+    "fileSize": 26384,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -925,7 +925,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.5 KB",
+          "File size: 25.8 KB",
           "Successfully opened workbook",
           "Worksheets: 9"
         ],
@@ -943,7 +943,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 715 cells across 9 sheets",
+          "Scanned 741 cells across 9 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1153,7 +1153,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 26169,
+    "fileSize": 26399,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1171,7 +1171,7 @@
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 25.6 KB",
+          "File size: 25.8 KB",
           "Successfully opened workbook",
           "Worksheets: 10"
         ],
@@ -1189,7 +1189,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 722 cells across 10 sheets",
+          "Scanned 752 cells across 10 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
