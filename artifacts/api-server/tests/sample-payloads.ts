@@ -34,7 +34,7 @@ export const microschoolStartup = {
     { id: "r1", category: "tuition_and_fees", lineItem: "Tuition", enabled: true, driverType: "per_student", amounts: [12000, 12360, 12731, 13113, 13506], billingMonths: 10 },
     { id: "r2", category: "tuition_and_fees", lineItem: "Registration Fee", enabled: true, driverType: "per_student", amounts: [250, 250, 250, 250, 250], billingMonths: 12 },
     { id: "r3", category: "school_choice", lineItem: "AZ ESA Funds", enabled: true, driverType: "per_student", amounts: [7000, 7210, 7426, 7649, 7878], billingMonths: 12 },
-    { id: "r4", category: "grants_contributions", lineItem: "Annual Fundraising", enabled: true, driverType: "annual_fixed", amounts: [5000, 6000, 7000, 8000, 9000] },
+    { id: "r4", category: "philanthropy", lineItem: "Annual Fundraising", enabled: true, driverType: "annual_fixed", amounts: [5000, 6000, 7000, 8000, 9000] },
     { id: "r5", category: "tuition_offsets", lineItem: "Scholarship Discount", enabled: true, driverType: "percent_of_base", amounts: [10, 10, 10, 10, 10], percentBase: "r1" },
   ],
   staffing: {
@@ -207,8 +207,8 @@ export const privateSchoolWithESA = {
     { id: "r2", category: "tuition_and_fees", lineItem: "Registration Fee", enabled: true, driverType: "per_student", amounts: [350, 350, 350, 350, 350], billingMonths: 12 },
     { id: "r3", category: "tuition_offsets", lineItem: "Scholarship Discount", enabled: true, driverType: "per_student", amounts: [-1050, -1082, -1114, -1147, -1182] },
     { id: "r4", category: "school_choice", lineItem: "FL FTC Scholarship", enabled: true, driverType: "per_student", amounts: [8700, 8961, 9230, 9507, 9792], billingMonths: 12, disbursementType: "direct" },
-    { id: "r5", category: "grants_contributions", lineItem: "Foundation Grant", enabled: true, driverType: "annual_fixed", amounts: [50000, 40000, 30000, 20000, 10000], grantStatus: "confirmed" },
-    { id: "r6", category: "grants_contributions", lineItem: "Annual Fund", enabled: true, driverType: "annual_fixed", amounts: [25000, 30000, 35000, 40000, 45000] },
+    { id: "r5", category: "philanthropy", lineItem: "Foundation Grant", enabled: true, driverType: "annual_fixed", amounts: [50000, 40000, 30000, 20000, 10000], grantStatus: "confirmed" },
+    { id: "r6", category: "philanthropy", lineItem: "Annual Fund", enabled: true, driverType: "annual_fixed", amounts: [25000, 30000, 35000, 40000, 45000] },
     { id: "r7", category: "other_revenue", lineItem: "After-School Programs", enabled: true, driverType: "per_student", amounts: [500, 515, 530, 546, 562] },
   ],
   staffingRows: [
@@ -295,8 +295,8 @@ export const charterPublicFunding = {
     { id: "r1", category: "public_funding", lineItem: "State Per-Pupil Funding", enabled: true, driverType: "per_student", amounts: [9500, 9690, 9884, 10081, 10283], billingMonths: 12, paymentFrequency: "monthly", disbursementType: "direct" },
     { id: "r2", category: "public_funding", lineItem: "Federal Title I", enabled: true, driverType: "per_student", amounts: [800, 816, 832, 849, 866], billingMonths: 12, disbursementType: "reimbursement", reimbursementLagMonths: 2 },
     { id: "r3", category: "public_funding", lineItem: "Special Education Funding", enabled: true, driverType: "per_student", amounts: [1200, 1224, 1248, 1273, 1299], billingMonths: 12 },
-    { id: "r4", category: "grants_contributions", lineItem: "CSP Startup Grant", enabled: true, driverType: "annual_fixed", amounts: [100000, 75000, 50000, 0, 0], grantStatus: "confirmed" },
-    { id: "r5", category: "grants_contributions", lineItem: "Annual Fundraising", enabled: true, driverType: "annual_fixed", amounts: [30000, 40000, 50000, 60000, 70000] },
+    { id: "r4", category: "philanthropy", lineItem: "CSP Startup Grant", enabled: true, driverType: "annual_fixed", amounts: [100000, 75000, 50000, 0, 0], grantStatus: "confirmed" },
+    { id: "r5", category: "philanthropy", lineItem: "Annual Fundraising", enabled: true, driverType: "annual_fixed", amounts: [30000, 40000, 50000, 60000, 70000] },
     { id: "r6", category: "other_revenue", lineItem: "Food Service Revenue", enabled: true, driverType: "per_student", amounts: [300, 309, 318, 328, 338] },
   ],
   staffingRows: [
@@ -394,8 +394,8 @@ export const charterADAGradeBand = {
     { id: "state_local_perpupil", category: "public_funding", lineItem: "State Per-Pupil Funding", enabled: true, driverType: "per_student", amounts: [8500, 8670, 8843, 9020, 9200], billingMonths: 12 },
     { id: "r2", category: "public_funding", lineItem: "Federal Title I", enabled: true, driverType: "per_student", amounts: [750, 765, 780, 796, 812], billingMonths: 12 },
     { id: "r3", category: "public_funding", lineItem: "IDEA Special Ed", enabled: true, driverType: "per_student", amounts: [1100, 1122, 1144, 1167, 1191], billingMonths: 12 },
-    { id: "r4", category: "grants_contributions", lineItem: "CSP Startup Grant", enabled: true, driverType: "annual_fixed", amounts: [150000, 100000, 50000, 0, 0] },
-    { id: "r5", category: "grants_contributions", lineItem: "Annual Fundraising", enabled: true, driverType: "annual_fixed", amounts: [25000, 35000, 45000, 55000, 65000] },
+    { id: "r4", category: "philanthropy", lineItem: "CSP Startup Grant", enabled: true, driverType: "annual_fixed", amounts: [150000, 100000, 50000, 0, 0] },
+    { id: "r5", category: "philanthropy", lineItem: "Annual Fundraising", enabled: true, driverType: "annual_fixed", amounts: [25000, 35000, 45000, 55000, 65000] },
     { id: "r6", category: "other_revenue", lineItem: "Before/After Care", enabled: true, driverType: "per_student", amounts: [400, 412, 424, 437, 450] },
   ],
   staffingRows: [
