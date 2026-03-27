@@ -853,6 +853,20 @@ components:
           type: boolean
         notes:
           type: string
+        staffingMode:
+          type: string
+          enum: [fixed, ratio]
+          default: fixed
+        studentRatio:
+          type: number
+        minFte:
+          type: number
+        maxFte:
+          type: number
+        startYear:
+          type: integer
+        endYear:
+          type: integer
       required:
         - id
         - roleName

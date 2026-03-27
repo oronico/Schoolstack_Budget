@@ -8,6 +8,7 @@ import {
   getEnrollmentArray,
   computeGradeBandRevenue,
   hasGradeBandData,
+  computeEffectiveFte,
   type SchoolProfile,
   type StaffingRow,
   type RevenueRow,
@@ -51,6 +52,12 @@ function normalizeRow(raw: Record<string, unknown>): StaffingRow {
     payrollTaxRate: (raw.payrollTaxRate as number) || 7.65,
     payrollLike: (raw.payrollLike as boolean) || false,
     notes: (raw.notes as string) || "",
+    staffingMode: (raw.staffingMode as "fixed" | "ratio") || "fixed",
+    studentRatio: raw.studentRatio != null ? (raw.studentRatio as number) : undefined,
+    minFte: raw.minFte != null ? (raw.minFte as number) : undefined,
+    maxFte: raw.maxFte != null ? (raw.maxFte as number) : undefined,
+    startYear: raw.startYear != null ? (raw.startYear as number) : undefined,
+    endYear: raw.endYear != null ? (raw.endYear as number) : undefined,
   };
 }
 
@@ -189,22 +196,34 @@ function testCharterPublicFunding() {
   const revY3 = computeRevenueForYear(revenueRows, 2, enrollment[2]);
   check("Charter Y3 Revenue", revY3, 3784600);
 
-  // Personnel: 9 staff rows
-  // s1: 110000 * (1+0.28+0.0765) = 110000 * 1.3565 = 149215
+  // Personnel: 9 staff rows, s4 is ratio mode (studentRatio=22, minFte=4)
+  // Y1 enrollment=120: s4 FTE = ceil(120/22 * 2)/2 = ceil(10.909)/2 = 5.5
+  // s1: 110000 * 1.3565 = 149215
   // s2: 90000 * 1.3565 = 122085
   // s3: 72000 * 1.3565 = 97668
-  // s4: 6 * 52000 * 1.3565 = 423228
+  // s4: 5.5 * 52000 * 1.3565 = 387959
   // s5: 55000 * 1.3565 = 74607.5
-  // s6: 3 * 30000 * (1+0.20+0.0765) = 90000 * 1.2765 = 114885
+  // s6: 3 * 30000 * 1.2765 = 114885
   // s7: 55000 * 1.3565 = 74607.5
-  // s8: 2 * 38000 * (1+0.25+0.0765) = 76000 * 1.3265 = 100814
+  // s8: 2 * 38000 * 1.3265 = 100814
   // s9: 55000 * 1.3565 = 74607.5
-  // Base total ≈ 1,231,717.5
+  // Base total ≈ 1,196,448.5
   // Y1 pf = 10/12
   const salaryEsc = 0;
   const prorationFactor = 10 / 12;
-  const persY1 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0);
-  check("Charter Y1 Personnel (no esc)", persY1, 1231718 * prorationFactor, 5);
+  const persY1 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, enrollment[0]);
+  check("Charter Y1 Personnel (ratio s4)", persY1, 1196449 * prorationFactor, 5);
+
+  // Ratio-driven FTE assertions
+  const s4 = staffingRows.find(r => r.id === "s4")!;
+  check("s4 Y1 FTE (120 students)", computeEffectiveFte(s4, 0, 120), 5.5, 0);
+  check("s4 Y3 FTE (300 students)", computeEffectiveFte(s4, 2, 300), 14, 0);
+  check("s4 Y5 FTE (400 students)", computeEffectiveFte(s4, 4, 400), 18.5, 0);
+
+  // Y3 personnel: s4 FTE = 14 → loaded = 14*52000*(1+0.28+0.0765) = 987532
+  // non-s4 base = 808489.5, total = 1796021.5
+  const persY3 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 2, enrollment[2]);
+  check("Charter Y3 Personnel (ratio s4)", persY3, 1796022, 5);
 }
 
 function testCharterADAGradeBand() {
@@ -470,9 +489,9 @@ async function testWorkbookKPIs() {
     }],
     ["Charter", charterPublicFunding as unknown as Record<string, unknown>, {
       y1Rev: 1288333, y5Rev: 5458718,
-      y1Pers: 1026431, y1Opex: 545000, y1CD: 164825,
-      y1TotalExp: 1736256, y1NI: -447923, y5NI: 2447131,
-      y1DebtSvc: 49825, y1DSCR: -5.68, y1EndingCash: -190250,
+      y1Pers: 997040, y1Opex: 545000, y1CD: 164825,
+      y1TotalExp: 1706865, y1NI: -418532, y5NI: 1454742,
+      y1DebtSvc: 49825, y1DSCR: -5.09, y1EndingCash: -160860,
     }],
     ["Charter ADA", charterADAGradeBand as unknown as Record<string, unknown>, {
       y1Rev: 1178333, y5Rev: 5696361,

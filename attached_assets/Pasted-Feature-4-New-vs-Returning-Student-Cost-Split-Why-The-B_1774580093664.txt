@@ -1,0 +1,97 @@
+Feature 4: New vs. Returning Student Cost Split
+Why: The Bellwether model budgets several costs differently for new vs. returning students. "Textbooks (new): $500/new child" vs. "$100/existing child." "Non-instructional equipment (new): $76/new child" vs. "$25/existing child." This is financially significant — Year 1 of a startup (all new students) costs 3-5x more per student for these categories than Year 4 (mostly returning). SchoolStack collects retentionRate but only uses it for display and coaching — never for financial calculations.
+Current state:
+
+enrollment.retentionRate collected in EnrollmentStep (line 168+), stored in schema
+Used only in DemandConfidenceIndicator (display) and consultant engine (coaching text)
+Revenue and expense calculations use total enrollment — no new/returning distinction
+Expense driver types: annual_fixed, monthly, per_student, percent_of_revenue
+
+Schema Changes
+File: lib/api-spec/openapi.yaml
+Add two new driver types to ExpenseDriverType:
+yamlExpenseDriverType:
+  type: string
+  enum: [annual_fixed, monthly, per_student, per_new_student, per_returning_student, percent_of_revenue]
+File: artifacts/school-financial-model/src/lib/expense-defaults.ts
+typescriptexport type ExpenseDriverType =
+  | "annual_fixed" | "monthly" | "per_student"
+  | "per_new_student" | "per_returning_student"
+  | "percent_of_revenue";
+Update EXPENSE_DRIVER_LABELS:
+typescriptexport const EXPENSE_DRIVER_LABELS: Record<ExpenseDriverType, string> = {
+  annual_fixed: "Annual Fixed",
+  monthly: "Monthly",
+  per_student: "Per Student",
+  per_new_student: "Per New Student",
+  per_returning_student: "Per Returning Student",
+  percent_of_revenue: "% of Revenue",
+};
+Computation Changes
+File: artifacts/api-server/src/lib/workbook-helpers.ts
+
+Add enrollment split helpers:
+
+typescriptexport function computeNewStudents(
+  enrollment: number[], retentionRate: number, y: number
+): number {
+  if (y === 0) return enrollment[0]; // Year 1: all new
+  const returning = Math.round(enrollment[y - 1] * (retentionRate / 100));
+  return Math.max(0, enrollment[y] - returning);
+}
+
+export function computeReturningStudents(
+  enrollment: number[], retentionRate: number, y: number
+): number {
+  if (y === 0) return 0; // Year 1: none returning
+  return Math.min(enrollment[y], Math.round(enrollment[y - 1] * (retentionRate / 100)));
+}
+
+Update driverVal() (line ~308) to handle new driver types:
+
+typescriptexport function driverVal(
+  amounts: number[] | undefined, y: number, dt: string,
+  students: number, escalationRate?: number, fallbackInflation?: number,
+  newStudents?: number, returningStudents?: number  // NEW
+): number {
+  let base = amounts?.[y] ?? 0;
+  const esc = resolveEsc(escalationRate, fallbackInflation);
+  if (esc !== 0 && y > 0) {
+    const y1 = amounts?.[0] ?? 0;
+    base = y1 * Math.pow(1 + esc / 100, y);
+  }
+  switch (dt) {
+    case "monthly": return base * 12;
+    case "per_student": return base * students;
+    case "per_new_student": return base * (newStudents ?? students);
+    case "per_returning_student": return base * (returningStudents ?? 0);
+    case "annual_fixed": return base;
+    default: return base;
+  }
+}
+
+Update computeExpenseForYear() to accept and pass through enrollment split:
+
+typescriptexport function computeExpenseForYear(
+  rows: ExpenseRow[], y: number, students: number, totalRevenue: number,
+  costInflationPct?: number,
+  newStudents?: number, returningStudents?: number  // NEW
+): number {
+  // ... existing logic, passing newStudents/returningStudents to driverVal
+}
+Callers to Update
+All callers of computeExpenseForYear and driverVal must compute and pass the new/returning split. The pattern at each call site:
+typescriptconst retentionRate = enrollment?.retentionRate ?? 85; // sensible default
+const newStudents = computeNewStudents(enrollmentArr, retentionRate, y);
+const returningStudents = computeReturningStudents(enrollmentArr, retentionRate, y);
+Frontend Changes
+In ExpenseStep.tsx, add per_new_student and per_returning_student to the driver type dropdown. Show coaching text: "Use 'Per New Student' for first-year costs like textbooks, devices, and uniforms that returning students don't need again."
+Default Expense Rows
+Update expense-defaults.ts line item catalog — change these rows to use new driver types:
+typescript// Existing — change from per_student to per_new_student:
+{ id: "student_devices", lineItem: "Student Devices (New)", driverType: "per_new_student", ... },
+{ id: "textbooks_new", lineItem: "Textbooks & Curriculum (New Students)", driverType: "per_new_student", ... },
+
+// Add new companion rows:
+{ id: "textbooks_returning", lineItem: "Textbooks & Curriculum (Returning)", driverType: "per_returning_student", ... },
+Effort estimate: Medium. Schema + computation changes are straightforward; the work is updating all the callers and export code.

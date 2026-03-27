@@ -1,0 +1,66 @@
+Feature 3: Days Cash on Hand (DCOH) Everywhere
+Why: DCOH is the #1 liquidity metric every CDFI, charter authorizer, and Bellwether reviewer checks first. The formula is simple: (Ending Cash / (Total Annual Expenses / 365)). SchoolStack already computes it in the DSCR & Covenants tab of the 21-tab underwriting workbook (line 2164), and the covenantThresholds.minDaysCashOnHand field exists — but it's absent from the Financial Health dashboard, the consultant engine output, and the lender pro forma.
+Current state:
+
+Computed in underwriting-workbook.ts line 2164–2167 (PASS/FAIL check only)
+covenantThresholds.minDaysCashOnHand schema field exists (default 45)
+NOT in: Financial Health dashboard, consultant engine, lender pro forma, standard export
+
+Changes Required
+
+Add helper function to workbook-helpers.ts:
+
+typescriptexport function computeDaysCashOnHand(endingCash: number, totalAnnualExpenses: number): number {
+  if (totalAnnualExpenses <= 0) return endingCash >= 0 ? 365 : 0;
+  return Math.max(0, (endingCash / totalAnnualExpenses) * 365);
+}
+
+Add benchmark thresholds to benchmark-thresholds.ts:
+
+typescriptexport const BENCHMARK_DCOH_GREEN = 90;   // 90+ days = healthy
+export const BENCHMARK_DCOH_AMBER = 45;   // 45-89 days = watch
+// Below 45 = red
+
+Financial Health Dashboard (addDashboardSheet in workbook-helpers.ts):
+
+Add a "Days Cash on Hand" row after "Cash Runway (Months)," using the same pattern:
+typescriptr++;
+ws.getCell(r, 2).value = "Days Cash on Hand"; bc(ws.getCell(r, 2));
+for (let y = 0; y < 5; y++) {
+  const dcoh = computeDaysCashOnHand(input.cashByYear[y], totalExpByYear[y]);
+  const cell = ws.getCell(r, y + 3);
+  cell.value = Math.round(dcoh);
+  cell.numFmt = NUM;
+  gc(cell);
+  cell.alignment = { horizontal: "right" };
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: {
+    argb: dcoh >= BENCHMARK_DCOH_GREEN ? GREEN_BG : dcoh >= BENCHMARK_DCOH_AMBER ? AMBER_BG : RED_BG
+  }};
+}
+ws.getCell(r, 8).value = `≥ ${BENCHMARK_DCOH_GREEN} days`;
+ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } };
+ws.getCell(r, 8).border = BORDER;
+
+Consultant engine (consultant-engine.ts):
+
+Add DCOH to keyMetrics array output:
+typescript{
+  name: "Days Cash on Hand",
+  value: `${Math.round(dcoh)} days`,
+  status: dcoh >= 90 ? "good" : dcoh >= 45 ? "warning" : "danger",
+  interpretation: dcoh >= 90
+    ? "Strong liquidity position — over 3 months of expenses covered by cash."
+    : dcoh >= 45
+      ? "Adequate but thin — target building toward 90 days for resilience."
+      : "Low liquidity — the school could face a cash crisis from a single late payment or unexpected expense.",
+  benchmark: "≥ 90 days (healthy), ≥ 45 days (minimum)"
+}
+
+Financial health signals (financial-health.ts):
+
+Add a days_cash dimension to the health signal generator, using the same thresholds.
+
+Lender Pro Forma (lender-proforma-export.ts):
+
+Add DCOH to the Summary tab, after the DSCR row.
+Effort estimate: Small-medium. The math is trivial; the work is wiring it into 4-5 existing display locations.

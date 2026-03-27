@@ -774,7 +774,7 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
     ws.getCell(r, 4).value = sr.annualizedRate; ws.getCell(r, 4).numFmt = CUR; dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
     ws.getCell(r, 5).value = sr.benefitsRate / 100; ws.getCell(r, 5).numFmt = PCT; dc(ws.getCell(r, 5)); inputCell(ws.getCell(r, 5));
     ws.getCell(r, 6).value = sr.payrollTaxRate / 100; ws.getCell(r, 6).numFmt = PCT; dc(ws.getCell(r, 6)); inputCell(ws.getCell(r, 6));
-    ws.getCell(r, 7).value = Math.round(computeStaffingLoaded(sr)); ws.getCell(r, 7).numFmt = CUR; bc(ws.getCell(r, 7));
+    ws.getCell(r, 7).value = Math.round(computeStaffingLoaded(sr, 0, enrollment[0])); ws.getCell(r, 7).numFmt = CUR; bc(ws.getCell(r, 7));
   }
 
   r += 2;
@@ -786,7 +786,7 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
   ws.getCell(r, 1).value = "Total Personnel"; bc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
     const pf = y === 0 ? prorationFactor : 1;
-    const val = computePersonnelForYear(staffingRows, salaryEsc, pf, y);
+    const val = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
     const cell = ws.getCell(r, y + 2);
     cell.value = Math.round(val); cell.numFmt = CUR; gc(cell); outputCell(cell);
   }
@@ -799,7 +799,7 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
   for (let y = 0; y < 5; y++) {
     const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     const pf = y === 0 ? prorationFactor : 1;
-    const pers = computePersonnelForYear(staffingRows, salaryEsc, pf, y);
+    const pers = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
     const cell = ws.getCell(r, y + 2);
     cell.value = rev > 0 ? pers / rev : 0;
     cell.numFmt = PCT; dc(cell);
@@ -1038,10 +1038,13 @@ function buildStaffingCostsForecast(wb: ExcelJS.Workbook, data: ModelData, enrol
     const catFirstRow = r + 1;
     for (const sr of catRows) {
       r++;
-      ws.getCell(r, 1).value = `  ${sr.roleName}`; dc(ws.getCell(r, 1));
-      const loaded = computeStaffingLoaded(sr);
+      const ratioTag = sr.staffingMode === "ratio" && sr.studentRatio
+        ? ` [1:${sr.studentRatio}]`
+        : ` [${sr.fte} FTE]`;
+      ws.getCell(r, 1).value = `  ${sr.roleName}${ratioTag}`; dc(ws.getCell(r, 1));
       for (let y = 0; y < 5; y++) {
         const pf = y === 0 ? prorationFactor : 1;
+        const loaded = computeStaffingLoaded(sr, y, enrollment[y]);
         const val = loaded * Math.pow(1 + salaryEsc, y) * pf;
         ws.getCell(r, y + 2).value = Math.round(val); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
       }
@@ -1054,7 +1057,7 @@ function buildStaffingCostsForecast(wb: ExcelJS.Workbook, data: ModelData, enrol
       let catTotal = 0;
       for (const sr of catRows) {
         const pf = y === 0 ? prorationFactor : 1;
-        catTotal += computeStaffingLoaded(sr) * Math.pow(1 + salaryEsc, y) * pf;
+        catTotal += computeStaffingLoaded(sr, y, enrollment[y]) * Math.pow(1 + salaryEsc, y) * pf;
       }
       const col = y + 2;
       setFormula(ws.getCell(r, col), `SUM(${cn(catFirstRow, col)}:${cn(catLastRow, col)})`, Math.round(catTotal));
@@ -1066,7 +1069,7 @@ function buildStaffingCostsForecast(wb: ExcelJS.Workbook, data: ModelData, enrol
   sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL PERSONNEL";
   for (let y = 0; y < 5; y++) {
     const pf = y === 0 ? prorationFactor : 1;
-    const val = computePersonnelForYear(staffingRows, salaryEsc, pf, y);
+    const val = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
     const col = y + 2;
     if (scfCatTotalRows.length > 0) {
       const sumParts = scfCatTotalRows.map(tr => cn(tr, col)).join("+");
@@ -1132,9 +1135,9 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   for (const sr of staffingRows) {
     r++;
     ws.getCell(r, 1).value = `  ${sr.roleName}`; dc(ws.getCell(r, 1));
-    const loaded = computeStaffingLoaded(sr);
     for (let y = 0; y < 5; y++) {
       const pf = y === 0 ? prorationFactor : 1;
+      const loaded = computeStaffingLoaded(sr, y, enrollment[y]);
       ws.getCell(r, y + 2).value = Math.round(loaded * Math.pow(1 + salaryEsc, y) * pf);
       ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
     }
@@ -1146,7 +1149,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   const persByYear: number[] = [];
   for (let y = 0; y < 5; y++) {
     const pf = y === 0 ? prorationFactor : 1;
-    const val = computePersonnelForYear(staffingRows, salaryEsc, pf, y);
+    const val = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
     persByYear.push(val);
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(persFirstRow, col)}:${cn(persLastRow, col)})`, Math.round(val));
@@ -1399,7 +1402,7 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   //   - Debt service: spread over 12 months (lenders require year-round payments).
   //   - Cumulative cash starts from startingCash and compounds monthly.
   const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp);
-  const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0);
+  const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, students);
   const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct) * prorationFactor;
   const cd0 = computeCapDebtForYear(capDebtRows, 0, students);
   const monthlyPers = pers0 / (opMonths || 12);

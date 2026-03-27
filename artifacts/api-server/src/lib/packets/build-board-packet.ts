@@ -181,7 +181,7 @@ function buildScenarioSnapshots(md: ModelData, co: ConsultantOutput): ScenarioSn
       const students = adjEnrollment[y] || 0;
       const baseRevenue = computeRevenueForYear(md.revenueRows || [], y, students, md.tuitionTiers, costInflPct, sp);
       const revenue = baseRevenue * (1 + (scenario.tuitionAdjustment || 0) / 100);
-      const baseStaffing = computePersonnelForYear(normalized, salaryEsc || 0, prorationFactor, y);
+      const baseStaffing = computePersonnelForYear(normalized, salaryEsc || 0, prorationFactor, y, students);
       const staffing = baseStaffing * (1 + (scenario.staffingAdjustment || 0) / 100);
       const baseOpex = computeExpenseForYear(md.expenseRows || [], y, students, revenue, costInflPct);
       const opex = baseOpex * (1 + (scenario.expenseAdjustment || 0) / 100);

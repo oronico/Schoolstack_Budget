@@ -11,6 +11,8 @@ export type EmploymentType = "full_time" | "part_time" | "contract";
 export type SchoolStage = "new_school" | "operating_school";
 export type FundingProfile = "tuition_based" | "charter_public_funded" | "hybrid_mixed";
 
+export type StaffingMode = "fixed" | "ratio";
+
 export interface StaffingRowData {
   id: string;
   roleName: string;
@@ -23,6 +25,12 @@ export interface StaffingRowData {
   payrollTaxRate: number;
   payrollLike: boolean;
   notes: string;
+  staffingMode: StaffingMode;
+  studentRatio?: number;
+  minFte?: number;
+  maxFte?: number;
+  startYear?: number;
+  endYear?: number;
 }
 
 export const FUNCTION_CATEGORY_LABELS: Record<StaffingFunctionCategory, string> = {
@@ -201,6 +209,7 @@ export function generateDefaultStaffingRows(
       payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
       payrollLike: false,
       notes: "",
+      staffingMode: "fixed" as StaffingMode,
     }));
 }
 
@@ -217,6 +226,7 @@ export function createBlankStaffRow(): StaffingRowData {
     payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
     payrollLike: false,
     notes: "",
+    staffingMode: "fixed",
   };
 }
 
@@ -230,7 +240,17 @@ export interface PersonnelCostSummary {
   totalFTE: number;
 }
 
-export function calculatePersonnelCosts(rows: StaffingRowData[]): PersonnelCostSummary {
+function computeEffectiveFteForRow(row: StaffingRowData, enrollment: number): number {
+  if (row.staffingMode === "ratio" && row.studentRatio && row.studentRatio > 0) {
+    let computed = enrollment / row.studentRatio;
+    if (row.minFte !== undefined) computed = Math.max(computed, row.minFte);
+    if (row.maxFte !== undefined) computed = Math.min(computed, row.maxFte);
+    return Math.ceil(computed * 2) / 2;
+  }
+  return row.fte;
+}
+
+export function calculatePersonnelCosts(rows: StaffingRowData[], y1Enrollment?: number): PersonnelCostSummary {
   let totalSalariesWages = 0;
   let totalBenefits = 0;
   let totalPayrollTaxes = 0;
@@ -238,8 +258,9 @@ export function calculatePersonnelCosts(rows: StaffingRowData[]): PersonnelCostS
   let totalFTE = 0;
 
   for (const row of rows) {
-    const annualCost = row.fte * row.annualizedRate;
-    totalFTE += row.fte;
+    const fte = y1Enrollment !== undefined ? computeEffectiveFteForRow(row, y1Enrollment) : row.fte;
+    const annualCost = fte * row.annualizedRate;
+    totalFTE += fte;
 
     const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
 

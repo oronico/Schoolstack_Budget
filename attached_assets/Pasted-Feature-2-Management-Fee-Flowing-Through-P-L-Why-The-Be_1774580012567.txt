@@ -1,0 +1,33 @@
+Feature 2: Management Fee Flowing Through P&L
+Why: The Bellwether model treats the charter management fee (13% of revenue) as a first-class expense line item. SchoolStack has hasManagementFee and managementFeePercent on the school profile, and an authorizer_fee expense row in the defaults — but the fee is buried as a generic admin expense and doesn't appear prominently in exports or consultant analysis.
+Current state:
+
+schoolProfile.hasManagementFee (boolean) and managementFeePercent (number) exist in schema
+ExpenseStep.tsx creates/updates an authorizer_fee row with percent_of_revenue driver
+The fee shows on the Assumptions tab of exports as a text note
+It does NOT appear as a named line in the P&L section of exports
+Consultant engine doesn't analyze it
+
+Changes Required
+This is mostly already wired. The authorizer_fee expense row exists and flows through computeExpenseForYear() like any other row. The gaps are:
+
+Visibility in exports: The authorizer_fee row gets grouped under "Administrative / General" in exports. It should be called out separately in the P&L summary — add a line between operating expenses and net income: "Less: Authorizer / Management Fee" with the computed value. This matches the Bellwether model's treatment (line 31 of School roll-up: "Charter Management Fee" as a distinct cost line).
+
+File: artifacts/api-server/src/lib/excel-export.ts
+In the Financial Model tab where the P&L is built, after the total operating expenses row, add a subtotal that separates the management fee:
+typescript// After computing total expenses, if hasManagementFee:
+if (sp.hasManagementFee) {
+  // Find the authorizer_fee row
+  const mgmtRow = revenueRows?.find(r => r.id === "authorizer_fee") ||
+    expenseRows?.find(r => r.id === "authorizer_fee" || r.lineItem?.includes("Management Fee"));
+  if (mgmtRow && mgmtRow.enabled) {
+    // Add a visible "Management Fee" line in the P&L section
+    // Show it as: "  Authorizer / Management Fee: $X (Y% of Revenue)"
+  }
+}
+Do the same in lender-proforma-export.ts and underwriting-workbook.ts.
+
+Consultant engine: In consultant-engine.ts, add a check — if management fee exceeds 15% of revenue, flag it as a risk. If the school is not a charter but has a management fee, add guidance about what this means for their cost structure.
+Dashboard metric: In addDashboardSheet() in workbook-helpers.ts, add a "Management Fee %" row when hasManagementFee is true, showing fee/revenue % per year with a benchmark of ≤15%.
+
+Effort estimate: Small. The plumbing exists; this is visibility/surfacing work.

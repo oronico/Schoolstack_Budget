@@ -3,6 +3,8 @@ import {
   addInstructionsSheet, addDashboardSheet, type DashboardInput, DASHBOARD_GREEN,
   computeRevenueForYear as sharedComputeRevenue,
   computePersonnelForYear as sharedComputePersonnel,
+  computeEffectiveFte as sharedComputeEffectiveFte,
+  computeStaffingLoaded,
   computeExpenseForYear as sharedComputeExpense,
   computeDebtServiceForYear as sharedComputeDebtService,
   computeFacilityCostByYear,
@@ -92,6 +94,12 @@ interface StaffingRow {
   id: string; roleName: string; functionCategory: string; employmentType: string;
   fte: number; annualizedRate: number; benefitsEligible: boolean;
   benefitsRate: number; payrollTaxRate: number; payrollLike: boolean; notes: string;
+  staffingMode?: "fixed" | "ratio";
+  studentRatio?: number;
+  minFte?: number;
+  maxFte?: number;
+  startYear?: number;
+  endYear?: number;
 }
 
 function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
@@ -104,6 +112,12 @@ function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
     annualizedRate: Number(raw.annualizedRate ?? raw.salary ?? raw.rate) || 0,
     benefitsEligible: Boolean(raw.benefitsEligible ?? true),
     benefitsRate: Number(raw.benefitsRate) || 0,
+    staffingMode: String(raw.staffingMode ?? "fixed") as "fixed" | "ratio",
+    studentRatio: raw.studentRatio != null ? Number(raw.studentRatio) : undefined,
+    minFte: raw.minFte != null ? Number(raw.minFte) : undefined,
+    maxFte: raw.maxFte != null ? Number(raw.maxFte) : undefined,
+    startYear: raw.startYear != null ? Number(raw.startYear) : undefined,
+    endYear: raw.endYear != null ? Number(raw.endYear) : undefined,
     payrollTaxRate: Number(raw.payrollTaxRate) || 0,
     payrollLike: Boolean(raw.payrollLike ?? false),
     notes: String(raw.notes ?? ""),
@@ -412,11 +426,15 @@ function computeRevenueForYear(
 }
 
 function computePersonnelForYear(
-  rows: StaffingRow[], salaryEsc: number, prorationFactor: number, y: number
+  rows: StaffingRow[], salaryEsc: number, prorationFactor: number, y: number,
+  enrollment?: number
 ): number {
   let total = 0;
   for (const r of rows) {
-    const annual = r.fte * r.annualizedRate;
+    const effectiveFte = enrollment !== undefined
+      ? sharedComputeEffectiveFte(r, y, enrollment)
+      : r.fte;
+    const annual = effectiveFte * r.annualizedRate;
     const isContractNoPL = r.employmentType === "contract" && !r.payrollLike;
     let benefits = 0, tax = 0;
     if (!isContractNoPL) {
@@ -709,7 +727,8 @@ function buildAssumptions(
   let staffCount = 0;
   for (const sr of staffingRows) {
     r++; staffCount++;
-    ws.getCell(r, 1).value = sr.roleName || "Unnamed"; dc(ws.getCell(r, 1));
+    const ratioTag = sr.staffingMode === "ratio" && sr.studentRatio ? ` [1:${sr.studentRatio}]` : "";
+    ws.getCell(r, 1).value = (sr.roleName || "Unnamed") + ratioTag; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = funcLabel(sr.functionCategory); dc(ws.getCell(r, 2));
     const empMap: Record<string, string> = { full_time: "FT", part_time: "PT", contract: "Contract" };
     ws.getCell(r, 3).value = empMap[sr.employmentType] || sr.employmentType; dc(ws.getCell(r, 3));
@@ -1091,23 +1110,16 @@ function buildFiveYearModel(
 
   for (const sr of staffingRows) {
     r++;
-    ws.getCell(r, 1).value = `${sr.roleName} (${funcLabel(sr.functionCategory)})`;
+    const ratioTag2 = sr.staffingMode === "ratio" && sr.studentRatio ? ` [1:${sr.studentRatio}]` : "";
+    ws.getCell(r, 1).value = `${sr.roleName}${ratioTag2} (${funcLabel(sr.functionCategory)})`;
     dc(ws.getCell(r, 1));
-
-    const baseCost = sr.fte * sr.annualizedRate;
-    const isContractNoPL = sr.employmentType === "contract" && !sr.payrollLike;
-    let benefits = 0, tax = 0;
-    if (!isContractNoPL) {
-      if (sr.benefitsEligible) benefits = baseCost * (sr.benefitsRate / 100);
-      tax = baseCost * (sr.payrollTaxRate / 100);
-    }
-    const loadedBase = baseCost + benefits + tax;
 
     for (let y = 0; y < yc; y++) {
       const cell = ws.getCell(r, y + 2);
       const esc = Math.pow(1 + salaryEsc, y);
       const pf = y === 0 ? prorationFactor : 1;
-      cell.value = Math.round(loadedBase * esc * pf);
+      const loaded = computeStaffingLoaded(sr, y, enrollment[y]);
+      cell.value = Math.round(loaded * esc * pf);
       cell.numFmt = CUR; dc(cell);
     }
   }
@@ -1116,7 +1128,7 @@ function buildFiveYearModel(
   r++; sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL PERSONNEL";
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    const persVal = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
+    const persVal = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, enrollment[y]);
     setFormula(cell, `SUM(${cn(persFirstRow, y + 2)}:${cn(r - 1, y + 2)})`, Math.round(persVal));
     cell.numFmt = CUR; gc(cell);
   }
@@ -1254,7 +1266,7 @@ function buildFiveYearModel(
   for (let y = 0; y < yc; y++) {
     const pf = y === 0 ? prorationFactor : 1;
     const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
-    const pers = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
+    const pers = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, enrollment[y]);
     const exp = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct) * pf;
     const cd = computeCapDebtForYear(capDebtRows, y, enrollment[y]);
     const revRounded = Math.round(rev * pf);
@@ -1660,20 +1672,14 @@ function buildProForma(
   r++; sec(ws, r, 14); ws.getCell(r, 1).value = "PERSONNEL";
   const pfPersFirstRow = r + 1;
 
-  const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0);
+  const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, enrollment[0]);
   const monthlyPers = pers0 / (opMonths || 12);
 
   for (const sr of staffingRows) {
     r++;
-    ws.getCell(r, 1).value = sr.roleName || "Unnamed"; dc(ws.getCell(r, 1));
-    const baseCost = sr.fte * sr.annualizedRate;
-    const isContractNoPL = sr.employmentType === "contract" && !sr.payrollLike;
-    let benefits = 0, tax = 0;
-    if (!isContractNoPL) {
-      if (sr.benefitsEligible) benefits = baseCost * (sr.benefitsRate / 100);
-      tax = baseCost * (sr.payrollTaxRate / 100);
-    }
-    const loaded = (baseCost + benefits + tax) * prorationFactor;
+    const ratioTag3 = sr.staffingMode === "ratio" && sr.studentRatio ? ` [1:${sr.studentRatio}]` : "";
+    ws.getCell(r, 1).value = (sr.roleName || "Unnamed") + ratioTag3; dc(ws.getCell(r, 1));
+    const loaded = computeStaffingLoaded(sr, 0, enrollment[0]) * prorationFactor;
     const monthly = loaded / (opMonths || 12);
 
     for (let m = 0; m < 12; m++) {
@@ -1933,8 +1939,8 @@ function buildActualsVsProjections(
   const rev0 = computeRevenueForYear(revenueRows, 0, enrollment[0], tiers, costInflPct, sp);
   const rev1 = computeRevenueForYear(revenueRows, 1, enrollment[1], tiers, costInflPct, sp);
   const pf = prorationFactor;
-  const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0);
-  const pers1 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 1);
+  const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, enrollment[0]);
+  const pers1 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 1, enrollment[1]);
   const exp0 = computeExpenseForYear(expenseRows, 0, enrollment[0], rev0, costInflPct) * pf;
   const exp1 = computeExpenseForYear(expenseRows, 1, enrollment[1], rev1, costInflPct);
   const cd0 = computeCapDebtForYear(capDebtRows, 0, enrollment[0]);

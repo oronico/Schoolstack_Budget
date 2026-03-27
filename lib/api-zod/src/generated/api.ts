@@ -116,6 +116,8 @@ export const createModelBodyDataEnrollmentApplicationsReceivedMin = 0;
 
 export const createModelBodyDataEnrollmentWaitlistCountMin = 0;
 
+export const createModelBodyDataStaffingRowsItemStaffingModeDefault = `fixed`;
+
 export const CreateModelBody = zod.object({
   name: zod.string(),
   currentStep: zod.number().optional(),
@@ -354,6 +356,14 @@ export const CreateModelBody = zod.object({
           payrollTaxRate: zod.number(),
           payrollLike: zod.boolean(),
           notes: zod.string().optional(),
+          staffingMode: zod
+            .enum(["fixed", "ratio"])
+            .default(createModelBodyDataStaffingRowsItemStaffingModeDefault),
+          studentRatio: zod.number().optional(),
+          minFte: zod.number().optional(),
+          maxFte: zod.number().optional(),
+          startYear: zod.number().optional(),
+          endYear: zod.number().optional(),
         }),
       )
       .optional(),
@@ -482,6 +492,8 @@ export const getModelResponseDataEnrollmentRetentionRateMax = 100;
 export const getModelResponseDataEnrollmentApplicationsReceivedMin = 0;
 
 export const getModelResponseDataEnrollmentWaitlistCountMin = 0;
+
+export const getModelResponseDataStaffingRowsItemStaffingModeDefault = `fixed`;
 
 export const GetModelResponse = zod.object({
   id: zod.number(),
@@ -723,6 +735,14 @@ export const GetModelResponse = zod.object({
           payrollTaxRate: zod.number(),
           payrollLike: zod.boolean(),
           notes: zod.string().optional(),
+          staffingMode: zod
+            .enum(["fixed", "ratio"])
+            .default(getModelResponseDataStaffingRowsItemStaffingModeDefault),
+          studentRatio: zod.number().optional(),
+          minFte: zod.number().optional(),
+          maxFte: zod.number().optional(),
+          startYear: zod.number().optional(),
+          endYear: zod.number().optional(),
         }),
       )
       .optional(),
@@ -853,6 +873,8 @@ export const updateModelBodyDataEnrollmentRetentionRateMax = 100;
 export const updateModelBodyDataEnrollmentApplicationsReceivedMin = 0;
 
 export const updateModelBodyDataEnrollmentWaitlistCountMin = 0;
+
+export const updateModelBodyDataStaffingRowsItemStaffingModeDefault = `fixed`;
 
 export const UpdateModelBody = zod.object({
   name: zod.string().optional(),
@@ -1093,6 +1115,14 @@ export const UpdateModelBody = zod.object({
           payrollTaxRate: zod.number(),
           payrollLike: zod.boolean(),
           notes: zod.string().optional(),
+          staffingMode: zod
+            .enum(["fixed", "ratio"])
+            .default(updateModelBodyDataStaffingRowsItemStaffingModeDefault),
+          studentRatio: zod.number().optional(),
+          minFte: zod.number().optional(),
+          maxFte: zod.number().optional(),
+          startYear: zod.number().optional(),
+          endYear: zod.number().optional(),
         }),
       )
       .optional(),
@@ -1214,6 +1244,8 @@ export const updateModelResponseDataEnrollmentRetentionRateMax = 100;
 export const updateModelResponseDataEnrollmentApplicationsReceivedMin = 0;
 
 export const updateModelResponseDataEnrollmentWaitlistCountMin = 0;
+
+export const updateModelResponseDataStaffingRowsItemStaffingModeDefault = `fixed`;
 
 export const UpdateModelResponse = zod.object({
   id: zod.number(),
@@ -1455,6 +1487,16 @@ export const UpdateModelResponse = zod.object({
           payrollTaxRate: zod.number(),
           payrollLike: zod.boolean(),
           notes: zod.string().optional(),
+          staffingMode: zod
+            .enum(["fixed", "ratio"])
+            .default(
+              updateModelResponseDataStaffingRowsItemStaffingModeDefault,
+            ),
+          studentRatio: zod.number().optional(),
+          minFte: zod.number().optional(),
+          maxFte: zod.number().optional(),
+          startYear: zod.number().optional(),
+          endYear: zod.number().optional(),
         }),
       )
       .optional(),
@@ -1603,6 +1645,8 @@ export const archiveModelResponseDataEnrollmentRetentionRateMax = 100;
 export const archiveModelResponseDataEnrollmentApplicationsReceivedMin = 0;
 
 export const archiveModelResponseDataEnrollmentWaitlistCountMin = 0;
+
+export const archiveModelResponseDataStaffingRowsItemStaffingModeDefault = `fixed`;
 
 export const ArchiveModelResponse = zod.object({
   id: zod.number(),
@@ -1844,6 +1888,16 @@ export const ArchiveModelResponse = zod.object({
           payrollTaxRate: zod.number(),
           payrollLike: zod.boolean(),
           notes: zod.string().optional(),
+          staffingMode: zod
+            .enum(["fixed", "ratio"])
+            .default(
+              archiveModelResponseDataStaffingRowsItemStaffingModeDefault,
+            ),
+          studentRatio: zod.number().optional(),
+          minFte: zod.number().optional(),
+          maxFte: zod.number().optional(),
+          startYear: zod.number().optional(),
+          endYear: zod.number().optional(),
         }),
       )
       .optional(),

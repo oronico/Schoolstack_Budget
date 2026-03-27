@@ -156,6 +156,12 @@ interface StaffingRow {
   payrollTaxRate: number;
   payrollLike: boolean;
   notes: string;
+  staffingMode?: "fixed" | "ratio";
+  studentRatio?: number;
+  minFte?: number;
+  maxFte?: number;
+  startYear?: number;
+  endYear?: number;
 }
 
 interface ExpenseRow {
@@ -478,10 +484,25 @@ function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: nu
   return { total: tuition + publicFunding + philanthropy, tuition, publicFunding, philanthropy };
 }
 
-function computeStaffingBaseCost(rows: StaffingRow[]): number {
+function computeEffectiveFte(r: StaffingRow, y: number, enrollment: number): number {
+  if (r.startYear && (y + 1) < r.startYear) return 0;
+  if (r.endYear && (y + 1) > r.endYear) return 0;
+  if (r.staffingMode === "ratio" && r.studentRatio && r.studentRatio > 0) {
+    let computed = enrollment / r.studentRatio;
+    if (r.minFte !== undefined) computed = Math.max(computed, r.minFte);
+    if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte);
+    return Math.ceil(computed * 2) / 2;
+  }
+  return r.fte;
+}
+
+function computeStaffingBaseCost(rows: StaffingRow[], y?: number, enrollment?: number): number {
   let total = 0;
   for (const row of rows) {
-    const annualCost = row.fte * row.annualizedRate;
+    const effectiveFte = (y !== undefined && enrollment !== undefined)
+      ? computeEffectiveFte(row, y, enrollment)
+      : row.fte;
+    const annualCost = effectiveFte * row.annualizedRate;
     const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
     if (isContractNotPayrollLike) {
       total += annualCost;
@@ -623,7 +644,6 @@ function computeAllYearsFromRows(
   costInflationPct?: number,
   schoolProfile?: SchoolProfile,
 ): YearFinancials[] {
-  const baseCost = computeStaffingBaseCost(staffingRows);
   const spIsFacilityAuthority = hasSchoolProfileFacilityData(schoolProfile);
   const effectiveExpenseRows = spIsFacilityAuthority
     ? expenseRows.map(r => r.category === "occupancy_facility" ? { ...r, enabled: false } : r)
@@ -632,6 +652,7 @@ function computeAllYearsFromRows(
   return enrollmentByYear.map((students, yearIdx) => {
     const pf = yearIdx === 0 ? prorationFactor : 1;
     const salaryEsc = Math.pow(1 + salaryEscRate, yearIdx);
+    const baseCost = computeStaffingBaseCost(staffingRows, yearIdx, students);
     const totalStaffingCost = baseCost * salaryEsc * pf;
 
     const rev = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers, schoolProfile);

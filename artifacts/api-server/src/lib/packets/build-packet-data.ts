@@ -116,7 +116,7 @@ function computeYearlyData(
   for (let y = 0; y < yearCount; y++) {
     const students = enrollment[y] || 0;
     const totalRevenue = computeRevenueForYear(md.revenueRows || [], y, students, md.tuitionTiers, costInflPct, sp);
-    const totalStaffing = computePersonnelForYear(normalized, salaryEsc || 0, prorationFactor, y);
+    const totalStaffing = computePersonnelForYear(normalized, salaryEsc || 0, prorationFactor, y, students);
     const opex = computeExpenseForYear(md.expenseRows || [], y, students, totalRevenue, costInflPct);
     const capDebt = computeCapDebtForYear(md.capitalAndDebtRows || [], y, students);
     const debtService = computeDebtServiceForYear(md.capitalAndDebtRows || [], y);

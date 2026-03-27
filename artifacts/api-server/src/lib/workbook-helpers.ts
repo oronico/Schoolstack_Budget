@@ -393,6 +393,12 @@ export interface StaffingRow {
   id: string; roleName: string; functionCategory: string; employmentType: string;
   fte: number; annualizedRate: number; benefitsEligible: boolean;
   benefitsRate: number; payrollTaxRate: number; payrollLike: boolean; notes: string;
+  staffingMode?: "fixed" | "ratio";
+  studentRatio?: number;
+  minFte?: number;
+  maxFte?: number;
+  startYear?: number;
+  endYear?: number;
 }
 
 export function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
@@ -408,6 +414,12 @@ export function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow 
     payrollTaxRate: Number(raw.payrollTaxRate) || 0,
     payrollLike: Boolean(raw.payrollLike ?? false),
     notes: String(raw.notes ?? ""),
+    staffingMode: String(raw.staffingMode ?? "fixed") as "fixed" | "ratio",
+    studentRatio: raw.studentRatio != null ? Number(raw.studentRatio) : undefined,
+    minFte: raw.minFte != null ? Number(raw.minFte) : undefined,
+    maxFte: raw.maxFte != null ? Number(raw.maxFte) : undefined,
+    startYear: raw.startYear != null ? Number(raw.startYear) : undefined,
+    endYear: raw.endYear != null ? Number(raw.endYear) : undefined,
   };
 }
 
@@ -602,12 +614,30 @@ export function computeRevenueForYear(
   return total;
 }
 
+export function computeEffectiveFte(r: StaffingRow, y: number, enrollment: number): number {
+  if (r.startYear && (y + 1) < r.startYear) return 0;
+  if (r.endYear && (y + 1) > r.endYear) return 0;
+
+  if (r.staffingMode === "ratio" && r.studentRatio && r.studentRatio > 0) {
+    let computed = enrollment / r.studentRatio;
+    if (r.minFte !== undefined) computed = Math.max(computed, r.minFte);
+    if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte);
+    return Math.ceil(computed * 2) / 2;
+  }
+
+  return r.fte;
+}
+
 export function computePersonnelForYear(
-  rows: StaffingRow[], salaryEsc: number, prorationFactor: number, y: number
+  rows: StaffingRow[], salaryEsc: number, prorationFactor: number, y: number,
+  enrollment?: number
 ): number {
   let total = 0;
   for (const r of rows) {
-    const annual = r.fte * r.annualizedRate;
+    const effectiveFte = enrollment !== undefined
+      ? computeEffectiveFte(r, y, enrollment)
+      : r.fte;
+    const annual = effectiveFte * r.annualizedRate;
     const isContractNoPL = r.employmentType === "contract" && !r.payrollLike;
     let benefits = 0, tax = 0;
     if (!isContractNoPL) {
@@ -621,8 +651,11 @@ export function computePersonnelForYear(
   return total * esc * pf;
 }
 
-export function computeStaffingLoaded(r: StaffingRow): number {
-  const annual = r.fte * r.annualizedRate;
+export function computeStaffingLoaded(r: StaffingRow, y?: number, enrollment?: number): number {
+  const effectiveFte = (y !== undefined && enrollment !== undefined)
+    ? computeEffectiveFte(r, y, enrollment)
+    : r.fte;
+  const annual = effectiveFte * r.annualizedRate;
   const isContractNoPL = r.employmentType === "contract" && !r.payrollLike;
   let benefits = 0, tax = 0;
   if (!isContractNoPL) {
@@ -630,6 +663,14 @@ export function computeStaffingLoaded(r: StaffingRow): number {
     tax = annual * (r.payrollTaxRate / 100);
   }
   return annual + benefits + tax;
+}
+
+export function computeTotalFte(rows: StaffingRow[], y: number, enrollment: number): number {
+  let total = 0;
+  for (const r of rows) {
+    total += computeEffectiveFte(r, y, enrollment);
+  }
+  return total;
 }
 
 export function computeExpenseForYear(

@@ -276,6 +276,14 @@ export interface RevenueRow {
   escalationRate?: number;
 }
 
+export type StaffingRowStaffingMode =
+  (typeof StaffingRowStaffingMode)[keyof typeof StaffingRowStaffingMode];
+
+export const StaffingRowStaffingMode = {
+  fixed: "fixed",
+  ratio: "ratio",
+} as const;
+
 export interface StaffingRow {
   id: string;
   roleName: string;
@@ -288,6 +296,12 @@ export interface StaffingRow {
   payrollTaxRate: number;
   payrollLike: boolean;
   notes?: string;
+  staffingMode?: StaffingRowStaffingMode;
+  studentRatio?: number;
+  minFte?: number;
+  maxFte?: number;
+  startYear?: number;
+  endYear?: number;
 }
 
 export interface ExpenseRow {

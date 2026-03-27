@@ -72,6 +72,12 @@ interface StaffingRow {
   payrollTaxRate: number;
   payrollLike: boolean;
   notes: string;
+  staffingMode?: "fixed" | "ratio";
+  studentRatio?: number;
+  minFte?: number;
+  maxFte?: number;
+  startYear?: number;
+  endYear?: number;
 }
 
 function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
@@ -87,6 +93,12 @@ function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
     payrollTaxRate: Number(raw.payrollTaxRate) || 0,
     payrollLike: Boolean(raw.payrollLike ?? false),
     notes: String(raw.notes ?? ""),
+    staffingMode: (raw.staffingMode as "fixed" | "ratio") || "fixed",
+    studentRatio: raw.studentRatio != null ? Number(raw.studentRatio) : undefined,
+    minFte: raw.minFte != null ? Number(raw.minFte) : undefined,
+    maxFte: raw.maxFte != null ? Number(raw.maxFte) : undefined,
+    startYear: raw.startYear != null ? Number(raw.startYear) : undefined,
+    endYear: raw.endYear != null ? Number(raw.endYear) : undefined,
   };
 }
 
@@ -480,12 +492,25 @@ function computeExpenseForYear(
   return total;
 }
 
+function computeEffectiveFteLocal(r: StaffingRow, y: number, enrollment: number): number {
+  if (r.startYear && (y + 1) < r.startYear) return 0;
+  if (r.endYear && (y + 1) > r.endYear) return 0;
+  if (r.staffingMode === "ratio" && r.studentRatio && r.studentRatio > 0) {
+    let computed = enrollment / r.studentRatio;
+    if (r.minFte !== undefined) computed = Math.max(computed, r.minFte);
+    if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte);
+    return Math.ceil(computed * 2) / 2;
+  }
+  return r.fte;
+}
+
 function computePersonnelForYear(
-  rows: StaffingRow[], salaryEsc: number, prorationFactor: number, y: number
+  rows: StaffingRow[], salaryEsc: number, prorationFactor: number, y: number, enrollment?: number
 ): number {
   let total = 0;
   for (const r of rows) {
-    const annual = r.fte * r.annualizedRate;
+    const fte = enrollment !== undefined ? computeEffectiveFteLocal(r, y, enrollment) : r.fte;
+    const annual = fte * r.annualizedRate;
     const isContractNoPL = r.employmentType === "contract" && !r.payrollLike;
     let benefits = 0, tax = 0;
     if (!isContractNoPL) {
@@ -583,7 +608,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
     const students = enrollment[y];
     const rev = computeRevenueForYear(revenueRows, y, students, data.tuitionTiers, sp);
     const pf = y === 0 ? prorationFactor : 1;
-    const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
+    const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, students);
     const costInflPct = costInflation * 100;
     const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct) * (y === 0 ? prorationFactor : 1);
     const capDebt = computeCapDebtForYear(capDebtRows, y, students);
@@ -716,7 +741,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
     const students = enrollment[y];
     const rev = computeRevenueForYear(revenueRows, y, students, data.tuitionTiers, sp);
     const pf = y === 0 ? prorationFactor : 1;
-    const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y);
+    const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, students);
     const costInflPct = costInflation * 100;
     const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct) * (y === 0 ? prorationFactor : 1);
     const capDebt = computeCapDebtForYear(capDebtRows, y, students);
@@ -838,7 +863,7 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
   const pf = yi === 0 ? prorationFactor : 1;
   const annualRevRaw = computeRevenueForYear(revenueRows, yi, students, data.tuitionTiers, sp);
   const annualRev = Math.round(annualRevRaw * pf);
-  const annualPersonnel = Math.round(computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, yi));
+  const annualPersonnel = Math.round(computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, yi, students));
   const annualOps = Math.round(computeExpenseForYear(expenseRows, yi, students, annualRevRaw, costInflPct) * pf);
   const annualCapDebt = Math.round(computeCapDebtForYear(capDebtRows, yi, students));
   const annualNI = annualRev - annualPersonnel - annualOps - annualCapDebt;

@@ -228,13 +228,19 @@ export const staffingRowSchema = z.object({
     required_error: "Please select the employment type",
     invalid_type_error: "Please select a valid employment type",
   }),
-  fte: z.number().min(0, "Please enter an FTE between 0 and 1").max(1, "FTE can't exceed 1.0 (full-time equivalent)"),
+  fte: z.number().min(0, "Please enter a positive FTE value").max(50, "FTE can't exceed 50"),
   annualizedRate: z.number().min(0, "Please enter a positive annual rate"),
   benefitsEligible: z.boolean(),
   benefitsRate: z.number().min(0, "Please enter a rate of 0% or higher").max(100, "Benefits rate can't exceed 100%"),
   payrollTaxRate: z.number().min(0, "Please enter a rate of 0% or higher").max(100, "Payroll tax rate can't exceed 100%"),
   payrollLike: z.boolean(),
   notes: z.string().default(""),
+  staffingMode: z.enum(["fixed", "ratio"]).default("fixed"),
+  studentRatio: z.number().min(1).max(1000).optional(),
+  minFte: z.number().min(0).max(50).optional(),
+  maxFte: z.number().min(0).max(100).optional(),
+  startYear: z.number().min(1).max(5).optional(),
+  endYear: z.number().min(1).max(5).optional(),
 });
 
 export const staffingSchema = z.object({

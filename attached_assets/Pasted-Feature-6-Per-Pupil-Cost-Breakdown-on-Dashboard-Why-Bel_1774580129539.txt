@@ -1,0 +1,75 @@
+Feature 6: Per-Pupil Cost Breakdown on Dashboard
+Why: Bellwether shows cost/pupil at the school level (line 72: "School Costs/pupil" and line 73: "Surplus(Deficit)/pupil"). SchoolStack shows revenue per student but not cost per student by function. Lenders and authorizers benchmark instructional spend per pupil, facility cost per pupil, and admin cost per pupil against state and national averages.
+Current state:
+
+Financial Health dashboard in addDashboardSheet() has "Revenue per Student" (line ~rpsRow)
+No expense-per-student metrics
+Expense categories exist and are tagged on every expense row (instructional_program, occupancy_facility, administrative_general, etc.)
+computeExpenseForYear could be called per-category by filtering rows
+
+Changes Required
+File: artifacts/api-server/src/lib/workbook-helpers.ts
+In addDashboardSheet(), after the "Revenue per Student" row, add three new rows:
+typescript// Cost per Student
+r++;
+ws.getCell(r, 2).value = "Cost per Student"; bc(ws.getCell(r, 2));
+for (let y = 0; y < 5; y++) {
+  const cps = input.enrollment[y] > 0
+    ? (input.personnelByYear[y] + input.opexByYear[y] + input.debtServiceByYear[y]) / input.enrollment[y]
+    : 0;
+  const cell = ws.getCell(r, y + 3);
+  cell.value = cps; cell.numFmt = CUR; dc(cell);
+  cell.alignment = { horizontal: "right" };
+}
+
+// Instructional Cost per Student
+r++;
+ws.getCell(r, 2).value = "  Instructional / Student"; dc(ws.getCell(r, 2));
+// ... (use input.instructionalByYear if provided, or compute from filtered expense rows)
+
+// Facility Cost per Student
+r++;
+ws.getCell(r, 2).value = "  Facility / Student"; dc(ws.getCell(r, 2));
+for (let y = 0; y < 5; y++) {
+  const fps = input.enrollment[y] > 0
+    ? (input.facilityCostByYear?.[y] || 0) / input.enrollment[y]
+    : 0;
+  const cell = ws.getCell(r, y + 3);
+  cell.value = fps; cell.numFmt = CUR; dc(cell);
+  cell.alignment = { horizontal: "right" };
+  // Benchmark: < $2,000/student = green, $2,000-$3,500 = amber, > $3,500 = red
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: {
+    argb: fps <= 2000 ? GREEN_BG : fps <= 3500 ? AMBER_BG : RED_BG
+  }};
+}
+ws.getCell(r, 8).value = "≤ $2,000"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } };
+
+// Surplus / (Deficit) per Student
+r++;
+ws.getCell(r, 2).value = "Surplus per Student"; bc(ws.getCell(r, 2));
+for (let y = 0; y < 5; y++) {
+  const sps = input.enrollment[y] > 0
+    ? input.netIncomeByYear[y] / input.enrollment[y]
+    : 0;
+  const cell = ws.getCell(r, y + 3);
+  cell.value = sps; cell.numFmt = CUR; gc(cell);
+  cell.alignment = { horizontal: "right" };
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: sps >= 0 ? GREEN_BG : RED_BG } };
+}
+To enable the instructional cost breakdown, update DashboardInput to accept per-category expense arrays:
+typescriptexport interface DashboardInput {
+  // ... existing fields
+  instructionalByYear?: number[];  // NEW
+  adminByYear?: number[];          // NEW
+}
+Populate these in each export file by filtering expense rows by category before passing to addDashboardSheet().
+Consultant Engine
+Add per-pupil cost metrics to the consultant output's keyMetrics array:
+typescript{
+  name: "Cost per Student",
+  value: formatCurrency(totalCostY5 / enrollmentY5),
+  status: /* compare against revenue per student — if cost > 90% of revenue, warning */,
+  interpretation: "...",
+  benchmark: "Should be < 90% of revenue per student"
+}
+Effort estimate: Small. The data is already available; this is dashboard layout work.

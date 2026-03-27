@@ -1,0 +1,148 @@
+Feature 1: Ratio-Driven Staffing Ramp
+Why: The Bellwether model's core innovation is enrollment-driven staffing. Every position has a trigger ratio — "22 students per teacher," "200 students per SPED teacher," "550 students per secretary." As enrollment grows from 88 to 400 students, FTEs auto-calculate from 4 to 18 teachers. SchoolStack's static staffing roster (same people, same FTEs, all 5 years) fails the lender sniff test for any school projecting enrollment growth.
+Current state:
+
+StaffingRow has a fixed fte field (0.0–1.0 per row)
+computePersonnelForYear() in workbook-helpers.ts (line 605) applies the same fte to all 5 years, only varying by salary escalation and Year 1 proration
+staffingRowSchema in schema.ts has no ratio or year-range fields
+
+Schema Changes
+File: artifacts/school-financial-model/src/pages/model-wizard/schema.ts
+Add these optional fields to staffingRowSchema:
+typescript// Add to staffingRowSchema (after payrollLike):
+staffingMode: z.enum(["fixed", "ratio"]).default("fixed"),
+studentRatio: z.number().min(1).max(1000).optional(),  // e.g. 22 = 1 FTE per 22 students
+minFte: z.number().min(0).max(50).optional(),           // floor FTE even at low enrollment
+maxFte: z.number().min(0).max(100).optional(),          // cap FTE at high enrollment
+startYear: z.number().min(1).max(5).optional(),         // year this position begins (1-indexed)
+endYear: z.number().min(1).max(5).optional(),           // year this position ends
+File: lib/api-spec/openapi.yaml
+Add to StaffingRow properties:
+yamlstaffingMode:
+  type: string
+  enum: [fixed, ratio]
+  default: fixed
+studentRatio:
+  type: number
+minFte:
+  type: number
+maxFte:
+  type: number
+startYear:
+  type: integer
+endYear:
+  type: integer
+Regenerate Zod schemas: pnpm --filter @workspace/api-zod run generate
+Computation Changes
+File: artifacts/api-server/src/lib/workbook-helpers.ts
+
+Update StaffingRow interface (line 392):
+
+typescriptexport interface StaffingRow {
+  id: string; roleName: string; functionCategory: string; employmentType: string;
+  fte: number; annualizedRate: number; benefitsEligible: boolean;
+  benefitsRate: number; payrollTaxRate: number; payrollLike: boolean; notes: string;
+  // NEW: ratio-driven staffing
+  staffingMode?: "fixed" | "ratio";
+  studentRatio?: number;
+  minFte?: number;
+  maxFte?: number;
+  startYear?: number;  // 1-indexed (1 = Year 1)
+  endYear?: number;
+}
+
+Update normalizeStaffingRow() (line 398) to include new fields:
+
+typescriptstaffingMode: String(raw.staffingMode ?? "fixed") as "fixed" | "ratio",
+studentRatio: raw.studentRatio != null ? Number(raw.studentRatio) : undefined,
+minFte: raw.minFte != null ? Number(raw.minFte) : undefined,
+maxFte: raw.maxFte != null ? Number(raw.maxFte) : undefined,
+startYear: raw.startYear != null ? Number(raw.startYear) : undefined,
+endYear: raw.endYear != null ? Number(raw.endYear) : undefined,
+
+Add a new helper function:
+
+typescript/** Compute effective FTE for a staffing row in a given year */
+export function computeEffectiveFte(r: StaffingRow, y: number, enrollment: number): number {
+  // Year range check (y is 0-indexed, startYear/endYear are 1-indexed)
+  if (r.startYear && (y + 1) < r.startYear) return 0;
+  if (r.endYear && (y + 1) > r.endYear) return 0;
+
+  if (r.staffingMode === "ratio" && r.studentRatio && r.studentRatio > 0) {
+    let computed = enrollment / r.studentRatio;
+    // Apply floor/cap
+    if (r.minFte !== undefined) computed = Math.max(computed, r.minFte);
+    if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte);
+    // Round up to nearest 0.5 FTE (you don't hire 2.3 teachers)
+    return Math.ceil(computed * 2) / 2;
+  }
+
+  // Fixed mode — use the static fte value
+  return r.fte;
+}
+
+Update computePersonnelForYear() (line 605) to accept enrollment and use the new helper:
+
+typescriptexport function computePersonnelForYear(
+  rows: StaffingRow[], salaryEsc: number, prorationFactor: number, y: number,
+  enrollment?: number  // NEW parameter, optional for backward compat
+): number {
+  let total = 0;
+  for (const r of rows) {
+    const effectiveFte = enrollment !== undefined
+      ? computeEffectiveFte(r, y, enrollment)
+      : r.fte;
+    const annual = effectiveFte * r.annualizedRate;
+    const isContractNoPL = r.employmentType === "contract" && !r.payrollLike;
+    let benefits = 0, tax = 0;
+    if (!isContractNoPL) {
+      if (r.benefitsEligible) benefits = annual * (r.benefitsRate / 100);
+      tax = annual * (r.payrollTaxRate / 100);
+    }
+    total += annual + benefits + tax;
+  }
+  const esc = Math.pow(1 + salaryEsc, y);
+  const pf = y === 0 ? prorationFactor : 1;
+  return total * esc * pf;
+}
+
+Update computeStaffingLoaded() similarly — add optional y and enrollment params.
+Add a total FTE helper (needed for Feature 5):
+
+typescriptexport function computeTotalFte(rows: StaffingRow[], y: number, enrollment: number): number {
+  let total = 0;
+  for (const r of rows) {
+    total += computeEffectiveFte(r, y, enrollment);
+  }
+  return total;
+}
+Callers to Update
+Every call to computePersonnelForYear() must now pass enrollment. Search across:
+
+excel-export.ts — search for computePersonnelForYear (~3 call sites)
+lender-proforma-export.ts — computeLenderResults() function
+underwriting-workbook.ts — multiple call sites in buildBudgetDetail, buildBudgetSummary, build5YearOperating, buildMonthlyCashFlow
+consultant-engine.ts — the consultant analysis engine
+
+All these already have enrollment arrays in scope, so pass enrollment[y] as the last argument.
+Frontend (StaffingStep.tsx)
+Add a toggle per staffing row: "Fixed FTE" vs "Ratio-driven." When ratio mode is selected, show:
+
+studentRatio input ("Students per position")
+Optional minFte / maxFte inputs
+A read-only computed FTE display per year based on enrollment
+
+Show a summary row: "Total projected FTEs" by year, computed from computeEffectiveFte across all rows using enrollment from the form.
+Export Updates
+In all staffing tabs (Standard, Lender Pro Forma, Underwriting V2):
+
+When a row uses ratio mode, show the ratio in the driver column (e.g., "1:22 students")
+Show computed FTE per year instead of static FTE
+
+Test Updates
+Update sample-payloads.ts:
+
+charterPublicFunding: Set core teachers to staffingMode: "ratio", studentRatio: 22, minFte: 4
+microschoolStartup: Keep all fixed (backward compat test)
+
+Add golden model assertions for ratio-driven FTE calculations.

@@ -90,6 +90,7 @@ export * from "./staffing";
 export * from "./staffingEmploymentType";
 export * from "./staffingFunctionCategory";
 export * from "./staffingRow";
+export * from "./staffingRowStaffingMode";
 export * from "./stressScenario";
 export * from "./updateFinancialModelData";
 export * from "./userResponse";

@@ -111,7 +111,7 @@ export function StaffingStep() {
     });
   }, []);
 
-  const costs = useMemo(() => calculatePersonnelCosts(rows), [rows]);
+  const costs = useMemo(() => calculatePersonnelCosts(rows, y1Students), [rows, y1Students]);
 
   const groupedRows = useMemo(() => {
     const groups: Record<StaffingFunctionCategory, StaffingRowData[]> = {
@@ -264,6 +264,7 @@ export function StaffingStep() {
                   onToggleExpand={() => toggleExpand(row.id)}
                   onUpdate={(field, value) => updateRow(row.id, field, value)}
                   onRemove={() => removeRow(row.id)}
+                  enrollmentArr={enrollmentArr}
                 />
               ))}
             </div>
@@ -320,12 +321,25 @@ function SummaryCard({
   );
 }
 
+function computeEffectiveFte(row: StaffingRowData, y: number, enrollment: number): number {
+  if (row.startYear && (y + 1) < row.startYear) return 0;
+  if (row.endYear && (y + 1) > row.endYear) return 0;
+  if (row.staffingMode === "ratio" && row.studentRatio && row.studentRatio > 0) {
+    let computed = enrollment / row.studentRatio;
+    if (row.minFte !== undefined) computed = Math.max(computed, row.minFte);
+    if (row.maxFte !== undefined) computed = Math.min(computed, row.maxFte);
+    return Math.ceil(computed * 2) / 2;
+  }
+  return row.fte;
+}
+
 interface StaffCardProps {
   row: StaffingRowData;
   isExpanded: boolean;
   onToggleExpand: () => void;
   onUpdate: (field: keyof StaffingRowData, value: string | number | boolean) => void;
   onRemove: () => void;
+  enrollmentArr: number[];
 }
 
 function StaffCard({
@@ -334,9 +348,12 @@ function StaffCard({
   onToggleExpand,
   onUpdate,
   onRemove,
+  enrollmentArr,
 }: StaffCardProps) {
   const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
-  const salary = Math.round(row.fte * row.annualizedRate);
+  const isRatio = row.staffingMode === "ratio";
+  const displayFte = isRatio ? computeEffectiveFte(row, 0, enrollmentArr[0]) : row.fte;
+  const salary = Math.round(displayFte * row.annualizedRate);
   const benefits = row.benefitsEligible && !isContractNotPayrollLike
     ? Math.round(salary * (row.benefitsRate / 100))
     : 0;
@@ -362,7 +379,7 @@ function StaffCard({
             {row.roleName || "Untitled Role"}
           </span>
           <span className="text-xs text-muted-foreground flex-shrink-0">
-            {EMPLOYMENT_TYPE_LABELS[row.employmentType]} · {row.fte} FTE
+            {EMPLOYMENT_TYPE_LABELS[row.employmentType]} · {isRatio ? `${displayFte} FTE (ratio)` : `${row.fte} FTE`}
           </span>
         </div>
         <span className="text-sm font-semibold text-foreground flex-shrink-0 ml-2">
@@ -400,14 +417,34 @@ function StaffCard({
               }))}
               onChange={(v) => onUpdate("employmentType", v)}
             />
-            <FieldNumber
-              label="FTE"
-              value={row.fte}
-              onChange={(v) => onUpdate("fte", v)}
-              min={0}
-              max={1}
-              step={0.05}
+            <FieldSelect
+              label="Staffing Mode"
+              value={row.staffingMode || "fixed"}
+              options={[
+                { value: "fixed", label: "Fixed FTE" },
+                { value: "ratio", label: "Student Ratio" },
+              ]}
+              onChange={(v) => onUpdate("staffingMode", v)}
             />
+            {!isRatio ? (
+              <FieldNumber
+                label="FTE"
+                value={row.fte}
+                onChange={(v) => onUpdate("fte", v)}
+                min={0}
+                max={50}
+                step={0.5}
+              />
+            ) : (
+              <FieldNumber
+                label="Students per Staff"
+                value={row.studentRatio || 0}
+                onChange={(v) => onUpdate("studentRatio", v)}
+                min={1}
+                max={100}
+                step={1}
+              />
+            )}
             <FieldNumber
               label="Annual Rate"
               value={row.annualizedRate}
@@ -415,9 +452,67 @@ function StaffCard({
               prefix="$"
               min={0}
             />
+          </div>
+
+          {isRatio && (
+            <div className="rounded-lg border border-teal-200 bg-teal-50/50 p-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-teal-600" />
+                <span className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Ratio-Driven Staffing Ramp</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <FieldNumber
+                  label="Min FTE"
+                  value={row.minFte ?? 0}
+                  onChange={(v) => onUpdate("minFte", v)}
+                  min={0}
+                  max={50}
+                  step={0.5}
+                />
+                <FieldNumber
+                  label="Max FTE"
+                  value={row.maxFte ?? 50}
+                  onChange={(v) => onUpdate("maxFte", v)}
+                  min={0}
+                  max={100}
+                  step={0.5}
+                />
+                <FieldNumber
+                  label="Start Year"
+                  value={row.startYear ?? 1}
+                  onChange={(v) => onUpdate("startYear", v)}
+                  min={1}
+                  max={5}
+                  step={1}
+                />
+                <FieldNumber
+                  label="End Year"
+                  value={row.endYear ?? 5}
+                  onChange={(v) => onUpdate("endYear", v)}
+                  min={1}
+                  max={5}
+                  step={1}
+                />
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {enrollmentArr.map((enr, yi) => {
+                  const fte = computeEffectiveFte(row, yi, enr);
+                  return (
+                    <div key={yi} className="text-center rounded-md bg-white border border-teal-100 py-1.5 px-1">
+                      <div className="text-[10px] text-muted-foreground">Y{yi + 1}</div>
+                      <div className="text-sm font-bold text-teal-700">{fte}</div>
+                      <div className="text-[10px] text-muted-foreground">{enr} students</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-4">
             <div className="flex flex-col gap-1">
               <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Computed Salary
+                {isRatio ? "Y1 Computed Salary" : "Computed Salary"}
               </span>
               <div className="flex items-center h-[38px] text-sm font-semibold text-foreground">
                 ${salary.toLocaleString()}

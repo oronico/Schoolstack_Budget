@@ -7,6 +7,7 @@
  */
 import type { StaffingEmploymentType } from "./staffingEmploymentType";
 import type { StaffingFunctionCategory } from "./staffingFunctionCategory";
+import type { StaffingRowStaffingMode } from "./staffingRowStaffingMode";
 
 export interface StaffingRow {
   id: string;
@@ -20,4 +21,10 @@ export interface StaffingRow {
   payrollTaxRate: number;
   payrollLike: boolean;
   notes?: string;
+  staffingMode?: StaffingRowStaffingMode;
+  studentRatio?: number;
+  minFte?: number;
+  maxFte?: number;
+  startYear?: number;
+  endYear?: number;
 }
