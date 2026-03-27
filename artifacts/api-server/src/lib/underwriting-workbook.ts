@@ -507,6 +507,45 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
     }
   }
 
+  const hasWeightedEnrollment = (sp.spedCount?.some((v: number) => v > 0)) || (sp.ellCount?.some((v: number) => v > 0)) || (sp.ecoDisCount?.some((v: number) => v > 0));
+  if (hasWeightedEnrollment) {
+    r += 2;
+    sec(ws, r, cols); ws.getCell(r, 1).value = "WEIGHTED ENROLLMENT POPULATIONS";
+    r++;
+    const weightedGroups = [
+      { label: "Special Education (SPED)", data: sp.spedCount as number[] | undefined },
+      { label: "English Language Learners (ELL)", data: sp.ellCount as number[] | undefined },
+      { label: "Economically Disadvantaged", data: sp.ecoDisCount as number[] | undefined },
+    ];
+    for (const group of weightedGroups) {
+      if (!group.data?.some((v: number) => v > 0)) continue;
+      r++;
+      ws.getCell(r, 1).value = group.label; dc(ws.getCell(r, 1));
+      for (let y = 0; y < 5; y++) {
+        const col = startCol + y;
+        const cell = ws.getCell(r, col);
+        cell.value = group.data?.[y] ?? 0; cell.numFmt = NUM; dc(cell); inputCell(cell);
+      }
+    }
+    r++;
+    ws.getCell(r, 1).value = "Total Weighted Population"; bc(ws.getCell(r, 1));
+    for (let y = 0; y < 5; y++) {
+      const col = startCol + y;
+      const cell = ws.getCell(r, col);
+      const total = (sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0);
+      cell.value = total; cell.numFmt = NUM; gc(cell); outputCell(cell);
+    }
+    r++;
+    ws.getCell(r, 1).value = "Weighted % of Total"; dc(ws.getCell(r, 1));
+    for (let y = 0; y < 5; y++) {
+      const col = startCol + y;
+      const cell = ws.getCell(r, col);
+      const total = (sp.spedCount?.[y] ?? 0) + (sp.ellCount?.[y] ?? 0) + (sp.ecoDisCount?.[y] ?? 0);
+      const pct = enrollment[y] > 0 ? total / enrollment[y] : 0;
+      cell.value = pct; cell.numFmt = PCT; dc(cell); outputCell(cell);
+    }
+  }
+
   return { programRows, startCol, sheetName: "Enrollment Drivers" };
 }
 
