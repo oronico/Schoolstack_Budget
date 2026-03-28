@@ -10,12 +10,17 @@ if (!databaseUrl) {
   console.error("WARNING: DATABASE_URL is not set. Database features will be unavailable.");
 }
 
+function getSslConfig(url: string): pg.PoolConfig["ssl"] {
+  if (url.includes("localhost") || url.includes("127.0.0.1") || url.includes("/tmp/")) {
+    return undefined;
+  }
+  return { rejectUnauthorized: false };
+}
+
 export const pool = databaseUrl
   ? new Pool({
       connectionString: databaseUrl,
-      ssl: databaseUrl.includes("railway.app") || databaseUrl.includes("neon.tech")
-        ? { rejectUnauthorized: false }
-        : undefined,
+      ssl: getSslConfig(databaseUrl),
     })
   : (null as unknown as pg.Pool);
 
