@@ -170,6 +170,33 @@ router.post("/auth/forgot-password", async (req, res) => {
   }
 });
 
+router.get("/auth/debug-reset-token", async (req, res) => {
+  try {
+    const email = req.query.email as string;
+    if (!email) { res.status(400).json({ error: "email required" }); return; }
+    const [user] = await db.select({
+      id: usersTable.id,
+      hasToken: sql<boolean>`reset_token IS NOT NULL`,
+      expiry: usersTable.resetTokenExpiry,
+      tokenLen: sql<number>`LENGTH(reset_token)`,
+    }).from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
+    if (!user) { res.json({ found: false }); return; }
+    const now = new Date();
+    res.json({
+      found: true,
+      userId: user.id,
+      hasToken: user.hasToken,
+      tokenLength: user.tokenLen,
+      expiry: user.expiry?.toISOString() ?? null,
+      serverNow: now.toISOString(),
+      isExpired: user.expiry ? user.expiry < now : null,
+      diffMs: user.expiry ? user.expiry.getTime() - now.getTime() : null,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post("/auth/reset-password", async (req, res) => {
   try {
     const parsed = ResetPasswordBody.safeParse(req.body);
@@ -180,7 +207,19 @@ router.post("/auth/reset-password", async (req, res) => {
     const { token, password } = parsed.data;
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.resetToken, token)).limit(1);
-    if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+    if (!user) {
+      console.error("[reset-password] No user found for token (first 8 chars):", token.substring(0, 8));
+      res.status(400).json({ error: "Invalid or expired reset token." });
+      return;
+    }
+    if (!user.resetTokenExpiry) {
+      console.error("[reset-password] Token found but no expiry set for user:", user.id);
+      res.status(400).json({ error: "Invalid or expired reset token." });
+      return;
+    }
+    const now = new Date();
+    if (user.resetTokenExpiry < now) {
+      console.error("[reset-password] Token expired for user:", user.id, "expiry:", user.resetTokenExpiry.toISOString(), "now:", now.toISOString());
       res.status(400).json({ error: "Invalid or expired reset token." });
       return;
     }
