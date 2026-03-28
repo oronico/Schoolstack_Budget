@@ -29,7 +29,7 @@ timeoutMs = 20000
 
 [userenv.shared]
 ADMIN_EMAILS = "aserafin@gmail.com"
-EMAIL_FROM = "SchoolStack Budget <admin@schoolstack.ai>"
+EMAIL_FROM = "SchoolStack Budget <admin@contact.schoolstack.ai>"
 
 [nix]
 channel = "stable-25_05"
