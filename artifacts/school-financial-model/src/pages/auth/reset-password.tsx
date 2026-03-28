@@ -8,6 +8,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 export function ResetPasswordPage() {
   const searchString = useSearch();
   const token = new URLSearchParams(searchString).get("token") || "";
+  console.log("[reset-password] searchString:", JSON.stringify(searchString), "token length:", token.length, "token first8:", token.substring(0, 8));
   
   const resetMutation = useResetPassword();
   const [password, setPassword] = useState("");
@@ -22,7 +23,13 @@ export function ResetPasswordPage() {
       await resetMutation.mutateAsync({ data: { token, password } });
       setSuccess(true);
     } catch (err) {
-      setError(getApiErrorMessage(err, "Failed to reset password. Link may be expired."));
+      console.error("[reset-password] Error:", err);
+      const apiMsg = getApiErrorMessage(err, "");
+      if (apiMsg) {
+        setError(apiMsg);
+      } else {
+        setError(`Reset failed: ${err instanceof Error ? err.message : "Unknown error"}. Please request a new link.`);
+      }
     }
   };
 
