@@ -156,13 +156,17 @@ router.post("/auth/forgot-password", async (req, res) => {
       const resetTokenExpiry = new Date(Date.now() + 3600000);
       await db.update(usersTable).set({ resetToken, resetTokenExpiry }).where(eq(usersTable.id, user.id));
       await trackEvent("requested_password_reset", user.id);
-      await sendPasswordResetEmail(user.email, resetToken);
+      const result = await sendPasswordResetEmail(user.email, resetToken);
+      if (!result.success) {
+        res.status(503).json({ error: result.error || "Unable to send reset email. Please try again later." });
+        return;
+      }
     }
 
     res.json({ message: "If an account with that email exists, a reset link has been sent." });
   } catch (err) {
     console.error("Forgot password error:", err);
-    res.json({ message: "If an account with that email exists, a reset link has been sent." });
+    res.status(500).json({ error: "Something went wrong. Please try again later." });
   }
 });
 

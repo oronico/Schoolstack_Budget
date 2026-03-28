@@ -15,23 +15,32 @@ function getResend(): Resend | null {
 export async function sendPasswordResetEmail(
   toEmail: string,
   resetToken: string,
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   const resend = getResend();
-  const fromAddress = process.env.EMAIL_FROM || "SchoolStack Budget <onboarding@resend.dev>";
+  const fromAddress = process.env.EMAIL_FROM;
   const appUrl = process.env.APP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`;
   const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
   if (!resend) {
-    console.warn(
+    console.error(
       `[mailer] Resend not configured - password reset email not sent. ` +
       `Set RESEND_API_KEY to enable. ` +
       `Reset link: ${resetUrl}`,
     );
-    return false;
+    return { success: false, error: "Email service is not configured. Please contact support." };
+  }
+
+  if (!fromAddress) {
+    console.error(
+      `[mailer] EMAIL_FROM not set - cannot send email. ` +
+      `Set EMAIL_FROM to a verified domain sender (e.g. noreply@schoolstack.ai). ` +
+      `Reset link: ${resetUrl}`,
+    );
+    return { success: false, error: "Email sender is not configured. Please contact support." };
   }
 
   try {
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: [toEmail],
       subject: "Reset your SchoolStack Budget password",
@@ -69,14 +78,14 @@ export async function sendPasswordResetEmail(
     });
 
     if (error) {
-      console.error("[mailer] Resend error:", error, `Reset link: ${resetUrl}`);
-      return false;
+      console.error("[mailer] Resend error:", error);
+      return { success: false, error: "Failed to send reset email. Please try again." };
     }
 
-    console.log(`[mailer] Password reset email sent to ${toEmail}`);
-    return true;
+    console.log(`[mailer] Password reset email sent to ${toEmail} (id: ${data?.id})`);
+    return { success: true };
   } catch (err) {
-    console.error("[mailer] Failed to send password reset email:", err, `Reset link: ${resetUrl}`);
-    return false;
+    console.error("[mailer] Failed to send password reset email:", err);
+    return { success: false, error: "Failed to send reset email. Please try again." };
   }
 }

@@ -3,19 +3,27 @@ import { Link } from "wouter";
 import { useForgotPassword } from "@workspace/api-client-react";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export function ForgotPasswordPage() {
   const forgotMutation = useForgotPassword();
   const [email, setEmail] = useState("");
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     try {
       await forgotMutation.mutateAsync({ data: { email } });
       setSuccess(true);
-    } catch (err) {
-      setSuccess(true);
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, "");
+      if (msg) {
+        setError(msg);
+      } else {
+        setSuccess(true);
+      }
     }
   };
 
@@ -42,6 +50,12 @@ export function ForgotPasswordPage() {
                 <h1 className="font-display text-3xl font-bold text-foreground mb-2">Reset Password</h1>
                 <p className="text-muted-foreground mb-8">Enter your email and we'll send you a reset link.</p>
                 
+                {error && (
+                  <div className="mb-6 p-4 rounded-xl bg-destructive/10 text-destructive text-sm font-medium border border-destructive/20">
+                    {error}
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
                     <label className="block text-sm font-semibold mb-1.5">Email</label>
