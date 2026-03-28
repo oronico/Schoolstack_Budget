@@ -1,5 +1,6 @@
 import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
+import { pool } from "@workspace/db";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -42,15 +43,38 @@ function validateEnv() {
   }
 }
 
+async function runMigrations() {
+  if (!pool) return;
+  try {
+    const migrations = [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS school_name TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_role TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS planning_stage TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS mailing_list_opt_in BOOLEAN NOT NULL DEFAULT false`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS guidance_level VARCHAR(20)`,
+      `ALTER TABLE feedback ADD COLUMN IF NOT EXISTS score INTEGER`,
+    ];
+    for (const sql of migrations) {
+      await pool.query(sql);
+    }
+    console.log("[migrations] Schema up to date.");
+  } catch (err) {
+    console.error("[migrations] Failed to run migrations:", err);
+  }
+}
+
 validateEnv();
 
 const port = Number(process.env["PORT"] || "3000");
 
+runMigrations().then(() => {
 app.listen(port, "0.0.0.0", () => {
   console.log(`Server listening on 0.0.0.0:${port}`);
   if (isProduction) {
     console.log(`[startup] Production mode — CORS origins: ${process.env.ALLOWED_ORIGINS || "(not set)"}`);
   }
+});
 });
 
 setInterval(() => {
