@@ -11,10 +11,14 @@ if (!databaseUrl) {
 }
 
 function getSslConfig(url: string): pg.PoolConfig["ssl"] {
-  if (url.includes("localhost") || url.includes("127.0.0.1") || url.includes("/tmp/")) {
-    return undefined;
+  if (url.includes("sslmode=require") || url.includes("sslmode=verify")) {
+    return { rejectUnauthorized: false };
   }
-  return { rejectUnauthorized: false };
+  const knownSslHosts = ["railway.app", "rlwy.net", "neon.tech", "supabase.co", "amazonaws.com"];
+  if (knownSslHosts.some((h) => url.includes(h))) {
+    return { rejectUnauthorized: false };
+  }
+  return undefined;
 }
 
 export const pool = databaseUrl
