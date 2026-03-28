@@ -176,21 +176,21 @@ router.get("/auth/debug-reset-token", async (req, res) => {
     if (!email) { res.status(400).json({ error: "email required" }); return; }
     const [user] = await db.select({
       id: usersTable.id,
-      hasToken: sql<boolean>`reset_token IS NOT NULL`,
+      token: usersTable.resetToken,
       expiry: usersTable.resetTokenExpiry,
-      tokenLen: sql<number>`LENGTH(reset_token)`,
     }).from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
     if (!user) { res.json({ found: false }); return; }
     const now = new Date();
     res.json({
       found: true,
       userId: user.id,
-      hasToken: user.hasToken,
-      tokenLength: user.tokenLen,
+      tokenFirst8: user.token?.substring(0, 8) ?? null,
+      tokenLength: user.token?.length ?? 0,
       expiry: user.expiry?.toISOString() ?? null,
       serverNow: now.toISOString(),
       isExpired: user.expiry ? user.expiry < now : null,
       diffMs: user.expiry ? user.expiry.getTime() - now.getTime() : null,
+      dbToken: user.token,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
