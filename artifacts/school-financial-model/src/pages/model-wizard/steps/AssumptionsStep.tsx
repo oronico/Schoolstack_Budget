@@ -1,5 +1,5 @@
 import { useFormContext } from "react-hook-form";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStateFundingConfig, type SchoolType } from "@/lib/state-funding-data";
@@ -143,6 +143,18 @@ export function AssumptionsStep() {
     [stateCode, schoolType]
   );
 
+  useEffect(() => {
+    if (!isCharter || !stateFundingConfig) return;
+    if (stateFundingConfig.enrollmentRevenueMethod) {
+      setValue("schoolProfile.enrollmentRevenueMethod", stateFundingConfig.enrollmentRevenueMethod, { shouldDirty: true });
+    } else {
+      setValue("schoolProfile.enrollmentRevenueMethod", "adm", { shouldDirty: true });
+    }
+    if (stateFundingConfig.charterMethodology) {
+      setValue("schoolProfile.stateFundingMethodology", stateFundingConfig.charterMethodology, { shouldDirty: true });
+    }
+  }, [isCharter, stateFundingConfig, setValue]);
+
   const fiscalYearStartMonth = watch("schoolProfile.fiscalYearStartMonth") || 7;
   const isPartialFirstYear = watch("schoolProfile.isPartialFirstYear") || false;
   const year1OperatingMonths = watch("schoolProfile.year1OperatingMonths") || 12;
@@ -156,6 +168,7 @@ export function AssumptionsStep() {
 
   const resetStaffingParams = () => {
     setValue("staffing.benefitsRate", DEFAULTS.benefitsRate, { shouldDirty: true });
+    setValue("staffing.payrollTaxRate", DEFAULTS.payrollTaxRate, { shouldDirty: true });
     setValue("enrollment.retentionRate", DEFAULTS.retentionRate, { shouldDirty: true });
   };
 
@@ -499,15 +512,16 @@ export function AssumptionsStep() {
                 max={100}
               />
 
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-semibold text-foreground">Payroll Tax Rate</label>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">Default 8%</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Employer-side payroll taxes (FICA, FUTA, state unemployment). Each staff role starts at 8% — override per role on the Staffing step.
-                </p>
-              </div>
+              <AssumptionField
+                label="Payroll Tax Rate"
+                name="staffing.payrollTaxRate"
+                suffix="%"
+                defaultValue={DEFAULTS.payrollTaxRate}
+                usageNote="Employer-side payroll taxes (FICA, FUTA, state unemployment). Applied as a default to each new staff role — override per role on the Staffing step."
+                placeholder="8"
+                min={0}
+                max={100}
+              />
 
               <AssumptionField
                 label="Student Retention Rate"

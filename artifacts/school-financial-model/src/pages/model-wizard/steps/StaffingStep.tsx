@@ -47,6 +47,7 @@ export function StaffingStep() {
 
   const colaRate = (watch("facilities.annualSalaryIncrease") as number) ?? 3;
   const modelBenefitsRate = (watch("staffing.benefitsRate") as number) ?? 25;
+  const modelPayrollTaxRate = (watch("staffing.payrollTaxRate") as number) ?? 8;
 
   const formRows = watch("staffingRows") as StaffingRowData[] | undefined;
   const [rows, setRows] = useState<StaffingRowData[]>([]);
@@ -86,6 +87,22 @@ export function StaffingStep() {
       setValue("staffingRows", updated, { shouldDirty: true });
     }
   }, [modelBenefitsRate, defaultsApplied, rows]);
+
+  useEffect(() => {
+    if (!defaultsApplied || rows.length === 0) return;
+    let changed = false;
+    const updated = rows.map((r) => {
+      if (!r.payrollTaxRateOverridden && r.payrollTaxRate !== modelPayrollTaxRate) {
+        changed = true;
+        return { ...r, payrollTaxRate: modelPayrollTaxRate };
+      }
+      return r;
+    });
+    if (changed) {
+      setRows(updated);
+      setValue("staffingRows", updated, { shouldDirty: true });
+    }
+  }, [modelPayrollTaxRate, defaultsApplied, rows]);
 
   const syncToForm = useCallback(
     (updatedRows: StaffingRowData[]) => {

@@ -313,8 +313,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
 
   r++;
   ws.getCell(r, 1).value = "Default Payroll Tax Rate"; dc(ws.getCell(r, 1));
-  ws.getCell(r, 2).value = 8 / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2));
-  ws.getCell(r, 3).value = "Per-role override; 8% default"; ws.getCell(r, 3).font = { ...NF, italic: true, color: { argb: "FF808080" } };
+  ws.getCell(r, 2).value = (Number(data.staffing?.payrollTaxRate ?? 8)) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
 
   r++;
   ws.getCell(r, 1).value = "Student Retention Rate"; dc(ws.getCell(r, 1));
