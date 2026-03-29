@@ -136,7 +136,7 @@ export function ModelWizardPage() {
         percentBase?: string;
         note?: string;
       }>,
-      staffing: { studentsPerTeacher: 12, benefitsRate: 20 },
+      staffing: { studentsPerTeacher: 12, benefitsRate: 25, payrollTaxRate: 8 },
       staffingRows: [] as Array<{
         id: string;
         roleName: string;
