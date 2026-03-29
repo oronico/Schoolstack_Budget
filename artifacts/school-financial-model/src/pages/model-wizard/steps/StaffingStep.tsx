@@ -46,6 +46,7 @@ export function StaffingStep() {
   const y5Students = enrollmentArr[4];
 
   const colaRate = (watch("facilities.annualSalaryIncrease") as number) ?? 3;
+  const modelBenefitsRate = (watch("staffing.benefitsRate") as number) ?? 25;
 
   const formRows = watch("staffingRows") as StaffingRowData[] | undefined;
   const [rows, setRows] = useState<StaffingRowData[]>([]);
@@ -70,6 +71,22 @@ export function StaffingStep() {
     }
   }, [formRows, schoolStage, fundingProfile, defaultsApplied, setValue]);
 
+  useEffect(() => {
+    if (!defaultsApplied || rows.length === 0) return;
+    let changed = false;
+    const updated = rows.map((r) => {
+      if (!r.benefitsRateOverridden && r.benefitsRate !== modelBenefitsRate) {
+        changed = true;
+        return { ...r, benefitsRate: modelBenefitsRate };
+      }
+      return r;
+    });
+    if (changed) {
+      setRows(updated);
+      setValue("staffingRows", updated, { shouldDirty: true });
+    }
+  }, [modelBenefitsRate, defaultsApplied, rows]);
+
   const syncToForm = useCallback(
     (updatedRows: StaffingRowData[]) => {
       setRows(updatedRows);
@@ -80,7 +97,13 @@ export function StaffingStep() {
 
   const updateRow = useCallback(
     (id: string, field: keyof StaffingRowData, value: string | number | boolean) => {
-      const updated = rows.map((r) => (r.id === id ? { ...r, [field]: value } : r));
+      const updated = rows.map((r) => {
+        if (r.id !== id) return r;
+        const patch: Partial<StaffingRowData> = { [field]: value };
+        if (field === "benefitsRate") patch.benefitsRateOverridden = true;
+        if (field === "payrollTaxRate") patch.payrollTaxRateOverridden = true;
+        return { ...r, ...patch };
+      });
       syncToForm(updated);
     },
     [rows, syncToForm]
@@ -555,24 +578,40 @@ function StaffCard({
               onChange={(v) => onUpdate("benefitsEligible", v)}
               disabled={isContractNotPayrollLike}
             />
-            <FieldNumber
-              label="Benefits Rate"
-              value={row.benefitsRate}
-              onChange={(v) => onUpdate("benefitsRate", v)}
-              suffix="%"
-              min={0}
-              max={100}
-              disabled={!row.benefitsEligible || isContractNotPayrollLike}
-            />
-            <FieldNumber
-              label="Payroll Tax Rate"
-              value={row.payrollTaxRate}
-              onChange={(v) => onUpdate("payrollTaxRate", v)}
-              suffix="%"
-              min={0}
-              max={100}
-              disabled={isContractNotPayrollLike}
-            />
+            <div className="space-y-1">
+              <FieldNumber
+                label="Benefits Rate"
+                value={row.benefitsRate}
+                onChange={(v) => onUpdate("benefitsRate", v)}
+                suffix="%"
+                min={0}
+                max={100}
+                disabled={!row.benefitsEligible || isContractNotPayrollLike}
+              />
+              <span className={cn(
+                "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
+                row.benefitsRateOverridden ? "bg-amber-100 text-amber-800" : "bg-teal-100 text-teal-800"
+              )}>
+                {row.benefitsRateOverridden ? "Custom" : "Model Default"}
+              </span>
+            </div>
+            <div className="space-y-1">
+              <FieldNumber
+                label="Payroll Tax Rate"
+                value={row.payrollTaxRate}
+                onChange={(v) => onUpdate("payrollTaxRate", v)}
+                suffix="%"
+                min={0}
+                max={100}
+                disabled={isContractNotPayrollLike}
+              />
+              <span className={cn(
+                "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
+                row.payrollTaxRateOverridden ? "bg-amber-100 text-amber-800" : "bg-teal-100 text-teal-800"
+              )}>
+                {row.payrollTaxRateOverridden ? "Custom" : "Model Default"}
+              </span>
+            </div>
             <FieldInput
               label="Notes"
               value={row.notes}

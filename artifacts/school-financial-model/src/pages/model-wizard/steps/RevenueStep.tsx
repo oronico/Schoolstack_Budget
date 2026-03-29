@@ -307,6 +307,49 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     });
   }, [schoolType, defaultsApplied, setValue]);
 
+  const revDefaultBillingMonths = watch("revenueDefaults.billingMonths") as 9 | 10 | 12 | undefined;
+  const revDefaultCollectionMethod = watch("revenueDefaults.collectionMethod") as CollectionMethod | undefined;
+  const revDefaultCollectionRate = watch("revenueDefaults.collectionRate") as number | undefined;
+  const revDefaultCollectionDelay = watch("revenueDefaults.collectionDelayDays") as number | undefined;
+
+  useEffect(() => {
+    if (!defaultsApplied) return;
+    setRows((currentRows) => {
+      if (currentRows.length === 0) return currentRows;
+      let changed = false;
+      const updated = currentRows.map((row) => {
+        if ((row.category === "tuition_and_fees" || row.category === "tuition_offsets") && !row.timingOverridden) {
+          const newRow = { ...row };
+          if (revDefaultBillingMonths !== undefined && newRow.billingMonths !== revDefaultBillingMonths) {
+            newRow.billingMonths = revDefaultBillingMonths;
+            changed = true;
+          }
+          if (row.category === "tuition_and_fees") {
+            if (revDefaultCollectionMethod !== undefined && newRow.collectionMethod !== revDefaultCollectionMethod) {
+              newRow.collectionMethod = revDefaultCollectionMethod;
+              changed = true;
+            }
+            if (revDefaultCollectionRate !== undefined && newRow.collectionRate !== revDefaultCollectionRate) {
+              newRow.collectionRate = revDefaultCollectionRate;
+              changed = true;
+            }
+            if (revDefaultCollectionDelay !== undefined && newRow.collectionDelayDays !== revDefaultCollectionDelay) {
+              newRow.collectionDelayDays = revDefaultCollectionDelay;
+              changed = true;
+            }
+          }
+          return newRow;
+        }
+        return row;
+      });
+      if (changed) {
+        setValue("revenueRows", updated, { shouldDirty: true });
+        return updated;
+      }
+      return currentRows;
+    });
+  }, [revDefaultBillingMonths, revDefaultCollectionMethod, revDefaultCollectionRate, revDefaultCollectionDelay, defaultsApplied, setValue]);
+
   const PROGRAM_TYPE_TO_ROW_ID: Record<string, string> = useMemo(() => ({
     esa: "esa_revenue", voucher: "voucher_revenue", tax_credit_scholarship: "scholarship_org",
     refundable_tax_credit: "refundable_tax_credit", individual_tax_credit: "individual_tax_credit",
@@ -456,7 +499,14 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   };
 
   const updateTimingField = (id: string, field: string, value: unknown) => {
-    const updated = rows.map((r) => r.id === id ? { ...r, [field]: value } : r);
+    const updated = rows.map((r) => {
+      if (r.id !== id) return r;
+      const patch: Record<string, unknown> = { [field]: value };
+      if (field !== "timingOverridden") {
+        patch.timingOverridden = true;
+      }
+      return { ...r, ...patch };
+    });
     syncToForm(updated);
   };
 
@@ -1397,11 +1447,24 @@ interface TimingControlsProps {
 
 function TimingControls({ row, onTimingChange }: TimingControlsProps) {
   const category = row.category;
+  const isOverridden = row.timingOverridden === true;
+
+  const handleTimingOverride = (field: string, value: unknown) => {
+    onTimingChange(field, value);
+  };
 
   return (
     <div className="mt-3 pt-3 border-t border-border/50">
       <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2 flex items-center gap-1">
         <Clock className="h-3 w-3" /> Payment Timing
+        {(category === "tuition_and_fees" || category === "tuition_offsets") && (
+          <span className={cn(
+            "ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
+            isOverridden ? "bg-amber-100 text-amber-800" : "bg-teal-100 text-teal-800"
+          )}>
+            {isOverridden ? "Custom" : "Default"}
+          </span>
+        )}
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {category === "tuition_and_fees" && (
@@ -1412,7 +1475,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               </label>
               <select
                 value={row.billingMonths ?? 10}
-                onChange={(e) => onTimingChange("billingMonths", parseInt(e.target.value))}
+                onChange={(e) => handleTimingOverride("billingMonths", parseInt(e.target.value))}
                 className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground"
               >
                 <option value={9}>9 months</option>
@@ -1426,7 +1489,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               </label>
               <select
                 value={row.collectionMethod ?? "autopay"}
-                onChange={(e) => onTimingChange("collectionMethod", e.target.value as CollectionMethod)}
+                onChange={(e) => handleTimingOverride("collectionMethod", e.target.value as CollectionMethod)}
                 className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground"
               >
                 {(Object.keys(COLLECTION_METHOD_LABELS) as CollectionMethod[]).map((cm) => (
@@ -1443,7 +1506,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
                   <input
                     type="number"
                     value={row.collectionRate ?? 95}
-                    onChange={(e) => { const v = parseFloat(e.target.value); onTimingChange("collectionRate", isNaN(v) ? 0 : v); }}
+                    onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
                     className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
                     min={0}
                     max={100}
@@ -1457,7 +1520,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
                     <input
                       type="number"
                       value={row.collectionDelayDays ?? 0}
-                      onChange={(e) => { const v = parseInt(e.target.value); onTimingChange("collectionDelayDays", isNaN(v) ? 0 : v); }}
+                      onChange={(e) => { const v = parseInt(e.target.value); handleTimingOverride("collectionDelayDays", isNaN(v) ? 0 : v); }}
                       className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full pr-12"
                       min={0}
                       max={90}
@@ -1477,7 +1540,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </label>
             <select
               value={row.billingMonths ?? 10}
-              onChange={(e) => onTimingChange("billingMonths", parseInt(e.target.value))}
+              onChange={(e) => handleTimingOverride("billingMonths", parseInt(e.target.value))}
               className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground"
             >
               <option value={9}>9 months</option>

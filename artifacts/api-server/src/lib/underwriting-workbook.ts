@@ -182,8 +182,8 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   r += 2;
   sec(ws, r, 7); ws.getCell(r, 1).value = "REVENUE DRIVERS";
   r++;
-  ws.getRow(r).values = ["Line Item", "Category", "Driver", "Amount", "Escalation %"];
-  hdr(ws, r, 5);
+  ws.getRow(r).values = ["Line Item", "Category", "Driver", "Amount", "Escalation %", "Timing"];
+  hdr(ws, r, 6);
   const revStartRow = r + 1;
   for (const rv of revenueRows) {
     r++;
@@ -192,6 +192,11 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     ws.getCell(r, 3).value = driverLabel(rv.driverType); dc(ws.getCell(r, 3));
     ws.getCell(r, 4).value = rv.amounts?.[0] ?? 0; ws.getCell(r, 4).numFmt = CUR; dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
     ws.getCell(r, 5).value = (rv.escalationRate ?? 0) / 100; ws.getCell(r, 5).numFmt = PCT; dc(ws.getCell(r, 5)); inputCell(ws.getCell(r, 5));
+    const timingStatus = (rv as unknown as Record<string, unknown>).timingOverridden ? "Custom" : "Default";
+    ws.getCell(r, 6).value = timingStatus; dc(ws.getCell(r, 6));
+    if ((rv as unknown as Record<string, unknown>).timingOverridden) {
+      ws.getCell(r, 6).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF3CD" } };
+    }
   }
 
   if (tiers.length > 0) {
@@ -289,6 +294,49 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   ws.getCell(r, 1).value = "Debt Included"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = sp.debtIncluded !== false ? "Yes" : "No"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
   const debtIncRow = r;
+
+  r++;
+  ws.getCell(r, 1).value = "Enrollment Growth Rate"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = (sp.enrollmentGrowthRate ?? 0) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+
+  r++;
+  ws.getCell(r, 1).value = "Rent Escalation Rate"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = (Number(data.facilities?.annualRentIncrease ?? 3)) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+
+  r++;
+  ws.getCell(r, 1).value = "Tuition Escalation Rate"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = (data.tuitionEscalation?.rate ?? 3) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+
+  r++;
+  ws.getCell(r, 1).value = "Default Benefits Rate"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = (Number(data.staffing?.benefitsRate ?? 25)) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+
+  r++;
+  ws.getCell(r, 1).value = "Default Payroll Tax Rate"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = 8 / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2));
+  ws.getCell(r, 3).value = "Per-role override; 8% default"; ws.getCell(r, 3).font = { ...NF, italic: true, color: { argb: "FF808080" } };
+
+  r++;
+  ws.getCell(r, 1).value = "Student Retention Rate"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = (data.enrollment?.retentionRate ?? 85) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+
+  const revDefaults = (data as Record<string, unknown>).revenueDefaults as { billingMonths?: number; collectionMethod?: string; collectionRate?: number; collectionDelayDays?: number } | undefined;
+  r += 2;
+  sec(ws, r, 7); ws.getCell(r, 1).value = "REVENUE COLLECTION DEFAULTS";
+  const BILLING_LABELS: Record<number, string> = { 9: "9 months (Sep-May)", 10: "10 months (Aug-May)", 12: "12 months (year-round)" };
+  const COLL_LABELS: Record<string, string> = { autopay: "Autopay", invoiced: "Invoiced", mixed: "Mixed" };
+  r++;
+  ws.getCell(r, 1).value = "Default Billing Months"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = BILLING_LABELS[revDefaults?.billingMonths ?? 10] || "10 months"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+  r++;
+  ws.getCell(r, 1).value = "Default Collection Method"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = COLL_LABELS[revDefaults?.collectionMethod ?? "autopay"] || "Autopay"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+  r++;
+  ws.getCell(r, 1).value = "Default Collection Rate"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = (revDefaults?.collectionRate ?? 100) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+  r++;
+  ws.getCell(r, 1).value = "Default Collection Delay"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = `${revDefaults?.collectionDelayDays ?? 0} days`; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
 
   const gbe = sp.gradeBandEnrollment;
   const gbp = sp.gradeBandPerPupil;
@@ -755,17 +803,17 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
   const sp = data.schoolProfile || {};
   const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const yLabels = yearLabels(sp.openingYear);
-  ws.columns = [{ width: 28 }, { width: 16 }, { width: 10 }, { width: 14 }, { width: 12 }, { width: 12 }, { width: 14 }];
+  ws.columns = [{ width: 28 }, { width: 16 }, { width: 10 }, { width: 14 }, { width: 12 }, { width: 12 }, { width: 14 }, { width: 12 }];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 7);
+  ws.mergeCells(r, 1, r, 8);
   ws.getCell(r, 1).value = "Staffing Drivers";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
-  ws.getRow(r).values = ["Role", "Category", "FTE", "Base Rate", "Benefits %", "Tax %", "Loaded Cost"];
-  hdr(ws, r, 7);
+  ws.getRow(r).values = ["Role", "Category", "FTE", "Base Rate", "Benefits %", "Tax %", "Loaded Cost", "Rates"];
+  hdr(ws, r, 8);
   for (const sr of staffingRows) {
     r++;
     ws.getCell(r, 1).value = sr.roleName; dc(ws.getCell(r, 1));
@@ -775,6 +823,11 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
     ws.getCell(r, 5).value = sr.benefitsRate / 100; ws.getCell(r, 5).numFmt = PCT; dc(ws.getCell(r, 5)); inputCell(ws.getCell(r, 5));
     ws.getCell(r, 6).value = sr.payrollTaxRate / 100; ws.getCell(r, 6).numFmt = PCT; dc(ws.getCell(r, 6)); inputCell(ws.getCell(r, 6));
     ws.getCell(r, 7).value = Math.round(computeStaffingLoaded(sr, 0, enrollment[0])); ws.getCell(r, 7).numFmt = CUR; bc(ws.getCell(r, 7));
+    const hasOverride = sr.benefitsRateOverridden || sr.payrollTaxRateOverridden;
+    ws.getCell(r, 8).value = hasOverride ? "Custom" : "Default"; dc(ws.getCell(r, 8));
+    if (hasOverride) {
+      ws.getCell(r, 8).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF3CD" } };
+    }
   }
 
   r += 2;

@@ -163,6 +163,13 @@ export function AssumptionsStep() {
     setValue("tuitionEscalation.rate", DEFAULTS.tuitionEscalationRate, { shouldDirty: true });
   };
 
+  const resetRevenueCollection = () => {
+    setValue("revenueDefaults.billingMonths", 10, { shouldDirty: true });
+    setValue("revenueDefaults.collectionMethod", "autopay", { shouldDirty: true });
+    setValue("revenueDefaults.collectionRate", 100, { shouldDirty: true });
+    setValue("revenueDefaults.collectionDelayDays", 0, { shouldDirty: true });
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -333,6 +340,91 @@ export function AssumptionsStep() {
 
             <InfoBadge>
               Revenue line items and amounts are configured on the Revenue step. This section controls only the rates and methodology that drive revenue projections.
+            </InfoBadge>
+          </div>
+        </section>
+
+        <section>
+          <SectionHeader
+            icon={<DollarSign className="h-5 w-5 text-primary" />}
+            title="Revenue Collection Defaults"
+            description="Default billing and collection behavior applied to new tuition revenue rows. Individual rows can override on the Revenue step."
+            onReset={resetRevenueCollection}
+          />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-sm font-semibold text-foreground">Billing Months</label>
+                  {(watch("revenueDefaults.billingMonths") || 10) !== 10 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider">Modified</span>
+                  )}
+                </div>
+                <select
+                  value={watch("revenueDefaults.billingMonths") || 10}
+                  onChange={(e) => setValue("revenueDefaults.billingMonths", parseInt(e.target.value) as 9 | 10 | 12, { shouldDirty: true })}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                >
+                  <option value={9}>9 months (Sep–May)</option>
+                  <option value={10}>10 months (Aug–May)</option>
+                  <option value={12}>12 months (year-round)</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  How many months tuition is billed over. Applied as default to tuition rows; override per row on the Revenue step.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-sm font-semibold text-foreground">Collection Method</label>
+                  {(watch("revenueDefaults.collectionMethod") || "autopay") !== "autopay" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider">Modified</span>
+                  )}
+                </div>
+                <select
+                  value={watch("revenueDefaults.collectionMethod") || "autopay"}
+                  onChange={(e) => setValue("revenueDefaults.collectionMethod", e.target.value as "autopay" | "invoiced" | "mixed", { shouldDirty: true })}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                >
+                  <option value="autopay">Autopay (100% on time)</option>
+                  <option value="invoiced">Invoiced (manual collection)</option>
+                  <option value="mixed">Mixed (autopay + invoiced)</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Default payment collection approach. Invoiced families may pay late or miss payments, reducing cash inflow timing.
+                </p>
+              </div>
+            </div>
+
+            {(watch("revenueDefaults.collectionMethod") || "autopay") !== "autopay" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <AssumptionField
+                  label="Collection Rate"
+                  name="revenueDefaults.collectionRate"
+                  suffix="%"
+                  defaultValue={100}
+                  usageNote="Expected percentage of billed tuition actually collected. Lenders scrutinize this — most schools see 92–98% for invoiced families."
+                  placeholder="95"
+                  min={0}
+                  max={100}
+                />
+
+                <AssumptionField
+                  label="Collection Delay (Days)"
+                  name="revenueDefaults.collectionDelayDays"
+                  suffix=" days"
+                  defaultValue={0}
+                  usageNote="Average delay from billing date to cash receipt. Shifts monthly cash inflow timing in the cash flow model. Typical: 15–30 days for invoiced families."
+                  placeholder="0"
+                  min={0}
+                  max={90}
+                />
+              </div>
+            )}
+
+            <InfoBadge>
+              These defaults apply to new tuition rows. Rows with custom timing show a "Custom" badge on the Revenue step.
+              Changing defaults here does not override rows you've already customized.
             </InfoBadge>
           </div>
         </section>

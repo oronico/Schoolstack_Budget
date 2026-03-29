@@ -24,6 +24,8 @@ export interface StaffingRowData {
   benefitsRate: number;
   payrollTaxRate: number;
   payrollLike: boolean;
+  benefitsRateOverridden?: boolean;
+  payrollTaxRateOverridden?: boolean;
   notes: string;
   staffingMode: StaffingMode;
   studentRatio?: number;

@@ -203,6 +203,14 @@ export const revenueRowSchema = z.object({
   reimbursementLagMonths: z.number().optional(),
   grantStatus: z.enum(["confirmed", "projected"]).optional(),
   receiptQuarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
+  timingOverridden: z.boolean().optional(),
+});
+
+export const revenueDefaultsSchema = z.object({
+  billingMonths: z.union([z.literal(9), z.literal(10), z.literal(12)]).optional().default(10),
+  collectionMethod: z.enum(["autopay", "invoiced", "mixed"]).optional().default("autopay"),
+  collectionRate: z.coerce.number().min(0).max(100).optional().default(100),
+  collectionDelayDays: z.coerce.number().min(0).max(90).optional().default(0),
 });
 
 export const revenueSchema = z.object({
@@ -234,6 +242,8 @@ export const staffingRowSchema = z.object({
   benefitsRate: z.number().min(0, "Please enter a rate of 0% or higher").max(100, "Benefits rate can't exceed 100%"),
   payrollTaxRate: z.number().min(0, "Please enter a rate of 0% or higher").max(100, "Payroll tax rate can't exceed 100%"),
   payrollLike: z.boolean(),
+  benefitsRateOverridden: z.boolean().optional(),
+  payrollTaxRateOverridden: z.boolean().optional(),
   notes: z.string().default(""),
   staffingMode: z.enum(["fixed", "ratio"]).default("fixed"),
   studentRatio: z.number().min(1).max(1000).optional(),
@@ -350,6 +360,7 @@ export const fullModelSchema = z.object({
   tuitionTiers: z.array(tuitionTierSchema).optional(),
   revenue: revenueSchema.optional(),
   revenueRows: z.array(revenueRowSchema).optional(),
+  revenueDefaults: revenueDefaultsSchema.optional(),
   staffing: staffingSchema.optional(),
   staffingRows: z.array(staffingRowSchema).optional(),
   facilities: facilitiesSchema.optional(),

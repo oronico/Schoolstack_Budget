@@ -85,6 +85,7 @@ export interface RevenueRowData {
   reimbursementLagMonths?: number;
   grantStatus?: GrantStatus;
   receiptQuarter?: 1 | 2 | 3 | 4;
+  timingOverridden?: boolean;
 }
 
 const DEPOSIT_TIMING_TO_FREQUENCY: Record<string, PaymentFrequency> = {

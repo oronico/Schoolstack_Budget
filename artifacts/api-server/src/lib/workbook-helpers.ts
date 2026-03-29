@@ -421,6 +421,8 @@ export interface StaffingRow {
   maxFte?: number;
   startYear?: number;
   endYear?: number;
+  benefitsRateOverridden?: boolean;
+  payrollTaxRateOverridden?: boolean;
 }
 
 export function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
@@ -442,6 +444,8 @@ export function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow 
     maxFte: raw.maxFte != null ? Number(raw.maxFte) : undefined,
     startYear: raw.startYear != null ? Number(raw.startYear) : undefined,
     endYear: raw.endYear != null ? Number(raw.endYear) : undefined,
+    benefitsRateOverridden: raw.benefitsRateOverridden === true ? true : undefined,
+    payrollTaxRateOverridden: raw.payrollTaxRateOverridden === true ? true : undefined,
   };
 }
 
