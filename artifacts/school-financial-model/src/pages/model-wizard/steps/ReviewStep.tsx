@@ -357,6 +357,14 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
               <Item label="Loan Term" value={`${data.schoolProfile?.loanTermYears || 0} years`} />
             </>
           )}
+          {data.revenueDefaults && (
+            <>
+              <Item label="Billing Months" value={`${data.revenueDefaults.billingMonths ?? 10} months`} />
+              <Item label="Collection Method" value={(data.revenueDefaults.collectionMethod ?? "autopay").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())} />
+              <Item label="Collection Rate" value={formatPercent(data.revenueDefaults.collectionRate ?? 100)} />
+              <Item label="Collection Delay" value={`${data.revenueDefaults.collectionDelayDays ?? 0} days`} />
+            </>
+          )}
         </div>
       </Section>
 
