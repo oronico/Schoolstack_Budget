@@ -486,7 +486,7 @@ function StaffCard({
         "grid transition-[grid-template-rows] duration-200 ease-in-out",
         isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
       )}>
-        <div className="overflow-hidden">
+        <div className="overflow-hidden" aria-hidden={!isExpanded} inert={!isExpanded || undefined}>
         <div className="px-4 pb-4 pt-1 space-y-4 border-t border-border/50">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FieldInput

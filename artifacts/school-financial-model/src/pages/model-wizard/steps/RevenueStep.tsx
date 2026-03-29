@@ -924,7 +924,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
               "grid transition-[grid-template-rows] duration-200 ease-in-out",
               isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
             )}>
-              <div className="overflow-hidden">
+              <div className="overflow-hidden" aria-hidden={!isExpanded} inert={!isExpanded || undefined}>
               <div className="px-5 pb-5 space-y-3">
                 {guidance && (
                   <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground flex items-start gap-2">
