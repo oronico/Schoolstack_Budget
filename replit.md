@@ -58,7 +58,8 @@ A React-based SPA featuring:
 - An 8-step public underwriting wizard (`/underwriting`) with localStorage persistence and public export, requiring no account.
 - Authentication pages (login, register, forgot/reset password).
 - A dashboard for model lifecycle management.
-- An 8-step authenticated wizard for detailed financial model setup.
+- A 9-step authenticated wizard: Profile → Assumptions → Enrollment → Revenue → Staffing → Expenses → Review → Consultant → Export.
+  - **Assumptions step** (step 2): Dedicated formula dashboard showing every rate and driver that powers the model. Sections: Revenue Drivers (tuition escalation, enrollment growth, charter methodology/deposit timing/ADA), Cost Escalation (COLA, general inflation, rent), Staffing Parameters (benefits rate, retention rate), Debt Terms, Model Configuration (fiscal year, partial first year, 5-year horizon). Each assumption shows where it's used. Reset-to-defaults per section. FacilitiesStep no longer has rate assumptions (only dollar amounts), with a reference link to Assumptions.
 - A Scenario Planner (`/model/:id/scenarios`) for creating up to 3 what-if scenarios with adjustment sliders, side-by-side comparisons, and viability nudges. Includes a Deep Comparison mode for detailed metric deltas.
 - An admin dashboard with analytics and feedback management.
 - A floating feedback widget for user submissions.

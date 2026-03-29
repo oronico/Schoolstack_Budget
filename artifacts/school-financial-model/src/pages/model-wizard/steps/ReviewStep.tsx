@@ -330,7 +330,29 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
         </dl>
       </Section>
 
-      <Section title="Enrollment" step={2} icon={<Users className="h-5 w-5" />}>
+      <Section title="Assumptions" step={2} icon={<DollarSign className="h-5 w-5" />}>
+        <div className="space-y-1.5">
+          <Item label="COLA (Cost of Living Adjustment)" value={formatPercent(data.facilities?.annualSalaryIncrease)} />
+          <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
+          <Item label="Rent Escalation" value={formatPercent(data.facilities?.annualRentIncrease)} />
+          {data.tuitionEscalation?.rate !== undefined && (
+            <Item label="Tuition Escalation" value={formatPercent(data.tuitionEscalation?.rate)} />
+          )}
+          {data.enrollment?.retentionRate !== undefined && (
+            <Item label="Student Retention" value={formatPercent(data.enrollment?.retentionRate)} />
+          )}
+          <Item label="Benefits Rate" value={formatPercent(data.staffing?.benefitsRate)} />
+          {(data.facilities?.loanAmount ?? 0) > 0 && (
+            <>
+              <Item label="Loan Amount" value={formatCurrency(data.facilities?.loanAmount)} />
+              <Item label="Interest Rate" value={formatPercent(data.facilities?.annualInterestRate)} />
+              <Item label="Loan Term" value={`${data.facilities?.loanTermYears || 0} years`} />
+            </>
+          )}
+        </div>
+      </Section>
+
+      <Section title="Enrollment" step={3} icon={<Users className="h-5 w-5" />}>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
           {["year1", "year2", "year3", "year4", "year5"].slice(0, yearCount).map((key, i) => {
             const val = data.enrollment?.[key];
@@ -345,7 +367,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
       </Section>
 
       {data.tuitionTiers && data.tuitionTiers.length > 0 && data.schoolProfile?.schoolType !== "charter_school" && (
-        <Section title="Tuition Discount Tiers" step={2}>
+        <Section title="Tuition Discount Tiers" step={3}>
           <div className="space-y-1.5">
             {data.tuitionTiers.map((tier: { id: string; label: string; discountPercent: number; studentCounts: number[] }) => {
               const y1Count = tier.studentCounts?.[0] || 0;
@@ -365,7 +387,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
 
       {hasRowData ? (
         <>
-          <Section title="Revenue Schedule" step={3} icon={<DollarSign className="h-5 w-5" />}>
+          <Section title="Revenue Schedule" step={4} icon={<DollarSign className="h-5 w-5" />}>
             <div className="mb-4 flex items-center gap-3">
               <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-semibold">
                 {revenueSummary.count} items
@@ -386,7 +408,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             </div>
           </Section>
 
-          <Section title="Staffing & Personnel" step={4} icon={<Users className="h-5 w-5" />}>
+          <Section title="Staffing & Personnel" step={5} icon={<Users className="h-5 w-5" />}>
             <div className="mb-4 flex items-center gap-3 flex-wrap">
               <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-semibold">
                 {staffingSummary.count} positions
@@ -411,7 +433,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             </div>
           </Section>
 
-          <Section title="Expenses by Category" step={5}>
+          <Section title="Expenses by Category" step={6}>
             <div className="mb-4 flex items-center gap-3">
               <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-semibold">
                 {expenseSummary.count} items
@@ -446,7 +468,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
         </>
       ) : (
         <>
-          <Section title="Revenue" step={3} icon={<DollarSign className="h-5 w-5" />}>
+          <Section title="Revenue" step={4} icon={<DollarSign className="h-5 w-5" />}>
             <div className="space-y-1.5">
               <Item label="Tuition per Student" value={formatCurrency(data.revenue?.tuitionPerStudent)} />
               <Item label="Annual Tuition Increase" value={formatPercent(data.revenue?.annualTuitionIncrease)} />
@@ -460,7 +482,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             </div>
           </Section>
 
-          <Section title="Staffing" step={4} icon={<Users className="h-5 w-5" />}>
+          <Section title="Staffing" step={5} icon={<Users className="h-5 w-5" />}>
             <div className="space-y-1.5">
               <Item label="Target Ratio" value={`1:${data.staffing?.studentsPerTeacher || 0}`} />
               <Item label="Teacher Salary" value={formatCurrency(data.staffing?.teacherSalary)} />
@@ -471,12 +493,9 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             </div>
           </Section>
 
-          <Section title="Operations & Expenses" step={5}>
+          <Section title="Operations & Expenses" step={6}>
             <div className="space-y-1.5">
-              <Item label="COLA (Cost of Living Adjustment)" value={formatPercent(data.facilities?.annualSalaryIncrease)} />
-              <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
               <Item label="Monthly Rent" value={formatCurrency(data.facilities?.monthlyRent)} />
-              <Item label="Rent Escalation" value={formatPercent(data.facilities?.annualRentIncrease)} />
               <Item label="Utilities" value={formatCurrency(data.facilities?.annualUtilities)} />
               <Item label="Insurance" value={formatCurrency(data.facilities?.annualInsurance)} />
               <Item label="Maintenance" value={formatCurrency(data.facilities?.facilityMaintenance)} />
@@ -488,13 +507,6 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
               <Item label="Marketing" value={formatCurrency(data.facilities?.annualMarketing)} />
               <Item label="Professional Development" value={formatCurrency(data.facilities?.professionalDevelopment)} />
               <Item label="Other Overhead" value={formatCurrency(data.facilities?.otherAnnualExpenses)} />
-              {(data.facilities?.loanAmount > 0) && (
-                <>
-                  <Item label="Loan Amount" value={formatCurrency(data.facilities?.loanAmount)} />
-                  <Item label="Interest Rate" value={formatPercent(data.facilities?.annualInterestRate)} />
-                  <Item label="Loan Term" value={`${data.facilities?.loanTermYears || 0} years`} />
-                </>
-              )}
             </div>
           </Section>
         </>

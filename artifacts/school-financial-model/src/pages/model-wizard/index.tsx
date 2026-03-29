@@ -15,6 +15,7 @@ import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-
 import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
 
+const AssumptionsStep = lazy(() => import("./steps/AssumptionsStep").then(m => ({ default: m.AssumptionsStep })));
 const RevenueStep = lazy(() => import("./steps/RevenueStep").then(m => ({ default: m.RevenueStep })));
 const StaffingStep = lazy(() => import("./steps/StaffingStep").then(m => ({ default: m.StaffingStep })));
 const ExpenseStep = lazy(() => import("./steps/ExpenseStep").then(m => ({ default: m.ExpenseStep })));
@@ -26,13 +27,14 @@ type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null };
 
 const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[] = [
   { id: 1, title: "Profile", component: SchoolProfileStep },
-  { id: 2, title: "Enrollment", component: EnrollmentStep },
-  { id: 3, title: "Revenue", component: RevenueStep as ComponentType<StepProps> },
-  { id: 4, title: "Staffing", component: StaffingStep as ComponentType<StepProps> },
-  { id: 5, title: "Expenses", component: ExpenseStep as ComponentType<StepProps> },
-  { id: 6, title: "Review", component: ReviewStep as ComponentType<StepProps> },
-  { id: 7, title: "Consultant", component: ConsultantStep as ComponentType<StepProps> },
-  { id: 8, title: "Export", component: ExportStep as ComponentType<StepProps> },
+  { id: 2, title: "Assumptions", component: AssumptionsStep as ComponentType<StepProps> },
+  { id: 3, title: "Enrollment", component: EnrollmentStep },
+  { id: 4, title: "Revenue", component: RevenueStep as ComponentType<StepProps> },
+  { id: 5, title: "Staffing", component: StaffingStep as ComponentType<StepProps> },
+  { id: 6, title: "Expenses", component: ExpenseStep as ComponentType<StepProps> },
+  { id: 7, title: "Review", component: ReviewStep as ComponentType<StepProps> },
+  { id: 8, title: "Consultant", component: ConsultantStep as ComponentType<StepProps> },
+  { id: 9, title: "Export", component: ExportStep as ComponentType<StepProps> },
 ];
 
 function sendModelTiming(step: number, stepName: string, durationSeconds: number, modelId: number) {
@@ -270,34 +272,35 @@ export function ModelWizardPage() {
 
   const ActiveStepComponent = STEPS[currentStep - 1].component;
   const isLastStep = currentStep === STEPS.length;
-  const isExportStep = currentStep === 8;
+  const isExportStep = currentStep === 9;
 
   const handleNext = async () => {
     const validateStep = async (step: number): Promise<boolean> => {
       switch (step) {
         case 1: return methods.trigger('schoolProfile');
-        case 2: {
+        case 2: return true;
+        case 3: {
           const progs = methods.getValues('programs') as unknown[];
           if (progs && progs.length > 0) {
             return methods.trigger('programs');
           }
           return methods.trigger('enrollment');
         }
-        case 3: {
+        case 4: {
           const [a, b] = await Promise.all([
             methods.trigger('revenue'),
             methods.trigger('revenueRows'),
           ]);
           return a && b;
         }
-        case 4: {
+        case 5: {
           const [a, b] = await Promise.all([
             methods.trigger('staffing'),
             methods.trigger('staffingRows'),
           ]);
           return a && b;
         }
-        case 5: {
+        case 6: {
           const [a, b, d] = await Promise.all([
             methods.trigger('facilities'),
             methods.trigger('expenseRows'),
@@ -495,7 +498,7 @@ export function ModelWizardPage() {
                 onClick={handleNext}
                 className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
               >
-                {currentStep === 6 ? "View Consultant Analysis" : currentStep === 7 ? "Generate Excel Model" : "Continue"} <ArrowRight className="h-5 w-5" />
+                {currentStep === 7 ? "View Consultant Analysis" : currentStep === 8 ? "Generate Excel Model" : "Continue"} <ArrowRight className="h-5 w-5" />
               </button>
             </div>
           )}

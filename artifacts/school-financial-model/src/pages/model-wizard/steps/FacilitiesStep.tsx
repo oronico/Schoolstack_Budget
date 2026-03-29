@@ -1,38 +1,29 @@
 import { FormInput } from "@/components/ui/form-inputs";
+import { Settings } from "lucide-react";
 
-export function FacilitiesStep() {
+export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => void }) {
   return (
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Operations & Expenses</h2>
-        <p className="text-muted-foreground text-lg">Define your facility costs, student services, and any outstanding debt. If you're not sure about some of these numbers yet, use your best estimate - you can always come back and update them.</p>
+        <p className="text-muted-foreground text-lg">Define your facility costs, student services, and any outstanding debt. If you're not sure about some of these numbers yet, use your best estimate — you can always come back and update them.</p>
+      </div>
+
+      <div className="flex items-center gap-2.5 rounded-xl bg-teal-50/60 border border-teal-200 px-4 py-3">
+        <Settings className="h-4 w-4 text-teal-700 flex-shrink-0" />
+        <p className="text-sm text-teal-800">
+          Cost escalation rates (COLA, inflation, rent escalation) are configured on the{" "}
+          {jumpToStep ? (
+            <button type="button" onClick={() => jumpToStep(2)} className="font-semibold text-teal-900 underline underline-offset-2 hover:text-primary transition-colors">
+              Assumptions step
+            </button>
+          ) : (
+            <span className="font-semibold text-teal-900">Assumptions step</span>
+          )}.
+        </p>
       </div>
 
       <div className="space-y-8">
-        <div>
-          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Growth & Inflation</h3>
-          <p className="text-sm text-muted-foreground mb-4">Annual escalation rates applied to costs over the 5-year model. Rent has its own escalation below.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormInput 
-              name="facilities.annualSalaryIncrease" 
-              label="COLA (Cost of Living Adjustment)" 
-              type="number"
-              suffix="%"
-              placeholder="3"
-              helperText="Annual salary increase to retain staff and keep pace with cost of living. The national average for education is 2.5–3.5%."
-            />
-            
-            <FormInput 
-              name="facilities.generalCostInflation" 
-              label="General Cost Inflation" 
-              type="number"
-              suffix="%"
-              placeholder="3"
-              helperText="Applied to utilities, insurance, supplies, services"
-            />
-          </div>
-        </div>
-
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Facility Costs</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -42,14 +33,6 @@ export function FacilitiesStep() {
               type="number"
               prefix="$"
               placeholder="5000"
-            />
-            
-            <FormInput 
-              name="facilities.annualRentIncrease" 
-              label="Annual Rent Escalation" 
-              type="number"
-              suffix="%"
-              placeholder="3"
             />
             
             <FormInput 
