@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit } from "../schema";
 
@@ -436,38 +436,44 @@ export function SchoolProfileStep() {
       </div>
 
       {!isCharter && (
-        <div>
-          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4 flex items-center gap-2">
-            <Landmark className="h-5 w-5 text-primary" /> Are you building this model to support a Lending Lab microloan application?
-          </h3>
-          <div className="space-y-3">
-            <RadioCard
-              value="plan_to_apply"
-              selected={lendingLabIntent === "plan_to_apply"}
-              onSelect={() => setValue("schoolProfile.lendingLabIntent", "plan_to_apply", { shouldDirty: true })}
-              icon={<Rocket className="h-5 w-5" />}
-              title="Yes, I plan to apply"
-              description="I'm preparing my model for a Lending Lab microloan application"
-            />
-            <RadioCard
-              value="want_to_understand"
-              selected={lendingLabIntent === "want_to_understand"}
-              onSelect={() => setValue("schoolProfile.lendingLabIntent", "want_to_understand", { shouldDirty: true })}
-              icon={<HelpCircle className="h-5 w-5" />}
-              title="Maybe - I want to understand what would be needed"
-              description="I'd like to see what a lender-ready model looks like"
-            />
-            <RadioCard
-              value="budget_only"
-              selected={lendingLabIntent === "budget_only"}
-              onSelect={() => setValue("schoolProfile.lendingLabIntent", "budget_only", { shouldDirty: true })}
-              icon={<Building2 className="h-5 w-5" />}
-              title="No, I'm building a budget/model only"
-              description="I just need a financial plan for my school"
-            />
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Landmark className="h-5 w-5 text-primary flex-shrink-0" />
+            <p className="font-semibold text-foreground">Is this model for a Lending Lab microloan application?</p>
           </div>
-          <p className="text-xs text-muted-foreground mt-3 italic">
-            Selecting yes helps tailor your export and next steps. It does not submit a loan application.
+          <div className="flex flex-wrap gap-2">
+            {([
+              { value: "plan_to_apply", label: "Yes, I plan to apply" },
+              { value: "want_to_understand", label: "Maybe — I want to explore" },
+              { value: "budget_only", label: "No, budget only" },
+            ] as const).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setValue("schoolProfile.lendingLabIntent", opt.value, { shouldDirty: true })}
+                className={cn(
+                  "px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all",
+                  lendingLabIntent === opt.value
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {(lendingLabIntent === "plan_to_apply" || lendingLabIntent === "want_to_understand") && (
+            <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-start gap-3">
+              <Rocket className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-foreground">
+                <p>
+                  The <a href="https://www.lendinglab.org" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline inline-flex items-center gap-1">Lending Lab <ExternalLink className="h-3 w-3" /></a> provides microloans to schools with fewer than 100 students. Your completed model here will help support your application.
+                </p>
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground italic">
+            This selection tailors your export and next steps — it does not submit a loan application.
           </p>
         </div>
       )}
