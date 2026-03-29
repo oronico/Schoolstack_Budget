@@ -348,7 +348,7 @@ export function generateDefaultRevenueRows(
 ): RevenueRowData[] {
   const isCharter = options?.isCharter ?? false;
   const currentYear = new Date().getFullYear();
-  const charterAge = options?.openingYear ? currentYear - options.openingYear : Infinity;
+  const charterAge = options?.openingYear ? Math.max(0, currentYear - options.openingYear) : Infinity;
   const isCSPEligible = isCharter && charterAge <= 3;
 
   const CHARTER_NOTES: Record<string, string> = {
@@ -365,6 +365,8 @@ export function generateDefaultRevenueRows(
     .filter((item) => {
       if (item.enabledFor.includes(fundingProfile)) return true;
       if (item.id === "csp_grant" && isCharter) return true;
+      const CHARTER_OPTIONAL_ROWS = ["sped_weighted", "ell_weighted", "at_risk_weighted"];
+      if (isCharter && CHARTER_OPTIONAL_ROWS.includes(item.id)) return true;
       return false;
     })
     .map((item) => {
@@ -380,9 +382,14 @@ export function generateDefaultRevenueRows(
         note = CHARTER_NOTES[item.id];
       }
 
+      const CHARTER_DISABLED_OPTIONAL = ["sped_weighted", "ell_weighted", "at_risk_weighted"];
+      if (isCharter && CHARTER_DISABLED_OPTIONAL.includes(item.id)) {
+        enabled = false;
+      }
+
       if (item.id === "csp_grant" && isCSPEligible) {
         amounts = new Array(yearCount).fill(0);
-        const remainingYears = Math.max(0, 3 - charterAge);
+        const remainingYears = Math.min(3, Math.max(0, 3 - charterAge));
         for (let i = 0; i < remainingYears && i < yearCount; i++) {
           amounts[i] = 150000;
         }

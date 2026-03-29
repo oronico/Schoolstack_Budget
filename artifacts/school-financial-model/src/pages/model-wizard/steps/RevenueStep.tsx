@@ -707,17 +707,39 @@ export function RevenueStep() {
 
       {isCharter && (
         <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-5">
-          {stateFundingConfig?.charterCoachingText && (
-            <div className="bg-teal-50/60 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
-              <div className="p-1.5 bg-teal-100 rounded-lg mt-0.5 flex-shrink-0">
-                <Lightbulb className="h-4 w-4 text-teal-700" />
+          {stateFundingConfig && (
+            <div className="bg-teal-50/60 border border-teal-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="p-1.5 bg-teal-100 rounded-lg mt-0.5 flex-shrink-0">
+                  <Lightbulb className="h-4 w-4 text-teal-700" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-teal-900 mb-1">Charter Revenue Coaching — {stateCode}</p>
+                  {stateFundingConfig.charterCoachingText && (
+                    <p className="text-xs text-teal-800 leading-relaxed">{stateFundingConfig.charterCoachingText}</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-teal-900 mb-1">Charter Revenue Coaching — {stateCode}</p>
-                <p className="text-xs text-teal-800 leading-relaxed">{stateFundingConfig.charterCoachingText}</p>
-                {stateFundingConfig.charterBasePerPupil?.notes && (
-                  <p className="text-xs text-teal-700 mt-1.5 italic">{stateFundingConfig.charterBasePerPupil.notes}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                {stateFundingConfig.charterBasePerPupil && (
+                  <div className="bg-white/60 rounded-lg p-2.5 border border-teal-100">
+                    <p className="text-[11px] font-bold text-teal-800 uppercase tracking-wider mb-0.5">State Per-Pupil</p>
+                    <p className="text-sm font-semibold text-teal-900">
+                      ${stateFundingConfig.charterBasePerPupil.min.toLocaleString()} – ${stateFundingConfig.charterBasePerPupil.max.toLocaleString()}
+                    </p>
+                    {stateFundingConfig.charterBasePerPupil.notes && (
+                      <p className="text-[10px] text-teal-700 mt-0.5 leading-tight">{stateFundingConfig.charterBasePerPupil.notes}</p>
+                    )}
+                  </div>
                 )}
+                <div className="bg-white/60 rounded-lg p-2.5 border border-teal-100">
+                  <p className="text-[11px] font-bold text-teal-800 uppercase tracking-wider mb-0.5">Federal Title Funds</p>
+                  <p className="text-xs text-teal-800">Title I, II, III and IDEA rows pre-loaded at $0. Enter your projected qualifying student counts.</p>
+                </div>
+                <div className="bg-white/60 rounded-lg p-2.5 border border-teal-100">
+                  <p className="text-[11px] font-bold text-teal-800 uppercase tracking-wider mb-0.5">CSP Startup Grant</p>
+                  <p className="text-xs text-teal-800">Federal CSP grants are typically $150K/yr for first 3 years. Confirm eligibility with your authorizer.</p>
+                </div>
               </div>
             </div>
           )}
