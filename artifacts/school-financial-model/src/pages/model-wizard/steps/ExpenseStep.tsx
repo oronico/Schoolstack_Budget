@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion, TrendingUp, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
@@ -10,6 +10,7 @@ import {
   type ExpenseDriverType,
   type SchoolStage,
   type FundingProfile,
+  type EscalationRates,
   EXPENSE_CATEGORY_LABELS,
   OPERATING_CATEGORIES,
   DRIVER_TYPE_LABELS,
@@ -24,6 +25,8 @@ import {
   isCustomCategory,
   generateCustomCategoryKey,
   COA_CATEGORY_RANGES,
+  getEscalationRule,
+  computeEscalatedAmounts,
 } from "@/lib/expense-defaults";
 import {
   type StaffingRowData,
@@ -169,6 +172,13 @@ export function ExpenseStep() {
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const yearCount = getYearCount(schoolStage);
 
+  const generalCostInflation = (watch("facilities.generalCostInflation") as number) || 3;
+  const annualRentIncrease = (watch("facilities.annualRentIncrease") as number) || 3;
+  const escalationRates: EscalationRates = useMemo(
+    () => ({ generalCostInflation, annualRentIncrease }),
+    [generalCostInflation, annualRentIncrease]
+  );
+
   const hasManagementFee = watch("schoolProfile.hasManagementFee") as boolean | undefined;
   const managementFeePercent = watch("schoolProfile.managementFeePercent") as number | undefined;
 
@@ -305,7 +315,7 @@ export function ExpenseStep() {
       setExpenseRows([]);
     } else if (!defaultsApplied) {
       const mgmtFee = hasManagementFee ? { enabled: true, percent: managementFeePercent || 5 } : undefined;
-      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount, schoolStage, mgmtFee);
+      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount, schoolStage, mgmtFee, escalationRates);
       setExpenseRows(defaults);
       const enabledCats = new Set<string>();
       defaults.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
@@ -344,7 +354,8 @@ export function ExpenseStep() {
         const cost = bookkeeperMonthlyCost || 0;
         if (row.enabled !== shouldEnable || row.amounts[0] !== cost) {
           changed = true;
-          return { ...row, enabled: shouldEnable, amounts: row.amounts.map(() => cost) };
+          const rule = getEscalationRule(row, escalationRates);
+          return { ...row, enabled: shouldEnable, amounts: computeEscalatedAmounts(cost, yearCount, rule.rate) };
         }
       }
       if (row.lineItem === "Lawyer / Legal Counsel") {
@@ -352,7 +363,8 @@ export function ExpenseStep() {
         const cost = lawyerMonthlyCost || 0;
         if (row.enabled !== shouldEnable || row.amounts[0] !== cost) {
           changed = true;
-          return { ...row, enabled: shouldEnable, amounts: row.amounts.map(() => cost) };
+          const rule = getEscalationRule(row, escalationRates);
+          return { ...row, enabled: shouldEnable, amounts: computeEscalatedAmounts(cost, yearCount, rule.rate) };
         }
       }
       if (row.lineItem === "General Liability Insurance") {
@@ -360,7 +372,8 @@ export function ExpenseStep() {
         const cost = insuranceCost || 0;
         if (row.enabled !== shouldEnable || row.amounts[0] !== cost) {
           changed = true;
-          return { ...row, enabled: shouldEnable, amounts: row.amounts.map(() => cost) };
+          const rule = getEscalationRule(row, escalationRates);
+          return { ...row, enabled: shouldEnable, amounts: computeEscalatedAmounts(cost, yearCount, rule.rate) };
         }
       }
       return row;
@@ -566,12 +579,24 @@ export function ExpenseStep() {
     const sums: Record<string, number> = {};
     for (const cat of allOperatingCategories) {
       const catRows = expenseRows.filter((r) => r.category === cat && r.enabled);
-      sums[cat] = catRows.reduce((acc, r) => acc + annualize(r.amounts[0] || 0, r.driverType), 0);
+      sums[cat] = catRows.reduce((acc, r) => {
+        let total = 0;
+        for (let y = 0; y < yearCount; y++) {
+          total += annualize(r.amounts[y] || 0, r.driverType);
+        }
+        return acc + total;
+      }, 0);
     }
     const capitalEnabled = capitalRows.filter((r) => r.enabled);
-    sums["capital_financing"] = capitalEnabled.reduce((acc, r) => acc + annualize(r.amounts[0] || 0, r.driverType), 0);
+    sums["capital_financing"] = capitalEnabled.reduce((acc, r) => {
+      let total = 0;
+      for (let y = 0; y < yearCount; y++) {
+        total += annualize(r.amounts[y] || 0, r.driverType);
+      }
+      return acc + total;
+    }, 0);
     return sums;
-  }, [expenseRows, capitalRows, allOperatingCategories]);
+  }, [expenseRows, capitalRows, allOperatingCategories, yearCount]);
 
   const totalOperating = useMemo(() => {
     let total = (personnelCosts?.grandTotal || 0);
@@ -581,7 +606,15 @@ export function ExpenseStep() {
     return total;
   }, [personnelCosts, categorySummaries, allOperatingCategories]);
 
-  const costPerStudent = y1Students > 0 ? Math.round(totalOperating / y1Students) : 0;
+  const y1OperatingTotal = useMemo(() => {
+    let total = (personnelCosts?.grandTotal || 0);
+    for (const cat of allOperatingCategories) {
+      const catRows = expenseRows.filter((r) => r.category === cat && r.enabled);
+      total += catRows.reduce((acc, r) => acc + annualize(r.amounts[0] || 0, r.driverType), 0);
+    }
+    return total;
+  }, [personnelCosts, expenseRows, allOperatingCategories]);
+  const costPerStudent = y1Students > 0 ? Math.round(y1OperatingTotal / y1Students) : 0;
 
   const yearLabels = Array.from({ length: yearCount }, (_, i) => `Y${i + 1}`);
 
@@ -769,6 +802,21 @@ export function ExpenseStep() {
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Expenses & Operations</h2>
         <p className="text-muted-foreground text-lg">First, a few quick questions about your business operations. Then we'll review your expense details.</p>
         <SectionExplainers section="expenses" className="mt-4" />
+      </div>
+
+      <div className="rounded-2xl border border-teal-200 bg-teal-50/50 p-4 flex items-start gap-3">
+        <TrendingUp className="h-5 w-5 text-teal-600 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-foreground space-y-1.5">
+          <p>
+            <span className="font-semibold">Smart Escalation Applied.</span>{" "}
+            A lender-ready model reflects how costs actually behave. Lease payments follow your contract terms. Vendor costs increase with inflation. Per-student expenses scale with enrollment. We've applied realistic escalation — you can adjust any year.
+          </p>
+          <div className="flex flex-wrap gap-3 text-xs text-teal-800">
+            <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Inflation: {generalCostInflation}%</span>
+            <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Rent escalation: {annualRentIncrease}%</span>
+            <span className="text-teal-600">Adjust rates in the Assumptions step</span>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
@@ -966,15 +1014,15 @@ export function ExpenseStep() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <SummaryCard label="People" value={formatCurrency(personnelCosts?.grandTotal || 0)} color="text-blue-600" />
-        <SummaryCard label="Program" value={formatCurrency(categorySummaries["instructional_program"] || 0)} color="text-emerald-600" />
-        <SummaryCard label="Technology" value={formatCurrency(categorySummaries["technology"] || 0)} color="text-violet-600" />
-        <SummaryCard label="Facility" value={formatCurrency(categorySummaries["occupancy_facility"] || 0)} color="text-amber-600" />
-        <SummaryCard label="Admin & Ops" value={formatCurrency(categorySummaries["administrative_general"] || 0)} color="text-rose-600" />
+        <SummaryCard label="People (Y1)" value={formatCurrency(personnelCosts?.grandTotal || 0)} color="text-blue-600" />
+        <SummaryCard label="Program (5yr)" value={formatCurrency(categorySummaries["instructional_program"] || 0)} color="text-emerald-600" />
+        <SummaryCard label="Technology (5yr)" value={formatCurrency(categorySummaries["technology"] || 0)} color="text-violet-600" />
+        <SummaryCard label="Facility (5yr)" value={formatCurrency(categorySummaries["occupancy_facility"] || 0)} color="text-amber-600" />
+        <SummaryCard label="Admin & Ops (5yr)" value={formatCurrency(categorySummaries["administrative_general"] || 0)} color="text-rose-600" />
         {customCategories.filter(c => enabledCategories.has(c)).map((cat) => (
-          <SummaryCard key={cat} label={customCategoryLabels[cat]} value={formatCurrency(categorySummaries[cat] || 0)} color="text-violet-600" />
+          <SummaryCard key={cat} label={`${customCategoryLabels[cat]} (5yr)`} value={formatCurrency(categorySummaries[cat] || 0)} color="text-violet-600" />
         ))}
-        <SummaryCard label="Total Operating" value={formatCurrency(totalOperating)} color="text-foreground" bold sublabel={costPerStudent > 0 ? `${formatCurrency(costPerStudent)} / student` : undefined} />
+        <SummaryCard label="Total Operating (5yr)" value={formatCurrency(totalOperating)} color="text-foreground" bold sublabel={costPerStudent > 0 ? `${formatCurrency(costPerStudent)} / student (Y1)` : undefined} />
       </div>
 
       <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 flex items-center justify-between">
@@ -1062,7 +1110,7 @@ export function ExpenseStep() {
                   <span className="text-[10px] font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">Custom</span>
                 )}
                 <span className="text-xs text-muted-foreground ml-2">({enabledCount} active)</span>
-                <span className="ml-auto text-sm font-semibold text-primary">{formatCurrency(categorySummaries[cat] || 0)}</span>
+                <span className="ml-auto text-sm font-semibold text-primary">{formatCurrency(categorySummaries[cat] || 0)} <span className="text-[10px] font-normal text-muted-foreground">5yr</span></span>
               </button>
               {isCustom && (
                 <div className="flex items-center gap-1 ml-2">
@@ -1138,7 +1186,7 @@ export function ExpenseStep() {
                   />
                 )}
                 {catRows.map((row) => (
-                  <ExpenseLineCard key={row.id} row={row} yearCount={yearCount} yearLabels={yearLabels} onUpdate={updateExpenseRow} onRemove={removeExpenseRow} y1Students={y1Students} />
+                  <ExpenseLineCard key={row.id} row={row} yearCount={yearCount} yearLabels={yearLabels} onUpdate={updateExpenseRow} onRemove={removeExpenseRow} y1Students={y1Students} escalationRates={escalationRates} />
                 ))}
                 <button type="button" onClick={() => addExpenseRow(cat)} className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-2">
                   <Plus className="h-4 w-4" /> Add expense line
@@ -1322,6 +1370,7 @@ function ExpenseLineCard({
   onUpdate,
   onRemove,
   y1Students,
+  escalationRates,
 }: {
   row: ExpenseRowData;
   yearCount: number;
@@ -1329,12 +1378,41 @@ function ExpenseLineCard({
   onUpdate: (id: string, field: keyof ExpenseRowData, value: string | number | boolean | number[]) => void;
   onRemove: (id: string) => void;
   y1Students: number;
+  escalationRates: EscalationRates;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const updateAmount = (yearIdx: number, val: number) => {
+  const rule = useMemo(() => getEscalationRule(row, escalationRates), [row.driverType, row.canonicalKey, escalationRates]);
+  const escalatedAmounts = useMemo(
+    () => computeEscalatedAmounts(row.amounts[0] || 0, yearCount, rule.rate),
+    [row.amounts[0], yearCount, rule.rate]
+  );
+
+  const overriddenYears = useMemo(() => {
+    return row.amounts.map((amt, i) => {
+      if (i === 0) return false;
+      if (rule.rate === 0) return false;
+      return amt !== escalatedAmounts[i];
+    });
+  }, [row.amounts, escalatedAmounts, rule.rate]);
+
+  const updateY1 = (val: number) => {
+    const newEscalated = computeEscalatedAmounts(val, yearCount, rule.rate);
+    const newAmounts = newEscalated.map((auto, i) =>
+      i === 0 ? val : (overriddenYears[i] ? row.amounts[i] : auto)
+    );
+    onUpdate(row.id, "amounts", newAmounts);
+  };
+
+  const updateYearN = (yearIdx: number, val: number) => {
     const newAmounts = [...row.amounts];
     newAmounts[yearIdx] = val;
+    onUpdate(row.id, "amounts", newAmounts);
+  };
+
+  const resetYear = (yearIdx: number) => {
+    const newAmounts = [...row.amounts];
+    newAmounts[yearIdx] = escalatedAmounts[yearIdx];
     onUpdate(row.id, "amounts", newAmounts);
   };
 
@@ -1405,6 +1483,11 @@ function ExpenseLineCard({
         <span className="text-[10px] text-muted-foreground flex-shrink-0">
           5yr: {row.driverType === "percent_of_revenue" ? "—" : formatCurrency(rowTotal)}
         </span>
+        {rule.rate > 0 && (
+          <span className="text-[9px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
+            {rule.label}
+          </span>
+        )}
         <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5 flex-shrink-0">
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -1433,23 +1516,50 @@ function ExpenseLineCard({
           </div>
 
           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
-            {yearLabels.map((label, i) => (
-              <div key={i} className="text-center">
-                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">{label}</div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={row.amounts[i] ?? 0}
-                    onChange={(e) => updateAmount(i, parseFloat(e.target.value) || 0)}
-                    className="w-full text-xs text-center border border-border rounded px-1 py-1 bg-background"
-                    step={row.driverType === "percent_of_revenue" ? "0.1" : "1"}
-                  />
-                  {row.driverType === "percent_of_revenue" && (
-                    <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
+            {yearLabels.map((label, i) => {
+              const isAutoFilled = i > 0 && rule.rate > 0 && !overriddenYears[i];
+              const isOverridden = i > 0 && overriddenYears[i];
+              return (
+                <div key={i} className="text-center">
+                  <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">{label}</div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={row.amounts[i] ?? 0}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        if (i === 0) updateY1(val);
+                        else updateYearN(i, val);
+                      }}
+                      className={cn(
+                        "w-full text-xs text-center border rounded px-1 py-1",
+                        isAutoFilled
+                          ? "bg-teal-50/60 border-teal-200 italic text-teal-900"
+                          : isOverridden
+                            ? "bg-amber-50/60 border-amber-200 text-amber-900"
+                            : "bg-background border-border"
+                      )}
+                      step={row.driverType === "percent_of_revenue" ? "0.1" : "1"}
+                    />
+                    {row.driverType === "percent_of_revenue" && (
+                      <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
+                    )}
+                  </div>
+                  {isAutoFilled && (
+                    <div className="text-[8px] text-teal-600 mt-0.5 leading-tight">{rule.label}</div>
+                  )}
+                  {isOverridden && (
+                    <button
+                      type="button"
+                      onClick={() => resetYear(i)}
+                      className="inline-flex items-center gap-0.5 text-[8px] text-amber-600 hover:text-amber-700 mt-0.5"
+                    >
+                      <RotateCcw className="h-2 w-2" /> reset
+                    </button>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {(row.driverType === "monthly" || perStudentHint) && (
             <div className="text-[10px] text-muted-foreground text-center">

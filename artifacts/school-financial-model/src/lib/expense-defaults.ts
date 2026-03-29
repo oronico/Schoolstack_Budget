@@ -13,6 +13,58 @@ export type ExpenseDriverType = "annual_fixed" | "monthly" | "per_student" | "pe
 export type SchoolStage = "new_school" | "operating_school";
 export type FundingProfile = "tuition_based" | "charter_public_funded" | "hybrid_mixed";
 
+export interface EscalationRule {
+  rate: number;
+  label: string;
+  type: "inflation" | "rent" | "flat";
+}
+
+export interface EscalationRates {
+  generalCostInflation: number;
+  annualRentIncrease: number;
+}
+
+const RENT_CANONICAL_KEYS = ["Rent / Lease"];
+
+export function getEscalationRule(
+  row: { driverType: ExpenseDriverType; canonicalKey?: string; category?: string },
+  rates: EscalationRates,
+): EscalationRule {
+  if (row.canonicalKey && RENT_CANONICAL_KEYS.includes(row.canonicalKey)) {
+    return { rate: rates.annualRentIncrease, label: "per lease terms", type: "rent" };
+  }
+
+  switch (row.driverType) {
+    case "per_student":
+    case "per_new_student":
+    case "per_returning_student":
+      return { rate: 0, label: "scales with enrollment", type: "flat" };
+    case "percent_of_revenue":
+      return { rate: 0, label: "scales with revenue", type: "flat" };
+    case "monthly":
+    case "annual_fixed":
+      return {
+        rate: rates.generalCostInflation,
+        label: rates.generalCostInflation > 0 ? `${rates.generalCostInflation}% inflation` : "no inflation",
+        type: "inflation",
+      };
+    default:
+      return { rate: 0, label: "flat", type: "flat" };
+  }
+}
+
+export function computeEscalatedAmounts(
+  y1Amount: number,
+  yearCount: number,
+  rate: number,
+): number[] {
+  const amounts = [y1Amount];
+  for (let i = 1; i < yearCount; i++) {
+    amounts.push(Math.round(y1Amount * Math.pow(1 + rate / 100, i)));
+  }
+  return amounts;
+}
+
 export interface ExpenseRowData {
   id: string;
   category: ExpenseCategory;
@@ -204,7 +256,9 @@ export function generateDefaultExpenseRows(
   yearCount: number,
   schoolStage: SchoolStage = "new_school",
   managementFee?: { enabled: boolean; percent: number },
+  rates?: EscalationRates,
 ): ExpenseRowData[] {
+  const defaultRates: EscalationRates = rates || { generalCostInflation: 3, annualRentIncrease: 3 };
   return EXPENSE_LINE_ITEMS.map((def) => {
     const baseAmount = stageAdjust(def.defaultAmount, schoolStage);
     let enabled = def.enabledFor.includes(fundingProfile);
@@ -215,6 +269,12 @@ export function generateDefaultExpenseRows(
       amount = managementFee.enabled ? managementFee.percent : baseAmount;
     }
 
+    const rule = getEscalationRule(
+      { driverType: def.driverType, canonicalKey: def.lineItem },
+      defaultRates,
+    );
+    const amounts = computeEscalatedAmounts(amount, yearCount, rule.rate);
+
     return {
       id: uid(),
       category: def.category,
@@ -222,7 +282,7 @@ export function generateDefaultExpenseRows(
       canonicalKey: def.lineItem,
       enabled,
       driverType: def.driverType,
-      amounts: new Array(yearCount).fill(amount),
+      amounts,
       note: "",
       accountCode: def.accountCode || "",
     };

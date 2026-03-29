@@ -23,6 +23,21 @@ The project is a pnpm workspace monorepo built with TypeScript.
 ### Universal Financial Model
 Supports diverse school configurations and projects 5 years, accommodating partial first years. It includes flexible programs & enrollment with tuition escalation, a comprehensive revenue model across 6 categories, an FTE-based staffing model with configurable benefits and ratio-driven staffing ramp, an expense model with 4 built-in categories and flexible drivers (including `per_new_student` and `per_returning_student`), and a capital & debt model with a loan calculator. Features also include contextual guidance, benchmark comparisons, capacity warnings, and a tuition discount tier editor. The "Grants & Fundraising" category has been merged into "Philanthropy" with backward compatibility.
 
+#### Smart Expense Escalation
+CFO-level cost forecasting with automatic escalation by expense type:
+- **Rent/Lease** → `annualRentIncrease` (default 3%), labeled "per lease terms"
+- **Per-student costs** → flat (enrollment drives growth)
+- **Monthly/annual fixed** → `generalCostInflation` (default 3%)
+- **% of Revenue** → flat (scales with revenue)
+- **Capital & Debt** → flat (contractual)
+- Helper functions: `getEscalationRule()` determines rate/label, `computeEscalatedAmounts()` generates Y2-5 from Y1
+- Default rows are generated with escalated amounts via `generateDefaultExpenseRows(..., rates)`
+- ExpenseLineCard auto-fills Y2-5 when Y1 changes, with teal styling for auto-filled cells and amber for overrides
+- Override tracking is derived from data (comparing actual vs computed amounts), surviving page reload
+- Category summaries show escalated 5-year totals
+- Escalation banner explains the logic with inline rate badges
+- COLA (Cost of Living Adjustment) replaces "Annual Salary Increase" across FacilitiesStep, StaffingStep (with Y1→Y5 projection), and ReviewStep
+
 #### Charter Revenue Streams
 Charter-specific revenue support includes:
 - **State per-pupil pre-fill**: `STATE_FUNDING_MAP` contains `charterBasePerPupil: {min, max}` ranges for all 50 states + DC. The midpoint auto-fills the State/Local Per-Pupil Revenue row.

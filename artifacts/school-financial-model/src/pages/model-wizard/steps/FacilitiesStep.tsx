@@ -15,11 +15,11 @@ export function FacilitiesStep() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput 
               name="facilities.annualSalaryIncrease" 
-              label="Annual Salary Increase" 
+              label="COLA (Cost of Living Adjustment)" 
               type="number"
               suffix="%"
               placeholder="3"
-              helperText="Teacher, admin, and founder salary escalation"
+              helperText="Annual salary increase to retain staff and keep pace with cost of living. The national average for education is 2.5–3.5%."
             />
             
             <FormInput 

@@ -473,7 +473,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
 
           <Section title="Operations & Expenses" step={5}>
             <div className="space-y-1.5">
-              <Item label="Annual Salary Increase" value={formatPercent(data.facilities?.annualSalaryIncrease)} />
+              <Item label="COLA (Cost of Living Adjustment)" value={formatPercent(data.facilities?.annualSalaryIncrease)} />
               <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
               <Item label="Monthly Rent" value={formatCurrency(data.facilities?.monthlyRent)} />
               <Item label="Rent Escalation" value={formatPercent(data.facilities?.annualRentIncrease)} />

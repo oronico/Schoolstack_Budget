@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
@@ -44,6 +44,8 @@ export function StaffingStep() {
   ];
   const y1Students = enrollmentArr[0];
   const y5Students = enrollmentArr[4];
+
+  const colaRate = (watch("facilities.annualSalaryIncrease") as number) || 3;
 
   const formRows = watch("staffingRows") as StaffingRowData[] | undefined;
   const [rows, setRows] = useState<StaffingRowData[]>([]);
@@ -155,7 +157,7 @@ export function StaffingStep() {
               <span className="font-semibold">{y1Students || "?"}</span> to{" "}
               <span className="font-semibold">{y5Students || "?"} students</span> by Year 5.
               {y5Students > y1Students && " You'll likely need to hire more staff as you grow."}{" "}
-              The salary escalation rate you set in the Assumptions step will increase these salaries automatically each year.
+              The COLA rate you set in Assumptions will increase these salaries automatically each year.
             </p>
             <p className="text-muted-foreground">
               Typical {schoolType.replace(/_/g, " ")} ratio: <span className="font-medium text-foreground">{benchmark.ratio}</span> (student-to-staff). Current staffing benchmark: {benchmark.staff}.
@@ -163,6 +165,22 @@ export function StaffingStep() {
           </div>
         </div>
       </div>
+
+      {costs.totalSalariesWages > 0 && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4 flex items-start gap-3">
+          <DollarSign className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground space-y-1">
+            <p>
+              <span className="font-semibold">COLA — {colaRate}% Cost of Living Adjustment</span>{" "}
+              applied annually. Schools that don't plan for COLA face teacher turnover — the #1 driver of quality loss.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Y1 total salaries: <span className="font-semibold text-foreground">${costs.totalSalariesWages.toLocaleString()}</span> → Y5: <span className="font-semibold text-foreground">${Math.round(costs.totalSalariesWages * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}</span> with {colaRate}% COLA.
+              {" "}Adjust the COLA rate in the Assumptions step.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-start gap-3">
         <ShieldCheck className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
