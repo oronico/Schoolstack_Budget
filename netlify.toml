@@ -6,6 +6,7 @@
   NODE_VERSION = "20"
   PNPM_VERSION = "10"
   BASE_PATH = "/"
+  VITE_API_BASE_URL = "https://schoolstackbudget.up.railway.app"
 
 [[headers]]
   for = "/assets/*"

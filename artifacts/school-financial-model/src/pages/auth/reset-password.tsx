@@ -8,7 +8,6 @@ import { getApiErrorMessage } from "@/lib/api-error";
 export function ResetPasswordPage() {
   const searchString = useSearch();
   const token = new URLSearchParams(searchString).get("token") || "";
-  console.log("[reset-password] searchString:", JSON.stringify(searchString), "token length:", token.length, "token first8:", token.substring(0, 8));
   
   const resetMutation = useResetPassword();
   const [password, setPassword] = useState("");
