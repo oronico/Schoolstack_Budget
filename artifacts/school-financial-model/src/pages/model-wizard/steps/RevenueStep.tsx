@@ -920,7 +920,11 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
               )}
             </button>
 
-            {isExpanded && (
+            <div className={cn(
+              "grid transition-[grid-template-rows] duration-200 ease-in-out",
+              isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            )}>
+              <div className="overflow-hidden">
               <div className="px-5 pb-5 space-y-3">
                 {guidance && (
                   <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground flex items-start gap-2">
@@ -1018,7 +1022,8 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                   />
                 )}
               </div>
-            )}
+              </div>
+            </div>
           </div>
         );
       })}
@@ -1389,7 +1394,11 @@ function RevenueLineItem({
                     type="number"
                     value={row.amounts[yi] ?? 0}
                     onChange={(e) => onAmountChange(yi, parseFloat(e.target.value) || 0)}
-                    className="w-full rounded-lg border border-border bg-card pl-6 pr-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    aria-invalid={rowErrors?.amounts ? "true" : undefined}
+                    className={cn(
+                      "w-full rounded-lg border bg-card pl-6 pr-2 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10",
+                      rowErrors?.amounts ? "border-destructive" : "border-border"
+                    )}
                     placeholder="0"
                     min={0}
                   />
@@ -1740,6 +1749,18 @@ interface AddLineItemDropdownProps {
 
 function AddLineItemDropdown({ category, availableItems, onAdd }: AddLineItemDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
 
   if (availableItems.length === 0) return null;
 

@@ -331,7 +331,7 @@ export function ModelWizardPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setTimeout(() => {
-        const firstError = document.querySelector('.text-destructive');
+        const firstError = document.querySelector('[data-error="true"], .text-destructive, .text-red-500, [aria-invalid="true"]');
         if (firstError) {
           firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }

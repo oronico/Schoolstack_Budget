@@ -28,7 +28,7 @@ const STAFFING_BENCHMARKS = {
 };
 
 export function StaffingStep() {
-  const { watch, setValue } = useFormContext();
+  const { watch, setValue, formState: { errors } } = useFormContext();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
@@ -314,18 +314,24 @@ export function StaffingStep() {
               {FUNCTION_CATEGORY_LABELS[cat]}
             </h3>
             <div className="space-y-3">
-              {catRows.map((row) => (
-                <StaffCard
-                  key={row.id}
-                  row={row}
-                  isExpanded={expandedRows.has(row.id)}
-                  onToggleExpand={() => toggleExpand(row.id)}
-                  onUpdate={(field, value) => updateRow(row.id, field, value)}
-                  onRemove={() => removeRow(row.id)}
-                  enrollmentArr={enrollmentArr}
-                  colaRate={colaRate}
-                />
-              ))}
+              {catRows.map((row) => {
+                const rowIndex = rows.indexOf(row);
+                const rowErrors = (errors as Record<string, unknown>)?.staffingRows as Record<string, Record<string, { message?: string }>> | undefined;
+                const thisRowErrors = rowErrors?.[rowIndex] as Record<string, { message?: string }> | undefined;
+                return (
+                  <StaffCard
+                    key={row.id}
+                    row={row}
+                    isExpanded={expandedRows.has(row.id)}
+                    onToggleExpand={() => toggleExpand(row.id)}
+                    onUpdate={(field, value) => updateRow(row.id, field, value)}
+                    onRemove={() => removeRow(row.id)}
+                    enrollmentArr={enrollmentArr}
+                    colaRate={colaRate}
+                    rowErrors={thisRowErrors}
+                  />
+                );
+              })}
             </div>
           </div>
         );
@@ -400,6 +406,7 @@ interface StaffCardProps {
   onRemove: () => void;
   enrollmentArr: number[];
   colaRate: number;
+  rowErrors?: Record<string, { message?: string }>;
 }
 
 function StaffCard({
@@ -410,6 +417,7 @@ function StaffCard({
   onRemove,
   enrollmentArr,
   colaRate,
+  rowErrors,
 }: StaffCardProps) {
   const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
   const isRatio = row.staffingMode === "ratio";
@@ -423,39 +431,62 @@ function StaffCard({
     : 0;
   const totalCost = salary + benefits + payrollTax;
 
-  return (
-    <div className="rounded-xl border-2 border-border bg-card overflow-hidden transition-all">
-      <button
-        type="button"
-        onClick={onToggleExpand}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/20 transition-colors"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          )}
-          <span className="font-medium text-sm text-foreground truncate">
-            {row.roleName || "Untitled Role"}
-          </span>
-          <span className="text-xs text-muted-foreground flex-shrink-0">
-            {EMPLOYMENT_TYPE_LABELS[row.employmentType]} · {isRatio ? `${displayFte} FTE (ratio)` : `${row.fte} FTE`}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-          <span className="text-sm font-semibold text-foreground">
-            ${totalCost.toLocaleString()}
-          </span>
-          {colaRate > 0 && row.annualizedRate > 0 && (
-            <span className="text-[9px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-              Y1: ${row.annualizedRate.toLocaleString()} → Y5: ${Math.round(row.annualizedRate * Math.pow(1 + colaRate / 100, 4)).toLocaleString()} ({colaRate}% COLA)
-            </span>
-          )}
-        </div>
-      </button>
+  const hasErrors = rowErrors && Object.keys(rowErrors).length > 0;
+  const fieldId = (field: string) => `staff-${row.id}-${field}`;
 
-      {isExpanded && (
+  return (
+    <div className={cn(
+      "rounded-xl border-2 bg-card overflow-hidden transition-all",
+      hasErrors ? "border-destructive" : "border-border"
+    )} data-error={hasErrors ? "true" : undefined}>
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className="flex-1 flex items-center justify-between px-4 py-3 hover:bg-secondary/20 transition-colors min-w-0"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            )}
+            <span className="font-medium text-sm text-foreground truncate">
+              {row.roleName || "Untitled Role"}
+            </span>
+            <span className="text-xs text-muted-foreground flex-shrink-0">
+              {EMPLOYMENT_TYPE_LABELS[row.employmentType]} · {isRatio ? `${displayFte} FTE (ratio)` : `${row.fte} FTE`}
+            </span>
+            {hasErrors && !isExpanded && (
+              <span className="text-xs text-destructive font-medium flex-shrink-0">Fix errors</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            <span className="text-sm font-semibold text-foreground">
+              ${totalCost.toLocaleString()}
+            </span>
+            {colaRate > 0 && row.annualizedRate > 0 && (
+              <span className="text-[9px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                Y1: ${row.annualizedRate.toLocaleString()} → Y5: ${Math.round(row.annualizedRate * Math.pow(1 + colaRate / 100, 4)).toLocaleString()} ({colaRate}% COLA)
+              </span>
+            )}
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="px-3 py-3 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+          title="Remove staff member"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className={cn(
+        "grid transition-[grid-template-rows] duration-200 ease-in-out",
+        isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+      )}>
+        <div className="overflow-hidden">
         <div className="px-4 pb-4 pt-1 space-y-4 border-t border-border/50">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FieldInput
@@ -463,6 +494,8 @@ function StaffCard({
               value={row.roleName}
               onChange={(v) => onUpdate("roleName", v)}
               placeholder="e.g., Lead Teacher"
+              error={rowErrors?.roleName?.message}
+              id={fieldId("roleName")}
             />
             <FieldSelect
               label="Function Category"
@@ -472,6 +505,8 @@ function StaffCard({
                 label: FUNCTION_CATEGORY_LABELS[c],
               }))}
               onChange={(v) => onUpdate("functionCategory", v)}
+              error={rowErrors?.functionCategory?.message}
+              id={fieldId("functionCategory")}
             />
           </div>
 
@@ -484,6 +519,8 @@ function StaffCard({
                 label: l,
               }))}
               onChange={(v) => onUpdate("employmentType", v)}
+              error={rowErrors?.employmentType?.message}
+              id={fieldId("employmentType")}
             />
             <FieldSelect
               label="Staffing Mode"
@@ -493,6 +530,7 @@ function StaffCard({
                 { value: "ratio", label: "Student Ratio" },
               ]}
               onChange={(v) => onUpdate("staffingMode", v)}
+              id={fieldId("staffingMode")}
             />
             {!isRatio ? (
               <FieldNumber
@@ -502,6 +540,8 @@ function StaffCard({
                 min={0}
                 max={50}
                 step={0.5}
+                error={rowErrors?.fte?.message}
+                id={fieldId("fte")}
               />
             ) : (
               <FieldNumber
@@ -511,6 +551,7 @@ function StaffCard({
                 min={1}
                 max={100}
                 step={1}
+                id={fieldId("studentRatio")}
               />
             )}
             <FieldNumber
@@ -519,6 +560,8 @@ function StaffCard({
               onChange={(v) => onUpdate("annualizedRate", v)}
               prefix="$"
               min={0}
+              error={rowErrors?.annualizedRate?.message}
+              id={fieldId("annualizedRate")}
             />
           </div>
 
@@ -594,6 +637,7 @@ function StaffCard({
               checked={row.benefitsEligible}
               onChange={(v) => onUpdate("benefitsEligible", v)}
               disabled={isContractNotPayrollLike}
+              id={fieldId("benefitsEligible")}
             />
             <div className="space-y-1">
               <FieldNumber
@@ -604,6 +648,8 @@ function StaffCard({
                 min={0}
                 max={100}
                 disabled={!row.benefitsEligible || isContractNotPayrollLike}
+                error={rowErrors?.benefitsRate?.message}
+                id={fieldId("benefitsRate")}
               />
               <span className={cn(
                 "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
@@ -621,6 +667,8 @@ function StaffCard({
                 min={0}
                 max={100}
                 disabled={isContractNotPayrollLike}
+                error={rowErrors?.payrollTaxRate?.message}
+                id={fieldId("payrollTaxRate")}
               />
               <span className={cn(
                 "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
@@ -634,6 +682,7 @@ function StaffCard({
               value={row.notes}
               onChange={(v) => onUpdate("notes", v)}
               placeholder="Optional"
+              id={fieldId("notes")}
             />
           </div>
 
@@ -643,6 +692,7 @@ function StaffCard({
                 label="Treat as Payroll"
                 checked={row.payrollLike}
                 onChange={(v) => onUpdate("payrollLike", v)}
+                id={fieldId("payrollLike")}
               />
               <span className="text-xs text-amber-800">
                 {row.payrollLike
@@ -664,17 +714,10 @@ function StaffCard({
                 <span className="text-amber-600">Contracted (not on payroll)</span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onRemove}
-              className="text-muted-foreground hover:text-destructive transition-colors p-1"
-              title="Remove staff member"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
           </div>
         </div>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -684,24 +727,34 @@ function FieldInput({
   value,
   onChange,
   placeholder,
+  error,
+  id,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  error?: string;
+  id?: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+      <label htmlFor={id} className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
         {label}
       </label>
       <input
+        id={id}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+        aria-invalid={error ? "true" : undefined}
+        className={cn(
+          "rounded-lg border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10",
+          error ? "border-destructive" : "border-border"
+        )}
       />
+      {error && <p className="text-xs text-destructive font-medium">{error}</p>}
     </div>
   );
 }
@@ -716,6 +769,8 @@ function FieldNumber({
   max,
   step,
   disabled,
+  error,
+  id,
 }: {
   label: string;
   value: number;
@@ -726,10 +781,12 @@ function FieldNumber({
   max?: number;
   step?: number;
   disabled?: boolean;
+  error?: string;
+  id?: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+      <label htmlFor={id} className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
         {label}
       </label>
       <div className="relative">
@@ -739,6 +796,7 @@ function FieldNumber({
           </span>
         )}
         <input
+          id={id}
           type="number"
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
@@ -746,8 +804,10 @@ function FieldNumber({
           max={max}
           step={step}
           disabled={disabled}
+          aria-invalid={error ? "true" : undefined}
           className={cn(
-            "w-full rounded-lg border border-border bg-card py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10",
+            "w-full rounded-lg border bg-card py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10",
+            error ? "border-destructive" : "border-border",
             prefix ? "pl-6 pr-2" : suffix ? "pl-3 pr-6" : "px-3",
             disabled && "opacity-50 cursor-not-allowed"
           )}
@@ -758,6 +818,7 @@ function FieldNumber({
           </span>
         )}
       </div>
+      {error && <p className="text-xs text-destructive font-medium">{error}</p>}
     </div>
   );
 }
@@ -767,21 +828,30 @@ function FieldSelect({
   value,
   options,
   onChange,
+  error,
+  id,
 }: {
   label: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
+  error?: string;
+  id?: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+      <label htmlFor={id} className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
         {label}
       </label>
       <select
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 cursor-pointer appearance-none"
+        aria-invalid={error ? "true" : undefined}
+        className={cn(
+          "rounded-lg border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 cursor-pointer appearance-none",
+          error ? "border-destructive" : "border-border"
+        )}
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -789,6 +859,7 @@ function FieldSelect({
           </option>
         ))}
       </select>
+      {error && <p className="text-xs text-destructive font-medium">{error}</p>}
     </div>
   );
 }
@@ -798,21 +869,25 @@ function FieldToggle({
   checked,
   onChange,
   disabled,
+  id,
 }: {
   label: string;
   checked: boolean;
   onChange: (v: boolean) => void;
   disabled?: boolean;
+  id?: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+      <label htmlFor={id} className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
         {label}
       </label>
       <button
+        id={id}
         type="button"
         onClick={() => !disabled && onChange(!checked)}
         disabled={disabled}
+        aria-pressed={checked}
         className={cn(
           "h-[38px] rounded-lg border text-sm font-medium px-3 transition-all",
           checked && !disabled
