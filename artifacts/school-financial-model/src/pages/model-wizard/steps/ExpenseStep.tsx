@@ -174,6 +174,7 @@ export function ExpenseStep() {
 
   const generalCostInflation = (watch("facilities.generalCostInflation") as number) ?? 3;
   const annualRentIncrease = (watch("facilities.annualRentIncrease") as number) ?? 3;
+  const annualSalaryIncrease = (watch("facilities.annualSalaryIncrease") as number) ?? 3;
   const escalationRates: EscalationRates = useMemo(
     () => ({ generalCostInflation, annualRentIncrease }),
     [generalCostInflation, annualRentIncrease]
@@ -634,10 +635,10 @@ export function ExpenseStep() {
     if (y1 === 0 || yearCount <= 1) return y1;
     let sum = y1;
     for (let i = 1; i < yearCount; i++) {
-      sum += Math.round(y1 * Math.pow(1 + (escalationRates.generalCostInflation || 0) / 100, i));
+      sum += Math.round(y1 * Math.pow(1 + (annualSalaryIncrease || 0) / 100, i));
     }
     return sum;
-  }, [personnelCosts, yearCount, escalationRates.generalCostInflation]);
+  }, [personnelCosts, yearCount, annualSalaryIncrease]);
 
   const totalOperating = useMemo(() => {
     let total = personnel5yrTotal;
