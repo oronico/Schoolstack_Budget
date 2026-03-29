@@ -172,7 +172,7 @@ function getYearLabel(index: number, schoolStage: string | undefined): string {
 
 const MONTH_LABELS = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun"];
 
-export function RevenueStep() {
+export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => void; modelId?: number | null }) {
   const { watch, setValue, getValues, formState: { errors } } = useFormContext();
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolStage = watch("schoolProfile.schoolStage") as string | undefined;
@@ -679,30 +679,18 @@ export function RevenueStep() {
         </div>
       )}
 
-      <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-primary" />
-          <h4 className="text-sm font-semibold text-foreground">Enrollment Growth Assumption</h4>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Annual enrollment growth rate used for out-year revenue projections. This is applied after your explicit year-by-year enrollment inputs.
+      <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 px-4 py-3">
+        <Info className="h-4 w-4 text-slate-500 flex-shrink-0" />
+        <p className="text-sm text-slate-700">
+          Enrollment growth rate{isCharter ? ", charter methodology, deposit timing, and ADA inputs are" : " and tuition escalation are"} configured on the{" "}
+          {jumpToStep ? (
+            <button type="button" onClick={() => jumpToStep(2)} className="font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">
+              Assumptions step
+            </button>
+          ) : (
+            <span className="font-semibold text-primary">Assumptions step</span>
+          )}.
         </p>
-        <div className="flex items-center gap-3 max-w-xs">
-          <input
-            type="number"
-            value={watch("schoolProfile.enrollmentGrowthRate") ?? ""}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              setValue("schoolProfile.enrollmentGrowthRate", isNaN(val) ? undefined : val, { shouldDirty: true });
-            }}
-            className="w-24 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-            placeholder="e.g. 10"
-            step={1}
-            min={0}
-            max={100}
-          />
-          <span className="text-sm text-muted-foreground">% per year</span>
-        </div>
       </div>
 
       {isCharter && (
@@ -741,121 +729,6 @@ export function RevenueStep() {
                   <p className="text-xs text-teal-800">Federal CSP grants are typically $150K/yr for first 3 years. Confirm eligibility with your authorizer.</p>
                 </div>
               </div>
-            </div>
-          )}
-
-          <div>
-            <h3 className="text-lg font-bold text-foreground mb-1">Charter Per-Pupil Funding Configuration</h3>
-            <p className="text-sm text-muted-foreground">
-              Your state's funding methodology and per-pupil rates are pre-filled based on {stateCode || "your state"}. Adjust deposit timing as needed.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground">Enrollment Revenue Method</label>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-sm font-semibold text-primary">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {stateFundingConfig?.charterMethodology === "other"
-                    ? "State-Specific Method"
-                    : ENROLLMENT_REVENUE_METHOD_LABELS[watch("schoolProfile.enrollmentRevenueMethod") as EnrollmentRevenueMethod] || "ADM"}
-                </span>
-                <span className="text-xs text-muted-foreground">Set by {stateCode || "state"}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {watch("schoolProfile.enrollmentRevenueMethod") === "ada"
-                  ? "Funding is based on actual student attendance. Requires prior-year ADA data."
-                  : watch("schoolProfile.enrollmentRevenueMethod") === "count_days"
-                    ? "Funding is based on student count days — students enrolled on specific reporting dates."
-                    : "Funding is based on average daily membership (enrolled students), regardless of attendance."}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground">Deposit Timing</label>
-              <select
-                value={watch("schoolProfile.charterDepositTiming") || "quarterly"}
-                onChange={(e) => setValue("schoolProfile.charterDepositTiming", e.target.value, { shouldDirty: true })}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-              >
-                {(Object.entries(CHARTER_DEPOSIT_TIMING_LABELS) as [CharterDepositTiming, string][]).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
-              <p className="text-xs text-muted-foreground">How frequently the state deposits per-pupil funds into your account.</p>
-            </div>
-          </div>
-
-          {stateFundingConfig?.charterBasePerPupil && (
-            <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4">
-              <div className="flex items-start gap-2">
-                <DollarSign className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-emerald-800">State Per-Pupil Range</p>
-                  <p className="text-xs text-emerald-700">
-                    {stateCode} charter schools typically receive <span className="font-bold">${stateFundingConfig.charterBasePerPupil.min.toLocaleString()}</span> – <span className="font-bold">${stateFundingConfig.charterBasePerPupil.max.toLocaleString()}</span> per student.
-                    The midpoint (<span className="font-bold">${Math.round((stateFundingConfig.charterBasePerPupil.min + stateFundingConfig.charterBasePerPupil.max) / 2).toLocaleString()}</span>) has been pre-filled in your State/Local Per-Pupil Revenue row.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {watch("schoolProfile.enrollmentRevenueMethod") === "ada" && (
-            <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-4 space-y-4">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-amber-800">ADA Attendance Ratio</p>
-                  <p className="text-xs text-amber-700">
-                    When your state uses ADA, funding is adjusted by the ratio of actual attendance to enrollment. Enter your prior-year data below - or leave blank to default to 95% attendance.
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-foreground">Prior-Year ADM</label>
-                  <input
-                    type="number"
-                    value={watch("schoolProfile.priorYearADM") || ""}
-                    onChange={(e) => setValue("schoolProfile.priorYearADM", parseFloat(e.target.value) || 0, { shouldDirty: true })}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                    placeholder="e.g. 200"
-                    min={0}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-foreground">Prior-Year ADA</label>
-                  <input
-                    type="number"
-                    value={watch("schoolProfile.priorYearADA") || ""}
-                    onChange={(e) => setValue("schoolProfile.priorYearADA", parseFloat(e.target.value) || 0, { shouldDirty: true })}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                    placeholder="e.g. 190"
-                    min={0}
-                  />
-                </div>
-              </div>
-              {(() => {
-                const adm = watch("schoolProfile.priorYearADM") || 0;
-                const ada = watch("schoolProfile.priorYearADA") || 0;
-                const ratio = adm > 0 ? ada / adm : 0.95;
-                return (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-medium text-foreground">Attendance Ratio:</span>
-                    <span className={cn(
-                      "font-bold",
-                      ratio >= 0.93 ? "text-green-700" : ratio >= 0.85 ? "text-amber-700" : "text-red-700"
-                    )}>
-                      {(ratio * 100).toFixed(1)}%
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {adm > 0 ? "(from your data)" : "(default - enter prior-year data for accuracy)"}
-                    </span>
-                  </div>
-                );
-              })()}
             </div>
           )}
 

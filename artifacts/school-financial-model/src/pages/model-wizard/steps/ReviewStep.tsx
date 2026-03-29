@@ -338,10 +338,17 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
           {data.tuitionEscalation?.rate !== undefined && (
             <Item label="Tuition Escalation" value={formatPercent(data.tuitionEscalation?.rate)} />
           )}
+          <Item label="Enrollment Growth Rate" value={formatPercent(data.schoolProfile?.enrollmentGrowthRate)} />
           {data.enrollment?.retentionRate !== undefined && (
             <Item label="Student Retention" value={formatPercent(data.enrollment?.retentionRate)} />
           )}
           <Item label="Benefits Rate" value={formatPercent(data.staffing?.benefitsRate)} />
+          {data.schoolProfile?.schoolType === "charter_school" && (
+            <>
+              <Item label="Charter Methodology" value={data.schoolProfile?.enrollmentRevenueMethod === "ada" ? "ADA" : data.schoolProfile?.enrollmentRevenueMethod === "count_days" ? "Count Days" : "ADM"} />
+              <Item label="Deposit Timing" value={(data.schoolProfile?.charterDepositTiming || "quarterly").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())} />
+            </>
+          )}
           {(data.facilities?.loanAmount ?? 0) > 0 && (
             <>
               <Item label="Loan Amount" value={formatCurrency(data.facilities?.loanAmount)} />

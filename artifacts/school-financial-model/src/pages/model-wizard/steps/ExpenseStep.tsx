@@ -166,7 +166,7 @@ function BusinessOperationsToggle({
   );
 }
 
-export function ExpenseStep() {
+export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => void; modelId?: number | null }) {
   const { watch, setValue } = useFormContext();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
@@ -856,7 +856,11 @@ export function ExpenseStep() {
           <div className="flex flex-wrap gap-3 text-xs text-teal-800">
             <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Inflation: {generalCostInflation}%</span>
             <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Rent escalation: {annualRentIncrease}%</span>
-            <span className="text-teal-600">Adjust rates in the Assumptions step</span>
+            {jumpToStep ? (
+              <button type="button" onClick={() => jumpToStep(2)} className="text-teal-600 font-medium underline underline-offset-2 hover:text-teal-800 transition-colors">Adjust rates in Assumptions →</button>
+            ) : (
+              <span className="text-teal-600">Adjust rates in the Assumptions step</span>
+            )}
           </div>
         </div>
       </div>
