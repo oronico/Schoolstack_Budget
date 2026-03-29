@@ -18,7 +18,7 @@ const DEFAULTS = {
   generalCostInflation: 3,
   annualRentIncrease: 3,
   benefitsRate: 25,
-  payrollTaxRate: 10,
+  payrollTaxRate: 8,
   retentionRate: 85,
   tuitionEscalationRate: 3,
 };

@@ -186,7 +186,7 @@ const STAFF_PRESETS: StaffPreset[] = [
   },
 ];
 
-const DEFAULT_BENEFITS_RATE = 20;
+const DEFAULT_BENEFITS_RATE = 25;
 const DEFAULT_PAYROLL_TAX_RATE = 8;
 
 export function generateDefaultStaffingRows(
