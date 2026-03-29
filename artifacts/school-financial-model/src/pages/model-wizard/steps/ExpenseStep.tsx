@@ -172,8 +172,8 @@ export function ExpenseStep() {
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const yearCount = getYearCount(schoolStage);
 
-  const generalCostInflation = (watch("facilities.generalCostInflation") as number) || 3;
-  const annualRentIncrease = (watch("facilities.annualRentIncrease") as number) || 3;
+  const generalCostInflation = (watch("facilities.generalCostInflation") as number) ?? 3;
+  const annualRentIncrease = (watch("facilities.annualRentIncrease") as number) ?? 3;
   const escalationRates: EscalationRates = useMemo(
     () => ({ generalCostInflation, annualRentIncrease }),
     [generalCostInflation, annualRentIncrease]
@@ -1391,10 +1391,9 @@ function ExpenseLineCard({
   const overriddenYears = useMemo(() => {
     return row.amounts.map((amt, i) => {
       if (i === 0) return false;
-      if (rule.rate === 0) return false;
       return amt !== escalatedAmounts[i];
     });
-  }, [row.amounts, escalatedAmounts, rule.rate]);
+  }, [row.amounts, escalatedAmounts]);
 
   const updateY1 = (val: number) => {
     const newEscalated = computeEscalatedAmounts(val, yearCount, rule.rate);
@@ -1483,11 +1482,9 @@ function ExpenseLineCard({
         <span className="text-[10px] text-muted-foreground flex-shrink-0">
           5yr: {row.driverType === "percent_of_revenue" ? "—" : formatCurrency(rowTotal)}
         </span>
-        {rule.rate > 0 && (
-          <span className="text-[9px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
-            {rule.label}
-          </span>
-        )}
+        <span className="text-[9px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
+          {rule.label}
+        </span>
         <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5 flex-shrink-0">
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -1517,7 +1514,7 @@ function ExpenseLineCard({
 
           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
             {yearLabels.map((label, i) => {
-              const isAutoFilled = i > 0 && rule.rate > 0 && !overriddenYears[i];
+              const isAutoFilled = i > 0 && !overriddenYears[i];
               const isOverridden = i > 0 && overriddenYears[i];
               return (
                 <div key={i} className="text-center">

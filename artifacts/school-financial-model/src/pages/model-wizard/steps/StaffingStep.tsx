@@ -45,7 +45,7 @@ export function StaffingStep() {
   const y1Students = enrollmentArr[0];
   const y5Students = enrollmentArr[4];
 
-  const colaRate = (watch("facilities.annualSalaryIncrease") as number) || 3;
+  const colaRate = (watch("facilities.annualSalaryIncrease") as number) ?? 3;
 
   const formRows = watch("staffingRows") as StaffingRowData[] | undefined;
   const [rows, setRows] = useState<StaffingRowData[]>([]);
