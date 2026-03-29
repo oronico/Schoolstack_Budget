@@ -266,10 +266,9 @@ export function RevenueStep() {
       const depositTiming = watch("schoolProfile.charterDepositTiming") as CharterDepositTiming | undefined;
       const perPupilRange = stateFundingConfig?.charterBasePerPupil;
       const perPupilMidpoint = perPupilRange ? Math.round((perPupilRange.min + perPupilRange.max) / 2) : undefined;
-      const isNewSchool = schoolStage === "new_school";
       const defaults = generateDefaultRevenueRows(fundingProfile, yearCount, depositTiming, {
         isCharter: isCharterType,
-        isNewSchool,
+        openingYear: openingYear ?? undefined,
         perPupilMidpoint,
       });
       setRows(defaults);

@@ -304,12 +304,11 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
   { id: "title_i", category: "public_funding", lineItem: "Title I — Low-Income Students", driverType: "per_student", enabledFor: ["charter_public_funded"] },
   { id: "title_ii", category: "public_funding", lineItem: "Title II — Teacher Quality", driverType: "annual_fixed", enabledFor: ["charter_public_funded"] },
   { id: "title_iii", category: "public_funding", lineItem: "Title III — English Learners", driverType: "per_student", enabledFor: ["charter_public_funded"] },
-  { id: "idea_sped", category: "public_funding", lineItem: "IDEA — Special Education", driverType: "per_student", enabledFor: ["charter_public_funded"] },
+  { id: "sped_funding", category: "public_funding", lineItem: "IDEA — Special Education", driverType: "per_student", enabledFor: ["charter_public_funded"] },
   { id: "sped_weighted", category: "public_funding", lineItem: "SPED Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
   { id: "ell_weighted", category: "public_funding", lineItem: "ELL Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
   { id: "at_risk_weighted", category: "public_funding", lineItem: "At-Risk Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
-  { id: "federal_revenue", category: "public_funding", lineItem: "Other Federal Funding", driverType: "annual_fixed", enabledFor: [] },
-  { id: "sped_funding", category: "public_funding", lineItem: "Special Education Funding (Other)", driverType: "annual_fixed", enabledFor: [] },
+  { id: "federal_revenue", category: "public_funding", lineItem: "Other Federal Funding", driverType: "annual_fixed", enabledFor: ["charter_public_funded"] },
   { id: "transportation_funding", category: "public_funding", lineItem: "Transportation Funding", driverType: "annual_fixed", enabledFor: [] },
   { id: "food_reimbursement", category: "public_funding", lineItem: "Food Service Reimbursement", driverType: "per_student", enabledFor: ["charter_public_funded"] },
   { id: "other_public_funding", category: "public_funding", lineItem: "Other Public Funding", driverType: "annual_fixed", enabledFor: [] },
@@ -343,18 +342,20 @@ export function generateDefaultRevenueRows(
   charterDepositTiming?: CharterDepositTiming,
   options?: {
     isCharter?: boolean;
-    isNewSchool?: boolean;
+    openingYear?: number;
     perPupilMidpoint?: number;
   }
 ): RevenueRowData[] {
   const isCharter = options?.isCharter ?? false;
-  const isNewSchool = options?.isNewSchool ?? false;
+  const currentYear = new Date().getFullYear();
+  const charterAge = options?.openingYear ? currentYear - options.openingYear : Infinity;
+  const isCSPEligible = isCharter && charterAge <= 3;
 
   const CHARTER_NOTES: Record<string, string> = {
     title_i: "Title I: ~$500-$1,100/qualifying low-income student. Enter your projected qualifying student count.",
     title_ii: "Title II: Annual fixed allocation for professional development & teacher quality. Confirm amount with your authorizer.",
     title_iii: "Title III: ~$130/qualifying English Learner student. Enter your projected EL student count.",
-    idea_sped: "IDEA: ~$1,500-$2,500/IEP student. Enter your projected IEP student count.",
+    sped_funding: "IDEA: ~$1,500-$2,500/IEP student. Enter your projected IEP student count.",
     sped_weighted: "State-level SPED weighting — varies by state and disability category. Check your state's weighted formula.",
     ell_weighted: "State-level ELL weighting — varies by state. Check your state's weighted formula.",
     at_risk_weighted: "State-level at-risk weighting — varies by state. Check your state's weighted formula.",
@@ -363,7 +364,7 @@ export function generateDefaultRevenueRows(
   return LINE_ITEM_CATALOG
     .filter((item) => {
       if (item.enabledFor.includes(fundingProfile)) return true;
-      if (item.id === "csp_grant" && isCharter && isNewSchool) return true;
+      if (item.id === "csp_grant" && isCharter) return true;
       return false;
     })
     .map((item) => {
@@ -379,15 +380,16 @@ export function generateDefaultRevenueRows(
         note = CHARTER_NOTES[item.id];
       }
 
-      if (item.id === "csp_grant" && isCharter && isNewSchool) {
+      if (item.id === "csp_grant" && isCSPEligible) {
         amounts = new Array(yearCount).fill(0);
-        if (yearCount >= 1) amounts[0] = 150000;
-        if (yearCount >= 2) amounts[1] = 150000;
-        if (yearCount >= 3) amounts[2] = 150000;
+        const remainingYears = Math.max(0, 3 - charterAge);
+        for (let i = 0; i < remainingYears && i < yearCount; i++) {
+          amounts[i] = 150000;
+        }
         note = "Federal CSP grants typically $150K/yr for first 3 years. Confirm eligibility with your authorizer.";
-      } else if (item.id === "csp_grant" && isCharter && !isNewSchool) {
+      } else if (item.id === "csp_grant" && isCharter && !isCSPEligible) {
         enabled = false;
-        note = "CSP grants are typically available only for new charter schools in their first 3 years.";
+        note = "CSP grants are typically available only for charter schools in their first 3 years of operation.";
       }
 
       return {
