@@ -12,7 +12,8 @@
     "qa:golden": "tsx ./tests/golden-model.ts",
     "qa:parity": "tsx ./tests/lender-parity-check.ts",
     "qa:formula-results": "tsx ./tests/export-formula-results.ts",
-    "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts"
+    "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts",
+    "generate:ceo-demos": "tsx ./src/scripts/generate-ceo-demos.ts"
   },
   "dependencies": {
     "@workspace/api-zod": "workspace:*",
