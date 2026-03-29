@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useEffect } from "react";
+import { useCallback, useMemo, useEffect, useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, TrendingUp, Info, School, ShieldCheck, Users, ClipboardList } from "lucide-react";
+import { Plus, Trash2, TrendingUp, Info, School, ShieldCheck, Users, ClipboardList, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -380,9 +380,12 @@ export function EnrollmentStep() {
   const escalationRate = watch("tuitionEscalation.rate") ?? 3;
   const plannedOpeningYear = watch("schoolProfile.plannedOpeningYear");
 
+  const currentStudents = watch("schoolProfile.currentStudents") || 0;
+
   const isNewSchool = schoolStage === "new_school";
   const isFirstYear = schoolStage === "operating_school" && operatingYear === "first_year";
   const isSecondYearPlus = schoolStage === "operating_school" && operatingYear === "second_year_plus";
+  const [prefillDismissed, setPrefillDismissed] = useState(false);
 
   const showPriorYear = isSecondYearPlus;
   const showCurrentYear = isFirstYear || isSecondYearPlus;
@@ -525,6 +528,44 @@ export function EnrollmentStep() {
         <SectionExplainers section="enrollment" className="mt-4" />
       </div>
 
+      {!isNewSchool && currentStudents > 0 && programs.length > 0 && !prefillDismissed && programs.every(p => !p.year1 && !p.currentYear) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <Sparkles className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-900">
+              You said you currently have {currentStudents} students enrolled.
+            </p>
+            <p className="text-xs text-amber-700 mt-1">
+              Want to use that as a starting point? We'll set Year 1 enrollment to {currentStudents} across your first program.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (programs.length > 0) {
+                    const updated = programs.map((p, i) =>
+                      i === 0 ? { ...p, year1: currentStudents, currentYear: currentStudents } : p
+                    );
+                    setValue("programs", updated, { shouldDirty: true });
+                  }
+                  setPrefillDismissed(true);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition-colors"
+              >
+                Pre-fill with {currentStudents} students
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrefillDismissed(true)}
+                className="px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 text-xs font-medium hover:bg-amber-100 transition-colors"
+              >
+                I'll enter manually
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {programs.length === 0 && (
         <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
           <p className="text-sm font-semibold text-foreground mb-3">
@@ -570,7 +611,7 @@ export function EnrollmentStep() {
                     placeholder="Program name (e.g., Elementary K-5)"
                   />
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className="text-xs text-muted-foreground">Annual Tuition:</span>
+                    <span className="text-xs text-muted-foreground">{schoolType === "charter_school" ? "Per-Pupil Revenue:" : "Annual Tuition:"}</span>
                     <span className="text-sm text-muted-foreground">$</span>
                     <input
                       type="number"
@@ -793,7 +834,7 @@ export function EnrollmentStep() {
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
             <span className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Tuition Escalation
+              {schoolType === "charter_school" ? "Per-Pupil Revenue Escalation" : "Tuition Escalation"}
             </span>
           </h3>
 
@@ -801,13 +842,15 @@ export function EnrollmentStep() {
             <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl border border-blue-200">
               <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-blue-700">
-                A 3-5% annual tuition increase keeps pace with rising operating costs and is standard across the industry. Building this into your model ensures your revenue projections stay realistic over time.
+                {schoolType === "charter_school"
+                  ? "Per-pupil funding typically increases 1-3% annually based on state funding formulas. Building this into your model ensures your revenue projections stay realistic over time."
+                  : "A 3-5% annual tuition increase keeps pace with rising operating costs and is standard across the industry. Building this into your model ensures your revenue projections stay realistic over time."}
               </p>
             </div>
 
             <div className="flex items-center gap-4">
               <label className="text-sm font-semibold text-foreground whitespace-nowrap">
-                Annual Tuition Increase:
+                {schoolType === "charter_school" ? "Annual Per-Pupil Increase:" : "Annual Tuition Increase:"}
               </label>
               <input
                 type="number"
@@ -874,7 +917,7 @@ export function EnrollmentStep() {
                       </tr>
                     ))}
                     <tr className="bg-secondary/40 font-semibold">
-                      <td className="py-2 px-3 text-sm">Projected Tuition Revenue</td>
+                      <td className="py-2 px-3 text-sm">{schoolType === "charter_school" ? "Projected Per-Pupil Revenue" : "Projected Tuition Revenue"}</td>
                       {futureYearLabels.map((_, i) => (
                         <td key={i} className="py-2 px-2 text-center text-sm text-primary">
                           {formatCurrency(revenueByYear[`year${i + 1}`] || 0)}

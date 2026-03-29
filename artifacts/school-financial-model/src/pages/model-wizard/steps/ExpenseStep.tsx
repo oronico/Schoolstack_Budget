@@ -1330,7 +1330,7 @@ function ExpenseLineCard({
   onRemove: (id: string) => void;
   y1Students: number;
 }) {
-  const [isOpen, setIsOpen] = useState(row.enabled);
+  const [isOpen, setIsOpen] = useState(false);
 
   const updateAmount = (yearIdx: number, val: number) => {
     const newAmounts = [...row.amounts];
@@ -1343,6 +1343,13 @@ function ExpenseLineCard({
     if (!row.enabled) setIsOpen(true);
   };
 
+  const y1Raw = row.amounts[0] || 0;
+  const y1Amount = row.driverType === "monthly" ? y1Raw * 12 : y1Raw;
+  const rowTotal = row.amounts.reduce((s, a) => {
+    const v = a || 0;
+    return s + (row.driverType === "monthly" ? v * 12 : v);
+  }, 0);
+
   const perStudentHint = row.driverType === "per_student" && y1Students > 0
     ? `Y1 total: ${formatCurrency((row.amounts[0] || 0) * y1Students)}`
     : row.driverType === "per_new_student" && y1Students > 0
@@ -1353,109 +1360,102 @@ function ExpenseLineCard({
           ? `≈ ${formatCurrency(Math.round(row.amounts[0] / y1Students))} / student`
           : null;
 
-  return (
-    <div className={cn("rounded-xl border p-4 transition-all", row.enabled ? "border-border bg-white" : "border-border/50 bg-muted/30 opacity-60")}>
-      <div className="flex items-center gap-3">
-        <input type="checkbox" checked={row.enabled} onChange={toggleEnabled} className="h-4 w-4 rounded border-border text-primary focus:ring-primary" />
-        <button type="button" onClick={() => setIsOpen(!isOpen)} className="flex-1 text-left">
-          <div className="flex items-center gap-2">
-            {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-            <input
-              type="text"
-              value={row.lineItem}
-              onChange={(e) => onUpdate(row.id, "lineItem", e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              className="font-medium text-sm bg-transparent border-none focus:outline-none focus:ring-0 w-full"
-              placeholder="Expense line item name"
-            />
-          </div>
+  if (!row.enabled) {
+    return (
+      <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-muted/20 opacity-50">
+        <input type="checkbox" checked={false} onChange={toggleEnabled} className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary" />
+        <span className="text-xs text-muted-foreground line-through flex-1">{row.lineItem || "Unnamed"}</span>
+        <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5">
+          <Trash2 className="h-3 w-3" />
         </button>
-        {row.accountCode && <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">#{row.accountCode}</span>}
-        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{DRIVER_TYPE_LABELS[row.driverType]}</span>
-        <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
-          <Trash2 className="h-4 w-4" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-white transition-all">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <input type="checkbox" checked={row.enabled} onChange={toggleEnabled} className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary flex-shrink-0" />
+        <button type="button" onClick={() => setIsOpen(!isOpen)} className="flex-shrink-0 p-0.5">
+          {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+        </button>
+        <input
+          type="text"
+          value={row.lineItem}
+          onChange={(e) => onUpdate(row.id, "lineItem", e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          className={cn("font-medium text-sm bg-transparent border-none focus:outline-none focus:ring-0 flex-1 min-w-0", !row.lineItem && "border-b border-dashed border-red-300")}
+          placeholder="Name *"
+        />
+        <select
+          value={row.driverType}
+          onChange={(e) => onUpdate(row.id, "driverType", e.target.value)}
+          className="text-[11px] border border-border rounded px-1.5 py-0.5 bg-background text-muted-foreground flex-shrink-0 w-24"
+        >
+          {Object.entries(DRIVER_TYPE_LABELS).map(([val, label]) => (
+            <option key={val} value={val}>{label}</option>
+          ))}
+        </select>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className="text-[10px] text-muted-foreground">Y1:</span>
+          <span className="text-xs font-semibold text-foreground w-16 text-right">
+            {row.driverType === "percent_of_revenue" ? `${y1Amount}%` : formatCurrency(y1Amount)}
+          </span>
+        </div>
+        <span className="text-[10px] text-muted-foreground flex-shrink-0">
+          5yr: {row.driverType === "percent_of_revenue" ? "—" : formatCurrency(rowTotal)}
+        </span>
+        <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5 flex-shrink-0">
+          <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      {isOpen && row.enabled && (
-        <div className="mt-4 space-y-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-4">
-              <label className="text-xs text-muted-foreground w-24">Driver Type</label>
-              <select
-                value={row.driverType}
-                onChange={(e) => onUpdate(row.id, "driverType", e.target.value)}
-                className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
-              >
-                {Object.entries(DRIVER_TYPE_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+      {isOpen && (
+        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-border/50">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <Hash className="h-3 w-3 text-muted-foreground" />
               <input
                 type="text"
                 value={row.accountCode || ""}
                 onChange={(e) => onUpdate(row.id, "accountCode", e.target.value)}
-                className="w-20 text-sm text-center border border-border rounded-lg px-2 py-1.5 bg-background font-mono"
+                className="w-16 text-xs text-center border border-border rounded px-1.5 py-1 bg-background font-mono"
                 placeholder="Code"
-                title="Chart of accounts code"
               />
             </div>
-          </div>
-
-          <div>
-            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
-              {yearLabels.map((label, i) => (
-                <div key={i} className="text-center">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{label}</div>
-                  <div className="relative">
-                    {row.driverType === "percent_of_revenue" ? (
-                      <input
-                        type="number"
-                        value={row.amounts[i] ?? 0}
-                        onChange={(e) => updateAmount(i, parseFloat(e.target.value) || 0)}
-                        className="w-full text-sm text-center border border-border rounded-lg px-2 py-1.5 bg-background pr-6"
-                        step="0.1"
-                      />
-                    ) : (
-                      <input
-                        type="number"
-                        value={row.amounts[i] ?? 0}
-                        onChange={(e) => updateAmount(i, parseFloat(e.target.value) || 0)}
-                        className="w-full text-sm text-center border border-border rounded-lg px-2 py-1.5 bg-background"
-                      />
-                    )}
-                    {row.driverType === "percent_of_revenue" && (
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {row.driverType === "monthly" && (
-              <div className="text-[10px] text-muted-foreground text-center mt-1">
-                Y1 annual: {formatCurrency((row.amounts[0] || 0) * 12)}
-              </div>
-            )}
-            {perStudentHint && (
-              <div className="text-[10px] text-muted-foreground text-center mt-1">
-                {perStudentHint}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground w-24">Note</label>
             <input
               type="text"
               value={row.note || ""}
               onChange={(e) => onUpdate(row.id, "note", e.target.value)}
-              className="flex-1 text-xs border border-border rounded-lg px-3 py-1.5 bg-background"
-              placeholder="Optional note"
+              className="flex-1 text-xs border border-border rounded px-2 py-1 bg-background min-w-[120px]"
+              placeholder="Note (optional)"
             />
           </div>
+
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
+            {yearLabels.map((label, i) => (
+              <div key={i} className="text-center">
+                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">{label}</div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={row.amounts[i] ?? 0}
+                    onChange={(e) => updateAmount(i, parseFloat(e.target.value) || 0)}
+                    className="w-full text-xs text-center border border-border rounded px-1 py-1 bg-background"
+                    step={row.driverType === "percent_of_revenue" ? "0.1" : "1"}
+                  />
+                  {row.driverType === "percent_of_revenue" && (
+                    <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          {(row.driverType === "monthly" || perStudentHint) && (
+            <div className="text-[10px] text-muted-foreground text-center">
+              {row.driverType === "monthly" ? `Y1 annual: ${formatCurrency((row.amounts[0] || 0) * 12)}` : perStudentHint}
+            </div>
+          )}
         </div>
       )}
     </div>
