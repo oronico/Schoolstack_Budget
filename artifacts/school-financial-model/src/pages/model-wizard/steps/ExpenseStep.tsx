@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion, TrendingUp, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -434,6 +434,37 @@ export function ExpenseStep() {
       setValue("capitalAndDebtRows", updated, { shouldDirty: true });
     }
   }, [hasLoan, loanAmount, loanRate, loanTermYears, defaultsApplied, capitalRows, enabledCategories]);
+
+  const prevRatesRef = useRef(escalationRates);
+  useEffect(() => {
+    if (!defaultsApplied || expenseRows.length === 0) return;
+    const prev = prevRatesRef.current;
+    if (prev.generalCostInflation === escalationRates.generalCostInflation && prev.annualRentIncrease === escalationRates.annualRentIncrease) return;
+    prevRatesRef.current = escalationRates;
+
+    let changed = false;
+    const updated = expenseRows.map((row) => {
+      const oldRule = getEscalationRule(row, prev);
+      const newRule = getEscalationRule(row, escalationRates);
+      if (oldRule.rate === newRule.rate) return row;
+      const isPerc = row.driverType === "percent_of_revenue";
+      const oldEscalated = computeEscalatedAmounts(row.amounts[0] || 0, yearCount, oldRule.rate, isPerc);
+      const newEscalated = computeEscalatedAmounts(row.amounts[0] || 0, yearCount, newRule.rate, isPerc);
+      const newAmounts = row.amounts.map((amt, i) => {
+        if (i === 0) return amt;
+        return amt === oldEscalated[i] ? newEscalated[i] : amt;
+      });
+      if (newAmounts.some((a, i) => a !== row.amounts[i])) {
+        changed = true;
+        return { ...row, amounts: newAmounts };
+      }
+      return row;
+    });
+    if (changed) {
+      setExpenseRows(updated);
+      setValue("expenseRows", updated, { shouldDirty: true });
+    }
+  }, [escalationRates, defaultsApplied]);
 
   const [capitalDefaultsApplied, setCapitalDefaultsApplied] = useState(false);
   useEffect(() => {
@@ -1383,9 +1414,10 @@ function ExpenseLineCard({
   const [isOpen, setIsOpen] = useState(false);
 
   const rule = useMemo(() => getEscalationRule(row, escalationRates), [row.driverType, row.canonicalKey, escalationRates]);
+  const isPercent = row.driverType === "percent_of_revenue";
   const escalatedAmounts = useMemo(
-    () => computeEscalatedAmounts(row.amounts[0] || 0, yearCount, rule.rate),
-    [row.amounts[0], yearCount, rule.rate]
+    () => computeEscalatedAmounts(row.amounts[0] || 0, yearCount, rule.rate, isPercent),
+    [row.amounts[0], yearCount, rule.rate, isPercent]
   );
 
   const overriddenYears = useMemo(() => {
@@ -1396,7 +1428,7 @@ function ExpenseLineCard({
   }, [row.amounts, escalatedAmounts]);
 
   const updateY1 = (val: number) => {
-    const newEscalated = computeEscalatedAmounts(val, yearCount, rule.rate);
+    const newEscalated = computeEscalatedAmounts(val, yearCount, rule.rate, isPercent);
     const newAmounts = newEscalated.map((auto, i) =>
       i === 0 ? val : (overriddenYears[i] ? row.amounts[i] : auto)
     );

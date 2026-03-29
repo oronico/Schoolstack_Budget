@@ -283,6 +283,7 @@ export function StaffingStep() {
                   onUpdate={(field, value) => updateRow(row.id, field, value)}
                   onRemove={() => removeRow(row.id)}
                   enrollmentArr={enrollmentArr}
+                  colaRate={colaRate}
                 />
               ))}
             </div>
@@ -358,6 +359,7 @@ interface StaffCardProps {
   onUpdate: (field: keyof StaffingRowData, value: string | number | boolean) => void;
   onRemove: () => void;
   enrollmentArr: number[];
+  colaRate: number;
 }
 
 function StaffCard({
@@ -367,6 +369,7 @@ function StaffCard({
   onUpdate,
   onRemove,
   enrollmentArr,
+  colaRate,
 }: StaffCardProps) {
   const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
   const isRatio = row.staffingMode === "ratio";
@@ -400,9 +403,16 @@ function StaffCard({
             {EMPLOYMENT_TYPE_LABELS[row.employmentType]} · {isRatio ? `${displayFte} FTE (ratio)` : `${row.fte} FTE`}
           </span>
         </div>
-        <span className="text-sm font-semibold text-foreground flex-shrink-0 ml-2">
-          ${totalCost.toLocaleString()}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          <span className="text-sm font-semibold text-foreground">
+            ${totalCost.toLocaleString()}
+          </span>
+          {colaRate > 0 && (
+            <span className="text-[9px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+              Y5: ${Math.round(row.annualizedRate * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}
+            </span>
+          )}
+        </div>
       </button>
 
       {isExpanded && (

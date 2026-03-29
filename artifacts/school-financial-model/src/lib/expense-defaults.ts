@@ -57,10 +57,12 @@ export function computeEscalatedAmounts(
   y1Amount: number,
   yearCount: number,
   rate: number,
+  preserveDecimals = false,
 ): number[] {
   const amounts = [y1Amount];
   for (let i = 1; i < yearCount; i++) {
-    amounts.push(Math.round(y1Amount * Math.pow(1 + rate / 100, i)));
+    const val = y1Amount * Math.pow(1 + rate / 100, i);
+    amounts.push(preserveDecimals ? parseFloat(val.toFixed(2)) : Math.round(val));
   }
   return amounts;
 }
@@ -273,7 +275,8 @@ export function generateDefaultExpenseRows(
       { driverType: def.driverType, canonicalKey: def.lineItem },
       defaultRates,
     );
-    const amounts = computeEscalatedAmounts(amount, yearCount, rule.rate);
+    const isPercent = def.driverType === "percent_of_revenue";
+    const amounts = computeEscalatedAmounts(amount, yearCount, rule.rate, isPercent);
 
     return {
       id: uid(),
