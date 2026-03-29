@@ -629,13 +629,23 @@ export function ExpenseStep() {
     return sums;
   }, [expenseRows, capitalRows, allOperatingCategories, yearCount]);
 
+  const personnel5yrTotal = useMemo(() => {
+    const y1 = personnelCosts?.grandTotal || 0;
+    if (y1 === 0 || yearCount <= 1) return y1;
+    let sum = y1;
+    for (let i = 1; i < yearCount; i++) {
+      sum += Math.round(y1 * Math.pow(1 + (escalationRates.generalCostInflation || 0) / 100, i));
+    }
+    return sum;
+  }, [personnelCosts, yearCount, escalationRates.generalCostInflation]);
+
   const totalOperating = useMemo(() => {
-    let total = (personnelCosts?.grandTotal || 0);
+    let total = personnel5yrTotal;
     for (const cat of allOperatingCategories) {
       total += categorySummaries[cat] || 0;
     }
     return total;
-  }, [personnelCosts, categorySummaries, allOperatingCategories]);
+  }, [personnel5yrTotal, categorySummaries, allOperatingCategories]);
 
   const y1OperatingTotal = useMemo(() => {
     let total = (personnelCosts?.grandTotal || 0);
@@ -1045,7 +1055,7 @@ export function ExpenseStep() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <SummaryCard label="People (Y1)" value={formatCurrency(personnelCosts?.grandTotal || 0)} color="text-blue-600" />
+        <SummaryCard label="People (5yr)" value={formatCurrency(personnel5yrTotal)} color="text-blue-600" />
         <SummaryCard label="Program (5yr)" value={formatCurrency(categorySummaries["instructional_program"] || 0)} color="text-emerald-600" />
         <SummaryCard label="Technology (5yr)" value={formatCurrency(categorySummaries["technology"] || 0)} color="text-violet-600" />
         <SummaryCard label="Facility (5yr)" value={formatCurrency(categorySummaries["occupancy_facility"] || 0)} color="text-amber-600" />

@@ -407,9 +407,9 @@ function StaffCard({
           <span className="text-sm font-semibold text-foreground">
             ${totalCost.toLocaleString()}
           </span>
-          {colaRate > 0 && (
+          {colaRate > 0 && row.annualizedRate > 0 && (
             <span className="text-[9px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-              Y5: ${Math.round(row.annualizedRate * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}
+              Y1: ${row.annualizedRate.toLocaleString()} → Y5: ${Math.round(row.annualizedRate * Math.pow(1 + colaRate / 100, 4)).toLocaleString()} ({colaRate}% COLA)
             </span>
           )}
         </div>
