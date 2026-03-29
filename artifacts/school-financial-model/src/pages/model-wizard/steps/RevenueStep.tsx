@@ -266,8 +266,10 @@ export function RevenueStep() {
       const depositTiming = watch("schoolProfile.charterDepositTiming") as CharterDepositTiming | undefined;
       const perPupilRange = stateFundingConfig?.charterBasePerPupil;
       const perPupilMidpoint = perPupilRange ? Math.round((perPupilRange.min + perPupilRange.max) / 2) : undefined;
+      const isNewSchool = schoolStage === "new_school";
       const defaults = generateDefaultRevenueRows(fundingProfile, yearCount, depositTiming, {
         isCharter: isCharterType,
+        isNewSchool,
         perPupilMidpoint,
       });
       setRows(defaults);
@@ -329,6 +331,23 @@ export function RevenueStep() {
         setValue("schoolProfile.stateFundingMethodology", stateFundingConfig.charterMethodology, { shouldDirty: true });
       } else {
         setValue("schoolProfile.stateFundingMethodology", "other", { shouldDirty: true });
+      }
+
+      if (stateFundingConfig.charterBasePerPupil) {
+        const midpoint = Math.round((stateFundingConfig.charterBasePerPupil.min + stateFundingConfig.charterBasePerPupil.max) / 2);
+        setRows(currentRows => {
+          const perPupilRow = currentRows.find(r => r.id === "state_local_perpupil");
+          if (!perPupilRow) return currentRows;
+          const userHasEdited = perPupilRow.amounts.some(a => a !== 0 && a !== midpoint);
+          if (userHasEdited) return currentRows;
+          const updated = currentRows.map(r =>
+            r.id === "state_local_perpupil"
+              ? { ...r, amounts: new Array(yearCount).fill(midpoint) }
+              : r
+          );
+          setValue("revenueRows", updated, { shouldDirty: true });
+          return updated;
+        });
       }
     }
 
@@ -1351,7 +1370,12 @@ function RevenueLineItem({
               </svg>
             )}
           </button>
-          <span className="font-medium text-sm text-foreground">{row.lineItem}</span>
+          <div className="flex flex-col">
+            <span className="font-medium text-sm text-foreground">{row.lineItem}</span>
+            {row.note && (
+              <span className="text-[11px] text-muted-foreground leading-tight mt-0.5">{row.note}</span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

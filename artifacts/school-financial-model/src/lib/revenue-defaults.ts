@@ -302,8 +302,8 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
 
   { id: "state_local_perpupil", category: "public_funding", lineItem: "State / Local Per-Pupil Revenue", driverType: "per_student", enabledFor: ["charter_public_funded", "hybrid_mixed"] },
   { id: "title_i", category: "public_funding", lineItem: "Title I — Low-Income Students", driverType: "per_student", enabledFor: ["charter_public_funded"] },
-  { id: "title_ii", category: "public_funding", lineItem: "Title II — Teacher Quality", driverType: "annual_fixed", enabledFor: [] },
-  { id: "title_iii", category: "public_funding", lineItem: "Title III — English Learners", driverType: "per_student", enabledFor: [] },
+  { id: "title_ii", category: "public_funding", lineItem: "Title II — Teacher Quality", driverType: "annual_fixed", enabledFor: ["charter_public_funded"] },
+  { id: "title_iii", category: "public_funding", lineItem: "Title III — English Learners", driverType: "per_student", enabledFor: ["charter_public_funded"] },
   { id: "idea_sped", category: "public_funding", lineItem: "IDEA — Special Education", driverType: "per_student", enabledFor: ["charter_public_funded"] },
   { id: "sped_weighted", category: "public_funding", lineItem: "SPED Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
   { id: "ell_weighted", category: "public_funding", lineItem: "ELL Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
@@ -343,44 +343,58 @@ export function generateDefaultRevenueRows(
   charterDepositTiming?: CharterDepositTiming,
   options?: {
     isCharter?: boolean;
+    isNewSchool?: boolean;
     perPupilMidpoint?: number;
   }
 ): RevenueRowData[] {
   const isCharter = options?.isCharter ?? false;
+  const isNewSchool = options?.isNewSchool ?? false;
+
+  const CHARTER_NOTES: Record<string, string> = {
+    title_i: "Title I: ~$500-$1,100/qualifying low-income student. Enter your projected qualifying student count.",
+    title_ii: "Title II: Annual fixed allocation for professional development & teacher quality. Confirm amount with your authorizer.",
+    title_iii: "Title III: ~$130/qualifying English Learner student. Enter your projected EL student count.",
+    idea_sped: "IDEA: ~$1,500-$2,500/IEP student. Enter your projected IEP student count.",
+    sped_weighted: "State-level SPED weighting — varies by state and disability category. Check your state's weighted formula.",
+    ell_weighted: "State-level ELL weighting — varies by state. Check your state's weighted formula.",
+    at_risk_weighted: "State-level at-risk weighting — varies by state. Check your state's weighted formula.",
+  };
 
   return LINE_ITEM_CATALOG
-    .filter((item) => item.enabledFor.includes(fundingProfile))
+    .filter((item) => {
+      if (item.enabledFor.includes(fundingProfile)) return true;
+      if (item.id === "csp_grant" && isCharter && isNewSchool) return true;
+      return false;
+    })
     .map((item) => {
       let amounts = new Array(yearCount).fill(0);
       let note: string | undefined;
+      let enabled = true;
 
       if (item.id === "state_local_perpupil" && options?.perPupilMidpoint) {
         amounts = new Array(yearCount).fill(options.perPupilMidpoint);
       }
 
-      if (item.id === "title_i" && isCharter) {
-        amounts = new Array(yearCount).fill(800);
-        note = "~$800/qualifying low-income student. Adjust count via per-student driver.";
+      if (isCharter && CHARTER_NOTES[item.id]) {
+        note = CHARTER_NOTES[item.id];
       }
 
-      if (item.id === "idea_sped" && isCharter) {
-        amounts = new Array(yearCount).fill(1500);
-        note = "~$1,500/IEP student. Adjust count via per-student driver.";
-      }
-
-      if (item.id === "csp_grant" && isCharter) {
+      if (item.id === "csp_grant" && isCharter && isNewSchool) {
         amounts = new Array(yearCount).fill(0);
         if (yearCount >= 1) amounts[0] = 150000;
         if (yearCount >= 2) amounts[1] = 150000;
         if (yearCount >= 3) amounts[2] = 150000;
-        note = "Federal CSP grants typically $150K/yr for first 3 years. Confirm with your authorizer.";
+        note = "Federal CSP grants typically $150K/yr for first 3 years. Confirm eligibility with your authorizer.";
+      } else if (item.id === "csp_grant" && isCharter && !isNewSchool) {
+        enabled = false;
+        note = "CSP grants are typically available only for new charter schools in their first 3 years.";
       }
 
       return {
         id: item.id,
         category: item.category,
         lineItem: item.lineItem,
-        enabled: true,
+        enabled,
         driverType: item.driverType,
         amounts,
         ...(item.id === "scholarships_aid" ? { percentBase: "gross_tuition" } : {}),
