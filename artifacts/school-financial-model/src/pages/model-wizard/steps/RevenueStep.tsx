@@ -34,7 +34,7 @@ import {
   generateSchoolChoiceRows,
 } from "@/lib/revenue-defaults";
 import { type TuitionTier, getDefaultTuitionTiers } from "@/pages/model-wizard/schema";
-import { getStateFundingConfig, type StateFundingConfig, type SchoolType } from "@/lib/state-funding-data";
+import { getStateFundingConfig, type StateFundingConfig, type SchoolType, type CharterPerPupilRange } from "@/lib/state-funding-data";
 
 const CATEGORY_ICONS: Record<RevenueCategory, React.ComponentType<{ className?: string }>> = {
   tuition_and_fees: GraduationCap,
@@ -264,7 +264,12 @@ export function RevenueStep() {
       setRows([]);
     } else if (!defaultsApplied) {
       const depositTiming = watch("schoolProfile.charterDepositTiming") as CharterDepositTiming | undefined;
-      const defaults = generateDefaultRevenueRows(fundingProfile, yearCount, depositTiming);
+      const perPupilRange = stateFundingConfig?.charterBasePerPupil;
+      const perPupilMidpoint = perPupilRange ? Math.round((perPupilRange.min + perPupilRange.max) / 2) : undefined;
+      const defaults = generateDefaultRevenueRows(fundingProfile, yearCount, depositTiming, {
+        isCharter: isCharterType,
+        perPupilMidpoint,
+      });
       setRows(defaults);
       const enabledCats = deriveEnabledCategories(defaults);
       setExpandedCategories(enabledCats);
@@ -314,10 +319,16 @@ export function RevenueStep() {
   useEffect(() => {
     if (!defaultsApplied) return;
 
-    if (isCharterType && stateFundingConfig?.enrollmentRevenueMethod) {
-      setValue("schoolProfile.enrollmentRevenueMethod", stateFundingConfig.enrollmentRevenueMethod, { shouldDirty: true });
+    if (isCharterType && stateFundingConfig) {
+      if (stateFundingConfig.enrollmentRevenueMethod) {
+        setValue("schoolProfile.enrollmentRevenueMethod", stateFundingConfig.enrollmentRevenueMethod, { shouldDirty: true });
+      } else {
+        setValue("schoolProfile.enrollmentRevenueMethod", "adm", { shouldDirty: true });
+      }
       if (stateFundingConfig.charterMethodology) {
         setValue("schoolProfile.stateFundingMethodology", stateFundingConfig.charterMethodology, { shouldDirty: true });
+      } else {
+        setValue("schoolProfile.stateFundingMethodology", "other", { shouldDirty: true });
       }
     }
 
@@ -678,30 +689,45 @@ export function RevenueStep() {
 
       {isCharter && (
         <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-5">
+          {stateFundingConfig?.charterCoachingText && (
+            <div className="bg-teal-50/60 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
+              <div className="p-1.5 bg-teal-100 rounded-lg mt-0.5 flex-shrink-0">
+                <Lightbulb className="h-4 w-4 text-teal-700" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-teal-900 mb-1">Charter Revenue Coaching — {stateCode}</p>
+                <p className="text-xs text-teal-800 leading-relaxed">{stateFundingConfig.charterCoachingText}</p>
+                {stateFundingConfig.charterBasePerPupil?.notes && (
+                  <p className="text-xs text-teal-700 mt-1.5 italic">{stateFundingConfig.charterBasePerPupil.notes}</p>
+                )}
+              </div>
+            </div>
+          )}
+
           <div>
             <h3 className="text-lg font-bold text-foreground mb-1">Charter Per-Pupil Funding Configuration</h3>
             <p className="text-sm text-muted-foreground">
-              Configure how your state calculates and distributes per-pupil funding. These settings drive the public funding revenue calculation.
+              Your state's funding methodology and per-pupil rates are pre-filled based on {stateCode || "your state"}. Adjust deposit timing as needed.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-foreground">Enrollment Revenue Method</label>
-              <select
-                value={watch("schoolProfile.enrollmentRevenueMethod") || "adm"}
-                onChange={(e) => setValue("schoolProfile.enrollmentRevenueMethod", e.target.value, { shouldDirty: true })}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-              >
-                {(Object.entries(ENROLLMENT_REVENUE_METHOD_LABELS) as [EnrollmentRevenueMethod, string][]).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-sm font-semibold text-primary">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {stateFundingConfig?.charterMethodology === "other"
+                    ? "State-Specific Method"
+                    : ENROLLMENT_REVENUE_METHOD_LABELS[watch("schoolProfile.enrollmentRevenueMethod") as EnrollmentRevenueMethod] || "ADM"}
+                </span>
+                <span className="text-xs text-muted-foreground">Set by {stateCode || "state"}</span>
+              </div>
               <p className="text-xs text-muted-foreground">
                 {watch("schoolProfile.enrollmentRevenueMethod") === "ada"
                   ? "Funding is based on actual student attendance. Requires prior-year ADA data."
                   : watch("schoolProfile.enrollmentRevenueMethod") === "count_days"
-                    ? "Funding is based on student count days - students enrolled on specific reporting dates."
+                    ? "Funding is based on student count days — students enrolled on specific reporting dates."
                     : "Funding is based on average daily membership (enrolled students), regardless of attendance."}
               </p>
             </div>
@@ -720,6 +746,21 @@ export function RevenueStep() {
               <p className="text-xs text-muted-foreground">How frequently the state deposits per-pupil funds into your account.</p>
             </div>
           </div>
+
+          {stateFundingConfig?.charterBasePerPupil && (
+            <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4">
+              <div className="flex items-start gap-2">
+                <DollarSign className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-emerald-800">State Per-Pupil Range</p>
+                  <p className="text-xs text-emerald-700">
+                    {stateCode} charter schools typically receive <span className="font-bold">${stateFundingConfig.charterBasePerPupil.min.toLocaleString()}</span> – <span className="font-bold">${stateFundingConfig.charterBasePerPupil.max.toLocaleString()}</span> per student.
+                    The midpoint (<span className="font-bold">${Math.round((stateFundingConfig.charterBasePerPupil.min + stateFundingConfig.charterBasePerPupil.max) / 2).toLocaleString()}</span>) has been pre-filled in your State/Local Per-Pupil Revenue row.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {watch("schoolProfile.enrollmentRevenueMethod") === "ada" && (
             <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-4 space-y-4">

@@ -23,6 +23,15 @@ The project is a pnpm workspace monorepo built with TypeScript.
 ### Universal Financial Model
 Supports diverse school configurations and projects 5 years, accommodating partial first years. It includes flexible programs & enrollment with tuition escalation, a comprehensive revenue model across 6 categories, an FTE-based staffing model with configurable benefits and ratio-driven staffing ramp, an expense model with 4 built-in categories and flexible drivers (including `per_new_student` and `per_returning_student`), and a capital & debt model with a loan calculator. Features also include contextual guidance, benchmark comparisons, capacity warnings, and a tuition discount tier editor. The "Grants & Fundraising" category has been merged into "Philanthropy" with backward compatibility.
 
+#### Charter Revenue Streams
+Charter-specific revenue support includes:
+- **State per-pupil pre-fill**: `STATE_FUNDING_MAP` contains `charterBasePerPupil: {min, max}` ranges for all 50 states + DC. The midpoint auto-fills the State/Local Per-Pupil Revenue row.
+- **State-driven methodology badge**: Enrollment revenue method (ADA/ADM/Count Days) is shown as a read-only badge driven by the user's state, not a manual dropdown.
+- **Federal title funds**: Title I (low-income), Title II (teacher quality), Title III (English learners), and IDEA (special education) are separate line items in the catalog.
+- **Weighted funding rows**: SPED, ELL, and At-Risk weighted funding rows available as optional per-student line items.
+- **CSP Grant**: Charter School Program (CSP) Grant line item under Philanthropy, pre-filled at $150K/yr for first 3 years.
+- **Charter coaching banner**: State-specific coaching text with per-pupil range displayed in a teal banner at the top of the charter configuration section.
+
 #### Ratio-Driven Staffing Ramp
 Staffing can be `fixed` or `ratio`-based, where FTE is computed from enrollment ÷ studentRatio, ceiled to nearest 0.5. This logic is consistently applied across workbook helpers, engines, and exports, with frontend support for configuration and preview.
 

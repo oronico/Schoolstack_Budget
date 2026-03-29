@@ -301,8 +301,15 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
   { id: "scholarships_aid", category: "tuition_offsets", lineItem: "Scholarships / Financial Aid / Discount Rate", driverType: "percent_of_base", enabledFor: ["tuition_based", "hybrid_mixed"] },
 
   { id: "state_local_perpupil", category: "public_funding", lineItem: "State / Local Per-Pupil Revenue", driverType: "per_student", enabledFor: ["charter_public_funded", "hybrid_mixed"] },
-  { id: "federal_revenue", category: "public_funding", lineItem: "Federal Revenue", driverType: "annual_fixed", enabledFor: ["charter_public_funded"] },
-  { id: "sped_funding", category: "public_funding", lineItem: "Special Education Funding", driverType: "annual_fixed", enabledFor: [] },
+  { id: "title_i", category: "public_funding", lineItem: "Title I — Low-Income Students", driverType: "per_student", enabledFor: ["charter_public_funded"] },
+  { id: "title_ii", category: "public_funding", lineItem: "Title II — Teacher Quality", driverType: "annual_fixed", enabledFor: [] },
+  { id: "title_iii", category: "public_funding", lineItem: "Title III — English Learners", driverType: "per_student", enabledFor: [] },
+  { id: "idea_sped", category: "public_funding", lineItem: "IDEA — Special Education", driverType: "per_student", enabledFor: ["charter_public_funded"] },
+  { id: "sped_weighted", category: "public_funding", lineItem: "SPED Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
+  { id: "ell_weighted", category: "public_funding", lineItem: "ELL Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
+  { id: "at_risk_weighted", category: "public_funding", lineItem: "At-Risk Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
+  { id: "federal_revenue", category: "public_funding", lineItem: "Other Federal Funding", driverType: "annual_fixed", enabledFor: [] },
+  { id: "sped_funding", category: "public_funding", lineItem: "Special Education Funding (Other)", driverType: "annual_fixed", enabledFor: [] },
   { id: "transportation_funding", category: "public_funding", lineItem: "Transportation Funding", driverType: "annual_fixed", enabledFor: [] },
   { id: "food_reimbursement", category: "public_funding", lineItem: "Food Service Reimbursement", driverType: "per_student", enabledFor: ["charter_public_funded"] },
   { id: "other_public_funding", category: "public_funding", lineItem: "Other Public Funding", driverType: "annual_fixed", enabledFor: [] },
@@ -311,6 +318,7 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
   { id: "voucher_revenue", category: "school_choice", lineItem: "Voucher Revenue", driverType: "per_student", enabledFor: [] },
   { id: "scholarship_org", category: "school_choice", lineItem: "Scholarship Organization Revenue", driverType: "per_student", enabledFor: [] },
 
+  { id: "csp_grant", category: "philanthropy", lineItem: "Charter School Program (CSP) Grant", driverType: "annual_fixed", enabledFor: ["charter_public_funded"] },
   { id: "private_scholarships", category: "philanthropy", lineItem: "Private Scholarships", driverType: "annual_fixed", enabledFor: ["tuition_based", "hybrid_mixed"] },
   { id: "grants", category: "philanthropy", lineItem: "Grants", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
   { id: "donations_fundraising", category: "philanthropy", lineItem: "Donations / Fundraising", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
@@ -332,20 +340,54 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
 export function generateDefaultRevenueRows(
   fundingProfile: FundingProfile,
   yearCount: number = 5,
-  charterDepositTiming?: CharterDepositTiming
+  charterDepositTiming?: CharterDepositTiming,
+  options?: {
+    isCharter?: boolean;
+    perPupilMidpoint?: number;
+  }
 ): RevenueRowData[] {
+  const isCharter = options?.isCharter ?? false;
+
   return LINE_ITEM_CATALOG
     .filter((item) => item.enabledFor.includes(fundingProfile))
-    .map((item) => ({
-      id: item.id,
-      category: item.category,
-      lineItem: item.lineItem,
-      enabled: true,
-      driverType: item.driverType,
-      amounts: new Array(yearCount).fill(0),
-      ...(item.id === "scholarships_aid" ? { percentBase: "gross_tuition" } : {}),
-      ...getTimingDefaults(item.category, fundingProfile, item.id, charterDepositTiming),
-    }));
+    .map((item) => {
+      let amounts = new Array(yearCount).fill(0);
+      let note: string | undefined;
+
+      if (item.id === "state_local_perpupil" && options?.perPupilMidpoint) {
+        amounts = new Array(yearCount).fill(options.perPupilMidpoint);
+      }
+
+      if (item.id === "title_i" && isCharter) {
+        amounts = new Array(yearCount).fill(800);
+        note = "~$800/qualifying low-income student. Adjust count via per-student driver.";
+      }
+
+      if (item.id === "idea_sped" && isCharter) {
+        amounts = new Array(yearCount).fill(1500);
+        note = "~$1,500/IEP student. Adjust count via per-student driver.";
+      }
+
+      if (item.id === "csp_grant" && isCharter) {
+        amounts = new Array(yearCount).fill(0);
+        if (yearCount >= 1) amounts[0] = 150000;
+        if (yearCount >= 2) amounts[1] = 150000;
+        if (yearCount >= 3) amounts[2] = 150000;
+        note = "Federal CSP grants typically $150K/yr for first 3 years. Confirm with your authorizer.";
+      }
+
+      return {
+        id: item.id,
+        category: item.category,
+        lineItem: item.lineItem,
+        enabled: true,
+        driverType: item.driverType,
+        amounts,
+        ...(item.id === "scholarships_aid" ? { percentBase: "gross_tuition" } : {}),
+        ...(note ? { note } : {}),
+        ...getTimingDefaults(item.category, fundingProfile, item.id, charterDepositTiming),
+      };
+    });
 }
 
 export const CHARTER_HIDDEN_CATEGORIES: RevenueCategory[] = [
