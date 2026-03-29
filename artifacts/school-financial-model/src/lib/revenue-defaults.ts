@@ -376,6 +376,7 @@ export function generateDefaultRevenueRows(
 
       if (item.id === "state_local_perpupil" && options?.perPupilMidpoint) {
         amounts = new Array(yearCount).fill(options.perPupilMidpoint);
+        note = "Pre-filled with your state's midpoint estimate. Confirm the exact rate with your authorizer or state agency.";
       }
 
       if (isCharter && CHARTER_NOTES[item.id]) {
