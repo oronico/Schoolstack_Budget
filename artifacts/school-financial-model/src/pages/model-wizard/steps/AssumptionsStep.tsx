@@ -395,7 +395,7 @@ export function AssumptionsStep() {
             onReset={resetStaffingParams}
           />
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <AssumptionField
                 label="Default Benefits Rate"
                 name="staffing.benefitsRate"
@@ -406,6 +406,16 @@ export function AssumptionsStep() {
                 min={0}
                 max={100}
               />
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-semibold text-foreground">Payroll Tax Rate</label>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">Default 8%</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Employer-side payroll taxes (FICA, FUTA, state unemployment). Each staff role starts at 8% — override per role on the Staffing step.
+                </p>
+              </div>
 
               <AssumptionField
                 label="Student Retention Rate"
@@ -436,7 +446,7 @@ export function AssumptionsStep() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <AssumptionField
                 label="Loan Amount"
-                name="facilities.loanAmount"
+                name="schoolProfile.loanAmount"
                 prefix="$"
                 usageNote="Total principal amount. Generates annual debt service payments on the Expenses step."
                 placeholder="0"
@@ -445,7 +455,7 @@ export function AssumptionsStep() {
 
               <AssumptionField
                 label="Annual Interest Rate"
-                name="facilities.annualInterestRate"
+                name="schoolProfile.loanRate"
                 suffix="%"
                 usageNote="Annual rate on outstanding loan balance. Used to calculate monthly/annual debt service payments."
                 placeholder="0"
@@ -455,7 +465,7 @@ export function AssumptionsStep() {
 
               <AssumptionField
                 label="Loan Term"
-                name="facilities.loanTermYears"
+                name="schoolProfile.loanTermYears"
                 suffix=" years"
                 usageNote="Number of years to fully amortize the loan. Drives the annual payment schedule."
                 placeholder="0"

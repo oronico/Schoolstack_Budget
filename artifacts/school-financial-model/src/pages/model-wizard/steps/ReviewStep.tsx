@@ -343,17 +343,18 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             <Item label="Student Retention" value={formatPercent(data.enrollment?.retentionRate)} />
           )}
           <Item label="Benefits Rate" value={formatPercent(data.staffing?.benefitsRate)} />
+          <Item label="Payroll Tax Rate (per-role default)" value="8%" />
           {data.schoolProfile?.schoolType === "charter_school" && (
             <>
               <Item label="Charter Methodology" value={data.schoolProfile?.enrollmentRevenueMethod === "ada" ? "ADA" : data.schoolProfile?.enrollmentRevenueMethod === "count_days" ? "Count Days" : "ADM"} />
               <Item label="Deposit Timing" value={(data.schoolProfile?.charterDepositTiming || "quarterly").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())} />
             </>
           )}
-          {(data.facilities?.loanAmount ?? 0) > 0 && (
+          {(data.schoolProfile?.loanAmount ?? 0) > 0 && (
             <>
-              <Item label="Loan Amount" value={formatCurrency(data.facilities?.loanAmount)} />
-              <Item label="Interest Rate" value={formatPercent(data.facilities?.annualInterestRate)} />
-              <Item label="Loan Term" value={`${data.facilities?.loanTermYears || 0} years`} />
+              <Item label="Loan Amount" value={formatCurrency(data.schoolProfile?.loanAmount)} />
+              <Item label="Interest Rate" value={formatPercent(data.schoolProfile?.loanRate)} />
+              <Item label="Loan Term" value={`${data.schoolProfile?.loanTermYears || 0} years`} />
             </>
           )}
         </div>
