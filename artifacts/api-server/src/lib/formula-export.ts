@@ -2273,8 +2273,8 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   const debtByYear: number[] = [];
   const niByYear: number[] = [];
   const cashByYear: number[] = [];
-  const effectiveExpRows = spFacAuth
-    ? (dbExpRows as any[]).map((r: any) => r.category === "occupancy_facility" ? { ...r, enabled: false } : r)
+  const effectiveExpRows: ExpenseRow[] = spFacAuth
+    ? dbExpRows.map(r => r.category === "occupancy_facility" ? { ...r, enabled: false } : r)
     : dbExpRows;
   let runCash = startingCash;
   for (let y = 0; y < 5; y++) {
