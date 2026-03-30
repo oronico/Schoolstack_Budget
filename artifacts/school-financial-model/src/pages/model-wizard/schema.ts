@@ -363,7 +363,7 @@ export const fullModelSchema = z.object({
   revenueRows: z.array(revenueRowSchema).optional(),
   revenueDefaults: revenueDefaultsSchema.optional(),
   staffing: staffingSchema.optional(),
-  staffingRows: z.array(staffingRowSchema).optional(),
+  staffingRows: z.array(staffingRowSchema).min(1, "Add at least one staff member to continue").optional(),
   facilities: facilitiesSchema.optional(),
   expenseRows: z.array(expenseRowSchema).optional(),
   customCategoryLabels: z.record(z.string(), z.string()).optional(),

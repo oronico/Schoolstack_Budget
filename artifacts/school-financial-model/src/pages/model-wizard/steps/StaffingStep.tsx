@@ -304,6 +304,15 @@ export function StaffingStep() {
         </div>
       )}
 
+      {rows.length === 0 && !!(errors as Record<string, unknown>)?.staffingRows && (
+        <div className="rounded-xl border-2 border-destructive/40 bg-destructive/5 px-4 py-3 flex items-center gap-3" data-error="true">
+          <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0" />
+          <p className="text-sm font-medium text-destructive">
+            Add at least one staff member to build your financial model.
+          </p>
+        </div>
+      )}
+
       {FUNCTION_CATEGORY_ORDER.map((cat) => {
         const catRows = groupedRows[cat];
         if (catRows.length === 0) return null;

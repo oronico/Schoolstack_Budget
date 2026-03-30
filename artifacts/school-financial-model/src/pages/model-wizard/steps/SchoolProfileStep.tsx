@@ -381,23 +381,26 @@ export function SchoolProfileStep() {
 
       <div>
         <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">What stage is your school?</h3>
-        <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl", stageError && "ring-2 ring-destructive/50 p-1")}>
-          <RadioCard
-            value="new_school"
-            selected={schoolStage === "new_school"}
-            onSelect={() => setValue("schoolProfile.schoolStage", "new_school", { shouldDirty: true, shouldValidate: true })}
-            icon={<Rocket className="h-5 w-5" />}
-            title="We're planning a new school"
-            description="We do not currently enroll students and are planning to open"
-          />
-          <RadioCard
-            value="operating_school"
-            selected={schoolStage === "operating_school"}
-            onSelect={() => setValue("schoolProfile.schoolStage", "operating_school", { shouldDirty: true, shouldValidate: true })}
-            icon={<Building2 className="h-5 w-5" />}
-            title="We're already operating"
-            description="We currently enroll students and are planning ahead"
-          />
+        <div className={cn("flex flex-wrap gap-2 rounded-xl", stageError && "ring-2 ring-destructive/50 p-1")}>
+          {([
+            { value: "new_school" as const, icon: <Rocket className="h-4 w-4" />, label: "New School (Pre-Opening)" },
+            { value: "operating_school" as const, icon: <Building2 className="h-4 w-4" />, label: "Already Operating" },
+          ]).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setValue("schoolProfile.schoolStage", opt.value, { shouldDirty: true, shouldValidate: true })}
+              className={cn(
+                "inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all",
+                schoolStage === opt.value
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/40"
+              )}
+            >
+              {opt.icon}
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         {stageError && (
@@ -477,6 +480,11 @@ export function SchoolProfileStep() {
           </p>
         </div>
       )}
+
+      <EntityTypeSection
+        allowedEntityTypes={allowedEntityTypes}
+        entityType={entityType}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {schoolStage === "operating_school" && (
@@ -741,11 +749,6 @@ export function SchoolProfileStep() {
           </div>
         </div>
       )}
-
-      <EntityTypeSection
-        allowedEntityTypes={allowedEntityTypes}
-        entityType={entityType}
-      />
 
       <div>
         <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Fiscal Year</h3>
