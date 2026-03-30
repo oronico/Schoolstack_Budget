@@ -1222,13 +1222,25 @@ export function SchoolProfileStep() {
                         if (field === "endYear" && typeof value === "number" && idx < updated.length - 1) {
                           const next = updated[idx + 1];
                           if (next.startYear <= value) {
-                            updated = updated.map((p, i) => i === idx + 1 ? { ...p, startYear: Math.min(value + 1, 5) } : p);
+                            const newNextStart = value + 1;
+                            if (newNextStart > 5) {
+                              const clampedEnd = next.startYear - 1;
+                              updated = updated.map((p, i) => i === idx ? { ...p, endYear: Math.max(clampedEnd, p.startYear) } : p);
+                            } else {
+                              updated = updated.map((p, i) => i === idx + 1 ? { ...p, startYear: newNextStart } : p);
+                            }
                           }
                         }
                         if (field === "startYear" && typeof value === "number" && idx > 0) {
                           const prev = updated[idx - 1];
                           if (prev.endYear >= value) {
-                            updated = updated.map((p, i) => i === idx - 1 ? { ...p, endYear: Math.max(value - 1, 1) } : p);
+                            const newPrevEnd = value - 1;
+                            if (newPrevEnd < 1) {
+                              const clampedStart = prev.endYear + 1;
+                              updated = updated.map((p, i) => i === idx ? { ...p, startYear: Math.min(clampedStart, p.endYear) } : p);
+                            } else {
+                              updated = updated.map((p, i) => i === idx - 1 ? { ...p, endYear: newPrevEnd } : p);
+                            }
                           }
                         }
                         setValue("schoolProfile.facilityPhases", updated, { shouldDirty: true });
