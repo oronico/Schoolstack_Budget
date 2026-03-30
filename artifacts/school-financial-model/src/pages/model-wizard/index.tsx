@@ -202,7 +202,28 @@ export function ModelWizardPage() {
       }
       const sp = d.schoolProfile as Record<string, unknown> | undefined;
       if (sp && sp.ownershipType && (!sp.facilityPhases || !(sp.facilityPhases as unknown[]).length)) {
-        sp.facilityPhases = undefined;
+        sp.facilityPhases = [{
+          id: `phase-legacy-1`,
+          ownershipType: sp.ownershipType as string,
+          startYear: 1,
+          endYear: 5,
+          monthlyRent: (sp.monthlyRent as number) || 0,
+          annualRentEscalation: (sp.annualRentEscalation as number) || 3,
+          postLeaseRenewalBump: (sp.postLeaseRenewalBump as number) || 15,
+          leaseExpirationYear: sp.leaseExpirationYear as number | undefined,
+          leaseExpirationMonth: sp.leaseExpirationMonth as number | undefined,
+          isNNNLease: (sp.isNNNLease as boolean) || false,
+          nnnCamCharges: (sp.nnnCamCharges as number) || 0,
+          nnnMaintenance: (sp.nnnMaintenance as number) || 0,
+          nnnUtilities: (sp.nnnUtilities as number) || 0,
+          propertyTaxAnnual: (sp.propertyTaxAnnual as number) || 0,
+          hasMortgage: (sp.hasMortgage as boolean) || false,
+          mortgageMonthlyPayment: (sp.mortgageMonthlyPayment as number) || 0,
+          facilityArrangementEndDate: sp.facilityArrangementEndDate as string | undefined,
+          comparableMarketRent: (sp.comparableMarketRent as number) || 0,
+          hasWrittenAgreement: (sp.hasWrittenAgreement as boolean) || false,
+          monthlyFacilityAllocation: (sp.monthlyFacilityAllocation as number) || 0,
+        }];
       }
       methods.reset(d);
       if (initialData.currentStep) {

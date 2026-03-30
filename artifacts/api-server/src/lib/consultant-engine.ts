@@ -598,7 +598,8 @@ function computeSinglePhaseOverlay(
   phase: { ownershipType?: string; monthlyRent?: number; annualRentEscalation?: number; postLeaseRenewalBump?: number; leaseExpirationYear?: number; isNNNLease?: boolean; nnnCamCharges?: number; nnnMaintenance?: number; nnnUtilities?: number; propertyTaxAnnual?: number; hasMortgage?: boolean; mortgageMonthlyPayment?: number; facilityArrangementEndDate?: string; comparableMarketRent?: number; monthlyFacilityAllocation?: number; estimatedMonthlyFacilityBudget?: number; },
   entityType: string | undefined,
   openingYear: number | undefined,
-  yearIndex: number,
+  absoluteYearIndex: number,
+  phaseRelativeYearIndex: number,
   pf: number,
 ): FacilityOverlayResult {
   const result: FacilityOverlayResult = { rent: 0, nnnCam: 0, nnnMaintenance: 0, nnnUtilities: 0, propertyTax: 0, mortgage: 0, estimatedBudget: 0, total: 0 };
@@ -613,18 +614,18 @@ function computeSinglePhaseOverlay(
     const yearsUntilExpiration = leaseEndYear - projectionStartYear;
 
     let annualRent: number;
-    if (yearIndex <= yearsUntilExpiration) {
-      annualRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
+    if (absoluteYearIndex <= yearsUntilExpiration) {
+      annualRent = baseRent * 12 * Math.pow(1 + escalation, phaseRelativeYearIndex);
     } else {
-      const preRenewalRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration);
+      const preRenewalRent = baseRent * Math.pow(1 + escalation, Math.max(0, yearsUntilExpiration - (absoluteYearIndex - phaseRelativeYearIndex)));
       const bumpedBase = preRenewalRent * (1 + renewalBump);
-      const postRenewalYears = yearIndex - yearsUntilExpiration - 1;
-      annualRent = bumpedBase * 12 * Math.pow(1 + escalation, postRenewalYears);
+      const postRenewalYears = phaseRelativeYearIndex - Math.max(0, yearsUntilExpiration - (absoluteYearIndex - phaseRelativeYearIndex)) - 1;
+      annualRent = bumpedBase * 12 * Math.pow(1 + escalation, Math.max(0, postRenewalYears));
     }
     result.rent = annualRent * pf;
 
     if (phase.isNNNLease) {
-      const inflFactor = Math.pow(1.03, yearIndex) * pf;
+      const inflFactor = Math.pow(1.03, phaseRelativeYearIndex) * pf;
       result.nnnCam = (phase.nnnCamCharges || 0) * 12 * inflFactor;
       result.nnnMaintenance = (phase.nnnMaintenance || 0) * 12 * inflFactor;
       result.nnnUtilities = (phase.nnnUtilities || 0) * 12 * inflFactor;
@@ -633,7 +634,7 @@ function computeSinglePhaseOverlay(
 
   if (phase.ownershipType === "own") {
     if (entityType && entityType !== "nonprofit_501c3" && (phase.propertyTaxAnnual || 0) > 0) {
-      result.propertyTax = (phase.propertyTaxAnnual || 0) * Math.pow(1.02, yearIndex) * pf;
+      result.propertyTax = (phase.propertyTaxAnnual || 0) * Math.pow(1.02, phaseRelativeYearIndex) * pf;
     }
     if (phase.hasMortgage && (phase.mortgageMonthlyPayment || 0) > 0) {
       result.mortgage = (phase.mortgageMonthlyPayment || 0) * 12 * pf;
@@ -650,7 +651,7 @@ function computeSinglePhaseOverlay(
       const yearsUntilEnd = endYear - projectionStartYear;
       if (yearsUntilEnd < 0) {
         result.rent = marketRent * 12 * pf;
-      } else if (yearIndex >= yearsUntilEnd) {
+      } else if (absoluteYearIndex >= yearsUntilEnd) {
         result.rent = marketRent * 12 * pf;
       }
     }
@@ -687,10 +688,10 @@ export function computeSchoolProfileFacilityOverlay(
     const activePhase = sp.facilityPhases.find(p => modelYear >= p.startYear && modelYear <= p.endYear);
     if (!activePhase) return zero;
     const phaseRelativeYearIndex = yearIndex - (activePhase.startYear - 1);
-    return computeSinglePhaseOverlay(activePhase, sp.entityType, sp.openingYear, phaseRelativeYearIndex, pf);
+    return computeSinglePhaseOverlay(activePhase, sp.entityType, sp.openingYear, yearIndex, phaseRelativeYearIndex, pf);
   }
 
-  return computeSinglePhaseOverlay(sp, sp.entityType, sp.openingYear, yearIndex, pf);
+  return computeSinglePhaseOverlay(sp, sp.entityType, sp.openingYear, yearIndex, yearIndex, pf);
 }
 
 export function hasSchoolProfileFacilityData(sp?: SchoolProfile): boolean {

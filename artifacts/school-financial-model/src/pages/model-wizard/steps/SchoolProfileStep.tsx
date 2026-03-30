@@ -522,55 +522,6 @@ export function SchoolProfileStep() {
     }
   }, [locationSecured, schoolState, facilityState, setValue]);
 
-  const prevOwnership = useRef(ownershipType);
-  useEffect(() => {
-    if (prevOwnership.current !== ownershipType && (!facilityPhases || facilityPhases.length === 0)) {
-      if (ownershipType === "own") {
-        setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
-        setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
-        setValue("schoolProfile.nnnCamCharges", 0, { shouldDirty: true });
-        setValue("schoolProfile.nnnMaintenance", 0, { shouldDirty: true });
-        setValue("schoolProfile.nnnUtilities", 0, { shouldDirty: true });
-        setValue("schoolProfile.facilityArrangementEndDate", undefined, { shouldDirty: true });
-        setValue("schoolProfile.comparableMarketRent", 0, { shouldDirty: true });
-        setValue("schoolProfile.monthlyFacilityAllocation", 0, { shouldDirty: true });
-        setValue("schoolProfile.hasWrittenAgreement", false, { shouldDirty: true });
-      }
-      if (ownershipType === "rent") {
-        setValue("schoolProfile.propertyTaxAnnual", 0, { shouldDirty: true });
-        setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
-        setValue("schoolProfile.mortgageMonthlyPayment", 0, { shouldDirty: true });
-        setValue("schoolProfile.facilityArrangementEndDate", undefined, { shouldDirty: true });
-        setValue("schoolProfile.comparableMarketRent", 0, { shouldDirty: true });
-        setValue("schoolProfile.monthlyFacilityAllocation", 0, { shouldDirty: true });
-        setValue("schoolProfile.hasWrittenAgreement", false, { shouldDirty: true });
-      }
-      if (ownershipType === "donated") {
-        setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
-        setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
-        setValue("schoolProfile.nnnCamCharges", 0, { shouldDirty: true });
-        setValue("schoolProfile.nnnMaintenance", 0, { shouldDirty: true });
-        setValue("schoolProfile.nnnUtilities", 0, { shouldDirty: true });
-        setValue("schoolProfile.propertyTaxAnnual", 0, { shouldDirty: true });
-        setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
-        setValue("schoolProfile.mortgageMonthlyPayment", 0, { shouldDirty: true });
-        setValue("schoolProfile.monthlyFacilityAllocation", 0, { shouldDirty: true });
-      }
-      if (ownershipType === "home_based") {
-        setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
-        setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
-        setValue("schoolProfile.nnnCamCharges", 0, { shouldDirty: true });
-        setValue("schoolProfile.nnnMaintenance", 0, { shouldDirty: true });
-        setValue("schoolProfile.nnnUtilities", 0, { shouldDirty: true });
-        setValue("schoolProfile.propertyTaxAnnual", 0, { shouldDirty: true });
-        setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
-        setValue("schoolProfile.mortgageMonthlyPayment", 0, { shouldDirty: true });
-        setValue("schoolProfile.facilityArrangementEndDate", undefined, { shouldDirty: true });
-        setValue("schoolProfile.comparableMarketRent", 0, { shouldDirty: true });
-      }
-      prevOwnership.current = ownershipType;
-    }
-  }, [ownershipType, facilityPhases, setValue]);
 
   const { formState: { errors } } = useFormContext();
   const stageError = getNestedError(errors, "schoolProfile.schoolStage");
