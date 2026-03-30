@@ -686,7 +686,8 @@ export function computeSchoolProfileFacilityOverlay(
     const modelYear = yearIndex + 1;
     const activePhase = sp.facilityPhases.find(p => modelYear >= p.startYear && modelYear <= p.endYear);
     if (!activePhase) return zero;
-    return computeSinglePhaseOverlay(activePhase, sp.entityType, sp.openingYear, yearIndex, pf);
+    const phaseRelativeYearIndex = yearIndex - (activePhase.startYear - 1);
+    return computeSinglePhaseOverlay(activePhase, sp.entityType, sp.openingYear, phaseRelativeYearIndex, pf);
   }
 
   return computeSinglePhaseOverlay(sp, sp.entityType, sp.openingYear, yearIndex, pf);

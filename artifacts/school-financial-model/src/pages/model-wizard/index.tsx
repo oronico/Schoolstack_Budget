@@ -200,6 +200,10 @@ export function ModelWizardPage() {
         if (rs.grantsContributions) rs.philanthropy = true;
         delete rs.grantsContributions;
       }
+      const sp = d.schoolProfile as Record<string, unknown> | undefined;
+      if (sp && sp.ownershipType && (!sp.facilityPhases || !(sp.facilityPhases as unknown[]).length)) {
+        sp.facilityPhases = undefined;
+      }
       methods.reset(d);
       if (initialData.currentStep) {
         setCurrentStep(initialData.currentStep);

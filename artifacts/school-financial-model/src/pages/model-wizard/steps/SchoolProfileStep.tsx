@@ -524,7 +524,7 @@ export function SchoolProfileStep() {
 
   const prevOwnership = useRef(ownershipType);
   useEffect(() => {
-    if (prevOwnership.current !== ownershipType) {
+    if (prevOwnership.current !== ownershipType && (!facilityPhases || facilityPhases.length === 0)) {
       if (ownershipType === "own") {
         setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
         setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
@@ -570,7 +570,7 @@ export function SchoolProfileStep() {
       }
       prevOwnership.current = ownershipType;
     }
-  }, [ownershipType, setValue]);
+  }, [ownershipType, facilityPhases, setValue]);
 
   const { formState: { errors } } = useFormContext();
   const stageError = getNestedError(errors, "schoolProfile.schoolStage");
@@ -1171,7 +1171,7 @@ export function SchoolProfileStep() {
                     />
                   ))}
 
-                  {facilityPhases.length < 5 && (
+                  {facilityPhases.length < 3 && (
                     <button
                       type="button"
                       onClick={() => {
