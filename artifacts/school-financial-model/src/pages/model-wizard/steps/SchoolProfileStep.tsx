@@ -262,7 +262,7 @@ export function SchoolProfileStep() {
   const entityType = watch("schoolProfile.entityType");
   const isAccredited = watch("schoolProfile.isAccredited");
   const lendingLabIntent = watch("schoolProfile.lendingLabIntent");
-  const currentYearEnrollment = watch("currentYearProjection.currentEnrollment");
+  const currentStudents = watch("schoolProfile.currentStudents");
 
   const locationSecured = watch("schoolProfile.locationSecured");
   const ownershipType = watch("schoolProfile.ownershipType");
@@ -297,10 +297,10 @@ export function SchoolProfileStep() {
   }, [isCharter, lendingLabIntent, setValue]);
 
   useEffect(() => {
-    if (schoolStage === "operating_school" && operatingYear === "first_year" && currentYearEnrollment != null) {
-      setValue("schoolProfile.currentStudents", currentYearEnrollment, { shouldDirty: true });
+    if (schoolStage === "operating_school" && operatingYear === "first_year" && currentStudents != null) {
+      setValue("currentYearProjection.currentEnrollment", currentStudents, { shouldDirty: true });
     }
-  }, [schoolStage, operatingYear, currentYearEnrollment, setValue]);
+  }, [schoolStage, operatingYear, currentStudents, setValue]);
 
   const prevLocationSecured = useRef(locationSecured);
   useEffect(() => {
@@ -910,7 +910,7 @@ export function SchoolProfileStep() {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput
-              name="currentYearProjection.currentEnrollment"
+              name="schoolProfile.currentStudents"
               label="Current Enrollment"
               type="number"
               placeholder="0"

@@ -15,6 +15,10 @@ import {
   type ExpenseRow as SharedExpenseRow, type CapitalDebtRow as SharedCapDebtRow,
   type TuitionTier as SharedTuitionTier, type SchoolProfile as SharedSchoolProfile,
 } from "./workbook-helpers.js";
+import {
+  computeSchoolProfileFacilityOverlay,
+  hasSchoolProfileFacilityData,
+} from "./consultant-engine.js";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -2300,6 +2304,14 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   }
 
   const facCostByYrF = computeFacilityCostByYear(dbExpRows, enrollment, revByYear, 5, costInflPct, retentionRate);
+  const spIsFacilityAuthority = hasSchoolProfileFacilityData(sp as unknown as Parameters<typeof hasSchoolProfileFacilityData>[0]);
+  if (spIsFacilityAuthority) {
+    for (let y = 0; y < 5; y++) {
+      const pf = y === 0 ? prorationFactor : 1;
+      const overlay = computeSchoolProfileFacilityOverlay(sp as unknown as Parameters<typeof computeSchoolProfileFacilityOverlay>[0], y, pf);
+      facCostByYrF[y] += overlay.total;
+    }
+  }
   const instrCostByYrF = computeInstructionalCostByYear(dbExpRows, enrollment, revByYear, 5, costInflPct);
 
   await addDashboardSheet(wb, {

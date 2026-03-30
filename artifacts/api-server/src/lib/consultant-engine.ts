@@ -559,7 +559,7 @@ function computeCapDebtForYear(rows: CapitalDebtRow[], yearIdx: number, students
   return total;
 }
 
-interface FacilityOverlayResult {
+export interface FacilityOverlayResult {
   rent: number;
   nnnCam: number;
   nnnMaintenance: number;
@@ -570,7 +570,7 @@ interface FacilityOverlayResult {
   total: number;
 }
 
-function computeSchoolProfileFacilityOverlay(
+export function computeSchoolProfileFacilityOverlay(
   sp: SchoolProfile,
   yearIndex: number,
   prorationFactor: number,
@@ -648,7 +648,7 @@ function computeSchoolProfileFacilityOverlay(
   return result;
 }
 
-function hasSchoolProfileFacilityData(sp?: SchoolProfile): boolean {
+export function hasSchoolProfileFacilityData(sp?: SchoolProfile): boolean {
   if (!sp) return false;
   if (sp.locationSecured === false && (sp.estimatedMonthlyFacilityBudget || 0) > 0) return true;
   if (sp.locationSecured === true && sp.ownershipType === "rent" && (sp.monthlyRent || 0) > 0) return true;
