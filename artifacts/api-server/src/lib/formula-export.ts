@@ -2249,13 +2249,18 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     schoolType: sp.entityType || sp.schoolType || undefined,
   });
 
-  const asm = buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
+  const spFacAuth = hasSchoolProfileFacilityData(sp as unknown as Parameters<typeof hasSchoolProfileFacilityData>[0]);
+  const effectiveData = spFacAuth
+    ? { ...data, expenseRows: (data.expenseRows || []).map((r: any) => r.category === "occupancy_facility" ? { ...r, enabled: false } : r) }
+    : data;
 
-  const fiveYr = buildFiveYearModel(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, asm);
+  const asm = buildAssumptions(wb, effectiveData, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
 
-  buildProForma(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, fiveYr);
+  const fiveYr = buildFiveYearModel(wb, effectiveData, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, asm);
 
-  buildActualsVsProjections(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, fiveYr);
+  buildProForma(wb, effectiveData, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, fiveYr);
+
+  buildActualsVsProjections(wb, effectiveData, enrollment, salaryEsc, costInflation, prorationFactor, fiveYr);
 
   {
   const dbRevRows = data.revenueRows || [];
@@ -2271,15 +2276,17 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   const debtByYear: number[] = [];
   const niByYear: number[] = [];
   const cashByYear: number[] = [];
-  const spIsFacilityAuthority = hasSchoolProfileFacilityData(sp as unknown as Parameters<typeof hasSchoolProfileFacilityData>[0]);
+  const effectiveExpRows = spFacAuth
+    ? (dbExpRows as any[]).map((r: any) => r.category === "occupancy_facility" ? { ...r, enabled: false } : r)
+    : dbExpRows;
   let runCash = startingCash;
   for (let y = 0; y < 5; y++) {
     const students = enrollment[y];
     const pf = y === 0 ? prorationFactor : 1;
     const rev = sharedComputeRevenue(dbRevRows as unknown as SharedRevenueRow[], y, students, dbTiers as unknown as SharedTuitionTier[], costInflPct, sp as unknown as SharedSchoolProfile);
     const pers = sharedComputePersonnel(dbStaffRows as unknown as SharedStaffingRow[], salaryEsc, pf, y);
-    let opex = sharedComputeExpense(dbExpRows as unknown as SharedExpenseRow[], y, students, rev, costInflPct);
-    if (spIsFacilityAuthority) {
+    let opex = sharedComputeExpense(effectiveExpRows as unknown as SharedExpenseRow[], y, students, rev, costInflPct);
+    if (spFacAuth) {
       const overlay = computeSchoolProfileFacilityOverlay(sp as unknown as Parameters<typeof computeSchoolProfileFacilityOverlay>[0], y, pf);
       opex += overlay.total;
     }
@@ -2308,8 +2315,8 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     }
   }
 
-  const facCostByYrF = computeFacilityCostByYear(dbExpRows, enrollment, revByYear, 5, costInflPct, retentionRate);
-  if (spIsFacilityAuthority) {
+  const facCostByYrF = computeFacilityCostByYear(effectiveExpRows, enrollment, revByYear, 5, costInflPct, retentionRate);
+  if (spFacAuth) {
     for (let y = 0; y < 5; y++) {
       const pf = y === 0 ? prorationFactor : 1;
       const overlay = computeSchoolProfileFacilityOverlay(sp as unknown as Parameters<typeof computeSchoolProfileFacilityOverlay>[0], y, pf);
