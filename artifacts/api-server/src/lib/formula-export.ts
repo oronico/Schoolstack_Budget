@@ -2250,17 +2250,14 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   });
 
   const spFacAuth = hasSchoolProfileFacilityData(sp as unknown as Parameters<typeof hasSchoolProfileFacilityData>[0]);
-  const effectiveData = spFacAuth
-    ? { ...data, expenseRows: (data.expenseRows || []).map((r: any) => r.category === "occupancy_facility" ? { ...r, enabled: false } : r) }
-    : data;
 
-  const asm = buildAssumptions(wb, effectiveData, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
+  const asm = buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
 
-  const fiveYr = buildFiveYearModel(wb, effectiveData, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, asm);
+  const fiveYr = buildFiveYearModel(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, asm);
 
-  buildProForma(wb, effectiveData, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, fiveYr);
+  buildProForma(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash, fiveYr);
 
-  buildActualsVsProjections(wb, effectiveData, enrollment, salaryEsc, costInflation, prorationFactor, fiveYr);
+  buildActualsVsProjections(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, fiveYr);
 
   {
   const dbRevRows = data.revenueRows || [];
