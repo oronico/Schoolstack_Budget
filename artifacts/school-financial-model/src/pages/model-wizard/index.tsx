@@ -200,31 +200,6 @@ export function ModelWizardPage() {
         if (rs.grantsContributions) rs.philanthropy = true;
         delete rs.grantsContributions;
       }
-      const sp = d.schoolProfile as Record<string, unknown> | undefined;
-      if (sp && sp.ownershipType && (!sp.facilityPhases || !(sp.facilityPhases as unknown[]).length)) {
-        sp.facilityPhases = [{
-          id: `phase-legacy-1`,
-          ownershipType: sp.ownershipType as string,
-          startYear: 1,
-          endYear: 5,
-          monthlyRent: (sp.monthlyRent as number) || 0,
-          annualRentEscalation: (sp.annualRentEscalation as number) || 3,
-          postLeaseRenewalBump: (sp.postLeaseRenewalBump as number) || 15,
-          leaseExpirationYear: sp.leaseExpirationYear as number | undefined,
-          leaseExpirationMonth: sp.leaseExpirationMonth as number | undefined,
-          isNNNLease: (sp.isNNNLease as boolean) || false,
-          nnnCamCharges: (sp.nnnCamCharges as number) || 0,
-          nnnMaintenance: (sp.nnnMaintenance as number) || 0,
-          nnnUtilities: (sp.nnnUtilities as number) || 0,
-          propertyTaxAnnual: (sp.propertyTaxAnnual as number) || 0,
-          hasMortgage: (sp.hasMortgage as boolean) || false,
-          mortgageMonthlyPayment: (sp.mortgageMonthlyPayment as number) || 0,
-          facilityArrangementEndDate: sp.facilityArrangementEndDate as string | undefined,
-          comparableMarketRent: (sp.comparableMarketRent as number) || 0,
-          hasWrittenAgreement: (sp.hasWrittenAgreement as boolean) || false,
-          monthlyFacilityAllocation: (sp.monthlyFacilityAllocation as number) || 0,
-        }];
-      }
       methods.reset(d);
       if (initialData.currentStep) {
         setCurrentStep(initialData.currentStep);
@@ -257,6 +232,33 @@ export function ModelWizardPage() {
         const profile = debouncedValues.schoolProfile as Record<string, unknown> | undefined;
         const stageVal = profile?.schoolStage as "new_school" | "operating_school" | undefined;
         const fundingVal = profile?.fundingProfile as "tuition_based" | "charter_public_funded" | "hybrid_mixed" | undefined;
+        const cleanedValues = { ...debouncedValues } as Record<string, unknown>;
+        const sp = cleanedValues.schoolProfile as Record<string, unknown> | undefined;
+        if (sp && sp.ownershipType && (!sp.facilityPhases || !(sp.facilityPhases as unknown[]).length)) {
+          const ot = sp.ownershipType as string;
+          if (ot !== "rent") {
+            sp.monthlyRent = 0;
+            sp.isNNNLease = false;
+            sp.nnnCamCharges = 0;
+            sp.nnnMaintenance = 0;
+            sp.nnnUtilities = 0;
+          }
+          if (ot !== "own") {
+            sp.propertyTaxAnnual = 0;
+            sp.hasMortgage = false;
+            sp.mortgageMonthlyPayment = 0;
+          }
+          if (ot !== "donated") {
+            sp.comparableMarketRent = 0;
+            sp.facilityArrangementEndDate = undefined;
+          }
+          if (ot !== "home_based") {
+            sp.monthlyFacilityAllocation = 0;
+          }
+          if (ot !== "donated" && ot !== "home_based") {
+            sp.hasWrittenAgreement = false;
+          }
+        }
         await updateMutation.mutateAsync({
           id: modelId,
           data: {
@@ -264,7 +266,7 @@ export function ModelWizardPage() {
             currentStep,
             ...(stageVal ? { schoolStage: stageVal } : {}),
             ...(fundingVal ? { fundingProfile: fundingVal } : {}),
-            data: debouncedValues as Record<string, unknown>,
+            data: cleanedValues,
           }
         });
         setLastSaved(new Date());

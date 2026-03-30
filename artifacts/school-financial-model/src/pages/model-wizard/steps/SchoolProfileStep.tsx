@@ -358,6 +358,23 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
               <input type="number" value={phase.annualRentEscalation as number || ""} onChange={e => onUpdate("annualRentEscalation", Number(e.target.value))} placeholder="3" className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
             </div>
           </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Lease Expires (Year)</label>
+              <input type="number" value={phase.leaseExpirationYear as number || ""} onChange={e => onUpdate("leaseExpirationYear", e.target.value ? Number(e.target.value) : undefined)} placeholder="2030" className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Expires (Month)</label>
+              <select value={phase.leaseExpirationMonth as number ?? ""} onChange={e => onUpdate("leaseExpirationMonth", e.target.value ? Number(e.target.value) : undefined)} className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm">
+                <option value="">--</option>
+                {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1]}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Renewal Bump %</label>
+              <input type="number" value={phase.postLeaseRenewalBump as number ?? ""} onChange={e => onUpdate("postLeaseRenewalBump", Number(e.target.value))} placeholder="15" className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
+            </div>
+          </div>
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={!!isNNN} onChange={e => onUpdate("isNNNLease", e.target.checked)} className="rounded" />
             <span className="text-muted-foreground">Triple Net (NNN) lease</span>
@@ -408,6 +425,11 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
             <label className="block text-xs font-medium text-muted-foreground mb-1">Comparable Market Rent/mo</label>
             <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span><input type="number" value={phase.comparableMarketRent as number || ""} onChange={e => onUpdate("comparableMarketRent", Number(e.target.value))} placeholder="3000" className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-1.5 text-sm" /></div>
             {benchmarkText && <p className="text-xs text-muted-foreground mt-1">Typical for your school type: {benchmarkText}</p>}
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Arrangement End Date</label>
+            <input type="date" value={phase.facilityArrangementEndDate as string || ""} onChange={e => onUpdate("facilityArrangementEndDate", e.target.value || undefined)} className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
+            <p className="text-xs text-muted-foreground mt-1">Leave blank if the arrangement has no fixed end date.</p>
           </div>
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={!!phase.hasWrittenAgreement} onChange={e => onUpdate("hasWrittenAgreement", e.target.checked)} className="rounded" />
@@ -1021,20 +1043,22 @@ export function SchoolProfileStep() {
                         ownershipType: ownershipType,
                         startYear: 1,
                         endYear: 3,
-                        monthlyRent: watch("schoolProfile.monthlyRent") || 0,
-                        annualRentEscalation: watch("schoolProfile.annualRentEscalation") || 3,
-                        postLeaseRenewalBump: watch("schoolProfile.postLeaseRenewalBump") || 15,
-                        isNNNLease: watch("schoolProfile.isNNNLease") || false,
-                        nnnCamCharges: watch("schoolProfile.nnnCamCharges") || 0,
-                        nnnMaintenance: watch("schoolProfile.nnnMaintenance") || 0,
-                        nnnUtilities: watch("schoolProfile.nnnUtilities") || 0,
-                        propertyTaxAnnual: watch("schoolProfile.propertyTaxAnnual") || 0,
-                        hasMortgage: watch("schoolProfile.hasMortgage") || false,
-                        mortgageMonthlyPayment: watch("schoolProfile.mortgageMonthlyPayment") || 0,
+                        monthlyRent: watch("schoolProfile.monthlyRent") ?? 0,
+                        annualRentEscalation: watch("schoolProfile.annualRentEscalation") ?? 3,
+                        postLeaseRenewalBump: watch("schoolProfile.postLeaseRenewalBump") ?? 15,
+                        leaseExpirationYear: watch("schoolProfile.leaseExpirationYear"),
+                        leaseExpirationMonth: watch("schoolProfile.leaseExpirationMonth"),
+                        isNNNLease: watch("schoolProfile.isNNNLease") ?? false,
+                        nnnCamCharges: watch("schoolProfile.nnnCamCharges") ?? 0,
+                        nnnMaintenance: watch("schoolProfile.nnnMaintenance") ?? 0,
+                        nnnUtilities: watch("schoolProfile.nnnUtilities") ?? 0,
+                        propertyTaxAnnual: watch("schoolProfile.propertyTaxAnnual") ?? 0,
+                        hasMortgage: watch("schoolProfile.hasMortgage") ?? false,
+                        mortgageMonthlyPayment: watch("schoolProfile.mortgageMonthlyPayment") ?? 0,
                         facilityArrangementEndDate: watch("schoolProfile.facilityArrangementEndDate"),
-                        comparableMarketRent: watch("schoolProfile.comparableMarketRent") || 0,
-                        hasWrittenAgreement: watch("schoolProfile.hasWrittenAgreement") || false,
-                        monthlyFacilityAllocation: watch("schoolProfile.monthlyFacilityAllocation") || 0,
+                        comparableMarketRent: watch("schoolProfile.comparableMarketRent") ?? 0,
+                        hasWrittenAgreement: watch("schoolProfile.hasWrittenAgreement") ?? false,
+                        monthlyFacilityAllocation: watch("schoolProfile.monthlyFacilityAllocation") ?? 0,
                       };
                       const newPhase = {
                         id: `phase-${Date.now()}-2`,
