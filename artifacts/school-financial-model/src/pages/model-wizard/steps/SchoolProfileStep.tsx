@@ -315,10 +315,13 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
           <select
             value={phase.endYear}
             onChange={e => onUpdate("endYear", Number(e.target.value))}
-            className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+            className={cn("w-full rounded-lg border bg-background px-3 py-1.5 text-sm", phase.startYear > phase.endYear ? "border-destructive" : "border-border")}
           >
             {YEAR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+          {phase.startYear > phase.endYear && (
+            <p className="text-xs text-destructive mt-1">End year must be ≥ start year</p>
+          )}
         </div>
       </div>
 
@@ -1182,6 +1185,24 @@ export function SchoolProfileStep() {
                     })}
                   </div>
 
+                  {(() => {
+                    const covered = new Set<number>();
+                    facilityPhases.forEach(p => {
+                      for (let y = p.startYear; y <= p.endYear; y++) covered.add(y);
+                    });
+                    const gaps = [1, 2, 3, 4, 5].filter(y => !covered.has(y));
+                    if (gaps.length === 0) return null;
+                    const label = gaps.length === 1 ? `Year ${gaps[0]} is` : `Years ${gaps.join(", ")} are`;
+                    return (
+                      <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800">
+                          {label} not covered by any phase. Facility costs will be $0 for uncovered years. Adjust your phase ranges or add another phase to fill the gap.
+                        </p>
+                      </div>
+                    );
+                  })()}
+
                   {facilityPhases.map((phase, idx) => (
                     <FacilityPhaseCard
                       key={phase.id}
@@ -1197,7 +1218,19 @@ export function SchoolProfileStep() {
                         setValue("schoolProfile.facilityPhases", updated.length > 0 ? updated : undefined, { shouldDirty: true });
                       }}
                       onUpdate={(field, value) => {
-                        const updated = facilityPhases.map((p, i) => i === idx ? { ...p, [field]: value } : p);
+                        let updated = facilityPhases.map((p, i) => i === idx ? { ...p, [field]: value } : p);
+                        if (field === "endYear" && typeof value === "number" && idx < updated.length - 1) {
+                          const next = updated[idx + 1];
+                          if (next.startYear <= value) {
+                            updated = updated.map((p, i) => i === idx + 1 ? { ...p, startYear: Math.min(value + 1, 5) } : p);
+                          }
+                        }
+                        if (field === "startYear" && typeof value === "number" && idx > 0) {
+                          const prev = updated[idx - 1];
+                          if (prev.endYear >= value) {
+                            updated = updated.map((p, i) => i === idx - 1 ? { ...p, endYear: Math.max(value - 1, 1) } : p);
+                          }
+                        }
                         setValue("schoolProfile.facilityPhases", updated, { shouldDirty: true });
                       }}
                     />

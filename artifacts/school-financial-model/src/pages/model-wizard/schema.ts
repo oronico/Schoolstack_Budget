@@ -90,6 +90,24 @@ export const facilityPhaseSchema = z.object({
   comparableMarketRent: z.coerce.number().min(0).optional().default(0),
   hasWrittenAgreement: z.boolean().optional().default(false),
   monthlyFacilityAllocation: z.coerce.number().min(0).optional().default(0),
+}).refine(d => d.startYear <= d.endYear, {
+  message: "Start year must be before or equal to end year",
+  path: ["endYear"],
+});
+
+export const facilityPhasesArraySchema = z.array(facilityPhaseSchema).optional().superRefine((phases, ctx) => {
+  if (!phases || phases.length <= 1) return;
+  const indexed = phases.map((p, originalIndex) => ({ p, originalIndex }));
+  indexed.sort((a, b) => a.p.startYear - b.p.startYear);
+  for (let i = 1; i < indexed.length; i++) {
+    if (indexed[i].p.startYear <= indexed[i - 1].p.endYear) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Phase overlaps with an adjacent phase`,
+        path: [indexed[i].originalIndex, "startYear"],
+      });
+    }
+  }
 });
 
 export const schoolProfileSchema = z.object({
@@ -176,7 +194,7 @@ export const schoolProfileSchema = z.object({
   schoolFteCount: z.coerce.number().min(0).optional(),
   newFteCount: z.coerce.number().min(0).optional(),
   stateFundingMethodology: z.enum(["ada", "adm", "single_count_day", "multiple_count_dates", "single_count_period", "multiple_count_periods", "other"]).optional(),
-  facilityPhases: z.array(facilityPhaseSchema).optional(),
+  facilityPhases: facilityPhasesArraySchema,
 });
 
 export const priorYearSnapshotSchema = z.object({

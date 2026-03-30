@@ -23,6 +23,32 @@ const ReviewStep = lazy(() => import("./steps/ReviewStep").then(m => ({ default:
 const ConsultantStep = lazy(() => import("./steps/ConsultantStep").then(m => ({ default: m.ConsultantStep })));
 const ExportStep = lazy(() => import("./steps/ExportStep").then(m => ({ default: m.ExportStep })));
 
+function cleanFacilityFieldsByOwnership(obj: Record<string, unknown>, ot: string | undefined) {
+  if (!ot) return;
+  if (ot !== "rent") {
+    obj.monthlyRent = 0;
+    obj.isNNNLease = false;
+    obj.nnnCamCharges = 0;
+    obj.nnnMaintenance = 0;
+    obj.nnnUtilities = 0;
+  }
+  if (ot !== "own") {
+    obj.propertyTaxAnnual = 0;
+    obj.hasMortgage = false;
+    obj.mortgageMonthlyPayment = 0;
+  }
+  if (ot !== "donated") {
+    obj.comparableMarketRent = 0;
+    obj.facilityArrangementEndDate = undefined;
+  }
+  if (ot !== "home_based") {
+    obj.monthlyFacilityAllocation = 0;
+  }
+  if (ot !== "donated" && ot !== "home_based") {
+    obj.hasWrittenAgreement = false;
+  }
+}
+
 type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null };
 
 const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[] = [
@@ -257,31 +283,15 @@ export function ModelWizardPage() {
         const profile = debouncedValues.schoolProfile as Record<string, unknown> | undefined;
         const stageVal = profile?.schoolStage as "new_school" | "operating_school" | undefined;
         const fundingVal = profile?.fundingProfile as "tuition_based" | "charter_public_funded" | "hybrid_mixed" | undefined;
-        const cleanedValues = { ...debouncedValues } as Record<string, unknown>;
+        const cleanedValues = JSON.parse(JSON.stringify(debouncedValues)) as Record<string, unknown>;
         const sp = cleanedValues.schoolProfile as Record<string, unknown> | undefined;
-        if (sp && sp.ownershipType) {
-          const ot = sp.ownershipType as string;
-          if (ot !== "rent") {
-            sp.monthlyRent = 0;
-            sp.isNNNLease = false;
-            sp.nnnCamCharges = 0;
-            sp.nnnMaintenance = 0;
-            sp.nnnUtilities = 0;
-          }
-          if (ot !== "own") {
-            sp.propertyTaxAnnual = 0;
-            sp.hasMortgage = false;
-            sp.mortgageMonthlyPayment = 0;
-          }
-          if (ot !== "donated") {
-            sp.comparableMarketRent = 0;
-            sp.facilityArrangementEndDate = undefined;
-          }
-          if (ot !== "home_based") {
-            sp.monthlyFacilityAllocation = 0;
-          }
-          if (ot !== "donated" && ot !== "home_based") {
-            sp.hasWrittenAgreement = false;
+        if (sp) {
+          cleanFacilityFieldsByOwnership(sp, sp.ownershipType as string | undefined);
+          const phases = sp.facilityPhases as Array<Record<string, unknown>> | undefined;
+          if (phases) {
+            for (const phase of phases) {
+              cleanFacilityFieldsByOwnership(phase, phase.ownershipType as string | undefined);
+            }
           }
         }
         await updateMutation.mutateAsync({
