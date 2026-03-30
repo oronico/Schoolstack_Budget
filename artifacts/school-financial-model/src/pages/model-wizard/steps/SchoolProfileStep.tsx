@@ -296,11 +296,16 @@ export function SchoolProfileStep() {
     }
   }, [isCharter, lendingLabIntent, setValue]);
 
+  const currentYearEnrollmentLegacy = watch("currentYearProjection.currentEnrollment");
   useEffect(() => {
-    if (schoolStage === "operating_school" && operatingYear === "first_year" && currentStudents != null) {
-      setValue("currentYearProjection.currentEnrollment", currentStudents, { shouldDirty: true });
+    if (schoolStage === "operating_school" && operatingYear === "first_year") {
+      if (currentStudents != null && currentStudents !== 0) {
+        setValue("currentYearProjection.currentEnrollment", currentStudents, { shouldDirty: true });
+      } else if ((currentStudents == null || currentStudents === 0) && currentYearEnrollmentLegacy && currentYearEnrollmentLegacy > 0) {
+        setValue("schoolProfile.currentStudents", currentYearEnrollmentLegacy, { shouldDirty: true });
+      }
     }
-  }, [schoolStage, operatingYear, currentStudents, setValue]);
+  }, [schoolStage, operatingYear, currentStudents, currentYearEnrollmentLegacy, setValue]);
 
   const prevLocationSecured = useRef(locationSecured);
   useEffect(() => {

@@ -2271,13 +2271,18 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   const debtByYear: number[] = [];
   const niByYear: number[] = [];
   const cashByYear: number[] = [];
+  const spIsFacilityAuthority = hasSchoolProfileFacilityData(sp as unknown as Parameters<typeof hasSchoolProfileFacilityData>[0]);
   let runCash = startingCash;
   for (let y = 0; y < 5; y++) {
     const students = enrollment[y];
     const pf = y === 0 ? prorationFactor : 1;
     const rev = sharedComputeRevenue(dbRevRows as unknown as SharedRevenueRow[], y, students, dbTiers as unknown as SharedTuitionTier[], costInflPct, sp as unknown as SharedSchoolProfile);
     const pers = sharedComputePersonnel(dbStaffRows as unknown as SharedStaffingRow[], salaryEsc, pf, y);
-    const opex = sharedComputeExpense(dbExpRows as unknown as SharedExpenseRow[], y, students, rev, costInflPct);
+    let opex = sharedComputeExpense(dbExpRows as unknown as SharedExpenseRow[], y, students, rev, costInflPct);
+    if (spIsFacilityAuthority) {
+      const overlay = computeSchoolProfileFacilityOverlay(sp as unknown as Parameters<typeof computeSchoolProfileFacilityOverlay>[0], y, pf);
+      opex += overlay.total;
+    }
     const debt = sharedComputeDebtService(dbCapRows as unknown as SharedCapDebtRow[], y);
     const ni = rev - pers - opex - debt;
     runCash += ni;
@@ -2304,7 +2309,6 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
   }
 
   const facCostByYrF = computeFacilityCostByYear(dbExpRows, enrollment, revByYear, 5, costInflPct, retentionRate);
-  const spIsFacilityAuthority = hasSchoolProfileFacilityData(sp as unknown as Parameters<typeof hasSchoolProfileFacilityData>[0]);
   if (spIsFacilityAuthority) {
     for (let y = 0; y < 5; y++) {
       const pf = y === 0 ? prorationFactor : 1;
