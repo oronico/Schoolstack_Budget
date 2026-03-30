@@ -425,6 +425,9 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
             <label className="block text-xs font-medium text-muted-foreground mb-1">Comparable Market Rent/mo</label>
             <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span><input type="number" value={phase.comparableMarketRent as number || ""} onChange={e => onUpdate("comparableMarketRent", Number(e.target.value))} placeholder="3000" className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-1.5 text-sm" /></div>
             {benchmarkText && <p className="text-xs text-muted-foreground mt-1">Typical for your school type: {benchmarkText}</p>}
+            {(phase.comparableMarketRent === 0 || phase.comparableMarketRent === undefined) && (
+              <p className="text-xs text-amber-600 mt-1">Lenders want to see what this space would cost at market rate. Even if it's free now, enter a comparable rent so your model reflects what happens if the arrangement ends.</p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Arrangement End Date</label>
@@ -443,6 +446,9 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Monthly Facility Allocation</label>
             <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span><input type="number" value={phase.monthlyFacilityAllocation as number || ""} onChange={e => onUpdate("monthlyFacilityAllocation", Number(e.target.value))} placeholder="500" className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-1.5 text-sm" /></div>
+            {(phase.monthlyFacilityAllocation === 0 || phase.monthlyFacilityAllocation === undefined) && (
+              <p className="text-xs text-amber-600 mt-1">Even home-based programs have costs (internet, utilities, supplies). Add a small monthly allocation so your budget reflects the true cost of operating.</p>
+            )}
           </div>
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={!!phase.hasWrittenAgreement} onChange={e => onUpdate("hasWrittenAgreement", e.target.checked)} className="rounded" />
@@ -1033,12 +1039,16 @@ export function SchoolProfileStep() {
                 </div>
               )}
 
-              {ownershipType && (!facilityPhases || facilityPhases.length === 0) && (
+              {ownershipType && (!facilityPhases || facilityPhases.length <= 1) && (
                 <div className="pt-2">
                   <button
                     type="button"
                     onClick={() => {
-                      const currentPhase: Record<string, unknown> = {
+                      const existingPhase = facilityPhases?.[0];
+                      const currentPhase: Record<string, unknown> = existingPhase ? {
+                        ...existingPhase,
+                        endYear: 3,
+                      } : {
                         id: `phase-${Date.now()}-1`,
                         ownershipType: ownershipType,
                         startYear: 1,
@@ -1092,14 +1102,15 @@ export function SchoolProfileStep() {
                 </div>
               )}
 
-              {facilityPhases && facilityPhases.length > 0 && (
+              {facilityPhases && facilityPhases.length > 1 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-bold text-foreground">Facility Timeline</h4>
                     <button
                       type="button"
                       onClick={() => {
-                        setValue("schoolProfile.facilityPhases", undefined, { shouldDirty: true });
+                        const first = facilityPhases[0];
+                        setValue("schoolProfile.facilityPhases", [{ ...first, startYear: 1, endYear: 5 }], { shouldDirty: true });
                       }}
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
