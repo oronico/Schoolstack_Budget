@@ -762,28 +762,6 @@ function buildAssumptions(
   r++; ws.getCell(r, 1).value = "Ownership Type"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = ({ own: "Own", rent: "Rent", donated: "Donated / No-Cost", home_based: "Home-Based" } as Record<string, string>)[sp.ownershipType || ""] || "N/A"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
 
-  if (sp.ownershipType === "donated") {
-    const marketRent = sp.comparableMarketRent || 0;
-    if (marketRent > 0) {
-      r++; ws.getCell(r, 1).value = "Comparable Market Rent"; dc(ws.getCell(r, 1));
-      ws.getCell(r, 2).value = marketRent; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
-      ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
-    }
-    if (sp.facilityArrangementEndDate) {
-      r++; ws.getCell(r, 1).value = "Arrangement Ends"; dc(ws.getCell(r, 1));
-      ws.getCell(r, 2).value = sp.facilityArrangementEndDate; dc(ws.getCell(r, 2));
-    }
-  }
-
-  if (sp.ownershipType === "home_based") {
-    const allocation = sp.monthlyFacilityAllocation || 0;
-    if (allocation > 0) {
-      r++; ws.getCell(r, 1).value = "Monthly Facility Allocation"; dc(ws.getCell(r, 1));
-      ws.getCell(r, 2).value = allocation; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
-      ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
-    }
-  }
-
   if (sp.ownershipType === "own") {
     r++; ws.getCell(r, 1).value = "Property Tax (Annual)"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = sp.propertyTaxAnnual || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
