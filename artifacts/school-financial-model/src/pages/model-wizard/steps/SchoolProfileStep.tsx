@@ -262,6 +262,7 @@ export function SchoolProfileStep() {
   const entityType = watch("schoolProfile.entityType");
   const isAccredited = watch("schoolProfile.isAccredited");
   const lendingLabIntent = watch("schoolProfile.lendingLabIntent");
+  const currentYearEnrollment = watch("currentYearProjection.currentEnrollment");
 
   const locationSecured = watch("schoolProfile.locationSecured");
   const ownershipType = watch("schoolProfile.ownershipType");
@@ -294,6 +295,12 @@ export function SchoolProfileStep() {
       setValue("schoolProfile.lendingLabIntent", "budget_only", { shouldDirty: true });
     }
   }, [isCharter, lendingLabIntent, setValue]);
+
+  useEffect(() => {
+    if (schoolStage === "operating_school" && operatingYear === "first_year" && currentYearEnrollment != null) {
+      setValue("schoolProfile.currentStudents", currentYearEnrollment, { shouldDirty: true });
+    }
+  }, [schoolStage, operatingYear, currentYearEnrollment, setValue]);
 
   const prevLocationSecured = useRef(locationSecured);
   useEffect(() => {

@@ -788,7 +788,7 @@ function buildAssumptions(
       ws.getCell(r, 2).value = sp.mortgageMonthlyPayment || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
       ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
     }
-  } else {
+  } else if (sp.ownershipType === "rent") {
     r++; ws.getCell(r, 1).value = "Monthly Rent"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = sp.monthlyRent || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
     ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
@@ -802,6 +802,26 @@ function buildAssumptions(
       r++; ws.getCell(r, 1).value = "Post-Lease Renewal Bump"; dc(ws.getCell(r, 1));
       ws.getCell(r, 2).value = (sp.postLeaseRenewalBump || 0) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
     }
+  } else if (sp.ownershipType === "donated") {
+    r++; ws.getCell(r, 1).value = "Facility Arrangement"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = "Donated / No-Cost Space"; dc(ws.getCell(r, 2));
+    r++; ws.getCell(r, 1).value = "Written Agreement"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = sp.hasWrittenAgreement ? "Yes" : "No"; dc(ws.getCell(r, 2));
+    if (sp.facilityArrangementEndDate) {
+      r++; ws.getCell(r, 1).value = "Arrangement End Date"; dc(ws.getCell(r, 1));
+      ws.getCell(r, 2).value = sp.facilityArrangementEndDate; dc(ws.getCell(r, 2));
+    }
+    r++; ws.getCell(r, 1).value = "Comparable Market Rent"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = sp.comparableMarketRent || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
+  } else if (sp.ownershipType === "home_based") {
+    r++; ws.getCell(r, 1).value = "Facility Arrangement"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = "Home-Based Program"; dc(ws.getCell(r, 2));
+    r++; ws.getCell(r, 1).value = "Monthly Facility Allocation"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = sp.monthlyFacilityAllocation || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+    ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
+    r++; ws.getCell(r, 1).value = "Written Use Agreement"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = sp.hasWrittenAgreement ? "Yes" : "No"; dc(ws.getCell(r, 2));
   }
 
   if (sp.isNNNLease) {
