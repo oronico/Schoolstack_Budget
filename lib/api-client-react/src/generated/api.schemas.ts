@@ -143,6 +143,8 @@ export const ExpenseDriverType = {
   annual_fixed: "annual_fixed",
   monthly: "monthly",
   per_student: "per_student",
+  per_new_student: "per_new_student",
+  per_returning_student: "per_returning_student",
   percent_of_revenue: "percent_of_revenue",
 } as const;
 
@@ -414,6 +416,8 @@ export type SchoolProfileOwnershipType =
 export const SchoolProfileOwnershipType = {
   own: "own",
   rent: "rent",
+  donated: "donated",
+  home_based: "home_based",
 } as const;
 
 export type SchoolProfileEnrollmentRevenueMethod =
@@ -490,6 +494,10 @@ export interface SchoolProfile {
   nnnMaintenance?: number;
   nnnUtilities?: number;
   estimatedMonthlyFacilityBudget?: number;
+  facilityArrangementEndDate?: string;
+  comparableMarketRent?: number;
+  hasWrittenAgreement?: boolean;
+  monthlyFacilityAllocation?: number;
   gradeBandEnrollment?: SchoolProfileGradeBandEnrollment;
   gradeBandPerPupil?: SchoolProfileGradeBandPerPupil;
   enrollmentRevenueMethod?: SchoolProfileEnrollmentRevenueMethod;

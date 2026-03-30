@@ -50,6 +50,10 @@ export interface SchoolProfile {
   nnnMaintenance?: number;
   nnnUtilities?: number;
   estimatedMonthlyFacilityBudget?: number;
+  facilityArrangementEndDate?: string;
+  comparableMarketRent?: number;
+  hasWrittenAgreement?: boolean;
+  monthlyFacilityAllocation?: number;
   gradeBandEnrollment?: SchoolProfileGradeBandEnrollment;
   gradeBandPerPupil?: SchoolProfileGradeBandPerPupil;
   enrollmentRevenueMethod?: SchoolProfileEnrollmentRevenueMethod;

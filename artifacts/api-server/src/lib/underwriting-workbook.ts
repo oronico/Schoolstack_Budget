@@ -443,7 +443,7 @@ function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
     ["Max Capacity", String(sp.maxCapacity || "N/A")],
     ["Accredited", sp.isAccredited ? `Yes - ${sp.accreditingBody || ""}` : "No"],
     ["Location", sp.locationSecured ? `${sp.facilityStreet || ""}, ${sp.facilityCity || ""}, ${sp.facilityState || ""} ${sp.facilityZip || ""}`.trim() : "Not yet secured"],
-    ["Facility", sp.ownershipType === "own" ? "Owned" : "Leased"],
+    ["Facility", ({ own: "Owned", rent: "Leased", donated: "Donated / No-Cost", home_based: "Home-Based" } as Record<string, string>)[sp.ownershipType || ""] || (sp.locationSecured ? "Secured" : "Not yet secured")],
   ];
   for (const [label, val] of entries) {
     ws.getCell(r, 1).value = label; bc(ws.getCell(r, 1));

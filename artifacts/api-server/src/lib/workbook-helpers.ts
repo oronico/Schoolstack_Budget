@@ -378,6 +378,10 @@ export interface SchoolProfile {
   nnnMaintenance?: number;
   nnnUtilities?: number;
   estimatedMonthlyFacilityBudget?: number;
+  facilityArrangementEndDate?: string;
+  comparableMarketRent?: number;
+  hasWrittenAgreement?: boolean;
+  monthlyFacilityAllocation?: number;
   hasBookkeeper?: boolean;
   bookkeeperMonthlyCost?: number;
   hasLawyer?: boolean;

@@ -169,7 +169,9 @@ export const CreateModelBody = zod.object({
         facilityCity: zod.string().optional(),
         facilityState: zod.string().optional(),
         facilityZip: zod.string().optional(),
-        ownershipType: zod.enum(["own", "rent"]).optional(),
+        ownershipType: zod
+          .enum(["own", "rent", "donated", "home_based"])
+          .optional(),
         propertyTaxAnnual: zod.number().optional(),
         hasMortgage: zod.boolean().optional(),
         mortgageMonthlyPayment: zod.number().optional(),
@@ -183,6 +185,10 @@ export const CreateModelBody = zod.object({
         nnnMaintenance: zod.number().optional(),
         nnnUtilities: zod.number().optional(),
         estimatedMonthlyFacilityBudget: zod.number().optional(),
+        facilityArrangementEndDate: zod.string().optional(),
+        comparableMarketRent: zod.number().optional(),
+        hasWrittenAgreement: zod.boolean().optional(),
+        monthlyFacilityAllocation: zod.number().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -385,6 +391,8 @@ export const CreateModelBody = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),
@@ -403,6 +411,8 @@ export const CreateModelBody = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),
@@ -548,7 +558,9 @@ export const GetModelResponse = zod.object({
         facilityCity: zod.string().optional(),
         facilityState: zod.string().optional(),
         facilityZip: zod.string().optional(),
-        ownershipType: zod.enum(["own", "rent"]).optional(),
+        ownershipType: zod
+          .enum(["own", "rent", "donated", "home_based"])
+          .optional(),
         propertyTaxAnnual: zod.number().optional(),
         hasMortgage: zod.boolean().optional(),
         mortgageMonthlyPayment: zod.number().optional(),
@@ -562,6 +574,10 @@ export const GetModelResponse = zod.object({
         nnnMaintenance: zod.number().optional(),
         nnnUtilities: zod.number().optional(),
         estimatedMonthlyFacilityBudget: zod.number().optional(),
+        facilityArrangementEndDate: zod.string().optional(),
+        comparableMarketRent: zod.number().optional(),
+        hasWrittenAgreement: zod.boolean().optional(),
+        monthlyFacilityAllocation: zod.number().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -764,6 +780,8 @@ export const GetModelResponse = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),
@@ -782,6 +800,8 @@ export const GetModelResponse = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),
@@ -928,7 +948,9 @@ export const UpdateModelBody = zod.object({
         facilityCity: zod.string().optional(),
         facilityState: zod.string().optional(),
         facilityZip: zod.string().optional(),
-        ownershipType: zod.enum(["own", "rent"]).optional(),
+        ownershipType: zod
+          .enum(["own", "rent", "donated", "home_based"])
+          .optional(),
         propertyTaxAnnual: zod.number().optional(),
         hasMortgage: zod.boolean().optional(),
         mortgageMonthlyPayment: zod.number().optional(),
@@ -942,6 +964,10 @@ export const UpdateModelBody = zod.object({
         nnnMaintenance: zod.number().optional(),
         nnnUtilities: zod.number().optional(),
         estimatedMonthlyFacilityBudget: zod.number().optional(),
+        facilityArrangementEndDate: zod.string().optional(),
+        comparableMarketRent: zod.number().optional(),
+        hasWrittenAgreement: zod.boolean().optional(),
+        monthlyFacilityAllocation: zod.number().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -1144,6 +1170,8 @@ export const UpdateModelBody = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),
@@ -1162,6 +1190,8 @@ export const UpdateModelBody = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),
@@ -1300,7 +1330,9 @@ export const UpdateModelResponse = zod.object({
         facilityCity: zod.string().optional(),
         facilityState: zod.string().optional(),
         facilityZip: zod.string().optional(),
-        ownershipType: zod.enum(["own", "rent"]).optional(),
+        ownershipType: zod
+          .enum(["own", "rent", "donated", "home_based"])
+          .optional(),
         propertyTaxAnnual: zod.number().optional(),
         hasMortgage: zod.boolean().optional(),
         mortgageMonthlyPayment: zod.number().optional(),
@@ -1314,6 +1346,10 @@ export const UpdateModelResponse = zod.object({
         nnnMaintenance: zod.number().optional(),
         nnnUtilities: zod.number().optional(),
         estimatedMonthlyFacilityBudget: zod.number().optional(),
+        facilityArrangementEndDate: zod.string().optional(),
+        comparableMarketRent: zod.number().optional(),
+        hasWrittenAgreement: zod.boolean().optional(),
+        monthlyFacilityAllocation: zod.number().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -1518,6 +1554,8 @@ export const UpdateModelResponse = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),
@@ -1536,6 +1574,8 @@ export const UpdateModelResponse = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),
@@ -1701,7 +1741,9 @@ export const ArchiveModelResponse = zod.object({
         facilityCity: zod.string().optional(),
         facilityState: zod.string().optional(),
         facilityZip: zod.string().optional(),
-        ownershipType: zod.enum(["own", "rent"]).optional(),
+        ownershipType: zod
+          .enum(["own", "rent", "donated", "home_based"])
+          .optional(),
         propertyTaxAnnual: zod.number().optional(),
         hasMortgage: zod.boolean().optional(),
         mortgageMonthlyPayment: zod.number().optional(),
@@ -1715,6 +1757,10 @@ export const ArchiveModelResponse = zod.object({
         nnnMaintenance: zod.number().optional(),
         nnnUtilities: zod.number().optional(),
         estimatedMonthlyFacilityBudget: zod.number().optional(),
+        facilityArrangementEndDate: zod.string().optional(),
+        comparableMarketRent: zod.number().optional(),
+        hasWrittenAgreement: zod.boolean().optional(),
+        monthlyFacilityAllocation: zod.number().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -1919,6 +1965,8 @@ export const ArchiveModelResponse = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),
@@ -1937,6 +1985,8 @@ export const ArchiveModelResponse = zod.object({
             "annual_fixed",
             "monthly",
             "per_student",
+            "per_new_student",
+            "per_returning_student",
             "percent_of_revenue",
           ]),
           amounts: zod.array(zod.number()),

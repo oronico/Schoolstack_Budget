@@ -64,9 +64,9 @@ export const lendingLabIntentSchema = z.enum(["plan_to_apply", "want_to_understa
   invalid_type_error: "Please select an option",
 }).optional();
 
-export const ownershipTypeSchema = z.enum(["own", "rent"], {
-  required_error: "Please tell us whether you own or rent your space",
-  invalid_type_error: "Please select own or rent",
+export const ownershipTypeSchema = z.enum(["own", "rent", "donated", "home_based"], {
+  required_error: "Please tell us about your facility arrangement",
+  invalid_type_error: "Please select a valid facility arrangement",
 });
 
 export const schoolProfileSchema = z.object({
@@ -113,6 +113,10 @@ export const schoolProfileSchema = z.object({
   nnnMaintenance: z.coerce.number(numMsg("NNN maintenance")).min(0, "Please enter a positive maintenance amount").optional().default(0),
   nnnUtilities: z.coerce.number(numMsg("NNN utilities")).min(0, "Please enter a positive utilities amount").optional().default(0),
   estimatedMonthlyFacilityBudget: z.coerce.number(numMsg("estimated facility budget")).min(0, "Please enter a positive monthly amount").optional().default(0),
+  facilityArrangementEndDate: z.string().optional(),
+  comparableMarketRent: z.coerce.number(numMsg("comparable market rent")).min(0, "Please enter a positive amount").optional().default(0),
+  hasWrittenAgreement: z.boolean().optional().default(false),
+  monthlyFacilityAllocation: z.coerce.number(numMsg("monthly facility allocation")).min(0, "Please enter a positive amount").optional().default(0),
   hasBookkeeper: z.boolean().optional().default(false),
   bookkeeperMonthlyCost: z.coerce.number(numMsg("bookkeeper cost")).min(0, "Please enter a positive dollar amount").optional().default(0),
   hasLawyer: z.boolean().optional().default(false),

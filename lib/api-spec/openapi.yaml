@@ -1133,7 +1133,7 @@ components:
           type: string
         ownershipType:
           type: string
-          enum: [own, rent]
+          enum: [own, rent, donated, home_based]
         propertyTaxAnnual:
           type: number
         hasMortgage:
@@ -1159,6 +1159,14 @@ components:
         nnnUtilities:
           type: number
         estimatedMonthlyFacilityBudget:
+          type: number
+        facilityArrangementEndDate:
+          type: string
+        comparableMarketRent:
+          type: number
+        hasWrittenAgreement:
+          type: boolean
+        monthlyFacilityAllocation:
           type: number
         gradeBandEnrollment:
           type: object

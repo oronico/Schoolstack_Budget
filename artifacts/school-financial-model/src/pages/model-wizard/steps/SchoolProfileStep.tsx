@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit } from "../schema";
 
@@ -267,6 +267,7 @@ export function SchoolProfileStep() {
   const ownershipType = watch("schoolProfile.ownershipType");
   const isNNNLease = watch("schoolProfile.isNNNLease");
   const hasMortgage = watch("schoolProfile.hasMortgage");
+  const estimatedFacilityBudget = watch("schoolProfile.estimatedMonthlyFacilityBudget");
   const forProfit = isForProfit(entityType);
 
   const isCharter = schoolType === "charter_school";
@@ -329,11 +330,36 @@ export function SchoolProfileStep() {
         setValue("schoolProfile.nnnCamCharges", 0, { shouldDirty: true });
         setValue("schoolProfile.nnnMaintenance", 0, { shouldDirty: true });
         setValue("schoolProfile.nnnUtilities", 0, { shouldDirty: true });
+        setValue("schoolProfile.facilityArrangementEndDate", undefined, { shouldDirty: true });
+        setValue("schoolProfile.comparableMarketRent", 0, { shouldDirty: true });
+        setValue("schoolProfile.monthlyFacilityAllocation", 0, { shouldDirty: true });
+        setValue("schoolProfile.hasWrittenAgreement", false, { shouldDirty: true });
       }
       if (ownershipType === "rent") {
         setValue("schoolProfile.propertyTaxAnnual", 0, { shouldDirty: true });
         setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
         setValue("schoolProfile.mortgageMonthlyPayment", 0, { shouldDirty: true });
+        setValue("schoolProfile.facilityArrangementEndDate", undefined, { shouldDirty: true });
+        setValue("schoolProfile.comparableMarketRent", 0, { shouldDirty: true });
+        setValue("schoolProfile.monthlyFacilityAllocation", 0, { shouldDirty: true });
+        setValue("schoolProfile.hasWrittenAgreement", false, { shouldDirty: true });
+      }
+      if (ownershipType === "donated") {
+        setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
+        setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
+        setValue("schoolProfile.propertyTaxAnnual", 0, { shouldDirty: true });
+        setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
+        setValue("schoolProfile.mortgageMonthlyPayment", 0, { shouldDirty: true });
+        setValue("schoolProfile.monthlyFacilityAllocation", 0, { shouldDirty: true });
+      }
+      if (ownershipType === "home_based") {
+        setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
+        setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
+        setValue("schoolProfile.propertyTaxAnnual", 0, { shouldDirty: true });
+        setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
+        setValue("schoolProfile.mortgageMonthlyPayment", 0, { shouldDirty: true });
+        setValue("schoolProfile.facilityArrangementEndDate", undefined, { shouldDirty: true });
+        setValue("schoolProfile.comparableMarketRent", 0, { shouldDirty: true });
       }
       prevOwnership.current = ownershipType;
     }
@@ -495,13 +521,15 @@ export function SchoolProfileStep() {
               type="number"
               placeholder="2020"
             />
-            <FormInput 
-              name="schoolProfile.currentStudents" 
-              label="Current Enrollment" 
-              type="number"
-              placeholder="0"
-              helperText="Number of students currently enrolled"
-            />
+            {operatingYear !== "first_year" && (
+              <FormInput 
+                name="schoolProfile.currentStudents" 
+                label="Current Enrollment" 
+                type="number"
+                placeholder="0"
+                helperText="Number of students currently enrolled"
+              />
+            )}
           </>
         )}
 
@@ -535,9 +563,9 @@ export function SchoolProfileStep() {
               <div className="flex items-start gap-3">
                 <HelpCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-foreground">
-                  <span className="font-semibold">No worries - an estimate is fine.</span>{" "}
+                  <span className="font-semibold">No worries — an estimate is fine.</span>{" "}
                   {schoolType && FACILITY_BENCHMARKS[schoolType]
-                    ? `Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${FACILITY_BENCHMARKS[schoolType]} for rent.`
+                    ? `Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${FACILITY_BENCHMARKS[schoolType]} for facility costs.`
                     : "Most small schools budget $2,000–$8,000/month for facility costs."}
                 </div>
               </div>
@@ -549,6 +577,14 @@ export function SchoolProfileStep() {
                 placeholder="3000"
                 helperText="Your best guess for monthly rent + utilities. We'll flag this as an estimate in your model."
               />
+              {estimatedFacilityBudget === 0 && (
+                <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    A $0 facility budget means your model assumes free space indefinitely. That's rare — most programs have some facility cost, even if it's modest. Consider what you'd pay if your current arrangement changed.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -582,24 +618,29 @@ export function SchoolProfileStep() {
               </div>
 
               <div>
-                <h4 className="text-sm font-bold text-foreground mb-3">Do you own or rent your space?</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <RadioCard
-                    value="own"
-                    selected={ownershipType === "own"}
-                    onSelect={() => setValue("schoolProfile.ownershipType", "own", { shouldDirty: true })}
-                    icon={<Home className="h-5 w-5" />}
-                    title="We own our space"
-                    description="Purchased property or building"
-                  />
-                  <RadioCard
-                    value="rent"
-                    selected={ownershipType === "rent"}
-                    onSelect={() => setValue("schoolProfile.ownershipType", "rent", { shouldDirty: true })}
-                    icon={<Key className="h-5 w-5" />}
-                    title="We rent / lease"
-                    description="Renting or leasing a space"
-                  />
+                <h4 className="text-sm font-bold text-foreground mb-3">What's your facility arrangement?</h4>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { value: "own" as const, icon: <Home className="h-4 w-4" />, label: "We own our space" },
+                    { value: "rent" as const, icon: <Key className="h-4 w-4" />, label: "We rent / lease" },
+                    { value: "donated" as const, icon: <Gift className="h-4 w-4" />, label: "Donated or no-cost space" },
+                    { value: "home_based" as const, icon: <Sprout className="h-4 w-4" />, label: "Home-based program" },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setValue("schoolProfile.ownershipType", opt.value, { shouldDirty: true })}
+                      className={cn(
+                        "inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all",
+                        ownershipType === opt.value
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                      )}
+                    >
+                      {opt.icon}
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -722,6 +763,79 @@ export function SchoolProfileStep() {
                   )}
                 </div>
               )}
+
+              {ownershipType === "donated" && (
+                <div className="rounded-2xl border border-border bg-secondary/30 p-5 space-y-5">
+                  <div className="flex items-start gap-3">
+                    <Gift className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-foreground">
+                      <span className="font-semibold">That's a great start.</span> Let's make sure your plan accounts for what happens when this arrangement changes — being prepared is what separates thriving programs from vulnerable ones.
+                    </div>
+                  </div>
+
+                  <FormCheckbox
+                    name="schoolProfile.hasWrittenAgreement"
+                    label="We have a written agreement for this space"
+                    helperText="Even informal arrangements benefit from a simple written agreement. It protects both parties and shows you've thought through the details."
+                  />
+
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground mb-2">When does this arrangement end?</h4>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      If there's no set end date, that's okay — but it's smart to plan for what rent would cost if things change.
+                    </p>
+                    <FormInput
+                      name="schoolProfile.facilityArrangementEndDate"
+                      label="Arrangement End Date"
+                      type="month"
+                      helperText="Leave blank if the arrangement is indefinite"
+                    />
+                  </div>
+
+                  <div>
+                    <FormInput
+                      name="schoolProfile.comparableMarketRent"
+                      label="What would comparable rent cost for this space?"
+                      type="number"
+                      prefix="$"
+                      placeholder="3000"
+                      helperText={schoolType && FACILITY_BENCHMARKS[schoolType]
+                        ? `Look up similar spaces in your area. Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s pay around ${FACILITY_BENCHMARKS[schoolType]}.`
+                        : "Look up similar spaces in your area. This helps your model show what it would take to sustain the school independently."}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {ownershipType === "home_based" && (
+                <div className="rounded-2xl border border-border bg-secondary/30 p-5 space-y-5">
+                  <div className="flex items-start gap-3">
+                    <Sprout className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-foreground">
+                      <span className="font-semibold">Running from home keeps costs low</span> — but there are still real costs to account for. Being honest about them now means fewer surprises later.
+                    </div>
+                  </div>
+
+                  <div>
+                    <FormInput
+                      name="schoolProfile.monthlyFacilityAllocation"
+                      label="Monthly Facility Allocation"
+                      type="number"
+                      prefix="$"
+                      placeholder="500"
+                      helperText={schoolType && FACILITY_BENCHMARKS[schoolType]
+                        ? `Think about your share of mortgage/rent, utilities, insurance, internet, and wear-and-tear. Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${FACILITY_BENCHMARKS[schoolType]}, even when home-based.`
+                        : "Think about your share of mortgage/rent, utilities, insurance, internet, and wear-and-tear on the space. Even a modest allocation makes your budget more realistic."}
+                    />
+                  </div>
+
+                  <FormCheckbox
+                    name="schoolProfile.hasWrittenAgreement"
+                    label="We have a written use agreement for this space"
+                    helperText="A simple agreement — even with yourself — clarifies what space is dedicated to the program and protects you if questions arise."
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -785,7 +899,7 @@ export function SchoolProfileStep() {
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Current Year Projections</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Your current year numbers give us real data to pressure test your projections and build a stronger financial story for lenders.
+            Knowing where you stand right now helps us build projections grounded in reality — not just hope. Be honest here; it makes the whole model stronger.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput

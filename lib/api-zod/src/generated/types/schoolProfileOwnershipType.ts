@@ -12,4 +12,6 @@ export type SchoolProfileOwnershipType =
 export const SchoolProfileOwnershipType = {
   own: "own",
   rent: "rent",
+  donated: "donated",
+  home_based: "home_based",
 } as const;

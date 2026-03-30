@@ -40,6 +40,10 @@ interface SchoolProfile {
   nnnMaintenance?: number;
   nnnUtilities?: number;
   estimatedMonthlyFacilityBudget?: number;
+  facilityArrangementEndDate?: string;
+  comparableMarketRent?: number;
+  hasWrittenAgreement?: boolean;
+  monthlyFacilityAllocation?: number;
   gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
   gradeBandPerPupil?: { k5: number; m68: number; h912: number };
   enrollmentRevenueMethod?: string;
@@ -619,6 +623,27 @@ function computeSchoolProfileFacilityOverlay(
     }
   }
 
+  if (sp.ownershipType === "donated") {
+    const marketRent = sp.comparableMarketRent || 0;
+    if (marketRent > 0 && sp.facilityArrangementEndDate) {
+      const endDate = new Date(sp.facilityArrangementEndDate);
+      const currentYear = new Date().getFullYear();
+      const projectionStartYear = Math.max(sp.openingYear || currentYear, currentYear);
+      const endYear = endDate.getFullYear();
+      const yearsUntilEnd = endYear - projectionStartYear;
+      if (yearIndex >= yearsUntilEnd && yearsUntilEnd >= 0) {
+        result.rent = marketRent * 12 * pf;
+      }
+    }
+  }
+
+  if (sp.ownershipType === "home_based") {
+    const allocation = sp.monthlyFacilityAllocation || 0;
+    if (allocation > 0) {
+      result.estimatedBudget = allocation * 12 * pf;
+    }
+  }
+
   result.total = result.rent + result.nnnCam + result.nnnMaintenance + result.nnnUtilities + result.propertyTax + result.mortgage + result.estimatedBudget;
   return result;
 }
@@ -631,6 +656,12 @@ function hasSchoolProfileFacilityData(sp?: SchoolProfile): boolean {
     const hasPropertyTax = (sp.propertyTaxAnnual || 0) > 0;
     const hasMortgage = sp.hasMortgage && (sp.mortgageMonthlyPayment || 0) > 0;
     if (hasPropertyTax || hasMortgage) return true;
+  }
+  if (sp.locationSecured === true && sp.ownershipType === "donated") {
+    return true;
+  }
+  if (sp.locationSecured === true && sp.ownershipType === "home_based") {
+    return (sp.monthlyFacilityAllocation || 0) > 0;
   }
   return false;
 }
