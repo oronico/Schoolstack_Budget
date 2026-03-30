@@ -220,6 +220,32 @@ export const CreateModelBody = zod.object({
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
+        facilityPhases: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              ownershipType: zod.enum(["own", "rent", "donated", "home_based"]),
+              startYear: zod.number(),
+              endYear: zod.number(),
+              monthlyRent: zod.number().optional(),
+              annualRentEscalation: zod.number().optional(),
+              postLeaseRenewalBump: zod.number().optional(),
+              leaseExpirationMonth: zod.number().optional(),
+              leaseExpirationYear: zod.number().optional(),
+              isNNNLease: zod.boolean().optional(),
+              nnnCamCharges: zod.number().optional(),
+              nnnMaintenance: zod.number().optional(),
+              nnnUtilities: zod.number().optional(),
+              propertyTaxAnnual: zod.number().optional(),
+              hasMortgage: zod.boolean().optional(),
+              mortgageMonthlyPayment: zod.number().optional(),
+              facilityArrangementEndDate: zod.string().optional(),
+              comparableMarketRent: zod.number().optional(),
+              hasWrittenAgreement: zod.boolean().optional(),
+              monthlyFacilityAllocation: zod.number().optional(),
+            }),
+          )
+          .optional(),
       })
       .optional(),
     enrollment: zod
@@ -608,6 +634,32 @@ export const GetModelResponse = zod.object({
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
+          .optional(),
+        facilityPhases: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              ownershipType: zod.enum(["own", "rent", "donated", "home_based"]),
+              startYear: zod.number(),
+              endYear: zod.number(),
+              monthlyRent: zod.number().optional(),
+              annualRentEscalation: zod.number().optional(),
+              postLeaseRenewalBump: zod.number().optional(),
+              leaseExpirationMonth: zod.number().optional(),
+              leaseExpirationYear: zod.number().optional(),
+              isNNNLease: zod.boolean().optional(),
+              nnnCamCharges: zod.number().optional(),
+              nnnMaintenance: zod.number().optional(),
+              nnnUtilities: zod.number().optional(),
+              propertyTaxAnnual: zod.number().optional(),
+              hasMortgage: zod.boolean().optional(),
+              mortgageMonthlyPayment: zod.number().optional(),
+              facilityArrangementEndDate: zod.string().optional(),
+              comparableMarketRent: zod.number().optional(),
+              hasWrittenAgreement: zod.boolean().optional(),
+              monthlyFacilityAllocation: zod.number().optional(),
+            }),
+          )
           .optional(),
       })
       .optional(),
@@ -999,6 +1051,32 @@ export const UpdateModelBody = zod.object({
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
+        facilityPhases: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              ownershipType: zod.enum(["own", "rent", "donated", "home_based"]),
+              startYear: zod.number(),
+              endYear: zod.number(),
+              monthlyRent: zod.number().optional(),
+              annualRentEscalation: zod.number().optional(),
+              postLeaseRenewalBump: zod.number().optional(),
+              leaseExpirationMonth: zod.number().optional(),
+              leaseExpirationYear: zod.number().optional(),
+              isNNNLease: zod.boolean().optional(),
+              nnnCamCharges: zod.number().optional(),
+              nnnMaintenance: zod.number().optional(),
+              nnnUtilities: zod.number().optional(),
+              propertyTaxAnnual: zod.number().optional(),
+              hasMortgage: zod.boolean().optional(),
+              mortgageMonthlyPayment: zod.number().optional(),
+              facilityArrangementEndDate: zod.string().optional(),
+              comparableMarketRent: zod.number().optional(),
+              hasWrittenAgreement: zod.boolean().optional(),
+              monthlyFacilityAllocation: zod.number().optional(),
+            }),
+          )
+          .optional(),
       })
       .optional(),
     enrollment: zod
@@ -1380,6 +1458,32 @@ export const UpdateModelResponse = zod.object({
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
+          .optional(),
+        facilityPhases: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              ownershipType: zod.enum(["own", "rent", "donated", "home_based"]),
+              startYear: zod.number(),
+              endYear: zod.number(),
+              monthlyRent: zod.number().optional(),
+              annualRentEscalation: zod.number().optional(),
+              postLeaseRenewalBump: zod.number().optional(),
+              leaseExpirationMonth: zod.number().optional(),
+              leaseExpirationYear: zod.number().optional(),
+              isNNNLease: zod.boolean().optional(),
+              nnnCamCharges: zod.number().optional(),
+              nnnMaintenance: zod.number().optional(),
+              nnnUtilities: zod.number().optional(),
+              propertyTaxAnnual: zod.number().optional(),
+              hasMortgage: zod.boolean().optional(),
+              mortgageMonthlyPayment: zod.number().optional(),
+              facilityArrangementEndDate: zod.string().optional(),
+              comparableMarketRent: zod.number().optional(),
+              hasWrittenAgreement: zod.boolean().optional(),
+              monthlyFacilityAllocation: zod.number().optional(),
+            }),
+          )
           .optional(),
       })
       .optional(),
@@ -1791,6 +1895,32 @@ export const ArchiveModelResponse = zod.object({
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
+          .optional(),
+        facilityPhases: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              ownershipType: zod.enum(["own", "rent", "donated", "home_based"]),
+              startYear: zod.number(),
+              endYear: zod.number(),
+              monthlyRent: zod.number().optional(),
+              annualRentEscalation: zod.number().optional(),
+              postLeaseRenewalBump: zod.number().optional(),
+              leaseExpirationMonth: zod.number().optional(),
+              leaseExpirationYear: zod.number().optional(),
+              isNNNLease: zod.boolean().optional(),
+              nnnCamCharges: zod.number().optional(),
+              nnnMaintenance: zod.number().optional(),
+              nnnUtilities: zod.number().optional(),
+              propertyTaxAnnual: zod.number().optional(),
+              hasMortgage: zod.boolean().optional(),
+              mortgageMonthlyPayment: zod.number().optional(),
+              facilityArrangementEndDate: zod.string().optional(),
+              comparableMarketRent: zod.number().optional(),
+              hasWrittenAgreement: zod.boolean().optional(),
+              monthlyFacilityAllocation: zod.number().optional(),
+            }),
+          )
           .optional(),
       })
       .optional(),

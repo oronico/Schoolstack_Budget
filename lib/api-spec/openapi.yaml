@@ -1223,6 +1223,59 @@ components:
         lendingLabIntent:
           type: string
           enum: [plan_to_apply, want_to_understand, budget_only]
+        facilityPhases:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacilityPhase"
+    FacilityPhase:
+      type: object
+      properties:
+        id:
+          type: string
+        ownershipType:
+          type: string
+          enum: [own, rent, donated, home_based]
+        startYear:
+          type: integer
+        endYear:
+          type: integer
+        monthlyRent:
+          type: number
+        annualRentEscalation:
+          type: number
+        postLeaseRenewalBump:
+          type: number
+        leaseExpirationMonth:
+          type: integer
+        leaseExpirationYear:
+          type: integer
+        isNNNLease:
+          type: boolean
+        nnnCamCharges:
+          type: number
+        nnnMaintenance:
+          type: number
+        nnnUtilities:
+          type: number
+        propertyTaxAnnual:
+          type: number
+        hasMortgage:
+          type: boolean
+        mortgageMonthlyPayment:
+          type: number
+        facilityArrangementEndDate:
+          type: string
+        comparableMarketRent:
+          type: number
+        hasWrittenAgreement:
+          type: boolean
+        monthlyFacilityAllocation:
+          type: number
+      required:
+        - id
+        - ownershipType
+        - startYear
+        - endYear
     Enrollment:
       type: object
       properties:

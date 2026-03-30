@@ -402,6 +402,28 @@ export interface SchoolProfile {
   ecoDisCount?: number[];
   enrollmentGrowthRate?: number;
   stateFundingMethodology?: string;
+  facilityPhases?: Array<{
+    id: string;
+    ownershipType: string;
+    startYear: number;
+    endYear: number;
+    monthlyRent?: number;
+    annualRentEscalation?: number;
+    postLeaseRenewalBump?: number;
+    leaseExpirationMonth?: number;
+    leaseExpirationYear?: number;
+    isNNNLease?: boolean;
+    nnnCamCharges?: number;
+    nnnMaintenance?: number;
+    nnnUtilities?: number;
+    propertyTaxAnnual?: number;
+    hasMortgage?: boolean;
+    mortgageMonthlyPayment?: number;
+    facilityArrangementEndDate?: string;
+    comparableMarketRent?: number;
+    hasWrittenAgreement?: boolean;
+    monthlyFacilityAllocation?: number;
+  }>;
 }
 
 export interface Enrollment { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number; retentionRate?: number; }

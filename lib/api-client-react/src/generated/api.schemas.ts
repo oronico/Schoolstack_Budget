@@ -448,6 +448,39 @@ export const SchoolProfileLendingLabIntent = {
   budget_only: "budget_only",
 } as const;
 
+export type FacilityPhaseOwnershipType =
+  (typeof FacilityPhaseOwnershipType)[keyof typeof FacilityPhaseOwnershipType];
+
+export const FacilityPhaseOwnershipType = {
+  own: "own",
+  rent: "rent",
+  donated: "donated",
+  home_based: "home_based",
+} as const;
+
+export interface FacilityPhase {
+  id: string;
+  ownershipType: FacilityPhaseOwnershipType;
+  startYear: number;
+  endYear: number;
+  monthlyRent?: number;
+  annualRentEscalation?: number;
+  postLeaseRenewalBump?: number;
+  leaseExpirationMonth?: number;
+  leaseExpirationYear?: number;
+  isNNNLease?: boolean;
+  nnnCamCharges?: number;
+  nnnMaintenance?: number;
+  nnnUtilities?: number;
+  propertyTaxAnnual?: number;
+  hasMortgage?: boolean;
+  mortgageMonthlyPayment?: number;
+  facilityArrangementEndDate?: string;
+  comparableMarketRent?: number;
+  hasWrittenAgreement?: boolean;
+  monthlyFacilityAllocation?: number;
+}
+
 export type SchoolProfileGradeBandEnrollment = {
   k5?: number[];
   m68?: number[];
@@ -511,6 +544,7 @@ export interface SchoolProfile {
   stateFundingMethodology?: string;
   debtIncluded?: boolean;
   lendingLabIntent?: SchoolProfileLendingLabIntent;
+  facilityPhases?: FacilityPhase[];
 }
 
 export interface Enrollment {

@@ -77,6 +77,28 @@ interface SchoolProfile {
   charterDepositTiming?: string;
   priorYearADM?: number;
   priorYearADA?: number;
+  facilityPhases?: Array<{
+    id: string;
+    ownershipType: string;
+    startYear: number;
+    endYear: number;
+    monthlyRent?: number;
+    annualRentEscalation?: number;
+    postLeaseRenewalBump?: number;
+    leaseExpirationMonth?: number;
+    leaseExpirationYear?: number;
+    isNNNLease?: boolean;
+    nnnCamCharges?: number;
+    nnnMaintenance?: number;
+    nnnUtilities?: number;
+    propertyTaxAnnual?: number;
+    hasMortgage?: boolean;
+    mortgageMonthlyPayment?: number;
+    facilityArrangementEndDate?: string;
+    comparableMarketRent?: number;
+    hasWrittenAgreement?: boolean;
+    monthlyFacilityAllocation?: number;
+  }>;
 }
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
@@ -759,10 +781,40 @@ function buildAssumptions(
   ws.getCell(r, 2).value = "Amount"; ws.getCell(r, 3).value = "Frequency";
   for (let c = 2; c <= 3; c++) ws.getCell(r, c).font = SECTION_FONT;
 
-  r++; ws.getCell(r, 1).value = "Ownership Type"; dc(ws.getCell(r, 1));
-  ws.getCell(r, 2).value = ({ own: "Own", rent: "Rent", donated: "Donated / No-Cost", home_based: "Home-Based" } as Record<string, string>)[sp.ownershipType || ""] || "N/A"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+  const ownershipLabels: Record<string, string> = { own: "Own", rent: "Rent", donated: "Donated / No-Cost", home_based: "Home-Based" };
 
-  if (sp.ownershipType === "own") {
+  if (sp.facilityPhases && sp.facilityPhases.length > 0) {
+    r++; ws.getCell(r, 1).value = "Facility Timeline"; dc(ws.getCell(r, 1));
+    ws.getCell(r, 2).value = `${sp.facilityPhases.length} phase(s)`; dc(ws.getCell(r, 2));
+    for (const phase of sp.facilityPhases) {
+      r++; ws.getCell(r, 1).value = `  Phase: ${ownershipLabels[phase.ownershipType] || phase.ownershipType}`; bc(ws.getCell(r, 1));
+      ws.getCell(r, 2).value = `Year ${phase.startYear}–${phase.endYear}`; dc(ws.getCell(r, 2));
+      if (phase.ownershipType === "rent" && (phase.monthlyRent || 0) > 0) {
+        r++; ws.getCell(r, 1).value = "    Monthly Rent"; dc(ws.getCell(r, 1));
+        ws.getCell(r, 2).value = phase.monthlyRent || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
+      }
+      if (phase.ownershipType === "own" && phase.hasMortgage) {
+        r++; ws.getCell(r, 1).value = "    Mortgage Payment"; dc(ws.getCell(r, 1));
+        ws.getCell(r, 2).value = phase.mortgageMonthlyPayment || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
+        ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
+      }
+      if (phase.ownershipType === "donated" && (phase.comparableMarketRent || 0) > 0) {
+        r++; ws.getCell(r, 1).value = "    Comparable Market Rent"; dc(ws.getCell(r, 1));
+        ws.getCell(r, 2).value = phase.comparableMarketRent || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
+        ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
+      }
+      if (phase.ownershipType === "home_based" && (phase.monthlyFacilityAllocation || 0) > 0) {
+        r++; ws.getCell(r, 1).value = "    Facility Allocation"; dc(ws.getCell(r, 1));
+        ws.getCell(r, 2).value = phase.monthlyFacilityAllocation || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
+        ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
+      }
+    }
+  } else {
+  r++; ws.getCell(r, 1).value = "Ownership Type"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 2).value = ownershipLabels[sp.ownershipType || ""] || "N/A"; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
+  }
+
+  if (!sp.facilityPhases?.length && sp.ownershipType === "own") {
     r++; ws.getCell(r, 1).value = "Property Tax (Annual)"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = sp.propertyTaxAnnual || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
     if (sp.hasMortgage) {
@@ -770,7 +822,7 @@ function buildAssumptions(
       ws.getCell(r, 2).value = sp.mortgageMonthlyPayment || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
       ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
     }
-  } else if (sp.ownershipType === "rent") {
+  } else if (!sp.facilityPhases?.length && sp.ownershipType === "rent") {
     r++; ws.getCell(r, 1).value = "Monthly Rent"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = sp.monthlyRent || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
     ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
@@ -784,7 +836,7 @@ function buildAssumptions(
       r++; ws.getCell(r, 1).value = "Post-Lease Renewal Bump"; dc(ws.getCell(r, 1));
       ws.getCell(r, 2).value = (sp.postLeaseRenewalBump || 0) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
     }
-  } else if (sp.ownershipType === "donated") {
+  } else if (!sp.facilityPhases?.length && sp.ownershipType === "donated") {
     r++; ws.getCell(r, 1).value = "Facility Arrangement"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = "Donated / No-Cost Space"; dc(ws.getCell(r, 2));
     r++; ws.getCell(r, 1).value = "Written Agreement"; dc(ws.getCell(r, 1));
@@ -796,7 +848,7 @@ function buildAssumptions(
     r++; ws.getCell(r, 1).value = "Comparable Market Rent"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = sp.comparableMarketRent || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
     ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
-  } else if (sp.ownershipType === "home_based") {
+  } else if (!sp.facilityPhases?.length && sp.ownershipType === "home_based") {
     r++; ws.getCell(r, 1).value = "Facility Arrangement"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = "Home-Based Program"; dc(ws.getCell(r, 2));
     r++; ws.getCell(r, 1).value = "Monthly Facility Allocation"; dc(ws.getCell(r, 1));
@@ -806,7 +858,7 @@ function buildAssumptions(
     ws.getCell(r, 2).value = sp.hasWrittenAgreement ? "Yes" : "No"; dc(ws.getCell(r, 2));
   }
 
-  if (sp.isNNNLease) {
+  if (!sp.facilityPhases?.length && sp.isNNNLease) {
     r++; ws.getCell(r, 1).value = "CAM / Common Area Charges"; dc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = sp.nnnCamCharges || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
     ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));

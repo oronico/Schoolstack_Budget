@@ -445,6 +445,14 @@ function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
     ["Location", sp.locationSecured ? `${sp.facilityStreet || ""}, ${sp.facilityCity || ""}, ${sp.facilityState || ""} ${sp.facilityZip || ""}`.trim() : "Not yet secured"],
     ["Facility", ({ own: "Owned", rent: "Leased", donated: "Donated / No-Cost", home_based: "Home-Based" } as Record<string, string>)[sp.ownershipType || ""] || (sp.locationSecured ? "Secured" : "Not yet secured")],
   ];
+  const ownershipLabelsUW: Record<string, string> = { own: "Owned", rent: "Leased", donated: "Donated / No-Cost", home_based: "Home-Based" };
+  if (sp.facilityPhases && sp.facilityPhases.length > 0) {
+    entries.pop();
+    entries.push(["Facility Timeline", `${sp.facilityPhases.length} phase(s)`]);
+    for (const phase of sp.facilityPhases) {
+      entries.push([`  Phase: ${ownershipLabelsUW[phase.ownershipType] || phase.ownershipType}`, `Year ${phase.startYear}–${phase.endYear}`]);
+    }
+  }
   for (const [label, val] of entries) {
     ws.getCell(r, 1).value = label; bc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = val; dc(ws.getCell(r, 2));

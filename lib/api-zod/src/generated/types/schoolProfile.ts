@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { FacilityPhase } from "./facilityPhase";
 import type { FundingProfile } from "./fundingProfile";
 import type { SchoolProfileCharterDepositTiming } from "./schoolProfileCharterDepositTiming";
 import type { SchoolProfileEnrollmentRevenueMethod } from "./schoolProfileEnrollmentRevenueMethod";
@@ -67,4 +68,5 @@ export interface SchoolProfile {
   stateFundingMethodology?: string;
   debtIncluded?: boolean;
   lendingLabIntent?: SchoolProfileLendingLabIntent;
+  facilityPhases?: FacilityPhase[];
 }

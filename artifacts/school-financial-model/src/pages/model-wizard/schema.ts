@@ -69,6 +69,29 @@ export const ownershipTypeSchema = z.enum(["own", "rent", "donated", "home_based
   invalid_type_error: "Please select a valid facility arrangement",
 });
 
+export const facilityPhaseSchema = z.object({
+  id: z.string(),
+  ownershipType: ownershipTypeSchema,
+  startYear: z.coerce.number().min(1).max(5).default(1),
+  endYear: z.coerce.number().min(1).max(5).default(5),
+  monthlyRent: z.coerce.number().min(0).optional().default(0),
+  annualRentEscalation: z.coerce.number().min(0).max(100).optional().default(3),
+  postLeaseRenewalBump: z.coerce.number().min(0).max(100).optional().default(15),
+  leaseExpirationMonth: z.coerce.number().min(1).max(12).optional(),
+  leaseExpirationYear: z.coerce.number().min(2024).max(2050).optional(),
+  isNNNLease: z.boolean().optional().default(false),
+  nnnCamCharges: z.coerce.number().min(0).optional().default(0),
+  nnnMaintenance: z.coerce.number().min(0).optional().default(0),
+  nnnUtilities: z.coerce.number().min(0).optional().default(0),
+  propertyTaxAnnual: z.coerce.number().min(0).optional().default(0),
+  hasMortgage: z.boolean().optional().default(false),
+  mortgageMonthlyPayment: z.coerce.number().min(0).optional().default(0),
+  facilityArrangementEndDate: z.string().optional(),
+  comparableMarketRent: z.coerce.number().min(0).optional().default(0),
+  hasWrittenAgreement: z.boolean().optional().default(false),
+  monthlyFacilityAllocation: z.coerce.number().min(0).optional().default(0),
+});
+
 export const schoolProfileSchema = z.object({
   schoolName: z.string().min(1, "We'll need your school's name to continue"),
   state: z.string().min(1, "Please select the state where your school is located"),
@@ -153,6 +176,7 @@ export const schoolProfileSchema = z.object({
   schoolFteCount: z.coerce.number().min(0).optional(),
   newFteCount: z.coerce.number().min(0).optional(),
   stateFundingMethodology: z.enum(["ada", "adm", "single_count_day", "multiple_count_dates", "single_count_period", "multiple_count_periods", "other"]).optional(),
+  facilityPhases: z.array(facilityPhaseSchema).optional(),
 });
 
 export const priorYearSnapshotSchema = z.object({
@@ -386,6 +410,7 @@ export type FundingProfile = z.infer<typeof fundingProfileSchema>;
 export type SchoolType = z.infer<typeof schoolTypeSchema>;
 export type EntityType = z.infer<typeof entityTypeSchema>;
 export type OwnershipType = z.infer<typeof ownershipTypeSchema>;
+export type FacilityPhase = z.infer<typeof facilityPhaseSchema>;
 export type TuitionTierType = z.infer<typeof tuitionTierTypeSchema>;
 export type TuitionTier = z.infer<typeof tuitionTierSchema>;
 export type Program = z.infer<typeof programSchema>;

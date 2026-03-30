@@ -29,6 +29,8 @@ export * from "./expenseCategory";
 export * from "./expenseDriverType";
 export * from "./expenseRow";
 export * from "./facilities";
+export * from "./facilityPhase";
+export * from "./facilityPhaseOwnershipType";
 export * from "./financialModel";
 export * from "./financialModelSummary";
 export * from "./forgotPasswordRequest";

@@ -253,6 +253,185 @@ const LEASE_EXPIRATION_YEARS = Array.from({ length: 15 }, (_, i) => ({
   label: String(CURRENT_YEAR + i),
 }));
 
+const YEAR_OPTIONS = [
+  { value: "1", label: "Year 1" },
+  { value: "2", label: "Year 2" },
+  { value: "3", label: "Year 3" },
+  { value: "4", label: "Year 4" },
+  { value: "5", label: "Year 5" },
+];
+
+const OWNERSHIP_PILLS = [
+  { value: "own" as const, label: "Own" },
+  { value: "rent" as const, label: "Rent / Lease" },
+  { value: "donated" as const, label: "Donated" },
+  { value: "home_based" as const, label: "Home-based" },
+];
+
+function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entityType }: {
+  index: number;
+  phase: { id: string; ownershipType: string; startYear: number; endYear: number; [key: string]: unknown };
+  onRemove: () => void;
+  onUpdate: (field: string, value: unknown) => void;
+  schoolType?: string;
+  entityType?: string;
+}) {
+  const forProfit = entityType ? !["nonprofit_501c3"].includes(entityType) : false;
+  const isNNN = phase.isNNNLease as boolean;
+  const hasMort = phase.hasMortgage as boolean;
+  const benchmarkText = schoolType && FACILITY_BENCHMARKS[schoolType] ? FACILITY_BENCHMARKS[schoolType] : null;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 space-y-4 relative">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-bold">{index + 1}</span>
+          <h4 className="text-sm font-bold text-foreground">Phase {index + 1}</h4>
+        </div>
+        {index > 0 && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 max-w-xs">
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Starts</label>
+          <select
+            value={phase.startYear}
+            onChange={e => onUpdate("startYear", Number(e.target.value))}
+            className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          >
+            {YEAR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Ends</label>
+          <select
+            value={phase.endYear}
+            onChange={e => onUpdate("endYear", Number(e.target.value))}
+            className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+          >
+            {YEAR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-muted-foreground mb-2">Arrangement</label>
+        <div className="flex flex-wrap gap-2">
+          {OWNERSHIP_PILLS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onUpdate("ownershipType", opt.value)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+                phase.ownershipType === opt.value
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/40"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {phase.ownershipType === "rent" && (
+        <div className="space-y-3 pl-2 border-l-2 border-primary/20">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Monthly Rent</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                <input type="number" value={phase.monthlyRent as number || ""} onChange={e => onUpdate("monthlyRent", Number(e.target.value))} placeholder="5000" className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-1.5 text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Annual Escalation %</label>
+              <input type="number" value={phase.annualRentEscalation as number || ""} onChange={e => onUpdate("annualRentEscalation", Number(e.target.value))} placeholder="3" className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={!!isNNN} onChange={e => onUpdate("isNNNLease", e.target.checked)} className="rounded" />
+            <span className="text-muted-foreground">Triple Net (NNN) lease</span>
+          </label>
+          {isNNN && (
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">CAM/mo</label>
+                <div className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span><input type="number" value={phase.nnnCamCharges as number || ""} onChange={e => onUpdate("nnnCamCharges", Number(e.target.value))} className="w-full rounded-lg border border-border bg-background pl-6 pr-2 py-1.5 text-xs" /></div>
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Maint/mo</label>
+                <div className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span><input type="number" value={phase.nnnMaintenance as number || ""} onChange={e => onUpdate("nnnMaintenance", Number(e.target.value))} className="w-full rounded-lg border border-border bg-background pl-6 pr-2 py-1.5 text-xs" /></div>
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Util/mo</label>
+                <div className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span><input type="number" value={phase.nnnUtilities as number || ""} onChange={e => onUpdate("nnnUtilities", Number(e.target.value))} className="w-full rounded-lg border border-border bg-background pl-6 pr-2 py-1.5 text-xs" /></div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {phase.ownershipType === "own" && (
+        <div className="space-y-3 pl-2 border-l-2 border-primary/20">
+          {forProfit && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Annual Property Tax</label>
+              <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span><input type="number" value={phase.propertyTaxAnnual as number || ""} onChange={e => onUpdate("propertyTaxAnnual", Number(e.target.value))} placeholder="5000" className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-1.5 text-sm" /></div>
+            </div>
+          )}
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={!!hasMort} onChange={e => onUpdate("hasMortgage", e.target.checked)} className="rounded" />
+            <span className="text-muted-foreground">We have a mortgage</span>
+          </label>
+          {hasMort && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Monthly Mortgage Payment</label>
+              <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span><input type="number" value={phase.mortgageMonthlyPayment as number || ""} onChange={e => onUpdate("mortgageMonthlyPayment", Number(e.target.value))} placeholder="2500" className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-1.5 text-sm" /></div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {phase.ownershipType === "donated" && (
+        <div className="space-y-3 pl-2 border-l-2 border-primary/20">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Comparable Market Rent/mo</label>
+            <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span><input type="number" value={phase.comparableMarketRent as number || ""} onChange={e => onUpdate("comparableMarketRent", Number(e.target.value))} placeholder="3000" className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-1.5 text-sm" /></div>
+            {benchmarkText && <p className="text-xs text-muted-foreground mt-1">Typical for your school type: {benchmarkText}</p>}
+          </div>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={!!phase.hasWrittenAgreement} onChange={e => onUpdate("hasWrittenAgreement", e.target.checked)} className="rounded" />
+            <span className="text-muted-foreground">Written agreement in place</span>
+          </label>
+        </div>
+      )}
+
+      {phase.ownershipType === "home_based" && (
+        <div className="space-y-3 pl-2 border-l-2 border-primary/20">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Monthly Facility Allocation</label>
+            <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span><input type="number" value={phase.monthlyFacilityAllocation as number || ""} onChange={e => onUpdate("monthlyFacilityAllocation", Number(e.target.value))} placeholder="500" className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-1.5 text-sm" /></div>
+          </div>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={!!phase.hasWrittenAgreement} onChange={e => onUpdate("hasWrittenAgreement", e.target.checked)} className="rounded" />
+            <span className="text-muted-foreground">Written use agreement in place</span>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SchoolProfileStep() {
   const { watch, setValue } = useFormContext();
   const isPartialFirstYear = watch("schoolProfile.isPartialFirstYear");
@@ -269,6 +448,9 @@ export function SchoolProfileStep() {
   const isNNNLease = watch("schoolProfile.isNNNLease");
   const hasMortgage = watch("schoolProfile.hasMortgage");
   const estimatedFacilityBudget = watch("schoolProfile.estimatedMonthlyFacilityBudget");
+  const comparableMarketRent = watch("schoolProfile.comparableMarketRent");
+  const monthlyFacilityAllocation = watch("schoolProfile.monthlyFacilityAllocation");
+  const facilityPhases = watch("schoolProfile.facilityPhases") as Array<{ id: string; ownershipType: string; startYear: number; endYear: number; [key: string]: unknown }> | undefined;
   const forProfit = isForProfit(entityType);
 
   const isCharter = schoolType === "charter_school";
@@ -301,7 +483,7 @@ export function SchoolProfileStep() {
   useEffect(() => {
     if (legacyEnrollmentMigrated.current) return;
     if (schoolStage === "operating_school" && operatingYear === "first_year") {
-      if (!currentStudents && currentYearEnrollmentLegacy && currentYearEnrollmentLegacy > 0) {
+      if (currentStudents === undefined && currentYearEnrollmentLegacy && currentYearEnrollmentLegacy > 0) {
         setValue("schoolProfile.currentStudents", currentYearEnrollmentLegacy, { shouldDirty: true });
         legacyEnrollmentMigrated.current = true;
       }
@@ -366,6 +548,9 @@ export function SchoolProfileStep() {
       if (ownershipType === "donated") {
         setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
         setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
+        setValue("schoolProfile.nnnCamCharges", 0, { shouldDirty: true });
+        setValue("schoolProfile.nnnMaintenance", 0, { shouldDirty: true });
+        setValue("schoolProfile.nnnUtilities", 0, { shouldDirty: true });
         setValue("schoolProfile.propertyTaxAnnual", 0, { shouldDirty: true });
         setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
         setValue("schoolProfile.mortgageMonthlyPayment", 0, { shouldDirty: true });
@@ -374,6 +559,9 @@ export function SchoolProfileStep() {
       if (ownershipType === "home_based") {
         setValue("schoolProfile.monthlyRent", 0, { shouldDirty: true });
         setValue("schoolProfile.isNNNLease", false, { shouldDirty: true });
+        setValue("schoolProfile.nnnCamCharges", 0, { shouldDirty: true });
+        setValue("schoolProfile.nnnMaintenance", 0, { shouldDirty: true });
+        setValue("schoolProfile.nnnUtilities", 0, { shouldDirty: true });
         setValue("schoolProfile.propertyTaxAnnual", 0, { shouldDirty: true });
         setValue("schoolProfile.hasMortgage", false, { shouldDirty: true });
         setValue("schoolProfile.mortgageMonthlyPayment", 0, { shouldDirty: true });
@@ -822,6 +1010,14 @@ export function SchoolProfileStep() {
                         ? `Look up similar spaces in your area. Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s pay around ${FACILITY_BENCHMARKS[schoolType]}.`
                         : "Look up similar spaces in your area. This helps your model show what it would take to sustain the school independently."}
                     />
+                    {(!comparableMarketRent || comparableMarketRent === 0) && (
+                      <div className="flex items-start gap-2 mt-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800 dark:text-amber-200">
+                          Leaving this at $0 means your model won't show what rent would cost if this arrangement ends. Adding a realistic estimate — even a rough one — makes your plan stronger and helps you prepare.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -846,6 +1042,14 @@ export function SchoolProfileStep() {
                         ? `Think about your share of mortgage/rent, utilities, insurance, internet, and wear-and-tear. Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${FACILITY_BENCHMARKS[schoolType]}, even when home-based.`
                         : "Think about your share of mortgage/rent, utilities, insurance, internet, and wear-and-tear on the space. Even a modest allocation makes your budget more realistic."}
                     />
+                    {(!monthlyFacilityAllocation || monthlyFacilityAllocation === 0) && (
+                      <div className="flex items-start gap-2 mt-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800 dark:text-amber-200">
+                          A $0 facility allocation means your model won't capture real costs like utilities, internet, or space wear-and-tear. Even $200–$500/mo makes your budget more credible to lenders and partners.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <FormCheckbox
@@ -853,6 +1057,156 @@ export function SchoolProfileStep() {
                     label="We have a written use agreement for this space"
                     helperText="A simple agreement — even with yourself — clarifies what space is dedicated to the program and protects you if questions arise."
                   />
+                </div>
+              )}
+
+              {ownershipType && (!facilityPhases || facilityPhases.length === 0) && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentPhase: Record<string, unknown> = {
+                        id: `phase-${Date.now()}-1`,
+                        ownershipType: ownershipType,
+                        startYear: 1,
+                        endYear: 3,
+                        monthlyRent: watch("schoolProfile.monthlyRent") || 0,
+                        annualRentEscalation: watch("schoolProfile.annualRentEscalation") || 3,
+                        postLeaseRenewalBump: watch("schoolProfile.postLeaseRenewalBump") || 15,
+                        isNNNLease: watch("schoolProfile.isNNNLease") || false,
+                        nnnCamCharges: watch("schoolProfile.nnnCamCharges") || 0,
+                        nnnMaintenance: watch("schoolProfile.nnnMaintenance") || 0,
+                        nnnUtilities: watch("schoolProfile.nnnUtilities") || 0,
+                        propertyTaxAnnual: watch("schoolProfile.propertyTaxAnnual") || 0,
+                        hasMortgage: watch("schoolProfile.hasMortgage") || false,
+                        mortgageMonthlyPayment: watch("schoolProfile.mortgageMonthlyPayment") || 0,
+                        facilityArrangementEndDate: watch("schoolProfile.facilityArrangementEndDate"),
+                        comparableMarketRent: watch("schoolProfile.comparableMarketRent") || 0,
+                        hasWrittenAgreement: watch("schoolProfile.hasWrittenAgreement") || false,
+                        monthlyFacilityAllocation: watch("schoolProfile.monthlyFacilityAllocation") || 0,
+                      };
+                      const newPhase = {
+                        id: `phase-${Date.now()}-2`,
+                        ownershipType: "rent",
+                        startYear: 4,
+                        endYear: 5,
+                        monthlyRent: 0,
+                        annualRentEscalation: 3,
+                        postLeaseRenewalBump: 15,
+                        isNNNLease: false,
+                        nnnCamCharges: 0,
+                        nnnMaintenance: 0,
+                        nnnUtilities: 0,
+                        propertyTaxAnnual: 0,
+                        hasMortgage: false,
+                        mortgageMonthlyPayment: 0,
+                        comparableMarketRent: 0,
+                        hasWrittenAgreement: false,
+                        monthlyFacilityAllocation: 0,
+                      };
+                      setValue("schoolProfile.facilityPhases", [currentPhase, newPhase], { shouldDirty: true });
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary border border-primary/30 rounded-xl hover:bg-primary/5 transition-colors"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                    Plan a facility transition
+                  </button>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Many schools evolve their space over 5 years — home-based to donated, donated to lease, lease to own. Add a transition to model that journey.
+                  </p>
+                </div>
+              )}
+
+              {facilityPhases && facilityPhases.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-foreground">Facility Timeline</h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("schoolProfile.facilityPhases", undefined, { shouldDirty: true });
+                      }}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Use single arrangement
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1 mb-2">
+                    {[1, 2, 3, 4, 5].map(yr => {
+                      const phase = facilityPhases.find(p => yr >= p.startYear && yr <= p.endYear);
+                      const color = phase ? ({
+                        own: "bg-emerald-500",
+                        rent: "bg-blue-500",
+                        donated: "bg-amber-500",
+                        home_based: "bg-violet-500",
+                      } as Record<string, string>)[phase.ownershipType] || "bg-gray-400" : "bg-gray-200";
+                      return (
+                        <div key={yr} className="flex-1 flex flex-col items-center gap-1">
+                          <div className={cn("h-2 w-full rounded-full", color)} />
+                          <span className="text-[10px] text-muted-foreground">Y{yr}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {facilityPhases.map((phase, idx) => (
+                    <FacilityPhaseCard
+                      key={phase.id}
+                      index={idx}
+                      phase={phase}
+                      schoolType={schoolType}
+                      entityType={entityType}
+                      onRemove={() => {
+                        const updated = facilityPhases.filter((_, i) => i !== idx);
+                        if (updated.length > 0) {
+                          updated[updated.length - 1] = { ...updated[updated.length - 1], endYear: 5 };
+                        }
+                        setValue("schoolProfile.facilityPhases", updated.length > 0 ? updated : undefined, { shouldDirty: true });
+                      }}
+                      onUpdate={(field, value) => {
+                        const updated = facilityPhases.map((p, i) => i === idx ? { ...p, [field]: value } : p);
+                        setValue("schoolProfile.facilityPhases", updated, { shouldDirty: true });
+                      }}
+                    />
+                  ))}
+
+                  {facilityPhases.length < 5 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const lastPhase = facilityPhases[facilityPhases.length - 1];
+                        const newStart = Math.min((lastPhase?.endYear || 0) + 1, 5);
+                        if (newStart > 5) return;
+                        const updated = facilityPhases.map((p, i) =>
+                          i === facilityPhases.length - 1 ? { ...p, endYear: Math.max(p.startYear, newStart - 1) } : p
+                        );
+                        updated.push({
+                          id: `phase-${Date.now()}`,
+                          ownershipType: "rent",
+                          startYear: newStart,
+                          endYear: 5,
+                          monthlyRent: 0,
+                          annualRentEscalation: 3,
+                          postLeaseRenewalBump: 15,
+                          isNNNLease: false,
+                          nnnCamCharges: 0,
+                          nnnMaintenance: 0,
+                          nnnUtilities: 0,
+                          propertyTaxAnnual: 0,
+                          hasMortgage: false,
+                          mortgageMonthlyPayment: 0,
+                          comparableMarketRent: 0,
+                          hasWrittenAgreement: false,
+                          monthlyFacilityAllocation: 0,
+                        });
+                        setValue("schoolProfile.facilityPhases", updated, { shouldDirty: true });
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-primary border border-dashed border-primary/30 rounded-xl hover:bg-primary/5 transition-colors w-full justify-center"
+                    >
+                      + Add another transition
+                    </button>
+                  )}
                 </div>
               )}
             </div>

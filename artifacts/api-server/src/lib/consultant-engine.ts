@@ -51,6 +51,30 @@ interface SchoolProfile {
   priorYearADM?: number;
   priorYearADA?: number;
   debtIncluded?: boolean;
+  facilityPhases?: FacilityPhase[];
+}
+
+interface FacilityPhase {
+  id: string;
+  ownershipType: string;
+  startYear: number;
+  endYear: number;
+  monthlyRent?: number;
+  annualRentEscalation?: number;
+  postLeaseRenewalBump?: number;
+  leaseExpirationMonth?: number;
+  leaseExpirationYear?: number;
+  isNNNLease?: boolean;
+  nnnCamCharges?: number;
+  nnnMaintenance?: number;
+  nnnUtilities?: number;
+  propertyTaxAnnual?: number;
+  hasMortgage?: boolean;
+  mortgageMonthlyPayment?: number;
+  facilityArrangementEndDate?: string;
+  comparableMarketRent?: number;
+  hasWrittenAgreement?: boolean;
+  monthlyFacilityAllocation?: number;
 }
 
 interface TuitionTier {
@@ -570,6 +594,79 @@ export interface FacilityOverlayResult {
   total: number;
 }
 
+function computeSinglePhaseOverlay(
+  phase: { ownershipType?: string; monthlyRent?: number; annualRentEscalation?: number; postLeaseRenewalBump?: number; leaseExpirationYear?: number; isNNNLease?: boolean; nnnCamCharges?: number; nnnMaintenance?: number; nnnUtilities?: number; propertyTaxAnnual?: number; hasMortgage?: boolean; mortgageMonthlyPayment?: number; facilityArrangementEndDate?: string; comparableMarketRent?: number; monthlyFacilityAllocation?: number; estimatedMonthlyFacilityBudget?: number; },
+  entityType: string | undefined,
+  openingYear: number | undefined,
+  yearIndex: number,
+  pf: number,
+): FacilityOverlayResult {
+  const result: FacilityOverlayResult = { rent: 0, nnnCam: 0, nnnMaintenance: 0, nnnUtilities: 0, propertyTax: 0, mortgage: 0, estimatedBudget: 0, total: 0 };
+
+  if (phase.ownershipType === "rent") {
+    const baseRent = phase.monthlyRent || 0;
+    const escalation = (phase.annualRentEscalation || 0) / 100;
+    const renewalBump = (phase.postLeaseRenewalBump || 15) / 100;
+    const currentYear = new Date().getFullYear();
+    const projectionStartYear = Math.max(openingYear || currentYear, currentYear);
+    const leaseEndYear = phase.leaseExpirationYear || (projectionStartYear + 99);
+    const yearsUntilExpiration = leaseEndYear - projectionStartYear;
+
+    let annualRent: number;
+    if (yearIndex <= yearsUntilExpiration) {
+      annualRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
+    } else {
+      const preRenewalRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration);
+      const bumpedBase = preRenewalRent * (1 + renewalBump);
+      const postRenewalYears = yearIndex - yearsUntilExpiration - 1;
+      annualRent = bumpedBase * 12 * Math.pow(1 + escalation, postRenewalYears);
+    }
+    result.rent = annualRent * pf;
+
+    if (phase.isNNNLease) {
+      const inflFactor = Math.pow(1.03, yearIndex) * pf;
+      result.nnnCam = (phase.nnnCamCharges || 0) * 12 * inflFactor;
+      result.nnnMaintenance = (phase.nnnMaintenance || 0) * 12 * inflFactor;
+      result.nnnUtilities = (phase.nnnUtilities || 0) * 12 * inflFactor;
+    }
+  }
+
+  if (phase.ownershipType === "own") {
+    if (entityType && entityType !== "nonprofit_501c3" && (phase.propertyTaxAnnual || 0) > 0) {
+      result.propertyTax = (phase.propertyTaxAnnual || 0) * Math.pow(1.02, yearIndex) * pf;
+    }
+    if (phase.hasMortgage && (phase.mortgageMonthlyPayment || 0) > 0) {
+      result.mortgage = (phase.mortgageMonthlyPayment || 0) * 12 * pf;
+    }
+  }
+
+  if (phase.ownershipType === "donated") {
+    const marketRent = phase.comparableMarketRent || 0;
+    if (marketRent > 0 && phase.facilityArrangementEndDate) {
+      const endDate = new Date(phase.facilityArrangementEndDate);
+      const currentYear = new Date().getFullYear();
+      const projectionStartYear = Math.max(openingYear || currentYear, currentYear);
+      const endYear = endDate.getFullYear();
+      const yearsUntilEnd = endYear - projectionStartYear;
+      if (yearsUntilEnd < 0) {
+        result.rent = marketRent * 12 * pf;
+      } else if (yearIndex >= yearsUntilEnd) {
+        result.rent = marketRent * 12 * pf;
+      }
+    }
+  }
+
+  if (phase.ownershipType === "home_based") {
+    const allocation = phase.monthlyFacilityAllocation || 0;
+    if (allocation > 0) {
+      result.estimatedBudget = allocation * 12 * pf;
+    }
+  }
+
+  result.total = result.rent + result.nnnCam + result.nnnMaintenance + result.nnnUtilities + result.propertyTax + result.mortgage + result.estimatedBudget;
+  return result;
+}
+
 export function computeSchoolProfileFacilityOverlay(
   sp: SchoolProfile,
   yearIndex: number,
@@ -584,73 +681,21 @@ export function computeSchoolProfileFacilityOverlay(
   }
 
   const pf = yearIndex === 0 ? prorationFactor : 1;
-  const result = { ...zero };
 
-  if (sp.ownershipType === "rent") {
-    const baseRent = sp.monthlyRent || 0;
-    const escalation = (sp.annualRentEscalation || 0) / 100;
-    const renewalBump = (sp.postLeaseRenewalBump || 15) / 100;
-    const currentYear = new Date().getFullYear();
-    const projectionStartYear = Math.max(sp.openingYear || currentYear, currentYear);
-    const leaseEndYear = sp.leaseExpirationYear || (projectionStartYear + 99);
-    const yearsUntilExpiration = leaseEndYear - projectionStartYear;
-
-    let annualRent: number;
-    if (yearIndex <= yearsUntilExpiration) {
-      annualRent = baseRent * 12 * Math.pow(1 + escalation, yearIndex);
-    } else {
-      const preRenewalRent = baseRent * Math.pow(1 + escalation, yearsUntilExpiration);
-      const bumpedBase = preRenewalRent * (1 + renewalBump);
-      const postRenewalYears = yearIndex - yearsUntilExpiration - 1;
-      annualRent = bumpedBase * 12 * Math.pow(1 + escalation, postRenewalYears);
-    }
-    result.rent = annualRent * pf;
-
-    if (sp.isNNNLease) {
-      const inflFactor = Math.pow(1.03, yearIndex) * pf;
-      result.nnnCam = (sp.nnnCamCharges || 0) * 12 * inflFactor;
-      result.nnnMaintenance = (sp.nnnMaintenance || 0) * 12 * inflFactor;
-      result.nnnUtilities = (sp.nnnUtilities || 0) * 12 * inflFactor;
-    }
+  if (sp.facilityPhases && sp.facilityPhases.length > 0) {
+    const modelYear = yearIndex + 1;
+    const activePhase = sp.facilityPhases.find(p => modelYear >= p.startYear && modelYear <= p.endYear);
+    if (!activePhase) return zero;
+    return computeSinglePhaseOverlay(activePhase, sp.entityType, sp.openingYear, yearIndex, pf);
   }
 
-  if (sp.ownershipType === "own") {
-    if (sp.entityType && sp.entityType !== "nonprofit_501c3" && (sp.propertyTaxAnnual || 0) > 0) {
-      result.propertyTax = (sp.propertyTaxAnnual || 0) * Math.pow(1.02, yearIndex) * pf;
-    }
-    if (sp.hasMortgage && (sp.mortgageMonthlyPayment || 0) > 0) {
-      result.mortgage = (sp.mortgageMonthlyPayment || 0) * 12 * pf;
-    }
-  }
-
-  if (sp.ownershipType === "donated") {
-    const marketRent = sp.comparableMarketRent || 0;
-    if (marketRent > 0 && sp.facilityArrangementEndDate) {
-      const endDate = new Date(sp.facilityArrangementEndDate);
-      const currentYear = new Date().getFullYear();
-      const projectionStartYear = Math.max(sp.openingYear || currentYear, currentYear);
-      const endYear = endDate.getFullYear();
-      const yearsUntilEnd = endYear - projectionStartYear;
-      if (yearIndex >= yearsUntilEnd && yearsUntilEnd >= 0) {
-        result.rent = marketRent * 12 * pf;
-      }
-    }
-  }
-
-  if (sp.ownershipType === "home_based") {
-    const allocation = sp.monthlyFacilityAllocation || 0;
-    if (allocation > 0) {
-      result.estimatedBudget = allocation * 12 * pf;
-    }
-  }
-
-  result.total = result.rent + result.nnnCam + result.nnnMaintenance + result.nnnUtilities + result.propertyTax + result.mortgage + result.estimatedBudget;
-  return result;
+  return computeSinglePhaseOverlay(sp, sp.entityType, sp.openingYear, yearIndex, pf);
 }
 
 export function hasSchoolProfileFacilityData(sp?: SchoolProfile): boolean {
   if (!sp) return false;
   if (sp.locationSecured === false && (sp.estimatedMonthlyFacilityBudget || 0) > 0) return true;
+  if (sp.facilityPhases && sp.facilityPhases.length > 0 && sp.locationSecured === true) return true;
   if (sp.locationSecured === true && sp.ownershipType === "rent" && (sp.monthlyRent || 0) > 0) return true;
   if (sp.locationSecured === true && sp.ownershipType === "own") {
     const hasPropertyTax = (sp.propertyTaxAnnual || 0) > 0;
