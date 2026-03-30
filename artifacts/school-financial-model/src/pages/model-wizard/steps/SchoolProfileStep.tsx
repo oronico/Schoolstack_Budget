@@ -478,6 +478,18 @@ export function SchoolProfileStep() {
   const estimatedFacilityBudget = watch("schoolProfile.estimatedMonthlyFacilityBudget");
   const comparableMarketRent = watch("schoolProfile.comparableMarketRent");
   const monthlyFacilityAllocation = watch("schoolProfile.monthlyFacilityAllocation");
+  const monthlyRent = watch("schoolProfile.monthlyRent");
+  const annualRentEscalation = watch("schoolProfile.annualRentEscalation");
+  const postLeaseRenewalBump = watch("schoolProfile.postLeaseRenewalBump");
+  const leaseExpirationYear = watch("schoolProfile.leaseExpirationYear");
+  const leaseExpirationMonth = watch("schoolProfile.leaseExpirationMonth");
+  const nnnCamCharges = watch("schoolProfile.nnnCamCharges");
+  const nnnMaintenance = watch("schoolProfile.nnnMaintenance");
+  const nnnUtilities = watch("schoolProfile.nnnUtilities");
+  const propertyTaxAnnual = watch("schoolProfile.propertyTaxAnnual");
+  const mortgageMonthlyPayment = watch("schoolProfile.mortgageMonthlyPayment");
+  const facilityArrangementEndDate = watch("schoolProfile.facilityArrangementEndDate");
+  const hasWrittenAgreement = watch("schoolProfile.hasWrittenAgreement");
   const facilityPhases = watch("schoolProfile.facilityPhases") as Array<{ id: string; ownershipType: string; startYear: number; endYear: number; [key: string]: unknown }> | undefined;
   const forProfit = isForProfit(entityType);
 
@@ -549,6 +561,38 @@ export function SchoolProfileStep() {
       setValue("schoolProfile.facilityState", schoolState, { shouldDirty: true });
     }
   }, [locationSecured, schoolState, facilityState, setValue]);
+
+  useEffect(() => {
+    if (!facilityPhases || facilityPhases.length !== 1) return;
+    if (!ownershipType) return;
+    const phase = facilityPhases[0];
+    const safeNum = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v)) ? v : fallback;
+    const updated = {
+      ...phase,
+      ownershipType,
+      monthlyRent: safeNum(monthlyRent, 0),
+      annualRentEscalation: safeNum(annualRentEscalation, 3),
+      postLeaseRenewalBump: safeNum(postLeaseRenewalBump, 15),
+      leaseExpirationYear,
+      leaseExpirationMonth,
+      isNNNLease: isNNNLease ?? false,
+      nnnCamCharges: safeNum(nnnCamCharges, 0),
+      nnnMaintenance: safeNum(nnnMaintenance, 0),
+      nnnUtilities: safeNum(nnnUtilities, 0),
+      propertyTaxAnnual: safeNum(propertyTaxAnnual, 0),
+      hasMortgage: hasMortgage ?? false,
+      mortgageMonthlyPayment: safeNum(mortgageMonthlyPayment, 0),
+      facilityArrangementEndDate,
+      comparableMarketRent: safeNum(comparableMarketRent, 0),
+      hasWrittenAgreement: hasWrittenAgreement ?? false,
+      monthlyFacilityAllocation: safeNum(monthlyFacilityAllocation, 0),
+      estimatedMonthlyFacilityBudget: safeNum(estimatedFacilityBudget, 0),
+    };
+    const changed = Object.keys(updated).some(k => !Object.is((updated as Record<string, unknown>)[k], (phase as Record<string, unknown>)[k]));
+    if (changed) {
+      setValue("schoolProfile.facilityPhases", [updated], { shouldDirty: true });
+    }
+  }, [ownershipType, monthlyRent, annualRentEscalation, postLeaseRenewalBump, leaseExpirationYear, leaseExpirationMonth, isNNNLease, nnnCamCharges, nnnMaintenance, nnnUtilities, propertyTaxAnnual, hasMortgage, mortgageMonthlyPayment, facilityArrangementEndDate, comparableMarketRent, hasWrittenAgreement, monthlyFacilityAllocation, estimatedFacilityBudget, facilityPhases, setValue]);
 
 
   const { formState: { errors } } = useFormContext();
@@ -803,6 +847,7 @@ export function SchoolProfileStep() {
                 </div>
               </div>
 
+              {(!facilityPhases || facilityPhases.length <= 1) && (
               <div>
                 <h4 className="text-sm font-bold text-foreground mb-3">What's your facility arrangement?</h4>
                 <div className="flex flex-wrap gap-2">
@@ -829,8 +874,9 @@ export function SchoolProfileStep() {
                   ))}
                 </div>
               </div>
+              )}
 
-              {ownershipType === "own" && (
+              {ownershipType === "own" && (!facilityPhases || facilityPhases.length <= 1) && (
                 <div className="rounded-2xl border border-border bg-secondary/30 p-5 space-y-4">
                   {forProfit && (
                     <FormInput
@@ -863,7 +909,7 @@ export function SchoolProfileStep() {
                 </div>
               )}
 
-              {ownershipType === "rent" && (
+              {ownershipType === "rent" && (!facilityPhases || facilityPhases.length <= 1) && (
                 <div className="rounded-2xl border border-border bg-secondary/30 p-5 space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormInput
@@ -950,7 +996,7 @@ export function SchoolProfileStep() {
                 </div>
               )}
 
-              {ownershipType === "donated" && (
+              {ownershipType === "donated" && (!facilityPhases || facilityPhases.length <= 1) && (
                 <div className="rounded-2xl border border-border bg-secondary/30 p-5 space-y-5">
                   <div className="flex items-start gap-3">
                     <Gift className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
@@ -1001,7 +1047,7 @@ export function SchoolProfileStep() {
                 </div>
               )}
 
-              {ownershipType === "home_based" && (
+              {ownershipType === "home_based" && (!facilityPhases || facilityPhases.length <= 1) && (
                 <div className="rounded-2xl border border-border bg-secondary/30 p-5 space-y-5">
                   <div className="flex items-start gap-3">
                     <Sprout className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
