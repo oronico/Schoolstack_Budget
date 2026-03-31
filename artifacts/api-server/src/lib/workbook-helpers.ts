@@ -1547,7 +1547,8 @@ type FacilityPhase = NonNullable<SchoolProfile["facilityPhases"]>[number];
 
 export function buildPhaseTimelineData(phases: FacilityPhase[]): Map<number, PhaseTimelineYear> {
   const map = new Map<number, PhaseTimelineYear>();
-  for (const phase of phases) {
+  const sorted = [...phases].sort((a, b) => a.startYear - b.startYear);
+  for (const phase of sorted) {
     for (let y = phase.startYear; y <= phase.endYear && y <= 5; y++) {
       const label = OWNERSHIP_LABELS[phase.ownershipType] || phase.ownershipType;
       let monthlyCost = 0;
@@ -1565,6 +1566,9 @@ export function buildPhaseTimelineData(phases: FacilityPhase[]): Map<number, Pha
           if (phase.hasMortgage) {
             monthlyCost = phase.mortgageMonthlyPayment || 0;
             costLabel = "Mortgage";
+            terms.push("Mortgage");
+          } else {
+            terms.push("No mortgage");
           }
           if (phase.propertyTaxAnnual) terms.push(`Prop. Tax: $${Math.round(phase.propertyTaxAnnual).toLocaleString()}/yr`);
           break;
@@ -1586,7 +1590,8 @@ export function buildPhaseTimelineData(phases: FacilityPhase[]): Map<number, Pha
 }
 
 export function buildPhaseDetails(phases: FacilityPhase[]): PhaseDetail[] {
-  return phases.map((phase) => {
+  const sorted = [...phases].sort((a, b) => a.startYear - b.startYear);
+  return sorted.map((phase) => {
     const label = OWNERSHIP_LABELS[phase.ownershipType] || phase.ownershipType;
     const yearRange = `Year ${phase.startYear}–${phase.endYear}`;
     const color = OWNERSHIP_COLORS[phase.ownershipType] || NAVY;
