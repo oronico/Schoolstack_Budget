@@ -286,9 +286,11 @@ export function generateDefaultExpenseRows(
 
     if (def.id === "diocesan_assessment" && faithProfile?.isDiocesan) {
       enabled = true;
+      note = "Annual assessment paid to the diocese, typically 5–10% of gross revenue. Confirm the rate with your diocesan office.";
     }
     if (def.id === "congregation_assessment" && faithProfile?.congregationAssessment) {
       enabled = true;
+      note = "Annual assessment or fee paid to your faith organization. Confirm the rate with your organization's leadership.";
     }
     if (def.id === "fiscal_sponsor_fee" && faithProfile?.hasFiscalSponsor) {
       enabled = true;

@@ -378,8 +378,15 @@ export function generateDefaultRevenueRows(
   };
 
   const FAITH_FUNDRAISE_IDS: Record<string, boolean> = {};
-  if (fr?.isDiocesan) FAITH_FUNDRAISE_IDS["parish_diocese_subsidy"] = true;
-  if (fr?.congregationSupport) FAITH_FUNDRAISE_IDS["congregation_support"] = true;
+  const FAITH_NOTES: Record<string, string> = {};
+  if (fr?.isDiocesan) {
+    FAITH_FUNDRAISE_IDS["parish_diocese_subsidy"] = true;
+    FAITH_NOTES["parish_diocese_subsidy"] = "Annual subsidy from your parish or diocese. Confirm the committed amount with your diocesan office.";
+  }
+  if (fr?.congregationSupport) {
+    FAITH_FUNDRAISE_IDS["congregation_support"] = true;
+    FAITH_NOTES["congregation_support"] = "Annual support from your congregation or faith organization. Enter the confirmed or expected commitment.";
+  }
 
   const fundraisingAnswered = fr?.doesFundraise !== undefined;
   const nonprofitFundraiser = fr?.doesFundraise && fr?.isNonprofit;
@@ -417,6 +424,10 @@ export function generateDefaultRevenueRows(
 
       if (isCharter && CHARTER_NOTES[item.id]) {
         note = CHARTER_NOTES[item.id];
+      }
+
+      if (FAITH_NOTES[item.id]) {
+        note = FAITH_NOTES[item.id];
       }
 
       const CHARTER_DISABLED_OPTIONAL = ["sped_weighted", "ell_weighted", "at_risk_weighted"];
