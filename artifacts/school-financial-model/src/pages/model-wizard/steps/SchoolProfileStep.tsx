@@ -903,7 +903,7 @@ export function SchoolProfileStep() {
                 />
                 <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 mt-3 flex items-start gap-3">
                   <Lightbulb className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-foreground">We'll add philanthropy revenue lines and a <span className="font-semibold">Fiscal Sponsor Fee</span> expense (typically 5–10% of donated revenue). Adjust on the Expense step.</p>
+                  <p className="text-sm text-foreground">We'll add philanthropy revenue lines and a <span className="font-semibold">Fiscal Sponsor Fee</span> expense line. Most sponsors charge 5–10% of the philanthropic revenue they process. Enter your estimated annual fee as a dollar amount on the Expense step.</p>
                 </div>
               </div>
             )}

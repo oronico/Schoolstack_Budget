@@ -223,7 +223,7 @@ const EXPENSE_LINE_ITEMS: ExpenseLineItemDef[] = [
   { id: "contingency_reserve", category: "administrative_general", lineItem: "Contingency / Operating Reserve", driverType: "percent_of_revenue", defaultAmount: 0, enabledFor: [], accountCode: "8850" },
   { id: "diocesan_assessment", category: "administrative_general", lineItem: "Diocesan Assessment", driverType: "percent_of_revenue", defaultAmount: 7, enabledFor: [], accountCode: "8860" },
   { id: "congregation_assessment", category: "administrative_general", lineItem: "Congregation / Organization Assessment Fee", driverType: "percent_of_revenue", defaultAmount: 5, enabledFor: [], accountCode: "8865" },
-  { id: "fiscal_sponsor_fee", category: "administrative_general", lineItem: "Fiscal Sponsor Fee", driverType: "percent_of_revenue", defaultAmount: 7, enabledFor: [], accountCode: "8870" },
+  { id: "fiscal_sponsor_fee", category: "administrative_general", lineItem: "Fiscal Sponsor Fee", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "8870" },
   { id: "miscellaneous", category: "administrative_general", lineItem: "Miscellaneous / Other Overhead", driverType: "annual_fixed", defaultAmount: 3000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "8900" },
 ];
 
@@ -277,6 +277,7 @@ export function generateDefaultExpenseRows(
     const baseAmount = stageAdjust(def.defaultAmount, schoolStage);
     let enabled = def.enabledFor.includes(fundingProfile);
     let amount = baseAmount;
+    let note = "";
 
     if (def.id === "authorizer_fee" && managementFee) {
       enabled = managementFee.enabled;
@@ -291,6 +292,7 @@ export function generateDefaultExpenseRows(
     }
     if (def.id === "fiscal_sponsor_fee" && faithProfile?.hasFiscalSponsor) {
       enabled = true;
+      note = "Typically 5–10% of philanthropic revenue (donations, grants, events). Calculate your expected philanthropy total and multiply by your sponsor's fee rate.";
     }
 
     const rule = getEscalationRule(
@@ -308,7 +310,7 @@ export function generateDefaultExpenseRows(
       enabled,
       driverType: def.driverType,
       amounts,
-      note: "",
+      note,
       accountCode: def.accountCode || "",
     };
   });
