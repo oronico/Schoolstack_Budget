@@ -221,6 +221,9 @@ const EXPENSE_LINE_ITEMS: ExpenseLineItemDef[] = [
   { id: "audit_compliance", category: "administrative_general", lineItem: "Audit & Compliance", driverType: "annual_fixed", defaultAmount: 5000, enabledFor: ["charter_public_funded"], accountCode: "8810" },
   { id: "board_governance", category: "administrative_general", lineItem: "Board & Governance", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "8820" },
   { id: "contingency_reserve", category: "administrative_general", lineItem: "Contingency / Operating Reserve", driverType: "percent_of_revenue", defaultAmount: 0, enabledFor: [], accountCode: "8850" },
+  { id: "diocesan_assessment", category: "administrative_general", lineItem: "Diocesan Assessment", driverType: "percent_of_revenue", defaultAmount: 7, enabledFor: [], accountCode: "8860" },
+  { id: "congregation_assessment", category: "administrative_general", lineItem: "Congregation / Organization Assessment Fee", driverType: "percent_of_revenue", defaultAmount: 5, enabledFor: [], accountCode: "8865" },
+  { id: "fiscal_sponsor_fee", category: "administrative_general", lineItem: "Fiscal Sponsor Fee", driverType: "percent_of_revenue", defaultAmount: 7, enabledFor: [], accountCode: "8870" },
   { id: "miscellaneous", category: "administrative_general", lineItem: "Miscellaneous / Other Overhead", driverType: "annual_fixed", defaultAmount: 3000, enabledFor: ["tuition_based", "charter_public_funded", "hybrid_mixed"], accountCode: "8900" },
 ];
 
@@ -255,12 +258,19 @@ function stageAdjust(amount: number, schoolStage: SchoolStage): number {
   return amount;
 }
 
+export interface FaithFundraisingExpenseProfile {
+  isDiocesan?: boolean;
+  congregationAssessment?: boolean;
+  hasFiscalSponsor?: boolean;
+}
+
 export function generateDefaultExpenseRows(
   fundingProfile: FundingProfile,
   yearCount: number,
   schoolStage: SchoolStage = "new_school",
   managementFee?: { enabled: boolean; percent: number },
   rates?: EscalationRates,
+  faithProfile?: FaithFundraisingExpenseProfile,
 ): ExpenseRowData[] {
   const defaultRates: EscalationRates = rates || { generalCostInflation: 3, annualRentIncrease: 3 };
   return EXPENSE_LINE_ITEMS.map((def) => {
@@ -271,6 +281,16 @@ export function generateDefaultExpenseRows(
     if (def.id === "authorizer_fee" && managementFee) {
       enabled = managementFee.enabled;
       amount = managementFee.enabled ? managementFee.percent : baseAmount;
+    }
+
+    if (def.id === "diocesan_assessment" && faithProfile?.isDiocesan) {
+      enabled = true;
+    }
+    if (def.id === "congregation_assessment" && faithProfile?.congregationAssessment) {
+      enabled = true;
+    }
+    if (def.id === "fiscal_sponsor_fee" && faithProfile?.hasFiscalSponsor) {
+      enabled = true;
     }
 
     const rule = getEscalationRule(

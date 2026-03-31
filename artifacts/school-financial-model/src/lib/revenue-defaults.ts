@@ -377,12 +377,25 @@ export function generateDefaultRevenueRows(
     at_risk_weighted: "State-level at-risk weighting — varies by state. Check your state's weighted formula.",
   };
 
+  const FAITH_FUNDRAISE_IDS: Record<string, boolean> = {};
+  if (fr?.isDiocesan) FAITH_FUNDRAISE_IDS["parish_diocese_subsidy"] = true;
+  if (fr?.congregationSupport) FAITH_FUNDRAISE_IDS["congregation_support"] = true;
+
+  const nonprofitFundraiser = fr?.doesFundraise && fr?.isNonprofit;
+  const forProfitWithSponsor = fr?.doesFundraise && !fr?.isNonprofit && fr?.hasFiscalSponsor;
+  if (nonprofitFundraiser || forProfitWithSponsor) {
+    FAITH_FUNDRAISE_IDS["unrestricted_annual_fund"] = true;
+    FAITH_FUNDRAISE_IDS["unrestricted_individual"] = true;
+    FAITH_FUNDRAISE_IDS["fundraising_events"] = true;
+  }
+
   return LINE_ITEM_CATALOG
     .filter((item) => {
       if (item.enabledFor.includes(fundingProfile)) return true;
       if (item.id === "csp_grant" && isCharter) return true;
       const CHARTER_OPTIONAL_ROWS = ["sped_weighted", "ell_weighted", "at_risk_weighted"];
       if (isCharter && CHARTER_OPTIONAL_ROWS.includes(item.id)) return true;
+      if (FAITH_FUNDRAISE_IDS[item.id]) return true;
       return false;
     })
     .map((item) => {

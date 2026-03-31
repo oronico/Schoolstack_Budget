@@ -181,6 +181,12 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const stateCode = watch("schoolProfile.state") as string | undefined;
   const openingYear = watch("schoolProfile.openingYear") as number | undefined;
   const maxCapacity = watch("schoolProfile.maxCapacity") as number | undefined;
+  const entityType = watch("schoolProfile.entityType") as string | undefined;
+  const isDiocesan = watch("schoolProfile.isDiocesan") as boolean | undefined;
+  const isFaithAffiliated = watch("schoolProfile.isFaithAffiliated") as boolean | undefined;
+  const congregationSupport = watch("schoolProfile.congregationSupport") as boolean | undefined;
+  const doesFundraise = watch("schoolProfile.doesFundraise") as boolean | undefined;
+  const hasFiscalSponsor = watch("schoolProfile.hasFiscalSponsor") as boolean | undefined;
   const yearCount = getYearCount(schoolStage);
 
   const enrollment = watch("enrollment");
@@ -271,6 +277,15 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         isCharter: isCharterType,
         openingYear: openingYear ?? undefined,
         perPupilMidpoint,
+        fundraising: {
+          isCatholic: schoolType === "catholic_school",
+          isDiocesan,
+          isFaithAffiliated,
+          congregationSupport,
+          doesFundraise,
+          hasFiscalSponsor,
+          isNonprofit: entityType === "nonprofit_501c3",
+        },
       });
       setRows(defaults);
       const enabledCats = deriveEnabledCategories(defaults);
@@ -279,7 +294,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       setValue("revenueRows", defaults, { shouldDirty: true });
       setDefaultsApplied(true);
     }
-  }, [formRows, fundingProfile, yearCount, defaultsApplied, setValue, deriveEnabledCategories]);
+  }, [formRows, fundingProfile, yearCount, defaultsApplied, setValue, deriveEnabledCategories, schoolType, entityType, isDiocesan, isFaithAffiliated, congregationSupport, doesFundraise, hasFiscalSponsor]);
 
   const CHARTER_HIDDEN_CATEGORIES: RevenueCategory[] = ["tuition_and_fees", "tuition_offsets", "school_choice"];
   useEffect(() => {

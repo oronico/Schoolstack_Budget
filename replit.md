@@ -48,6 +48,9 @@ Charter-specific revenue support includes:
 - **CSP Grant**: Charter School Program (CSP) Grant line item under Philanthropy, pre-filled at $150K/yr for first 3 years.
 - **Charter coaching banner**: State-specific coaching text with per-pupil range displayed in a teal banner at the top of the charter configuration section.
 
+#### School Identity & Fundraising Intelligence
+Catholic School type with diocese/parish affiliation logic tree (parish subsidy revenue + diocesan assessment expense). Faith-affiliated private schools get congregation support revenue + organization assessment expense. Fundraising question for all school types: nonprofits auto-enable Annual Fund/Donations/Events; for-profit schools get fiscal sponsor guidance with fee tracking (5-10% of donations). Schema fields: `isDiocesan`, `isFaithAffiliated`, `congregationSupport`, `congregationAssessment`, `doesFundraise`, `hasFiscalSponsor`, `fiscalSponsorName`, `fiscalSponsorInterest`. Revenue catalog: `parish_diocese_subsidy`, `congregation_support`. Expense catalog: `diocesan_assessment`, `congregation_assessment`, `fiscal_sponsor_fee`. All conditionally enabled based on profile answers.
+
 #### Ratio-Driven Staffing Ramp
 Staffing can be `fixed` or `ratio`-based, where FTE is computed from enrollment ÷ studentRatio, ceiled to nearest 0.5. This logic is consistently applied across workbook helpers, engines, and exports, with frontend support for configuration and preview.
 

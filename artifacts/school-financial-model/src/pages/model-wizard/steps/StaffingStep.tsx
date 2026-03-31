@@ -19,6 +19,7 @@ import {
 } from "@/lib/staffing-defaults";
 
 const STAFFING_BENCHMARKS = {
+  catholic_school: { ratio: "1:12–1:18", staff: "6–12 staff for 80–150 students" },
   microschool: { ratio: "1:8–1:12", staff: "2–4 staff for 15–25 students" },
   private_school: { ratio: "1:10–1:15", staff: "5–10 staff for 50–100 students" },
   charter_school: { ratio: "1:15–1:20", staff: "8–15 staff for 100–200 students" },

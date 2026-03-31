@@ -179,6 +179,9 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
 
   const hasManagementFee = watch("schoolProfile.hasManagementFee") as boolean | undefined;
   const managementFeePercent = watch("schoolProfile.managementFeePercent") as number | undefined;
+  const isDiocesan = watch("schoolProfile.isDiocesan") as boolean | undefined;
+  const congregationAssessment = watch("schoolProfile.congregationAssessment") as boolean | undefined;
+  const hasFiscalSponsor = watch("schoolProfile.hasFiscalSponsor") as boolean | undefined;
 
   const hasBookkeeper = watch("schoolProfile.hasBookkeeper") as boolean | undefined;
   const bookkeeperMonthlyCost = watch("schoolProfile.bookkeeperMonthlyCost") as number | undefined;
@@ -313,7 +316,8 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       setExpenseRows([]);
     } else if (!defaultsApplied) {
       const mgmtFee = hasManagementFee ? { enabled: true, percent: managementFeePercent || 5 } : undefined;
-      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount, schoolStage, mgmtFee, escalationRates);
+      const faithProfile = { isDiocesan, congregationAssessment, hasFiscalSponsor };
+      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount, schoolStage, mgmtFee, escalationRates, faithProfile);
       setExpenseRows(defaults);
       const enabledCats = new Set<string>();
       defaults.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
@@ -322,7 +326,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       setValue("expenseRows", defaults, { shouldDirty: true });
       setDefaultsApplied(true);
     }
-  }, [formExpenseRows, fundingProfile, schoolStage, yearCount, defaultsApplied, setValue, hasManagementFee, managementFeePercent]);
+  }, [formExpenseRows, fundingProfile, schoolStage, yearCount, defaultsApplied, setValue, hasManagementFee, managementFeePercent, isDiocesan, congregationAssessment, hasFiscalSponsor]);
 
   useEffect(() => {
     if (!defaultsApplied || expenseRows.length === 0) return;

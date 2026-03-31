@@ -227,6 +227,23 @@ export const EXPLAINERS: Record<string, Explainer> = {
     highFriction: false,
     priority: "standard",
   },
+  fundraising_strategy: {
+    id: "fundraising_strategy",
+    title: "Fundraising & Philanthropy",
+    body: {
+      whatThisMeans: "Fundraising includes annual funds, individual donations, events, and grants from foundations or government programs. For faith-affiliated schools, it may also include parish subsidies or congregation support.",
+      whyItMatters: "Philanthropy can provide crucial early-stage funding, but it's inherently uncertain and time-limited. Lenders prefer models anchored to enrollment-driven revenue. For-profit schools face additional complexity — donors can't claim tax deductions for gifts to a for-profit entity without a fiscal sponsor arrangement.",
+      healthyVsRisky: "Philanthropy as 10-25% of total revenue is supplemental and healthy. Above 30% signals dependence on uncertain income. If you're a for-profit school fundraising through a fiscal sponsor, budget for the sponsor's fee (typically 5-10% of donated funds).",
+      whatToDoNext: "Start with your most certain fundraising sources. If you're a for-profit school planning to fundraise, establish a fiscal sponsorship early — approval takes 4-8 weeks. Track your fiscal sponsor fee as an operating expense.",
+    },
+    audienceLevel: ["basics", "extra"],
+    relatedSection: "revenue",
+    dismissible: true,
+    autoExpandFor: [],
+    order: 4.5,
+    highFriction: false,
+    priority: "standard",
+  },
   fixed_vs_variable: {
     id: "fixed_vs_variable",
     title: "Fixed vs Variable Costs",

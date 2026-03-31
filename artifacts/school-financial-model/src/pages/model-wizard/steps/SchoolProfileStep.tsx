@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle } from "lucide-react";
+import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit } from "../schema";
+import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit } from "../schema";
 
 const STATES = [
   { value: "AL", label: "Alabama" }, { value: "AK", label: "Alaska" }, { value: "AZ", label: "Arizona" },
@@ -238,6 +238,7 @@ function EntityTypeSection({ allowedEntityTypes, entityType }: { allowedEntityTy
 }
 
 const FACILITY_BENCHMARKS: Record<string, string> = {
+  catholic_school: "$5,000–$15,000/mo",
   microschool: "$1,500–$4,000/mo",
   learning_pod: "$800–$2,500/mo",
   private_school: "$5,000–$15,000/mo",
@@ -498,14 +499,23 @@ export function SchoolProfileStep() {
 
   const isCharter = schoolType === "charter_school";
   const isPrivate = schoolType === "private_school";
+  const isCatholic = schoolType === "catholic_school";
+
+  const isDiocesan = watch("schoolProfile.isDiocesan") as boolean | undefined;
+  const isFaithAffiliated = watch("schoolProfile.isFaithAffiliated") as boolean | undefined;
+  const congregationSupport = watch("schoolProfile.congregationSupport") as boolean | undefined;
+  const congregationAssessment = watch("schoolProfile.congregationAssessment") as boolean | undefined;
+  const doesFundraise = watch("schoolProfile.doesFundraise") as boolean | undefined;
+  const hasFiscalSponsor = watch("schoolProfile.hasFiscalSponsor") as boolean | undefined;
+  const fiscalSponsorInterest = watch("schoolProfile.fiscalSponsorInterest") as boolean | undefined;
 
   const allowedEntityTypes = useMemo(() => {
     const all = Object.entries(ENTITY_TYPE_LABELS);
-    if (isCharter || isPrivate || schoolType === "homeschool_coop") {
+    if (isCharter || isPrivate || isCatholic || schoolType === "homeschool_coop") {
       return all.filter(([v]) => v !== "sole_practitioner");
     }
     return all;
-  }, [schoolType, isCharter, isPrivate]);
+  }, [schoolType, isCharter, isPrivate, isCatholic]);
 
   useEffect(() => {
     if (!schoolType || !entityType) return;
@@ -744,6 +754,192 @@ export function SchoolProfileStep() {
         allowedEntityTypes={allowedEntityTypes}
         entityType={entityType}
       />
+
+      {isCatholic && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold border-b border-border pb-2">Diocese & Parish Affiliation</h3>
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={isDiocesan === true}
+              onChange={(e) => {
+                setValue("schoolProfile.isDiocesan", e.target.checked, { shouldDirty: true });
+                if (!e.target.checked) {
+                  setValue("schoolProfile.congregationAssessment", false, { shouldDirty: true });
+                }
+              }}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary mt-0.5"
+            />
+            <div className="flex-1">
+              <label className="text-sm font-medium text-foreground">Is your school part of a diocese?</label>
+              <p className="text-xs text-muted-foreground mt-0.5">Diocesan schools often receive parish subsidies and pay a diocesan assessment fee</p>
+            </div>
+          </div>
+          {isDiocesan && (
+            <div className="ml-7 rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-start gap-3">
+              <Lightbulb className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-foreground space-y-1">
+                <p>We'll add a <span className="font-semibold">Parish / Diocese Subsidy</span> revenue line and a <span className="font-semibold">Diocesan Assessment</span> expense (typically 5–10% of revenue). You can adjust the amounts on the Revenue and Expense steps.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isCatholic && isPrivate && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold border-b border-border pb-2">Faith or Organization Affiliation</h3>
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={isFaithAffiliated === true}
+              onChange={(e) => {
+                setValue("schoolProfile.isFaithAffiliated", e.target.checked, { shouldDirty: true });
+                if (!e.target.checked) {
+                  setValue("schoolProfile.congregationSupport", false, { shouldDirty: true });
+                  setValue("schoolProfile.congregationAssessment", false, { shouldDirty: true });
+                }
+              }}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary mt-0.5"
+            />
+            <div className="flex-1">
+              <label className="text-sm font-medium text-foreground">Is your school affiliated with a faith community or sponsoring organization?</label>
+              <p className="text-xs text-muted-foreground mt-0.5">Examples: church-sponsored school, synagogue-affiliated program, faith-based academy</p>
+            </div>
+          </div>
+          {isFaithAffiliated && (
+            <div className="ml-7 space-y-3">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={congregationSupport === true}
+                  onChange={(e) => setValue("schoolProfile.congregationSupport", e.target.checked, { shouldDirty: true })}
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary mt-0.5"
+                />
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-foreground">Does the congregation or organization provide financial support?</label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Direct subsidies, below-market rent, or regular contributions</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={congregationAssessment === true}
+                  onChange={(e) => setValue("schoolProfile.congregationAssessment", e.target.checked, { shouldDirty: true })}
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary mt-0.5"
+                />
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-foreground">Does the organization charge an assessment fee?</label>
+                  <p className="text-xs text-muted-foreground mt-0.5">A percentage of revenue paid to the sponsoring organization</p>
+                </div>
+              </div>
+              {(congregationSupport || congregationAssessment) && (
+                <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-start gap-3">
+                  <Lightbulb className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-foreground space-y-1">
+                    {congregationSupport && <p>We'll add a <span className="font-semibold">Congregation / Organization Support</span> revenue line.</p>}
+                    {congregationAssessment && <p>We'll add a <span className="font-semibold">Congregation / Organization Assessment Fee</span> expense.</p>}
+                    <p className="text-xs text-muted-foreground">You can set the exact amounts on the Revenue and Expense steps.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold border-b border-border pb-2">Fundraising</h3>
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={doesFundraise === true}
+            onChange={(e) => {
+              setValue("schoolProfile.doesFundraise", e.target.checked, { shouldDirty: true });
+              if (!e.target.checked) {
+                setValue("schoolProfile.hasFiscalSponsor", false, { shouldDirty: true });
+                setValue("schoolProfile.fiscalSponsorInterest", false, { shouldDirty: true });
+              }
+            }}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary mt-0.5"
+          />
+          <div className="flex-1">
+            <label className="text-sm font-medium text-foreground">Does your school fundraise or plan to fundraise?</label>
+            <p className="text-xs text-muted-foreground mt-0.5">Annual fund, events, individual donations, grant applications</p>
+          </div>
+        </div>
+        {doesFundraise && !isNonprofit(entityType) && entityType !== "undetermined" && entityType && (
+          <div className="ml-7 space-y-3">
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-900 space-y-1">
+                <p className="font-semibold">For-profit schools and tax-deductible donations</p>
+                <p>Donors generally cannot take a tax deduction for gifts to a for-profit entity. Many for-profit schools work with a <span className="font-semibold">fiscal sponsor</span> — a 501(c)(3) nonprofit that receives donations on the school's behalf and passes the funds through, minus a fee (typically 5–10% of donations received).</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={hasFiscalSponsor === true}
+                onChange={(e) => {
+                  setValue("schoolProfile.hasFiscalSponsor", e.target.checked, { shouldDirty: true });
+                  if (!e.target.checked) {
+                    setValue("schoolProfile.fiscalSponsorName", "", { shouldDirty: true });
+                  }
+                }}
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary mt-0.5"
+              />
+              <div className="flex-1">
+                <label className="text-sm font-medium text-foreground">Do you have a fiscal sponsor?</label>
+                <p className="text-xs text-muted-foreground mt-0.5">A 501(c)(3) that receives tax-deductible donations on your behalf</p>
+              </div>
+            </div>
+            {hasFiscalSponsor && (
+              <div className="ml-7">
+                <FormInput
+                  name="schoolProfile.fiscalSponsorName"
+                  label="Fiscal Sponsor Name"
+                  placeholder="e.g., Community Foundation of Greater Springfield"
+                />
+                <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 mt-3 flex items-start gap-3">
+                  <Lightbulb className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-foreground">We'll add philanthropy revenue lines and a <span className="font-semibold">Fiscal Sponsor Fee</span> expense (typically 5–10% of donated revenue). Adjust on the Expense step.</p>
+                </div>
+              </div>
+            )}
+            {!hasFiscalSponsor && (
+              <div className="ml-7 space-y-3">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={fiscalSponsorInterest === true}
+                    onChange={(e) => setValue("schoolProfile.fiscalSponsorInterest", e.target.checked, { shouldDirty: true })}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary mt-0.5"
+                  />
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-foreground">Would you like help finding a fiscal sponsor?</label>
+                    <p className="text-xs text-muted-foreground mt-0.5">We can guide you through the process of establishing a fiscal sponsorship</p>
+                  </div>
+                </div>
+                {fiscalSponsorInterest && (
+                  <div className="rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 flex items-start gap-3">
+                    <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-teal-900 space-y-1">
+                      <p>Look for community foundations, education-focused nonprofits, or national fiscal sponsors like the <span className="font-semibold">National Network of Fiscal Sponsors</span>. Most charge 5–10% of funds received. Start the conversation early — approval can take 4–8 weeks.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {doesFundraise && isNonprofit(entityType) && (
+          <div className="ml-7 rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-start gap-3">
+            <Lightbulb className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-foreground">As a nonprofit, we'll pre-enable <span className="font-semibold">Annual Fund</span>, <span className="font-semibold">Individual Donations</span>, and <span className="font-semibold">Fundraising Events</span> on the Revenue step. You can adjust or disable any of these.</p>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {schoolStage === "operating_school" && (
