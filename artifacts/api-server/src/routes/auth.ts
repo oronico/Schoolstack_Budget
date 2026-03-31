@@ -13,10 +13,14 @@ import {
 import { authMiddleware, generateToken, type AuthRequest } from "../middlewares/auth";
 import { trackEvent } from "../lib/track-event";
 import { sendPasswordResetEmail } from "../lib/mailer";
+import { createRateLimiter } from "../lib/rate-limiter";
 
 const router: IRouter = Router();
 
-router.post("/auth/register", async (req, res) => {
+const authRateLimiter = createRateLimiter(60_000, 10);
+const strictRateLimiter = createRateLimiter(60_000, 5);
+
+router.post("/auth/register", authRateLimiter, async (req, res) => {
   try {
     const parsed = RegisterBody.safeParse(req.body);
     if (!parsed.success) {
@@ -53,7 +57,7 @@ router.post("/auth/register", async (req, res) => {
   }
 });
 
-router.post("/auth/login", async (req, res) => {
+router.post("/auth/login", authRateLimiter, async (req, res) => {
   try {
     const parsed = LoginBody.safeParse(req.body);
     if (!parsed.success) {
@@ -141,7 +145,7 @@ router.patch("/auth/guidance-level", authMiddleware, async (req: AuthRequest, re
   }
 });
 
-router.post("/auth/forgot-password", async (req, res) => {
+router.post("/auth/forgot-password", strictRateLimiter, async (req, res) => {
   try {
     const parsed = ForgotPasswordBody.safeParse(req.body);
     if (!parsed.success) {
@@ -172,7 +176,7 @@ router.post("/auth/forgot-password", async (req, res) => {
 });
 
 
-router.post("/auth/reset-password", async (req, res) => {
+router.post("/auth/reset-password", strictRateLimiter, async (req, res) => {
   try {
     const parsed = ResetPasswordBody.safeParse(req.body);
     if (!parsed.success) {

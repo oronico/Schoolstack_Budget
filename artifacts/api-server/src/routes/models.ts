@@ -194,7 +194,7 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
         ...rowCols,
         updatedAt: new Date(),
       })
-      .where(eq(financialModelsTable.id, params.data.id))
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
       .returning();
 
     await trackEvent("updated_model", req.userId, { modelId: model.id });
@@ -225,7 +225,7 @@ router.delete("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
 
-    await db.delete(financialModelsTable).where(eq(financialModelsTable.id, params.data.id));
+    await db.delete(financialModelsTable).where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)));
     await trackEvent("deleted_model", req.userId, { modelId: params.data.id });
     res.json({ message: "Model deleted successfully." });
   } catch (err) {
@@ -300,7 +300,7 @@ router.post("/models/:id/archive", authMiddleware, async (req: AuthRequest, res)
     const [model] = await db
       .update(financialModelsTable)
       .set({ status: "archived", updatedAt: new Date() })
-      .where(eq(financialModelsTable.id, params.data.id))
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
       .returning();
 
     await trackEvent("archived_model", req.userId, { modelId: model.id });
@@ -340,7 +340,7 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
         consultantSummaryJson: consultantOutput as unknown as Record<string, unknown>,
         updatedAt: new Date(),
       })
-      .where(eq(financialModelsTable.id, params.data.id));
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)));
 
     res.json(consultantOutput);
   } catch (err) {

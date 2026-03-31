@@ -274,7 +274,7 @@ function applyAdjustments(
   const expFactor = 1 + adj.expenseAdjustment / 100;
 
   const enrollment = base.enrollment.map((e) => Math.round(e * enrollFactor));
-  const revenue = base.revenue.map((r) => r * enrollFactor * revFactor);
+  const revenue = base.revenue.map((r) => r * revFactor);
   const staffingCost = base.staffingCost.map((s) => s * staffFactor);
   const facilityCost = base.facilityCost.map((f) => f * facFactor);
   const opex = base.opex.map((o) => o * expFactor);
