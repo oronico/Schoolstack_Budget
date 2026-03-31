@@ -23,6 +23,9 @@
   to = "https://schoolstackbudget.up.railway.app/api/:splat"
   status = 200
   force = true
+  [redirects.headers]
+    Host = "schoolstackbudget.up.railway.app"
+    X-Forwarded-Host = "budget.schoolstack.ai"
 
 [[redirects]]
   from = "/*"
