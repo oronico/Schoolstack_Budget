@@ -80,7 +80,7 @@ app.get("/api/ready", async (_req, res) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("Readiness check DB error:", message);
-    res.status(503).json({ status: "error", db: "disconnected", error: message });
+    res.status(503).json({ status: "error", db: "disconnected" });
   }
 });
 

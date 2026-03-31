@@ -24,8 +24,7 @@ export async function sendPasswordResetEmail(
   if (!resend) {
     console.error(
       `[mailer] Resend not configured - password reset email not sent. ` +
-      `Set RESEND_API_KEY to enable. ` +
-      `Reset link: ${resetUrl}`,
+      `Set RESEND_API_KEY to enable.`,
     );
     return { success: false, error: "Email service is not configured. Please contact support." };
   }
@@ -33,8 +32,7 @@ export async function sendPasswordResetEmail(
   if (!fromAddress) {
     console.error(
       `[mailer] EMAIL_FROM not set - cannot send email. ` +
-      `Set EMAIL_FROM to a verified domain sender (e.g. noreply@schoolstack.ai). ` +
-      `Reset link: ${resetUrl}`,
+      `Set EMAIL_FROM to a verified domain sender (e.g. noreply@schoolstack.ai).`,
     );
     return { success: false, error: "Email sender is not configured. Please contact support." };
   }
