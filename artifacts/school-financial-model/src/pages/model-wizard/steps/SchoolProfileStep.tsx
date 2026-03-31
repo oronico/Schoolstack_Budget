@@ -531,6 +531,31 @@ export function SchoolProfileStep() {
     }
   }, [isCharter, lendingLabIntent, setValue]);
 
+  const prevSchoolType = useRef(schoolType);
+  useEffect(() => {
+    if (prevSchoolType.current === schoolType) return;
+    prevSchoolType.current = schoolType;
+    if (!isCatholic) {
+      setValue("schoolProfile.isDiocesan", false, { shouldDirty: true });
+    }
+    if (isCatholic || !isPrivate) {
+      setValue("schoolProfile.isFaithAffiliated", false, { shouldDirty: true });
+      setValue("schoolProfile.congregationSupport", false, { shouldDirty: true });
+      setValue("schoolProfile.congregationAssessment", false, { shouldDirty: true });
+    }
+  }, [schoolType, isCatholic, isPrivate, setValue]);
+
+  const prevEntityType = useRef(entityType);
+  useEffect(() => {
+    if (prevEntityType.current === entityType) return;
+    prevEntityType.current = entityType;
+    if (isNonprofit(entityType)) {
+      setValue("schoolProfile.hasFiscalSponsor", false, { shouldDirty: true });
+      setValue("schoolProfile.fiscalSponsorName", "", { shouldDirty: true });
+      setValue("schoolProfile.fiscalSponsorInterest", false, { shouldDirty: true });
+    }
+  }, [entityType, setValue]);
+
   const legacyEnrollmentMigrated = useRef(false);
   const currentYearEnrollmentLegacy = watch("currentYearProjection.currentEnrollment");
   useEffect(() => {
