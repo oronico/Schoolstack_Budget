@@ -782,7 +782,8 @@ export function SchoolProfileStep() {
 
       {isCatholic && (
         <div className="space-y-4">
-          <h3 className="text-lg font-bold border-b border-border pb-2">Diocese & Parish Affiliation</h3>
+          <h3 className="text-lg font-bold border-b border-border pb-2">Catholic School Governance</h3>
+          <p className="text-sm text-muted-foreground">Catholic schools can be diocesan, parish-based, or fully independent. This affects your financial structure.</p>
           <div className="flex items-start gap-3">
             <input
               type="checkbox"
@@ -796,8 +797,8 @@ export function SchoolProfileStep() {
               className="h-4 w-4 rounded border-border text-primary focus:ring-primary mt-0.5"
             />
             <div className="flex-1">
-              <label className="text-sm font-medium text-foreground">Is your school part of a diocese?</label>
-              <p className="text-xs text-muted-foreground mt-0.5">Diocesan schools often receive parish subsidies and pay a diocesan assessment fee</p>
+              <label className="text-sm font-medium text-foreground">Is your school affiliated with a diocese?</label>
+              <p className="text-xs text-muted-foreground mt-0.5">Diocesan-affiliated schools often receive parish subsidies and pay a diocesan assessment fee. Leave unchecked if your school is independent.</p>
             </div>
           </div>
           {isDiocesan && (
@@ -806,6 +807,12 @@ export function SchoolProfileStep() {
               <div className="text-sm text-foreground space-y-1">
                 <p>We'll add a <span className="font-semibold">Parish / Diocese Subsidy</span> revenue line and a <span className="font-semibold">Diocesan Assessment</span> expense (typically 5–10% of revenue). You can adjust the amounts on the Revenue and Expense steps.</p>
               </div>
+            </div>
+          )}
+          {!isDiocesan && (
+            <div className="ml-7 rounded-xl bg-muted/50 border border-border px-4 py-3 flex items-start gap-3">
+              <Lightbulb className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-muted-foreground">Independent Catholic schools typically rely more heavily on tuition and philanthropy. You can still add fundraising sources below.</p>
             </div>
           )}
         </div>
