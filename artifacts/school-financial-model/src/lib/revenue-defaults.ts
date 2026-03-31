@@ -332,10 +332,23 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
   { id: "restricted_scholarship", category: "philanthropy", lineItem: "Restricted - Scholarship / Financial Aid", driverType: "annual_fixed", enabledFor: [] },
   { id: "restricted_other", category: "philanthropy", lineItem: "Restricted - Other Designated Funds", driverType: "annual_fixed", enabledFor: [] },
 
+  { id: "parish_diocese_subsidy", category: "philanthropy", lineItem: "Parish / Diocese Subsidy", driverType: "annual_fixed", enabledFor: [] },
+  { id: "congregation_support", category: "philanthropy", lineItem: "Congregation / Organization Support", driverType: "annual_fixed", enabledFor: [] },
+
   { id: "facility_rental", category: "other_revenue", lineItem: "Facility Rental", driverType: "annual_fixed", enabledFor: [] },
   { id: "partnerships", category: "other_revenue", lineItem: "Partnerships", driverType: "annual_fixed", enabledFor: [] },
   { id: "misc_other", category: "other_revenue", lineItem: "Miscellaneous Other Revenue", driverType: "annual_fixed", enabledFor: [] },
 ];
+
+export interface FundraisingProfile {
+  isCatholic?: boolean;
+  isDiocesan?: boolean;
+  isFaithAffiliated?: boolean;
+  congregationSupport?: boolean;
+  doesFundraise?: boolean;
+  hasFiscalSponsor?: boolean;
+  isNonprofit?: boolean;
+}
 
 export function generateDefaultRevenueRows(
   fundingProfile: FundingProfile,
@@ -345,9 +358,11 @@ export function generateDefaultRevenueRows(
     isCharter?: boolean;
     openingYear?: number;
     perPupilMidpoint?: number;
+    fundraising?: FundraisingProfile;
   }
 ): RevenueRowData[] {
   const isCharter = options?.isCharter ?? false;
+  const fr = options?.fundraising;
   const currentYear = new Date().getFullYear();
   const charterAge = options?.openingYear ? Math.max(0, currentYear - options.openingYear) : Infinity;
   const isCSPEligible = isCharter && charterAge <= 3;

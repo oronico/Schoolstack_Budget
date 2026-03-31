@@ -13,7 +13,7 @@ export const fundingProfileSchema = z.enum(["tuition_based", "charter_public_fun
   required_error: "Please select a funding profile",
   invalid_type_error: "Please select a valid funding profile",
 });
-export const schoolTypeSchema = z.enum(["charter_school", "homeschool_coop", "learning_pod", "microschool", "private_school", "tutoring_center", "other"], {
+export const schoolTypeSchema = z.enum(["catholic_school", "charter_school", "homeschool_coop", "learning_pod", "microschool", "private_school", "tutoring_center", "other"], {
   required_error: "Please select the type of school you're building",
   invalid_type_error: "Please select a valid school type",
 });
@@ -195,6 +195,14 @@ export const schoolProfileSchema = z.object({
   newFteCount: z.coerce.number().min(0).optional(),
   stateFundingMethodology: z.enum(["ada", "adm", "single_count_day", "multiple_count_dates", "single_count_period", "multiple_count_periods", "other"]).optional(),
   facilityPhases: facilityPhasesArraySchema,
+  isDiocesan: z.boolean().optional(),
+  isFaithAffiliated: z.boolean().optional(),
+  congregationSupport: z.boolean().optional(),
+  congregationAssessment: z.boolean().optional(),
+  doesFundraise: z.boolean().optional(),
+  hasFiscalSponsor: z.boolean().optional(),
+  fiscalSponsorName: z.string().optional(),
+  fiscalSponsorInterest: z.boolean().optional(),
 });
 
 export const priorYearSnapshotSchema = z.object({
@@ -445,6 +453,7 @@ export const ENTITY_TYPE_LABELS: Record<string, string> = {
 };
 
 export const SCHOOL_TYPE_LABELS: Record<string, string> = {
+  catholic_school: "Catholic School",
   charter_school: "Charter School",
   homeschool_coop: "Homeschool Co-Op",
   learning_pod: "Learning Pod",
@@ -487,7 +496,11 @@ export function isCharterSchool(schoolType?: string): boolean {
 }
 
 export function isPrivateSchool(schoolType?: string): boolean {
-  return schoolType === "private_school";
+  return schoolType === "private_school" || schoolType === "catholic_school";
+}
+
+export function isCatholicSchool(schoolType?: string): boolean {
+  return schoolType === "catholic_school";
 }
 
 export function getDefaultTuitionTiers(yearCount: number): TuitionTier[] {
