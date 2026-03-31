@@ -11,7 +11,7 @@ const LEVELS = [
   { value: "extra", icon: GraduationCap, label: "Extra help", color: "text-amber-600" },
 ] as const;
 
-export function GuidanceModeSelector() {
+export function GuidanceModeSelector({ compact }: { compact?: boolean } = {}) {
   const { user, refetchUser } = useAuth();
   const [saving, setSaving] = useState(false);
   const current = user?.guidanceLevel || "basics";
@@ -40,7 +40,7 @@ export function GuidanceModeSelector() {
 
   return (
     <div className="px-2 py-1.5">
-      <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Guidance level</p>
+      {!compact && <p className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Guidance level</p>}
       {LEVELS.map((lvl) => {
         const Icon = lvl.icon;
         const isActive = current === lvl.value;

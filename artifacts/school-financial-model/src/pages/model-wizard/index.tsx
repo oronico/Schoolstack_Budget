@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense, type ComponentType } from "react";
+import { useState, useEffect, useRef, lazy, Suspense, useMemo, type ComponentType } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2 }
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 import { trackCoachingEvent } from "@/lib/coaching/track";
+import { MicroLessonContainer } from "@/components/coaching/MicroLessonCard";
 import { useAuth } from "@/lib/auth-context";
 
 import { fullModelSchema, type FullModelData } from "./schema";
@@ -599,6 +600,7 @@ export function ModelWizardPage() {
       <div className="flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto w-full">
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <MicroLessonContainer data={methods.getValues() as FullModelData} currentStep={currentStep} className="mb-4" />
             <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
               <ActiveStepComponent jumpToStep={setCurrentStep} modelId={modelId} />
             </Suspense>

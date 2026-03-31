@@ -216,6 +216,15 @@ const ALLOWED_EVENTS = new Set([
   "kpi_formula_closed",
   "wizard_section_completed",
   "analysis_view_opened",
+  "diagnostic_panel_shown",
+  "diagnostic_action_clicked",
+  "micro_lesson_shown",
+  "micro_lesson_dismissed",
+  "primer_card_viewed",
+  "primer_completed",
+  "primer_skipped",
+  "primer_opened",
+  "help_menu_opened",
 ]);
 
 router.post("/auth/track", authMiddleware, async (req: AuthRequest, res) => {

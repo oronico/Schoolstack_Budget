@@ -4,6 +4,8 @@ import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, B
 import { useMemo } from "react";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
+import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
+import type { FullModelData } from "../schema";
 
 interface ReviewRevenueRow {
   id: string;
@@ -248,6 +250,12 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
         <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime. Remember, this is your first draft - every version of your budget gets stronger.</p>
         <SectionExplainers section="review" className="mt-4" />
       </div>
+
+      <DiagnosticPanel
+        data={data as FullModelData}
+        onNavigateToStep={(step) => jumpToStep(step)}
+        className="mt-2"
+      />
 
       {hasRowData && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

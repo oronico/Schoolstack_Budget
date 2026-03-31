@@ -10,7 +10,16 @@ type CoachingEvent =
   | "kpi_formula_opened"
   | "kpi_formula_closed"
   | "wizard_section_completed"
-  | "analysis_view_opened";
+  | "analysis_view_opened"
+  | "diagnostic_panel_shown"
+  | "diagnostic_action_clicked"
+  | "micro_lesson_shown"
+  | "micro_lesson_dismissed"
+  | "primer_card_viewed"
+  | "primer_completed"
+  | "primer_skipped"
+  | "primer_opened"
+  | "help_menu_opened";
 
 export function trackCoachingEvent(
   event: CoachingEvent,
