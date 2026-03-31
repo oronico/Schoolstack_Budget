@@ -97,9 +97,10 @@ export const MICRO_LESSONS: MicroLesson[] = [
       for (const r of rows) {
         if (r.enabled) y1Rev += r.amounts?.[0] ?? 0;
       }
+      const LOADED_COST_MULTIPLIER = 1 + (25 + 8) / 100;
       let y1Staff = 0;
       for (const s of staffing) {
-        y1Staff += (s.fte || 0) * (s.annualizedRate || 0) * 1.33;
+        y1Staff += (s.fte || 0) * (s.annualizedRate || 0) * LOADED_COST_MULTIPLIER;
       }
       let y1Exp = 0;
       for (const e of expenses) {

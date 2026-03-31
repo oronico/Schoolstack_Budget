@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen, Sliders } from "lucide-react";
+import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen } from "lucide-react";
 import { GuidanceModeSelector } from "@/components/coaching/GuidanceModeSelector";
 import { BudgetPrimer } from "@/components/coaching/BudgetPrimer";
 import { trackCoachingEvent } from "@/lib/coaching/track";
@@ -96,11 +96,9 @@ export function Navbar() {
                     </button>
                     {showSettings && (
                       <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-background shadow-xl animate-in fade-in slide-in-from-top-1 duration-150 z-50">
-                        <GuidanceModeSelector />
-                        <div className="border-t border-border mx-2" />
                         <button
                           onClick={logout}
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-b-xl transition-colors"
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-xl transition-colors"
                         >
                           <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
                           Log out

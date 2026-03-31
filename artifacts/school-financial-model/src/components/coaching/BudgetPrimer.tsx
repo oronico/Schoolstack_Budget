@@ -44,19 +44,18 @@ function PrimerCardView({ card, index, total }: { card: PrimerCard; index: numbe
 
 export function BudgetPrimer({ onClose }: BudgetPrimerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const cards = PRIMER_CARDS;
-  const card = cards[currentIndex];
+  const card = PRIMER_CARDS[currentIndex];
 
   const handleNext = () => {
-    if (currentIndex < cards.length - 1) {
+    if (currentIndex < PRIMER_CARDS.length - 1) {
       setCurrentIndex(currentIndex + 1);
       trackCoachingEvent("primer_card_viewed", {
-        cardId: cards[currentIndex + 1].id,
+        cardId: PRIMER_CARDS[currentIndex + 1].id,
         cardIndex: currentIndex + 1,
       });
     } else {
       markPrimerCompleted();
-      trackCoachingEvent("primer_completed", { cardsViewed: cards.length });
+      trackCoachingEvent("primer_completed", { cardsViewed: PRIMER_CARDS.length });
       onClose();
     }
   };
@@ -95,7 +94,7 @@ export function BudgetPrimer({ onClose }: BudgetPrimerProps) {
         </div>
 
         <div className="px-6 py-5 min-h-[280px]">
-          <PrimerCardView card={card} index={currentIndex} total={cards.length} />
+          <PrimerCardView card={card} index={currentIndex} total={PRIMER_CARDS.length} />
         </div>
 
         <div className="px-6 py-4 border-t border-border bg-muted/30 flex items-center justify-between">
@@ -126,8 +125,8 @@ export function BudgetPrimer({ onClose }: BudgetPrimerProps) {
               onClick={handleNext}
               className="flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
             >
-              {currentIndex === cards.length - 1 ? "Done" : "Next"}
-              {currentIndex < cards.length - 1 && <ChevronRight className="h-4 w-4" />}
+              {currentIndex === PRIMER_CARDS.length - 1 ? "Done" : "Next"}
+              {currentIndex < PRIMER_CARDS.length - 1 && <ChevronRight className="h-4 w-4" />}
             </button>
           </div>
         </div>

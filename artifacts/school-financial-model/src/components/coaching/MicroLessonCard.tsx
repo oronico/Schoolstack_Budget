@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Lightbulb, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTriggeredLessons, dismissLesson, type MicroLesson } from "@/lib/coaching/micro-lessons";
@@ -59,7 +59,12 @@ export function MicroLessonContainer({ data, currentStep, className }: MicroLess
     return getTriggeredLessons(data, currentStep).filter(l => !dismissedIds.has(l.id));
   }, [data, currentStep, dismissedIds]);
 
+  const trackedRef = useRef<string>("");
   useEffect(() => {
+    if (lessons.length === 0) return;
+    const key = lessons.map(l => l.id).join(",");
+    if (key === trackedRef.current) return;
+    trackedRef.current = key;
     for (const lesson of lessons) {
       trackCoachingEvent("micro_lesson_shown", {
         lessonId: lesson.id,
@@ -67,7 +72,7 @@ export function MicroLessonContainer({ data, currentStep, className }: MicroLess
         guidanceLevel: level,
       });
     }
-  }, [lessons.map(l => l.id).join(",")]);
+  }, [lessons, currentStep, level]);
 
   if (level === "advanced" || lessons.length === 0) return null;
 
