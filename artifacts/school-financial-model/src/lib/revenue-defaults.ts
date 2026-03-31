@@ -289,7 +289,7 @@ interface LineItemDef {
   enabledFor: FundingProfile[];
 }
 
-const ALL_PROFILES: FundingProfile[] = ["tuition_based", "charter_public_funded", "hybrid_mixed"];
+
 
 const LINE_ITEM_CATALOG: LineItemDef[] = [
   { id: "gross_tuition", category: "tuition_and_fees", lineItem: "Private Pay / Tuition", driverType: "per_student", enabledFor: ["tuition_based", "hybrid_mixed"] },
@@ -320,12 +320,12 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
 
   { id: "csp_grant", category: "philanthropy", lineItem: "Charter School Program (CSP) Grant", driverType: "annual_fixed", enabledFor: ["charter_public_funded"] },
   { id: "private_scholarships", category: "philanthropy", lineItem: "Private Scholarships", driverType: "annual_fixed", enabledFor: ["tuition_based", "hybrid_mixed"] },
-  { id: "grants", category: "philanthropy", lineItem: "Grants", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
-  { id: "donations_fundraising", category: "philanthropy", lineItem: "Donations / Fundraising", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
+  { id: "grants", category: "philanthropy", lineItem: "Grants", driverType: "annual_fixed", enabledFor: [] },
+  { id: "donations_fundraising", category: "philanthropy", lineItem: "Donations / Fundraising", driverType: "annual_fixed", enabledFor: [] },
   { id: "fundraising_events", category: "philanthropy", lineItem: "Fundraising Events", driverType: "annual_fixed", enabledFor: [] },
 
-  { id: "unrestricted_annual_fund", category: "philanthropy", lineItem: "Annual Fund / Unrestricted Giving", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
-  { id: "unrestricted_board_giving", category: "philanthropy", lineItem: "Board Giving / Board Commitments", driverType: "annual_fixed", enabledFor: ALL_PROFILES },
+  { id: "unrestricted_annual_fund", category: "philanthropy", lineItem: "Annual Fund / Unrestricted Giving", driverType: "annual_fixed", enabledFor: [] },
+  { id: "unrestricted_board_giving", category: "philanthropy", lineItem: "Board Giving / Board Commitments", driverType: "annual_fixed", enabledFor: [] },
   { id: "unrestricted_individual", category: "philanthropy", lineItem: "Individual Donations", driverType: "annual_fixed", enabledFor: [] },
   { id: "restricted_capital", category: "philanthropy", lineItem: "Restricted - Capital / Building", driverType: "annual_fixed", enabledFor: [] },
   { id: "restricted_program", category: "philanthropy", lineItem: "Restricted - Program-Specific", driverType: "annual_fixed", enabledFor: [] },
@@ -381,10 +381,17 @@ export function generateDefaultRevenueRows(
   if (fr?.isDiocesan) FAITH_FUNDRAISE_IDS["parish_diocese_subsidy"] = true;
   if (fr?.congregationSupport) FAITH_FUNDRAISE_IDS["congregation_support"] = true;
 
+  const fundraisingAnswered = fr?.doesFundraise !== undefined;
   const nonprofitFundraiser = fr?.doesFundraise && fr?.isNonprofit;
   const forProfitWithSponsor = fr?.doesFundraise && !fr?.isNonprofit && fr?.hasFiscalSponsor;
-  if (nonprofitFundraiser || forProfitWithSponsor) {
+  const includePhilanthropy = !fundraisingAnswered || nonprofitFundraiser || forProfitWithSponsor;
+  if (includePhilanthropy) {
+    FAITH_FUNDRAISE_IDS["grants"] = true;
+    FAITH_FUNDRAISE_IDS["donations_fundraising"] = true;
     FAITH_FUNDRAISE_IDS["unrestricted_annual_fund"] = true;
+    FAITH_FUNDRAISE_IDS["unrestricted_board_giving"] = true;
+  }
+  if (nonprofitFundraiser || forProfitWithSponsor) {
     FAITH_FUNDRAISE_IDS["unrestricted_individual"] = true;
     FAITH_FUNDRAISE_IDS["fundraising_events"] = true;
   }
