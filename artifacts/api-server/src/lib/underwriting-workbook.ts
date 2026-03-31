@@ -12,6 +12,8 @@ import {
   computeRevLineItem, computeRevenueForYear, computePersonnelForYear, computeStaffingLoaded,
   computeExpenseForYear, computeFacilityCostByYear, computeInstructionalCostByYear, computeCapDebtForYear, computeDebtServiceForYear,
   driverVal, resolveEsc, tuitionWithTiers, computeNewStudents, computeReturningStudents,
+  buildPhaseTimelineData, buildPhaseDetails,
+  OWNERSHIP_COLORS, OWNERSHIP_BG_COLORS,
   ModelData, SchoolProfile, RevenueRow, StaffingRow, ExpenseRow, CapitalDebtRow, TuitionTier,
 } from "./workbook-helpers.js";
 
@@ -420,7 +422,10 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
 function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
   const ws = wb.addWorksheet("Program Profile");
   const sp = data.schoolProfile || {};
-  ws.columns = [{ width: 36 }, { width: 30 }];
+  const hasPhases = sp.facilityPhases && sp.facilityPhases.length > 0;
+  ws.columns = hasPhases
+    ? [{ width: 36 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }]
+    : [{ width: 36 }, { width: 30 }];
   printSetup(ws);
 
   let r = 1;
@@ -445,18 +450,92 @@ function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
     ["Location", sp.locationSecured ? `${sp.facilityStreet || ""}, ${sp.facilityCity || ""}, ${sp.facilityState || ""} ${sp.facilityZip || ""}`.trim() : "Not yet secured"],
     ["Facility", ({ own: "Owned", rent: "Leased", donated: "Donated / No-Cost", home_based: "Home-Based" } as Record<string, string>)[sp.ownershipType || ""] || (sp.locationSecured ? "Secured" : "Not yet secured")],
   ];
-  const ownershipLabelsUW: Record<string, string> = { own: "Owned", rent: "Leased", donated: "Donated / No-Cost", home_based: "Home-Based" };
   if (sp.facilityPhases && sp.facilityPhases.length > 0) {
     entries.pop();
     entries.push(["Facility Timeline", `${sp.facilityPhases.length} phase(s)`]);
-    for (const phase of sp.facilityPhases) {
-      entries.push([`  Phase: ${ownershipLabelsUW[phase.ownershipType] || phase.ownershipType}`, `Year ${phase.startYear}–${phase.endYear}`]);
-    }
   }
   for (const [label, val] of entries) {
     ws.getCell(r, 1).value = label; bc(ws.getCell(r, 1));
     ws.getCell(r, 2).value = val; dc(ws.getCell(r, 2));
     r++;
+  }
+
+  if (sp.facilityPhases && sp.facilityPhases.length > 0) {
+    const yLabelsUW = yearLabels(sp.openingYear);
+    const timeline = buildPhaseTimelineData(sp.facilityPhases);
+    const phaseDetails = buildPhaseDetails(sp.facilityPhases);
+
+    r++;
+    ws.getCell(r, 1).value = "";
+    for (let yi = 0; yi < 5; yi++) {
+      ws.getCell(r, yi + 2).value = yLabelsUW[yi];
+      ws.getCell(r, yi + 2).font = SECTION_FONT;
+      ws.getCell(r, yi + 2).alignment = { horizontal: "center" };
+    }
+    for (let c = 1; c <= 6; c++) { ws.getCell(r, c).fill = SECTION_FILL; ws.getCell(r, c).border = BORDER; }
+    ws.getRow(r).height = 24;
+
+    r++;
+    ws.getCell(r, 1).value = "Arrangement"; bc(ws.getCell(r, 1));
+    for (let yi = 0; yi < 5; yi++) {
+      const cell = ws.getCell(r, yi + 2);
+      const yearData = timeline.get(yi + 1);
+      if (yearData) {
+        cell.value = yearData.label;
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: OWNERSHIP_BG_COLORS[yearData.ownershipType] || LIGHT_GRAY } };
+        cell.font = { ...BF, color: { argb: OWNERSHIP_COLORS[yearData.ownershipType] || NAVY } };
+      } else {
+        cell.value = "—";
+        cell.font = NF;
+      }
+      cell.alignment = { horizontal: "center" };
+      cell.border = BORDER;
+    }
+
+    r++;
+    ws.getCell(r, 1).value = "Monthly Cost"; dc(ws.getCell(r, 1));
+    for (let yi = 0; yi < 5; yi++) {
+      const cell = ws.getCell(r, yi + 2);
+      const yearData = timeline.get(yi + 1);
+      if (!yearData) {
+        cell.value = "—";
+      } else if (yearData.monthlyCost > 0) {
+        cell.value = yearData.monthlyCost;
+        cell.numFmt = CUR;
+      } else {
+        cell.value = "—";
+      }
+      cell.alignment = { horizontal: "center" };
+      dc(cell);
+    }
+
+    r++;
+    ws.getCell(r, 1).value = "Key Terms"; dc(ws.getCell(r, 1));
+    for (let yi = 0; yi < 5; yi++) {
+      const cell = ws.getCell(r, yi + 2);
+      const yearData = timeline.get(yi + 1);
+      cell.value = !yearData ? "—" : (yearData.keyTerms || "");
+      cell.alignment = { horizontal: "center", wrapText: true };
+      dc(cell);
+    }
+
+    for (const pd of phaseDetails) {
+      r++;
+      ws.getCell(r, 1).value = `${pd.label} (${pd.yearRange})`;
+      ws.getCell(r, 1).font = { ...BF, color: { argb: pd.color } };
+      for (let c = 1; c <= 6; c++) {
+        ws.getCell(r, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: pd.bgColor } };
+        ws.getCell(r, c).border = BORDER;
+      }
+
+      for (const [label, value, fmt] of pd.details) {
+        r++;
+        ws.getCell(r, 1).value = `  ${label}`; dc(ws.getCell(r, 1));
+        ws.getCell(r, 2).value = value;
+        if (fmt) ws.getCell(r, 2).numFmt = fmt;
+        dc(ws.getCell(r, 2));
+      }
+    }
   }
 }
 

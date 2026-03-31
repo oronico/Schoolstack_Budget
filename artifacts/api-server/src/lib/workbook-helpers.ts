@@ -14,6 +14,7 @@ export const BLUE_INPUT_FONT = "FF1E3A5F";
 export const DASHBOARD_GREEN = "FF16A34A";
 export const DASHBOARD_AMBER = "FFD97706";
 export const DASHBOARD_RED = "FFDC2626";
+export const VIOLET = "FF7C3AED";
 
 import {
   BENCHMARK_PAYROLL_GREEN,
@@ -1502,6 +1503,126 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
       });
     }
   }
+}
+
+export const OWNERSHIP_LABELS: Record<string, string> = {
+  own: "Own",
+  rent: "Rent / Lease",
+  donated: "Donated / No-Cost",
+  home_based: "Home-Based",
+};
+
+export const OWNERSHIP_COLORS: Record<string, string> = {
+  own: EVERGREEN,
+  rent: BLUE_INPUT_FONT,
+  donated: DASHBOARD_AMBER,
+  home_based: VIOLET,
+};
+
+export const OWNERSHIP_BG_COLORS: Record<string, string> = {
+  own: "FFE8F5E9",
+  rent: BLUE_INPUT_BG,
+  donated: "FFFFF8E1",
+  home_based: "FFF3E8FF",
+};
+
+export interface PhaseTimelineYear {
+  ownershipType: string;
+  label: string;
+  monthlyCost: number;
+  costLabel: string;
+  keyTerms: string;
+}
+
+export interface PhaseDetail {
+  phase: SchoolProfile["facilityPhases"] extends (infer T)[] | undefined ? NonNullable<T> : never;
+  label: string;
+  yearRange: string;
+  color: string;
+  bgColor: string;
+  details: [string, string | number, string?][];
+}
+
+type FacilityPhase = NonNullable<SchoolProfile["facilityPhases"]>[number];
+
+export function buildPhaseTimelineData(phases: FacilityPhase[]): Map<number, PhaseTimelineYear> {
+  const map = new Map<number, PhaseTimelineYear>();
+  for (const phase of phases) {
+    for (let y = phase.startYear; y <= phase.endYear && y <= 5; y++) {
+      const label = OWNERSHIP_LABELS[phase.ownershipType] || phase.ownershipType;
+      let monthlyCost = 0;
+      let costLabel = "";
+      const terms: string[] = [];
+
+      switch (phase.ownershipType) {
+        case "rent":
+          monthlyCost = phase.monthlyRent || 0;
+          costLabel = "Monthly Rent";
+          if (phase.isNNNLease) terms.push("NNN Lease");
+          if (phase.annualRentEscalation) terms.push(`${phase.annualRentEscalation}% esc.`);
+          break;
+        case "own":
+          if (phase.hasMortgage) {
+            monthlyCost = phase.mortgageMonthlyPayment || 0;
+            costLabel = "Mortgage";
+          }
+          if (phase.propertyTaxAnnual) terms.push(`Prop. Tax: $${Math.round(phase.propertyTaxAnnual).toLocaleString()}/yr`);
+          break;
+        case "donated":
+          monthlyCost = phase.comparableMarketRent || 0;
+          costLabel = "Comp. Rent";
+          if (phase.hasWrittenAgreement) terms.push("Written agreement");
+          break;
+        case "home_based":
+          monthlyCost = phase.monthlyFacilityAllocation || 0;
+          costLabel = "Allocation";
+          break;
+      }
+
+      map.set(y, { ownershipType: phase.ownershipType, label, monthlyCost, costLabel, keyTerms: terms.join(", ") });
+    }
+  }
+  return map;
+}
+
+export function buildPhaseDetails(phases: FacilityPhase[]): PhaseDetail[] {
+  return phases.map((phase) => {
+    const label = OWNERSHIP_LABELS[phase.ownershipType] || phase.ownershipType;
+    const yearRange = `Year ${phase.startYear}–${phase.endYear}`;
+    const color = OWNERSHIP_COLORS[phase.ownershipType] || NAVY;
+    const bgColor = OWNERSHIP_BG_COLORS[phase.ownershipType] || LIGHT_GRAY;
+    const details: [string, string | number, string?][] = [];
+
+    switch (phase.ownershipType) {
+      case "rent":
+        if (phase.monthlyRent) details.push(["Monthly Rent", phase.monthlyRent, CUR]);
+        if (phase.annualRentEscalation) details.push(["Annual Rent Escalation", phase.annualRentEscalation / 100, PCT]);
+        if (phase.postLeaseRenewalBump) details.push(["Post-Lease Renewal Bump", phase.postLeaseRenewalBump / 100, PCT]);
+        if (phase.isNNNLease) {
+          details.push(["Lease Type", "NNN (Triple Net)"]);
+          if (phase.nnnCamCharges) details.push(["  CAM Charges", phase.nnnCamCharges, CUR]);
+          if (phase.nnnMaintenance) details.push(["  Maintenance", phase.nnnMaintenance, CUR]);
+          if (phase.nnnUtilities) details.push(["  Utilities", phase.nnnUtilities, CUR]);
+        }
+        break;
+      case "own":
+        if (phase.propertyTaxAnnual) details.push(["Property Tax (Annual)", phase.propertyTaxAnnual, CUR]);
+        if (phase.hasMortgage) {
+          details.push(["Has Mortgage", "Yes"]);
+          if (phase.mortgageMonthlyPayment) details.push(["  Monthly Payment", phase.mortgageMonthlyPayment, CUR]);
+        }
+        break;
+      case "donated":
+        if (phase.comparableMarketRent) details.push(["Comparable Market Rent", phase.comparableMarketRent, CUR]);
+        details.push(["Written Agreement", phase.hasWrittenAgreement ? "Yes" : "No"]);
+        break;
+      case "home_based":
+        if (phase.monthlyFacilityAllocation) details.push(["Monthly Facility Allocation", phase.monthlyFacilityAllocation, CUR]);
+        break;
+    }
+
+    return { phase, label, yearRange, color, bgColor, details };
+  });
 }
 
 let _healthModule: { generateHealthSignals: (input: unknown) => Array<{ dimension: string; status: string; label: string; explanation: string; watchItem: string }> } | null = null;

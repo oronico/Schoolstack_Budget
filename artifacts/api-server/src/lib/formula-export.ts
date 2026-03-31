@@ -11,6 +11,8 @@ import {
   computeInstructionalCostByYear,
   computeNewStudents,
   computeReturningStudents,
+  buildPhaseTimelineData, buildPhaseDetails,
+  OWNERSHIP_COLORS, OWNERSHIP_BG_COLORS,
   type RevenueRow as SharedRevenueRow, type StaffingRow as SharedStaffingRow,
   type ExpenseRow as SharedExpenseRow, type CapitalDebtRow as SharedCapDebtRow,
   type TuitionTier as SharedTuitionTier, type SchoolProfile as SharedSchoolProfile,
@@ -784,29 +786,80 @@ function buildAssumptions(
   const ownershipLabels: Record<string, string> = { own: "Own", rent: "Rent", donated: "Donated / No-Cost", home_based: "Home-Based" };
 
   if (sp.facilityPhases && sp.facilityPhases.length > 0) {
-    r++; ws.getCell(r, 1).value = "Facility Timeline"; dc(ws.getCell(r, 1));
-    ws.getCell(r, 2).value = `${sp.facilityPhases.length} phase(s)`; dc(ws.getCell(r, 2));
-    for (const phase of sp.facilityPhases) {
-      r++; ws.getCell(r, 1).value = `  Phase: ${ownershipLabels[phase.ownershipType] || phase.ownershipType}`; bc(ws.getCell(r, 1));
-      ws.getCell(r, 2).value = `Year ${phase.startYear}–${phase.endYear}`; dc(ws.getCell(r, 2));
-      if (phase.ownershipType === "rent" && (phase.monthlyRent || 0) > 0) {
-        r++; ws.getCell(r, 1).value = "    Monthly Rent"; dc(ws.getCell(r, 1));
-        ws.getCell(r, 2).value = phase.monthlyRent || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
+    const yLabelsF = yearLabels(sp);
+    const timeline = buildPhaseTimelineData(sp.facilityPhases);
+    const phaseDetails = buildPhaseDetails(sp.facilityPhases);
+
+    r++;
+    ws.getCell(r, 1).value = "Facility Timeline";
+    ws.getCell(r, 1).font = SECTION_FONT;
+    for (let c = 1; c <= 6; c++) { ws.getCell(r, c).fill = SECTION_FILL; ws.getCell(r, c).border = BORDER; }
+    for (let yi = 0; yi < 5; yi++) {
+      ws.getCell(r, yi + 2).value = yLabelsF[yi];
+      ws.getCell(r, yi + 2).font = SECTION_FONT;
+      ws.getCell(r, yi + 2).alignment = { horizontal: "center" };
+    }
+    ws.getRow(r).height = 24;
+
+    r++;
+    ws.getCell(r, 1).value = "Arrangement"; bc(ws.getCell(r, 1));
+    for (let yi = 0; yi < 5; yi++) {
+      const cell = ws.getCell(r, yi + 2);
+      const yearData = timeline.get(yi + 1);
+      if (yearData) {
+        cell.value = yearData.label;
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: OWNERSHIP_BG_COLORS[yearData.ownershipType] || LIGHT_GRAY } };
+        cell.font = { ...BF, color: { argb: OWNERSHIP_COLORS[yearData.ownershipType] || NAVY } };
+      } else {
+        cell.value = "—";
+        cell.font = NF;
       }
-      if (phase.ownershipType === "own" && phase.hasMortgage) {
-        r++; ws.getCell(r, 1).value = "    Mortgage Payment"; dc(ws.getCell(r, 1));
-        ws.getCell(r, 2).value = phase.mortgageMonthlyPayment || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
-        ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
+      cell.alignment = { horizontal: "center" };
+      cell.border = BORDER;
+    }
+
+    r++;
+    ws.getCell(r, 1).value = "Monthly Cost"; dc(ws.getCell(r, 1));
+    for (let yi = 0; yi < 5; yi++) {
+      const cell = ws.getCell(r, yi + 2);
+      const yearData = timeline.get(yi + 1);
+      if (!yearData) {
+        cell.value = "—";
+      } else if (yearData.monthlyCost > 0) {
+        cell.value = yearData.monthlyCost;
+        cell.numFmt = CUR;
+      } else {
+        cell.value = "—";
       }
-      if (phase.ownershipType === "donated" && (phase.comparableMarketRent || 0) > 0) {
-        r++; ws.getCell(r, 1).value = "    Comparable Market Rent"; dc(ws.getCell(r, 1));
-        ws.getCell(r, 2).value = phase.comparableMarketRent || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
-        ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
+      cell.alignment = { horizontal: "center" };
+      dc(cell);
+    }
+
+    r++;
+    ws.getCell(r, 1).value = "Key Terms"; dc(ws.getCell(r, 1));
+    for (let yi = 0; yi < 5; yi++) {
+      const cell = ws.getCell(r, yi + 2);
+      const yearData = timeline.get(yi + 1);
+      cell.value = !yearData ? "—" : (yearData.keyTerms || "");
+      cell.alignment = { horizontal: "center", wrapText: true };
+      dc(cell);
+    }
+
+    for (const pd of phaseDetails) {
+      r++;
+      ws.getCell(r, 1).value = `${pd.label} (${pd.yearRange})`;
+      ws.getCell(r, 1).font = { ...BF, color: { argb: pd.color } };
+      for (let c = 1; c <= 6; c++) {
+        ws.getCell(r, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: pd.bgColor } };
+        ws.getCell(r, c).border = BORDER;
       }
-      if (phase.ownershipType === "home_based" && (phase.monthlyFacilityAllocation || 0) > 0) {
-        r++; ws.getCell(r, 1).value = "    Facility Allocation"; dc(ws.getCell(r, 1));
-        ws.getCell(r, 2).value = phase.monthlyFacilityAllocation || 0; ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
-        ws.getCell(r, 3).value = "Monthly"; dc(ws.getCell(r, 3));
+
+      for (const [label, value, fmt] of pd.details) {
+        r++;
+        ws.getCell(r, 1).value = `  ${label}`; dc(ws.getCell(r, 1));
+        ws.getCell(r, 2).value = value;
+        if (fmt) ws.getCell(r, 2).numFmt = fmt;
+        dc(ws.getCell(r, 2));
       }
     }
   } else {
