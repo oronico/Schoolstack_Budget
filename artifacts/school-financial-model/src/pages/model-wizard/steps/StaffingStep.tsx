@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
   type StaffingRowData,
@@ -46,8 +47,8 @@ export function StaffingStep() {
   const y5Students = enrollmentArr[4];
 
   const colaRate = (watch("facilities.annualSalaryIncrease") as number) ?? 3;
-  const modelBenefitsRate = (watch("staffing.benefitsRate") as number) ?? 25;
-  const modelPayrollTaxRate = (watch("staffing.payrollTaxRate") as number) ?? 8;
+  const modelBenefitsRate = (watch("staffing.benefitsRate") as number) ?? DEFAULT_BENEFITS_RATE;
+  const modelPayrollTaxRate = (watch("staffing.payrollTaxRate") as number) ?? DEFAULT_PAYROLL_TAX_RATE;
 
   const formRows = watch("staffingRows") as StaffingRowData[] | undefined;
   const [rows, setRows] = useState<StaffingRowData[]>([]);

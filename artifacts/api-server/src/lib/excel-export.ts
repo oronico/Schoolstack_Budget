@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { computeAnnualDebt } from "@workspace/finance";
 import { addDashboardSheet, computeFacilityCostByYear, computeInstructionalCostByYear, setFormula } from "./workbook-helpers.js";
 
 function safeResult(v: unknown): number | string {
@@ -621,14 +622,7 @@ function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driv
   }
 }
 
-function computeAnnualDebtService(principal: number, annualRate: number, termYears: number): number {
-  if (principal <= 0 || termYears <= 0) return 0;
-  if (annualRate <= 0) return principal / termYears;
-  const monthlyRate = annualRate / 12;
-  const months = termYears * 12;
-  const mp = principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
-  return mp * 12;
-}
+const computeAnnualDebtService = computeAnnualDebt;
 
 function driverLabel(dt: string): string {
   switch (dt) {

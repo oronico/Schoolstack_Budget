@@ -1,6 +1,7 @@
 import { generateTopIssues } from "./decision-rules";
 import { generateHealthSignals, type HealthSignal } from "./financial-health";
 import { computeDaysCashOnHand, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER } from "./workbook-helpers.js";
+import { computeAnnualDebt } from "@workspace/finance";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -365,14 +366,7 @@ function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
 }
 
-function computeAnnualDebtService(loanAmount: number, annualRate: number, termYears: number): number {
-  if (loanAmount <= 0 || termYears <= 0) return 0;
-  if (annualRate <= 0) return loanAmount / termYears;
-  const monthlyRate = annualRate / 12;
-  const months = termYears * 12;
-  const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
-  return monthlyPayment * 12;
-}
+const computeAnnualDebtService = computeAnnualDebt;
 
 function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number): number {
   let base: number;

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useEffect, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, TrendingUp, Info, School, ShieldCheck, Users, ClipboardList, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import type { Program } from "../schema";
@@ -481,9 +481,6 @@ export function EnrollmentStep() {
 
   const existingProgramNames = new Set(programs.map(p => p.name));
   const availableSuggestions = SUGGESTED_PROGRAMS.filter(s => !existingProgramNames.has(s));
-
-  const formatCurrency = (val: number) =>
-    val >= 1000 ? `$${Math.round(val).toLocaleString()}` : `$${val}`;
 
   useEffect(() => {
     const y1 = programs.reduce((s, p) => s + (p.year1 || 0), 0);

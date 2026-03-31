@@ -18,6 +18,7 @@ The project is a pnpm workspace monorepo built with TypeScript.
 - **Authentication**: JWT-based (bcryptjs for passwords, jsonwebtoken for tokens).
 - **Export Capabilities**: Utilizes ExcelJS for Excel exports (8-tab Lender Pro Forma, 3-tab public wizard, 21-tab full underwriting model) and PDFKit for PDF exports (lender and board packets). Exports include print-ready formatting, school-specific branding, and pre-computed cached results for formula cells. Financial integrity is ensured through linked balance sheet and cash flow statements. Automated Excel QA suite (`tests/excel-qa.ts`) verifies file integrity, formulas, and financial tie-outs.
 - **Monorepo Structure**: Organized into `artifacts/` for deployable applications, `lib/` for shared libraries, and `scripts/` for utilities.
+- **Shared Finance Library** (`@workspace/finance` in `lib/finance/`): Canonical source for financial constants (benefits rate 25%, payroll tax 8%, COLA 3%, inflation 3%, rent escalation 3%, tuition escalation 3%, retention rate 85%, YEAR_COUNT 5, LOADED_COST_MULTIPLIER) and loan amortization functions (computeAnnualDebt, computeMonthlyDebt, computeAnnualDebtForYear, computeInterestPortion, computePrincipalPortion, computeRemainingBalance). All amortization functions take rate as a decimal (0.05 for 5%); callers with percentage rates divide by 100 before calling. Both frontend and backend depend on this package.
 
 ## Core Features
 ### Universal Financial Model

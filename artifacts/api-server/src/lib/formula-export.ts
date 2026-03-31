@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { computeAnnualDebt } from "@workspace/finance";
 import {
   addInstructionsSheet, addDashboardSheet, type DashboardInput, DASHBOARD_GREEN,
   computeRevenueForYear as sharedComputeRevenue,
@@ -349,14 +350,6 @@ function driverLabel(dt: string): string {
     percent_of_base: "% of Base", percent_of_revenue: "% of Revenue",
   };
   return map[dt] || dt;
-}
-
-function computeAnnualDebt(principal: number, rate: number, termYears: number): number {
-  if (principal <= 0 || termYears <= 0) return 0;
-  if (rate <= 0) return principal / termYears;
-  const mr = rate / 12;
-  const m = termYears * 12;
-  return (principal * (mr * Math.pow(1 + mr, m)) / (Math.pow(1 + mr, m) - 1)) * 12;
 }
 
 function resolveEsc(rowEsc?: number, fallback?: number): number {

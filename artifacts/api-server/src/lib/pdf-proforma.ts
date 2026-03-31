@@ -4,6 +4,7 @@ import {
   profitLabel, profitMarginLabel, entityTypeDisplay, schoolTypeDisplay,
   ensureSpace, type PDFDoc, type TableColumn,
 } from "./pdf-utils.js";
+import { computeAnnualDebt } from "@workspace/finance";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -290,14 +291,7 @@ function computeCapDebt(rows: CapitalDebtRow[], yearIdx: number, students: numbe
   for (const r of rows) {
     if (!r.enabled) continue;
     if (r.isLoan && r.loanPrincipal && r.loanPrincipal > 0) {
-      const p = r.loanPrincipal;
-      const rate = (r.loanRate || 0) / 100;
-      const term = r.loanTermYears || 0;
-      if (p <= 0 || term <= 0) continue;
-      if (rate <= 0) { total += p / term; continue; }
-      const mr = rate / 12;
-      const mo = term * 12;
-      total += p * (mr * Math.pow(1 + mr, mo)) / (Math.pow(1 + mr, mo) - 1) * 12;
+      total += computeAnnualDebt(r.loanPrincipal, (r.loanRate || 0) / 100, r.loanTermYears || 0);
     } else {
       total += computeDriverValue(r.amounts, yearIdx, r.driverType, students);
     }

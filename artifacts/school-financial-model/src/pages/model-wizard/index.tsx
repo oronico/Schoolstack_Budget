@@ -7,6 +7,7 @@ import { useDebounce } from "use-debounce";
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
+import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { MicroLessonContainer } from "@/components/coaching/MicroLessonCard";
 import { useAuth } from "@/lib/auth-context";
@@ -165,7 +166,7 @@ export function ModelWizardPage() {
         percentBase?: string;
         note?: string;
       }>,
-      staffing: { studentsPerTeacher: 12, benefitsRate: 25, payrollTaxRate: 8 },
+      staffing: { studentsPerTeacher: 12, benefitsRate: DEFAULT_BENEFITS_RATE, payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE },
       staffingRows: [] as Array<{
         id: string;
         roleName: string;

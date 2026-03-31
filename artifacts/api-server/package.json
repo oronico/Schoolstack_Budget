@@ -19,6 +19,7 @@
   "dependencies": {
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/finance": "workspace:*",
     "adm-zip": "^0.5.16",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",

@@ -2,6 +2,15 @@ import { useFormContext } from "react-hook-form";
 import { useEffect, useMemo } from "react";
 import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DEFAULT_BENEFITS_RATE,
+  DEFAULT_PAYROLL_TAX_RATE,
+  DEFAULT_COLA_PCT,
+  DEFAULT_GENERAL_INFLATION_PCT,
+  DEFAULT_RENT_ESCALATION_PCT,
+  DEFAULT_TUITION_ESCALATION_PCT,
+  DEFAULT_RETENTION_RATE,
+} from "@workspace/finance";
 import { getStateFundingConfig, type SchoolType } from "@/lib/state-funding-data";
 import {
   ENROLLMENT_REVENUE_METHOD_LABELS,
@@ -14,13 +23,13 @@ import type { FullModelData } from "../schema";
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const DEFAULTS = {
-  annualSalaryIncrease: 3,
-  generalCostInflation: 3,
-  annualRentIncrease: 3,
-  benefitsRate: 25,
-  payrollTaxRate: 8,
-  retentionRate: 85,
-  tuitionEscalationRate: 3,
+  annualSalaryIncrease: DEFAULT_COLA_PCT,
+  generalCostInflation: DEFAULT_GENERAL_INFLATION_PCT,
+  annualRentIncrease: DEFAULT_RENT_ESCALATION_PCT,
+  benefitsRate: DEFAULT_BENEFITS_RATE,
+  payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
+  retentionRate: DEFAULT_RETENTION_RATE,
+  tuitionEscalationRate: DEFAULT_TUITION_ESCALATION_PCT,
 };
 
 function AssumptionField({

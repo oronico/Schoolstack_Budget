@@ -3,6 +3,7 @@
 // Retained for reference only — do not add new code here.
 import ExcelJS from "exceljs";
 import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear, computeInstructionalCostByYear } from "./workbook-helpers.js";
+import { computeAnnualDebt } from "@workspace/finance";
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
   if (!baseYear) return `Year ${offset + 1}`;
@@ -409,14 +410,6 @@ function tuitionWithTiers(gross: number, y: number, students: number, tiers?: Tu
   const rem = students - alloc;
   if (rem > 0) total += rem * gross;
   return total;
-}
-
-function computeAnnualDebt(principal: number, rate: number, termYears: number): number {
-  if (principal <= 0 || termYears <= 0) return 0;
-  if (rate <= 0) return principal / termYears;
-  const mr = rate / 12;
-  const m = termYears * 12;
-  return (principal * (mr * Math.pow(1 + mr, m)) / (Math.pow(1 + mr, m) - 1)) * 12;
 }
 
 function computeGradeBandRevenueUW(sp: SchoolProfile, y: number): number {

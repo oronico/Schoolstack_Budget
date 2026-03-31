@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2 } from "lucide-react";
 import { useMemo } from "react";
+import { computeAnnualDebt } from "@workspace/finance";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
@@ -89,13 +90,7 @@ function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driv
   }
 }
 
-function computeAnnualDebtService(principal: number, annualRate: number, termYears: number): number {
-  if (principal <= 0 || termYears <= 0) return 0;
-  if (annualRate <= 0) return principal / termYears;
-  const mr = annualRate / 12;
-  const months = termYears * 12;
-  return (principal * (mr * Math.pow(1 + mr, months)) / (Math.pow(1 + mr, months) - 1)) * 12;
-}
+const computeAnnualDebtService = computeAnnualDebt;
 
 export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void, modelId?: number }) {
   const { getValues, watch } = useFormContext();

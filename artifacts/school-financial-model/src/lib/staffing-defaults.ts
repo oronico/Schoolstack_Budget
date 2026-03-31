@@ -1,3 +1,5 @@
+import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
+
 export type StaffingFunctionCategory =
   | "instructional"
   | "school_leadership"
@@ -185,9 +187,6 @@ const STAFF_PRESETS: StaffPreset[] = [
     includeFor: { stages: ALL_STAGES, profiles: ALL_PROFILES },
   },
 ];
-
-const DEFAULT_BENEFITS_RATE = 25;
-const DEFAULT_PAYROLL_TAX_RATE = 8;
 
 export function generateDefaultStaffingRows(
   schoolStage: SchoolStage,

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart, MapPin, Users } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+import { YEAR_COUNT } from "@workspace/finance";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
   type RevenueRowData,
@@ -162,7 +163,7 @@ function sourcesToCategories(sources: RevenueSources): Set<RevenueCategory> {
 }
 
 function getYearCount(_schoolStage: string | undefined): number {
-  return 5;
+  return YEAR_COUNT;
 }
 
 function getYearLabel(index: number, schoolStage: string | undefined): string {
@@ -575,9 +576,6 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const revenuePerStudent = y1Students > 0 ? Math.round(totalY1Revenue / y1Students) : 0;
 
   const isCharter = schoolType === "charter_school" || fundingProfile === "charter_public_funded";
-
-  const formatCurrency = (val: number) =>
-    val >= 1000 ? `$${Math.round(val).toLocaleString()}` : `$${val}`;
 
   const anySourceChecked = revenueSources?.tuition || revenueSources?.publicFunding || revenueSources?.schoolChoice || revenueSources?.philanthropy;
   const sourceCount = [revenueSources?.tuition, revenueSources?.publicFunding, revenueSources?.schoolChoice, revenueSources?.philanthropy].filter(Boolean).length;

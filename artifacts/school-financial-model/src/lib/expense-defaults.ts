@@ -1,3 +1,5 @@
+import { computeAnnualDebt, YEAR_COUNT } from "@workspace/finance";
+
 export type BuiltInExpenseCategory =
   | "personnel"
   | "instructional_program"
@@ -316,12 +318,7 @@ export function generateDefaultCapitalDebtRows(
 }
 
 export function calculateLoanPayment(principal: number, annualRate: number, termYears: number): number {
-  if (principal <= 0 || termYears <= 0) return 0;
-  if (annualRate <= 0) return Math.round(principal / termYears);
-  const monthlyRate = annualRate / 100 / 12;
-  const totalPayments = termYears * 12;
-  const monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / (Math.pow(1 + monthlyRate, totalPayments) - 1);
-  return Math.round(monthlyPayment * 12);
+  return Math.round(computeAnnualDebt(principal, annualRate / 100, termYears));
 }
 
 export function mergeCanonicalExpenseRows(existing: ExpenseRowData[], yearCount: number): ExpenseRowData[] {
@@ -397,5 +394,5 @@ export const COA_CATEGORY_RANGES: Record<string, { range: string; label: string 
 };
 
 export function getYearCount(_schoolStage?: string): number {
-  return 5;
+  return YEAR_COUNT;
 }

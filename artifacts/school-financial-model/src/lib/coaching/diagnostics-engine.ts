@@ -1,4 +1,5 @@
 import type { FullModelData } from "@/pages/model-wizard/schema";
+import { computeAnnualDebt, DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, DEFAULT_COLA_PCT } from "@workspace/finance";
 
 export type DiagnosticSeverity = "critical" | "warning" | "info";
 
@@ -38,9 +39,6 @@ const THRESHOLDS = {
   minReserveMonths: 1,
 } as const;
 
-const DEFAULT_BENEFITS_RATE = 25;
-const DEFAULT_PAYROLL_TAX_RATE = 8;
-const DEFAULT_COLA_PCT = 3;
 
 function computeMetrics(data: FullModelData): ComputedMetrics {
   const programs = data.programs || [];
@@ -142,13 +140,7 @@ function computeMetrics(data: FullModelData): ComputedMetrics {
   for (const c of capDebtRows) {
     if (!c.enabled) continue;
     if (c.isLoan && c.loanPrincipal && c.loanRate && c.loanTermYears) {
-      const monthlyRate = (c.loanRate / 100) / 12;
-      const months = c.loanTermYears * 12;
-      if (monthlyRate > 0 && months > 0) {
-        const monthlyPmt = (c.loanPrincipal * monthlyRate * Math.pow(1 + monthlyRate, months))
-          / (Math.pow(1 + monthlyRate, months) - 1);
-        y1CapDebt += monthlyPmt * 12;
-      }
+      y1CapDebt += computeAnnualDebt(c.loanPrincipal, c.loanRate / 100, c.loanTermYears);
     } else {
       y1CapDebt += driverVal(c.amounts, 0, c.driverType, y1Students);
     }
