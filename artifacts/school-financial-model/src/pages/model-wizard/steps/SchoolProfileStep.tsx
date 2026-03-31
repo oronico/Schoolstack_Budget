@@ -549,7 +549,7 @@ export function SchoolProfileStep() {
   useEffect(() => {
     if (prevEntityType.current === entityType) return;
     prevEntityType.current = entityType;
-    if (isNonprofit(entityType)) {
+    if (!isForProfit(entityType)) {
       setValue("schoolProfile.hasFiscalSponsor", false, { shouldDirty: true });
       setValue("schoolProfile.fiscalSponsorName", "", { shouldDirty: true });
       setValue("schoolProfile.fiscalSponsorInterest", false, { shouldDirty: true });
