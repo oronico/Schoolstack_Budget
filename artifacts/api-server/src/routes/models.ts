@@ -73,6 +73,9 @@ function modelResponse(model: typeof financialModelsTable.$inferSelect) {
 
 router.get("/models", authMiddleware, async (req: AuthRequest, res) => {
   try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+
     const models = await db
       .select({
         id: financialModelsTable.id,
@@ -86,7 +89,9 @@ router.get("/models", authMiddleware, async (req: AuthRequest, res) => {
       })
       .from(financialModelsTable)
       .where(eq(financialModelsTable.userId, req.userId!))
-      .orderBy(desc(financialModelsTable.updatedAt));
+      .orderBy(desc(financialModelsTable.updatedAt))
+      .limit(limit)
+      .offset(offset);
 
     res.json(models);
   } catch (err) {

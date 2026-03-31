@@ -152,11 +152,12 @@ router.post("/auth/forgot-password", async (req, res) => {
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
     if (user) {
-      const resetToken = crypto.randomBytes(32).toString("hex");
+      const resetTokenRaw = crypto.randomBytes(32).toString("hex");
+      const resetToken = crypto.createHash("sha256").update(resetTokenRaw).digest("hex");
       const resetTokenExpiry = new Date(Date.now() + 3600000);
       await db.update(usersTable).set({ resetToken, resetTokenExpiry }).where(eq(usersTable.id, user.id));
       await trackEvent("requested_password_reset", user.id);
-      const result = await sendPasswordResetEmail(user.email, resetToken);
+      const result = await sendPasswordResetEmail(user.email, resetTokenRaw);
       if (!result.success) {
         res.status(503).json({ error: result.error || "Unable to send reset email. Please try again later." });
         return;
@@ -180,7 +181,8 @@ router.post("/auth/reset-password", async (req, res) => {
     }
     const { token, password } = parsed.data;
 
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.resetToken, token)).limit(1);
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.resetToken, tokenHash)).limit(1);
     if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
       res.status(400).json({ error: "Invalid or expired reset token." });
       return;

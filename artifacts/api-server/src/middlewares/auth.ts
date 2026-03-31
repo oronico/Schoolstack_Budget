@@ -10,7 +10,7 @@ export interface AuthRequest extends Request {
   userId?: number;
 }
 
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     res.status(401).json({ error: "Authentication required" });
@@ -23,21 +23,20 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     req.userId = decoded.userId;
 
     if (typeof decoded.tokenVersion === "number") {
-      db.select({ tokenVersion: usersTable.tokenVersion })
-        .from(usersTable)
-        .where(eq(usersTable.id, decoded.userId))
-        .limit(1)
-        .then(([user]) => {
-          if (!user || user.tokenVersion !== decoded.tokenVersion) {
-            res.status(401).json({ error: "Session has been invalidated. Please log in again." });
-            return;
-          }
-          next();
-        })
-        .catch(() => {
-          res.status(500).json({ error: "Authentication check failed" });
-        });
-      return;
+      try {
+        const [user] = await db.select({ tokenVersion: usersTable.tokenVersion })
+          .from(usersTable)
+          .where(eq(usersTable.id, decoded.userId))
+          .limit(1);
+
+        if (!user || user.tokenVersion !== decoded.tokenVersion) {
+          res.status(401).json({ error: "Session has been invalidated. Please log in again." });
+          return;
+        }
+      } catch {
+        res.status(500).json({ error: "Authentication check failed" });
+        return;
+      }
     }
 
     next();

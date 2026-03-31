@@ -282,7 +282,7 @@ function safeFormulaValue(formula: string, result: unknown): { formula: string; 
   if (result === null || result === undefined) return { formula, result: "0" };
   if (typeof result === "number") {
     if (isNaN(result) || !isFinite(result)) return { formula, result: "0" };
-    const rounded = Math.round(result * 100) / 100;
+    const rounded = Math.round(result * 1e8) / 1e8;
     return { formula, result: rounded === 0 ? "0" : rounded };
   }
   if (typeof result === "string") return { formula, result: result || "0" };

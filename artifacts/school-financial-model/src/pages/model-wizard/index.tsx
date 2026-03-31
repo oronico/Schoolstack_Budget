@@ -23,30 +23,32 @@ const ReviewStep = lazy(() => import("./steps/ReviewStep").then(m => ({ default:
 const ConsultantStep = lazy(() => import("./steps/ConsultantStep").then(m => ({ default: m.ConsultantStep })));
 const ExportStep = lazy(() => import("./steps/ExportStep").then(m => ({ default: m.ExportStep })));
 
-function cleanFacilityFieldsByOwnership(obj: Record<string, unknown>, ot: string | undefined) {
-  if (!ot) return;
+function cleanFacilityFieldsForSave(obj: Record<string, unknown>, ot: string | undefined): Record<string, unknown> {
+  if (!ot) return obj;
+  const cleaned = { ...obj };
   if (ot !== "rent") {
-    obj.monthlyRent = 0;
-    obj.isNNNLease = false;
-    obj.nnnCamCharges = 0;
-    obj.nnnMaintenance = 0;
-    obj.nnnUtilities = 0;
+    delete cleaned.monthlyRent;
+    delete cleaned.isNNNLease;
+    delete cleaned.nnnCamCharges;
+    delete cleaned.nnnMaintenance;
+    delete cleaned.nnnUtilities;
   }
   if (ot !== "own") {
-    obj.propertyTaxAnnual = 0;
-    obj.hasMortgage = false;
-    obj.mortgageMonthlyPayment = 0;
+    delete cleaned.propertyTaxAnnual;
+    delete cleaned.hasMortgage;
+    delete cleaned.mortgageMonthlyPayment;
   }
   if (ot !== "donated") {
-    obj.comparableMarketRent = 0;
-    obj.facilityArrangementEndDate = undefined;
+    delete cleaned.comparableMarketRent;
+    delete cleaned.facilityArrangementEndDate;
   }
   if (ot !== "home_based") {
-    obj.monthlyFacilityAllocation = 0;
+    delete cleaned.monthlyFacilityAllocation;
   }
   if (ot !== "donated" && ot !== "home_based") {
-    obj.hasWrittenAgreement = false;
+    delete cleaned.hasWrittenAgreement;
   }
+  return cleaned;
 }
 
 type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null };
@@ -273,26 +275,30 @@ export function ModelWizardPage() {
 
   const formValues = methods.watch();
   const [debouncedValues] = useDebounce(formValues, 1000);
+  const latestValuesRef = useRef(formValues);
+  const lastSavedRef = useRef<string>("");
+  latestValuesRef.current = formValues;
 
   useEffect(() => {
     if (!modelId || !initialData) return;
     
-    const save = async () => {
+    const save = async (): Promise<boolean> => {
       setIsSaving(true);
       try {
         const profile = debouncedValues.schoolProfile as Record<string, unknown> | undefined;
         const stageVal = profile?.schoolStage as "new_school" | "operating_school" | undefined;
         const fundingVal = profile?.fundingProfile as "tuition_based" | "charter_public_funded" | "hybrid_mixed" | undefined;
         const cleanedValues = JSON.parse(JSON.stringify(debouncedValues)) as Record<string, unknown>;
-        const sp = cleanedValues.schoolProfile as Record<string, unknown> | undefined;
+        let sp = cleanedValues.schoolProfile as Record<string, unknown> | undefined;
         if (sp) {
-          cleanFacilityFieldsByOwnership(sp, sp.ownershipType as string | undefined);
+          sp = cleanFacilityFieldsForSave(sp, sp.ownershipType as string | undefined);
           const phases = sp.facilityPhases as Array<Record<string, unknown>> | undefined;
           if (phases) {
-            for (const phase of phases) {
-              cleanFacilityFieldsByOwnership(phase, phase.ownershipType as string | undefined);
-            }
+            sp.facilityPhases = phases.map(phase =>
+              cleanFacilityFieldsForSave(phase, phase.ownershipType as string | undefined)
+            );
           }
+          cleanedValues.schoolProfile = sp;
         }
         await updateMutation.mutateAsync({
           id: modelId,
@@ -305,17 +311,69 @@ export function ModelWizardPage() {
           }
         });
         setLastSaved(new Date());
+        return true;
       } catch (e) {
         console.error("Auto-save failed", e);
+        return false;
       } finally {
         setIsSaving(false);
       }
     };
     
     if (Object.keys(methods.formState.dirtyFields).length > 0) {
-       save();
+       save().then((ok) => {
+         if (ok) lastSavedRef.current = JSON.stringify(debouncedValues);
+       });
     }
   }, [debouncedValues, currentStep, modelId]);
+
+  useEffect(() => {
+    if (!modelId || !initialData) return;
+
+    const flushSave = () => {
+      const current = JSON.stringify(latestValuesRef.current);
+      if (current === lastSavedRef.current) return;
+      const profile = latestValuesRef.current.schoolProfile as Record<string, unknown> | undefined;
+      const stageVal = profile?.schoolStage as string | undefined;
+      const fundingVal = profile?.fundingProfile as string | undefined;
+      const cleanedValues = JSON.parse(current) as Record<string, unknown>;
+      let sp = cleanedValues.schoolProfile as Record<string, unknown> | undefined;
+      if (sp) {
+        sp = cleanFacilityFieldsForSave(sp, sp.ownershipType as string | undefined);
+        const phases = sp.facilityPhases as Array<Record<string, unknown>> | undefined;
+        if (phases) {
+          sp.facilityPhases = phases.map(phase =>
+            cleanFacilityFieldsForSave(phase, phase.ownershipType as string | undefined)
+          );
+        }
+        cleanedValues.schoolProfile = sp;
+      }
+      const body = JSON.stringify({
+        name: (profile?.schoolName as string) || initialData.name,
+        currentStep,
+        ...(stageVal ? { schoolStage: stageVal } : {}),
+        ...(fundingVal ? { fundingProfile: fundingVal } : {}),
+        data: cleanedValues,
+      });
+      const token = localStorage.getItem("auth_token");
+      fetch(`/api/models/${modelId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    };
+
+    const handleBeforeUnload = () => { flushSave(); };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      flushSave();
+    };
+  }, [modelId, initialData, currentStep]);
 
   if (!modelId) {
     setLocation("/dashboard");
