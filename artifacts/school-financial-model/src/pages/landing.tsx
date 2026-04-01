@@ -141,7 +141,7 @@ export function LandingPage() {
               {
                 icon: <Download className="w-8 h-8 text-[#0D9488]" />,
                 title: "Take it with you.",
-                desc: "Download a Lender-Ready Packet, a Board Summary, or a full Underwriting Package. Share a read-only link with your funder or authorizer. For your board meeting, your bank, or just your own peace of mind.",
+                desc: "Download a Lender-Ready Packet, a Board Summary, a Formula Workbook, or a full Underwriting Package. Share a read-only link with your funder or authorizer. For your board meeting, your bank, or just your own peace of mind.",
               },
             ].map((item, i) => (
               <motion.div
