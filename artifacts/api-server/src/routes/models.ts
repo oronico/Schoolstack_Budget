@@ -832,6 +832,12 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      res.status(400).json({ error: "Please provide a valid email address." });
+      return;
+    }
+
     const [model] = await db
       .select()
       .from(financialModelsTable)

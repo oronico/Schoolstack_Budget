@@ -58,7 +58,7 @@ export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<
 
   const yearHeaders = data.enrollment.map((_, i) => `<th style="padding:6px 12px;border-bottom:2px solid #D97706;text-align:right;color:#1E293B;">Year ${i + 1}</th>`).join("");
   const findingsHtml = data.criticalFindings.length > 0
-    ? `<div style="background:#FEF3C7;border-left:4px solid #D97706;padding:12px 16px;border-radius:4px;margin:16px 0;"><strong style="color:#92400E;">Diagnostics Findings:</strong><ul style="margin:8px 0 0;padding-left:18px;color:#92400E;">${data.criticalFindings.map(f => `<li>${f}</li>`).join("")}</ul></div>`
+    ? `<div style="background:#FEF3C7;border-left:4px solid #D97706;padding:12px 16px;border-radius:4px;margin:16px 0;"><strong style="color:#92400E;">Diagnostics Findings:</strong><ul style="margin:8px 0 0;padding-left:18px;color:#92400E;">${data.criticalFindings.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul></div>`
     : "";
 
   const html = `
