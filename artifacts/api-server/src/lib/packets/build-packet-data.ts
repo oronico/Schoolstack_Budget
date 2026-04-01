@@ -184,7 +184,7 @@ function buildSection(
     case "five_year_projection":
       return buildFiveYearProjection(base, co, yearlyData, niLabel, md);
     case "cash_flow":
-      return buildCashFlow(base, co);
+      return buildCashFlow(base, co, md, yearlyData);
     case "debt_service":
       return buildDebtService(base, co, yearlyData);
     case "stress_tests":
@@ -427,7 +427,20 @@ function buildFiveYearProjection(
   let breakevenNote = "";
   if (y1 && y1.students > 0 && y1.totalRevenue > 0) {
     const revPerStudent = y1.totalRevenue / y1.students;
-    const breakevenEnroll = revPerStudent > 0 ? Math.ceil(y1.totalExpenses / revPerStudent) : 0;
+    let y1VarCostPerStudent = 0;
+    let y1FixedCosts = y1.totalStaffing;
+    for (const e of (md.expenseRows || [])) {
+      if (e.enabled === false) continue;
+      const dt = e.driverType;
+      if (dt === "per_student" || dt === "per_new_student" || dt === "per_returning_student") {
+        y1VarCostPerStudent += e.amounts?.[0] ?? 0;
+      } else if (dt !== "percent_of_revenue") {
+        y1FixedCosts += driverVal(e.amounts, 0, dt, y1.students);
+      }
+    }
+    y1FixedCosts += y1.debtService;
+    const contribMargin = revPerStudent - y1VarCostPerStudent;
+    const breakevenEnroll = contribMargin > 0 ? Math.ceil(y1FixedCosts / contribMargin) : 0;
     if (breakevenEnroll > 0 && breakevenEnroll !== Infinity) {
       const cushionPct = ((y1.students - breakevenEnroll) / breakevenEnroll * 100).toFixed(0);
       breakevenNote = ` Breakeven enrollment is ${breakevenEnroll} students (${y1.students >= breakevenEnroll ? `${cushionPct}% above` : `${Math.abs(Number(cushionPct))}% below`} Year 1 enrollment).`;
@@ -461,7 +474,7 @@ function buildFiveYearProjection(
   };
 }
 
-function buildCashFlow(s: PacketSection, co: ConsultantOutput): PacketSection {
+function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, yearlyData: YearData[]): PacketSection {
   const runwayText = co.cashRunwayMonths >= 60
     ? "Cash stays positive throughout the entire 5-year projection."
     : `Cash goes negative in month ${co.cashRunwayMonths}. The school will need additional funding or cost adjustments.`;
@@ -471,17 +484,53 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput): PacketSection {
     values: [fmt(cf.cumulativeNetIncome), `${cf.reserveMonths.toFixed(1)} months`],
   }));
 
+  const y1 = yearlyData[0];
+  const ob = md.openingBalances;
+  let openingNote = "";
+  if (ob && ((ob.cash || 0) > 0)) {
+    const totalAssets = (ob.cash || 0) + (ob.accountsReceivable || 0) + (ob.fixedAssets || 0) + (ob.otherAssets || 0);
+    const totalLiabilities = (ob.accountsPayable || 0) + (ob.currentDebtPortion || 0) + (ob.longTermDebt || 0);
+    openingNote = ` Opening balance: ${fmt(totalAssets)} total assets, ${fmt(totalLiabilities)} total liabilities, ${fmt(totalAssets - totalLiabilities)} net position.`;
+  }
+
+  const monthlyTable: PacketTable | undefined = y1 && y1.totalRevenue > 0 ? {
+    title: "Year 1 Monthly Cash Flow Summary",
+    headers: ["Month", "Beginning", "Inflows", "Outflows", "Ending"],
+    rows: (() => {
+      const calendarMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const fyStart = ((md.schoolProfile?.fiscalYearStartMonth || 7) - 1);
+      const monthlyInflow = y1.totalRevenue / 12;
+      const monthlyOutflow = y1.totalExpenses / 12;
+      const startingCash = ob?.cash ?? 0;
+      let running = startingCash;
+      const monthRows: PacketTableRow[] = [];
+      for (let i = 0; i < 12; i++) {
+        const mIdx = (fyStart + i) % 12;
+        const begin = running;
+        const end = begin + monthlyInflow - monthlyOutflow;
+        monthRows.push({
+          label: calendarMonths[mIdx],
+          values: [fmt(begin), fmt(monthlyInflow), `(${fmt(monthlyOutflow)})`, fmt(end)],
+          isBold: end < 0,
+        });
+        running = end;
+      }
+      return monthRows;
+    })(),
+  } : undefined;
+
+  const tables: PacketTable[] = [
+    { title: "Cumulative Cash Position", headers: ["Year", "Cumulative Net Income", "Reserve Months"], rows },
+  ];
+  if (monthlyTable) tables.push(monthlyTable);
+
   return {
     ...s,
-    narrative: runwayText,
+    narrative: `${runwayText}${openingNote}`,
     linkedMetrics: [
       { label: "Cash Runway", value: co.cashRunwayMonths >= 60 ? "60+ months" : `${co.cashRunwayMonths} months`, sourceEngine: "consultant" },
     ],
-    tables: [{
-      title: "Cumulative Cash Position",
-      headers: ["Year", "Cumulative Net Income", "Reserve Months"],
-      rows,
-    }],
+    tables,
   };
 }
 

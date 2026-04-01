@@ -596,15 +596,28 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   const y1Rev = revTotals[0] || 0;
   const y1Exp = staffTotals[0] + opexTotals[0] + capDebtTotals[0];
   if (enrollment[0] > 0 && y1Rev > 0) {
-    ensureSpace(doc, 140);
+    ensureSpace(doc, 160);
     sectionTitle(doc, "Key Financial Indicators");
     const revenuePerStudent = y1Rev / enrollment[0];
-    const expensePerStudent = y1Exp / enrollment[0];
-    const contributionMargin = revenuePerStudent - expensePerStudent;
-    const breakeven = contributionMargin > 0 ? Math.ceil(y1Exp / revenuePerStudent) : Infinity;
+
+    let y1VariableCostPerStudent = 0;
+    let y1FixedCosts = staffTotals[0];
+    for (const e of (data.expenseRows || [])) {
+      if (!e.enabled) continue;
+      const dt = e.driverType as string;
+      if (dt === "per_student" || dt === "per_new_student" || dt === "per_returning_student") {
+        y1VariableCostPerStudent += e.amounts?.[0] ?? 0;
+      } else if (dt !== "percent_of_revenue") {
+        y1FixedCosts += computeDriverValue(e.amounts, 0, e.driverType, enrollment[0]);
+      }
+    }
+    y1FixedCosts += capDebtTotals[0];
+    const contributionMargin = revenuePerStudent - y1VariableCostPerStudent;
+    const breakeven = contributionMargin > 0 ? Math.ceil(y1FixedCosts / contributionMargin) : Infinity;
 
     labelValue(doc, "Revenue per Student", fmtCurrency(revenuePerStudent));
-    labelValue(doc, "Expense per Student", fmtCurrency(expensePerStudent));
+    labelValue(doc, "Variable Cost per Student", fmtCurrency(y1VariableCostPerStudent));
+    labelValue(doc, "Fixed Costs", fmtCurrency(y1FixedCosts));
     if (breakeven !== Infinity) {
       labelValue(doc, "Breakeven Enrollment", `${fmtNumber(breakeven)} students`);
       const cushion = enrollment[0] > breakeven
@@ -618,12 +631,55 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     for (const p of facilityPhases) {
       if (p.squareFootage) totalSqft += p.squareFootage;
     }
+    let facilityCost = 0;
+    for (const e of (data.expenseRows || [])) {
+      if (!e.enabled || e.category !== "occupancy_facility") continue;
+      if (e.driverType === "percent_of_revenue") {
+        facilityCost += ((e.amounts?.[0] ?? 0) / 100) * y1Rev;
+      } else {
+        facilityCost += computeDriverValue(e.amounts, 0, e.driverType, enrollment[0]);
+      }
+    }
+    if (enrollment[0] > 0 && facilityCost > 0) {
+      labelValue(doc, "Facility Cost / Student", fmtCurrency(facilityCost / enrollment[0]));
+    }
     if (totalSqft > 0) {
-      const facilityCost = opexTotals[0] > 0 ? opexTotals[0] * 0.3 : 0;
       labelValue(doc, "Total Square Footage", fmtNumber(totalSqft));
       if (facilityCost > 0) {
         labelValue(doc, "Facility Cost / Sq Ft", fmtCurrency(facilityCost / totalSqft));
       }
+    }
+  }
+
+  if (revenueRows.length > 0 && enrollment[0] > 0) {
+    ensureSpace(doc, 300);
+    sectionTitle(doc, "Year 1 Monthly Cash Flow");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const fyStart = (sp.fiscalYearStartMonth || 7) - 1;
+    const monthlyExpense = y1Exp / 12;
+    const startingCash = (data.openingBalances?.cash ?? 0);
+    let running = startingCash;
+
+    const cfCols: TableColumn[] = [
+      { header: "Month", width: 60 },
+      { header: "Beginning", width: 80, align: "right" },
+      { header: "Inflows", width: 80, align: "right" },
+      { header: "Outflows", width: 80, align: "right" },
+      { header: "Ending", width: 80, align: "right" },
+    ];
+    const cfRows: string[][] = [];
+    for (let i = 0; i < 12; i++) {
+      const mIdx = (fyStart + i) % 12;
+      const label = monthNames[mIdx];
+      const inflow = y1Rev / 12;
+      const begin = running;
+      const end = begin + inflow - monthlyExpense;
+      cfRows.push([label, fmtCurrency(begin), fmtCurrency(inflow), `(${fmtCurrency(monthlyExpense)})`, fmtCurrency(end)]);
+      running = end;
+    }
+    drawTable(doc, cfCols, cfRows, { zebra: true });
+    if (running < 0) {
+      bodyText(doc, "⚠ Cash position turns negative during Year 1. Consider adjusting revenue timing or securing a line of credit.");
     }
   }
 

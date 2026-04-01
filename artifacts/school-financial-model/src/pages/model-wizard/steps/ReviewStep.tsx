@@ -618,45 +618,164 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                 <TrendingDown className="h-5 w-5 text-primary" />
                 Prior Year vs. Projected Year 1
               </h3>
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
-                  <span className="text-sm font-medium text-muted-foreground">Prior-Year Revenue</span>
-                  <span className="text-sm font-semibold">{formatCurrency(data.priorYearSnapshot.totalRevenue)}</span>
-                </div>
-                <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
-                  <span className="text-sm font-medium text-muted-foreground">Projected Year 1 Revenue</span>
-                  <span className="text-sm font-semibold">{formatCurrency(revenueSummary.total)}</span>
-                </div>
-                {revenueSummary.total > 0 && data.priorYearSnapshot.totalRevenue > 0 && (
-                  <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
-                    <span className="text-sm font-medium text-muted-foreground">Revenue Variance</span>
-                    <span className={`text-sm font-semibold ${revenueSummary.total >= data.priorYearSnapshot.totalRevenue ? "text-green-600" : "text-rose-600"}`}>
-                      {revenueSummary.total >= data.priorYearSnapshot.totalRevenue ? "+" : ""}
-                      {Math.round(((revenueSummary.total - data.priorYearSnapshot.totalRevenue) / data.priorYearSnapshot.totalRevenue) * 100)}%
-                    </span>
-                  </div>
-                )}
-                {data.priorYearSnapshot.totalExpenses && data.priorYearSnapshot.totalExpenses > 0 && (
-                  <>
-                    <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30 mt-2">
-                      <span className="text-sm font-medium text-muted-foreground">Prior-Year Expenses</span>
-                      <span className="text-sm font-semibold">{formatCurrency(data.priorYearSnapshot.totalExpenses)}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
-                      <span className="text-sm font-medium text-muted-foreground">Projected Year 1 Expenses</span>
-                      <span className="text-sm font-semibold">{formatCurrency(totalExpenses)}</span>
-                    </div>
-                    <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
-                      <span className="text-sm font-medium text-muted-foreground">Expense Variance</span>
-                      <span className={`text-sm font-semibold ${totalExpenses <= data.priorYearSnapshot.totalExpenses ? "text-green-600" : "text-rose-600"}`}>
-                        {totalExpenses >= data.priorYearSnapshot.totalExpenses ? "+" : ""}
-                        {Math.round(((totalExpenses - data.priorYearSnapshot.totalExpenses) / data.priorYearSnapshot.totalExpenses) * 100)}%
-                      </span>
-                    </div>
-                  </>
-                )}
+              <div className="overflow-x-auto -mx-2">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 px-3 font-semibold text-muted-foreground">Category</th>
+                      <th className="text-right py-2 px-3 font-semibold text-muted-foreground">Prior Year</th>
+                      <th className="text-right py-2 px-3 font-semibold text-muted-foreground">Year 1 Projected</th>
+                      <th className="text-right py-2 px-3 font-semibold text-muted-foreground">Variance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-border/30 bg-secondary/20 font-semibold">
+                      <td className="py-2 px-3">Total Revenue</td>
+                      <td className="py-2 px-3 text-right">{formatCurrency(data.priorYearSnapshot.totalRevenue)}</td>
+                      <td className="py-2 px-3 text-right">{formatCurrency(revenueSummary.total)}</td>
+                      <td className={`py-2 px-3 text-right ${revenueSummary.total >= data.priorYearSnapshot.totalRevenue ? "text-green-600" : "text-rose-600"}`}>
+                        {revenueSummary.total >= data.priorYearSnapshot.totalRevenue ? "+" : ""}{Math.round(((revenueSummary.total - data.priorYearSnapshot.totalRevenue) / data.priorYearSnapshot.totalRevenue) * 100)}%
+                      </td>
+                    </tr>
+                    {data.priorYearSnapshot.tuitionRevenue ? (
+                      <tr className="border-b border-border/30">
+                        <td className="py-1.5 px-3 pl-6 text-muted-foreground">Tuition & Fees</td>
+                        <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.tuitionRevenue)}</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                      </tr>
+                    ) : null}
+                    {data.priorYearSnapshot.publicFundingRevenue ? (
+                      <tr className="border-b border-border/30">
+                        <td className="py-1.5 px-3 pl-6 text-muted-foreground">Public Funding</td>
+                        <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.publicFundingRevenue)}</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                      </tr>
+                    ) : null}
+                    {data.priorYearSnapshot.philanthropyRevenue ? (
+                      <tr className="border-b border-border/30">
+                        <td className="py-1.5 px-3 pl-6 text-muted-foreground">Philanthropy</td>
+                        <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.philanthropyRevenue)}</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                      </tr>
+                    ) : null}
+                    {data.priorYearSnapshot.otherRevenue ? (
+                      <tr className="border-b border-border/30">
+                        <td className="py-1.5 px-3 pl-6 text-muted-foreground">Other Revenue</td>
+                        <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.otherRevenue)}</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                      </tr>
+                    ) : null}
+                    {data.priorYearSnapshot.totalExpenses && data.priorYearSnapshot.totalExpenses > 0 && (
+                      <>
+                        <tr className="border-b border-border/30 bg-secondary/20 font-semibold">
+                          <td className="py-2 px-3">Total Expenses</td>
+                          <td className="py-2 px-3 text-right">{formatCurrency(data.priorYearSnapshot.totalExpenses)}</td>
+                          <td className="py-2 px-3 text-right">{formatCurrency(totalExpenses)}</td>
+                          <td className={`py-2 px-3 text-right ${totalExpenses <= data.priorYearSnapshot.totalExpenses ? "text-green-600" : "text-rose-600"}`}>
+                            {totalExpenses >= data.priorYearSnapshot.totalExpenses ? "+" : ""}{Math.round(((totalExpenses - data.priorYearSnapshot.totalExpenses) / data.priorYearSnapshot.totalExpenses) * 100)}%
+                          </td>
+                        </tr>
+                        {data.priorYearSnapshot.personnelExpenses ? (
+                          <tr className="border-b border-border/30">
+                            <td className="py-1.5 px-3 pl-6 text-muted-foreground">Personnel</td>
+                            <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.personnelExpenses)}</td>
+                            <td className="py-1.5 px-3 text-right">{formatCurrency(staffingSummary.totalCost)}</td>
+                            <td className={`py-1.5 px-3 text-right ${staffingSummary.totalCost <= data.priorYearSnapshot.personnelExpenses ? "text-green-600" : "text-rose-600"}`}>
+                              {staffingSummary.totalCost >= data.priorYearSnapshot.personnelExpenses ? "+" : ""}{Math.round(((staffingSummary.totalCost - data.priorYearSnapshot.personnelExpenses) / data.priorYearSnapshot.personnelExpenses) * 100)}%
+                            </td>
+                          </tr>
+                        ) : null}
+                        {data.priorYearSnapshot.facilityExpenses ? (
+                          <tr className="border-b border-border/30">
+                            <td className="py-1.5 px-3 pl-6 text-muted-foreground">Facility</td>
+                            <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.facilityExpenses)}</td>
+                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                          </tr>
+                        ) : null}
+                        {data.priorYearSnapshot.instructionalExpenses ? (
+                          <tr className="border-b border-border/30">
+                            <td className="py-1.5 px-3 pl-6 text-muted-foreground">Instructional</td>
+                            <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.instructionalExpenses)}</td>
+                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                          </tr>
+                        ) : null}
+                        {data.priorYearSnapshot.adminExpenses ? (
+                          <tr className="border-b border-border/30">
+                            <td className="py-1.5 px-3 pl-6 text-muted-foreground">Admin & Ops</td>
+                            <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.adminExpenses)}</td>
+                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
+                          </tr>
+                        ) : null}
+                      </>
+                    )}
+                    {data.priorYearSnapshot.endingEnrollment ? (
+                      <tr className="border-b border-border/30 bg-secondary/20">
+                        <td className="py-2 px-3 font-medium">Enrollment</td>
+                        <td className="py-2 px-3 text-right font-semibold">{data.priorYearSnapshot.endingEnrollment}</td>
+                        <td className="py-2 px-3 text-right font-semibold">{year1Students}</td>
+                        <td className={`py-2 px-3 text-right font-semibold ${year1Students >= data.priorYearSnapshot.endingEnrollment ? "text-green-600" : "text-rose-600"}`}>
+                          {year1Students >= data.priorYearSnapshot.endingEnrollment ? "+" : ""}{Math.round(((year1Students - data.priorYearSnapshot.endingEnrollment) / data.priorYearSnapshot.endingEnrollment) * 100)}%
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
               </div>
             </div>
+          )}
+
+          {schoolStage === "operating_school" && data.openingBalances && (
+            (data.openingBalances.cash || data.openingBalances.accountsReceivable || data.openingBalances.fixedAssets || data.openingBalances.otherAssets || data.openingBalances.accountsPayable || data.openingBalances.currentDebtPortion || data.openingBalances.longTermDebt) ? (
+              <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
+                <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Opening Balance Sheet
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Assets</p>
+                    <div className="space-y-1.5">
+                      {data.openingBalances.cash ? <Item label="Cash & Cash Equivalents" value={formatCurrency(data.openingBalances.cash)} /> : null}
+                      {data.openingBalances.accountsReceivable ? <Item label="Accounts Receivable" value={formatCurrency(data.openingBalances.accountsReceivable)} /> : null}
+                      {data.openingBalances.fixedAssets ? <Item label="Fixed Assets (Net)" value={formatCurrency(data.openingBalances.fixedAssets)} /> : null}
+                      {data.openingBalances.otherAssets ? <Item label="Other Assets" value={formatCurrency(data.openingBalances.otherAssets)} /> : null}
+                      <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-primary/10 font-semibold">
+                        <span className="text-sm text-foreground">Total Assets</span>
+                        <span className="text-sm text-foreground">{formatCurrency((data.openingBalances.cash || 0) + (data.openingBalances.accountsReceivable || 0) + (data.openingBalances.fixedAssets || 0) + (data.openingBalances.otherAssets || 0))}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Liabilities</p>
+                    <div className="space-y-1.5">
+                      {data.openingBalances.accountsPayable ? <Item label="Accounts Payable" value={formatCurrency(data.openingBalances.accountsPayable)} /> : null}
+                      {data.openingBalances.currentDebtPortion ? <Item label="Current Portion of Debt" value={formatCurrency(data.openingBalances.currentDebtPortion)} /> : null}
+                      {data.openingBalances.longTermDebt ? <Item label="Long-Term Debt" value={formatCurrency(data.openingBalances.longTermDebt)} /> : null}
+                      <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-primary/10 font-semibold">
+                        <span className="text-sm text-foreground">Total Liabilities</span>
+                        <span className="text-sm text-foreground">{formatCurrency((data.openingBalances.accountsPayable || 0) + (data.openingBalances.currentDebtPortion || 0) + (data.openingBalances.longTermDebt || 0))}</span>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/50 font-bold">
+                        <span className="text-sm text-foreground">Net Position</span>
+                        <span className="text-sm text-foreground">{formatCurrency(
+                          (data.openingBalances.cash || 0) + (data.openingBalances.accountsReceivable || 0) + (data.openingBalances.fixedAssets || 0) + (data.openingBalances.otherAssets || 0) -
+                          (data.openingBalances.accountsPayable || 0) - (data.openingBalances.currentDebtPortion || 0) - (data.openingBalances.longTermDebt || 0)
+                        )}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null
           )}
         </>
       ) : (
