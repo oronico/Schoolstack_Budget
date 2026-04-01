@@ -22,6 +22,7 @@ import { generateFormulaWorkbook } from "../lib/formula-export";
 import { generateWorkbook } from "../lib/excel-export";
 import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
+import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
 import { buildLenderPacket } from "../lib/packets/build-lender-packet";
 import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
@@ -865,6 +866,11 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
     const reserveMonths = cf.length > 0 ? cf[cf.length - 1].reserveMonths : 0;
     const cashRunwayMonths = consultantOutput.cashRunwayMonths || 0;
 
+    const priorSnapshot = (data as Record<string, unknown>).priorYearSnapshot as Record<string, number> | undefined;
+    const y1StartingCash = priorSnapshot?.endingCash || 0;
+    const y1EndingCash = y1StartingCash + (yearFinancials[0]?.netIncome || 0);
+    const daysCashOnHand = computeDaysCashOnHand(y1EndingCash, yearFinancials[0]?.totalExpenses || 0);
+
     const findings: string[] = [];
     for (const issue of consultantOutput.topIssues.slice(0, 5)) {
       findings.push(issue.title);
@@ -886,6 +892,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
         dscr,
         reserveMonths,
         cashRunwayMonths,
+        daysCashOnHand,
         criticalFindings: findings,
       }),
       sendReviewConfirmation(email, name, schoolName),
