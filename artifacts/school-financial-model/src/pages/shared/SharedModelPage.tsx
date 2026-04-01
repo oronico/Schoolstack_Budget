@@ -242,7 +242,7 @@ export function SharedModelPage() {
 
   useEffect(() => {
     if (!params.token) return;
-    const apiBase = (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_API_BASE_URL) || "";
+    const apiBase = import.meta.env.VITE_API_BASE_URL || "";
     fetch(`${apiBase}/api/shared/${params.token}`)
       .then(async res => {
         if (!res.ok) {
