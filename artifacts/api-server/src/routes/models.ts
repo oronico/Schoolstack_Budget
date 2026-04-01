@@ -21,12 +21,14 @@ import { generateUnderwritingWorkbook as generateUnderwritingWorkbookV2 } from "
 import { generateFormulaWorkbook } from "../lib/formula-export";
 import { generateWorkbook } from "../lib/excel-export";
 import { trackEvent } from "../lib/track-event";
-import { runConsultantEngine } from "../lib/consultant-engine";
+import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
 import { buildLenderPacket } from "../lib/packets/build-lender-packet";
 import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
 import { generateBoardPacketPDF } from "../lib/packets/board-packet-pdf";
 import { normalizeRevenueRows } from "../lib/workbook-helpers";
+import { isEmailConfigured, sendReviewRequestToTeam, sendReviewConfirmation } from "../lib/mailer";
+import { schoolTypeDisplay, entityTypeDisplay } from "../lib/pdf-utils";
 import type { Response } from "express";
 
 function sendBinary(res: Response, buffer: Buffer | ArrayBuffer | Uint8Array, contentType: string, filename: string) {
@@ -803,6 +805,105 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
   } catch (err) {
     console.error("Export model error:", err);
     res.status(500).json({ error: "Something went wrong generating the workbook." });
+  }
+});
+
+router.get("/models/:id/review-available", authMiddleware, async (_req: AuthRequest, res) => {
+  res.json({ available: isEmailConfigured() });
+});
+
+router.post("/models/:id/request-review", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    if (!isEmailConfigured()) {
+      res.status(503).json({ error: "Email service is not configured." });
+      return;
+    }
+
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const { name, email, message } = req.body || {};
+    if (!name || !email) {
+      res.status(400).json({ error: "Name and email are required." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    const data = normalizeModelData(model.data as Record<string, unknown>);
+    const consultantOutput = runConsultantEngine(data);
+
+    const profile = data.schoolProfile as Record<string, unknown> | undefined;
+    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
+    const state = (typeof profile?.state === "string" ? profile.state : "") || "N/A";
+    const schoolType = schoolTypeDisplay(profile?.schoolType as string);
+    const entityType = entityTypeDisplay(profile?.entityType as string);
+
+    const yearFinancials = computeYearFinancialsFromData(data);
+
+    const enrollment = yearFinancials.map(yf => yf.students);
+    const revenue = yearFinancials.map(yf => yf.totalRevenue);
+    const expenses = yearFinancials.map(yf => yf.totalExpenses);
+    const netIncome = yearFinancials.map(yf => yf.netIncome);
+    const dscr = yearFinancials.map(yf =>
+      yf.debtService > 0 ? (yf.netIncome + yf.debtService) / yf.debtService : 0
+    );
+
+    const cf = consultantOutput.cumulativeFinancials || [];
+    const reserveMonths = cf.length > 0 ? cf[cf.length - 1].reserveMonths : 0;
+    const cashRunwayMonths = consultantOutput.cashRunwayMonths || 0;
+
+    const findings: string[] = [];
+    for (const issue of consultantOutput.topIssues.slice(0, 5)) {
+      findings.push(issue.title);
+    }
+
+    const [teamResult, confirmResult] = await Promise.all([
+      sendReviewRequestToTeam({
+        requesterName: name,
+        requesterEmail: email,
+        message: message || undefined,
+        schoolName,
+        state,
+        schoolType,
+        entityType,
+        enrollment,
+        revenue,
+        expenses,
+        netIncome,
+        dscr,
+        reserveMonths,
+        cashRunwayMonths,
+        criticalFindings: findings,
+      }),
+      sendReviewConfirmation(email, name, schoolName),
+    ]);
+
+    if (!teamResult.success || !confirmResult.success) {
+      const failedParts: string[] = [];
+      if (!teamResult.success) failedParts.push("team notification");
+      if (!confirmResult.success) failedParts.push("confirmation email");
+      res.status(500).json({ error: `Failed to send ${failedParts.join(" and ")}. Please try again.` });
+      return;
+    }
+
+    await trackEvent("requested_model_review", req.userId, { modelId: model.id });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Request review error:", err);
+    res.status(500).json({ error: "Something went wrong submitting the review request." });
   }
 });
 

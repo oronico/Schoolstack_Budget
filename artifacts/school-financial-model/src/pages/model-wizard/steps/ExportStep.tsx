@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { getExportModelUrl } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { getExportModelUrl, customFetch } from "@workspace/api-client-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3, MessageSquareMore, CheckCircle2, Send } from "lucide-react";
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
 import { BoardPacketPreview } from "../../../components/export/BoardPacketPreview";
@@ -13,6 +13,40 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
   const [exported, setExported] = useState<Set<ExportType>>(new Set());
   const [showPacketPreview, setShowPacketPreview] = useState(false);
   const [showBoardPreview, setShowBoardPreview] = useState(false);
+  const [reviewAvailable, setReviewAvailable] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewName, setReviewName] = useState("");
+  const [reviewEmail, setReviewEmail] = useState("");
+  const [reviewMessage, setReviewMessage] = useState("");
+
+  useEffect(() => {
+    if (!modelId) return;
+    customFetch<{ available: boolean }>(`/api/models/${modelId}/review-available`)
+      .then(data => setReviewAvailable(data.available))
+      .catch(() => setReviewAvailable(false));
+  }, [modelId]);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modelId || !reviewName.trim() || !reviewEmail.trim()) return;
+    setReviewLoading(true);
+    setReviewError(null);
+    try {
+      await customFetch(`/api/models/${modelId}/request-review`, {
+        method: "POST",
+        body: JSON.stringify({ name: reviewName.trim(), email: reviewEmail.trim(), message: reviewMessage.trim() || undefined }),
+      });
+      setReviewSubmitted(true);
+      setShowReviewForm(false);
+    } catch {
+      setReviewError("Something went wrong. Please try again.");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
 
   const handleDownload = async (type: ExportType) => {
     if (!modelId || loading) return;
@@ -135,6 +169,95 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           onClick={() => handleDownload("formula")}
         />
       </div>
+
+      {reviewAvailable && (
+        <div className="mt-10 max-w-xl mx-auto">
+          {reviewSubmitted ? (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-8 animate-in fade-in duration-500">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
+                <h3 className="font-display font-bold text-xl text-green-900">Review requested — we'll be in touch</h3>
+              </div>
+              <p className="text-green-700 text-sm">
+                Check your email for a confirmation. Our team will review your model and get back to you within 2 business days.
+              </p>
+            </div>
+          ) : showReviewForm ? (
+            <div className="bg-white border border-primary/30 rounded-2xl p-8 shadow-lg animate-in fade-in duration-300">
+              <h3 className="font-display font-bold text-xl text-foreground mb-2">Request a Model Review</h3>
+              <p className="text-muted-foreground text-sm mb-6">Our team will review your financial model and send you feedback within 2 business days.</p>
+              <form onSubmit={handleReviewSubmit} className="space-y-4 text-left">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Your name</label>
+                  <input
+                    type="text"
+                    required
+                    value={reviewName}
+                    onChange={e => setReviewName(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    placeholder="Jane Smith"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Your email</label>
+                  <input
+                    type="email"
+                    required
+                    value={reviewEmail}
+                    onChange={e => setReviewEmail(e.target.value)}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    placeholder="jane@school.org"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Questions or notes <span className="text-muted-foreground font-normal">(optional)</span></label>
+                  <textarea
+                    value={reviewMessage}
+                    onChange={e => setReviewMessage(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+                    placeholder="Anything specific you'd like us to look at?"
+                  />
+                </div>
+                {reviewError && (
+                  <p className="text-sm text-red-600">{reviewError}</p>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={reviewLoading || !reviewName.trim() || !reviewEmail.trim()}
+                    className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {reviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {reviewLoading ? "Submitting..." : "Submit Request"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowReviewForm(false); setReviewError(null); }}
+                    className="px-4 py-2.5 rounded-lg border border-border text-muted-foreground hover:bg-muted/50 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowReviewForm(true)}
+              className="w-full group bg-white border-2 border-dashed border-primary/30 hover:border-primary/60 rounded-2xl p-6 flex items-center gap-4 transition-all hover:shadow-md"
+            >
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                <MessageSquareMore className="h-6 w-6 text-primary" />
+              </div>
+              <div className="text-left">
+                <span className="font-display font-bold text-foreground block">Request a Model Review</span>
+                <span className="text-sm text-muted-foreground">Get expert feedback on your financial model from our team — free of charge.</span>
+              </div>
+              <ArrowRight className="h-5 w-5 text-primary ml-auto flex-shrink-0" />
+            </button>
+          )}
+        </div>
+      )}
 
       {anyExported && (
         <div className="mt-16 animate-in fade-in slide-in-from-bottom-8 duration-700">

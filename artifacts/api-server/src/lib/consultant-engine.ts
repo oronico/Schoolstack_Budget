@@ -338,7 +338,7 @@ export interface ConsultantOutput {
   generatedAt: string;
 }
 
-interface YearFinancials {
+export interface YearFinancials {
   year: number;
   students: number;
   totalRevenue: number;
@@ -721,7 +721,7 @@ function localReturningStudents(enrollment: number[], retentionRate: number, y: 
   return Math.min(enrollment[y] || 0, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
 }
 
-function computeAllYearsFromRows(
+export function computeAllYearsFromRows(
   enrollmentByYear: number[],
   revenueRows: RevenueRow[],
   staffingRows: StaffingRow[],
@@ -1393,6 +1393,64 @@ function assessLendingLabReadiness(
     philanthropyByYear: philanthropyByYear.length > 0 ? philanthropyByYear : undefined,
     expenseAllocation,
   };
+}
+
+export function computeYearFinancialsFromData(rawData: Record<string, unknown>): YearFinancials[] {
+  const data = rawData as unknown as ModelData;
+  const sp = data.schoolProfile || {};
+  const en = data.enrollment || {};
+  const isPartial = sp.isPartialFirstYear || false;
+  const operatingMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
+  const prorationFactor = operatingMonths / 12;
+  const hasRowData = !!(
+    (data.revenueRows && data.revenueRows.length > 0) ||
+    (data.staffingRows && data.staffingRows.length > 0) ||
+    (data.expenseRows && data.expenseRows.length > 0)
+  );
+  const yearCount = hasRowData
+    ? (data.revenueRows?.[0]?.amounts?.length || data.expenseRows?.[0]?.amounts?.length || (sp.schoolStage === "operating_school" ? 5 : 3))
+    : 5;
+  const enrollmentByYear = [
+    en.year1 || 0, en.year2 || 0, en.year3 || 0,
+    ...(yearCount > 3 ? [en.year4 || 0] : []),
+    ...(yearCount > 4 ? [en.year5 || 0] : []),
+  ];
+  const ceRR = en.retentionRate ?? 85;
+  const debtIncluded = sp.debtIncluded !== false;
+
+  if (hasRowData) {
+    const revenueRows = data.revenueRows || [];
+    const staffingRows = data.staffingRows || [];
+    const expenseRows = data.expenseRows || [];
+    const capDebtRows = data.capitalAndDebtRows || [];
+    const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
+    const costInflationPct = data.facilities?.generalCostInflation || 0;
+    const effectiveCapDebtRows = debtIncluded ? capDebtRows : capDebtRows.filter(r => !r.isLoan);
+    return computeAllYearsFromRows(
+      enrollmentByYear, revenueRows, staffingRows, expenseRows, effectiveCapDebtRows,
+      salaryEscRate, prorationFactor, data.tuitionTiers, costInflationPct, sp, ceRR,
+    );
+  } else {
+    const rev = data.revenue || {};
+    const st = data.staffing || {};
+    const fac = data.facilities || {};
+    const spIsAuth = hasSchoolProfileFacilityData(sp);
+    const effectiveFac = spIsAuth ? { ...fac, monthlyRent: 0, annualRentIncrease: 0 } : fac;
+    return enrollmentByYear.map((students, idx) => {
+      const base = computeYearFinancialsLegacy(idx, students, rev, st, effectiveFac, prorationFactor);
+      if (spIsAuth) {
+        const overlay = computeSchoolProfileFacilityOverlay(sp, idx, prorationFactor);
+        if (overlay.total > 0) {
+          base.facilityCost += overlay.total;
+          base.totalOpex += overlay.total;
+          base.totalExpenses += overlay.total;
+          base.netIncome -= overlay.total;
+          base.netMargin = base.totalRevenue > 0 ? base.netIncome / base.totalRevenue : 0;
+        }
+      }
+      return base;
+    });
+  }
 }
 
 export function runConsultantEngine(rawData: Record<string, unknown>): ConsultantOutput {
