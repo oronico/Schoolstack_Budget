@@ -532,6 +532,7 @@ export function generateSchoolChoiceRows(
     minPerStudent: number;
     maxPerStudent: number;
     status: string;
+    optIn?: boolean;
     notes?: string;
   }>,
   yearCount: number = 5,
@@ -572,7 +573,7 @@ export function generateSchoolChoiceRows(
         id,
         category: "school_choice" as RevenueCategory,
         lineItem: p.type === "private_scholarship" ? p.label : (PROGRAM_TYPE_TO_LABEL[p.type] || p.label),
-        enabled: p.status === "active" && p.type !== "private_scholarship",
+        enabled: p.status === "active" && !p.optIn,
         driverType: "per_student" as RevenueDriverType,
         amounts: new Array(yearCount).fill(defaultAmount),
         note,

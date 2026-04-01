@@ -29,6 +29,7 @@ export interface ProgramInfo {
   universal: boolean;
   status: ProgramStatus;
   effectiveYear?: number;
+  optIn?: boolean;
   notes?: string;
 }
 
@@ -157,7 +158,7 @@ function correspondenceCharter(min: number, max: number, notes?: string, status:
 }
 
 function privateScholarship(min: number, max: number, label: string, notes?: string, status: ProgramStatus = "active"): ProgramInfo {
-  return { type: "private_scholarship", label, minPerStudent: min, maxPerStudent: max, universal: false, status, notes };
+  return { type: "private_scholarship", label, minPerStudent: min, maxPerStudent: max, universal: false, status, optIn: true, notes };
 }
 
 export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
@@ -289,7 +290,7 @@ export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
     esa(6000, 7000, false, "Limited geographic eligibility — $7,000/student", 6000, 7000),
   ], true, { min: 8500, max: 10000, notes: "TISA (Tennessee Investment in Student Achievement) base" }),
   TX: entry("ada", [
-    esa(10000, 10474, false, "Education Freedom Accounts — launching 2026-27; ~$10,474/student private, up to $30,000 IEP", 2000, 2000, "active", 2026),
+    { ...esa(10000, 10474, false, "Texas Education Freedom Accounts — launching 2026-27; ~$10,474/student, up to $30,000 IEP. Schools must choose to accept ESA students. Enable this if your school will participate.", 2000, 2000, "active", 2026), optIn: true },
   ], false, { min: 7500, max: 9500, notes: "Foundation School Program — basic allotment + tier adjustments" }),
   UT: entry("single_count_day", [
     esa(7000, 8000, false, "Fits All — ~$8,000 (court challenges pending, status uncertain)", 7000, 8000, "litigated"),
