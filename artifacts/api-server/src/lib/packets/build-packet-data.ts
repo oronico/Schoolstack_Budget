@@ -185,7 +185,7 @@ function buildSection(
     case "five_year_projection":
       return buildFiveYearProjection(base, co, yearlyData, niLabel, md);
     case "prior_year_actuals":
-      return buildPriorYearActuals(base, md, yearlyData);
+      return buildPriorYearActuals(base, md, yearlyData, enrollment);
     case "opening_balance_sheet":
       return buildOpeningBalanceSheet(base, md);
     case "facility_kpis":
@@ -481,7 +481,7 @@ function buildFiveYearProjection(
   };
 }
 
-function buildPriorYearActuals(s: PacketSection, md: ModelData, yearlyData: YearData[]): PacketSection {
+function buildPriorYearActuals(s: PacketSection, md: ModelData, yearlyData: YearData[], enrollment: number[]): PacketSection {
   const py = md.priorYearSnapshot;
   if (!py) return { ...s, included: false, narrative: "No prior-year data provided." };
 
@@ -501,40 +501,71 @@ function buildPriorYearActuals(s: PacketSection, md: ModelData, yearlyData: Year
   const pyAdmin = py.adminExpenses ?? 0;
   const pyTotalExp = py.totalExpenses ?? (pyPersonnel + pyFacility + pyInstructional + pyAdmin);
 
+  const students0 = enrollment[0] || 0;
+  const sp = md.schoolProfile || ({} as SchoolProfile);
+  const costInflPct = (sp as Record<string, unknown>).costInflationPct as number | undefined;
+  const rRows = md.revenueRows || [];
+  const revByCat = new Map<string, number>();
+  for (const r of rRows) {
+    if (!r.enabled) continue;
+    const val = driverVal(r.amounts, 0, r.driverType, students0, undefined, costInflPct);
+    const cat = r.category || "other_revenue";
+    revByCat.set(cat, (revByCat.get(cat) || 0) + val);
+  }
+  const projTuition = (revByCat.get("tuition_and_fees") || 0) + (revByCat.get("tuition_offsets") || 0);
+  const projPublic = (revByCat.get("public_funding") || 0) + (revByCat.get("school_choice") || 0);
+  const projPhil = (revByCat.get("philanthropy") || 0) + (revByCat.get("grants_contributions") || 0);
+  const projOther = revByCat.get("other_revenue") || 0;
+
+  const eRows = md.expenseRows || [];
+  const expByCat = new Map<string, number>();
+  for (const e of eRows) {
+    if (!e.enabled) continue;
+    const val = e.driverType === "percent_of_revenue"
+      ? ((e.amounts?.[0] ?? 0) / 100) * y1Rev
+      : driverVal(e.amounts, 0, e.driverType, students0, undefined, costInflPct);
+    expByCat.set(e.category, (expByCat.get(e.category) || 0) + val);
+  }
+  const salaryEsc = (sp as Record<string, unknown>).salaryEscalation as number | undefined;
+  const prorationFactor = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 12) / 12 : 1;
+  const normalized = normalizeStaffingRows(md);
+  const projPersonnel = computePersonnelForYear(normalized, salaryEsc || 0, prorationFactor, 0, students0);
+  const projFacility = expByCat.get("occupancy_facility") || 0;
+  const projInstructional = expByCat.get("instructional_program") || 0;
+  const projAdmin = (expByCat.get("administrative_general") || 0) + (expByCat.get("technology") || 0);
+
+  const fmtVar = (py: number, proj: number) => py > 0 ? `${((proj - py) / py * 100) >= 0 ? "+" : ""}${((proj - py) / py * 100).toFixed(1)}%` : "—";
+
   const revRows: PacketTableRow[] = [
-    { label: "Tuition & Fees", values: [fmt(pyTuition)] },
-    { label: "Public Funding", values: [fmt(pyPublicFunding)] },
-    { label: "Philanthropy", values: [fmt(pyPhilanthropy)] },
-    { label: "Other Revenue", values: [fmt(pyOtherRev)] },
-    { label: "Total Revenue", values: [fmt(pyTotalRev)], isBold: true },
+    { label: "Tuition & Fees", values: [fmt(pyTuition), fmt(projTuition), fmtVar(pyTuition, projTuition)] },
+    { label: "Public Funding", values: [fmt(pyPublicFunding), fmt(projPublic), fmtVar(pyPublicFunding, projPublic)] },
+    { label: "Philanthropy", values: [fmt(pyPhilanthropy), fmt(projPhil), fmtVar(pyPhilanthropy, projPhil)] },
+    { label: "Other Revenue", values: [fmt(pyOtherRev), fmt(projOther), fmtVar(pyOtherRev, projOther)] },
+    { label: "Total Revenue", values: [fmt(pyTotalRev), fmt(y1Rev), fmtVar(pyTotalRev, y1Rev)], isBold: true },
   ];
 
   const expRows: PacketTableRow[] = [
-    { label: "Personnel & Benefits", values: [fmt(pyPersonnel)] },
-    { label: "Facilities & Occupancy", values: [fmt(pyFacility)] },
-    { label: "Instructional Supplies", values: [fmt(pyInstructional)] },
-    { label: "Admin & Operations", values: [fmt(pyAdmin)] },
-    { label: "Total Expenses", values: [fmt(pyTotalExp)], isBold: true },
+    { label: "Personnel & Benefits", values: [fmt(pyPersonnel), fmt(projPersonnel), fmtVar(pyPersonnel, projPersonnel)] },
+    { label: "Facilities & Occupancy", values: [fmt(pyFacility), fmt(projFacility), fmtVar(pyFacility, projFacility)] },
+    { label: "Instructional Supplies", values: [fmt(pyInstructional), fmt(projInstructional), fmtVar(pyInstructional, projInstructional)] },
+    { label: "Admin & Operations", values: [fmt(pyAdmin), fmt(projAdmin), fmtVar(pyAdmin, projAdmin)] },
+    { label: "Total Expenses", values: [fmt(pyTotalExp), fmt(y1Exp), fmtVar(pyTotalExp, y1Exp)], isBold: true },
   ];
 
   const pyNet = pyTotalRev - pyTotalExp;
   const varianceRows: PacketTableRow[] = [];
   if (y1Rev > 0) {
-    const revVar = ((y1Rev - pyTotalRev) / pyTotalRev) * 100;
-    const expVar = ((y1Exp - pyTotalExp) / pyTotalExp) * 100;
     varianceRows.push(
-      { label: "Total Revenue", values: [fmt(pyTotalRev), fmt(y1Rev), `${revVar >= 0 ? "+" : ""}${revVar.toFixed(1)}%`] },
-      { label: "Total Expenses", values: [fmt(pyTotalExp), fmt(y1Exp), `${expVar >= 0 ? "+" : ""}${expVar.toFixed(1)}%`] },
       { label: "Net Income", values: [fmt(pyNet), fmt(y1Rev - y1Exp), ""], isBold: true },
     );
   }
 
   const tables: PacketTable[] = [
-    { title: "Prior-Year Revenue", headers: ["Category", "Amount"], rows: revRows },
-    { title: "Prior-Year Expenses", headers: ["Category", "Amount"], rows: expRows },
+    { title: "Prior-Year Revenue vs Year 1", headers: ["Category", "Prior Year", "Year 1", "Variance"], rows: revRows },
+    { title: "Prior-Year Expenses vs Year 1", headers: ["Category", "Prior Year", "Year 1", "Variance"], rows: expRows },
   ];
   if (varianceRows.length > 0) {
-    tables.push({ title: "Prior-Year vs Year 1 Projected", headers: ["", "Prior Year", "Year 1", "Variance"], rows: varianceRows });
+    tables.push({ title: "Net Income Comparison", headers: ["", "Prior Year", "Year 1", ""], rows: varianceRows });
   }
 
   return {

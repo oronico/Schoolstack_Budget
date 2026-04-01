@@ -684,8 +684,8 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                         {(() => {
                           const expCatMap: Array<{ label: string; pyKey: "facilityExpenses" | "instructionalExpenses" | "adminExpenses"; projCats: string[] }> = [
                             { label: "Facility", pyKey: "facilityExpenses", projCats: ["occupancy_facility"] },
-                            { label: "Instructional", pyKey: "instructionalExpenses", projCats: ["instructional"] },
-                            { label: "Admin & Ops", pyKey: "adminExpenses", projCats: ["admin_operations", "technology", "professional_services"] },
+                            { label: "Instructional", pyKey: "instructionalExpenses", projCats: ["instructional_program"] },
+                            { label: "Admin & Ops", pyKey: "adminExpenses", projCats: ["administrative_general", "technology"] },
                           ];
                           return expCatMap.map(({ label, pyKey, projCats }) => {
                             const pyVal = data.priorYearSnapshot?.[pyKey];

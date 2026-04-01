@@ -559,10 +559,20 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
         : "—";
       priorRows.push(["Total Revenue", fmtCurrency(priorYear.totalRevenue), fmtCurrency(revTotals[0]), variance]);
     }
-    if (priorYear.tuitionRevenue) priorRows.push(["  Tuition & Fees", fmtCurrency(priorYear.tuitionRevenue), "—", "—"]);
-    if (priorYear.publicFundingRevenue) priorRows.push(["  Public Funding", fmtCurrency(priorYear.publicFundingRevenue), "—", "—"]);
-    if (priorYear.philanthropyRevenue) priorRows.push(["  Philanthropy", fmtCurrency(priorYear.philanthropyRevenue), "—", "—"]);
-    if (priorYear.otherRevenue) priorRows.push(["  Other Revenue", fmtCurrency(priorYear.otherRevenue), "—", "—"]);
+    const y1ByCat = computeRevenueByCat(revenueRows, 0, enrollment[0], data.tuitionTiers, sp);
+    const revCatMap: Array<{ label: string; pyKey: keyof typeof priorYear; projCats: string[] }> = [
+      { label: "  Tuition & Fees", pyKey: "tuitionRevenue", projCats: ["tuition_and_fees", "tuition_offsets"] },
+      { label: "  Public Funding", pyKey: "publicFundingRevenue", projCats: ["public_funding", "school_choice"] },
+      { label: "  Philanthropy", pyKey: "philanthropyRevenue", projCats: ["philanthropy", "grants_contributions"] },
+      { label: "  Other Revenue", pyKey: "otherRevenue", projCats: ["other_revenue"] },
+    ];
+    for (const { label, pyKey, projCats } of revCatMap) {
+      const pyVal = priorYear[pyKey] as number | undefined;
+      if (!pyVal) continue;
+      const proj = projCats.reduce((s, c) => s + (y1ByCat.get(c) || 0), 0);
+      const varStr = pyVal > 0 ? `${((proj - pyVal) / pyVal * 100).toFixed(1)}%` : "—";
+      priorRows.push([label, fmtCurrency(pyVal), fmtCurrency(proj), varStr]);
+    }
     if (priorYear.totalExpenses) {
       const y1Exp = staffTotals[0] + opexTotals[0] + capDebtTotals[0];
       const expVariance = priorYear.totalExpenses > 0
@@ -570,10 +580,35 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
         : "—";
       priorRows.push(["Total Expenses", fmtCurrency(priorYear.totalExpenses), fmtCurrency(y1Exp), expVariance]);
     }
-    if (priorYear.personnelExpenses) priorRows.push(["  Personnel", fmtCurrency(priorYear.personnelExpenses), "—", "—"]);
-    if (priorYear.facilityExpenses) priorRows.push(["  Facility", fmtCurrency(priorYear.facilityExpenses), "—", "—"]);
-    if (priorYear.instructionalExpenses) priorRows.push(["  Instructional", fmtCurrency(priorYear.instructionalExpenses), "—", "—"]);
-    if (priorYear.adminExpenses) priorRows.push(["  Admin", fmtCurrency(priorYear.adminExpenses), "—", "—"]);
+    if (priorYear.personnelExpenses) {
+      const varStr = priorYear.personnelExpenses > 0
+        ? `${((staffTotals[0] - priorYear.personnelExpenses) / priorYear.personnelExpenses * 100).toFixed(1)}%`
+        : "—";
+      priorRows.push(["  Personnel", fmtCurrency(priorYear.personnelExpenses), fmtCurrency(staffTotals[0]), varStr]);
+    }
+    const y1ExpByCat = new Map<string, number>();
+    for (const e of expenseRows) {
+      if (!e.enabled) continue;
+      let val: number;
+      if (e.driverType === "percent_of_revenue") {
+        val = ((e.amounts?.[0] ?? 0) / 100) * revTotals[0];
+      } else {
+        val = computeDriverValue(e.amounts, 0, e.driverType, enrollment[0]);
+      }
+      y1ExpByCat.set(e.category, (y1ExpByCat.get(e.category) || 0) + val);
+    }
+    const expCatMap: Array<{ label: string; pyKey: keyof typeof priorYear; projCats: string[] }> = [
+      { label: "  Facility", pyKey: "facilityExpenses", projCats: ["occupancy_facility"] },
+      { label: "  Instructional", pyKey: "instructionalExpenses", projCats: ["instructional_program"] },
+      { label: "  Admin", pyKey: "adminExpenses", projCats: ["administrative_general", "technology"] },
+    ];
+    for (const { label, pyKey, projCats } of expCatMap) {
+      const pyVal = priorYear[pyKey] as number | undefined;
+      if (!pyVal) continue;
+      const proj = projCats.reduce((s, c) => s + (y1ExpByCat.get(c) || 0), 0);
+      const varStr = pyVal > 0 ? `${((proj - pyVal) / pyVal * 100).toFixed(1)}%` : "—";
+      priorRows.push([label, fmtCurrency(pyVal), fmtCurrency(proj), varStr]);
+    }
     if (priorYear.endingEnrollment) priorRows.push(["Ending Enrollment", fmtNumber(priorYear.endingEnrollment), fmtNumber(enrollment[0]), "—"]);
     if (priorYear.endingCash) priorRows.push(["Ending Cash", fmtCurrency(priorYear.endingCash), "—", "—"]);
     drawTable(doc, priorCols, priorRows, { zebra: true });
