@@ -57,7 +57,7 @@ const HOW_IT_WORKS = [
   {
     icon: <Download className="w-6 h-6" />,
     title: "Export and share.",
-    desc: "Four formats: Excel workbook with live formulas, lender pro forma, pro forma PDF, and a loan readiness report. Take them to your board, your bank, your authorizer, or your kitchen table.",
+    desc: "Lender-ready PDF packet, board summary, full underwriting workbook, and a formula Excel with live math. Or generate a shareable link so your lender or board can view the model online — no login required.",
   },
 ];
 
@@ -141,7 +141,7 @@ export function LandingPage() {
               {
                 icon: <Download className="w-8 h-8 text-[#0D9488]" />,
                 title: "Take it with you.",
-                desc: "Export a polished Excel workbook, a pro forma PDF, or a loan readiness report. For your board, your authorizer, a funder, or just for your own peace of mind.",
+                desc: "Download a lender-ready PDF, a board summary, or a full underwriting workbook. Share a read-only link with your funder or authorizer. For your board meeting, your bank, or just your own peace of mind.",
               },
             ].map((item, i) => (
               <motion.div

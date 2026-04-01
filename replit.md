@@ -85,7 +85,7 @@ Provides deterministic financial analysis, including lender readiness scores, sc
 A shared packet-generation layer (`artifacts/api-server/src/lib/packets/`) supports lender-ready and board-ready deliverables. It includes narrative generation, assembly of full `PacketData` using canonical math, and enrichment for lender packets with risk/mitigant pairs from the Decision Engine. PDF output is generated via `lender-packet-pdf.ts`.
 
 ### Decision Engine
-Identifies and surfaces critical financial issues (e.g., negative cash, weak reserves, high staffing cost) through 8 decision rules. Issues are ranked by severity and include model-specific summaries, explanations, recommended actions, and navigation to relevant steps.
+Identifies and surfaces critical financial issues (e.g., negative cash, weak reserves, high staffing cost) through 10 decision rules. Issues are ranked by severity and include model-specific summaries, explanations, recommended actions, and navigation to relevant steps.
 
 ## Deployment Architecture
 - **Development**: Replit
@@ -94,7 +94,7 @@ Identifies and surfaces critical financial issues (e.g., negative cash, weak res
 - **API + DB**: Railway (Express API server + managed PostgreSQL)
 - **DNS**: Squarespace for `budget.schoolstack.ai`
 - **Proxy**: Netlify rewrites `/api/*` to the Railway API server.
-- **Schema management**: `drizzle-kit push`.
+- **Schema management**: Runtime DDL migrations in api-server startup (primary); `drizzle-kit push` available as secondary tool.
 
 # External Dependencies
 
