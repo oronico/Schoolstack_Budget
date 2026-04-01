@@ -57,7 +57,7 @@ const HOW_IT_WORKS = [
   {
     icon: <Download className="w-6 h-6" />,
     title: "Export and share.",
-    desc: "Lender-Ready Packet PDF, Board Summary PDF, a 21-tab Underwriting Package, and a Formula Workbook with live Excel math. Or generate a shareable link so your lender or board can view the model online — no login required.",
+    desc: "Lender-Ready Packet PDF, Board Summary PDF, a 21-tab Underwriting Package, and a Formula Workbook with live Excel math. Or generate a shareable read-only link so your lender or board can view the model online — no login required.",
   },
 ];
 
