@@ -17,7 +17,7 @@ interface DiagnosticRule {
   check: (data: FullModelData, computed: ComputedMetrics) => Omit<DiagnosticFinding, "id"> | null;
 }
 
-interface ComputedMetrics {
+export interface ComputedMetrics {
   y1Revenue: number;
   y1StaffingCost: number;
   y1TotalExpenses: number;
@@ -28,6 +28,9 @@ interface ComputedMetrics {
   expensesByYear: number[];
   grantRevenue: number;
   endingCashByYear: number[];
+  breakevenEnrollment: number;
+  y1VariableCostPerStudent: number;
+  y1FixedCosts: number;
 }
 
 const THRESHOLDS = {
@@ -40,7 +43,7 @@ const THRESHOLDS = {
 } as const;
 
 
-function computeMetrics(data: FullModelData): ComputedMetrics {
+export function computeMetrics(data: FullModelData): ComputedMetrics {
   const programs = data.programs || [];
   const enrollment = [0, 0, 0, 0, 0];
   for (const prog of programs) {
@@ -127,6 +130,8 @@ function computeMetrics(data: FullModelData): ComputedMetrics {
 
   let y1OpExpenses = 0;
   let y1FacilityCost = 0;
+  let y1VariableCostPerStudent = 0;
+  let y1FixedCosts = 0;
   for (const e of expenseRows) {
     if (!e.enabled) continue;
     const val = driverVal(e.amounts, 0, e.driverType, y1Students);
@@ -134,7 +139,13 @@ function computeMetrics(data: FullModelData): ComputedMetrics {
     if (e.category === "occupancy_facility") {
       y1FacilityCost += val;
     }
+    if (e.driverType === "per_student" || (e.driverType as string) === "per_new_student" || (e.driverType as string) === "per_returning_student") {
+      y1VariableCostPerStudent += e.amounts?.[0] ?? 0;
+    } else if (e.driverType !== "percent_of_revenue") {
+      y1FixedCosts += val;
+    }
   }
+  y1FixedCosts += y1StaffingCost;
 
   let y1CapDebt = 0;
   for (const c of capDebtRows) {
@@ -145,6 +156,11 @@ function computeMetrics(data: FullModelData): ComputedMetrics {
       y1CapDebt += driverVal(c.amounts, 0, c.driverType, y1Students);
     }
   }
+  y1FixedCosts += y1CapDebt;
+
+  const revenuePerStudent = y1Students > 0 ? revenueByYear[0] / y1Students : 0;
+  const contributionMargin = revenuePerStudent - y1VariableCostPerStudent;
+  const breakevenEnrollment = contributionMargin > 0 ? Math.ceil(y1FixedCosts / contributionMargin) : Infinity;
 
   const expensesByYear = [0, 0, 0, 0, 0];
   for (let y = 0; y < 5; y++) {
@@ -180,6 +196,9 @@ function computeMetrics(data: FullModelData): ComputedMetrics {
     expensesByYear,
     grantRevenue,
     endingCashByYear,
+    breakevenEnrollment,
+    y1VariableCostPerStudent,
+    y1FixedCosts,
   };
 }
 
@@ -339,6 +358,30 @@ const RULES: DiagnosticRule[] = [
         explanation: "Your annual budget shows a surplus, but ending cash stays tight relative to monthly expenses. Timing mismatches between when revenue arrives and bills are due are one of the most common cash flow problems for new schools.",
         action: "Review your revenue collection timing. Make sure tuition payments and grant disbursements align with your monthly expense obligations.",
         targetStep: 4,
+      };
+    },
+  },
+  {
+    id: "near_breakeven_enrollment",
+    check: (_data, m) => {
+      if (m.enrollment[0] <= 0 || m.breakevenEnrollment === Infinity || m.breakevenEnrollment <= 0) return null;
+      const margin = (m.enrollment[0] - m.breakevenEnrollment) / m.breakevenEnrollment;
+      if (margin >= 0.10) return null;
+      if (margin < 0) {
+        return {
+          severity: "critical",
+          headline: `Enrollment is below breakeven (need ${m.breakevenEnrollment} students)`,
+          explanation: `Your projected Year 1 enrollment of ${m.enrollment[0]} is below the ${m.breakevenEnrollment} students needed to cover your costs. The school would operate at a loss from day one. Lenders will not fund a model that starts below breakeven.`,
+          action: "Increase enrollment targets, reduce fixed costs (staffing, facility), or add revenue sources to lower your breakeven point.",
+          targetStep: 3,
+        };
+      }
+      return {
+        severity: "warning",
+        headline: `Enrollment is within 10% of breakeven (${m.breakevenEnrollment} students)`,
+        explanation: `Your breakeven point is ${m.breakevenEnrollment} students and you're projecting ${m.enrollment[0]} in Year 1 — that's only ${Math.round(margin * 100)}% above breakeven. Any enrollment shortfall could push you into a deficit. Lenders see this as a thin margin.`,
+        action: "Consider whether you can grow enrollment, add revenue sources, or reduce fixed costs to build more cushion above breakeven.",
+        targetStep: 3,
       };
     },
   },

@@ -460,6 +460,24 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
           </label>
         </div>
       )}
+
+      {phase.ownershipType && phase.ownershipType !== "home_based" && (
+        <div className="space-y-3 pt-3 border-t border-border">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Square Footage</label>
+              <input type="number" value={phase.squareFootage as number || ""} onChange={e => onUpdate("squareFootage", e.target.value ? Number(e.target.value) : undefined)} placeholder="5000" className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
+              <p className="text-xs text-muted-foreground mt-1">Total usable square footage</p>
+            </div>
+            <div className="flex items-end pb-6">
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" checked={!!phase.hasRenewalOption} onChange={e => onUpdate("hasRenewalOption", e.target.checked)} className="rounded" />
+                <span className="text-muted-foreground">Lease includes renewal option</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1624,14 +1642,32 @@ export function SchoolProfileStep() {
       {schoolStage === "operating_school" && operatingYear === "second_year_plus" && (
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Prior-Year Actuals</h3>
+          {lendingLabIntent === "plan_to_apply" && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
+              <Rocket className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">Lenders compare your projections against actual performance. Providing last year's numbers strengthens your application and shows you know your financials.</p>
+            </div>
+          )}
+          {lendingLabIntent === "want_to_understand" && (
+            <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 mb-4">
+              <p className="text-sm text-muted-foreground">Adding prior-year data helps validate your projections and spot trends.</p>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground mb-4">
-            Last year's real numbers are the foundation for credible projections - they help us stress-test assumptions and give lenders confidence in your plan.
+            Last year's real numbers are the foundation for credible projections — they help us stress-test assumptions and give lenders confidence in your plan.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <FormInput
               name="priorYearSnapshot.endingEnrollment"
               label="Prior-Year Ending Enrollment"
               type="number"
+              placeholder="0"
+            />
+            <FormInput
+              name="priorYearSnapshot.endingCash"
+              label="Prior-Year Ending Cash"
+              type="number"
+              prefix="$"
               placeholder="0"
             />
             <FormInput
@@ -1648,14 +1684,73 @@ export function SchoolProfileStep() {
               prefix="$"
               placeholder="0"
             />
-            <FormInput
-              name="priorYearSnapshot.endingCash"
-              label="Prior-Year Ending Cash"
-              type="number"
-              prefix="$"
-              placeholder="0"
-            />
           </div>
+          <details className="group">
+            <summary className="cursor-pointer text-sm font-medium text-primary hover:underline mb-4">
+              + Revenue & expense breakdown (optional)
+            </summary>
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Revenue by Source</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormInput name="priorYearSnapshot.tuitionRevenue" label="Tuition & Fees" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="priorYearSnapshot.publicFundingRevenue" label="Public Funding" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="priorYearSnapshot.philanthropyRevenue" label="Philanthropy & Grants" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="priorYearSnapshot.otherRevenue" label="Other Revenue" type="number" prefix="$" placeholder="0" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Expenses by Category</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormInput name="priorYearSnapshot.personnelExpenses" label="Personnel (Salaries & Benefits)" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="priorYearSnapshot.facilityExpenses" label="Facility & Occupancy" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="priorYearSnapshot.instructionalExpenses" label="Instructional & Program" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="priorYearSnapshot.adminExpenses" label="Admin & Operations" type="number" prefix="$" placeholder="0" />
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+      )}
+
+      {schoolStage === "operating_school" && (
+        <div>
+          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Opening Balance Sheet</h3>
+          {lendingLabIntent === "plan_to_apply" && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
+              <Rocket className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">An opening balance sheet tells lenders your current financial position — it's standard in any loan package.</p>
+            </div>
+          )}
+          {lendingLabIntent === "want_to_understand" && (
+            <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 mb-4">
+              <p className="text-sm text-muted-foreground">Your opening balances flow into Year 1 cash projections and give a complete financial picture.</p>
+            </div>
+          )}
+          <details className="group" open={lendingLabIntent === "plan_to_apply"}>
+            <summary className="cursor-pointer text-sm font-medium text-primary hover:underline mb-4">
+              {lendingLabIntent === "plan_to_apply" ? "Assets & Liabilities" : "+ Opening balances (optional)"}
+            </summary>
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Assets</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormInput name="openingBalances.cash" label="Cash & Cash Equivalents" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="openingBalances.accountsReceivable" label="Accounts Receivable" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="openingBalances.fixedAssets" label="Fixed Assets (Net)" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="openingBalances.otherAssets" label="Other Assets" type="number" prefix="$" placeholder="0" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Liabilities</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormInput name="openingBalances.accountsPayable" label="Accounts Payable" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="openingBalances.currentDebtPortion" label="Current Portion of Debt" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="openingBalances.longTermDebt" label="Long-Term Debt" type="number" prefix="$" placeholder="0" />
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
       )}
 

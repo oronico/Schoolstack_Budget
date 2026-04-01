@@ -90,6 +90,8 @@ export const facilityPhaseSchema = z.object({
   comparableMarketRent: z.coerce.number().min(0).optional().default(0),
   hasWrittenAgreement: z.boolean().optional().default(false),
   monthlyFacilityAllocation: z.coerce.number().min(0).optional().default(0),
+  squareFootage: z.coerce.number(numMsg("square footage")).min(0).optional(),
+  hasRenewalOption: z.boolean().optional().default(false),
 }).refine(d => d.startYear <= d.endYear, {
   message: "Start year must be before or equal to end year",
   path: ["endYear"],
@@ -210,6 +212,14 @@ export const priorYearSnapshotSchema = z.object({
   totalRevenue: z.coerce.number(numMsg("total revenue")).min(0, "Please enter a positive revenue amount").optional(),
   totalExpenses: z.coerce.number(numMsg("total expenses")).min(0, "Please enter a positive expense amount").optional(),
   endingCash: z.coerce.number(numMsg("ending cash")).min(0, "Please enter a positive cash balance").optional(),
+  tuitionRevenue: z.coerce.number(numMsg("tuition revenue")).min(0).optional(),
+  publicFundingRevenue: z.coerce.number(numMsg("public funding revenue")).min(0).optional(),
+  philanthropyRevenue: z.coerce.number(numMsg("philanthropy revenue")).min(0).optional(),
+  otherRevenue: z.coerce.number(numMsg("other revenue")).min(0).optional(),
+  personnelExpenses: z.coerce.number(numMsg("personnel expenses")).min(0).optional(),
+  facilityExpenses: z.coerce.number(numMsg("facility expenses")).min(0).optional(),
+  instructionalExpenses: z.coerce.number(numMsg("instructional expenses")).min(0).optional(),
+  adminExpenses: z.coerce.number(numMsg("admin expenses")).min(0).optional(),
 });
 
 export const currentYearProjectionSchema = z.object({

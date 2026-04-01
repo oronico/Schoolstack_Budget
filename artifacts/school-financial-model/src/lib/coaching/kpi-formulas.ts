@@ -95,6 +95,40 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
     interpretation:
       "Capacity utilization shows how full your school is projected to be by the end of the forecast period. Operating at 80–95% is optimal. Below 60% often means fixed costs are spread too thin across too few students.",
   },
+  breakevenEnrollment: {
+    id: "breakevenEnrollment",
+    title: "Breakeven Enrollment",
+    formula: "Fixed Costs / (Revenue per Student − Variable Cost per Student)",
+    inputLabels: [
+      "Total fixed costs (expenses that don't change with enrollment — rent, insurance, admin salaries, etc.)",
+      "Revenue per student (total Year 1 revenue ÷ enrollment)",
+      "Variable cost per student (per-student expenses like curriculum, devices, supplies)",
+    ],
+    interpretation:
+      "Breakeven enrollment is the minimum number of students your school needs just to cover its costs. If your projected enrollment is close to or below this number, the financial model has very little margin for error. Lenders look at this to understand how sensitive your budget is to enrollment shortfalls. A healthy gap between breakeven and projected enrollment signals resilience.",
+  },
+  occupancyCostPerStudent: {
+    id: "occupancyCostPerStudent",
+    title: "Occupancy Cost per Student",
+    formula: "Total Facility Costs / Enrolled Students",
+    inputLabels: [
+      "Total Year 1 facility costs (rent, utilities, insurance, maintenance)",
+      "Total enrolled students in Year 1",
+    ],
+    interpretation:
+      "This tells you how much your school spends on its physical space for each student. Lenders and authorizers compare this against benchmarks ($1,500–$3,000 per student is typical). Very high numbers may signal an oversized or overpriced facility relative to enrollment.",
+  },
+  occupancyCostPerSqft: {
+    id: "occupancyCostPerSqft",
+    title: "Occupancy Cost per Sq Ft",
+    formula: "Total Facility Costs / Square Footage",
+    inputLabels: [
+      "Total Year 1 facility costs",
+      "Total square footage of the facility",
+    ],
+    interpretation:
+      "Cost per square foot helps you compare your space against local market rates. If your all-in occupancy cost per sq ft is significantly above comparable commercial space in your area, it may be worth renegotiating or exploring alternatives.",
+  },
 };
 
 export function getKpiFormula(id: string): KpiFormula | undefined {

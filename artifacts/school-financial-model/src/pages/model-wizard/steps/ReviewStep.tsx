@@ -1,11 +1,13 @@
 import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2 } from "lucide-react";
+import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2, AlertTriangle, Rocket } from "lucide-react";
 import { useMemo } from "react";
 import { computeAnnualDebt } from "@workspace/finance";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
+import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
+import { computeMonthlyCashInflow } from "@/lib/revenue-defaults";
 import type { FullModelData } from "../schema";
 
 interface ReviewRevenueRow {
@@ -204,6 +206,44 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
 
   const totalExpenses = staffingSummary.totalCost + expenseSummary.total + capitalDebtSummary.total;
   const netIncome = revenueSummary.total - totalExpenses;
+
+  const lendingLabIntent = data.schoolProfile?.lendingLabIntent;
+  const schoolStage = data.schoolProfile?.schoolStage;
+
+  const diagnosticMetrics = useMemo(() => computeMetrics(data as FullModelData), [data]);
+
+  const monthlyCashFlow = useMemo(() => {
+    if (!hasRowData || year1Students === 0) return null;
+    const monthlyInflows = computeMonthlyCashInflow(revenueRows, 0, year1Students);
+    const monthlyExpense = totalExpenses / 12;
+    const startingCash = data.openingBalances?.cash ?? 0;
+    const months: { month: string; beginBalance: number; inflow: number; outflow: number; endBalance: number }[] = [];
+    let runningBalance = startingCash;
+    const calendarMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const fyStart = (data.schoolProfile?.fiscalYearStartMonth || 7) - 1;
+    for (let i = 0; i < 12; i++) {
+      const mIdx = (fyStart + i) % 12;
+      const label = calendarMonths[mIdx] || `M${i + 1}`;
+      const inflow = monthlyInflows[i] || 0;
+      const outflow = monthlyExpense;
+      const endBalance = runningBalance + inflow - outflow;
+      months.push({ month: label, beginBalance: runningBalance, inflow, outflow, endBalance });
+      runningBalance = endBalance;
+    }
+    return months;
+  }, [hasRowData, revenueRows, totalExpenses, year1Students, data.openingBalances?.cash, data.schoolProfile?.fiscalYearStartMonth]);
+
+  const facilityKpis = useMemo(() => {
+    const phases = data.schoolProfile?.facilityPhases || data.facilityPhases || [];
+    let totalSqft = 0;
+    for (const p of phases) {
+      if (p.squareFootage) totalSqft += p.squareFootage;
+    }
+    const facilityCost = diagnosticMetrics.y1FacilityCost;
+    const costPerStudent = year1Students > 0 ? facilityCost / year1Students : 0;
+    const costPerSqft = totalSqft > 0 ? facilityCost / totalSqft : 0;
+    return { totalSqft, costPerStudent, costPerSqft, facilityCost };
+  }, [data.facilityPhases, diagnosticMetrics.y1FacilityCost, year1Students]);
 
   const finalYearStudents = data.enrollment?.[`year${yearCount}`] || data.enrollment?.year5 || data.enrollment?.year3 || 0;
   const studentGrowth = year1Students > 0 && finalYearStudents > year1Students
@@ -484,6 +524,140 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
               </div>
             )}
           </Section>
+
+          {hasRowData && diagnosticMetrics.breakevenEnrollment > 0 && diagnosticMetrics.breakevenEnrollment !== Infinity && (
+            <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
+              <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Key Financial Indicators
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl bg-secondary/30 p-4 text-center">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Breakeven Enrollment</p>
+                  <p className="font-display font-bold text-2xl text-foreground">{diagnosticMetrics.breakevenEnrollment}</p>
+                  <p className="text-xs text-muted-foreground mt-1">students needed</p>
+                  {year1Students > 0 && (
+                    <p className={`text-xs font-medium mt-2 ${year1Students >= diagnosticMetrics.breakevenEnrollment ? "text-green-600" : "text-rose-600"}`}>
+                      {year1Students >= diagnosticMetrics.breakevenEnrollment
+                        ? `${Math.round(((year1Students - diagnosticMetrics.breakevenEnrollment) / diagnosticMetrics.breakevenEnrollment) * 100)}% above breakeven`
+                        : `${Math.round(((diagnosticMetrics.breakevenEnrollment - year1Students) / diagnosticMetrics.breakevenEnrollment) * 100)}% below breakeven`}
+                    </p>
+                  )}
+                </div>
+                {facilityKpis.facilityCost > 0 && year1Students > 0 && (
+                  <div className="rounded-xl bg-secondary/30 p-4 text-center">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Facility Cost / Student</p>
+                    <p className="font-display font-bold text-2xl text-foreground">{formatCurrency(facilityKpis.costPerStudent)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {facilityKpis.costPerStudent > 3000 ? "Above typical range ($1,500–$3,000)" : facilityKpis.costPerStudent < 1500 ? "Below typical range" : "Within typical range ($1,500–$3,000)"}
+                    </p>
+                  </div>
+                )}
+                {facilityKpis.totalSqft > 0 && facilityKpis.facilityCost > 0 && (
+                  <div className="rounded-xl bg-secondary/30 p-4 text-center">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Facility Cost / Sq Ft</p>
+                    <p className="font-display font-bold text-2xl text-foreground">{formatCurrency(facilityKpis.costPerSqft)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{facilityKpis.totalSqft.toLocaleString()} sq ft total</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {monthlyCashFlow && monthlyCashFlow.length > 0 && (
+            <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-display font-bold text-lg flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  Year 1 Monthly Cash Flow
+                </h3>
+                {monthlyCashFlow.some(m => m.endBalance < 0) && (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full bg-rose-100 text-rose-700">
+                    <AlertTriangle className="h-3 w-3" /> Negative months
+                  </span>
+                )}
+              </div>
+              {lendingLabIntent === "plan_to_apply" && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
+                  <Rocket className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">Lenders look at monthly cash flow to spot timing gaps between when you collect revenue and when bills are due.</p>
+                </div>
+              )}
+              <div className="overflow-x-auto -mx-2">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 px-2 font-semibold text-muted-foreground">Month</th>
+                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Beginning</th>
+                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Inflows</th>
+                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Outflows</th>
+                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Ending</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyCashFlow.map((m, i) => (
+                      <tr key={i} className={`border-b border-border/30 ${m.endBalance < 0 ? "bg-rose-50" : i % 2 === 0 ? "bg-secondary/20" : ""}`}>
+                        <td className="py-2 px-2 font-medium">{m.month}</td>
+                        <td className="py-2 px-2 text-right">{formatCurrency(m.beginBalance)}</td>
+                        <td className="py-2 px-2 text-right text-green-700">{formatCurrency(m.inflow)}</td>
+                        <td className="py-2 px-2 text-right text-rose-600">({formatCurrency(m.outflow)})</td>
+                        <td className={`py-2 px-2 text-right font-semibold ${m.endBalance < 0 ? "text-rose-700" : ""}`}>
+                          {formatCurrency(m.endBalance)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {schoolStage === "operating_school" && data.priorYearSnapshot?.totalRevenue && data.priorYearSnapshot.totalRevenue > 0 && (
+            <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
+              <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
+                <TrendingDown className="h-5 w-5 text-primary" />
+                Prior Year vs. Projected Year 1
+              </h3>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
+                  <span className="text-sm font-medium text-muted-foreground">Prior-Year Revenue</span>
+                  <span className="text-sm font-semibold">{formatCurrency(data.priorYearSnapshot.totalRevenue)}</span>
+                </div>
+                <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
+                  <span className="text-sm font-medium text-muted-foreground">Projected Year 1 Revenue</span>
+                  <span className="text-sm font-semibold">{formatCurrency(revenueSummary.total)}</span>
+                </div>
+                {revenueSummary.total > 0 && data.priorYearSnapshot.totalRevenue > 0 && (
+                  <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
+                    <span className="text-sm font-medium text-muted-foreground">Revenue Variance</span>
+                    <span className={`text-sm font-semibold ${revenueSummary.total >= data.priorYearSnapshot.totalRevenue ? "text-green-600" : "text-rose-600"}`}>
+                      {revenueSummary.total >= data.priorYearSnapshot.totalRevenue ? "+" : ""}
+                      {Math.round(((revenueSummary.total - data.priorYearSnapshot.totalRevenue) / data.priorYearSnapshot.totalRevenue) * 100)}%
+                    </span>
+                  </div>
+                )}
+                {data.priorYearSnapshot.totalExpenses && data.priorYearSnapshot.totalExpenses > 0 && (
+                  <>
+                    <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30 mt-2">
+                      <span className="text-sm font-medium text-muted-foreground">Prior-Year Expenses</span>
+                      <span className="text-sm font-semibold">{formatCurrency(data.priorYearSnapshot.totalExpenses)}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
+                      <span className="text-sm font-medium text-muted-foreground">Projected Year 1 Expenses</span>
+                      <span className="text-sm font-semibold">{formatCurrency(totalExpenses)}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
+                      <span className="text-sm font-medium text-muted-foreground">Expense Variance</span>
+                      <span className={`text-sm font-semibold ${totalExpenses <= data.priorYearSnapshot.totalExpenses ? "text-green-600" : "text-rose-600"}`}>
+                        {totalExpenses >= data.priorYearSnapshot.totalExpenses ? "+" : ""}
+                        {Math.round(((totalExpenses - data.priorYearSnapshot.totalExpenses) / data.priorYearSnapshot.totalExpenses) * 100)}%
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <>

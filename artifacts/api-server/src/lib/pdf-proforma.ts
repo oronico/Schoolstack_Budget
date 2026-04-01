@@ -97,6 +97,37 @@ interface TuitionTier {
   studentCounts: number[];
 }
 
+interface PriorYearSnapshot {
+  endingEnrollment?: number;
+  totalRevenue?: number;
+  totalExpenses?: number;
+  endingCash?: number;
+  tuitionRevenue?: number;
+  publicFundingRevenue?: number;
+  philanthropyRevenue?: number;
+  otherRevenue?: number;
+  personnelExpenses?: number;
+  facilityExpenses?: number;
+  instructionalExpenses?: number;
+  adminExpenses?: number;
+}
+
+interface OpeningBalances {
+  cash?: number;
+  accountsReceivable?: number;
+  fixedAssets?: number;
+  otherAssets?: number;
+  accountsPayable?: number;
+  currentDebtPortion?: number;
+  longTermDebt?: number;
+}
+
+interface FacilityPhase {
+  squareFootage?: number;
+  hasRenewalOption?: boolean;
+  [key: string]: unknown;
+}
+
 interface ModelData {
   schoolProfile?: SchoolProfile;
   enrollment?: Enrollment;
@@ -106,6 +137,10 @@ interface ModelData {
   expenseRows?: ExpenseRow[];
   customCategoryLabels?: Record<string, string>;
   capitalAndDebtRows?: CapitalDebtRow[];
+  priorYearSnapshot?: PriorYearSnapshot;
+  openingBalances?: OpeningBalances;
+  facilityPhases?: FacilityPhase[];
+  facilities?: Record<string, unknown>;
 }
 
 const MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -496,6 +531,101 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   pnlRows.push([`Cumulative ${profitLabel(sp.entityType)}`, ...cumNIs.map(v => fmtCurrency(v))]);
 
   drawTable(doc, pnlCols, pnlRows, { highlightLastRow: false, zebra: true });
+
+  const priorYear = data.priorYearSnapshot;
+  if (priorYear && (priorYear.totalRevenue || priorYear.totalExpenses)) {
+    ensureSpace(doc, 200);
+    sectionTitle(doc, "Prior-Year Actuals vs. Year 1 Projections");
+    const priorCols: TableColumn[] = [
+      { header: "", width: 180 },
+      { header: "Prior Year", width: 100, align: "right" },
+      { header: "Year 1 Projected", width: 100, align: "right" },
+      { header: "Variance", width: 80, align: "right" },
+    ];
+    const priorRows: string[][] = [];
+    if (priorYear.totalRevenue) {
+      const variance = revTotals[0] > 0 && priorYear.totalRevenue > 0
+        ? ((revTotals[0] - priorYear.totalRevenue) / priorYear.totalRevenue * 100).toFixed(1) + "%"
+        : "—";
+      priorRows.push(["Total Revenue", fmtCurrency(priorYear.totalRevenue), fmtCurrency(revTotals[0]), variance]);
+    }
+    if (priorYear.tuitionRevenue) priorRows.push(["  Tuition & Fees", fmtCurrency(priorYear.tuitionRevenue), "—", "—"]);
+    if (priorYear.publicFundingRevenue) priorRows.push(["  Public Funding", fmtCurrency(priorYear.publicFundingRevenue), "—", "—"]);
+    if (priorYear.philanthropyRevenue) priorRows.push(["  Philanthropy", fmtCurrency(priorYear.philanthropyRevenue), "—", "—"]);
+    if (priorYear.otherRevenue) priorRows.push(["  Other Revenue", fmtCurrency(priorYear.otherRevenue), "—", "—"]);
+    if (priorYear.totalExpenses) {
+      const y1Exp = staffTotals[0] + opexTotals[0] + capDebtTotals[0];
+      const expVariance = priorYear.totalExpenses > 0
+        ? ((y1Exp - priorYear.totalExpenses) / priorYear.totalExpenses * 100).toFixed(1) + "%"
+        : "—";
+      priorRows.push(["Total Expenses", fmtCurrency(priorYear.totalExpenses), fmtCurrency(y1Exp), expVariance]);
+    }
+    if (priorYear.personnelExpenses) priorRows.push(["  Personnel", fmtCurrency(priorYear.personnelExpenses), "—", "—"]);
+    if (priorYear.facilityExpenses) priorRows.push(["  Facility", fmtCurrency(priorYear.facilityExpenses), "—", "—"]);
+    if (priorYear.instructionalExpenses) priorRows.push(["  Instructional", fmtCurrency(priorYear.instructionalExpenses), "—", "—"]);
+    if (priorYear.adminExpenses) priorRows.push(["  Admin", fmtCurrency(priorYear.adminExpenses), "—", "—"]);
+    if (priorYear.endingEnrollment) priorRows.push(["Ending Enrollment", fmtNumber(priorYear.endingEnrollment), fmtNumber(enrollment[0]), "—"]);
+    if (priorYear.endingCash) priorRows.push(["Ending Cash", fmtCurrency(priorYear.endingCash), "—", "—"]);
+    drawTable(doc, priorCols, priorRows, { zebra: true });
+  }
+
+  const ob = data.openingBalances;
+  if (ob && ((ob.cash || 0) + (ob.accountsReceivable || 0) + (ob.fixedAssets || 0) + (ob.otherAssets || 0) + (ob.accountsPayable || 0) + (ob.currentDebtPortion || 0) + (ob.longTermDebt || 0) > 0)) {
+    ensureSpace(doc, 200);
+    sectionTitle(doc, "Opening Balance Sheet");
+    const bsCols: TableColumn[] = [{ header: "", width: 200 }, { header: "Amount", width: 120, align: "right" }];
+    const bsRows: string[][] = [];
+    const totalAssets = (ob.cash || 0) + (ob.accountsReceivable || 0) + (ob.fixedAssets || 0) + (ob.otherAssets || 0);
+    const totalLiabilities = (ob.accountsPayable || 0) + (ob.currentDebtPortion || 0) + (ob.longTermDebt || 0);
+    bsRows.push(["ASSETS", ""]);
+    if (ob.cash) bsRows.push(["  Cash & Cash Equivalents", fmtCurrency(ob.cash)]);
+    if (ob.accountsReceivable) bsRows.push(["  Accounts Receivable", fmtCurrency(ob.accountsReceivable)]);
+    if (ob.fixedAssets) bsRows.push(["  Fixed Assets (Net)", fmtCurrency(ob.fixedAssets)]);
+    if (ob.otherAssets) bsRows.push(["  Other Assets", fmtCurrency(ob.otherAssets)]);
+    bsRows.push(["Total Assets", fmtCurrency(totalAssets)]);
+    bsRows.push(["", ""]);
+    bsRows.push(["LIABILITIES", ""]);
+    if (ob.accountsPayable) bsRows.push(["  Accounts Payable", fmtCurrency(ob.accountsPayable)]);
+    if (ob.currentDebtPortion) bsRows.push(["  Current Portion of Debt", fmtCurrency(ob.currentDebtPortion)]);
+    if (ob.longTermDebt) bsRows.push(["  Long-Term Debt", fmtCurrency(ob.longTermDebt)]);
+    bsRows.push(["Total Liabilities", fmtCurrency(totalLiabilities)]);
+    bsRows.push(["Net Position", fmtCurrency(totalAssets - totalLiabilities)]);
+    drawTable(doc, bsCols, bsRows, { zebra: true });
+  }
+
+  const y1Rev = revTotals[0] || 0;
+  const y1Exp = staffTotals[0] + opexTotals[0] + capDebtTotals[0];
+  if (enrollment[0] > 0 && y1Rev > 0) {
+    ensureSpace(doc, 140);
+    sectionTitle(doc, "Key Financial Indicators");
+    const revenuePerStudent = y1Rev / enrollment[0];
+    const expensePerStudent = y1Exp / enrollment[0];
+    const contributionMargin = revenuePerStudent - expensePerStudent;
+    const breakeven = contributionMargin > 0 ? Math.ceil(y1Exp / revenuePerStudent) : Infinity;
+
+    labelValue(doc, "Revenue per Student", fmtCurrency(revenuePerStudent));
+    labelValue(doc, "Expense per Student", fmtCurrency(expensePerStudent));
+    if (breakeven !== Infinity) {
+      labelValue(doc, "Breakeven Enrollment", `${fmtNumber(breakeven)} students`);
+      const cushion = enrollment[0] > breakeven
+        ? `${((enrollment[0] - breakeven) / breakeven * 100).toFixed(0)}% above breakeven`
+        : `${((breakeven - enrollment[0]) / breakeven * 100).toFixed(0)}% below breakeven`;
+      labelValue(doc, "Enrollment Cushion", cushion);
+    }
+
+    let totalSqft = 0;
+    const facilityPhases = (sp as Record<string, unknown>).facilityPhases as FacilityPhase[] | undefined || data.facilityPhases || [];
+    for (const p of facilityPhases) {
+      if (p.squareFootage) totalSqft += p.squareFootage;
+    }
+    if (totalSqft > 0) {
+      const facilityCost = opexTotals[0] > 0 ? opexTotals[0] * 0.3 : 0;
+      labelValue(doc, "Total Square Footage", fmtNumber(totalSqft));
+      if (facilityCost > 0) {
+        labelValue(doc, "Facility Cost / Sq Ft", fmtCurrency(facilityCost / totalSqft));
+      }
+    }
+  }
 
   drawFooter(doc);
   return docToBuffer(doc);

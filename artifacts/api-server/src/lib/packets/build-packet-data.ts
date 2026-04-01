@@ -182,7 +182,7 @@ function buildSection(
     case "capital_debt":
       return buildCapitalDebt(base, md, co);
     case "five_year_projection":
-      return buildFiveYearProjection(base, co, yearlyData, niLabel);
+      return buildFiveYearProjection(base, co, yearlyData, niLabel, md);
     case "cash_flow":
       return buildCashFlow(base, co);
     case "debt_service":
@@ -411,6 +411,7 @@ function buildFiveYearProjection(
   co: ConsultantOutput,
   yearlyData: YearData[],
   niLabel: string,
+  md: ModelData,
 ): PacketSection {
   const rows: PacketTableRow[] = yearlyData.map((yd) => ({
     label: yearLabel(yd.year),
@@ -422,21 +423,41 @@ function buildFiveYearProjection(
     ? `The model reaches break-even in Year ${breakEvenYear + 1}.`
     : "The model does not reach break-even within the 5-year projection.";
 
+  const y1 = yearlyData[0];
+  let breakevenNote = "";
+  if (y1 && y1.students > 0 && y1.totalRevenue > 0) {
+    const revPerStudent = y1.totalRevenue / y1.students;
+    const breakevenEnroll = revPerStudent > 0 ? Math.ceil(y1.totalExpenses / revPerStudent) : 0;
+    if (breakevenEnroll > 0 && breakevenEnroll !== Infinity) {
+      const cushionPct = ((y1.students - breakevenEnroll) / breakevenEnroll * 100).toFixed(0);
+      breakevenNote = ` Breakeven enrollment is ${breakevenEnroll} students (${y1.students >= breakevenEnroll ? `${cushionPct}% above` : `${Math.abs(Number(cushionPct))}% below`} Year 1 enrollment).`;
+    }
+  }
+
+  const priorYear = md.priorYearSnapshot;
+  let priorYearNote = "";
+  if (priorYear?.totalRevenue && y1) {
+    const revVariance = ((y1.totalRevenue - priorYear.totalRevenue) / priorYear.totalRevenue * 100).toFixed(1);
+    priorYearNote = ` Prior-year revenue was ${fmt(priorYear.totalRevenue)}; Year 1 projections represent a ${revVariance}% change.`;
+  }
+
+  const metrics: LinkedMetric[] = co.keyMetrics.map((m) => ({
+    label: m.name,
+    value: m.value,
+    status: m.status,
+    benchmark: m.benchmark,
+    sourceEngine: "consultant" as const,
+  }));
+
   return {
     ...s,
-    narrative: `${breakEvenText} Year 5 ${niLabel.toLowerCase()} is projected at ${fmt(yearlyData[4]?.netIncome || 0)} (${pct(yearlyData[4]?.netMargin || 0)} margin).`,
+    narrative: `${breakEvenText}${breakevenNote}${priorYearNote} Year 5 ${niLabel.toLowerCase()} is projected at ${fmt(yearlyData[4]?.netIncome || 0)} (${pct(yearlyData[4]?.netMargin || 0)} margin).`,
     tables: [{
       title: `5-Year ${niLabel} Projection`,
       headers: ["Year", "Students", "Revenue", "Expenses", niLabel, "Margin"],
       rows,
     }],
-    linkedMetrics: co.keyMetrics.map((m) => ({
-      label: m.name,
-      value: m.value,
-      status: m.status,
-      benchmark: m.benchmark,
-      sourceEngine: "consultant" as const,
-    })),
+    linkedMetrics: metrics,
   };
 }
 
