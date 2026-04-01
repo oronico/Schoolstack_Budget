@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
+import crypto from "crypto";
 import { db } from "@workspace/db";
-import { financialModelsTable, exportsTable } from "@workspace/db/schema";
+import { financialModelsTable, exportsTable, sharedLinksTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import {
   CreateModelBody,
@@ -917,6 +918,202 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
   } catch (err) {
     console.error("Request review error:", err);
     res.status(500).json({ error: "Something went wrong submitting the review request." });
+  }
+});
+
+router.post("/models/:id/share", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid model ID." }); return; }
+
+    const [model] = await db
+      .select({ id: financialModelsTable.id })
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) { res.status(404).json({ error: "Model not found." }); return; }
+
+    const viewerLabel = typeof req.body?.viewerLabel === "string" ? req.body.viewerLabel.trim().slice(0, 200) : null;
+    const token = crypto.randomBytes(32).toString("hex");
+
+    const [link] = await db.insert(sharedLinksTable).values({
+      modelId: id,
+      token,
+      viewerLabel: viewerLabel || null,
+    }).returning();
+
+    await trackEvent("shared_model", req.userId, { modelId: id, sharedLinkId: link.id });
+
+    res.status(201).json({
+      id: link.id,
+      token: link.token,
+      viewerLabel: link.viewerLabel,
+      createdAt: link.createdAt.toISOString(),
+    });
+  } catch (err) {
+    console.error("Share model error:", err);
+    res.status(500).json({ error: "Something went wrong creating the share link." });
+  }
+});
+
+router.get("/models/:id/shares", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid model ID." }); return; }
+
+    const [model] = await db
+      .select({ id: financialModelsTable.id })
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) { res.status(404).json({ error: "Model not found." }); return; }
+
+    const links = await db
+      .select()
+      .from(sharedLinksTable)
+      .where(eq(sharedLinksTable.modelId, id))
+      .orderBy(desc(sharedLinksTable.createdAt));
+
+    res.json(links.map(l => ({
+      id: l.id,
+      token: l.token,
+      viewerLabel: l.viewerLabel,
+      createdAt: l.createdAt.toISOString(),
+      revokedAt: l.revokedAt?.toISOString() || null,
+    })));
+  } catch (err) {
+    console.error("List shares error:", err);
+    res.status(500).json({ error: "Something went wrong listing share links." });
+  }
+});
+
+router.delete("/models/:id/share/:token", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid model ID." }); return; }
+
+    const [model] = await db
+      .select({ id: financialModelsTable.id })
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) { res.status(404).json({ error: "Model not found." }); return; }
+
+    const token = req.params.token;
+    const [link] = await db
+      .select()
+      .from(sharedLinksTable)
+      .where(and(eq(sharedLinksTable.modelId, id), eq(sharedLinksTable.token, token)))
+      .limit(1);
+
+    if (!link) { res.status(404).json({ error: "Share link not found." }); return; }
+
+    await db
+      .update(sharedLinksTable)
+      .set({ revokedAt: new Date() })
+      .where(eq(sharedLinksTable.id, link.id));
+
+    await trackEvent("revoked_share_link", req.userId, { modelId: id, sharedLinkId: link.id });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Revoke share error:", err);
+    res.status(500).json({ error: "Something went wrong revoking the share link." });
+  }
+});
+
+router.get("/shared/:token", async (req, res) => {
+  try {
+    const token = req.params.token;
+    if (!token || token.length !== 64 || !/^[a-f0-9]{64}$/.test(token)) { res.status(400).json({ error: "Invalid share token." }); return; }
+
+    const [link] = await db
+      .select()
+      .from(sharedLinksTable)
+      .where(eq(sharedLinksTable.token, token))
+      .limit(1);
+
+    if (!link) { res.status(404).json({ error: "Shared model not found." }); return; }
+    if (link.revokedAt) { res.status(410).json({ error: "This share link has been revoked." }); return; }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(eq(financialModelsTable.id, link.modelId))
+      .limit(1);
+
+    if (!model) { res.status(404).json({ error: "Model no longer exists." }); return; }
+
+    const data = normalizeModelData(model.data as Record<string, unknown>);
+    const profile = data.schoolProfile as Record<string, unknown> | undefined;
+    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
+    const state = typeof profile?.state === "string" ? profile.state : "";
+    const schoolType = typeof profile?.schoolType === "string" ? profile.schoolType : "";
+    const entityType = typeof profile?.entityType === "string" ? profile.entityType : "";
+
+    const yearFinancials = computeYearFinancialsFromData(data);
+    const consultantOutput = runConsultantEngine(data);
+
+    const enrollment = yearFinancials.map(yf => yf.students);
+    const revenue = yearFinancials.map(yf => yf.totalRevenue);
+    const expenses = yearFinancials.map(yf => yf.totalExpenses);
+    const netIncome = yearFinancials.map(yf => yf.netIncome);
+    const staffingCost = yearFinancials.map(yf => yf.totalStaffingCost);
+    const facilityCost = yearFinancials.map(yf => yf.facilityCost);
+    const debtService = yearFinancials.map(yf => yf.debtService);
+    const netMargin = yearFinancials.map(yf => yf.netMargin);
+    const dscr = yearFinancials.map(yf =>
+      yf.debtService > 0 ? Math.round(((yf.netIncome + yf.debtService) / yf.debtService) * 100) / 100 : 0
+    );
+
+    const cf = consultantOutput.cumulativeFinancials || [];
+    const reserveMonths = cf.length > 0 ? cf[cf.length - 1].reserveMonths : 0;
+    const cashRunwayMonths = consultantOutput.cashRunwayMonths || 0;
+
+    const priorSnapshot = (data as Record<string, unknown>).priorYearSnapshot as Record<string, number> | undefined;
+    const y1StartingCash = priorSnapshot?.endingCash || 0;
+    const y1EndingCash = y1StartingCash + (yearFinancials[0]?.netIncome || 0);
+    const daysCashOnHand = computeDaysCashOnHand(y1EndingCash, yearFinancials[0]?.totalExpenses || 0);
+
+    const revenueComposition = consultantOutput.revenueComposition || [];
+    const costComposition = consultantOutput.costComposition || [];
+
+    const revenueBreakdown = yearFinancials.map(yf => ({
+      tuition: yf.tuitionRevenue,
+      public: yf.publicRevenue,
+      philanthropy: yf.philanthropyRevenue,
+    }));
+
+    res.json({
+      schoolName,
+      state,
+      schoolType,
+      entityType,
+      enrollment,
+      revenue,
+      expenses,
+      netIncome,
+      staffingCost,
+      facilityCost,
+      debtService,
+      netMargin,
+      dscr,
+      reserveMonths,
+      cashRunwayMonths,
+      daysCashOnHand,
+      revenueComposition,
+      costComposition,
+      revenueBreakdown,
+      executiveSummary: consultantOutput.executiveSummary || null,
+      lenderReadiness: consultantOutput.lenderReadiness || null,
+      createdAt: link.createdAt.toISOString(),
+    });
+  } catch (err) {
+    console.error("Get shared model error:", err);
+    res.status(500).json({ error: "Something went wrong loading the shared model." });
   }
 });
 

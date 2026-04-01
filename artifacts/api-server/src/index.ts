@@ -80,6 +80,17 @@ async function runMigrations() {
       `CREATE INDEX IF NOT EXISTS exports_model_id_idx ON exports(model_id)`,
       `CREATE INDEX IF NOT EXISTS events_user_id_idx ON events(user_id)`,
       `CREATE INDEX IF NOT EXISTS events_event_name_idx ON events(event_name)`,
+      // --- shared_links ---
+      `CREATE TABLE IF NOT EXISTS shared_links (
+        id SERIAL PRIMARY KEY,
+        model_id INTEGER NOT NULL REFERENCES financial_models(id) ON DELETE CASCADE,
+        token VARCHAR(64) NOT NULL UNIQUE,
+        viewer_label TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT now(),
+        revoked_at TIMESTAMP
+      )`,
+      `CREATE INDEX IF NOT EXISTS shared_links_model_id_idx ON shared_links(model_id)`,
+      `CREATE INDEX IF NOT EXISTS shared_links_token_idx ON shared_links(token)`,
     ];
     for (const stmt of migrations) {
       await pool.query(stmt);

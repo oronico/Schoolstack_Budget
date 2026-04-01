@@ -57,8 +57,11 @@ Operating schools (2nd year+) get optional prior-year actuals with categorized r
 #### Ratio-Driven Staffing Ramp
 Staffing can be `fixed` or `ratio`-based, where FTE is computed from enrollment ÷ studentRatio, ceiled to nearest 0.5. This logic is consistently applied across workbook helpers, engines, and exports, with frontend support for configuration and preview.
 
+#### Shareable Read-Only Links
+Founders can generate unguessable share links (`/shared/:token`) from the Export step to let lenders, board members, or incubator directors view their financial model interactively — no login required. Share links use 256-bit crypto tokens, can optionally include a viewer label for tracking, and can be revoked. The shared view displays school name, 5-year financial summary, enrollment chart, key metrics (DSCR, cash reserves, net margin), revenue/expense breakdowns, executive summary, and a "Powered by SchoolStack" branded footer. DB table: `shared_links` with model_id, token, viewer_label, created_at, revoked_at.
+
 ### API Server (`api-server`)
-Manages authentication, CRUD operations for financial models, admin analytics, feedback, and a consultant rules engine. It orchestrates all Excel and PDF export formats, including public and consultant endpoints with PostgreSQL-backed rate limiting. CORS is hardened with explicit origin allowlisting. Production-hardened with `helmet` (security headers) and `compression` (gzip). DB performance indexes on `financial_models(user_id)`, `exports(user_id, model_id)`, and `events(user_id, event_name)`.
+Manages authentication, CRUD operations for financial models, admin analytics, feedback, and a consultant rules engine. It orchestrates all Excel and PDF export formats, including public and consultant endpoints with PostgreSQL-backed rate limiting. CORS is hardened with explicit origin allowlisting. Production-hardened with `helmet` (security headers) and `compression` (gzip). DB performance indexes on `financial_models(user_id)`, `exports(user_id, model_id)`, `events(user_id, event_name)`, and `shared_links(model_id, token)`.
 
 ### Frontend (`school-financial-model`)
 A React-based SPA featuring:

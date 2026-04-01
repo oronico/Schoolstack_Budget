@@ -23,6 +23,7 @@ const ScenarioPage = lazy(() => import("@/pages/scenarios").then(m => ({ default
 const AdminPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPage })));
 const TermsPage = lazy(() => import("@/pages/legal/terms").then(m => ({ default: m.TermsPage })));
 const PrivacyPolicyPage = lazy(() => import("@/pages/legal/privacy").then(m => ({ default: m.PrivacyPolicyPage })));
+const SharedModelPage = lazy(() => import("@/pages/shared/SharedModelPage").then(m => ({ default: m.SharedModelPage })));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 setupFetchInterceptor();
@@ -115,6 +116,7 @@ function AppRouter() {
         <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/underwriting" component={PublicWizardPage} />
+        <Route path="/shared/:token" component={SharedModelPage} />
         <Route path="/terms" component={TermsPage} />
         <Route path="/privacy" component={PrivacyPolicyPage} />
 

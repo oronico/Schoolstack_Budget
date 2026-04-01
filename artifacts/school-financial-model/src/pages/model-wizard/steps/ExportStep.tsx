@@ -1,12 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getExportModelUrl, customFetch } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3, MessageSquareMore, CheckCircle2, Send } from "lucide-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3, MessageSquareMore, CheckCircle2, Send, Share2, Copy, Check, Trash2, Link2 } from "lucide-react";
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
 import { BoardPacketPreview } from "../../../components/export/BoardPacketPreview";
 import { trackExport } from "@/hooks/useExportTracker";
 
 type ExportType = "formula" | "underwritingV2" | "lenderPacketPdf" | "boardPacketPdf";
+
+interface SharedLinkItem {
+  id: number;
+  token: string;
+  viewerLabel: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+}
 
 export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
   const [loading, setLoading] = useState<ExportType | null>(null);
@@ -22,12 +30,86 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
   const [reviewEmail, setReviewEmail] = useState("");
   const [reviewMessage, setReviewMessage] = useState("");
 
+  const [showSharePanel, setShowSharePanel] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareViewerLabel, setShareViewerLabel] = useState("");
+  const [sharedLinks, setSharedLinks] = useState<SharedLinkItem[]>([]);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState<string | null>(null);
+
   useEffect(() => {
     if (!modelId) return;
     customFetch<{ available: boolean }>(`/api/models/${modelId}/review-available`)
       .then(data => setReviewAvailable(data.available))
       .catch(() => setReviewAvailable(false));
   }, [modelId]);
+
+  const fetchSharedLinks = useCallback(async () => {
+    if (!modelId) return;
+    try {
+      const links = await customFetch<SharedLinkItem[]>(`/api/models/${modelId}/shares`);
+      setSharedLinks(links);
+    } catch { /* ignore */ }
+  }, [modelId]);
+
+  useEffect(() => {
+    fetchSharedLinks();
+  }, [fetchSharedLinks]);
+
+  function getShareUrl(token: string): string {
+    const base = window.location.origin;
+    const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    return `${base}${basePath}/shared/${token}`;
+  }
+
+  const handleCreateShare = async () => {
+    if (!modelId || shareLoading) return;
+    setShareLoading(true);
+    try {
+      const result = await customFetch<SharedLinkItem>(`/api/models/${modelId}/share`, {
+        method: "POST",
+        body: JSON.stringify({ viewerLabel: shareViewerLabel.trim() || undefined }),
+      });
+      setSharedLinks(prev => [result, ...prev]);
+      setShareViewerLabel("");
+      try {
+        const url = getShareUrl(result.token);
+        await navigator.clipboard.writeText(url);
+        setCopiedToken(result.token);
+        setTimeout(() => setCopiedToken(null), 2000);
+      } catch {
+        /* clipboard failed — link still created, user can copy manually */
+      }
+    } catch {
+      alert("Failed to create share link. Please try again.");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleRevokeShare = async (token: string) => {
+    if (!modelId || revoking) return;
+    setRevoking(token);
+    try {
+      await customFetch(`/api/models/${modelId}/share/${token}`, { method: "DELETE" });
+      setSharedLinks(prev => prev.map(l => l.token === token ? { ...l, revokedAt: new Date().toISOString() } : l));
+    } catch {
+      alert("Failed to revoke link. Please try again.");
+    } finally {
+      setRevoking(null);
+    }
+  };
+
+  const handleCopyLink = async (token: string) => {
+    try {
+      const url = getShareUrl(token);
+      await navigator.clipboard.writeText(url);
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken(null), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,6 +340,111 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           )}
         </div>
       )}
+
+      <div className="mt-10 max-w-xl mx-auto">
+        {showSharePanel ? (
+          <div className="bg-white border border-primary/30 rounded-2xl p-8 shadow-lg animate-in fade-in duration-300">
+            <h3 className="font-display font-bold text-xl text-foreground mb-2">Share with Lender or Board</h3>
+            <p className="text-muted-foreground text-sm mb-6">Generate a read-only link anyone can view — no login required.</p>
+
+            <div className="space-y-4 text-left">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Viewer name or role <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={shareViewerLabel}
+                  onChange={e => setShareViewerLabel(e.target.value)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  placeholder="e.g. First National Bank, Board Chair"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCreateShare}
+                  disabled={shareLoading}
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {shareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                  {shareLoading ? "Generating..." : "Generate & Copy Link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSharePanel(false)}
+                  className="px-4 py-2.5 rounded-lg border border-border text-muted-foreground hover:bg-muted/50 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+
+            {sharedLinks.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold text-foreground mb-3">Active Share Links</h4>
+                <div className="space-y-2">
+                  {sharedLinks.map(link => (
+                    <div
+                      key={link.token}
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${link.revokedAt ? "bg-muted/30 border-border/50 opacity-60" : "bg-white border-border"}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-foreground truncate">
+                          {link.viewerLabel || "Shared link"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {link.revokedAt ? "Revoked" : `Created ${new Date(link.createdAt).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                      {!link.revokedAt && (
+                        <>
+                          <button
+                            onClick={() => handleCopyLink(link.token)}
+                            className="p-1.5 rounded-md hover:bg-muted/50 transition-colors"
+                            title="Copy link"
+                          >
+                            {copiedToken === link.token ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleRevokeShare(link.token)}
+                            disabled={revoking === link.token}
+                            className="p-1.5 rounded-md hover:bg-red-50 transition-colors"
+                            title="Revoke link"
+                          >
+                            {revoking === link.token ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            )}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowSharePanel(true)}
+            className="w-full group bg-white border-2 border-dashed border-primary/30 hover:border-primary/60 rounded-2xl p-6 flex items-center gap-4 transition-all hover:shadow-md"
+          >
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+              <Share2 className="h-6 w-6 text-primary" />
+            </div>
+            <div className="text-left">
+              <span className="font-display font-bold text-foreground block">Share with Lender or Board</span>
+              <span className="text-sm text-muted-foreground">Generate a read-only link to your financial model — no login required.</span>
+            </div>
+            <ArrowRight className="h-5 w-5 text-primary ml-auto flex-shrink-0" />
+          </button>
+        )}
+      </div>
 
       {anyExported && (
         <div className="mt-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
