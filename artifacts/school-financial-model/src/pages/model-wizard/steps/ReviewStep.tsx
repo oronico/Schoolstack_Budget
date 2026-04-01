@@ -637,38 +637,30 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                         {revenueSummary.total >= data.priorYearSnapshot.totalRevenue ? "+" : ""}{Math.round(((revenueSummary.total - data.priorYearSnapshot.totalRevenue) / data.priorYearSnapshot.totalRevenue) * 100)}%
                       </td>
                     </tr>
-                    {data.priorYearSnapshot.tuitionRevenue ? (
-                      <tr className="border-b border-border/30">
-                        <td className="py-1.5 px-3 pl-6 text-muted-foreground">Tuition & Fees</td>
-                        <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.tuitionRevenue)}</td>
-                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                      </tr>
-                    ) : null}
-                    {data.priorYearSnapshot.publicFundingRevenue ? (
-                      <tr className="border-b border-border/30">
-                        <td className="py-1.5 px-3 pl-6 text-muted-foreground">Public Funding</td>
-                        <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.publicFundingRevenue)}</td>
-                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                      </tr>
-                    ) : null}
-                    {data.priorYearSnapshot.philanthropyRevenue ? (
-                      <tr className="border-b border-border/30">
-                        <td className="py-1.5 px-3 pl-6 text-muted-foreground">Philanthropy</td>
-                        <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.philanthropyRevenue)}</td>
-                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                      </tr>
-                    ) : null}
-                    {data.priorYearSnapshot.otherRevenue ? (
-                      <tr className="border-b border-border/30">
-                        <td className="py-1.5 px-3 pl-6 text-muted-foreground">Other Revenue</td>
-                        <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.otherRevenue)}</td>
-                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                        <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                      </tr>
-                    ) : null}
+                    {(() => {
+                      const revCatMap: Array<{ label: string; pyKey: "tuitionRevenue" | "publicFundingRevenue" | "philanthropyRevenue" | "otherRevenue"; projCats: string[] }> = [
+                        { label: "Tuition & Fees", pyKey: "tuitionRevenue", projCats: ["tuition_and_fees", "tuition_offsets"] },
+                        { label: "Public Funding", pyKey: "publicFundingRevenue", projCats: ["public_funding", "school_choice"] },
+                        { label: "Philanthropy", pyKey: "philanthropyRevenue", projCats: ["philanthropy"] },
+                        { label: "Other Revenue", pyKey: "otherRevenue", projCats: ["other_revenue"] },
+                      ];
+                      return revCatMap.map(({ label, pyKey, projCats }) => {
+                        const pyVal = data.priorYearSnapshot?.[pyKey];
+                        if (!pyVal) return null;
+                        const projVal = projCats.reduce((s, c) => s + (revenueSummary.byCategory.get(c) || 0), 0);
+                        const varPct = pyVal > 0 ? Math.round(((projVal - pyVal) / pyVal) * 100) : 0;
+                        return (
+                          <tr key={pyKey} className="border-b border-border/30">
+                            <td className="py-1.5 px-3 pl-6 text-muted-foreground">{label}</td>
+                            <td className="py-1.5 px-3 text-right">{formatCurrency(pyVal)}</td>
+                            <td className="py-1.5 px-3 text-right">{formatCurrency(projVal)}</td>
+                            <td className={`py-1.5 px-3 text-right ${projVal >= pyVal ? "text-green-600" : "text-rose-600"}`}>
+                              {projVal >= pyVal ? "+" : ""}{varPct}%
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                     {data.priorYearSnapshot.totalExpenses && data.priorYearSnapshot.totalExpenses > 0 && (
                       <>
                         <tr className="border-b border-border/30 bg-secondary/20 font-semibold">
@@ -689,30 +681,29 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                             </td>
                           </tr>
                         ) : null}
-                        {data.priorYearSnapshot.facilityExpenses ? (
-                          <tr className="border-b border-border/30">
-                            <td className="py-1.5 px-3 pl-6 text-muted-foreground">Facility</td>
-                            <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.facilityExpenses)}</td>
-                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                          </tr>
-                        ) : null}
-                        {data.priorYearSnapshot.instructionalExpenses ? (
-                          <tr className="border-b border-border/30">
-                            <td className="py-1.5 px-3 pl-6 text-muted-foreground">Instructional</td>
-                            <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.instructionalExpenses)}</td>
-                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                          </tr>
-                        ) : null}
-                        {data.priorYearSnapshot.adminExpenses ? (
-                          <tr className="border-b border-border/30">
-                            <td className="py-1.5 px-3 pl-6 text-muted-foreground">Admin & Ops</td>
-                            <td className="py-1.5 px-3 text-right">{formatCurrency(data.priorYearSnapshot.adminExpenses)}</td>
-                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                            <td className="py-1.5 px-3 text-right text-muted-foreground">—</td>
-                          </tr>
-                        ) : null}
+                        {(() => {
+                          const expCatMap: Array<{ label: string; pyKey: "facilityExpenses" | "instructionalExpenses" | "adminExpenses"; projCats: string[] }> = [
+                            { label: "Facility", pyKey: "facilityExpenses", projCats: ["occupancy_facility"] },
+                            { label: "Instructional", pyKey: "instructionalExpenses", projCats: ["instructional"] },
+                            { label: "Admin & Ops", pyKey: "adminExpenses", projCats: ["admin_operations", "technology", "professional_services"] },
+                          ];
+                          return expCatMap.map(({ label, pyKey, projCats }) => {
+                            const pyVal = data.priorYearSnapshot?.[pyKey];
+                            if (!pyVal) return null;
+                            const projVal = projCats.reduce((s, c) => s + (expenseSummary.byCategory.get(c) || 0), 0);
+                            const varPct = pyVal > 0 ? Math.round(((projVal - pyVal) / pyVal) * 100) : 0;
+                            return (
+                              <tr key={pyKey} className="border-b border-border/30">
+                                <td className="py-1.5 px-3 pl-6 text-muted-foreground">{label}</td>
+                                <td className="py-1.5 px-3 text-right">{formatCurrency(pyVal)}</td>
+                                <td className="py-1.5 px-3 text-right">{formatCurrency(projVal)}</td>
+                                <td className={`py-1.5 px-3 text-right ${projVal <= pyVal ? "text-green-600" : "text-rose-600"}`}>
+                                  {projVal >= pyVal ? "+" : ""}{varPct}%
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
                       </>
                     )}
                     {data.priorYearSnapshot.endingEnrollment ? (
@@ -731,7 +722,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             </div>
           )}
 
-          {schoolStage === "operating_school" && data.openingBalances && (
+          {data.openingBalances && (
             (data.openingBalances.cash || data.openingBalances.accountsReceivable || data.openingBalances.fixedAssets || data.openingBalances.otherAssets || data.openingBalances.accountsPayable || data.openingBalances.currentDebtPortion || data.openingBalances.longTermDebt) ? (
               <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
                 <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">

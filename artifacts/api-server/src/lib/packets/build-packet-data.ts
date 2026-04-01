@@ -9,6 +9,7 @@ import {
   fundingLabel,
   stageLabel,
   driverVal,
+  computeMonthlyCashInflow,
   computeRevenueForYear,
   computePersonnelForYear,
   computeExpenseForYear,
@@ -642,76 +643,6 @@ function buildFacilityKPIs(s: PacketSection, md: ModelData, yearlyData: YearData
   };
 }
 
-function computeTimingAwareInflows(md: ModelData, students: number): number[] {
-  const monthly = new Array(12).fill(0);
-  const revRows = md.revenueRows || [];
-
-  const rowValues = new Map<string, number>();
-  for (const r of revRows) {
-    if (!r.enabled || r.driverType === "percent_of_base") continue;
-    const base = r.amounts?.[0] ?? 0;
-    let val = 0;
-    switch (r.driverType) {
-      case "monthly": val = base * 12; break;
-      case "per_student": val = base * students; break;
-      case "annual_fixed": val = base; break;
-      default: val = base;
-    }
-    rowValues.set(r.id, val);
-  }
-  for (const r of revRows) {
-    if (!r.enabled || r.driverType !== "percent_of_base") continue;
-    const baseVal = rowValues.get(r.percentBase ?? "") ?? 0;
-    const pct = (r.amounts?.[0] ?? 0) / 100;
-    rowValues.set(r.id, baseVal * pct);
-  }
-
-  for (const r of revRows) {
-    if (!r.enabled) continue;
-    const annualAmount = rowValues.get(r.id) ?? 0;
-    if (annualAmount === 0) continue;
-    const cat = r.category;
-    const rec = r as unknown as Record<string, unknown>;
-
-    if (cat === "tuition_and_fees" || cat === "tuition_offsets") {
-      const isTuition = r.id === "gross_tuition" || cat === "tuition_offsets";
-      if (isTuition) {
-        const billingMonths = (rec.billingMonths as number) ?? 10;
-        const collMethod = (rec.collectionMethod as string) ?? "autopay";
-        const collRate = (collMethod === "invoiced" || collMethod === "mixed")
-          ? ((rec.collectionRate as number) ?? 95) / 100 : 1;
-        const delayDays = (collMethod === "invoiced" || collMethod === "mixed")
-          ? ((rec.collectionDelayDays as number) ?? 0) : 0;
-        const delayMonths = Math.floor(delayDays / 30);
-        const effective = cat === "tuition_offsets" ? -annualAmount : annualAmount;
-        const perMonth = (effective * collRate) / billingMonths;
-        const startMonth = (billingMonths === 12 ? 0 : 1) + delayMonths;
-        for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) monthly[i] += perMonth;
-      } else {
-        monthly[0] += annualAmount;
-      }
-    } else if (cat === "public_funding") {
-      const freq = (rec.paymentFrequency as string) ?? "monthly";
-      if (freq === "monthly") {
-        const lag = Math.floor(((rec.reimbursementLagDays as number) ?? 0) / 30);
-        const perMo = annualAmount / 12;
-        for (let i = lag; i < 12; i++) monthly[i] += perMo;
-      } else if (freq === "quarterly") {
-        const q = annualAmount / 4;
-        [2, 5, 8, 11].forEach(m => { if (m < 12) monthly[m] += q; });
-      } else {
-        monthly[0] += annualAmount;
-      }
-    } else if (cat === "grants_contributions" || cat === "philanthropy") {
-      monthly[0] += annualAmount;
-    } else {
-      const perMo = annualAmount / 12;
-      for (let i = 0; i < 12; i++) monthly[i] += perMo;
-    }
-  }
-  return monthly;
-}
-
 function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, yearlyData: YearData[]): PacketSection {
   const runwayText = co.cashRunwayMonths >= 60
     ? "Cash stays positive throughout the entire 5-year projection."
@@ -737,7 +668,7 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
     rows: (() => {
       const calendarMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const fyStart = ((md.schoolProfile?.fiscalYearStartMonth || 7) - 1);
-      const monthlyInflows = computeTimingAwareInflows(md, y1.students);
+      const monthlyInflows = computeMonthlyCashInflow(md.revenueRows || [], 0, y1.students);
       const monthlyOutflow = y1.totalExpenses / 12;
       const startingCash = ob?.cash ?? 0;
       let running = startingCash;

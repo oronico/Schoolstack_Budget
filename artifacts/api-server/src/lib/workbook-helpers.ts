@@ -1598,6 +1598,106 @@ export function buildPhaseDetails(phases: FacilityPhase[]): PhaseDetail[] {
   });
 }
 
+export function computeMonthlyCashInflow(
+  rows: RevenueRow[],
+  yearIndex: number = 0,
+  students: number = 0,
+): number[] {
+  const monthly = new Array(12).fill(0);
+  const rowValues = new Map<string, number>();
+
+  for (const row of rows) {
+    if (!row.enabled || row.driverType === "percent_of_base") continue;
+    const base = row.amounts?.[yearIndex] ?? 0;
+    let val = 0;
+    switch (row.driverType) {
+      case "monthly": val = base * 12; break;
+      case "per_student": val = base * students; break;
+      case "annual_fixed": val = base; break;
+      default: val = base;
+    }
+    rowValues.set(row.id, val);
+  }
+
+  for (const row of rows) {
+    if (!row.enabled || row.driverType !== "percent_of_base") continue;
+    const baseVal = rowValues.get(row.percentBase ?? "") ?? 0;
+    const percentage = (row.amounts?.[yearIndex] ?? 0) / 100;
+    rowValues.set(row.id, baseVal * percentage);
+  }
+
+  for (const row of rows) {
+    if (!row.enabled) continue;
+    const annualAmount = rowValues.get(row.id) ?? 0;
+    if (annualAmount === 0) continue;
+    const category = row.category;
+
+    if (category === "tuition_and_fees" || category === "tuition_offsets") {
+      const isTuition = row.id === "gross_tuition" || category === "tuition_offsets";
+      if (isTuition) {
+        const billingMonths = row.billingMonths ?? 10;
+        const collectionRate = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
+          ? (row.collectionRate ?? 95) / 100 : 1;
+        const delayDays = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
+          ? (row.collectionDelayDays ?? 0) : 0;
+        const delayMs = Math.floor(delayDays / 30);
+        const effectiveAmount = category === "tuition_offsets" ? -annualAmount : annualAmount;
+        const adjustedAmount = effectiveAmount * collectionRate;
+        const perMonth = adjustedAmount / billingMonths;
+        const startMonth = (billingMonths === 12 ? 0 : 1) + delayMs;
+        for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) monthly[i] += perMonth;
+      } else {
+        monthly[0] += annualAmount;
+      }
+    } else if (category === "public_funding") {
+      const freq = row.paymentFrequency ?? "monthly";
+      const timing = row.paymentTiming ?? "upfront";
+      if (freq === "monthly") {
+        const perMonth = annualAmount / 12;
+        if (timing === "arrears") {
+          for (let i = 1; i < 12; i++) monthly[i] += perMonth;
+        } else {
+          for (let i = 0; i < 12; i++) monthly[i] += perMonth;
+        }
+      } else if (freq === "quarterly") {
+        const perPayment = annualAmount / 4;
+        const months = timing === "arrears" ? [2, 5, 8, 11] : [0, 3, 6, 9];
+        months.forEach(m => { monthly[m] += perPayment; });
+      } else if (freq === "semi_annual") {
+        const perPayment = annualAmount / 2;
+        const months = timing === "arrears" ? [5, 11] : [0, 6];
+        months.forEach(m => { monthly[m] += perPayment; });
+      } else if (freq === "annual") {
+        const month = timing === "arrears" ? 11 : 0;
+        monthly[month] += annualAmount;
+      }
+    } else if (category === "school_choice") {
+      const disbType = row.disbursementType ?? "direct";
+      if (disbType === "direct") {
+        const perQuarter = annualAmount / 4;
+        [0, 3, 6, 9].forEach(m => { monthly[m] += perQuarter; });
+      } else {
+        const lagMonths = row.reimbursementLagMonths ?? 2;
+        const perMonth = annualAmount / 12;
+        for (let i = lagMonths; i < 12; i++) monthly[i] += perMonth;
+        if (lagMonths > 0 && lagMonths < 12) {
+          const deferred = perMonth * lagMonths;
+          const remainingMonths = 12 - lagMonths;
+          for (let i = lagMonths; i < 12; i++) monthly[i] += deferred / remainingMonths;
+        }
+      }
+    } else if (category === "philanthropy" || category === "grants_contributions") {
+      const quarter = row.receiptQuarter ?? 1;
+      const startMonth = (quarter - 1) * 3;
+      monthly[startMonth] += annualAmount;
+    } else {
+      const perMonth = annualAmount / 12;
+      for (let i = 0; i < 12; i++) monthly[i] += perMonth;
+    }
+  }
+  return monthly;
+}
+
 let _healthModule: { generateHealthSignals: (input: unknown) => Array<{ dimension: string; status: string; label: string; explanation: string; watchItem: string }> } | null = null;
 async function importHealthModule() {
   if (!_healthModule) {
