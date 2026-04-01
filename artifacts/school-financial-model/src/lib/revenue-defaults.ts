@@ -572,7 +572,7 @@ export function generateSchoolChoiceRows(
         id,
         category: "school_choice" as RevenueCategory,
         lineItem: p.type === "private_scholarship" ? p.label : (PROGRAM_TYPE_TO_LABEL[p.type] || p.label),
-        enabled: p.status === "active",
+        enabled: p.status === "active" && p.type !== "private_scholarship",
         driverType: "per_student" as RevenueDriverType,
         amounts: new Array(yearCount).fill(defaultAmount),
         note,

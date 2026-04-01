@@ -179,7 +179,7 @@ export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
     correspondenceCharter(2800, 3200, "Charter school enrollment pathway — ~$2,800-$3,200/student"),
   ], false, { min: 12000, max: 16000, notes: "LCFF rate — varies significantly by resident district" }),
   CO: entry("single_count_day", [
-    privateScholarship(1000, 3000, "ACE Scholarship", "ACE Scholarships (acescholarships.org) — K-12 scholarships for low-income families attending private schools in Colorado. Amounts vary by grade level and family need."),
+    privateScholarship(1000, 3000, "ACE Scholarship", "ACE Scholarships (acescholarships.org) — need-based K-12 scholarships for low-income families attending private schools in Colorado. Not all private schools receive ACE funds; families must apply and qualify. Amounts vary by grade level and family need."),
   ], true, { min: 10000, max: 11500, notes: "Charter equity law requires 95%+ of district per-pupil revenue" }),
   CT: entry("single_count_day", [], false, { min: 13000, max: 14000, notes: "State charter grant base ~$13,185" }),
   DE: entry("adm", [], false, { min: 15000, max: 16000, notes: "Unit-based formula equivalent to district schools" }),
