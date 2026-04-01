@@ -370,6 +370,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     esa: "esa_revenue", voucher: "voucher_revenue", tax_credit_scholarship: "scholarship_org",
     refundable_tax_credit: "refundable_tax_credit", individual_tax_credit: "individual_tax_credit",
     federal_tax_credit_sgo: "federal_tax_credit_sgo", correspondence_charter: "correspondence_charter",
+    private_scholarship: "private_scholarship_revenue",
   }), []);
 
   const AUTO_GENERATED_IDS = useMemo(() => new Set(Object.values(PROGRAM_TYPE_TO_ROW_ID)), [PROGRAM_TYPE_TO_ROW_ID]);

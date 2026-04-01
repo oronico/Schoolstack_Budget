@@ -14,7 +14,8 @@ export type SchoolChoiceProgramType =
   | "refundable_tax_credit"
   | "individual_tax_credit"
   | "federal_tax_credit_sgo"
-  | "correspondence_charter";
+  | "correspondence_charter"
+  | "private_scholarship";
 
 export type ProgramStatus = "active" | "pending" | "blocked" | "litigated";
 
@@ -155,6 +156,10 @@ function correspondenceCharter(min: number, max: number, notes?: string, status:
   return { type: "correspondence_charter", label: "Correspondence / Charter Pathway", minPerStudent: min, maxPerStudent: max, universal: false, status, notes };
 }
 
+function privateScholarship(min: number, max: number, label: string, notes?: string, status: ProgramStatus = "active"): ProgramInfo {
+  return { type: "private_scholarship", label, minPerStudent: min, maxPerStudent: max, universal: false, status, notes };
+}
+
 export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
   AL: entry("single_count_period", [
     refundableTaxCredit(1000, 2000, "CHOOSE Act — up to $2,000 for homeschoolers", 1000, 2000),
@@ -174,6 +179,7 @@ export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
     correspondenceCharter(2800, 3200, "Charter school enrollment pathway — ~$2,800-$3,200/student"),
   ], false, { min: 12000, max: 16000, notes: "LCFF rate — varies significantly by resident district" }),
   CO: entry("single_count_day", [
+    privateScholarship(1000, 3000, "ACE Scholarship", "ACE Scholarships (acescholarships.org) — K-12 scholarships for low-income families attending private schools in Colorado. Amounts vary by grade level and family need."),
   ], true, { min: 10000, max: 11500, notes: "Charter equity law requires 95%+ of district per-pupil revenue" }),
   CT: entry("single_count_day", [], false, { min: 13000, max: 14000, notes: "State charter grant base ~$13,185" }),
   DE: entry("adm", [], false, { min: 15000, max: 16000, notes: "Unit-based formula equivalent to district schools" }),
@@ -392,6 +398,15 @@ function filterProgramsForSchoolType(programs: ProgramInfo[], schoolType: School
       });
 
     case "private_school":
+      return programs.filter(p =>
+        p.type === "esa" ||
+        p.type === "voucher" ||
+        p.type === "tax_credit_scholarship" ||
+        p.type === "refundable_tax_credit" ||
+        p.type === "individual_tax_credit" ||
+        p.type === "private_scholarship"
+      );
+
     case "microschool":
     case "learning_pod":
     case "tutoring_center":

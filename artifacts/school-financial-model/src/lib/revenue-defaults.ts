@@ -545,6 +545,7 @@ export function generateSchoolChoiceRows(
     individual_tax_credit: "individual_tax_credit",
     federal_tax_credit_sgo: "federal_tax_credit_sgo",
     correspondence_charter: "correspondence_charter",
+    private_scholarship: "private_scholarship_revenue",
   };
 
   const PROGRAM_TYPE_TO_LABEL: Record<string, string> = {
@@ -555,6 +556,7 @@ export function generateSchoolChoiceRows(
     individual_tax_credit: "Individual Tax Credit / Deduction",
     federal_tax_credit_sgo: "Federal Tax Credit (SGO)",
     correspondence_charter: "Correspondence / Charter Pathway",
+    private_scholarship: "Private Scholarship Revenue",
   };
 
   return programs
