@@ -436,3 +436,45 @@ describe("Schema backward compatibility", () => {
     }
   });
 });
+
+describe("ACE Scholarship (Colorado private_scholarship)", () => {
+  it("CO private_school sees ACE Scholarship", () => {
+    const config = getStateFundingConfig("private_school", "CO");
+    const ace = config.availablePrograms.find(p => p.label === "ACE Scholarship");
+    expect(ace).toBeDefined();
+    expect(ace!.type).toBe("private_scholarship");
+    expect(ace!.minPerStudent).toBe(1000);
+    expect(ace!.maxPerStudent).toBe(3000);
+    expect(ace!.status).toBe("active");
+    expect(ace!.notes).toContain("acescholarships.org");
+  });
+
+  it("CO charter_school does NOT see ACE Scholarship", () => {
+    const config = getStateFundingConfig("charter_school", "CO");
+    const ace = config.availablePrograms.find(p => p.label === "ACE Scholarship");
+    expect(ace).toBeUndefined();
+  });
+
+  it("CO microschool does NOT see ACE Scholarship", () => {
+    const config = getStateFundingConfig("microschool", "CO");
+    const ace = config.availablePrograms.find(p => p.label === "ACE Scholarship");
+    expect(ace).toBeUndefined();
+  });
+
+  it("CO homeschool_coop does NOT see ACE Scholarship", () => {
+    const config = getStateFundingConfig("homeschool_coop", "CO");
+    const ace = config.availablePrograms.find(p => p.label === "ACE Scholarship");
+    expect(ace).toBeUndefined();
+  });
+
+  it("CO learning_pod does NOT see ACE Scholarship", () => {
+    const config = getStateFundingConfig("learning_pod", "CO");
+    const ace = config.availablePrograms.find(p => p.label === "ACE Scholarship");
+    expect(ace).toBeUndefined();
+  });
+
+  it("coaching text mentions ACE for CO private schools", () => {
+    const config = getStateFundingConfig("private_school", "CO");
+    expect(config.schoolChoiceCoachingText).toContain("ACE Scholarship");
+  });
+});
