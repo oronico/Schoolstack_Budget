@@ -505,14 +505,25 @@ function buildPriorYearActuals(s: PacketSection, md: ModelData, yearlyData: Year
   const sp = md.schoolProfile || ({} as SchoolProfile);
   const costInflPct = (sp as Record<string, unknown>).costInflationPct as number | undefined;
   const rRows = md.revenueRows || [];
+  const revById = new Map<string, number>();
+  for (const r of rRows) {
+    if (!r.enabled || r.driverType === "percent_of_base") continue;
+    revById.set(r.id, driverVal(r.amounts, 0, r.driverType, students0, undefined, costInflPct));
+  }
+  for (const r of rRows) {
+    if (!r.enabled || r.driverType !== "percent_of_base") continue;
+    const base = revById.get(r.percentBase || "") || 0;
+    revById.set(r.id, base * ((r.amounts?.[0] ?? 0) / 100));
+  }
   const revByCat = new Map<string, number>();
   for (const r of rRows) {
     if (!r.enabled) continue;
-    const val = driverVal(r.amounts, 0, r.driverType, students0, undefined, costInflPct);
+    const v = revById.get(r.id) || 0;
     const cat = r.category || "other_revenue";
-    revByCat.set(cat, (revByCat.get(cat) || 0) + val);
+    const sign = cat === "tuition_offsets" ? -1 : 1;
+    revByCat.set(cat, (revByCat.get(cat) || 0) + v * sign);
   }
-  const projTuition = (revByCat.get("tuition_and_fees") || 0) - Math.abs(revByCat.get("tuition_offsets") || 0);
+  const projTuition = (revByCat.get("tuition_and_fees") || 0) + (revByCat.get("tuition_offsets") || 0);
   const projPublic = (revByCat.get("public_funding") || 0) + (revByCat.get("school_choice") || 0);
   const projPhil = (revByCat.get("philanthropy") || 0) + (revByCat.get("grants_contributions") || 0);
   const projOther = revByCat.get("other_revenue") || 0;
@@ -644,7 +655,12 @@ function buildFacilityKPIs(s: PacketSection, md: ModelData, yearlyData: YearData
 
   const occupancyExpense = (md.expenseRows || [])
     .filter(e => e.enabled !== false && e.category === "occupancy_facility")
-    .reduce((sum, e) => sum + driverVal(e.amounts, 0, e.driverType, y1.students), 0);
+    .reduce((sum, e) => {
+      if (e.driverType === "percent_of_revenue") {
+        return sum + ((e.amounts?.[0] ?? 0) / 100) * y1.totalRevenue;
+      }
+      return sum + driverVal(e.amounts, 0, e.driverType, y1.students);
+    }, 0);
 
   const costPerStudent = occupancyExpense / y1.students;
   const costPerSqft = sqft > 0 ? occupancyExpense / sqft : 0;
