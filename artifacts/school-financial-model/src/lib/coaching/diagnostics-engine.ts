@@ -249,9 +249,9 @@ const RULES: DiagnosticRule[] = [
       if (badYear === -1) return null;
       return {
         severity: "critical",
-        headline: `Cash goes negative in Year ${badYear + 1}`,
-        explanation: `Your projected ending cash drops below zero in Year ${badYear + 1}. This means the school wouldn't be able to cover its bills. Lenders and funders will see this as a major risk.`,
-        action: "Review your revenue assumptions or reduce expenses so cash stays positive every year.",
+        headline: `I'm seeing cash go negative in Year ${badYear + 1}`,
+        explanation: `Your projected ending cash drops below zero in Year ${badYear + 1}. That means the school wouldn't be able to cover its bills — and lenders and funders will see this as a major red flag. We see this a lot in early drafts, so don't panic — it's fixable. — SchoolStack Team`,
+        action: "I'd start by reviewing your revenue assumptions or trimming expenses so cash stays positive every year. Even small timing adjustments can make a big difference.",
         targetStep: 7,
       };
     },
@@ -264,9 +264,9 @@ const RULES: DiagnosticRule[] = [
       if (pct < THRESHOLDS.staffingPctCritical) return null;
       return {
         severity: "critical",
-        headline: `Staffing costs are ${Math.round(pct)}% of revenue`,
-        explanation: `Personnel costs above ${THRESHOLDS.staffingPctCritical}% of revenue leave almost nothing for operations, facilities, and reserves. Most lenders flag anything over 65%.`,
-        action: "Consider whether all positions are needed in Year 1, or if some roles can be phased in as enrollment grows.",
+        headline: `I'd watch this — staffing costs are ${Math.round(pct)}% of revenue`,
+        explanation: `Personnel costs above ${THRESHOLDS.staffingPctCritical}% of revenue leave almost nothing for operations, facilities, and reserves. Most lenders flag anything over 65%. I've seen this be the single biggest issue in models that don't get funded. — SchoolStack Team`,
+        action: "We'd recommend looking at whether all positions are truly needed in Year 1. Phasing in roles as enrollment grows is one of the most effective levers you have.",
         targetStep: 5,
       };
     },
@@ -279,9 +279,9 @@ const RULES: DiagnosticRule[] = [
       if (pct < THRESHOLDS.staffingPctWarning || pct >= THRESHOLDS.staffingPctCritical) return null;
       return {
         severity: "warning",
-        headline: `Staffing costs are ${Math.round(pct)}% of revenue`,
-        explanation: `Personnel costs between ${THRESHOLDS.staffingPctWarning}% and ${THRESHOLDS.staffingPctCritical}% are on the high side. Healthy schools typically stay between 50-60%.`,
-        action: "Look at whether some roles can start part-time or be phased in after Year 1.",
+        headline: `Staffing costs at ${Math.round(pct)}% of revenue — worth keeping an eye on`,
+        explanation: `Personnel costs between ${THRESHOLDS.staffingPctWarning}% and ${THRESHOLDS.staffingPctCritical}% are on the high side. Healthy schools typically stay between 50-60%. You're not in the danger zone yet, but there's not a lot of room. — SchoolStack Team`,
+        action: "I'd look at whether some roles can start part-time or be phased in after Year 1. That's usually the quickest way to create breathing room.",
         targetStep: 5,
       };
     },
@@ -294,9 +294,9 @@ const RULES: DiagnosticRule[] = [
       if (pct < THRESHOLDS.rentPctWarning) return null;
       return {
         severity: "warning",
-        headline: `Facility costs are ${Math.round(pct)}% of revenue`,
-        explanation: `Spending more than ${THRESHOLDS.rentPctWarning}% of revenue on your facility is a red flag. It crowds out staffing and program budgets.`,
-        action: "Explore lower-cost space options, shared facilities, or phased facility upgrades.",
+        headline: `Facility costs are ${Math.round(pct)}% of revenue — that's high`,
+        explanation: `Spending more than ${THRESHOLDS.rentPctWarning}% of revenue on your facility is a red flag we see often. It crowds out staffing and program budgets, and lenders notice it right away. — SchoolStack Team`,
+        action: "I'd explore lower-cost space options, shared facilities, or phased facility upgrades. Many successful schools start in modest space and upgrade as enrollment proves out.",
         targetStep: 6,
       };
     },
@@ -309,9 +309,9 @@ const RULES: DiagnosticRule[] = [
       if (pct < THRESHOLDS.grantDependencyPct) return null;
       return {
         severity: "warning",
-        headline: `${Math.round(pct)}% of revenue comes from grants`,
-        explanation: `Relying on grants and philanthropy for more than ${THRESHOLDS.grantDependencyPct}% of revenue is risky. Grants are time-limited and competitive. Lenders prefer enrollment-driven revenue.`,
-        action: "Focus on growing enrollment-driven revenue (tuition, per-pupil funding) so grants are supplemental, not foundational.",
+        headline: `${Math.round(pct)}% of revenue comes from grants — here's why that matters`,
+        explanation: `Relying on grants and philanthropy for more than ${THRESHOLDS.grantDependencyPct}% of revenue is risky. Grants are time-limited and competitive. Lenders strongly prefer models anchored to enrollment-driven revenue. — SchoolStack Team`,
+        action: "We'd recommend focusing on growing enrollment-driven revenue (tuition, per-pupil funding) so grants become supplemental, not foundational. That's what makes a model lender-ready.",
         targetStep: 4,
       };
     },
@@ -326,9 +326,9 @@ const RULES: DiagnosticRule[] = [
         if (growth > THRESHOLDS.enrollmentGrowthPct) {
           return {
             severity: "warning",
-            headline: `Enrollment jumps ${Math.round(growth)}% in Year ${y + 1}`,
-            explanation: `Growing by more than ${THRESHOLDS.enrollmentGrowthPct}% in a single year is hard to achieve. Most new schools grow 15-25% per year. Lenders will ask how you plan to recruit this many students.`,
-            action: "Make sure you have evidence to support this growth — waitlist data, marketing plans, or community partnerships.",
+            headline: `Enrollment jumps ${Math.round(growth)}% in Year ${y + 1} — that'll get questioned`,
+            explanation: `Growing by more than ${THRESHOLDS.enrollmentGrowthPct}% in a single year is hard to achieve. Most new schools grow 15-25% per year. Lenders will absolutely ask how you plan to recruit this many students, so you'll want a good answer ready. — SchoolStack Team`,
+            action: "I'd make sure you have evidence to support this growth — waitlist data, marketing plans, or community partnerships. If you can't back it up, consider moderating the projection.",
             targetStep: 3,
           };
         }
@@ -347,9 +347,9 @@ const RULES: DiagnosticRule[] = [
       if (reserveMonths >= THRESHOLDS.minReserveMonths) return null;
       return {
         severity: "critical",
-        headline: "No cash reserve cushion",
-        explanation: "Your model shows less than one month of operating reserves. Any unexpected expense or delayed funding could force the school to close. Lenders require at least 45-60 days of reserves.",
-        action: "Build in a reserve target — either through additional fundraising, reduced spending, or a line of credit.",
+        headline: "No cash reserve cushion — this needs attention",
+        explanation: "Your model shows less than one month of operating reserves. Any unexpected expense or delayed funding could force the school to close. Lenders require at least 45-60 days of reserves, and we'd encourage you to aim higher. — SchoolStack Team",
+        action: "I'd build in a reserve target — either through additional fundraising, reduced spending, or a line of credit. Even a modest cushion makes a big difference in how lenders view your model.",
         targetStep: 2,
       };
     },
@@ -364,9 +364,9 @@ const RULES: DiagnosticRule[] = [
       if (expGrowth <= revGrowth * 1.1) return null;
       return {
         severity: "warning",
-        headline: "Expenses are growing faster than revenue",
-        explanation: "Over the 5-year projection, your costs are increasing faster than your income. This means your financial health deteriorates over time, even if Year 1 looks fine.",
-        action: "Check whether expense escalation rates (COLA, rent increases, inflation) are outpacing your revenue growth assumptions.",
+        headline: "Here's something I'd watch — expenses are growing faster than revenue",
+        explanation: "Over the 5-year projection, your costs are increasing faster than your income. That means your financial health deteriorates over time, even if Year 1 looks fine. Lenders will spot this trend quickly. — SchoolStack Team",
+        action: "I'd check whether your expense escalation rates (COLA, rent increases, inflation) are outpacing your revenue growth assumptions. That's usually where the mismatch lives.",
         targetStep: 2,
       };
     },
@@ -377,9 +377,9 @@ const RULES: DiagnosticRule[] = [
       if (m.y1Revenue > 0) return null;
       return {
         severity: "info",
-        headline: "No revenue entered yet",
-        explanation: "Your model doesn't have any revenue sources. The financial projections can't work without knowing how your school will generate income.",
-        action: "Add your primary revenue sources — tuition, per-pupil funding, or grants.",
+        headline: "No revenue entered yet — let's fix that",
+        explanation: "Your model doesn't have any revenue sources yet. We can't run meaningful financial projections without knowing how your school will generate income. — SchoolStack Team",
+        action: "Go ahead and add your primary revenue sources — tuition, per-pupil funding, or grants. We'll start generating insights as soon as we have numbers to work with.",
         targetStep: 4,
       };
     },
@@ -393,9 +393,9 @@ const RULES: DiagnosticRule[] = [
       if (monthlyExpenses <= 0 || minCash >= monthlyExpenses * 2) return null;
       return {
         severity: "info",
-        headline: "Annual surplus looks good, but cash reserves are thin",
-        explanation: "Your annual budget shows a surplus, but ending cash stays tight relative to monthly expenses. Timing mismatches between when revenue arrives and bills are due are one of the most common cash flow problems for new schools.",
-        action: "Review your revenue collection timing. Make sure tuition payments and grant disbursements align with your monthly expense obligations.",
+        headline: "Annual surplus looks good, but your cash reserves are thin",
+        explanation: "Your annual budget shows a surplus — that's great. But ending cash stays tight relative to monthly expenses. Timing mismatches between when revenue arrives and bills are due are one of the most common cash flow problems we see with new schools. — SchoolStack Team",
+        action: "I'd review your revenue collection timing. Make sure tuition payments and grant disbursements align with your monthly expense obligations. That alignment is often the difference between a model that works on paper and one that works in practice.",
         targetStep: 4,
       };
     },
@@ -409,17 +409,17 @@ const RULES: DiagnosticRule[] = [
       if (margin < 0) {
         return {
           severity: "critical",
-          headline: `Enrollment is below breakeven (need ${m.breakevenEnrollment} students)`,
-          explanation: `Your projected Year 1 enrollment of ${m.enrollment[0]} is below the ${m.breakevenEnrollment} students needed to cover your costs. The school would operate at a loss from day one. Lenders will not fund a model that starts below breakeven.`,
-          action: "Increase enrollment targets, reduce fixed costs (staffing, facility), or add revenue sources to lower your breakeven point.",
+          headline: `Enrollment is below breakeven — you need ${m.breakevenEnrollment} students`,
+          explanation: `Your projected Year 1 enrollment of ${m.enrollment[0]} is below the ${m.breakevenEnrollment} students needed to cover your costs. The school would operate at a loss from day one, and lenders won't fund a model that starts below breakeven. The good news: most founders fix this by adjusting staffing or phasing costs. — SchoolStack Team`,
+          action: "I'd focus on three levers: increase enrollment targets, reduce fixed costs (staffing, facility), or add revenue sources to lower your breakeven point. Even small changes can move the needle significantly.",
           targetStep: 3,
         };
       }
       return {
         severity: "warning",
-        headline: `Enrollment is within 10% of breakeven (${m.breakevenEnrollment} students)`,
-        explanation: `Your breakeven point is ${m.breakevenEnrollment} students and you're projecting ${m.enrollment[0]} in Year 1 — that's only ${Math.round(margin * 100)}% above breakeven. Any enrollment shortfall could push you into a deficit. Lenders see this as a thin margin.`,
-        action: "Consider whether you can grow enrollment, add revenue sources, or reduce fixed costs to build more cushion above breakeven.",
+        headline: `Enrollment is within 10% of breakeven (${m.breakevenEnrollment} students needed)`,
+        explanation: `Your breakeven point is ${m.breakevenEnrollment} students and you're projecting ${m.enrollment[0]} in Year 1 — that's only ${Math.round(margin * 100)}% above breakeven. Any enrollment shortfall could push you into a deficit. Lenders see this as a thin margin, and honestly, so do we. — SchoolStack Team`,
+        action: "We'd recommend looking at whether you can grow enrollment, add revenue sources, or reduce fixed costs to build more cushion above breakeven. A 15-20% buffer is much more comfortable.",
         targetStep: 3,
       };
     },

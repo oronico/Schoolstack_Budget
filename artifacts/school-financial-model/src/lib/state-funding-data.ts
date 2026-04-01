@@ -49,19 +49,19 @@ export interface StateFundingEntry {
 }
 
 const ADA_COACHING =
-  "Your state funds charter schools based on Average Daily Attendance (ADA). Funding is calculated on the average number of students physically present each day. Absent students reduce your funding, so strong attendance programs directly impact revenue.";
+  "Your state funds charter schools based on Average Daily Attendance (ADA). Funding is calculated on the average number of students physically present each day — so absent students reduce your funding. I'd strongly recommend investing in attendance programs early, because they directly impact your revenue. This is one of those areas where school culture and financial health are directly connected. — SchoolStack Team";
 const ADM_COACHING =
-  "Your state funds charter schools based on Average Daily Membership (ADM). Funding counts every enrolled student each day, regardless of whether they attend. This is generally more favorable for innovative school models.";
+  "Your state funds charter schools based on Average Daily Membership (ADM). Funding counts every enrolled student each day, regardless of whether they attend. This is generally more favorable for innovative school models, and it gives you more predictability in your revenue planning. — SchoolStack Team";
 const SINGLE_COUNT_DAY_COACHING =
-  "Your state funds charter schools based on a single count day. Your enrollment on that specific date determines your funding for the year. New schools that haven't reached full enrollment by the count date may receive less funding than expected.";
+  "Your state funds charter schools based on a single count day — your enrollment on that specific date determines your funding for the entire year. I'd pay close attention to this: new schools that haven't reached full enrollment by the count date may receive significantly less funding than expected. Plan your recruitment timeline around this date. — SchoolStack Team";
 const MULTIPLE_COUNT_DATES_COACHING =
-  "Your state uses multiple count dates to determine funding. Enrollment is measured on several specific dates throughout the year, which can help smooth out fluctuations.";
+  "Your state uses multiple count dates to determine funding. Enrollment is measured on several specific dates throughout the year, which can help smooth out fluctuations. This is generally more forgiving for new schools, but I'd still recommend tracking your enrollment carefully around each count date. — SchoolStack Team";
 const SINGLE_COUNT_PERIOD_COACHING =
-  "Your state determines funding based on enrollment during a single count period rather than a single day. This gives schools a window to demonstrate enrollment levels.";
+  "Your state determines funding based on enrollment during a single count period rather than a single day. This gives your school a window to demonstrate enrollment levels, which is helpful for new schools that are still ramping up. — SchoolStack Team";
 const MULTIPLE_COUNT_PERIODS_COACHING =
-  "Your state uses multiple count periods to calculate funding. Each period's enrollment is measured and typically averaged.";
+  "Your state uses multiple count periods to calculate funding. Each period's enrollment is measured and typically averaged. This tends to be favorable for growing schools since it captures your enrollment trajectory rather than a single snapshot. — SchoolStack Team";
 const OTHER_COACHING =
-  "Your state has a unique funding methodology. Check with your state education agency for details on how charter school funding is calculated.";
+  "Your state has a unique funding methodology. I'd recommend checking with your state education agency for details on how charter school funding is calculated — the specifics matter for your revenue planning. — SchoolStack Team";
 
 function methodologyLabel(m: CharterMethodology): string {
   switch (m) {
@@ -361,7 +361,7 @@ function statusSuffix(p: ProgramInfo): string {
 
 function buildSchoolChoiceCoaching(programs: ProgramInfo[], schoolType: SchoolType, state: string): string {
   if (programs.length === 0) {
-    return `Based on our data, ${state} does not currently have ESA, voucher, or tax-credit scholarship programs available. Check with your state education agency for the latest information.`;
+    return `Based on what we know, ${state} does not currently have ESA, voucher, or tax-credit scholarship programs available. I'd recommend checking with your state education agency for the latest information — this landscape changes quickly. — SchoolStack Team`;
   }
 
   const parts: string[] = [];
@@ -373,7 +373,7 @@ function buildSchoolChoiceCoaching(programs: ProgramInfo[], schoolType: SchoolTy
     parts.push(`${p.label}: ${range}/student${statusSuffix(p)}`);
   }
 
-  return `${state} offers: ${parts.join("; ")}. Check eligibility requirements with your state — amounts shown are estimates and may vary.`;
+  return `${state} offers: ${parts.join("; ")}. I'd recommend verifying eligibility requirements with your state — amounts shown are estimates and may vary. We keep this data updated, but always confirm before building your model around it. — SchoolStack Team`;
 }
 
 function filterProgramsForSchoolType(programs: ProgramInfo[], schoolType: SchoolType): ProgramInfo[] {
@@ -440,7 +440,7 @@ export function getStateFundingConfig(
       charterCoachingText: null,
       enrollmentRevenueMethod: null,
       availablePrograms: [],
-      schoolChoiceCoachingText: `We don't have funding data for "${stateCode}". Please enter your revenue sources manually.`,
+      schoolChoiceCoachingText: `We don't have funding data for "${stateCode}" yet. I'd recommend entering your revenue sources manually — and if you know the specifics of your state's programs, we'd love to hear about them. — SchoolStack Team`,
       federalTaxCreditSGO: false,
       stateCode: normalized,
       charterBasePerPupil: null,
