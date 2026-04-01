@@ -612,7 +612,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             </div>
           )}
 
-          {schoolStage === "operating_school" && data.priorYearSnapshot?.totalRevenue && data.priorYearSnapshot.totalRevenue > 0 && (
+          {schoolStage === "operating_school" && data.priorYearSnapshot && (data.priorYearSnapshot.totalRevenue || data.priorYearSnapshot.tuitionRevenue || data.priorYearSnapshot.publicFundingRevenue || data.priorYearSnapshot.philanthropyRevenue || data.priorYearSnapshot.totalExpenses || data.priorYearSnapshot.personnelExpenses) && (
             <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
               <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
                 <TrendingDown className="h-5 w-5 text-primary" />
@@ -629,19 +629,25 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-border/30 bg-secondary/20 font-semibold">
-                      <td className="py-2 px-3">Total Revenue</td>
-                      <td className="py-2 px-3 text-right">{formatCurrency(data.priorYearSnapshot.totalRevenue)}</td>
-                      <td className="py-2 px-3 text-right">{formatCurrency(revenueSummary.total)}</td>
-                      <td className={`py-2 px-3 text-right ${revenueSummary.total >= data.priorYearSnapshot.totalRevenue ? "text-green-600" : "text-rose-600"}`}>
-                        {revenueSummary.total >= data.priorYearSnapshot.totalRevenue ? "+" : ""}{Math.round(((revenueSummary.total - data.priorYearSnapshot.totalRevenue) / data.priorYearSnapshot.totalRevenue) * 100)}%
-                      </td>
-                    </tr>
+                    {(() => {
+                      const pyTotalRev = data.priorYearSnapshot.totalRevenue || ((data.priorYearSnapshot.tuitionRevenue || 0) + (data.priorYearSnapshot.publicFundingRevenue || 0) + (data.priorYearSnapshot.philanthropyRevenue || 0) + (data.priorYearSnapshot.otherRevenue || 0));
+                      if (!pyTotalRev) return null;
+                      return (
+                        <tr className="border-b border-border/30 bg-secondary/20 font-semibold">
+                          <td className="py-2 px-3">Total Revenue</td>
+                          <td className="py-2 px-3 text-right">{formatCurrency(pyTotalRev)}</td>
+                          <td className="py-2 px-3 text-right">{formatCurrency(revenueSummary.total)}</td>
+                          <td className={`py-2 px-3 text-right ${revenueSummary.total >= pyTotalRev ? "text-green-600" : "text-rose-600"}`}>
+                            {revenueSummary.total >= pyTotalRev ? "+" : ""}{Math.round(((revenueSummary.total - pyTotalRev) / pyTotalRev) * 100)}%
+                          </td>
+                        </tr>
+                      );
+                    })()}
                     {(() => {
                       const revCatMap: Array<{ label: string; pyKey: "tuitionRevenue" | "publicFundingRevenue" | "philanthropyRevenue" | "otherRevenue"; projCats: string[] }> = [
                         { label: "Tuition & Fees", pyKey: "tuitionRevenue", projCats: ["tuition_and_fees", "tuition_offsets"] },
                         { label: "Public Funding", pyKey: "publicFundingRevenue", projCats: ["public_funding", "school_choice"] },
-                        { label: "Philanthropy", pyKey: "philanthropyRevenue", projCats: ["philanthropy"] },
+                        { label: "Philanthropy", pyKey: "philanthropyRevenue", projCats: ["philanthropy", "grants_contributions"] },
                         { label: "Other Revenue", pyKey: "otherRevenue", projCats: ["other_revenue"] },
                       ];
                       return revCatMap.map(({ label, pyKey, projCats }) => {
@@ -661,14 +667,17 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                         );
                       });
                     })()}
-                    {data.priorYearSnapshot.totalExpenses && data.priorYearSnapshot.totalExpenses > 0 && (
+                    {(() => {
+                      const pyTotalExp = data.priorYearSnapshot.totalExpenses || ((data.priorYearSnapshot.personnelExpenses || 0) + (data.priorYearSnapshot.facilityExpenses || 0) + (data.priorYearSnapshot.instructionalExpenses || 0) + (data.priorYearSnapshot.adminExpenses || 0));
+                      if (!pyTotalExp) return null;
+                      return (
                       <>
                         <tr className="border-b border-border/30 bg-secondary/20 font-semibold">
                           <td className="py-2 px-3">Total Expenses</td>
-                          <td className="py-2 px-3 text-right">{formatCurrency(data.priorYearSnapshot.totalExpenses)}</td>
+                          <td className="py-2 px-3 text-right">{formatCurrency(pyTotalExp)}</td>
                           <td className="py-2 px-3 text-right">{formatCurrency(totalExpenses)}</td>
-                          <td className={`py-2 px-3 text-right ${totalExpenses <= data.priorYearSnapshot.totalExpenses ? "text-green-600" : "text-rose-600"}`}>
-                            {totalExpenses >= data.priorYearSnapshot.totalExpenses ? "+" : ""}{Math.round(((totalExpenses - data.priorYearSnapshot.totalExpenses) / data.priorYearSnapshot.totalExpenses) * 100)}%
+                          <td className={`py-2 px-3 text-right ${totalExpenses <= pyTotalExp ? "text-green-600" : "text-rose-600"}`}>
+                            {totalExpenses >= pyTotalExp ? "+" : ""}{Math.round(((totalExpenses - pyTotalExp) / pyTotalExp) * 100)}%
                           </td>
                         </tr>
                         {data.priorYearSnapshot.personnelExpenses ? (
@@ -705,7 +714,8 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                           });
                         })()}
                       </>
-                    )}
+                      );
+                    })()}
                     {data.priorYearSnapshot.endingEnrollment ? (
                       <tr className="border-b border-border/30 bg-secondary/20">
                         <td className="py-2 px-3 font-medium">Enrollment</td>
