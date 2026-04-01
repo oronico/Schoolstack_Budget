@@ -11,4 +11,12 @@ export interface PriorYearSnapshot {
   totalRevenue?: number;
   totalExpenses?: number;
   endingCash?: number;
+  tuitionRevenue?: number;
+  publicFundingRevenue?: number;
+  philanthropyRevenue?: number;
+  otherRevenue?: number;
+  personnelExpenses?: number;
+  facilityExpenses?: number;
+  instructionalExpenses?: number;
+  adminExpenses?: number;
 }

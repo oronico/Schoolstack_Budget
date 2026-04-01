@@ -28,4 +28,6 @@ export interface FacilityPhase {
   comparableMarketRent?: number;
   hasWrittenAgreement?: boolean;
   monthlyFacilityAllocation?: number;
+  squareFootage?: number;
+  hasRenewalOption?: boolean;
 }

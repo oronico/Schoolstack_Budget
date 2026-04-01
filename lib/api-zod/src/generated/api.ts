@@ -189,6 +189,8 @@ export const CreateModelBody = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -243,6 +245,8 @@ export const CreateModelBody = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
+              squareFootage: zod.number().optional(),
+              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -457,6 +461,14 @@ export const CreateModelBody = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+        tuitionRevenue: zod.number().optional(),
+        publicFundingRevenue: zod.number().optional(),
+        philanthropyRevenue: zod.number().optional(),
+        otherRevenue: zod.number().optional(),
+        personnelExpenses: zod.number().optional(),
+        facilityExpenses: zod.number().optional(),
+        instructionalExpenses: zod.number().optional(),
+        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
@@ -604,6 +616,8 @@ export const GetModelResponse = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -658,6 +672,8 @@ export const GetModelResponse = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
+              squareFootage: zod.number().optional(),
+              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -872,6 +888,14 @@ export const GetModelResponse = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+        tuitionRevenue: zod.number().optional(),
+        publicFundingRevenue: zod.number().optional(),
+        philanthropyRevenue: zod.number().optional(),
+        otherRevenue: zod.number().optional(),
+        personnelExpenses: zod.number().optional(),
+        facilityExpenses: zod.number().optional(),
+        instructionalExpenses: zod.number().optional(),
+        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
@@ -1020,6 +1044,8 @@ export const UpdateModelBody = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -1074,6 +1100,8 @@ export const UpdateModelBody = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
+              squareFootage: zod.number().optional(),
+              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -1288,6 +1316,14 @@ export const UpdateModelBody = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+        tuitionRevenue: zod.number().optional(),
+        publicFundingRevenue: zod.number().optional(),
+        philanthropyRevenue: zod.number().optional(),
+        otherRevenue: zod.number().optional(),
+        personnelExpenses: zod.number().optional(),
+        facilityExpenses: zod.number().optional(),
+        instructionalExpenses: zod.number().optional(),
+        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
@@ -1428,6 +1464,8 @@ export const UpdateModelResponse = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -1482,6 +1520,8 @@ export const UpdateModelResponse = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
+              squareFootage: zod.number().optional(),
+              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -1698,6 +1738,14 @@ export const UpdateModelResponse = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+        tuitionRevenue: zod.number().optional(),
+        publicFundingRevenue: zod.number().optional(),
+        philanthropyRevenue: zod.number().optional(),
+        otherRevenue: zod.number().optional(),
+        personnelExpenses: zod.number().optional(),
+        facilityExpenses: zod.number().optional(),
+        instructionalExpenses: zod.number().optional(),
+        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
@@ -1865,6 +1913,8 @@ export const ArchiveModelResponse = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -1919,6 +1969,8 @@ export const ArchiveModelResponse = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
+              squareFootage: zod.number().optional(),
+              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -2135,6 +2187,14 @@ export const ArchiveModelResponse = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
+        tuitionRevenue: zod.number().optional(),
+        publicFundingRevenue: zod.number().optional(),
+        philanthropyRevenue: zod.number().optional(),
+        otherRevenue: zod.number().optional(),
+        personnelExpenses: zod.number().optional(),
+        facilityExpenses: zod.number().optional(),
+        instructionalExpenses: zod.number().optional(),
+        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
