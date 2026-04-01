@@ -466,6 +466,10 @@ export interface Program {
 export interface PriorYearSnapshot {
   endingEnrollment?: number; totalRevenue?: number;
   totalExpenses?: number; endingCash?: number;
+  tuitionRevenue?: number; publicFundingRevenue?: number;
+  philanthropyRevenue?: number; otherRevenue?: number;
+  personnelExpenses?: number; facilityExpenses?: number;
+  instructionalExpenses?: number; adminExpenses?: number;
 }
 
 export interface CurrentYearProjection {

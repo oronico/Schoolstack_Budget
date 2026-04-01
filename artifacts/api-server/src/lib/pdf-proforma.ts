@@ -50,6 +50,13 @@ interface RevenueRow {
   amounts: number[];
   percentBase?: string;
   note?: string;
+  billingMonths?: number;
+  collectionRate?: number;
+  collectionMethod?: string;
+  collectionDelayDays?: number;
+  paymentFrequency?: string;
+  paymentTiming?: string;
+  reimbursementLagDays?: number;
 }
 
 interface StaffingRow {
@@ -192,6 +199,71 @@ function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driv
     case "annual_fixed": return base;
     default: return base;
   }
+}
+
+function computeMonthlyInflows(rows: RevenueRow[], yearIdx: number, students: number, tiers?: TuitionTier[], sp?: SchoolProfile): number[] {
+  const monthly = new Array(12).fill(0);
+  const rowValues = new Map<string, number>();
+
+  for (const r of rows) {
+    if (!r.enabled || r.driverType === "percent_of_base") continue;
+    if (r.id === "state_local_perpupil" && sp && hasGradeBandPDF(sp)) {
+      rowValues.set(r.id, computeGradeBandRevenuePDF(sp, yearIdx));
+    } else if (r.id === "gross_tuition" && r.driverType === "per_student" && tiers?.length) {
+      rowValues.set(r.id, computeTuitionWithTiers(r.amounts?.[yearIdx] ?? 0, yearIdx, students, tiers));
+    } else {
+      rowValues.set(r.id, computeDriverValue(r.amounts, yearIdx, r.driverType, students));
+    }
+  }
+  for (const r of rows) {
+    if (!r.enabled || r.driverType !== "percent_of_base") continue;
+    const base = rowValues.get(r.percentBase || "") || 0;
+    rowValues.set(r.id, base * ((r.amounts?.[yearIdx] ?? 0) / 100));
+  }
+
+  for (const r of rows) {
+    if (!r.enabled) continue;
+    const annualAmount = rowValues.get(r.id) ?? 0;
+    if (annualAmount === 0) continue;
+    const cat = r.category;
+
+    if (cat === "tuition_and_fees" || cat === "tuition_offsets") {
+      const isTuition = r.id === "gross_tuition" || cat === "tuition_offsets";
+      if (isTuition) {
+        const billingMonths = r.billingMonths ?? 10;
+        const collMethod = r.collectionMethod ?? "autopay";
+        const collRate = (collMethod === "invoiced" || collMethod === "mixed")
+          ? (r.collectionRate ?? 95) / 100 : 1;
+        const delayDays = (collMethod === "invoiced" || collMethod === "mixed")
+          ? (r.collectionDelayDays ?? 0) : 0;
+        const delayMonths = Math.floor(delayDays / 30);
+        const effective = cat === "tuition_offsets" ? -annualAmount : annualAmount;
+        const perMonth = (effective * collRate) / billingMonths;
+        const startMonth = (billingMonths === 12 ? 0 : 1) + delayMonths;
+        for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) monthly[i] += perMonth;
+      } else {
+        monthly[0] += annualAmount;
+      }
+    } else if (cat === "public_funding") {
+      const freq = r.paymentFrequency ?? "monthly";
+      if (freq === "monthly") {
+        const lag = Math.floor((r.reimbursementLagDays ?? 0) / 30);
+        const perMo = annualAmount / 12;
+        for (let i = lag; i < 12; i++) monthly[i] += perMo;
+      } else if (freq === "quarterly") {
+        const q = annualAmount / 4;
+        [2, 5, 8, 11].forEach(m => { if (m < 12) monthly[m] += q; });
+      } else {
+        monthly[0] += annualAmount;
+      }
+    } else if (cat === "grants_contributions" || cat === "philanthropy") {
+      monthly[0] += annualAmount;
+    } else {
+      const perMo = annualAmount / 12;
+      for (let i = 0; i < 12; i++) monthly[i] += perMo;
+    }
+  }
+  return monthly;
 }
 
 function computeTuitionWithTiers(gross: number, yearIdx: number, total: number, tiers?: TuitionTier[]): number {
@@ -656,6 +728,13 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     sectionTitle(doc, "Year 1 Monthly Cash Flow");
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const fyStart = (sp.fiscalYearStartMonth || 7) - 1;
+    const monthlyInflows = computeMonthlyInflows(
+      data.revenueRows || [],
+      0,
+      enrollment[0],
+      data.tuitionTiers,
+      sp,
+    );
     const monthlyExpense = y1Exp / 12;
     const startingCash = (data.openingBalances?.cash ?? 0);
     let running = startingCash;
@@ -671,7 +750,7 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     for (let i = 0; i < 12; i++) {
       const mIdx = (fyStart + i) % 12;
       const label = monthNames[mIdx];
-      const inflow = y1Rev / 12;
+      const inflow = monthlyInflows[i];
       const begin = running;
       const end = begin + inflow - monthlyExpense;
       cfRows.push([label, fmtCurrency(begin), fmtCurrency(inflow), `(${fmtCurrency(monthlyExpense)})`, fmtCurrency(end)]);

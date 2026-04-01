@@ -1713,7 +1713,7 @@ export function SchoolProfileStep() {
         </div>
       )}
 
-      {schoolStage === "operating_school" && (
+      {schoolStage && (
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Opening Balance Sheet</h3>
           {lendingLabIntent === "plan_to_apply" && (

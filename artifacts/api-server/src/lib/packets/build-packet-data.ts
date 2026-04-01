@@ -183,6 +183,12 @@ function buildSection(
       return buildCapitalDebt(base, md, co);
     case "five_year_projection":
       return buildFiveYearProjection(base, co, yearlyData, niLabel, md);
+    case "prior_year_actuals":
+      return buildPriorYearActuals(base, md, yearlyData);
+    case "opening_balance_sheet":
+      return buildOpeningBalanceSheet(base, md);
+    case "facility_kpis":
+      return buildFacilityKPIs(base, md, yearlyData);
     case "cash_flow":
       return buildCashFlow(base, co, md, yearlyData);
     case "debt_service":
@@ -474,6 +480,238 @@ function buildFiveYearProjection(
   };
 }
 
+function buildPriorYearActuals(s: PacketSection, md: ModelData, yearlyData: YearData[]): PacketSection {
+  const py = md.priorYearSnapshot;
+  if (!py) return { ...s, included: false, narrative: "No prior-year data provided." };
+
+  const y1 = yearlyData[0];
+  const y1Rev = y1?.totalRevenue ?? 0;
+  const y1Exp = y1?.totalExpenses ?? 0;
+
+  const pyTuition = py.tuitionRevenue ?? 0;
+  const pyPublicFunding = py.publicFundingRevenue ?? 0;
+  const pyPhilanthropy = py.philanthropyRevenue ?? 0;
+  const pyOtherRev = py.otherRevenue ?? 0;
+  const pyTotalRev = py.totalRevenue ?? (pyTuition + pyPublicFunding + pyPhilanthropy + pyOtherRev);
+
+  const pyPersonnel = py.personnelExpenses ?? 0;
+  const pyFacility = py.facilityExpenses ?? 0;
+  const pyInstructional = py.instructionalExpenses ?? 0;
+  const pyAdmin = py.adminExpenses ?? 0;
+  const pyTotalExp = py.totalExpenses ?? (pyPersonnel + pyFacility + pyInstructional + pyAdmin);
+
+  const revRows: PacketTableRow[] = [
+    { label: "Tuition & Fees", values: [fmt(pyTuition)] },
+    { label: "Public Funding", values: [fmt(pyPublicFunding)] },
+    { label: "Philanthropy", values: [fmt(pyPhilanthropy)] },
+    { label: "Other Revenue", values: [fmt(pyOtherRev)] },
+    { label: "Total Revenue", values: [fmt(pyTotalRev)], isBold: true },
+  ];
+
+  const expRows: PacketTableRow[] = [
+    { label: "Personnel & Benefits", values: [fmt(pyPersonnel)] },
+    { label: "Facilities & Occupancy", values: [fmt(pyFacility)] },
+    { label: "Instructional Supplies", values: [fmt(pyInstructional)] },
+    { label: "Admin & Operations", values: [fmt(pyAdmin)] },
+    { label: "Total Expenses", values: [fmt(pyTotalExp)], isBold: true },
+  ];
+
+  const pyNet = pyTotalRev - pyTotalExp;
+  const varianceRows: PacketTableRow[] = [];
+  if (y1Rev > 0) {
+    const revVar = ((y1Rev - pyTotalRev) / pyTotalRev) * 100;
+    const expVar = ((y1Exp - pyTotalExp) / pyTotalExp) * 100;
+    varianceRows.push(
+      { label: "Total Revenue", values: [fmt(pyTotalRev), fmt(y1Rev), `${revVar >= 0 ? "+" : ""}${revVar.toFixed(1)}%`] },
+      { label: "Total Expenses", values: [fmt(pyTotalExp), fmt(y1Exp), `${expVar >= 0 ? "+" : ""}${expVar.toFixed(1)}%`] },
+      { label: "Net Income", values: [fmt(pyNet), fmt(y1Rev - y1Exp), ""], isBold: true },
+    );
+  }
+
+  const tables: PacketTable[] = [
+    { title: "Prior-Year Revenue", headers: ["Category", "Amount"], rows: revRows },
+    { title: "Prior-Year Expenses", headers: ["Category", "Amount"], rows: expRows },
+  ];
+  if (varianceRows.length > 0) {
+    tables.push({ title: "Prior-Year vs Year 1 Projected", headers: ["", "Prior Year", "Year 1", "Variance"], rows: varianceRows });
+  }
+
+  return {
+    ...s,
+    narrative: `Prior-year net income was ${fmt(pyNet)} on revenue of ${fmt(pyTotalRev)}.`,
+    tables,
+  };
+}
+
+function buildOpeningBalanceSheet(s: PacketSection, md: ModelData): PacketSection {
+  const ob = md.openingBalances;
+  if (!ob) return { ...s, included: false, narrative: "No opening balance sheet provided." };
+
+  const cash = ob.cash ?? 0;
+  const ar = ob.accountsReceivable ?? 0;
+  const fixedAssets = ob.fixedAssets ?? 0;
+  const otherAssets = ob.otherAssets ?? 0;
+  const totalAssets = cash + ar + fixedAssets + otherAssets;
+
+  const ap = ob.accountsPayable ?? 0;
+  const currentDebt = ob.currentDebtPortion ?? 0;
+  const longTermDebt = ob.longTermDebt ?? 0;
+  const totalLiabilities = ap + currentDebt + longTermDebt;
+  const netPosition = totalAssets - totalLiabilities;
+
+  const assetRows: PacketTableRow[] = [
+    { label: "Cash & Equivalents", values: [fmt(cash)] },
+    { label: "Accounts Receivable", values: [fmt(ar)] },
+    { label: "Fixed Assets", values: [fmt(fixedAssets)] },
+    { label: "Other Assets", values: [fmt(otherAssets)] },
+    { label: "Total Assets", values: [fmt(totalAssets)], isBold: true },
+  ];
+  const liabRows: PacketTableRow[] = [
+    { label: "Accounts Payable", values: [fmt(ap)] },
+    { label: "Current Debt Portion", values: [fmt(currentDebt)] },
+    { label: "Long-Term Debt", values: [fmt(longTermDebt)] },
+    { label: "Total Liabilities", values: [fmt(totalLiabilities)], isBold: true },
+  ];
+
+  return {
+    ...s,
+    narrative: `Net position at model start: ${fmt(netPosition)}.`,
+    tables: [
+      { title: "Assets", headers: ["Item", "Amount"], rows: assetRows },
+      { title: "Liabilities", headers: ["Item", "Amount"], rows: liabRows },
+    ],
+    linkedMetrics: [
+      { label: "Total Assets", value: fmt(totalAssets), sourceEngine: "workbook-helpers" },
+      { label: "Total Liabilities", value: fmt(totalLiabilities), sourceEngine: "workbook-helpers" },
+      { label: "Net Position", value: fmt(netPosition), sourceEngine: "workbook-helpers" },
+    ],
+  };
+}
+
+function buildFacilityKPIs(s: PacketSection, md: ModelData, yearlyData: YearData[]): PacketSection {
+  const y1 = yearlyData[0];
+  if (!y1 || y1.students === 0) return { ...s, included: false, narrative: "No Year 1 data available." };
+
+  const facilityPhases = md.schoolProfile?.facilityPhases || (md as Record<string, unknown>).facilityPhases as Array<Record<string, unknown>> | undefined;
+  const sqft = ((facilityPhases?.[0] as Record<string, unknown>)?.squareFootage as number) ?? 0;
+
+  const occupancyExpense = (md.expenseRows || [])
+    .filter(e => e.enabled !== false && e.category === "occupancy_facility")
+    .reduce((sum, e) => sum + driverVal(e.amounts, 0, e.driverType, y1.students), 0);
+
+  const costPerStudent = occupancyExpense / y1.students;
+  const costPerSqft = sqft > 0 ? occupancyExpense / sqft : 0;
+
+  let y1VarCostPerStudent = 0;
+  let y1FixedCosts = y1.totalStaffing;
+  for (const e of (md.expenseRows || [])) {
+    if (e.enabled === false) continue;
+    const dt = e.driverType;
+    if (dt === "per_student" || dt === "per_new_student" || dt === "per_returning_student") {
+      y1VarCostPerStudent += e.amounts?.[0] ?? 0;
+    } else if (dt !== "percent_of_revenue") {
+      y1FixedCosts += driverVal(e.amounts, 0, dt, y1.students);
+    }
+  }
+  y1FixedCosts += y1.debtService;
+  const revPerStudent = y1.totalRevenue / y1.students;
+  const contribMargin = revPerStudent - y1VarCostPerStudent;
+  const breakevenEnroll = contribMargin > 0 ? Math.ceil(y1FixedCosts / contribMargin) : 0;
+
+  const kpiRows: PacketTableRow[] = [
+    { label: "Facility Cost / Student", values: [fmt(costPerStudent)] },
+  ];
+  if (sqft > 0) kpiRows.push({ label: "Facility Cost / Sq Ft", values: [`$${costPerSqft.toFixed(2)}`] });
+  if (sqft > 0) kpiRows.push({ label: "Total Square Footage", values: [sqft.toLocaleString()] });
+  kpiRows.push({ label: "Breakeven Enrollment", values: [breakevenEnroll > 0 ? `${breakevenEnroll} students` : "N/A"] });
+  if (breakevenEnroll > 0) {
+    const cushion = ((y1.students - breakevenEnroll) / breakevenEnroll) * 100;
+    kpiRows.push({ label: "Enrollment Cushion", values: [`${cushion >= 0 ? "+" : ""}${cushion.toFixed(1)}%`], isBold: cushion < 0 });
+  }
+
+  return {
+    ...s,
+    narrative: breakevenEnroll > 0
+      ? `Breakeven enrollment is ${breakevenEnroll} students. Year 1 projects ${y1.students} students, providing a ${(((y1.students - breakevenEnroll) / breakevenEnroll) * 100).toFixed(1)}% cushion.`
+      : "Unable to compute breakeven with current model assumptions.",
+    tables: [{ title: "Key Performance Indicators", headers: ["Metric", "Value"], rows: kpiRows }],
+    linkedMetrics: [
+      { label: "Breakeven Enrollment", value: breakevenEnroll > 0 ? `${breakevenEnroll}` : "N/A", sourceEngine: "workbook-helpers" },
+      { label: "Facility Cost/Student", value: fmt(costPerStudent), sourceEngine: "workbook-helpers" },
+    ],
+  };
+}
+
+function computeTimingAwareInflows(md: ModelData, students: number): number[] {
+  const monthly = new Array(12).fill(0);
+  const revRows = md.revenueRows || [];
+
+  const rowValues = new Map<string, number>();
+  for (const r of revRows) {
+    if (!r.enabled || r.driverType === "percent_of_base") continue;
+    const base = r.amounts?.[0] ?? 0;
+    let val = 0;
+    switch (r.driverType) {
+      case "monthly": val = base * 12; break;
+      case "per_student": val = base * students; break;
+      case "annual_fixed": val = base; break;
+      default: val = base;
+    }
+    rowValues.set(r.id, val);
+  }
+  for (const r of revRows) {
+    if (!r.enabled || r.driverType !== "percent_of_base") continue;
+    const baseVal = rowValues.get(r.percentBase ?? "") ?? 0;
+    const pct = (r.amounts?.[0] ?? 0) / 100;
+    rowValues.set(r.id, baseVal * pct);
+  }
+
+  for (const r of revRows) {
+    if (!r.enabled) continue;
+    const annualAmount = rowValues.get(r.id) ?? 0;
+    if (annualAmount === 0) continue;
+    const cat = r.category;
+    const rec = r as unknown as Record<string, unknown>;
+
+    if (cat === "tuition_and_fees" || cat === "tuition_offsets") {
+      const isTuition = r.id === "gross_tuition" || cat === "tuition_offsets";
+      if (isTuition) {
+        const billingMonths = (rec.billingMonths as number) ?? 10;
+        const collMethod = (rec.collectionMethod as string) ?? "autopay";
+        const collRate = (collMethod === "invoiced" || collMethod === "mixed")
+          ? ((rec.collectionRate as number) ?? 95) / 100 : 1;
+        const delayDays = (collMethod === "invoiced" || collMethod === "mixed")
+          ? ((rec.collectionDelayDays as number) ?? 0) : 0;
+        const delayMonths = Math.floor(delayDays / 30);
+        const effective = cat === "tuition_offsets" ? -annualAmount : annualAmount;
+        const perMonth = (effective * collRate) / billingMonths;
+        const startMonth = (billingMonths === 12 ? 0 : 1) + delayMonths;
+        for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) monthly[i] += perMonth;
+      } else {
+        monthly[0] += annualAmount;
+      }
+    } else if (cat === "public_funding") {
+      const freq = (rec.paymentFrequency as string) ?? "monthly";
+      if (freq === "monthly") {
+        const lag = Math.floor(((rec.reimbursementLagDays as number) ?? 0) / 30);
+        const perMo = annualAmount / 12;
+        for (let i = lag; i < 12; i++) monthly[i] += perMo;
+      } else if (freq === "quarterly") {
+        const q = annualAmount / 4;
+        [2, 5, 8, 11].forEach(m => { if (m < 12) monthly[m] += q; });
+      } else {
+        monthly[0] += annualAmount;
+      }
+    } else if (cat === "grants_contributions" || cat === "philanthropy") {
+      monthly[0] += annualAmount;
+    } else {
+      const perMo = annualAmount / 12;
+      for (let i = 0; i < 12; i++) monthly[i] += perMo;
+    }
+  }
+  return monthly;
+}
+
 function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, yearlyData: YearData[]): PacketSection {
   const runwayText = co.cashRunwayMonths >= 60
     ? "Cash stays positive throughout the entire 5-year projection."
@@ -499,7 +737,7 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
     rows: (() => {
       const calendarMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const fyStart = ((md.schoolProfile?.fiscalYearStartMonth || 7) - 1);
-      const monthlyInflow = y1.totalRevenue / 12;
+      const monthlyInflows = computeTimingAwareInflows(md, y1.students);
       const monthlyOutflow = y1.totalExpenses / 12;
       const startingCash = ob?.cash ?? 0;
       let running = startingCash;
@@ -507,10 +745,10 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
       for (let i = 0; i < 12; i++) {
         const mIdx = (fyStart + i) % 12;
         const begin = running;
-        const end = begin + monthlyInflow - monthlyOutflow;
+        const end = begin + monthlyInflows[i] - monthlyOutflow;
         monthRows.push({
           label: calendarMonths[mIdx],
-          values: [fmt(begin), fmt(monthlyInflow), `(${fmt(monthlyOutflow)})`, fmt(end)],
+          values: [fmt(begin), fmt(monthlyInflows[i]), `(${fmt(monthlyOutflow)})`, fmt(end)],
           isBold: end < 0,
         });
         running = end;

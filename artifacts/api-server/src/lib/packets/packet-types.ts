@@ -21,7 +21,10 @@ export type SectionId =
   | "key_strengths"
   | "lender_readiness"
   | "board_action_items"
-  | "appendix_assumptions";
+  | "appendix_assumptions"
+  | "prior_year_actuals"
+  | "opening_balance_sheet"
+  | "facility_kpis";
 
 export interface LinkedAssumption {
   label: string;
@@ -105,6 +108,9 @@ export const LENDER_SECTIONS: SectionId[] = [
   "expense_summary",
   "capital_debt",
   "five_year_projection",
+  "prior_year_actuals",
+  "opening_balance_sheet",
+  "facility_kpis",
   "cash_flow",
   "debt_service",
   "stress_tests",
@@ -149,4 +155,7 @@ export const SECTION_META: Record<SectionId, { title: string; description: strin
   lender_readiness: { title: "Lender Readiness", description: "Assessment of readiness for debt financing" },
   board_action_items: { title: "Board Action Items", description: "Recommended priorities for board oversight" },
   appendix_assumptions: { title: "Appendix: Key Assumptions", description: "Complete list of model assumptions with sources" },
+  prior_year_actuals: { title: "Prior-Year Actuals", description: "Categorized prior-year revenue and expense actuals with Year 1 variance" },
+  opening_balance_sheet: { title: "Opening Balance Sheet", description: "Assets, liabilities, and net position at model start" },
+  facility_kpis: { title: "Facility & Key Performance Indicators", description: "Facility cost metrics and breakeven enrollment analysis" },
 };
