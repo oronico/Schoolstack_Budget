@@ -71,47 +71,55 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
   const cola = (sp && typeof sp === "object" && "annualSalaryIncrease" in sp)
     ? (sp as { annualSalaryIncrease?: number }).annualSalaryIncrease ?? DEFAULT_COLA_PCT
     : DEFAULT_COLA_PCT;
+  const costInflation = (data.facilities as Record<string, unknown> | undefined)?.generalCostInflation as number ?? 0;
+  const retentionRate = (data.enrollment as Record<string, unknown> | undefined)?.retentionRate as number ?? 85;
 
-  function driverVal(amounts: number[] | undefined, y: number, driverType: string, students: number): number {
-    const raw = amounts?.[y] ?? amounts?.[0] ?? 0;
+  function driverVal(
+    amounts: number[] | undefined, y: number, driverType: string, students: number,
+    escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number
+  ): number {
+    let base = amounts?.[y] ?? 0;
+    const esc = escalationRate ?? fallbackInflation ?? 0;
+    if (esc !== 0 && y > 0) {
+      base = (amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
+    }
     switch (driverType) {
-      case "monthly": return raw * 12;
-      case "per_student": return raw * students;
-      default: return raw;
+      case "monthly": return base * 12;
+      case "per_student": return base * students;
+      case "per_new_student": return base * (newStudents ?? students);
+      case "per_returning_student": return base * (returningStudents ?? 0);
+      case "annual_fixed": return base;
+      default: return base;
     }
   }
 
   const revenueByYear = [0, 0, 0, 0, 0];
   let grantRevenue = 0;
-  const rowValues = new Map<string, number>();
 
-  for (const r of revenueRows) {
-    if (!r.enabled || r.driverType === "percent_of_base") continue;
-    for (let y = 0; y < 5; y++) {
-      const val = driverVal(r.amounts, y, r.driverType, enrollment[y] || y1Students);
-      if (r.category === "tuition_offsets") {
-        revenueByYear[y] -= Math.abs(val);
-      } else {
-        revenueByYear[y] += val;
+  for (let y = 0; y < 5; y++) {
+    const students = enrollment[y] || y1Students;
+    const rowVals = new Map<string, number>();
+    for (const r of revenueRows) {
+      if (!r.enabled || r.driverType === "percent_of_base") continue;
+      const val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation);
+      rowVals.set(r.id, val);
+    }
+    for (const r of revenueRows) {
+      if (!r.enabled || r.driverType !== "percent_of_base") continue;
+      const baseVal = rowVals.get(r.percentBase || "") || 0;
+      let pctVal = r.amounts?.[y] ?? 0;
+      if (r.escalationRate && r.escalationRate !== 0 && y > 0) {
+        pctVal = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
       }
+      rowVals.set(r.id, baseVal * (pctVal / 100));
     }
-    const y1Val = driverVal(r.amounts, 0, r.driverType, y1Students);
-    rowValues.set(r.id, y1Val);
-    if (r.category === "grants_contributions" || r.category === "philanthropy") {
-      grantRevenue += y1Val;
-    }
-  }
-
-  for (const r of revenueRows) {
-    if (!r.enabled || r.driverType !== "percent_of_base") continue;
-    const baseVal = rowValues.get(r.percentBase || "") || 0;
-    const pct = (r.amounts?.[0] ?? 0) / 100;
-    const val = baseVal * pct;
-    for (let y = 0; y < 5; y++) {
-      if (r.category === "tuition_offsets") {
-        revenueByYear[y] -= Math.abs(val);
-      } else {
-        revenueByYear[y] += val;
+    for (const r of revenueRows) {
+      if (!r.enabled) continue;
+      const v = rowVals.get(r.id) || 0;
+      if (r.category === "tuition_offsets") revenueByYear[y] -= Math.abs(v);
+      else revenueByYear[y] += v;
+      if (y === 0 && (r.category === "grants_contributions" || r.category === "philanthropy")) {
+        grantRevenue += v;
       }
     }
   }
@@ -132,14 +140,21 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
   let y1FacilityCost = 0;
   let y1VariableCostPerStudent = 0;
   let y1FixedCosts = 0;
+  const y1Revenue = revenueByYear[0];
   for (const e of expenseRows) {
     if (!e.enabled) continue;
-    const val = driverVal(e.amounts, 0, e.driverType, y1Students);
+    let val: number;
+    if (e.driverType === "percent_of_revenue") {
+      val = ((e.amounts?.[0] ?? 0) / 100) * y1Revenue;
+    } else {
+      val = driverVal(e.amounts, 0, e.driverType, y1Students, e.escalationRate, costInflation);
+    }
     y1OpExpenses += val;
     if (e.category === "occupancy_facility") {
       y1FacilityCost += val;
     }
-    if (e.driverType === "per_student" || (e.driverType as string) === "per_new_student" || (e.driverType as string) === "per_returning_student") {
+    const dt = e.driverType as string;
+    if (dt === "per_student" || dt === "per_new_student" || dt === "per_returning_student") {
       y1VariableCostPerStudent += e.amounts?.[0] ?? 0;
     } else if (e.driverType !== "percent_of_revenue") {
       y1FixedCosts += val;
@@ -164,16 +179,40 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
 
   const expensesByYear = [0, 0, 0, 0, 0];
   for (let y = 0; y < 5; y++) {
+    const students = enrollment[y] || y1Students;
+    const ns = y === 0 ? students : Math.max(0, students - Math.min(students, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100))));
+    const rs = y === 0 ? 0 : Math.min(students, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
     const staffY = y1StaffingCost * Math.pow(1 + cola / 100, y);
     let opY = 0;
     for (const e of expenseRows) {
       if (!e.enabled) continue;
-      opY += driverVal(e.amounts, y, e.driverType, enrollment[y] || y1Students);
+      if (e.driverType === "percent_of_revenue") {
+        const esc = e.escalationRate ?? costInflation ?? 0;
+        let pct: number;
+        if (esc !== 0 && y > 0) {
+          pct = (e.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
+        } else {
+          pct = e.amounts?.[y] ?? 0;
+        }
+        opY += (pct / 100) * revenueByYear[y];
+      } else {
+        opY += driverVal(e.amounts, y, e.driverType, students, e.escalationRate, costInflation, ns, rs);
+      }
     }
-    expensesByYear[y] = staffY + opY + y1CapDebt;
+    let capDebtY = 0;
+    for (const c of capDebtRows) {
+      if (!c.enabled) continue;
+      if (c.isLoan && c.loanPrincipal && c.loanRate && c.loanTermYears) {
+        if (y < c.loanTermYears) {
+          capDebtY += computeAnnualDebt(c.loanPrincipal, c.loanRate / 100, c.loanTermYears);
+        }
+      } else {
+        capDebtY += driverVal(c.amounts, y, c.driverType, students, (c as Record<string, unknown>).escalationRate as number | undefined, costInflation);
+      }
+    }
+    expensesByYear[y] = staffY + opY + capDebtY;
   }
 
-  const y1Revenue = revenueByYear[0];
   const y1TotalExpenses = y1StaffingCost + y1OpExpenses + y1CapDebt;
   const y1NetIncome = y1Revenue - y1TotalExpenses;
 

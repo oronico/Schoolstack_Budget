@@ -23,6 +23,7 @@ export interface ScenarioMetrics {
   breakEvenYear: number | null;
   cashRunwayMonths: number;
   reserveMonths: number;
+  loanDebtService?: number[];
 }
 
 export interface NudgeItem {
@@ -59,7 +60,7 @@ function driverVal(
   newStudents?: number,
   returningStudents?: number
 ): number {
-  const raw = amounts?.[y] ?? amounts?.[0] ?? 0;
+  const raw = amounts?.[y] ?? 0;
   const esc = escalationRate ?? fallbackEsc ?? 0;
   let base: number;
   if (esc !== 0 && y > 0) {
@@ -105,6 +106,7 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const netMargin: number[] = [];
   const dscr: number[] = [];
   const staffingPctOfRevenue: number[] = [];
+  const loanDS: number[] = [];
 
   for (let y = 0; y < 5; y++) {
     const students = enrollment[y];
@@ -149,7 +151,21 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
 
     let persTotal = 0;
     for (const r of staffingRows) {
-      const annual = (r.fte || 0) * (r.annualizedRate || 0);
+      let effectiveFte = r.fte || 0;
+      if (r.startYear && (y + 1) < r.startYear) { effectiveFte = 0; }
+      else if (r.endYear && (y + 1) > r.endYear) { effectiveFte = 0; }
+      else if ((r as Record<string, unknown>).staffingMode === "ratio" && (r as Record<string, unknown>).studentRatio) {
+        const ratio = (r as Record<string, unknown>).studentRatio as number;
+        if (ratio > 0) {
+          let computed = students / ratio;
+          const minFte = (r as Record<string, unknown>).minFte as number | undefined;
+          const maxFte = (r as Record<string, unknown>).maxFte as number | undefined;
+          if (minFte !== undefined) computed = Math.max(computed, minFte);
+          if (maxFte !== undefined) computed = Math.min(computed, maxFte);
+          effectiveFte = Math.ceil(computed * 2) / 2;
+        }
+      }
+      const annual = effectiveFte * (r.annualizedRate || 0);
       const isContractNoPL = r.employmentType === "contract" && !r.payrollLike;
       let benefits = 0, tax = 0;
       if (!isContractNoPL) {
@@ -176,6 +192,7 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
         val = (pct / 100) * revTotal;
       } else {
         val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, seNewStudents(enrollment, seRR, y), seReturningStudents(enrollment, seRR, y));
+        val *= pf;
       }
       if (r.category === "occupancy_facility") {
         facTotal += val;
@@ -185,6 +202,7 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     }
 
     let cdTotal = 0;
+    let loanDebtService = 0;
     for (const r of capDebtRows) {
       if (r.isLoan) {
         const principal = r.loanPrincipal || 0;
@@ -194,7 +212,9 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
           const monthlyRate = rate / 12;
           const numPayments = term * 12;
           const monthlyPmt = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numPayments));
-          cdTotal += monthlyPmt * 12;
+          const annualPmt = monthlyPmt * 12;
+          cdTotal += annualPmt;
+          loanDebtService += annualPmt;
         }
       } else {
         cdTotal += driverVal(r.amounts, y, r.driverType, students);
@@ -212,10 +232,9 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     netIncome.push(ni);
     netMargin.push(revTotal > 0 ? ni / revTotal : 0);
 
-    const debtService = cdTotal;
-    if (debtService > 0) {
-      const cfads = revTotal - persTotal - facTotal - opexTotal;
-      dscr.push(Math.round((cfads / debtService) * 100) / 100);
+    loanDS.push(loanDebtService);
+    if (loanDebtService > 0) {
+      dscr.push(Math.round(((ni + loanDebtService) / loanDebtService) * 100) / 100);
     } else {
       dscr.push(0);
     }
@@ -259,6 +278,7 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     breakEvenYear: breakEvenIdx >= 0 ? breakEvenIdx + 1 : null,
     cashRunwayMonths: Math.round(cashRunwayMonths * 10) / 10,
     reserveMonths: Math.round(reserveMonths * 10) / 10,
+    loanDebtService: loanDS,
   };
 }
 
@@ -278,16 +298,15 @@ function applyAdjustments(
   const staffingCost = base.staffingCost.map((s) => s * staffFactor);
   const facilityCost = base.facilityCost.map((f) => f * facFactor);
   const opex = base.opex.map((o) => o * expFactor);
-  const debtService = base.totalExpenses.map((te, i) => te - base.staffingCost[i] - base.facilityCost[i] - base.opex[i]);
-  const totalExpenses = staffingCost.map((s, i) => s + facilityCost[i] + opex[i] + debtService[i]);
+  const baseLoanDS = base.loanDebtService || base.enrollment.map(() => 0);
+  const capNonLoan = base.totalExpenses.map((te, i) => te - base.staffingCost[i] - base.facilityCost[i] - base.opex[i] - baseLoanDS[i]);
+  const totalExpenses = staffingCost.map((s, i) => s + facilityCost[i] + opex[i] + baseLoanDS[i] + capNonLoan[i]);
   const netIncome = revenue.map((r, i) => r - totalExpenses[i]);
   const netMargin = revenue.map((r, i) => (r > 0 ? netIncome[i] / r : 0));
 
-  const dscr = revenue.map((r, i) => {
-    const ds = debtService[i];
+  const dscr = baseLoanDS.map((ds, i) => {
     if (ds > 0) {
-      const cfads = r - staffingCost[i] - facilityCost[i] - opex[i];
-      return Math.round((cfads / ds) * 100) / 100;
+      return Math.round(((netIncome[i] + ds) / ds) * 100) / 100;
     }
     return 0;
   });
@@ -328,6 +347,7 @@ function applyAdjustments(
     breakEvenYear: breakEvenIdx >= 0 ? breakEvenIdx + 1 : null,
     cashRunwayMonths: Math.round(cashRunwayMonths * 10) / 10,
     reserveMonths: Math.round(reserveMonths * 10) / 10,
+    loanDebtService: baseLoanDS,
   };
 }
 

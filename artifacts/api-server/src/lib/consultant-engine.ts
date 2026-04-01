@@ -564,17 +564,20 @@ function computeExpensesForYear(rows: ExpenseRow[], yearIdx: number, students: n
   return { total, facilityCost };
 }
 
-function computeCapDebtForYear(rows: CapitalDebtRow[], yearIdx: number, students: number): number {
+function computeCapDebtForYear(rows: CapitalDebtRow[], yearIdx: number, students: number): { total: number; loanOnly: number } {
   let total = 0;
+  let loanOnly = 0;
   for (const row of rows) {
     if (!row.enabled) continue;
     if (row.isLoan && row.loanPrincipal && row.loanPrincipal > 0) {
-      total += computeAnnualDebtService(row.loanPrincipal, (row.loanRate || 0) / 100, row.loanTermYears || 0);
+      const ds = computeAnnualDebtService(row.loanPrincipal, (row.loanRate || 0) / 100, row.loanTermYears || 0);
+      total += ds;
+      loanOnly += ds;
     } else {
       total += computeDriverValue(row.amounts, yearIdx, row.driverType, students);
     }
   }
-  return total;
+  return { total, loanOnly };
 }
 
 export interface FacilityOverlayResult {
@@ -753,7 +756,7 @@ function computeAllYearsFromRows(
       facilityOverlay = overlay.total;
     }
 
-    const totalOpex = exp.total + capDebt + facilityOverlay;
+    const totalOpex = exp.total + capDebt.total + facilityOverlay;
     const facilityCost = exp.facilityCost + facilityOverlay;
     const totalExpenses = totalStaffingCost + totalOpex;
     const netIncome = rev.total - totalExpenses;
@@ -768,7 +771,8 @@ function computeAllYearsFromRows(
       totalStaffingCost,
       facilityCost,
       totalOpex,
-      debtService: capDebt,
+      debtService: capDebt.total,
+      loanDebtService: capDebt.loanOnly,
       totalExpenses,
       netIncome,
       netMargin: rev.total > 0 ? netIncome / rev.total : 0,
@@ -1172,6 +1176,7 @@ function assessLendingLabReadiness(
   }
 
   // --- 5. DSCR ---
+  const readinessLoanDS = (y1 as unknown as Record<string, unknown>).loanDebtService as number ?? y1.debtService;
   const hasLoan = capDebtRows.some(r => r.enabled && r.isLoan);
   if (!hasLoan) {
     criteria.push({
@@ -1181,7 +1186,7 @@ function assessLendingLabReadiness(
       actual: "No loans in model",
       detail: "No debt in your model, so DSCR is not applicable. This criterion only applies when you include a loan.",
     });
-  } else if (y1.debtService <= 0) {
+  } else if (readinessLoanDS <= 0) {
     criteria.push({
       name: "Debt Service Coverage",
       status: "na",
@@ -1191,7 +1196,7 @@ function assessLendingLabReadiness(
       jumpToStep: 6,
     });
   } else {
-    const dscrVal = (y1.netIncome + y1.debtService) / y1.debtService;
+    const dscrVal = (y1.netIncome + readinessLoanDS) / readinessLoanDS;
     const dscrStr = `${dscrVal.toFixed(2)}x`;
     if (dscrVal < 1.15) {
       criteria.push({
@@ -1481,9 +1486,10 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   const philanthropyPct = y1.totalRevenue > 0 ? y1.philanthropyRevenue / y1.totalRevenue : 0;
   const publicRevenuePct = y1.totalRevenue > 0 ? y1.publicRevenue / y1.totalRevenue : 0;
-  const hasDebt = y1.debtService > 0;
+  const y1LoanDS = (y1 as unknown as Record<string, unknown>).loanDebtService as number ?? y1.debtService;
+  const hasDebt = y1LoanDS > 0;
   const dscr = hasDebt && y1.netIncome !== undefined
-    ? (y1.netIncome + y1.debtService) / y1.debtService
+    ? (y1.netIncome + y1LoanDS) / y1LoanDS
     : 0;
 
   const revenueComposition: RevenueComposition[] = yearFinancials.map(yf => ({
