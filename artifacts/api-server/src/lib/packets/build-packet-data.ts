@@ -512,7 +512,7 @@ function buildPriorYearActuals(s: PacketSection, md: ModelData, yearlyData: Year
     const cat = r.category || "other_revenue";
     revByCat.set(cat, (revByCat.get(cat) || 0) + val);
   }
-  const projTuition = (revByCat.get("tuition_and_fees") || 0) + (revByCat.get("tuition_offsets") || 0);
+  const projTuition = (revByCat.get("tuition_and_fees") || 0) - Math.abs(revByCat.get("tuition_offsets") || 0);
   const projPublic = (revByCat.get("public_funding") || 0) + (revByCat.get("school_choice") || 0);
   const projPhil = (revByCat.get("philanthropy") || 0) + (revByCat.get("grants_contributions") || 0);
   const projOther = revByCat.get("other_revenue") || 0;
@@ -625,7 +625,22 @@ function buildFacilityKPIs(s: PacketSection, md: ModelData, yearlyData: YearData
   if (!y1 || y1.students === 0) return { ...s, included: false, narrative: "No Year 1 data available." };
 
   const facilityPhases = md.schoolProfile?.facilityPhases || (md as Record<string, unknown>).facilityPhases as Array<Record<string, unknown>> | undefined;
-  const sqft = ((facilityPhases?.[0] as Record<string, unknown>)?.squareFootage as number) ?? 0;
+  let sqft = 0;
+  let hasRenewalOption = false;
+  let earliestExpiry: string | undefined;
+  for (const fp of (facilityPhases || [])) {
+    const sq = (fp as Record<string, unknown>).squareFootage as number | undefined;
+    if (sq) sqft += sq;
+    if ((fp as Record<string, unknown>).hasRenewalOption) hasRenewalOption = true;
+    const endDate = (fp as Record<string, unknown>).facilityArrangementEndDate as string | undefined;
+    if (endDate && (!earliestExpiry || endDate < earliestExpiry)) earliestExpiry = endDate;
+  }
+  let leaseTermMonths: number | undefined;
+  if (earliestExpiry) {
+    const end = new Date(earliestExpiry);
+    const now = new Date();
+    leaseTermMonths = Math.max(0, Math.round((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
+  }
 
   const occupancyExpense = (md.expenseRows || [])
     .filter(e => e.enabled !== false && e.category === "occupancy_facility")
@@ -655,6 +670,8 @@ function buildFacilityKPIs(s: PacketSection, md: ModelData, yearlyData: YearData
   ];
   if (sqft > 0) kpiRows.push({ label: "Facility Cost / Sq Ft", values: [`$${costPerSqft.toFixed(2)}`] });
   if (sqft > 0) kpiRows.push({ label: "Total Square Footage", values: [sqft.toLocaleString()] });
+  if (leaseTermMonths !== undefined) kpiRows.push({ label: "Lease Term Remaining", values: [`${leaseTermMonths} months`] });
+  kpiRows.push({ label: "Renewal Option", values: [hasRenewalOption ? "Yes" : "No"] });
   kpiRows.push({ label: "Breakeven Enrollment", values: [breakevenEnroll > 0 ? `${breakevenEnroll} students` : "N/A"] });
   if (breakevenEnroll > 0) {
     const cushion = ((y1.students - breakevenEnroll) / breakevenEnroll) * 100;
@@ -695,7 +712,7 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
 
   const monthlyTable: PacketTable | undefined = y1 && y1.totalRevenue > 0 ? {
     title: "Year 1 Monthly Cash Flow Summary",
-    headers: ["Month", "Beginning", "Inflows", "Outflows", "Ending"],
+    headers: ["Month", "Beginning", "Inflows", "Outflows", "Net Cash Flow", "Ending"],
     rows: (() => {
       const calendarMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const fyStart = ((md.schoolProfile?.fiscalYearStartMonth || 7) - 1);
@@ -707,10 +724,11 @@ function buildCashFlow(s: PacketSection, co: ConsultantOutput, md: ModelData, ye
       for (let i = 0; i < 12; i++) {
         const mIdx = (fyStart + i) % 12;
         const begin = running;
-        const end = begin + monthlyInflows[i] - monthlyOutflow;
+        const netCash = monthlyInflows[i] - monthlyOutflow;
+        const end = begin + netCash;
         monthRows.push({
           label: calendarMonths[mIdx],
-          values: [fmt(begin), fmt(monthlyInflows[i]), `(${fmt(monthlyOutflow)})`, fmt(end)],
+          values: [fmt(begin), fmt(monthlyInflows[i]), `(${fmt(monthlyOutflow)})`, fmt(netCash), fmt(end)],
           isBold: end < 0,
         });
         running = end;

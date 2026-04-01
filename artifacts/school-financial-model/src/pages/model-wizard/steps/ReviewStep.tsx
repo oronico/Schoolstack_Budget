@@ -236,14 +236,26 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
   const facilityKpis = useMemo(() => {
     const phases = data.schoolProfile?.facilityPhases || data.facilityPhases || [];
     let totalSqft = 0;
+    let hasRenewal = false;
+    let earliestExpiry: string | undefined;
     for (const p of phases) {
       if (p.squareFootage) totalSqft += p.squareFootage;
+      if (p.hasRenewalOption) hasRenewal = true;
+      if (p.facilityArrangementEndDate) {
+        if (!earliestExpiry || p.facilityArrangementEndDate < earliestExpiry) earliestExpiry = p.facilityArrangementEndDate;
+      }
+    }
+    let leaseTermRemainingMonths: number | undefined;
+    if (earliestExpiry) {
+      const end = new Date(earliestExpiry);
+      const now = new Date();
+      leaseTermRemainingMonths = Math.max(0, Math.round((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
     }
     const facilityCost = diagnosticMetrics.y1FacilityCost;
     const costPerStudent = year1Students > 0 ? facilityCost / year1Students : 0;
     const costPerSqft = totalSqft > 0 ? facilityCost / totalSqft : 0;
-    return { totalSqft, costPerStudent, costPerSqft, facilityCost };
-  }, [data.facilityPhases, diagnosticMetrics.y1FacilityCost, year1Students]);
+    return { totalSqft, costPerStudent, costPerSqft, facilityCost, hasRenewal, leaseTermRemainingMonths, earliestExpiry };
+  }, [data.facilityPhases, data.schoolProfile?.facilityPhases, diagnosticMetrics.y1FacilityCost, year1Students]);
 
   const finalYearStudents = data.enrollment?.[`year${yearCount}`] || data.enrollment?.year5 || data.enrollment?.year3 || 0;
   const studentGrowth = year1Students > 0 && finalYearStudents > year1Students
@@ -560,6 +572,15 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                     <p className="text-xs text-muted-foreground mt-1">{facilityKpis.totalSqft.toLocaleString()} sq ft total</p>
                   </div>
                 )}
+                {facilityKpis.leaseTermRemainingMonths !== undefined && (
+                  <div className="rounded-xl bg-secondary/30 p-4 text-center">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Lease Term Remaining</p>
+                    <p className="font-display font-bold text-2xl text-foreground">{facilityKpis.leaseTermRemainingMonths} mo</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {facilityKpis.hasRenewal ? "Renewal option available" : "No renewal option"}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -591,6 +612,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                       <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Beginning</th>
                       <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Inflows</th>
                       <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Outflows</th>
+                      <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Net Cash Flow</th>
                       <th className="text-right py-2 px-2 font-semibold text-muted-foreground">Ending</th>
                     </tr>
                   </thead>
@@ -601,6 +623,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                         <td className="py-2 px-2 text-right">{formatCurrency(m.beginBalance)}</td>
                         <td className="py-2 px-2 text-right text-green-700">{formatCurrency(m.inflow)}</td>
                         <td className="py-2 px-2 text-right text-rose-600">({formatCurrency(m.outflow)})</td>
+                        <td className={`py-2 px-2 text-right ${m.inflow - m.outflow >= 0 ? "text-green-700" : "text-rose-600"}`}>{formatCurrency(m.inflow - m.outflow)}</td>
                         <td className={`py-2 px-2 text-right font-semibold ${m.endBalance < 0 ? "text-rose-700" : ""}`}>
                           {formatCurrency(m.endBalance)}
                         </td>

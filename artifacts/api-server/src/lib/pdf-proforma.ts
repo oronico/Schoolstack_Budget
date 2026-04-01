@@ -135,6 +135,7 @@ interface OpeningBalances {
 interface FacilityPhase {
   squareFootage?: number;
   hasRenewalOption?: boolean;
+  facilityArrangementEndDate?: string;
   [key: string]: unknown;
 }
 
@@ -673,8 +674,14 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
 
     let totalSqft = 0;
     const facilityPhases = (sp as Record<string, unknown>).facilityPhases as FacilityPhase[] | undefined || data.facilityPhases || [];
+    let hasRenewalOpt = false;
+    let earliestExpiry: string | undefined;
     for (const p of facilityPhases) {
       if (p.squareFootage) totalSqft += p.squareFootage;
+      if (p.hasRenewalOption) hasRenewalOpt = true;
+      if (p.facilityArrangementEndDate) {
+        if (!earliestExpiry || p.facilityArrangementEndDate < earliestExpiry) earliestExpiry = p.facilityArrangementEndDate;
+      }
     }
     let facilityCost = 0;
     for (const e of (data.expenseRows || [])) {
@@ -694,6 +701,13 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
         labelValue(doc, "Facility Cost / Sq Ft", fmtCurrency(facilityCost / totalSqft));
       }
     }
+    if (earliestExpiry) {
+      const endDt = new Date(earliestExpiry);
+      const now = new Date();
+      const remainingMonths = Math.max(0, Math.round((endDt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
+      labelValue(doc, "Lease Term Remaining", `${remainingMonths} months`);
+    }
+    labelValue(doc, "Renewal Option", hasRenewalOpt ? "Yes" : "No");
   }
 
   if (revenueRows.length > 0 && enrollment[0] > 0) {
@@ -711,11 +725,12 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
     let running = startingCash;
 
     const cfCols: TableColumn[] = [
-      { header: "Month", width: 60 },
-      { header: "Beginning", width: 80, align: "right" },
-      { header: "Inflows", width: 80, align: "right" },
-      { header: "Outflows", width: 80, align: "right" },
-      { header: "Ending", width: 80, align: "right" },
+      { header: "Month", width: 55 },
+      { header: "Beginning", width: 72, align: "right" },
+      { header: "Inflows", width: 72, align: "right" },
+      { header: "Outflows", width: 72, align: "right" },
+      { header: "Net Cash Flow", width: 72, align: "right" },
+      { header: "Ending", width: 72, align: "right" },
     ];
     const cfRows: string[][] = [];
     let anyNegativeMonth = false;
@@ -724,9 +739,10 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
       const label = monthNames[mIdx];
       const inflow = monthlyInflows[i];
       const begin = running;
-      const end = begin + inflow - monthlyExpense;
+      const netCash = inflow - monthlyExpense;
+      const end = begin + netCash;
       if (end < 0) anyNegativeMonth = true;
-      cfRows.push([label, fmtCurrency(begin), fmtCurrency(inflow), `(${fmtCurrency(monthlyExpense)})`, fmtCurrency(end)]);
+      cfRows.push([label, fmtCurrency(begin), fmtCurrency(inflow), `(${fmtCurrency(monthlyExpense)})`, fmtCurrency(netCash), fmtCurrency(end)]);
       running = end;
     }
     drawTable(doc, cfCols, cfRows, { zebra: true });
