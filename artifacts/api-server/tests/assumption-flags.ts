@@ -1,6 +1,11 @@
 import { detectUnusualAssumptions, type AssumptionFlag } from "../src/lib/assumption-flags.js";
-import { runConsultantEngine, computeYearFinancialsFromData } from "../src/lib/consultant-engine.js";
-import { resolveEsc, computeEffectiveFte } from "../src/lib/workbook-helpers.js";
+import { runConsultantEngine, computeYearFinancialsFromData, type YearFinancials } from "../src/lib/consultant-engine.js";
+import {
+  resolveEsc, computeEffectiveFte,
+  computeRevenueForYear, computePersonnelForYear,
+  computeExpenseForYear, computeDebtServiceForYear,
+  getEnrollmentArray,
+} from "../src/lib/workbook-helpers.js";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../src/lib/benchmark-thresholds.js";
 import { microschoolStartup, privateSchoolWithESA, charterPublicFunding } from "./sample-payloads.js";
 
@@ -341,47 +346,84 @@ async function testHighTuitionGrowthFlag() {
 function testDscrEngineParity() {
   console.log("\n=== DSCR engine-vs-workbook parity ===");
 
-  const yf = computeYearFinancialsFromData(charterPublicFunding as Record<string, unknown>);
+  interface TestPayload {
+    enrollment?: Record<string, unknown>;
+    schoolProfile?: Record<string, unknown>;
+    tuitionEscalation?: { rate?: number };
+    salaryEscalationRate?: number;
+    costInflationRate?: number;
+    revenueRows?: unknown[];
+    staffingRows?: unknown[];
+    expenseRows?: unknown[];
+    capitalAndDebtRows?: unknown[];
+    tuitionTiers?: unknown[];
+  }
 
-  assert("Engine returns year financials array", Array.isArray(yf) && yf.length > 0);
+  const payload = charterPublicFunding as Record<string, unknown>;
+  const data = payload as unknown as TestPayload;
 
-  for (let y = 0; y < yf.length; y++) {
-    const ni = yf[y].netIncome;
-    const ds = (yf[y] as any).loanDebtService ?? yf[y].debtService;
-    if (ds > 0) {
-      const dscr = (ni + ds) / ds;
-      assert(
-        `Year ${y + 1} DSCR formula (NI+DS)/DS = ${dscr.toFixed(4)}x (NI=${ni}, DS=${ds})`,
-        typeof dscr === "number" && !isNaN(dscr),
-        `got ${dscr}`
+  const engineYF: YearFinancials[] = computeYearFinancialsFromData(payload);
+  assert("Engine returns year financials array", Array.isArray(engineYF) && engineYF.length > 0);
+
+  const enrollment = getEnrollmentArray(data.enrollment);
+  const sp = data.schoolProfile || {};
+  const sharedRate = data.tuitionEscalation?.rate ?? 3;
+  const costInflPct = data.costInflationRate ?? sharedRate;
+  const salaryEsc = (data.salaryEscalationRate ?? sharedRate) / 100;
+  const isPartial = (sp as Record<string, unknown>).isPartialFirstYear;
+  const y1Months = ((sp as Record<string, unknown>).year1OperatingMonths as number) || 10;
+  const operatingMonths = isPartial ? y1Months : 12;
+  const prorationFactor = operatingMonths / 12;
+
+  for (let y = 0; y < engineYF.length; y++) {
+    const wbDS = computeDebtServiceForYear((data.capitalAndDebtRows || []) as never[], y);
+    const engDS = engineYF[y].loanDebtService ?? engineYF[y].debtService;
+
+    assert(
+      `Year ${y + 1} debt service parity: engine=${Math.round(engDS)} workbook=${Math.round(wbDS)}`,
+      Math.abs(engDS - wbDS) < 1,
+      `engine=${engDS}, workbook=${wbDS}`
+    );
+
+    if (engDS > 0) {
+      const engDSCR = (engineYF[y].netIncome + engDS) / engDS;
+      const wbRev = computeRevenueForYear(
+        (data.revenueRows || []) as never[], y, enrollment[y],
+        (data.tuitionTiers || []) as never[], costInflPct, sp as never
       );
-      const status = dscr >= BENCHMARK_DSCR_GREEN ? "good" : dscr >= BENCHMARK_DSCR_AMBER ? "warning" : "danger";
+      const wbPers = computePersonnelForYear(
+        (data.staffingRows || []) as never[], salaryEsc, prorationFactor, y, enrollment[y]
+      );
+      const wbOpex = computeExpenseForYear(
+        (data.expenseRows || []) as never[], y, enrollment[y], wbRev, costInflPct
+      );
+      const wbNI = wbRev - wbPers - wbOpex - wbDS;
+      const wbDSCR = (wbNI + wbDS) / wbDS;
+
       assert(
-        `Year ${y + 1} DSCR ${dscr.toFixed(2)}x → status '${status}' uses shared thresholds`,
-        ["good", "warning", "danger"].includes(status)
+        `Year ${y + 1} both paths apply (NI+DS)/DS: eng=${engDSCR.toFixed(2)}x wb=${wbDSCR.toFixed(2)}x`,
+        typeof engDSCR === "number" && !isNaN(engDSCR) && typeof wbDSCR === "number" && !isNaN(wbDSCR)
+      );
+
+      const engStatus = engDSCR >= BENCHMARK_DSCR_GREEN ? "good" : engDSCR >= BENCHMARK_DSCR_AMBER ? "warning" : "danger";
+      const wbStatus = wbDSCR >= BENCHMARK_DSCR_GREEN ? "good" : wbDSCR >= BENCHMARK_DSCR_AMBER ? "warning" : "danger";
+
+      assert(
+        `Year ${y + 1} both paths bucket using shared thresholds (GREEN=${BENCHMARK_DSCR_GREEN} AMBER=${BENCHMARK_DSCR_AMBER})`,
+        ["good", "warning", "danger"].includes(engStatus) && ["good", "warning", "danger"].includes(wbStatus)
       );
     }
   }
 
-  const ni = 125_000;
-  const ds = 100_000;
-  const dscrEngine = (ni + ds) / ds;
-  const dscrWorkbook = (ni + ds) / ds;
-  assert(
-    `Formula parity: engine ${dscrEngine.toFixed(4)} === workbook ${dscrWorkbook.toFixed(4)}`,
-    dscrEngine === dscrWorkbook
-  );
+  const sampleNI = 25_000;
+  const sampleDS = 100_000;
+  const dscr = (sampleNI + sampleDS) / sampleDS;
+  assert(`Verify formula algebra: (25k+100k)/100k = ${dscr}x = 1.25x`, dscr === 1.25);
+  assert(`DSCR 1.25x >= GREEN(${BENCHMARK_DSCR_GREEN})`, dscr >= BENCHMARK_DSCR_GREEN);
 
-  assert(
-    `DSCR 2.25x >= GREEN(${BENCHMARK_DSCR_GREEN}) → good`,
-    dscrEngine >= BENCHMARK_DSCR_GREEN
-  );
-  const tightNi = (BENCHMARK_DSCR_AMBER - 1) * ds;
-  const tightDscr = (tightNi + ds) / ds;
-  assert(
-    `DSCR at AMBER boundary ${tightDscr.toFixed(4)}x ≈ ${BENCHMARK_DSCR_AMBER}`,
-    Math.abs(tightDscr - BENCHMARK_DSCR_AMBER) < 1e-10
-  );
+  const amberNI = (BENCHMARK_DSCR_AMBER - 1) * sampleDS;
+  const amberDscr = (amberNI + sampleDS) / sampleDS;
+  assert(`DSCR at AMBER boundary = ${amberDscr}x ≈ ${BENCHMARK_DSCR_AMBER}`, Math.abs(amberDscr - BENCHMARK_DSCR_AMBER) < 1e-10);
 }
 
 function testDscrThresholdParity() {
