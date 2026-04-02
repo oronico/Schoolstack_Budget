@@ -497,7 +497,7 @@ router.post(
         return;
       }
 
-      const { strengths, watchItems, recommendations, metrics } = req.body;
+      const { strengths, watchItems, recommendations } = req.body;
 
       if (!strengths && !watchItems && !recommendations) {
         res.status(400).json({ error: "At least one feedback section is required." });
@@ -542,9 +542,21 @@ router.post(
         return;
       }
 
-      const d = model.data as Record<string, unknown>;
-      const profile = d?.schoolProfile as Record<string, unknown> | undefined;
+      const modelData = normalizeModelData(model.data as Record<string, unknown>);
+      const consultantOutput = runConsultantEngine(modelData);
+      const yearFinancials = computeYearFinancialsFromData(modelData);
+      const profile = modelData.schoolProfile as Record<string, unknown> | undefined;
       const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
+
+      const serverMetrics = {
+        y1Revenue: yearFinancials[0]?.totalRevenue || 0,
+        y1NetMargin: yearFinancials[0]?.netMargin || 0,
+        dscr: yearFinancials[0]?.debtService > 0
+          ? (yearFinancials[0].netIncome + yearFinancials[0].debtService) / yearFinancials[0].debtService
+          : 0,
+        cashRunwayMonths: consultantOutput.cashRunwayMonths || 0,
+        lenderReadiness: consultantOutput.lenderReadiness,
+      };
 
       const appUrl = process.env.APP_URL
         || (process.env.NODE_ENV !== "production" && process.env.REPLIT_DEV_DOMAIN
@@ -560,13 +572,7 @@ router.post(
         watchItems: watchItems || "",
         recommendations: recommendations || "",
         dashboardUrl,
-        metrics: metrics || {
-          y1Revenue: 0,
-          y1NetMargin: 0,
-          dscr: 0,
-          cashRunwayMonths: 0,
-          lenderReadiness: "N/A",
-        },
+        metrics: serverMetrics,
       });
 
       if (!result.success) {

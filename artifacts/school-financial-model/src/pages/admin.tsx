@@ -668,13 +668,9 @@ function ReviewsSection() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recipientName: analysis.requesterName,
-          recipientEmail: analysis.requesterEmail,
-          schoolName: analysis.schoolName,
           strengths,
           watchItems,
           recommendations,
-          metrics: analysis.metrics,
         }),
       });
       if (!res.ok) {
