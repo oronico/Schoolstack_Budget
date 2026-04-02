@@ -923,7 +923,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
 
 router.post("/models/:id/share", authMiddleware, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid model ID." }); return; }
 
     const [model] = await db
@@ -959,7 +959,7 @@ router.post("/models/:id/share", authMiddleware, async (req: AuthRequest, res) =
 
 router.get("/models/:id/shares", authMiddleware, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid model ID." }); return; }
 
     const [model] = await db
@@ -991,7 +991,7 @@ router.get("/models/:id/shares", authMiddleware, async (req: AuthRequest, res) =
 
 router.delete("/models/:id/share/:token", authMiddleware, async (req: AuthRequest, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid model ID." }); return; }
 
     const [model] = await db
@@ -1002,7 +1002,7 @@ router.delete("/models/:id/share/:token", authMiddleware, async (req: AuthReques
 
     if (!model) { res.status(404).json({ error: "Model not found." }); return; }
 
-    const token = req.params.token;
+    const token = req.params.token as string;
     const [link] = await db
       .select()
       .from(sharedLinksTable)

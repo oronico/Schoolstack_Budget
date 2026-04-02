@@ -1,6 +1,6 @@
 # Overview
 
-SchoolStack Budget is a full-stack web application designed for school founders to create comprehensive, lender-ready 5-year financial models. It guides educators through financial modeling, generating investor-grade Excel workbooks and PDF reports. The platform supports various school types and stages, aiming to provide clear financial planning for microschools, private schools, charter schools, pods, and co-ops.
+SchoolStack Budget is a full-stack web application designed for school founders to create comprehensive, lender-ready 5-year financial models. It guides educators through financial modeling, generating investor-grade Excel workbooks and PDF reports. The platform supports various school types and stages, aiming to provide clear financial planning for microschools, private schools, charter schools, pods, and co-ops. The project's vision is to empower school leaders with robust financial tools to ensure sustainability and attract investment.
 
 # User Preferences
 
@@ -13,89 +13,65 @@ The application adheres to the SchoolStack.ai brand system, using Amber (#D97706
 
 ## Technical Stack
 The project is a pnpm workspace monorepo built with TypeScript.
-- **Backend**: Node.js, Express 5 API server, PostgreSQL with Drizzle ORM, Zod for validation, and Orval for OpenAPI codegen.
-- **Frontend**: React, Vite, Tailwind CSS v4, with route-based code splitting.
-- **Authentication**: JWT-based (bcryptjs for passwords, jsonwebtoken for tokens).
-- **Export Capabilities**: Utilizes ExcelJS for Excel exports (8-tab Lender Pro Forma, 3-tab public wizard, 21-tab full underwriting model) and PDFKit for PDF exports (lender and board packets). Exports include print-ready formatting, school-specific branding, and pre-computed cached results for formula cells. Financial integrity is ensured through linked balance sheet and cash flow statements. Automated Excel QA suite (`tests/excel-qa.ts`) verifies file integrity, formulas, and financial tie-outs.
+- **Backend**: Node.js, Express 5 API server, PostgreSQL with Drizzle ORM.
+- **Frontend**: React, Vite, Tailwind CSS v4.
+- **Authentication**: JWT-based.
+- **Export Capabilities**: Utilizes ExcelJS for Excel exports (8-tab Lender Pro Forma, 3-tab public wizard, 21-tab full underwriting model) and PDFKit for PDF exports (lender and board packets), ensuring print-ready formatting and school-specific branding.
 - **Monorepo Structure**: Organized into `artifacts/` for deployable applications, `lib/` for shared libraries, and `scripts/` for utilities.
-- **Shared Finance Library** (`@workspace/finance` in `lib/finance/`): Canonical source for financial constants (benefits rate 25%, payroll tax 8%, COLA 3%, inflation 3%, rent escalation 3%, tuition escalation 3%, retention rate 85%, YEAR_COUNT 5, LOADED_COST_MULTIPLIER) and loan amortization functions (computeAnnualDebt, computeMonthlyDebt, computeAnnualDebtForYear, computeInterestPortion, computePrincipalPortion, computeRemainingBalance). All amortization functions take rate as a decimal (0.05 for 5%); callers with percentage rates divide by 100 before calling. Both frontend and backend depend on this package.
+- **Shared Finance Library** (`@workspace/finance`): Provides canonical financial constants and loan amortization functions for both frontend and backend.
 
 ## Core Features
 ### Universal Financial Model
-Supports diverse school configurations and projects 5 years, accommodating partial first years. It includes flexible programs & enrollment with tuition escalation, a comprehensive revenue model across 6 categories, an FTE-based staffing model with configurable benefits and ratio-driven staffing ramp, an expense model with 4 built-in categories and flexible drivers (including `per_new_student` and `per_returning_student`), and a capital & debt model with a loan calculator. Features also include contextual guidance, benchmark comparisons, capacity warnings, and a tuition discount tier editor. The "Grants & Fundraising" category has been merged into "Philanthropy" with backward compatibility.
+Supports diverse school configurations with a 5-year projection, flexible programs & enrollment, comprehensive revenue models, FTE-based staffing, an expense model with flexible drivers, and capital & debt modeling. Includes contextual guidance, benchmark comparisons, and capacity warnings. Integrates smart expense escalation logic based on expense type (e.g., rent, per-student costs, fixed, % of revenue).
 
-#### Smart Expense Escalation
-CFO-level cost forecasting with automatic escalation by expense type:
-- **Rent/Lease** → `annualRentIncrease` (default 3%), labeled "per lease terms"
-- **Per-student costs** → flat (enrollment drives growth)
-- **Monthly/annual fixed** → `generalCostInflation` (default 3%)
-- **% of Revenue** → flat (scales with revenue)
-- **Capital & Debt** → flat (contractual)
-- Helper functions: `getEscalationRule()` determines rate/label, `computeEscalatedAmounts()` generates Y2-5 from Y1
-- Default rows are generated with escalated amounts via `generateDefaultExpenseRows(..., rates)`
-- ExpenseLineCard auto-fills Y2-5 when Y1 changes, with teal styling for auto-filled cells and amber for overrides
-- Override tracking is derived from data (comparing actual vs computed amounts), surviving page reload
-- Category summaries show escalated 5-year totals
-- Escalation banner explains the logic with inline rate badges
-- COLA (Cost of Living Adjustment) replaces "Annual Salary Increase" across FacilitiesStep, StaffingStep (with Y1→Y5 projection), and ReviewStep
+### Charter Revenue Streams
+Offers specific support for charter schools including state per-pupil pre-fills, state-driven methodology badges, federal title funds, weighted funding rows, and CSP Grant line items.
 
-#### Charter Revenue Streams
-Charter-specific revenue support includes:
-- **State per-pupil pre-fill**: `STATE_FUNDING_MAP` contains `charterBasePerPupil: {min, max}` ranges for all 50 states + DC. The midpoint auto-fills the State/Local Per-Pupil Revenue row.
-- **State-driven methodology badge**: Enrollment revenue method (ADA/ADM/Count Days) is shown as a read-only badge driven by the user's state, not a manual dropdown.
-- **Federal title funds**: Title I (low-income), Title II (teacher quality), Title III (English learners), and IDEA (special education) are separate line items in the catalog.
-- **Weighted funding rows**: SPED, ELL, and At-Risk weighted funding rows available as optional per-student line items.
-- **CSP Grant**: Charter School Program (CSP) Grant line item under Philanthropy, pre-filled at $150K/yr for first 3 years.
-- **Charter coaching banner**: State-specific coaching text with per-pupil range displayed in a teal banner at the top of the charter configuration section.
+### School Identity & Fundraising Intelligence
+Includes logic for Catholic and faith-affiliated schools (diocese/parish subsidies, assessments) and fundraising intelligence for both non-profit and for-profit school types, with conditional schema fields and catalog items.
 
-#### School Identity & Fundraising Intelligence
-Catholic School type with diocese/parish affiliation logic tree (parish subsidy revenue + diocesan assessment expense). Faith-affiliated private schools get congregation support revenue + organization assessment expense. Fundraising question for all school types: nonprofits auto-enable Annual Fund/Donations/Events; for-profit schools get fiscal sponsor guidance with fee tracking (5-10% of donations). Schema fields: `isDiocesan`, `isFaithAffiliated`, `congregationSupport`, `congregationAssessment`, `doesFundraise`, `hasFiscalSponsor`, `fiscalSponsorName`, `fiscalSponsorInterest`. Revenue catalog: `parish_diocese_subsidy`, `congregation_support`. Expense catalog: `diocesan_assessment`, `congregation_assessment`, `fiscal_sponsor_fee`. All conditionally enabled based on profile answers.
+### Underwriter-Ready Evidence & Financial Intelligence
+Operating schools can include prior-year actuals and an opening balance sheet. Features coaching banners (`lendingLabIntent`), facility phase tracking, and a ReviewStep showing Key Financial Indicators (breakeven enrollment, cash flow, prior-year variance).
 
-#### Underwriter-Ready Evidence & Financial Intelligence
-Operating schools (2nd year+) get optional prior-year actuals with categorized revenue/expense breakdown (tuition, public funding, philanthropy, other; personnel, facility, instructional, admin). Opening balance sheet (assets: cash, AR, fixed, other; liabilities: AP, current debt, long-term debt) is available for all operating schools. All sections use coaching banners gated by `lendingLabIntent`: amber "Lenders will want to see..." for `plan_to_apply`, softer notes for `want_to_understand`, nothing for `budget_only`. New schools see neither section. Facility phases track `squareFootage` and `hasRenewalOption`. ReviewStep shows Key Financial Indicators (breakeven enrollment with cushion %, facility cost/student, facility cost/sqft), a 12-month Year 1 cash flow table with beginning/ending balances, and prior-year vs. projected variance comparison. Breakeven enrollment computed as fixedCosts / revenuePerStudent; diagnostic fires critical if enrollment < breakeven, warning within 10%. PDF proforma includes prior-year comparison table, opening balance sheet, and key financial indicators. Lender packet five-year projection includes breakeven enrollment narrative and prior-year revenue variance.
+### Ratio-Driven Staffing Ramp
+Staffing can be `fixed` or `ratio`-based, where FTE is computed from enrollment ÷ studentRatio, ceiled to nearest 0.5.
 
-#### Ratio-Driven Staffing Ramp
-Staffing can be `fixed` or `ratio`-based, where FTE is computed from enrollment ÷ studentRatio, ceiled to nearest 0.5. This logic is consistently applied across workbook helpers, engines, and exports, with frontend support for configuration and preview.
-
-#### Shareable Read-Only Links
-Founders can generate unguessable share links (`/shared/:token`) from the Export step to let lenders, board members, or incubator directors view their financial model interactively — no login required. Share links use 256-bit crypto tokens, can optionally include a viewer label for tracking, and can be revoked. The shared view displays school name, 5-year financial summary, enrollment chart, key metrics (DSCR, cash reserves, net margin), revenue/expense breakdowns, executive summary, and a "Powered by SchoolStack" branded footer. DB table: `shared_links` with model_id, token, viewer_label, created_at, revoked_at.
+### Shareable Read-Only Links
+Founders can generate unguessable share links (`/shared/:token`) for interactive viewing of their financial model by third parties without requiring a login. These links are revocable and display key financial summaries and metrics.
 
 ### API Server (`api-server`)
-Manages authentication, CRUD operations for financial models, admin analytics, feedback, and a consultant rules engine. It orchestrates all Excel and PDF export formats, including public and consultant endpoints with PostgreSQL-backed rate limiting. CORS is hardened with explicit origin allowlisting. Production-hardened with `helmet` (security headers) and `compression` (gzip). DB performance indexes on `financial_models(user_id)`, `exports(user_id, model_id)`, `events(user_id, event_name)`, and `shared_links(model_id, token)`.
+Manages authentication, CRUD for financial models, analytics, feedback, and orchestrates all export formats. Includes PostgreSQL-backed rate limiting and hardened CORS.
 
 ### Frontend (`school-financial-model`)
 A React-based SPA featuring:
-- An 8-step public underwriting wizard (`/underwriting`) with localStorage persistence and public export, requiring no account.
-- Authentication pages (login, register, forgot/reset password).
-- A dashboard for model lifecycle management.
-- A 9-step authenticated wizard: Profile → Assumptions → Enrollment → Revenue → Staffing → Expenses → Review → Consultant → Export.
-  - **Assumptions step** (step 2): Dedicated formula dashboard showing every rate and driver that powers the model. Sections: Revenue Drivers (tuition escalation, enrollment growth, charter methodology/deposit timing/ADA), Cost Escalation (COLA, general inflation, rent), Staffing Parameters (benefits rate, retention rate), Revenue Collection Defaults (billing months, collection method, collection rate, delay days), Debt Terms, Model Configuration (fiscal year, partial first year, 5-year horizon). Each assumption shows where it's used. Reset-to-defaults per section. FacilitiesStep no longer has rate assumptions (only dollar amounts), with a reference link to Assumptions.
-  - **Centralized-defaults + per-row override inheritance**: Model-level defaults (benefits rate, payroll tax rate, revenue timing) flow from Assumptions to individual rows. Rows inherit defaults unless manually overridden. Override flags (`timingOverridden`, `benefitsRateOverridden`, `payrollTaxRateOverridden`) track per-row customization. Visual badges ("Model Default" in teal, "Custom" in amber) indicate status on each row. When Assumptions change, non-overridden rows update reactively. XLSX export includes override indicators ("Default"/"Custom") on driver sheets with amber highlighting for customized rows.
-- A Scenario Planner (`/model/:id/scenarios`) for creating up to 3 what-if scenarios with adjustment sliders, side-by-side comparisons, and viability nudges. Includes a Deep Comparison mode for detailed metric deltas.
-- An admin dashboard with analytics and feedback management.
-- A floating feedback widget for user submissions.
-    - NPS survey modal: triggered 2s after a user's first export, with 90-day per-user cooldown (localStorage). 0-10 score buttons color-coded red/amber/green, optional comment, posts to `/api/feedback` with `category: "nps"` and integer `score`. Admin dashboard shows NPS entries with violet badge and "9/10 (Promoter)" labels.
-- Budgeting Co-Pilot Phase 1: Provides guidance mode preferences, inline explainer cards on wizard steps, and KPI formula transparency on consultant analysis metric cards.
-- Onboarding prep screen: New users arriving at the public wizard (`/underwriting`) see a "Before you start" checklist (basics, revenue, team, space & costs) before step 1. Dismissible with "I'm ready, let's go" or "Skip this." State stored in localStorage; returning users skip it. Landing page also has a matching "What to have handy" section.
-- SchoolStack Space pre-fill integration (`/model/new`): Allows auto-creation of models with pre-filled facility data from URL query parameters.
+- An 8-step public underwriting wizard (`/underwriting`).
+- Authentication pages and a dashboard for model lifecycle management.
+- A 9-step authenticated wizard covering Profile, Assumptions, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, and Export.
+- **Assumptions step**: A formula dashboard showing all rates and drivers, with centralized defaults and per-row override inheritance.
+- A Scenario Planner (`/model/:id/scenarios`) for what-if analysis with side-by-side comparisons.
+- Admin dashboard for analytics and feedback.
+- NPS survey modal for user feedback.
+- Budgeting Co-Pilot Phase 1 for guidance and KPI transparency.
+- Onboarding prep screen for new users.
+- Integration with SchoolStack Space for pre-filling facility data.
 
 ### Consultant Engine
-Provides deterministic financial analysis, including lender readiness scores, school-type-aware heuristics, management fee analysis, five stress test scenarios, a 5x5 sensitivity matrix, cash runway calculation, industry benchmark comparisons, and prior-year variance analysis.
+Provides deterministic financial analysis, including lender readiness scores, stress tests, sensitivity analysis, cash runway, industry benchmarks, and prior-year variance analysis.
 
 ### Packet Architecture
-A shared packet-generation layer (`artifacts/api-server/src/lib/packets/`) supports lender-ready and board-ready deliverables. It includes narrative generation, assembly of full `PacketData` using canonical math, and enrichment for lender packets with risk/mitigant pairs from the Decision Engine. PDF output is generated via `lender-packet-pdf.ts`.
+A shared packet-generation layer supports lender-ready and board-ready deliverables, including narrative generation and enrichment with risk/mitigant pairs from the Decision Engine.
 
 ### Decision Engine
-Identifies and surfaces critical financial issues (e.g., negative cash, weak reserves, high staffing cost) through 10 decision rules. Issues are ranked by severity and include model-specific summaries, explanations, recommended actions, and navigation to relevant steps.
+Identifies and surfaces critical financial issues with severity ranking, model-specific summaries, explanations, recommended actions, and navigation to relevant steps.
 
 ## Deployment Architecture
 - **Development**: Replit
-- **Source of truth**: GitHub (`oronico/School-Finance-Mod`)
+- **Source of truth**: GitHub
 - **Frontend**: Netlify
 - **API + DB**: Railway (Express API server + managed PostgreSQL)
-- **DNS**: Squarespace for `budget.schoolstack.ai`
-- **Proxy**: Netlify rewrites `/api/*` to the Railway API server.
-- **Schema management**: Runtime DDL migrations in api-server startup (primary); `drizzle-kit push` available as secondary tool.
+- **DNS**: Squarespace
+- **Proxy**: Netlify rewrites `/api/*` to Railway.
+- **Schema management**: Runtime DDL migrations in api-server startup.
 
 # External Dependencies
 
@@ -106,4 +82,4 @@ Identifies and surfaces critical financial issues (e.g., negative cash, weak res
 - **Excel Export**: ExcelJS
 - **PDF Export**: PDFKit
 - **Authentication**: bcryptjs, jsonwebtoken
-- **Email**: Resend (for transactional emails)
+- **Email**: Resend

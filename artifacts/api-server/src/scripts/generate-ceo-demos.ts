@@ -632,8 +632,8 @@ async function exportModel(modelData: Record<string, unknown>, slug: string, out
   console.log(`  Consultant engine: ${consultantOutput.lenderReadiness}`);
   const signals = consultantOutput.healthSignals || [];
   for (const sig of signals.slice(0, 6)) {
-    const detail = sig.detail || sig.description || "";
-    console.log(`    ${sig.signal === "green" ? "🟢" : sig.signal === "amber" ? "🟡" : "🔴"} ${sig.label}: ${String(detail).slice(0, 80)}`);
+    const detail = sig.explanation || "";
+    console.log(`    ${sig.status === "healthy" ? "🟢" : sig.status === "watch" ? "🟡" : "🔴"} ${sig.label}: ${String(detail).slice(0, 80)}`);
   }
 
   const formulaBuffer = await generateWorkbook(modelData, consultantOutput);
