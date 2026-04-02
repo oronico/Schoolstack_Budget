@@ -649,12 +649,12 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
-    const computedFlags = (consultantOutput.assumptionFlags || []).map((f: Record<string, unknown>) => ({
-      field: String(f.field || ""),
-      flagType: String(f.flagType || ""),
-      severity: String(f.severity || "info"),
-      message: String(f.defaultPrompt || ""),
-      currentValue: String(f.currentValue || ""),
+    const computedFlags = (consultantOutput.assumptionFlags || []).map(f => ({
+      field: f.field,
+      flagType: f.flagType,
+      severity: f.severity,
+      message: f.defaultPrompt,
+      currentValue: f.currentValue,
     }));
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
@@ -699,12 +699,12 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
-    const computedFlags = (consultantOutput.assumptionFlags || []).map((f: Record<string, unknown>) => ({
-      field: String(f.field || ""),
-      flagType: String(f.flagType || ""),
-      severity: String(f.severity || "info"),
-      message: String(f.defaultPrompt || ""),
-      currentValue: String(f.currentValue || ""),
+    const computedFlags = (consultantOutput.assumptionFlags || []).map(f => ({
+      field: f.field,
+      flagType: f.flagType,
+      severity: f.severity,
+      message: f.defaultPrompt,
+      currentValue: f.currentValue,
     }));
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";

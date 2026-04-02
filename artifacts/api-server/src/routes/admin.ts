@@ -543,7 +543,7 @@ router.post(
       }
 
       const modelData = normalizeModelData(model.data as Record<string, unknown>);
-      const consultantOutput = runConsultantEngine(modelData);
+      const consultantOutput = await runConsultantEngine(modelData);
       const yearFinancials = computeYearFinancialsFromData(modelData);
       const profile = modelData.schoolProfile as Record<string, unknown> | undefined;
       const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";

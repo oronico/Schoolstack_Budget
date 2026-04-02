@@ -2754,7 +2754,7 @@ function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData, computedFlags?
 
   let row = 1;
   ws.getRow(row).values = ["Budget Narrative", ""];
-  hdr(ws, row, 1, 2);
+  hdr(ws, row, 2);
   ws.mergeCells(row, 1, row, 2);
   row += 2;
 
@@ -2771,7 +2771,7 @@ function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData, computedFlags?
   ] as const;
 
   for (const [label, text] of sections) {
-    sec(ws, row, 1, 2);
+    sec(ws, row, 2);
     ws.getCell(row, 1).value = label;
     ws.getCell(row, 1).font = { ...BF, color: { argb: NAVY } };
     row++;
@@ -2794,7 +2794,7 @@ function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData, computedFlags?
     row++;
     ws.columns = [{ width: 12 }, { width: 22 }, { width: 30 }, { width: 20 }, { width: 35 }];
     ws.getRow(row).values = ["Severity", "Flag Type", "Description", "Current Value", "Explanation"];
-    hdr(ws, row, 1, 5);
+    hdr(ws, row, 5);
     row++;
 
     for (const flag of flagsToShow) {
@@ -2819,7 +2819,7 @@ function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData, computedFlags?
     row++;
     ws.columns = [{ width: 15 }, { width: 25 }, { width: 25 }, { width: 35 }];
     ws.getRow(row).values = ["Severity", "Flag", "Current Value", "Explanation"];
-    hdr(ws, row, 1, 4);
+    hdr(ws, row, 4);
     row++;
 
     for (const resp of flagResponses) {
