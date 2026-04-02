@@ -1758,24 +1758,31 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
     ws.getCell(r, y + 2).value = Math.round(cdByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
   r++;
+  const deprRow = r;
+  ws.getCell(r, 1).value = "Depreciation"; bc(ws.getCell(r, 1));
+  for (let y = 0; y < 5; y++) {
+    ws.getCell(r, y + 2).value = Math.round(depreciationByYear?.[y] ?? 0); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
+  }
+  r++;
   const totExpRow = r;
   ws.getCell(r, 1).value = "Total Expenses"; gc(ws.getCell(r, 1));
-  const totalExpByYear = persByYear.map((p, y) => p + opexByYear[y] + cdByYear[y]);
+  const totalExpByYear = persByYear.map((p, y) => p + opexByYear[y] + cdByYear[y] + (depreciationByYear?.[y] ?? 0));
   for (let y = 0; y < 5; y++) {
     const col = y + 2;
-    setFormula(ws.getCell(r, col), `SUM(${cn(persRow, col)}:${cn(cdRow, col)})`, Math.round(totalExpByYear[y]));
+    setFormula(ws.getCell(r, col), `SUM(${cn(persRow, col)}:${cn(deprRow, col)})`, Math.round(totalExpByYear[y]));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
   }
 
   r++;
   r++;
   sec(ws, r, 6); ws.getCell(r, 1).value = "BOTTOM LINE";
+  const niWithDepr = niByYear.map((ni, y) => ni - (depreciationByYear?.[y] ?? 0));
   r++;
   const niRow = r;
   ws.getCell(r, 1).value = niLabel; gc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
     const col = y + 2;
-    setFormula(ws.getCell(r, col), `${cn(revRow, col)}-${cn(totExpRow, col)}`, Math.round(niByYear[y]));
+    setFormula(ws.getCell(r, col), `${cn(revRow, col)}-${cn(totExpRow, col)}`, Math.round(niWithDepr[y]));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
   }
 
@@ -1783,7 +1790,7 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
   ws.getCell(r, 1).value = "Net Margin %"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
     const col = y + 2;
-    setFormula(ws.getCell(r, col), `IF(${cn(revRow, col)}=0,0,${cn(niRow, col)}/${cn(revRow, col)})`, revByYear[y] > 0 ? niByYear[y] / revByYear[y] : 0);
+    setFormula(ws.getCell(r, col), `IF(${cn(revRow, col)}=0,0,${cn(niRow, col)}/${cn(revRow, col)})`, revByYear[y] > 0 ? niWithDepr[y] / revByYear[y] : 0);
     ws.getCell(r, col).numFmt = PCT; dc(ws.getCell(r, col));
   }
 
@@ -1792,7 +1799,7 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
   ws.getCell(r, 1).value = niLabel.includes("Net Income") ? "Cumulative Net Income" : "Cumulative Profit"; bc(ws.getCell(r, 1));
   let cumNIVal = 0;
   for (let y = 0; y < 5; y++) {
-    cumNIVal += niByYear[y];
+    cumNIVal += niWithDepr[y];
     const col = y + 2;
     const cell = ws.getCell(r, col);
     if (y === 0) setFormula(cell, cn(niRow, col), Math.round(cumNIVal));
@@ -1805,7 +1812,7 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
   let beYear = -1;
   let cumCheck = 0;
   for (let y = 0; y < 5; y++) {
-    cumCheck += niByYear[y];
+    cumCheck += niWithDepr[y];
     if (beYear < 0 && cumCheck >= 0) beYear = y;
   }
   for (let y = 0; y < 5; y++) {
@@ -1819,16 +1826,6 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
     }
     cell.border = BORDER;
     cell.alignment = { horizontal: "center" };
-  }
-
-  if (depreciationByYear && depreciationByYear.some(d => d > 0)) {
-    r += 2;
-    sec(ws, r, 6); ws.getCell(r, 1).value = "NON-CASH ADJUSTMENTS (MEMO)";
-    r++;
-    ws.getCell(r, 1).value = "Depreciation (non-cash)"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
-      ws.getCell(r, y + 2).value = Math.round(depreciationByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
-    }
   }
 
   return { niRow, cumNIRow };
@@ -2220,20 +2217,27 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
     ws.getCell(r, y + 2).value = Math.round(niByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
   r++;
+  ws.getCell(r, 1).value = "Depreciation Add-Back"; dc(ws.getCell(r, 1));
+  const deprRow = r;
+  for (let y = 0; y < 5; y++) {
+    ws.getCell(r, y + 2).value = Math.round(depreciationByYear?.[y] ?? 0); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+  }
+  r++;
   ws.getCell(r, 1).value = "Debt Service (Loan)"; dc(ws.getCell(r, 1));
   const dsRow = r;
   for (let y = 0; y < 5; y++) {
     ws.getCell(r, y + 2).value = Math.round(cdByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
-  ws.getCell(r, 1).value = "CFADS (NI + Debt Service)"; bc(ws.getCell(r, 1));
+  ws.getCell(r, 1).value = "CFADS (NI + Depr + DS)"; bc(ws.getCell(r, 1));
   const cfadsRow = r;
   const cfads: number[] = [];
   for (let y = 0; y < 5; y++) {
-    const v = niByYear[y] + cdByYear[y];
+    const depr = depreciationByYear?.[y] ?? 0;
+    const v = niByYear[y] + depr + cdByYear[y];
     cfads.push(v);
     const col = y + 2;
-    setFormula(ws.getCell(r, col), `${cn(niRow, col)}+${cn(dsRow, col)}`, Math.round(v));
+    setFormula(ws.getCell(r, col), `${cn(niRow, col)}+${cn(deprRow, col)}+${cn(dsRow, col)}`, Math.round(v));
     ws.getCell(r, col).numFmt = CUR; bc(ws.getCell(r, col));
   }
 
@@ -2325,14 +2329,13 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
 
   const ob = data.openingBalances || {};
   const openAP = ob.accountsPayable ?? 0;
-  const openCurrentDebt = ob.currentDebtPortion ?? 0;
   const minCurrentRatio = ct.minCurrentRatio ?? BENCHMARK_CURRENT_RATIO;
 
   const checks: [string, (y: number) => string][] = [
     [`DSCR ≥ ${minDSCR}x`, (y) => cdByYear[y] <= 0 ? "N/A" : (cfads[y] / cdByYear[y] >= minDSCR ? "PASS" : "FAIL")],
     ["Positive Net Income", (y) => niByYear[y] > 0 ? "PASS" : "FAIL"],
     [`Current Ratio ≥ ${minCurrentRatio}x`, (y) => {
-      const currentLiab = openAP + openCurrentDebt;
+      const currentLiab = openAP + cdByYear[y];
       if (currentLiab <= 0) return "N/A";
       const ar = projectedARByYear?.[y] ?? (ob.accountsReceivable ?? 0);
       const currentAssets = cashByYear[y] + ar;
