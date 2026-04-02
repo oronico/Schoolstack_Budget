@@ -118,32 +118,20 @@ function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, co
     return `We project ${retRate}% student retention year over year.`;
   }
 
-  if (key === "tuitionRationale") {
+  if (key === "revenueAssumptions") {
     const tuitionPrograms = programs.filter(p => p.annualTuition > 0);
     if (tuitionPrograms.length > 0) {
       const lines = tuitionPrograms.map(p => `${p.name}: ${fmt$(p.annualTuition)}/year`);
       const escRate = revenue?.annualTuitionIncrease ?? 0;
       const escText = escRate > 0 ? ` with ${escRate}% annual increases` : "";
-      return `Our tuition structure: ${lines.join("; ")}${escText}.`;
-    }
-  }
-
-  if (key === "revenueModel") {
-    const enabledRows = revenueRows.filter(r => r.enabled && r.amounts?.[0] > 0);
-    if (enabledRows.length > 0) {
-      const y1Total = enabledRows.reduce((sum, r) => sum + (r.amounts[0] || 0), 0);
+      const enabledRows = revenueRows.filter(r => r.enabled && r.amounts?.[0] > 0);
+      const supplementalY1 = enabledRows.reduce((sum, r) => sum + (r.amounts[0] || 0), 0);
       const tuitionY1 = programs.reduce((sum, p) => sum + (p.annualTuition * (p.year1 || 0)), 0);
-      const grandTotal = y1Total + tuitionY1;
-      if (grandTotal > 0) {
-        const tuitionPct = tuitionY1 > 0 ? ((tuitionY1 / grandTotal) * 100).toFixed(0) : "0";
-        return `Year 1 projected revenue: ${fmt$(grandTotal)} total (${tuitionPct}% from tuition, remainder from supplemental sources).`;
-      }
-    }
-    if (programs.length > 0) {
-      const tuitionY1 = programs.reduce((sum, p) => sum + (p.annualTuition * (p.year1 || 0)), 0);
-      if (tuitionY1 > 0) {
-        return `Year 1 projected tuition revenue: ${fmt$(tuitionY1)}.`;
-      }
+      const grandTotal = supplementalY1 + tuitionY1;
+      const revSuffix = grandTotal > 0
+        ? ` Year 1 projected revenue: ${fmt$(grandTotal)} (${tuitionY1 > 0 ? ((tuitionY1 / grandTotal) * 100).toFixed(0) : "0"}% tuition).`
+        : "";
+      return `Our tuition structure: ${lines.join("; ")}${escText}.${revSuffix}`;
     }
   }
 
@@ -181,7 +169,7 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
     },
   });
 
-  const assumptionFlags: AssumptionFlag[] = (consultantData as Record<string, unknown>)?.assumptionFlags as AssumptionFlag[] || [];
+  const assumptionFlags: AssumptionFlag[] = (consultantData as unknown as Record<string, unknown>)?.assumptionFlags as AssumptionFlag[] || [];
 
   useEffect(() => {
     const existing = getValues("assumptionFlagResponses") as Array<{ field: string; flagType: string; reason: string }> | undefined;
