@@ -58,8 +58,8 @@ const HOW_IT_WORKS = [
   },
   {
     icon: <MessageCircle className="w-6 h-6" />,
-    title: "Get your CFO\u2019s take.",
-    desc: "Budget analyzes your model and gives you specific, practical recommendations. Not generic advice. Guidance based on YOUR numbers.",
+    title: "See what your numbers are really saying.",
+    desc: "Budget analyzes your model and gives you specific, practical recommendations. Not generic advice. Guidance based on YOUR numbers — automatically, as you build.",
   },
   {
     icon: <Download className="w-6 h-6" />,
@@ -96,8 +96,8 @@ export function LandingPage() {
 
               <p className="text-lg text-[#1E293B]/70 mb-10 leading-relaxed max-w-2xl">
                 You started a school because you're a great educator, not because you love spreadsheets.
-                We help school founders build lender-ready budgets — with real advisors who review your
-                numbers and a platform that makes the math make sense.
+                We help school founders build lender-ready budgets — with a platform that
+                makes the math make sense.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -128,10 +128,10 @@ export function LandingPage() {
             className="text-center mb-12"
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
-              Software that builds your model. Advisors who review it.
+              A financial planning platform built for school founders.
             </h2>
             <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
-              SchoolStack Budget is a financial planning team that works alongside you.
+              SchoolStack Budget walks you through every step and makes the math make sense.
             </p>
           </motion.div>
 
@@ -157,9 +157,9 @@ export function LandingPage() {
               <div className="w-14 h-14 bg-[#D97706]/10 rounded-xl flex items-center justify-center mb-5">
                 <MessageCircle className="w-7 h-7 text-[#D97706]" />
               </div>
-              <h3 className="font-display text-xl font-bold text-[#1E293B] mb-3">Free expert review — every model</h3>
+              <h3 className="font-display text-xl font-bold text-[#1E293B] mb-3">Expert review available — free</h3>
               <p className="text-[#1E293B]/60 leading-relaxed">
-                When your model is ready, our school finance advisors review your numbers personally. We'll tell you what's strong, what needs work, and exactly what a lender will ask about. No charge, no strings.
+                When your model is ready, you can request a review from our school finance advisors. They'll share what's strong, what needs work, and what a lender will look for. Free, no strings — but entirely your choice.
               </p>
             </motion.div>
           </div>
@@ -191,13 +191,13 @@ export function LandingPage() {
               },
               {
                 icon: <MessageCircle className="w-8 h-8 text-[#328555]" />,
-                title: "A CFO who speaks your language.",
-                desc: "Our team reviews your model and tells you where you're healthy, where you're at risk, and what to do about it. No jargon. No judgment. Just clear, practical guidance.",
+                title: "Analysis you can actually understand.",
+                desc: "Budget flags where you're healthy, where you're at risk, and what to do about it. No jargon. No judgment. Just clear, practical guidance — built right into the platform.",
               },
               {
                 icon: <CheckCircle2 className="w-8 h-8 text-[#0D9488]" />,
-                title: "Free expert review included.",
-                desc: "Every model gets a free review from our school finance team. We'll tell you what looks strong, what needs work, and what a lender will ask about. Real advisors, real feedback — not an upsell.",
+                title: "Expert review when you want it.",
+                desc: "Once your model is complete, you can request a free review from our school finance team. They'll tell you what looks strong, what needs work, and what a lender will ask about. Totally optional — your model stands on its own.",
               },
             ].map((item, i) => (
               <motion.div
@@ -503,7 +503,7 @@ export function LandingPage() {
                 A parent who started a learning pod and it grew into something bigger than you expected.
               </p>
               <p>
-                You don't have a CFO. You might not even have a bookkeeper. You're making financial
+                You don't have a finance team. You might not even have a bookkeeper. You're making financial
                 decisions every week that determine whether your school survives or doesn't.
               </p>
               <p>
@@ -612,7 +612,7 @@ export function LandingPage() {
                 href="mailto:hello@schoolstack.ai"
                 className="bg-transparent border border-white/30 text-white hover:bg-white/10 px-8 py-4 rounded-xl font-bold text-lg transition flex items-center justify-center"
               >
-                Schedule a Free Review
+                Questions? Reach Out
               </a>
             </div>
           </motion.div>
