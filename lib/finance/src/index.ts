@@ -26,3 +26,27 @@ export {
   resolveEsc,
   type StaffingRowLike,
 } from "./staffing.js";
+
+export function computeStraightLineDepreciation(
+  fixedAssets: number,
+  usefulLifeYears: number,
+  yearIndex: number,
+): { annualDepreciation: number; accumulatedDepreciation: number; netBookValue: number } {
+  if (fixedAssets <= 0 || usefulLifeYears <= 0) {
+    return { annualDepreciation: 0, accumulatedDepreciation: 0, netBookValue: fixedAssets };
+  }
+  const annual = fixedAssets / usefulLifeYears;
+  const yearsDepreciated = Math.min(yearIndex + 1, usefulLifeYears);
+  const accumulated = annual * yearsDepreciated;
+  const nbv = Math.max(0, fixedAssets - accumulated);
+  const actualAnnual = yearIndex < usefulLifeYears ? annual : 0;
+  return { annualDepreciation: actualAnnual, accumulatedDepreciation: accumulated, netBookValue: nbv };
+}
+
+export function computeProjectedAR(
+  annualTuitionRevenue: number,
+  collectionDelayDays: number,
+): number {
+  if (annualTuitionRevenue <= 0 || collectionDelayDays <= 0) return 0;
+  return annualTuitionRevenue * (collectionDelayDays / 365);
+}

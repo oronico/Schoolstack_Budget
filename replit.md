@@ -31,7 +31,7 @@ Offers specific support for charter schools including state per-pupil pre-fills,
 Includes logic for Catholic and faith-affiliated schools (diocese/parish subsidies, assessments) and fundraising intelligence for both non-profit and for-profit school types, with conditional schema fields and catalog items.
 
 ### Underwriter-Ready Evidence & Financial Intelligence
-Operating schools can include prior-year actuals and an opening balance sheet. Features coaching banners (`lendingLabIntent`), facility phase tracking, and a ReviewStep showing Key Financial Indicators (breakeven enrollment, cash flow, prior-year variance).
+Operating schools can include prior-year actuals and an opening balance sheet. Features coaching banners (`lendingLabIntent`), facility phase tracking, and a ReviewStep showing Key Financial Indicators (breakeven enrollment, cash flow, prior-year variance). Balance sheet intelligence includes straight-line depreciation of fixed assets, dynamic accounts receivable projected from tuition revenue and collection delay, and current ratio covenant checks (BENCHMARK_CURRENT_RATIO = 1.1x).
 
 ### Ratio-Driven Staffing Ramp
 Staffing can be `fixed` or `ratio`-based, where FTE is computed from enrollment ÷ studentRatio, ceiled to nearest 0.5.

@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { computeStraightLineDepreciation, computeProjectedAR } from "@workspace/finance";
 import {
   NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM, INPUT_CELL_FILL, DASHBOARD_GREEN,
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT, NF, BF,
@@ -17,6 +18,7 @@ import {
   ModelData, SchoolProfile, RevenueRow, StaffingRow, ExpenseRow, CapitalDebtRow, TuitionTier,
   BENCHMARK_DSCR_GREEN,
 } from "./workbook-helpers.js";
+import { BENCHMARK_CURRENT_RATIO } from "./benchmark-thresholds.js";
 
 const TAB_NAMES = [
   "Instructions", "Cover", "Assumptions", "Program Profile",
@@ -1708,7 +1710,7 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   return { endingCashY1: cumCashMonthly[11], cumCashRow };
 }
 
-function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[]) {
+function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], depreciationByYear?: number[]) {
   const ws = wb.addWorksheet("5-Year Operating Stmt");
   const sp = data.schoolProfile || {};
   const yLabels = yearLabels(sp.openingYear);
@@ -1817,6 +1819,16 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
     }
     cell.border = BORDER;
     cell.alignment = { horizontal: "center" };
+  }
+
+  if (depreciationByYear && depreciationByYear.some(d => d > 0)) {
+    r += 2;
+    sec(ws, r, 6); ws.getCell(r, 1).value = "NON-CASH ADJUSTMENTS (MEMO)";
+    r++;
+    ws.getCell(r, 1).value = "Depreciation (non-cash)"; dc(ws.getCell(r, 1));
+    for (let y = 0; y < 5; y++) {
+      ws.getCell(r, y + 2).value = Math.round(depreciationByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+    }
   }
 
   return { niRow, cumNIRow };
@@ -1996,7 +2008,7 @@ interface CrossTabRefs {
   debtBalanceRow: number;
 }
 
-function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: number[], balanceByYear: number[], startingCash: number, crossRefs: CrossTabRefs, endingCashY1?: number) {
+function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: number[], balanceByYear: number[], startingCash: number, crossRefs: CrossTabRefs, endingCashY1?: number, depreciationByYear?: number[], projectedARByYear?: number[]) {
   const ws = wb.addWorksheet("Balance Sheet");
   const sp = data.schoolProfile || {};
   const yLabels = yearLabels(sp.openingYear);
@@ -2067,13 +2079,16 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   const arRow = r;
   ws.getCell(r, 1).value = "Accounts Receivable"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
-    ws.getCell(r, y + 2).value = Math.round(openAR); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+    const arVal = projectedARByYear?.[y] ?? openAR;
+    ws.getCell(r, y + 2).value = Math.round(arVal); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   const faRow = r;
-  ws.getCell(r, 1).value = "Fixed Assets"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 1).value = "Fixed Assets (Net of Depreciation)"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
-    ws.getCell(r, y + 2).value = Math.round(openFA); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+    const cumDepr = depreciationByYear ? depreciationByYear.slice(0, y + 1).reduce((a, b) => a + b, 0) : 0;
+    const netFA = Math.max(0, openFA - cumDepr);
+    ws.getCell(r, y + 2).value = Math.round(netFA); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   const oaRow = r;
@@ -2087,7 +2102,10 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   const totalAssets: number[] = [];
   for (let y = 0; y < 5; y++) {
     const col = y + 2;
-    const ta = cashByYear[y] + openAR + openFA + openOA;
+    const arVal = projectedARByYear?.[y] ?? openAR;
+    const cumDepr = depreciationByYear ? depreciationByYear.slice(0, y + 1).reduce((a, b) => a + b, 0) : 0;
+    const netFA = Math.max(0, openFA - cumDepr);
+    const ta = cashByYear[y] + arVal + netFA + openOA;
     totalAssets.push(ta);
     setFormula(ws.getCell(r, col), `SUM(${cn(cashRow, col)}:${cn(oaRow, col)})`, Math.round(ta));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
@@ -2153,7 +2171,7 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   return { cashByYear, totalAssets, totalLiabilities, equityByYear };
 }
 
-function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], cashByYear: number[]) {
+function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], cashByYear: number[], depreciationByYear?: number[], projectedARByYear?: number[]) {
   const ws = wb.addWorksheet("DSCR & Covenants");
   const sp = data.schoolProfile || {};
   const yLabels = yearLabels(sp.openingYear);
@@ -2305,9 +2323,21 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   r += 2;
   sec(ws, r, 6); ws.getCell(r, 1).value = "COVENANT CHECKS";
 
+  const ob = data.openingBalances || {};
+  const openAP = ob.accountsPayable ?? 0;
+  const openCurrentDebt = ob.currentDebtPortion ?? 0;
+  const minCurrentRatio = ct.minCurrentRatio ?? BENCHMARK_CURRENT_RATIO;
+
   const checks: [string, (y: number) => string][] = [
     [`DSCR ≥ ${minDSCR}x`, (y) => cdByYear[y] <= 0 ? "N/A" : (cfads[y] / cdByYear[y] >= minDSCR ? "PASS" : "FAIL")],
     ["Positive Net Income", (y) => niByYear[y] > 0 ? "PASS" : "FAIL"],
+    [`Current Ratio ≥ ${minCurrentRatio}x`, (y) => {
+      const currentLiab = openAP + openCurrentDebt;
+      if (currentLiab <= 0) return "N/A";
+      const ar = projectedARByYear?.[y] ?? (ob.accountsReceivable ?? 0);
+      const currentAssets = cashByYear[y] + ar;
+      return currentAssets / currentLiab >= minCurrentRatio ? "PASS" : "FAIL";
+    }],
     [`Capacity ≥ ${(minCapUtil * 100).toFixed(0)}%`, (y) => cap <= 0 ? "N/A" : (enrollment[y] / cap >= minCapUtil ? "PASS" : "FAIL")],
     [`Cash Reserve ≥ ${minMonths} months`, (y) => {
       const te = totalExp[y];
@@ -2694,8 +2724,26 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   const bdRefs: BudgetDetailRefs = { revTotalRow, persTotalRow, opexTotalRow, cdTotalRow };
   const { niByYear } = buildBudgetSummary(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, bdRefs);
 
+  const openFA = data.openingBalances?.fixedAssets ?? 0;
+  const usefulLife = data.openingBalances?.fixedAssetUsefulLife ?? 7;
+  const depreciationByYear: number[] = [];
+  const projectedARByYear: number[] = [];
+  const tuitionRows = (data.revenueRows || []).filter(r => r.enabled && (r.category === "tuition_and_fees"));
+  const tuitionByYear: number[] = Array(5).fill(0);
+  for (const row of tuitionRows) {
+    for (let y = 0; y < 5; y++) {
+      tuitionByYear[y] += (row.amounts?.[y] ?? 0);
+    }
+  }
+  for (let y = 0; y < 5; y++) {
+    const depr = computeStraightLineDepreciation(openFA, usefulLife, y);
+    depreciationByYear.push(depr.annualDepreciation);
+    const tuitionRev = tuitionByYear[y] > 0 ? tuitionByYear[y] : revByYear[y] * 0.7;
+    projectedARByYear.push(computeProjectedAR(tuitionRev, 30));
+  }
+
   const { endingCashY1, cumCashRow: cfCumCashRow } = buildMonthlyCashFlowY1(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
-  const { niRow: opStmtNiRow, cumNIRow: opStmtCumNIRow } = buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear);
+  const { niRow: opStmtNiRow, cumNIRow: opStmtCumNIRow } = buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear, depreciationByYear);
 
   const debtResult = buildDebtSchedule(wb, effectiveData);
   const debtServiceByYear = debtResult.debtByYear;
@@ -2703,9 +2751,9 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   const debtBalanceRow = debtResult.debtBalanceRow;
 
   const crossRefs: CrossTabRefs = { cfCumCashRow, opStmtNiRow, debtBalanceRow };
-  const { cashByYear } = buildBalanceSheet(wb, data, niByYear, balanceByYear, startingCash, crossRefs, endingCashY1);
+  const { cashByYear } = buildBalanceSheet(wb, data, niByYear, balanceByYear, startingCash, crossRefs, endingCashY1, depreciationByYear, projectedARByYear);
 
-  buildDSCRCovenants(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear);
+  buildDSCRCovenants(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear, depreciationByYear, projectedARByYear);
   buildSourcesAndUses(wb, data, startingCash);
   buildScenarios(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear);
   buildUnderwritingSnapshot(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear, balanceByYear);

@@ -1738,6 +1738,13 @@ export function SchoolProfileStep() {
                   <FormInput name="openingBalances.cash" label="Cash & Cash Equivalents" type="number" prefix="$" placeholder="0" />
                   <FormInput name="openingBalances.accountsReceivable" label="Accounts Receivable" type="number" prefix="$" placeholder="0" />
                   <FormInput name="openingBalances.fixedAssets" label="Fixed Assets (Net)" type="number" prefix="$" placeholder="0" />
+                  <div className="flex flex-col gap-1.5">
+                    <FormInput name="openingBalances.fixedAssetUsefulLife" label="Useful Life (years)" type="number" placeholder="7" />
+                    <div className="flex items-start gap-2 mt-1">
+                      <Lightbulb className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-muted-foreground">How many years your equipment and furniture will last before needing replacement. We spread the cost evenly across those years — that's depreciation. Most school assets last 5–10 years. Default is 7.</p>
+                    </div>
+                  </div>
                   <FormInput name="openingBalances.otherAssets" label="Other Assets" type="number" prefix="$" placeholder="0" />
                 </div>
               </div>

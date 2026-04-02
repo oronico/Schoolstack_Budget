@@ -1,7 +1,7 @@
 import { generateTopIssues } from "./decision-rules";
 import { generateHealthSignals, type HealthSignal } from "./financial-health";
 import { computeDaysCashOnHand, computeEffectiveFte as computeEffectiveFteShared, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER, BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./workbook-helpers.js";
-import { computeAnnualDebt } from "@workspace/finance";
+import { computeAnnualDebt, computeStraightLineDepreciation, computeProjectedAR } from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
 
 interface SchoolProfile {
@@ -241,6 +241,17 @@ interface ModelData {
   expenseRows?: ExpenseRow[];
   capitalAndDebtRows?: CapitalDebtRow[];
   priorYearSnapshot?: PriorYearSnapshot;
+  openingBalances?: {
+    cash?: number;
+    accountsReceivable?: number;
+    fixedAssets?: number;
+    otherAssets?: number;
+    accountsPayable?: number;
+    currentDebtPortion?: number;
+    longTermDebt?: number;
+    fixedAssetUsefulLife?: number;
+  };
+  covenantThresholds?: Record<string, number>;
 }
 
 export interface KeyMetric {
@@ -358,6 +369,8 @@ export interface YearFinancials {
   totalExpenses: number;
   netIncome: number;
   netMargin: number;
+  depreciation: number;
+  projectedAR: number;
 }
 
 function fmt(n: number): string {
@@ -733,11 +746,16 @@ export function computeAllYearsFromRows(
   schoolProfile?: SchoolProfile,
   retentionRate?: number,
   skipFacilityOverlay?: boolean,
+  openingBalances?: { fixedAssets?: number; fixedAssetUsefulLife?: number; accountsReceivable?: number },
 ): YearFinancials[] {
   const spIsFacilityAuthority = !skipFacilityOverlay && hasSchoolProfileFacilityData(schoolProfile);
   const effectiveExpenseRows = spIsFacilityAuthority
     ? expenseRows.map(r => r.category === "occupancy_facility" ? { ...r, enabled: false } : r)
     : expenseRows;
+
+  const openFA = openingBalances?.fixedAssets ?? 0;
+  const usefulLife = openingBalances?.fixedAssetUsefulLife ?? 7;
+  const defaultCollectionDelay = 30;
 
   return enrollmentByYear.map((students, yearIdx) => {
     const pf = yearIdx === 0 ? prorationFactor : 1;
@@ -758,16 +776,22 @@ export function computeAllYearsFromRows(
       facilityOverlay = overlay.total;
     }
 
+    const depr = computeStraightLineDepreciation(openFA, usefulLife, yearIdx);
+    const depreciation = depr.annualDepreciation;
+
+    const tuitionRev = revRaw.tuition * pf;
+    const projectedAR = computeProjectedAR(tuitionRev, defaultCollectionDelay);
+
     const totalOpex = expTotal + capDebt.total + facilityOverlay;
     const facilityCost = exp.facilityCost * pf + facilityOverlay;
-    const totalExpenses = totalStaffingCost + totalOpex;
+    const totalExpenses = totalStaffingCost + totalOpex + depreciation;
     const netIncome = revTotal - totalExpenses;
 
     return {
       year: yearIdx + 1,
       students,
       totalRevenue: revTotal,
-      tuitionRevenue: revRaw.tuition * pf,
+      tuitionRevenue: tuitionRev,
       publicRevenue: revRaw.publicFunding * pf,
       philanthropyRevenue: revRaw.philanthropy * pf,
       totalStaffingCost,
@@ -778,6 +802,8 @@ export function computeAllYearsFromRows(
       totalExpenses,
       netIncome,
       netMargin: revTotal > 0 ? netIncome / revTotal : 0,
+      depreciation,
+      projectedAR,
     };
   });
 }
@@ -869,6 +895,8 @@ function computeYearFinancialsLegacy(
     totalExpenses,
     netIncome,
     netMargin: totalRevenue > 0 ? netIncome / totalRevenue : 0,
+    depreciation: 0,
+    projectedAR: 0,
   };
 }
 
@@ -1229,6 +1257,57 @@ function assessLendingLabReadiness(
     }
   }
 
+  // --- 5b. Current Ratio ---
+  {
+    const llOB = data.openingBalances || {};
+    const llAP = llOB.accountsPayable ?? 0;
+    const llCurrentDebt = llOB.currentDebtPortion ?? 0;
+    const llCurrentLiab = llAP + llCurrentDebt;
+    if (llCurrentLiab <= 0) {
+      criteria.push({
+        name: "Current Ratio",
+        status: "na",
+        threshold: "≥1.1x",
+        actual: "No short-term liabilities entered",
+        detail: "No accounts payable or current debt reported, so the current ratio cannot be evaluated. If your school has any bills due within 12 months, enter them under Opening Balances.",
+        jumpToStep: 0,
+      });
+    } else {
+      const llCash = (llOB.cash ?? 0) + y1.netIncome;
+      const llAR = y1.projectedAR > 0 ? y1.projectedAR : (llOB.accountsReceivable ?? 0);
+      const llCurrentAssets = llCash + llAR;
+      const cr = llCurrentAssets / llCurrentLiab;
+      const crStr = `${cr.toFixed(2)}x`;
+      if (cr < 1.1) {
+        criteria.push({
+          name: "Current Ratio",
+          status: "fail",
+          threshold: "≥1.1x",
+          actual: crStr,
+          detail: `Current ratio of ${crStr} is below the 1.1x minimum. Short-term liabilities are not adequately covered by liquid assets. Increase cash reserves or reduce near-term payables.`,
+          jumpToStep: 0,
+        });
+      } else if (cr < 1.5) {
+        criteria.push({
+          name: "Current Ratio",
+          status: "warn",
+          threshold: "≥1.1x (ideal ≥1.5x)",
+          actual: crStr,
+          detail: "Current ratio meets the minimum but leaves little margin. Building more liquidity strengthens your balance sheet for lenders.",
+          jumpToStep: 0,
+        });
+      } else {
+        criteria.push({
+          name: "Current Ratio",
+          status: "pass",
+          threshold: "≥1.1x (ideal ≥1.5x)",
+          actual: crStr,
+          detail: `Current ratio of ${crStr} shows strong short-term liquidity.`,
+        });
+      }
+    }
+  }
+
   // --- 6. Net Margin Trajectory ---
   if (yearFinancials.length < 3) {
     criteria.push({
@@ -1432,6 +1511,7 @@ export function computeYearFinancialsFromData(rawData: Record<string, unknown>):
     return computeAllYearsFromRows(
       enrollmentByYear, revenueRows, staffingRows, expenseRows, effectiveCapDebtRows,
       salaryEscRate, prorationFactor, data.tuitionTiers, costInflationPct, sp, ceRR, true,
+      data.openingBalances,
     );
   } else {
     const rev = data.revenue || {};
@@ -1506,6 +1586,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     yearFinancials = computeAllYearsFromRows(
       enrollmentByYear, revenueRows, staffingRows, expenseRows, effectiveCapDebtRows,
       salaryEscRate, prorationFactor, tuitionTiers, costInflationPct, sp, ceRR, true,
+      data.openingBalances,
     );
   } else {
     const rev = data.revenue || {};
@@ -1859,6 +1940,30 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
             ? `DSCR is above ${BENCHMARK_DSCR_AMBER}x but below the ${BENCHMARK_DSCR_GREEN}x target. Look for ways to widen this buffer.`
             : `DSCR is below ${BENCHMARK_DSCR_AMBER}x, meaning debt coverage is critically thin. This needs to be addressed.`,
       benchmark: `Healthy minimum: ${BENCHMARK_DSCR_AMBER}x; target: ${BENCHMARK_DSCR_GREEN}x`,
+    });
+  }
+
+  const ob = data.openingBalances || {};
+  const y1Cash = (ob.cash ?? 0) + y1.netIncome;
+  const y1AR = y1.projectedAR > 0 ? y1.projectedAR : (ob.accountsReceivable ?? 0);
+  const y1CurrentAssets = y1Cash + y1AR;
+  const y1AP = ob.accountsPayable ?? 0;
+  const y1CurrentDebt = ob.currentDebtPortion ?? 0;
+  const y1CurrentLiabilities = y1AP + y1CurrentDebt;
+  const y1CurrentRatio = y1CurrentLiabilities > 0 ? y1CurrentAssets / y1CurrentLiabilities : (y1CurrentAssets > 0 ? 999 : 0);
+
+  if (y1CurrentLiabilities > 0) {
+    keyMetrics.push({
+      name: "Current Ratio (Year 1)",
+      value: `${y1CurrentRatio.toFixed(2)}x`,
+      status: y1CurrentRatio >= 1.5 ? "good" : y1CurrentRatio >= 1.1 ? "warning" : "danger",
+      interpretation:
+        y1CurrentRatio >= 1.5
+          ? "Current ratio is healthy — short-term assets comfortably cover short-term obligations."
+          : y1CurrentRatio >= 1.1
+            ? "Current ratio is above the minimum but tight. Build more liquidity to create a safety margin."
+            : "Current ratio is below 1.1x, meaning short-term liabilities could exceed available assets. This is a red flag for lenders.",
+      benchmark: "Minimum: 1.1x; healthy: 1.5x+",
     });
   }
 

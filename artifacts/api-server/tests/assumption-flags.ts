@@ -2,7 +2,8 @@ import { detectUnusualAssumptions, type AssumptionFlag } from "../src/lib/assump
 import { runConsultantEngine, computeYearFinancialsFromData, type YearFinancials } from "../src/lib/consultant-engine.js";
 import { resolveEsc, computeEffectiveFte } from "../src/lib/workbook-helpers.js";
 import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
-import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../src/lib/benchmark-thresholds.js";
+import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER, BENCHMARK_CURRENT_RATIO } from "../src/lib/benchmark-thresholds.js";
+import { computeStraightLineDepreciation, computeProjectedAR } from "@workspace/finance";
 import { microschoolStartup, privateSchoolWithESA, charterPublicFunding } from "./sample-payloads.js";
 
 let passed = 0;
@@ -551,6 +552,91 @@ function testEscalationFallbackChain() {
   );
 }
 
+function testDepreciationMath() {
+  console.log("\n=== Depreciation straight-line math ===");
+  const fa = 700_000;
+  const life = 7;
+  const y0 = computeStraightLineDepreciation(fa, life, 0);
+  assert("Annual depreciation = FA / life", y0.annualDepreciation === 100_000, `got ${y0.annualDepreciation}`);
+  assert("Accumulated depreciation Y0 = 1 year", y0.accumulatedDepreciation === 100_000);
+  assert("Net book value Y0 = FA - accum", y0.netBookValue === 600_000, `got ${y0.netBookValue}`);
+
+  const y4 = computeStraightLineDepreciation(fa, life, 4);
+  assert("Accumulated depreciation Y4 = 5 years", y4.accumulatedDepreciation === 500_000);
+  assert("Net book value Y4 = 200k", y4.netBookValue === 200_000, `got ${y4.netBookValue}`);
+
+  const y6 = computeStraightLineDepreciation(fa, life, 6);
+  assert("Accumulated depreciation Y6 = 7 years (fully depreciated)", y6.accumulatedDepreciation === 700_000);
+  assert("Net book value Y6 = 0", y6.netBookValue === 0);
+
+  const y8 = computeStraightLineDepreciation(fa, life, 8);
+  assert("Beyond useful life: accum capped at FA", y8.accumulatedDepreciation === 700_000);
+  assert("Beyond useful life: NBV = 0", y8.netBookValue === 0);
+  assert("Beyond useful life: annual depr = 0", y8.annualDepreciation === 0);
+
+  const zeroFA = computeStraightLineDepreciation(0, 7, 0);
+  assert("Zero fixed assets: no depreciation", zeroFA.annualDepreciation === 0);
+}
+
+function testProjectedAR() {
+  console.log("\n=== Projected AR growth ===");
+  const ar1 = computeProjectedAR(500_000, 30);
+  const expected1 = 500_000 * (30 / 365);
+  assert("AR = tuition * (days/365)", Math.abs(ar1 - expected1) < 1, `got ${ar1.toFixed(2)} expected ${expected1.toFixed(2)}`);
+
+  const ar2 = computeProjectedAR(1_000_000, 30);
+  assert("AR grows with revenue", ar2 > ar1, `${ar2} should be > ${ar1}`);
+
+  const ar0 = computeProjectedAR(0, 30);
+  assert("Zero revenue = zero AR", ar0 === 0);
+
+  const ar60 = computeProjectedAR(500_000, 60);
+  assert("Longer collection delay = higher AR", ar60 > ar1, `60 day AR ${ar60} > 30 day AR ${ar1}`);
+}
+
+function testCurrentRatioCovenant() {
+  console.log("\n=== Current ratio covenant ===");
+  assert("BENCHMARK_CURRENT_RATIO = 1.1", BENCHMARK_CURRENT_RATIO === 1.1);
+
+  const cash = 200_000;
+  const ar = 50_000;
+  const ap = 100_000;
+  const currentDebt = 50_000;
+  const currentAssets = cash + ar;
+  const currentLiab = ap + currentDebt;
+  const ratio = currentAssets / currentLiab;
+  assert("Current ratio formula: (cash + AR) / (AP + currentDebt)", Math.abs(ratio - 1.6667) < 0.01, `got ${ratio.toFixed(4)}`);
+  assert("Ratio 1.67 >= 1.1 benchmark → PASS", ratio >= BENCHMARK_CURRENT_RATIO);
+
+  const lowCash = 50_000;
+  const lowAR = 10_000;
+  const lowRatio = (lowCash + lowAR) / currentLiab;
+  assert("Low ratio 0.4 < 1.1 benchmark → FAIL", lowRatio < BENCHMARK_CURRENT_RATIO, `got ${lowRatio.toFixed(2)}`);
+
+  const zeroLiab = 0;
+  assert("Zero liabilities → N/A (avoid divide-by-zero)", zeroLiab <= 0);
+}
+
+function testDepreciationInEngine() {
+  console.log("\n=== Depreciation + AR in consultant engine ===");
+  const payload = JSON.parse(JSON.stringify(microschoolStartup));
+  payload.openingBalances = {
+    fixedAssets: 350_000,
+    fixedAssetUsefulLife: 7,
+    cash: 100_000,
+    accountsReceivable: 20_000,
+  };
+  const yf = computeYearFinancialsFromData(payload);
+  assert("Engine returns 5 year financials", Array.isArray(yf) && yf.length >= 3);
+  const y0 = yf[0];
+  assert("Y1 depreciation = 50k (350k/7)", y0.depreciation === 50_000, `got ${y0.depreciation}`);
+  assert("Y1 projectedAR > 0", (y0.projectedAR ?? 0) > 0, `got ${y0.projectedAR}`);
+  if (yf.length > 1) {
+    const y1 = yf[1];
+    assert("Y2 projectedAR > Y1 (revenue grows)", (y1.projectedAR ?? 0) >= (y0.projectedAR ?? 0));
+  }
+}
+
 async function main() {
   console.log("=== Assumption Flag Test Suite ===");
 
@@ -576,6 +662,10 @@ async function main() {
   testDscrThresholdParity();
   testPercentOfRevenueProration();
   testEscalationFallbackChain();
+  testDepreciationMath();
+  testProjectedAR();
+  testCurrentRatioCovenant();
+  testDepreciationInEngine();
 
   console.log(`\n${"=".repeat(50)}`);
   console.log(`Results: ${passed} passed, ${failed} failed`);

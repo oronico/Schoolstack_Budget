@@ -14,3 +14,5 @@ export const BENCHMARK_REV_SOURCES_AMBER = 2;
 
 export const BENCHMARK_DCOH_GREEN = 90;
 export const BENCHMARK_DCOH_AMBER = 45;
+
+export const BENCHMARK_CURRENT_RATIO = 1.1;

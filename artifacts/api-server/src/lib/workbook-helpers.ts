@@ -484,6 +484,7 @@ export interface OpeningBalances {
   accountsPayable?: number;
   currentDebtPortion?: number;
   longTermDebt?: number;
+  fixedAssetUsefulLife?: number;
 }
 
 export interface SourcesAndUses {
@@ -505,6 +506,7 @@ export interface CovenantThresholds {
   minDaysCashOnHand?: number;
   minMonthsRunway?: number;
   minCapacityUtil?: number;
+  minCurrentRatio?: number;
 }
 
 export interface ModelData {

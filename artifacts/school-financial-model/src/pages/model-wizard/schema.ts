@@ -363,6 +363,7 @@ export const openingBalancesSchema = z.object({
   cash: z.coerce.number(numMsg("cash")).min(0).optional().default(0),
   accountsReceivable: z.coerce.number(numMsg("accounts receivable")).min(0).optional().default(0),
   fixedAssets: z.coerce.number(numMsg("fixed assets")).min(0).optional().default(0),
+  fixedAssetUsefulLife: z.coerce.number(numMsg("useful life")).min(1).max(50).optional().default(7),
   otherAssets: z.coerce.number(numMsg("other assets")).min(0).optional().default(0),
   accountsPayable: z.coerce.number(numMsg("accounts payable")).min(0).optional().default(0),
   currentDebtPortion: z.coerce.number(numMsg("current debt portion")).min(0).optional().default(0),
@@ -394,6 +395,7 @@ export const covenantThresholdsSchema = z.object({
   minDaysCashOnHand: z.coerce.number(numMsg("minimum days cash on hand")).min(0).optional().default(45),
   minMonthsRunway: z.coerce.number(numMsg("minimum months runway")).min(0).optional().default(2),
   minCapacityUtil: z.coerce.number(numMsg("minimum capacity utilization")).min(0).max(1).optional().default(0.7),
+  minCurrentRatio: z.coerce.number(numMsg("minimum current ratio")).min(0).optional().default(1.1),
 });
 
 export const facilitiesSchema = z.object({
