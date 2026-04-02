@@ -32,7 +32,6 @@ ADMIN_EMAILS = "aserafin@gmail.com"
 EMAIL_FROM = "SchoolStack Budget <admin@contact.schoolstack.ai>"
 
 [userenv.development]
-JWT_SECRET = "b3e379a3982f4dc4f2a235a8137c4a403abaac91dce27849d63abefd7a558f84"
 
 [nix]
 channel = "stable-25_05"
