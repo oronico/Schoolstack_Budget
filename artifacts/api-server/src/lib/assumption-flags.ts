@@ -177,7 +177,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     const revenueRows = data.revenueRows || [];
     const grossTuition = revenueRows.find(r => r.id === "gross_tuition" && r.enabled);
     if (grossTuition) {
-      const resolvedTuitionEsc = resolveEsc(grossTuition.escalationRate, costInflation);
+      const resolvedTuitionEsc = resolveEsc(grossTuition.escalationRate, costInflationPct);
       if (resolvedTuitionEsc > 5) {
         flags.push({
           field: "revenueRows.gross_tuition.escalationRate",

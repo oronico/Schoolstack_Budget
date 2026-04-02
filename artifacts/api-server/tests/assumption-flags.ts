@@ -305,6 +305,38 @@ async function testTraceabilityRevenueComposition() {
   }
 }
 
+async function testHighTuitionGrowthFlag() {
+  console.log("\n=== Traceability: High tuition growth flag with gross_tuition row ===");
+  const withHighEsc = {
+    ...microschoolStartup,
+    revenueRows: [
+      { id: "gross_tuition", category: "tuition", lineItem: "Gross Tuition", enabled: true, driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000], escalationRate: 8 },
+    ],
+  };
+  const flags = await detectUnusualAssumptions(withHighEsc as Record<string, unknown>);
+  assert("high_tuition_growth flag fires at 8% escalation", !!hasFlag(flags, "high_tuition_growth"));
+  assert("high_tuition_growth is warning severity", hasSeverity(flags, "high_tuition_growth", "warning"));
+
+  const withNormalEsc = {
+    ...microschoolStartup,
+    revenueRows: [
+      { id: "gross_tuition", category: "tuition", lineItem: "Gross Tuition", enabled: true, driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000], escalationRate: 3 },
+    ],
+  };
+  const normalFlags = await detectUnusualAssumptions(withNormalEsc as Record<string, unknown>);
+  assert("No high_tuition_growth at 3% escalation", !hasFlag(normalFlags, "high_tuition_growth"));
+
+  const withFallbackEsc = {
+    ...microschoolStartup,
+    revenueRows: [
+      { id: "gross_tuition", category: "tuition", lineItem: "Gross Tuition", enabled: true, driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000], escalationRate: 0 },
+    ],
+    facilities: { ...(microschoolStartup as Record<string, unknown>).facilities, generalCostInflation: 7 },
+  };
+  const fallbackFlags = await detectUnusualAssumptions(withFallbackEsc as Record<string, unknown>);
+  assert("high_tuition_growth fires via resolveEsc fallback at 7% inflation", !!hasFlag(fallbackFlags, "high_tuition_growth"));
+}
+
 async function main() {
   console.log("=== Assumption Flag Test Suite ===");
 
@@ -324,6 +356,7 @@ async function main() {
   await testTraceabilityNetMargin();
   await testTraceabilityStaffingRatio();
   await testTraceabilityRevenueComposition();
+  await testHighTuitionGrowthFlag();
 
   console.log(`\n${"=".repeat(50)}`);
   console.log(`Results: ${passed} passed, ${failed} failed`);

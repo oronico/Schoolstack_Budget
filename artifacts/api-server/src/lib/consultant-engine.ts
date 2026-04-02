@@ -2697,7 +2697,8 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   let assumptionFlags: import("./assumption-flags").AssumptionFlag[] = [];
   try {
     assumptionFlags = await detectUnusualAssumptions(rawData);
-  } catch {
+  } catch (flagError) {
+    console.error("Assumption flag detection failed — flags will be empty:", flagError);
     assumptionFlags = [];
   }
 
