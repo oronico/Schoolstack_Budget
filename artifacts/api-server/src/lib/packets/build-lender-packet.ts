@@ -1,5 +1,6 @@
 import type { ConsultantOutput } from "../consultant-engine";
 import type { ModelData } from "../workbook-helpers";
+import type { AssumptionFlag } from "../assumption-flags";
 import { buildPacketData } from "./build-packet-data";
 import type { PacketData, PacketSection, PacketTable, PacketTableRow, LinkedMetric } from "./packet-types";
 
@@ -11,6 +12,23 @@ export interface RiskMitigant {
   supportingMetrics: { label: string; value: string }[];
 }
 
+export interface BudgetNarrativeData {
+  missionAndVision?: string;
+  enrollmentStrategy?: string;
+  retentionPlan?: string;
+  revenueAssumptions?: string;
+  staffingPhilosophy?: string;
+  expenseAssumptions?: string;
+  growthStrategy?: string;
+  riskMitigation?: string;
+  additionalContext?: string;
+}
+
+export interface FlaggedAssumptionExport {
+  flag: AssumptionFlag;
+  userExplanation: string;
+}
+
 export interface LenderPacket extends PacketData {
   riskMitigants: RiskMitigant[];
   dscrSummary: DSCRSummary | null;
@@ -18,6 +36,8 @@ export interface LenderPacket extends PacketData {
     status: "Strong" | "Needs Work" | "Not Yet Ready";
     explanation: string;
   };
+  budgetNarrative: BudgetNarrativeData;
+  flaggedAssumptions: FlaggedAssumptionExport[];
 }
 
 export interface DSCRSummary {
@@ -53,6 +73,19 @@ export function buildLenderPacket(
 
   const dscrSummary = extractDSCRSummary(consultantOutput);
 
+  const raw = modelData as unknown as Record<string, unknown>;
+  const budgetNarrative: BudgetNarrativeData = (raw.budgetNarrative as BudgetNarrativeData) || {};
+  const flagResponses = (raw.assumptionFlagResponses as Array<{ field: string; flagType: string; reason: string }>) || [];
+  const assumptionFlags = consultantOutput.assumptionFlags || [];
+
+  const flaggedAssumptions: FlaggedAssumptionExport[] = assumptionFlags.map(flag => {
+    const response = flagResponses.find(r => r.flagType === flag.flagType && r.field === flag.field);
+    return {
+      flag,
+      userExplanation: response?.reason || "",
+    };
+  });
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -62,6 +95,8 @@ export function buildLenderPacket(
       status: consultantOutput.lenderReadiness,
       explanation: consultantOutput.lenderReadinessExplanation,
     },
+    budgetNarrative,
+    flaggedAssumptions,
   };
 }
 

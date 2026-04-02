@@ -49,7 +49,7 @@ Manages authentication, CRUD for financial models, analytics, feedback, and orch
 A React-based SPA featuring:
 - An 8-step public underwriting wizard (`/underwriting`).
 - Authentication pages and a dashboard for model lifecycle management.
-- A 9-step authenticated wizard covering Profile, Assumptions, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, and Export.
+- A 10-step authenticated wizard covering Profile, Assumptions, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, Narrative, and Export.
 - **Assumptions step**: A formula dashboard showing all rates and drivers, with centralized defaults and per-row override inheritance.
 - A Scenario Planner (`/model/:id/scenarios`) for what-if analysis with side-by-side comparisons.
 - Admin dashboard for analytics and feedback.
@@ -58,8 +58,11 @@ A React-based SPA featuring:
 - Onboarding prep screen for new users.
 - Integration with SchoolStack Space for pre-filling facility data.
 
+### Budget Narrative & Assumption Flagging
+Step 9 in the wizard allows founders to write lender-facing narratives for 9 sections (3 priority: Enrollment Strategy, Retention Plan, Risk Mitigation; 6 supplementary). The assumption flagging engine (`assumption-flags.ts`) uses the same math helpers as the projection engines to detect unusual inputs (low retention, high growth, 0% escalation, etc.) with severity levels (critical/warning/info). Flag responses and narratives are included in Lender Packet PDF, Board Summary PDF, and a dedicated "Budget Narrative" tab in the Excel underwriting workbook.
+
 ### Consultant Engine
-Provides deterministic financial analysis, including lender readiness scores, stress tests, sensitivity analysis, cash runway, industry benchmarks, and prior-year variance analysis.
+Provides deterministic financial analysis, including lender readiness scores, stress tests, sensitivity analysis, cash runway, industry benchmarks, and prior-year variance analysis. Also outputs assumption flags for the Narrative step.
 
 ### Packet Architecture
 A shared packet-generation layer supports lender-ready and board-ready deliverables, including narrative generation and enrichment with risk/mitigant pairs from the Decision Engine.

@@ -42,6 +42,13 @@ export interface CashRunwayView {
   yearByYearCash: { year: number; cumulative: string; reserveMonths: string }[];
 }
 
+export interface BoardNarrativeData {
+  enrollmentStrategy?: string;
+  retentionPlan?: string;
+  riskMitigation?: string;
+  missionAndVision?: string;
+}
+
 export interface BoardPacket extends PacketData {
   topRisks: BoardRiskItem[];
   focusAreas: BoardFocusArea[];
@@ -52,6 +59,7 @@ export interface BoardPacket extends PacketData {
     status: "healthy" | "watch" | "needs_attention";
     summary: string;
   };
+  boardNarrative: BoardNarrativeData;
 }
 
 const BOARD_PACKET_SECTIONS: SectionId[] = [
@@ -108,6 +116,15 @@ export function buildBoardPacket(
   const cashRunway = buildCashRunway(consultantOutput);
   const financialOutlook = buildFinancialOutlook(consultantOutput);
 
+  const raw = modelData as unknown as Record<string, unknown>;
+  const narrativeData = (raw.budgetNarrative || {}) as Record<string, string>;
+  const boardNarrative: BoardNarrativeData = {
+    enrollmentStrategy: narrativeData.enrollmentStrategy || undefined,
+    retentionPlan: narrativeData.retentionPlan || undefined,
+    riskMitigation: narrativeData.riskMitigation || undefined,
+    missionAndVision: narrativeData.missionAndVision || undefined,
+  };
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -116,6 +133,7 @@ export function buildBoardPacket(
     scenarioSnapshots,
     cashRunway,
     financialOutlook,
+    boardNarrative,
   };
 }
 

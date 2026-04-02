@@ -23,6 +23,7 @@ const TAB_NAMES = [
   "Enrollment Tuition Fcst", "Staffing Costs Fcst", "Budget Detail", "Budget Summary",
   "Monthly Cash Flow Y1", "5-Year Operating Stmt", "Debt Schedule", "Balance Sheet",
   "DSCR & Covenants", "Sources & Uses", "Scenarios", "Underwriting Snapshot", "Financial Health",
+  "Budget Narrative",
 ];
 
 function getProrationFactor(sp: SchoolProfile): number {
@@ -2729,5 +2730,64 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
     cumNIRef: { sheetName: "5-Year Operating Stmt", row: opStmtCumNIRow, startCol: 2 },
   });
 
+  buildNarrativeTab(wb, data);
+
   return wb;
+}
+
+function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData) {
+  const ws = wb.addWorksheet("Budget Narrative");
+  printSetup(ws);
+  ws.columns = [{ width: 30 }, { width: 70 }];
+
+  const raw = data as unknown as Record<string, unknown>;
+  const narrative = (raw.budgetNarrative || {}) as Record<string, string>;
+  const flagResponses = (raw.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason: string }>;
+
+  let row = 1;
+  ws.getRow(row).values = ["Budget Narrative", ""];
+  hdr(ws, row, 1, 2);
+  ws.mergeCells(row, 1, row, 2);
+  row += 2;
+
+  const sections = [
+    ["Enrollment Strategy", narrative.enrollmentStrategy],
+    ["Retention Plan", narrative.retentionPlan],
+    ["Risk Mitigation", narrative.riskMitigation],
+    ["Mission & Vision", narrative.missionAndVision],
+    ["Revenue Assumptions", narrative.revenueAssumptions],
+    ["Staffing Philosophy", narrative.staffingPhilosophy],
+    ["Expense Assumptions", narrative.expenseAssumptions],
+    ["Growth Strategy", narrative.growthStrategy],
+    ["Additional Context", narrative.additionalContext],
+  ] as const;
+
+  for (const [label, text] of sections) {
+    sec(ws, row, 1, 2);
+    ws.getCell(row, 1).value = label;
+    ws.getCell(row, 1).font = { ...BF, color: { argb: NAVY } };
+    row++;
+    const content = text?.trim() || "(Not provided)";
+    ws.getCell(row, 1).value = content;
+    ws.getCell(row, 1).font = NF;
+    ws.getCell(row, 1).alignment = { wrapText: true, vertical: "top" };
+    ws.mergeCells(row, 1, row, 2);
+    row += 2;
+  }
+
+  if (flagResponses.length > 0) {
+    row++;
+    ws.getRow(row).values = ["Flagged Assumptions", "Explanation"];
+    hdr(ws, row, 1, 2);
+    row++;
+
+    for (const resp of flagResponses) {
+      ws.getCell(row, 1).value = `${resp.flagType}: ${resp.field}`;
+      ws.getCell(row, 1).font = NF;
+      ws.getCell(row, 2).value = resp.reason || "(Not addressed)";
+      ws.getCell(row, 2).font = NF;
+      ws.getCell(row, 2).alignment = { wrapText: true };
+      row++;
+    }
+  }
 }

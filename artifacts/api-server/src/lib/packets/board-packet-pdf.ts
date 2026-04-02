@@ -4,7 +4,7 @@ import {
   ensureSpace,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
-import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView } from "./build-board-packet";
+import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView, BoardNarrativeData } from "./build-board-packet";
 import type { PacketSection, PacketTable, LinkedMetric } from "./packet-types";
 
 export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffer> {
@@ -14,6 +14,8 @@ export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffe
   doc.addPage();
 
   drawOutlookSection(doc, packet);
+
+  renderBoardNarrativeSection(doc, packet.boardNarrative);
 
   for (const section of packet.sections) {
     if (!section.included) continue;
@@ -213,6 +215,27 @@ function renderScenarioComparison(doc: PDFDoc, snapshots: ScenarioSnapshot[]) {
 
   const rows = snapshots.map((s) => [s.name, s.y5Revenue, s.y5NetIncome, s.y5Margin]);
   drawTable(doc, cols, rows, { zebra: true });
+}
+
+function renderBoardNarrativeSection(doc: PDFDoc, narrative: BoardNarrativeData) {
+  const sections: Array<[string, string | undefined]> = [
+    ["Enrollment Strategy", narrative.enrollmentStrategy],
+    ["Retention Plan", narrative.retentionPlan],
+    ["Risk Mitigation", narrative.riskMitigation],
+    ["Mission & Vision", narrative.missionAndVision],
+  ];
+  const hasContent = sections.some(([, text]) => text?.trim());
+  if (!hasContent) return;
+
+  sectionTitle(doc, "Founder's Narrative");
+  for (const [label, text] of sections) {
+    if (!text?.trim()) continue;
+    ensureSpace(doc, 30);
+    subSection(doc, label);
+    bodyText(doc, text);
+    doc.moveDown(0.2);
+  }
+  doc.moveDown(0.3);
 }
 
 function renderSection(doc: PDFDoc, section: PacketSection) {

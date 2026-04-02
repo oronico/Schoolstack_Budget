@@ -416,6 +416,24 @@ export const facilitiesSchema = z.object({
   generalCostInflation: z.coerce.number(numMsg("inflation rate")).min(0, "Please enter a rate of 0% or higher").max(100, "Inflation rate can't exceed 100%").optional(),
 });
 
+export const budgetNarrativeSchema = z.object({
+  missionAndVision: z.string().default(""),
+  enrollmentStrategy: z.string().default(""),
+  retentionPlan: z.string().default(""),
+  revenueAssumptions: z.string().default(""),
+  staffingPhilosophy: z.string().default(""),
+  expenseAssumptions: z.string().default(""),
+  growthStrategy: z.string().default(""),
+  riskMitigation: z.string().default(""),
+  additionalContext: z.string().default(""),
+});
+
+export const assumptionFlagResponseSchema = z.object({
+  field: z.string(),
+  flagType: z.string(),
+  reason: z.string().default(""),
+});
+
 export const fullModelSchema = z.object({
   schoolProfile: schoolProfileSchema.optional(),
   enrollment: enrollmentSchema.optional(),
@@ -438,6 +456,8 @@ export const fullModelSchema = z.object({
   sourcesAndUses: sourcesAndUsesSchema.optional(),
   scenarios: z.array(scenarioDefSchema).optional(),
   covenantThresholds: covenantThresholdsSchema.optional(),
+  budgetNarrative: budgetNarrativeSchema.optional(),
+  assumptionFlagResponses: z.array(assumptionFlagResponseSchema).optional(),
 });
 
 export type FullModelData = z.infer<typeof fullModelSchema>;
@@ -451,6 +471,8 @@ export type TuitionTierType = z.infer<typeof tuitionTierTypeSchema>;
 export type TuitionTier = z.infer<typeof tuitionTierSchema>;
 export type Program = z.infer<typeof programSchema>;
 export type TuitionEscalation = z.infer<typeof tuitionEscalationSchema>;
+export type BudgetNarrative = z.infer<typeof budgetNarrativeSchema>;
+export type AssumptionFlagResponse = z.infer<typeof assumptionFlagResponseSchema>;
 
 export const ENTITY_TYPE_LABELS: Record<string, string> = {
   sole_practitioner: "Sole Practitioner (no EIN)",

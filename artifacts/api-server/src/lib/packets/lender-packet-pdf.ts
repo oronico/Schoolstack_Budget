@@ -4,7 +4,7 @@ import {
   fmtCurrency, ensureSpace,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
-import type { LenderPacket, RiskMitigant } from "./build-lender-packet";
+import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport } from "./build-lender-packet";
 import type { PacketSection, PacketTable, LinkedMetric } from "./packet-types";
 
 export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buffer> {
@@ -13,9 +13,17 @@ export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buf
   drawCoverPage(doc, packet);
   doc.addPage();
 
+  const execSection = packet.sections.find(s => s.id === "executive_summary" && s.included);
+  if (execSection) {
+    renderSection(doc, execSection, packet);
+  }
+
+  renderBudgetNarrativeSection(doc, packet.budgetNarrative, packet.flaggedAssumptions);
+
   for (const section of packet.sections) {
     if (!section.included) continue;
     if (section.id === "cover") continue;
+    if (section.id === "executive_summary") continue;
 
     renderSection(doc, section, packet);
   }
@@ -71,6 +79,69 @@ function drawCoverPage(doc: PDFDoc, packet: LenderPacket) {
   doc.font("Helvetica").fontSize(8).fillColor(BRAND.gray);
   doc.text("This packet is generated from the school's financial model and is intended for lender review.", { align: "center" });
   doc.text("All projections are based on assumptions entered by the school founder.", { align: "center" });
+}
+
+const NARRATIVE_LABELS: Array<[keyof BudgetNarrativeData, string]> = [
+  ["enrollmentStrategy", "Enrollment Strategy"],
+  ["retentionPlan", "Retention Plan"],
+  ["riskMitigation", "Risk Mitigation"],
+  ["missionAndVision", "Mission & Vision"],
+  ["revenueAssumptions", "Revenue Assumptions"],
+  ["staffingPhilosophy", "Staffing Philosophy"],
+  ["expenseAssumptions", "Expense Assumptions"],
+  ["growthStrategy", "Growth Strategy"],
+  ["additionalContext", "Additional Context"],
+];
+
+function renderBudgetNarrativeSection(doc: PDFDoc, narrative: BudgetNarrativeData, flagged: FlaggedAssumptionExport[]) {
+  const hasNarrative = NARRATIVE_LABELS.some(([key]) => narrative[key]?.trim());
+  const hasFlags = flagged.length > 0;
+  if (!hasNarrative && !hasFlags) return;
+
+  sectionTitle(doc, "Budget Narrative");
+
+  if (hasNarrative) {
+    for (const [key, label] of NARRATIVE_LABELS) {
+      const text = narrative[key]?.trim();
+      if (!text) continue;
+      const isPrimary = key === "enrollmentStrategy" || key === "retentionPlan" || key === "riskMitigation";
+      ensureSpace(doc, 40);
+      if (isPrimary) {
+        doc.save();
+        doc.rect(doc.page.margins.left, doc.y, 3, 14).fill(BRAND.amber);
+        doc.restore();
+        doc.font("Helvetica-Bold").fontSize(10).fillColor(BRAND.navy);
+        doc.text(label, doc.page.margins.left + 10, doc.y, { width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10 });
+      } else {
+        subSection(doc, label);
+      }
+      bodyText(doc, text);
+      doc.moveDown(0.3);
+    }
+  }
+
+  if (hasFlags) {
+    ensureSpace(doc, 30);
+    subSection(doc, "Flagged Assumptions");
+    for (const fa of flagged) {
+      ensureSpace(doc, 30);
+      const severityLabel = fa.flag.severity.charAt(0).toUpperCase() + fa.flag.severity.slice(1);
+      const color = fa.flag.severity === "critical" ? BRAND.red : fa.flag.severity === "warning" ? BRAND.amber : BRAND.teal;
+      doc.font("Helvetica-Bold").fontSize(8).fillColor(color);
+      doc.text(`[${severityLabel}] `, doc.page.margins.left, doc.y, { continued: true });
+      doc.font("Helvetica").fontSize(8).fillColor(BRAND.black);
+      doc.text(fa.flag.currentValue);
+      if (fa.userExplanation.trim()) {
+        doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray);
+        doc.text(`  Explanation: ${fa.userExplanation}`, doc.page.margins.left + 10, doc.y, {
+          width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
+        });
+      }
+      doc.moveDown(0.2);
+    }
+  }
+
+  doc.moveDown(0.5);
 }
 
 function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket) {

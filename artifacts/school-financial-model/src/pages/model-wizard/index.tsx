@@ -23,6 +23,7 @@ const StaffingStep = lazy(() => import("./steps/StaffingStep").then(m => ({ defa
 const ExpenseStep = lazy(() => import("./steps/ExpenseStep").then(m => ({ default: m.ExpenseStep })));
 const ReviewStep = lazy(() => import("./steps/ReviewStep").then(m => ({ default: m.ReviewStep })));
 const ConsultantStep = lazy(() => import("./steps/ConsultantStep").then(m => ({ default: m.ConsultantStep })));
+const NarrativeStep = lazy(() => import("./steps/NarrativeStep").then(m => ({ default: m.NarrativeStep })));
 const ExportStep = lazy(() => import("./steps/ExportStep").then(m => ({ default: m.ExportStep })));
 
 function cleanFacilityFieldsForSave(obj: Record<string, unknown>, ot: string | undefined): Record<string, unknown> {
@@ -64,7 +65,8 @@ const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[
   { id: 6, title: "Expenses", component: ExpenseStep as ComponentType<StepProps> },
   { id: 7, title: "Review", component: ReviewStep as ComponentType<StepProps> },
   { id: 8, title: "Consultant", component: ConsultantStep as ComponentType<StepProps> },
-  { id: 9, title: "Export", component: ExportStep as ComponentType<StepProps> },
+  { id: 9, title: "Narrative", component: NarrativeStep as ComponentType<StepProps> },
+  { id: 10, title: "Export", component: ExportStep as ComponentType<StepProps> },
 ];
 
 function sendModelTiming(step: number, stepName: string, durationSeconds: number, modelId: number) {
@@ -200,6 +202,18 @@ export function ModelWizardPage() {
         note?: string;
       }>,
       priorYearSnapshot: {},
+      budgetNarrative: {
+        missionAndVision: "",
+        enrollmentStrategy: "",
+        retentionPlan: "",
+        riskMitigation: "",
+        revenueAssumptions: "",
+        staffingPhilosophy: "",
+        expenseAssumptions: "",
+        growthStrategy: "",
+        additionalContext: "",
+      },
+      assumptionFlagResponses: [] as Array<{ field: string; flagType: string; reason: string }>,
     },
     mode: "onChange"
   });
@@ -396,7 +410,7 @@ export function ModelWizardPage() {
 
   const ActiveStepComponent = STEPS[currentStep - 1].component;
   const isLastStep = currentStep === STEPS.length;
-  const isExportStep = currentStep === 9;
+  const isExportStep = currentStep === STEPS.length;
 
   const handleNext = async () => {
     const validateStep = async (step: number): Promise<boolean> => {

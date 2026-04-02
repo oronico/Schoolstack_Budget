@@ -524,6 +524,28 @@ export const CreateModelBody = zod.object({
         minCapacityUtil: zod.number().optional(),
       })
       .optional(),
+    budgetNarrative: zod
+      .object({
+        missionAndVision: zod.string().optional(),
+        enrollmentStrategy: zod.string().optional(),
+        retentionPlan: zod.string().optional(),
+        riskMitigation: zod.string().optional(),
+        revenueAssumptions: zod.string().optional(),
+        staffingPhilosophy: zod.string().optional(),
+        expenseAssumptions: zod.string().optional(),
+        growthStrategy: zod.string().optional(),
+        additionalContext: zod.string().optional(),
+      })
+      .optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
   }),
 });
 
@@ -950,6 +972,28 @@ export const GetModelResponse = zod.object({
         minMonthsRunway: zod.number().optional(),
         minCapacityUtil: zod.number().optional(),
       })
+      .optional(),
+    budgetNarrative: zod
+      .object({
+        missionAndVision: zod.string().optional(),
+        enrollmentStrategy: zod.string().optional(),
+        retentionPlan: zod.string().optional(),
+        riskMitigation: zod.string().optional(),
+        revenueAssumptions: zod.string().optional(),
+        staffingPhilosophy: zod.string().optional(),
+        expenseAssumptions: zod.string().optional(),
+        growthStrategy: zod.string().optional(),
+        additionalContext: zod.string().optional(),
+      })
+      .optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          reason: zod.string().optional(),
+        }),
+      )
       .optional(),
   }),
   updatedAt: zod.date(),
@@ -1379,6 +1423,28 @@ export const UpdateModelBody = zod.object({
         minCapacityUtil: zod.number().optional(),
       })
       .optional(),
+    budgetNarrative: zod
+      .object({
+        missionAndVision: zod.string().optional(),
+        enrollmentStrategy: zod.string().optional(),
+        retentionPlan: zod.string().optional(),
+        riskMitigation: zod.string().optional(),
+        revenueAssumptions: zod.string().optional(),
+        staffingPhilosophy: zod.string().optional(),
+        expenseAssumptions: zod.string().optional(),
+        growthStrategy: zod.string().optional(),
+        additionalContext: zod.string().optional(),
+      })
+      .optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
   }),
 });
 
@@ -1800,6 +1866,28 @@ export const UpdateModelResponse = zod.object({
         minMonthsRunway: zod.number().optional(),
         minCapacityUtil: zod.number().optional(),
       })
+      .optional(),
+    budgetNarrative: zod
+      .object({
+        missionAndVision: zod.string().optional(),
+        enrollmentStrategy: zod.string().optional(),
+        retentionPlan: zod.string().optional(),
+        riskMitigation: zod.string().optional(),
+        revenueAssumptions: zod.string().optional(),
+        staffingPhilosophy: zod.string().optional(),
+        expenseAssumptions: zod.string().optional(),
+        growthStrategy: zod.string().optional(),
+        additionalContext: zod.string().optional(),
+      })
+      .optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          reason: zod.string().optional(),
+        }),
+      )
       .optional(),
   }),
   updatedAt: zod.date(),
@@ -2249,6 +2337,28 @@ export const ArchiveModelResponse = zod.object({
         minMonthsRunway: zod.number().optional(),
         minCapacityUtil: zod.number().optional(),
       })
+      .optional(),
+    budgetNarrative: zod
+      .object({
+        missionAndVision: zod.string().optional(),
+        enrollmentStrategy: zod.string().optional(),
+        retentionPlan: zod.string().optional(),
+        riskMitigation: zod.string().optional(),
+        revenueAssumptions: zod.string().optional(),
+        staffingPhilosophy: zod.string().optional(),
+        expenseAssumptions: zod.string().optional(),
+        growthStrategy: zod.string().optional(),
+        additionalContext: zod.string().optional(),
+      })
+      .optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          reason: zod.string().optional(),
+        }),
+      )
       .optional(),
   }),
   updatedAt: zod.date(),

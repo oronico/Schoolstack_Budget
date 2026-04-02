@@ -2,6 +2,7 @@ import { generateTopIssues } from "./decision-rules";
 import { generateHealthSignals, type HealthSignal } from "./financial-health";
 import { computeDaysCashOnHand, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER } from "./workbook-helpers.js";
 import { computeAnnualDebt } from "@workspace/finance";
+import { detectUnusualAssumptions } from "./assumption-flags";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -335,6 +336,7 @@ export interface ConsultantOutput {
   topIssues: import("./decision-rules").DecisionIssue[];
   healthSignals: HealthSignal[];
   lendingLabAssessment: LendingLabAssessment;
+  assumptionFlags: import("./assumption-flags").AssumptionFlag[];
   generatedAt: string;
 }
 
@@ -2691,6 +2693,13 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   const lendingLabAssessment = assessLendingLabReadiness(data, yearFinancials, enrollmentByYear);
 
+  let assumptionFlags: import("./assumption-flags").AssumptionFlag[] = [];
+  try {
+    assumptionFlags = detectUnusualAssumptions(rawData);
+  } catch {
+    assumptionFlags = [];
+  }
+
   return {
     executiveSummary,
     biggestStrength,
@@ -2709,6 +2718,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     topIssues,
     healthSignals,
     lendingLabAssessment,
+    assumptionFlags,
     generatedAt: new Date().toISOString(),
   };
 }
