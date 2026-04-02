@@ -23,7 +23,32 @@ import { generateFormulaWorkbook } from "../lib/formula-export";
 import { generateWorkbook } from "../lib/excel-export";
 import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
+import { type AssumptionFlag } from "../lib/assumption-flags";
 import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
+
+function checkUnresolvedFlags(
+  flags: AssumptionFlag[],
+  responses: Array<{ field: string; flagType: string; reason?: string }>,
+): { blocked: boolean; message: string } {
+  const responseMap = new Map<string, string>();
+  for (const r of responses) {
+    responseMap.set(`${r.flagType}:${r.field}`, r.reason || "");
+  }
+  const unresolved = flags.filter(
+    f => (f.severity === "critical" || f.severity === "warning") &&
+         !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
+  );
+  if (unresolved.length === 0) return { blocked: false, message: "" };
+  const critCount = unresolved.filter(f => f.severity === "critical").length;
+  const warnCount = unresolved.filter(f => f.severity === "warning").length;
+  const parts = [];
+  if (critCount > 0) parts.push(`${critCount} critical`);
+  if (warnCount > 0) parts.push(`${warnCount} warning`);
+  return {
+    blocked: true,
+    message: `Export blocked: ${parts.join(" and ")} assumption flag(s) require an explanation before exporting.`,
+  };
+}
 import { buildLenderPacket } from "../lib/packets/build-lender-packet";
 import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
@@ -511,6 +536,15 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    const raw = data as unknown as Record<string, unknown>;
+    const flagResponses = (raw.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
+    const flagCheck = checkUnresolvedFlags(consultantOutput.assumptionFlags || [], flagResponses);
+    if (flagCheck.blocked) {
+      res.status(422).json({ error: flagCheck.message });
+      return;
+    }
+
     const packet = buildLenderPacket(data as any, consultantOutput, model.id);
 
     res.json(packet);
@@ -540,11 +574,20 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
     }
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    const consultantOutput = await runConsultantEngine(data);
+
+    const raw = data as unknown as Record<string, unknown>;
+    const flagResponses = (raw.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
+    const flagCheck = checkUnresolvedFlags(consultantOutput.assumptionFlags || [], flagResponses);
+    if (flagCheck.blocked) {
+      res.status(422).json({ error: flagCheck.message });
+      return;
+    }
+
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const consultantOutput = await runConsultantEngine(data);
     const packet = buildLenderPacket(data as any, consultantOutput, model.id);
     const buffer = await generateLenderPacketPDF(packet);
 
@@ -584,6 +627,15 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    const raw = data as unknown as Record<string, unknown>;
+    const flagResponses = (raw.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
+    const flagCheck = checkUnresolvedFlags(consultantOutput.assumptionFlags || [], flagResponses);
+    if (flagCheck.blocked) {
+      res.status(422).json({ error: flagCheck.message });
+      return;
+    }
+
     const packet = buildBoardPacket(data as any, consultantOutput, model.id);
 
     res.json(packet);
@@ -613,11 +665,20 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
     }
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    const consultantOutput = await runConsultantEngine(data);
+
+    const raw = data as unknown as Record<string, unknown>;
+    const flagResponses = (raw.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
+    const flagCheck = checkUnresolvedFlags(consultantOutput.assumptionFlags || [], flagResponses);
+    if (flagCheck.blocked) {
+      res.status(422).json({ error: flagCheck.message });
+      return;
+    }
+
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const consultantOutput = await runConsultantEngine(data);
     const packet = buildBoardPacket(data as any, consultantOutput, model.id);
     const buffer = await generateBoardPacketPDF(packet);
 
@@ -660,6 +721,15 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    const raw1 = data as unknown as Record<string, unknown>;
+    const flagResponses1 = (raw1.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
+    const flagCheck1 = checkUnresolvedFlags(consultantOutput.assumptionFlags || [], flagResponses1);
+    if (flagCheck1.blocked) {
+      res.status(422).json({ error: flagCheck1.message });
+      return;
+    }
+
     const computedFlags = (consultantOutput.assumptionFlags || []).map(f => ({
       field: f.field,
       flagType: f.flagType,
@@ -710,6 +780,15 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    const raw2 = data as unknown as Record<string, unknown>;
+    const flagResponses2 = (raw2.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
+    const flagCheck2 = checkUnresolvedFlags(consultantOutput.assumptionFlags || [], flagResponses2);
+    if (flagCheck2.blocked) {
+      res.status(422).json({ error: flagCheck2.message });
+      return;
+    }
+
     const computedFlags = (consultantOutput.assumptionFlags || []).map(f => ({
       field: f.field,
       flagType: f.flagType,
