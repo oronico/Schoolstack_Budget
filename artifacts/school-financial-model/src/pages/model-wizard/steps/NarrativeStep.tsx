@@ -92,10 +92,10 @@ interface ConsultantFlag {
   currentValue?: string;
 }
 
-interface RevenueComp {
-  source: string;
-  amount: number;
-  percentage: number;
+interface EngineRevenueComposition {
+  tuitionPct: number;
+  publicPct: number;
+  philanthropyPct: number;
 }
 
 interface KeyMetricData {
@@ -105,7 +105,7 @@ interface KeyMetricData {
 
 interface ConsultantEngineData {
   assumptionFlags?: ConsultantFlag[];
-  revenueComposition?: RevenueComp[];
+  revenueComposition?: EngineRevenueComposition[];
   keyMetrics?: KeyMetricData[];
 }
 
@@ -134,10 +134,15 @@ function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, en
   if (key === "revenueAssumptions") {
     const revComp = engineData?.revenueComposition;
     if (revComp && revComp.length > 0) {
-      const total = revComp.reduce((sum, r) => sum + r.amount, 0);
-      const lines = revComp.filter(r => r.amount > 0).map(r => `${r.source}: ${fmt$(r.amount)} (${r.percentage.toFixed(0)}%)`);
-      if (total > 0) {
-        return `Year 1 projected revenue: ${fmt$(total)}. Breakdown: ${lines.join("; ")}.`;
+      const y1Rev = revComp[0];
+      const sources: string[] = [];
+      if (y1Rev.tuitionPct > 0) sources.push(`Tuition: ${(y1Rev.tuitionPct * 100).toFixed(0)}%`);
+      if (y1Rev.publicPct > 0) sources.push(`Public funding: ${(y1Rev.publicPct * 100).toFixed(0)}%`);
+      if (y1Rev.philanthropyPct > 0) sources.push(`Philanthropy: ${(y1Rev.philanthropyPct * 100).toFixed(0)}%`);
+      const otherPct = 1 - y1Rev.tuitionPct - y1Rev.publicPct - y1Rev.philanthropyPct;
+      if (otherPct > 0.005) sources.push(`Other: ${(otherPct * 100).toFixed(0)}%`);
+      if (sources.length > 0) {
+        return `Year 1 projected revenue composition: ${sources.join("; ")}.`;
       }
     }
   }
@@ -239,7 +244,7 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
           const currentVal = narrative[section.key] || "";
           const engineDataForPrefill: ConsultantEngineData = {
             assumptionFlags: assumptionFlags as ConsultantFlag[],
-            revenueComposition: (consultantData as unknown as Record<string, unknown>)?.revenueComposition as RevenueComp[] | undefined,
+            revenueComposition: (consultantData as unknown as Record<string, unknown>)?.revenueComposition as EngineRevenueComposition[] | undefined,
             keyMetrics: (consultantData as unknown as Record<string, unknown>)?.keyMetrics as KeyMetricData[] | undefined,
           };
           const prefill = buildPrefill(section.key, formValues, engineDataForPrefill);

@@ -461,11 +461,11 @@ export function ModelWizardPage() {
             if (consultantRes.ok) {
               const consultantData = await consultantRes.json();
               const flags = (consultantData?.assumptionFlags || []) as Array<{ field: string; flagType: string; severity: string }>;
-              const unresolvedCritical = flags.filter(
-                f => f.severity === "critical" && !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
+              const unresolved = flags.filter(
+                f => (f.severity === "critical" || f.severity === "warning") && !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
               );
-              if (unresolvedCritical.length > 0) {
-                alert(`Please address ${unresolvedCritical.length} critical assumption flag(s) before proceeding to Export.`);
+              if (unresolved.length > 0) {
+                alert(`Please address all ${unresolved.length} flagged assumption(s) before proceeding to Export. Lenders should never see unexplained anomalies.`);
                 return false;
               }
             }

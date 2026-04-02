@@ -34,14 +34,14 @@ function checkUnresolvedFlags(
   for (const r of responses) {
     responseMap.set(`${r.flagType}:${r.field}`, r.reason || "");
   }
-  const unresolvedCritical = flags.filter(
-    f => f.severity === "critical" &&
+  const unresolved = flags.filter(
+    f => (f.severity === "critical" || f.severity === "warning") &&
          !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
   );
-  if (unresolvedCritical.length === 0) return { blocked: false, message: "" };
+  if (unresolved.length === 0) return { blocked: false, message: "" };
   return {
     blocked: true,
-    message: `Export blocked: ${unresolvedCritical.length} critical assumption flag(s) require an explanation before exporting.`,
+    message: `Export blocked: ${unresolved.length} flagged assumption(s) require an explanation before exporting. Lenders should never see unexplained anomalies.`,
   };
 }
 import { buildLenderPacket } from "../lib/packets/build-lender-packet";
@@ -358,6 +358,13 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
 
+    const rawData = data as unknown as Record<string, unknown>;
+    const existingResponses = (rawData.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
+    const responseMap = new Map<string, string>();
+    for (const r of existingResponses) {
+      responseMap.set(`${r.flagType}:${r.field}`, r.reason || "");
+    }
+
     const persistedFlags = (consultantOutput.assumptionFlags || []).map(f => ({
       field: f.field,
       flagType: f.flagType,
@@ -365,6 +372,7 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
       currentValue: f.currentValue,
       benchmark: f.benchmark,
       defaultPrompt: f.defaultPrompt,
+      reason: responseMap.get(`${f.flagType}:${f.field}`) || "",
     }));
     const updatedData = { ...data, assumptionFlags: persistedFlags };
 
@@ -377,7 +385,11 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
       })
       .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)));
 
-    res.json(consultantOutput);
+    const outputWithReasons = {
+      ...consultantOutput,
+      assumptionFlags: persistedFlags,
+    };
+    res.json(outputWithReasons);
   } catch (err) {
     console.error("Consultant engine error:", err);
     res.status(500).json({ error: "Something went wrong running the consultant analysis." });
