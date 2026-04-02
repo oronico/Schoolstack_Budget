@@ -796,7 +796,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         <div className="flex-1">
           <p className="text-sm font-semibold text-foreground mb-1">Want a real advisor to look at this?</p>
           <p className="text-sm text-muted-foreground">
-            Request a free expert review — our school finance team will walk through your model and send you personalized feedback within 2 business days.
+            Request a free expert review — our school finance team will walk through your model and send you personalized feedback within 5–7 business days.
           </p>
         </div>
         <button

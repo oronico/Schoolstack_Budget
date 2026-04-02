@@ -215,7 +215,7 @@ export async function sendReviewConfirmation(toEmail: string, requesterName: str
         Hi ${escapeHtml(requesterName)},
       </p>
       <p style="color:#475569;line-height:1.6;">
-        We've received your request to review the financial model for <strong>${escapeHtml(schoolName)}</strong>. Our team will look it over and get back to you within <strong>2 business days</strong>.
+        We've received your request to review the financial model for <strong>${escapeHtml(schoolName)}</strong>. Our team will look it over and get back to you within <strong>5–7 business days</strong>.
       </p>
       <p style="color:#475569;line-height:1.6;">
         In the meantime, feel free to continue refining your model — any changes you make will be reflected when we review it.
@@ -237,7 +237,7 @@ export async function sendReviewConfirmation(toEmail: string, requesterName: str
       to: [toEmail],
       subject: `Review request received — ${schoolName}`,
       html,
-      text: `Hi ${requesterName},\n\nWe've received your request to review the financial model for ${schoolName}. Our team will look it over and get back to you within 2 business days.\n\nThanks for using SchoolStack Budget.\n— The SchoolStack Team`,
+      text: `Hi ${requesterName},\n\nWe've received your request to review the financial model for ${schoolName}. Our team will look it over and get back to you within 5-7 business days.\n\nThanks for using SchoolStack Budget.\n— The SchoolStack Team`,
     });
     if (error) {
       console.error("[mailer] Confirmation error:", error);
@@ -247,6 +247,182 @@ export async function sendReviewConfirmation(toEmail: string, requesterName: str
   } catch (err) {
     console.error("[mailer] Confirmation failed:", err);
     return { success: false, error: "Failed to send confirmation." };
+  }
+}
+
+export interface ReviewFeedbackData {
+  recipientName: string;
+  recipientEmail: string;
+  schoolName: string;
+  strengths: string;
+  watchItems: string;
+  recommendations: string;
+  metrics: {
+    y1Revenue: number;
+    y1NetMargin: number;
+    dscr: number;
+    cashRunwayMonths: number;
+    lenderReadiness: string;
+  };
+  dashboardUrl?: string;
+}
+
+function nl2br(str: string): string {
+  return escapeHtml(str).replace(/\n/g, "<br/>");
+}
+
+export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ success: boolean; error?: string }> {
+  const resend = getResend();
+  const fromAddress = process.env.EMAIL_FROM;
+
+  if (!resend || !fromAddress) {
+    return { success: false, error: "Email service is not configured." };
+  }
+
+  const firstName = data.recipientName.split(" ")[0] || data.recipientName;
+
+  const metricsTable = `
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;">
+      <tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:14px;">Year 1 Revenue</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${fmtCurrency(data.metrics.y1Revenue)}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:14px;">Year 1 Net Margin</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${(data.metrics.y1NetMargin * 100).toFixed(1)}%</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:14px;">DSCR (Debt Service Coverage)</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${data.metrics.dscr.toFixed(2)}x</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:14px;">Cash Runway</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${data.metrics.cashRunwayMonths} months</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;color:#475569;font-size:14px;">Lending Readiness</td>
+        <td style="padding:8px 12px;color:#1E293B;font-weight:600;text-align:right;font-size:14px;">${escapeHtml(data.metrics.lenderReadiness)}</td>
+      </tr>
+    </table>
+  `;
+
+  const sections: string[] = [];
+
+  if (data.strengths.trim()) {
+    sections.push(`
+      <div style="margin-bottom:24px;">
+        <div style="font-family:'Quicksand',Arial,sans-serif;font-weight:700;font-size:15px;color:#328555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;border-bottom:2px solid #328555;padding-bottom:4px;">What looks strong</div>
+        <p style="color:#475569;line-height:1.7;font-size:15px;margin:0;">${nl2br(data.strengths)}</p>
+      </div>
+    `);
+  }
+
+  if (data.watchItems.trim()) {
+    sections.push(`
+      <div style="margin-bottom:24px;">
+        <div style="font-family:'Quicksand',Arial,sans-serif;font-weight:700;font-size:15px;color:#D97706;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;border-bottom:2px solid #D97706;padding-bottom:4px;">What to keep an eye on</div>
+        <p style="color:#475569;line-height:1.7;font-size:15px;margin:0;">${nl2br(data.watchItems)}</p>
+      </div>
+    `);
+  }
+
+  if (data.recommendations.trim()) {
+    sections.push(`
+      <div style="margin-bottom:24px;">
+        <div style="font-family:'Quicksand',Arial,sans-serif;font-weight:700;font-size:15px;color:#0D9488;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;border-bottom:2px solid #0D9488;padding-bottom:4px;">Our recommendations</div>
+        <p style="color:#475569;line-height:1.7;font-size:15px;margin:0;">${nl2br(data.recommendations)}</p>
+      </div>
+    `);
+  }
+
+  const html = `
+    <div style="font-family:'Nunito',Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px;">
+      <div style="background:#1E293B;border-radius:12px 12px 0 0;padding:20px 24px;text-align:center;margin-bottom:0;">
+        <span style="color:#328555;font-family:'Quicksand',Arial,sans-serif;font-size:18px;font-weight:700;">SchoolStack</span>
+        <span style="color:white;font-family:'Quicksand',Arial,sans-serif;font-size:18px;font-weight:700;"> Budget</span>
+      </div>
+      <div style="border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px;padding:32px 24px;">
+        <p style="color:#1E293B;font-size:16px;line-height:1.6;margin-top:0;">
+          Hi ${escapeHtml(firstName)},
+        </p>
+        <p style="color:#475569;font-size:15px;line-height:1.6;">
+          Thank you for sharing your financial model with us. We've reviewed <strong>${escapeHtml(data.schoolName)}</strong>'s 5-year plan, and here's what we found.
+        </p>
+
+        ${sections.join("")}
+
+        <div style="margin:28px 0;background:#FAF9F7;border-radius:12px;padding:20px;">
+          <div style="font-family:'Quicksand',Arial,sans-serif;font-weight:700;font-size:15px;color:#1E293B;margin-bottom:12px;">Your key numbers at a glance</div>
+          ${metricsTable}
+        </div>
+
+        <div style="margin-bottom:24px;">
+          <div style="font-family:'Quicksand',Arial,sans-serif;font-weight:700;font-size:15px;color:#1E293B;margin-bottom:8px;">What's next</div>
+          <p style="color:#475569;line-height:1.7;font-size:15px;margin:0;">
+            Your model is saved in your SchoolStack Budget dashboard. You can update your assumptions anytime and re-run your analysis.
+          </p>
+          <p style="color:#475569;line-height:1.7;font-size:15px;margin:12px 0 0 0;">
+            If you have questions about this review or want to talk through your plan, just reply to this email — we read every one.
+          </p>
+        </div>
+
+        <p style="color:#1E293B;font-size:15px;line-height:1.6;margin-bottom:0;">
+          Wishing you the best,
+        </p>
+        <p style="color:#1E293B;font-size:15px;font-weight:600;margin-top:4px;">
+          The SchoolStack Team
+        </p>
+      </div>
+      <div style="text-align:center;padding:16px 0;">
+        <p style="color:#94A3B8;font-size:12px;margin:0;">SchoolStack Budget by SchoolStack.ai</p>
+      </div>
+    </div>
+  `;
+
+  const plainSections: string[] = [];
+  if (data.strengths.trim()) plainSections.push(`WHAT LOOKS STRONG\n${data.strengths}\n`);
+  if (data.watchItems.trim()) plainSections.push(`WHAT TO KEEP AN EYE ON\n${data.watchItems}\n`);
+  if (data.recommendations.trim()) plainSections.push(`OUR RECOMMENDATIONS\n${data.recommendations}\n`);
+
+  const text = [
+    `Hi ${firstName},`,
+    "",
+    `Thank you for sharing your financial model with us. We've reviewed ${data.schoolName}'s 5-year plan, and here's what we found.`,
+    "",
+    ...plainSections,
+    "YOUR KEY NUMBERS AT A GLANCE",
+    `Year 1 Revenue: ${fmtCurrency(data.metrics.y1Revenue)}`,
+    `Year 1 Net Margin: ${(data.metrics.y1NetMargin * 100).toFixed(1)}%`,
+    `DSCR (Debt Service Coverage): ${data.metrics.dscr.toFixed(2)}x`,
+    `Cash Runway: ${data.metrics.cashRunwayMonths} months`,
+    `Lending Readiness: ${data.metrics.lenderReadiness}`,
+    "",
+    "WHAT'S NEXT",
+    "Your model is saved in your SchoolStack Budget dashboard. You can update your assumptions anytime and re-run your analysis.",
+    "",
+    "If you have questions about this review or want to talk through your plan, just reply to this email — we read every one.",
+    "",
+    "Wishing you the best,",
+    "The SchoolStack Team",
+  ].join("\n");
+
+  try {
+    const { error } = await resend.emails.send({
+      from: fromAddress,
+      to: [data.recipientEmail],
+      subject: `Your SchoolStack Budget Review — ${data.schoolName}`,
+      html,
+      text,
+      replyTo: fromAddress,
+    });
+    if (error) {
+      console.error("[mailer] Review feedback error:", error);
+      return { success: false, error: "Failed to send review feedback." };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error("[mailer] Review feedback failed:", err);
+    return { success: false, error: "Failed to send review feedback." };
   }
 }
 

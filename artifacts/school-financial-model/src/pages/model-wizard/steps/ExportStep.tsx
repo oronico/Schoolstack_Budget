@@ -229,7 +229,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
                 </p>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Free of charge</span>
-                  <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> 2-day turnaround</span>
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> 5–7 day turnaround</span>
                   <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Personalized feedback</span>
                 </div>
               </div>
@@ -289,7 +289,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
                 <h3 className="font-display font-bold text-xl text-green-900">Review requested — we'll be in touch</h3>
               </div>
               <p className="text-green-700 text-sm">
-                Check your email for a confirmation. Our advisors will review your model and get back to you within 2 business days.
+                Check your email for a confirmation. Our advisors will review your model and get back to you within 5–7 business days.
               </p>
             </div>
           ) : showReviewForm ? (
@@ -300,7 +300,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
                 </div>
                 <h3 className="font-display font-bold text-xl text-foreground">Request Your Free Review</h3>
               </div>
-              <p className="text-muted-foreground text-sm mb-6">Our school finance advisors will review your model and send personalized feedback within 2 business days — completely free.</p>
+              <p className="text-muted-foreground text-sm mb-6">Our school finance advisors will review your model and send personalized feedback within 5–7 business days — completely free.</p>
               <form onSubmit={handleReviewSubmit} className="space-y-4 text-left">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>

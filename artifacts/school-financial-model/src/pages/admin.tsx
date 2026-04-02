@@ -25,6 +25,11 @@ import {
   ChevronDown,
   ChevronRight,
   Star,
+  ClipboardCheck,
+  Send,
+  CheckCircle2,
+  ArrowLeft,
+  Eye,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -508,13 +513,485 @@ function ErrorsSection() {
   );
 }
 
+interface ReviewItem {
+  eventId: number;
+  modelId: number;
+  userId: number | null;
+  requesterName: string;
+  requesterEmail: string;
+  schoolName: string;
+  modelName: string;
+  requestedAt: string;
+  feedbackSent: boolean;
+}
+
+interface ReviewAnalysis {
+  modelName: string;
+  schoolName: string;
+  state: string;
+  requesterName: string;
+  requesterEmail: string;
+  lenderReadiness: string;
+  executiveSummary: string;
+  biggestStrength: string;
+  biggestRisk: string;
+  topIssues: { title: string; severity: string; explanation: string }[];
+  yearFinancials: {
+    year: number;
+    students: number;
+    totalRevenue: number;
+    totalExpenses: number;
+    netIncome: number;
+    netMargin: number;
+    debtService: number;
+  }[];
+  metrics: {
+    y1Revenue: number;
+    y1NetMargin: number;
+    dscr: number;
+    cashRunwayMonths: number;
+    reserveMonths: number;
+    daysCashOnHand: number;
+    lenderReadiness: string;
+  };
+}
+
+function fmtCurrency(n: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
+function SeverityBadge({ severity }: { severity: string }) {
+  const colors: Record<string, string> = {
+    critical: "bg-red-100 text-red-700",
+    high: "bg-orange-100 text-orange-700",
+    medium: "bg-amber-100 text-amber-700",
+    low: "bg-green-100 text-green-700",
+  };
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colors[severity] || "bg-gray-100 text-gray-700"}`}>
+      {severity}
+    </span>
+  );
+}
+
+function LenderBadge({ readiness }: { readiness: string }) {
+  const colors: Record<string, string> = {
+    "Strong": "bg-green-100 text-green-700 border-green-200",
+    "Needs Work": "bg-amber-100 text-amber-700 border-amber-200",
+    "Not Yet Ready": "bg-red-100 text-red-700 border-red-200",
+  };
+  return (
+    <span className={`text-sm font-bold px-3 py-1 rounded-xl border ${colors[readiness] || "bg-gray-100 text-gray-700 border-gray-200"}`}>
+      {readiness}
+    </span>
+  );
+}
+
+function ReviewsSection() {
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
+  const [analysis, setAnalysis] = useState<ReviewAnalysis | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [filter, setFilter] = useState<"all" | "pending" | "sent">("all");
+
+  const [strengths, setStrengths] = useState("");
+  const [watchItems, setWatchItems] = useState("");
+  const [recommendations, setRecommendations] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/reviews");
+      if (!res.ok) throw new Error("Failed to fetch reviews");
+      const json = await res.json();
+      setReviews(json.reviews || []);
+    } catch {
+      setError("Failed to load review queue.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
+
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  const openReview = async (modelId: number) => {
+    setSelectedModelId(modelId);
+    setAnalysisLoading(true);
+    setAnalysis(null);
+    setAnalysisError(null);
+    setSendSuccess(false);
+    setSendError(null);
+    setStrengths("");
+    setWatchItems("");
+    setRecommendations("");
+    try {
+      const res = await fetch(`/api/admin/reviews/${modelId}/analysis`);
+      if (!res.ok) throw new Error("Failed to fetch analysis");
+      const json = await res.json();
+      setAnalysis(json);
+
+      if (json.biggestStrength) setStrengths(json.biggestStrength);
+      if (json.biggestRisk) setWatchItems(json.biggestRisk);
+      const recs = json.topIssues
+        ?.filter((i: { severity: string }) => i.severity === "critical" || i.severity === "high")
+        .slice(0, 3)
+        .map((i: { title: string; explanation: string }) => `• ${i.title}: ${i.explanation}`)
+        .join("\n");
+      if (recs) setRecommendations(recs);
+    } catch {
+      setAnalysisError("Failed to load analysis.");
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!analysis || !selectedModelId) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      const res = await fetch(`/api/admin/reviews/${selectedModelId}/send-feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientName: analysis.requesterName,
+          recipientEmail: analysis.requesterEmail,
+          schoolName: analysis.schoolName,
+          strengths,
+          watchItems,
+          recommendations,
+          metrics: analysis.metrics,
+        }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Failed to send");
+      }
+      setSendSuccess(true);
+      setReviews(prev => prev.map(r =>
+        r.modelId === selectedModelId ? { ...r, feedbackSent: true } : r
+      ));
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : "Failed to send feedback.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const filteredReviews = reviews.filter(r => {
+    if (filter === "pending") return !r.feedbackSent;
+    if (filter === "sent") return r.feedbackSent;
+    return true;
+  });
+
+  const pendingCount = reviews.filter(r => !r.feedbackSent).length;
+
+  if (selectedModelId) {
+    return (
+      <div>
+        <button
+          onClick={() => { setSelectedModelId(null); setAnalysis(null); }}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to queue
+        </button>
+
+        {analysisLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : analysisError || !analysis ? (
+          <p className="text-destructive text-center py-12">{analysisError || "Failed to load analysis."}</p>
+        ) : (
+          <div className="space-y-6">
+            <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="font-display text-xl font-bold text-foreground">{analysis.schoolName}</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {analysis.requesterName} &middot; {analysis.requesterEmail}
+                  </p>
+                </div>
+                <LenderBadge readiness={analysis.lenderReadiness} />
+              </div>
+              <p className="text-sm text-foreground/80 leading-relaxed">{analysis.executiveSummary}</p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="bg-card border border-border/60 rounded-xl p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Y1 Revenue</p>
+                <p className="text-lg font-bold text-foreground">{fmtCurrency(analysis.metrics.y1Revenue)}</p>
+              </div>
+              <div className="bg-card border border-border/60 rounded-xl p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Y1 Margin</p>
+                <p className="text-lg font-bold text-foreground">{(analysis.metrics.y1NetMargin * 100).toFixed(1)}%</p>
+              </div>
+              <div className="bg-card border border-border/60 rounded-xl p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">DSCR</p>
+                <p className="text-lg font-bold text-foreground">{analysis.metrics.dscr.toFixed(2)}x</p>
+              </div>
+              <div className="bg-card border border-border/60 rounded-xl p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Cash Runway</p>
+                <p className="text-lg font-bold text-foreground">{analysis.metrics.cashRunwayMonths}mo</p>
+              </div>
+              <div className="bg-card border border-border/60 rounded-xl p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Days Cash</p>
+                <p className="text-lg font-bold text-foreground">{analysis.metrics.daysCashOnHand}</p>
+              </div>
+            </div>
+
+            {analysis.yearFinancials.length > 0 && (
+              <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm overflow-x-auto">
+                <h3 className="font-display text-sm font-bold text-foreground mb-3">5-Year Summary</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/60">
+                      <th className="text-left py-2 text-muted-foreground font-medium">Year</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Students</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Revenue</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Expenses</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Net Income</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.yearFinancials.map(yf => (
+                      <tr key={yf.year} className="border-b border-border/30">
+                        <td className="py-2 font-medium">Year {yf.year}</td>
+                        <td className="py-2 text-right">{yf.students}</td>
+                        <td className="py-2 text-right">{fmtCurrency(yf.totalRevenue)}</td>
+                        <td className="py-2 text-right">{fmtCurrency(yf.totalExpenses)}</td>
+                        <td className={`py-2 text-right font-semibold ${yf.netIncome >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {fmtCurrency(yf.netIncome)}
+                        </td>
+                        <td className="py-2 text-right">{(yf.netMargin * 100).toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {analysis.topIssues.length > 0 && (
+              <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+                <h3 className="font-display text-sm font-bold text-foreground mb-3">Top Issues</h3>
+                <div className="space-y-2">
+                  {analysis.topIssues.map((issue, i) => (
+                    <div key={i} className="flex items-start gap-3 py-2 border-b border-border/30 last:border-0">
+                      <SeverityBadge severity={issue.severity} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{issue.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{issue.explanation}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Send className="h-5 w-5 text-primary" />
+                <h3 className="font-display text-lg font-bold text-foreground">Compose Feedback</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                This will be emailed to {analysis.requesterName} ({analysis.requesterEmail}).
+                The fields below are pre-filled from the consultant engine — edit them to personalize.
+              </p>
+
+              {sendSuccess ? (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <p className="font-semibold text-green-900">Feedback sent successfully</p>
+                  <p className="text-sm text-green-700 mt-1">
+                    {analysis.requesterName} will receive the email shortly.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">
+                      What looks strong
+                    </label>
+                    <textarea
+                      value={strengths}
+                      onChange={(e) => setStrengths(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+                      placeholder="Highlight the model's strengths..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">
+                      What to keep an eye on
+                    </label>
+                    <textarea
+                      value={watchItems}
+                      onChange={(e) => setWatchItems(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+                      placeholder="Risks or areas that need attention..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">
+                      Our recommendations
+                    </label>
+                    <textarea
+                      value={recommendations}
+                      onChange={(e) => setRecommendations(e.target.value)}
+                      rows={4}
+                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+                      placeholder="Actionable recommendations for the founder..."
+                    />
+                  </div>
+
+                  {sendError && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                      <p className="text-sm text-red-700">{sendError}</p>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleSend}
+                    disabled={sending || (!strengths.trim() && !watchItems.trim() && !recommendations.trim())}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0"
+                  >
+                    {sending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    {sending ? "Sending..." : "Send Feedback Email"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <p className="text-destructive text-center py-12">{error}</p>;
+  }
+
+  if (reviews.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <ClipboardCheck className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+        <p className="text-muted-foreground">No review requests yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <button
+          onClick={() => setFilter("all")}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            filter === "all"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          All ({reviews.length})
+        </button>
+        <button
+          onClick={() => setFilter("pending")}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            filter === "pending"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Pending ({pendingCount})
+        </button>
+        <button
+          onClick={() => setFilter("sent")}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            filter === "sent"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Sent ({reviews.length - pendingCount})
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {filteredReviews.map((review) => (
+          <div
+            key={review.eventId}
+            className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm hover:border-primary/30 transition-colors"
+          >
+            <div className="flex items-start gap-4">
+              <div className={`p-2 rounded-xl flex-shrink-0 ${
+                review.feedbackSent
+                  ? "bg-green-100 text-green-600"
+                  : "bg-amber-100 text-amber-600"
+              }`}>
+                {review.feedbackSent
+                  ? <CheckCircle2 className="h-4 w-4" />
+                  : <ClipboardCheck className="h-4 w-4" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="text-sm font-semibold text-foreground">{review.schoolName}</span>
+                  {review.feedbackSent && (
+                    <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      Feedback sent
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {review.requesterName} &middot; {review.requesterEmail}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Model: {review.modelName} &middot; Requested {format(new Date(review.requestedAt), "MMM d, yyyy 'at' h:mm a")}
+                </p>
+              </div>
+              <button
+                onClick={() => openReview(review.modelId)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-primary text-primary-foreground shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex-shrink-0"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {review.feedbackSent ? "View" : "Review"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AdminPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"analytics" | "feedback" | "errors">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "feedback" | "errors" | "reviews">("analytics");
 
   useEffect(() => {
     async function fetchAnalytics() {
@@ -616,6 +1093,17 @@ export function AdminPage() {
               Feedback
             </button>
             <button
+              onClick={() => setActiveTab("reviews")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "reviews"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              Reviews
+            </button>
+            <button
               onClick={() => setActiveTab("errors")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === "errors"
@@ -631,6 +1119,8 @@ export function AdminPage() {
 
         {activeTab === "errors" ? (
           <ErrorsSection />
+        ) : activeTab === "reviews" ? (
+          <ReviewsSection />
         ) : activeTab === "feedback" ? (
           <FeedbackSection />
         ) : (

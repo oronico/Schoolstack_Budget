@@ -4,10 +4,22 @@ import {
   usersTable,
   financialModelsTable,
   exportsTable,
+  eventsTable,
 } from "@workspace/db/schema";
-import { count, countDistinct, gte, desc, sql, eq } from "drizzle-orm";
+import { count, countDistinct, gte, desc, sql, eq, and, inArray } from "drizzle-orm";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 import { adminMiddleware } from "../middlewares/admin";
+import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
+import { normalizeRevenueRows } from "../lib/workbook-helpers";
+import { sendReviewFeedback } from "../lib/mailer";
+import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
+
+function normalizeModelData(data: Record<string, unknown>): Record<string, unknown> {
+  if (Array.isArray(data.revenueRows)) {
+    return { ...data, revenueRows: normalizeRevenueRows(data.revenueRows as any) };
+  }
+  return data;
+}
 
 const router: IRouter = Router();
 
@@ -218,6 +230,284 @@ router.get(
     } catch (err) {
       console.error("Admin analytics error:", err);
       res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  },
+);
+
+router.get(
+  "/admin/reviews",
+  authMiddleware,
+  adminMiddleware,
+  async (_req: AuthRequest, res) => {
+    try {
+      const reviewEvents = await db
+        .select({
+          id: eventsTable.id,
+          userId: eventsTable.userId,
+          metadata: eventsTable.metadata,
+          createdAt: eventsTable.createdAt,
+        })
+        .from(eventsTable)
+        .where(eq(eventsTable.eventName, "requested_model_review"))
+        .orderBy(desc(eventsTable.createdAt));
+
+      const modelIds = reviewEvents
+        .map((e) => (e.metadata as Record<string, unknown>)?.modelId as number)
+        .filter((id): id is number => typeof id === "number");
+
+      const uniqueModelIds = [...new Set(modelIds)];
+
+      let modelsMap: Record<number, { name: string; schoolName: string; data: Record<string, unknown> }> = {};
+      if (uniqueModelIds.length > 0) {
+        const models = await db
+          .select({
+            id: financialModelsTable.id,
+            name: financialModelsTable.name,
+            data: financialModelsTable.data,
+          })
+          .from(financialModelsTable)
+          .where(inArray(financialModelsTable.id, uniqueModelIds));
+
+        for (const m of models) {
+          const d = m.data as Record<string, unknown>;
+          const profile = d?.schoolProfile as Record<string, unknown> | undefined;
+          const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
+          modelsMap[m.id] = { name: m.name, schoolName, data: d };
+        }
+      }
+
+      const userIds = reviewEvents
+        .map((e) => e.userId)
+        .filter((id): id is number => typeof id === "number");
+      const uniqueUserIds = [...new Set(userIds)];
+
+      let usersMap: Record<number, { name: string; email: string }> = {};
+      if (uniqueUserIds.length > 0) {
+        const users = await db
+          .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
+          .from(usersTable)
+          .where(inArray(usersTable.id, uniqueUserIds));
+        for (const u of users) {
+          usersMap[u.id] = { name: u.name, email: u.email };
+        }
+      }
+
+      const feedbackSentEvents = await db
+        .select({ metadata: eventsTable.metadata })
+        .from(eventsTable)
+        .where(eq(eventsTable.eventName, "review_feedback_sent"));
+
+      const sentModelIds = new Set(
+        feedbackSentEvents
+          .map((e) => (e.metadata as Record<string, unknown>)?.modelId as number)
+          .filter((id): id is number => typeof id === "number")
+      );
+
+      const reviews = reviewEvents.map((e) => {
+        const meta = e.metadata as Record<string, unknown>;
+        const modelId = meta?.modelId as number;
+        const model = modelsMap[modelId];
+        const user = e.userId ? usersMap[e.userId] : null;
+
+        return {
+          eventId: e.id,
+          modelId,
+          userId: e.userId,
+          requesterName: user?.name || "Unknown",
+          requesterEmail: user?.email || "Unknown",
+          schoolName: model?.schoolName || "Unknown",
+          modelName: model?.name || "Untitled",
+          requestedAt: e.createdAt.toISOString(),
+          feedbackSent: sentModelIds.has(modelId),
+        };
+      });
+
+      res.json({ reviews });
+    } catch (err) {
+      console.error("Admin reviews error:", err);
+      res.status(500).json({ error: "Failed to fetch reviews" });
+    }
+  },
+);
+
+router.get(
+  "/admin/reviews/:modelId/analysis",
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const modelId = parseInt(req.params.modelId, 10);
+      if (isNaN(modelId)) {
+        res.status(400).json({ error: "Invalid model ID." });
+        return;
+      }
+
+      const [model] = await db
+        .select()
+        .from(financialModelsTable)
+        .where(eq(financialModelsTable.id, modelId))
+        .limit(1);
+
+      if (!model) {
+        res.status(404).json({ error: "Model not found." });
+        return;
+      }
+
+      const data = normalizeModelData(model.data as Record<string, unknown>);
+      const consultantOutput = runConsultantEngine(data);
+      const yearFinancials = computeYearFinancialsFromData(data);
+
+      const profile = data.schoolProfile as Record<string, unknown> | undefined;
+      const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
+      const state = (typeof profile?.state === "string" ? profile.state : "") || "N/A";
+
+      const priorSnapshot = (data as Record<string, unknown>).priorYearSnapshot as Record<string, number> | undefined;
+      const y1StartingCash = priorSnapshot?.endingCash || 0;
+      const y1EndingCash = y1StartingCash + (yearFinancials[0]?.netIncome || 0);
+      const daysCashOnHand = computeDaysCashOnHand(y1EndingCash, yearFinancials[0]?.totalExpenses || 0);
+
+      const cf = consultantOutput.cumulativeFinancials || [];
+      const reserveMonths = cf.length > 0 ? cf[cf.length - 1].reserveMonths : 0;
+
+      const user = model.userId
+        ? await db.select({ name: usersTable.name, email: usersTable.email }).from(usersTable).where(eq(usersTable.id, model.userId)).limit(1).then(r => r[0])
+        : null;
+
+      res.json({
+        modelName: model.name,
+        schoolName,
+        state,
+        requesterName: user?.name || "Unknown",
+        requesterEmail: user?.email || "Unknown",
+        lenderReadiness: consultantOutput.lenderReadiness,
+        executiveSummary: consultantOutput.executiveSummary,
+        biggestStrength: consultantOutput.biggestStrength,
+        biggestRisk: consultantOutput.biggestRisk,
+        topIssues: consultantOutput.topIssues.slice(0, 8).map(i => ({
+          title: i.title,
+          severity: i.severity,
+          explanation: i.explanation,
+        })),
+        yearFinancials: yearFinancials.map(yf => ({
+          year: yf.year,
+          students: yf.students,
+          totalRevenue: yf.totalRevenue,
+          totalExpenses: yf.totalExpenses,
+          netIncome: yf.netIncome,
+          netMargin: yf.netMargin,
+          debtService: yf.debtService,
+        })),
+        metrics: {
+          y1Revenue: yearFinancials[0]?.totalRevenue || 0,
+          y1NetMargin: yearFinancials[0]?.netMargin || 0,
+          dscr: yearFinancials[0]?.debtService > 0
+            ? (yearFinancials[0].netIncome + yearFinancials[0].debtService) / yearFinancials[0].debtService
+            : 0,
+          cashRunwayMonths: consultantOutput.cashRunwayMonths || 0,
+          reserveMonths,
+          daysCashOnHand,
+          lenderReadiness: consultantOutput.lenderReadiness,
+        },
+      });
+    } catch (err) {
+      console.error("Admin review analysis error:", err);
+      res.status(500).json({ error: "Failed to fetch analysis" });
+    }
+  },
+);
+
+router.post(
+  "/admin/reviews/:modelId/send-feedback",
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const modelId = parseInt(req.params.modelId, 10);
+      if (isNaN(modelId)) {
+        res.status(400).json({ error: "Invalid model ID." });
+        return;
+      }
+
+      const { strengths, watchItems, recommendations, metrics } = req.body;
+
+      if (!strengths && !watchItems && !recommendations) {
+        res.status(400).json({ error: "At least one feedback section is required." });
+        return;
+      }
+
+      const [model] = await db
+        .select({
+          id: financialModelsTable.id,
+          name: financialModelsTable.name,
+          userId: financialModelsTable.userId,
+          data: financialModelsTable.data,
+        })
+        .from(financialModelsTable)
+        .where(eq(financialModelsTable.id, modelId))
+        .limit(1);
+
+      if (!model) {
+        res.status(404).json({ error: "Model not found." });
+        return;
+      }
+
+      if (!model.userId) {
+        res.status(400).json({ error: "Model has no associated user." });
+        return;
+      }
+
+      const [owner] = await db
+        .select({ name: usersTable.name, email: usersTable.email })
+        .from(usersTable)
+        .where(eq(usersTable.id, model.userId))
+        .limit(1);
+
+      if (!owner || !owner.email) {
+        res.status(400).json({ error: "Could not find model owner's email." });
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(owner.email)) {
+        res.status(400).json({ error: "Owner has an invalid email address." });
+        return;
+      }
+
+      const d = model.data as Record<string, unknown>;
+      const profile = d?.schoolProfile as Record<string, unknown> | undefined;
+      const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
+
+      const result = await sendReviewFeedback({
+        recipientName: owner.name,
+        recipientEmail: owner.email,
+        schoolName,
+        strengths: strengths || "",
+        watchItems: watchItems || "",
+        recommendations: recommendations || "",
+        metrics: metrics || {
+          y1Revenue: 0,
+          y1NetMargin: 0,
+          dscr: 0,
+          cashRunwayMonths: 0,
+          lenderReadiness: "N/A",
+        },
+      });
+
+      if (!result.success) {
+        res.status(500).json({ error: result.error || "Failed to send feedback email." });
+        return;
+      }
+
+      await db.insert(eventsTable).values({
+        userId: req.userId,
+        eventName: "review_feedback_sent",
+        metadata: { modelId, recipientEmail: owner.email, sentBy: req.userId },
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Send review feedback error:", err);
+      res.status(500).json({ error: "Failed to send feedback." });
     }
   },
 );
