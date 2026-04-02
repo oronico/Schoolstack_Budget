@@ -7,11 +7,7 @@ import { eq } from "drizzle-orm";
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("JWT_SECRET environment variable is required in production");
-    }
-    console.warn("[auth] JWT_SECRET not set — using insecure dev-only default. Never use this in production.");
-    return "schoolstack-dev-secret-DO-NOT-USE-IN-PROD";
+    throw new Error("JWT_SECRET environment variable is required. Set it before starting the server.");
   }
   return secret;
 }
