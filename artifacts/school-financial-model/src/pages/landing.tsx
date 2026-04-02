@@ -11,6 +11,11 @@ import {
   Download,
   CheckCircle2,
   Building2,
+  SlidersHorizontal,
+  Lightbulb,
+  RefreshCw,
+  Lock,
+  BookOpen,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { motion } from "framer-motion";
@@ -73,13 +78,16 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="max-w-3xl">
             <motion.div {...fadeUp} transition={{ duration: 0.6 }}>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#328555]/10 text-[#328555] font-bold text-sm mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#328555]/10 text-[#328555] font-bold text-sm mb-2">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#328555] opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-[#328555]" />
                 </span>
                 FREE DURING BETA
               </div>
+              <p className="text-sm text-[#1E293B]/50 mb-6">
+                Your data stays yours. When pricing launches, you'll get advance notice and the option to export everything.
+              </p>
 
               <h1 className="font-display text-5xl md:text-6xl font-bold text-[#1E293B] leading-tight mb-6">
                 Every school deserves a{" "}
@@ -208,6 +216,142 @@ export function LandingPage() {
             className="text-center mb-14"
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
+              Budget coaches you while you build.
+            </h2>
+            <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
+              You're never guessing alone. Context-specific guidance appears right when you need it.
+            </p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 gap-6 mb-12">
+            <motion.div
+              {...fadeUp}
+              transition={{ duration: 0.4 }}
+              className="bg-[#FAF9F7] p-6 rounded-2xl border border-[#1E293B]/5"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center shrink-0">
+                  <Lightbulb className="w-6 h-6 text-[#D97706]" />
+                </div>
+                <h3 className="font-display font-bold text-lg text-[#1E293B]">
+                  Inline explainers
+                </h3>
+              </div>
+              <p className="text-[#1E293B]/60 leading-relaxed text-sm">
+                Entering salaries? Budget tells you "most schools spend 50–60% on staffing" right next to the input.
+                Setting tuition? You'll see what similar schools charge. Every section has contextual guidance
+                that helps you make confident decisions — like having a consultant sitting next to you.
+              </p>
+            </motion.div>
+            <motion.div
+              {...fadeUp}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="bg-[#FAF9F7] p-6 rounded-2xl border border-[#1E293B]/5"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center shrink-0">
+                  <BookOpen className="w-6 h-6 text-[#328555]" />
+                </div>
+                <h3 className="font-display font-bold text-lg text-[#1E293B]">
+                  Plain-English explanations
+                </h3>
+              </div>
+              <p className="text-[#1E293B]/60 leading-relaxed text-sm">
+                What does DSCR mean? Why do lenders care about your staffing ratio?
+                Budget explains every metric in language you actually understand — what it means,
+                why it matters, what's healthy vs. risky, and what to do about it.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-24 bg-[#FAF9F7]">
+        <div className="max-w-4xl mx-auto px-6">
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-14"
+          >
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
+              What if things don't go perfectly?
+            </h2>
+            <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
+              The best financial plans aren't the optimistic ones. They're the ones
+              that have already accounted for what could go wrong.
+            </p>
+          </motion.div>
+
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="bg-white p-8 rounded-2xl border border-[#1E293B]/5 shadow-sm mb-8"
+          >
+            <div className="flex items-start gap-5">
+              <div className="w-12 h-12 rounded-xl bg-[#D97706]/10 flex items-center justify-center shrink-0">
+                <SlidersHorizontal className="w-6 h-6 text-[#D97706]" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-xl text-[#1E293B] mb-3">
+                  The What-If Scenario Planner
+                </h3>
+                <p className="text-[#1E293B]/60 leading-relaxed mb-4">
+                  After you build your base model, use sliders to test what happens when assumptions change.
+                  Adjust enrollment, tuition, staffing costs, facility expenses, and more — and see the impact
+                  on your bottom line instantly.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {[
+                    "What if enrollment is 20% lower than projected?",
+                    "What if you lose a grant you were counting on?",
+                    "What if rent goes up 15% after Year 2?",
+                    "What if you need to hire an extra teacher?",
+                    "What if tuition collection falls short?",
+                    "Can your school survive if things don't go perfectly?",
+                  ].map((q, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm text-[#1E293B]/70">
+                      <span className="text-[#D97706] shrink-0 mt-0.5">&#x2022;</span>
+                      {q}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="bg-white p-8 rounded-2xl border border-[#1E293B]/5 shadow-sm"
+          >
+            <div className="flex items-start gap-5">
+              <div className="w-12 h-12 rounded-xl bg-[#0D9488]/10 flex items-center justify-center shrink-0">
+                <BarChart3 className="w-6 h-6 text-[#0D9488]" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-xl text-[#1E293B] mb-3">
+                  Compare scenarios side by side
+                </h3>
+                <p className="text-[#1E293B]/60 leading-relaxed">
+                  Create multiple scenarios — "Conservative," "Optimistic," "What if we lose the lease" — and
+                  compare them against your base model. Budget shows you which metrics improve, which get worse,
+                  and gives you a clear verdict. It's the tool that answers: <span className="font-semibold text-[#1E293B]">can
+                  my school survive the downside?</span>
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="py-24 bg-white border-t border-[#1E293B]/5">
+        <div className="max-w-4xl mx-auto px-6">
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-14"
+          >
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
               What to have handy before you start.
             </h2>
             <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
@@ -316,6 +460,12 @@ export function LandingPage() {
                 You don't have a CFO. You might not even have a bookkeeper. You're making financial
                 decisions every week that determine whether your school survives or doesn't.
               </p>
+              <p>
+                Sometimes the model shows you something difficult. That's the point.
+                Better to find out now — while you can adjust your plan, rethink your staffing,
+                or renegotiate your lease — than after you've committed. The hard truths are the
+                ones that save schools.
+              </p>
               <p className="font-semibold text-[#1E293B]">
                 SchoolStack Budget was built for you.
               </p>
@@ -389,9 +539,20 @@ export function LandingPage() {
               <br />
               Let's make sure you know your numbers.
             </h2>
-            <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
+            <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
               About an hour. No credit card. No spreadsheet experience required.
             </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mb-10 text-sm text-white/70">
+              <span className="flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Save and return anytime — adjust assumptions and re-run your model
+              </span>
+              <span className="flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                Your model is private. No one sees it unless you share it.
+              </span>
+            </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
