@@ -82,7 +82,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
   );
 
   const yearCount = hasRowData
-    ? (data.revenueRows?.[0]?.amounts?.length || data.expenseRows?.[0]?.amounts?.length || 5)
+    ? (data.revenueRows?.[0]?.amounts?.length || data.expenseRows?.[0]?.amounts?.length || (sp.schoolStage === "operating_school" ? 5 : 3))
     : 5;
 
   const enrollmentByYear = buildEnrollmentArray(en, yearCount);
@@ -176,15 +176,18 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
 
     const revenueRows = data.revenueRows || [];
     const grossTuition = revenueRows.find(r => r.id === "gross_tuition" && r.enabled);
-    if (grossTuition && grossTuition.escalationRate !== undefined && grossTuition.escalationRate > 5) {
-      flags.push({
-        field: "revenueRows.gross_tuition.escalationRate",
-        flagType: "high_tuition_growth",
-        currentValue: `${grossTuition.escalationRate}% annual tuition escalation`,
-        benchmark: "≤ 5% per year",
-        severity: "warning",
-        defaultPrompt: `You're increasing tuition by ${grossTuition.escalationRate}% per year. That's aggressive — what market conditions, program enhancements, or competitive positioning justifies this?`,
-      });
+    if (grossTuition) {
+      const resolvedTuitionEsc = resolveEsc(grossTuition.escalationRate, costInflation);
+      if (resolvedTuitionEsc > 5) {
+        flags.push({
+          field: "revenueRows.gross_tuition.escalationRate",
+          flagType: "high_tuition_growth",
+          currentValue: `${resolvedTuitionEsc}% annual tuition escalation`,
+          benchmark: "≤ 5% per year",
+          severity: "warning",
+          defaultPrompt: `You're increasing tuition by ${resolvedTuitionEsc}% per year. That's aggressive — what market conditions, program enhancements, or competitive positioning justifies this?`,
+        });
+      }
     }
 
     const staffingRows = data.staffingRows || [];
