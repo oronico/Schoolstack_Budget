@@ -256,7 +256,7 @@ export async function sendPasswordResetEmail(
 ): Promise<{ success: boolean; error?: string }> {
   const resend = getResend();
   const fromAddress = process.env.EMAIL_FROM;
-  const appUrl = process.env.APP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`;
+  const appUrl = process.env.APP_URL || (process.env.NODE_ENV === "production" ? "https://budget.schoolstack.ai" : `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`);
   const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
   if (!resend) {
@@ -318,7 +318,7 @@ export async function sendPasswordResetEmail(
       return { success: false, error: "Failed to send reset email. Please try again." };
     }
 
-    console.log(`[mailer] Password reset email sent to ${toEmail} (id: ${data?.id})`);
+    if (process.env.NODE_ENV !== "production") console.log(`[mailer] Password reset email sent to ${toEmail} (id: ${data?.id})`);
     return { success: true };
   } catch (err) {
     console.error("[mailer] Failed to send password reset email:", err);

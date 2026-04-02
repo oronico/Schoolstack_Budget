@@ -168,7 +168,7 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
     }
     const parsed = UpdateModelBody.safeParse(req.body);
     if (!parsed.success) {
-      console.error("Update validation errors:", JSON.stringify(parsed.error.issues, null, 2));
+      if (process.env.NODE_ENV !== "production") console.error("Update validation errors:", JSON.stringify(parsed.error.issues, null, 2));
       res.status(400).json({ error: "Invalid model data.", details: parsed.error.issues });
       return;
     }
@@ -893,7 +893,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
         token: shareToken,
         viewerLabel: "SchoolStack Team Review",
       }).returning();
-      const appUrl = process.env.APP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`;
+      const appUrl = process.env.APP_URL || (process.env.NODE_ENV === "production" ? "https://budget.schoolstack.ai" : `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`);
       sharedViewUrl = `${appUrl}/shared/${shareLink.token}`;
     } catch (shareErr) {
       console.error("Failed to create team review shared link:", shareErr);
