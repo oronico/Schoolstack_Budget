@@ -9,6 +9,8 @@ import {
   BarChart3,
   MessageCircle,
   Download,
+  CheckCircle2,
+  Building2,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { motion } from "framer-motion";
@@ -195,6 +197,100 @@ export function LandingPage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="py-24 bg-white border-t border-[#1E293B]/5">
+        <div className="max-w-4xl mx-auto px-6">
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-14"
+          >
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
+              What to have handy before you start.
+            </h2>
+            <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
+              You don't need all of this — estimates work fine for most fields.
+              But having these nearby will make the process faster and your model stronger.
+            </p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 gap-6">
+            {[
+              {
+                icon: <School className="w-6 h-6 text-[#328555]" />,
+                title: "The basics",
+                items: [
+                  "Your school type (charter, private, micro, pod, etc.)",
+                  "What state you're in",
+                  "How many students you expect in Year 1",
+                  "Your building capacity",
+                ],
+              },
+              {
+                icon: <DollarSign className="w-6 h-6 text-[#D97706]" />,
+                title: "Revenue & funding",
+                items: [
+                  "Tuition rate (or an estimate)",
+                  "Per-pupil funding amount (charter schools)",
+                  "Any grants or donations you expect",
+                  "ESA or voucher amounts (if applicable)",
+                ],
+              },
+              {
+                icon: <Users className="w-6 h-6 text-[#0D9488]" />,
+                title: "Your team",
+                items: [
+                  "Roles you plan to hire (teachers, admin, etc.)",
+                  "Salary ranges for each role",
+                  "Full-time vs. part-time vs. contract",
+                ],
+              },
+              {
+                icon: <Building2 className="w-6 h-6 text-[#1E293B]" />,
+                title: "Your space & costs",
+                items: [
+                  "Monthly rent or mortgage payment",
+                  "Lease terms (if you have them)",
+                  "Estimates for insurance, utilities, curriculum",
+                  "Any loans or debt you're planning",
+                ],
+              },
+            ].map((group, i) => (
+              <motion.div
+                key={i}
+                {...fadeUp}
+                transition={{ duration: 0.4, delay: i * 0.08 }}
+                className="bg-[#FAF9F7] p-6 rounded-2xl border border-[#1E293B]/5"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center shrink-0">
+                    {group.icon}
+                  </div>
+                  <h3 className="font-display font-bold text-lg text-[#1E293B]">
+                    {group.title}
+                  </h3>
+                </div>
+                <ul className="space-y-2.5">
+                  {group.items.map((item, j) => (
+                    <li key={j} className="flex items-start gap-2.5 text-[#1E293B]/60 text-sm leading-relaxed">
+                      <CheckCircle2 className="w-4 h-4 text-[#328555]/50 shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.p
+            {...fadeUp}
+            transition={{ duration: 0.4, delay: 0.35 }}
+            className="text-center text-sm text-[#1E293B]/40 mt-8"
+          >
+            Don't have everything? No problem. You can save your progress and come back anytime.
+          </motion.p>
         </div>
       </section>
 

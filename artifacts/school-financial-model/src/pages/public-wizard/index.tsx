@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { ArrowLeft, ArrowRight, CheckCircle2, Save, RotateCcw, Shield, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Save, RotateCcw, Shield, X, School, DollarSign, Users, Building2 } from "lucide-react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
@@ -68,6 +68,9 @@ export function PublicWizardPage() {
   const [saveFlash, setSaveFlash] = useState(false);
   const [accountBannerDismissed, setAccountBannerDismissed] = useState(() => {
     return localStorage.getItem(STORAGE_KEY + "_account_banner_dismissed") === "true";
+  });
+  const [showPrepScreen, setShowPrepScreen] = useState(() => {
+    return !loadFromStorage() && localStorage.getItem(STORAGE_KEY + "_prep_dismissed") !== "true";
   });
   const { user } = useAuth();
   const stepStartTime = useRef(Date.now());
@@ -307,6 +310,119 @@ export function PublicWizardPage() {
     setCurrentStep(s => Math.max(s - 1, 1));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const dismissPrepScreen = () => {
+    setShowPrepScreen(false);
+    localStorage.setItem(STORAGE_KEY + "_prep_dismissed", "true");
+  };
+
+  const PREP_GROUPS = [
+    {
+      icon: <School className="w-5 h-5 text-[#328555]" />,
+      title: "The basics",
+      items: [
+        "Your school type (charter, private, micro, pod, etc.)",
+        "What state you're in",
+        "How many students you expect in Year 1",
+        "Your building capacity",
+      ],
+    },
+    {
+      icon: <DollarSign className="w-5 h-5 text-[#D97706]" />,
+      title: "Revenue & funding",
+      items: [
+        "Tuition rate (or an estimate)",
+        "Per-pupil funding amount (charter schools)",
+        "Any grants or donations you expect",
+        "ESA or voucher amounts (if applicable)",
+      ],
+    },
+    {
+      icon: <Users className="w-5 h-5 text-[#0D9488]" />,
+      title: "Your team",
+      items: [
+        "Roles you plan to hire (teachers, admin, etc.)",
+        "Salary ranges for each role",
+        "Full-time vs. part-time vs. contract",
+      ],
+    },
+    {
+      icon: <Building2 className="w-5 h-5 text-[#1E293B]" />,
+      title: "Your space & costs",
+      items: [
+        "Monthly rent or mortgage payment",
+        "Lease terms (if you have them)",
+        "Estimates for insurance, utilities, curriculum",
+        "Any loans or debt you're planning",
+      ],
+    },
+  ];
+
+  if (showPrepScreen) {
+    return (
+      <Layout>
+        <div className="flex-1 py-12 md:py-20 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto w-full">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-5">
+              <School className="w-7 h-7 text-primary" />
+            </div>
+            <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
+              Before you start.
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
+              Gathering a few things first will make this go faster. You don't need exact numbers — estimates work fine.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4 mb-8">
+            {PREP_GROUPS.map((group, i) => (
+              <div
+                key={i}
+                className="bg-card p-5 rounded-2xl border border-border/50 shadow-sm"
+              >
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-8 h-8 bg-background rounded-lg border border-border/50 flex items-center justify-center shrink-0">
+                    {group.icon}
+                  </div>
+                  <h3 className="font-display font-bold text-sm text-foreground">
+                    {group.title}
+                  </h3>
+                </div>
+                <ul className="space-y-2">
+                  {group.items.map((item, j) => (
+                    <li key={j} className="flex items-start gap-2 text-muted-foreground text-sm leading-relaxed">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary/40 shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-center text-sm text-muted-foreground mb-8">
+            Don't have everything? No problem — you can save your progress and come back anytime.
+          </p>
+
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={dismissPrepScreen}
+              className="flex items-center gap-2 px-8 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+            >
+              I'm ready, let's go
+              <ArrowRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={dismissPrepScreen}
+              className="text-sm text-muted-foreground hover:text-foreground transition"
+            >
+              Skip this
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
