@@ -446,6 +446,33 @@ export function ModelWizardPage() {
           ]);
           return a && b && d;
         }
+        case 9: {
+          const flagResponses = methods.getValues("assumptionFlagResponses") as Array<{ field: string; flagType: string; reason: string }> | undefined;
+          const responseMap = new Map<string, string>();
+          if (flagResponses) {
+            for (const r of flagResponses) {
+              responseMap.set(`${r.flagType}:${r.field}`, r.reason || "");
+            }
+          }
+          try {
+            const consultantRes = await fetch(`/api/models/${modelId}/consultant`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("auth_token")}` },
+            });
+            if (consultantRes.ok) {
+              const consultantData = await consultantRes.json();
+              const flags = (consultantData?.assumptionFlags || []) as Array<{ field: string; flagType: string; severity: string }>;
+              const unresolvedCritical = flags.filter(
+                f => f.severity === "critical" && !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
+              );
+              if (unresolvedCritical.length > 0) {
+                alert(`Please address all critical assumption flags before proceeding to Export. ${unresolvedCritical.length} critical flag(s) require an explanation.`);
+                return false;
+              }
+            }
+          } catch {
+          }
+          return true;
+        }
         default: return true;
       }
     };

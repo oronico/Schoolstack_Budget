@@ -4,7 +4,7 @@ import {
   ensureSpace,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
-import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView, BoardNarrativeData } from "./build-board-packet";
+import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView, BoardNarrativeData, BoardFlaggedAssumption } from "./build-board-packet";
 import type { PacketSection, PacketTable, LinkedMetric } from "./packet-types";
 
 export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffer> {
@@ -15,7 +15,7 @@ export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffe
 
   drawOutlookSection(doc, packet);
 
-  renderBoardNarrativeSection(doc, packet.boardNarrative);
+  renderBoardNarrativeSection(doc, packet.boardNarrative, packet.boardFlaggedAssumptions);
 
   for (const section of packet.sections) {
     if (!section.included) continue;
@@ -217,7 +217,7 @@ function renderScenarioComparison(doc: PDFDoc, snapshots: ScenarioSnapshot[]) {
   drawTable(doc, cols, rows, { zebra: true });
 }
 
-function renderBoardNarrativeSection(doc: PDFDoc, narrative: BoardNarrativeData) {
+function renderBoardNarrativeSection(doc: PDFDoc, narrative: BoardNarrativeData, flaggedAssumptions: BoardFlaggedAssumption[]) {
   const sections: Array<[string, string | undefined]> = [
     ["Enrollment Strategy", narrative.enrollmentStrategy],
     ["Retention Plan", narrative.retentionPlan],
@@ -225,7 +225,8 @@ function renderBoardNarrativeSection(doc: PDFDoc, narrative: BoardNarrativeData)
     ["Mission & Vision", narrative.missionAndVision],
   ];
   const hasContent = sections.some(([, text]) => text?.trim());
-  if (!hasContent) return;
+  const hasFlags = flaggedAssumptions.length > 0;
+  if (!hasContent && !hasFlags) return;
 
   sectionTitle(doc, "Founder's Narrative");
   for (const [label, text] of sections) {
@@ -234,6 +235,27 @@ function renderBoardNarrativeSection(doc: PDFDoc, narrative: BoardNarrativeData)
     subSection(doc, label);
     bodyText(doc, text);
     doc.moveDown(0.2);
+  }
+
+  if (hasFlags) {
+    ensureSpace(doc, 30);
+    subSection(doc, "Flagged Assumptions");
+    for (const fa of flaggedAssumptions) {
+      ensureSpace(doc, 25);
+      const color = fa.severity === "critical" ? BRAND.red : BRAND.amber;
+      const label = fa.severity.charAt(0).toUpperCase() + fa.severity.slice(1);
+      doc.font("Helvetica-Bold").fontSize(8).fillColor(color);
+      doc.text(`[${label}] `, doc.page.margins.left, doc.y, { continued: true });
+      doc.font("Helvetica").fontSize(8).fillColor(BRAND.black);
+      doc.text(fa.description);
+      if (fa.explanation) {
+        doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray);
+        doc.text(`  Response: ${fa.explanation}`, doc.page.margins.left + 10, doc.y, {
+          width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10,
+        });
+      }
+      doc.moveDown(0.15);
+    }
   }
   doc.moveDown(0.3);
 }

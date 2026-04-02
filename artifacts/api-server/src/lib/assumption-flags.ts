@@ -1,4 +1,13 @@
-import { resolveEsc } from "./workbook-helpers.js";
+import {
+  resolveEsc,
+  type RevenueRow,
+  type StaffingRow,
+  type ExpenseRow,
+  type CapitalDebtRow,
+  type TuitionTier,
+  type SchoolProfile,
+  type ModelData,
+} from "./workbook-helpers.js";
 import { computeAllYearsFromRows, type YearFinancials } from "./consultant-engine";
 
 export type FlagSeverity = "info" | "warning" | "critical";
@@ -21,87 +30,10 @@ interface Enrollment {
   retentionRate?: number;
 }
 
-interface SchoolProfile {
-  maxCapacity?: number;
-  schoolStage?: string;
-  isPartialFirstYear?: boolean;
-  year1OperatingMonths?: number;
-  debtIncluded?: boolean;
-  facilityPhases?: { id: string; ownershipType: string; [k: string]: unknown }[];
-  [k: string]: unknown;
-}
-
-interface StaffingRow {
-  id: string;
-  roleName: string;
-  functionCategory: string;
-  employmentType: string;
-  fte: number;
-  annualizedRate: number;
-  benefitsEligible: boolean;
-  benefitsRate: number;
-  payrollTaxRate: number;
-  payrollLike: boolean;
-  notes: string;
-  staffingMode?: "fixed" | "ratio";
-  studentRatio?: number;
-  minFte?: number;
-  maxFte?: number;
-  startYear?: number;
-  endYear?: number;
-}
-
-interface RevenueRow {
-  id: string;
-  category: string;
-  lineItem: string;
-  enabled: boolean;
-  driverType: string;
-  amounts: number[];
-  escalationRate?: number;
-  percentBase?: string;
-  [k: string]: unknown;
-}
-
-interface ExpenseRow {
-  id: string;
-  category: string;
-  lineItem: string;
-  enabled: boolean;
-  driverType: string;
-  amounts: number[];
-  escalationRate?: number;
-  [k: string]: unknown;
-}
-
-interface CapitalDebtRow {
-  id: string;
-  lineItem: string;
-  enabled: boolean;
-  driverType: string;
-  amounts: number[];
-  isLoan?: boolean;
-  loanPrincipal?: number;
-  loanRate?: number;
-  loanTermYears?: number;
-  [k: string]: unknown;
-}
-
 interface Facilities {
   annualSalaryIncrease?: number;
   generalCostInflation?: number;
   [k: string]: unknown;
-}
-
-interface ModelData {
-  schoolProfile?: SchoolProfile;
-  enrollment?: Enrollment;
-  tuitionTiers?: { id: string; tierType: string; label: string; discountPercent: number; studentCounts: number[] }[];
-  revenueRows?: RevenueRow[];
-  staffingRows?: StaffingRow[];
-  expenseRows?: ExpenseRow[];
-  capitalAndDebtRows?: CapitalDebtRow[];
-  facilities?: Facilities;
 }
 
 function buildEnrollmentArray(en: Enrollment, yearCount: number): number[] {
@@ -133,9 +65,9 @@ function pctStr(n: number): string {
 export function detectUnusualAssumptions(rawData: Record<string, unknown>): AssumptionFlag[] {
   const data = rawData as unknown as ModelData;
   const flags: AssumptionFlag[] = [];
-  const sp = data.schoolProfile || {};
-  const en = data.enrollment || {};
-  const facilities = data.facilities || {};
+  const sp = (data.schoolProfile || {}) as SchoolProfile;
+  const en = (data.enrollment || {}) as Enrollment;
+  const facilities = (data.facilities || {}) as Facilities;
 
   const hasRowData = !!(
     (data.revenueRows && data.revenueRows.length > 0) ||
@@ -209,19 +141,30 @@ export function detectUnusualAssumptions(rawData: Record<string, unknown>): Assu
   // --- FINANCIAL FLAGS (use engine helpers for math integrity) ---
 
   if (hasRowData) {
-    const expenseRows = data.expenseRows || [];
+    const expenseRows = (data.expenseRows || []) as ExpenseRow[];
     for (const row of expenseRows) {
       if (!row.enabled) continue;
-      const resolved = resolveEsc(row.escalationRate, costInflationPct);
-      if (row.escalationRate === 0 && costInflationPct > 0 && resolved === costInflationPct) {
-        flags.push({
-          field: `expenseRows.${row.id}`,
-          flagType: "zero_escalation",
-          currentValue: `0% explicit escalation on "${row.lineItem}" (falls through to ${costInflationPct}% inflation)`,
-          benchmark: `General cost inflation: ${costInflationPct}%`,
-          severity: "warning",
-          defaultPrompt: `You set 0% escalation on "${row.lineItem}" but your general cost inflation is ${costInflationPct}%. The system uses the inflation fallback. If you intend truly flat costs, explain why this line item won't increase with inflation.`,
-        });
+      if (row.escalationRate === 0) {
+        const resolved = resolveEsc(row.escalationRate, costInflationPct);
+        if (costInflationPct > 0 && resolved === costInflationPct) {
+          flags.push({
+            field: `expenseRows.${row.id}`,
+            flagType: "zero_escalation",
+            currentValue: `0% explicit escalation on "${row.lineItem}" (falls through to ${costInflationPct}% inflation)`,
+            benchmark: `General cost inflation: ${costInflationPct}%`,
+            severity: "warning",
+            defaultPrompt: `You set 0% escalation on "${row.lineItem}" but your general cost inflation is ${costInflationPct}%. The system uses the inflation fallback. If you intend truly flat costs, explain why this line item won't increase with inflation.`,
+          });
+        } else {
+          flags.push({
+            field: `expenseRows.${row.id}`,
+            flagType: "zero_escalation",
+            currentValue: `0% explicit escalation on "${row.lineItem}"`,
+            benchmark: `Costs typically rise 2-4% per year`,
+            severity: "info",
+            defaultPrompt: `You set 0% escalation on "${row.lineItem}". Costs typically rise with inflation. Is this line item contractually fixed, or should it increase over time?`,
+          });
+        }
       }
     }
 
@@ -253,12 +196,21 @@ export function detectUnusualAssumptions(rawData: Record<string, unknown>): Assu
     let yearFinancials: YearFinancials[];
     try {
       yearFinancials = computeAllYearsFromRows(
-        enrollmentByYear, revenueRows as any, staffingRows as any, expenseRows as any,
-        effectiveCapDebtRows as any, salaryEscRate, prorationFactor,
-        data.tuitionTiers as any, costInflationPct, sp as any, retentionRate,
+        enrollmentByYear,
+        revenueRows as RevenueRow[],
+        staffingRows as StaffingRow[],
+        expenseRows as ExpenseRow[],
+        effectiveCapDebtRows as CapitalDebtRow[],
+        salaryEscRate,
+        prorationFactor,
+        (data.tuitionTiers || []) as TuitionTier[],
+        costInflationPct,
+        sp as SchoolProfile,
+        retentionRate,
       );
-    } catch {
-      yearFinancials = [];
+    } catch (err) {
+      console.error("[assumption-flags] computeAllYearsFromRows failed:", err);
+      return flags;
     }
 
     for (let y = 0; y < yearFinancials.length; y++) {
@@ -278,15 +230,15 @@ export function detectUnusualAssumptions(rawData: Record<string, unknown>): Assu
 
     if (yearFinancials.length > 0) {
       const y1 = yearFinancials[0];
-      if (y1.totalRevenue > 0 && y1.tuitionRevenue / y1.totalRevenue < 0.70) {
-        const tuitionPct = (y1.tuitionRevenue / y1.totalRevenue * 100).toFixed(0);
+      if (y1.totalExpenses > 0 && y1.tuitionRevenue / y1.totalExpenses < 0.70) {
+        const tuitionPct = (y1.tuitionRevenue / y1.totalExpenses * 100).toFixed(0);
         flags.push({
           field: "year1.tuitionCoverage",
           flagType: "low_tuition_coverage",
-          currentValue: `Tuition covers ${tuitionPct}% of Year 1 revenue`,
+          currentValue: `Tuition covers ${tuitionPct}% of Year 1 total expenses`,
           benchmark: "≥ 70%",
           severity: "info",
-          defaultPrompt: `Tuition accounts for only ${tuitionPct}% of Year 1 revenue, meaning you depend on grants or donations. What's your plan if that external funding doesn't materialize?`,
+          defaultPrompt: `Tuition accounts for only ${tuitionPct}% of Year 1 expenses, meaning you depend on grants or donations to cover costs. What's your plan if that external funding doesn't materialize?`,
         });
       }
     }

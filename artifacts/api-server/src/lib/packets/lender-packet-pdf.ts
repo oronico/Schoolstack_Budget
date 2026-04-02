@@ -96,9 +96,14 @@ const NARRATIVE_LABELS: Array<[keyof BudgetNarrativeData, string]> = [
 function renderBudgetNarrativeSection(doc: PDFDoc, narrative: BudgetNarrativeData, flagged: FlaggedAssumptionExport[]) {
   const hasNarrative = NARRATIVE_LABELS.some(([key]) => narrative[key]?.trim());
   const hasFlags = flagged.length > 0;
-  if (!hasNarrative && !hasFlags) return;
 
   sectionTitle(doc, "Budget Narrative");
+
+  if (!hasNarrative && !hasFlags) {
+    bodyText(doc, "The school founder has not yet provided narrative context for this financial model. Lenders should request clarification on enrollment strategy, retention plans, and risk mitigation before underwriting.");
+    doc.moveDown(0.5);
+    return;
+  }
 
   if (hasNarrative) {
     for (const [key, label] of NARRATIVE_LABELS) {

@@ -49,6 +49,12 @@ export interface BoardNarrativeData {
   missionAndVision?: string;
 }
 
+export interface BoardFlaggedAssumption {
+  severity: string;
+  description: string;
+  explanation: string;
+}
+
 export interface BoardPacket extends PacketData {
   topRisks: BoardRiskItem[];
   focusAreas: BoardFocusArea[];
@@ -60,6 +66,7 @@ export interface BoardPacket extends PacketData {
     summary: string;
   };
   boardNarrative: BoardNarrativeData;
+  boardFlaggedAssumptions: BoardFlaggedAssumption[];
 }
 
 const BOARD_PACKET_SECTIONS: SectionId[] = [
@@ -125,6 +132,19 @@ export function buildBoardPacket(
     missionAndVision: narrativeData.missionAndVision || undefined,
   };
 
+  const flagResponses = (raw.assumptionFlagResponses as Array<{ field: string; flagType: string; reason: string }>) || [];
+  const assumptionFlags = consultantOutput.assumptionFlags || [];
+  const boardFlaggedAssumptions: BoardFlaggedAssumption[] = assumptionFlags
+    .filter(f => f.severity === "critical" || f.severity === "warning")
+    .map(flag => {
+      const resp = flagResponses.find(r => r.field === flag.field && r.flagType === flag.flagType);
+      return {
+        severity: flag.severity,
+        description: flag.currentValue,
+        explanation: resp?.reason?.trim() || "",
+      };
+    });
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -134,6 +154,7 @@ export function buildBoardPacket(
     cashRunway,
     financialOutlook,
     boardNarrative,
+    boardFlaggedAssumptions,
   };
 }
 

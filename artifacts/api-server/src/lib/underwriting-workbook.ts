@@ -2777,16 +2777,21 @@ function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData) {
 
   if (flagResponses.length > 0) {
     row++;
-    ws.getRow(row).values = ["Flagged Assumptions", "Explanation"];
-    hdr(ws, row, 1, 2);
+    ws.columns = [{ width: 15 }, { width: 25 }, { width: 25 }, { width: 35 }];
+    ws.getRow(row).values = ["Severity", "Flag", "Current Value", "Explanation"];
+    hdr(ws, row, 1, 4);
     row++;
 
     for (const resp of flagResponses) {
-      ws.getCell(row, 1).value = `${resp.flagType}: ${resp.field}`;
+      ws.getCell(row, 1).value = resp.flagType;
       ws.getCell(row, 1).font = NF;
-      ws.getCell(row, 2).value = resp.reason || "(Not addressed)";
+      ws.getCell(row, 2).value = resp.field;
       ws.getCell(row, 2).font = NF;
-      ws.getCell(row, 2).alignment = { wrapText: true };
+      ws.getCell(row, 3).value = "";
+      ws.getCell(row, 3).font = NF;
+      ws.getCell(row, 4).value = resp.reason || "(Not addressed)";
+      ws.getCell(row, 4).font = NF;
+      ws.getCell(row, 4).alignment = { wrapText: true };
       row++;
     }
   }
