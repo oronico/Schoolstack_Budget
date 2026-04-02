@@ -462,10 +462,15 @@ export function ModelWizardPage() {
               const consultantData = await consultantRes.json();
               const flags = (consultantData?.assumptionFlags || []) as Array<{ field: string; flagType: string; severity: string }>;
               const unresolved = flags.filter(
-                f => f.severity === "critical" && !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
+                f => (f.severity === "critical" || f.severity === "warning") && !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
               );
               if (unresolved.length > 0) {
-                alert(`Please address ${unresolved.length} critical assumption flag(s) before proceeding to Export.`);
+                const critCount = unresolved.filter(f => f.severity === "critical").length;
+                const warnCount = unresolved.filter(f => f.severity === "warning").length;
+                const parts = [];
+                if (critCount > 0) parts.push(`${critCount} critical`);
+                if (warnCount > 0) parts.push(`${warnCount} warning`);
+                alert(`Please address all flagged assumptions before proceeding to Export. ${parts.join(" and ")} flag(s) require an explanation.`);
                 return false;
               }
             }

@@ -351,6 +351,7 @@ export interface YearFinancials {
   facilityCost: number;
   totalOpex: number;
   debtService: number;
+  loanDebtService?: number;
   totalExpenses: number;
   netIncome: number;
   netMargin: number;
@@ -1181,7 +1182,7 @@ function assessLendingLabReadiness(
   }
 
   // --- 5. DSCR ---
-  const readinessLoanDS = (y1 as unknown as Record<string, unknown>).loanDebtService as number ?? y1.debtService;
+  const readinessLoanDS = y1.loanDebtService ?? y1.debtService;
   const hasLoan = capDebtRows.some(r => r.enabled && r.isLoan);
   if (!hasLoan) {
     criteria.push({
@@ -1549,7 +1550,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
 
   const philanthropyPct = y1.totalRevenue > 0 ? y1.philanthropyRevenue / y1.totalRevenue : 0;
   const publicRevenuePct = y1.totalRevenue > 0 ? y1.publicRevenue / y1.totalRevenue : 0;
-  const y1LoanDS = (y1 as unknown as Record<string, unknown>).loanDebtService as number ?? y1.debtService;
+  const y1LoanDS = y1.loanDebtService ?? y1.debtService;
   const hasDebt = y1LoanDS > 0;
   const dscr = hasDebt && y1.netIncome !== undefined
     ? (y1.netIncome + y1LoanDS) / y1LoanDS

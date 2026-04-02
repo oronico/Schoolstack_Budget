@@ -1,5 +1,6 @@
 import {
   resolveEsc,
+  computeEffectiveFte,
   type RevenueRow,
   type StaffingRow,
   type ExpenseRow,
@@ -20,6 +21,7 @@ type YearFinancials = {
   facilityCost: number;
   totalOpex: number;
   debtService: number;
+  loanDebtService?: number;
   totalExpenses: number;
   netIncome: number;
   netMargin: number;
@@ -61,17 +63,6 @@ function buildEnrollmentArray(en: Enrollment, yearCount: number): number[] {
   ];
 }
 
-function computeEffectiveFte(r: StaffingRow, y: number, enrollment: number): number {
-  if (r.startYear && (y + 1) < r.startYear) return 0;
-  if (r.endYear && (y + 1) > r.endYear) return 0;
-  if (r.staffingMode === "ratio" && r.studentRatio && r.studentRatio > 0) {
-    let computed = enrollment / r.studentRatio;
-    if (r.minFte !== undefined) computed = Math.max(computed, r.minFte);
-    if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte);
-    return Math.ceil(computed * 2) / 2;
-  }
-  return r.fte;
-}
 
 function pctStr(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
@@ -262,7 +253,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     const hasLoanRows = capDebtRows.some(r => r.enabled && r.isLoan && (r.loanPrincipal || 0) > 0);
     if (hasLoanRows && yearFinancials.length > 0) {
       const y1 = yearFinancials[0];
-      const y1LoanDS = (y1 as unknown as Record<string, unknown>).loanDebtService as number ?? y1.debtService;
+      const y1LoanDS = y1.loanDebtService ?? y1.debtService;
       if (y1LoanDS === 0) {
         flags.push({
           field: "capitalAndDebtRows",
