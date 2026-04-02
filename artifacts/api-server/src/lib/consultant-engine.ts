@@ -2694,13 +2694,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
 
   const lendingLabAssessment = assessLendingLabReadiness(data, yearFinancials, enrollmentByYear);
 
-  let assumptionFlags: import("./assumption-flags").AssumptionFlag[] = [];
-  try {
-    assumptionFlags = await detectUnusualAssumptions(rawData);
-  } catch (flagError) {
-    console.error("Assumption flag detection failed — flags will be empty:", flagError);
-    assumptionFlags = [];
-  }
+  const assumptionFlags = await detectUnusualAssumptions(rawData);
 
   return {
     executiveSummary,

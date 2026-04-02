@@ -202,10 +202,8 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
       ? capDebtRows
       : capDebtRows.filter(r => !r.isLoan);
 
-    let yearFinancials: YearFinancials[];
-    try {
-      const { computeAllYearsFromRows } = await import("./consultant-engine");
-      yearFinancials = computeAllYearsFromRows(
+    const { computeAllYearsFromRows } = await import("./consultant-engine");
+    const yearFinancials: YearFinancials[] = computeAllYearsFromRows(
         enrollmentByYear,
         revenueRows as RevenueRow[],
         staffingRows as StaffingRow[],
@@ -218,10 +216,6 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
         sp as SchoolProfile,
         retentionRate,
       );
-    } catch (err) {
-      console.error("[assumption-flags] computeAllYearsFromRows failed:", err);
-      return flags;
-    }
 
     for (let y = 0; y < yearFinancials.length; y++) {
       const yf = yearFinancials[y];
