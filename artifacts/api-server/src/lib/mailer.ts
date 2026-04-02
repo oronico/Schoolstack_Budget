@@ -361,6 +361,11 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
           <p style="color:#475569;line-height:1.7;font-size:15px;margin:0;">
             Your model is saved in your SchoolStack Budget dashboard. You can update your assumptions anytime and re-run your analysis.
           </p>
+          ${data.dashboardUrl ? `
+          <div style="margin:16px 0;">
+            <a href="${escapeHtml(data.dashboardUrl)}" style="display:inline-block;background:#328555;color:white;font-weight:700;font-size:15px;padding:12px 28px;border-radius:10px;text-decoration:none;font-family:'Quicksand',Arial,sans-serif;">Open My Dashboard</a>
+          </div>
+          ` : ""}
           <p style="color:#475569;line-height:1.7;font-size:15px;margin:12px 0 0 0;">
             If you have questions about this review or want to talk through your plan, just reply to this email — we read every one.
           </p>
@@ -399,6 +404,7 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
     "",
     "WHAT'S NEXT",
     "Your model is saved in your SchoolStack Budget dashboard. You can update your assumptions anytime and re-run your analysis.",
+    ...(data.dashboardUrl ? ["", `Open your dashboard: ${data.dashboardUrl}`] : []),
     "",
     "If you have questions about this review or want to talk through your plan, just reply to this email — we read every one.",
     "",

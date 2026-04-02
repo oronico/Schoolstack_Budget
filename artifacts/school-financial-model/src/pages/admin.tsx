@@ -520,9 +520,12 @@ interface ReviewItem {
   requesterName: string;
   requesterEmail: string;
   schoolName: string;
+  schoolType: string;
   modelName: string;
   requestedAt: string;
   feedbackSent: boolean;
+  status: "pending" | "sent";
+  sharedViewUrl: string | null;
 }
 
 interface ReviewAnalysis {
@@ -535,6 +538,7 @@ interface ReviewAnalysis {
   executiveSummary: string;
   biggestStrength: string;
   biggestRisk: string;
+  sharedViewUrl: string | null;
   topIssues: { title: string; severity: string; explanation: string }[];
   yearFinancials: {
     year: number;
@@ -724,6 +728,17 @@ function ReviewsSection() {
                 <LenderBadge readiness={analysis.lenderReadiness} />
               </div>
               <p className="text-sm text-foreground/80 leading-relaxed">{analysis.executiveSummary}</p>
+              {analysis.sharedViewUrl && (
+                <a
+                  href={analysis.sharedViewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 rounded-xl text-sm font-medium bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View Full Model
+                </a>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -965,6 +980,9 @@ function ReviewsSection() {
                 </div>
                 <p className="text-xs text-muted-foreground mb-1">
                   {review.requesterName} &middot; {review.requesterEmail}
+                  {review.schoolType && (
+                    <span> &middot; {SCHOOL_TYPE_LABELS[review.schoolType] || review.schoolType}</span>
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Model: {review.modelName} &middot; Requested {format(new Date(review.requestedAt), "MMM d, yyyy 'at' h:mm a")}

@@ -13,6 +13,8 @@ import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consu
 import { normalizeRevenueRows } from "../lib/workbook-helpers";
 import { sendReviewFeedback } from "../lib/mailer";
 import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
+import { sharedLinksTable } from "@workspace/db/schema";
+import { isNull } from "drizzle-orm";
 
 function normalizeModelData(data: Record<string, unknown>): Record<string, unknown> {
   if (Array.isArray(data.revenueRows)) {
@@ -251,13 +253,18 @@ router.get(
         .where(eq(eventsTable.eventName, "requested_model_review"))
         .orderBy(desc(eventsTable.createdAt));
 
-      const modelIds = reviewEvents
+      const validEvents = reviewEvents.filter((e) => {
+        const meta = e.metadata as Record<string, unknown>;
+        return typeof meta?.modelId === "number" && e.userId != null;
+      });
+
+      const modelIds = validEvents
         .map((e) => (e.metadata as Record<string, unknown>)?.modelId as number)
         .filter((id): id is number => typeof id === "number");
 
       const uniqueModelIds = [...new Set(modelIds)];
 
-      let modelsMap: Record<number, { name: string; schoolName: string; data: Record<string, unknown> }> = {};
+      let modelsMap: Record<number, { name: string; schoolName: string; schoolType: string; data: Record<string, unknown> }> = {};
       if (uniqueModelIds.length > 0) {
         const models = await db
           .select({
@@ -272,11 +279,12 @@ router.get(
           const d = m.data as Record<string, unknown>;
           const profile = d?.schoolProfile as Record<string, unknown> | undefined;
           const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
-          modelsMap[m.id] = { name: m.name, schoolName, data: d };
+          const schoolType = (typeof profile?.schoolType === "string" ? profile.schoolType : "") || "";
+          modelsMap[m.id] = { name: m.name, schoolName, schoolType, data: d };
         }
       }
 
-      const userIds = reviewEvents
+      const userIds = validEvents
         .map((e) => e.userId)
         .filter((id): id is number => typeof id === "number");
       const uniqueUserIds = [...new Set(userIds)];
@@ -303,11 +311,39 @@ router.get(
           .filter((id): id is number => typeof id === "number")
       );
 
-      const reviews = reviewEvents.map((e) => {
+      let sharedLinksMap: Record<number, string> = {};
+      if (uniqueModelIds.length > 0) {
+        const links = await db
+          .select({
+            modelId: sharedLinksTable.modelId,
+            token: sharedLinksTable.token,
+          })
+          .from(sharedLinksTable)
+          .where(and(
+            inArray(sharedLinksTable.modelId, uniqueModelIds),
+            isNull(sharedLinksTable.revokedAt),
+          ));
+
+        const appUrl = process.env.APP_URL
+          || (process.env.NODE_ENV !== "production" && process.env.REPLIT_DEV_DOMAIN
+            ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+            : null);
+
+        if (appUrl) {
+          for (const link of links) {
+            if (!sharedLinksMap[link.modelId]) {
+              sharedLinksMap[link.modelId] = `${appUrl}/shared/${link.token}`;
+            }
+          }
+        }
+      }
+
+      const reviews = validEvents.map((e) => {
         const meta = e.metadata as Record<string, unknown>;
         const modelId = meta?.modelId as number;
         const model = modelsMap[modelId];
         const user = e.userId ? usersMap[e.userId] : null;
+        const feedbackSent = sentModelIds.has(modelId);
 
         return {
           eventId: e.id,
@@ -316,10 +352,18 @@ router.get(
           requesterName: user?.name || "Unknown",
           requesterEmail: user?.email || "Unknown",
           schoolName: model?.schoolName || "Unknown",
+          schoolType: model?.schoolType || "",
           modelName: model?.name || "Untitled",
           requestedAt: e.createdAt.toISOString(),
-          feedbackSent: sentModelIds.has(modelId),
+          feedbackSent,
+          status: feedbackSent ? "sent" as const : "pending" as const,
+          sharedViewUrl: sharedLinksMap[modelId] || null,
         };
+      });
+
+      reviews.sort((a, b) => {
+        if (a.feedbackSent !== b.feedbackSent) return a.feedbackSent ? 1 : -1;
+        return new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime();
       });
 
       res.json({ reviews });
@@ -373,6 +417,25 @@ router.get(
         ? await db.select({ name: usersTable.name, email: usersTable.email }).from(usersTable).where(eq(usersTable.id, model.userId)).limit(1).then(r => r[0])
         : null;
 
+      let sharedViewUrl: string | null = null;
+      const [sharedLink] = await db
+        .select({ token: sharedLinksTable.token })
+        .from(sharedLinksTable)
+        .where(and(
+          eq(sharedLinksTable.modelId, modelId),
+          isNull(sharedLinksTable.revokedAt),
+        ))
+        .limit(1);
+      if (sharedLink) {
+        const appUrl = process.env.APP_URL
+          || (process.env.NODE_ENV !== "production" && process.env.REPLIT_DEV_DOMAIN
+            ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+            : null);
+        if (appUrl) {
+          sharedViewUrl = `${appUrl}/shared/${sharedLink.token}`;
+        }
+      }
+
       res.json({
         modelName: model.name,
         schoolName,
@@ -383,6 +446,7 @@ router.get(
         executiveSummary: consultantOutput.executiveSummary,
         biggestStrength: consultantOutput.biggestStrength,
         biggestRisk: consultantOutput.biggestRisk,
+        sharedViewUrl,
         topIssues: consultantOutput.topIssues.slice(0, 8).map(i => ({
           title: i.title,
           severity: i.severity,
@@ -477,6 +541,12 @@ router.post(
       const profile = d?.schoolProfile as Record<string, unknown> | undefined;
       const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
 
+      const appUrl = process.env.APP_URL
+        || (process.env.NODE_ENV !== "production" && process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : null);
+      const dashboardUrl = appUrl ? `${appUrl}/dashboard` : undefined;
+
       const result = await sendReviewFeedback({
         recipientName: owner.name,
         recipientEmail: owner.email,
@@ -484,6 +554,7 @@ router.post(
         strengths: strengths || "",
         watchItems: watchItems || "",
         recommendations: recommendations || "",
+        dashboardUrl,
         metrics: metrics || {
           y1Revenue: 0,
           y1NetMargin: 0,
