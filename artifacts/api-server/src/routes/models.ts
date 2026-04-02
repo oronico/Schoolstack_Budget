@@ -883,6 +883,20 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
       findings.push(issue.title);
     }
 
+    let sharedViewUrl: string | undefined;
+    try {
+      const shareToken = crypto.randomBytes(32).toString("hex");
+      const [shareLink] = await db.insert(sharedLinksTable).values({
+        modelId: model.id,
+        token: shareToken,
+        viewerLabel: "SchoolStack Team Review",
+      }).returning();
+      const appUrl = process.env.APP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`;
+      sharedViewUrl = `${appUrl}/shared/${shareLink.token}`;
+    } catch (shareErr) {
+      console.error("Failed to create team review shared link:", shareErr);
+    }
+
     const [teamResult, confirmResult] = await Promise.all([
       sendReviewRequestToTeam({
         requesterName: name,
@@ -901,6 +915,8 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
         cashRunwayMonths,
         daysCashOnHand,
         criticalFindings: findings,
+        sharedViewUrl,
+        source: "authenticated",
       }),
       sendReviewConfirmation(email, name, schoolName),
     ]);

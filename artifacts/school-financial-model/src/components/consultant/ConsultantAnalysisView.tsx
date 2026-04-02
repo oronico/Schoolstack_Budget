@@ -787,6 +787,27 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           {data.lenderReadinessExplanation}
         </p>
       </div>
+
+      <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/60 via-white to-amber-50/60 p-5 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+          <HelpCircle className="h-5 w-5 text-amber-600" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold">Have questions about these results?</span>{" "}
+            <span className="text-muted-foreground">Our team can review your model and explain what to focus on first.</span>
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (jumpToStep) jumpToStep(9);
+          }}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap transition-colors"
+        >
+          Request free review <ArrowUpRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   );
 }

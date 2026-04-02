@@ -253,7 +253,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       </div>
 
       {reviewAvailable && (
-        <div className="mt-10 max-w-xl mx-auto">
+        <div className="mt-10 max-w-2xl mx-auto">
           {reviewSubmitted ? (
             <div className="bg-green-50 border border-green-200 rounded-2xl p-8 animate-in fade-in duration-500">
               <div className="flex items-center justify-center gap-3 mb-3">
@@ -265,31 +265,38 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
               </p>
             </div>
           ) : showReviewForm ? (
-            <div className="bg-white border border-primary/30 rounded-2xl p-8 shadow-lg animate-in fade-in duration-300">
-              <h3 className="font-display font-bold text-xl text-foreground mb-2">Request a Model Review</h3>
-              <p className="text-muted-foreground text-sm mb-6">Our team will review your financial model and send you feedback within 2 business days.</p>
-              <form onSubmit={handleReviewSubmit} className="space-y-4 text-left">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Your name</label>
-                  <input
-                    type="text"
-                    required
-                    value={reviewName}
-                    onChange={e => setReviewName(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    placeholder="Jane Smith"
-                  />
+            <div className="bg-gradient-to-b from-amber-50/80 to-white border-2 border-amber-400/40 rounded-2xl p-8 shadow-lg animate-in fade-in duration-300">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                  <MessageSquareMore className="h-5 w-5 text-amber-600" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Your email</label>
-                  <input
-                    type="email"
-                    required
-                    value={reviewEmail}
-                    onChange={e => setReviewEmail(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    placeholder="jane@school.org"
-                  />
+                <h3 className="font-display font-bold text-xl text-foreground">Request Expert Review</h3>
+              </div>
+              <p className="text-muted-foreground text-sm mb-6">Our team will review your financial model and send personalized feedback within 2 business days — completely free.</p>
+              <form onSubmit={handleReviewSubmit} className="space-y-4 text-left">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Your name</label>
+                    <input
+                      type="text"
+                      required
+                      value={reviewName}
+                      onChange={e => setReviewName(e.target.value)}
+                      className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                      placeholder="Jane Smith"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Your email</label>
+                    <input
+                      type="email"
+                      required
+                      value={reviewEmail}
+                      onChange={e => setReviewEmail(e.target.value)}
+                      className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                      placeholder="jane@school.org"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">Questions or notes <span className="text-muted-foreground font-normal">(optional)</span></label>
@@ -297,7 +304,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
                     value={reviewMessage}
                     onChange={e => setReviewMessage(e.target.value)}
                     rows={3}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+                    className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 resize-none"
                     placeholder="Anything specific you'd like us to look at?"
                   />
                 </div>
@@ -308,15 +315,15 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
                   <button
                     type="submit"
                     disabled={reviewLoading || !reviewName.trim() || !reviewEmail.trim()}
-                    className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 inline-flex items-center justify-center gap-2 bg-amber-500 text-white font-semibold py-3 px-4 rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {reviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    {reviewLoading ? "Submitting..." : "Submit Request"}
+                    {reviewLoading ? "Submitting..." : "Submit Review Request"}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setShowReviewForm(false); setReviewError(null); }}
-                    className="px-4 py-2.5 rounded-lg border border-border text-muted-foreground hover:bg-muted/50 transition-colors text-sm"
+                    className="px-4 py-3 rounded-xl border border-border text-muted-foreground hover:bg-muted/50 transition-colors text-sm"
                   >
                     Cancel
                   </button>
@@ -324,20 +331,40 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
               </form>
             </div>
           ) : (
-            <button
+            <div
               onClick={() => setShowReviewForm(true)}
-              className="w-full group bg-white border-2 border-dashed border-primary/30 hover:border-primary/60 rounded-2xl p-6 flex items-center gap-4 transition-all hover:shadow-md"
+              className="w-full cursor-pointer group bg-gradient-to-r from-amber-50 via-white to-amber-50 border-2 border-amber-300/60 hover:border-amber-400 rounded-2xl p-6 sm:p-8 transition-all hover:shadow-xl hover:-translate-y-0.5"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                <MessageSquareMore className="h-6 w-6 text-primary" />
+              <div className="flex items-start gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-200 transition-colors">
+                  <MessageSquareMore className="h-7 w-7 text-amber-600" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h3 className="font-display font-bold text-lg sm:text-xl text-foreground mb-1">Get a Free Expert Review</h3>
+                  <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                    Our team of school finance specialists will review your model and send you personalized feedback — what looks strong, what to watch, and how to improve your lending position.
+                  </p>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Free of charge</span>
+                    <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> 2-day turnaround</span>
+                    <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Personalized feedback</span>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-amber-500 mt-1 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
               </div>
-              <div className="text-left">
-                <span className="font-display font-bold text-foreground block">Request a Model Review</span>
-                <span className="text-sm text-muted-foreground">Get expert feedback on your financial model from our team — free of charge.</span>
-              </div>
-              <ArrowRight className="h-5 w-5 text-primary ml-auto flex-shrink-0" />
-            </button>
+            </div>
           )}
+        </div>
+      )}
+
+      {anyExported && !reviewSubmitted && reviewAvailable && (
+        <div className="mt-6 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl px-5 py-3 flex items-center gap-3">
+            <MessageSquareMore className="h-4 w-4 text-amber-600 flex-shrink-0" />
+            <p className="text-sm text-amber-800">
+              <span className="font-semibold">Before you go</span> — want an expert to look over your model? <button onClick={() => setShowReviewForm(true)} className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Request a free review</button>
+            </p>
+          </div>
         </div>
       )}
 

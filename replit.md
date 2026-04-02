@@ -36,6 +36,9 @@ Operating schools can include prior-year actuals and an opening balance sheet. F
 ### Ratio-Driven Staffing Ramp
 Staffing can be `fixed` or `ratio`-based, where FTE is computed from enrollment ÷ studentRatio, ceiled to nearest 0.5.
 
+### Expert Review Service
+Prominent "Get a Free Expert Review" cards on both authenticated and public Export steps invite users to request personalized model feedback. The consultant analysis view includes a contextual nudge linking to the review request. Review requests generate structured Advisor Briefs (HTML email with priority tagging, financial snapshot, risk assessment, and lending readiness) sent to the team. Authenticated review requests auto-create a shared link for the advisor. Public wizard users can also request reviews via `POST /api/public/request-review` (rate-limited, validated).
+
 ### Shareable Read-Only Links
 Founders can generate unguessable share links (`/shared/:token`) for interactive viewing of their financial model by third parties without requiring a login. These links are revocable and display key financial summaries and metrics.
 

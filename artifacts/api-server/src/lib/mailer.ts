@@ -33,6 +33,9 @@ export interface ReviewRequestData {
   cashRunwayMonths: number;
   daysCashOnHand: number;
   criticalFindings: string[];
+  sharedViewUrl?: string;
+  source?: "authenticated" | "public";
+  breakEvenYear?: number | null;
 }
 
 function escapeHtml(str: string): string {
@@ -43,8 +46,25 @@ function fmtCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
-function yearRow(label: string, values: number[], formatter: (n: number) => string = fmtCurrency): string {
-  return `<tr><td style="padding:6px 12px;border-bottom:1px solid #E2E8F0;font-weight:600;color:#1E293B;">${label}</td>${values.map(v => `<td style="padding:6px 12px;border-bottom:1px solid #E2E8F0;text-align:right;color:#475569;">${formatter(v)}</td>`).join("")}</tr>`;
+function determinePriority(data: ReviewRequestData): "high" | "standard" {
+  if (data.criticalFindings.length >= 3) return "high";
+  const msg = (data.message || "").toLowerCase();
+  const urgencyWords = ["urgent", "asap", "deadline", "immediately", "time-sensitive", "closing", "due date"];
+  if (urgencyWords.some(w => msg.includes(w))) return "high";
+  return "standard";
+}
+
+function findBreakEvenYear(netIncome: number[]): number | null {
+  for (let i = 0; i < netIncome.length; i++) {
+    if (netIncome[i] >= 0) return i + 1;
+  }
+  return null;
+}
+
+function severityDot(index: number): string {
+  if (index < 2) return "🔴";
+  if (index < 4) return "🟡";
+  return "🟢";
 }
 
 export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<{ success: boolean; error?: string }> {
@@ -56,57 +76,115 @@ export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<
     return { success: false, error: "Email service is not configured." };
   }
 
-  const yearHeaders = data.enrollment.map((_, i) => `<th style="padding:6px 12px;border-bottom:2px solid #D97706;text-align:right;color:#1E293B;">Year ${i + 1}</th>`).join("");
+  const priority = determinePriority(data);
+  const breakEven = data.breakEvenYear ?? findBreakEvenYear(data.netIncome);
+  const source = data.source || "authenticated";
+  const isPublic = source === "public";
+
+  const y1Rev = data.revenue[0] || 0;
+  const y1Exp = data.expenses[0] || 0;
+  const y1Margin = y1Rev > 0 ? ((y1Rev - y1Exp) / y1Rev * 100).toFixed(1) : "0.0";
+  const y5Rev = data.revenue[data.revenue.length - 1] || 0;
+  const y5NI = data.netIncome[data.netIncome.length - 1] || 0;
+
+  const priorityBadge = priority === "high"
+    ? `<div style="background:#FEE2E2;border:1px solid #FECACA;border-radius:6px;padding:8px 16px;margin-bottom:16px;text-align:center;"><span style="color:#DC2626;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;">⚠ High Priority Review</span></div>`
+    : `<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:6px;padding:8px 16px;margin-bottom:16px;text-align:center;"><span style="color:#16A34A;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;">Standard Review</span></div>`;
+
+  const sourceBadge = isPublic
+    ? `<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;padding:8px 16px;margin-bottom:16px;"><span style="color:#92400E;font-size:13px;">📋 <strong>Public wizard user</strong> — this person has not created an account yet.</span></div>`
+    : "";
+
+  const yearHeaders = data.enrollment.map((_, i) => `<th style="padding:6px 10px;border-bottom:2px solid #D97706;text-align:right;color:#1E293B;font-size:12px;">Y${i + 1}</th>`).join("");
+
+  function yearRow(label: string, values: number[], formatter: (n: number) => string = fmtCurrency): string {
+    return `<tr><td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;font-weight:600;color:#1E293B;font-size:13px;">${label}</td>${values.map(v => `<td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;text-align:right;color:#475569;font-size:13px;">${formatter(v)}</td>`).join("")}</tr>`;
+  }
+
   const findingsHtml = data.criticalFindings.length > 0
-    ? `<div style="background:#FEF3C7;border-left:4px solid #D97706;padding:12px 16px;border-radius:4px;margin:16px 0;"><strong style="color:#92400E;">Diagnostics Findings:</strong><ul style="margin:8px 0 0;padding-left:18px;color:#92400E;">${data.criticalFindings.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul></div>`
+    ? data.criticalFindings.map((f, i) => `<div style="padding:6px 0;border-bottom:1px solid #FDE68A;font-size:13px;color:#1E293B;">${severityDot(i)} ${escapeHtml(f)}</div>`).join("")
+    : `<p style="color:#16A34A;font-size:13px;">No critical findings identified.</p>`;
+
+  const sharedLinkSection = data.sharedViewUrl
+    ? `<div style="text-align:center;margin:12px 0;"><a href="${escapeHtml(data.sharedViewUrl)}" style="background:#1E293B;color:white;padding:10px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;display:inline-block;">View Full Model</a></div>`
     : "";
 
   const html = `
-    <div style="font-family:'Nunito',Arial,sans-serif;max-width:640px;margin:0 auto;padding:32px;">
-      <div style="background:#1E293B;padding:16px 24px;border-radius:8px 8px 0 0;">
-        <h2 style="color:#FFFFFF;margin:0;font-family:'Quicksand',Arial,sans-serif;">Model Review Request</h2>
+    <div style="font-family:'Nunito',Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px;">
+      <div style="background:#1E293B;padding:14px 24px;border-radius:8px 8px 0 0;">
+        <h2 style="color:#FFFFFF;margin:0;font-family:'Quicksand',Arial,sans-serif;font-size:18px;">Advisor Review Brief</h2>
       </div>
       <div style="border:1px solid #E2E8F0;border-top:none;padding:24px;border-radius:0 0 8px 8px;">
-        <p style="color:#475569;line-height:1.6;margin-top:0;"><strong>${escapeHtml(data.requesterName)}</strong> (${escapeHtml(data.requesterEmail)}) has requested a review of their financial model.</p>
-        ${data.message ? `<div style="background:#F8FAFC;border-radius:6px;padding:12px 16px;margin:12px 0;"><p style="color:#475569;margin:0;font-style:italic;">"${escapeHtml(data.message)}"</p></div>` : ""}
-        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;">School Profile</h3>
+        ${priorityBadge}
+        ${sourceBadge}
+
+        <!-- SECTION 1: School Profile -->
+        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;margin-top:20px;">School Profile</h3>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;">
-          <tr><td style="padding:4px 0;color:#94A3B8;width:140px;">School</td><td style="color:#1E293B;font-weight:600;">${escapeHtml(data.schoolName)}</td></tr>
-          <tr><td style="padding:4px 0;color:#94A3B8;">State</td><td style="color:#1E293B;">${escapeHtml(data.state)}</td></tr>
-          <tr><td style="padding:4px 0;color:#94A3B8;">Type</td><td style="color:#1E293B;">${escapeHtml(data.schoolType)}</td></tr>
-          <tr><td style="padding:4px 0;color:#94A3B8;">Entity</td><td style="color:#1E293B;">${escapeHtml(data.entityType)}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;width:140px;font-size:13px;">School</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${escapeHtml(data.schoolName)}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">State</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.state)}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Type</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.schoolType)}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Entity</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.entityType)}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Enrollment Y1→Y5</td><td style="color:#1E293B;font-size:13px;">${data.enrollment.map(e => e.toLocaleString()).join(" → ")}</td></tr>
         </table>
-        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;">5-Year Summary</h3>
-        <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:13px;">
-          <thead><tr><th style="padding:6px 12px;border-bottom:2px solid #D97706;text-align:left;color:#1E293B;">Metric</th>${yearHeaders}</tr></thead>
+
+        <!-- SECTION 2: Financial Snapshot -->
+        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Financial Snapshot</h3>
+        <table style="width:100%;border-collapse:collapse;margin:8px 0 4px;">
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Revenue</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(y1Rev)}</td><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Margin</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${y1Margin}%</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y5 Revenue</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(y5Rev)}</td><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y5 Net Income</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(y5NI)}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Break-even</td><td style="color:#1E293B;font-weight:600;font-size:13px;" colspan="3">${breakEven ? `Year ${breakEven}` : "Not within projection"}</td></tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:12px;">
+          <thead><tr><th style="padding:5px 10px;border-bottom:2px solid #D97706;text-align:left;color:#1E293B;font-size:12px;">Metric</th>${yearHeaders}</tr></thead>
           <tbody>
-            ${yearRow("Enrollment", data.enrollment, n => n.toLocaleString())}
             ${yearRow("Revenue", data.revenue)}
             ${yearRow("Expenses", data.expenses)}
             ${yearRow("Net Income", data.netIncome)}
             ${yearRow("DSCR", data.dscr, n => n > 0 ? n.toFixed(2) + "x" : "N/A")}
           </tbody>
         </table>
+
+        <!-- SECTION 3: Risk Assessment -->
+        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Risk Assessment</h3>
+        <div style="background:#FFFBEB;border-radius:6px;padding:12px 16px;margin:8px 0 16px;">
+          ${findingsHtml}
+        </div>
+
+        <!-- SECTION 4: Lending Readiness -->
+        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Lending Readiness</h3>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;">
-          <tr><td style="padding:4px 0;color:#94A3B8;width:180px;">Reserve Months</td><td style="color:#1E293B;font-weight:600;">${data.reserveMonths.toFixed(1)}</td></tr>
-          <tr><td style="padding:4px 0;color:#94A3B8;">Cash Runway</td><td style="color:#1E293B;font-weight:600;">${data.cashRunwayMonths >= 60 ? "60+ months" : data.cashRunwayMonths.toFixed(1) + " months"}</td></tr>
-          <tr><td style="padding:4px 0;color:#94A3B8;">Days Cash on Hand</td><td style="color:#1E293B;font-weight:600;">${Math.round(data.daysCashOnHand)} days</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;width:180px;font-size:13px;">Reserve Months</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${data.reserveMonths.toFixed(1)}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Cash Runway</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${data.cashRunwayMonths >= 60 ? "60+ months" : data.cashRunwayMonths.toFixed(1) + " months"}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Days Cash on Hand</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${Math.round(data.daysCashOnHand)} days</td></tr>
         </table>
-        ${findingsHtml}
-        <div style="text-align:center;margin:24px 0 8px;">
-          <a href="mailto:${escapeHtml(data.requesterEmail)}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Reply to ${escapeHtml(data.requesterName)}</a>
+
+        <!-- SECTION 5: Advisor Notes -->
+        ${data.message ? `
+        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Advisor Notes</h3>
+        <div style="background:#F8FAFC;border-radius:6px;padding:12px 16px;margin:8px 0 16px;">
+          <p style="color:#475569;margin:0;font-style:italic;font-size:13px;line-height:1.5;">"${escapeHtml(data.message)}"</p>
+        </div>` : ""}
+
+        <!-- Actions -->
+        ${sharedLinkSection}
+        <div style="text-align:center;margin:16px 0 8px;">
+          <a href="mailto:${escapeHtml(data.requesterEmail)}" style="background-color:#D97706;color:white;padding:10px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;display:inline-block;">Reply to ${escapeHtml(data.requesterName)}</a>
         </div>
       </div>
-      <p style="color:#94A3B8;font-size:12px;text-align:center;margin-top:16px;">SchoolStack Budget by SchoolStack.ai</p>
+      <p style="color:#94A3B8;font-size:11px;text-align:center;margin-top:12px;">SchoolStack Budget — Advisor Brief</p>
     </div>
   `;
+
+  const subjectPrefix = priority === "high" ? "⚠ " : "";
+  const subjectSource = isPublic ? " [Public]" : "";
 
   try {
     const { error } = await resend.emails.send({
       from: fromAddress,
       to: [notifyEmail],
       replyTo: data.requesterEmail,
-      subject: `Model Review Request: ${data.schoolName} (${data.state})`,
+      subject: `${subjectPrefix}Review Brief: ${data.schoolName} (${data.state})${subjectSource}`,
       html,
     });
     if (error) {
