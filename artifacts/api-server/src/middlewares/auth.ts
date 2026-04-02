@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 
 let _jwtSecret: string | undefined;
 
-function getJwtSecret(): string {
+export function getJwtSecret(): string {
   if (!_jwtSecret) {
     const secret = process.env.JWT_SECRET;
     if (!secret) {

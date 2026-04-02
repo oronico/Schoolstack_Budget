@@ -896,7 +896,8 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
       if (process.env.APP_URL) {
         sharedViewUrl = `${process.env.APP_URL}/shared/${shareLink.token}`;
       } else if (process.env.NODE_ENV !== "production") {
-        const devUrl = `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`;
+        const devUrl = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : undefined;
+        if (!devUrl) return;
         sharedViewUrl = `${devUrl}/shared/${shareLink.token}`;
       }
     } catch (shareErr) {

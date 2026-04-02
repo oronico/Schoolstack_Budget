@@ -2,10 +2,8 @@ import { Router, type IRouter, type Response, type NextFunction } from "express"
 import jwt from "jsonwebtoken";
 import { db, feedbackTable, usersTable } from "@workspace/db";
 import { desc, eq, count } from "drizzle-orm";
-import { authMiddleware, type AuthRequest } from "../middlewares/auth";
+import { authMiddleware, type AuthRequest, getJwtSecret } from "../middlewares/auth";
 import { adminMiddleware } from "../middlewares/admin";
-
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? (() => { throw new Error("JWT_SECRET required in production"); })() : "schoolstack-dev-secret-change-in-production");
 
 const router: IRouter = Router();
 
@@ -14,7 +12,7 @@ function optionalAuthMiddleware(req: AuthRequest, _res: Response, next: NextFunc
   if (authHeader?.startsWith("Bearer ")) {
     try {
       const token = authHeader.substring(7);
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+      const decoded = jwt.verify(token, getJwtSecret()) as { userId: number };
       req.userId = decoded.userId;
     } catch {
     }

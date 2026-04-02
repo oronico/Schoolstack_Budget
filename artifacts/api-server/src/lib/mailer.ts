@@ -260,7 +260,11 @@ export async function sendPasswordResetEmail(
     console.error("[mailer] FATAL: APP_URL is required in production to generate reset links");
     return { success: false, error: "Server configuration error." };
   }
-  const appUrl = process.env.APP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`;
+  const appUrl = process.env.APP_URL || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : undefined);
+  if (!appUrl) {
+    console.error("[mailer] Cannot generate reset link: neither APP_URL nor REPLIT_DEV_DOMAIN is set");
+    return { success: false, error: "Server configuration error." };
+  }
   const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
   if (!resend) {

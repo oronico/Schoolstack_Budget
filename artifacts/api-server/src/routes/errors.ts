@@ -49,8 +49,8 @@ router.post("/errors/report", async (req, res) => {
       const authHeader = req.headers.authorization;
       if (authHeader?.startsWith("Bearer ")) {
         const jwt = await import("jsonwebtoken");
-        const secret = process.env.JWT_SECRET || "dev-secret-change-me";
-        const decoded = jwt.default.verify(authHeader.slice(7), secret) as { userId?: number };
+        const { getJwtSecret } = await import("../middlewares/auth");
+        const decoded = jwt.default.verify(authHeader.slice(7), getJwtSecret()) as { userId?: number };
         if (decoded.userId) userId = String(decoded.userId);
       }
     } catch {
