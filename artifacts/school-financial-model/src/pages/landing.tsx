@@ -96,8 +96,8 @@ export function LandingPage() {
 
               <p className="text-lg text-[#1E293B]/70 mb-10 leading-relaxed max-w-2xl">
                 You started a school because you're a great educator, not because you love spreadsheets.
-                SchoolStack Budget walks you through a 5-year financial model, step by step, in plain English.
-                When you're done, you'll actually understand your numbers.
+                We help school founders build lender-ready budgets — with real advisors who review your
+                numbers and a platform that makes the math make sense.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
@@ -105,7 +105,7 @@ export function LandingPage() {
                   href="/underwriting"
                   className="bg-[#328555] hover:bg-[#276844] text-white px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg shadow-[#328555]/20 flex items-center justify-center gap-2"
                 >
-                  Build My Budget
+                  Start My Financial Plan
                   <ArrowRight className="w-5 h-5" />
                 </Link>
                 <Link
@@ -115,6 +115,52 @@ export function LandingPage() {
                   Log into existing
                 </Link>
               </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 bg-white border-y border-[#1E293B]/5">
+        <div className="max-w-5xl mx-auto px-6">
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
+          >
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
+              Software that builds your model. Advisors who review it.
+            </h2>
+            <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
+              SchoolStack Budget is a financial planning team that works alongside you.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            <motion.div
+              {...fadeUp}
+              transition={{ duration: 0.5 }}
+              className="bg-[#FAF9F7] p-8 rounded-2xl border border-[#1E293B]/5"
+            >
+              <div className="w-14 h-14 bg-[#328555]/10 rounded-xl flex items-center justify-center mb-5">
+                <ClipboardList className="w-7 h-7 text-[#328555]" />
+              </div>
+              <h3 className="font-display text-xl font-bold text-[#1E293B] mb-3">Guided financial planning</h3>
+              <p className="text-[#1E293B]/60 leading-relaxed">
+                Our platform walks you through enrollment, revenue, staffing, and expenses — step by step, in plain English. You answer questions about your school; we build a professional 5-year financial model.
+              </p>
+            </motion.div>
+            <motion.div
+              {...fadeUp}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="bg-[#FAF9F7] p-8 rounded-2xl border border-[#328555]/20 ring-1 ring-[#328555]/10"
+            >
+              <div className="w-14 h-14 bg-[#D97706]/10 rounded-xl flex items-center justify-center mb-5">
+                <MessageCircle className="w-7 h-7 text-[#D97706]" />
+              </div>
+              <h3 className="font-display text-xl font-bold text-[#1E293B] mb-3">Free expert review — every model</h3>
+              <p className="text-[#1E293B]/60 leading-relaxed">
+                When your model is ready, our school finance advisors review your numbers personally. We'll tell you what's strong, what needs work, and exactly what a lender will ask about. No charge, no strings.
+              </p>
             </motion.div>
           </div>
         </div>
@@ -141,17 +187,17 @@ export function LandingPage() {
               {
                 icon: <School className="w-8 h-8 text-[#D97706]" />,
                 title: "Start with what you know.",
-                desc: "How many students? What do you charge? What do you pay your teachers? You already know more than you think. The wizard turns what's in your head into a real financial model.",
+                desc: "How many students? What do you charge? What do you pay your teachers? You already know more than you think. We turn what you know into a professional financial model.",
               },
               {
                 icon: <MessageCircle className="w-8 h-8 text-[#328555]" />,
                 title: "A CFO who speaks your language.",
-                desc: "Budget tells you what your numbers mean. Where you're healthy, where you're at risk, and what to do about it. No jargon. No judgment. Just clear, practical guidance.",
+                desc: "Our team reviews your model and tells you where you're healthy, where you're at risk, and what to do about it. No jargon. No judgment. Just clear, practical guidance.",
               },
               {
-                icon: <Download className="w-8 h-8 text-[#0D9488]" />,
-                title: "Take it with you.",
-                desc: "Download a Lender-Ready Packet, a Board Summary, a Formula Workbook, or a full Underwriting Package. Share a read-only link with your funder or authorizer. For your board meeting, your bank, or just your own peace of mind.",
+                icon: <CheckCircle2 className="w-8 h-8 text-[#0D9488]" />,
+                title: "Free expert review included.",
+                desc: "Every model gets a free review from our school finance team. We'll tell you what looks strong, what needs work, and what a lender will ask about. Real advisors, real feedback — not an upsell.",
               },
             ].map((item, i) => (
               <motion.div
@@ -238,7 +284,7 @@ export function LandingPage() {
                 </h3>
               </div>
               <p className="text-[#1E293B]/60 leading-relaxed text-sm">
-                Entering salaries? Budget tells you "most schools spend 50–60% on staffing" right next to the input.
+                Entering salaries? We'll show you that most schools spend 50–60% on staffing, right next to the input.
                 Setting tuition? You'll see what similar schools charge. Every section has contextual guidance
                 that helps you make confident decisions — like having a consultant sitting next to you.
               </p>
@@ -334,8 +380,8 @@ export function LandingPage() {
                 </h3>
                 <p className="text-[#1E293B]/60 leading-relaxed">
                   Create multiple scenarios — "Conservative," "Optimistic," "What if we lose the lease" — and
-                  compare them against your base model. Budget shows you which metrics improve, which get worse,
-                  and gives you a clear verdict. It's the tool that answers: <span className="font-semibold text-[#1E293B]">can
+                  compare them against your base model. We show you which metrics improve, which get worse,
+                  and give you a clear verdict. It's the analysis that answers: <span className="font-semibold text-[#1E293B]">can
                   my school survive the downside?</span>
                 </p>
               </div>
@@ -566,7 +612,7 @@ export function LandingPage() {
                 href="mailto:hello@schoolstack.ai"
                 className="bg-transparent border border-white/30 text-white hover:bg-white/10 px-8 py-4 rounded-xl font-bold text-lg transition flex items-center justify-center"
               >
-                Talk to Sales
+                Schedule a Free Review
               </a>
             </div>
           </motion.div>

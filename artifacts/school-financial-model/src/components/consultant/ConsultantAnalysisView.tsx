@@ -210,10 +210,10 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           </div>
           <div>
             <h2 className="font-display text-3xl font-bold text-foreground">
-              Your Financial Health Check
+              What Our Analysis Found
             </h2>
             <p className="text-muted-foreground text-base mt-0.5">
-              Here's what a school finance consultant would tell you about your plan.
+              Here's what our school finance team would tell you about your plan.
             </p>
           </div>
         </div>
@@ -789,14 +789,14 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         </p>
       </div>
 
-      <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/60 via-white to-amber-50/60 p-5 flex items-center gap-4">
+      <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/60 via-white to-amber-50/60 p-6 flex items-start gap-4">
         <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
           <HelpCircle className="h-5 w-5 text-amber-600" />
         </div>
         <div className="flex-1">
-          <p className="text-sm text-foreground">
-            <span className="font-semibold">Have questions about these results?</span>{" "}
-            <span className="text-muted-foreground">Our team can review your model and explain what to focus on first.</span>
+          <p className="text-sm font-semibold text-foreground mb-1">Want a real advisor to look at this?</p>
+          <p className="text-sm text-muted-foreground">
+            Request a free expert review — our school finance team will walk through your model and send you personalized feedback within 2 business days.
           </p>
         </div>
         <button
@@ -804,7 +804,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
           onClick={() => {
             if (jumpToStep) jumpToStep(exportStepNumber);
           }}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap transition-colors mt-1"
         >
           Request free review <ArrowUpRight className="h-3.5 w-3.5" />
         </button>

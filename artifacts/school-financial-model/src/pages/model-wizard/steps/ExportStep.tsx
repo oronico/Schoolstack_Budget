@@ -209,8 +209,35 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       <p className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto">
         {anyExported
           ? "Check your downloads folder. All documents are lender-ready and fully formatted."
-          : "Download your financial model as a polished workbook or lender packet - ready for financing conversations."}
+          : "Before you download, let our team review your numbers."}
       </p>
+
+      {reviewAvailable && !reviewSubmitted && !showReviewForm && (
+        <div className="max-w-2xl mx-auto mb-10">
+          <div
+            onClick={() => setShowReviewForm(true)}
+            className="w-full cursor-pointer group bg-gradient-to-r from-amber-50 via-white to-amber-50 border-2 border-amber-300/60 hover:border-amber-400 rounded-2xl p-6 sm:p-8 transition-all hover:shadow-xl hover:-translate-y-0.5"
+          >
+            <div className="flex items-start gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-200 transition-colors">
+                <MessageSquareMore className="h-7 w-7 text-amber-600" />
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="font-display font-bold text-lg sm:text-xl text-foreground mb-1">Get Your Free Expert Review</h3>
+                <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                  Our school finance advisors will review your model personally and send you feedback — what looks strong, what to watch, and how to strengthen your lending position. Free, no strings attached.
+                </p>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Free of charge</span>
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> 2-day turnaround</span>
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Personalized feedback</span>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-amber-500 mt-1 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <ExportCard
@@ -253,7 +280,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         />
       </div>
 
-      {reviewAvailable && (
+      {reviewAvailable && (reviewSubmitted || showReviewForm) && (
         <div className="mt-10 max-w-2xl mx-auto">
           {reviewSubmitted ? (
             <div className="bg-green-50 border border-green-200 rounded-2xl p-8 animate-in fade-in duration-500">
@@ -262,7 +289,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
                 <h3 className="font-display font-bold text-xl text-green-900">Review requested — we'll be in touch</h3>
               </div>
               <p className="text-green-700 text-sm">
-                Check your email for a confirmation. Our team will review your model and get back to you within 2 business days.
+                Check your email for a confirmation. Our advisors will review your model and get back to you within 2 business days.
               </p>
             </div>
           ) : showReviewForm ? (
@@ -271,9 +298,9 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
                 <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
                   <MessageSquareMore className="h-5 w-5 text-amber-600" />
                 </div>
-                <h3 className="font-display font-bold text-xl text-foreground">Request Expert Review</h3>
+                <h3 className="font-display font-bold text-xl text-foreground">Request Your Free Review</h3>
               </div>
-              <p className="text-muted-foreground text-sm mb-6">Our team will review your financial model and send personalized feedback within 2 business days — completely free.</p>
+              <p className="text-muted-foreground text-sm mb-6">Our school finance advisors will review your model and send personalized feedback within 2 business days — completely free.</p>
               <form onSubmit={handleReviewSubmit} className="space-y-4 text-left">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -331,30 +358,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
                 </div>
               </form>
             </div>
-          ) : (
-            <div
-              onClick={() => setShowReviewForm(true)}
-              className="w-full cursor-pointer group bg-gradient-to-r from-amber-50 via-white to-amber-50 border-2 border-amber-300/60 hover:border-amber-400 rounded-2xl p-6 sm:p-8 transition-all hover:shadow-xl hover:-translate-y-0.5"
-            >
-              <div className="flex items-start gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-200 transition-colors">
-                  <MessageSquareMore className="h-7 w-7 text-amber-600" />
-                </div>
-                <div className="flex-1 text-left">
-                  <h3 className="font-display font-bold text-lg sm:text-xl text-foreground mb-1">Get a Free Expert Review</h3>
-                  <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                    Our team of school finance specialists will review your model and send you personalized feedback — what looks strong, what to watch, and how to improve your lending position.
-                  </p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Free of charge</span>
-                    <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> 2-day turnaround</span>
-                    <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Personalized feedback</span>
-                  </div>
-                </div>
-                <ArrowRight className="h-5 w-5 text-amber-500 mt-1 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
       )}
 

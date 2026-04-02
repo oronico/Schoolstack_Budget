@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
-import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive, Sparkles, ArrowRight, BarChart3, CheckCircle2, Lightbulb, GitBranch, Lock } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive, Sparkles, ArrowRight, BarChart3, CheckCircle2, Lightbulb, GitBranch, Lock, MessageSquareMore, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { format, differenceInDays } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
 import { GuidanceModePrompt } from "@/components/coaching/GuidanceModePrompt";
 
@@ -175,6 +175,47 @@ export function DashboardPage() {
           </div>
         ) : (
           <div>
+            {completedModels.length > 0 && (
+              <div className="mb-8 bg-gradient-to-r from-amber-50/80 via-white to-amber-50/80 border border-amber-200/60 rounded-2xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <Lightbulb className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-display font-bold text-foreground mb-2">Recommended next steps</h3>
+                    <div className="grid sm:grid-cols-3 gap-3">
+                      <button
+                        onClick={() => setLocation(`/model/${completedModels[0].id}`)}
+                        className="flex items-center gap-2.5 text-left text-sm bg-white border border-border/60 rounded-xl px-4 py-3 hover:border-amber-300 hover:shadow-sm transition-all group"
+                      >
+                        <MessageSquareMore className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                        <span className="text-foreground/80 group-hover:text-foreground">Request your free expert review</span>
+                      </button>
+                      <button
+                        onClick={() => setLocation(`/model/${completedModels[0].id}/scenarios`)}
+                        className="flex items-center gap-2.5 text-left text-sm bg-white border border-border/60 rounded-xl px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all group"
+                      >
+                        <SlidersHorizontal className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="text-foreground/80 group-hover:text-foreground">Run a what-if scenario for your board</span>
+                      </button>
+                      {completedModels.some(m => differenceInDays(new Date(), new Date(m.updatedAt)) > 90) && (
+                        <button
+                          onClick={() => {
+                            const old = completedModels.find(m => differenceInDays(new Date(), new Date(m.updatedAt)) > 90);
+                            if (old) setLocation(`/model/${old.id}`);
+                          }}
+                          className="flex items-center gap-2.5 text-left text-sm bg-white border border-border/60 rounded-xl px-4 py-3 hover:border-teal-300 hover:shadow-sm transition-all group"
+                        >
+                          <RefreshCw className="h-4 w-4 text-teal-600 flex-shrink-0" />
+                          <span className="text-foreground/80 group-hover:text-foreground">Update your assumptions — a lot can change in a quarter</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <h2 className="font-display text-lg font-bold text-foreground mb-4">Your Models</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {models?.map(model => {
