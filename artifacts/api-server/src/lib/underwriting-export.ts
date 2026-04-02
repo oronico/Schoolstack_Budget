@@ -911,7 +911,7 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
   const headers = [...monthLabels, `${yearLabel} Total`];
 
   buildSYAssumptions(wb, sp, students, salaryEsc, costInflation, prorationFactor, yearLabel);
-  const revTotalRow = buildSYRevenue(wb, revenueRows, monthlyRev, opMonths, students, cols, headers, data.tuitionTiers, yi);
+  const revTotalRow = buildSYRevenue(wb, revenueRows, monthlyRev, opMonths, students, cols, headers, data.tuitionTiers, yi, costInflPct);
   const staffRow = buildSYStaffing(wb, staffingRows, salaryEsc, prorationFactor, opMonths, cols, headers, yi);
   const opsRow = buildSYExpenses(wb, expenseRows, students, annualRev, costInflation, prorationFactor, opMonths, cols, headers, yi);
   let syMgmtFee = 0;
@@ -981,7 +981,7 @@ function buildSYAssumptions(
 function buildSYRevenue(
   wb: ExcelJS.Workbook, rows: RevenueRow[], monthlyRev: number[],
   opMonths: number, students: number, cols: number, headers: string[],
-  tiers?: TuitionTier[], yi?: number
+  tiers?: TuitionTier[], yi?: number, costInflPct: number = 0
 ): number {
   const ws = wb.addWorksheet("Revenue");
   ws.columns = [{ width: 30 }, ...Array(12).fill({ width: 14 }), { width: 16 }];
@@ -992,7 +992,7 @@ function buildSYRevenue(
 
   for (const ro of rows) {
     r++; ws.getCell(r, 1).value = ro.lineItem || "Unnamed"; ws.getCell(r, 1).font = NF;
-    const yearAmt = computeRevForRow(ro, yi ?? 0, students, tiers);
+    const yearAmt = computeRevForRow(ro, yi ?? 0, students, tiers, costInflPct);
     for (let m = 0; m < 12; m++) {
       const cell = ws.getCell(r, m + 2);
       cell.value = m < opMonths ? Math.round(yearAmt / (opMonths || 12)) : 0;

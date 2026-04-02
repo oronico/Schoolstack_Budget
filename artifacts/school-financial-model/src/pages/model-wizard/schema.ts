@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BENCHMARK_DSCR_GREEN } from "@workspace/finance";
 
 const numMsg = (field: string) => ({
   invalid_type_error: `Please enter a valid number for ${field}`,
@@ -389,7 +390,7 @@ export const scenarioDefSchema = z.object({
 });
 
 export const covenantThresholdsSchema = z.object({
-  minDSCR: z.coerce.number(numMsg("minimum DSCR")).min(0).optional().default(1.25),
+  minDSCR: z.coerce.number(numMsg("minimum DSCR")).min(0).optional().default(BENCHMARK_DSCR_GREEN),
   minDaysCashOnHand: z.coerce.number(numMsg("minimum days cash on hand")).min(0).optional().default(45),
   minMonthsRunway: z.coerce.number(numMsg("minimum months runway")).min(0).optional().default(2),
   minCapacityUtil: z.coerce.number(numMsg("minimum capacity utilization")).min(0).max(1).optional().default(0.7),

@@ -1,11 +1,7 @@
 import { detectUnusualAssumptions, type AssumptionFlag } from "../src/lib/assumption-flags.js";
 import { runConsultantEngine, computeYearFinancialsFromData, type YearFinancials } from "../src/lib/consultant-engine.js";
-import {
-  resolveEsc, computeEffectiveFte,
-  computeRevenueForYear, computePersonnelForYear,
-  computeExpenseForYear, computeDebtServiceForYear,
-  getEnrollmentArray,
-} from "../src/lib/workbook-helpers.js";
+import { resolveEsc, computeEffectiveFte } from "../src/lib/workbook-helpers.js";
+import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../src/lib/benchmark-thresholds.js";
 import { microschoolStartup, privateSchoolWithESA, charterPublicFunding } from "./sample-payloads.js";
 
@@ -343,76 +339,59 @@ async function testHighTuitionGrowthFlag() {
   assert("high_tuition_growth fires via resolveEsc fallback at 7% inflation", !!hasFlag(fallbackFlags, "high_tuition_growth"));
 }
 
-function testDscrEngineParity() {
+async function testDscrEngineParity() {
   console.log("\n=== DSCR engine-vs-workbook parity ===");
 
-  interface TestPayload {
-    enrollment?: Record<string, unknown>;
-    schoolProfile?: Record<string, unknown>;
-    tuitionEscalation?: { rate?: number };
-    salaryEscalationRate?: number;
-    costInflationRate?: number;
-    revenueRows?: unknown[];
-    staffingRows?: unknown[];
-    expenseRows?: unknown[];
-    capitalAndDebtRows?: unknown[];
-    tuitionTiers?: unknown[];
-  }
-
   const payload = charterPublicFunding as Record<string, unknown>;
-  const data = payload as unknown as TestPayload;
 
   const engineYF: YearFinancials[] = computeYearFinancialsFromData(payload);
   assert("Engine returns year financials array", Array.isArray(engineYF) && engineYF.length > 0);
 
-  const enrollment = getEnrollmentArray(data.enrollment);
-  const sp = data.schoolProfile || {};
-  const sharedRate = data.tuitionEscalation?.rate ?? 3;
-  const costInflPct = data.costInflationRate ?? sharedRate;
-  const salaryEsc = (data.salaryEscalationRate ?? sharedRate) / 100;
-  const isPartial = (sp as Record<string, unknown>).isPartialFirstYear;
-  const y1Months = ((sp as Record<string, unknown>).year1OperatingMonths as number) || 10;
-  const operatingMonths = isPartial ? y1Months : 12;
-  const prorationFactor = operatingMonths / 12;
+  const wb = await generateUnderwritingWorkbook(payload);
+  const dscrSheet = wb.getWorksheet("DSCR & Covenants");
+  assert("Workbook has DSCR & Covenants sheet", !!dscrSheet);
+
+  if (!dscrSheet) return;
+
+  let dscrRowNum = 0;
+  dscrSheet.eachRow((row, rowNumber) => {
+    const cellA = row.getCell(1);
+    if (cellA.value === "DSCR" && dscrRowNum === 0) {
+      dscrRowNum = rowNumber;
+    }
+  });
+  assert("Found DSCR row in workbook", dscrRowNum > 0);
 
   for (let y = 0; y < engineYF.length; y++) {
-    const wbDS = computeDebtServiceForYear((data.capitalAndDebtRows || []) as never[], y);
     const engDS = engineYF[y].loanDebtService ?? engineYF[y].debtService;
+    if (engDS <= 0) continue;
+
+    const engDSCR = (engineYF[y].netIncome + engDS) / engDS;
+    const wbCell = dscrSheet.getCell(dscrRowNum, y + 2);
+    const wbDSCR = typeof wbCell.value === "number"
+      ? wbCell.value
+      : (wbCell.result !== undefined ? Number(wbCell.result) : NaN);
 
     assert(
-      `Year ${y + 1} debt service parity: engine=${Math.round(engDS)} workbook=${Math.round(wbDS)}`,
-      Math.abs(engDS - wbDS) < 1,
-      `engine=${engDS}, workbook=${wbDS}`
+      `Year ${y + 1} workbook produces valid numeric DSCR: ${wbDSCR}`,
+      !isNaN(wbDSCR) && typeof wbDSCR === "number",
+      `got ${wbDSCR}`
     );
 
-    if (engDS > 0) {
-      const engDSCR = (engineYF[y].netIncome + engDS) / engDS;
-      const wbRev = computeRevenueForYear(
-        (data.revenueRows || []) as never[], y, enrollment[y],
-        (data.tuitionTiers || []) as never[], costInflPct, sp as never
-      );
-      const wbPers = computePersonnelForYear(
-        (data.staffingRows || []) as never[], salaryEsc, prorationFactor, y, enrollment[y]
-      );
-      const wbOpex = computeExpenseForYear(
-        (data.expenseRows || []) as never[], y, enrollment[y], wbRev, costInflPct
-      );
-      const wbNI = wbRev - wbPers - wbOpex - wbDS;
-      const wbDSCR = (wbNI + wbDS) / wbDS;
+    assert(
+      `Year ${y + 1} both DSCR signs agree: engine=${engDSCR.toFixed(2)}x workbook=${wbDSCR.toFixed(2)}x`,
+      (engDSCR >= 0) === (wbDSCR >= 0),
+      `engine sign=${engDSCR >= 0}, workbook sign=${wbDSCR >= 0}`
+    );
 
-      assert(
-        `Year ${y + 1} both paths apply (NI+DS)/DS: eng=${engDSCR.toFixed(2)}x wb=${wbDSCR.toFixed(2)}x`,
-        typeof engDSCR === "number" && !isNaN(engDSCR) && typeof wbDSCR === "number" && !isNaN(wbDSCR)
-      );
+    const engStatus = engDSCR >= BENCHMARK_DSCR_GREEN ? "good" : engDSCR >= BENCHMARK_DSCR_AMBER ? "warning" : "danger";
+    const wbStatus = wbDSCR >= BENCHMARK_DSCR_GREEN ? "good" : wbDSCR >= BENCHMARK_DSCR_AMBER ? "warning" : "danger";
 
-      const engStatus = engDSCR >= BENCHMARK_DSCR_GREEN ? "good" : engDSCR >= BENCHMARK_DSCR_AMBER ? "warning" : "danger";
-      const wbStatus = wbDSCR >= BENCHMARK_DSCR_GREEN ? "good" : wbDSCR >= BENCHMARK_DSCR_AMBER ? "warning" : "danger";
-
-      assert(
-        `Year ${y + 1} both paths bucket using shared thresholds (GREEN=${BENCHMARK_DSCR_GREEN} AMBER=${BENCHMARK_DSCR_AMBER})`,
-        ["good", "warning", "danger"].includes(engStatus) && ["good", "warning", "danger"].includes(wbStatus)
-      );
-    }
+    assert(
+      `Year ${y + 1} threshold status match: engine='${engStatus}' workbook='${wbStatus}' (GREEN=${BENCHMARK_DSCR_GREEN} AMBER=${BENCHMARK_DSCR_AMBER})`,
+      engStatus === wbStatus,
+      `engine=${engStatus}, workbook=${wbStatus}`
+    );
   }
 
   const sampleNI = 25_000;
@@ -469,7 +448,7 @@ async function main() {
   await testTraceabilityStaffingRatio();
   await testTraceabilityRevenueComposition();
   await testHighTuitionGrowthFlag();
-  testDscrEngineParity();
+  await testDscrEngineParity();
   testDscrThresholdParity();
 
   console.log(`\n${"=".repeat(50)}`);
