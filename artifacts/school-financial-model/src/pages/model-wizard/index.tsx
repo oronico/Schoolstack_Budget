@@ -469,7 +469,10 @@ export function ModelWizardPage() {
                 return false;
               }
             }
-          } catch {
+          } catch (err) {
+            console.error("Failed to validate assumption flags:", err);
+            alert("Could not verify assumption flags. Please try again or check your connection.");
+            return false;
           }
           return true;
         }
