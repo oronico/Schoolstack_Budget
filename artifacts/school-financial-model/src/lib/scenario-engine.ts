@@ -61,7 +61,7 @@ function driverVal(
   returningStudents?: number
 ): number {
   const raw = amounts?.[y] ?? 0;
-  const esc = escalationRate ?? fallbackEsc ?? 0;
+  const esc = (escalationRate !== undefined && escalationRate !== 0) ? escalationRate : (fallbackEsc ?? 0);
   let base: number;
   if (esc !== 0 && y > 0) {
     base = (amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
@@ -197,7 +197,7 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     for (const r of expenseRows) {
       let val: number;
       if (r.driverType === "percent_of_revenue") {
-        const esc = r.escalationRate ?? costInflation ?? 0;
+        const esc = (r.escalationRate !== undefined && r.escalationRate !== 0) ? r.escalationRate : (costInflation ?? 0);
         let pct: number;
         if (esc !== 0 && y > 0) {
           pct = (r.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
