@@ -473,13 +473,13 @@ export const CreateModelBody = zod.object({
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().optional(),
-        accountsReceivable: zod.number().optional(),
-        fixedAssets: zod.number().optional(),
-        otherAssets: zod.number().optional(),
-        accountsPayable: zod.number().optional(),
-        currentDebtPortion: zod.number().optional(),
-        longTermDebt: zod.number().optional(),
+        cash: zod.number().nullable().optional(),
+        accountsReceivable: zod.number().nullable().optional(),
+        fixedAssets: zod.number().nullable().optional(),
+        otherAssets: zod.number().nullable().optional(),
+        accountsPayable: zod.number().nullable().optional(),
+        currentDebtPortion: zod.number().nullable().optional(),
+        longTermDebt: zod.number().nullable().optional(),
       })
       .optional(),
     sourcesAndUses: zod
@@ -900,13 +900,13 @@ export const GetModelResponse = zod.object({
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().optional(),
-        accountsReceivable: zod.number().optional(),
-        fixedAssets: zod.number().optional(),
-        otherAssets: zod.number().optional(),
-        accountsPayable: zod.number().optional(),
-        currentDebtPortion: zod.number().optional(),
-        longTermDebt: zod.number().optional(),
+        cash: zod.number().nullable().optional(),
+        accountsReceivable: zod.number().nullable().optional(),
+        fixedAssets: zod.number().nullable().optional(),
+        otherAssets: zod.number().nullable().optional(),
+        accountsPayable: zod.number().nullable().optional(),
+        currentDebtPortion: zod.number().nullable().optional(),
+        longTermDebt: zod.number().nullable().optional(),
       })
       .optional(),
     sourcesAndUses: zod
@@ -1328,13 +1328,13 @@ export const UpdateModelBody = zod.object({
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().optional(),
-        accountsReceivable: zod.number().optional(),
-        fixedAssets: zod.number().optional(),
-        otherAssets: zod.number().optional(),
-        accountsPayable: zod.number().optional(),
-        currentDebtPortion: zod.number().optional(),
-        longTermDebt: zod.number().optional(),
+        cash: zod.number().nullable().optional(),
+        accountsReceivable: zod.number().nullable().optional(),
+        fixedAssets: zod.number().nullable().optional(),
+        otherAssets: zod.number().nullable().optional(),
+        accountsPayable: zod.number().nullable().optional(),
+        currentDebtPortion: zod.number().nullable().optional(),
+        longTermDebt: zod.number().nullable().optional(),
       })
       .optional(),
     sourcesAndUses: zod
@@ -1750,13 +1750,13 @@ export const UpdateModelResponse = zod.object({
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().optional(),
-        accountsReceivable: zod.number().optional(),
-        fixedAssets: zod.number().optional(),
-        otherAssets: zod.number().optional(),
-        accountsPayable: zod.number().optional(),
-        currentDebtPortion: zod.number().optional(),
-        longTermDebt: zod.number().optional(),
+        cash: zod.number().nullable().optional(),
+        accountsReceivable: zod.number().nullable().optional(),
+        fixedAssets: zod.number().nullable().optional(),
+        otherAssets: zod.number().nullable().optional(),
+        accountsPayable: zod.number().nullable().optional(),
+        currentDebtPortion: zod.number().nullable().optional(),
+        longTermDebt: zod.number().nullable().optional(),
       })
       .optional(),
     sourcesAndUses: zod
@@ -2199,13 +2199,13 @@ export const ArchiveModelResponse = zod.object({
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().optional(),
-        accountsReceivable: zod.number().optional(),
-        fixedAssets: zod.number().optional(),
-        otherAssets: zod.number().optional(),
-        accountsPayable: zod.number().optional(),
-        currentDebtPortion: zod.number().optional(),
-        longTermDebt: zod.number().optional(),
+        cash: zod.number().nullable().optional(),
+        accountsReceivable: zod.number().nullable().optional(),
+        fixedAssets: zod.number().nullable().optional(),
+        otherAssets: zod.number().nullable().optional(),
+        accountsPayable: zod.number().nullable().optional(),
+        currentDebtPortion: zod.number().nullable().optional(),
+        longTermDebt: zod.number().nullable().optional(),
       })
       .optional(),
     sourcesAndUses: zod
