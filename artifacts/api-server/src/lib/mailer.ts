@@ -32,7 +32,7 @@ export interface ReviewRequestData {
   reserveMonths: number;
   cashRunwayMonths: number;
   daysCashOnHand: number;
-  criticalFindings: string[];
+  criticalFindings: { title: string; severity: "critical" | "high" | "medium" }[];
   criticalSeverityCount?: number;
   sharedViewUrl?: string;
   source?: "authenticated" | "public";
@@ -63,9 +63,9 @@ function findBreakEvenYear(netIncome: number[]): number | null {
   return null;
 }
 
-function severityDot(index: number): string {
-  if (index < 2) return "🔴";
-  if (index < 4) return "🟡";
+function severityDot(severity: "critical" | "high" | "medium"): string {
+  if (severity === "critical") return "🔴";
+  if (severity === "high") return "🟡";
   return "🟢";
 }
 
@@ -104,7 +104,7 @@ export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<
   }
 
   const findingsHtml = data.criticalFindings.length > 0
-    ? data.criticalFindings.map((f, i) => `<div style="padding:6px 0;border-bottom:1px solid #FDE68A;font-size:13px;color:#1E293B;">${severityDot(i)} ${escapeHtml(f)}</div>`).join("")
+    ? data.criticalFindings.map((f) => `<div style="padding:6px 0;border-bottom:1px solid #FDE68A;font-size:13px;color:#1E293B;">${severityDot(f.severity)} <span style="font-weight:600;text-transform:uppercase;font-size:10px;color:${f.severity === "critical" ? "#DC2626" : f.severity === "high" ? "#D97706" : "#6B7280"};margin-right:4px;">${f.severity}</span> ${escapeHtml(f.title)}</div>`).join("")
     : `<p style="color:#16A34A;font-size:13px;">No critical findings identified.</p>`;
 
   const sharedLinkSection = data.sharedViewUrl

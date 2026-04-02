@@ -186,10 +186,10 @@ router.post("/public/request-review", rateLimiter, async (req: Request, res: Res
     const y1EndingCash = y1StartingCash + (yearFinancials[0]?.netIncome || 0);
     const daysCashOnHand = computeDaysCashOnHand(y1EndingCash, yearFinancials[0]?.totalExpenses || 0);
 
-    const findings: string[] = [];
+    const findings: { title: string; severity: "critical" | "high" | "medium" }[] = [];
     let criticalSeverityCount = 0;
     for (const issue of consultantOutput.topIssues.slice(0, 5)) {
-      findings.push(issue.title);
+      findings.push({ title: issue.title, severity: issue.severity });
       if (issue.severity === "critical") criticalSeverityCount++;
     }
 
