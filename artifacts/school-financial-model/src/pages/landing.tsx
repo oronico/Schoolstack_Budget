@@ -171,7 +171,7 @@ export function LandingPage() {
             className="text-center mb-16"
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
-              What you'll build in about 20 minutes.
+              What you'll build in about an hour.
             </h2>
           </motion.div>
 
@@ -294,7 +294,7 @@ export function LandingPage() {
               Let's make sure you know your numbers.
             </h2>
             <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-              20 minutes. No credit card. No spreadsheet experience required.
+              About an hour. No credit card. No spreadsheet experience required.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
