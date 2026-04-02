@@ -45,6 +45,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
   const [reviewName, setReviewName] = useState("");
   const [reviewEmail, setReviewEmail] = useState("");
   const [reviewMessage, setReviewMessage] = useState("");
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,6 +264,25 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
                 </li>
               ))}
             </ul>
+          </div>
+        </div>
+      )}
+
+      {exported && !reviewSubmitted && !nudgeDismissed && (
+        <div className="mt-6 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl px-5 py-3 flex items-center gap-3">
+            <MessageSquareMore className="h-4 w-4 text-amber-600 flex-shrink-0" />
+            <p className="text-sm text-amber-800 flex-1">
+              <span className="font-semibold">Before you go</span> — want an expert to look over your model? <button onClick={() => { setShowReviewForm(true); const el = document.querySelector('[data-review-card]'); if (el) el.scrollIntoView({ behavior: "smooth" }); }} className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Request a free review</button>
+            </p>
+            <button
+              type="button"
+              onClick={() => setNudgeDismissed(true)}
+              className="text-amber-400 hover:text-amber-600 transition-colors p-1 flex-shrink-0"
+              aria-label="Dismiss"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
           </div>
         </div>
       )}
