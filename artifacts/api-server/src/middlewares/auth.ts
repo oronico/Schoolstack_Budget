@@ -4,15 +4,18 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
-function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error("JWT_SECRET environment variable is required. Set it before starting the server.");
-  }
-  return secret;
-}
+let _jwtSecret: string | undefined;
 
-const JWT_SECRET = getJwtSecret();
+function getJwtSecret(): string {
+  if (!_jwtSecret) {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET environment variable is required. Set it before starting the server.");
+    }
+    _jwtSecret = secret;
+  }
+  return _jwtSecret;
+}
 
 export interface AuthRequest extends Request {
   userId?: number;
@@ -27,7 +30,7 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
 
   const token = authHeader.substring(7);
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; tokenVersion?: number };
+    const decoded = jwt.verify(token, getJwtSecret()) as { userId: number; tokenVersion?: number };
     req.userId = decoded.userId;
 
     if (typeof decoded.tokenVersion === "number") {
@@ -55,5 +58,5 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
 }
 
 export function generateToken(userId: number, tokenVersion: number = 0): string {
-  return jwt.sign({ userId, tokenVersion }, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ userId, tokenVersion }, getJwtSecret(), { expiresIn: "7d" });
 }
