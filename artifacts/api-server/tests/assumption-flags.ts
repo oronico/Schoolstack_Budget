@@ -1,5 +1,6 @@
 import { detectUnusualAssumptions, type AssumptionFlag } from "../src/lib/assumption-flags.js";
-import { runConsultantEngine } from "../src/lib/consultant-engine.js";
+import { runConsultantEngine, computeYearFinancialsFromData } from "../src/lib/consultant-engine.js";
+import { resolveEsc, computeEffectiveFte } from "../src/lib/workbook-helpers.js";
 import { microschoolStartup, privateSchoolWithESA, charterPublicFunding } from "./sample-payloads.js";
 
 let passed = 0;
@@ -233,6 +234,77 @@ async function testFlagRoundTrip() {
   }
 }
 
+async function testTraceabilityEscalation() {
+  console.log("\n=== Traceability: resolveEsc parity ===");
+  const rate = resolveEsc(0, 3);
+  assert("resolveEsc(0, 3) returns fallback 3", rate === 3);
+  const rate2 = resolveEsc(5, 3);
+  assert("resolveEsc(5, 3) returns explicit 5", rate2 === 5);
+  const rate3 = resolveEsc(undefined, 3);
+  assert("resolveEsc(undefined, 3) returns fallback 3", rate3 === 3);
+}
+
+async function testTraceabilityNetMargin() {
+  console.log("\n=== Traceability: Net margin from engine matches flags ===");
+  const yf = computeYearFinancialsFromData(charterPublicFunding as Record<string, unknown>);
+  if (yf.length > 0) {
+    const y1Margin = yf[0].netMargin;
+    const flags = await detectUnusualAssumptions(charterPublicFunding as Record<string, unknown>);
+    const marginFlag = flags.find(f => f.flagType === "deep_losses");
+    if (marginFlag) {
+      const flagMarginStr = marginFlag.currentValue;
+      const flagMarginVal = parseFloat(flagMarginStr.replace("%", "")) / 100;
+      assert(
+        `Engine Y1 margin (${(y1Margin * 100).toFixed(1)}%) matches flag value (${(flagMarginVal * 100).toFixed(1)}%)`,
+        Math.abs(y1Margin - flagMarginVal) < 0.001,
+        `engine=${y1Margin}, flag=${flagMarginVal}`,
+      );
+    } else {
+      assert("No deep_losses flag means margin >= -10%", y1Margin >= -0.1);
+    }
+  }
+}
+
+async function testTraceabilityStaffingRatio() {
+  console.log("\n=== Traceability: Staffing ratio uses shared computeEffectiveFte ===");
+  const extremeRatio = {
+    ...microschoolStartup,
+    enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+    staffingRows: [
+      { id: "s1", roleName: "Solo Teacher", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 45000, benefitsEligible: true, benefitsRate: 20, payrollTaxRate: 7.65, payrollLike: false },
+    ],
+  };
+  const row = extremeRatio.staffingRows[0] as any;
+  const efteDirect = computeEffectiveFte(row, 0, 100);
+  assert("computeEffectiveFte for 1 FTE fixed = 1", efteDirect === 1);
+
+  const flags = await detectUnusualAssumptions(extremeRatio as Record<string, unknown>);
+  const ratioFlag = flags.find(f => f.flagType === "extreme_staffing_ratio");
+  assert("extreme_staffing_ratio flag present for 100:1", !!ratioFlag);
+  if (ratioFlag) {
+    assert("Flag currentValue includes ratio", ratioFlag.currentValue.includes("100"));
+  }
+}
+
+async function testTraceabilityRevenueComposition() {
+  console.log("\n=== Traceability: Revenue/tuition parity between engine and flags ===");
+  const yf = computeYearFinancialsFromData(charterPublicFunding as Record<string, unknown>);
+  if (yf.length > 0) {
+    const y1Rev = yf[0].totalRevenue;
+    const y1Tuition = yf[0].tuitionRevenue;
+    const flags = await detectUnusualAssumptions(charterPublicFunding as Record<string, unknown>);
+    const coverageFlag = flags.find(f => f.flagType === "low_tuition_coverage");
+    if (coverageFlag && y1Rev > 0) {
+      const engineTuitionPct = (y1Tuition / yf[0].totalExpenses) * 100;
+      assert(
+        `Tuition coverage flag fires when tuition/expenses < 70% (engine: ${engineTuitionPct.toFixed(1)}%)`,
+        engineTuitionPct < 70,
+        `engineTuitionPct=${engineTuitionPct.toFixed(1)}%`,
+      );
+    }
+  }
+}
+
 async function main() {
   console.log("=== Assumption Flag Test Suite ===");
 
@@ -248,6 +320,10 @@ async function main() {
   await testStaffingRatioNegative();
   await testParityWithConsultantEngine();
   await testFlagRoundTrip();
+  await testTraceabilityEscalation();
+  await testTraceabilityNetMargin();
+  await testTraceabilityStaffingRatio();
+  await testTraceabilityRevenueComposition();
 
   console.log(`\n${"=".repeat(50)}`);
   console.log(`Results: ${passed} passed, ${failed} failed`);

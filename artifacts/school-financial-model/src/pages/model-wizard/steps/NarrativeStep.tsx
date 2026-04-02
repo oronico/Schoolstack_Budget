@@ -92,16 +92,29 @@ interface ConsultantFlag {
   currentValue?: string;
 }
 
+interface RevenueComp {
+  source: string;
+  amount: number;
+  percentage: number;
+}
+
+interface KeyMetricData {
+  name: string;
+  value: string;
+}
+
+interface ConsultantEngineData {
+  assumptionFlags?: ConsultantFlag[];
+  revenueComposition?: RevenueComp[];
+  keyMetrics?: KeyMetricData[];
+}
+
 function fmt$(n: number): string {
   return "$" + n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
-function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, consultantFlags?: ConsultantFlag[]): string {
+function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, engineData?: ConsultantEngineData): string {
   const enrollment = formValues.enrollment as Record<string, number> | undefined;
-  const programs = (formValues.programs || []) as Array<{ name: string; annualTuition: number; year1: number }>;
-  const revenue = formValues.revenue as Record<string, number> | undefined;
-  const revenueRows = (formValues.revenueRows || []) as Array<{ category: string; enabled: boolean; amounts: number[] }>;
-  const staffingRows = (formValues.staffingRows || []) as Array<{ fte: number; roleName: string; functionCategory?: string }>;
 
   if (!enrollment) return "";
 
@@ -119,36 +132,25 @@ function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, co
   }
 
   if (key === "revenueAssumptions") {
-    const tuitionPrograms = programs.filter(p => p.annualTuition > 0);
-    if (tuitionPrograms.length > 0) {
-      const lines = tuitionPrograms.map(p => `${p.name}: ${fmt$(p.annualTuition)}/year`);
-      const escRate = revenue?.annualTuitionIncrease ?? 0;
-      const escText = escRate > 0 ? ` with ${escRate}% annual increases` : "";
-      const enabledRows = revenueRows.filter(r => r.enabled && r.amounts?.[0] > 0);
-      const supplementalY1 = enabledRows.reduce((sum, r) => sum + (r.amounts[0] || 0), 0);
-      const tuitionY1 = programs.reduce((sum, p) => sum + (p.annualTuition * (p.year1 || 0)), 0);
-      const grandTotal = supplementalY1 + tuitionY1;
-      const revSuffix = grandTotal > 0
-        ? ` Year 1 projected revenue: ${fmt$(grandTotal)} (${tuitionY1 > 0 ? ((tuitionY1 / grandTotal) * 100).toFixed(0) : "0"}% tuition).`
-        : "";
-      return `Our tuition structure: ${lines.join("; ")}${escText}.${revSuffix}`;
+    const revComp = engineData?.revenueComposition;
+    if (revComp && revComp.length > 0) {
+      const total = revComp.reduce((sum, r) => sum + r.amount, 0);
+      const lines = revComp.filter(r => r.amount > 0).map(r => `${r.source}: ${fmt$(r.amount)} (${r.percentage.toFixed(0)}%)`);
+      if (total > 0) {
+        return `Year 1 projected revenue: ${fmt$(total)}. Breakdown: ${lines.join("; ")}.`;
+      }
     }
   }
 
   if (key === "staffingPhilosophy") {
-    const ratioFlag = consultantFlags?.find(f => f.flagType === "staffing_ratio" || f.flagType === "extreme_staffing_ratio");
+    const flags = engineData?.assumptionFlags;
+    const ratioFlag = flags?.find(f => f.flagType === "staffing_ratio" || f.flagType === "extreme_staffing_ratio");
     if (ratioFlag?.currentValue) {
       return `Our staffing plan: ${ratioFlag.currentValue}.`;
     }
-    if (staffingRows.length > 0 && y1 > 0) {
-      const totalFte = staffingRows.reduce((sum, row) => sum + (Number(row.fte) || 0), 0);
-      const instructionalFte = staffingRows
-        .filter(r => r.functionCategory === "instructional")
-        .reduce((sum, row) => sum + (Number(row.fte) || 0), 0);
-      if (totalFte > 0) {
-        const ratio = Math.round(y1 / (instructionalFte || totalFte));
-        return `Year 1: ${totalFte.toFixed(1)} FTE staff for ${y1} students (${ratio}:1 student-to-teacher ratio).`;
-      }
+    const staffingMetric = engineData?.keyMetrics?.find(m => m.name.toLowerCase().includes("staffing") || m.name.toLowerCase().includes("staff"));
+    if (staffingMetric) {
+      return `Our staffing plan: ${staffingMetric.value}.`;
     }
   }
 
@@ -235,7 +237,12 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
           const Icon = section.icon;
           const isExpanded = expandedSections.has(section.key);
           const currentVal = narrative[section.key] || "";
-          const prefill = buildPrefill(section.key, formValues, assumptionFlags as ConsultantFlag[]);
+          const engineDataForPrefill: ConsultantEngineData = {
+            assumptionFlags: assumptionFlags as ConsultantFlag[],
+            revenueComposition: (consultantData as unknown as Record<string, unknown>)?.revenueComposition as RevenueComp[] | undefined,
+            keyMetrics: (consultantData as unknown as Record<string, unknown>)?.keyMetrics as KeyMetricData[] | undefined,
+          };
+          const prefill = buildPrefill(section.key, formValues, engineDataForPrefill);
 
           return (
             <div

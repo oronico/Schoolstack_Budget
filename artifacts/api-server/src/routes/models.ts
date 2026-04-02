@@ -34,19 +34,14 @@ function checkUnresolvedFlags(
   for (const r of responses) {
     responseMap.set(`${r.flagType}:${r.field}`, r.reason || "");
   }
-  const unresolved = flags.filter(
-    f => (f.severity === "critical" || f.severity === "warning") &&
+  const unresolvedCritical = flags.filter(
+    f => f.severity === "critical" &&
          !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
   );
-  if (unresolved.length === 0) return { blocked: false, message: "" };
-  const critCount = unresolved.filter(f => f.severity === "critical").length;
-  const warnCount = unresolved.filter(f => f.severity === "warning").length;
-  const parts = [];
-  if (critCount > 0) parts.push(`${critCount} critical`);
-  if (warnCount > 0) parts.push(`${warnCount} warning`);
+  if (unresolvedCritical.length === 0) return { blocked: false, message: "" };
   return {
     blocked: true,
-    message: `Export blocked: ${parts.join(" and ")} assumption flag(s) require an explanation before exporting.`,
+    message: `Export blocked: ${unresolvedCritical.length} critical assumption flag(s) require an explanation before exporting.`,
   };
 }
 import { buildLenderPacket } from "../lib/packets/build-lender-packet";
