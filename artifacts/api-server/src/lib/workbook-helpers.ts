@@ -6,6 +6,8 @@ import {
   computeInterestPortion,
   computePrincipalPortion,
   computeRemainingBalance,
+  resolveEsc,
+  computeEffectiveFte,
 } from "@workspace/finance";
 export {
   computeAnnualDebt,
@@ -270,10 +272,7 @@ export function isCharterModel(schoolType?: string, fundingProfile?: string): bo
 }
 
 
-export function resolveEsc(rowEsc?: number, fallback?: number): number {
-  if (rowEsc !== undefined && rowEsc !== 0) return rowEsc;
-  return fallback ?? 0;
-}
+export { resolveEsc };
 
 export function computeNewStudents(enrollment: number[], retentionRate: number, y: number): number {
   if (y === 0) return enrollment[0] || 0;
@@ -635,19 +634,7 @@ export function computeRevenueForYear(
   return total;
 }
 
-export function computeEffectiveFte(r: StaffingRow, y: number, enrollment: number): number {
-  if (r.startYear && (y + 1) < r.startYear) return 0;
-  if (r.endYear && (y + 1) > r.endYear) return 0;
-
-  if (r.staffingMode === "ratio" && r.studentRatio && r.studentRatio > 0) {
-    let computed = enrollment / r.studentRatio;
-    if (r.minFte !== undefined) computed = Math.max(computed, r.minFte);
-    if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte);
-    return Math.ceil(computed * 2) / 2;
-  }
-
-  return r.fte;
-}
+export { computeEffectiveFte };
 
 export function computePersonnelForYear(
   rows: StaffingRow[], salaryEsc: number, prorationFactor: number, y: number,

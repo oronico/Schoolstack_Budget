@@ -4,8 +4,7 @@ export const BENCHMARK_PAYROLL_AMBER = 0.65;
 export const BENCHMARK_FACILITY_GREEN = 0.15;
 export const BENCHMARK_FACILITY_AMBER = 0.22;
 
-export const BENCHMARK_DSCR_GREEN = 1.25;
-export const BENCHMARK_DSCR_AMBER = 1.15;
+export { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "@workspace/finance";
 
 export const BENCHMARK_REV_PER_STUDENT_GREEN = 10_000;
 export const BENCHMARK_REV_PER_STUDENT_AMBER = 7_000;

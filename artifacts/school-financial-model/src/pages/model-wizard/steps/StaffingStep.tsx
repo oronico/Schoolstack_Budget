@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
+import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, computeEffectiveFte } from "@workspace/finance";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
   type StaffingRowData,
@@ -395,20 +395,6 @@ function SummaryCard({
       )}
     </div>
   );
-}
-
-// Canonical version: artifacts/api-server/src/lib/workbook-helpers.ts:computeEffectiveFte
-// Keep in sync — any changes must be mirrored in both locations.
-function computeEffectiveFte(row: StaffingRowData, y: number, enrollment: number): number {
-  if (row.startYear && (y + 1) < row.startYear) return 0;
-  if (row.endYear && (y + 1) > row.endYear) return 0;
-  if (row.staffingMode === "ratio" && row.studentRatio && row.studentRatio > 0) {
-    let computed = enrollment / row.studentRatio;
-    if (row.minFte !== undefined) computed = Math.max(computed, row.minFte);
-    if (row.maxFte !== undefined) computed = Math.min(computed, row.maxFte);
-    return Math.ceil(computed * 2) / 2;
-  }
-  return row.fte;
 }
 
 interface StaffCardProps {

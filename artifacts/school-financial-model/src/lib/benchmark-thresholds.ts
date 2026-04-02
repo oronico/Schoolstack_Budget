@@ -1,2 +1,1 @@
-export const BENCHMARK_DSCR_GREEN = 1.25;
-export const BENCHMARK_DSCR_AMBER = 1.15;
+export { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "@workspace/finance";

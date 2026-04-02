@@ -17,4 +17,12 @@ export {
   DEFAULT_RETENTION_RATE,
   LOADED_COST_MULTIPLIER,
   YEAR_COUNT,
+  BENCHMARK_DSCR_GREEN,
+  BENCHMARK_DSCR_AMBER,
 } from "./constants.js";
+
+export {
+  computeEffectiveFte,
+  resolveEsc,
+  type StaffingRowLike,
+} from "./staffing.js";

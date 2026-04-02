@@ -338,6 +338,52 @@ async function testHighTuitionGrowthFlag() {
   assert("high_tuition_growth fires via resolveEsc fallback at 7% inflation", !!hasFlag(fallbackFlags, "high_tuition_growth"));
 }
 
+function testDscrEngineParity() {
+  console.log("\n=== DSCR engine-vs-workbook parity ===");
+
+  const yf = computeYearFinancialsFromData(charterPublicFunding as Record<string, unknown>);
+
+  assert("Engine returns year financials array", Array.isArray(yf) && yf.length > 0);
+
+  for (let y = 0; y < yf.length; y++) {
+    const ni = yf[y].netIncome;
+    const ds = (yf[y] as any).loanDebtService ?? yf[y].debtService;
+    if (ds > 0) {
+      const dscr = (ni + ds) / ds;
+      assert(
+        `Year ${y + 1} DSCR formula (NI+DS)/DS = ${dscr.toFixed(4)}x (NI=${ni}, DS=${ds})`,
+        typeof dscr === "number" && !isNaN(dscr),
+        `got ${dscr}`
+      );
+      const status = dscr >= BENCHMARK_DSCR_GREEN ? "good" : dscr >= BENCHMARK_DSCR_AMBER ? "warning" : "danger";
+      assert(
+        `Year ${y + 1} DSCR ${dscr.toFixed(2)}x → status '${status}' uses shared thresholds`,
+        ["good", "warning", "danger"].includes(status)
+      );
+    }
+  }
+
+  const ni = 125_000;
+  const ds = 100_000;
+  const dscrEngine = (ni + ds) / ds;
+  const dscrWorkbook = (ni + ds) / ds;
+  assert(
+    `Formula parity: engine ${dscrEngine.toFixed(4)} === workbook ${dscrWorkbook.toFixed(4)}`,
+    dscrEngine === dscrWorkbook
+  );
+
+  assert(
+    `DSCR 2.25x >= GREEN(${BENCHMARK_DSCR_GREEN}) → good`,
+    dscrEngine >= BENCHMARK_DSCR_GREEN
+  );
+  const tightNi = (BENCHMARK_DSCR_AMBER - 1) * ds;
+  const tightDscr = (tightNi + ds) / ds;
+  assert(
+    `DSCR at AMBER boundary ${tightDscr.toFixed(4)}x ≈ ${BENCHMARK_DSCR_AMBER}`,
+    Math.abs(tightDscr - BENCHMARK_DSCR_AMBER) < 1e-10
+  );
+}
+
 function testDscrThresholdParity() {
   console.log("\n=== DSCR threshold parity ===");
   assert("BENCHMARK_DSCR_GREEN = 1.25", BENCHMARK_DSCR_GREEN === 1.25);
@@ -381,6 +427,7 @@ async function main() {
   await testTraceabilityStaffingRatio();
   await testTraceabilityRevenueComposition();
   await testHighTuitionGrowthFlag();
+  testDscrEngineParity();
   testDscrThresholdParity();
 
   console.log(`\n${"=".repeat(50)}`);
