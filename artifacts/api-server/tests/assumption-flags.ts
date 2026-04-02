@@ -30,17 +30,10 @@ async function testMicroschoolFlags() {
 
   assert("Generates flags for microschool", flags.length > 0);
 
-  const ratioFlag = hasFlag(flags, "staffing_ratio");
-  if (ratioFlag) {
-    assert("Staffing ratio flag detected for microschool", true);
-    assert("Staffing ratio is info or warning", ratioFlag.severity === "info" || ratioFlag.severity === "warning");
-    assert("Staffing ratio has currentValue", !!ratioFlag.currentValue);
-  }
-
   const y1Cap = hasFlag(flags, "low_initial_capacity");
   if (microschoolStartup.enrollment.year1 < (microschoolStartup.schoolProfile.maxCapacity * 0.5)) {
-    assert("Year 1 capacity flag present (under 50% of max)", !!y1Cap);
-    assert("Year 1 capacity flag is info", y1Cap?.severity === "info");
+    assert("Low initial capacity flag present (under 50% of max)", !!y1Cap);
+    assert("Low initial capacity flag is info", y1Cap?.severity === "info");
   }
 
   assert("All flags have field property", flags.every(f => typeof f.field === "string" && f.field.length > 0));
@@ -75,8 +68,18 @@ async function testRetentionFlag() {
   assert("Critical retention flag at 79%", hasSeverity(borderFlags, "low_retention", "critical"));
 }
 
-async function testEnrollmentGrowthFlag() {
-  console.log("\n=== Enrollment Growth Flag (Warning >30%) ===");
+async function testRetentionNegative() {
+  console.log("\n=== Negative: 85% Retention NOT flagged ===");
+  const okRetention = {
+    ...microschoolStartup,
+    enrollment: { ...microschoolStartup.enrollment, retentionRate: 85 },
+  };
+  const flags = await detectUnusualAssumptions(okRetention as Record<string, unknown>);
+  assert("85% retention produces no low_retention flag", !hasFlag(flags, "low_retention"));
+}
+
+async function testEnrollmentSpikeFlag() {
+  console.log("\n=== Enrollment Spike Flag (Warning >30%) ===");
 
   const highGrowth = {
     ...microschoolStartup,
@@ -90,14 +93,19 @@ async function testEnrollmentGrowthFlag() {
 
 async function testTuitionConcentration() {
   console.log("\n=== Tuition Concentration (Info if <70% of expenses) ===");
-  const flags = await detectUnusualAssumptions(microschoolStartup as Record<string, unknown>);
-  const tuitionFlag = hasFlag(flags, "tuition_concentration");
+  const charterFlags = await detectUnusualAssumptions(charterPublicFunding as Record<string, unknown>);
+  const tuitionFlag = hasFlag(charterFlags, "low_tuition_coverage");
   if (tuitionFlag) {
-    assert("Tuition concentration is info severity", tuitionFlag.severity === "info");
-    assert("Tuition concentration has currentValue", !!tuitionFlag.currentValue);
-  } else {
-    assert("No tuition concentration flag (tuition covers >70% of expenses)", true);
+    assert("low_tuition_coverage present for charter", true);
+    assert("low_tuition_coverage is info severity", tuitionFlag.severity === "info");
+    assert("low_tuition_coverage has currentValue", !!tuitionFlag.currentValue);
   }
+}
+
+async function testTuitionConcentrationNegative() {
+  console.log("\n=== Negative: High Tuition Coverage NOT flagged ===");
+  const microFlags = await detectUnusualAssumptions(microschoolStartup as Record<string, unknown>);
+  assert("Microschool (tuition-heavy) has no low_tuition_coverage flag", !hasFlag(microFlags, "low_tuition_coverage"));
 }
 
 async function testZeroEscalation() {
@@ -128,15 +136,43 @@ async function testZeroEscalation() {
 }
 
 async function testNetMarginFlag() {
-  console.log("\n=== Net Margin Flag (Warning if <-10%) ===");
-  const flags = await detectUnusualAssumptions(microschoolStartup as Record<string, unknown>);
-  const marginFlag = hasFlag(flags, "net_margin");
+  console.log("\n=== Net Margin / Deep Losses Flag ===");
+  const charterFlags = await detectUnusualAssumptions(charterPublicFunding as Record<string, unknown>);
+  const marginFlag = hasFlag(charterFlags, "deep_losses");
   if (marginFlag) {
-    assert("Net margin flag is warning severity", marginFlag.severity === "warning");
-    assert("Net margin flag has currentValue", !!marginFlag.currentValue);
-  } else {
-    console.log("  ℹ️  No net margin flag (margins are healthy)");
+    assert("deep_losses flag is warning severity", marginFlag.severity === "warning");
+    assert("deep_losses flag has currentValue", !!marginFlag.currentValue);
   }
+}
+
+async function testStaffingRatioFlag() {
+  console.log("\n=== Staffing Ratio Flag ===");
+
+  const extremeRatio = {
+    ...microschoolStartup,
+    enrollment: { year1: 100, year2: 100, year3: 100, year4: 100, year5: 100, retentionRate: 85 },
+    staffingRows: [
+      { id: "s1", roleName: "Solo Teacher", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 45000, benefitsEligible: true, benefitsRate: 20, payrollTaxRate: 7.65, payrollLike: false },
+    ],
+  };
+  const flags = await detectUnusualAssumptions(extremeRatio as Record<string, unknown>);
+  const ratioFlag = hasFlag(flags, "extreme_staffing_ratio");
+  assert("Extreme staffing ratio flagged (100:1)", !!ratioFlag);
+  assert("Extreme staffing ratio is warning severity", ratioFlag?.severity === "warning");
+}
+
+async function testStaffingRatioNegative() {
+  console.log("\n=== Negative: 1:8 Ratio NOT flagged ===");
+  const goodRatio = {
+    ...microschoolStartup,
+    enrollment: { year1: 16, year2: 16, year3: 16, year4: 16, year5: 16, retentionRate: 85 },
+    staffingRows: [
+      { id: "s1", roleName: "Teacher A", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 45000, benefitsEligible: true, benefitsRate: 20, payrollTaxRate: 7.65, payrollLike: false },
+      { id: "s2", roleName: "Teacher B", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 45000, benefitsEligible: true, benefitsRate: 20, payrollTaxRate: 7.65, payrollLike: false },
+    ],
+  };
+  const flags = await detectUnusualAssumptions(goodRatio as Record<string, unknown>);
+  assert("1:8 student-teacher ratio not flagged", !hasFlag(flags, "extreme_staffing_ratio"));
 }
 
 async function testParityWithConsultantEngine() {
@@ -153,7 +189,7 @@ async function testParityWithConsultantEngine() {
     const consultantFlags = consultantOutput.assumptionFlags || [];
 
     assert(
-      `${label}: Direct flags count matches consultant flags count`,
+      `${label}: Flag count matches (direct=${directFlags.length}, consultant=${consultantFlags.length})`,
       directFlags.length === consultantFlags.length,
       `direct=${directFlags.length}, consultant=${consultantFlags.length}`,
     );
@@ -161,27 +197,16 @@ async function testParityWithConsultantEngine() {
     for (const cf of consultantFlags) {
       const df = directFlags.find(f => f.field === cf.field && f.flagType === cf.flagType);
       assert(
-        `${label}: Flag ${cf.flagType}:${cf.field} exists in both`,
-        !!df,
+        `${label}: ${cf.flagType}:${cf.field} severity=${cf.severity} matches`,
+        !!df && df.severity === cf.severity && df.currentValue === cf.currentValue,
+        df ? `sev: ${df.severity}=${cf.severity}, val: ${df.currentValue}=${cf.currentValue}` : "missing",
       );
-      if (df) {
-        assert(
-          `${label}: Severity matches for ${cf.flagType}:${cf.field}`,
-          df.severity === cf.severity,
-          `direct=${df.severity}, consultant=${cf.severity}`,
-        );
-        assert(
-          `${label}: currentValue matches for ${cf.flagType}:${cf.field}`,
-          df.currentValue === cf.currentValue,
-          `direct=${df.currentValue}, consultant=${cf.currentValue}`,
-        );
-      }
     }
   }
 }
 
 async function testFlagRoundTrip() {
-  console.log("\n=== Round-trip: Flags persist and reload correctly ===");
+  console.log("\n=== Round-trip: Flags serialize and deserialize correctly ===");
 
   const flags = await detectUnusualAssumptions(microschoolStartup as Record<string, unknown>);
   const serialized = flags.map(f => ({
@@ -199,15 +224,10 @@ async function testFlagRoundTrip() {
   assert("Serialized flags length matches", parsed.length === flags.length);
   for (let i = 0; i < flags.length; i++) {
     assert(
-      `Flag ${i} field round-trips`,
-      parsed[i].field === flags[i].field && parsed[i].flagType === flags[i].flagType,
-    );
-    assert(
-      `Flag ${i} severity round-trips`,
-      parsed[i].severity === flags[i].severity,
-    );
-    assert(
-      `Flag ${i} currentValue round-trips`,
+      `Flag ${i} (${flags[i].flagType}) round-trips correctly`,
+      parsed[i].field === flags[i].field &&
+      parsed[i].flagType === flags[i].flagType &&
+      parsed[i].severity === flags[i].severity &&
       parsed[i].currentValue === flags[i].currentValue,
     );
   }
@@ -218,10 +238,14 @@ async function main() {
 
   await testMicroschoolFlags();
   await testRetentionFlag();
-  await testEnrollmentGrowthFlag();
+  await testRetentionNegative();
+  await testEnrollmentSpikeFlag();
   await testTuitionConcentration();
+  await testTuitionConcentrationNegative();
   await testZeroEscalation();
   await testNetMarginFlag();
+  await testStaffingRatioFlag();
+  await testStaffingRatioNegative();
   await testParityWithConsultantEngine();
   await testFlagRoundTrip();
 

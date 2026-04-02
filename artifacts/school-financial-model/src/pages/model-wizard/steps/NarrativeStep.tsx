@@ -109,16 +109,9 @@ function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, co
     return `We project ${retRate}% student retention year over year.`;
   }
   if (key === "staffingPhilosophy") {
-    const ratioFlag = consultantFlags?.find(f => f.flagType === "staffing_ratio");
+    const ratioFlag = consultantFlags?.find(f => f.flagType === "staffing_ratio" || f.flagType === "extreme_staffing_ratio");
     if (ratioFlag?.currentValue) {
       return `Our staffing plan: ${ratioFlag.currentValue}.`;
-    }
-    if (y1 > 0) {
-      const totalFte = ((formValues.staffingRows as Array<Record<string, unknown>>) || [])
-        .reduce((sum, row) => sum + (Number(row.fte) || 0), 0);
-      if (totalFte > 0) {
-        return `Our Year 1 plan includes ${totalFte.toFixed(1)} total FTE staff for ${y1} students.`;
-      }
     }
   }
   return "";
