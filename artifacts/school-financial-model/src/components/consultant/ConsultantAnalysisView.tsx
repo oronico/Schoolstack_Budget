@@ -122,9 +122,10 @@ interface ConsultantAnalysisViewProps {
   cumNiLabel: string;
   modelId?: number;
   jumpToStep?: (step: number) => void;
+  exportStepNumber?: number;
 }
 
-export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep }: ConsultantAnalysisViewProps) {
+export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9 }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
 
   useEffect(() => {
@@ -801,7 +802,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         <button
           type="button"
           onClick={() => {
-            if (jumpToStep) jumpToStep(9);
+            if (jumpToStep) jumpToStep(exportStepNumber);
           }}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap transition-colors"
         >

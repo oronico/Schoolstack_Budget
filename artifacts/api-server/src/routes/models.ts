@@ -879,8 +879,10 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
     const daysCashOnHand = computeDaysCashOnHand(y1EndingCash, yearFinancials[0]?.totalExpenses || 0);
 
     const findings: string[] = [];
+    let criticalSeverityCount = 0;
     for (const issue of consultantOutput.topIssues.slice(0, 5)) {
       findings.push(issue.title);
+      if (issue.severity === "critical") criticalSeverityCount++;
     }
 
     let sharedViewUrl: string | undefined;
@@ -915,6 +917,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
         cashRunwayMonths,
         daysCashOnHand,
         criticalFindings: findings,
+        criticalSeverityCount,
         sharedViewUrl,
         source: "authenticated",
       }),

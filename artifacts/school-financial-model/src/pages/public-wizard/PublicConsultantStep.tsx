@@ -89,6 +89,8 @@ export function PublicConsultantStep({ jumpToStep, modelId }: { jumpToStep?: (s:
       data={data}
       niLabel={niLabel}
       cumNiLabel={cumNiLabel}
+      jumpToStep={jumpToStep}
+      exportStepNumber={8}
     />
   );
 }

@@ -187,8 +187,10 @@ router.post("/public/request-review", rateLimiter, async (req: Request, res: Res
     const daysCashOnHand = computeDaysCashOnHand(y1EndingCash, yearFinancials[0]?.totalExpenses || 0);
 
     const findings: string[] = [];
+    let criticalSeverityCount = 0;
     for (const issue of consultantOutput.topIssues.slice(0, 5)) {
       findings.push(issue.title);
+      if (issue.severity === "critical") criticalSeverityCount++;
     }
 
     const [teamResult, confirmResult] = await Promise.all([
@@ -209,6 +211,7 @@ router.post("/public/request-review", rateLimiter, async (req: Request, res: Res
         cashRunwayMonths,
         daysCashOnHand,
         criticalFindings: findings,
+        criticalSeverityCount,
         source: "public",
       }),
       sendReviewConfirmation(trimmedEmail, trimmedName, schoolName),

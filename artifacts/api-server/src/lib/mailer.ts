@@ -33,6 +33,7 @@ export interface ReviewRequestData {
   cashRunwayMonths: number;
   daysCashOnHand: number;
   criticalFindings: string[];
+  criticalSeverityCount?: number;
   sharedViewUrl?: string;
   source?: "authenticated" | "public";
   breakEvenYear?: number | null;
@@ -47,7 +48,8 @@ function fmtCurrency(n: number): string {
 }
 
 function determinePriority(data: ReviewRequestData): "high" | "standard" {
-  if (data.criticalFindings.length >= 3) return "high";
+  const criticalCount = data.criticalSeverityCount ?? 0;
+  if (criticalCount >= 3) return "high";
   const msg = (data.message || "").toLowerCase();
   const urgencyWords = ["urgent", "asap", "deadline", "immediately", "time-sensitive", "closing", "due date"];
   if (urgencyWords.some(w => msg.includes(w))) return "high";
