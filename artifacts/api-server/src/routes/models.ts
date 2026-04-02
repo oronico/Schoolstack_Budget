@@ -895,10 +895,8 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
       }).returning();
       if (process.env.APP_URL) {
         sharedViewUrl = `${process.env.APP_URL}/shared/${shareLink.token}`;
-      } else if (process.env.NODE_ENV !== "production") {
-        const devUrl = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : undefined;
-        if (!devUrl) return;
-        sharedViewUrl = `${devUrl}/shared/${shareLink.token}`;
+      } else if (process.env.NODE_ENV !== "production" && process.env.REPLIT_DEV_DOMAIN) {
+        sharedViewUrl = `https://${process.env.REPLIT_DEV_DOMAIN}/shared/${shareLink.token}`;
       }
     } catch (shareErr) {
       console.error("Failed to create team review shared link:", shareErr);
