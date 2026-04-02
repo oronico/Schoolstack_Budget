@@ -26,6 +26,13 @@ import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consu
 import { type AssumptionFlag } from "../lib/assumption-flags";
 import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
 
+// DATA MODEL: Assumption flags use a dual-source architecture:
+//   - `assumptionFlags` (computed): Engine-generated flags with field, flagType, severity,
+//     currentValue, benchmark, defaultPrompt. Recomputed on each consultant run.
+//   - `assumptionFlagResponses` (user input): User-provided reasons keyed by flagType:field.
+//     Stored separately since flags are recomputed but reasons persist.
+//   - API response merges both into a canonical shape with `reason` field included.
+//   - Persisted `assumptionFlags` also includes merged `reason` for export consumers.
 function checkUnresolvedFlags(
   flags: AssumptionFlag[],
   responses: Array<{ field: string; flagType: string; reason?: string }>,
@@ -34,6 +41,12 @@ function checkUnresolvedFlags(
   for (const r of responses) {
     responseMap.set(`${r.flagType}:${r.field}`, r.reason || "");
   }
+  // POLICY: Block export for unresolved warning AND critical flags.
+  // Rationale: Lender-ready documents must never contain unexplained anomalies.
+  // Info-level flags are informational only and do not block export.
+  // This policy is intentionally enforced identically in:
+  //   1. Server-side: checkUnresolvedFlags (this function) — used by all 6 export routes
+  //   2. Client-side: wizard step 9 validation in model-wizard/index.tsx
   const unresolved = flags.filter(
     f => (f.severity === "critical" || f.severity === "warning") &&
          !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
