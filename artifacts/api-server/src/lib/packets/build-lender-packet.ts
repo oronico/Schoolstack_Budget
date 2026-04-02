@@ -1,7 +1,7 @@
 import type { ConsultantOutput } from "../consultant-engine";
 import type { ModelData } from "../workbook-helpers";
 import type { AssumptionFlag } from "../assumption-flags";
-import { BENCHMARK_DSCR_GREEN } from "../benchmark-thresholds";
+import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
 import { buildPacketData } from "./build-packet-data";
 import type { PacketData, PacketSection, PacketTable, PacketTableRow, LinkedMetric } from "./packet-types";
 
@@ -235,7 +235,7 @@ function extractDSCRSummary(co: ConsultantOutput): DSCRSummary | null {
   return {
     currentDSCR: dscrMetric.value,
     status: dscrMetric.status as "good" | "warning" | "danger",
-    benchmark: dscrMetric.benchmark || `${BENCHMARK_DSCR_GREEN.toFixed(2)}x minimum`,
+    benchmark: dscrMetric.benchmark || `Minimum: ${BENCHMARK_DSCR_AMBER.toFixed(2)}x; target: ${BENCHMARK_DSCR_GREEN.toFixed(2)}x`,
     trendDescription: dscrMetric.interpretation,
   };
 }
