@@ -273,7 +273,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
           <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl px-5 py-3 flex items-center gap-3">
             <MessageSquareMore className="h-4 w-4 text-amber-600 flex-shrink-0" />
             <p className="text-sm text-amber-800 flex-1">
-              <span className="font-semibold">Before you go</span> — want an expert to look over your model? <button onClick={() => { setShowReviewForm(true); const el = document.querySelector('[data-review-card]'); if (el) el.scrollIntoView({ behavior: "smooth" }); }} className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Request a free review</button>
+              <span className="font-semibold">Before you go</span> — want an expert to look over your model? <button onClick={() => setShowReviewForm(true)} className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Request a free review</button>
             </p>
             <button
               type="button"
