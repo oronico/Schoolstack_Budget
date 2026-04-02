@@ -230,6 +230,9 @@ interface ModelData {
   schoolProfile?: SchoolProfile;
   enrollment?: Enrollment;
   tuitionTiers?: TuitionTier[];
+  tuitionEscalation?: { rate?: number };
+  salaryEscalationRate?: number;
+  costInflationRate?: number;
   revenue?: LegacyRevenue;
   revenueRows?: RevenueRow[];
   staffing?: LegacyStaffing;
@@ -729,8 +732,9 @@ export function computeAllYearsFromRows(
   costInflationPct?: number,
   schoolProfile?: SchoolProfile,
   retentionRate?: number,
+  skipFacilityOverlay?: boolean,
 ): YearFinancials[] {
-  const spIsFacilityAuthority = hasSchoolProfileFacilityData(schoolProfile);
+  const spIsFacilityAuthority = !skipFacilityOverlay && hasSchoolProfileFacilityData(schoolProfile);
   const effectiveExpenseRows = spIsFacilityAuthority
     ? expenseRows.map(r => r.category === "occupancy_facility" ? { ...r, enabled: false } : r)
     : expenseRows;
@@ -741,9 +745,11 @@ export function computeAllYearsFromRows(
     const baseCost = computeStaffingBaseCost(staffingRows, yearIdx, students);
     const totalStaffingCost = baseCost * salaryEsc * pf;
 
-    const rev = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers, schoolProfile);
+    const revRaw = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers, schoolProfile);
+    const revTotal = revRaw.total * pf;
     const rr = retentionRate ?? 85;
-    const exp = computeExpensesForYear(effectiveExpenseRows, yearIdx, students, rev.total, costInflationPct, localNewStudents(enrollmentByYear, rr, yearIdx), localReturningStudents(enrollmentByYear, rr, yearIdx));
+    const exp = computeExpensesForYear(effectiveExpenseRows, yearIdx, students, revRaw.total, costInflationPct, localNewStudents(enrollmentByYear, rr, yearIdx), localReturningStudents(enrollmentByYear, rr, yearIdx));
+    const expTotal = exp.total * pf;
     const capDebt = computeCapDebtForYear(capDebtRows, yearIdx, students);
 
     let facilityOverlay = 0;
@@ -752,18 +758,18 @@ export function computeAllYearsFromRows(
       facilityOverlay = overlay.total;
     }
 
-    const totalOpex = exp.total + capDebt.total + facilityOverlay;
-    const facilityCost = exp.facilityCost + facilityOverlay;
+    const totalOpex = expTotal + capDebt.total + facilityOverlay;
+    const facilityCost = exp.facilityCost * pf + facilityOverlay;
     const totalExpenses = totalStaffingCost + totalOpex;
-    const netIncome = rev.total - totalExpenses;
+    const netIncome = revTotal - totalExpenses;
 
     return {
       year: yearIdx + 1,
       students,
-      totalRevenue: rev.total,
-      tuitionRevenue: rev.tuition,
-      publicRevenue: rev.publicFunding,
-      philanthropyRevenue: rev.philanthropy,
+      totalRevenue: revTotal,
+      tuitionRevenue: revRaw.tuition * pf,
+      publicRevenue: revRaw.publicFunding * pf,
+      philanthropyRevenue: revRaw.philanthropy * pf,
       totalStaffingCost,
       facilityCost,
       totalOpex,
@@ -771,7 +777,7 @@ export function computeAllYearsFromRows(
       loanDebtService: capDebt.loanOnly,
       totalExpenses,
       netIncome,
-      netMargin: rev.total > 0 ? netIncome / rev.total : 0,
+      netMargin: revTotal > 0 ? netIncome / revTotal : 0,
     };
   });
 }
@@ -1419,12 +1425,13 @@ export function computeYearFinancialsFromData(rawData: Record<string, unknown>):
     const staffingRows = data.staffingRows || [];
     const expenseRows = data.expenseRows || [];
     const capDebtRows = data.capitalAndDebtRows || [];
-    const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
-    const costInflationPct = data.facilities?.generalCostInflation || 0;
+    const sharedRate = data.tuitionEscalation?.rate ?? 3;
+    const salaryEscRate = (data.salaryEscalationRate ?? sharedRate) / 100;
+    const costInflationPct = data.costInflationRate ?? sharedRate;
     const effectiveCapDebtRows = debtIncluded ? capDebtRows : capDebtRows.filter(r => !r.isLoan);
     return computeAllYearsFromRows(
       enrollmentByYear, revenueRows, staffingRows, expenseRows, effectiveCapDebtRows,
-      salaryEscRate, prorationFactor, data.tuitionTiers, costInflationPct, sp, ceRR,
+      salaryEscRate, prorationFactor, data.tuitionTiers, costInflationPct, sp, ceRR, true,
     );
   } else {
     const rev = data.revenue || {};
@@ -1488,10 +1495,10 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     const staffingRows = data.staffingRows || [];
     const expenseRows = data.expenseRows || [];
     const capDebtRows = data.capitalAndDebtRows || [];
-    const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
-    const costInflationPct = data.facilities?.generalCostInflation || 0;
+    const ceSharedRate = data.tuitionEscalation?.rate ?? 3;
+    const salaryEscRate = (data.salaryEscalationRate ?? ceSharedRate) / 100;
+    const costInflationPct = data.costInflationRate ?? ceSharedRate;
 
-    // When debtIncluded is false, pass only non-loan capital rows
     const effectiveCapDebtRows = debtIncluded
       ? capDebtRows
       : capDebtRows.filter(r => !r.isLoan);
@@ -1636,8 +1643,9 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     const staffingRows = data.staffingRows || [];
     const expenseRows = data.expenseRows || [];
     const capDebtRows = data.capitalAndDebtRows || [];
-    const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
-    const stressCostInflation = data.facilities?.generalCostInflation || 0;
+    const stressSharedRate = data.tuitionEscalation?.rate ?? 3;
+    const salaryEscRate = (data.salaryEscalationRate ?? stressSharedRate) / 100;
+    const stressCostInflation = data.costInflationRate ?? stressSharedRate;
 
     stressTests = [
       runStressScenarioFromRows("Enrollment 20% Below Plan", enrollmentByYear, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, {
@@ -2604,8 +2612,9 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
         const staffingRows = data.staffingRows || [];
         const expenseRows = data.expenseRows || [];
         const capDebtRows = data.capitalAndDebtRows || [];
-        const salaryEscRate = (data.facilities?.annualSalaryIncrease || 0) / 100;
-        const sensCostInflation = data.facilities?.generalCostInflation || 0;
+        const sensSharedRate = data.tuitionEscalation?.rate ?? 3;
+        const salaryEscRate = (data.salaryEscalationRate ?? sensSharedRate) / 100;
+        const sensCostInflation = data.costInflationRate ?? sensSharedRate;
         const adjRevRows = revenueRows.map(r => {
           if ((r.category === "tuition_and_fees" || r.category === "tuition_offsets") && r.driverType !== "percent_of_base") {
             return { ...r, amounts: r.amounts.map(a => a * (1 + tPct / 100)) };

@@ -62,7 +62,7 @@ A React-based SPA featuring:
 Step 9 in the wizard allows founders to write lender-facing narratives for 9 sections (3 priority: Enrollment Strategy, Retention Plan, Risk Mitigation; 6 supplementary). The assumption flagging engine (`assumption-flags.ts`) uses the same math helpers as the projection engines to detect unusual inputs (low retention, high growth, 0% escalation, etc.) with severity levels (critical/warning/info). Flag responses and narratives are included in Lender Packet PDF, Board Summary PDF, and a dedicated "Budget Narrative" tab in the Excel underwriting workbook.
 
 ### Consultant Engine
-Provides deterministic financial analysis, including lender readiness scores, stress tests, sensitivity analysis, cash runway, industry benchmarks, and prior-year variance analysis. Also outputs assumption flags for the Narrative step.
+Provides deterministic financial analysis, including lender readiness scores, stress tests, sensitivity analysis, cash runway, industry benchmarks, and prior-year variance analysis. Also outputs assumption flags for the Narrative step. Uses the same escalation source resolution as the workbook: `salaryEscalationRate ?? tuitionEscalation.rate ?? 3` for salary, `costInflationRate ?? tuitionEscalation.rate ?? 3` for cost inflation. `computeYearFinancialsFromData` skips the facility overlay to match workbook parity. Y1 proration applies uniformly to revenue, personnel, and OpEx.
 
 ### Packet Architecture
 A shared packet-generation layer supports lender-ready and board-ready deliverables, including narrative generation and enrichment with risk/mitigant pairs from the Decision Engine.

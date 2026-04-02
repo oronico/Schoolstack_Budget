@@ -1357,9 +1357,10 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   const opexTotalRow = r;
   ws.getCell(r, 1).value = "Total Operating Expenses"; bc(ws.getCell(r, 1));
   const opexByYear: number[] = [];
+  const unproRev = revByYear.map((r, y) => y === 0 && prorationFactor !== 1 ? r / prorationFactor : r);
   for (let y = 0; y < 5; y++) {
     const pf = y === 0 ? prorationFactor : 1;
-    const val = computeExpenseForYear(expenseRows, y, enrollment[y], revByYear[y], costInflPct, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y)) * pf;
+    const val = computeExpenseForYear(expenseRows, y, enrollment[y], unproRev[y], costInflPct, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y)) * pf;
     opexByYear.push(val);
     const col = y + 2;
     if (bdCatSumRows.length > 0) {

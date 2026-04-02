@@ -87,7 +87,8 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
 
   const enrollmentByYear = buildEnrollmentArray(en, yearCount);
   const retentionRate = en.retentionRate ?? 85;
-  const costInflationPct = facilities.generalCostInflation || 0;
+  const sharedRate = data.tuitionEscalation?.rate ?? 3;
+  const costInflationPct = (data as Record<string, unknown>).costInflationRate as number ?? sharedRate;
 
   // --- ENROLLMENT-CENTRIC FLAGS (highest priority) ---
 
@@ -207,7 +208,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
 
     const staffingRows = data.staffingRows || [];
     const capDebtRows = data.capitalAndDebtRows || [];
-    const salaryEscRate = (facilities.annualSalaryIncrease || 0) / 100;
+    const salaryEscRate = ((data as Record<string, unknown>).salaryEscalationRate as number ?? sharedRate) / 100;
     const isPartial = sp.isPartialFirstYear || false;
     const operatingMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
     const prorationFactor = operatingMonths / 12;
@@ -230,6 +231,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
         costInflationPct,
         sp as SchoolProfile,
         retentionRate,
+        true,
       );
 
     for (let y = 0; y < yearFinancials.length; y++) {
