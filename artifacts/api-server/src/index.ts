@@ -10,12 +10,15 @@ function validateEnv() {
     ["JWT_SECRET", "Secret key for signing JWT tokens"],
   ];
 
+  const requiredInProduction: [string, string][] = [
+    ["APP_URL", "Public URL of the frontend application"],
+  ];
+
   const optional: [string, string][] = [
     ["ALLOWED_ORIGINS", "Comma-separated list of allowed CORS origins"],
     ["ADMIN_EMAILS", "Comma-separated list of admin email addresses"],
     ["RESEND_API_KEY", "Resend API key for transactional emails"],
     ["EMAIL_FROM", "Sender address for outgoing emails"],
-    ["APP_URL", "Public URL of the frontend application"],
   ];
 
   let hasFatal = false;
@@ -27,6 +30,17 @@ function validateEnv() {
         hasFatal = true;
       } else {
         console.warn(`[startup] WARNING: ${key} not set — ${desc}. Using dev default.`);
+      }
+    }
+  }
+
+  for (const [key, desc] of requiredInProduction) {
+    if (!process.env[key]) {
+      if (isProduction) {
+        console.error(`[startup] FATAL: Missing required env var ${key} — ${desc}`);
+        hasFatal = true;
+      } else {
+        console.warn(`[startup] INFO: ${key} not set — ${desc}. Will use dev fallback.`);
       }
     }
   }

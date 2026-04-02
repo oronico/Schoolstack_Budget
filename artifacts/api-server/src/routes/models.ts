@@ -893,7 +893,10 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
         token: shareToken,
         viewerLabel: "SchoolStack Team Review",
       }).returning();
-      const appUrl = process.env.APP_URL || (process.env.NODE_ENV === "production" ? "https://budget.schoolstack.ai" : `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`);
+      if (!process.env.APP_URL && process.env.NODE_ENV === "production") {
+        console.error("[models] FATAL: APP_URL is required in production to generate share links");
+      }
+      const appUrl = process.env.APP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`;
       sharedViewUrl = `${appUrl}/shared/${shareLink.token}`;
     } catch (shareErr) {
       console.error("Failed to create team review shared link:", shareErr);

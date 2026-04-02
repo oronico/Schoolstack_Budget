@@ -4,7 +4,19 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? (() => { throw new Error("JWT_SECRET environment variable is required in production"); })() : "schoolstack-dev-secret-change-in-production");
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("JWT_SECRET environment variable is required in production");
+    }
+    console.warn("[auth] JWT_SECRET not set — using insecure dev-only default. Never use this in production.");
+    return "schoolstack-dev-secret-DO-NOT-USE-IN-PROD";
+  }
+  return secret;
+}
+
+const JWT_SECRET = getJwtSecret();
 
 export interface AuthRequest extends Request {
   userId?: number;

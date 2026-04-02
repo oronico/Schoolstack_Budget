@@ -256,7 +256,11 @@ export async function sendPasswordResetEmail(
 ): Promise<{ success: boolean; error?: string }> {
   const resend = getResend();
   const fromAddress = process.env.EMAIL_FROM;
-  const appUrl = process.env.APP_URL || (process.env.NODE_ENV === "production" ? "https://budget.schoolstack.ai" : `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`);
+  if (!process.env.APP_URL && process.env.NODE_ENV === "production") {
+    console.error("[mailer] FATAL: APP_URL is required in production to generate reset links");
+    return { success: false, error: "Server configuration error." };
+  }
+  const appUrl = process.env.APP_URL || `https://${process.env.REPLIT_DEV_DOMAIN || "localhost:3000"}`;
   const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
   if (!resend) {
