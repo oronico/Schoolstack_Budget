@@ -9,7 +9,7 @@ import {
   setFormula, inputCell, printSetup,
   addInstructionsSheet, addDashboardSheet,
   computeAnnualDebt, computeDaysCashOnHand,
-  BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER,
+  BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER, BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER,
   driverVal, computeNewStudents, computeReturningStudents,
   computeGradeBandRevenue,
   hasGradeBandData,
@@ -1419,7 +1419,7 @@ function buildCashFlow(wb: ExcelJS.Workbook, res: LenderResults) {
     cell.font = BF; cell.border = BORDER;
     cell.alignment = { horizontal: "right" };
     const v = res.dscr[y];
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= 1.2 ? GREEN_BG : v >= 1.0 ? AMBER_BG : RED_BG } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: v >= BENCHMARK_DSCR_GREEN ? GREEN_BG : v >= BENCHMARK_DSCR_AMBER ? AMBER_BG : RED_BG } };
   }
 
   lbl(13, "Net Income After Debt");
@@ -1643,14 +1643,14 @@ function buildSummary(wb: ExcelJS.Workbook, input: Record<string, string | numbe
   setFormula(s17, `'Cash Flow & DSCR'!C11`, res.dscr[0]);
   s17.numFmt = "0.00x"; s17.font = BF; s17.border = BORDER; s17.alignment = { horizontal: "right" };
   const dscrV = res.dscr[0];
-  s17.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscrV >= 1.2 ? GREEN_BG : dscrV >= 1.0 ? AMBER_BG : RED_BG } };
+  s17.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscrV >= BENCHMARK_DSCR_GREEN ? GREEN_BG : dscrV >= BENCHMARK_DSCR_AMBER ? AMBER_BG : RED_BG } };
 
   lbl(18, "DSCR (Year 5)");
   const s18 = ws.getCell("C18");
   setFormula(s18, `'Cash Flow & DSCR'!G11`, res.dscr[4]);
   s18.numFmt = "0.00x"; s18.font = BF; s18.border = BORDER; s18.alignment = { horizontal: "right" };
   const dscrV5 = res.dscr[4];
-  s18.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscrV5 >= 1.2 ? GREEN_BG : dscrV5 >= 1.0 ? AMBER_BG : RED_BG } };
+  s18.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscrV5 >= BENCHMARK_DSCR_GREEN ? GREEN_BG : dscrV5 >= BENCHMARK_DSCR_AMBER ? AMBER_BG : RED_BG } };
 
   const y1DcohLender = computeDaysCashOnHand(res.cumulativeCash[0] || 0, res.totalExpenses[0] || 0);
   const y1DcohRoundedLender = Math.round(y1DcohLender);

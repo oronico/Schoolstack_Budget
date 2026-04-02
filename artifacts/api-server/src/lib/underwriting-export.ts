@@ -2,7 +2,7 @@
 // The /export/underwriting route has been removed; only /export/underwriting-v2 is active.
 // Retained for reference only — do not add new code here.
 import ExcelJS from "exceljs";
-import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear, computeInstructionalCostByYear, resolveEsc as resolveEscShared, computeEffectiveFte } from "./workbook-helpers.js";
+import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear, computeInstructionalCostByYear, resolveEsc as resolveEscShared, computeEffectiveFte, BENCHMARK_DSCR_GREEN } from "./workbook-helpers.js";
 import { computeAnnualDebt } from "@workspace/finance";
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
@@ -350,12 +350,8 @@ function funcLabel(fc: string): string {
   return map[fc] || fc;
 }
 
-let _globalCostInflationPct = 0;
-
-function setGlobalCostInflation(pct: number) { _globalCostInflationPct = pct; }
-
-function resolveEsc(rowEsc?: number): number {
-  return resolveEscShared(rowEsc, _globalCostInflationPct);
+function resolveEsc(rowEsc: number | undefined, fallback: number): number {
+  return resolveEscShared(rowEsc, fallback);
 }
 
 function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number): number {
@@ -386,8 +382,8 @@ function localReturningStudents(enrollment: number[], retentionRate: number, y: 
   return Math.min(enrollment[y] || 0, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
 }
 
-function resolveAmount(amounts: number[] | undefined, y: number, rowEsc?: number): number {
-  const esc = resolveEsc(rowEsc);
+function resolveAmount(amounts: number[] | undefined, y: number, rowEsc: number | undefined, costInflPct: number): number {
+  const esc = resolveEsc(rowEsc, costInflPct);
   if (esc !== 0 && y > 0) {
     return (amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
   }
@@ -585,7 +581,7 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
     ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100 : 0;
   const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
     ? Number((data.facilities as Record<string, unknown>).generalCostInflation) / 100 : 0;
-  setGlobalCostInflation(costInflation * 100);
+  const costInflPct = costInflation * 100;
   const isPartial = sp.isPartialFirstYear || false;
   const opMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
   const prorationFactor = opMonths / 12;
@@ -638,8 +634,8 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
   buildEnrollmentRevDrivers(wb, enrollment, revenueRows, yc, cols, yearHeaders, maxCapacity, data.tuitionTiers);
   const revGrandTotalRow = buildTuitionFundingDetail(wb, revenueRows, enrollment, yc, cols, yearHeaders, data.tuitionTiers);
   const staffTotalRow = buildStaffingPlan(wb, staffingRows, salaryEsc, prorationFactor, yc, cols, yearHeaders);
-  const opexGrandTotalRow = buildOperatingExpenses(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
-  const facGrandTotalRow = buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
+  const opexGrandTotalRow = buildOperatingExpenses(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders, costInflPct);
+  const facGrandTotalRow = buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders, costInflPct);
   buildSourcesUses(wb, sp, capDebtRows, startingCash, annualPersonnel, annualExpenses, annualCapDebt, expenseRows, enrollment, totalPrincipal);
   buildDebtSchedule(wb, capDebtRows, yc);
   buildMonthlyCashFlowY1(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
@@ -733,7 +729,7 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
     ? Number((data.facilities as Record<string, unknown>).annualSalaryIncrease) / 100 : 0;
   const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
     ? Number((data.facilities as Record<string, unknown>).generalCostInflation) / 100 : 0;
-  setGlobalCostInflation(costInflation * 100);
+  const costInflPct = costInflation * 100;
   const isPartial = sp.isPartialFirstYear || false;
   const opMonths = isPartial ? (sp.year1OperatingMonths || 10) : 12;
   const prorationFactor = opMonths / 12;
@@ -786,8 +782,8 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
   buildEnrollmentRevDrivers(wb, enrollment, revenueRows, yc, cols, yearHeaders, maxCapacity, data.tuitionTiers);
   const revGrandTotalRow2 = buildTuitionFundingDetail(wb, revenueRows, enrollment, yc, cols, yearHeaders, data.tuitionTiers);
   const staffTotalRow2 = buildStaffingPlan(wb, staffingRows, salaryEsc, prorationFactor, yc, cols, yearHeaders);
-  const opexGrandTotalRow2 = buildOperatingExpenses(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
-  const facGrandTotalRow2 = buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders);
+  const opexGrandTotalRow2 = buildOperatingExpenses(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders, costInflPct);
+  const facGrandTotalRow2 = buildFacilitiesOccupancy(wb, expenseRows, enrollment, annualRevenue, yc, cols, yearHeaders, costInflPct);
   buildSourcesUses(wb, sp, capDebtRows, startingCash, annualPersonnel, annualExpenses, annualCapDebt, expenseRows, enrollment, totalPrincipal);
   buildDebtSchedule(wb, capDebtRows, yc);
   buildMonthlyCashFlowY1(wb, sp, annualRevenue, annualPersonnel, annualExpenses, annualCapDebt, cashAtOpen, opMonths, revenueRows, enrollment, data.tuitionTiers, sp.fiscalYearStartMonth);
@@ -881,7 +877,6 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
   const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation
     ? Number((data.facilities as Record<string, unknown>).generalCostInflation) / 100 : 0;
   const costInflPct = costInflation * 100;
-  setGlobalCostInflation(costInflPct);
   const isPartial = sp.isPartialFirstYear || false;
   const opMonthsBase = isPartial ? (sp.year1OperatingMonths || 10) : 12;
   const prorationFactor = opMonthsBase / 12;
@@ -1024,8 +1019,8 @@ function buildSYRevenue(
   return r;
 }
 
-function computeRevForRow(ro: RevenueRow, yi: number, students: number, tiers?: TuitionTier[]): number {
-  const amt = resolveAmount(ro.amounts, yi, ro.escalationRate);
+function computeRevForRow(ro: RevenueRow, yi: number, students: number, tiers?: TuitionTier[], costInflPct: number = 0): number {
+  const amt = resolveAmount(ro.amounts, yi, ro.escalationRate, costInflPct);
   if (ro.driverType === "per_student") {
     if (ro.category === "tuition" && tiers && tiers.length > 0) {
       let total = 0;
@@ -1748,7 +1743,8 @@ function buildStaffingPlan(
 
 function buildOperatingExpenses(
   wb: ExcelJS.Workbook, rows: ExpenseRow[], enrollment: number[],
-  annualRev: number[], yc: number, cols: number, yearHeaders: string[]
+  annualRev: number[], yc: number, cols: number, yearHeaders: string[],
+  costInflPct: number = 0
 ): number {
   const ws = wb.addWorksheet("Operating Expenses");
   ws.columns = [{ width: 42 }, ...Array(yc).fill({ width: 18 })];
@@ -1774,12 +1770,12 @@ function buildOperatingExpenses(
       for (let y = 0; y < yc; y++) {
         const cell = ws.getCell(r, y + 2);
         const computed = ro.driverType === "percent_of_revenue"
-          ? Math.round((resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y])
-          : Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct));
+          ? Math.round((resolveAmount(ro.amounts, y, ro.escalationRate, costInflPct) / 100) * annualRev[y])
+          : Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, costInflPct));
 
         if (ro.driverType === "per_student") {
           const baseAmt = ro.amounts?.[0] ?? 0;
-          const esc = resolveEsc(ro.escalationRate);
+          const esc = resolveEsc(ro.escalationRate, costInflPct);
           if (esc !== 0 && y > 0) {
             setFormula(cell, `ROUND(${asmEnroll(y)}*${baseAmt}*(1+${asmRef(ASM.COST_INFL_ROW)})^${y},0)`, computed);
           } else {
@@ -1797,8 +1793,8 @@ function buildOperatingExpenses(
     for (let y = 0; y < yc; y++) {
       let catSum = 0;
       for (const ro of catRows) {
-        if (ro.driverType === "percent_of_revenue") catSum += Math.round((resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y]);
-        else catSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct));
+        if (ro.driverType === "percent_of_revenue") catSum += Math.round((resolveAmount(ro.amounts, y, ro.escalationRate, costInflPct) / 100) * annualRev[y]);
+        else catSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, costInflPct));
       }
       totals.push(catSum);
       const cell = ws.getCell(r, y + 2);
@@ -1832,7 +1828,8 @@ function buildOperatingExpenses(
 
 function buildFacilitiesOccupancy(
   wb: ExcelJS.Workbook, rows: ExpenseRow[], enrollment: number[],
-  annualRev: number[], yc: number, cols: number, yearHeaders: string[]
+  annualRev: number[], yc: number, cols: number, yearHeaders: string[],
+  costInflPct: number = 0
 ): number {
   const ws = wb.addWorksheet("Facilities & Occupancy");
   ws.columns = [{ width: 42 }, ...Array(yc).fill({ width: 18 })];
@@ -1858,9 +1855,9 @@ function buildFacilitiesOccupancy(
     for (let y = 0; y < yc; y++) {
       const cell = ws.getCell(r, y + 2);
       if (ro.driverType === "percent_of_revenue") {
-        cell.value = Math.round((resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y]);
+        cell.value = Math.round((resolveAmount(ro.amounts, y, ro.escalationRate, costInflPct) / 100) * annualRev[y]);
       } else {
-        cell.value = Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct));
+        cell.value = Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, costInflPct));
       }
       cell.numFmt = CUR; dc(cell);
     }
@@ -1870,8 +1867,8 @@ function buildFacilitiesOccupancy(
   for (let y = 0; y < yc; y++) {
     let facSum = 0;
     for (const ro of facRows) {
-      if (ro.driverType === "percent_of_revenue") facSum += Math.round((resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y]);
-      else facSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct));
+      if (ro.driverType === "percent_of_revenue") facSum += Math.round((resolveAmount(ro.amounts, y, ro.escalationRate, costInflPct) / 100) * annualRev[y]);
+      else facSum += Math.round(driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, costInflPct));
     }
     const cell = ws.getCell(r, y + 2);
     setFormula(cell, `SUM(${cn(firstData, y + 2)}:${cn(r - 1, y + 2)})`, facSum);
@@ -1884,8 +1881,8 @@ function buildFacilitiesOccupancy(
     const cell = ws.getCell(r, y + 2);
     let facTotal = 0;
     for (const ro of facRows) {
-      if (ro.driverType === "percent_of_revenue") facTotal += (resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y];
-      else facTotal += driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct);
+      if (ro.driverType === "percent_of_revenue") facTotal += (resolveAmount(ro.amounts, y, ro.escalationRate, costInflPct) / 100) * annualRev[y];
+      else facTotal += driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, costInflPct);
     }
     cell.value = enrollment[y] > 0 ? Math.round(facTotal / enrollment[y]) : 0;
     cell.numFmt = CUR; dc(cell);
@@ -1897,8 +1894,8 @@ function buildFacilitiesOccupancy(
     const cell = ws.getCell(r, y + 2);
     let facTotal = 0;
     for (const ro of facRows) {
-      if (ro.driverType === "percent_of_revenue") facTotal += (resolveAmount(ro.amounts, y, ro.escalationRate) / 100) * annualRev[y];
-      else facTotal += driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, _globalCostInflationPct);
+      if (ro.driverType === "percent_of_revenue") facTotal += (resolveAmount(ro.amounts, y, ro.escalationRate, costInflPct) / 100) * annualRev[y];
+      else facTotal += driverVal(ro.amounts, y, ro.driverType, enrollment[y], ro.escalationRate, costInflPct);
     }
     cell.value = annualRev[y] > 0 ? facTotal / annualRev[y] : 0;
     cell.numFmt = PCT; dc(cell);
@@ -2642,15 +2639,15 @@ function buildDSCRCovenant(
   r += 2; sec(ws, r, cols); ws.getCell(r, 1).value = "COVENANT CHECKS";
 
   const dscrCheckRow = r + 1;
-  r++; ws.getCell(r, 1).value = "DSCR ≥ 1.20x"; ws.getCell(r, 1).font = NF;
+  r++; ws.getCell(r, 1).value = `DSCR ≥ ${BENCHMARK_DSCR_GREEN.toFixed(2)}x`; ws.getCell(r, 1).font = NF;
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     if (annualDebtSvc > 0) {
       const noi = rev[y] - personnel[y] - ops[y];
       const dscr = noi / annualDebtSvc;
       const dscrCellRef = cn(dscrRow, y + 2);
-      setFormula(cell, `IF(${dscrCellRef}>=1.2,"PASS","FAIL")`, dscr >= 1.2 ? "PASS" : "FAIL");
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscr >= 1.2 ? GREEN_BG : RED_BG } };
+      setFormula(cell, `IF(${dscrCellRef}>=${BENCHMARK_DSCR_GREEN},"PASS","FAIL")`, dscr >= BENCHMARK_DSCR_GREEN ? "PASS" : "FAIL");
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: dscr >= BENCHMARK_DSCR_GREEN ? GREEN_BG : RED_BG } };
     } else {
       cell.value = "N/A";
     }
@@ -2716,7 +2713,7 @@ function buildUnderwritingSnapshot(
   const y1DSCR = annualDebtSvc > 0 ? y1NOI / annualDebtSvc : 0;
   const flagYr1 = schoolYearLabel(sp.openingYear, 0);
   if (annualDebtSvc > 0) {
-    flags.push([`DSCR ≥ 1.20x (${flagYr1})`, y1DSCR >= 1.2, `${y1DSCR.toFixed(2)}x`]);
+    flags.push([`DSCR ≥ ${BENCHMARK_DSCR_GREEN.toFixed(2)}x (${flagYr1})`, y1DSCR >= BENCHMARK_DSCR_GREEN, `${y1DSCR.toFixed(2)}x`]);
   }
 
   const y1Cash = startingCash + ni[0];

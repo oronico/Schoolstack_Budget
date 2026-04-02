@@ -14,6 +14,7 @@ import {
   computeReturningStudents,
   buildPhaseTimelineData, buildPhaseDetails,
   OWNERSHIP_COLORS, OWNERSHIP_BG_COLORS,
+  BENCHMARK_DSCR_GREEN,
   type RevenueRow as SharedRevenueRow, type StaffingRow as SharedStaffingRow,
   type ExpenseRow as SharedExpenseRow, type CapitalDebtRow as SharedCapDebtRow,
   type TuitionTier as SharedTuitionTier, type SchoolProfile as SharedSchoolProfile,
@@ -1625,11 +1626,11 @@ function buildFiveYearModel(
   r += 2;
   sec(ws, r, 6); ws.getCell(r, 1).value = "COVENANT & HEALTH CHECKS";
 
-  r++; ws.getCell(r, 1).value = "DSCR ≥ 1.20x"; dc(ws.getCell(r, 1));
+  r++; ws.getCell(r, 1).value = `DSCR ≥ ${BENCHMARK_DSCR_GREEN.toFixed(2)}x`; dc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
-    const dscrChk = cdArr[y] === 0 ? "N/A" : (cfadsArr[y] / cdArr[y] >= 1.2 ? "PASS" : "FAIL");
-    setFormula(cell, `IF(${cn(dsDebtRow, y + 2)}=0,"N/A",IF(${cn(dscrRow, y + 2)}>=1.2,"PASS","FAIL"))`, dscrChk);
+    const dscrChk = cdArr[y] === 0 ? "N/A" : (cfadsArr[y] / cdArr[y] >= BENCHMARK_DSCR_GREEN ? "PASS" : "FAIL");
+    setFormula(cell, `IF(${cn(dsDebtRow, y + 2)}=0,"N/A",IF(${cn(dscrRow, y + 2)}>=${BENCHMARK_DSCR_GREEN},"PASS","FAIL"))`, dscrChk);
     dc(cell);
   }
 
