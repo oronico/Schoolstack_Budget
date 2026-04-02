@@ -1,5 +1,5 @@
 import { detectUnusualAssumptions, type AssumptionFlag } from "../src/lib/assumption-flags.js";
-import { runConsultantEngine, computeYearFinancialsFromData, computeAllYearsFromRows, type YearFinancials } from "../src/lib/consultant-engine.js";
+import { runConsultantEngine, computeYearFinancialsFromData, type YearFinancials } from "../src/lib/consultant-engine.js";
 import { resolveEsc, computeEffectiveFte } from "../src/lib/workbook-helpers.js";
 import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../src/lib/benchmark-thresholds.js";
@@ -282,7 +282,7 @@ async function testTraceabilityStaffingRatio() {
       { id: "s1", roleName: "Solo Teacher", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 45000, benefitsEligible: true, benefitsRate: 20, payrollTaxRate: 7.65, payrollLike: false },
     ],
   };
-  const row = extremeRatio.staffingRows[0] as any;
+  const row = extremeRatio.staffingRows[0];
   const efteDirect = computeEffectiveFte(row, 0, 100);
   assert("computeEffectiveFte for 1 FTE fixed = 1", efteDirect === 1);
 
@@ -412,6 +412,65 @@ async function testDscrEngineParity() {
   assert(`DSCR at AMBER boundary = ${amberDscr}x ≈ ${BENCHMARK_DSCR_AMBER}`, Math.abs(amberDscr - BENCHMARK_DSCR_AMBER) < 1e-10);
 }
 
+async function testConsultantEngineDscrParity() {
+  console.log("\n=== Consultant engine DSCR vs workbook parity ===");
+
+  const payload = microschoolStartup as Record<string, unknown>;
+  const ceResult = await runConsultantEngine(payload);
+
+  const ceYF = computeYearFinancialsFromData(payload);
+  assert("CE computeYearFinancialsFromData returns array", Array.isArray(ceYF) && ceYF.length > 0);
+
+  const wb = await generateUnderwritingWorkbook(payload);
+  const dscrSheet = wb.getWorksheet("DSCR & Covenants");
+  assert("Workbook has DSCR & Covenants sheet (CE parity)", !!dscrSheet);
+  if (!dscrSheet) return;
+
+  let dscrRowNum = 0;
+  dscrSheet.eachRow((row: { getCell: (col: number) => { value: unknown } }, rowNumber: number) => {
+    if (row.getCell(1).value === "DSCR" && dscrRowNum === 0) dscrRowNum = rowNumber;
+  });
+
+  for (let y = 0; y < ceYF.length; y++) {
+    const ds = ceYF[y].loanDebtService ?? ceYF[y].debtService;
+    if (ds <= 0) continue;
+
+    const ceDscr = (ceYF[y].netIncome + ds) / ds;
+    const wbCell = dscrSheet.getCell(dscrRowNum, y + 2);
+    const wbDSCR = typeof wbCell.value === "number"
+      ? wbCell.value
+      : (wbCell.result !== undefined ? Number(wbCell.result) : NaN);
+
+    const diff = Math.abs(ceDscr - wbDSCR);
+    assert(
+      `CE Y${y + 1} DSCR (${ceDscr.toFixed(2)}x) ≈ workbook (${wbDSCR.toFixed(2)}x), diff=${diff.toFixed(4)}`,
+      diff < 0.05,
+      `diff ${diff.toFixed(4)} >= 0.05`,
+    );
+  }
+
+  if (ceResult.keyMetrics) {
+    const dscrMetric = ceResult.keyMetrics.find(
+      (m: { name: string }) => m.name.includes("Debt Service Coverage"),
+    );
+    if (dscrMetric) {
+      const ceVal = parseFloat(dscrMetric.value);
+      if (!isNaN(ceVal)) {
+        const wbY1Cell = dscrSheet.getCell(dscrRowNum, 2);
+        const wbY1 = typeof wbY1Cell.value === "number"
+          ? wbY1Cell.value
+          : (wbY1Cell.result !== undefined ? Number(wbY1Cell.result) : NaN);
+        const metricDiff = Math.abs(ceVal - wbY1);
+        assert(
+          `CE keyMetric DSCR (${ceVal.toFixed(2)}x) ≈ workbook Y1 (${wbY1.toFixed(2)}x)`,
+          metricDiff < 0.05,
+          `diff ${metricDiff.toFixed(4)} >= 0.05`,
+        );
+      }
+    }
+  }
+}
+
 function testDscrThresholdParity() {
   console.log("\n=== DSCR threshold parity ===");
   assert("BENCHMARK_DSCR_GREEN = 1.25", BENCHMARK_DSCR_GREEN === 1.25);
@@ -437,13 +496,16 @@ function testDscrThresholdParity() {
 
 function testPercentOfRevenueProration() {
   console.log("\n=== Percent-of-revenue proration guard ===");
-  const enrollment = [100, 120, 150, 180, 200];
-  const revRows = [{ id: "tuition", lineItem: "Tuition", category: "tuition_and_fees", enabled: true, driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000] }];
-  const staffRows: unknown[] = [];
-  const expRows = [{ id: "mgmt_fee", lineItem: "Management Fee", category: "administrative_general", enabled: true, driverType: "percent_of_revenue", amounts: [10, 10, 10, 10, 10] }];
-  const capRows: unknown[] = [];
-  const prorationFactor = 10 / 12;
-  const yf = computeAllYearsFromRows(enrollment, revRows as any, staffRows as any, expRows as any, capRows as any, 0.03, prorationFactor, undefined, 3, undefined, 85, true);
+  const pctPayload = {
+    schoolProfile: { isPartialFirstYear: true, year1OperatingMonths: 10 },
+    enrollment: { year1: 100, year2: 120, year3: 150, year4: 180, year5: 200 },
+    revenueRows: [{ id: "tuition", lineItem: "Tuition", category: "tuition_and_fees", enabled: true, driverType: "per_student", amounts: [10000, 10000, 10000, 10000, 10000] }],
+    staffingRows: [],
+    expenseRows: [{ id: "mgmt_fee", lineItem: "Management Fee", category: "administrative_general", enabled: true, driverType: "percent_of_revenue", amounts: [10, 10, 10, 10, 10] }],
+    capitalAndDebtRows: [],
+    tuitionEscalation: { rate: 3 },
+  };
+  const yf = computeYearFinancialsFromData(pctPayload as Record<string, unknown>);
   const y1Rev = yf[0].totalRevenue;
   const y1Opex = yf[0].totalOpex;
   const expectedOpexRatio = y1Opex / y1Rev;
@@ -510,6 +572,7 @@ async function main() {
   await testTraceabilityRevenueComposition();
   await testHighTuitionGrowthFlag();
   await testDscrEngineParity();
+  await testConsultantEngineDscrParity();
   testDscrThresholdParity();
   testPercentOfRevenueProration();
   testEscalationFallbackChain();

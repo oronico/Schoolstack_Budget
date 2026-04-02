@@ -903,7 +903,7 @@ function runStressScenarioFromRows(
     ? mods.modifyStaffingRows(staffingRows.map(r => ({ ...r })))
     : staffingRows;
 
-  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers, costInflationPct, schoolProfile, retentionRate);
+  const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, capDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers, costInflationPct, schoolProfile, retentionRate, true);
   const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
 
   return {
@@ -1505,7 +1505,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
 
     yearFinancials = computeAllYearsFromRows(
       enrollmentByYear, revenueRows, staffingRows, expenseRows, effectiveCapDebtRows,
-      salaryEscRate, prorationFactor, tuitionTiers, costInflationPct, sp, ceRR,
+      salaryEscRate, prorationFactor, tuitionTiers, costInflationPct, sp, ceRR, true,
     );
   } else {
     const rev = data.revenue || {};
@@ -2621,7 +2621,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
           }
           return r;
         });
-        const fins = computeAllYearsFromRows(adjEnroll, adjRevRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, tuitionTiers, sensCostInflation, sp, ceRR);
+        const fins = computeAllYearsFromRows(adjEnroll, adjRevRows, staffingRows, expenseRows, capDebtRows, salaryEscRate, prorationFactor, tuitionTiers, sensCostInflation, sp, ceRR, true);
         sensitivityMatrix.push({ enrollmentPct: ePct, tuitionPct: tPct, netIncome: fins[lastIdx]?.netIncome || 0 });
       } else {
         const rev = data.revenue || {};
