@@ -85,9 +85,15 @@ const NARRATIVE_SECTIONS = [
 
 type NarrativeKey = typeof NARRATIVE_SECTIONS[number]["key"];
 
-function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>): string {
+interface ConsultantFlag {
+  field: string;
+  flagType: string;
+  severity: string;
+  currentValue?: string;
+}
+
+function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, consultantFlags?: ConsultantFlag[]): string {
   const enrollment = formValues.enrollment as Record<string, number> | undefined;
-  const staffingRows = formValues.staffingRows as Array<Record<string, unknown>> | undefined;
 
   if (!enrollment) return "";
 
@@ -102,17 +108,17 @@ function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>): s
   if (key === "retentionPlan") {
     return `We project ${retRate}% student retention year over year.`;
   }
-  if (key === "staffingPhilosophy" && staffingRows && staffingRows.length > 0 && y1 > 0) {
-    const teacherCategories = ["instruction", "teaching", "teacher"];
-    let teacherFte = 0;
-    for (const row of staffingRows) {
-      const cat = String(row.functionCategory || "").toLowerCase();
-      if (teacherCategories.some(t => cat.includes(t))) {
-        teacherFte += Number(row.fte) || 0;
-      }
+  if (key === "staffingPhilosophy") {
+    const ratioFlag = consultantFlags?.find(f => f.flagType === "staffing_ratio");
+    if (ratioFlag?.currentValue) {
+      return `Our staffing plan: ${ratioFlag.currentValue}.`;
     }
-    if (teacherFte > 0) {
-      return `Our Year 1 plan includes a ${Math.round(y1 / teacherFte)}:1 student-teacher ratio.`;
+    if (y1 > 0) {
+      const totalFte = ((formValues.staffingRows as Array<Record<string, unknown>>) || [])
+        .reduce((sum, row) => sum + (Number(row.fte) || 0), 0);
+      if (totalFte > 0) {
+        return `Our Year 1 plan includes ${totalFte.toFixed(1)} total FTE staff for ${y1} students.`;
+      }
     }
   }
   return "";
@@ -198,7 +204,7 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
           const Icon = section.icon;
           const isExpanded = expandedSections.has(section.key);
           const currentVal = narrative[section.key] || "";
-          const prefill = buildPrefill(section.key, formValues);
+          const prefill = buildPrefill(section.key, formValues, assumptionFlags as ConsultantFlag[]);
 
           return (
             <div
