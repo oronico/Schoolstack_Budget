@@ -4,7 +4,7 @@ import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2 } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
@@ -85,6 +85,7 @@ export function ModelWizardPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [saveError, setSaveError] = useState(false);
   const [stepInitialized, setStepInitialized] = useState(false);
   const [showImportBanner, setShowImportBanner] = useState(false);
   const stepStartTime = useRef(Date.now());
@@ -313,9 +314,10 @@ export function ModelWizardPage() {
           }
         });
         setLastSaved(new Date());
+        setSaveError(false);
         return true;
-      } catch (e) {
-        console.error("Auto-save failed", e);
+      } catch {
+        setSaveError(true);
         return false;
       } finally {
         setIsSaving(false);
@@ -540,6 +542,8 @@ export function ModelWizardPage() {
               <div className="text-xs font-medium text-muted-foreground">
                 {isSaving ? (
                   <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</span>
+                ) : saveError ? (
+                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save failed — retrying</span>
                 ) : lastSaved ? (
                   <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved</span>
                 ) : null}
