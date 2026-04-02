@@ -29,7 +29,8 @@ function validateEnv() {
         console.error(`[startup] FATAL: Missing required env var ${key} — ${desc}`);
         hasFatal = true;
       } else {
-        console.warn(`[startup] WARNING: ${key} not set — ${desc}. Using dev default.`);
+        console.error(`[startup] ERROR: ${key} not set — ${desc}. Server may fail to start.`);
+        hasFatal = true;
       }
     }
   }
