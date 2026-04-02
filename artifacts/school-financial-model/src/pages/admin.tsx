@@ -532,6 +532,8 @@ interface ReviewAnalysis {
   modelName: string;
   schoolName: string;
   state: string;
+  schoolType: string;
+  entityType: string;
   requesterName: string;
   requesterEmail: string;
   lenderReadiness: string;
@@ -721,9 +723,15 @@ function ReviewsSection() {
               <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
                 <div>
                   <h2 className="font-display text-xl font-bold text-foreground">{analysis.schoolName}</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {analysis.requesterName} &middot; {analysis.requesterEmail}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground mt-1">
+                    <span>{analysis.requesterName} &middot; {analysis.requesterEmail}</span>
+                    {(analysis.schoolType || analysis.entityType || analysis.state) && (
+                      <span className="text-border">|</span>
+                    )}
+                    {analysis.schoolType && <span>{analysis.schoolType}</span>}
+                    {analysis.entityType && <span>&middot; {analysis.entityType}</span>}
+                    {analysis.state && analysis.state !== "N/A" && <span>&middot; {analysis.state}</span>}
+                  </div>
                 </div>
                 <LenderBadge readiness={analysis.lenderReadiness} />
               </div>

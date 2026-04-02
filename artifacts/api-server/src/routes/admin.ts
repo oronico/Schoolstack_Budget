@@ -10,15 +10,16 @@ import { count, countDistinct, gte, desc, sql, eq, and, inArray } from "drizzle-
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 import { adminMiddleware } from "../middlewares/admin";
 import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
-import { normalizeRevenueRows } from "../lib/workbook-helpers";
+import { normalizeRevenueRows, type RevenueRow } from "../lib/workbook-helpers";
 import { sendReviewFeedback } from "../lib/mailer";
 import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
 import { sharedLinksTable } from "@workspace/db/schema";
 import { isNull } from "drizzle-orm";
+import { schoolTypeDisplay, entityTypeDisplay } from "../lib/pdf-utils";
 
 function normalizeModelData(data: Record<string, unknown>): Record<string, unknown> {
   if (Array.isArray(data.revenueRows)) {
-    return { ...data, revenueRows: normalizeRevenueRows(data.revenueRows as any) };
+    return { ...data, revenueRows: normalizeRevenueRows(data.revenueRows as RevenueRow[]) };
   }
   return data;
 }
@@ -404,6 +405,8 @@ router.get(
       const profile = data.schoolProfile as Record<string, unknown> | undefined;
       const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
       const state = (typeof profile?.state === "string" ? profile.state : "") || "N/A";
+      const schoolType = schoolTypeDisplay(profile?.schoolType as string);
+      const entityType = entityTypeDisplay(profile?.entityType as string);
 
       const priorSnapshot = (data as Record<string, unknown>).priorYearSnapshot as Record<string, number> | undefined;
       const y1StartingCash = priorSnapshot?.endingCash || 0;
@@ -440,6 +443,8 @@ router.get(
         modelName: model.name,
         schoolName,
         state,
+        schoolType,
+        entityType,
         requesterName: user?.name || "Unknown",
         requesterEmail: user?.email || "Unknown",
         lenderReadiness: consultantOutput.lenderReadiness,
