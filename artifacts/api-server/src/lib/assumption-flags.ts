@@ -176,7 +176,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
             flagType: "zero_escalation",
             currentValue: `0% explicit escalation on "${row.lineItem}"`,
             benchmark: `Costs typically rise 2-4% per year`,
-            severity: "info",
+            severity: "warning",
             defaultPrompt: `You set 0% escalation on "${row.lineItem}". Costs typically rise with inflation. Is this line item contractually fixed, or should it increase over time?`,
           });
         }

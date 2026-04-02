@@ -338,9 +338,20 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
 
+    const persistedFlags = (consultantOutput.assumptionFlags || []).map(f => ({
+      field: f.field,
+      flagType: f.flagType,
+      severity: f.severity,
+      currentValue: f.currentValue,
+      benchmark: f.benchmark,
+      defaultPrompt: f.defaultPrompt,
+    }));
+    const updatedData = { ...data, assumptionFlags: persistedFlags };
+
     await db
       .update(financialModelsTable)
       .set({
+        data: updatedData as unknown as Record<string, unknown>,
         consultantSummaryJson: consultantOutput as unknown as Record<string, unknown>,
         updatedAt: new Date(),
       })

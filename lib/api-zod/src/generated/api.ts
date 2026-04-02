@@ -546,6 +546,18 @@ export const CreateModelBody = zod.object({
         }),
       )
       .optional(),
+    assumptionFlags: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.string(),
+          currentValue: zod.string().optional(),
+          benchmark: zod.string().optional(),
+          defaultPrompt: zod.string().optional(),
+        }),
+      )
+      .optional(),
   }),
 });
 
@@ -992,6 +1004,18 @@ export const GetModelResponse = zod.object({
           field: zod.string(),
           flagType: zod.string(),
           reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    assumptionFlags: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.string(),
+          currentValue: zod.string().optional(),
+          benchmark: zod.string().optional(),
+          defaultPrompt: zod.string().optional(),
         }),
       )
       .optional(),
@@ -1445,6 +1469,18 @@ export const UpdateModelBody = zod.object({
         }),
       )
       .optional(),
+    assumptionFlags: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.string(),
+          currentValue: zod.string().optional(),
+          benchmark: zod.string().optional(),
+          defaultPrompt: zod.string().optional(),
+        }),
+      )
+      .optional(),
   }),
 });
 
@@ -1886,6 +1922,18 @@ export const UpdateModelResponse = zod.object({
           field: zod.string(),
           flagType: zod.string(),
           reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    assumptionFlags: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.string(),
+          currentValue: zod.string().optional(),
+          benchmark: zod.string().optional(),
+          defaultPrompt: zod.string().optional(),
         }),
       )
       .optional(),
@@ -2357,6 +2405,18 @@ export const ArchiveModelResponse = zod.object({
           field: zod.string(),
           flagType: zod.string(),
           reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    assumptionFlags: zod
+      .array(
+        zod.object({
+          field: zod.string(),
+          flagType: zod.string(),
+          severity: zod.string(),
+          currentValue: zod.string().optional(),
+          benchmark: zod.string().optional(),
+          defaultPrompt: zod.string().optional(),
         }),
       )
       .optional(),
