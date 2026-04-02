@@ -92,8 +92,16 @@ interface ConsultantFlag {
   currentValue?: string;
 }
 
+function fmt$(n: number): string {
+  return "$" + n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
 function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, consultantFlags?: ConsultantFlag[]): string {
   const enrollment = formValues.enrollment as Record<string, number> | undefined;
+  const programs = (formValues.programs || []) as Array<{ name: string; annualTuition: number; year1: number }>;
+  const revenue = formValues.revenue as Record<string, number> | undefined;
+  const revenueRows = (formValues.revenueRows || []) as Array<{ category: string; enabled: boolean; amounts: number[] }>;
+  const staffingRows = (formValues.staffingRows || []) as Array<{ fte: number; roleName: string; functionCategory?: string }>;
 
   if (!enrollment) return "";
 
@@ -105,15 +113,57 @@ function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, co
     const growthPct = y1 > 0 && y5 > 0 ? (((y5 / y1) ** (1 / 4) - 1) * 100).toFixed(0) : "0";
     return `We project ${y1} students in Year 1, growing to ${y5} by Year 5 (approximately ${growthPct}% annual growth).`;
   }
+
   if (key === "retentionPlan") {
     return `We project ${retRate}% student retention year over year.`;
   }
+
+  if (key === "tuitionRationale") {
+    const tuitionPrograms = programs.filter(p => p.annualTuition > 0);
+    if (tuitionPrograms.length > 0) {
+      const lines = tuitionPrograms.map(p => `${p.name}: ${fmt$(p.annualTuition)}/year`);
+      const escRate = revenue?.annualTuitionIncrease ?? 0;
+      const escText = escRate > 0 ? ` with ${escRate}% annual increases` : "";
+      return `Our tuition structure: ${lines.join("; ")}${escText}.`;
+    }
+  }
+
+  if (key === "revenueModel") {
+    const enabledRows = revenueRows.filter(r => r.enabled && r.amounts?.[0] > 0);
+    if (enabledRows.length > 0) {
+      const y1Total = enabledRows.reduce((sum, r) => sum + (r.amounts[0] || 0), 0);
+      const tuitionY1 = programs.reduce((sum, p) => sum + (p.annualTuition * (p.year1 || 0)), 0);
+      const grandTotal = y1Total + tuitionY1;
+      if (grandTotal > 0) {
+        const tuitionPct = tuitionY1 > 0 ? ((tuitionY1 / grandTotal) * 100).toFixed(0) : "0";
+        return `Year 1 projected revenue: ${fmt$(grandTotal)} total (${tuitionPct}% from tuition, remainder from supplemental sources).`;
+      }
+    }
+    if (programs.length > 0) {
+      const tuitionY1 = programs.reduce((sum, p) => sum + (p.annualTuition * (p.year1 || 0)), 0);
+      if (tuitionY1 > 0) {
+        return `Year 1 projected tuition revenue: ${fmt$(tuitionY1)}.`;
+      }
+    }
+  }
+
   if (key === "staffingPhilosophy") {
     const ratioFlag = consultantFlags?.find(f => f.flagType === "staffing_ratio" || f.flagType === "extreme_staffing_ratio");
     if (ratioFlag?.currentValue) {
       return `Our staffing plan: ${ratioFlag.currentValue}.`;
     }
+    if (staffingRows.length > 0 && y1 > 0) {
+      const totalFte = staffingRows.reduce((sum, row) => sum + (Number(row.fte) || 0), 0);
+      const instructionalFte = staffingRows
+        .filter(r => r.functionCategory === "instructional")
+        .reduce((sum, row) => sum + (Number(row.fte) || 0), 0);
+      if (totalFte > 0) {
+        const ratio = Math.round(y1 / (instructionalFte || totalFte));
+        return `Year 1: ${totalFte.toFixed(1)} FTE staff for ${y1} students (${ratio}:1 student-to-teacher ratio).`;
+      }
+    }
   }
+
   return "";
 }
 
