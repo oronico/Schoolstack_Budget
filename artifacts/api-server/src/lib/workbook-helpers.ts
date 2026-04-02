@@ -605,7 +605,7 @@ export function computeRevLineItem(
     }
     return tuitionWithTiers(perStudentAmount, y, students, tiers);
   }
-  return driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflPct);
+  return driverVal(r.amounts, y, r.driverType, students, r.escalationRate);
 }
 
 export function computeRevenueForYear(

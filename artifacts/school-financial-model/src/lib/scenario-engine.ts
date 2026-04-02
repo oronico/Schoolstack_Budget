@@ -118,18 +118,33 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
       if (r.driverType === "percent_of_base") continue;
       let val: number;
       if (r.driverType === "per_student" && r.category === "tuition_and_fees" && tiers.length > 0) {
-        let tierRev = 0;
         const baseTuition = r.amounts?.[0] ?? 0;
         const escRate = (data.tuitionEscalation?.rate ?? r.escalationRate ?? 0) / 100;
         const adjTuition = baseTuition * Math.pow(1 + escRate, y);
+
+        let rawTierTotal = 0;
+        for (const t of tiers) {
+          rawTierTotal += t.studentCounts?.[y] ?? 0;
+        }
+        const scaleFactor = rawTierTotal > students ? students / rawTierTotal : 1;
+
+        let tierRev = 0;
+        let allocatedStudents = 0;
         for (const t of tiers) {
           const disc = 1 - (t.discountPercent || 0) / 100;
-          const count = t.studentCounts?.[y] ?? 0;
-          tierRev += adjTuition * disc * count;
+          const rawCount = t.studentCounts?.[y] ?? 0;
+          const scaledCount = rawCount * scaleFactor;
+          allocatedStudents += scaledCount;
+          tierRev += adjTuition * disc * scaledCount;
+        }
+
+        const remaining = students - allocatedStudents;
+        if (remaining > 0) {
+          tierRev += adjTuition * remaining;
         }
         val = tierRev;
       } else {
-        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation);
+        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate);
       }
       val *= pf;
       revVals.set(r.id, val);
@@ -208,11 +223,16 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
         const principal = r.loanPrincipal || 0;
         const rate = (r.loanRate || 0) / 100;
         const term = r.loanTermYears || 0;
-        if (principal > 0 && rate > 0 && term > 0 && y < term) {
-          const monthlyRate = rate / 12;
-          const numPayments = term * 12;
-          const monthlyPmt = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numPayments));
-          const annualPmt = monthlyPmt * 12;
+        if (principal > 0 && term > 0 && y < term) {
+          let annualPmt: number;
+          if (rate <= 0) {
+            annualPmt = principal / term;
+          } else {
+            const monthlyRate = rate / 12;
+            const numPayments = term * 12;
+            const monthlyPmt = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numPayments));
+            annualPmt = monthlyPmt * 12;
+          }
           cdTotal += annualPmt;
           loanDebtService += annualPmt;
         }

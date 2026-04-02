@@ -54,13 +54,13 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
   dscr: {
     id: "dscr",
     title: "Debt Service Coverage Ratio (DSCR)",
-    formula: "(Net Income + Capital & Debt Costs) / Capital & Debt Costs",
+    formula: "(Net Income + Loan Debt Service) / Loan Debt Service",
     inputLabels: [
-      "Year 1 net income (already includes capital/debt costs as a deduction)",
-      "Year 1 total capital and debt obligations (loan payments plus any other capital/debt line items)",
+      "Year 1 net income (already includes loan debt service as a deduction)",
+      "Year 1 loan debt service (annual loan payments only — excludes non-loan capital expenditures)",
     ],
     interpretation:
-      "DSCR tells lenders whether your school generates enough operating income to cover its debt and capital obligations. The formula adds those costs back to net income to calculate operating income before debt service. A ratio of 1.25x or higher is the standard minimum lenders require. Below 1.0x means operations alone cannot cover the obligations.",
+      "DSCR tells lenders whether your school generates enough operating income to cover its loan payments. The formula adds loan debt service back to net income to calculate operating income before debt service. A ratio of 1.25x or higher is the standard minimum lenders require. Below 1.0x means operations alone cannot cover the loan payments.",
   },
   reserveMonths: {
     id: "reserveMonths",

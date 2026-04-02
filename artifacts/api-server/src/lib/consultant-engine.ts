@@ -570,9 +570,12 @@ function computeCapDebtForYear(rows: CapitalDebtRow[], yearIdx: number, students
   for (const row of rows) {
     if (!row.enabled) continue;
     if (row.isLoan && row.loanPrincipal && row.loanPrincipal > 0) {
-      const ds = computeAnnualDebtService(row.loanPrincipal, (row.loanRate || 0) / 100, row.loanTermYears || 0);
-      total += ds;
-      loanOnly += ds;
+      const term = row.loanTermYears || 0;
+      if (term > 0 && yearIdx < term) {
+        const ds = computeAnnualDebtService(row.loanPrincipal, (row.loanRate || 0) / 100, term);
+        total += ds;
+        loanOnly += ds;
+      }
     } else {
       total += computeDriverValue(row.amounts, yearIdx, row.driverType, students);
     }
@@ -1725,8 +1728,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
     benchmark: isCharterBenchmark ? "Charter avg: $10,000–$15,000" : "Private avg: $12,000–$25,000",
   });
 
-  const totalCostY1 = y1.totalStaffingCost + y1.totalOpex + y1.debtService;
-  const costPerStudent = y1.students > 0 ? totalCostY1 / y1.students : 0;
+  const costPerStudent = y1.students > 0 ? y1.totalExpenses / y1.students : 0;
   const costToRevRatio = revenuePerStudent > 0 ? costPerStudent / revenuePerStudent : 0;
 
   keyMetrics.push({
