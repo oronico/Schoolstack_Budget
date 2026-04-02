@@ -1458,7 +1458,7 @@ export function computeYearFinancialsFromData(rawData: Record<string, unknown>):
   }
 }
 
-export function runConsultantEngine(rawData: Record<string, unknown>): ConsultantOutput {
+export async function runConsultantEngine(rawData: Record<string, unknown>): Promise<ConsultantOutput> {
   const data = rawData as unknown as ModelData;
   const sp = data.schoolProfile || {};
   const en = data.enrollment || {};
@@ -2695,7 +2695,7 @@ export function runConsultantEngine(rawData: Record<string, unknown>): Consultan
 
   let assumptionFlags: import("./assumption-flags").AssumptionFlag[] = [];
   try {
-    assumptionFlags = detectUnusualAssumptions(rawData);
+    assumptionFlags = await detectUnusualAssumptions(rawData);
   } catch {
     assumptionFlags = [];
   }

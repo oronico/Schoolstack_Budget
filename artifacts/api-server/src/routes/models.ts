@@ -336,7 +336,7 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
     }
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
 
     await db
       .update(financialModelsTable)
@@ -419,7 +419,7 @@ router.get("/models/:id/export/loan-readiness-pdf", authMiddleware, async (req: 
     const entityType = typeof profile?.entityType === "string" ? profile.entityType : undefined;
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
 
     const buffer = await generateLoanReadinessPDF(consultantOutput, schoolName, entityType);
 
@@ -499,7 +499,7 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
     }
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
     const packet = buildLenderPacket(data as any, consultantOutput, model.id);
 
     res.json(packet);
@@ -533,7 +533,7 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
     const packet = buildLenderPacket(data as any, consultantOutput, model.id);
     const buffer = await generateLenderPacketPDF(packet);
 
@@ -572,7 +572,7 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
     }
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
     const packet = buildBoardPacket(data as any, consultantOutput, model.id);
 
     res.json(packet);
@@ -606,7 +606,7 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
     const packet = buildBoardPacket(data as any, consultantOutput, model.id);
     const buffer = await generateBoardPacketPDF(packet);
 
@@ -648,11 +648,19 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
     }
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    const consultantOutput = await runConsultantEngine(data);
+    const computedFlags = (consultantOutput.assumptionFlags || []).map((f: Record<string, unknown>) => ({
+      field: String(f.field || ""),
+      flagType: String(f.flagType || ""),
+      severity: String(f.severity || "info"),
+      message: String(f.defaultPrompt || ""),
+      currentValue: String(f.currentValue || ""),
+    }));
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const workbook = await generateUnderwritingWorkbookV2(data);
+    const workbook = await generateUnderwritingWorkbookV2(data, computedFlags);
     const buffer = await workbook.xlsx.writeBuffer();
 
     await db.insert(exportsTable).values({
@@ -690,11 +698,19 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
     }
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
+    const consultantOutput = await runConsultantEngine(data);
+    const computedFlags = (consultantOutput.assumptionFlags || []).map((f: Record<string, unknown>) => ({
+      field: String(f.field || ""),
+      flagType: String(f.flagType || ""),
+      severity: String(f.severity || "info"),
+      message: String(f.defaultPrompt || ""),
+      currentValue: String(f.currentValue || ""),
+    }));
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const workbook = await generateUnderwritingWorkbookV2(data);
+    const workbook = await generateUnderwritingWorkbookV2(data, computedFlags);
     const buffer = await workbook.xlsx.writeBuffer();
 
     await db.insert(exportsTable).values({
@@ -788,7 +804,7 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
       : 5;
     const fileName = `${schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_${yearCount}-Year_Financial_Model.xlsx`;
 
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
     const buffer = await generateWorkbook(data, consultantOutput);
 
     await db.update(financialModelsTable)
@@ -851,7 +867,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
     }
 
     const data = normalizeModelData(model.data as Record<string, unknown>);
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
 
     const profile = data.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";
@@ -1077,7 +1093,7 @@ router.get("/shared/:token", async (req, res) => {
     const entityType = typeof profile?.entityType === "string" ? profile.entityType : "";
 
     const yearFinancials = computeYearFinancialsFromData(data);
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
 
     const enrollment = yearFinancials.map(yf => yf.students);
     const revenue = yearFinancials.map(yf => yf.totalRevenue);

@@ -18,7 +18,8 @@ export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buf
     renderSection(doc, execSection, packet);
   }
 
-  renderBudgetNarrativeSection(doc, packet.budgetNarrative, packet.flaggedAssumptions);
+  const execSummary = packet.sections.find(s => s.id === "executive_summary");
+  renderBudgetNarrativeSection(doc, packet.budgetNarrative, packet.flaggedAssumptions, execSummary?.narrative);
 
   for (const section of packet.sections) {
     if (!section.included) continue;
@@ -93,16 +94,22 @@ const NARRATIVE_LABELS: Array<[keyof BudgetNarrativeData, string]> = [
   ["additionalContext", "Additional Context"],
 ];
 
-function renderBudgetNarrativeSection(doc: PDFDoc, narrative: BudgetNarrativeData, flagged: FlaggedAssumptionExport[]) {
+function renderBudgetNarrativeSection(doc: PDFDoc, narrative: BudgetNarrativeData, flagged: FlaggedAssumptionExport[], autoNarrative?: string) {
   const hasNarrative = NARRATIVE_LABELS.some(([key]) => narrative[key]?.trim());
   const hasFlags = flagged.length > 0;
 
   sectionTitle(doc, "Budget Narrative");
 
-  if (!hasNarrative && !hasFlags) {
-    bodyText(doc, "The school founder has not yet provided narrative context for this financial model. Lenders should request clarification on enrollment strategy, retention plans, and risk mitigation before underwriting.");
-    doc.moveDown(0.5);
-    return;
+  if (!hasNarrative) {
+    if (autoNarrative?.trim()) {
+      bodyText(doc, autoNarrative);
+    } else {
+      bodyText(doc, "The school founder has not yet provided narrative context for this financial model. Lenders should request clarification on enrollment strategy, retention plans, and risk mitigation before underwriting.");
+    }
+    if (!hasFlags) {
+      doc.moveDown(0.5);
+      return;
+    }
   }
 
   if (hasNarrative) {

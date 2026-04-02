@@ -219,7 +219,7 @@ const CHARTER_SCHOOL: SampleModel = {
 const SAMPLES = [MICROSCHOOL, PRIVATE_SCHOOL, CHARTER_SCHOOL];
 
 async function exportModel(modelData: Record<string, unknown>, slug: string, outDir: string, modelId: number) {
-  const consultantOutput = runConsultantEngine(modelData);
+  const consultantOutput = await runConsultantEngine(modelData);
   const typedData = modelData as unknown as ModelData;
 
   const formulaBuffer = await generateWorkbook(modelData, consultantOutput);

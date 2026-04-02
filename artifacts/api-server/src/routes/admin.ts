@@ -399,7 +399,7 @@ router.get(
       }
 
       const data = normalizeModelData(model.data as Record<string, unknown>);
-      const consultantOutput = runConsultantEngine(data);
+      const consultantOutput = await runConsultantEngine(data);
       const yearFinancials = computeYearFinancialsFromData(data);
 
       const profile = data.schoolProfile as Record<string, unknown> | undefined;

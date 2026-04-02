@@ -111,7 +111,7 @@ router.post("/public/consultant", rateLimiter, async (req: Request, res: Respons
     }
 
     const data = parsed.data as Record<string, unknown>;
-    const result = runConsultantEngine(data);
+    const result = await runConsultantEngine(data);
     res.json(result);
   } catch (err) {
     console.error("Public consultant analysis error:", err);
@@ -160,7 +160,7 @@ router.post("/public/request-review", rateLimiter, async (req: Request, res: Res
     }
 
     const data = parsed.data as Record<string, unknown>;
-    const consultantOutput = runConsultantEngine(data);
+    const consultantOutput = await runConsultantEngine(data);
 
     const profile = data.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Unnamed School";

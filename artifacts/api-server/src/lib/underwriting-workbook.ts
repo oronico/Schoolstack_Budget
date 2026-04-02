@@ -2625,11 +2625,19 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
   ws.getCell(r, 1).alignment = { horizontal: "center" };
 }
 
-export async function generateUnderwritingWorkbook(data: Record<string, unknown>): Promise<ExcelJS.Workbook> {
-  return generateWorkbook(data as ModelData);
+interface ComputedFlag {
+  field: string;
+  flagType: string;
+  severity: string;
+  message: string;
+  currentValue?: string;
 }
 
-async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
+export async function generateUnderwritingWorkbook(data: Record<string, unknown>, computedFlags?: ComputedFlag[]): Promise<ExcelJS.Workbook> {
+  return generateWorkbook(data as ModelData, computedFlags);
+}
+
+async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[]): Promise<ExcelJS.Workbook> {
   const wb = new ExcelJS.Workbook();
   wb.creator = "SchoolStack Budget";
   wb.created = new Date();
@@ -2730,12 +2738,12 @@ async function generateWorkbook(data: ModelData): Promise<ExcelJS.Workbook> {
     cumNIRef: { sheetName: "5-Year Operating Stmt", row: opStmtCumNIRow, startCol: 2 },
   });
 
-  buildNarrativeTab(wb, data);
+  buildNarrativeTab(wb, data, computedFlags);
 
   return wb;
 }
 
-function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData) {
+function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData, computedFlags?: ComputedFlag[]) {
   const ws = wb.addWorksheet("Budget Narrative");
   printSetup(ws);
   ws.columns = [{ width: 30 }, { width: 70 }];
@@ -2775,7 +2783,39 @@ function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData) {
     row += 2;
   }
 
-  if (flagResponses.length > 0) {
+  const responseMap = new Map<string, string>();
+  for (const resp of flagResponses) {
+    responseMap.set(`${resp.flagType}:${resp.field}`, resp.reason || "");
+  }
+
+  const flagsToShow = computedFlags && computedFlags.length > 0 ? computedFlags : null;
+
+  if (flagsToShow) {
+    row++;
+    ws.columns = [{ width: 12 }, { width: 22 }, { width: 30 }, { width: 20 }, { width: 35 }];
+    ws.getRow(row).values = ["Severity", "Flag Type", "Description", "Current Value", "Explanation"];
+    hdr(ws, row, 1, 5);
+    row++;
+
+    for (const flag of flagsToShow) {
+      const sevLabel = flag.severity.charAt(0).toUpperCase() + flag.severity.slice(1);
+      const explanation = responseMap.get(`${flag.flagType}:${flag.field}`) || "(Not addressed)";
+
+      ws.getCell(row, 1).value = sevLabel;
+      ws.getCell(row, 1).font = NF;
+      ws.getCell(row, 2).value = flag.flagType;
+      ws.getCell(row, 2).font = NF;
+      ws.getCell(row, 3).value = flag.message;
+      ws.getCell(row, 3).font = NF;
+      ws.getCell(row, 3).alignment = { wrapText: true };
+      ws.getCell(row, 4).value = flag.currentValue || "";
+      ws.getCell(row, 4).font = NF;
+      ws.getCell(row, 5).value = explanation;
+      ws.getCell(row, 5).font = NF;
+      ws.getCell(row, 5).alignment = { wrapText: true };
+      row++;
+    }
+  } else if (flagResponses.length > 0) {
     row++;
     ws.columns = [{ width: 15 }, { width: 25 }, { width: 25 }, { width: 35 }];
     ws.getRow(row).values = ["Severity", "Flag", "Current Value", "Explanation"];

@@ -8,7 +8,22 @@ import {
   type SchoolProfile,
   type ModelData,
 } from "./workbook-helpers.js";
-import { computeAllYearsFromRows, type YearFinancials } from "./consultant-engine";
+
+type YearFinancials = {
+  year: number;
+  students: number;
+  totalRevenue: number;
+  tuitionRevenue: number;
+  publicRevenue: number;
+  philanthropyRevenue: number;
+  totalStaffingCost: number;
+  facilityCost: number;
+  totalOpex: number;
+  debtService: number;
+  totalExpenses: number;
+  netIncome: number;
+  netMargin: number;
+};
 
 export type FlagSeverity = "info" | "warning" | "critical";
 
@@ -62,7 +77,7 @@ function pctStr(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
 }
 
-export function detectUnusualAssumptions(rawData: Record<string, unknown>): AssumptionFlag[] {
+export async function detectUnusualAssumptions(rawData: Record<string, unknown>): Promise<AssumptionFlag[]> {
   const data = rawData as unknown as ModelData;
   const flags: AssumptionFlag[] = [];
   const sp = (data.schoolProfile || {}) as SchoolProfile;
@@ -195,6 +210,7 @@ export function detectUnusualAssumptions(rawData: Record<string, unknown>): Assu
 
     let yearFinancials: YearFinancials[];
     try {
+      const { computeAllYearsFromRows } = await import("./consultant-engine");
       yearFinancials = computeAllYearsFromRows(
         enrollmentByYear,
         revenueRows as RevenueRow[],
