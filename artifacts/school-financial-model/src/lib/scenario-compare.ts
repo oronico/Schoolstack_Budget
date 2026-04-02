@@ -1,4 +1,5 @@
 import type { ScenarioMetrics, ScenarioAdjustments } from "./scenario-engine";
+import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./benchmark-thresholds";
 
 export type DeltaDirection = "improved" | "worsened" | "unchanged";
 export type DeltaSeverity = "minor" | "moderate" | "major";
@@ -94,8 +95,8 @@ function marginExplanation(base: number, compare: number): string {
 
 function dscrExplanation(base: number, compare: number): string {
   if (base === 0 && compare === 0) return "No debt service in either scenario.";
-  if (compare >= 1.25) return `DSCR of ${compare.toFixed(2)}x means the school comfortably covers its debt payments. Lenders look for 1.2x or higher.`;
-  if (compare >= 1.0) return `DSCR of ${compare.toFixed(2)}x means debt payments are covered, but there is not much margin. Lenders may want more cushion.`;
+  if (compare >= BENCHMARK_DSCR_GREEN) return `DSCR of ${compare.toFixed(2)}x means the school comfortably covers its debt payments. Lenders look for ${BENCHMARK_DSCR_GREEN}x or higher.`;
+  if (compare >= BENCHMARK_DSCR_AMBER) return `DSCR of ${compare.toFixed(2)}x means debt payments are covered, but there is not much margin. Lenders may want more cushion.`;
   return `DSCR of ${compare.toFixed(2)}x means operating income does not fully cover debt payments. This is a concern for lenders.`;
 }
 

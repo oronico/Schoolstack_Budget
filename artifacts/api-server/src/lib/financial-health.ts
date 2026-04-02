@@ -3,6 +3,8 @@ import {
   BENCHMARK_PAYROLL_AMBER,
   BENCHMARK_FACILITY_GREEN,
   BENCHMARK_FACILITY_AMBER,
+  BENCHMARK_DSCR_GREEN,
+  BENCHMARK_DSCR_AMBER,
   BENCHMARK_DCOH_GREEN,
   BENCHMARK_DCOH_AMBER,
 } from "./benchmark-thresholds.js";
@@ -202,7 +204,7 @@ const DIMENSIONS: {
     compute: (input) => {
       const { hasDebt, dscr } = input;
       if (!hasDebt) return null;
-      if (dscr >= 1.50) {
+      if (dscr >= BENCHMARK_DSCR_GREEN) {
         return {
           dimension: "debt_affordability",
           status: "healthy",
@@ -211,7 +213,7 @@ const DIMENSIONS: {
           watchItem: "Maintain this ratio as you take on any additional debt.",
         };
       }
-      if (dscr >= 1.10) {
+      if (dscr >= BENCHMARK_DSCR_AMBER) {
         return {
           dimension: "debt_affordability",
           status: "watch",
@@ -224,9 +226,7 @@ const DIMENSIONS: {
         dimension: "debt_affordability",
         status: "at_risk",
         label: "Needs attention",
-        explanation: dscr < 1.0
-          ? `DSCR of ${dscr.toFixed(2)}x means operating income does not cover debt payments. This must be resolved.`
-          : `DSCR of ${dscr.toFixed(2)}x is barely above 1.0x. Any shortfall in revenue makes debt unaffordable.`,
+        explanation: `DSCR of ${dscr.toFixed(2)}x is below the ${BENCHMARK_DSCR_AMBER}x amber threshold. Any shortfall in revenue makes debt unaffordable.`,
         watchItem: "Reduce loan amounts, extend terms, or increase revenue before committing to this debt.",
       };
     },

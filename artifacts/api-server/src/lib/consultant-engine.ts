@@ -1,6 +1,6 @@
 import { generateTopIssues } from "./decision-rules";
 import { generateHealthSignals, type HealthSignal } from "./financial-health";
-import { computeDaysCashOnHand, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER } from "./workbook-helpers.js";
+import { computeDaysCashOnHand, computeEffectiveFte as computeEffectiveFteShared, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER, BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./workbook-helpers.js";
 import { computeAnnualDebt } from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
 
@@ -512,17 +512,7 @@ function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: nu
   return { total: tuition + publicFunding + philanthropy, tuition, publicFunding, philanthropy };
 }
 
-function computeEffectiveFte(r: StaffingRow, y: number, enrollment: number): number {
-  if (r.startYear && (y + 1) < r.startYear) return 0;
-  if (r.endYear && (y + 1) > r.endYear) return 0;
-  if (r.staffingMode === "ratio" && r.studentRatio && r.studentRatio > 0) {
-    let computed = enrollment / r.studentRatio;
-    if (r.minFte !== undefined) computed = Math.max(computed, r.minFte);
-    if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte);
-    return Math.ceil(computed * 2) / 2;
-  }
-  return r.fte;
-}
+const computeEffectiveFte = computeEffectiveFteShared;
 
 function computeStaffingBaseCost(rows: StaffingRow[], y?: number, enrollment?: number): number {
   let total = 0;
@@ -1188,7 +1178,7 @@ function assessLendingLabReadiness(
     criteria.push({
       name: "Debt Service Coverage",
       status: "na",
-      threshold: "≥1.15x DSCR",
+      threshold: `≥${BENCHMARK_DSCR_AMBER}x DSCR`,
       actual: "No loans in model",
       detail: "No debt in your model, so DSCR is not applicable. This criterion only applies when you include a loan.",
     });
@@ -1196,7 +1186,7 @@ function assessLendingLabReadiness(
     criteria.push({
       name: "Debt Service Coverage",
       status: "na",
-      threshold: "≥1.15x DSCR",
+      threshold: `≥${BENCHMARK_DSCR_AMBER}x DSCR`,
       actual: "No debt service calculated",
       detail: "Loan exists but no debt service payments are calculated. Verify your loan terms.",
       jumpToStep: 6,
@@ -1204,20 +1194,20 @@ function assessLendingLabReadiness(
   } else {
     const dscrVal = (y1.netIncome + readinessLoanDS) / readinessLoanDS;
     const dscrStr = `${dscrVal.toFixed(2)}x`;
-    if (dscrVal < 1.15) {
+    if (dscrVal < BENCHMARK_DSCR_AMBER) {
       criteria.push({
         name: "Debt Service Coverage",
         status: "fail",
-        threshold: "≥1.15x DSCR",
+        threshold: `≥${BENCHMARK_DSCR_AMBER}x DSCR`,
         actual: dscrStr,
-        detail: `DSCR of ${dscrStr} is below the 1.15x minimum. The school's operating income does not sufficiently cover loan payments. Increase revenue, reduce expenses, or restructure debt terms.`,
+        detail: `DSCR of ${dscrStr} is below the ${BENCHMARK_DSCR_AMBER}x minimum. The school's operating income does not sufficiently cover loan payments. Increase revenue, reduce expenses, or restructure debt terms.`,
         jumpToStep: 6,
       });
-    } else if (dscrVal < 1.30) {
+    } else if (dscrVal < BENCHMARK_DSCR_GREEN) {
       criteria.push({
         name: "Debt Service Coverage",
         status: "warn",
-        threshold: "≥1.15x DSCR (ideal ≥1.30x)",
+        threshold: `≥${BENCHMARK_DSCR_AMBER}x DSCR (ideal ≥${BENCHMARK_DSCR_GREEN}x)`,
         actual: dscrStr,
         detail: "DSCR meets minimum but has limited cushion. Consider strengthening operating margins for more financial breathing room.",
         jumpToStep: 6,
@@ -1226,7 +1216,7 @@ function assessLendingLabReadiness(
       criteria.push({
         name: "Debt Service Coverage",
         status: "pass",
-        threshold: "≥1.15x DSCR (ideal ≥1.30x)",
+        threshold: `≥${BENCHMARK_DSCR_AMBER}x DSCR (ideal ≥${BENCHMARK_DSCR_GREEN}x)`,
         actual: dscrStr,
         detail: `DSCR of ${dscrStr} provides strong debt service coverage with healthy cushion.`,
       });
@@ -1853,14 +1843,14 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     keyMetrics.push({
       name: "Debt Service Coverage Ratio (Year 1)",
       value: dscr > 0 ? `${dscr.toFixed(2)}x` : "N/A",
-      status: dscr >= 1.25 ? "good" : dscr >= 1.0 ? "warning" : "danger",
+      status: dscr >= BENCHMARK_DSCR_GREEN ? "good" : dscr >= BENCHMARK_DSCR_AMBER ? "warning" : "danger",
       interpretation:
-        dscr >= 1.25
-          ? "DSCR is above 1.25x, and your operating income comfortably covers debt payments."
-          : dscr >= 1.0
-            ? "DSCR is above 1.0x but tight, with little margin if revenue dips. Look for ways to widen this buffer."
-            : "DSCR is below 1.0x, meaning the school cannot cover debt payments from operating income alone. This needs to be addressed.",
-      benchmark: "Healthy minimum: 1.25x",
+        dscr >= BENCHMARK_DSCR_GREEN
+          ? `DSCR is above ${BENCHMARK_DSCR_GREEN}x, and your operating income comfortably covers debt payments.`
+          : dscr >= BENCHMARK_DSCR_AMBER
+            ? `DSCR is above ${BENCHMARK_DSCR_AMBER}x but below the ${BENCHMARK_DSCR_GREEN}x target. Look for ways to widen this buffer.`
+            : `DSCR is below ${BENCHMARK_DSCR_AMBER}x, meaning debt coverage is critically thin. This needs to be addressed.`,
+      benchmark: `Healthy minimum: ${BENCHMARK_DSCR_AMBER}x; target: ${BENCHMARK_DSCR_GREEN}x`,
     });
   }
 
@@ -1920,7 +1910,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   if (breakEvenYear === 0) strengths.push(`${profitWord.charAt(0).toUpperCase() + profitWord.slice(1)} from Year 1`);
   if (capacityUtilLastYear >= 0.8) strengths.push(`Efficient facility utilization by Year ${lastYearNum}`);
   if (enrollmentGrowthRate >= 0.5) strengths.push("Significant enrollment growth planned");
-  if (hasDebt && dscr >= 1.25) strengths.push("Strong debt service coverage ratio");
+  if (hasDebt && dscr >= BENCHMARK_DSCR_GREEN) strengths.push("Strong debt service coverage ratio");
   if (publicRevenuePct > 0.1 && publicRevenuePct <= 0.5) strengths.push("Diversified revenue with public funding");
   if (philanthropyPct > 0 && philanthropyPct <= 0.15) strengths.push("Supplemental philanthropy without over-reliance");
   if (lastReserve && lastReserve.reserveMonths >= 3) strengths.push(`Healthy operating reserve by Year ${lastYearNum}`);
@@ -1933,8 +1923,8 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   if (breakEvenYear < 0) risks.push(`The model doesn't yet reach break-even within ${yearCount} years, but adjusting revenue or costs can help close the gap`);
   if (capacityUtilLastYear < 0.6 && sp.maxCapacity && sp.maxCapacity > 0)
     risks.push("Facility capacity is underutilized, and a smaller space could improve your cost structure");
-  if (hasDebt && dscr < 1.0)
-    risks.push("Debt service currently exceeds operating income, so consider adjusting loan terms or boosting revenue before taking on this debt");
+  if (hasDebt && dscr < BENCHMARK_DSCR_AMBER)
+    risks.push("Debt service coverage is critically thin, so consider adjusting loan terms or boosting revenue before taking on this debt");
   if (philanthropyPct > 0.30)
     risks.push(`Philanthropy at ${pct(philanthropyPct)} of revenue is a generous foundation, but building more earned revenue will add stability`);
   if (publicRevenuePct > 0.70)
@@ -1997,10 +1987,10 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     });
   }
 
-  if (hasDebt && dscr < 1.25) {
+  if (hasDebt && dscr < BENCHMARK_DSCR_GREEN) {
     recommendations.push({
       title: "Strengthen Your Debt Service Coverage",
-      description: `Your DSCR of ${dscr.toFixed(2)}x is ${dscr < 1.0 ? "below 1.0x, meaning debt payments exceed operating income right now" : "below the 1.25x healthy target"}. Some paths forward: reducing the loan amount, extending the term, or growing revenue. Strengthening this ratio gives you more financial breathing room and makes your model more resilient.`,
+      description: `Your DSCR of ${dscr.toFixed(2)}x is ${dscr < BENCHMARK_DSCR_AMBER ? `below ${BENCHMARK_DSCR_AMBER}x, meaning debt coverage is critically thin right now` : `below the ${BENCHMARK_DSCR_GREEN}x healthy target`}. Some paths forward: reducing the loan amount, extending the term, or growing revenue. Strengthening this ratio gives you more financial breathing room and makes your model more resilient.`,
       priority: "high",
     });
   }
@@ -2576,7 +2566,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   const goodMetrics = keyMetrics.filter(m => m.status === "good").length;
   const dangerMetrics = keyMetrics.filter(m => m.status === "danger").length;
 
-  if (dangerMetrics === 0 && lastYearNetMargin >= 0.1 && breakEvenYear <= 1 && (!hasDebt || dscr >= 1.25)) {
+  if (dangerMetrics === 0 && lastYearNetMargin >= 0.1 && breakEvenYear <= 1 && (!hasDebt || dscr >= BENCHMARK_DSCR_GREEN)) {
     lenderReadiness = "Strong";
     lenderReadinessExplanation =
       `This model demonstrates strong financial fundamentals: a clear path to ${profitWord}, controlled costs, a sustainable revenue mix, and adequate debt coverage. Your projections are grounded and achievable.`;

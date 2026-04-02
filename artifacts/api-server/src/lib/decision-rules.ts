@@ -1,3 +1,5 @@
+import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./benchmark-thresholds.js";
+
 export interface DecisionIssue {
   id: string;
   severity: "critical" | "high" | "medium";
@@ -300,25 +302,25 @@ const grantDependencyRule: RuleFn = (input) => {
 
 const weakDscrRule: RuleFn = (input) => {
   const { hasDebt, dscr, yearFinancials } = input;
-  if (!hasDebt || dscr >= 1.25) return null;
+  if (!hasDebt || dscr >= BENCHMARK_DSCR_GREEN) return null;
 
   const y1 = yearFinancials[0];
   return {
     id: "weak_dscr",
-    severity: dscr < 1.0 ? "critical" : "high",
-    title: dscr < 1.0 ? "Debt payments exceed operating income" : "Debt coverage ratio is tight",
-    summary: `Your DSCR is ${dscr.toFixed(2)}x.${dscr < 1.0 ? " The school cannot currently cover its debt payments from operations alone." : " Lenders typically require 1.25x minimum."}`,
-    whyItMatters: dscr < 1.0
-      ? "A DSCR below 1.0x means every dollar of debt service requires outside cash. No lender will approve this without a clear path to improvement."
-      : "A DSCR below 1.25x gives you almost no margin. A small revenue dip could push you below 1.0x and trigger loan covenant violations.",
-    recommendedAction: dscr < 1.0
+    severity: dscr < BENCHMARK_DSCR_AMBER ? "critical" : "high",
+    title: dscr < BENCHMARK_DSCR_AMBER ? "Debt coverage is critically thin" : "Debt coverage ratio is tight",
+    summary: `Your DSCR is ${dscr.toFixed(2)}x.${dscr < BENCHMARK_DSCR_AMBER ? ` Debt coverage below ${BENCHMARK_DSCR_AMBER}x is critically thin.` : ` Lenders typically require ${BENCHMARK_DSCR_GREEN}x minimum.`}`,
+    whyItMatters: dscr < BENCHMARK_DSCR_AMBER
+      ? `A DSCR below ${BENCHMARK_DSCR_AMBER}x means debt coverage is critically thin. No lender will approve this without a clear path to improvement.`
+      : `A DSCR below ${BENCHMARK_DSCR_GREEN}x gives you almost no margin. A small revenue dip could trigger loan covenant violations.`,
+    recommendedAction: dscr < BENCHMARK_DSCR_AMBER
       ? "Reduce loan amounts, extend terms, or increase revenue before committing to this debt load. Consider whether the capital expenditure can be phased."
       : "Look for ways to boost operating income by 10–15% or negotiate slightly better loan terms to widen this buffer.",
     relatedStep: 5,
     supportingMetrics: [
       { label: "DSCR", value: `${dscr.toFixed(2)}x` },
       { label: "Annual debt service", value: fmt(y1.debtService) },
-      { label: "Minimum target", value: "1.25x" },
+      { label: "Minimum target", value: `${BENCHMARK_DSCR_GREEN}x` },
     ],
   };
 };

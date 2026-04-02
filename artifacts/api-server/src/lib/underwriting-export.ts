@@ -2,7 +2,7 @@
 // The /export/underwriting route has been removed; only /export/underwriting-v2 is active.
 // Retained for reference only — do not add new code here.
 import ExcelJS from "exceljs";
-import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear, computeInstructionalCostByYear } from "./workbook-helpers.js";
+import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear, computeInstructionalCostByYear, resolveEsc as resolveEscShared, computeEffectiveFte } from "./workbook-helpers.js";
 import { computeAnnualDebt } from "@workspace/finance";
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
@@ -355,8 +355,7 @@ let _globalCostInflationPct = 0;
 function setGlobalCostInflation(pct: number) { _globalCostInflationPct = pct; }
 
 function resolveEsc(rowEsc?: number): number {
-  if (rowEsc !== undefined && rowEsc !== 0) return rowEsc;
-  return _globalCostInflationPct;
+  return resolveEscShared(rowEsc, _globalCostInflationPct);
 }
 
 function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number): number {
@@ -499,17 +498,7 @@ function computeExpenseForYear(
   return total;
 }
 
-function computeEffectiveFteLocal(r: StaffingRow, y: number, enrollment: number): number {
-  if (r.startYear && (y + 1) < r.startYear) return 0;
-  if (r.endYear && (y + 1) > r.endYear) return 0;
-  if (r.staffingMode === "ratio" && r.studentRatio && r.studentRatio > 0) {
-    let computed = enrollment / r.studentRatio;
-    if (r.minFte !== undefined) computed = Math.max(computed, r.minFte);
-    if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte);
-    return Math.ceil(computed * 2) / 2;
-  }
-  return r.fte;
-}
+const computeEffectiveFteLocal = computeEffectiveFte;
 
 function computePersonnelForYear(
   rows: StaffingRow[], salaryEsc: number, prorationFactor: number, y: number, enrollment?: number

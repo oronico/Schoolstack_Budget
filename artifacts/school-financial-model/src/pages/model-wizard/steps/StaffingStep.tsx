@@ -397,6 +397,8 @@ function SummaryCard({
   );
 }
 
+// Canonical version: artifacts/api-server/src/lib/workbook-helpers.ts:computeEffectiveFte
+// Keep in sync — any changes must be mirrored in both locations.
 function computeEffectiveFte(row: StaffingRowData, y: number, enrollment: number): number {
   if (row.startYear && (y + 1) < row.startYear) return 0;
   if (row.endYear && (y + 1) > row.endYear) return 0;

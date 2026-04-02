@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { TrendingUp, TrendingDown, Users, DollarSign, Shield, Clock, AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
+import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "@/lib/benchmark-thresholds";
 
 interface SharedModelData {
   schoolName: string;
@@ -344,7 +345,7 @@ export function SharedModelPage() {
               value={data.dscr[0] > 0 ? `${data.dscr[0].toFixed(2)}x` : "N/A"}
               subtext="Debt service coverage ratio"
               icon={Shield}
-              status={data.dscr[0] >= 1.25 ? "good" : data.dscr[0] >= 1.0 ? "warning" : "danger"}
+              status={data.dscr[0] >= BENCHMARK_DSCR_GREEN ? "good" : data.dscr[0] >= BENCHMARK_DSCR_AMBER ? "warning" : "danger"}
             />
             <MetricCard
               label="Reserve Months"

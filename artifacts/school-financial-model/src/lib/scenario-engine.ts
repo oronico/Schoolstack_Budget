@@ -1,4 +1,5 @@
 import type { FullModelData } from "@/pages/model-wizard/schema";
+import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./benchmark-thresholds";
 
 export interface ScenarioAdjustments {
   name: string;
@@ -400,12 +401,12 @@ function generateNudges(metrics: ScenarioMetrics, name: string): NudgeItem[] {
   const hasDscr = metrics.dscr.some((d) => d > 0);
   if (hasDscr) {
     const y1Dscr = metrics.dscr[0];
-    if (y1Dscr >= 1.25) {
-      nudges.push({ signal: "green", label: "DSCR", message: `Debt service coverage of ${y1Dscr.toFixed(2)}x exceeds the 1.25x minimum lenders want.` });
-    } else if (y1Dscr >= 1.0) {
-      nudges.push({ signal: "amber", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is tight. Most lenders want at least 1.25x.` });
+    if (y1Dscr >= BENCHMARK_DSCR_GREEN) {
+      nudges.push({ signal: "green", label: "DSCR", message: `Debt service coverage of ${y1Dscr.toFixed(2)}x exceeds the ${BENCHMARK_DSCR_GREEN}x minimum lenders want.` });
+    } else if (y1Dscr >= BENCHMARK_DSCR_AMBER) {
+      nudges.push({ signal: "amber", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is tight. Most lenders want at least ${BENCHMARK_DSCR_GREEN}x.` });
     } else {
-      nudges.push({ signal: "red", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is below 1.0x. The school can't cover its debt payments.` });
+      nudges.push({ signal: "red", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is below ${BENCHMARK_DSCR_AMBER}x. Debt coverage is critically thin.` });
     }
   }
 

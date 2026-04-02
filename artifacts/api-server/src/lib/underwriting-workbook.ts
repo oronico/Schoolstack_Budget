@@ -15,6 +15,7 @@ import {
   buildPhaseTimelineData, buildPhaseDetails,
   OWNERSHIP_COLORS, OWNERSHIP_BG_COLORS,
   ModelData, SchoolProfile, RevenueRow, StaffingRow, ExpenseRow, CapitalDebtRow, TuitionTier,
+  BENCHMARK_DSCR_GREEN,
 } from "./workbook-helpers.js";
 
 const TAB_NAMES = [
@@ -2156,7 +2157,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   const sp = data.schoolProfile || {};
   const yLabels = yearLabels(sp.openingYear);
   const ct = data.covenantThresholds || {};
-  const minDSCR = ct.minDSCR ?? 1.25;
+  const minDSCR = ct.minDSCR ?? BENCHMARK_DSCR_GREEN;
   const minDaysCash = ct.minDaysCashOnHand ?? 45;
   const minMonths = ct.minMonthsRunway ?? 2;
   const minCapUtil = ct.minCapacityUtil ?? 0.7;
@@ -2194,22 +2195,27 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
     ws.getCell(r, y + 2).value = Math.round(opexByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
-  ws.getCell(r, 1).value = "CFADS (Rev - Pers - OpEx)"; bc(ws.getCell(r, 1));
-  const cfadsRow = r;
-  const cfads: number[] = [];
+  ws.getCell(r, 1).value = "Net Income"; bc(ws.getCell(r, 1));
+  const niRow = r;
   for (let y = 0; y < 5; y++) {
-    const v = revByYear[y] - persByYear[y] - opexByYear[y];
-    cfads.push(v);
-    const col = y + 2;
-    setFormula(ws.getCell(r, col), `${cn(dscrRevRow, col)}-${cn(dscrPersRow, col)}-${cn(dscrOpexRow, col)}`, Math.round(v));
-    ws.getCell(r, col).numFmt = CUR; bc(ws.getCell(r, col));
+    ws.getCell(r, y + 2).value = Math.round(niByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
-
   r++;
-  ws.getCell(r, 1).value = "Debt Service"; dc(ws.getCell(r, 1));
+  ws.getCell(r, 1).value = "Debt Service (Loan)"; dc(ws.getCell(r, 1));
   const dsRow = r;
   for (let y = 0; y < 5; y++) {
     ws.getCell(r, y + 2).value = Math.round(cdByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+  }
+  r++;
+  ws.getCell(r, 1).value = "CFADS (NI + Debt Service)"; bc(ws.getCell(r, 1));
+  const cfadsRow = r;
+  const cfads: number[] = [];
+  for (let y = 0; y < 5; y++) {
+    const v = niByYear[y] + cdByYear[y];
+    cfads.push(v);
+    const col = y + 2;
+    setFormula(ws.getCell(r, col), `${cn(niRow, col)}+${cn(dsRow, col)}`, Math.round(v));
+    ws.getCell(r, col).numFmt = CUR; bc(ws.getCell(r, col));
   }
 
   r++;
@@ -2227,7 +2233,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
 
   r += 2;
   sec(ws, r, 6); ws.getCell(r, 1).value = "LIQUIDITY METRICS";
-  const totalExp = persByYear.map((p, y) => p + opexByYear[y] + cdByYear[y]);
+  const totalExp = revByYear.map((rev, y) => rev - niByYear[y]);
 
   r++;
   ws.getCell(r, 1).value = "Ending Cash"; dc(ws.getCell(r, 1));
@@ -2241,7 +2247,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   for (let y = 0; y < 5; y++) {
     const days = totalExp[y] > 0 ? (cashByYear[y] / totalExp[y]) * 365 : 0;
     const col = y + 2;
-    const totalExpFormula = `${cn(dscrPersRow, col)}+${cn(dscrOpexRow, col)}+${cn(dsRow, col)}`;
+    const totalExpFormula = `${cn(dscrRevRow, col)}-${cn(niRow, col)}`;
     setFormula(ws.getCell(r, col), `IF((${totalExpFormula})=0,0,(${cn(cashRow, col)}/(${totalExpFormula}))*365)`, Math.round(days));
     ws.getCell(r, col).numFmt = NUM; dc(ws.getCell(r, col));
   }
@@ -2251,7 +2257,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   for (let y = 0; y < 5; y++) {
     const months = totalExp[y] > 0 ? cashByYear[y] / (totalExp[y] / 12) : 0;
     const col = y + 2;
-    const totalExpFormula = `${cn(dscrPersRow, col)}+${cn(dscrOpexRow, col)}+${cn(dsRow, col)}`;
+    const totalExpFormula = `${cn(dscrRevRow, col)}-${cn(niRow, col)}`;
     setFormula(ws.getCell(r, col), `IF((${totalExpFormula})=0,0,${cn(cashRow, col)}/((${totalExpFormula})/12))`, Math.round(months * 10) / 10);
     ws.getCell(r, col).numFmt = "0.0"; dc(ws.getCell(r, col));
   }
@@ -2516,8 +2522,8 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
     r++;
     ws.getCell(r, 1).value = "DSCR"; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const cfads = adjRev[y] - adjPers[y] - adjOpex[y];
-      ws.getCell(r, y + 2).value = cdByYear[y] > 0 ? Math.round(cfads / cdByYear[y] * 100) / 100 : "N/A";
+      const scenCfads = adjNI[y] + cdByYear[y];
+      ws.getCell(r, y + 2).value = cdByYear[y] > 0 ? Math.round(scenCfads / cdByYear[y] * 100) / 100 : "N/A";
       ws.getCell(r, y + 2).numFmt = "0.00x"; dc(ws.getCell(r, y + 2));
     }
 
@@ -2599,8 +2605,8 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
   r++;
   ws.getCell(r, 1).value = "DSCR"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
-    const cfads = revByYear[y] - persByYear[y] - opexByYear[y];
-    ws.getCell(r, y + 4).value = cdByYear[y] > 0 ? Math.round(cfads / cdByYear[y] * 100) / 100 : "N/A";
+    const snapCfads = niByYear[y] + cdByYear[y];
+    ws.getCell(r, y + 4).value = cdByYear[y] > 0 ? Math.round(snapCfads / cdByYear[y] * 100) / 100 : "N/A";
     ws.getCell(r, y + 4).numFmt = "0.00x"; dc(ws.getCell(r, y + 4));
   }
 

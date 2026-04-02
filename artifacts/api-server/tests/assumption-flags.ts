@@ -1,6 +1,7 @@
 import { detectUnusualAssumptions, type AssumptionFlag } from "../src/lib/assumption-flags.js";
 import { runConsultantEngine, computeYearFinancialsFromData } from "../src/lib/consultant-engine.js";
 import { resolveEsc, computeEffectiveFte } from "../src/lib/workbook-helpers.js";
+import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../src/lib/benchmark-thresholds.js";
 import { microschoolStartup, privateSchoolWithESA, charterPublicFunding } from "./sample-payloads.js";
 
 let passed = 0;
@@ -337,6 +338,29 @@ async function testHighTuitionGrowthFlag() {
   assert("high_tuition_growth fires via resolveEsc fallback at 7% inflation", !!hasFlag(fallbackFlags, "high_tuition_growth"));
 }
 
+function testDscrThresholdParity() {
+  console.log("\n=== DSCR threshold parity ===");
+  assert("BENCHMARK_DSCR_GREEN = 1.25", BENCHMARK_DSCR_GREEN === 1.25);
+  assert("BENCHMARK_DSCR_AMBER = 1.15", BENCHMARK_DSCR_AMBER === 1.15);
+  assert("GREEN > AMBER", BENCHMARK_DSCR_GREEN > BENCHMARK_DSCR_AMBER);
+  assert("AMBER > 1.0 (not trivially low)", BENCHMARK_DSCR_AMBER > 1.0);
+
+  const niByYear = 200_000;
+  const loanDS = 100_000;
+  const dscrFormula = (niByYear + loanDS) / loanDS;
+  assert("DSCR formula: (NI + DS) / DS = 3.0x", dscrFormula === 3.0, `got ${dscrFormula}`);
+
+  const dscrSubOne = (50_000 + 100_000) / 100_000;
+  assert("DSCR with tight NI: (50k + 100k)/100k = 1.5x", dscrSubOne === 1.5, `got ${dscrSubOne}`);
+
+  const dscrExact = ((BENCHMARK_DSCR_GREEN - 1) * loanDS + loanDS) / loanDS;
+  assert("DSCR at GREEN threshold is exactly GREEN", Math.abs(dscrExact - BENCHMARK_DSCR_GREEN) < 1e-10);
+
+  assert("resolveEsc(5, 3) returns explicit 5", resolveEsc(5, 3) === 5);
+  assert("resolveEsc(undefined, 3) returns fallback 3", resolveEsc(undefined, 3) === 3);
+  assert("resolveEsc(0, 3) returns fallback 3", resolveEsc(0, 3) === 3);
+}
+
 async function main() {
   console.log("=== Assumption Flag Test Suite ===");
 
@@ -357,6 +381,7 @@ async function main() {
   await testTraceabilityStaffingRatio();
   await testTraceabilityRevenueComposition();
   await testHighTuitionGrowthFlag();
+  testDscrThresholdParity();
 
   console.log(`\n${"=".repeat(50)}`);
   console.log(`Results: ${passed} passed, ${failed} failed`);
