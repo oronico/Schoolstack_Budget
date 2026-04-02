@@ -132,16 +132,31 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     });
   }
 
-  const hasPostYear1Growth = enrollmentByYear.slice(1).some((e, i) => e > enrollmentByYear[i]);
-  if (enrollmentByYear.length > 1 && enrollmentByYear[0] > 0 && !hasPostYear1Growth) {
-    flags.push({
-      field: "enrollment",
-      flagType: "flat_declining_enrollment",
-      currentValue: `Enrollment is flat or declining after Year 1`,
-      benchmark: "Growth expected",
-      severity: "warning",
-      defaultPrompt: "Your enrollment doesn't grow after Year 1. Is this intentional (e.g., a single-cohort model), or did you miss entering growth targets?",
-    });
+  if (enrollmentByYear.length > 2 && enrollmentByYear[0] > 0) {
+    const decliningYears = enrollmentByYear.slice(1).filter((e, i) => e <= enrollmentByYear[i]).length;
+    const totalTransitions = enrollmentByYear.length - 1;
+    if (decliningYears === totalTransitions) {
+      flags.push({
+        field: "enrollment",
+        flagType: "flat_declining_enrollment",
+        currentValue: `Enrollment is flat or declining after Year 1`,
+        benchmark: "Growth expected",
+        severity: "warning",
+        defaultPrompt: "Your enrollment doesn't grow after Year 1. Is this intentional (e.g., a single-cohort model), or did you miss entering growth targets?",
+      });
+    } else if (decliningYears > 0) {
+      const declineYearIndices = enrollmentByYear.slice(1).map((e, i) => e < enrollmentByYear[i] ? i + 2 : null).filter(Boolean);
+      if (declineYearIndices.length > 0) {
+        flags.push({
+          field: "enrollment",
+          flagType: "flat_declining_enrollment",
+          currentValue: `Enrollment declines in Year(s) ${declineYearIndices.join(", ")}`,
+          benchmark: "Sustained growth expected",
+          severity: "info",
+          defaultPrompt: `Your enrollment declines in some years. Is this intentional (e.g., planned cohort exit), or does it reflect a conservative assumption?`,
+        });
+      }
+    }
   }
 
   // --- FINANCIAL FLAGS (use engine helpers for math integrity) ---
