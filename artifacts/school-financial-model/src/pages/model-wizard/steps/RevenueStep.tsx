@@ -1491,13 +1491,10 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
         )}
       </p>
       {category === "tuition_and_fees" && (
-        <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
-          <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-          <span>Autopay families pay on time. If you invoice, expect 2-5% non-collection and 15-30 day delays. Lenders discount invoiced tuition accordingly.</span>
+        <div className="space-y-1 mb-2">
+          <LenderHint text="Tuition pricing is benchmarked against comparable schools in your market. Outlier rates require a justification narrative." />
+          <LenderHint text="Autopay families pay on time. Invoiced collection rates below 98% and delays over 15 days are typical underwriter adjustments." />
         </div>
-      )}
-      {category === "tuition_and_fees" && (
-        <LenderHint text="Tuition pricing is benchmarked against comparable schools in your market. Outlier rates require a justification narrative." className="mb-2" />
       )}
       {category === "public_funding" && (
         <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">

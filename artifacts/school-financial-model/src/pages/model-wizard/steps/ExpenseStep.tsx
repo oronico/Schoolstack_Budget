@@ -948,6 +948,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             label="Savings Account"
             description="A dedicated savings account for the school"
           />
+          <LenderHint text="Lenders typically require 45-90 days of operating reserves. A dedicated savings account demonstrates cash management discipline." className="ml-12 -mt-2" />
 
           <BusinessOperationsToggle
             checked={hasBusinessAccount === true}
