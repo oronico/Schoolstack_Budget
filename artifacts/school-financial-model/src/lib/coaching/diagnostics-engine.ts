@@ -1,5 +1,6 @@
 import type { FullModelData } from "@/pages/model-wizard/schema";
 import { computeAnnualDebt, DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, DEFAULT_COLA_PCT } from "@workspace/finance";
+import { computeQuickLevers } from "@/lib/scenario-engine";
 
 export type DiagnosticSeverity = "critical" | "warning" | "info";
 
@@ -448,64 +449,17 @@ export interface WhatIfSuggestion {
 }
 
 export function computeWhatIfSuggestions(data: FullModelData): WhatIfSuggestion[] {
-  const metrics = computeMetrics(data);
+  const leverNudges = computeQuickLevers(data);
   const suggestions: WhatIfSuggestion[] = [];
-  const staffingRows = data.staffingRows || [];
 
-  if (metrics.y1Revenue > 0 && (metrics.y1StaffingCost / metrics.y1Revenue) * 100 >= THRESHOLDS.staffingPctWarning) {
-    if (staffingRows.length > 0) {
-      const topRole = [...staffingRows].sort((a, b) => ((b.fte || 0) * (b.annualizedRate || 0)) - ((a.fte || 0) * (a.annualizedRate || 0)))[0];
-      if (topRole) {
-        const savings = (topRole.fte || 0) * (topRole.annualizedRate || 0);
-        const newStaffPct = metrics.y1Revenue > 0 ? ((metrics.y1StaffingCost - savings) / metrics.y1Revenue) * 100 : 0;
-        suggestions.push({
-          findingId: "high_staffing_critical",
-          lever: "Defer 1 position",
-          impact: `Removing the highest-cost role saves ~$${Math.round(savings / 1000)}K/year and drops staffing to ${Math.round(newStaffPct)}% of revenue.`,
-        });
-        suggestions.push({
-          findingId: "high_staffing_warning",
-          lever: "Defer 1 position",
-          impact: `Removing the highest-cost role saves ~$${Math.round(savings / 1000)}K/year and drops staffing to ${Math.round(newStaffPct)}% of revenue.`,
-        });
-      }
-    }
-  }
-
-  if (metrics.enrollment[0] > 0 && metrics.breakevenEnrollment !== Infinity) {
-    const margin = (metrics.enrollment[0] - metrics.breakevenEnrollment) / metrics.breakevenEnrollment;
-    if (margin < 0.10) {
-      const tenPctMore = Math.round(metrics.enrollment[0] * 0.1);
-      const newMargin = ((metrics.enrollment[0] + tenPctMore) - metrics.breakevenEnrollment) / metrics.breakevenEnrollment;
+  for (const lever of leverNudges) {
+    for (const diagId of lever.relatedDiagnosticIds) {
       suggestions.push({
-        findingId: "near_breakeven_enrollment",
-        lever: "+10% enrollment",
-        impact: `Adding ${tenPctMore} students moves you to ${Math.round(newMargin * 100)}% above breakeven — a much healthier cushion.`,
+        findingId: diagId,
+        lever: lever.label,
+        impact: lever.coaching,
       });
     }
-  }
-
-  if (metrics.y1NetIncome > 0 && metrics.y1Revenue > 0) {
-    const minCash = Math.min(...metrics.endingCashByYear.slice(0, 3));
-    const monthlyExpenses = metrics.y1TotalExpenses / 12;
-    if (monthlyExpenses > 0 && minCash < monthlyExpenses * 2) {
-      const revBoost = metrics.y1Revenue * 0.05;
-      suggestions.push({
-        findingId: "surplus_but_tight_cash",
-        lever: "+5% revenue",
-        impact: `A 5% revenue increase adds ~$${Math.round(revBoost / 1000)}K/year, which could extend your cash runway past the tight early months.`,
-      });
-    }
-  }
-
-  const badYear = metrics.endingCashByYear.findIndex(c => c < 0);
-  if (badYear !== -1) {
-    const revBoost = metrics.y1Revenue * 0.05;
-    suggestions.push({
-      findingId: "negative_cash",
-      lever: "+5% revenue or -5% expenses",
-      impact: `A 5% revenue increase adds ~$${Math.round(revBoost / 1000)}K/year. Combined with modest cost cuts, this can keep cash positive through Year ${badYear + 1}.`,
-    });
   }
 
   return suggestions;

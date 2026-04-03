@@ -372,7 +372,131 @@ function applyAdjustments(
   };
 }
 
-function generateNudges(metrics: ScenarioMetrics, name: string): NudgeItem[] {
+export interface LeverMetrics {
+  netIncome: number;
+  cashTrough: number;
+  breakEvenYear: number;
+  dscr: number;
+}
+
+export interface QuickLever {
+  id: string;
+  label: string;
+  description: string;
+  icon: "users" | "dollar" | "scissors";
+  before: LeverMetrics;
+  after: LeverMetrics;
+  coaching: string;
+  relatedDiagnosticIds: string[];
+}
+
+function cashTrough(metrics: ScenarioMetrics, startingCash: number): number {
+  let running = startingCash;
+  let min = startingCash;
+  for (let y = 0; y < 5; y++) {
+    const monthlyNI = metrics.netIncome[y] / 12;
+    for (let m = 0; m < 12; m++) {
+      running += monthlyNI;
+      if (running < min) min = running;
+    }
+  }
+  return min;
+}
+
+function metricsToLever(m: ScenarioMetrics, startingCash: number): LeverMetrics {
+  return {
+    netIncome: m.netIncome[0],
+    cashTrough: cashTrough(m, startingCash),
+    breakEvenYear: m.breakEvenYear ?? -1,
+    dscr: m.dscr[0],
+  };
+}
+
+function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): QuickLever[] {
+  const startingCash = data.openingBalances?.cash || 0;
+  const staffingRows = data.staffingRows || [];
+  const levers: QuickLever[] = [];
+
+  const baseLM = metricsToLever(baseMetrics, startingCash);
+  const baseEnrollment = baseMetrics.enrollment[0] ?? 0;
+
+  if (baseEnrollment > 0) {
+    const modifiedData = cloneDataWithEnrollmentAdjustment(data, 10);
+    const m = computeBaseFinancials(modifiedData);
+    const afterLM = metricsToLever(m, startingCash);
+    levers.push({
+      id: "enrollment_up_10",
+      label: "Add 10% More Students",
+      description: `Increase enrollment from ${baseEnrollment} to ${Math.round(baseEnrollment * 1.1)} students`,
+      icon: "users",
+      before: baseLM,
+      after: afterLM,
+      coaching: afterLM.netIncome > baseLM.netIncome
+        ? `Adding ${Math.round(baseEnrollment * 0.1)} students could improve Year 1 net income by ${fmtCurrency(afterLM.netIncome - baseLM.netIncome)}. Make sure your facility and staffing can absorb the growth.`
+        : `Even with 10% more students, net income doesn't improve — check whether your per-student costs exceed per-student revenue.`,
+      relatedDiagnosticIds: ["near_breakeven_enrollment", "fast_enrollment_growth"],
+    });
+  }
+
+  if (staffingRows.length > 0) {
+    const highestCostRow = [...staffingRows].sort((a, b) => {
+      const costA = (a.fte || 0) * (a.annualizedRate || 0);
+      const costB = (b.fte || 0) * (b.annualizedRate || 0);
+      return costB - costA;
+    })[0];
+    if (highestCostRow && highestCostRow.fte > 0) {
+      const oneFteCost = highestCostRow.annualizedRate || 0;
+      const fteToRemove = Math.min(1, highestCostRow.fte);
+      const savingsBase = fteToRemove * oneFteCost;
+      const totalStaffCost = staffingRows.reduce((s, r) => s + (r.fte || 0) * (r.annualizedRate || 0), 0);
+      const pctReduction = totalStaffCost > 0 ? -(savingsBase / totalStaffCost) * 100 : 0;
+      const adj: ScenarioAdjustments = { name: "-1 FTE", enrollmentAdjustment: 0, tuitionAdjustment: 0, expenseAdjustment: 0, staffingAdjustment: Math.round(pctReduction * 10) / 10, facilityAdjustment: 0 };
+      const m = applyAdjustments(baseMetrics, adj, startingCash);
+      const afterLM = metricsToLever(m, startingCash);
+      levers.push({
+        id: "staff_minus_1",
+        label: "Remove 1 FTE",
+        description: `Defer 1 FTE of the highest-cost role (~${fmtCurrencyAbs(savingsBase)}/year)`,
+        icon: "scissors",
+        before: baseLM,
+        after: afterLM,
+        coaching: `Deferring 1 FTE saves ~${fmtCurrencyAbs(savingsBase)}/year. ${afterLM.netIncome >= 0 && baseLM.netIncome < 0 ? "This alone could move you from a deficit to a surplus." : `Year 1 net income shifts by ${fmtCurrency(afterLM.netIncome - baseLM.netIncome)}.`} Consider whether you can phase in this hire later.`,
+        relatedDiagnosticIds: ["high_staffing_critical", "high_staffing_warning"],
+      });
+    }
+  }
+
+  if (baseMetrics.revenue[0] > 0) {
+    const adj: ScenarioAdjustments = { name: "+5% Tuition", enrollmentAdjustment: 0, tuitionAdjustment: 5, expenseAdjustment: 0, staffingAdjustment: 0, facilityAdjustment: 0 };
+    const m = applyAdjustments(baseMetrics, adj, startingCash);
+    const afterLM = metricsToLever(m, startingCash);
+    levers.push({
+      id: "tuition_up_5",
+      label: "Raise Revenue 5%",
+      description: `Increase tuition or per-pupil funding by 5%`,
+      icon: "dollar",
+      before: baseLM,
+      after: afterLM,
+      coaching: `A 5% revenue increase adds ~${fmtCurrency(m.revenue[0] - baseMetrics.revenue[0])}/year. ${afterLM.cashTrough > baseLM.cashTrough ? `Cash trough improves from ${fmtCurrencyAbs(baseLM.cashTrough)} to ${fmtCurrencyAbs(afterLM.cashTrough)}.` : "Cash trough stays about the same."} Check that tuition stays competitive in your market.`,
+      relatedDiagnosticIds: ["negative_cash", "surplus_but_tight_cash", "no_reserves"],
+    });
+  }
+
+  return levers;
+}
+
+function cloneDataWithEnrollmentAdjustment(data: FullModelData, pctIncrease: number): FullModelData {
+  const factor = 1 + pctIncrease / 100;
+  const enrollment = data.enrollment ? { ...data.enrollment } : {} as Record<string, unknown>;
+  for (const key of ["year1", "year2", "year3", "year4", "year5"]) {
+    if (typeof (enrollment as Record<string, unknown>)[key] === "number") {
+      (enrollment as Record<string, unknown>)[key] = Math.round(((enrollment as Record<string, unknown>)[key] as number) * factor);
+    }
+  }
+  return { ...data, enrollment: enrollment as FullModelData["enrollment"] };
+}
+
+function generateNudges(metrics: ScenarioMetrics, name: string, leverNudges?: QuickLever[]): NudgeItem[] {
   const nudges: NudgeItem[] = [];
   const y1 = metrics.netIncome[0];
   const y5 = metrics.netIncome[4];
@@ -391,9 +515,13 @@ function generateNudges(metrics: ScenarioMetrics, name: string): NudgeItem[] {
 
   const avgStaffPct = metrics.staffingPctOfRevenue.reduce((a, b) => a + b, 0) / 5;
   if (avgStaffPct > 0.7) {
-    nudges.push({ signal: "red", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue. Lenders will flag anything over 70%.` });
+    const staffLever = leverNudges?.find(l => l.id === "staff_minus_1");
+    const leverHint = staffLever ? ` ${staffLever.coaching}` : "";
+    nudges.push({ signal: "red", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue. Lenders will flag anything over 70%.${leverHint}` });
   } else if (avgStaffPct > 0.6) {
-    nudges.push({ signal: "amber", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue. That's within range but worth watching.` });
+    const staffLever = leverNudges?.find(l => l.id === "staff_minus_1");
+    const leverHint = staffLever ? ` ${staffLever.coaching}` : "";
+    nudges.push({ signal: "amber", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue. That's within range but worth watching.${leverHint}` });
   } else if (avgStaffPct > 0) {
     nudges.push({ signal: "green", label: "Staffing", message: `Staffing costs are ${Math.round(avgStaffPct * 100)}% of revenue. Well managed.` });
   }
@@ -415,7 +543,9 @@ function generateNudges(metrics: ScenarioMetrics, name: string): NudgeItem[] {
   } else if (y5 > 0) {
     nudges.push({ signal: "green", label: "Trajectory", message: `Positive throughout with $${Math.round(y5).toLocaleString()} net income by Year 5.` });
   } else {
-    nudges.push({ signal: "red", label: "Trajectory", message: `Still negative by Year 5. This scenario needs stronger revenue or lower costs.` });
+    const revLever = leverNudges?.find(l => l.id === "tuition_up_5");
+    const leverHint = revLever ? ` ${revLever.coaching}` : "";
+    nudges.push({ signal: "red", label: "Trajectory", message: `Still negative by Year 5. This scenario needs stronger revenue or lower costs.${leverHint}` });
   }
 
   if (metrics.reserveMonths >= 3) {
@@ -432,9 +562,10 @@ function generateNudges(metrics: ScenarioMetrics, name: string): NudgeItem[] {
 export function computeScenarios(
   data: FullModelData,
   scenarios: ScenarioAdjustments[]
-): { base: ScenarioResult; scenarios: ScenarioResult[] } {
+): { base: ScenarioResult; scenarios: ScenarioResult[]; leverNudges: QuickLever[] } {
   const baseMetrics = computeBaseFinancials(data);
   const startingCash = data.openingBalances?.cash || 0;
+  const leverNudges = computeLeverNudges(data, baseMetrics);
   const baseResult: ScenarioResult = {
     name: "Base Model",
     adjustments: {
@@ -446,7 +577,7 @@ export function computeScenarios(
       facilityAdjustment: 0,
     },
     metrics: baseMetrics,
-    nudges: generateNudges(baseMetrics, "Your base model"),
+    nudges: generateNudges(baseMetrics, "Your base model", leverNudges),
   };
 
   const scenarioResults = scenarios.map((adj) => {
@@ -459,114 +590,12 @@ export function computeScenarios(
     };
   });
 
-  return { base: baseResult, scenarios: scenarioResults };
-}
-
-export interface LeverMetrics {
-  netIncome: number;
-  cashTrough: number;
-  breakEvenYear: number;
-  dscr: number;
-}
-
-export interface QuickLever {
-  id: string;
-  label: string;
-  description: string;
-  icon: "users" | "dollar" | "scissors";
-  before: LeverMetrics;
-  after: LeverMetrics;
-  coaching: string;
-}
-
-function cashTrough(metrics: ScenarioMetrics, startingCash: number): number {
-  let running = startingCash;
-  let min = startingCash;
-  for (let y = 0; y < 5; y++) {
-    const monthlyNI = metrics.netIncome[y] / 12;
-    for (let m = 0; m < 12; m++) {
-      running += monthlyNI;
-      if (running < min) min = running;
-    }
-  }
-  return min;
+  return { base: baseResult, scenarios: scenarioResults, leverNudges };
 }
 
 export function computeQuickLevers(data: FullModelData): QuickLever[] {
-  const base = computeBaseFinancials(data);
-  const startingCash = data.openingBalances?.cash || 0;
-  const staffingRows = data.staffingRows || [];
-  const levers: QuickLever[] = [];
-
-  const baseY1NI = base.netIncome[0] ?? 0;
-  const baseBEYear = base.breakEvenYear ?? -1;
-  const baseTrough = cashTrough(base, startingCash);
-  const baseY1DSCR = base.dscr[0] ?? 0;
-  const baseEnrollment = base.enrollment[0] ?? 0;
-
-  function baseBefore(): LeverMetrics {
-    return { netIncome: baseY1NI, cashTrough: baseTrough, breakEvenYear: baseBEYear, dscr: baseY1DSCR };
-  }
-
-  function leverAfter(m: ScenarioMetrics): LeverMetrics {
-    return { netIncome: m.netIncome[0], cashTrough: cashTrough(m, startingCash), breakEvenYear: m.breakEvenYear ?? -1, dscr: m.dscr[0] };
-  }
-
-  if (baseEnrollment > 0) {
-    const adj: ScenarioAdjustments = { name: "+10% Enrollment", enrollmentAdjustment: 10, tuitionAdjustment: 10, expenseAdjustment: 0, staffingAdjustment: 0, facilityAdjustment: 0 };
-    const m = applyAdjustments(base, adj, startingCash);
-    levers.push({
-      id: "enrollment_up_10",
-      label: "Add 10% More Students",
-      description: `Increase enrollment from ${baseEnrollment} to ${Math.round(baseEnrollment * 1.1)} students`,
-      icon: "users",
-      before: baseBefore(),
-      after: leverAfter(m),
-      coaching: m.netIncome[0] > baseY1NI
-        ? `Adding ${Math.round(baseEnrollment * 0.1)} students could improve Year 1 net income by ${fmtCurrency(m.netIncome[0] - baseY1NI)}. Make sure your facility and staffing can absorb the growth.`
-        : `Even with 10% more students, net income doesn't improve — check whether your per-student costs exceed per-student revenue.`,
-    });
-  }
-
-  if (staffingRows.length > 0) {
-    const highestCostRow = [...staffingRows].sort((a, b) => {
-      const costA = (a.fte || 0) * (a.annualizedRate || 0);
-      const costB = (b.fte || 0) * (b.annualizedRate || 0);
-      return costB - costA;
-    })[0];
-    if (highestCostRow && highestCostRow.fte > 0) {
-      const oneRole = (highestCostRow.fte || 0) * (highestCostRow.annualizedRate || 0);
-      const totalStaffCost = staffingRows.reduce((s, r) => s + (r.fte || 0) * (r.annualizedRate || 0), 0);
-      const pctReduction = totalStaffCost > 0 ? -(oneRole / totalStaffCost) * 100 : 0;
-      const adj: ScenarioAdjustments = { name: "-1 Staff Position", enrollmentAdjustment: 0, tuitionAdjustment: 0, expenseAdjustment: 0, staffingAdjustment: Math.round(pctReduction), facilityAdjustment: 0 };
-      const m = applyAdjustments(base, adj, startingCash);
-      levers.push({
-        id: "staff_minus_1",
-        label: "Remove 1 Staff Position",
-        description: `Defer the highest-cost role (~${fmtCurrency(oneRole)}/year)`,
-        icon: "scissors",
-        before: baseBefore(),
-        after: leverAfter(m),
-        coaching: `Deferring one position saves ~${fmtCurrency(oneRole)}/year. ${m.netIncome[0] >= 0 && baseY1NI < 0 ? "This alone could move you from a deficit to a surplus." : `Year 1 net income shifts by ${fmtCurrency(m.netIncome[0] - baseY1NI)}.`} Consider whether you can phase in this hire later.`,
-      });
-    }
-  }
-
-  if (base.revenue[0] > 0) {
-    const adj: ScenarioAdjustments = { name: "+5% Tuition", enrollmentAdjustment: 0, tuitionAdjustment: 5, expenseAdjustment: 0, staffingAdjustment: 0, facilityAdjustment: 0 };
-    const m = applyAdjustments(base, adj, startingCash);
-    levers.push({
-      id: "tuition_up_5",
-      label: "Raise Revenue 5%",
-      description: `Increase tuition or per-pupil funding by 5%`,
-      icon: "dollar",
-      before: baseBefore(),
-      after: leverAfter(m),
-      coaching: `A 5% revenue increase adds ~${fmtCurrency(m.revenue[0] - base.revenue[0])}/year. ${cashTrough(m, startingCash) > baseTrough ? `Cash trough improves from ${fmtCurrencyAbs(baseTrough)} to ${fmtCurrencyAbs(cashTrough(m, startingCash))}.` : "Cash trough stays about the same."} Check that tuition stays competitive in your market.`,
-    });
-  }
-
-  return levers;
+  const baseMetrics = computeBaseFinancials(data);
+  return computeLeverNudges(data, baseMetrics);
 }
 
 function fmtCurrency(n: number): string {
