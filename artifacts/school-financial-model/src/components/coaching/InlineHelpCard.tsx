@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, HelpCircle, Calculator, BarChart3, BookOpen, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Explainer } from "@/lib/coaching/explainers";
+import type { Explainer, ExtraDepthContent } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
 import { shouldAutoExpand } from "@/lib/coaching/explainers";
 import { trackCoachingEvent } from "@/lib/coaching/track";
@@ -39,6 +39,8 @@ export function InlineHelpCard({ explainer, className, defaultOpen, section }: I
     });
   }, [isOpen, explainer.id, explainer.relatedSection, section, level]);
 
+  const showExtra = level === "extra" && explainer.extraBody;
+
   return (
     <div className={cn("rounded-xl border border-primary/15 bg-gradient-to-br from-emerald-50/60 to-teal-50/40 overflow-hidden transition-all duration-200", className)}>
       <button
@@ -62,6 +64,7 @@ export function InlineHelpCard({ explainer, className, defaultOpen, section }: I
           <ExplainerSection label="Why it matters" text={explainer.body.whyItMatters} />
           <ExplainerSection label="Healthy vs risky" text={explainer.body.healthyVsRisky} />
           <ExplainerSection label="What to do next" text={explainer.body.whatToDoNext} />
+          {showExtra && <ExtraDepthSections extra={explainer.extraBody!} />}
         </div>
       )}
     </div>
@@ -73,6 +76,34 @@ function ExplainerSection({ label, text }: { label: string; text: string }) {
     <div>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-primary/60 mb-0.5">{label}</p>
       <p className="text-[13px] text-foreground/80 leading-relaxed">{text}</p>
+    </div>
+  );
+}
+
+const EXTRA_SECTION_CONFIG = [
+  { key: "workedExample" as const, label: "Worked example", Icon: Calculator, color: "text-amber-600" },
+  { key: "benchmarkDetail" as const, label: "Detailed benchmarks", Icon: BarChart3, color: "text-blue-600" },
+  { key: "glossaryTerms" as const, label: "Key terms", Icon: BookOpen, color: "text-teal-600" },
+  { key: "lenderPerspective" as const, label: "Lender perspective", Icon: Eye, color: "text-violet-600" },
+];
+
+function ExtraDepthSections({ extra }: { extra: ExtraDepthContent }) {
+  return (
+    <div className="mt-3 pt-3 border-t border-primary/10 space-y-2.5">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600/80 mb-1">Deep Dive</p>
+      {EXTRA_SECTION_CONFIG.map(({ key, label, Icon, color }) => {
+        const text = extra[key];
+        if (!text) return null;
+        return (
+          <div key={key} className="rounded-lg bg-white/60 border border-primary/8 px-3 py-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Icon className={cn("h-3 w-3", color)} />
+              <p className={cn("text-[10px] font-semibold uppercase tracking-wider", color)}>{label}</p>
+            </div>
+            <p className="text-[13px] text-foreground/80 leading-relaxed">{text}</p>
+          </div>
+        );
+      })}
     </div>
   );
 }

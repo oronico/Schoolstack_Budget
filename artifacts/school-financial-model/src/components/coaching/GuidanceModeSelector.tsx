@@ -6,9 +6,9 @@ import { customFetch } from "@workspace/api-client-react";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
 const LEVELS = [
-  { value: "advanced", icon: Zap, label: "Compact", color: "text-teal-600" },
-  { value: "basics", icon: BookOpen, label: "Guided", color: "text-primary" },
-  { value: "extra", icon: GraduationCap, label: "Extra help", color: "text-amber-600" },
+  { value: "advanced", icon: Zap, label: "Compact", description: "Minimal guidance — for experienced operators", color: "text-teal-600" },
+  { value: "basics", icon: BookOpen, label: "Guided", description: "Key concepts and benchmarks at each step", color: "text-primary" },
+  { value: "extra", icon: GraduationCap, label: "Extra help", description: "Deep dives with worked examples and lender insights", color: "text-amber-600" },
 ] as const;
 
 export function GuidanceModeSelector({ compact }: { compact?: boolean } = {}) {
@@ -55,9 +55,12 @@ export function GuidanceModeSelector({ compact }: { compact?: boolean } = {}) {
               isActive ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
           >
-            <Icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? lvl.color : "")} aria-hidden="true" />
-            <span className="flex-1">{lvl.label}</span>
-            {isActive && <Check className="h-3.5 w-3.5 text-primary" aria-hidden="true" />}
+            <Icon className={cn("h-3.5 w-3.5 shrink-0 mt-0.5", isActive ? lvl.color : "")} aria-hidden="true" />
+            <div className="flex-1 min-w-0">
+              <span>{lvl.label}</span>
+              <p className="text-[11px] text-muted-foreground font-normal leading-tight mt-0.5">{lvl.description}</p>
+            </div>
+            {isActive && <Check className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" aria-hidden="true" />}
           </button>
         );
       })}

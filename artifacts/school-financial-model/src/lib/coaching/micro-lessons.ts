@@ -1,4 +1,5 @@
 import type { FullModelData } from "@/pages/model-wizard/schema";
+import type { GuidanceLevel } from "@/lib/coaching/explainers";
 import { LOADED_COST_MULTIPLIER } from "@workspace/finance";
 
 export interface MicroLesson {
@@ -8,6 +9,7 @@ export interface MicroLesson {
   readTimeSeconds: number;
   triggerStep: number;
   checkTrigger: (data: FullModelData) => boolean;
+  extraOnly?: boolean;
 }
 
 const DISMISSED_KEY = "schoolstack_micro_lessons_dismissed";
@@ -109,14 +111,65 @@ export const MICRO_LESSONS: MicroLesson[] = [
       return y1Rev > 0 && (y1Rev - y1Staff - y1Exp) < 0;
     },
   },
+  {
+    id: "retention_compounding_extra",
+    title: "The Math of Retention: 90% vs 80% Over 5 Years",
+    body: "Here's a concrete example: you start with 100 students and want to stay at 100 each year. At 90% retention: 90 return in Year 2, so you recruit 10 new. Year 3: 90 return, recruit 10. Over 4 years you recruit 40 total new students. At 80% retention: 80 return in Year 2, recruit 20 new. Year 3: 80 return, recruit 20. Over 4 years you recruit 80 total — double the effort. At $500/student acquisition cost, that's $20K vs $40K in recruitment alone. Retention isn't just a quality metric — it's a financial lever. — SchoolStack Team",
+    readTimeSeconds: 40,
+    triggerStep: 3,
+    extraOnly: true,
+    checkTrigger: (data) => {
+      const programs = data.programs || [];
+      if (programs.some((p) => (p.year1 || 0) > 0)) return true;
+      return (data.enrollment?.year1 || 0) > 0;
+    },
+  },
+  {
+    id: "staffing_pct_extra",
+    title: "Staffing Cost at Different Scales",
+    body: "Let's see how staffing percentage changes with enrollment. At 60 students ($600K revenue) with 7 staff ($455K loaded): staffing = 76% of revenue — danger zone. At 80 students ($800K revenue) with 8 staff ($520K loaded): staffing = 65% — improving. At 100 students ($1M revenue) with 9 staff ($585K loaded): staffing = 59% — healthy. At 120 students ($1.2M revenue) with 10 staff ($650K loaded): staffing = 54% — excellent. Notice: each cohort of 20 students drops staffing percentage by ~6 points because revenue grows faster than staffing. This is why enrollment is your biggest financial lever. — SchoolStack Team",
+    readTimeSeconds: 45,
+    triggerStep: 5,
+    extraOnly: true,
+    checkTrigger: (data) => {
+      const positions = data.staffingRows || [];
+      return positions.length >= 3;
+    },
+  },
+  {
+    id: "breakeven_math_extra",
+    title: "Your Break-Even Number: A Worked Example",
+    body: "Here's how break-even works in practice. Say your fixed costs are $500K/year (admin salaries, rent, insurance, debt). Your revenue per student is $10,000, and variable costs are $1,500/student (supplies, food, tech). Contribution margin = $10,000 - $1,500 = $8,500. Break-even = $500K ÷ $8,500 = 59 students. At 60 students you have a $8,500 surplus. At 80 students: surplus = $178,500. At 50 students: deficit = -$76,500. Every student above 59 adds $8,500 to your bottom line. Every student below costs you $8,500. This is why knowing your break-even number is essential. — SchoolStack Team",
+    readTimeSeconds: 45,
+    triggerStep: 7,
+    extraOnly: true,
+    checkTrigger: (data) => {
+      const rows = data.revenueRows || [];
+      const staffing = data.staffingRows || [];
+      return rows.some((r) => r.enabled) && staffing.length >= 2;
+    },
+  },
+  {
+    id: "cash_timing_extra",
+    title: "Monthly Cash Flow: Why August Is Dangerous",
+    body: "Here's a real scenario: Monthly expenses are $70K (mostly payroll and rent — they don't pause in summer). Revenue arrives over 10 months (Sept-June) at $84K/month = $840K annually. July expenses: $70K, revenue: $0. August expenses: $70K, revenue: $0. That's $140K out with $0 in. If you start July with $100K cash, you'll be -$40K by September 1st — payday for your teachers. You need at least $140K in starting cash just to survive the summer gap. Budget $200K+ for comfort. This catches first-time founders every year. — SchoolStack Team",
+    readTimeSeconds: 40,
+    triggerStep: 4,
+    extraOnly: true,
+    checkTrigger: (data) => {
+      const rows = data.revenueRows || [];
+      return rows.filter((r) => r.enabled).length >= 1;
+    },
+  },
 ];
 
-export function getTriggeredLessons(data: FullModelData, currentStep: number): MicroLesson[] {
+export function getTriggeredLessons(data: FullModelData, currentStep: number, level?: GuidanceLevel): MicroLesson[] {
   const dismissed = getDismissedLessons();
   return MICRO_LESSONS.filter(
     (lesson) =>
       lesson.triggerStep === currentStep &&
       !dismissed.has(lesson.id) &&
+      (!lesson.extraOnly || level === "extra") &&
       lesson.checkTrigger(data)
   );
 }

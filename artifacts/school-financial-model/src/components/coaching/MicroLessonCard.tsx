@@ -56,8 +56,8 @@ export function MicroLessonContainer({ data, currentStep, className }: MicroLess
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const lessons = useMemo(() => {
-    return getTriggeredLessons(data, currentStep).filter(l => !dismissedIds.has(l.id));
-  }, [data, currentStep, dismissedIds]);
+    return getTriggeredLessons(data, currentStep, level).filter(l => !dismissedIds.has(l.id));
+  }, [data, currentStep, dismissedIds, level]);
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
