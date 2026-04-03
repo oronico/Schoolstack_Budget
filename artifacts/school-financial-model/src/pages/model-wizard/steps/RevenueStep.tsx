@@ -1642,6 +1642,20 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Payment Timing
+              </label>
+              <select
+                value={row.paymentTiming ?? "upfront"}
+                onChange={(e) => onTimingChange("paymentTiming", e.target.value as PaymentTiming)}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground"
+              >
+                {(Object.keys(PAYMENT_TIMING_LABELS) as PaymentTiming[]).map((pt) => (
+                  <option key={pt} value={pt}>{PAYMENT_TIMING_LABELS[pt]}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                 Collection Rate %
               </label>
               <input

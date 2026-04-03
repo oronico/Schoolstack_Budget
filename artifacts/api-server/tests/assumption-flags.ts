@@ -895,7 +895,7 @@ async function testCollectionDelayShiftsRevenue() {
   const troughWith = ceWith.keyMetrics?.find((m: { name: string }) => m.name.includes("Cash Trough"));
 
   assert("Cash Trough metric exists for no-delay model", !!troughNo);
-  assert("Cash Trough metric exists for 30-day delay model", !!troughWith);
+  assert("Cash Trough metric exists for 90-day delay model", !!troughWith);
 
   if (troughNo && troughWith) {
     const extractAmt = (v: string) => parseInt(v.split(":")[1].replace(/[^-\d]/g, ""));
