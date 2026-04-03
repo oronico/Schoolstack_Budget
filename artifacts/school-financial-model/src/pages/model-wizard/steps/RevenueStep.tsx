@@ -1489,6 +1489,30 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
           </span>
         )}
       </p>
+      {category === "tuition_and_fees" && (
+        <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
+          <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+          <span>Autopay families pay on time. If you invoice, expect 2-5% non-collection and 15-30 day delays. Lenders discount invoiced tuition accordingly.</span>
+        </div>
+      )}
+      {category === "public_funding" && (
+        <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
+          <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+          <span>State and district payments typically arrive 30-45 days after the reporting period. Budget for the cash gap in your first months of operation.</span>
+        </div>
+      )}
+      {category === "school_choice" && (
+        <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
+          <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+          <span>ESA/voucher disbursements vary by state. Reimbursement programs can lag 45-60 days — plan bridge funding if this is a major revenue source.</span>
+        </div>
+      )}
+      {category === "philanthropy" && (
+        <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
+          <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+          <span>Grants and donations often arrive in lump sums. Mark "projected" grants as such — lenders apply a 5% haircut to uncommitted philanthropy.</span>
+        </div>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {category === "tuition_and_fees" && (
           <>

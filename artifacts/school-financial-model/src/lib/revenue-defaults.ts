@@ -109,7 +109,7 @@ export function getTimingDefaults(
       return {
         billingMonths: fundingProfile === "charter_public_funded" ? 12 : 10,
         collectionMethod: "autopay",
-        collectionRate: 100,
+        collectionRate: 98,
         collectionDelayDays: 0,
       };
     case "tuition_offsets":
@@ -126,17 +126,23 @@ export function getTimingDefaults(
       return {
         paymentFrequency: freq,
         paymentTiming: fundingProfile === "charter_public_funded" ? "arrears" : "upfront",
+        collectionDelayDays: 30,
+        collectionRate: 100,
       };
     }
     case "school_choice":
       return {
         disbursementType: "direct",
         reimbursementLagMonths: 2,
+        collectionDelayDays: 45,
+        collectionRate: 100,
       };
     case "philanthropy":
       return {
         grantStatus: "projected",
         receiptQuarter: 1,
+        collectionDelayDays: 60,
+        collectionRate: 95,
       };
     case "other_revenue":
       return {};

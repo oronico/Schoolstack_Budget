@@ -1576,15 +1576,19 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
       if (!rv.enabled) continue;
       const annualAmount = rowValues.get(rv.id) || 0;
       if (annualAmount === 0) continue;
+      const collectionRate = (rv.collectionRate ?? 100) / 100;
+      const delayMonths = Math.ceil((rv.collectionDelayDays ?? 0) / 30);
       if (rv.category === "tuition_and_fees" || rv.category === "tuition_offsets") {
         const bm = rv.billingMonths ?? 10;
         const effectiveAmount = rv.category === "tuition_offsets" ? -Math.abs(annualAmount) : annualAmount;
-        const perMonth = effectiveAmount / bm;
-        const startMonth = bm >= 12 ? 0 : 1;
+        const adjustedAmount = effectiveAmount * collectionRate;
+        const perMonth = adjustedAmount / bm;
+        const startMonth = (bm >= 12 ? 0 : 1) + delayMonths;
         for (let i = startMonth; i < startMonth + bm && i < 12; i++) monthly[i] += perMonth;
       } else {
-        const perMonth = annualAmount / opMonths;
-        for (let m = 0; m < opMonths; m++) monthly[m] += perMonth;
+        const adjustedAmount = annualAmount * collectionRate;
+        const perMonth = adjustedAmount / opMonths;
+        for (let m = delayMonths; m < opMonths + delayMonths && m < 12; m++) monthly[m] += perMonth;
       }
     }
     return monthly;
@@ -1703,11 +1707,29 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   setFormula(ws.getCell(r, 2), `${cn(cumCashRow, 13)}`, Math.round(cumCashMonthly[11]));
   ws.getCell(r, 2).numFmt = CUR; bc(ws.getCell(r, 2)); outputCell(ws.getCell(r, 2));
   r++;
+  const minCash = Math.min(...cumCashMonthly);
+  const minCashMonthIdx = cumCashMonthly.indexOf(minCash);
+  const minCashMonthLabel = MONTH_NAMES[((fyStart - 1 + minCashMonthIdx) % 12) + 1];
   ws.getCell(r, 1).value = "Minimum Cash Month"; dc(ws.getCell(r, 1));
-  setFormula(ws.getCell(r, 2), `MIN(${cn(cumCashRow, 2)}:${cn(cumCashRow, 13)})`, Math.round(Math.min(...cumCashMonthly)));
+  setFormula(ws.getCell(r, 2), `MIN(${cn(cumCashRow, 2)}:${cn(cumCashRow, 13)})`, Math.round(minCash));
   ws.getCell(r, 2).numFmt = CUR; dc(ws.getCell(r, 2));
+  if (minCash < 0) {
+    ws.getCell(r, 2).font = { ...(ws.getCell(r, 2).font || {}), color: { argb: "FFDC2626" } };
+    ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFEF2F2" } };
+  } else if (minCash < startingCash * 0.25) {
+    ws.getCell(r, 2).font = { ...(ws.getCell(r, 2).font || {}), color: { argb: "FFD97706" } };
+    ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFBEB" } };
+  }
+  r++;
+  ws.getCell(r, 1).value = `Cash Trough: ${minCashMonthLabel} (Month ${minCashMonthIdx + 1})`;
+  ws.getCell(r, 1).font = { italic: true, size: 10, name: "Calibri", color: { argb: "FF6B7280" } };
+  ws.mergeCells(r, 1, r, 6);
+  r++;
+  ws.getCell(r, 1).value = "Your lowest cash point is the month lenders focus on to ensure you won't run out of money before collections start. Plan reserves to cover this trough.";
+  ws.getCell(r, 1).font = { italic: true, size: 9, name: "Calibri", color: { argb: "FF9CA3AF" } };
+  ws.mergeCells(r, 1, r, 8);
 
-  return { endingCashY1: cumCashMonthly[11], cumCashRow };
+  return { endingCashY1: cumCashMonthly[11], cumCashRow, minCashMonth: minCashMonthIdx + 1, minCashAmount: Math.round(minCash), minCashMonthLabel };
 }
 
 function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], depreciationByYear?: number[]) {

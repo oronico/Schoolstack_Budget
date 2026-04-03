@@ -1953,6 +1953,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
 
   const priorSnapshot = (data as Record<string, unknown>).priorYearSnapshot as Record<string, number> | undefined;
   const y1StartingCash = priorSnapshot?.endingCash || 0;
+  const startCash = y1StartingCash || (data.openingBalances as Record<string, number> | undefined)?.cash || (data.startingCash as number | undefined) || 0;
   const y1EndingCash = y1StartingCash + y1.netIncome;
   const y1Dcoh = computeDaysCashOnHand(y1EndingCash, y1.totalExpenses);
   const y1DcohRounded = Math.round(y1Dcoh);
@@ -1969,6 +1970,79 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
           : `Only ${y1DcohRounded} days of cash on hand — well below the 45-day minimum. Secure bridge funding or reduce early costs.`,
     benchmark: `Healthy: ≥ ${BENCHMARK_DCOH_GREEN} days; minimum: ${BENCHMARK_DCOH_AMBER} days`,
   });
+
+  const computeMonthlyCashTrough = (): { minCashMonth: number; minCashAmount: number } => {
+    const opMonths = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) : 12;
+    const revenueRows = data.revenueRows || [];
+    const students = enrollmentByYear[0] || 0;
+
+    const monthlyRev = new Array(12).fill(0);
+    const rowValues = new Map<string, number>();
+    for (const rv of revenueRows) {
+      if (!rv.enabled || rv.driverType === "percent_of_base") continue;
+      const base = rv.amounts?.[0] ?? 0;
+      let val = base;
+      if (rv.driverType === "per_student") val = base * students;
+      else if (rv.driverType === "monthly") val = base * 12;
+      rowValues.set(rv.id, val);
+    }
+    for (const rv of revenueRows) {
+      if (!rv.enabled || rv.driverType !== "percent_of_base") continue;
+      const baseVal = rowValues.get(rv.percentBase || "") || 0;
+      rowValues.set(rv.id, baseVal * ((rv.amounts?.[0] ?? 0) / 100));
+    }
+    for (const rv of revenueRows) {
+      if (!rv.enabled) continue;
+      const annualAmount = rowValues.get(rv.id) || 0;
+      if (annualAmount === 0) continue;
+      const collectionRate = (rv.collectionRate ?? 100) / 100;
+      const delayMonths = Math.ceil((rv.collectionDelayDays ?? 0) / 30);
+      if (rv.category === "tuition_and_fees" || rv.category === "tuition_offsets") {
+        const bm = rv.billingMonths ?? 10;
+        const effectiveAmt = rv.category === "tuition_offsets" ? -Math.abs(annualAmount) : annualAmount;
+        const adjusted = effectiveAmt * collectionRate;
+        const perMonth = adjusted / bm;
+        const startMonth = (bm >= 12 ? 0 : 1) + delayMonths;
+        for (let i = startMonth; i < startMonth + bm && i < 12; i++) monthlyRev[i] += perMonth;
+      } else {
+        const adjusted = annualAmount * collectionRate;
+        const perMonth = adjusted / opMonths;
+        for (let m = delayMonths; m < opMonths + delayMonths && m < 12; m++) monthlyRev[m] += perMonth;
+      }
+    }
+
+    const cashExpenses = y1.totalExpenses - (y1.depreciation ?? 0);
+    const monthlyPersonnel = y1.totalStaffingCost / (opMonths || 12);
+    const monthlyOps = (cashExpenses - y1.totalStaffingCost - (y1.debtService ?? 0)) / (opMonths || 12);
+    const monthlyDebt = (y1.debtService ?? 0) / 12;
+
+    let cum = startCash;
+    let minCash = cum;
+    let minMonth = 0;
+    for (let m = 0; m < 12; m++) {
+      const exp = (m < opMonths ? monthlyPersonnel + monthlyOps : 0) + monthlyDebt;
+      cum += monthlyRev[m] - exp;
+      if (cum < minCash) { minCash = cum; minMonth = m; }
+    }
+    return { minCashMonth: minMonth + 1, minCashAmount: Math.round(minCash) };
+  };
+
+  const cashTrough = hasRowData ? computeMonthlyCashTrough() : null;
+
+  if (cashTrough) {
+    keyMetrics.push({
+      name: "Cash Trough (Minimum Cash Month)",
+      value: `Month ${cashTrough.minCashMonth}: ${fmt(cashTrough.minCashAmount)}`,
+      status: cashTrough.minCashAmount >= 0 ? (cashTrough.minCashAmount >= startCash * 0.25 ? "good" : "warning") : "danger",
+      interpretation:
+        cashTrough.minCashAmount < 0
+          ? `Your cash balance dips negative in Month ${cashTrough.minCashMonth}. This means you'll run out of money before collections catch up. Plan bridge financing or a line of credit to cover this gap.`
+          : cashTrough.minCashAmount < startCash * 0.25
+            ? `Your lowest cash point is Month ${cashTrough.minCashMonth} at ${fmt(cashTrough.minCashAmount)}. Lenders look at this to make sure you won't run out of money before tuition collections start. Consider building reserves.`
+            : `Your lowest cash point is Month ${cashTrough.minCashMonth} at ${fmt(cashTrough.minCashAmount)}. You have enough reserves to weather the collection gap — this is what lenders want to see.`,
+      benchmark: "Target: Positive cash balance every month",
+    });
+  }
 
   if (hasDebt) {
     keyMetrics.push({

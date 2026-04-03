@@ -673,6 +673,9 @@ async function main() {
   await testWorkingCapitalFlag();
   await testProjectedWorkingCapitalDrop();
   await testWorkingCapitalNegative();
+  await testCollectionDelayShiftsRevenue();
+  await testCollectionRateReducesRevenue();
+  await testCashTroughMetric();
 
   console.log(`\n${"=".repeat(50)}`);
   console.log(`Results: ${passed} passed, ${failed} failed`);
@@ -866,6 +869,122 @@ async function testWorkingCapitalNegative() {
   };
   const noLiabFlags = await detectUnusualAssumptions(noLiab as Record<string, unknown>);
   assert("No low_working_capital flag when no current liabilities", !hasFlag(noLiabFlags, "low_working_capital"));
+}
+
+async function testCollectionDelayShiftsRevenue() {
+  console.log("\n=== Collection delay: 90-day delay shifts revenue and worsens cash trough ===");
+
+  const noDelay = {
+    ...microschoolStartup,
+    revenueRows: [
+      { id: "r1", category: "tuition_and_fees", lineItem: "Tuition", enabled: true, driverType: "per_student", amounts: [12000, 12000, 12000, 12000, 12000], billingMonths: 10, collectionDelayDays: 0, collectionRate: 100 },
+    ],
+  };
+  const withDelay = {
+    ...microschoolStartup,
+    revenueRows: [
+      { id: "r1", category: "tuition_and_fees", lineItem: "Tuition", enabled: true, driverType: "per_student", amounts: [12000, 12000, 12000, 12000, 12000], billingMonths: 10, collectionDelayDays: 90, collectionRate: 100 },
+    ],
+  };
+
+  const ceNo = await runConsultantEngine(noDelay as Record<string, unknown>);
+  const ceWith = await runConsultantEngine(withDelay as Record<string, unknown>);
+
+  const troughNo = ceNo.keyMetrics?.find((m: { name: string }) => m.name.includes("Cash Trough"));
+  const troughWith = ceWith.keyMetrics?.find((m: { name: string }) => m.name.includes("Cash Trough"));
+
+  assert("Cash Trough metric exists for no-delay model", !!troughNo);
+  assert("Cash Trough metric exists for 30-day delay model", !!troughWith);
+
+  if (troughNo && troughWith) {
+    const extractAmt = (v: string) => parseInt(v.split(":")[1].replace(/[^-\d]/g, ""));
+    const noAmt = extractAmt(troughNo.value);
+    const withAmt = extractAmt(troughWith.value);
+    assert(
+      `30-day delay produces lower cash trough (${withAmt} < ${noAmt})`,
+      withAmt < noAmt,
+      `Expected delayed trough ${withAmt} < no-delay trough ${noAmt}`,
+    );
+  }
+}
+
+async function testCollectionRateReducesRevenue() {
+  console.log("\n=== Collection rate: 95% rate reduces effective revenue ===");
+
+  const full = {
+    ...microschoolStartup,
+    revenueRows: [
+      { id: "r1", category: "philanthropy", lineItem: "Grants", enabled: true, driverType: "annual_fixed", amounts: [100000, 100000, 100000, 100000, 100000], collectionDelayDays: 0, collectionRate: 100 },
+    ],
+  };
+  const partial = {
+    ...microschoolStartup,
+    revenueRows: [
+      { id: "r1", category: "philanthropy", lineItem: "Grants", enabled: true, driverType: "annual_fixed", amounts: [100000, 100000, 100000, 100000, 100000], collectionDelayDays: 0, collectionRate: 95 },
+    ],
+  };
+
+  const ceFull = await runConsultantEngine(full as Record<string, unknown>);
+  const cePartial = await runConsultantEngine(partial as Record<string, unknown>);
+
+  const troughFull = ceFull.keyMetrics?.find((m: { name: string }) => m.name.includes("Cash Trough"));
+  const troughPartial = cePartial.keyMetrics?.find((m: { name: string }) => m.name.includes("Cash Trough"));
+
+  assert("Cash Trough metric exists for 100% collection", !!troughFull);
+  assert("Cash Trough metric exists for 95% collection", !!troughPartial);
+
+  if (troughFull && troughPartial) {
+    const extractAmt = (v: string) => parseInt(v.split(":")[1].replace(/[^-\d]/g, ""));
+    const fullAmt = extractAmt(troughFull.value);
+    const partialAmt = extractAmt(troughPartial.value);
+    assert(
+      `95% collection produces lower trough than 100% (${partialAmt} < ${fullAmt})`,
+      partialAmt < fullAmt,
+      `Expected 95% trough ${partialAmt} < 100% trough ${fullAmt}`,
+    );
+  }
+}
+
+async function testCashTroughMetric() {
+  console.log("\n=== Cash Trough: metric present with correct status levels ===");
+
+  const goodCash = {
+    ...microschoolStartup,
+    startingCash: 200000,
+    revenueRows: [
+      { id: "r1", category: "tuition_and_fees", lineItem: "Tuition", enabled: true, driverType: "per_student", amounts: [12000, 12360, 12731, 13113, 13506], billingMonths: 10 },
+    ],
+  };
+
+  const ceResult = await runConsultantEngine(goodCash as Record<string, unknown>);
+  const trough = ceResult.keyMetrics?.find((m: { name: string }) => m.name.includes("Cash Trough"));
+  assert("Cash Trough key metric exists", !!trough);
+
+  if (trough) {
+    assert("Cash Trough value includes month number", /Month \d+/.test(trough.value));
+    assert("Cash Trough has a status", ["good", "warning", "danger"].includes(trough.status));
+    assert("Cash Trough has interpretation text", trough.interpretation.length > 20);
+    assert("Cash Trough has benchmark", trough.benchmark.includes("Positive"));
+  }
+
+  const tightCash = {
+    ...microschoolStartup,
+    startingCash: 5000,
+    revenueRows: [
+      { id: "r1", category: "public_funding", lineItem: "State Funds", enabled: true, driverType: "annual_fixed", amounts: [50000, 50000, 50000, 50000, 50000], collectionDelayDays: 60, collectionRate: 100 },
+    ],
+  };
+
+  const ceTight = await runConsultantEngine(tightCash as Record<string, unknown>);
+  const tightTrough = ceTight.keyMetrics?.find((m: { name: string }) => m.name.includes("Cash Trough"));
+  assert("Cash Trough exists for tight-cash scenario", !!tightTrough);
+  if (tightTrough) {
+    assert(
+      "Tight cash scenario triggers warning or danger status",
+      tightTrough.status === "warning" || tightTrough.status === "danger",
+      `Expected warning/danger but got ${tightTrough.status}`,
+    );
+  }
 }
 
 main().catch(err => {
