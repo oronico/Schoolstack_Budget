@@ -124,13 +124,17 @@ function LeverCard({ lever, index }: { lever: QuickLever; index: number }) {
   );
 }
 
+const ACTIONABLE_LEVER_IDS = ["enrollment_up_10", "staff_minus_1", "tuition_up_5"];
+const RISK_LEVER_IDS = ["enrollment_down_10"];
+
 function selectTopLevers(all: QuickLever[], max: number): QuickLever[] {
-  if (all.length <= max) return all;
-  const ranked = all.map(l => {
-    const delta = Math.abs(l.after.netIncome - l.before.netIncome);
-    return { lever: l, delta };
-  }).sort((a, b) => b.delta - a.delta);
-  return ranked.slice(0, max).map(r => r.lever);
+  const actionable = all.filter(l => ACTIONABLE_LEVER_IDS.includes(l.id));
+  const risk = all.filter(l => RISK_LEVER_IDS.includes(l.id));
+  const selected = actionable.slice(0, max);
+  if (selected.length < max && risk.length > 0) {
+    selected.push(...risk.slice(0, max - selected.length));
+  }
+  return selected;
 }
 
 export function QuickLevers({ data, className }: QuickLeversProps) {

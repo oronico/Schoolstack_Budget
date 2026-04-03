@@ -460,7 +460,7 @@ function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): 
       before: baseLM,
       after: downLM,
       coaching: downLM.netIncome < baseLM.netIncome
-        ? `Losing ${Math.round(baseEnrollment * 0.1)} students would reduce Year 1 net income by ${fmtCurrency(downLM.netIncome - baseLM.netIncome)}. ${downLM.breakEvenEnrollment > 0 && Math.round(baseEnrollment * 0.9) <= downLM.breakEvenEnrollment ? `At ${Math.round(baseEnrollment * 0.9)} students you'd be at or below your break-even enrollment of ${downLM.breakEvenEnrollment}.` : "Build a contingency plan for lower-than-projected enrollment."}`
+        ? `Losing ${Math.round(baseEnrollment * 0.1)} students would reduce Year 1 net income by ${fmtCurrencyAbs(baseLM.netIncome - downLM.netIncome)}. ${downLM.breakEvenEnrollment > 0 && Math.round(baseEnrollment * 0.9) <= downLM.breakEvenEnrollment ? `At ${Math.round(baseEnrollment * 0.9)} students you'd be at or below your break-even enrollment of ${downLM.breakEvenEnrollment}.` : "Build a contingency plan for lower-than-projected enrollment."}`
         : `A 10% enrollment drop has minimal financial impact — your cost structure is not enrollment-driven.`,
       relatedDiagnosticIds: ["near_breakeven_enrollment"],
     });
