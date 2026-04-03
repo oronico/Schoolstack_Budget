@@ -124,8 +124,18 @@ function LeverCard({ lever, index }: { lever: QuickLever; index: number }) {
   );
 }
 
+function selectTopLevers(all: QuickLever[], max: number): QuickLever[] {
+  if (all.length <= max) return all;
+  const ranked = all.map(l => {
+    const delta = Math.abs(l.after.netIncome - l.before.netIncome);
+    return { lever: l, delta };
+  }).sort((a, b) => b.delta - a.delta);
+  return ranked.slice(0, max).map(r => r.lever);
+}
+
 export function QuickLevers({ data, className }: QuickLeversProps) {
-  const levers = useMemo(() => computeQuickLevers(data), [data]);
+  const allLevers = useMemo(() => computeQuickLevers(data), [data]);
+  const levers = useMemo(() => selectTopLevers(allLevers, 3), [allLevers]);
 
   const trackedRef = useRef(false);
   useEffect(() => {

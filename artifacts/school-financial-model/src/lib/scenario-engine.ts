@@ -421,20 +421,36 @@ function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): 
   const baseEnrollment = baseMetrics.enrollment[0] ?? 0;
 
   if (baseEnrollment > 0) {
-    const modifiedData = cloneDataWithEnrollmentAdjustment(data, 10);
-    const m = computeBaseFinancials(modifiedData);
-    const afterLM = metricsToLever(m, startingCash);
+    const upData = cloneDataWithEnrollmentAdjustment(data, 10);
+    const upM = computeBaseFinancials(upData);
+    const upLM = metricsToLever(upM, startingCash);
     levers.push({
       id: "enrollment_up_10",
       label: "Add 10% More Students",
       description: `Increase enrollment from ${baseEnrollment} to ${Math.round(baseEnrollment * 1.1)} students`,
       icon: "users",
       before: baseLM,
-      after: afterLM,
-      coaching: afterLM.netIncome > baseLM.netIncome
-        ? `Adding ${Math.round(baseEnrollment * 0.1)} students could improve Year 1 net income by ${fmtCurrency(afterLM.netIncome - baseLM.netIncome)}. Make sure your facility and staffing can absorb the growth.`
+      after: upLM,
+      coaching: upLM.netIncome > baseLM.netIncome
+        ? `Adding ${Math.round(baseEnrollment * 0.1)} students could improve Year 1 net income by ${fmtCurrency(upLM.netIncome - baseLM.netIncome)}. Make sure your facility and staffing can absorb the growth.`
         : `Even with 10% more students, net income doesn't improve — check whether your per-student costs exceed per-student revenue.`,
       relatedDiagnosticIds: ["near_breakeven_enrollment", "fast_enrollment_growth"],
+    });
+
+    const downData = cloneDataWithEnrollmentAdjustment(data, -10);
+    const downM = computeBaseFinancials(downData);
+    const downLM = metricsToLever(downM, startingCash);
+    levers.push({
+      id: "enrollment_down_10",
+      label: "Lose 10% of Students",
+      description: `Enrollment drops from ${baseEnrollment} to ${Math.round(baseEnrollment * 0.9)} students`,
+      icon: "users",
+      before: baseLM,
+      after: downLM,
+      coaching: downLM.netIncome < baseLM.netIncome
+        ? `Losing ${Math.round(baseEnrollment * 0.1)} students would reduce Year 1 net income by ${fmtCurrency(downLM.netIncome - baseLM.netIncome)}. ${downLM.breakEvenYear === -1 && baseLM.breakEvenYear !== -1 ? "This could push you past break-even." : "Build a contingency plan for lower-than-projected enrollment."}`
+        : `A 10% enrollment drop has minimal financial impact — your cost structure is not enrollment-driven.`,
+      relatedDiagnosticIds: ["near_breakeven_enrollment"],
     });
   }
 
@@ -460,7 +476,7 @@ function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): 
         icon: "scissors",
         before: baseLM,
         after: afterLM,
-        coaching: `Deferring 1 FTE saves ~${fmtCurrencyAbs(savingsBase)}/year. ${afterLM.netIncome >= 0 && baseLM.netIncome < 0 ? "This alone could move you from a deficit to a surplus." : `Year 1 net income shifts by ${fmtCurrency(afterLM.netIncome - baseLM.netIncome)}.`} Consider whether you can phase in this hire later.`,
+        coaching: `Deferring 1 FTE saves ~${fmtCurrencyAbs(savingsBase)}/year. ${afterLM.netIncome >= 0 && baseLM.netIncome < 0 ? "This alone could move you from a deficit to a surplus." : `Year 1 net income shifts by ${fmtCurrency(afterLM.netIncome - baseLM.netIncome)}.`}${afterLM.dscr > baseLM.dscr && baseLM.dscr > 0 ? ` DSCR improves from ${baseLM.dscr.toFixed(2)}x to ${afterLM.dscr.toFixed(2)}x.` : ""} Consider whether you can phase in this hire later.`,
         relatedDiagnosticIds: ["high_staffing_critical", "high_staffing_warning"],
       });
     }
