@@ -1249,22 +1249,42 @@ function assessLendingLabReadiness(
     const thresholdLabel = dscrStepUp
       ? `≥${y1DscrThreshold}x Y1 (step-up to ${dscrStepUp[4]}x by Y5)`
       : `≥${BENCHMARK_DSCR_AMBER}x DSCR`;
-    if (dscrVal < y1DscrThreshold) {
+
+    let worstStatus: "pass" | "warn" | "fail" = "pass";
+    let failingYears: string[] = [];
+    let warnYears: string[] = [];
+
+    for (let yi = 0; yi < yearFinancials.length; yi++) {
+      const yf = yearFinancials[yi];
+      const yDS = yf.loanDebtService ?? yf.debtService;
+      if (yDS <= 0) continue;
+      const yDscr = (yf.netIncome + yDS) / yDS;
+      const yThreshold = dscrStepUp ? (dscrStepUp[yi] ?? dscrStepUp[dscrStepUp.length - 1]) : BENCHMARK_DSCR_AMBER;
+      if (yDscr < yThreshold) {
+        worstStatus = "fail";
+        failingYears.push(`Y${yi + 1} (${yDscr.toFixed(2)}x < ${yThreshold}x)`);
+      } else if (yDscr < BENCHMARK_DSCR_GREEN && worstStatus !== "fail") {
+        worstStatus = "warn";
+        warnYears.push(`Y${yi + 1}`);
+      }
+    }
+
+    if (worstStatus === "fail") {
       criteria.push({
         name: "Debt Service Coverage",
         status: "fail",
         threshold: thresholdLabel,
         actual: dscrStr,
-        detail: `DSCR of ${dscrStr} is below the ${y1DscrThreshold}x Year 1 minimum. The school's operating income does not sufficiently cover loan payments. Increase revenue, reduce expenses, or restructure debt terms.`,
+        detail: `DSCR covenant breached in ${failingYears.join(", ")}. The school's operating income does not sufficiently cover loan payments in those years. Increase revenue, reduce expenses, or restructure debt terms.`,
         jumpToStep: 6,
       });
-    } else if (dscrVal < BENCHMARK_DSCR_GREEN) {
+    } else if (worstStatus === "warn") {
       criteria.push({
         name: "Debt Service Coverage",
         status: "warn",
         threshold: thresholdLabel,
         actual: dscrStr,
-        detail: "DSCR meets the Year 1 minimum but has limited cushion. Consider strengthening operating margins for more financial breathing room.",
+        detail: `DSCR meets minimums but has limited cushion${warnYears.length ? ` in ${warnYears.join(", ")}` : ""}. Consider strengthening operating margins for more financial breathing room.`,
         jumpToStep: 6,
       });
     } else {
@@ -1273,7 +1293,7 @@ function assessLendingLabReadiness(
         status: "pass",
         threshold: thresholdLabel,
         actual: dscrStr,
-        detail: `DSCR of ${dscrStr} provides strong debt service coverage with healthy cushion.`,
+        detail: `DSCR of ${dscrStr} provides strong debt service coverage with healthy cushion across all years.`,
       });
     }
   }
@@ -2761,7 +2781,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   }
 
   const expenseSensitivityMatrix: ExpenseSensitivityCell[] = [];
-  const sensExpInflPcts = [-10, -5, 0, 5, 10];
+  const sensExpInflPcts = [-10, -5, 0, 5, 10, 15, 20];
   for (const ePct of sensEnrollPcts) {
     for (const inflPct of sensExpInflPcts) {
       const adjEnroll = enrollmentByYear.map(s => Math.round(s * (1 + ePct / 100)));

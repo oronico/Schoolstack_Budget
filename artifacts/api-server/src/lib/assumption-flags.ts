@@ -80,6 +80,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     (data.staffingRows && data.staffingRows.length > 0) ||
     (data.expenseRows && data.expenseRows.length > 0)
   );
+  let yearFinancials: YearFinancials[] = [];
 
   const yearCount = hasRowData
     ? (data.revenueRows?.[0]?.amounts?.length || data.expenseRows?.[0]?.amounts?.length || (sp.schoolStage === "operating_school" ? 5 : 3))
@@ -219,7 +220,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
       : capDebtRows.filter(r => !r.isLoan);
 
     const { computeAllYearsFromRows } = await import("./consultant-engine");
-    const yearFinancials: YearFinancials[] = computeAllYearsFromRows(
+    yearFinancials = computeAllYearsFromRows(
         enrollmentByYear,
         revenueRows as RevenueRow[],
         staffingRows as StaffingRow[],
@@ -306,7 +307,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     }
   }
 
-  // --- WORKING CAPITAL FLAG ---
+  // --- WORKING CAPITAL FLAG (opening + projected) ---
   const ob = (data.openingBalances || {}) as { cash?: number; accountsReceivable?: number; accountsPayable?: number; currentDebtPortion?: number };
   const wcCash = ob.cash ?? 0;
   const wcAR = ob.accountsReceivable ?? 0;
@@ -324,6 +325,32 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
         severity: currentRatio < 0.8 ? "critical" : "warning",
         defaultPrompt: `Your opening current ratio is ${currentRatio.toFixed(2)}x, which is below the 1.1x minimum lenders expect. How will you ensure short-term obligations are covered? Consider increasing cash reserves or reducing short-term liabilities.`,
       });
+    }
+  }
+
+  if (hasRowData && yearFinancials.length > 0) {
+    const collectionDays = (data as Record<string, unknown>).collectionDelayDays as number ?? 30;
+    let runningCash = wcCash;
+    for (let y = 0; y < yearFinancials.length; y++) {
+      const yf = yearFinancials[y];
+      runningCash += yf.netIncome;
+      const projAR = yf.tuitionRevenue * (collectionDays / 365);
+      const projCurrentAssets = Math.max(0, runningCash) + projAR;
+      const projCurrentLiab = wcAP + wcCurrentDebt;
+      if (projCurrentLiab > 0) {
+        const projRatio = projCurrentAssets / projCurrentLiab;
+        if (projRatio < 1.1 && !flags.some(f => f.flagType === "low_working_capital")) {
+          flags.push({
+            field: `year${y + 1}.workingCapital`,
+            flagType: "low_working_capital",
+            currentValue: `${projRatio.toFixed(2)}x projected current ratio before Year ${y + 1}`,
+            benchmark: "≥ 1.1x",
+            severity: projRatio < 0.8 ? "critical" : "warning",
+            defaultPrompt: `Your projected current ratio drops to ${projRatio.toFixed(2)}x before Year ${y + 1}, which is below the 1.1x minimum. Build cash reserves earlier or reduce short-term liabilities to avoid liquidity stress.`,
+          });
+          break;
+        }
+      }
     }
   }
 

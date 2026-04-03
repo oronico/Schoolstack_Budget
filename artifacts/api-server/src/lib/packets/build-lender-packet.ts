@@ -72,7 +72,7 @@ export function buildLenderPacket(
     return section;
   });
 
-  const dscrSummary = extractDSCRSummary(consultantOutput);
+  const dscrSummary = extractDSCRSummary(consultantOutput, modelData);
 
   const raw = modelData as unknown as Record<string, unknown>;
   const budgetNarrative: BudgetNarrativeData = (raw.budgetNarrative as BudgetNarrativeData) || {};
@@ -225,17 +225,26 @@ function enrichDebtServiceSection(
   };
 }
 
-function extractDSCRSummary(co: ConsultantOutput): DSCRSummary | null {
+function extractDSCRSummary(co: ConsultantOutput, modelData?: ModelData): DSCRSummary | null {
   const dscrMetric = co.keyMetrics.find(
     (m) => m.name.toLowerCase().includes("dscr") || m.name.toLowerCase().includes("debt service coverage"),
   );
 
   if (!dscrMetric) return null;
 
+  const ct = modelData?.covenantThresholds as { dscrByYear?: number[] } | undefined;
+  const dscrByYear = ct?.dscrByYear && ct.dscrByYear.length === 5 ? ct.dscrByYear : null;
+  let benchmarkText: string;
+  if (dscrByYear) {
+    benchmarkText = `Step-up: ${dscrByYear.map((v, i) => `Y${i + 1} ≥${v.toFixed(2)}x`).join(", ")}`;
+  } else {
+    benchmarkText = dscrMetric.benchmark || `Minimum: ${BENCHMARK_DSCR_AMBER.toFixed(2)}x; target: ${BENCHMARK_DSCR_GREEN.toFixed(2)}x`;
+  }
+
   return {
     currentDSCR: dscrMetric.value,
     status: dscrMetric.status as "good" | "warning" | "danger",
-    benchmark: dscrMetric.benchmark || `Minimum: ${BENCHMARK_DSCR_AMBER.toFixed(2)}x; target: ${BENCHMARK_DSCR_GREEN.toFixed(2)}x`,
+    benchmark: benchmarkText,
     trendDescription: dscrMetric.interpretation,
   };
 }

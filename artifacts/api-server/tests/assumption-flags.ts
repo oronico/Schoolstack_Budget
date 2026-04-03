@@ -751,12 +751,15 @@ async function testExpenseSensitivityMatrix() {
 
   assert("expenseSensitivityMatrix is array", Array.isArray(co.expenseSensitivityMatrix));
   assert("expenseSensitivityMatrix has cells", co.expenseSensitivityMatrix.length > 0);
-  assert("expenseSensitivityMatrix has 25 cells (5x5)", co.expenseSensitivityMatrix.length === 25);
+  assert("expenseSensitivityMatrix has 35 cells (5x7)", co.expenseSensitivityMatrix.length === 35);
 
   const enrollPcts = [...new Set(co.expenseSensitivityMatrix.map(c => c.enrollmentPct))];
   const inflPcts = [...new Set(co.expenseSensitivityMatrix.map(c => c.expenseInflationPct))];
   assert("5 unique enrollment %s in expense matrix", enrollPcts.length === 5);
-  assert("5 unique expense inflation %s in expense matrix", inflPcts.length === 5);
+  assert("7 unique expense inflation %s in expense matrix (-10 to +20)", inflPcts.length === 7);
+
+  const highInflCell = co.expenseSensitivityMatrix.find(c => c.enrollmentPct === 0 && c.expenseInflationPct === 20);
+  assert("+20% inflation stress case exists", !!highInflCell);
 
   const baseCell = co.expenseSensitivityMatrix.find(c => c.enrollmentPct === 0 && c.expenseInflationPct === 0);
   assert("Base case cell exists (0% enrollment, 0% inflation)", !!baseCell);

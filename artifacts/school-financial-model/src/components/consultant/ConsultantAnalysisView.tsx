@@ -638,6 +638,9 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
             <Grid3X3 className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-lg text-foreground">Sensitivity Analysis</h3>
           </div>
+          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+            Sensitivity analysis shows how your bottom line changes under different scenarios. Lenders use these tables to stress-test your model — green cells indicate healthy margins while red signals risk.
+          </p>
           {data.expenseSensitivityMatrix && data.expenseSensitivityMatrix.length > 0 && (
             <div className="flex gap-1 mb-3 bg-secondary/30 rounded-lg p-1 w-fit">
               <button
