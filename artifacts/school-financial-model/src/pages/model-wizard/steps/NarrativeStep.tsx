@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { useGetConsultantAnalysis } from "@workspace/api-client-react";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Loader2, BookOpen, Shield, Users, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Loader2, BookOpen, Shield, Users, TrendingUp, FileText } from "lucide-react";
+import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 
 interface NarrativeStepProps {
   jumpToStep?: (step: number) => void;
@@ -223,6 +224,23 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
     return !flagResponses[key] || flagResponses[key].trim().length === 0;
   });
 
+  const completenessStats = useMemo(() => {
+    const MIN_SUBSTANTIVE_LENGTH = 20;
+    const completed = NARRATIVE_SECTIONS.filter(s => {
+      const val = (narrative[s.key] || "").trim();
+      return val.length >= MIN_SUBSTANTIVE_LENGTH;
+    });
+    const priorityTotal = NARRATIVE_SECTIONS.filter(s => s.primary).length;
+    const priorityDone = NARRATIVE_SECTIONS.filter(s => s.primary && (narrative[s.key] || "").trim().length >= MIN_SUBSTANTIVE_LENGTH).length;
+    return {
+      total: NARRATIVE_SECTIONS.length,
+      done: completed.length,
+      priorityTotal,
+      priorityDone,
+      pct: Math.round((completed.length / NARRATIVE_SECTIONS.length) * 100),
+    };
+  }, [narrative]);
+
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -235,6 +253,37 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
         <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
           Lenders read the story before the numbers. Explain your assumptions in your own words so reviewers understand the "why" behind your financial plan.
         </p>
+      </div>
+
+      <SectionExplainers section="narrative" />
+
+      <div className="border rounded-xl bg-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold text-foreground">Narrative Completeness</span>
+          </div>
+          <span className={`text-sm font-bold ${completenessStats.pct === 100 ? "text-emerald-600" : completenessStats.pct >= 50 ? "text-amber-600" : "text-muted-foreground"}`}>
+            {completenessStats.done}/{completenessStats.total} sections
+          </span>
+        </div>
+        <div className="w-full bg-muted rounded-full h-2 mb-2">
+          <div
+            className={`h-2 rounded-full transition-all duration-500 ${completenessStats.pct === 100 ? "bg-emerald-500" : completenessStats.pct >= 50 ? "bg-amber-500" : "bg-muted-foreground/40"}`}
+            style={{ width: `${completenessStats.pct}%` }}
+          />
+        </div>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <span>
+            Priority sections: {completenessStats.priorityDone}/{completenessStats.priorityTotal}
+            {completenessStats.priorityDone === completenessStats.priorityTotal && (
+              <CheckCircle2 className="inline-block ml-1 h-3 w-3 text-emerald-500" />
+            )}
+          </span>
+          {completenessStats.pct < 100 && (
+            <span>Sections with fewer than 20 characters are counted as empty.</span>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4">
