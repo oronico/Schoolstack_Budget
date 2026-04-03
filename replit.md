@@ -33,11 +33,28 @@ Includes logic for Catholic and faith-affiliated schools (diocese/parish subsidi
 ### Underwriter-Ready Evidence & Financial Intelligence
 Operating schools can include prior-year actuals and an opening balance sheet. Features coaching banners (`lendingLabIntent`), facility phase tracking, and a ReviewStep showing Key Financial Indicators (breakeven enrollment, cash flow, prior-year variance). Balance sheet intelligence includes straight-line depreciation of fixed assets, dynamic accounts receivable projected from tuition revenue and collection delay, and current ratio covenant checks (BENCHMARK_CURRENT_RATIO = 1.1x).
 
+### Coaching System (Kind Coaching Tone)
+All in-app guidance uses a warm, school-leader-friendly coaching voice. Key principles: "Coach don't preach — be kind — give grace." Never uses lender jargon (no "red flag," "deal-breaker," "underwriters will flag") in coaching contexts. Uses "worth thinking about" or "worth watching" instead.
+- **FinancingInsight** (Landmark icon): 10 curated instances across wizard steps providing practical financing context for school leaders.
+- **InlineHelpCard**: Tabbed help cards with "Financing Insight" tab (renamed from lender perspective).
+- **Diagnostics engine**: Kind coaching language with no team signatures.
+- **Faith affirmation**: Conditional coaching card for faith-affiliated schools (Heart icon, teal).
+- **Founder salary detection**: Triggers when leader has no salary in staffing.
+- **Staffing guardrail**: Note when staffing exceeds 60% of revenue.
+- **Insurance/payroll tax reminder**: Amber card in ExpenseStep.
+- Lender-specific language is preserved ONLY in: ExportStep, LenderPacketPreview, Lender Packet API output, ConsultantAnalysisView `lenderReadiness`, landing/dashboard product descriptions, and Footer.
+
 ### Ratio-Driven Staffing Ramp
 Staffing can be `fixed` or `ratio`-based, where FTE is computed from enrollment ÷ studentRatio, ceiled to nearest 0.5.
 
 ### Expert Review Service
-Prominent "Get a Free Expert Review" cards on both authenticated and public Export steps invite users to request personalized model feedback. The consultant analysis view includes a contextual nudge linking to the review request. Review requests generate structured Advisor Briefs (HTML email with priority tagging, financial snapshot, risk assessment, and lending readiness) sent to the team. Authenticated review requests auto-create a shared link for the advisor. Public wizard users can also request reviews via `POST /api/public/request-review` (rate-limited, validated).
+Prominent "Get a Free Expert Review" cards on both authenticated and public Export steps invite users to request personalized model feedback. The consultant analysis view includes a contextual nudge linking to the review request. Review requests generate structured Advisor Briefs (HTML email with priority tagging) sent to `REVIEW_NOTIFY_EMAIL` via Resend. The brief includes:
+- **School Profile**: Name, location (city + state), type, entity, stage, opening year, max capacity, enrollment trajectory, faith affiliation.
+- **Facility & Financing**: Ownership type, monthly rent, existing loans, financing interest level, staff count, staffing % of revenue (flagged red if >65%).
+- **Financial Snapshot**: Y1–Y5 revenue/expenses/net income/DSCR table, break-even year, margins.
+- **Risk Assessment**: Top 5 critical findings from consultant engine.
+- **Lending Readiness**: Reserve months, cash runway, days cash on hand.
+Authenticated review requests auto-create a shared link for the advisor. Public wizard users can also request reviews via `POST /api/public/request-review` (rate-limited, validated). Both flows send the same enriched data.
 
 ### Shareable Read-Only Links
 Founders can generate unguessable share links (`/shared/:token`) for interactive viewing of their financial model by third parties without requiring a login. These links are revocable and display key financial summaries and metrics.
