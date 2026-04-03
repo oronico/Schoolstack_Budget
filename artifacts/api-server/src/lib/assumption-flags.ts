@@ -333,7 +333,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     for (let y = 0; y < yearFinancials.length; y++) {
       const yf = yearFinancials[y];
       runningCash += yf.netIncome;
-      const projAR = yf.projectedAR > 0 ? yf.projectedAR : wcAR;
+      const projAR = yf.projectedAR != null ? yf.projectedAR : wcAR;
       const projCurrentAssets = Math.max(0, runningCash) + projAR;
       const projCurrentLiab = wcAP + wcCurrentDebt;
       if (projCurrentLiab > 0) {
