@@ -1096,6 +1096,25 @@ components:
             $ref: "#/components/schemas/Scenario"
         covenantThresholds:
           $ref: "#/components/schemas/CovenantThresholds"
+        budgetNarrative:
+          type: object
+          additionalProperties: true
+        assumptionFlagResponses:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              flagType:
+                type: string
+              reason:
+                type: string
+        assumptionFlags:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
     SchoolProfile:
       type: object
       properties:
@@ -1384,6 +1403,10 @@ components:
           type: integer
         loanAmount:
           type: number
+        squareFootage:
+          type: number
+        hasRenewalOption:
+          type: boolean
     RevenueComposition:
       type: object
       properties:

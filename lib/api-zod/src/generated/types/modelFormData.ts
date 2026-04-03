@@ -10,6 +10,9 @@ import type { CovenantThresholds } from "./covenantThresholds";
 import type { Enrollment } from "./enrollment";
 import type { ExpenseRow } from "./expenseRow";
 import type { Facilities } from "./facilities";
+import type { ModelFormDataAssumptionFlagResponsesItem } from "./modelFormDataAssumptionFlagResponsesItem";
+import type { ModelFormDataAssumptionFlagsItem } from "./modelFormDataAssumptionFlagsItem";
+import type { ModelFormDataBudgetNarrative } from "./modelFormDataBudgetNarrative";
 import type { OpeningBalances } from "./openingBalances";
 import type { PriorYearSnapshot } from "./priorYearSnapshot";
 import type { Revenue } from "./revenue";
@@ -35,4 +38,7 @@ export interface ModelFormData {
   sourcesAndUses?: SourcesAndUses;
   scenarios?: Scenario[];
   covenantThresholds?: CovenantThresholds;
+  budgetNarrative?: ModelFormDataBudgetNarrative;
+  assumptionFlagResponses?: ModelFormDataAssumptionFlagResponsesItem[];
+  assumptionFlags?: ModelFormDataAssumptionFlagsItem[];
 }

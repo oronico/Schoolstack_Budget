@@ -25,4 +25,6 @@ export interface Facilities {
   annualInterestRate?: number;
   loanTermYears?: number;
   loanAmount?: number;
+  squareFootage?: number;
+  hasRenewalOption?: boolean;
 }

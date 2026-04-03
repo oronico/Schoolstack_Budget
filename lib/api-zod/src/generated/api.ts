@@ -316,6 +316,8 @@ export const CreateModelBody = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
       })
       .optional(),
     revenueRows: zod
@@ -519,6 +521,19 @@ export const CreateModelBody = zod.object({
           .max(createModelBodyDataCovenantThresholdsDscrByYearMax)
           .optional(),
       })
+      .optional(),
+    budgetNarrative: zod.record(zod.string(), zod.unknown()).optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string().optional(),
+          flagType: zod.string().optional(),
+          reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    assumptionFlags: zod
+      .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
   }),
 });
@@ -739,6 +754,8 @@ export const GetModelResponse = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
       })
       .optional(),
     revenueRows: zod
@@ -942,6 +959,19 @@ export const GetModelResponse = zod.object({
           .max(getModelResponseDataCovenantThresholdsDscrByYearMax)
           .optional(),
       })
+      .optional(),
+    budgetNarrative: zod.record(zod.string(), zod.unknown()).optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string().optional(),
+          flagType: zod.string().optional(),
+          reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    assumptionFlags: zod
+      .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
   }),
   updatedAt: zod.date(),
@@ -1163,6 +1193,8 @@ export const UpdateModelBody = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
       })
       .optional(),
     revenueRows: zod
@@ -1366,6 +1398,19 @@ export const UpdateModelBody = zod.object({
           .max(updateModelBodyDataCovenantThresholdsDscrByYearMax)
           .optional(),
       })
+      .optional(),
+    budgetNarrative: zod.record(zod.string(), zod.unknown()).optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string().optional(),
+          flagType: zod.string().optional(),
+          reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    assumptionFlags: zod
+      .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
   }),
 });
@@ -1579,6 +1624,8 @@ export const UpdateModelResponse = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
       })
       .optional(),
     revenueRows: zod
@@ -1784,6 +1831,19 @@ export const UpdateModelResponse = zod.object({
           .max(updateModelResponseDataCovenantThresholdsDscrByYearMax)
           .optional(),
       })
+      .optional(),
+    budgetNarrative: zod.record(zod.string(), zod.unknown()).optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string().optional(),
+          flagType: zod.string().optional(),
+          reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    assumptionFlags: zod
+      .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
   }),
   updatedAt: zod.date(),
@@ -2024,6 +2084,8 @@ export const ArchiveModelResponse = zod.object({
         annualInterestRate: zod.number().optional(),
         loanTermYears: zod.number().optional(),
         loanAmount: zod.number().optional(),
+        squareFootage: zod.number().optional(),
+        hasRenewalOption: zod.boolean().optional(),
       })
       .optional(),
     revenueRows: zod
@@ -2229,6 +2291,19 @@ export const ArchiveModelResponse = zod.object({
           .max(archiveModelResponseDataCovenantThresholdsDscrByYearMax)
           .optional(),
       })
+      .optional(),
+    budgetNarrative: zod.record(zod.string(), zod.unknown()).optional(),
+    assumptionFlagResponses: zod
+      .array(
+        zod.object({
+          field: zod.string().optional(),
+          flagType: zod.string().optional(),
+          reason: zod.string().optional(),
+        }),
+      )
+      .optional(),
+    assumptionFlags: zod
+      .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
   }),
   updatedAt: zod.date(),

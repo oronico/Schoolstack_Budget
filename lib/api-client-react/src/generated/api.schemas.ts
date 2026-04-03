@@ -611,7 +611,19 @@ export interface Facilities {
   annualInterestRate?: number;
   loanTermYears?: number;
   loanAmount?: number;
+  squareFootage?: number;
+  hasRenewalOption?: boolean;
 }
+
+export type ModelFormDataBudgetNarrative = { [key: string]: unknown };
+
+export type ModelFormDataAssumptionFlagResponsesItem = {
+  field?: string;
+  flagType?: string;
+  reason?: string;
+};
+
+export type ModelFormDataAssumptionFlagsItem = { [key: string]: unknown };
 
 export interface ModelFormData {
   schoolProfile?: SchoolProfile;
@@ -628,6 +640,9 @@ export interface ModelFormData {
   sourcesAndUses?: SourcesAndUses;
   scenarios?: Scenario[];
   covenantThresholds?: CovenantThresholds;
+  budgetNarrative?: ModelFormDataBudgetNarrative;
+  assumptionFlagResponses?: ModelFormDataAssumptionFlagResponsesItem[];
+  assumptionFlags?: ModelFormDataAssumptionFlagsItem[];
 }
 
 export interface CreateFinancialModelData {
