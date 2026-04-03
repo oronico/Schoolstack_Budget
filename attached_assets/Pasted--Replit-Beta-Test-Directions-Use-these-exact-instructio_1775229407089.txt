@@ -1,0 +1,99 @@
+# Replit Beta Test Directions
+
+Use these exact instructions in your Replit "Agent" or runbook before shipping beta.
+
+## 1) Environment and install
+
+1. Use **Node.js 24** and **pnpm 9+**.
+2. Copy `.env.example` to `.env` (or set Secrets in Replit) with at least:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+   - `VITE_API_BASE_URL` (pointing to the Replit API URL)
+3. Install dependencies:
+
+```bash
+pnpm install
+```
+
+4. Prepare DB schema:
+
+```bash
+pnpm --filter @workspace/db run push
+```
+
+## 2) Start both apps
+
+Run these in parallel shells:
+
+```bash
+pnpm --filter @workspace/api-server run dev
+pnpm --filter @workspace/school-financial-model run dev
+```
+
+Confirm:
+- API health responds (`/health` or `/api/*` route returns expected JSON)
+- Frontend loads and can reach API without CORS errors
+
+## 3) Smoke test (must pass)
+
+1. Open the app and complete one model through all wizard steps.
+2. Save model with an authenticated account.
+3. Re-open model and verify saved data is intact.
+4. Run Consultant Analysis and verify score + stress tests render.
+5. Export all enabled outputs and open files locally:
+   - Formula Export
+   - Lender Pro Forma
+   - Underwriting V2
+   - Lender Packet (JSON/PDF if enabled)
+6. Validate Scenario Planner:
+   - Create at least 2 scenarios
+   - Change sliders/assumptions
+   - Confirm deep comparison updates KPIs
+7. Test public underwriting route (`/underwriting`) in incognito.
+8. Submit feedback form and confirm API success response.
+
+## 4) Regression checks for beta gate
+
+- Auth: register, login, logout, forgot/reset password
+- Critical API routes return expected status codes (200/201, no 500s)
+- No blocking console errors in frontend
+- No unhandled backend exceptions in logs
+- Mobile viewport sanity check (at least one iPhone-sized width)
+- Performance sanity: first load, wizard navigation, and export actions feel responsive
+
+## 5) Fail criteria (do not release beta if any fail)
+
+- Any data-loss bug (inputs disappear, wrong year mapping, failed saves)
+- Any export file cannot be generated/opened
+- Any auth/session bug that blocks normal usage
+- Reproducible 500 errors on core flows
+- Broken underwriting flow for public users
+
+## 6) Report format to send back
+
+Ask Replit to return a short report in this format:
+
+```txt
+BETA TEST REPORT
+Date:
+Commit/Branch:
+Environment URL:
+
+PASS/FAIL SUMMARY:
+- Smoke test:
+- Exports:
+- Auth:
+- Public underwriting:
+- Scenario planner:
+
+BUGS FOUND:
+1) [Severity] Title
+   Steps:
+   Expected:
+   Actual:
+   Screenshot/Log:
+
+RELEASE RECOMMENDATION:
+- Ready for beta: Yes/No
+- Blocking issues:
+```
