@@ -2798,8 +2798,6 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
         const adjExpenseRows = expenseRows.map(r => ({
           ...r,
           amounts: r.amounts ? r.amounts.map(a => a * scaleFactor) : [],
-          annualAmount: r.annualAmount != null ? r.annualAmount * scaleFactor : r.annualAmount,
-          monthlyAmount: r.monthlyAmount != null ? r.monthlyAmount * scaleFactor : r.monthlyAmount,
         }));
         const fins = computeAllYearsFromRows(adjEnroll, revenueRows, staffingRows, adjExpenseRows, capDebtRows, salaryEscRate2, prorationFactor, tuitionTiers, baseCostInflation, sp, ceRR, true);
         expenseSensitivityMatrix.push({ enrollmentPct: ePct, expenseInflationPct: inflPct, netIncome: fins[lastIdx]?.netIncome || 0 });
