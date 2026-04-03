@@ -257,7 +257,7 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     for (let m = 0; m < 12; m++) {
       runningCash += monthlyNI;
       if (runningCash <= 0) {
-        cashRunwayMonths = y * 12 + m;
+        cashRunwayMonths = y * 12 + m + 1;
         break;
       }
     }
@@ -326,7 +326,7 @@ function applyAdjustments(
     for (let m = 0; m < 12; m++) {
       runningCash += monthlyNI;
       if (runningCash <= 0) {
-        cashRunwayMonths = y * 12 + m;
+        cashRunwayMonths = y * 12 + m + 1;
         break;
       }
     }
