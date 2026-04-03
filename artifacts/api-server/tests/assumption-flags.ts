@@ -676,6 +676,7 @@ async function main() {
   await testCollectionDelayShiftsRevenue();
   await testCollectionRateReducesRevenue();
   await testCashTroughMetric();
+  await testWorkbookMonthlyDistribution();
 
   console.log(`\n${"=".repeat(50)}`);
   console.log(`Results: ${passed} passed, ${failed} failed`);
@@ -985,6 +986,99 @@ async function testCashTroughMetric() {
       `Expected warning/danger but got ${tightTrough.status}`,
     );
   }
+}
+
+async function testWorkbookMonthlyDistribution() {
+  console.log("\n=== Workbook: Monthly revenue distribution with collection delay and rate ===");
+
+  const payload = {
+    ...microschoolStartup,
+    revenueRows: [
+      { id: "r1", category: "public_funding", lineItem: "State Funds", enabled: true, driverType: "annual_fixed", amounts: [120000, 120000, 120000, 120000, 120000], collectionDelayDays: 30, collectionRate: 100 },
+    ],
+    startingCash: 50000,
+  };
+
+  const wb = await generateUnderwritingWorkbook(payload as Record<string, unknown>);
+  const cfSheet = wb.getWorksheet("Monthly Cash Flow Y1");
+
+  assert("Monthly Cash Flow Y1 sheet exists", !!cfSheet);
+  if (!cfSheet) return;
+
+  let revRow = 0;
+  cfSheet.eachRow((row: { getCell: (col: number) => { value: unknown } }, rowNumber: number) => {
+    if (row.getCell(1).value === "Total Revenue" && revRow === 0) revRow = rowNumber;
+  });
+
+  assert("Total Revenue row found in Monthly Cash Flow", revRow > 0);
+  if (revRow === 0) return;
+
+  const monthlyValues: number[] = [];
+  for (let m = 0; m < 12; m++) {
+    const cell = cfSheet.getCell(revRow, m + 2);
+    const v = typeof cell.value === "number" ? cell.value : (cell.result !== undefined ? Number(cell.result) : 0);
+    monthlyValues.push(v);
+  }
+
+  assert(
+    "Month 1 revenue is 0 due to 30-day delay",
+    monthlyValues[0] === 0,
+    `Expected 0 but got ${monthlyValues[0]}`,
+  );
+  assert(
+    "Month 2 has revenue after 30-day delay",
+    monthlyValues[1] > 0,
+    `Expected >0 but got ${monthlyValues[1]}`,
+  );
+
+  const totalCollected = monthlyValues.reduce((s, v) => s + v, 0);
+  const expectedTotal = 120000;
+  const diff = Math.abs(totalCollected - expectedTotal);
+  assert(
+    `Total collected revenue (${totalCollected}) ≈ expected (${expectedTotal}), diff=${diff}`,
+    diff < expectedTotal * 0.15,
+    `diff ${diff} >= 15% of expected`,
+  );
+
+  const payloadWithRate = {
+    ...microschoolStartup,
+    revenueRows: [
+      { id: "r1", category: "public_funding", lineItem: "State Funds", enabled: true, driverType: "annual_fixed", amounts: [120000, 120000, 120000, 120000, 120000], collectionDelayDays: 0, collectionRate: 90 },
+    ],
+    startingCash: 50000,
+  };
+
+  const wb2 = await generateUnderwritingWorkbook(payloadWithRate as Record<string, unknown>);
+  const cfSheet2 = wb2.getWorksheet("Monthly Cash Flow Y1");
+  assert("Monthly Cash Flow Y1 sheet exists for rate test", !!cfSheet2);
+  if (!cfSheet2) return;
+
+  let revRow2 = 0;
+  cfSheet2.eachRow((row: { getCell: (col: number) => { value: unknown } }, rowNumber: number) => {
+    if (row.getCell(1).value === "Total Revenue" && revRow2 === 0) revRow2 = rowNumber;
+  });
+
+  const monthlyValues2: number[] = [];
+  for (let m = 0; m < 12; m++) {
+    const cell = cfSheet2.getCell(revRow2, m + 2);
+    const v = typeof cell.value === "number" ? cell.value : (cell.result !== undefined ? Number(cell.result) : 0);
+    monthlyValues2.push(v);
+  }
+
+  const totalWithRate = monthlyValues2.reduce((s, v) => s + v, 0);
+  const expectedWithRate = 120000 * 0.9;
+  const rateDiff = Math.abs(totalWithRate - expectedWithRate);
+  assert(
+    `90% collection rate: total (${totalWithRate}) ≈ expected (${expectedWithRate}), diff=${rateDiff}`,
+    rateDiff < expectedWithRate * 0.05,
+    `diff ${rateDiff} >= 5% of expected`,
+  );
+
+  assert(
+    `90% rate total (${totalWithRate}) < 100% total (${totalCollected})`,
+    totalWithRate < totalCollected,
+    `Expected ${totalWithRate} < ${totalCollected}`,
+  );
 }
 
 main().catch(err => {

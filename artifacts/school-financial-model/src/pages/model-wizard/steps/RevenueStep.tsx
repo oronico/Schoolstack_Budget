@@ -1615,17 +1615,32 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Payment Timing
+                Collection Rate %
               </label>
-              <select
-                value={row.paymentTiming ?? "upfront"}
-                onChange={(e) => onTimingChange("paymentTiming", e.target.value as PaymentTiming)}
-                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground"
-              >
-                {(Object.keys(PAYMENT_TIMING_LABELS) as PaymentTiming[]).map((pt) => (
-                  <option key={pt} value={pt}>{PAYMENT_TIMING_LABELS[pt]}</option>
-                ))}
-              </select>
+              <input
+                type="number"
+                value={row.collectionRate ?? 100}
+                onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
+                min={0}
+                max={100}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Collection Delay
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={row.collectionDelayDays ?? 30}
+                  onChange={(e) => { const v = parseInt(e.target.value); handleTimingOverride("collectionDelayDays", isNaN(v) ? 0 : v); }}
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full pr-12"
+                  min={0}
+                  max={90}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">days</span>
+              </div>
             </div>
           </>
         )}
@@ -1645,6 +1660,35 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
                   <option key={dt} value={dt}>{DISBURSEMENT_TYPE_LABELS[dt]}</option>
                 ))}
               </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Collection Rate %
+              </label>
+              <input
+                type="number"
+                value={row.collectionRate ?? 100}
+                onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
+                min={0}
+                max={100}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Collection Delay
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={row.collectionDelayDays ?? 45}
+                  onChange={(e) => { const v = parseInt(e.target.value); handleTimingOverride("collectionDelayDays", isNaN(v) ? 0 : v); }}
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full pr-12"
+                  min={0}
+                  max={90}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">days</span>
+              </div>
             </div>
             {row.disbursementType === "reimbursement" && (
               <div className="flex flex-col gap-1">
@@ -1697,6 +1741,35 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
                 <option value={3}>Q3 (Jan-Mar)</option>
                 <option value={4}>Q4 (Apr-Jun)</option>
               </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Collection Rate %
+              </label>
+              <input
+                type="number"
+                value={row.collectionRate ?? 95}
+                onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
+                min={0}
+                max={100}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Collection Delay
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={row.collectionDelayDays ?? 60}
+                  onChange={(e) => { const v = parseInt(e.target.value); handleTimingOverride("collectionDelayDays", isNaN(v) ? 0 : v); }}
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full pr-12"
+                  min={0}
+                  max={120}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">days</span>
+              </div>
             </div>
           </>
         )}
