@@ -1225,7 +1225,8 @@ function assessLendingLabReadiness(
   const hasLoan = capDebtRows.some(r => r.enabled && r.isLoan);
   const ct = data.covenantThresholds || {};
   const dscrStepUp = ct.dscrByYear && ct.dscrByYear.length === 5 ? ct.dscrByYear : null;
-  const y1DscrThreshold = dscrStepUp ? dscrStepUp[0] : BENCHMARK_DSCR_AMBER;
+  const flatDscrMin = ct.minDSCR ?? BENCHMARK_DSCR_AMBER;
+  const y1DscrThreshold = dscrStepUp ? dscrStepUp[0] : flatDscrMin;
   if (!hasLoan) {
     criteria.push({
       name: "Debt Service Coverage",
@@ -1248,7 +1249,7 @@ function assessLendingLabReadiness(
     const dscrStr = `${dscrVal.toFixed(2)}x`;
     const thresholdLabel = dscrStepUp
       ? `≥${y1DscrThreshold}x Y1 (step-up to ${dscrStepUp[4]}x by Y5)`
-      : `≥${BENCHMARK_DSCR_AMBER}x DSCR`;
+      : `≥${flatDscrMin}x DSCR`;
 
     let worstStatus: "pass" | "warn" | "fail" = "pass";
     let failingYears: string[] = [];
@@ -1259,7 +1260,7 @@ function assessLendingLabReadiness(
       const yDS = yf.loanDebtService ?? yf.debtService;
       if (yDS <= 0) continue;
       const yDscr = (yf.netIncome + yDS) / yDS;
-      const yThreshold = dscrStepUp ? (dscrStepUp[yi] ?? dscrStepUp[dscrStepUp.length - 1]) : BENCHMARK_DSCR_AMBER;
+      const yThreshold = dscrStepUp ? (dscrStepUp[yi] ?? dscrStepUp[dscrStepUp.length - 1]) : flatDscrMin;
       if (yDscr < yThreshold) {
         worstStatus = "fail";
         failingYears.push(`Y${yi + 1} (${yDscr.toFixed(2)}x < ${yThreshold}x)`);
