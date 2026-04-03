@@ -3,7 +3,7 @@ import { useFormContext } from "react-hook-form";
 import {
   Download, Loader2, ArrowRight, Landmark, CheckCircle2,
   Lock, Check, FileSpreadsheet, Crown, Sparkles, Zap,
-  MessageSquareMore, Send,
+  MessageSquareMore, Send, AlertTriangle, RefreshCw,
 } from "lucide-react";
 import { Link } from "wouter";
 import { getPublicExportUnderwritingUrl } from "@workspace/api-client-react";
@@ -35,6 +35,7 @@ const PLUS_FEATURES = [
 export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: number) => void; modelId: number | null }) {
   const [loading, setLoading] = useState(false);
   const [exported, setExported] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const { getValues, watch } = useFormContext();
   const lendingLabIntent = watch("schoolProfile.lendingLabIntent");
 
@@ -80,6 +81,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
   const handleDownload = async () => {
     if (loading) return;
     setLoading(true);
+    setExportError(null);
 
     try {
       const data = getValues();
@@ -108,7 +110,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
       setExported(true);
     } catch (e) {
       console.error(e);
-      alert("Failed to export. Please try again.");
+      setExportError("Failed to export. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -178,6 +180,19 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
                 <><Download className="h-4 w-4" /> Download Starter</>
               )}
             </button>
+            {exportError && (
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-2.5 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                <span className="flex-1">{exportError}</span>
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className="flex items-center gap-1 px-3 py-1 rounded-md bg-destructive/10 hover:bg-destructive/20 font-semibold text-xs transition-colors"
+                >
+                  <RefreshCw className="h-3 w-3" /> Retry
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

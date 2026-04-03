@@ -89,6 +89,7 @@ export * from "./schoolProfileLendingLabIntent";
 export * from "./schoolProfileOwnershipType";
 export * from "./schoolProfileSchoolType";
 export * from "./schoolStage";
+export * from "./expenseSensitivityCell";
 export * from "./sensitivityCell";
 export * from "./sourcesAndUses";
 export * from "./sourcesAndUsesItem";

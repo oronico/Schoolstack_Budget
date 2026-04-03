@@ -7,6 +7,16 @@ import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { fullModelSchema, type FullModelData } from "@/pages/model-wizard/schema";
 import { migrateGrantsToPhilanthropy } from "@/lib/revenue-defaults";
@@ -234,8 +244,9 @@ export function PublicWizardPage() {
     setTimeout(() => setSaveFlash(false), 2500);
   }, [methods, currentStep]);
 
-  const handleStartOver = useCallback(() => {
-    if (!confirm("Start over? This will clear all your wizard data and reset to step 1.")) return;
+  const [startOverOpen, setStartOverOpen] = useState(false);
+
+  const confirmStartOver = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY + "_step");
     methods.reset({
@@ -258,6 +269,7 @@ export function PublicWizardPage() {
       expenseRows: [],
     } as unknown as FullModelData);
     setCurrentStep(1);
+    setStartOverOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [methods]);
 
@@ -452,7 +464,7 @@ export function PublicWizardPage() {
               </span>
               <button
                 type="button"
-                onClick={handleStartOver}
+                onClick={() => setStartOverOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
@@ -520,7 +532,8 @@ export function PublicWizardPage() {
       <div className="flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto w-full">
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <ActiveStepComponent jumpToStep={setCurrentStep} modelId={0} />
+            {/* @ts-expect-error exportStepNumber only used by PublicConsultantStep */}
+            <ActiveStepComponent jumpToStep={setCurrentStep} modelId={0} exportStepNumber={STEPS.findIndex(s => s.title === "Export") + 1 || STEPS.length} />
           </div>
 
           {!user && !accountBannerDismissed && currentStep >= 3 && !isExportStep && (
@@ -600,6 +613,25 @@ export function PublicWizardPage() {
           )}
         </FormProvider>
       </div>
+      <AlertDialog open={startOverOpen} onOpenChange={setStartOverOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start over?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear all your wizard data and reset to step 1. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmStartOver}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Start Over
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

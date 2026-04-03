@@ -5,7 +5,7 @@ import { getPublicConsultantAnalysisUrl, type ConsultantOutput } from "@workspac
 import { profitLabel, cumulativeProfitLabel } from "@/pages/model-wizard/schema";
 import { ConsultantAnalysisView } from "@/components/consultant/ConsultantAnalysisView";
 
-export function PublicConsultantStep({ jumpToStep, modelId }: { jumpToStep?: (s: number) => void; modelId: number | null }) {
+export function PublicConsultantStep({ jumpToStep, modelId, exportStepNumber = 8 }: { jumpToStep?: (s: number) => void; modelId: number | null; exportStepNumber?: number }) {
   const { getValues, watch } = useFormContext();
   const entityType = watch("schoolProfile.entityType");
   const niLabel = profitLabel(entityType);
@@ -90,7 +90,7 @@ export function PublicConsultantStep({ jumpToStep, modelId }: { jumpToStep?: (s:
       niLabel={niLabel}
       cumNiLabel={cumNiLabel}
       jumpToStep={jumpToStep}
-      exportStepNumber={8}
+      exportStepNumber={exportStepNumber}
     />
   );
 }

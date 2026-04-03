@@ -352,6 +352,5 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
       }
     }
   }
-
   return flags;
 }
