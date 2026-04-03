@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
+import { LenderHint } from "@/components/coaching/LenderHint";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, computeEffectiveFte } from "@workspace/finance";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -238,6 +239,7 @@ export function StaffingStep() {
           <p className="text-muted-foreground">
             Paying staff through Venmo, Zelle, or Cash App creates serious tax and legal risk — and is a red flag for any lender reviewing your financials.
           </p>
+          <LenderHint text="Underwriters confirm payroll processing through bank statements — informal payments are commonly flagged as a disqualifying factor." />
         </div>
       </div>
 
@@ -284,6 +286,9 @@ export function StaffingStep() {
           sublabel={studentStaffRatio > 0 ? `${studentStaffRatio}:1 student-to-staff` : undefined}
         />
       </div>
+      {studentStaffRatio > 0 && (
+        <LenderHint text={`Your ${studentStaffRatio}:1 student-to-staff ratio is compared against industry benchmarks during underwriting. Ratios outside ${benchmark.ratio} for your school type may require justification.`} />
+      )}
 
       {y1Students > 0 && totalFTE > 0 && (
         <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">

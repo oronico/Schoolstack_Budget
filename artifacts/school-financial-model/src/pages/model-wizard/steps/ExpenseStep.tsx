@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion, TrendingUp, RotateCcw } from "lucide-react";
+import { LenderHint } from "@/components/coaching/LenderHint";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
@@ -854,6 +855,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             <span className="font-semibold">Smart Escalation Applied.</span>{" "}
             A lender-ready model reflects how costs actually behave. Lease payments follow your contract terms. Vendor costs increase with inflation. Per-student expenses scale with enrollment. We've applied realistic escalation — you can adjust any year.
           </p>
+          <LenderHint text="Underwriters typically compare occupancy costs against the 15-25% of revenue benchmark. Facility expenses above 30% of revenue are often flagged for additional review." />
           <div className="flex flex-wrap gap-3 text-xs text-teal-800">
             <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Inflation: {generalCostInflation}%</span>
             <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Rent escalation: {annualRentIncrease}%</span>

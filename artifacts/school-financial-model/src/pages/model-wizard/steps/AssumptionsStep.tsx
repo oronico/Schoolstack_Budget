@@ -1,6 +1,7 @@
 import { useFormContext } from "react-hook-form";
 import { useEffect, useMemo } from "react";
 import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield } from "lucide-react";
+import { LenderHint } from "@/components/coaching/LenderHint";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_BENEFITS_RATE,
@@ -226,16 +227,19 @@ export function AssumptionsStep() {
           />
           <div className="space-y-4">
             {isTuitionBased && (
-              <AssumptionField
-                label="Tuition Escalation Rate"
-                name="tuitionEscalation.rate"
-                suffix="%"
-                defaultValue={DEFAULTS.tuitionEscalationRate}
-                usageNote="Applied to all tuition programs, compounding each year. A 3% annual increase on $10,000 tuition becomes $10,300 in Year 2 and $10,609 in Year 3."
-                placeholder="3"
-                min={0}
-                max={20}
-              />
+              <div>
+                <AssumptionField
+                  label="Tuition Escalation Rate"
+                  name="tuitionEscalation.rate"
+                  suffix="%"
+                  defaultValue={DEFAULTS.tuitionEscalationRate}
+                  usageNote="Applied to all tuition programs, compounding each year. A 3% annual increase on $10,000 tuition becomes $10,300 in Year 2 and $10,609 in Year 3."
+                  placeholder="3"
+                  min={0}
+                  max={20}
+                />
+                <LenderHint text="Tuition increases above 5% per year are stress-tested against local market elasticity and family ability to pay." />
+              </div>
             )}
 
             <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
@@ -420,16 +424,19 @@ export function AssumptionsStep() {
 
             {(watch("revenueDefaults.collectionMethod") || "autopay") !== "autopay" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <AssumptionField
-                  label="Collection Rate"
-                  name="revenueDefaults.collectionRate"
-                  suffix="%"
-                  defaultValue={100}
-                  usageNote="Expected percentage of billed tuition actually collected. Lenders scrutinize this — most schools see 92–98% for invoiced families."
-                  placeholder="95"
-                  min={0}
-                  max={100}
-                />
+                <div>
+                  <AssumptionField
+                    label="Collection Rate"
+                    name="revenueDefaults.collectionRate"
+                    suffix="%"
+                    defaultValue={100}
+                    usageNote="Expected percentage of billed tuition actually collected. Lenders scrutinize this — most schools see 92–98% for invoiced families."
+                    placeholder="95"
+                    min={0}
+                    max={100}
+                  />
+                  <LenderHint text="A 100% collection rate on invoiced tuition is typically adjusted by underwriters — they apply their own haircut if you don't." />
+                </div>
 
                 <AssumptionField
                   label="Collection Delay (Days)"
@@ -460,16 +467,19 @@ export function AssumptionsStep() {
           />
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <AssumptionField
-                label="COLA (Cost of Living Adjustment)"
-                name="facilities.annualSalaryIncrease"
-                suffix="%"
-                defaultValue={DEFAULTS.annualSalaryIncrease}
-                usageNote="Applied to all staff salaries, compounding annually over the 5-year model. Keeps pace with cost of living to retain teachers. National education average: 2.5–3.5%."
-                placeholder="3"
-                min={0}
-                max={100}
-              />
+              <div>
+                <AssumptionField
+                  label="COLA (Cost of Living Adjustment)"
+                  name="facilities.annualSalaryIncrease"
+                  suffix="%"
+                  defaultValue={DEFAULTS.annualSalaryIncrease}
+                  usageNote="Applied to all staff salaries, compounding annually over the 5-year model. Keeps pace with cost of living to retain teachers. National education average: 2.5–3.5%."
+                  placeholder="3"
+                  min={0}
+                  max={100}
+                />
+                <LenderHint text="COLA rates below 2% are often questioned — lenders may assume higher attrition risk without competitive raises." />
+              </div>
 
               <AssumptionField
                 label="General Cost Inflation"
@@ -624,6 +634,7 @@ export function AssumptionsStep() {
                 A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.
               </span>
             </div>
+            <LenderHint text="DSCR covenant violations can trigger loan default provisions. Lenders typically verify each year independently against the step-up schedule." />
           </div>
         </section>
 

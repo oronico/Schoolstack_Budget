@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart, MapPin, Users } from "lucide-react";
+import { LenderHint } from "@/components/coaching/LenderHint";
 import { cn, formatCurrency } from "@/lib/utils";
 import { YEAR_COUNT } from "@workspace/finance";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -1495,6 +1496,9 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
           <span>Autopay families pay on time. If you invoice, expect 2-5% non-collection and 15-30 day delays. Lenders discount invoiced tuition accordingly.</span>
         </div>
       )}
+      {category === "tuition_and_fees" && (
+        <LenderHint text="Tuition pricing is benchmarked against comparable schools in your market. Outlier rates require a justification narrative." className="mb-2" />
+      )}
       {category === "public_funding" && (
         <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
@@ -1512,6 +1516,9 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
           <span>Grants and donations often arrive in lump sums. Mark "projected" grants as such — lenders apply a 5% haircut to uncommitted philanthropy.</span>
         </div>
+      )}
+      {category === "philanthropy" && (
+        <LenderHint text="Philanthropy above 15% of total revenue triggers additional scrutiny — underwriters view heavy donation dependence as a concentration risk." className="mb-2" />
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {category === "tuition_and_fees" && (

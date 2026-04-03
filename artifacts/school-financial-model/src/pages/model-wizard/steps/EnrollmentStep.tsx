@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useEffect, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, TrendingUp, Info, School, ShieldCheck, Users, ClipboardList, Sparkles } from "lucide-react";
+import { LenderHint } from "@/components/coaching/LenderHint";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -327,6 +328,7 @@ function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOpe
               <span>&#9888;</span> Retention below 80% means you'll need a stronger recruitment pipeline to hit your enrollment targets. Consider what's driving attrition and how you'll address it.
             </p>
           )}
+          <LenderHint text="Retention rate is a key underwriting metric — lenders use it to validate your out-year enrollment projections." />
         </div>
       )}
 
@@ -824,6 +826,9 @@ export function EnrollmentStep() {
           year1Enrollment={year1Total}
           isOperatingSchool={isOperatingSchool}
         />
+      )}
+      {hasYear1Data && (
+        <LenderHint text="Year 1 enrollment targets are cross-referenced against your applications, waitlist, and letter-of-intent count during underwriting." />
       )}
 
       {hasYear1Data && (

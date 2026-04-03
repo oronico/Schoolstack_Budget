@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
 import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb } from "lucide-react";
+import { LenderHint } from "@/components/coaching/LenderHint";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit } from "../schema";
 
@@ -70,6 +71,7 @@ function EINInput() {
       ) : !display ? (
         <p className="text-xs text-muted-foreground">Optional — you can add this later</p>
       ) : null}
+      <LenderHint text="Underwriters verify your EIN against IRS records and your articles of incorporation." />
     </div>
   );
 }
@@ -224,11 +226,14 @@ function EntityTypeSection({ allowedEntityTypes, entityType }: { allowedEntityTy
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <FormSelect
-          name="schoolProfile.entityType"
-          label="Entity Type"
-          options={allowedEntityTypes.map(([value, label]) => ({ value, label }))}
-        />
+        <div>
+          <FormSelect
+            name="schoolProfile.entityType"
+            label="Entity Type"
+            options={allowedEntityTypes.map(([value, label]) => ({ value, label }))}
+          />
+          <LenderHint text="Entity type determines tax treatment, liability, and loan eligibility. 501(c)(3) status unlocks tax-exempt bond financing." />
+        </div>
         {entityType && entityType !== "sole_practitioner" && entityType !== "undetermined" && (
           <EINInput />
         )}
@@ -432,6 +437,7 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
             {(phase.comparableMarketRent === 0 || phase.comparableMarketRent === undefined) && (
               <p className="text-xs text-amber-600 mt-1">Lenders want to see what this space would cost at market rate. Even if it's free now, enter a comparable rent so your model reflects what happens if the arrangement ends.</p>
             )}
+            <LenderHint text="Donated-space arrangements are stress-tested by underwriters — they model what happens when the arrangement ends." />
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Arrangement End Date</label>
