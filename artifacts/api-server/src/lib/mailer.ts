@@ -24,6 +24,18 @@ export interface ReviewRequestData {
   state: string;
   schoolType: string;
   entityType: string;
+  schoolStage?: string;
+  openingYear?: number;
+  maxCapacity?: number;
+  facilityCity?: string;
+  facilityState?: string;
+  ownershipType?: string;
+  monthlyRent?: number;
+  isFaithAffiliated?: boolean;
+  faithAffiliation?: string;
+  hasLoan?: boolean;
+  loanAmount?: number;
+  lendingLabIntent?: string;
   enrollment: number[];
   revenue: number[];
   expenses: number[];
@@ -37,6 +49,8 @@ export interface ReviewRequestData {
   sharedViewUrl?: string;
   source?: "authenticated" | "public";
   breakEvenYear?: number | null;
+  staffCount?: number;
+  staffingCostPercent?: number;
 }
 
 function escapeHtml(str: string): string {
@@ -124,10 +138,25 @@ export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<
         <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;margin-top:20px;">School Profile</h3>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;">
           <tr><td style="padding:3px 0;color:#94A3B8;width:140px;font-size:13px;">School</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${escapeHtml(data.schoolName)}</td></tr>
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">State</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.state)}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Location</td><td style="color:#1E293B;font-size:13px;">${data.facilityCity ? escapeHtml(data.facilityCity) + ", " : ""}${escapeHtml(data.state)}</td></tr>
           <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Type</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.schoolType)}</td></tr>
           <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Entity</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.entityType)}</td></tr>
+          ${data.schoolStage ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Stage</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.schoolStage)}</td></tr>` : ""}
+          ${data.openingYear ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Opening Year</td><td style="color:#1E293B;font-size:13px;">${data.openingYear}</td></tr>` : ""}
+          ${data.maxCapacity ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Max Capacity</td><td style="color:#1E293B;font-size:13px;">${data.maxCapacity.toLocaleString()} students</td></tr>` : ""}
           <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Enrollment Y1→Y5</td><td style="color:#1E293B;font-size:13px;">${data.enrollment.map(e => e.toLocaleString()).join(" → ")}</td></tr>
+          ${data.isFaithAffiliated ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Faith-Affiliated</td><td style="color:#1E293B;font-size:13px;">Yes${data.faithAffiliation ? " — " + escapeHtml(data.faithAffiliation) : ""}</td></tr>` : ""}
+        </table>
+
+        <!-- SECTION 1b: Facility & Financing Context -->
+        <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Facility & Financing</h3>
+        <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;">
+          ${data.ownershipType ? `<tr><td style="padding:3px 0;color:#94A3B8;width:140px;font-size:13px;">Facility</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.ownershipType)}</td></tr>` : ""}
+          ${data.monthlyRent ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Monthly Rent</td><td style="color:#1E293B;font-size:13px;">${fmtCurrency(data.monthlyRent)}</td></tr>` : ""}
+          ${data.hasLoan ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Existing Loan</td><td style="color:#1E293B;font-size:13px;">${data.loanAmount ? fmtCurrency(data.loanAmount) : "Yes"}</td></tr>` : ""}
+          ${data.lendingLabIntent ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Financing Interest</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.lendingLabIntent)}</td></tr>` : ""}
+          ${data.staffCount ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Staff Count</td><td style="color:#1E293B;font-size:13px;">${data.staffCount} positions</td></tr>` : ""}
+          ${data.staffingCostPercent !== undefined && data.staffingCostPercent > 0 ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Staffing % of Revenue</td><td style="color:#1E293B;font-size:13px;${data.staffingCostPercent > 65 ? "color:#DC2626;font-weight:600;" : ""}">${data.staffingCostPercent.toFixed(1)}%</td></tr>` : ""}
         </table>
 
         <!-- SECTION 2: Financial Snapshot -->

@@ -985,6 +985,25 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
     const schoolType = schoolTypeDisplay(profile?.schoolType as string);
     const entityType = entityTypeDisplay(profile?.entityType as string);
 
+    const stageMap: Record<string, string> = { pre_launch: "Pre-Launch", year_one: "Year 1", operating: "Operating (2+ years)" };
+    const ownerMap: Record<string, string> = { own: "Owned", rent: "Leased", donated: "Donated / Shared", home_based: "Home-Based" };
+    const intentMap: Record<string, string> = { plan_to_apply: "Planning to apply for financing", want_to_understand: "Want to understand lending readiness", budget_only: "Budget planning only" };
+
+    const schoolStage = stageMap[profile?.schoolStage as string] || undefined;
+    const openingYear = typeof profile?.openingYear === "number" ? profile.openingYear : undefined;
+    const maxCapacity = typeof profile?.maxCapacity === "number" ? profile.maxCapacity : undefined;
+    const facilityCity = typeof profile?.facilityCity === "string" && profile.facilityCity ? profile.facilityCity : undefined;
+    const ownershipType = ownerMap[profile?.ownershipType as string] || undefined;
+    const monthlyRent = typeof profile?.monthlyRent === "number" && profile.monthlyRent > 0 ? profile.monthlyRent : undefined;
+    const isFaithAffiliated = profile?.isFaithAffiliated === true;
+    const faithAffiliation = typeof profile?.faithAffiliation === "string" ? profile.faithAffiliation : undefined;
+    const hasLoan = profile?.hasLoan === true;
+    const loanAmount = typeof profile?.loanAmount === "number" && profile.loanAmount > 0 ? profile.loanAmount : undefined;
+    const lendingLabIntent = intentMap[profile?.lendingLabIntent as string] || undefined;
+
+    const staffingRows = Array.isArray(data.staffingRows) ? data.staffingRows : [];
+    const staffCount = staffingRows.length;
+
     const yearFinancials = computeYearFinancialsFromData(data);
 
     const enrollment = yearFinancials.map(yf => yf.students);
@@ -1028,6 +1047,14 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
       console.error("Failed to create team review shared link:", shareErr);
     }
 
+    const y1Rev = revenue[0] || 0;
+    const y1StaffingCost = staffingRows.reduce((sum: number, r: Record<string, unknown>) => {
+      const salary = typeof r.salary === "number" ? r.salary : 0;
+      const count = typeof r.count === "number" ? r.count : 1;
+      return sum + salary * count;
+    }, 0);
+    const staffingCostPercent = y1Rev > 0 ? (y1StaffingCost / y1Rev) * 100 : 0;
+
     const [teamResult, confirmResult] = await Promise.all([
       sendReviewRequestToTeam({
         requesterName: name,
@@ -1037,6 +1064,19 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
         state,
         schoolType,
         entityType,
+        schoolStage,
+        openingYear,
+        maxCapacity,
+        facilityCity,
+        ownershipType,
+        monthlyRent,
+        isFaithAffiliated,
+        faithAffiliation,
+        hasLoan,
+        loanAmount,
+        lendingLabIntent,
+        staffCount,
+        staffingCostPercent,
         enrollment,
         revenue,
         expenses,
