@@ -295,7 +295,7 @@ const RULES: DiagnosticRule[] = [
       if (pct < THRESHOLDS.rentPctWarning) return null;
       return {
         severity: "warning",
-        headline: `I'd flag this — facility costs are ${Math.round(pct)}% of revenue`,
+        headline: `Worth watching — facility costs are ${Math.round(pct)}% of revenue`,
         explanation: `Spending more than ${THRESHOLDS.rentPctWarning}% of revenue on your facility is something we see often. It crowds out staffing and program budgets, which puts pressure on the whole model.`,
         action: "I'd explore lower-cost space options, shared facilities, or phased facility upgrades. Many successful schools start in modest space and upgrade as enrollment proves out.",
         targetStep: 6,

@@ -59,7 +59,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Enrollment Assumptions",
     body: {
       whatThisMeans: "Enrollment assumptions are your best estimate of how many students will attend your school each year for the next five years. This is the single most important input in your entire model — everything flows from it.",
-      whyItMatters: "Demand is the engine. Every revenue line, every staffing decision, and every expense assumption flows from how many students you enroll. If enrollment falls short, the entire model breaks. This is the single most scrutinized assumption in any financial model.",
+      whyItMatters: "Demand is the engine. Every revenue line, every staffing decision, and every expense assumption flows from how many students you enroll. If enrollment falls short, the entire model breaks. This is the single most important assumption in any financial model.",
       healthyVsRisky: "Most new schools fill 40-65% of capacity in Year 1. Growth of 15-25% per year is considered strong and realistic. Jumping from 30 to 150 students in one year is worth questioning. What matters most: can you document the demand? Waitlist depth, letters of intent, recruitment pipeline, and retention rates are what make enrollment projections credible.",
       whatToDoNext: "I'd start with how many students you're confident you can enroll in Year 1 based on evidence — signed letters of intent, waitlist data, or community survey results. Then project realistic growth based on your recruitment capacity and retention expectations.",
     },
