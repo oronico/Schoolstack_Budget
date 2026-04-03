@@ -280,10 +280,23 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
               <CheckCircle2 className="inline-block ml-1 h-3 w-3 text-emerald-500" />
             )}
           </span>
-          {completenessStats.pct < 100 && (
-            <span>Sections with fewer than 20 characters are counted as empty.</span>
-          )}
         </div>
+        {completenessStats.pct < 100 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {NARRATIVE_SECTIONS.map(s => {
+              const filled = (narrative[s.key] || "").trim().length >= 20;
+              return (
+                <span
+                  key={s.key}
+                  className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full ${filled ? "bg-emerald-100 text-emerald-700" : s.primary ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"}`}
+                >
+                  {filled ? <CheckCircle2 className="h-2.5 w-2.5" /> : null}
+                  {s.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
