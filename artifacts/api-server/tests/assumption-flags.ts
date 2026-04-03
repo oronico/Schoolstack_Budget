@@ -667,6 +667,7 @@ async function main() {
   testCurrentRatioCovenant();
   testDepreciationInEngine();
   await testStepUpCovenants();
+  await testStepUpCovenantYearBreaches();
   await testStepUpCovenantWithoutConfig();
   await testExpenseSensitivityMatrix();
   await testWorkingCapitalFlag();
@@ -715,6 +716,26 @@ async function testStepUpCovenants() {
       }
     });
     assert("Found Step-Up DSCR covenant row in workbook", stepUpRowNum > 0);
+  }
+}
+
+async function testStepUpCovenantYearBreaches() {
+  console.log("\n=== Step-Up DSCR: year-specific threshold breach detection ===");
+
+  const veryHighThresholds = [5.0, 5.5, 6.0, 6.5, 7.0];
+  const payload = {
+    ...charterPublicFunding,
+    covenantThresholds: {
+      dscrByYear: veryHighThresholds,
+    },
+  };
+
+  const co = await runConsultantEngine(payload as Record<string, unknown>);
+  const dscrCrit = co.lendingLabAssessment.criteria.find(c => c.name === "Debt Service Coverage");
+  assert("DSCR criterion exists", !!dscrCrit);
+  if (dscrCrit) {
+    assert("DSCR fails with impossibly high step-up thresholds", dscrCrit.status === "fail");
+    assert("Failing detail mentions specific year(s)", dscrCrit.detail.includes("Y1") || dscrCrit.detail.includes("Y2"));
   }
 }
 
