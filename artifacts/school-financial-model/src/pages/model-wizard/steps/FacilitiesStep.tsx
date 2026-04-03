@@ -75,6 +75,12 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
               <span className="font-semibold">Insurance tip:</span> School insurance typically escalates 5-8% per year. Get quotes from brokers who specialize in schools — they'll know the coverage your state requires. A $0 insurance budget is a deal-breaker for any lender.
             </p>
           </div>
+          <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
+            <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-amber-800 leading-relaxed">
+              <span className="font-semibold">Utility deposits:</span> Many utility providers require upfront deposits of $500-2,000 for new commercial accounts. Budget for connection fees, security deposits, and first/last month payments — these hit before your first student walks in the door.
+            </p>
+          </div>
         </div>
 
         <div>

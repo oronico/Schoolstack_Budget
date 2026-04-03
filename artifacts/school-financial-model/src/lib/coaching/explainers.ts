@@ -261,6 +261,23 @@ export const EXPLAINERS: Record<string, Explainer> = {
     highFriction: false,
     priority: "standard",
   },
+  facility_occupancy: {
+    id: "facility_occupancy",
+    title: "Occupancy Costs",
+    body: {
+      whatThisMeans: "Occupancy costs are everything related to your physical space — rent or mortgage, utilities, insurance, and maintenance. Together, these form your second-largest expense category after payroll.",
+      whyItMatters: "Facility costs are almost entirely fixed — they don't shrink when enrollment is low. Locking into an expensive lease before enrollment proves out is one of the most common financial mistakes we see. Lenders pay very close attention to your occupancy-to-revenue ratio.",
+      healthyVsRisky: "Total occupancy costs between 10-20% of revenue are typical for schools. Above 25% puts real pressure on your budget, especially in the early years. If your rent alone exceeds 15% of projected Year 1 revenue, consider a smaller or shared space.",
+      whatToDoNext: "Add up your monthly rent, annual utilities, insurance, and maintenance to see your total occupancy cost. Compare it against your Year 1 revenue projection. If it's above 20%, explore options to reduce facility costs before committing.",
+    },
+    audienceLevel: ["basics", "extra"],
+    relatedSection: "facilities",
+    dismissible: true,
+    autoExpandFor: ["basics", "extra"],
+    order: 13.5,
+    highFriction: true,
+    priority: "high",
+  },
   facility_maintenance: {
     id: "facility_maintenance",
     title: "Maintenance & Repairs",
