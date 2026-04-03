@@ -238,7 +238,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={20}
                 />
-                <FinancingInsight text="Tuition increases above 5% per year can be a stretch for families — make sure your rate stays competitive in your market." />
+
               </div>
             )}
 
@@ -263,7 +263,7 @@ export function AssumptionsStep() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Annual enrollment growth rate used for out-year revenue projections. Applied after your explicit year-by-year enrollment inputs.
               </p>
-              <FinancingInsight text="Growth above 20% per year is ambitious — having evidence (waitlists, applications, community partnerships) makes your projections more credible." />
+
             </div>
 
             {isCharter && stateFundingConfig && (
@@ -479,7 +479,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={100}
                 />
-                <FinancingInsight text="COLA below 2% can make it harder to retain staff long-term. Competitive raises help keep your best people — and that protects your school's quality." />
+
               </div>
 
               <div>
@@ -493,7 +493,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={100}
                 />
-                <FinancingInsight text="Keep your inflation assumptions close to national CPI trends — rates far above or below typical ranges are worth explaining in your plan." />
+
               </div>
             </div>
 

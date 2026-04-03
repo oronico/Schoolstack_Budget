@@ -1490,11 +1490,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
           </span>
         )}
       </p>
-      {category === "tuition_and_fees" && (
-        <div className="space-y-1 mb-2">
-          <FinancingInsight text="It's worth checking how your tuition compares to similar schools in your area — this helps you set competitive rates and builds credibility if you ever apply for financing." />
-        </div>
-      )}
+      
       {category === "public_funding" && (
         <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />

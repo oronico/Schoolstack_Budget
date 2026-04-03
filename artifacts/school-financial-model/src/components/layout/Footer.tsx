@@ -11,7 +11,7 @@ export function Footer() {
               <p className="font-display text-lg font-bold text-white leading-none">SchoolStack Budget</p>
             </div>
             <p className="text-sm text-white/60 leading-relaxed max-w-xs">
-              Build a simple 5-year financial model for your school, save your work, and export a professional workbook.
+              Build a simple 5-year financial model for your school, save your work, and export a lender-ready workbook.
             </p>
           </div>
 

@@ -438,7 +438,7 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
             {(phase.comparableMarketRent === 0 || phase.comparableMarketRent === undefined) && (
               <p className="text-xs text-amber-600 mt-1">Even if your space is free, entering a comparable market rent helps your model show what happens if the arrangement changes. It's good planning either way.</p>
             )}
-            <FinancingInsight text="If financing is ever part of your plan, banks will ask what happens if this donated-space arrangement ends — it's worth having that answer ready." />
+
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Arrangement End Date</label>

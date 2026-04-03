@@ -178,6 +178,16 @@ export function StaffingStep() {
 
   const benchmark = STAFFING_BENCHMARKS[schoolType as keyof typeof STAFFING_BENCHMARKS] || STAFFING_BENCHMARKS.other;
 
+  const hasLeaderWithNoSalary = useMemo(() => {
+    return rows.some(
+      (r) => r.functionCategory === "school_leadership" && (!r.salary || r.salary === 0)
+    );
+  }, [rows]);
+
+  const hasAnyLeader = useMemo(() => {
+    return rows.some((r) => r.functionCategory === "school_leadership");
+  }, [rows]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -239,7 +249,7 @@ export function StaffingStep() {
           <p className="text-muted-foreground">
             Paying staff through Venmo, Zelle, or Cash App creates serious tax and legal risk.
           </p>
-          <FinancingInsight text="Running payroll through a formal processor creates a clean paper trail — this matters for compliance and is something banks check if you apply for financing." />
+
         </div>
       </div>
 
@@ -290,18 +300,35 @@ export function StaffingStep() {
         <FinancingInsight text={`Your ${studentStaffRatio}:1 student-to-staff ratio is compared against industry benchmarks (${benchmark.ratio} is typical for your school type). If it's outside that range, it's worth having a clear reason why.`} />
       )}
 
-      <div className="rounded-xl border border-teal-200 bg-teal-50/50 px-4 py-3 flex items-start gap-3">
-        <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-teal-800 space-y-1">
-          <p>
-            <span className="font-semibold">A note on founder compensation.</span>{" "}
-            If you're the head of school, pay yourself a real salary — you deserve it, and it makes your model more realistic. A budget that assumes the founder works for free isn't sustainable.
-          </p>
-          <p>
-            <span className="font-semibold">Staffing guardrail:</span>{" "}
-            Aim to keep total personnel costs at or below 60% of revenue. Above 65% starts to crowd out facility, program, and reserve needs. If you're above that, consider phasing roles in as enrollment grows.
-          </p>
+      {hasLeaderWithNoSalary && (
+        <div className="rounded-xl border border-teal-200 bg-teal-50/50 px-4 py-3 flex items-start gap-3">
+          <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-teal-800">
+            <p>
+              <span className="font-semibold">A note on founder compensation.</span>{" "}
+              We notice a leadership role without a salary. If you're the head of school, pay yourself a real salary — you deserve it, and it makes your model more realistic. A budget that assumes the founder works for free isn't sustainable.
+            </p>
+          </div>
         </div>
+      )}
+
+      {!hasAnyLeader && rows.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3 flex items-start gap-3">
+          <Lightbulb className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <p>
+              We don't see a school leadership role yet. Most models include a head of school or executive director — even if that's you as the founder. Adding one with a real salary makes your model more complete.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 flex items-start gap-3">
+        <Lightbulb className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">Staffing guardrail:</span>{" "}
+          Aim to keep total personnel costs at or below 60% of revenue. Above 65% starts to crowd out facility, program, and reserve needs. If you're above that, consider phasing roles in as enrollment grows.
+        </p>
       </div>
 
       {y1Students > 0 && totalFTE > 0 && (

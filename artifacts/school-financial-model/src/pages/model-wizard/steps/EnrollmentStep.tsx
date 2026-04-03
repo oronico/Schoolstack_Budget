@@ -328,7 +328,7 @@ function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOpe
               <span>&#9888;</span> Retention below 80% means you'll need a stronger recruitment pipeline to hit your enrollment targets. Consider what's driving attrition and how you'll address it.
             </p>
           )}
-          <FinancingInsight text="Retention rate directly drives your out-year enrollment projections. If financing is part of your plan, this is one of the first numbers banks look at." />
+
         </div>
       )}
 
@@ -738,7 +738,7 @@ export function EnrollmentStep() {
               <p className="text-sm text-blue-700">
                 Charter per-pupil funding often varies by grade band. Break down your enrollment by K-5, 6-8, and 9-12 so we can apply the correct per-pupil rates. Totals should match your program enrollment above.
               </p>
-              <FinancingInsight text="Keep your grade-band breakdown consistent with state reporting — mismatches can create headaches during compliance reviews or financing applications." />
+
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
