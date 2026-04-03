@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2, AlertTriangle, Rocket } from "lucide-react";
+import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2, AlertTriangle, Rocket, Lightbulb } from "lucide-react";
 import { useMemo } from "react";
 import { computeAnnualDebt } from "@workspace/finance";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
@@ -604,6 +604,38 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                   <p className="text-sm text-amber-800">Lenders look at monthly cash flow to spot timing gaps between when you collect revenue and when bills are due.</p>
                 </div>
               )}
+              {(() => {
+                const minMonth = monthlyCashFlow.reduce((min, m, i) => m.endBalance < monthlyCashFlow[min].endBalance ? i : min, 0);
+                const minAmt = monthlyCashFlow[minMonth].endBalance;
+                const monthLabel = monthlyCashFlow[minMonth].month;
+                const startingCash = data.openingBalances?.cash ?? 0;
+                const isNeg = minAmt < 0;
+                const isLow = !isNeg && startingCash > 0 && minAmt < startingCash * 0.25;
+                if (isNeg) return (
+                  <div className="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 flex items-start gap-3 mb-4">
+                    <AlertTriangle className="h-4 w-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-rose-800">
+                      <span className="font-bold">Cash Trough Alert:</span> Your cash balance drops to {formatCurrency(minAmt)} in {monthLabel}. You'll run out of money before collections catch up — plan bridge financing or a line of credit to cover this gap.
+                    </p>
+                  </div>
+                );
+                if (isLow) return (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
+                    <Lightbulb className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-800">
+                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. This is below 25% of your starting reserves — lenders will want to see more cushion. Consider building reserves or adjusting collection timing.
+                    </p>
+                  </div>
+                );
+                return (
+                  <div className="rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 flex items-start gap-3 mb-4">
+                    <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-teal-800">
+                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. You have enough reserves to weather the collection gap — this is what lenders want to see.
+                    </p>
+                  </div>
+                );
+              })()}
               <div className="overflow-x-auto -mx-2">
                 <table className="w-full text-xs">
                   <thead>

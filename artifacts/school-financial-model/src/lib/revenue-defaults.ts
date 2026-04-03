@@ -186,76 +186,71 @@ export function computeMonthlyCashInflow(
 
     const category = row.category;
 
+    const collectionRate = (row.collectionRate ?? 100) / 100;
+    const delayMonths = Math.ceil((row.collectionDelayDays ?? 0) / 30);
+
     if (category === "tuition_and_fees" || category === "tuition_offsets") {
-      const isTuition = row.id === "gross_tuition" || category === "tuition_offsets";
-      if (isTuition) {
-        const billingMonths = row.billingMonths ?? 10;
-        const collectionRate = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
-          ? (row.collectionRate ?? 95) / 100
-          : 1;
-        const delayDays = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
-          ? (row.collectionDelayDays ?? 0)
-          : 0;
-        const delayMonths = Math.floor(delayDays / 30);
-        const effectiveAmount = category === "tuition_offsets" ? -annualAmount : annualAmount;
-        const adjustedAmount = effectiveAmount * collectionRate;
-        const perMonth = adjustedAmount / billingMonths;
-        const startMonth = (billingMonths === 12 ? 0 : 1) + delayMonths;
-        for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) {
-          monthly[i] += perMonth;
-        }
-      } else {
-        monthly[0] += annualAmount;
+      const billingMonths = row.billingMonths ?? 10;
+      const effectiveAmount = category === "tuition_offsets" ? -Math.abs(annualAmount) : annualAmount;
+      const adjustedAmount = effectiveAmount * collectionRate;
+      const perMonth = adjustedAmount / billingMonths;
+      const startMonth = (billingMonths >= 12 ? 0 : 1) + delayMonths;
+      for (let i = startMonth; i < startMonth + billingMonths && i < 12; i++) {
+        monthly[i] += perMonth;
       }
     } else if (category === "public_funding") {
+      const adjustedAmount = annualAmount * collectionRate;
       const freq = row.paymentFrequency ?? "monthly";
       const timing = row.paymentTiming ?? "upfront";
       if (freq === "monthly") {
-        const perMonth = annualAmount / 12;
+        const perMonth = adjustedAmount / 12;
         if (timing === "arrears") {
-          for (let i = 1; i < 12; i++) monthly[i] += perMonth;
-          monthly[0] += 0;
+          for (let i = 1 + delayMonths; i < 12; i++) monthly[i] += perMonth;
         } else {
-          for (let i = 0; i < 12; i++) monthly[i] += perMonth;
+          for (let i = delayMonths; i < 12; i++) monthly[i] += perMonth;
         }
       } else if (freq === "quarterly") {
-        const perPayment = annualAmount / 4;
-        const months = timing === "arrears" ? [2, 5, 8, 11] : [0, 3, 6, 9];
-        months.forEach(m => { monthly[m] += perPayment; });
+        const perPayment = adjustedAmount / 4;
+        const baseMonths = timing === "arrears" ? [2, 5, 8, 11] : [0, 3, 6, 9];
+        baseMonths.forEach(m => { const dm = m + delayMonths; if (dm < 12) monthly[dm] += perPayment; });
       } else if (freq === "semi_annual") {
-        const perPayment = annualAmount / 2;
-        const months = timing === "arrears" ? [5, 11] : [0, 6];
-        months.forEach(m => { monthly[m] += perPayment; });
+        const perPayment = adjustedAmount / 2;
+        const baseMonths = timing === "arrears" ? [5, 11] : [0, 6];
+        baseMonths.forEach(m => { const dm = m + delayMonths; if (dm < 12) monthly[dm] += perPayment; });
       } else if (freq === "annual") {
-        const month = timing === "arrears" ? 11 : 0;
-        monthly[month] += annualAmount;
+        const month = (timing === "arrears" ? 11 : 0) + delayMonths;
+        if (month < 12) monthly[month] += adjustedAmount;
       }
     } else if (category === "school_choice") {
+      const adjustedAmount = annualAmount * collectionRate;
       const disbType = row.disbursementType ?? "direct";
       if (disbType === "direct") {
-        const perQuarter = annualAmount / 4;
-        [0, 3, 6, 9].forEach(m => { monthly[m] += perQuarter; });
+        const perQuarter = adjustedAmount / 4;
+        [0, 3, 6, 9].forEach(m => { const dm = m + delayMonths; if (dm < 12) monthly[dm] += perQuarter; });
       } else {
         const lagMonths = row.reimbursementLagMonths ?? 2;
-        const perMonth = annualAmount / 12;
-        for (let i = lagMonths; i < 12; i++) {
+        const effectiveDelay = Math.max(lagMonths, delayMonths);
+        const perMonth = adjustedAmount / 12;
+        for (let i = effectiveDelay; i < 12; i++) {
           monthly[i] += perMonth;
         }
-        if (lagMonths > 0 && lagMonths < 12) {
-          const deferred = perMonth * lagMonths;
-          const remainingMonths = 12 - lagMonths;
-          for (let i = lagMonths; i < 12; i++) {
+        if (effectiveDelay > 0 && effectiveDelay < 12) {
+          const deferred = perMonth * effectiveDelay;
+          const remainingMonths = 12 - effectiveDelay;
+          for (let i = effectiveDelay; i < 12; i++) {
             monthly[i] += deferred / remainingMonths;
           }
         }
       }
     } else if (category === "philanthropy" || (category as string) === "grants_contributions") {
+      const adjustedAmount = annualAmount * collectionRate;
       const quarter = row.receiptQuarter ?? 1;
-      const startMonth = (quarter - 1) * 3;
-      monthly[startMonth] += annualAmount;
+      const startMonth = (quarter - 1) * 3 + delayMonths;
+      if (startMonth < 12) monthly[startMonth] += adjustedAmount;
     } else {
-      const perMonth = annualAmount / 12;
-      for (let i = 0; i < 12; i++) monthly[i] += perMonth;
+      const adjustedAmount = annualAmount * collectionRate;
+      const perMonth = adjustedAmount / 12;
+      for (let i = delayMonths; i < 12; i++) monthly[i] += perMonth;
     }
   }
 

@@ -1544,57 +1544,84 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
                 ))}
               </select>
             </div>
-            {(row.collectionMethod === "invoiced" || row.collectionMethod === "mixed") && (
-              <>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                    Collection Rate %
-                  </label>
-                  <input
-                    type="number"
-                    value={row.collectionRate ?? 95}
-                    onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
-                    className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
-                    min={0}
-                    max={100}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                    Collection Delay
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={row.collectionDelayDays ?? 0}
-                      onChange={(e) => { const v = parseInt(e.target.value); handleTimingOverride("collectionDelayDays", isNaN(v) ? 0 : v); }}
-                      className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full pr-12"
-                      min={0}
-                      max={90}
-                    />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">days</span>
-                  </div>
-                </div>
-              </>
-            )}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Collection Rate %
+              </label>
+              <input
+                type="number"
+                value={row.collectionRate ?? 98}
+                onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
+                min={0}
+                max={100}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Collection Delay
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={row.collectionDelayDays ?? 0}
+                  onChange={(e) => { const v = parseInt(e.target.value); handleTimingOverride("collectionDelayDays", isNaN(v) ? 0 : v); }}
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full pr-12"
+                  min={0}
+                  max={90}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">days</span>
+              </div>
+            </div>
           </>
         )}
 
         {category === "tuition_offsets" && (
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Billing Months
-            </label>
-            <select
-              value={row.billingMonths ?? 10}
-              onChange={(e) => handleTimingOverride("billingMonths", parseInt(e.target.value))}
-              className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground"
-            >
-              <option value={9}>9 months</option>
-              <option value={10}>10 months</option>
-              <option value={12}>12 months</option>
-            </select>
-          </div>
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Billing Months
+              </label>
+              <select
+                value={row.billingMonths ?? 10}
+                onChange={(e) => handleTimingOverride("billingMonths", parseInt(e.target.value))}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground"
+              >
+                <option value={9}>9 months</option>
+                <option value={10}>10 months</option>
+                <option value={12}>12 months</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Collection Rate %
+              </label>
+              <input
+                type="number"
+                value={row.collectionRate ?? 100}
+                onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
+                min={0}
+                max={100}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                Collection Delay
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={row.collectionDelayDays ?? 0}
+                  onChange={(e) => { const v = parseInt(e.target.value); handleTimingOverride("collectionDelayDays", isNaN(v) ? 0 : v); }}
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full pr-12"
+                  min={0}
+                  max={90}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">days</span>
+              </div>
+            </div>
+          </>
         )}
 
         {category === "public_funding" && (
