@@ -375,7 +375,7 @@ function applyAdjustments(
 export interface LeverMetrics {
   netIncome: number;
   cashTrough: number;
-  breakEvenYear: number;
+  breakEvenEnrollment: number;
   dscr: number;
 }
 
@@ -403,11 +403,23 @@ function cashTrough(metrics: ScenarioMetrics, startingCash: number): number {
   return min;
 }
 
+function computeBreakEvenEnrollment(m: ScenarioMetrics): number {
+  const y1Students = m.enrollment[0] || 0;
+  if (y1Students <= 0) return -1;
+  const revenuePerStudent = m.revenue[0] / y1Students;
+  const fixedCosts = m.staffingCost[0] + (m.loanDebtService?.[0] ?? 0);
+  const variableOpex = m.opex[0] ?? 0;
+  const variableCostPerStudent = y1Students > 0 ? variableOpex / y1Students : 0;
+  const contributionMargin = revenuePerStudent - variableCostPerStudent;
+  if (contributionMargin <= 0) return -1;
+  return Math.ceil(fixedCosts / contributionMargin);
+}
+
 function metricsToLever(m: ScenarioMetrics, startingCash: number): LeverMetrics {
   return {
     netIncome: m.netIncome[0],
     cashTrough: cashTrough(m, startingCash),
-    breakEvenYear: m.breakEvenYear ?? -1,
+    breakEvenEnrollment: computeBreakEvenEnrollment(m),
     dscr: m.dscr[0],
   };
 }
@@ -448,7 +460,7 @@ function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): 
       before: baseLM,
       after: downLM,
       coaching: downLM.netIncome < baseLM.netIncome
-        ? `Losing ${Math.round(baseEnrollment * 0.1)} students would reduce Year 1 net income by ${fmtCurrency(downLM.netIncome - baseLM.netIncome)}. ${downLM.breakEvenYear === -1 && baseLM.breakEvenYear !== -1 ? "This could push you past break-even." : "Build a contingency plan for lower-than-projected enrollment."}`
+        ? `Losing ${Math.round(baseEnrollment * 0.1)} students would reduce Year 1 net income by ${fmtCurrency(downLM.netIncome - baseLM.netIncome)}. ${downLM.breakEvenEnrollment > 0 && Math.round(baseEnrollment * 0.9) <= downLM.breakEvenEnrollment ? `At ${Math.round(baseEnrollment * 0.9)} students you'd be at or below your break-even enrollment of ${downLM.breakEvenEnrollment}.` : "Build a contingency plan for lower-than-projected enrollment."}`
         : `A 10% enrollment drop has minimal financial impact — your cost structure is not enrollment-driven.`,
       relatedDiagnosticIds: ["near_breakeven_enrollment"],
     });
@@ -476,7 +488,7 @@ function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): 
         icon: "scissors",
         before: baseLM,
         after: afterLM,
-        coaching: `Deferring 1 FTE saves ~${fmtCurrencyAbs(savingsBase)}/year. ${afterLM.netIncome >= 0 && baseLM.netIncome < 0 ? "This alone could move you from a deficit to a surplus." : `Year 1 net income shifts by ${fmtCurrency(afterLM.netIncome - baseLM.netIncome)}.`}${afterLM.dscr > baseLM.dscr && baseLM.dscr > 0 ? ` DSCR improves from ${baseLM.dscr.toFixed(2)}x to ${afterLM.dscr.toFixed(2)}x.` : ""} Consider whether you can phase in this hire later.`,
+        coaching: `Deferring 1 FTE saves ~${fmtCurrencyAbs(savingsBase)}/year. ${afterLM.netIncome >= 0 && baseLM.netIncome < 0 ? "This alone could move you from a deficit to a surplus." : `Year 1 net income shifts by ${fmtCurrency(afterLM.netIncome - baseLM.netIncome)}.`}${afterLM.dscr > baseLM.dscr && baseLM.dscr > 0 ? ` DSCR improves from ${baseLM.dscr.toFixed(2)}x to ${afterLM.dscr.toFixed(2)}x.` : ""}${afterLM.breakEvenEnrollment > 0 && baseLM.breakEvenEnrollment > 0 && afterLM.breakEvenEnrollment < baseLM.breakEvenEnrollment ? ` Break-even enrollment drops from ${baseLM.breakEvenEnrollment} to ${afterLM.breakEvenEnrollment} students.` : ""} Consider whether you can phase in this hire later.`,
         relatedDiagnosticIds: ["high_staffing_critical", "high_staffing_warning"],
       });
     }

@@ -34,7 +34,7 @@ function DeltaChip({ before, after, label, higherIsBetter = true }: { before: nu
   let isImproved = false;
   let isWorsened = false;
 
-  if (isSentinel && label === "Break-Even") {
+  if (isSentinel && label === "BE Enrollment") {
     if (before === -1 && after > 0) isImproved = true;
     else if (after === -1 && before > 0) isWorsened = true;
   } else if (!isUnchanged) {
@@ -55,12 +55,12 @@ function DeltaChip({ before, after, label, higherIsBetter = true }: { before: nu
   }
 
   let display: string;
-  if (label === "Break-Even") {
-    if (before === -1 && after > 0) display = `→ Year ${after}`;
-    else if (after === -1 && before > 0) display = "Lost break-even";
+  if (label === "BE Enrollment") {
+    if (before === -1 && after > 0) display = `→ ${after} students`;
+    else if (after === -1 && before > 0) display = "N/A";
     else if (before === -1 && after === -1) return null;
-    else if (delta < 0) display = `${delta} yr`;
-    else if (delta > 0) display = `+${delta} yr`;
+    else if (delta < 0) display = `${delta} students`;
+    else if (delta > 0) display = `+${delta} students`;
     else display = "—";
   } else if (label === "DSCR") {
     display = `${delta >= 0 ? "+" : ""}${delta.toFixed(2)}x`;
@@ -116,7 +116,7 @@ function LeverCard({ lever, index }: { lever: QuickLever; index: number }) {
       <div className="flex flex-wrap gap-1.5 mb-3">
         <DeltaChip before={lever.before.cashTrough} after={lever.after.cashTrough} label="Cash Trough" />
         <DeltaChip before={lever.before.dscr} after={lever.after.dscr} label="DSCR" />
-        <DeltaChip before={lever.before.breakEvenYear} after={lever.after.breakEvenYear} label="Break-Even" higherIsBetter={false} />
+        <DeltaChip before={lever.before.breakEvenEnrollment} after={lever.after.breakEvenEnrollment} label="BE Enrollment" higherIsBetter={false} />
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed italic">{lever.coaching}</p>
