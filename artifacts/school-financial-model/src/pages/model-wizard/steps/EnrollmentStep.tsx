@@ -738,6 +738,7 @@ export function EnrollmentStep() {
               <p className="text-sm text-blue-700">
                 Charter per-pupil funding often varies by grade band. Break down your enrollment by K-5, 6-8, and 9-12 so we can apply the correct per-pupil rates. Totals should match your program enrollment above.
               </p>
+              <LenderHint text="Grade-band breakdowns are verified against state reporting — mismatches between your model and actual enrollment counts raise compliance flags." />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">

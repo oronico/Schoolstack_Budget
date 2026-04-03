@@ -263,6 +263,7 @@ export function AssumptionsStep() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Annual enrollment growth rate used for out-year revenue projections. Applied after your explicit year-by-year enrollment inputs.
               </p>
+              <LenderHint text="Growth rates above 20% per year are often stress-tested — lenders look for evidence of demand (waitlists, applications) to support aggressive projections." />
             </div>
 
             {isCharter && stateFundingConfig && (
@@ -481,16 +482,19 @@ export function AssumptionsStep() {
                 <LenderHint text="COLA rates below 2% are often questioned — lenders may assume higher attrition risk without competitive raises." />
               </div>
 
-              <AssumptionField
-                label="General Cost Inflation"
-                name="facilities.generalCostInflation"
-                suffix="%"
-                defaultValue={DEFAULTS.generalCostInflation}
-                usageNote="Applied to utilities, insurance, supplies, and service contracts. Monthly and annual fixed costs escalate by this rate each year."
-                placeholder="3"
-                min={0}
-                max={100}
-              />
+              <div>
+                <AssumptionField
+                  label="General Cost Inflation"
+                  name="facilities.generalCostInflation"
+                  suffix="%"
+                  defaultValue={DEFAULTS.generalCostInflation}
+                  usageNote="Applied to utilities, insurance, supplies, and service contracts. Monthly and annual fixed costs escalate by this rate each year."
+                  placeholder="3"
+                  min={0}
+                  max={100}
+                />
+                <LenderHint text="Inflation assumptions are compared against CPI data — rates significantly above or below national trends require explanation." />
+              </div>
             </div>
 
             <AssumptionField

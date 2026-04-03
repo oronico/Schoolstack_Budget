@@ -384,6 +384,7 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
               <input type="number" value={phase.postLeaseRenewalBump as number ?? ""} onChange={e => onUpdate("postLeaseRenewalBump", Number(e.target.value))} placeholder="15" className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
             </div>
           </div>
+          <LenderHint text="Lease terms expiring within the model horizon are scrutinized — lenders want to see renewal assumptions or a relocation plan." />
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={!!isNNN} onChange={e => onUpdate("isNNNLease", e.target.checked)} className="rounded" />
             <span className="text-muted-foreground">Triple Net (NNN) lease</span>
