@@ -306,5 +306,26 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
     }
   }
 
+  // --- WORKING CAPITAL FLAG ---
+  const ob = (data.openingBalances || {}) as { cash?: number; accountsReceivable?: number; accountsPayable?: number; currentDebtPortion?: number };
+  const wcCash = ob.cash ?? 0;
+  const wcAR = ob.accountsReceivable ?? 0;
+  const wcAP = ob.accountsPayable ?? 0;
+  const wcCurrentDebt = ob.currentDebtPortion ?? 0;
+  const wcCurrentLiab = wcAP + wcCurrentDebt;
+  if (wcCurrentLiab > 0) {
+    const currentRatio = (wcCash + wcAR) / wcCurrentLiab;
+    if (currentRatio < 1.1) {
+      flags.push({
+        field: "openingBalances.currentRatio",
+        flagType: "low_working_capital",
+        currentValue: `${currentRatio.toFixed(2)}x current ratio`,
+        benchmark: "≥ 1.1x",
+        severity: currentRatio < 0.8 ? "critical" : "warning",
+        defaultPrompt: `Your opening current ratio is ${currentRatio.toFixed(2)}x, which is below the 1.1x minimum lenders expect. How will you ensure short-term obligations are covered? Consider increasing cash reserves or reducing short-term liabilities.`,
+      });
+    }
+  }
+
   return flags;
 }

@@ -117,6 +117,8 @@ export const createModelBodyDataEnrollmentApplicationsReceivedMin = 0;
 export const createModelBodyDataEnrollmentWaitlistCountMin = 0;
 
 export const createModelBodyDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const createModelBodyDataCovenantThresholdsDscrByYearMin = 5;
+export const createModelBodyDataCovenantThresholdsDscrByYearMax = 5;
 
 export const CreateModelBody = zod.object({
   name: zod.string(),
@@ -189,8 +191,6 @@ export const CreateModelBody = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
-        squareFootage: zod.number().optional(),
-        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -245,8 +245,6 @@ export const CreateModelBody = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
-              squareFootage: zod.number().optional(),
-              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -461,25 +459,17 @@ export const CreateModelBody = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
-        tuitionRevenue: zod.number().optional(),
-        publicFundingRevenue: zod.number().optional(),
-        philanthropyRevenue: zod.number().optional(),
-        otherRevenue: zod.number().optional(),
-        personnelExpenses: zod.number().optional(),
-        facilityExpenses: zod.number().optional(),
-        instructionalExpenses: zod.number().optional(),
-        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().nullable().optional(),
-        accountsReceivable: zod.number().nullable().optional(),
-        fixedAssets: zod.number().nullable().optional(),
-        otherAssets: zod.number().nullable().optional(),
-        accountsPayable: zod.number().nullable().optional(),
-        currentDebtPortion: zod.number().nullable().optional(),
-        longTermDebt: zod.number().nullable().optional(),
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
       })
       .optional(),
     sourcesAndUses: zod
@@ -522,41 +512,13 @@ export const CreateModelBody = zod.object({
         minDaysCashOnHand: zod.number().optional(),
         minMonthsRunway: zod.number().optional(),
         minCapacityUtil: zod.number().optional(),
+        minCurrentRatio: zod.number().optional(),
+        dscrByYear: zod
+          .array(zod.number())
+          .min(createModelBodyDataCovenantThresholdsDscrByYearMin)
+          .max(createModelBodyDataCovenantThresholdsDscrByYearMax)
+          .optional(),
       })
-      .optional(),
-    budgetNarrative: zod
-      .object({
-        missionAndVision: zod.string().optional(),
-        enrollmentStrategy: zod.string().optional(),
-        retentionPlan: zod.string().optional(),
-        riskMitigation: zod.string().optional(),
-        revenueAssumptions: zod.string().optional(),
-        staffingPhilosophy: zod.string().optional(),
-        expenseAssumptions: zod.string().optional(),
-        growthStrategy: zod.string().optional(),
-        additionalContext: zod.string().optional(),
-      })
-      .optional(),
-    assumptionFlagResponses: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          reason: zod.string().optional(),
-        }),
-      )
-      .optional(),
-    assumptionFlags: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          severity: zod.string(),
-          currentValue: zod.string().optional(),
-          benchmark: zod.string().optional(),
-          defaultPrompt: zod.string().optional(),
-        }),
-      )
       .optional(),
   }),
 });
@@ -576,6 +538,8 @@ export const getModelResponseDataEnrollmentApplicationsReceivedMin = 0;
 export const getModelResponseDataEnrollmentWaitlistCountMin = 0;
 
 export const getModelResponseDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const getModelResponseDataCovenantThresholdsDscrByYearMin = 5;
+export const getModelResponseDataCovenantThresholdsDscrByYearMax = 5;
 
 export const GetModelResponse = zod.object({
   id: zod.number(),
@@ -650,8 +614,6 @@ export const GetModelResponse = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
-        squareFootage: zod.number().optional(),
-        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -706,8 +668,6 @@ export const GetModelResponse = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
-              squareFootage: zod.number().optional(),
-              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -922,25 +882,17 @@ export const GetModelResponse = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
-        tuitionRevenue: zod.number().optional(),
-        publicFundingRevenue: zod.number().optional(),
-        philanthropyRevenue: zod.number().optional(),
-        otherRevenue: zod.number().optional(),
-        personnelExpenses: zod.number().optional(),
-        facilityExpenses: zod.number().optional(),
-        instructionalExpenses: zod.number().optional(),
-        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().nullable().optional(),
-        accountsReceivable: zod.number().nullable().optional(),
-        fixedAssets: zod.number().nullable().optional(),
-        otherAssets: zod.number().nullable().optional(),
-        accountsPayable: zod.number().nullable().optional(),
-        currentDebtPortion: zod.number().nullable().optional(),
-        longTermDebt: zod.number().nullable().optional(),
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
       })
       .optional(),
     sourcesAndUses: zod
@@ -983,41 +935,13 @@ export const GetModelResponse = zod.object({
         minDaysCashOnHand: zod.number().optional(),
         minMonthsRunway: zod.number().optional(),
         minCapacityUtil: zod.number().optional(),
+        minCurrentRatio: zod.number().optional(),
+        dscrByYear: zod
+          .array(zod.number())
+          .min(getModelResponseDataCovenantThresholdsDscrByYearMin)
+          .max(getModelResponseDataCovenantThresholdsDscrByYearMax)
+          .optional(),
       })
-      .optional(),
-    budgetNarrative: zod
-      .object({
-        missionAndVision: zod.string().optional(),
-        enrollmentStrategy: zod.string().optional(),
-        retentionPlan: zod.string().optional(),
-        riskMitigation: zod.string().optional(),
-        revenueAssumptions: zod.string().optional(),
-        staffingPhilosophy: zod.string().optional(),
-        expenseAssumptions: zod.string().optional(),
-        growthStrategy: zod.string().optional(),
-        additionalContext: zod.string().optional(),
-      })
-      .optional(),
-    assumptionFlagResponses: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          reason: zod.string().optional(),
-        }),
-      )
-      .optional(),
-    assumptionFlags: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          severity: zod.string(),
-          currentValue: zod.string().optional(),
-          benchmark: zod.string().optional(),
-          defaultPrompt: zod.string().optional(),
-        }),
-      )
       .optional(),
   }),
   updatedAt: zod.date(),
@@ -1039,6 +963,8 @@ export const updateModelBodyDataEnrollmentApplicationsReceivedMin = 0;
 export const updateModelBodyDataEnrollmentWaitlistCountMin = 0;
 
 export const updateModelBodyDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const updateModelBodyDataCovenantThresholdsDscrByYearMin = 5;
+export const updateModelBodyDataCovenantThresholdsDscrByYearMax = 5;
 
 export const UpdateModelBody = zod.object({
   name: zod.string().optional(),
@@ -1112,8 +1038,6 @@ export const UpdateModelBody = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
-        squareFootage: zod.number().optional(),
-        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -1168,8 +1092,6 @@ export const UpdateModelBody = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
-              squareFootage: zod.number().optional(),
-              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -1384,25 +1306,17 @@ export const UpdateModelBody = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
-        tuitionRevenue: zod.number().optional(),
-        publicFundingRevenue: zod.number().optional(),
-        philanthropyRevenue: zod.number().optional(),
-        otherRevenue: zod.number().optional(),
-        personnelExpenses: zod.number().optional(),
-        facilityExpenses: zod.number().optional(),
-        instructionalExpenses: zod.number().optional(),
-        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().nullable().optional(),
-        accountsReceivable: zod.number().nullable().optional(),
-        fixedAssets: zod.number().nullable().optional(),
-        otherAssets: zod.number().nullable().optional(),
-        accountsPayable: zod.number().nullable().optional(),
-        currentDebtPortion: zod.number().nullable().optional(),
-        longTermDebt: zod.number().nullable().optional(),
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
       })
       .optional(),
     sourcesAndUses: zod
@@ -1445,41 +1359,13 @@ export const UpdateModelBody = zod.object({
         minDaysCashOnHand: zod.number().optional(),
         minMonthsRunway: zod.number().optional(),
         minCapacityUtil: zod.number().optional(),
+        minCurrentRatio: zod.number().optional(),
+        dscrByYear: zod
+          .array(zod.number())
+          .min(updateModelBodyDataCovenantThresholdsDscrByYearMin)
+          .max(updateModelBodyDataCovenantThresholdsDscrByYearMax)
+          .optional(),
       })
-      .optional(),
-    budgetNarrative: zod
-      .object({
-        missionAndVision: zod.string().optional(),
-        enrollmentStrategy: zod.string().optional(),
-        retentionPlan: zod.string().optional(),
-        riskMitigation: zod.string().optional(),
-        revenueAssumptions: zod.string().optional(),
-        staffingPhilosophy: zod.string().optional(),
-        expenseAssumptions: zod.string().optional(),
-        growthStrategy: zod.string().optional(),
-        additionalContext: zod.string().optional(),
-      })
-      .optional(),
-    assumptionFlagResponses: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          reason: zod.string().optional(),
-        }),
-      )
-      .optional(),
-    assumptionFlags: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          severity: zod.string(),
-          currentValue: zod.string().optional(),
-          benchmark: zod.string().optional(),
-          defaultPrompt: zod.string().optional(),
-        }),
-      )
       .optional(),
   }),
 });
@@ -1492,6 +1378,8 @@ export const updateModelResponseDataEnrollmentApplicationsReceivedMin = 0;
 export const updateModelResponseDataEnrollmentWaitlistCountMin = 0;
 
 export const updateModelResponseDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const updateModelResponseDataCovenantThresholdsDscrByYearMin = 5;
+export const updateModelResponseDataCovenantThresholdsDscrByYearMax = 5;
 
 export const UpdateModelResponse = zod.object({
   id: zod.number(),
@@ -1566,8 +1454,6 @@ export const UpdateModelResponse = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
-        squareFootage: zod.number().optional(),
-        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -1622,8 +1508,6 @@ export const UpdateModelResponse = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
-              squareFootage: zod.number().optional(),
-              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -1840,25 +1724,17 @@ export const UpdateModelResponse = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
-        tuitionRevenue: zod.number().optional(),
-        publicFundingRevenue: zod.number().optional(),
-        philanthropyRevenue: zod.number().optional(),
-        otherRevenue: zod.number().optional(),
-        personnelExpenses: zod.number().optional(),
-        facilityExpenses: zod.number().optional(),
-        instructionalExpenses: zod.number().optional(),
-        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().nullable().optional(),
-        accountsReceivable: zod.number().nullable().optional(),
-        fixedAssets: zod.number().nullable().optional(),
-        otherAssets: zod.number().nullable().optional(),
-        accountsPayable: zod.number().nullable().optional(),
-        currentDebtPortion: zod.number().nullable().optional(),
-        longTermDebt: zod.number().nullable().optional(),
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
       })
       .optional(),
     sourcesAndUses: zod
@@ -1901,41 +1777,13 @@ export const UpdateModelResponse = zod.object({
         minDaysCashOnHand: zod.number().optional(),
         minMonthsRunway: zod.number().optional(),
         minCapacityUtil: zod.number().optional(),
+        minCurrentRatio: zod.number().optional(),
+        dscrByYear: zod
+          .array(zod.number())
+          .min(updateModelResponseDataCovenantThresholdsDscrByYearMin)
+          .max(updateModelResponseDataCovenantThresholdsDscrByYearMax)
+          .optional(),
       })
-      .optional(),
-    budgetNarrative: zod
-      .object({
-        missionAndVision: zod.string().optional(),
-        enrollmentStrategy: zod.string().optional(),
-        retentionPlan: zod.string().optional(),
-        riskMitigation: zod.string().optional(),
-        revenueAssumptions: zod.string().optional(),
-        staffingPhilosophy: zod.string().optional(),
-        expenseAssumptions: zod.string().optional(),
-        growthStrategy: zod.string().optional(),
-        additionalContext: zod.string().optional(),
-      })
-      .optional(),
-    assumptionFlagResponses: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          reason: zod.string().optional(),
-        }),
-      )
-      .optional(),
-    assumptionFlags: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          severity: zod.string(),
-          currentValue: zod.string().optional(),
-          benchmark: zod.string().optional(),
-          defaultPrompt: zod.string().optional(),
-        }),
-      )
       .optional(),
   }),
   updatedAt: zod.date(),
@@ -1975,6 +1823,8 @@ export const archiveModelResponseDataEnrollmentApplicationsReceivedMin = 0;
 export const archiveModelResponseDataEnrollmentWaitlistCountMin = 0;
 
 export const archiveModelResponseDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const archiveModelResponseDataCovenantThresholdsDscrByYearMin = 5;
+export const archiveModelResponseDataCovenantThresholdsDscrByYearMax = 5;
 
 export const ArchiveModelResponse = zod.object({
   id: zod.number(),
@@ -2049,8 +1899,6 @@ export const ArchiveModelResponse = zod.object({
         comparableMarketRent: zod.number().optional(),
         hasWrittenAgreement: zod.boolean().optional(),
         monthlyFacilityAllocation: zod.number().optional(),
-        squareFootage: zod.number().optional(),
-        hasRenewalOption: zod.boolean().optional(),
         gradeBandEnrollment: zod
           .object({
             k5: zod.array(zod.number()).optional(),
@@ -2105,8 +1953,6 @@ export const ArchiveModelResponse = zod.object({
               comparableMarketRent: zod.number().optional(),
               hasWrittenAgreement: zod.boolean().optional(),
               monthlyFacilityAllocation: zod.number().optional(),
-              squareFootage: zod.number().optional(),
-              hasRenewalOption: zod.boolean().optional(),
             }),
           )
           .optional(),
@@ -2323,25 +2169,17 @@ export const ArchiveModelResponse = zod.object({
         totalRevenue: zod.number().optional(),
         totalExpenses: zod.number().optional(),
         endingCash: zod.number().optional(),
-        tuitionRevenue: zod.number().optional(),
-        publicFundingRevenue: zod.number().optional(),
-        philanthropyRevenue: zod.number().optional(),
-        otherRevenue: zod.number().optional(),
-        personnelExpenses: zod.number().optional(),
-        facilityExpenses: zod.number().optional(),
-        instructionalExpenses: zod.number().optional(),
-        adminExpenses: zod.number().optional(),
       })
       .optional(),
     openingBalances: zod
       .object({
-        cash: zod.number().nullable().optional(),
-        accountsReceivable: zod.number().nullable().optional(),
-        fixedAssets: zod.number().nullable().optional(),
-        otherAssets: zod.number().nullable().optional(),
-        accountsPayable: zod.number().nullable().optional(),
-        currentDebtPortion: zod.number().nullable().optional(),
-        longTermDebt: zod.number().nullable().optional(),
+        cash: zod.number().optional(),
+        accountsReceivable: zod.number().optional(),
+        fixedAssets: zod.number().optional(),
+        otherAssets: zod.number().optional(),
+        accountsPayable: zod.number().optional(),
+        currentDebtPortion: zod.number().optional(),
+        longTermDebt: zod.number().optional(),
       })
       .optional(),
     sourcesAndUses: zod
@@ -2384,41 +2222,13 @@ export const ArchiveModelResponse = zod.object({
         minDaysCashOnHand: zod.number().optional(),
         minMonthsRunway: zod.number().optional(),
         minCapacityUtil: zod.number().optional(),
+        minCurrentRatio: zod.number().optional(),
+        dscrByYear: zod
+          .array(zod.number())
+          .min(archiveModelResponseDataCovenantThresholdsDscrByYearMin)
+          .max(archiveModelResponseDataCovenantThresholdsDscrByYearMax)
+          .optional(),
       })
-      .optional(),
-    budgetNarrative: zod
-      .object({
-        missionAndVision: zod.string().optional(),
-        enrollmentStrategy: zod.string().optional(),
-        retentionPlan: zod.string().optional(),
-        riskMitigation: zod.string().optional(),
-        revenueAssumptions: zod.string().optional(),
-        staffingPhilosophy: zod.string().optional(),
-        expenseAssumptions: zod.string().optional(),
-        growthStrategy: zod.string().optional(),
-        additionalContext: zod.string().optional(),
-      })
-      .optional(),
-    assumptionFlagResponses: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          reason: zod.string().optional(),
-        }),
-      )
-      .optional(),
-    assumptionFlags: zod
-      .array(
-        zod.object({
-          field: zod.string(),
-          flagType: zod.string(),
-          severity: zod.string(),
-          currentValue: zod.string().optional(),
-          benchmark: zod.string().optional(),
-          defaultPrompt: zod.string().optional(),
-        }),
-      )
       .optional(),
   }),
   updatedAt: zod.date(),
@@ -2488,6 +2298,13 @@ export const GetConsultantAnalysisResponse = zod.object({
     zod.object({
       enrollmentPct: zod.number(),
       tuitionPct: zod.number(),
+      netIncome: zod.number(),
+    }),
+  ),
+  expenseSensitivityMatrix: zod.array(
+    zod.object({
+      enrollmentPct: zod.number(),
+      expenseInflationPct: zod.number(),
       netIncome: zod.number(),
     }),
   ),
@@ -2684,6 +2501,13 @@ export const PublicConsultantAnalysisResponse = zod.object({
     zod.object({
       enrollmentPct: zod.number(),
       tuitionPct: zod.number(),
+      netIncome: zod.number(),
+    }),
+  ),
+  expenseSensitivityMatrix: zod.array(
+    zod.object({
+      enrollmentPct: zod.number(),
+      expenseInflationPct: zod.number(),
       netIncome: zod.number(),
     }),
   ),

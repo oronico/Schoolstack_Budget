@@ -2331,8 +2331,14 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   const openAP = ob.accountsPayable ?? 0;
   const minCurrentRatio = ct.minCurrentRatio ?? BENCHMARK_CURRENT_RATIO;
 
+  const dscrStepUp = ct.dscrByYear && ct.dscrByYear.length === 5 ? ct.dscrByYear : null;
+
   const checks: [string, (y: number) => string][] = [
-    [`DSCR ≥ ${minDSCR}x`, (y) => cdByYear[y] <= 0 ? "N/A" : (cfads[y] / cdByYear[y] >= minDSCR ? "PASS" : "FAIL")],
+    [dscrStepUp ? `DSCR Step-Up (${dscrStepUp.map(v => v.toFixed(2) + "x").join(" → ")})` : `DSCR ≥ ${minDSCR}x`, (y) => {
+      if (cdByYear[y] <= 0) return "N/A";
+      const threshold = dscrStepUp ? dscrStepUp[y] : minDSCR;
+      return cfads[y] / cdByYear[y] >= threshold ? "PASS" : "FAIL";
+    }],
     ["Positive Net Income", (y) => niByYear[y] > 0 ? "PASS" : "FAIL"],
     [`Current Ratio ≥ ${minCurrentRatio}x`, (y) => {
       const currentLiab = openAP + cdByYear[y];

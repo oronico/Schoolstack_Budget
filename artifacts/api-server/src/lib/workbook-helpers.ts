@@ -503,6 +503,7 @@ export interface ScenarioDef {
 
 export interface CovenantThresholds {
   minDSCR?: number;
+  dscrByYear?: number[];
   minDaysCashOnHand?: number;
   minMonthsRunway?: number;
   minCapacityUtil?: number;

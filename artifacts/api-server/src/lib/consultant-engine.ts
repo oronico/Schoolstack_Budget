@@ -251,7 +251,15 @@ interface ModelData {
     longTermDebt?: number;
     fixedAssetUsefulLife?: number;
   };
-  covenantThresholds?: Record<string, number>;
+  covenantThresholds?: {
+    minDSCR?: number;
+    minDaysCashOnHand?: number;
+    minMonthsRunway?: number;
+    minCapacityUtil?: number;
+    minCurrentRatio?: number;
+    dscrByYear?: number[];
+    [key: string]: unknown;
+  };
 }
 
 export interface KeyMetric {
@@ -300,6 +308,12 @@ export interface SensitivityCell {
   netIncome: number;
 }
 
+export interface ExpenseSensitivityCell {
+  enrollmentPct: number;
+  expenseInflationPct: number;
+  netIncome: number;
+}
+
 export interface LendingLabCriterion {
   name: string;
   status: "pass" | "warn" | "fail" | "na";
@@ -345,6 +359,7 @@ export interface ConsultantOutput {
   cumulativeFinancials: CumulativeYear[];
   stressTests: StressScenario[];
   sensitivityMatrix: SensitivityCell[];
+  expenseSensitivityMatrix: ExpenseSensitivityCell[];
   cashRunwayMonths: number;
   enrollmentGuidance: string[];
   topIssues: import("./decision-rules").DecisionIssue[];
@@ -922,10 +937,10 @@ function runStressScenarioFromRows(
 ): StressScenario {
   const adjEnrollment = mods.modifyEnrollment ? mods.modifyEnrollment([...enrollmentByYear]) : enrollmentByYear;
   const adjRevRows = mods.modifyRevenueRows
-    ? mods.modifyRevenueRows(revenueRows.map(r => ({ ...r, amounts: [...r.amounts] })))
+    ? mods.modifyRevenueRows(revenueRows.map(r => ({ ...r, amounts: r.amounts ? [...r.amounts] : [] })))
     : revenueRows;
   const adjExpRows = mods.modifyExpenseRows
-    ? mods.modifyExpenseRows(expenseRows.map(r => ({ ...r, amounts: [...r.amounts] })))
+    ? mods.modifyExpenseRows(expenseRows.map(r => ({ ...r, amounts: r.amounts ? [...r.amounts] : [] })))
     : expenseRows;
   const adjStaffRows = mods.modifyStaffingRows
     ? mods.modifyStaffingRows(staffingRows.map(r => ({ ...r })))
@@ -1205,9 +1220,12 @@ function assessLendingLabReadiness(
     }
   }
 
-  // --- 5. DSCR ---
+  // --- 5. DSCR (step-up aware) ---
   const readinessLoanDS = y1.loanDebtService ?? y1.debtService;
   const hasLoan = capDebtRows.some(r => r.enabled && r.isLoan);
+  const ct = data.covenantThresholds || {};
+  const dscrStepUp = ct.dscrByYear && ct.dscrByYear.length === 5 ? ct.dscrByYear : null;
+  const y1DscrThreshold = dscrStepUp ? dscrStepUp[0] : BENCHMARK_DSCR_AMBER;
   if (!hasLoan) {
     criteria.push({
       name: "Debt Service Coverage",
@@ -1228,29 +1246,32 @@ function assessLendingLabReadiness(
   } else {
     const dscrVal = (y1.netIncome + readinessLoanDS) / readinessLoanDS;
     const dscrStr = `${dscrVal.toFixed(2)}x`;
-    if (dscrVal < BENCHMARK_DSCR_AMBER) {
+    const thresholdLabel = dscrStepUp
+      ? `≥${y1DscrThreshold}x Y1 (step-up to ${dscrStepUp[4]}x by Y5)`
+      : `≥${BENCHMARK_DSCR_AMBER}x DSCR`;
+    if (dscrVal < y1DscrThreshold) {
       criteria.push({
         name: "Debt Service Coverage",
         status: "fail",
-        threshold: `≥${BENCHMARK_DSCR_AMBER}x DSCR`,
+        threshold: thresholdLabel,
         actual: dscrStr,
-        detail: `DSCR of ${dscrStr} is below the ${BENCHMARK_DSCR_AMBER}x minimum. The school's operating income does not sufficiently cover loan payments. Increase revenue, reduce expenses, or restructure debt terms.`,
+        detail: `DSCR of ${dscrStr} is below the ${y1DscrThreshold}x Year 1 minimum. The school's operating income does not sufficiently cover loan payments. Increase revenue, reduce expenses, or restructure debt terms.`,
         jumpToStep: 6,
       });
     } else if (dscrVal < BENCHMARK_DSCR_GREEN) {
       criteria.push({
         name: "Debt Service Coverage",
         status: "warn",
-        threshold: `≥${BENCHMARK_DSCR_AMBER}x DSCR (ideal ≥${BENCHMARK_DSCR_GREEN}x)`,
+        threshold: thresholdLabel,
         actual: dscrStr,
-        detail: "DSCR meets minimum but has limited cushion. Consider strengthening operating margins for more financial breathing room.",
+        detail: "DSCR meets the Year 1 minimum but has limited cushion. Consider strengthening operating margins for more financial breathing room.",
         jumpToStep: 6,
       });
     } else {
       criteria.push({
         name: "Debt Service Coverage",
         status: "pass",
-        threshold: `≥${BENCHMARK_DSCR_AMBER}x DSCR (ideal ≥${BENCHMARK_DSCR_GREEN}x)`,
+        threshold: thresholdLabel,
         actual: dscrStr,
         detail: `DSCR of ${dscrStr} provides strong debt service coverage with healthy cushion.`,
       });
@@ -2739,6 +2760,33 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     }
   }
 
+  const expenseSensitivityMatrix: ExpenseSensitivityCell[] = [];
+  const sensExpInflPcts = [-10, -5, 0, 5, 10];
+  for (const ePct of sensEnrollPcts) {
+    for (const inflPct of sensExpInflPcts) {
+      const adjEnroll = enrollmentByYear.map(s => Math.round(s * (1 + ePct / 100)));
+      if (hasRowData) {
+        const revenueRows = data.revenueRows || [];
+        const staffingRows = data.staffingRows || [];
+        const expenseRows = data.expenseRows || [];
+        const capDebtRows = data.capitalAndDebtRows || [];
+        const sensSharedRate = data.tuitionEscalation?.rate ?? 3;
+        const salaryEscRate2 = (data.salaryEscalationRate ?? sensSharedRate) / 100;
+        const baseCostInflation = data.costInflationRate ?? sensSharedRate;
+        const adjCostInflation = baseCostInflation + inflPct;
+        const fins = computeAllYearsFromRows(adjEnroll, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate2, prorationFactor, tuitionTiers, adjCostInflation, sp, ceRR, true);
+        expenseSensitivityMatrix.push({ enrollmentPct: ePct, expenseInflationPct: inflPct, netIncome: fins[lastIdx]?.netIncome || 0 });
+      } else {
+        const rev = data.revenue || {};
+        const st = data.staffing || {};
+        const fac = data.facilities || {};
+        const adjFac = { ...fac, generalCostInflation: ((fac as Record<string, number>).generalCostInflation || 0) + inflPct };
+        const fins = adjEnroll.map((s, idx) => computeYearFinancialsLegacy(idx, s, rev, st, adjFac, prorationFactor));
+        expenseSensitivityMatrix.push({ enrollmentPct: ePct, expenseInflationPct: inflPct, netIncome: fins[lastIdx]?.netIncome || 0 });
+      }
+    }
+  }
+
   let cashRunwayMonths = 0;
   {
     const startingCash = (data as Record<string, unknown>).priorYearSnapshot
@@ -2813,6 +2861,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     cumulativeFinancials,
     stressTests,
     sensitivityMatrix,
+    expenseSensitivityMatrix,
     cashRunwayMonths,
     enrollmentGuidance,
     topIssues,

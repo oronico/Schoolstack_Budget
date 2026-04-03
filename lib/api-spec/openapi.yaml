@@ -1003,6 +1003,14 @@ components:
           type: number
         minCapacityUtil:
           type: number
+        minCurrentRatio:
+          type: number
+        dscrByYear:
+          type: array
+          items:
+            type: number
+          minItems: 5
+          maxItems: 5
     PriorYearSnapshot:
       type: object
       properties:
@@ -1445,6 +1453,19 @@ components:
         - enrollmentPct
         - tuitionPct
         - netIncome
+    ExpenseSensitivityCell:
+      type: object
+      properties:
+        enrollmentPct:
+          type: number
+        expenseInflationPct:
+          type: number
+        netIncome:
+          type: number
+      required:
+        - enrollmentPct
+        - expenseInflationPct
+        - netIncome
     ConsultantOutput:
       type: object
       properties:
@@ -1487,6 +1508,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SensitivityCell"
+        expenseSensitivityMatrix:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseSensitivityCell"
         cashRunwayMonths:
           type: number
         enrollmentGuidance:
@@ -1519,6 +1544,7 @@ components:
         - cumulativeFinancials
         - stressTests
         - sensitivityMatrix
+        - expenseSensitivityMatrix
         - cashRunwayMonths
         - enrollmentGuidance
         - topIssues

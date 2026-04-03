@@ -28,6 +28,7 @@ export * from "./expenseAllocation";
 export * from "./expenseCategory";
 export * from "./expenseDriverType";
 export * from "./expenseRow";
+export * from "./expenseSensitivityCell";
 export * from "./facilities";
 export * from "./facilityPhase";
 export * from "./facilityPhaseOwnershipType";

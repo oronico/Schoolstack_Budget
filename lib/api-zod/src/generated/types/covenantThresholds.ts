@@ -11,4 +11,10 @@ export interface CovenantThresholds {
   minDaysCashOnHand?: number;
   minMonthsRunway?: number;
   minCapacityUtil?: number;
+  minCurrentRatio?: number;
+  /**
+   * @minItems 5
+   * @maxItems 5
+   */
+  dscrByYear?: number[];
 }

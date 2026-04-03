@@ -666,6 +666,11 @@ async function main() {
   testProjectedAR();
   testCurrentRatioCovenant();
   testDepreciationInEngine();
+  await testStepUpCovenants();
+  await testStepUpCovenantWithoutConfig();
+  await testExpenseSensitivityMatrix();
+  await testWorkingCapitalFlag();
+  await testWorkingCapitalNegative();
 
   console.log(`\n${"=".repeat(50)}`);
   console.log(`Results: ${passed} passed, ${failed} failed`);
@@ -674,6 +679,138 @@ async function main() {
   } else {
     console.log("All assumption flag tests passed! ✅");
   }
+}
+
+async function testStepUpCovenants() {
+  console.log("\n=== Step-Up DSCR Covenants ===");
+
+  const payload = {
+    ...charterPublicFunding,
+    covenantThresholds: {
+      dscrByYear: [1.10, 1.15, 1.20, 1.25, 1.25],
+    },
+  };
+
+  const co = await runConsultantEngine(payload as Record<string, unknown>);
+
+  assert("Consultant output has lendingLabAssessment", !!co.lendingLabAssessment);
+  const dscrCrit = co.lendingLabAssessment.criteria.find(c => c.name === "Debt Service Coverage");
+  if (dscrCrit) {
+    assert("DSCR criterion threshold references step-up", dscrCrit.threshold.includes("step-up") || dscrCrit.threshold.includes("Y1"));
+  }
+
+  const wb = await generateUnderwritingWorkbook(payload as Record<string, unknown>);
+  const dscrSheet = wb.getWorksheet("DSCR & Covenants");
+  assert("Workbook has DSCR & Covenants sheet (step-up)", !!dscrSheet);
+
+  if (dscrSheet) {
+    let stepUpRowNum = 0;
+    dscrSheet.eachRow((row: { getCell: (col: number) => { value: unknown } }, rowNumber: number) => {
+      const cellA = row.getCell(1).value;
+      if (typeof cellA === "string" && cellA.includes("Step-Up") && stepUpRowNum === 0) {
+        stepUpRowNum = rowNumber;
+      }
+    });
+    assert("Found Step-Up DSCR covenant row in workbook", stepUpRowNum > 0);
+  }
+}
+
+async function testStepUpCovenantWithoutConfig() {
+  console.log("\n=== Step-Up DSCR Covenants — fallback without dscrByYear ===");
+
+  const payload = {
+    ...charterPublicFunding,
+    covenantThresholds: { minDSCR: BENCHMARK_DSCR_GREEN },
+  };
+
+  const wb = await generateUnderwritingWorkbook(payload as Record<string, unknown>);
+  const dscrSheet = wb.getWorksheet("DSCR & Covenants");
+  assert("Workbook has DSCR & Covenants sheet (fallback)", !!dscrSheet);
+
+  if (dscrSheet) {
+    let flatRowNum = 0;
+    let hasStepUp = false;
+    dscrSheet.eachRow((row: { getCell: (col: number) => { value: unknown } }, rowNumber: number) => {
+      const cellA = row.getCell(1).value;
+      if (typeof cellA === "string") {
+        if (cellA.includes("DSCR") && !cellA.includes("Step-Up") && !cellA.includes("DSCR & Covenant") && flatRowNum === 0) {
+          flatRowNum = rowNumber;
+        }
+        if (cellA.includes("Step-Up")) hasStepUp = true;
+      }
+    });
+    assert("Flat DSCR covenant row present when no dscrByYear", flatRowNum > 0);
+    assert("No Step-Up label when dscrByYear not configured", !hasStepUp);
+  }
+}
+
+async function testExpenseSensitivityMatrix() {
+  console.log("\n=== Expense Sensitivity Matrix ===");
+
+  const co = await runConsultantEngine(microschoolStartup as Record<string, unknown>);
+
+  assert("expenseSensitivityMatrix is array", Array.isArray(co.expenseSensitivityMatrix));
+  assert("expenseSensitivityMatrix has cells", co.expenseSensitivityMatrix.length > 0);
+  assert("expenseSensitivityMatrix has 25 cells (5x5)", co.expenseSensitivityMatrix.length === 25);
+
+  const enrollPcts = [...new Set(co.expenseSensitivityMatrix.map(c => c.enrollmentPct))];
+  const inflPcts = [...new Set(co.expenseSensitivityMatrix.map(c => c.expenseInflationPct))];
+  assert("5 unique enrollment %s in expense matrix", enrollPcts.length === 5);
+  assert("5 unique expense inflation %s in expense matrix", inflPcts.length === 5);
+
+  const baseCell = co.expenseSensitivityMatrix.find(c => c.enrollmentPct === 0 && c.expenseInflationPct === 0);
+  assert("Base case cell exists (0% enrollment, 0% inflation)", !!baseCell);
+
+  if (baseCell) {
+    const highInflCell = co.expenseSensitivityMatrix.find(c => c.enrollmentPct === 0 && c.expenseInflationPct === 10);
+    if (highInflCell) {
+      assert("Higher expense inflation reduces net income", highInflCell.netIncome <= baseCell.netIncome);
+    }
+  }
+
+  assert("Revenue sensitivity matrix still present", co.sensitivityMatrix.length === 25);
+}
+
+async function testWorkingCapitalFlag() {
+  console.log("\n=== Working Capital Flag ===");
+
+  const lowWC = {
+    ...microschoolStartup,
+    openingBalances: { cash: 5000, accountsReceivable: 0, fixedAssets: 5000, otherAssets: 0, accountsPayable: 8000, currentDebtPortion: 2000, longTermDebt: 0 },
+  };
+  const flags = await detectUnusualAssumptions(lowWC as Record<string, unknown>);
+  const wcFlag = hasFlag(flags, "low_working_capital");
+  assert("low_working_capital flag fires at 0.50x", !!wcFlag);
+  if (wcFlag) {
+    assert("low_working_capital severity is warning or critical", wcFlag.severity === "warning" || wcFlag.severity === "critical");
+    assert("low_working_capital currentValue contains ratio", wcFlag.currentValue.includes("0.50"));
+  }
+
+  const critWC = {
+    ...microschoolStartup,
+    openingBalances: { cash: 1000, accountsReceivable: 0, fixedAssets: 5000, otherAssets: 0, accountsPayable: 8000, currentDebtPortion: 5000, longTermDebt: 0 },
+  };
+  const critFlags = await detectUnusualAssumptions(critWC as Record<string, unknown>);
+  const critFlag = hasFlag(critFlags, "low_working_capital");
+  assert("low_working_capital fires at critical level when ratio < 0.8", !!critFlag && critFlag.severity === "critical");
+}
+
+async function testWorkingCapitalNegative() {
+  console.log("\n=== Negative: No working capital flag when ratio >= 1.1x ===");
+
+  const goodWC = {
+    ...microschoolStartup,
+    openingBalances: { cash: 15000, accountsReceivable: 5000, fixedAssets: 5000, otherAssets: 0, accountsPayable: 5000, currentDebtPortion: 3000, longTermDebt: 0 },
+  };
+  const flags = await detectUnusualAssumptions(goodWC as Record<string, unknown>);
+  assert("No low_working_capital flag at 2.5x ratio", !hasFlag(flags, "low_working_capital"));
+
+  const noLiab = {
+    ...microschoolStartup,
+    openingBalances: { cash: 15000, accountsReceivable: 0, fixedAssets: 5000, otherAssets: 0, accountsPayable: 0, currentDebtPortion: 0, longTermDebt: 0 },
+  };
+  const noLiabFlags = await detectUnusualAssumptions(noLiab as Record<string, unknown>);
+  assert("No low_working_capital flag when no current liabilities", !hasFlag(noLiabFlags, "low_working_capital"));
 }
 
 main().catch(err => {

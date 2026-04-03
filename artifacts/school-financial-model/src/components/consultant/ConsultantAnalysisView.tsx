@@ -127,6 +127,7 @@ interface ConsultantAnalysisViewProps {
 
 export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9 }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
+  const [sensitivityTab, setSensitivityTab] = useState<"revenue" | "expense">("revenue");
 
   useEffect(() => {
     trackCoachingEvent("analysis_view_opened", {
@@ -637,10 +638,33 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
             <Grid3X3 className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-lg text-foreground">Sensitivity Analysis</h3>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Final year {niLabel.toLowerCase()} under different enrollment and tuition assumptions.
-          </p>
-          {(() => {
+          {data.expenseSensitivityMatrix && data.expenseSensitivityMatrix.length > 0 && (
+            <div className="flex gap-1 mb-3 bg-secondary/30 rounded-lg p-1 w-fit">
+              <button
+                onClick={() => setSensitivityTab("revenue")}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
+                  sensitivityTab === "revenue"
+                    ? "bg-white text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Enrollment × Tuition
+              </button>
+              <button
+                onClick={() => setSensitivityTab("expense")}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-xs font-semibold transition-colors",
+                  sensitivityTab === "expense"
+                    ? "bg-white text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Enrollment × Expense Inflation
+              </button>
+            </div>
+          )}
+          {sensitivityTab === "revenue" && (() => {
             const enrollPcts = [...new Set(data.sensitivityMatrix.map(c => c.enrollmentPct))].sort((a, b) => a - b);
             const tuitionPcts = [...new Set(data.sensitivityMatrix.map(c => c.tuitionPct))].sort((a, b) => a - b);
             const cellMap = new Map<string, number>();
@@ -648,45 +672,104 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
               cellMap.set(`${c.enrollmentPct}_${c.tuitionPct}`, c.netIncome);
             }
             return (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-secondary/50">
-                      <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Enrollment \ Tuition</th>
-                      {tuitionPcts.map(tp => (
-                        <th key={tp} className="px-3 py-2 text-center font-semibold text-muted-foreground">
-                          {tp >= 0 ? "+" : ""}{tp}%
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {enrollPcts.map(ep => (
-                      <tr key={ep} className="border-t border-border/40">
-                        <td className="px-3 py-2 font-medium">
-                          {ep >= 0 ? "+" : ""}{ep}% Enrollment
-                        </td>
-                        {tuitionPcts.map(tp => {
-                          const ni = cellMap.get(`${ep}_${tp}`) || 0;
-                          const isBase = ep === 0 && tp === 0;
-                          return (
-                            <td
-                              key={tp}
-                              className={cn(
-                                "px-3 py-2 text-center font-semibold",
-                                isBase ? "bg-blue-50 ring-1 ring-blue-300 rounded" : "",
-                                ni >= 0 ? "text-green-700" : "text-rose-700"
-                              )}
-                            >
-                              {fmtCompact(ni)}
-                            </td>
-                          );
-                        })}
+              <>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Final year {niLabel.toLowerCase()} under different enrollment and tuition assumptions.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-secondary/50">
+                        <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Enrollment \ Tuition</th>
+                        {tuitionPcts.map(tp => (
+                          <th key={tp} className="px-3 py-2 text-center font-semibold text-muted-foreground">
+                            {tp >= 0 ? "+" : ""}{tp}%
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {enrollPcts.map(ep => (
+                        <tr key={ep} className="border-t border-border/40">
+                          <td className="px-3 py-2 font-medium">
+                            {ep >= 0 ? "+" : ""}{ep}% Enrollment
+                          </td>
+                          {tuitionPcts.map(tp => {
+                            const ni = cellMap.get(`${ep}_${tp}`) || 0;
+                            const isBase = ep === 0 && tp === 0;
+                            return (
+                              <td
+                                key={tp}
+                                className={cn(
+                                  "px-3 py-2 text-center font-semibold",
+                                  isBase ? "bg-blue-50 ring-1 ring-blue-300 rounded" : "",
+                                  ni >= 0 ? "text-green-700" : "text-rose-700"
+                                )}
+                              >
+                                {fmtCompact(ni)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            );
+          })()}
+          {sensitivityTab === "expense" && data.expenseSensitivityMatrix && (() => {
+            const enrollPcts = [...new Set(data.expenseSensitivityMatrix.map(c => c.enrollmentPct))].sort((a, b) => a - b);
+            const inflPcts = [...new Set(data.expenseSensitivityMatrix.map(c => c.expenseInflationPct))].sort((a, b) => a - b);
+            const cellMap = new Map<string, number>();
+            for (const c of data.expenseSensitivityMatrix) {
+              cellMap.set(`${c.enrollmentPct}_${c.expenseInflationPct}`, c.netIncome);
+            }
+            return (
+              <>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Final year {niLabel.toLowerCase()} under different enrollment and expense inflation assumptions.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-secondary/50">
+                        <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Enrollment \ Expense Inflation</th>
+                        {inflPcts.map(ip => (
+                          <th key={ip} className="px-3 py-2 text-center font-semibold text-muted-foreground">
+                            {ip >= 0 ? "+" : ""}{ip}%
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {enrollPcts.map(ep => (
+                        <tr key={ep} className="border-t border-border/40">
+                          <td className="px-3 py-2 font-medium">
+                            {ep >= 0 ? "+" : ""}{ep}% Enrollment
+                          </td>
+                          {inflPcts.map(ip => {
+                            const ni = cellMap.get(`${ep}_${ip}`) || 0;
+                            const isBase = ep === 0 && ip === 0;
+                            return (
+                              <td
+                                key={ip}
+                                className={cn(
+                                  "px-3 py-2 text-center font-semibold",
+                                  isBase ? "bg-blue-50 ring-1 ring-blue-300 rounded" : "",
+                                  ni >= 0 ? "text-green-700" : "text-rose-700"
+                                )}
+                              >
+                                {fmtCompact(ni)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             );
           })()}
         </div>

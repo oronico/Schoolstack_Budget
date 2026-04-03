@@ -597,6 +597,38 @@ export function AssumptionsStep() {
 
         <section>
           <SectionHeader
+            icon={<Shield className="h-5 w-5 text-primary" />}
+            title="Step-Up DSCR Covenants"
+            description="Many lenders require the Debt Service Coverage Ratio to increase each year as your school matures. Set year-by-year minimums."
+          />
+          <div className="space-y-4">
+            <div className="grid grid-cols-5 gap-3">
+              {[0, 1, 2, 3, 4].map(y => (
+                <AssumptionField
+                  key={y}
+                  label={`Year ${y + 1}`}
+                  name={`covenantThresholds.dscrByYear.${y}`}
+                  suffix="x"
+                  usageNote={`Minimum DSCR for Year ${y + 1}`}
+                  placeholder={[1.10, 1.15, 1.20, 1.25, 1.25][y].toFixed(2)}
+                  min={0}
+                  max={10}
+                  step={0.05}
+                />
+              ))}
+            </div>
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900">
+              <Lightbulb className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <span>
+                Step-up covenants start lower in early years when your school is still growing, then tighten as cash flow stabilizes.
+                A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <SectionHeader
             icon={<Calendar className="h-5 w-5 text-primary" />}
             title="Model Configuration"
             description="Structural parameters that shape the timeline and scope of your financial model."

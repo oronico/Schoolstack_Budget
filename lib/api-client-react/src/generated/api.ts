@@ -1806,26 +1806,6 @@ export const usePublicExportUnderwriting = <
 };
 
 /**
- * Submit a review request from the public wizard (no authentication required).
- * @summary Request expert review without authentication
- */
-export const getPublicReviewRequestUrl = () => {
-  return `/api/public/request-review`;
-};
-
-export const publicReviewRequest = async (
-  body: { name: string; email: string; message?: string; modelData: Record<string, unknown> },
-  options?: RequestInit,
-): Promise<{ success: boolean }> => {
-  return customFetch<{ success: boolean }>(getPublicReviewRequestUrl(), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(body),
-  });
-};
-
-/**
  * Accepts full model data payload and returns consultant analysis with readiness score, key metrics, and recommendations. No authentication required.
  * @summary Run consultant analysis without authentication
  */

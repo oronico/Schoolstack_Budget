@@ -375,6 +375,12 @@ export interface CovenantThresholds {
   minDaysCashOnHand?: number;
   minMonthsRunway?: number;
   minCapacityUtil?: number;
+  minCurrentRatio?: number;
+  /**
+   * @minItems 5
+   * @maxItems 5
+   */
+  dscrByYear?: number[];
 }
 
 export interface PriorYearSnapshot {
@@ -672,6 +678,12 @@ export interface SensitivityCell {
   netIncome: number;
 }
 
+export interface ExpenseSensitivityCell {
+  enrollmentPct: number;
+  expenseInflationPct: number;
+  netIncome: number;
+}
+
 export type ConsultantOutputLenderReadiness =
   (typeof ConsultantOutputLenderReadiness)[keyof typeof ConsultantOutputLenderReadiness];
 
@@ -813,6 +825,7 @@ export interface ConsultantOutput {
   cumulativeFinancials: CumulativeYear[];
   stressTests: StressScenario[];
   sensitivityMatrix: SensitivityCell[];
+  expenseSensitivityMatrix: ExpenseSensitivityCell[];
   cashRunwayMonths: number;
   enrollmentGuidance: string[];
   topIssues: DecisionIssue[];
