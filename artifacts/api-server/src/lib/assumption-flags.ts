@@ -329,12 +329,11 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
   }
 
   if (hasRowData && yearFinancials.length > 0) {
-    const collectionDays = (data as Record<string, unknown>).collectionDelayDays as number ?? 30;
     let runningCash = wcCash;
     for (let y = 0; y < yearFinancials.length; y++) {
       const yf = yearFinancials[y];
       runningCash += yf.netIncome;
-      const projAR = yf.tuitionRevenue * (collectionDays / 365);
+      const projAR = yf.projectedAR > 0 ? yf.projectedAR : wcAR;
       const projCurrentAssets = Math.max(0, runningCash) + projAR;
       const projCurrentLiab = wcAP + wcCurrentDebt;
       if (projCurrentLiab > 0) {

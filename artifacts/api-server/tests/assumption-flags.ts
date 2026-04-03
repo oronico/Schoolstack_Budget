@@ -670,6 +670,7 @@ async function main() {
   await testStepUpCovenantWithoutConfig();
   await testExpenseSensitivityMatrix();
   await testWorkingCapitalFlag();
+  await testProjectedWorkingCapitalDrop();
   await testWorkingCapitalNegative();
 
   console.log(`\n${"=".repeat(50)}`);
@@ -697,6 +698,8 @@ async function testStepUpCovenants() {
   const dscrCrit = co.lendingLabAssessment.criteria.find(c => c.name === "Debt Service Coverage");
   if (dscrCrit) {
     assert("DSCR criterion threshold references step-up", dscrCrit.threshold.includes("step-up") || dscrCrit.threshold.includes("Y1"));
+    assert("DSCR criterion has a pass/warn/fail status", ["pass", "warn", "fail"].includes(dscrCrit.status));
+    assert("DSCR criterion actual value contains 'x'", dscrCrit.actual.includes("x"));
   }
 
   const wb = await generateUnderwritingWorkbook(payload as Record<string, unknown>);
@@ -803,6 +806,27 @@ async function testWorkingCapitalFlag() {
   const critFlags = await detectUnusualAssumptions(critWC as Record<string, unknown>);
   const critFlag = hasFlag(critFlags, "low_working_capital");
   assert("low_working_capital fires at warning level even when ratio < 0.8", !!critFlag && critFlag.severity === "warning");
+}
+
+async function testProjectedWorkingCapitalDrop() {
+  console.log("\n=== Projected Working Capital: healthy opening, drops in later year ===");
+
+  const projPayload = {
+    ...charterPublicFunding,
+    openingBalances: { cash: 50000, accountsReceivable: 10000, fixedAssets: 100000, otherAssets: 0, accountsPayable: 20000, currentDebtPortion: 15000, longTermDebt: 200000 },
+  };
+  const openingRatio = (50000 + 10000) / (20000 + 15000);
+  assert("Opening ratio is healthy (>1.1x)", openingRatio > 1.1);
+
+  const flags = await detectUnusualAssumptions(projPayload as Record<string, unknown>);
+  const openingWC = flags.find(f => f.flagType === "low_working_capital" && f.field.startsWith("openingBalances"));
+  assert("No opening working capital flag for healthy opening", !openingWC);
+
+  const projectedWC = flags.filter(f => f.flagType === "low_working_capital" && f.field.startsWith("year"));
+  if (projectedWC.length > 0) {
+    assert("Projected WC flag references a specific year", projectedWC[0].currentValue.includes("projected"));
+    assert("Projected WC flag uses dynamic projectedAR", projectedWC[0].severity === "warning");
+  }
 }
 
 async function testWorkingCapitalNegative() {
