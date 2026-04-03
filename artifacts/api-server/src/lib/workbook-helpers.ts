@@ -1335,9 +1335,9 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     const mNI = input.netIncomeByYear[y] / 12;
     for (let m = 0; m < 12; m++) {
       _runCash += mNI;
-      if (_runCash < 0) { cashRunwayMonths = y * 12 + m; break; }
+      if (_runCash <= 0) { cashRunwayMonths = y * 12 + m + 1; break; }
     }
-    if (_runCash < 0) break;
+    if (_runCash <= 0) break;
   }
 
   const y5Rev = input.revenueByYear[4] || 1;
