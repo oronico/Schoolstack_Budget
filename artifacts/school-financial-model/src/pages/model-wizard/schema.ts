@@ -392,7 +392,7 @@ export const scenarioDefSchema = z.object({
 
 export const covenantThresholdsSchema = z.object({
   minDSCR: z.coerce.number(numMsg("minimum DSCR")).min(0).optional().default(BENCHMARK_DSCR_GREEN),
-  dscrByYear: z.array(z.coerce.number().min(0)).length(5).optional().default([1.10, 1.15, 1.20, 1.25, 1.25]),
+  dscrByYear: z.array(z.coerce.number().min(0)).length(5).optional(),
   minDaysCashOnHand: z.coerce.number(numMsg("minimum days cash on hand")).min(0).optional().default(45),
   minMonthsRunway: z.coerce.number(numMsg("minimum months runway")).min(0).optional().default(2),
   minCapacityUtil: z.coerce.number(numMsg("minimum capacity utilization")).min(0).max(1).optional().default(0.7),

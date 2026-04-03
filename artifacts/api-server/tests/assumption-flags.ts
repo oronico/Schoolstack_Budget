@@ -718,10 +718,17 @@ async function testStepUpCovenants() {
 async function testStepUpCovenantWithoutConfig() {
   console.log("\n=== Step-Up DSCR Covenants — fallback without dscrByYear ===");
 
+  const customMinDSCR = 1.50;
   const payload = {
     ...charterPublicFunding,
-    covenantThresholds: { minDSCR: BENCHMARK_DSCR_GREEN },
+    covenantThresholds: { minDSCR: customMinDSCR },
   };
+
+  const co = await runConsultantEngine(payload as Record<string, unknown>);
+  const dscrCrit = co.lendingLabAssessment.criteria.find(c => c.name === "Debt Service Coverage");
+  if (dscrCrit && dscrCrit.threshold) {
+    assert("Fallback threshold uses ct.minDSCR not benchmark", dscrCrit.threshold.includes(String(customMinDSCR)));
+  }
 
   const wb = await generateUnderwritingWorkbook(payload as Record<string, unknown>);
   const dscrSheet = wb.getWorksheet("DSCR & Covenants");
