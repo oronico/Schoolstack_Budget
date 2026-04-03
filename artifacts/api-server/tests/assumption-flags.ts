@@ -795,7 +795,7 @@ async function testWorkingCapitalFlag() {
   };
   const critFlags = await detectUnusualAssumptions(critWC as Record<string, unknown>);
   const critFlag = hasFlag(critFlags, "low_working_capital");
-  assert("low_working_capital fires at critical level when ratio < 0.8", !!critFlag && critFlag.severity === "critical");
+  assert("low_working_capital fires at warning level even when ratio < 0.8", !!critFlag && critFlag.severity === "warning");
 }
 
 async function testWorkingCapitalNegative() {

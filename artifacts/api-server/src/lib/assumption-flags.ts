@@ -322,7 +322,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
         flagType: "low_working_capital",
         currentValue: `${currentRatio.toFixed(2)}x current ratio`,
         benchmark: "≥ 1.1x",
-        severity: currentRatio < 0.8 ? "critical" : "warning",
+        severity: "warning",
         defaultPrompt: `Your opening current ratio is ${currentRatio.toFixed(2)}x, which is below the 1.1x minimum lenders expect. How will you ensure short-term obligations are covered? Consider increasing cash reserves or reducing short-term liabilities.`,
       });
     }
@@ -345,7 +345,7 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
             flagType: "low_working_capital",
             currentValue: `${projRatio.toFixed(2)}x projected current ratio before Year ${y + 1}`,
             benchmark: "≥ 1.1x",
-            severity: projRatio < 0.8 ? "critical" : "warning",
+            severity: "warning",
             defaultPrompt: `Your projected current ratio drops to ${projRatio.toFixed(2)}x before Year ${y + 1}, which is below the 1.1x minimum. Build cash reserves earlier or reduce short-term liabilities to avoid liquidity stress.`,
           });
           break;

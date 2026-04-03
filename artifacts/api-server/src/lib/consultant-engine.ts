@@ -2785,6 +2785,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   for (const ePct of sensEnrollPcts) {
     for (const inflPct of sensExpInflPcts) {
       const adjEnroll = enrollmentByYear.map(s => Math.round(s * (1 + ePct / 100)));
+      const scaleFactor = 1 + inflPct / 100;
       if (hasRowData) {
         const revenueRows = data.revenueRows || [];
         const staffingRows = data.staffingRows || [];
@@ -2793,14 +2794,19 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
         const sensSharedRate = data.tuitionEscalation?.rate ?? 3;
         const salaryEscRate2 = (data.salaryEscalationRate ?? sensSharedRate) / 100;
         const baseCostInflation = data.costInflationRate ?? sensSharedRate;
-        const adjCostInflation = baseCostInflation + inflPct;
-        const fins = computeAllYearsFromRows(adjEnroll, revenueRows, staffingRows, expenseRows, capDebtRows, salaryEscRate2, prorationFactor, tuitionTiers, adjCostInflation, sp, ceRR, true);
+        const adjExpenseRows = expenseRows.map(r => ({
+          ...r,
+          amounts: r.amounts ? r.amounts.map(a => a * scaleFactor) : [],
+          annualAmount: r.annualAmount != null ? r.annualAmount * scaleFactor : r.annualAmount,
+          monthlyAmount: r.monthlyAmount != null ? r.monthlyAmount * scaleFactor : r.monthlyAmount,
+        }));
+        const fins = computeAllYearsFromRows(adjEnroll, revenueRows, staffingRows, adjExpenseRows, capDebtRows, salaryEscRate2, prorationFactor, tuitionTiers, baseCostInflation, sp, ceRR, true);
         expenseSensitivityMatrix.push({ enrollmentPct: ePct, expenseInflationPct: inflPct, netIncome: fins[lastIdx]?.netIncome || 0 });
       } else {
         const rev = data.revenue || {};
         const st = data.staffing || {};
         const fac = data.facilities || {};
-        const adjFac = { ...fac, generalCostInflation: ((fac as Record<string, number>).generalCostInflation || 0) + inflPct };
+        const adjFac = { ...fac, generalCostInflation: ((fac as Record<string, number>).generalCostInflation || 0) * scaleFactor };
         const fins = adjEnroll.map((s, idx) => computeYearFinancialsLegacy(idx, s, rev, st, adjFac, prorationFactor));
         expenseSensitivityMatrix.push({ enrollmentPct: ePct, expenseInflationPct: inflPct, netIncome: fins[lastIdx]?.netIncome || 0 });
       }
