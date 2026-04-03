@@ -230,14 +230,14 @@ export function StaffingStep() {
         <div className="text-sm text-foreground space-y-1">
           <p>
             <span className="font-semibold">Use a payroll provider.</span>{" "}
-            Lenders and auditors expect to see a real payroll system in place. Services like{" "}
+            Services like{" "}
             <span className="font-semibold">Gusto</span>,{" "}
             <span className="font-semibold">ADP</span>, or{" "}
             <span className="font-semibold">Paychex</span>{" "}
             handle tax withholding, benefits, and compliance automatically.
           </p>
           <p className="text-muted-foreground">
-            Paying staff through Venmo, Zelle, or Cash App creates serious tax and legal risk — and is a red flag for any lender reviewing your financials.
+            Paying staff through Venmo, Zelle, or Cash App creates serious tax and legal risk.
           </p>
           <LenderHint text="Underwriters confirm payroll processing through bank statements — informal payments are commonly flagged as a disqualifying factor." />
         </div>
