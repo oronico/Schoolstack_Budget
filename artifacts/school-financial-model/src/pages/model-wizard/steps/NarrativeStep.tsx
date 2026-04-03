@@ -80,7 +80,7 @@ const NARRATIVE_SECTIONS = [
     label: "Additional Context",
     icon: BookOpen,
     primary: false,
-    helpText: "Anything else a lender or board member should know?",
+    helpText: "Anything else a board member or reviewer should know?",
   },
 ];
 
@@ -251,7 +251,7 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
           Budget Narrative
         </h2>
         <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-          Lenders read the story before the numbers. Explain your assumptions in your own words so reviewers understand the "why" behind your financial plan.
+          Reviewers read the story before the numbers. Explain your assumptions in your own words so anyone reviewing your model understands the "why" behind your financial plan.
         </p>
       </div>
 
@@ -382,7 +382,7 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
               Flagged Assumptions
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              We've identified assumptions that lenders will likely question. Address each one below.
+              We've identified assumptions that reviewers will likely question. Address each one below.
             </p>
           </div>
 

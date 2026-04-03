@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
-import { LenderHint } from "@/components/coaching/LenderHint";
+import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, computeEffectiveFte } from "@workspace/finance";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -239,7 +239,7 @@ export function StaffingStep() {
           <p className="text-muted-foreground">
             Paying staff through Venmo, Zelle, or Cash App creates serious tax and legal risk.
           </p>
-          <LenderHint text="Underwriters confirm payroll processing through bank statements — informal payments are commonly flagged as a disqualifying factor." />
+          <FinancingInsight text="Running payroll through a formal processor creates a clean paper trail — this matters for compliance and is something banks check if you apply for financing." />
         </div>
       </div>
 
@@ -249,9 +249,9 @@ export function StaffingStep() {
           <div className="text-sm text-foreground">
             <span className="font-semibold">Building capacity: {maxCapacity} students.</span>{" "}
             {y5Students > (maxCapacity || 0) ? (
-              <span className="text-amber-700">Your Year 5 enrollment ({y5Students}) exceeds building capacity. Underwriters will need to see a facility expansion plan or revised enrollment targets.</span>
+              <span className="text-amber-700">Your Year 5 enrollment ({y5Students}) exceeds building capacity. You'll want a facility expansion plan or revised enrollment targets before then.</span>
             ) : (
-              <span>Your enrollment fits within your building ({Math.round((y5Students / maxCapacity) * 100)}% capacity by Year 5). Lenders want to see you can grow into your space.</span>
+              <span>Your enrollment fits within your building ({Math.round((y5Students / maxCapacity) * 100)}% capacity by Year 5). Growing into your space is a sign of smart planning.</span>
             )}
           </div>
         </div>
@@ -287,8 +287,22 @@ export function StaffingStep() {
         />
       </div>
       {studentStaffRatio > 0 && (
-        <LenderHint text={`Your ${studentStaffRatio}:1 student-to-staff ratio is compared against industry benchmarks during underwriting. Ratios outside ${benchmark.ratio} for your school type may require justification.`} />
+        <FinancingInsight text={`Your ${studentStaffRatio}:1 student-to-staff ratio is compared against industry benchmarks (${benchmark.ratio} is typical for your school type). If it's outside that range, it's worth having a clear reason why.`} />
       )}
+
+      <div className="rounded-xl border border-teal-200 bg-teal-50/50 px-4 py-3 flex items-start gap-3">
+        <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-teal-800 space-y-1">
+          <p>
+            <span className="font-semibold">A note on founder compensation.</span>{" "}
+            If you're the head of school, pay yourself a real salary — you deserve it, and it makes your model more realistic. A budget that assumes the founder works for free isn't sustainable.
+          </p>
+          <p>
+            <span className="font-semibold">Staffing guardrail:</span>{" "}
+            Aim to keep total personnel costs at or below 60% of revenue. Above 65% starts to crowd out facility, program, and reserve needs. If you're above that, consider phasing roles in as enrollment grows.
+          </p>
+        </div>
+      </div>
 
       {y1Students > 0 && totalFTE > 0 && (
         <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">

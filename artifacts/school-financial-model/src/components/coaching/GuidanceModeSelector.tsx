@@ -8,7 +8,7 @@ import { trackCoachingEvent } from "@/lib/coaching/track";
 const LEVELS = [
   { value: "advanced", icon: Zap, label: "Compact", description: "Minimal guidance — for experienced operators", color: "text-teal-600" },
   { value: "basics", icon: BookOpen, label: "Guided", description: "Key concepts and benchmarks at each step", color: "text-primary" },
-  { value: "extra", icon: GraduationCap, label: "Extra help", description: "Deep dives with worked examples and lender insights", color: "text-amber-600" },
+  { value: "extra", icon: GraduationCap, label: "Extra help", description: "Deep dives with worked examples and financing insights", color: "text-amber-600" },
 ] as const;
 
 export function GuidanceModeSelector({ compact }: { compact?: boolean } = {}) {

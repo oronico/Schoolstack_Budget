@@ -66,13 +66,13 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Common pitfall:</span> Budgeting $0 for maintenance. Every building needs upkeep — even leased spaces. Plan for at least $2,000-5,000/year for a small school, more for older buildings. Lenders will flag a model with no maintenance budget.
+              <span className="font-semibold">Common pitfall:</span> Budgeting $0 for maintenance. Every building needs upkeep — even leased spaces. Plan for at least $2,000-5,000/year for a small school, more for older buildings.
             </p>
           </div>
           <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Insurance tip:</span> School insurance typically escalates 5-8% per year. Get quotes from brokers who specialize in schools — they'll know the coverage your state requires. A $0 insurance budget is a deal-breaker for any lender.
+              <span className="font-semibold">Insurance tip:</span> School insurance typically escalates 5-8% per year. Get quotes from brokers who specialize in schools — they'll know the coverage your state requires. Every school needs insurance — don't skip this line item.
             </p>
           </div>
           <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
@@ -175,7 +175,7 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">PD matters:</span> Budget at least $500 per staff member for professional development. Schools that skip PD see higher teacher turnover — which costs far more than training. Authorizers and lenders view a PD budget as a sign of quality leadership.
+              <span className="font-semibold">PD matters:</span> Budget at least $500 per staff member for professional development. Schools that skip PD see higher teacher turnover — which costs far more than training. Investing in your team signals quality leadership.
             </p>
           </div>
         </div>
@@ -210,7 +210,7 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">DSCR check:</span> Lenders require a Debt Service Coverage Ratio of at least 1.15-1.2x — meaning your operating cash flow should be 15-20% more than your annual debt payments. If your model shows a DSCR below 1.0x, you cannot cover the loan from operations.
+              <span className="font-semibold">DSCR check:</span> If you have a loan, aim for a Debt Service Coverage Ratio of at least 1.15-1.2x — meaning your operating cash flow should be 15-20% more than your annual debt payments. Below 1.0x means operations alone can't cover the loan.
             </p>
           </div>
         </div>

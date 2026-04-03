@@ -1,7 +1,7 @@
 import { useFormContext } from "react-hook-form";
 import { useEffect, useMemo } from "react";
 import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield } from "lucide-react";
-import { LenderHint } from "@/components/coaching/LenderHint";
+import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_BENEFITS_RATE,
@@ -211,7 +211,7 @@ export function AssumptionsStep() {
             <p className="text-sm font-semibold text-teal-900 mb-1">Why assumptions matter</p>
             <p className="text-sm text-teal-800 leading-relaxed">
               These are the formulas behind your 5-year model. Every projection on the Review page flows from the assumptions you set here.
-              Lenders always review assumptions first — realistic inputs build credibility.
+              Realistic assumptions are the foundation of a strong plan — they build credibility with anyone reviewing your model.
             </p>
           </div>
         </div>
@@ -238,7 +238,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={20}
                 />
-                <LenderHint text="Tuition increases above 5% per year are stress-tested against local market elasticity and family ability to pay." />
+                <FinancingInsight text="Tuition increases above 5% per year can be a stretch for families — make sure your rate stays competitive in your market." />
               </div>
             )}
 
@@ -263,7 +263,7 @@ export function AssumptionsStep() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Annual enrollment growth rate used for out-year revenue projections. Applied after your explicit year-by-year enrollment inputs.
               </p>
-              <LenderHint text="Growth rates above 20% per year are often stress-tested — lenders look for evidence of demand (waitlists, applications) to support aggressive projections." />
+              <FinancingInsight text="Growth above 20% per year is ambitious — having evidence (waitlists, applications, community partnerships) makes your projections more credible." />
             </div>
 
             {isCharter && stateFundingConfig && (
@@ -431,12 +431,12 @@ export function AssumptionsStep() {
                     name="revenueDefaults.collectionRate"
                     suffix="%"
                     defaultValue={100}
-                    usageNote="Expected percentage of billed tuition actually collected. Lenders scrutinize this — most schools see 92–98% for invoiced families."
+                    usageNote="Expected percentage of billed tuition actually collected. Most schools see 92–98% for invoiced families — building in a realistic rate matters."
                     placeholder="95"
                     min={0}
                     max={100}
                   />
-                  <LenderHint text="A 100% collection rate on invoiced tuition is typically adjusted by underwriters — they apply their own haircut if you don't." />
+                  <FinancingInsight text="A 100% collection rate is optimistic for invoiced families — most schools see 92-98%. Building in a realistic rate protects your cash flow projections." />
                 </div>
 
                 <AssumptionField
@@ -479,7 +479,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={100}
                 />
-                <LenderHint text="COLA rates below 2% are often questioned — lenders may assume higher attrition risk without competitive raises." />
+                <FinancingInsight text="COLA below 2% can make it harder to retain staff long-term. Competitive raises help keep your best people — and that protects your school's quality." />
               </div>
 
               <div>
@@ -493,7 +493,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={100}
                 />
-                <LenderHint text="Inflation assumptions are compared against CPI data — rates significantly above or below national trends require explanation." />
+                <FinancingInsight text="Keep your inflation assumptions close to national CPI trends — rates far above or below typical ranges are worth explaining in your plan." />
               </div>
             </div>
 
@@ -613,7 +613,7 @@ export function AssumptionsStep() {
           <SectionHeader
             icon={<Shield className="h-5 w-5 text-primary" />}
             title="Step-Up DSCR Covenants"
-            description="Many lenders require the Debt Service Coverage Ratio to increase each year as your school matures. Set year-by-year minimums."
+            description="If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets."
           />
           <div className="space-y-4">
             <div className="grid grid-cols-5 gap-3">
@@ -638,7 +638,7 @@ export function AssumptionsStep() {
                 A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.
               </span>
             </div>
-            <LenderHint text="DSCR covenant violations can trigger loan default provisions. Lenders typically verify each year independently against the step-up schedule." />
+            <FinancingInsight text="If you have loan covenants, missing your DSCR targets can trigger default provisions — plan conservatively so you have room to meet each year's target." />
           </div>
         </section>
 
@@ -691,7 +691,7 @@ export function AssumptionsStep() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Industry standard for lender-ready financial models. Covers startup through stabilization.
+                  Industry standard for comprehensive financial models. Covers startup through stabilization.
                 </p>
               </div>
             </div>

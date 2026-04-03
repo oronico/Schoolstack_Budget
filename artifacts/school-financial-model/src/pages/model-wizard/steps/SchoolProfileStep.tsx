@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb } from "lucide-react";
-import { LenderHint } from "@/components/coaching/LenderHint";
+import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb, Heart } from "lucide-react";
+import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit } from "../schema";
 
@@ -71,7 +71,7 @@ function EINInput() {
       ) : !display ? (
         <p className="text-xs text-muted-foreground">Optional — you can add this later</p>
       ) : null}
-      <LenderHint text="Underwriters verify your EIN against IRS records and your articles of incorporation." />
+      <FinancingInsight text="If you're applying for financing, banks will verify your EIN against IRS records — having it ready saves time." />
     </div>
   );
 }
@@ -232,7 +232,7 @@ function EntityTypeSection({ allowedEntityTypes, entityType }: { allowedEntityTy
             label="Entity Type"
             options={allowedEntityTypes.map(([value, label]) => ({ value, label }))}
           />
-          <LenderHint text="Entity type determines tax treatment, liability, and loan eligibility. 501(c)(3) status unlocks tax-exempt bond financing." />
+          <FinancingInsight text="Your entity type affects tax treatment, liability, and what financing options are available. 501(c)(3) status can unlock tax-exempt bond financing if that's part of your plan." />
         </div>
         {entityType && entityType !== "sole_practitioner" && entityType !== "undetermined" && (
           <EINInput />
@@ -384,7 +384,7 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
               <input type="number" value={phase.postLeaseRenewalBump as number ?? ""} onChange={e => onUpdate("postLeaseRenewalBump", Number(e.target.value))} placeholder="15" className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
             </div>
           </div>
-          <LenderHint text="Lease terms expiring within the model horizon are scrutinized — lenders want to see renewal assumptions or a relocation plan." />
+          <FinancingInsight text="If your lease expires during the 5-year plan, think about what happens next — renewal terms, a relocation plan, or a backup option. This is something banks focus on." />
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={!!isNNN} onChange={e => onUpdate("isNNNLease", e.target.checked)} className="rounded" />
             <span className="text-muted-foreground">Triple Net (NNN) lease</span>
@@ -436,9 +436,9 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
             <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span><input type="number" value={phase.comparableMarketRent as number || ""} onChange={e => onUpdate("comparableMarketRent", Number(e.target.value))} placeholder="3000" className="w-full rounded-lg border border-border bg-background pl-7 pr-3 py-1.5 text-sm" /></div>
             {benchmarkText && <p className="text-xs text-muted-foreground mt-1">Typical for your school type: {benchmarkText}</p>}
             {(phase.comparableMarketRent === 0 || phase.comparableMarketRent === undefined) && (
-              <p className="text-xs text-amber-600 mt-1">Lenders want to see what this space would cost at market rate. Even if it's free now, enter a comparable rent so your model reflects what happens if the arrangement ends.</p>
+              <p className="text-xs text-amber-600 mt-1">Even if your space is free, entering a comparable market rent helps your model show what happens if the arrangement changes. It's good planning either way.</p>
             )}
-            <LenderHint text="Donated-space arrangements are stress-tested by underwriters — they model what happens when the arrangement ends." />
+            <FinancingInsight text="If financing is ever part of your plan, banks will ask what happens if this donated-space arrangement ends — it's worth having that answer ready." />
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Arrangement End Date</label>
@@ -864,6 +864,14 @@ export function SchoolProfileStep() {
               <p className="text-xs text-muted-foreground mt-0.5">Examples: church-sponsored school, synagogue-affiliated program, faith-based academy</p>
             </div>
           </div>
+          {isFaithAffiliated && (
+            <div className="rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 flex items-start gap-3 ml-7 mb-2">
+              <Heart className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-teal-800">
+                Faith-affiliated schools bring a unique strength: a community already invested in your mission. Your congregation or faith community can be a powerful foundation for enrollment, fundraising, and volunteer support. We'll help you build a budget that honors that partnership.
+              </p>
+            </div>
+          )}
           {isFaithAffiliated && (
             <div className="ml-7 space-y-3">
               <div className="flex items-start gap-3">
@@ -1327,7 +1335,7 @@ export function SchoolProfileStep() {
                       <div className="flex items-start gap-2 mt-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                         <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-amber-800 dark:text-amber-200">
-                          A $0 facility allocation means your model won't capture real costs like utilities, internet, or space wear-and-tear. Even $200–$500/mo makes your budget more credible to lenders and partners.
+                          A $0 facility allocation means your model won't capture real costs like utilities, internet, or space wear-and-tear. Even $200–$500/mo makes your budget more realistic and complete.
                         </p>
                       </div>
                     )}
@@ -1652,7 +1660,7 @@ export function SchoolProfileStep() {
           {lendingLabIntent === "plan_to_apply" && (
             <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
               <Rocket className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-800">Lenders compare your projections against actual performance. Providing last year's numbers strengthens your application and shows you know your financials.</p>
+              <p className="text-sm text-amber-800">Reviewers compare your projections against actual performance. Providing last year's numbers strengthens your model and shows you know your financials.</p>
             </div>
           )}
           {lendingLabIntent === "want_to_understand" && (
@@ -1661,7 +1669,7 @@ export function SchoolProfileStep() {
             </div>
           )}
           <p className="text-sm text-muted-foreground mb-4">
-            Last year's real numbers are the foundation for credible projections — they help us stress-test assumptions and give lenders confidence in your plan.
+            Last year's real numbers are the foundation for credible projections — they help us stress-test assumptions and strengthen your financial story.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <FormInput
@@ -1726,7 +1734,7 @@ export function SchoolProfileStep() {
           {lendingLabIntent === "plan_to_apply" && (
             <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
               <Rocket className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-800">An opening balance sheet tells lenders your current financial position — it's standard in any loan package.</p>
+              <p className="text-sm text-amber-800">An opening balance sheet shows your current financial position — it's standard for any financing application and helps reviewers understand where you're starting from.</p>
             </div>
           )}
           {lendingLabIntent === "want_to_understand" && (

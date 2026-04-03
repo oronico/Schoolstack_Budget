@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion, TrendingUp, RotateCcw } from "lucide-react";
-import { LenderHint } from "@/components/coaching/LenderHint";
+import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
@@ -853,9 +853,9 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         <div className="text-sm text-foreground space-y-1.5">
           <p>
             <span className="font-semibold">Smart Escalation Applied.</span>{" "}
-            A lender-ready model reflects how costs actually behave. Lease payments follow your contract terms. Vendor costs increase with inflation. Per-student expenses scale with enrollment. We've applied realistic escalation — you can adjust any year.
+            A strong financial model reflects how costs actually behave. Lease payments follow your contract terms. Vendor costs increase with inflation. Per-student expenses scale with enrollment. We've applied realistic escalation — you can adjust any year.
           </p>
-          <LenderHint text="Underwriters typically compare occupancy costs against the 15-25% of revenue benchmark. Facility expenses above 30% of revenue are often flagged for additional review." />
+          <FinancingInsight text="A good rule of thumb: keep facility costs between 15-25% of revenue. Above 30% can crowd out staffing and programs — worth watching." />
           <div className="flex flex-wrap gap-3 text-xs text-teal-800">
             <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Inflation: {generalCostInflation}%</span>
             <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Rent escalation: {annualRentIncrease}%</span>
@@ -941,6 +941,19 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             </div>
           </BusinessOperationsToggle>
 
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 ml-12 -mt-1 mb-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-800 space-y-1">
+              <p>
+                <span className="font-semibold">Don't forget insurance and payroll taxes.</span>{" "}
+                General liability insurance is typically $1,500–$4,000/year for a small school. Payroll taxes (FICA, SUTA, FUTA) add roughly 8–10% on top of gross wages — these are already calculated in the Staffing step.
+              </p>
+              <p>
+                If you're not sure what coverage you need, a local insurance broker can give you a quote before you open. Most charter authorizers and landlords require proof of insurance.
+              </p>
+            </div>
+          </div>
+
           <BusinessOperationsToggle
             checked={hasSavingsAccount === true}
             onChange={(v) => setValue("schoolProfile.hasSavingsAccount", v, { shouldDirty: true })}
@@ -948,7 +961,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             label="Savings Account"
             description="A dedicated savings account for the school"
           />
-          <LenderHint text="Lenders typically require 45-90 days of operating reserves. A dedicated savings account demonstrates cash management discipline." className="ml-12 -mt-2" />
+          <FinancingInsight text="Aim for 45-90 days of operating reserves. A dedicated savings account is a simple way to show you're managing cash well — and it protects your school from surprises." className="ml-12 -mt-2" />
 
           <BusinessOperationsToggle
             checked={hasBusinessAccount === true}
@@ -1055,9 +1068,9 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             <span className="font-semibold">Building capacity: {maxCapacity} students.</span>{" "}
             Your enrollment grows from {y1Students} to {y5Students} over 5 years
             {y5Students > (maxCapacity || 0) ? (
-              <span className="text-amber-700 font-semibold"> - that exceeds your building capacity. Lenders will flag this.</span>
+              <span className="text-amber-700 font-semibold"> - that exceeds your building capacity. You'll want to address this before finalizing your plan.</span>
             ) : (
-              <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5 - good for underwriting).</span>
+              <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5 — room to grow).</span>
             )}
           </div>
         </div>

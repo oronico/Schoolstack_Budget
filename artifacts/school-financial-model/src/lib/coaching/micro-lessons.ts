@@ -44,7 +44,7 @@ export const MICRO_LESSONS: MicroLesson[] = [
   {
     id: "realistic_enrollment",
     title: "What Makes Enrollment Realistic?",
-    body: "Most new schools fill 40-65% of capacity in Year 1. Year-over-year growth of 15-25% is strong. The best evidence for your projections: signed letters of intent, waitlist depth, community survey data, and comparable schools in your area. Lenders don't just want a number — they want to know why you believe it. We'd recommend documenting your evidence early. — SchoolStack Team",
+    body: "Most new schools fill 40-65% of capacity in Year 1. Year-over-year growth of 15-25% is strong. The best evidence for your projections: signed letters of intent, waitlist depth, community survey data, and comparable schools in your area. A strong model doesn't just show a number — it shows why you believe it. We'd recommend documenting your evidence early. — SchoolStack Team",
     readTimeSeconds: 25,
     triggerStep: 3,
     checkTrigger: (data) => {

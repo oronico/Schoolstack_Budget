@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart, MapPin, Users } from "lucide-react";
-import { LenderHint } from "@/components/coaching/LenderHint";
+import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { cn, formatCurrency } from "@/lib/utils";
 import { YEAR_COUNT } from "@workspace/finance";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -64,7 +64,7 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
     },
   },
   tuition_offsets: {
-    tip: "Financial aid, sibling discounts, and staff discounts reduce private pay / tuition. Include these so lenders see the realistic net tuition.",
+    tip: "Financial aid, sibling discounts, and staff discounts reduce private pay / tuition. Include these so your model reflects realistic net tuition.",
     common: true,
   },
   public_funding: {
@@ -86,7 +86,7 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
     },
   },
   philanthropy: {
-    tip: "Grants, fundraising events, annual fund, board giving, and restricted gifts. Lenders distinguish between unrestricted funds (which support debt service) and restricted funds (which cannot).",
+    tip: "Grants, fundraising events, annual fund, board giving, and restricted gifts. It's helpful to distinguish between unrestricted funds (which support general operations) and restricted funds (which are earmarked for specific purposes).",
     common: false,
   },
   other_revenue: {
@@ -621,7 +621,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-foreground">
               <span className="font-semibold">Revenue needs to cover {y1Students} students in Year 1{y5Students > y1Students ? `, growing to ${y5Students} by Year 5` : ""}.</span>{" "}
-              Demand is the engine — lenders focus on whether your revenue is anchored to enrollment-driven income that grows reliably as you fill seats.
+              Demand is the engine — the strongest models anchor revenue to enrollment-driven income that grows reliably as you fill seats.
             </div>
           </div>
         )}
@@ -736,7 +736,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             <span className="font-semibold">Building capacity: {maxCapacity} students.</span>{" "}
             Your enrollment grows from {y1Students} to {y5Students} over 5 years
             {y5Students > (maxCapacity || 0) ? (
-              <span className="text-amber-700 font-semibold"> - that exceeds your building capacity. Revenue projections beyond capacity aren't credible to lenders.</span>
+              <span className="text-amber-700 font-semibold"> - that exceeds your building capacity. Revenue projections beyond capacity aren't realistic.</span>
             ) : (
               <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5).</span>
             )}
@@ -1492,8 +1492,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
       </p>
       {category === "tuition_and_fees" && (
         <div className="space-y-1 mb-2">
-          <LenderHint text="Tuition pricing is benchmarked against comparable schools in your market. Outlier rates require a justification narrative." />
-          <LenderHint text="Autopay families pay on time. Invoiced collection rates below 98% and delays over 15 days are typical underwriter adjustments." />
+          <FinancingInsight text="It's worth checking how your tuition compares to similar schools in your area — this helps you set competitive rates and builds credibility if you ever apply for financing." />
         </div>
       )}
       {category === "public_funding" && (
@@ -1511,11 +1510,11 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
       {category === "philanthropy" && (
         <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-          <span>Grants and donations often arrive in lump sums. Mark "projected" grants as such — lenders apply a 5% haircut to uncommitted philanthropy.</span>
+          <span>Grants and donations often arrive in lump sums. Mark "projected" grants as such — it's good practice to plan for the possibility that uncommitted funds don't come through.</span>
         </div>
       )}
       {category === "philanthropy" && (
-        <LenderHint text="Philanthropy above 15% of total revenue triggers additional scrutiny — underwriters view heavy donation dependence as a concentration risk." className="mb-2" />
+        <FinancingInsight text="If donations make up a large share of your revenue, consider how sustainable that is year over year. Diversifying toward enrollment-driven income builds long-term stability." className="mb-2" />
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {category === "tuition_and_fees" && (

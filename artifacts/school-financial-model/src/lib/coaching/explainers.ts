@@ -11,7 +11,7 @@ export interface ExtraDepthContent {
   workedExample?: string;
   benchmarkDetail?: string;
   glossaryTerms?: string;
-  lenderPerspective?: string;
+  financingInsight?: string;
 }
 
 export type ExplainerPriority = "high" | "standard";
@@ -36,15 +36,15 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Revenue",
     body: {
       whatThisMeans: "Revenue is all the money your school expects to bring in — tuition, public funding, grants, fundraising, and any other income sources. Think of it as the total fuel your school runs on.",
-      whyItMatters: "Revenue follows enrollment — demand is the engine of your financial model. Lenders focus on whether your revenue is anchored to dependable, enrollment-driven income (tuition, per-pupil funding) rather than uncertain sources like one-time grants. We see this distinction matter a lot in how models get evaluated.",
+      whyItMatters: "Revenue follows enrollment — demand is the engine of your financial model. The strongest plans are anchored to dependable, enrollment-driven income (tuition, per-pupil funding) rather than uncertain sources like one-time grants. We see this distinction matter a lot in how models hold up over time.",
       healthyVsRisky: "A focused revenue model anchored to enrollment-driven income is a strength, not a weakness. The risk isn't having one dominant stream — it's relying on income that doesn't scale with student demand (like a single large grant). I'd look for revenue that grows reliably as enrollment grows.",
       whatToDoNext: "I'd start with your most certain, demand-driven revenue sources. If you're a tuition-based school, begin there. Add other sources only if you have reasonable confidence they'll come through. Focus on filling seats first — everything else follows.",
     },
     extraBody: {
-      workedExample: "Example: A school with 100 students charging $10,000 tuition has $1M in tuition revenue. If per-pupil state funding is $8,500, that adds $850K. A $50K annual grant brings total to $1.9M. But note: if the grant ends in Year 3, Year 4 revenue drops to $1.85M unless enrollment grows to offset it. This is why lenders prefer enrollment-driven revenue — it compounds, while grants are temporary.",
+      workedExample: "Example: A school with 100 students charging $10,000 tuition has $1M in tuition revenue. If per-pupil state funding is $8,500, that adds $850K. A $50K annual grant brings total to $1.9M. But note: if the grant ends in Year 3, Year 4 revenue drops to $1.85M unless enrollment grows to offset it. This is why enrollment-driven revenue is so important — it compounds, while grants are temporary.",
       benchmarkDetail: "Industry benchmarks: Charter schools typically receive $8,000-$15,000 per pupil in public funding depending on state. Private schools charge $8,000-$25,000 in tuition. Revenue per student below $8,000 is very lean. Schools with >70% of revenue from a single source need strong justification for that concentration.",
       glossaryTerms: "Per-Pupil Revenue: Total enrollment-driven revenue divided by total students. Revenue Concentration: The percentage of total revenue from your largest single source — above 80% warrants explanation. Earned Revenue: Income directly tied to delivering educational services, as opposed to philanthropic or grant income.",
-      lenderPerspective: "Lenders rank revenue sources by reliability: (1) contracted per-pupil public funding, (2) tuition with documented collection rates, (3) multi-year grants with signed agreements, (4) annual fundraising. Revenue from sources in categories 3-4 that exceeds 30% of total revenue gets discounted in underwriting.",
+      financingInsight: "If financing is ever part of your plan, banks rank revenue by reliability: (1) contracted per-pupil public funding, (2) tuition with documented collection rates, (3) multi-year grants with signed agreements, (4) annual fundraising. Keeping your strongest revenue sources front and center strengthens any application.",
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "revenue",
@@ -59,15 +59,15 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Enrollment Assumptions",
     body: {
       whatThisMeans: "Enrollment assumptions are your best estimate of how many students will attend your school each year for the next five years. This is the single most important input in your entire model — everything flows from it.",
-      whyItMatters: "Demand is the engine. Every revenue line, every staffing decision, and every expense assumption flows from how many students you enroll. If enrollment falls short, the entire model breaks. We've seen lenders scrutinize enrollment projections more than any other assumption.",
-      healthyVsRisky: "Most new schools fill 40-65% of capacity in Year 1. Growth of 15-25% per year is considered strong and realistic. Jumping from 30 to 150 students in one year is a red flag. What matters most: can you document the demand? Waitlist depth, letters of intent, recruitment pipeline, and retention rates are what make enrollment projections credible.",
+      whyItMatters: "Demand is the engine. Every revenue line, every staffing decision, and every expense assumption flows from how many students you enroll. If enrollment falls short, the entire model breaks. This is the single most scrutinized assumption in any financial model.",
+      healthyVsRisky: "Most new schools fill 40-65% of capacity in Year 1. Growth of 15-25% per year is considered strong and realistic. Jumping from 30 to 150 students in one year is worth questioning. What matters most: can you document the demand? Waitlist depth, letters of intent, recruitment pipeline, and retention rates are what make enrollment projections credible.",
       whatToDoNext: "I'd start with how many students you're confident you can enroll in Year 1 based on evidence — signed letters of intent, waitlist data, or community survey results. Then project realistic growth based on your recruitment capacity and retention expectations.",
     },
     extraBody: {
       workedExample: "Example: You start with 80 students in Year 1 with 85% retention. Year 2: 68 return + 32 new = 100 students. Year 3: 85 return + 35 new = 120. Year 4: 102 return + 28 new = 130. Year 5: 111 return + 29 new = 140. Notice how strong retention (85%) means you need fewer new students each year — retention compounds. At 75% retention, you'd need 52 new students in Year 2 just to reach 100, making growth much harder.",
       benchmarkDetail: "Enrollment benchmarks by school type: Urban charter schools average 85-95% of capacity by Year 3. Rural schools often take longer — 70-85% by Year 3. Private schools with no public funding typically fill slower. Year-over-year growth above 30% is rare and requires documented demand. Schools that grow too fast often face quality and staffing problems.",
       glossaryTerms: "Capacity Utilization: Enrolled students divided by your facility's maximum capacity. Retention Rate: Percentage of current students who re-enroll the following year. Net Enrollment Growth: New students minus departing students. Waitlist Depth: Number of qualified families waiting for a spot — the strongest evidence of demand.",
-      lenderPerspective: "Lenders typically haircut enrollment projections by 10-20% when stress-testing your model. If your model breaks at 80% of projected enrollment, that's a red flag. The strongest models remain viable even at 70% of projected enrollment in Year 1.",
+      financingInsight: "If financing is part of your plan, banks typically stress-test enrollment by 10-20%. The strongest models remain viable even at 70-80% of projected Year 1 enrollment — that kind of cushion gives everyone confidence.",
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "enrollment",
@@ -82,7 +82,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Tuition Assumptions",
     body: {
       whatThisMeans: "Your tuition assumptions include the amount you charge per student, how much you expect to collect, and how tuition changes over time. For private and independent schools, this is often the largest share of revenue.",
-      whyItMatters: "Setting tuition too high can limit enrollment. Setting it too low can leave you short on revenue. Collection rates matter too — not every family will pay the full amount on time. We'd encourage you to be realistic here rather than optimistic.",
+      whyItMatters: "Setting tuition too high can limit enrollment. Setting it too low can leave you short on revenue. Collection rates matter too — not every family pays the full amount on time. We'd encourage you to be realistic here rather than optimistic.",
       healthyVsRisky: "A collection rate of 90-95% is realistic for most schools. Planning for 100% collection is risky. Annual tuition increases of 2-4% are common and generally sustainable.",
       whatToDoNext: "I'd research what comparable schools in your area charge. Set a tuition level that balances affordability for families with your school's financial needs. If you're unsure, err slightly conservative — it's easier to adjust up than to recover from overestimating.",
     },
@@ -134,7 +134,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
       workedExample: "Example: A school with $1.2M revenue and 10 staff members. Base salaries total $650K. Add 25% for benefits and payroll taxes (FICA 7.65%, health insurance ~$6K/employee, workers comp ~2%): loaded cost = $812K. That's 68% of revenue — a warning zone. Reducing to 9 staff saves ~$81K loaded, dropping to 61% — much healthier. Each additional FTE at $65K salary actually costs ~$81K loaded.",
       benchmarkDetail: "Staffing cost benchmarks: Charter schools average 55-65% of revenue on personnel. High-performing networks target 50-55%. Teacher salaries vary widely: $35K-$65K depending on region. Administrative salaries: Head of School $80K-$130K, Operations Manager $45K-$70K. Loaded cost multiplier (benefits + taxes): typically 1.25x-1.35x of base salary.",
       glossaryTerms: "Loaded Cost: Total compensation including salary, benefits, and employer-paid taxes. FTE (Full-Time Equivalent): A measure of staff commitment — 1.0 = full-time, 0.5 = half-time. Student-to-Teacher Ratio: Total students divided by instructional FTE — most schools target 12:1 to 20:1. Benefits Load: The percentage added to base salary for health insurance, retirement, and payroll taxes — typically 25-35%.",
-      lenderPerspective: "Lenders red-flag staffing above 65% of revenue because it leaves too little margin for debt service, facility costs, and reserves. They also look at whether staffing scales appropriately with enrollment — hiring a full admin team for 50 students signals poor cost discipline.",
+      financingInsight: "Staffing above 65% of revenue leaves very little room for facilities, debt, and reserves. If financing is part of your plan, banks look at whether staffing scales with enrollment — building lean and growing thoughtfully signals strong leadership.",
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "staffing",
@@ -150,7 +150,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     body: {
       whatThisMeans: "Occupancy costs include your rent or mortgage, utilities, maintenance, insurance, and any other facility-related expenses. For many schools, this is the second-largest expense after payroll.",
       whyItMatters: "Facility costs are usually fixed — they don't change much whether you have 20 students or 100. That makes them especially important for new schools that are still growing enrollment. We see facility costs trip up founders who lock into expensive leases before enrollment proves out.",
-      healthyVsRisky: "Occupancy costs between 10-20% of revenue are typical. Above 25% can put pressure on your budget, especially in the early years when enrollment is ramping up. Lenders pay close attention to lease terms and facility costs.",
+      healthyVsRisky: "Occupancy costs between 10-20% of revenue are typical. Above 25% can put pressure on your budget, especially in the early years when enrollment is ramping up. Lease terms and facility costs deserve careful attention.",
       whatToDoNext: "If you have a location, enter your actual costs. If you're still searching, use estimates based on comparable spaces in your area. I'd seriously consider whether sharing space or starting smaller could reduce early-year risk.",
     },
     extraBody: {
@@ -193,14 +193,14 @@ export const EXPLAINERS: Record<string, Explainer> = {
     body: {
       whatThisMeans: "Your operating surplus (or deficit) is the difference between your total revenue and total expenses for a given year. A surplus means you brought in more than you spent. A deficit means expenses exceeded revenue.",
       whyItMatters: "A small surplus is the goal for most schools, especially nonprofits. It shows the school can sustain itself and build reserves. Repeated deficits signal that the current model isn't financially sustainable without changes. We always look at this trend across all five years.",
-      healthyVsRisky: "New schools often run a small deficit in Year 1 as they ramp up — that's normal. By Year 2 or 3, most viable models show a positive margin. A margin of 5-15% by Year 5 is a strong signal to lenders.",
+      healthyVsRisky: "New schools often run a small deficit in Year 1 as they ramp up — that's normal. By Year 2 or 3, most viable models show a positive margin. A margin of 5-15% by Year 5 is a strong sign your school is on solid footing.",
       whatToDoNext: "If your model shows persistent deficits, I'd look at the biggest cost drivers first: staffing, rent, and enrollment. Small changes in these areas can have a meaningful impact on your bottom line.",
     },
     extraBody: {
       workedExample: "Example: Year 1: Revenue $900K - Expenses $950K = -$50K deficit (5.6% margin). Year 2: $1.1M - $1.05M = +$50K surplus (4.5%). Year 3: $1.3M - $1.15M = +$150K (11.5%). This trajectory is textbook healthy — a modest Year 1 deficit followed by growing surpluses. The cumulative position turns positive mid-Year 2. Contrast with a model showing -$50K, -$30K, -$10K, +$5K, +$15K — technically profitable by Year 4, but razor-thin margins leave no room for surprises.",
       benchmarkDetail: "Operating margin benchmarks: Year 1 deficit up to 10% is acceptable if covered by startup reserves. By Year 3, target 5-10% operating margin. By Year 5, 8-15% margin is strong. Nonprofit schools above 20% margin may face questions about mission alignment. Schools that never achieve positive margin within 5 years have a structural cost problem.",
       glossaryTerms: "Operating Margin: Net income divided by total revenue, expressed as a percentage. Cumulative Surplus/Deficit: The running total of all surpluses and deficits across years — shows your overall financial trajectory. Breakeven Point: The year in which annual revenue first equals or exceeds annual expenses.",
-      lenderPerspective: "Lenders expect to see a clear path to profitability within 2-3 years. A Year 1 deficit is forgivable if startup costs are clearly identified and non-recurring. Persistent deficits beyond Year 2 signal a structural problem — the model doesn't work at any enrollment level the school can realistically achieve.",
+      financingInsight: "If financing is part of your plan, banks want to see a clear path to profitability within 2-3 years. A Year 1 deficit is understandable if startup costs are clearly identified and non-recurring. Persistent deficits beyond Year 2 may signal a structural challenge worth addressing.",
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "review",
@@ -237,7 +237,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Ending Cash",
     body: {
       whatThisMeans: "Ending cash is the amount of money your school has at the end of a given period, after accounting for all the cash that came in and went out. Think of it as your bank balance at the end of the month or year.",
-      whyItMatters: "Ending cash tells you whether your school can actually pay its bills. Even if your annual budget shows a surplus, you need enough cash on hand to cover payroll, rent, and other expenses as they come due. This is one of the first things a lender will look at.",
+      whyItMatters: "Ending cash tells you whether your school can actually pay its bills. Even if your annual budget shows a surplus, you need enough cash on hand to cover payroll, rent, and other expenses as they come due. This is one of the first things any reviewer will look at.",
       healthyVsRisky: "Ending cash should never go negative — that means you can't cover your obligations. Having 2-3 months of expenses in ending cash provides a reasonable safety cushion.",
       whatToDoNext: "If ending cash drops below zero in any month, I'd review when your revenue arrives versus when your largest expenses are due. Adjust timing assumptions or plan for a startup reserve — even a small one makes a big difference.",
     },
@@ -258,13 +258,13 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Reserves",
     body: {
       whatThisMeans: "Reserves are the savings your school sets aside to handle unexpected costs or revenue shortfalls. This is money that's available but not earmarked for day-to-day operations — your financial safety net.",
-      whyItMatters: "Schools without adequate reserves are vulnerable to surprises like enrollment drops, facility repairs, or delayed grant payments. Lenders consider reserves a key indicator of financial health. We always look at this when evaluating a model.",
-      healthyVsRisky: "Best practice is to build toward 3-6 months of operating expenses in reserves. Schools with less than one month of reserves are considered high-risk by most lenders.",
-      whatToDoNext: "If you're starting without reserves, I'd build a plan to accumulate them over time. Even small surpluses set aside each year add up. Consider including a reserve target in your model's assumptions — it shows lenders you're thinking ahead.",
+      whyItMatters: "Schools without adequate reserves are vulnerable to surprises like enrollment drops, facility repairs, or delayed grant payments. Reserves are a key indicator of financial health — we always look at this when evaluating a model.",
+      healthyVsRisky: "Best practice is to build toward 3-6 months of operating expenses in reserves. Schools with less than one month of reserves are in a risky position.",
+      whatToDoNext: "If you're starting without reserves, I'd build a plan to accumulate them over time. Even small surpluses set aside each year add up. Consider including a reserve target in your model's assumptions — it shows thoughtful planning.",
     },
     extraBody: {
       workedExample: "Example: Monthly operating expenses are $75K. Target reserve: 3 months = $225K. If your model generates $50K surplus per year, it takes 4.5 years to reach your reserve target. But if you start with a $75K startup reserve and add $50K/year: Year 1: $125K (1.7 months), Year 2: $175K (2.3 months), Year 3: $225K (3.0 months — target reached). Starting with even a modest reserve dramatically accelerates your path to financial stability.",
-      benchmarkDetail: "Reserve benchmarks: NACSA (National Association of Charter School Authorizers) recommends 45 days of cash on hand minimum. Most lender covenants require 60-90 days. Highly rated schools maintain 4-6 months. Schools in financial distress typically have <15 days. Reserve accumulation rate: plan to add 3-5% of revenue annually until target is reached.",
+      benchmarkDetail: "Reserve benchmarks: NACSA (National Association of Charter School Authorizers) recommends 45 days of cash on hand minimum. If financing is part of your plan, loan covenants often require 60-90 days. Highly rated schools maintain 4-6 months. Schools in financial distress typically have <15 days. Reserve accumulation rate: plan to add 3-5% of revenue annually until target is reached.",
       glossaryTerms: "Operating Reserve: Cash set aside for unexpected expenses or revenue shortfalls — measured in months of operating expenses. Board-Designated Reserve: Reserves the board has earmarked for specific purposes (e.g., facility expansion, technology refresh). Days of Cash on Hand: Ending cash divided by daily operating expenses — a more precise measure than months of reserves.",
     },
     audienceLevel: ["basics", "extra"],
@@ -280,7 +280,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Budget vs Actual",
     body: {
       whatThisMeans: "Budget vs actual compares what you planned to spend and earn against what actually happened. This is how you measure whether your financial model held up in practice.",
-      whyItMatters: "No budget is perfect on the first try. Tracking budget vs actual helps you identify where your assumptions were off so you can improve future projections. Lenders and boards expect to see this kind of accountability — and honestly, it's one of the best habits you can build.",
+      whyItMatters: "No budget is perfect on the first try. Tracking budget vs actual helps you identify where your assumptions were off so you can improve future projections. Boards and reviewers expect to see this kind of accountability — and honestly, it's one of the best habits you can build.",
       healthyVsRisky: "Small variances (under 5-10%) are normal and expected. Large, repeated variances in the same direction suggest your assumptions need updating. The worst outcome is not tracking this at all.",
       whatToDoNext: "I'd plan to compare your budget against actual results monthly or quarterly once the school is operating. Use what you learn to update your projections and make better decisions going forward.",
     },
@@ -301,7 +301,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Fundraising & Philanthropy",
     body: {
       whatThisMeans: "Fundraising includes annual funds, individual donations, events, and grants from foundations or government programs. For faith-affiliated schools, it may also include parish subsidies or congregation support.",
-      whyItMatters: "Philanthropy can provide crucial early-stage funding, but it's inherently uncertain and time-limited. Lenders prefer models anchored to enrollment-driven revenue. For-profit schools face additional complexity — donors can't claim tax deductions for gifts to a for-profit entity without a fiscal sponsor arrangement.",
+      whyItMatters: "Philanthropy can provide crucial early-stage funding, but it's inherently uncertain and time-limited. The strongest models are anchored to enrollment-driven revenue. For-profit schools face additional complexity — donors can't claim tax deductions for gifts to a for-profit entity without a fiscal sponsor arrangement.",
       healthyVsRisky: "Philanthropy as 10-25% of total revenue is supplemental and healthy. Above 30% signals dependence on uncertain income. If you're a for-profit school fundraising through a fiscal sponsor, I'd budget for the sponsor's fee — typically 5-10% of the philanthropic revenue they process, entered as an annual dollar amount.",
       whatToDoNext: "I'd start with your most certain fundraising sources. If you're a for-profit school planning to fundraise, establish a fiscal sponsorship early — approval takes 4-8 weeks. Estimate your annual philanthropy, multiply by the sponsor's fee rate (5-10%), and enter that dollar amount as your Fiscal Sponsor Fee expense.",
     },
@@ -344,7 +344,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Occupancy Costs",
     body: {
       whatThisMeans: "Occupancy costs are everything related to your physical space — rent or mortgage, utilities, insurance, and maintenance. Together, these form your second-largest expense category after payroll.",
-      whyItMatters: "Facility costs are almost entirely fixed — they don't shrink when enrollment is low. Locking into an expensive lease before enrollment proves out is one of the most common financial mistakes we see. Lenders pay very close attention to your occupancy-to-revenue ratio.",
+      whyItMatters: "Facility costs are almost entirely fixed — they don't shrink when enrollment is low. Locking into an expensive lease before enrollment proves out is one of the most common financial mistakes we see. Your occupancy-to-revenue ratio is worth watching closely.",
       healthyVsRisky: "Total occupancy costs between 10-20% of revenue are typical for schools. Above 25% puts real pressure on your budget, especially in the early years. If your rent alone exceeds 15% of projected Year 1 revenue, consider a smaller or shared space.",
       whatToDoNext: "Add up your monthly rent, annual utilities, insurance, and maintenance to see your total occupancy cost. Compare it against your Year 1 revenue projection. If it's above 20%, explore options to reduce facility costs before committing.",
     },
@@ -365,8 +365,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Maintenance & Repairs",
     body: {
       whatThisMeans: "Maintenance covers everything that keeps your building functional and safe — janitorial services, HVAC upkeep, plumbing and electrical repairs, grounds maintenance, and general wear-and-tear fixes. This is separate from your rent or mortgage.",
-      whyItMatters: "Deferred maintenance is one of the most common budget mistakes we see. Founders skip this line item to keep costs low, then face emergency repairs that blow through their reserves. Lenders know this pattern and will flag a model with zero maintenance budget.",
-      healthyVsRisky: "Plan for 2-4% of your facility's annual value, or $2-5 per square foot per year. Schools spending less than $1/sqft on maintenance are deferring costs that will eventually come due. Budgeting $0 for maintenance is a red flag for any lender reviewing your model.",
+      whyItMatters: "Deferred maintenance is one of the most common budget mistakes we see. Founders skip this line item to keep costs low, then face emergency repairs that blow through their reserves. A model with zero maintenance budget raises concerns for any reviewer.",
+      healthyVsRisky: "Plan for 2-4% of your facility's annual value, or $2-5 per square foot per year. Schools spending less than $1/sqft on maintenance are deferring costs that will eventually come due. Every school needs a maintenance line item — don't skip it.",
       whatToDoNext: "If you own or lease, ask your landlord or property manager what typical annual maintenance runs. For a leased space, $2,000-5,000/year is a reasonable starting point for a small school. Include a small buffer for unexpected repairs — they always come.",
     },
     extraBody: {
@@ -428,7 +428,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Professional Development",
     body: {
       whatThisMeans: "Professional development (PD) covers teacher training, conferences, certifications, coaching, and any investment in growing your staff's skills. This includes both external programs and internal training time.",
-      whyItMatters: "Schools that invest in PD retain teachers longer and deliver better outcomes. Lenders and authorizers look for a PD budget as a sign that leadership takes quality seriously. Skipping PD to save money is a false economy — it leads to higher turnover, which costs far more.",
+      whyItMatters: "Schools that invest in PD retain teachers longer and deliver better outcomes. A PD budget signals that leadership takes quality seriously. Skipping PD to save money is a false economy — it leads to higher turnover, which costs far more.",
       healthyVsRisky: "Most schools budget $500-1,500 per staff member per year for PD. Less than $200 per person signals underinvestment. Some charter authorizers require a minimum PD budget as a condition of the charter.",
       whatToDoNext: "Budget at least $500 per staff member for Year 1. As revenue grows, increase PD spending — it's one of the best investments you can make in school quality and staff retention.",
     },
@@ -448,9 +448,9 @@ export const EXPLAINERS: Record<string, Explainer> = {
     id: "insurance_coverage",
     title: "Insurance",
     body: {
-      whatThisMeans: "School insurance typically includes general liability, property insurance, directors & officers (D&O), workers' compensation, and potentially umbrella coverage. This is a non-negotiable operating cost that lenders verify.",
-      whyItMatters: "Operating without adequate insurance is both a legal risk and a deal-breaker for lenders. Insurance costs tend to escalate 5-8% annually, which founders often forget to factor in. We've seen models that budget Year 1 insurance correctly but don't account for increases.",
-      healthyVsRisky: "Most small schools pay $3,000-8,000 annually for a basic insurance package. Schools with transportation or athletics should budget higher ($8,000-15,000). A $0 insurance budget will immediately raise questions from any lender or authorizer.",
+      whatThisMeans: "School insurance typically includes general liability, property insurance, directors & officers (D&O), workers' compensation, and potentially umbrella coverage. This is a non-negotiable operating cost for any school.",
+      whyItMatters: "Operating without adequate insurance is both a legal risk and a non-starter for any serious financial plan. Insurance costs tend to escalate 5-8% annually, which founders often forget to factor in. We've seen models that budget Year 1 insurance correctly but don't account for increases.",
+      healthyVsRisky: "Most small schools pay $3,000-8,000 annually for a basic insurance package. Schools with transportation or athletics should budget higher ($8,000-15,000). A $0 insurance budget will immediately raise questions from anyone reviewing your model.",
       whatToDoNext: "Get quotes from 2-3 insurance brokers who specialize in schools — they'll know the coverage requirements for your state. Budget the Year 1 quote and plan for 5-8% annual increases in your assumptions.",
     },
     extraBody: {
@@ -470,15 +470,15 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Debt Service",
     body: {
       whatThisMeans: "Debt service is the total amount you pay on any loans — principal plus interest. This includes loans for building renovations, equipment, working capital, or any other borrowed funds.",
-      whyItMatters: "Debt service is a fixed obligation that must be paid regardless of enrollment or revenue. Lenders evaluate your Debt Service Coverage Ratio (DSCR) — your available cash flow divided by your debt payments. A low DSCR means the school may struggle to make loan payments.",
-      healthyVsRisky: "A DSCR of 1.2x or higher is considered healthy — meaning you have 20% more cash flow than needed to cover debt. Below 1.0x means you can't cover your payments from operations. Most lenders require at least 1.15x DSCR.",
+      whyItMatters: "Debt service is a fixed obligation that must be paid regardless of enrollment or revenue. Your Debt Service Coverage Ratio (DSCR) — available cash flow divided by debt payments — tells you whether your school can comfortably meet its loan obligations.",
+      healthyVsRisky: "A DSCR of 1.2x or higher is considered healthy — meaning you have 20% more cash flow than needed to cover debt. Below 1.0x means you can't cover your payments from operations. If you're applying for financing, most banks require at least 1.15x DSCR.",
       whatToDoNext: "If you plan to take on debt, enter the loan details accurately. If your DSCR comes out below 1.2x, consider whether you can reduce the loan amount, extend the term, or grow revenue faster. Don't take on debt your model can't support.",
     },
     extraBody: {
-      workedExample: "Example: You borrow $500K at 7% interest over 10 years. Annual payment: $71,187 ($35,000 interest in Year 1 + $36,187 principal). Your Year 1 net operating income (before debt service) is $85,000. DSCR = $85,000 ÷ $71,187 = 1.19x — just below the 1.2x threshold most lenders require. Adding 10 more students at $10K revenue each would push net income to $165K and DSCR to 2.32x. Small enrollment changes have outsized DSCR impact.",
-      benchmarkDetail: "Debt benchmarks for schools: Interest rates for charter school loans: 5-9% (varies with credit quality and collateral). Typical loan terms: 7-15 years for facility loans, 3-5 years for working capital. Maximum recommended debt: total debt service should not exceed 15% of revenue. Lender DSCR requirements: minimum 1.15x-1.25x. Some CDFIs (Community Development Financial Institutions) accept lower DSCR for mission-aligned schools.",
+      workedExample: "Example: You borrow $500K at 7% interest over 10 years. Annual payment: $71,187 ($35,000 interest in Year 1 + $36,187 principal). Your Year 1 net operating income (before debt service) is $85,000. DSCR = $85,000 ÷ $71,187 = 1.19x — just below the 1.2x threshold most banks look for. Adding 10 more students at $10K revenue each would push net income to $165K and DSCR to 2.32x. Small enrollment changes have outsized DSCR impact.",
+      benchmarkDetail: "Debt benchmarks for schools: Interest rates for charter school loans: 5-9% (varies with credit quality and collateral). Typical loan terms: 7-15 years for facility loans, 3-5 years for working capital. Maximum recommended debt: total debt service should not exceed 15% of revenue. Typical bank DSCR requirements: minimum 1.15x-1.25x. Some CDFIs (Community Development Financial Institutions) accept lower DSCR for mission-aligned schools.",
       glossaryTerms: "DSCR (Debt Service Coverage Ratio): Net operating income divided by total annual debt payments. A DSCR of 1.5x means you earn 50% more than you owe in loan payments. Principal: The portion of your loan payment that reduces the outstanding balance. Amortization: The schedule by which loan principal is paid down over time. Covenant: A condition in your loan agreement (like maintaining 1.2x DSCR) that you must meet or risk default.",
-      lenderPerspective: "Lenders view DSCR as the single most important metric for debt capacity. Below 1.0x means the school cannot service its debt from operations — an automatic decline. Between 1.0x-1.15x is a yellow flag requiring additional security (personal guarantees, reserve accounts). Above 1.25x gives lenders confidence that the school can handle debt even if enrollment dips 10-15%.",
+      financingInsight: "If you're applying for financing, DSCR is the single most important metric banks evaluate. Below 1.0x means the school can't cover debt from operations. Between 1.0x-1.15x may require additional security. Above 1.25x gives confidence that your school can handle debt even if enrollment dips 10-15%.",
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "facilities",
@@ -492,14 +492,14 @@ export const EXPLAINERS: Record<string, Explainer> = {
     id: "narrative_enrollment_strategy",
     title: "Writing Your Enrollment Strategy",
     body: {
-      whatThisMeans: "This section explains how you'll fill seats — your marketing channels, community outreach, waitlist strategy, and evidence of demand. Lenders read this to assess whether your enrollment projections are realistic or aspirational.",
-      whyItMatters: "Lenders read enrollment strategy first because every revenue line depends on it. They want to see specific, evidence-backed plans — not vague optimism. A founder who can articulate exactly how 50 families will find and choose their school is far more credible than one who writes 'we expect strong community interest.'",
+      whatThisMeans: "This section explains how you'll fill seats — your marketing channels, community outreach, waitlist strategy, and evidence of demand. Anyone reviewing your model will read this to assess whether your enrollment projections are realistic or aspirational.",
+      whyItMatters: "Enrollment strategy is the first thing reviewers look at because every revenue line depends on it. They want to see specific, evidence-backed plans — not vague optimism. A founder who can articulate exactly how 50 families will find and choose their school is far more credible than one who writes 'we expect strong community interest.'",
       healthyVsRisky: "Strong: 'We have 35 signed letters of intent and a waitlist of 12 families from our community info sessions. Our marketing plan includes partnerships with 3 local churches and a monthly open house series.' Weak: 'We expect families will be interested because our program is unique and there's demand in the area.'",
       whatToDoNext: "Name your specific recruitment channels (info sessions, church partnerships, social media campaigns, community events). Cite evidence: letters of intent, waitlist numbers, survey results, or pre-registration counts. If you don't have evidence yet, describe your plan to build it before opening day.",
     },
     extraBody: {
       workedExample: "Example enrollment strategy: 'Target: 80 students in Year 1. Evidence: 47 signed letters of intent as of March 2025. Sources: 6 community info sessions (avg. 22 attendees, 35% conversion to LOI), partnership with First Baptist Church (12 LOIs from congregation), Facebook/Instagram campaign (800 clicks, 15% to info session). Conversion funnel: 800 digital leads → 180 info session attendees → 63 LOIs → projected 80 enrolled (127% of LOI typically enroll when waitlisted peers confirm).'",
-      lenderPerspective: "Lenders evaluate enrollment strategy credibility on a spectrum: (1) Signed contracts/deposits — strongest evidence, (2) Letters of intent — strong, (3) Waitlist sign-ups — moderate, (4) Survey interest — weak, (5) 'We believe there's demand' — no evidence. A model backed by evidence at levels 1-2 gets favorable terms. Level 4-5 evidence results in higher interest rates or decline.",
+      financingInsight: "If financing is part of your plan, banks evaluate demand evidence on a spectrum: (1) Signed contracts/deposits — strongest, (2) Letters of intent — strong, (3) Waitlist sign-ups — moderate, (4) Survey interest — helpful but not decisive, (5) General belief in demand — not enough. Building toward levels 1-2 strengthens any application.",
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "narrative",
@@ -513,8 +513,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     id: "narrative_retention",
     title: "Articulating Your Retention Plan",
     body: {
-      whatThisMeans: "This section describes how you'll keep families year over year. Lenders know that acquiring a new student costs 3-5x more than retaining one, so retention is a key financial lever.",
-      whyItMatters: "Lenders want to see that you've thought about what happens after families enroll. A school that loses 30% of students each year needs to replace them just to stay flat — and recruitment costs eat into margins. Retention above 85% is what makes 5-year projections believable.",
+      whatThisMeans: "This section describes how you'll keep families year over year. Acquiring a new student costs 3-5x more than retaining one, so retention is a key financial lever.",
+      whyItMatters: "Strong plans show that you've thought about what happens after families enroll. A school that loses 30% of students each year needs to replace them just to stay flat — and recruitment costs eat into margins. Retention above 85% is what makes 5-year projections believable.",
       healthyVsRisky: "Strong: 'Our re-enrollment process begins in January with family conferences. We track family satisfaction quarterly through surveys, and our parent liaison addresses concerns within 48 hours. We target 90% retention.' Weak: 'We believe families will stay because they'll love our program.'",
       whatToDoNext: "Describe your re-enrollment timeline, family communication plan, and how you'll measure satisfaction. If you have retention data from a pilot or similar school, include it. Specific processes (surveys, conferences, parent liaisons) are more convincing than general intentions.",
     },
@@ -535,14 +535,14 @@ export const EXPLAINERS: Record<string, Explainer> = {
     id: "narrative_risk_mitigation",
     title: "Presenting Risk Mitigation",
     body: {
-      whatThisMeans: "This section shows lenders you've stress-tested your plan. What happens if enrollment is 20% below target? What if retention drops to 70%? What expenses can you cut without closing the school?",
-      whyItMatters: "Every lender assumes something will go wrong. Founders who acknowledge risks and present specific contingencies are seen as realistic operators. Founders who claim 'everything will go as planned' are seen as inexperienced. This section can make or break lender confidence.",
+      whatThisMeans: "This section shows you've stress-tested your plan. What happens if enrollment is 20% below target? What if retention drops to 70%? What expenses can you cut without closing the school?",
+      whyItMatters: "Good planning assumes something will go wrong. Founders who acknowledge risks and present specific contingencies are seen as realistic operators. Founders who claim 'everything will go as planned' are seen as inexperienced. This section can make or break reviewer confidence.",
       healthyVsRisky: "Strong: 'If Year 1 enrollment is 20% below target, we'll defer 2 non-essential hires (saving $85K) and reduce marketing spend by $10K. Our lease allows subletting one classroom. We maintain a 60-day operating reserve for cash flow gaps.' Weak: 'If enrollment is low, we'll work harder to recruit students and reduce costs.'",
       whatToDoNext: "Walk through 2-3 specific downside scenarios (low enrollment, delayed funding, unexpected costs) and describe your response for each. Name the expenses you'd cut and the dollar amounts. Show that you've identified which costs are flexible and which are locked in.",
     },
     extraBody: {
       workedExample: "Example risk mitigation table: Scenario 1 — Enrollment 20% below target (64 vs 80 students): Revenue impact -$160K. Response: Defer 2 hires (-$110K), reduce supplies budget (-$20K), negotiate rent deferral (-$30K). Net gap: $0. Scenario 2 — Grant delayed 6 months ($50K): Bridge with startup reserve ($50K available). Scenario 3 — Key staff departure mid-year: Cross-trained backup identified for each critical role, $15K emergency recruitment budget reserved.",
-      lenderPerspective: "Lenders evaluate risk mitigation on three criteria: (1) Are the risks realistic — not just minor inconveniences but actual threats to viability? (2) Are the responses specific — dollar amounts, named positions, timeline? (3) Is there a 'break glass' plan — at what point would the school need to fundamentally restructure or close? Founders who can calmly discuss closure scenarios paradoxically inspire more confidence than those who refuse to consider failure.",
+      financingInsight: "If financing is part of your plan, reviewers look for three things in risk planning: (1) Are the risks realistic — not minor inconveniences but genuine threats? (2) Are the responses specific — dollar amounts, named actions, timelines? (3) Is there a contingency plan — what would you do if things got really tough? Founders who can calmly discuss difficult scenarios inspire more confidence, not less.",
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "narrative",
@@ -557,7 +557,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Explaining Revenue & Expense Assumptions",
     body: {
       whatThisMeans: "This section explains the reasoning behind your financial numbers — why you set tuition at a specific level, why you chose your staffing ratios, and why certain expenses are higher or lower than benchmarks.",
-      whyItMatters: "Lenders don't just read the numbers — they read the logic behind them. A tuition rate of $12,000 needs context: is that below market? At market? Is there data to support families' ability to pay? Every assumption that deviates from benchmarks needs an explanation.",
+      whyItMatters: "Reviewers don't just read the numbers — they read the logic behind them. A tuition rate of $12,000 needs context: is that below market? At market? Is there data to support families' ability to pay? Every assumption that deviates from benchmarks needs an explanation.",
       healthyVsRisky: "Strong: 'Tuition is set at $11,500, which is 15% below the average for independent schools in our zip code ($13,500). We chose this to maximize enrollment accessibility while covering per-student costs of $9,800.' Weak: 'Our tuition is competitive for the area.'",
       whatToDoNext: "For each major assumption (tuition, staffing ratio, facility cost, growth rate), provide the reasoning and any market data that supports it. If an assumption differs from typical benchmarks, explain why. Concrete numbers and comparisons are always stronger than qualitative statements.",
     },
@@ -578,7 +578,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Break-Even Analysis",
     body: {
       whatThisMeans: "Break-even analysis tells you exactly how many students you need to cover all your costs — the point where revenue equals expenses. Below this number, you lose money. Above it, every additional student adds to your surplus.",
-      whyItMatters: "Your break-even enrollment is the most important number in your financial model after total enrollment. It tells you how much margin for error you have. If your projected enrollment is barely above break-even, any shortfall puts the school in the red. Lenders always calculate this number, even if you don't present it.",
+      whyItMatters: "Your break-even enrollment is the most important number in your financial model after total enrollment. It tells you how much margin for error you have. If your projected enrollment is barely above break-even, any shortfall puts the school in the red. Any serious reviewer will calculate this number, even if you don't present it.",
       healthyVsRisky: "Healthy: break-even enrollment is 70-80% of projected enrollment, giving you a 20-30% cushion. Risky: break-even is 90%+ of projected enrollment — a small miss puts you underwater. Critical: break-even exceeds projected enrollment — the model doesn't work at any realistic enrollment level.",
       whatToDoNext: "Calculate your break-even point: Total Fixed Costs ÷ (Revenue per Student - Variable Cost per Student). Compare this to your projected enrollment. If break-even is above 85% of projected enrollment, look for ways to reduce fixed costs or increase per-student revenue.",
     },
@@ -586,7 +586,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
       workedExample: "Example: Fixed costs = $600K (admin salaries $280K, rent $120K, insurance $8K, debt service $48K, other fixed $144K). Revenue per student = $10,000. Variable cost per student = $2,000 (supplies, food, per-student tech). Contribution margin = $10,000 - $2,000 = $8,000. Break-even = $600K ÷ $8,000 = 75 students. If you project 100 students, your cushion is 25 students (25%). At 80 students, surplus = 5 × $8,000 = $40K. At 70 students (below break-even), deficit = 5 × $8,000 = -$40K.",
       benchmarkDetail: "Break-even benchmarks: Most viable school models break even at 65-80% of target capacity. Schools that can't break even below 90% of capacity face high risk. The national average break-even for new charter schools is approximately 72% of Year 1 target enrollment. Schools with high fixed costs (expensive leases, large admin teams) have higher break-even points.",
       glossaryTerms: "Break-Even Enrollment: The exact number of students needed for revenue to equal expenses. Contribution Margin: Revenue per student minus variable cost per student — what each student contributes to covering fixed costs. Margin of Safety: The difference between projected enrollment and break-even enrollment, expressed as a percentage. Operating Leverage: Schools with high fixed costs and low variable costs have high operating leverage — they lose money quickly below break-even but profit grows quickly above it.",
-      lenderPerspective: "Lenders always calculate your break-even enrollment independently. If your break-even is within 15% of projected enrollment, they'll apply a stress test: what happens if enrollment comes in 20% lower? If the model fails that test, the loan is likely declined. The strongest applications show break-even at or below 70% of projected enrollment.",
+      financingInsight: "If financing is part of your plan, banks will independently calculate your break-even enrollment. The strongest models show break-even at or below 70% of projected enrollment — that cushion gives everyone confidence that the school can weather a slow start.",
     },
     audienceLevel: ["extra"],
     relatedSection: "review",
@@ -601,15 +601,15 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "Debt Service Coverage Ratio (DSCR) Explained",
     body: {
       whatThisMeans: "DSCR measures whether your school generates enough cash flow to cover its loan payments. It's calculated as: Net Operating Income ÷ Annual Debt Service. A DSCR of 1.5x means you earn 50% more than you owe in loan payments.",
-      whyItMatters: "If you're taking on any debt — facility loans, equipment financing, working capital lines — DSCR is the metric lenders use to decide whether to approve your loan and at what rate. It's the financial equivalent of 'can you afford this?'",
-      healthyVsRisky: "Above 1.25x: Strong — lenders are comfortable. 1.15x-1.25x: Adequate but tight — may get approved with additional security. 1.0x-1.15x: Marginal — most lenders will decline or require personal guarantees. Below 1.0x: The school cannot cover its debt from operations — automatic decline.",
+      whyItMatters: "If you're taking on any debt — facility loans, equipment financing, working capital lines — DSCR is the metric banks use to decide whether to approve your loan and at what rate. It's the financial equivalent of 'can you afford this?'",
+      healthyVsRisky: "Above 1.25x: Strong — comfortable position. 1.15x-1.25x: Adequate but tight — may require additional security. 1.0x-1.15x: Marginal — most banks will decline or require personal guarantees. Below 1.0x: The school cannot cover its debt from operations.",
       whatToDoNext: "If your model shows debt, check the DSCR on your Review page. If it's below 1.2x, consider: reducing loan amount, extending loan term (lower annual payments), increasing revenue, or cutting non-essential expenses to improve cash flow.",
     },
     extraBody: {
-      workedExample: "Example: Year 1 revenue $1.2M, total expenses (excluding debt) $1.05M. Net Operating Income = $150K. Annual debt service on a $600K loan at 7% over 10 years = $85K. DSCR = $150K ÷ $85K = 1.76x — healthy. Now stress-test: if enrollment drops 15%, revenue falls to $1.02M, NOI drops to $-30K. DSCR = -0.35x — the school can't make loan payments. This shows why lenders require cushion: your base case looks fine, but a modest enrollment miss makes debt unsustainable.",
-      benchmarkDetail: "DSCR benchmarks by lender type: Traditional banks require 1.25x-1.50x. CDFIs (community development lenders) may accept 1.10x-1.20x for mission-aligned projects. SBA loans require 1.15x-1.25x. Bond financing (for larger projects) typically requires 1.30x-1.50x. Your DSCR should be calculated both on a trailing 12-month basis and on projected figures — lenders look at both.",
+      workedExample: "Example: Year 1 revenue $1.2M, total expenses (excluding debt) $1.05M. Net Operating Income = $150K. Annual debt service on a $600K loan at 7% over 10 years = $85K. DSCR = $150K ÷ $85K = 1.76x — healthy. Now stress-test: if enrollment drops 15%, revenue falls to $1.02M, NOI drops to $-30K. DSCR = -0.35x — the school can't make loan payments. This shows why cushion matters: your base case looks fine, but a modest enrollment miss makes debt unsustainable.",
+      benchmarkDetail: "DSCR benchmarks by financing type: Traditional banks typically require 1.25x-1.50x. CDFIs (community development financial institutions) may accept 1.10x-1.20x for mission-aligned projects. SBA loans require 1.15x-1.25x. Bond financing (for larger projects) typically requires 1.30x-1.50x. DSCR is evaluated both on a trailing 12-month basis and on projected figures.",
       glossaryTerms: "Net Operating Income (NOI): Total revenue minus total operating expenses, before debt service payments. Debt Service: Total annual loan payments including both principal and interest. Coverage Ratio: NOI divided by debt service — how many times over you can cover your loan payments. Debt Covenant: A condition in your loan requiring you to maintain a minimum DSCR (typically 1.15x-1.25x) — violating it can trigger default.",
-      lenderPerspective: "DSCR is the single metric that determines your debt capacity. Lenders calculate it three ways: (1) using your projections, (2) using their stress-tested (haircut) projections, and (3) using peer school benchmarks. Your loan amount, interest rate, and terms are all calibrated to maintain DSCR above their minimum threshold. Improving DSCR by even 0.1x can meaningfully improve your loan terms.",
+      financingInsight: "If you're applying for financing, DSCR drives your loan terms. Banks typically evaluate it three ways: (1) using your projections, (2) using conservative stress-tested numbers, and (3) using peer school benchmarks. Improving DSCR by even 0.1x can meaningfully improve the terms you're offered.",
     },
     audienceLevel: ["extra"],
     relatedSection: "review",
@@ -632,7 +632,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
       workedExample: "Example: Monthly expenses = $75K. Working capital target = 2.5 months = $187.5K. You start with $120K cash. In July (before school starts), you pay $75K in expenses with $0 revenue. Cash drops to $45K. August: another $75K in expenses, $0 revenue. Cash = -$30K — you're out of money before a single student arrives. You needed $187.5K to safely bridge this gap. Solution: secure a $75K line of credit or $75K startup grant to supplement your $120K starting cash.",
       benchmarkDetail: "Working capital benchmarks: New schools should target 60-90 days of operating expenses before doors open. The most cash-intensive period is typically June-September (staff hired, facility prepared, no revenue yet). Working capital sources: startup grants (most common), founder investment, pre-opening fundraising, lines of credit ($25K-$100K from CDFIs). Cost of a line of credit: 6-10% interest on drawn amounts, plus 0.25-0.50% annual fee on undrawn balance.",
       glossaryTerms: "Working Capital: Current assets minus current liabilities — practically, the cash available to cover short-term obligations. Cash Conversion Cycle: The time between paying expenses and collecting revenue — for schools, this can be 30-90 days. Line of Credit: A pre-approved borrowing facility that lets you draw cash when needed and repay when revenue arrives — different from a term loan because you only pay interest on what you use. Days Cash on Hand: Your cash balance divided by daily operating expenses — the most direct measure of working capital adequacy.",
-      lenderPerspective: "Lenders view working capital as a survival metric. Schools that start with less than 45 days of operating expenses in cash are considered high-risk regardless of how strong their annual budget looks. When underwriting a loan, lenders calculate your minimum cash position across the entire projection period — if it goes negative at any point, the model fails even if the annual budget shows a surplus.",
+      financingInsight: "If financing is part of your plan, banks view working capital as a survival metric. Starting with less than 45 days of operating expenses in cash is considered risky regardless of how strong your annual budget looks. Your minimum cash position across the entire projection matters — if it goes negative at any point, the model needs work even if the annual budget balances.",
     },
     audienceLevel: ["extra"],
     relatedSection: "review",

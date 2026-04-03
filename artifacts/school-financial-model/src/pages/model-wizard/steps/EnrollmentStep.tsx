@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useEffect, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, TrendingUp, Info, School, ShieldCheck, Users, ClipboardList, Sparkles } from "lucide-react";
-import { LenderHint } from "@/components/coaching/LenderHint";
+import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -328,7 +328,7 @@ function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOpe
               <span>&#9888;</span> Retention below 80% means you'll need a stronger recruitment pipeline to hit your enrollment targets. Consider what's driving attrition and how you'll address it.
             </p>
           )}
-          <LenderHint text="Retention rate is a key underwriting metric — lenders use it to validate your out-year enrollment projections." />
+          <FinancingInsight text="Retention rate directly drives your out-year enrollment projections. If financing is part of your plan, this is one of the first numbers banks look at." />
         </div>
       )}
 
@@ -738,7 +738,7 @@ export function EnrollmentStep() {
               <p className="text-sm text-blue-700">
                 Charter per-pupil funding often varies by grade band. Break down your enrollment by K-5, 6-8, and 9-12 so we can apply the correct per-pupil rates. Totals should match your program enrollment above.
               </p>
-              <LenderHint text="Grade-band breakdowns are verified against state reporting — mismatches between your model and actual enrollment counts raise compliance flags." />
+              <FinancingInsight text="Keep your grade-band breakdown consistent with state reporting — mismatches can create headaches during compliance reviews or financing applications." />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
@@ -829,7 +829,7 @@ export function EnrollmentStep() {
         />
       )}
       {hasYear1Data && (
-        <LenderHint text="Year 1 enrollment targets are cross-referenced against your applications, waitlist, and letter-of-intent count during underwriting." />
+        <FinancingInsight text="Having evidence for your Year 1 enrollment — applications, waitlist data, letters of intent — strengthens your model whether you're seeking financing or not." />
       )}
 
       {hasYear1Data && (

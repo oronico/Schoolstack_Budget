@@ -533,7 +533,7 @@ function generateNudges(metrics: ScenarioMetrics, name: string, leverNudges?: Qu
     if (metrics.breakEvenYear <= 2) {
       nudges.push({ signal: "green", label: "Break-Even", message: `${name} reaches break-even in Year ${metrics.breakEvenYear}.` });
     } else if (metrics.breakEvenYear <= 4) {
-      nudges.push({ signal: "amber", label: "Break-Even", message: `${name} reaches break-even in Year ${metrics.breakEvenYear}. Earlier is better for lenders.` });
+      nudges.push({ signal: "amber", label: "Break-Even", message: `${name} reaches break-even in Year ${metrics.breakEvenYear}. Earlier is better for long-term stability.` });
     } else {
       nudges.push({ signal: "red", label: "Break-Even", message: `${name} doesn't break even until Year ${metrics.breakEvenYear}. Consider reducing costs or increasing revenue.` });
     }
@@ -545,7 +545,7 @@ function generateNudges(metrics: ScenarioMetrics, name: string, leverNudges?: Qu
   if (avgStaffPct > 0.7) {
     const staffLever = leverNudges?.find(l => l.id === "staff_minus_1");
     const leverHint = staffLever ? ` ${staffLever.coaching}` : "";
-    nudges.push({ signal: "red", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue. Lenders will flag anything over 70%.${leverHint}` });
+    nudges.push({ signal: "red", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue — above 70% leaves very little room for other costs.${leverHint}` });
   } else if (avgStaffPct > 0.6) {
     const staffLever = leverNudges?.find(l => l.id === "staff_minus_1");
     const leverHint = staffLever ? ` ${staffLever.coaching}` : "";
@@ -558,9 +558,9 @@ function generateNudges(metrics: ScenarioMetrics, name: string, leverNudges?: Qu
   if (hasDscr) {
     const y1Dscr = metrics.dscr[0];
     if (y1Dscr >= BENCHMARK_DSCR_GREEN) {
-      nudges.push({ signal: "green", label: "DSCR", message: `Debt service coverage of ${y1Dscr.toFixed(2)}x exceeds the ${BENCHMARK_DSCR_GREEN}x minimum lenders want.` });
+      nudges.push({ signal: "green", label: "DSCR", message: `Debt service coverage of ${y1Dscr.toFixed(2)}x exceeds the ${BENCHMARK_DSCR_GREEN}x benchmark — strong position.` });
     } else if (y1Dscr >= BENCHMARK_DSCR_AMBER) {
-      nudges.push({ signal: "amber", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is tight. Most lenders want at least ${BENCHMARK_DSCR_GREEN}x.` });
+      nudges.push({ signal: "amber", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is tight. A target of at least ${BENCHMARK_DSCR_GREEN}x gives more breathing room.` });
     } else {
       nudges.push({ signal: "red", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is below ${BENCHMARK_DSCR_AMBER}x. Debt coverage is critically thin.` });
     }

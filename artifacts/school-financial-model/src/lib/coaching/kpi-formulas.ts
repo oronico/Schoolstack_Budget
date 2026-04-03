@@ -60,7 +60,7 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
       "Year 1 loan debt service (annual loan payments only — excludes non-loan capital expenditures)",
     ],
     interpretation:
-      "DSCR tells lenders whether your school generates enough operating income to cover its loan payments. The formula adds loan debt service back to net income to calculate operating income before debt service. A ratio of 1.25x or higher is the standard minimum lenders require. Below 1.0x means operations alone cannot cover the loan payments.",
+      "DSCR tells you whether your school generates enough operating income to cover its loan payments. The formula adds loan debt service back to net income to calculate operating income before debt service. A ratio of 1.25x or higher is the standard benchmark. Below 1.0x means operations alone cannot cover the loan payments.",
   },
   reserveMonths: {
     id: "reserveMonths",
@@ -105,7 +105,7 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
       "Variable cost per student (per-student expenses like curriculum, devices, supplies)",
     ],
     interpretation:
-      "Breakeven enrollment is the minimum number of students your school needs just to cover its costs. If your projected enrollment is close to or below this number, the financial model has very little margin for error. Lenders look at this to understand how sensitive your budget is to enrollment shortfalls. A healthy gap between breakeven and projected enrollment signals resilience.",
+      "Breakeven enrollment is the minimum number of students your school needs just to cover its costs. If your projected enrollment is close to or below this number, the financial model has very little margin for error. A healthy gap between breakeven and projected enrollment signals resilience and gives you room to weather a slow start.",
   },
   occupancyCostPerStudent: {
     id: "occupancyCostPerStudent",
@@ -116,7 +116,7 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
       "Total enrolled students in Year 1",
     ],
     interpretation:
-      "This tells you how much your school spends on its physical space for each student. Lenders and authorizers compare this against benchmarks ($1,500–$3,000 per student is typical). Very high numbers may signal an oversized or overpriced facility relative to enrollment.",
+      "This tells you how much your school spends on its physical space for each student. The typical range is $1,500–$3,000 per student. Very high numbers may signal an oversized or overpriced facility relative to enrollment.",
   },
   occupancyCostPerSqft: {
     id: "occupancyCostPerSqft",

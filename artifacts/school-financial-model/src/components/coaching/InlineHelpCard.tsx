@@ -84,7 +84,7 @@ const EXTRA_SECTION_CONFIG = [
   { key: "workedExample" as const, label: "Worked example", Icon: Calculator, color: "text-amber-600" },
   { key: "benchmarkDetail" as const, label: "Detailed benchmarks", Icon: BarChart3, color: "text-blue-600" },
   { key: "glossaryTerms" as const, label: "Key terms", Icon: BookOpen, color: "text-teal-600" },
-  { key: "lenderPerspective" as const, label: "Lender perspective", Icon: Eye, color: "text-violet-600" },
+  { key: "financingInsight" as const, label: "What banks focus on", Icon: Eye, color: "text-violet-600" },
 ];
 
 function ExtraDepthSections({ extra }: { extra: ExtraDepthContent }) {

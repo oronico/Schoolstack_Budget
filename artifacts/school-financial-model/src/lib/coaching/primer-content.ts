@@ -31,7 +31,7 @@ export const PRIMER_CARDS: PrimerCard[] = [
   {
     id: "reserves",
     title: "Why Reserves Matter",
-    body: "Reserves are cash you set aside for unexpected expenses or revenue shortfalls. Lenders and funders typically want to see 45-90 days of operating expenses in reserve. Without reserves, a single surprise — a delayed grant, unexpected repairs, lower-than-expected enrollment — can put your school at risk.",
+    body: "Reserves are cash you set aside for unexpected expenses or revenue shortfalls. Best practice is 45-90 days of operating expenses in reserve. Without reserves, a single surprise — a delayed grant, unexpected repairs, lower-than-expected enrollment — can put your school at risk.",
     takeaway: "Aim for at least 2-3 months of operating expenses in reserve.",
     order: 4,
   },
@@ -43,10 +43,10 @@ export const PRIMER_CARDS: PrimerCard[] = [
     order: 5,
   },
   {
-    id: "lenders",
-    title: "What Lenders and Funders Care About",
-    body: "When reviewing your financial model, lenders look for: positive net income by Year 2 or 3, staffing costs under 65% of revenue, realistic enrollment projections backed by evidence, adequate cash reserves, and a clear plan for debt repayment. They want to see that you've thought carefully about risks and have realistic assumptions — not that everything is perfect.",
-    takeaway: "Lenders want realistic planning, not optimistic projections.",
+    id: "strong-plan",
+    title: "What Makes a Strong Financial Plan",
+    body: "The strongest school financial plans share a few things in common: positive net income by Year 2 or 3, staffing costs under 65% of revenue, realistic enrollment projections backed by evidence, adequate cash reserves, and a clear plan for any debt. Reviewers — whether board members, authorizers, or banks — want to see that you've thought carefully about risks and built realistic assumptions.",
+    takeaway: "Strong planning means realistic assumptions, not optimistic projections.",
     order: 6,
   },
 ];

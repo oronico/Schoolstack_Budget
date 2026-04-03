@@ -465,7 +465,7 @@ export function ModelWizardPage() {
                 f => (f.severity === "critical" || f.severity === "warning") && !responseMap.get(`${f.flagType}:${f.field}`)?.trim()
               );
               if (unresolved.length > 0) {
-                alert(`Please address all ${unresolved.length} flagged assumption(s) before proceeding to Export. Lenders should never see unexplained anomalies.`);
+                alert(`Please address all ${unresolved.length} flagged assumption(s) before proceeding to Export. Your model will be stronger with these explained.`);
                 return false;
               }
             }

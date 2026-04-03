@@ -95,9 +95,9 @@ function marginExplanation(base: number, compare: number): string {
 
 function dscrExplanation(base: number, compare: number): string {
   if (base === 0 && compare === 0) return "No debt service in either scenario.";
-  if (compare >= BENCHMARK_DSCR_GREEN) return `DSCR of ${compare.toFixed(2)}x means the school comfortably covers its debt payments. Lenders look for ${BENCHMARK_DSCR_GREEN}x or higher.`;
-  if (compare >= BENCHMARK_DSCR_AMBER) return `DSCR of ${compare.toFixed(2)}x means debt payments are covered, but there is not much margin. Lenders may want more cushion.`;
-  return `DSCR of ${compare.toFixed(2)}x means operating income does not fully cover debt payments. This is a concern for lenders.`;
+  if (compare >= BENCHMARK_DSCR_GREEN) return `DSCR of ${compare.toFixed(2)}x means the school comfortably covers its debt payments. The benchmark is ${BENCHMARK_DSCR_GREEN}x or higher.`;
+  if (compare >= BENCHMARK_DSCR_AMBER) return `DSCR of ${compare.toFixed(2)}x means debt payments are covered, but there is not much margin. More cushion would strengthen the model.`;
+  return `DSCR of ${compare.toFixed(2)}x means operating income does not fully cover debt payments. This needs attention.`;
 }
 
 function reserveExplanation(base: number, compare: number): string {

@@ -606,7 +606,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
               {lendingLabIntent === "plan_to_apply" && (
                 <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
                   <Rocket className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-800">Lenders look at monthly cash flow to spot timing gaps between when you collect revenue and when bills are due.</p>
+                  <p className="text-sm text-amber-800">Monthly cash flow helps you spot timing gaps between when you collect revenue and when bills are due.</p>
                 </div>
               )}
               {(() => {
@@ -628,7 +628,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                   <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
                     <Lightbulb className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-amber-800">
-                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. This is below 25% of your starting reserves — lenders will want to see more cushion. Consider building reserves or adjusting collection timing.
+                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. This is below 25% of your starting reserves — it's worth building more cushion. Consider increasing reserves or adjusting collection timing.
                     </p>
                   </div>
                 );
@@ -636,7 +636,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                   <div className="rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 flex items-start gap-3 mb-4">
                     <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-teal-800">
-                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. You have enough reserves to weather the collection gap — this is what lenders want to see.
+                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. You have enough reserves to weather the collection gap — this is a strong position.
                     </p>
                   </div>
                 );
