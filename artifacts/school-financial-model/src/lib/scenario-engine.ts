@@ -461,3 +461,126 @@ export function computeScenarios(
 
   return { base: baseResult, scenarios: scenarioResults };
 }
+
+export interface LeverMetrics {
+  netIncome: number;
+  cashTrough: number;
+  breakEvenYear: number;
+  dscr: number;
+}
+
+export interface QuickLever {
+  id: string;
+  label: string;
+  description: string;
+  icon: "users" | "dollar" | "scissors";
+  before: LeverMetrics;
+  after: LeverMetrics;
+  coaching: string;
+}
+
+function cashTrough(metrics: ScenarioMetrics, startingCash: number): number {
+  let running = startingCash;
+  let min = startingCash;
+  for (let y = 0; y < 5; y++) {
+    const monthlyNI = metrics.netIncome[y] / 12;
+    for (let m = 0; m < 12; m++) {
+      running += monthlyNI;
+      if (running < min) min = running;
+    }
+  }
+  return min;
+}
+
+export function computeQuickLevers(data: FullModelData): QuickLever[] {
+  const base = computeBaseFinancials(data);
+  const startingCash = data.openingBalances?.cash || 0;
+  const staffingRows = data.staffingRows || [];
+  const levers: QuickLever[] = [];
+
+  const baseY1NI = base.netIncome[0] ?? 0;
+  const baseBEYear = base.breakEvenYear ?? -1;
+  const baseTrough = cashTrough(base, startingCash);
+  const baseY1DSCR = base.dscr[0] ?? 0;
+  const baseEnrollment = base.enrollment[0] ?? 0;
+
+  function baseBefore(): LeverMetrics {
+    return { netIncome: baseY1NI, cashTrough: baseTrough, breakEvenYear: baseBEYear, dscr: baseY1DSCR };
+  }
+
+  function leverAfter(m: ScenarioMetrics): LeverMetrics {
+    return { netIncome: m.netIncome[0], cashTrough: cashTrough(m, startingCash), breakEvenYear: m.breakEvenYear ?? -1, dscr: m.dscr[0] };
+  }
+
+  if (baseEnrollment > 0) {
+    const adj: ScenarioAdjustments = { name: "+10% Enrollment", enrollmentAdjustment: 10, tuitionAdjustment: 10, expenseAdjustment: 0, staffingAdjustment: 0, facilityAdjustment: 0 };
+    const m = applyAdjustments(base, adj, startingCash);
+    levers.push({
+      id: "enrollment_up_10",
+      label: "Add 10% More Students",
+      description: `Increase enrollment from ${baseEnrollment} to ${Math.round(baseEnrollment * 1.1)} students`,
+      icon: "users",
+      before: baseBefore(),
+      after: leverAfter(m),
+      coaching: m.netIncome[0] > baseY1NI
+        ? `Adding ${Math.round(baseEnrollment * 0.1)} students could improve Year 1 net income by ${fmtCurrency(m.netIncome[0] - baseY1NI)}. Make sure your facility and staffing can absorb the growth.`
+        : `Even with 10% more students, net income doesn't improve — check whether your per-student costs exceed per-student revenue.`,
+    });
+  }
+
+  if (staffingRows.length > 0) {
+    const highestCostRow = [...staffingRows].sort((a, b) => {
+      const costA = (a.fte || 0) * (a.annualizedRate || 0);
+      const costB = (b.fte || 0) * (b.annualizedRate || 0);
+      return costB - costA;
+    })[0];
+    if (highestCostRow && highestCostRow.fte > 0) {
+      const oneRole = (highestCostRow.fte || 0) * (highestCostRow.annualizedRate || 0);
+      const totalStaffCost = staffingRows.reduce((s, r) => s + (r.fte || 0) * (r.annualizedRate || 0), 0);
+      const pctReduction = totalStaffCost > 0 ? -(oneRole / totalStaffCost) * 100 : 0;
+      const adj: ScenarioAdjustments = { name: "-1 Staff Position", enrollmentAdjustment: 0, tuitionAdjustment: 0, expenseAdjustment: 0, staffingAdjustment: Math.round(pctReduction), facilityAdjustment: 0 };
+      const m = applyAdjustments(base, adj, startingCash);
+      levers.push({
+        id: "staff_minus_1",
+        label: "Remove 1 Staff Position",
+        description: `Defer the highest-cost role (~${fmtCurrency(oneRole)}/year)`,
+        icon: "scissors",
+        before: baseBefore(),
+        after: leverAfter(m),
+        coaching: `Deferring one position saves ~${fmtCurrency(oneRole)}/year. ${m.netIncome[0] >= 0 && baseY1NI < 0 ? "This alone could move you from a deficit to a surplus." : `Year 1 net income shifts by ${fmtCurrency(m.netIncome[0] - baseY1NI)}.`} Consider whether you can phase in this hire later.`,
+      });
+    }
+  }
+
+  if (base.revenue[0] > 0) {
+    const adj: ScenarioAdjustments = { name: "+5% Tuition", enrollmentAdjustment: 0, tuitionAdjustment: 5, expenseAdjustment: 0, staffingAdjustment: 0, facilityAdjustment: 0 };
+    const m = applyAdjustments(base, adj, startingCash);
+    levers.push({
+      id: "tuition_up_5",
+      label: "Raise Revenue 5%",
+      description: `Increase tuition or per-pupil funding by 5%`,
+      icon: "dollar",
+      before: baseBefore(),
+      after: leverAfter(m),
+      coaching: `A 5% revenue increase adds ~${fmtCurrency(m.revenue[0] - base.revenue[0])}/year. ${cashTrough(m, startingCash) > baseTrough ? `Cash trough improves from ${fmtCurrencyAbs(baseTrough)} to ${fmtCurrencyAbs(cashTrough(m, startingCash))}.` : "Cash trough stays about the same."} Check that tuition stays competitive in your market.`,
+    });
+  }
+
+  return levers;
+}
+
+function fmtCurrency(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "-" : "+";
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}K`;
+  return `${sign}$${Math.round(abs)}`;
+}
+
+function fmtCurrencyAbs(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}K`;
+  return `${sign}$${Math.round(abs)}`;
+}

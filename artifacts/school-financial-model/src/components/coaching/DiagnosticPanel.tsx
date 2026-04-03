@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useRef } from "react";
-import { AlertTriangle, AlertCircle, Info, ArrowRight } from "lucide-react";
+import { AlertTriangle, AlertCircle, Info, ArrowRight, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { runDiagnostics, type DiagnosticFinding, type DiagnosticSeverity } from "@/lib/coaching/diagnostics-engine";
+import { runDiagnostics, computeWhatIfSuggestions, type DiagnosticFinding, type DiagnosticSeverity, type WhatIfSuggestion } from "@/lib/coaching/diagnostics-engine";
 import type { FullModelData } from "@/pages/model-wizard/schema";
 import { useAuth } from "@/lib/auth-context";
 import { trackCoachingEvent } from "@/lib/coaching/track";
@@ -47,7 +47,7 @@ const STEP_NAMES: Record<number, string> = {
   7: "Review",
 };
 
-function DiagnosticCard({ finding, onNavigate }: { finding: DiagnosticFinding; onNavigate?: (step: number) => void }) {
+function DiagnosticCard({ finding, onNavigate, whatIf }: { finding: DiagnosticFinding; onNavigate?: (step: number) => void; whatIf?: WhatIfSuggestion }) {
   const config = SEVERITY_CONFIG[finding.severity];
   const Icon = config.icon;
   const stepName = STEP_NAMES[finding.targetStep] || `Step ${finding.targetStep}`;
@@ -70,6 +70,15 @@ function DiagnosticCard({ finding, onNavigate }: { finding: DiagnosticFinding; o
           <p className="text-xs text-muted-foreground leading-relaxed mb-3">
             {finding.explanation}
           </p>
+          {whatIf && (
+            <div className="mb-3 rounded-lg bg-white/60 border border-border/40 p-2.5 flex items-start gap-2">
+              <Lightbulb className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-0.5">What if: {whatIf.lever}</p>
+                <p className="text-xs text-foreground/80 leading-relaxed">{whatIf.impact}</p>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-foreground/80 italic flex-1">
               {finding.action}
@@ -106,6 +115,14 @@ export function DiagnosticPanel({ data, onNavigateToStep, className, maxResults 
   const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
 
   const findings = useMemo(() => runDiagnostics(data, maxResults), [data, maxResults]);
+  const whatIfSuggestions = useMemo(() => computeWhatIfSuggestions(data), [data]);
+  const whatIfMap = useMemo(() => {
+    const map = new Map<string, WhatIfSuggestion>();
+    for (const s of whatIfSuggestions) {
+      if (!map.has(s.findingId)) map.set(s.findingId, s);
+    }
+    return map;
+  }, [whatIfSuggestions]);
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
@@ -153,6 +170,7 @@ export function DiagnosticPanel({ data, onNavigateToStep, className, maxResults 
           key={finding.id}
           finding={finding}
           onNavigate={onNavigateToStep}
+          whatIf={whatIfMap.get(finding.id)}
         />
       ))}
     </div>

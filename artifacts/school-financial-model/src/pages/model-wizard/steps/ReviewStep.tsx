@@ -6,6 +6,7 @@ import { computeAnnualDebt } from "@workspace/finance";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
+import { QuickLevers } from "@/components/coaching/QuickLevers";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import { computeMonthlyCashInflow } from "@/lib/revenue-defaults";
 import type { FullModelData } from "../schema";
@@ -303,6 +304,10 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
         onNavigateToStep={(step) => jumpToStep(step)}
         className="mt-2"
       />
+
+      {hasRowData && (
+        <QuickLevers data={data as FullModelData} className="mt-2" />
+      )}
 
       {hasRowData && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

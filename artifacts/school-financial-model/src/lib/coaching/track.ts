@@ -19,7 +19,9 @@ type CoachingEvent =
   | "primer_completed"
   | "primer_skipped"
   | "primer_opened"
-  | "help_menu_opened";
+  | "help_menu_opened"
+  | "quick_lever_viewed"
+  | "quick_levers_shown";
 
 export function trackCoachingEvent(
   event: CoachingEvent,
