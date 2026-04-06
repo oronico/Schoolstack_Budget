@@ -1,0 +1,31 @@
+kind = "slides"
+previewPath = "/budget-allhands/"
+title = "SchoolStack Budget All-Hands"
+version = "1.0.0"
+id = "artifacts/budget-allhands"
+router = "path"
+
+[[integratedSkills]]
+name = "slides"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/budget-allhands/" ]
+localPort = 18166
+
+[services.development]
+run = "pnpm --filter @workspace/budget-allhands run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/budget-allhands", "run", "build" ]
+publicDir = "artifacts/budget-allhands/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18166"
+BASE_PATH = "/budget-allhands/"

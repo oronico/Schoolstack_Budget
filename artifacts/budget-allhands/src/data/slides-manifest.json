@@ -1,0 +1,58 @@
+[
+  {
+    "id": "a1b2c3d4-0001-4000-8000-000000000001",
+    "position": 1,
+    "filepath": "src/pages/slides/TitleSlide.tsx",
+    "title": "SchoolStack Budget: CFO in a Box",
+    "description": "Title slide with hero image, SchoolStack branding, and Friday all-hands date.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0002-4000-8000-000000000002",
+    "position": 2,
+    "filepath": "src/pages/slides/ProblemSlide.tsx",
+    "title": "The Problem We Solve",
+    "description": "School founders need financial models but lack finance backgrounds. Stats on charter/micro/private school growth.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0003-4000-8000-000000000003",
+    "position": 3,
+    "filepath": "src/pages/slides/WhatBudgetDoes.tsx",
+    "title": "What SchoolStack Budget Does",
+    "description": "Overview of the 8-step guided wizard, consultant analysis engine, scenario planner, and professional exports.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0004-4000-8000-000000000004",
+    "position": 4,
+    "filepath": "src/pages/slides/MilestonesSlide.tsx",
+    "title": "Development Journey & Milestones",
+    "description": "Key highlights of what has been shipped: 149 merged tasks since March 14.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0005-4000-8000-000000000005",
+    "position": 5,
+    "filepath": "src/pages/slides/EcosystemSlide.tsx",
+    "title": "The SchoolStack Ecosystem",
+    "description": "Visual showing how schoolstack.ai, Budget, Space, and The Lending Lab fit together.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0006-4000-8000-000000000006",
+    "position": 6,
+    "filepath": "src/pages/slides/LendingLabSlide.tsx",
+    "title": "How Budget Connects to The Lending Lab",
+    "description": "Lender-readiness criteria, underwriting thresholds, and cross-referral to Space.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0007-4000-8000-000000000007",
+    "position": 7,
+    "filepath": "src/pages/slides/ClosingSlide.tsx",
+    "title": "What's Next",
+    "description": "Current beta status, next steps, and call to action for the team.",
+    "speakerNotes": ""
+  }
+]

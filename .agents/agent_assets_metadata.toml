@@ -1,5 +1,16 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "gPGRzle_U1-xP8R1_F0na"
+uri = "file://artifacts/budget-allhands/public/hero-school.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "WbJlVJjjNbC3VJ_8FKxVS"
+uri = "file://artifacts/budget-allhands/public/closing-school.png"
+type = "image"
+title = "generated_image"
 
 [[outputs]]
 id = "mt89Qdy3YQO6xf-BdcRhT"
@@ -162,3 +173,9 @@ id = "HoNbciVrr_y8PE52n_LeF"
 uri = "file://artifacts/api-server/qa-output/export-samples/Year_1_Budget.xlsx"
 type = "table"
 title = "Year 1 Budget (XLSX, 12KB)"
+
+[[outputs]]
+id = "Sw8reQ3S42YsUwQyTtWXK"
+uri = "file://.local/outputs/SchoolStack-Budget.pptx"
+type = "slides"
+title = "SchoolStack Budget.pptx"
