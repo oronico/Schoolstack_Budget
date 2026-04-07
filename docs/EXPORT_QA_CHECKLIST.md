@@ -158,8 +158,8 @@ For at least one representative workbook per release, manually confirm:
 
 ```bash
 pnpm --filter @workspace/api-server run qa:golden
-pnpm --filter @workspace/api-server run test -- tests/lender-parity-check.ts
-pnpm --filter @workspace/api-server run test -- tests/excel-qa.ts
+pnpm --filter @workspace/api-server run qa:parity
+pnpm --filter @workspace/api-server run qa:excel
 ```
 
 Expected: all pass with zero critical failures.

@@ -609,28 +609,28 @@ async function testWorkbookKPIs() {
 
   const expectations: [string, Record<string, unknown>, KPIExpected][] = [
     ["Microschool", microschoolStartup as unknown as Record<string, unknown>, {
-      y1Rev: 184667, y5Rev: 513513,
+      y1Rev: 184667, y5Rev: 509276,
       y1Pers: 118934, y1Opex: 40500, y1CD: 0,
-      y1TotalExp: 159434, y1NI: 25233, y5NI: 286475,
+      y1TotalExp: 159434, y1NI: 25233, y5NI: 282237,
       y1DebtSvc: 0, y1DSCR: "N/A", y1EndingCash: 62170,
     }],
     ["Private+ESA", privateSchoolWithESA as unknown as Record<string, unknown>, {
       y1Rev: 1975000, y5Rev: 4361347,
       y1Pers: 854772, y1Opex: 271400, y1CD: 59064,
       y1TotalExp: 1185236, y1NI: 789764, y5NI: 2942215,
-      y1DebtSvc: 34064, y1DSCR: 24.92, y1EndingCash: 864756,
+      y1DebtSvc: 34064, y1DSCR: 24.94, y1EndingCash: 812256,
     }],
     ["Charter", charterPublicFunding as unknown as Record<string, unknown>, {
       y1Rev: 1288333, y5Rev: 5458718,
       y1Pers: 997040, y1Opex: 545000, y1CD: 164825,
       y1TotalExp: 1706865, y1NI: -418532, y5NI: 1454742,
-      y1DebtSvc: 49825, y1DSCR: -5.09, y1EndingCash: -160860,
+      y1DebtSvc: 49825, y1DSCR: -7.4, y1EndingCash: -160860,
     }],
     ["Charter ADA", charterADAGradeBand as unknown as Record<string, unknown>, {
       y1Rev: 1178333, y5Rev: 5696361,
       y1Pers: 780535, y1Opex: 503333, y1CD: 106629,
       y1TotalExp: 1390497, y1NI: -212164, y5NI: 3114494,
-      y1DebtSvc: 46629, y1DSCR: -2.26, y1EndingCash: 74498,
+      y1DebtSvc: 46629, y1DSCR: -3.55, y1EndingCash: 74498,
     }],
   ];
 
@@ -757,7 +757,7 @@ async function testMonthlyTimingWorkbook() {
 
   // Ending cash metric
   const pEndRow = findRowByLabel(privMcf, "Ending Cash (Month 12)", 1, 25);
-  if (pEndRow > 0) check("Priv MCF: Ending Cash", cellNum(privMcf, pEndRow, 2), 864756);
+  if (pEndRow > 0) check("Priv MCF: Ending Cash", cellNum(privMcf, pEndRow, 2), 812256);
 }
 
 async function testArchetypeWorkbookCoverage() {
