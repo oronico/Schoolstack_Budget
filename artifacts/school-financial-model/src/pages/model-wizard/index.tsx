@@ -4,12 +4,13 @@ import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle, Sparkles } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { MicroLessonContainer } from "@/components/coaching/MicroLessonCard";
+import { WizardPrepChecklist } from "@/components/coaching/WizardPrepChecklist";
 import { useAuth } from "@/lib/auth-context";
 
 import { fullModelSchema, type FullModelData } from "./schema";
@@ -90,6 +91,8 @@ export function ModelWizardPage() {
   const [saveError, setSaveError] = useState(false);
   const [stepInitialized, setStepInitialized] = useState(false);
   const [showImportBanner, setShowImportBanner] = useState(false);
+  const [showPrepChecklist, setShowPrepChecklist] = useState(false);
+  const [encouragementDismissed, setEncouragementDismissed] = useState(false);
   const stepStartTime = useRef(Date.now());
   const completedSteps = useRef<Set<number>>(new Set());
 
@@ -107,6 +110,14 @@ export function ModelWizardPage() {
     const dismissedKey = `space_import_dismissed_${modelId}`;
     if (sessionStorage.getItem(importKey) && !sessionStorage.getItem(dismissedKey)) {
       setShowImportBanner(true);
+    }
+    const prepDismissedKey = `wizard_prep_seen_${modelId}`;
+    if (!localStorage.getItem(prepDismissedKey)) {
+      setShowPrepChecklist(true);
+    }
+    const encourageKey = `wizard_encouragement_seen_${modelId}`;
+    if (localStorage.getItem(encourageKey)) {
+      setEncouragementDismissed(true);
     }
   }, [modelId]);
   const { user } = useAuth();
@@ -545,8 +556,26 @@ export function ModelWizardPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const showEncouragement = (currentStep === 5 || currentStep === 6) && !encouragementDismissed;
+  const handleDismissEncouragement = () => {
+    setEncouragementDismissed(true);
+    if (modelId) {
+      localStorage.setItem(`wizard_encouragement_seen_${modelId}`, "1");
+    }
+  };
+
   return (
     <Layout>
+      {showPrepChecklist && currentStep === 1 && (
+        <WizardPrepChecklist
+          onReady={() => {
+            setShowPrepChecklist(false);
+            if (modelId) {
+              localStorage.setItem(`wizard_prep_seen_${modelId}`, "1");
+            }
+          }}
+        />
+      )}
       {showImportBanner && (
         <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-teal-200">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
@@ -650,6 +679,25 @@ export function ModelWizardPage() {
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <MicroLessonContainer data={methods.getValues() as FullModelData} currentStep={currentStep} className="mb-4" />
+            {showEncouragement && (
+              <div className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                <div className="shrink-0 mt-0.5 w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-emerald-900">You're more than halfway there</p>
+                  <p className="text-xs text-emerald-700 mt-1">Most of the hard thinking is done. The next steps are about reviewing what you've built and making it stronger.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDismissEncouragement}
+                  className="shrink-0 p-1 rounded-lg text-emerald-500 hover:bg-emerald-100 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
               <ActiveStepComponent jumpToStep={setCurrentStep} modelId={modelId} />
             </Suspense>

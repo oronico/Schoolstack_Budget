@@ -160,7 +160,7 @@ export function QuickLevers({ data, className }: QuickLeversProps) {
         <h3 className="text-sm font-bold text-foreground">Quick Levers — What If You...</h3>
       </div>
       <p className="text-xs text-muted-foreground -mt-1">
-        See how small changes could affect your bottom line. These are previews, not recommendations.
+        Your budget is never perfect on the first try — and that's okay. These quick levers help you see how small changes affect your bottom line, so you can make adjustments with confidence.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {levers.map((lever, i) => (
