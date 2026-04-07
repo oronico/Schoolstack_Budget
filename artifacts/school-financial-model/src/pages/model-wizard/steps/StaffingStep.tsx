@@ -272,7 +272,7 @@ export function StaffingStep() {
         <SummaryCard
           label="Headcount"
           value={costs.headcount.toString()}
-          sublabel={<>{costs.totalFTE} <GlossaryTerm termKey="fte">FTE</GlossaryTerm></>}
+          sublabel={<>{costs.totalFTE} <GlossaryTerm termKey="fte">FTE</GlossaryTerm> <span className="text-[9px] text-muted-foreground">(Full-Time Equivalent — a part-time teacher working 2 days/week ≈ 0.4 FTE)</span></>}
         />
         <SummaryCard
           label="Salaries & Wages"
@@ -620,7 +620,7 @@ function StaffCard({
                 <span className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Ratio-Driven Staffing Ramp</span>
               </div>
               <p className="text-[11px] text-teal-700 leading-relaxed">
-                This role scales automatically with enrollment. Set a student-to-staff ratio and the model will calculate <GlossaryTerm termKey="fte">FTE</GlossaryTerm> for each year. Great for teachers, aides, and other roles that grow as your school grows.
+                This role scales automatically with enrollment. Set a student-to-staff ratio and the model will calculate <GlossaryTerm termKey="fte">FTE</GlossaryTerm> for each year. As your enrollment grows in later years, this will automatically add staff to keep your ratio — which means costs go up too. That's realistic and expected.
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <FieldNumber

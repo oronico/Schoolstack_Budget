@@ -1362,19 +1362,26 @@ function RevenueLineItem({
                   <span className="hidden sm:inline">Timing</span>
                 </button>
               )}
-              <select
-                value={row.driverType}
-                onChange={(e) => onDriverChange(e.target.value as RevenueDriverType)}
-                title="How this revenue is calculated: per student (scales with enrollment), annual fixed (same each year), monthly (×12), or % of base tuition"
-                className={cn(
-                  "text-xs border rounded-lg px-2 py-1.5 bg-card text-foreground cursor-pointer",
-                  rowErrors?.driverType ? "border-destructive" : "border-border"
-                )}
-              >
-                {(Object.keys(DRIVER_TYPE_LABELS) as RevenueDriverType[]).map((dt) => (
-                  <option key={dt} value={dt}>{DRIVER_TYPE_LABELS[dt]}</option>
-                ))}
-              </select>
+              <div className="flex flex-col gap-0.5">
+                <select
+                  value={row.driverType}
+                  onChange={(e) => onDriverChange(e.target.value as RevenueDriverType)}
+                  className={cn(
+                    "text-xs border rounded-lg px-2 py-1.5 bg-card text-foreground cursor-pointer",
+                    rowErrors?.driverType ? "border-destructive" : "border-border"
+                  )}
+                >
+                  {(Object.keys(DRIVER_TYPE_LABELS) as RevenueDriverType[]).map((dt) => (
+                    <option key={dt} value={dt}>{DRIVER_TYPE_LABELS[dt]}</option>
+                  ))}
+                </select>
+                <span className="text-[9px] text-muted-foreground leading-tight">
+                  {row.driverType === "per_student" && "Scales with enrollment"}
+                  {row.driverType === "annual_fixed" && "Fixed amount each year"}
+                  {row.driverType === "monthly" && "Multiplied ×12 for annual total"}
+                  {row.driverType === "percent_of_base" && "% of base tuition revenue"}
+                </span>
+              </div>
             </>
           )}
           <button

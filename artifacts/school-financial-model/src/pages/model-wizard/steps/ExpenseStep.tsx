@@ -165,6 +165,123 @@ function BusinessOperationsToggle({
   );
 }
 
+const FORGOTTEN_COSTS: {
+  label: string;
+  category: ExpenseCategory;
+  defaultAmount: number;
+  driverType: ExpenseDriverType;
+}[] = [
+  { label: "Background Checks & Fingerprinting", category: "administrative_general", defaultAmount: 75, driverType: "per_student" },
+  { label: "Liability Insurance", category: "administrative_general", defaultAmount: 5000, driverType: "annual_fixed" },
+  { label: "Marketing & Enrollment Outreach", category: "administrative_general", defaultAmount: 8000, driverType: "annual_fixed" },
+  { label: "Technology (Devices + WiFi)", category: "technology", defaultAmount: 300, driverType: "per_student" },
+  { label: "Professional Development", category: "instructional_program", defaultAmount: 500, driverType: "per_student" },
+  { label: "Payment Processing Fees", category: "administrative_general", defaultAmount: 3000, driverType: "annual_fixed" },
+];
+
+function ForgottenCostsPrompt({
+  expenseRows,
+  addExpenseRow,
+  yearCount,
+  syncExpenseRows,
+}: {
+  expenseRows: ExpenseRowData[];
+  addExpenseRow: (category: ExpenseCategory) => void;
+  yearCount: number;
+  syncExpenseRows: (rows: ExpenseRowData[]) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
+
+  const existingLineItems = useMemo(() => {
+    return new Set(expenseRows.map((r) => r.lineItem.toLowerCase().trim()));
+  }, [expenseRows]);
+
+  const handleQuickAdd = useCallback((item: typeof FORGOTTEN_COSTS[number]) => {
+    const newRow: ExpenseRowData = {
+      id: `forgotten_${item.label.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now()}`,
+      category: item.category,
+      lineItem: item.label,
+      enabled: true,
+      driverType: item.driverType,
+      amounts: new Array(yearCount).fill(item.defaultAmount),
+      note: "",
+      accountCode: "",
+    };
+    syncExpenseRows([...expenseRows, newRow]);
+    setAddedItems((prev) => new Set(prev).add(item.label));
+  }, [expenseRows, yearCount, syncExpenseRows]);
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50/40 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-amber-50/60 transition-colors"
+      >
+        {isOpen ? (
+          <ChevronDown className="h-5 w-5 text-amber-600 flex-shrink-0" />
+        ) : (
+          <ChevronRight className="h-5 w-5 text-amber-600 flex-shrink-0" />
+        )}
+        <Lightbulb className="h-5 w-5 text-amber-600 flex-shrink-0" />
+        <div className="flex-1">
+          <p className="font-semibold text-sm text-amber-900">Common costs schools forget</p>
+          <p className="text-xs text-amber-700 mt-0.5">Quick-check these items — click to add any you're missing</p>
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="px-4 pb-4 space-y-2">
+          {FORGOTTEN_COSTS.map((item) => {
+            const alreadyExists = existingLineItems.has(item.label.toLowerCase()) || addedItems.has(item.label);
+            return (
+              <div
+                key={item.label}
+                className={cn(
+                  "flex items-center justify-between rounded-lg border px-3 py-2.5 transition-colors",
+                  alreadyExists
+                    ? "border-emerald-200 bg-emerald-50/50"
+                    : "border-amber-100 bg-white hover:border-amber-300"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  {alreadyExists ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-amber-300 flex-shrink-0" />
+                  )}
+                  <span className={cn("text-sm", alreadyExists ? "text-emerald-700" : "text-foreground")}>
+                    {item.label}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    ({item.driverType === "per_student" ? `~$${item.defaultAmount}/student` : `~$${item.defaultAmount.toLocaleString()}/yr`})
+                  </span>
+                </div>
+                {!alreadyExists && (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAdd(item)}
+                    className="text-xs font-medium text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-md transition-colors flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> Add
+                  </button>
+                )}
+                {alreadyExists && (
+                  <span className="text-xs text-emerald-600 font-medium">Added</span>
+                )}
+              </div>
+            );
+          })}
+          <p className="text-[11px] text-amber-700 mt-2 leading-relaxed">
+            Don't worry about getting every dollar perfect — the goal is to not be surprised. You can adjust amounts in the categories below.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => void; modelId?: number | null }) {
   const { watch, setValue } = useFormContext();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
@@ -869,16 +986,12 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         </div>
       </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 flex items-start gap-3">
-        <Lightbulb className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-amber-900 space-y-1">
-          <p className="font-semibold">Costs first-time founders often forget</p>
-          <p className="text-xs text-amber-800 leading-relaxed">
-            Background checks, fingerprinting, curriculum licensing, classroom furniture, staff laptops, copier leases, postage, and state compliance fees. 
-            Don't worry about getting every dollar perfect — the goal is to not be surprised. Scroll down and make sure each category feels reasonable.
-          </p>
-        </div>
-      </div>
+      <ForgottenCostsPrompt
+        expenseRows={expenseRows}
+        addExpenseRow={addExpenseRow}
+        yearCount={yearCount}
+        syncExpenseRows={syncExpenseRows}
+      />
 
       <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
         <div>
@@ -1322,7 +1435,12 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           <button type="button" onClick={() => toggleCategory("capital_financing")} className="flex items-center gap-3 w-full text-left p-5 hover:bg-amber-50/50 transition-colors">
             {expandedCategories.has("capital_financing") ? <ChevronDown className="h-5 w-5 text-amber-600" /> : <ChevronRight className="h-5 w-5 text-amber-600" />}
             <Landmark className="h-5 w-5 text-amber-600" />
-            <span className="font-bold text-lg text-foreground">Capital & Debt (<GlossaryTerm termKey="ffe">FF&E</GlossaryTerm>, <GlossaryTerm termKey="leasehold_improvements">Buildout</GlossaryTerm>)</span>
+            <div className="flex-1 min-w-0">
+              <span className="font-bold text-lg text-foreground">Capital & Debt</span>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                <GlossaryTerm termKey="ffe">FF&E</GlossaryTerm> (Furniture, Fixtures & Equipment — desks, chairs, whiteboards, etc.) · <GlossaryTerm termKey="leasehold_improvements">Leasehold Improvements</GlossaryTerm> (Costs to build out or modify your space — painting, flooring, adding walls)
+              </p>
+            </div>
             <span className="text-xs text-muted-foreground ml-2">({capitalRows.filter((r) => r.enabled).length} active)</span>
             <span className="ml-auto text-sm font-semibold text-amber-600">{formatCurrency(categorySummaries["capital_financing"] || 0)}</span>
           </button>
