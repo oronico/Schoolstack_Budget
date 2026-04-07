@@ -15,6 +15,8 @@ export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
   const { watch } = useFormContext();
   const entityType = watch("schoolProfile.entityType");
   const lendingLabIntent = watch("schoolProfile.lendingLabIntent") as string | undefined;
+  const loanAmount = watch("schoolProfile.loanAmount") as number | undefined;
+  const hasLoan = loanAmount !== undefined && loanAmount !== null && loanAmount > 0;
   const niLabel = profitLabel(entityType);
   const cumNiLabel = cumulativeProfitLabel(entityType);
   const [hasRequested, setHasRequested] = useState(false);
@@ -81,6 +83,7 @@ export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
         modelId={modelId ?? undefined}
         jumpToStep={jumpToStep}
         lendingLabIntent={lendingLabIntent}
+        hasLoan={hasLoan}
       />
     </>
   );

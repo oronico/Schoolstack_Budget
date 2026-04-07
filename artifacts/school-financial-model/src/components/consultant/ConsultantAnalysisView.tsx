@@ -46,13 +46,16 @@ import { LendingLabCard } from "./LendingLabCard";
 function metricNameToKpiId(name: string): string | undefined {
   const lower = name.toLowerCase();
   if (lower.includes("revenue per student")) return "revenuePerStudent";
+  if (lower.includes("cost per student")) return "costPerStudent";
   if (lower.includes("staffing cost")) return "staffingCostPct";
   if (lower.includes("operating cost")) return "operatingCostPct";
   if (lower.includes("margin") || lower.includes("surplus") || lower.includes("profit")) return "netMargin";
   if (lower.includes("revenue growth")) return "revenueGrowth";
   if (lower.includes("capacity utilization")) return "capacityUtilization";
   if (lower.includes("debt service") || lower.includes("dscr")) return "dscr";
+  if (lower.includes("days cash") || lower.includes("cash on hand")) return "daysCashOnHand";
   if (lower.includes("reserve")) return "reserveMonths";
+  if (lower.includes("breakeven") || lower.includes("break-even") || lower.includes("break even")) return "breakevenEnrollment";
   return undefined;
 }
 
@@ -125,15 +128,18 @@ interface ConsultantAnalysisViewProps {
   jumpToStep?: (step: number) => void;
   exportStepNumber?: number;
   lendingLabIntent?: string;
+  hasLoan?: boolean;
 }
 
 const KPI_PLAIN_ENGLISH: Record<string, (value: string) => string> = {
   revenuePerStudent: (v) => `Your school brings in ${v} for each student enrolled`,
+  costPerStudent: (v) => `It costs ${v} to educate each student for the year`,
   staffingCostPct: (v) => `${v} of every dollar goes to paying your team`,
   operatingCostPct: (v) => `${v} of revenue covers non-staffing operations`,
   netMargin: (v) => `${v} of revenue is left over after all expenses`,
   dscr: (v) => `For every $1 of loan payments, you earn ${v} — higher is safer`,
   reserveMonths: (v) => `You could run the school for ${v} with no income`,
+  daysCashOnHand: (v) => `You have ${v} of cash to cover daily operations`,
   revenueGrowth: (v) => `Revenue grows ${v} over the projection period`,
   capacityUtilization: (v) => `Your school is projected to be ${v} full`,
   breakevenEnrollment: (v) => `You need at least ${v} students just to cover costs`,
@@ -160,14 +166,13 @@ function generateHealthSummary(data: ConsultantOutput): string {
   return "We've reviewed your financial model and have some observations to share. Let's walk through the key findings together.";
 }
 
-export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, lendingLabIntent }: ConsultantAnalysisViewProps) {
+export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, lendingLabIntent, hasLoan }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
   const [sensitivityTab, setSensitivityTab] = useState<"revenue" | "expense">("revenue");
-  const [lendingLabExpanded, setLendingLabExpanded] = useState(
-    lendingLabIntent === "plan_to_apply" || lendingLabIntent === "want_to_understand"
-  );
+  const lendingRelevant = lendingLabIntent === "plan_to_apply" || lendingLabIntent === "want_to_understand" || hasLoan;
+  const [lendingLabExpanded, setLendingLabExpanded] = useState(lendingRelevant);
   const healthSummary = generateHealthSummary(data);
-  const showLendingLabCollapsed = lendingLabIntent === "budget_only" || !lendingLabIntent;
+  const showLendingLabCollapsed = !lendingRelevant;
 
   useEffect(() => {
     trackCoachingEvent("analysis_view_opened", {
