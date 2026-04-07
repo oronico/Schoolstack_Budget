@@ -1194,9 +1194,7 @@ function buildFiveYearModel(
   ws.mergeCells(r, 1, r, 6);
   const abMap2: Record<string, string> = { cash: "cash", accrual: "accrual", not_sure: "undetermined" };
   const currentBasis = sp.accountingBasis ? (abMap2[sp.accountingBasis] || sp.accountingBasis) : "undetermined";
-  const basisNote = sp.accountingBasis === "accrual"
-    ? "Projections prepared on an accrual basis."
-    : `Projections prepared on an accrual basis. School currently keeps books on a ${currentBasis} basis.`;
+  const basisNote = `Projections prepared on an accrual basis. School currently keeps books on a ${currentBasis} basis.`;
   ws.getCell(r, 1).value = basisNote;
   ws.getCell(r, 1).font = { italic: true, size: 10, name: "Calibri", color: { argb: "FF64748B" } };
 

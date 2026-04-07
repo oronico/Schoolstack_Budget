@@ -472,9 +472,8 @@ function buildFiveYearProjection(
   }));
 
   const sp = md.schoolProfile || {};
-  const basisNote = sp.accountingBasis && sp.accountingBasis !== "accrual"
-    ? ` All projections are prepared on an accrual basis; the school currently keeps books on a ${accountingBasisLabel(sp.accountingBasis).toLowerCase()} basis.`
-    : " All projections are prepared on an accrual basis.";
+  const currentBasis = sp.accountingBasis ? accountingBasisLabel(sp.accountingBasis).toLowerCase() : "undetermined";
+  const basisNote = ` All projections are prepared on an accrual basis; the school currently keeps books on a ${currentBasis} basis.`;
 
   return {
     ...s,
