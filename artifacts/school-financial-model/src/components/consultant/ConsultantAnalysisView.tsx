@@ -183,18 +183,23 @@ function generateHealthSummary(data: ConsultantOutput): string {
           ? " Your lending readiness needs some work before approaching a lender."
           : "";
 
-  if (alertMetrics.length > 0 && goodCount < alertMetrics.length) {
+  const firstGoodName = metrics.find(m => m.status === "good")?.name;
+  const anyMetricName = topConcernName || firstGoodName || metrics[0]?.name;
+
+  if (alertMetrics.length > 0) {
     const nameSnippet = topConcernName ? ` — starting with ${topConcernName}` : "";
     return `Your model has some areas that need attention before it's ready${nameSnippet}. That's completely normal for an early draft — most founders need a few rounds of adjustments.${riskDetail} Let's walk through what we found and what you can do about it.`;
   }
-  if (warningMetrics.length > 0 && goodCount >= warningMetrics.length) {
+  if (warningMetrics.length > 0) {
     const nameSnippet = topConcernName ? `, particularly around ${topConcernName}` : "";
     return `Your school looks financially solid overall, with a few areas worth watching${nameSnippet}.${riskDetail} The foundation is strong — let's review the specifics so you can make informed decisions about where to fine-tune.${readinessNote}`;
   }
-  if (alertMetrics.length === 0 && warningMetrics.length === 0 && goodCount > 0) {
-    return `Your financial model looks healthy across the board. Your revenue, costs, and reserves are all in good shape.${readinessNote} That's a strong starting point — you should feel good about where this stands.`;
+  if (goodCount > 0) {
+    const strengthSnippet = firstGoodName ? ` ${firstGoodName} is looking strong.` : "";
+    return `Your financial model looks healthy across the board.${strengthSnippet} Your revenue, costs, and reserves are all in good shape.${readinessNote} That's a strong starting point — you should feel good about where this stands.`;
   }
-  return `We've reviewed your financial model and have some observations to share.${riskDetail} Let's walk through the key findings together.`;
+  const fallbackSnippet = anyMetricName ? ` We looked at ${anyMetricName} and more.` : "";
+  return `We've reviewed your financial model and have some observations to share.${fallbackSnippet}${riskDetail} Let's walk through the key findings together.`;
 }
 
 export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, lendingLabIntent, hasLoan }: ConsultantAnalysisViewProps) {
