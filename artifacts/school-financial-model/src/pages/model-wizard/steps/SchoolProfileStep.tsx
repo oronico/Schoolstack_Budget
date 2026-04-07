@@ -1761,7 +1761,7 @@ export function SchoolProfileStep() {
               <p className="text-sm text-teal-800">Starting from scratch? That's totally normal — we'll set everything to $0 for you. If you do have existing savings or debts to carry over, you can expand this section and enter them.</p>
             </div>
           )}
-          <details className="group" open={schoolStage === "operating_school"}>
+          <details className="group" open={schoolStage === "operating_school" && lendingLabIntent === "plan_to_apply"}>
             <summary className="cursor-pointer text-sm font-medium text-primary hover:underline mb-4">
               {schoolStage === "new_school" ? "Do you have any existing finances to carry over?" : lendingLabIntent === "plan_to_apply" ? "Assets & Liabilities" : "+ Opening balances (optional)"}
             </summary>
