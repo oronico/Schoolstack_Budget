@@ -177,9 +177,11 @@ function generateHealthSummary(data: ConsultantOutput): string {
   const readinessNote =
     data.lenderReadiness === "Strong"
       ? " Your lending readiness looks strong."
-      : data.lenderReadiness === "Not Yet Ready"
-        ? " Your lending readiness needs some work before approaching a lender."
-        : "";
+      : data.lenderReadiness === "Needs Work"
+        ? " Your lending readiness is getting there, with a few areas to strengthen before approaching a lender."
+        : data.lenderReadiness === "Not Yet Ready"
+          ? " Your lending readiness needs some work before approaching a lender."
+          : "";
 
   if (alertMetrics.length > 0 && goodCount < alertMetrics.length) {
     const nameSnippet = topConcernName ? ` — starting with ${topConcernName}` : "";
@@ -187,7 +189,7 @@ function generateHealthSummary(data: ConsultantOutput): string {
   }
   if (warningMetrics.length > 0 && goodCount >= warningMetrics.length) {
     const nameSnippet = topConcernName ? `, particularly around ${topConcernName}` : "";
-    return `Your school looks financially solid overall, with a few areas worth watching${nameSnippet}. The foundation is strong — let's review the specifics so you can make informed decisions about where to fine-tune.${readinessNote}`;
+    return `Your school looks financially solid overall, with a few areas worth watching${nameSnippet}.${riskDetail} The foundation is strong — let's review the specifics so you can make informed decisions about where to fine-tune.${readinessNote}`;
   }
   if (alertMetrics.length === 0 && warningMetrics.length === 0 && goodCount > 0) {
     return `Your financial model looks healthy across the board. Your revenue, costs, and reserves are all in good shape.${readinessNote} That's a strong starting point — you should feel good about where this stands.`;
