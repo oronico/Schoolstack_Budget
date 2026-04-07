@@ -48,6 +48,9 @@ Thumbs.db
 .cache/
 .local/
 
+# Slide deck (local-only)
+artifacts/budget-allhands/
+
 # Debug & test artifacts
 *.xlsx
 !artifacts/api-server/qa-output/**/*.xlsx
