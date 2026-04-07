@@ -66,9 +66,10 @@ Manages authentication, CRUD for financial models, analytics, feedback, and orch
 
 ### Frontend (`school-financial-model`)
 A React-based SPA featuring:
-- An 8-step public underwriting wizard (`/underwriting`).
+- Authentication required before entering the wizard. All entry points ("Start My Financial Plan", "Get Started", footer links) redirect to `/register`. The old `/underwriting` public wizard route redirects to `/register`.
 - Authentication pages and a dashboard for model lifecycle management.
 - A 10-step authenticated wizard covering Profile, Assumptions, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, Narrative, and Export.
+- **Non-linear wizard navigation**: Users can skip to any step (1–6) freely. Steps 7+ (Review, Consultant, Narrative, Export) require core fields (school name, state, type, enrollment, revenue source, staff role) to be filled first. Users are told exactly which fields are missing.
 - **Assumptions step**: A formula dashboard showing all rates and drivers, with centralized defaults and per-row override inheritance.
 - A Scenario Planner (`/model/:id/scenarios`) for what-if analysis with side-by-side comparisons.
 - Admin dashboard for analytics and feedback.

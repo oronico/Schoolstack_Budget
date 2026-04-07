@@ -446,6 +446,25 @@ export function ModelWizardPage() {
   const isLastStep = currentStep === STEPS.length;
   const isExportStep = currentStep === STEPS.length;
 
+  const checkCoreFieldsForExport = (): { ok: boolean; missing: string[] } => {
+    const vals = methods.getValues();
+    const missing: string[] = [];
+    const profile = vals.schoolProfile as Record<string, unknown> | undefined;
+    if (!profile?.schoolName || !(profile.schoolName as string).trim()) missing.push("School Name (Profile)");
+    if (!profile?.state) missing.push("State (Profile)");
+    if (!profile?.schoolType) missing.push("School Type (Profile)");
+    const enrollment = vals.enrollment as Record<string, number> | undefined;
+    const programs = vals.programs as unknown[] | undefined;
+    const hasEnrollment = enrollment && (enrollment.year1 > 0 || enrollment.year2 > 0);
+    const hasPrograms = programs && programs.length > 0;
+    if (!hasEnrollment && !hasPrograms) missing.push("Enrollment numbers");
+    const revenueRows = vals.revenueRows as unknown[] | undefined;
+    if (!revenueRows || revenueRows.length === 0) missing.push("At least one revenue source");
+    const staffingRows = vals.staffingRows as unknown[] | undefined;
+    if (!staffingRows || staffingRows.length === 0) missing.push("At least one staff role");
+    return { ok: missing.length === 0, missing };
+  };
+
   const handleNext = async () => {
     const validateStep = async (step: number): Promise<boolean> => {
       switch (step) {
@@ -478,6 +497,13 @@ export function ModelWizardPage() {
             methods.trigger('expenseRows'),
             methods.trigger('capitalAndDebtRows'),
           ]);
+          if (a && b && d) {
+            const { ok, missing } = checkCoreFieldsForExport();
+            if (!ok) {
+              alert(`Before you can continue to Review, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order — just make sure they're done before generating your outputs.`);
+              return false;
+            }
+          }
           return a && b && d;
         }
         case 9: {
@@ -662,32 +688,36 @@ export function ModelWizardPage() {
               style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
             />
             {STEPS.map((step) => {
-              const isClickable = step.id <= currentStep;
+              const isCompleted = completedSteps.current.has(step.id);
+              const isCurrent = currentStep === step.id;
               return (
                 <div key={step.id} className="flex flex-col items-center gap-2">
                   <button
                     type="button"
-                    disabled={!isClickable}
                     onClick={() => {
-                      if (isClickable) {
-                        setCurrentStep(step.id);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      if (step.id >= 7) {
+                        const { ok, missing } = checkCoreFieldsForExport();
+                        if (!ok) {
+                          alert(`Before you can access ${step.title}, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order — just make sure they're done before generating your outputs.`);
+                          return;
+                        }
                       }
+                      setCurrentStep(step.id);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300",
-                      currentStep === step.id ? "bg-primary border-primary text-primary-foreground scale-110 shadow-md shadow-primary/30" : 
-                      currentStep > step.id ? "bg-primary border-primary text-primary-foreground hover:scale-110 hover:shadow-md hover:shadow-primary/30" : 
-                      "bg-card border-border text-muted-foreground",
-                      isClickable ? "cursor-pointer" : "cursor-default"
+                      "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 cursor-pointer",
+                      isCurrent ? "bg-primary border-primary text-primary-foreground scale-110 shadow-md shadow-primary/30" : 
+                      isCompleted ? "bg-primary border-primary text-primary-foreground hover:scale-110 hover:shadow-md hover:shadow-primary/30" : 
+                      "bg-card border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
                     )}
                   >
-                    {currentStep > step.id ? <CheckCircle2 className="h-4 w-4" /> : step.id}
+                    {isCompleted && !isCurrent ? <CheckCircle2 className="h-4 w-4" /> : step.id}
                   </button>
                   <span className={cn(
                     "text-[10px] uppercase tracking-wider font-semibold absolute mt-10",
-                    currentStep === step.id ? "block" : "hidden md:block",
-                    currentStep >= step.id ? "text-primary" : "text-muted-foreground"
+                    isCurrent ? "block" : "hidden md:block",
+                    isCurrent || isCompleted ? "text-primary" : "text-muted-foreground"
                   )}>
                     {step.title}
                   </span>

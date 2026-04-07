@@ -102,7 +102,7 @@ export function LandingPage() {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/underwriting"
+                  href="/register"
                   className="bg-[#328555] hover:bg-[#276844] text-white px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg shadow-[#328555]/20 flex items-center justify-center gap-2"
                 >
                   Start My Financial Plan
@@ -602,7 +602,7 @@ export function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/underwriting"
+                href="/register"
                 className="bg-white text-[#328555] hover:bg-gray-50 px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg flex items-center justify-center gap-2"
               >
                 Get Started Free

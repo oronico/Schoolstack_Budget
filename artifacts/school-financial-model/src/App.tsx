@@ -18,7 +18,7 @@ const ResetPasswordPage = lazy(() => import("@/pages/auth/reset-password").then(
 const DashboardPage = lazy(() => import("@/pages/dashboard").then(m => ({ default: m.DashboardPage })));
 const NewModelPage = lazy(() => import("@/pages/model-new").then(m => ({ default: m.NewModelPage })));
 const ModelWizardPage = lazy(() => import("@/pages/model-wizard").then(m => ({ default: m.ModelWizardPage })));
-const PublicWizardPage = lazy(() => import("@/pages/public-wizard").then(m => ({ default: m.PublicWizardPage })));
+const PublicWizardRedirect = lazy(() => Promise.resolve({ default: () => { window.location.replace((import.meta.env.BASE_URL || "/").replace(/\/$/, "") + "/register"); return null; } }));
 const ScenarioPage = lazy(() => import("@/pages/scenarios").then(m => ({ default: m.ScenarioPage })));
 const AdminPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPage })));
 const TermsPage = lazy(() => import("@/pages/legal/terms").then(m => ({ default: m.TermsPage })));
@@ -57,7 +57,8 @@ function SpaceAwareRoute({ component: Component }: { component: React.ComponentT
     const hasSpaceParams = search && (search.includes("sqft") || search.includes("students") || search.includes("monthlyRent") || search.includes("schoolName"));
     if (hasSpaceParams) {
       const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-      window.location.replace(`${base}/underwriting${search}`);
+      sessionStorage.setItem("auth_return_to", `/model/new${search}`);
+      window.location.replace(`${base}/register`);
       return;
     } else {
       const currentPath = window.location.pathname + search;
@@ -115,7 +116,7 @@ function AppRouter() {
         <Route path="/register" component={RegisterPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
-        <Route path="/underwriting" component={PublicWizardPage} />
+        <Route path="/underwriting" component={PublicWizardRedirect} />
         <Route path="/shared/:token" component={SharedModelPage} />
         <Route path="/terms" component={TermsPage} />
         <Route path="/privacy" component={PrivacyPolicyPage} />
