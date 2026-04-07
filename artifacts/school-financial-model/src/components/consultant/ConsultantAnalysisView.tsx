@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import {
   AreaChart,
   Area,
@@ -557,7 +558,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
                     ))}
                   </tr>
                   <tr className="border-t border-border/40">
-                    <td className="px-4 py-2 font-medium text-xs">Reserve (Months)</td>
+                    <td className="px-4 py-2 font-medium text-xs"><GlossaryTerm termKey="reserve_months">Reserve (Months)</GlossaryTerm></td>
                     {cumFin!.map((cf) => (
                       <td key={cf.year} className={cn("text-right px-4 py-2 font-semibold text-xs", cf.reserveMonths >= 3 ? "text-green-700" : cf.reserveMonths >= 1 ? "text-amber-700" : "text-rose-700")}>
                         {cf.reserveMonths.toFixed(1)}
@@ -782,7 +783,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="h-5 w-5 text-primary" />
-            <h3 className="font-display font-bold text-lg text-foreground">Cash Runway</h3>
+            <h3 className="font-display font-bold text-lg text-foreground"><GlossaryTerm termKey="cash_trough">Cash Runway</GlossaryTerm></h3>
           </div>
           <div className="flex items-center gap-4">
             <div className={cn(

@@ -41,8 +41,20 @@ export function GlossaryTerm({ termKey, children, className }: GlossaryTermProps
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        tooltipRef.current && !tooltipRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
     document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
+    document.addEventListener("pointerdown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("pointerdown", handleOutsideClick);
+    };
   }, [open]);
 
   useEffect(() => {

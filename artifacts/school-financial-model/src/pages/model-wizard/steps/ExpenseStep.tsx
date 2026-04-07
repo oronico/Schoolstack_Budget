@@ -853,7 +853,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         <TrendingUp className="h-5 w-5 text-teal-600 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-foreground space-y-1.5">
           <p>
-            <span className="font-semibold">Smart Escalation Applied.</span>{" "}
+            <span className="font-semibold">Smart <GlossaryTerm termKey="escalation_rate">Escalation</GlossaryTerm> Applied.</span>{" "}
             A strong financial model reflects how costs actually behave. Lease payments follow your contract terms. Vendor costs increase with inflation. Per-student expenses scale with enrollment. We've applied realistic escalation — you can adjust any year.
           </p>
           <FinancingInsight text="A good rule of thumb: keep facility costs between 15-25% of revenue. Above 30% can crowd out staffing and programs — worth watching." />
@@ -1311,7 +1311,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           <button type="button" onClick={() => toggleCategory("capital_financing")} className="flex items-center gap-3 w-full text-left p-5 hover:bg-amber-50/50 transition-colors">
             {expandedCategories.has("capital_financing") ? <ChevronDown className="h-5 w-5 text-amber-600" /> : <ChevronRight className="h-5 w-5 text-amber-600" />}
             <Landmark className="h-5 w-5 text-amber-600" />
-            <span className="font-bold text-lg text-foreground">Capital & Debt</span>
+            <span className="font-bold text-lg text-foreground">Capital & Debt (<GlossaryTerm termKey="ffe">FF&E</GlossaryTerm>, <GlossaryTerm termKey="leasehold_improvements">Buildout</GlossaryTerm>)</span>
             <span className="text-xs text-muted-foreground ml-2">({capitalRows.filter((r) => r.enabled).length} active)</span>
             <span className="ml-auto text-sm font-semibold text-amber-600">{formatCurrency(categorySummaries["capital_financing"] || 0)}</span>
           </button>
