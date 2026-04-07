@@ -23,6 +23,7 @@ interface SchoolProfile {
   year1OperatingMonths?: number;
   isAccredited?: boolean;
   accreditingBody?: string;
+  accountingBasis?: string;
   hasManagementFee?: boolean;
   managementFeePercent?: number;
   gradeBandEnrollment?: { k5: number[]; m68: number[]; h912: number[] };
@@ -365,6 +366,10 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   if (sp.fiscalYearStartMonth) labelValue(doc, "Fiscal Year Start", MONTH_NAMES[sp.fiscalYearStartMonth] || "");
   if (sp.isAccredited) labelValue(doc, "Accreditation", sp.accreditingBody || "Yes");
   if (sp.isPartialFirstYear) labelValue(doc, "Year 1 Operating Months", String(sp.year1OperatingMonths || 10));
+  if (sp.accountingBasis) {
+    const abMap: Record<string, string> = { cash: "Cash Basis", accrual: "Accrual Basis", not_sure: "Not Yet Determined" };
+    labelValue(doc, "Accounting Basis", abMap[sp.accountingBasis] || sp.accountingBasis);
+  }
 
   const revenueRows = data.revenueRows || [];
   const staffingRows = data.staffingRows || [];

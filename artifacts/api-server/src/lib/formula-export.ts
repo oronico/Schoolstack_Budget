@@ -68,6 +68,7 @@ interface SchoolProfile {
   comparableMarketRent?: number;
   hasWrittenAgreement?: boolean;
   monthlyFacilityAllocation?: number;
+  accountingBasis?: string;
   hasBookkeeper?: boolean;
   bookkeeperMonthlyCost?: number;
   hasLawyer?: boolean;
@@ -661,6 +662,12 @@ function buildAssumptions(
 
   r++; ws.getCell(r, 1).value = "School Stage"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = sp.schoolStage === "operating_school" ? "Operating School" : "New School"; dc(ws.getCell(r, 2));
+
+  if (sp.accountingBasis) {
+    r++; ws.getCell(r, 1).value = "Accounting Basis"; dc(ws.getCell(r, 1));
+    const abMap: Record<string, string> = { cash: "Cash Basis", accrual: "Accrual Basis", not_sure: "Not Yet Determined" };
+    ws.getCell(r, 2).value = abMap[sp.accountingBasis] || sp.accountingBasis; dc(ws.getCell(r, 2));
+  }
 
   if (sp.locationSecured) {
     r++; ws.getCell(r, 1).value = "Location"; dc(ws.getCell(r, 1));

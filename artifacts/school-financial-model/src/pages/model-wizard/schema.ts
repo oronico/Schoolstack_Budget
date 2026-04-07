@@ -197,6 +197,7 @@ export const schoolProfileSchema = z.object({
   schoolFteCount: z.coerce.number().min(0).optional(),
   newFteCount: z.coerce.number().min(0).optional(),
   stateFundingMethodology: z.enum(["ada", "adm", "single_count_day", "multiple_count_dates", "single_count_period", "multiple_count_periods", "other"]).optional(),
+  accountingBasis: z.enum(["cash", "accrual", "not_sure"]).optional(),
   facilityPhases: facilityPhasesArraySchema,
   isDiocesan: z.boolean().optional(),
   isFaithAffiliated: z.boolean().optional(),

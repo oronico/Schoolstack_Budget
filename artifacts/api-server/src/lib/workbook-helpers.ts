@@ -260,6 +260,15 @@ export function stageLabel(s?: string): string {
   return s === "operating_school" ? "Operating" : "Startup / Pre-Opening";
 }
 
+export function accountingBasisLabel(ab?: string): string {
+  const map: Record<string, string> = {
+    cash: "Cash Basis",
+    accrual: "Accrual Basis",
+    not_sure: "Not Yet Determined",
+  };
+  return map[ab || ""] || "";
+}
+
 export function schoolModelFromType(schoolType?: string): string {
   if (!schoolType) return "private";
   if (schoolType === "charter_school") return "charter";
@@ -362,6 +371,7 @@ export interface SchoolProfile {
   lawyerMonthlyCost?: number;
   hasGeneralLiabilityInsurance?: boolean;
   insuranceCost?: number;
+  accountingBasis?: string;
   fundingProfile?: string;
   debtIncluded?: boolean;
   lendingLabIntent?: string;

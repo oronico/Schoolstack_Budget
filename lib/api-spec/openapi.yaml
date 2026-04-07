@@ -1250,6 +1250,9 @@ components:
         lendingLabIntent:
           type: string
           enum: [plan_to_apply, want_to_understand, budget_only]
+        accountingBasis:
+          type: string
+          enum: [cash, accrual, not_sure]
         facilityPhases:
           type: array
           items:

@@ -7,7 +7,7 @@ import {
   hdr, sec, dc, bc, gc, cn, colLetter, setFormula, inputCell, outputCell, printSetup,
   addInstructionsSheet, addDashboardSheet,
   schoolYearLabel, yearLabels, schoolTypeLabel, entityLabel, funcLabel, catLabel, expCatLabel, driverLabel,
-  fundingLabel, stageLabel, schoolModelFromType, isNonprofit, netIncomeLabel, equityLabel,
+  fundingLabel, stageLabel, accountingBasisLabel, schoolModelFromType, isNonprofit, netIncomeLabel, equityLabel,
   normalizeStaffingRow, getEnrollmentArray,
   computeAnnualDebt, computeAnnualDebtForYear, computeInterestPortion, computePrincipalPortion, computeRemainingBalance, computeDaysCashOnHand,
   computeRevLineItem, computeRevenueForYear, computePersonnelForYear, computeStaffingLoaded,
@@ -71,6 +71,7 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
     ["Model Date", new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })],
     ["Stage", stageLabel(sp.schoolStage)],
     ["Funding Profile", fundingLabel(sp.fundingProfile)],
+    ...(sp.accountingBasis ? [["Accounting Basis", accountingBasisLabel(sp.accountingBasis)] as [string, string]] : []),
   ];
   for (const [label, val] of info) {
     ws.getCell(r, 2).value = label; ws.getCell(r, 2).font = { ...NF, bold: true };
@@ -166,6 +167,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     ["EIN", sp.ein || ""],
     ["Stage", stageLabel(sp.schoolStage)],
     ["Funding Profile", fundingLabel(sp.fundingProfile)],
+    ...(sp.accountingBasis ? [["Accounting Basis", accountingBasisLabel(sp.accountingBasis)] as [string, string | number]] : []),
     ["Fiscal Year Start Month", sp.fiscalYearStartMonth || 7],
     ["Max Capacity", sp.maxCapacity || 0],
   ];

@@ -541,6 +541,7 @@ export function SchoolProfileStep() {
   const doesFundraise = watch("schoolProfile.doesFundraise") as boolean | undefined;
   const hasFiscalSponsor = watch("schoolProfile.hasFiscalSponsor") as boolean | undefined;
   const fiscalSponsorInterest = watch("schoolProfile.fiscalSponsorInterest") as boolean | undefined;
+  const accountingBasis = watch("schoolProfile.accountingBasis") as string | undefined;
 
   const allowedEntityTypes = useMemo(() => {
     const all = Object.entries(ENTITY_TYPE_LABELS);
@@ -1616,6 +1617,45 @@ export function SchoolProfileStep() {
               helperText="Number of months the school operates in Year 1"
             />
           )}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-bold border-b border-border pb-2 mb-4 flex items-center gap-2">
+          <Landmark className="h-5 w-5 text-primary" /> Accounting Basis
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          How do you currently keep your books? This helps us label your exports accurately. Your projections will work exactly the same regardless of your answer.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          {([
+            { value: "cash", label: "Cash Basis", desc: "I record income when received and expenses when paid" },
+            { value: "accrual", label: "Accrual Basis", desc: "I record income when earned and expenses when incurred" },
+            { value: "not_sure", label: "Not sure yet", desc: "I haven't decided or I'm not sure what we use" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setValue("schoolProfile.accountingBasis", opt.value, { shouldDirty: true })}
+              className={cn(
+                "flex flex-col items-start gap-1 p-4 rounded-xl border-2 text-left transition-all",
+                accountingBasis === opt.value
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-border bg-card hover:border-primary/40"
+              )}
+            >
+              <span className={cn("text-sm font-semibold", accountingBasis === opt.value ? "text-primary" : "text-foreground")}>{opt.label}</span>
+              <span className="text-xs text-muted-foreground">{opt.desc}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="rounded-xl bg-teal-50/60 border border-teal-200/60 px-4 py-3 flex items-start gap-2.5">
+          <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-teal-800">
+            <span className="font-semibold">Why we always model on an accrual basis:</span> Accrual accounting shows when revenue is earned and costs are committed — not just when cash moves. This gives your board, authorizer, or any reviewer the most complete picture of your school's financial health. Your day-to-day bookkeeping method is a separate choice.
+          </div>
         </div>
       </div>
 

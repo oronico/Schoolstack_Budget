@@ -8,6 +8,7 @@ import {
   entityLabel,
   fundingLabel,
   stageLabel,
+  accountingBasisLabel,
   driverVal,
   computeMonthlyCashInflow,
   computeRevenueForYear,
@@ -223,6 +224,7 @@ function buildCover(s: PacketSection, md: ModelData): PacketSection {
       { label: "School Type", value: schoolTypeLabel(sp.schoolType), sourceField: "schoolProfile.schoolType" },
       { label: "Entity Type", value: entityLabel(sp.entityType), sourceField: "schoolProfile.entityType" },
       { label: "State", value: sp.state || "—", sourceField: "schoolProfile.state" },
+      ...(sp.accountingBasis ? [{ label: "Accounting Basis", value: accountingBasisLabel(sp.accountingBasis), sourceField: "schoolProfile.accountingBasis" }] : []),
     ],
   };
 }

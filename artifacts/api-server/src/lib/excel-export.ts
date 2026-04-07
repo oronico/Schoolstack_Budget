@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { computeAnnualDebt } from "@workspace/finance";
-import { addDashboardSheet, computeFacilityCostByYear, computeInstructionalCostByYear, setFormula } from "./workbook-helpers.js";
+import { accountingBasisLabel, addDashboardSheet, computeFacilityCostByYear, computeInstructionalCostByYear, setFormula } from "./workbook-helpers.js";
 
 function safeResult(v: unknown): number | string {
   if (v === null || v === undefined) return "0";
@@ -60,6 +60,7 @@ interface SchoolProfile {
   ecoDisCount?: number[];
   enrollmentGrowthRate?: number;
   stateFundingMethodology?: string;
+  accountingBasis?: string;
 }
 
 interface TuitionTier {
@@ -405,6 +406,7 @@ function buildCoverSheet(
   const details: string[] = [];
   if (sp.schoolType) details.push(schoolTypeDisplay(sp.schoolType, sp.schoolTypeOther));
   if (sp.entityType) details.push(entityTypeDisplay(sp.entityType));
+  if (sp.accountingBasis) details.push(accountingBasisLabel(sp.accountingBasis));
   if (sp.state) details.push(sp.state);
   ws.getCell(r, 2).value = details.join("  •  ");
   ws.getCell(r, 2).font = { size: 11, color: { argb: "FF64748B" }, name: "Calibri" };
@@ -1058,6 +1060,7 @@ function buildAssumptionsTab(
     ["Current Students", sp.currentStudents || 0],
     ["Max Student Capacity", sp.maxCapacity || 0],
     ["Fiscal Year Start", MONTH_NAMES[sp.fiscalYearStartMonth || 7] || "July"],
+    ["Accounting Basis", accountingBasisLabel(sp.accountingBasis)],
   ];
 
   if (sp.isPartialFirstYear) {
@@ -2082,6 +2085,7 @@ function buildSummaryTabNew(ws: ExcelJS.Worksheet, sp: SchoolProfile, yearCount:
     ["School Stage", sp.schoolStage === "operating_school" ? "Operating School" : "New School"],
     ["State", sp.state || ""],
     ["Fiscal Year Start", MONTH_NAMES[sp.fiscalYearStartMonth || 7] || "July"],
+    ["Accounting Basis", accountingBasisLabel(sp.accountingBasis)],
     ["Max Student Capacity", String(sp.maxCapacity || "N/A")],
   ];
   for (const [label, value] of infoItems) {

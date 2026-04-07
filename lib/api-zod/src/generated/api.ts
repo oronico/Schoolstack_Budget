@@ -222,6 +222,9 @@ export const CreateModelBody = zod.object({
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
+        accountingBasis: zod
+          .enum(["cash", "accrual", "not_sure"])
+          .optional(),
         facilityPhases: zod
           .array(
             zod.object({
@@ -659,6 +662,9 @@ export const GetModelResponse = zod.object({
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
+          .optional(),
+        accountingBasis: zod
+          .enum(["cash", "accrual", "not_sure"])
           .optional(),
         facilityPhases: zod
           .array(
@@ -1099,6 +1105,9 @@ export const UpdateModelBody = zod.object({
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
+        accountingBasis: zod
+          .enum(["cash", "accrual", "not_sure"])
+          .optional(),
         facilityPhases: zod
           .array(
             zod.object({
@@ -1529,6 +1538,9 @@ export const UpdateModelResponse = zod.object({
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
+          .optional(),
+        accountingBasis: zod
+          .enum(["cash", "accrual", "not_sure"])
           .optional(),
         facilityPhases: zod
           .array(
@@ -1989,6 +2001,9 @@ export const ArchiveModelResponse = zod.object({
         debtIncluded: zod.boolean().optional(),
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
+          .optional(),
+        accountingBasis: zod
+          .enum(["cash", "accrual", "not_sure"])
           .optional(),
         facilityPhases: zod
           .array(

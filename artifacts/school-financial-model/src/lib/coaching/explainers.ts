@@ -761,6 +761,27 @@ export const EXPLAINERS: Record<string, Explainer> = {
     highFriction: true,
     priority: "high",
   },
+  accounting_basis: {
+    id: "accounting_basis",
+    title: "Accounting Basis",
+    body: {
+      whatThisMeans: "Your accounting basis describes when you record revenue and expenses. Cash basis means you record transactions when money actually changes hands. Accrual basis means you record them when they're earned or incurred, regardless of when payment happens.",
+      whyItMatters: "We build every model on an accrual basis — it gives the most complete and accurate picture of your school's financial health. Even if you currently track your books on a cash basis (which is perfectly fine for day-to-day operations), your 5-year projections need to show when revenue is earned and expenses are committed, not just when checks clear.",
+      healthyVsRisky: "There's no wrong answer here. Many small schools start on cash basis because it's simpler — that's completely normal. What matters is that your financial model projects on an accrual basis so that anyone reviewing it (a board, an authorizer, a lender) sees a complete picture. Your day-to-day bookkeeping method is a separate decision.",
+      whatToDoNext: "Select whichever option describes how you currently keep your books. If you're not sure, choose 'Not sure yet' — we'll note it and your model will work exactly the same either way. All projections use accrual accounting regardless of your selection.",
+    },
+    extraBody: {
+      workedExample: "Example: Your school bills $120K in tuition for September, but only collects $100K by September 30th (the rest arrives in October). Cash basis records $100K revenue in September and $20K in October. Accrual basis records $120K in September because that's when it was earned. The annual total is the same — $120K — but accrual gives a more accurate monthly picture of your financial position.",
+      glossaryTerms: "Cash Basis: Revenue recorded when received, expenses recorded when paid. Simplest method, common for small organizations. Accrual Basis: Revenue recorded when earned, expenses recorded when incurred. Required for GAAP-compliant financial statements and most grant reporting. Modified Cash Basis: A hybrid approach some schools use — cash basis with certain accrual adjustments. GAAP: Generally Accepted Accounting Principles — the standard framework for financial reporting in the U.S.",
+    },
+    audienceLevel: ["basics", "extra"],
+    relatedSection: "school_profile",
+    dismissible: true,
+    autoExpandFor: ["basics"],
+    order: 36,
+    highFriction: false,
+    priority: "standard",
+  },
   reading_your_analysis: {
     id: "reading_your_analysis",
     title: "How to Read Your Analysis",
