@@ -175,6 +175,10 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
   const showLendingLabCollapsed = !lendingRelevant;
 
   useEffect(() => {
+    setLendingLabExpanded(lendingRelevant);
+  }, [lendingRelevant]);
+
+  useEffect(() => {
     trackCoachingEvent("analysis_view_opened", {
       modelId: modelId ?? null,
     });
