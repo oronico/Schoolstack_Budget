@@ -122,6 +122,7 @@ interface RevenueRow {
   id: string; category: string; lineItem: string; enabled: boolean;
   driverType: string; amounts: number[]; percentBase?: string;
   escalationRate?: number; note?: string; billingMonths?: number;
+  escalationRateOverridden?: boolean;
   collectionMethod?: string; collectionRate?: number; collectionDelayDays?: number;
   paymentFrequency?: string; paymentTiming?: string; disbursementType?: string;
   reimbursementLagMonths?: number; grantStatus?: string; receiptQuarter?: number;
@@ -164,6 +165,7 @@ function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
 interface ExpenseRow {
   id: string; category: string; lineItem: string; enabled: boolean;
   driverType: string; amounts: number[]; escalationRate?: number; note?: string;
+  escalationRateOverridden?: boolean;
 }
 
 interface CapitalDebtRow {
@@ -358,9 +360,13 @@ function resolveEsc(rowEsc?: number, fallback?: number): number {
   return fallback ?? 0;
 }
 
-function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number): number {
+function resolveRowEsc(rowEsc?: number, fallback?: number, overridden?: boolean): number {
+  return overridden ? (rowEsc ?? 0) : resolveEsc(rowEsc, fallback);
+}
+
+function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number, escalationRateOverridden?: boolean): number {
   let base = amounts?.[y] ?? 0;
-  const esc = resolveEsc(escalationRate, fallbackInflation);
+  const esc = resolveRowEsc(escalationRate, fallbackInflation, escalationRateOverridden);
   if (esc !== 0 && y > 0) {
     const y1 = amounts?.[0] ?? 0;
     base = y1 * Math.pow(1 + esc / 100, y);
@@ -434,15 +440,18 @@ function computeRevenueForYear(
       }
       vals.set(r.id, tuitionWithTiers(perStudentAmount, y, students, tiers));
     } else {
-      vals.set(r.id, driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflPct));
+      vals.set(r.id, driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflPct, undefined, undefined, r.escalationRateOverridden));
     }
   }
   for (const r of rows) {
     if (!r.enabled || r.driverType !== "percent_of_base") continue;
     const baseVal = vals.get(r.percentBase || "") || 0;
     let pctVal = r.amounts?.[y] ?? 0;
-    if (r.escalationRate !== undefined && r.escalationRate !== 0 && y > 0) {
-      pctVal = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
+    const percentEscalation = r.escalationRateOverridden === true
+      ? (r.escalationRate ?? 0)
+      : resolveRowEsc(r.escalationRate, costInflPct, r.escalationRateOverridden);
+    if (percentEscalation !== 0 && y > 0) {
+      pctVal = (r.amounts?.[0] ?? 0) * Math.pow(1 + percentEscalation / 100, y);
     }
     vals.set(r.id, baseVal * (pctVal / 100));
   }
@@ -487,7 +496,7 @@ function computeExpenseForYear(
   for (const r of rows) {
     if (!r.enabled) continue;
     if (r.driverType === "percent_of_revenue") {
-      const esc = resolveEsc(r.escalationRate, fallback);
+      const esc = resolveRowEsc(r.escalationRate, fallback, r.escalationRateOverridden);
       let pct: number;
       if (esc !== 0 && y > 0) {
         pct = (r.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
@@ -496,7 +505,7 @@ function computeExpenseForYear(
       }
       total += (pct / 100) * totalRevenue;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents);
+      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents, r.escalationRateOverridden);
     }
   }
   return total;
@@ -1295,7 +1304,7 @@ function buildFiveYearModel(
         const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct, sp);
         let val: number;
         if (ex.driverType === "percent_of_revenue") {
-          const esc = resolveEsc(ex.escalationRate, costInflPct);
+          const esc = resolveRowEsc(ex.escalationRate, costInflPct);
           let pct: number;
           if (esc !== 0 && y > 0) {
             pct = (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
@@ -1321,7 +1330,7 @@ function buildFiveYearModel(
       let catSum = 0;
       for (const ex of catRows) {
         if (ex.driverType === "percent_of_revenue") {
-          const esc = resolveEsc(ex.escalationRate, costInflPct);
+          const esc = resolveRowEsc(ex.escalationRate, costInflPct);
           let pct: number;
           if (esc !== 0 && y > 0) {
             pct = (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
@@ -1447,7 +1456,7 @@ function buildFiveYearModel(
     for (let y = 0; y < yc; y++) {
       const pf = y === 0 ? prorationFactor : 1;
       const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
-      const esc = resolveEsc(mgmtFeeRow.escalationRate, costInflPct);
+      const esc = resolveRowEsc(mgmtFeeRow.escalationRate, costInflPct);
       let pct: number;
       if (esc !== 0 && y > 0) {
         pct = (mgmtFeeRow.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);

@@ -75,10 +75,20 @@ function sendBinary(res: Response, buffer: Buffer | ArrayBuffer | Uint8Array, co
 }
 
 function normalizeModelData(data: Record<string, unknown>): Record<string, unknown> {
-  if (Array.isArray(data.revenueRows)) {
-    return { ...data, revenueRows: normalizeRevenueRows(data.revenueRows as any) };
+  const normalized = { ...data };
+  if (Array.isArray(normalized.revenueRows)) {
+    normalized.revenueRows = normalizeRevenueRows(normalized.revenueRows as any).map((row) => ({
+      ...row,
+      escalationRateOverridden: row.escalationRateOverridden ?? true,
+    }));
   }
-  return data;
+  if (Array.isArray(normalized.expenseRows)) {
+    normalized.expenseRows = (normalized.expenseRows as Array<Record<string, unknown>>).map((row) => ({
+      ...row,
+      escalationRateOverridden: (row.escalationRateOverridden as boolean | undefined) ?? true,
+    }));
+  }
+  return normalized;
 }
 
 const router: IRouter = Router();
@@ -145,13 +155,14 @@ router.post("/models", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
     const { name, data, currentStep, schoolStage, fundingProfile } = parsed.data;
-    const rowCols = extractRowColumns(data as Record<string, unknown>);
+    const normalizedData = normalizeModelData(data as Record<string, unknown>);
+    const rowCols = extractRowColumns(normalizedData);
 
     const [model] = await db.insert(financialModelsTable).values({
       userId: req.userId!,
       name,
       currentStep: currentStep ?? 0,
-      data: data as Record<string, unknown>,
+      data: normalizedData,
       schoolStage: schoolStage as typeof financialModelsTable.$inferInsert["schoolStage"],
       fundingProfile: fundingProfile as typeof financialModelsTable.$inferInsert["fundingProfile"],
       ...rowCols,
@@ -218,12 +229,13 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
     }
 
     const { name, data, currentStep, status, schoolStage, fundingProfile } = parsed.data;
-    const rowCols = extractRowColumns(data as Record<string, unknown>);
+    const normalizedData = normalizeModelData(data as Record<string, unknown>);
+    const rowCols = extractRowColumns(normalizedData);
     const [model] = await db
       .update(financialModelsTable)
       .set({
         name: name ?? existing.name,
-        data: data as Record<string, unknown>,
+        data: normalizedData,
         currentStep: currentStep ?? existing.currentStep,
         status: status ?? existing.status,
         schoolStage: (schoolStage as typeof financialModelsTable.$inferInsert["schoolStage"]) ?? existing.schoolStage,

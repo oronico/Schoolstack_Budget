@@ -54,6 +54,23 @@ function cleanFacilityFieldsForSave(obj: Record<string, unknown>, ot: string | u
   return cleaned;
 }
 
+function normalizeEscalationOverrideRows(data: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...data };
+  if (Array.isArray(normalized.revenueRows)) {
+    normalized.revenueRows = (normalized.revenueRows as Array<Record<string, unknown>>).map((row) => ({
+      ...row,
+      escalationRateOverridden: (row.escalationRateOverridden as boolean | undefined) ?? true,
+    }));
+  }
+  if (Array.isArray(normalized.expenseRows)) {
+    normalized.expenseRows = (normalized.expenseRows as Array<Record<string, unknown>>).map((row) => ({
+      ...row,
+      escalationRateOverridden: (row.escalationRateOverridden as boolean | undefined) ?? true,
+    }));
+  }
+  return normalized;
+}
+
 type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null };
 
 const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[] = [
@@ -167,6 +184,8 @@ export function ModelWizardPage() {
         driverType: string;
         amounts: number[];
         percentBase?: string;
+        escalationRate?: number;
+        escalationRateOverridden?: boolean;
         note?: string;
       }>,
       staffing: { studentsPerTeacher: 12, benefitsRate: DEFAULT_BENEFITS_RATE, payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE },
@@ -191,6 +210,8 @@ export function ModelWizardPage() {
         enabled: boolean;
         driverType: string;
         amounts: number[];
+        escalationRate?: number;
+        escalationRateOverridden?: boolean;
         note?: string;
       }>,
       capitalAndDebtRows: [] as Array<{
@@ -317,6 +338,7 @@ export function ModelWizardPage() {
           }
           cleanedValues.schoolProfile = sp;
         }
+        const normalizedValues = normalizeEscalationOverrideRows(cleanedValues);
         await updateMutation.mutateAsync({
           id: modelId,
           data: {
@@ -324,7 +346,7 @@ export function ModelWizardPage() {
             currentStep,
             ...(stageVal ? { schoolStage: stageVal } : {}),
             ...(fundingVal ? { fundingProfile: fundingVal } : {}),
-            data: cleanedValues,
+            data: normalizedValues,
           }
         });
         setLastSaved(new Date());
@@ -366,12 +388,13 @@ export function ModelWizardPage() {
         }
         cleanedValues.schoolProfile = sp;
       }
+      const normalizedValues = normalizeEscalationOverrideRows(cleanedValues);
       const body = JSON.stringify({
         name: (profile?.schoolName as string) || initialData.name,
         currentStep,
         ...(stageVal ? { schoolStage: stageVal } : {}),
         ...(fundingVal ? { fundingProfile: fundingVal } : {}),
-        data: cleanedValues,
+        data: normalizedValues,
       });
       const token = localStorage.getItem("auth_token");
       fetch(`/api/models/${modelId}`, {

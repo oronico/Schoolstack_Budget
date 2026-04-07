@@ -11,6 +11,7 @@ import {
   computeEffectiveFte,
   computeNewStudents,
   computeReturningStudents,
+  computeRevLineItem,
   type SchoolProfile,
   type StaffingRow,
   type RevenueRow,
@@ -18,7 +19,7 @@ import {
   type CapitalDebtRow,
 } from "../src/lib/workbook-helpers.js";
 import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
-import { microschoolStartup, privateSchoolWithESA, charterPublicFunding, charterADAGradeBand } from "./sample-payloads.js";
+import { microschoolStartup, privateSchoolWithESA, charterPublicFunding, charterADAGradeBand, homeschoolCoopMixed } from "./sample-payloads.js";
 
 interface GoldenValue {
   label: string;
@@ -437,6 +438,136 @@ function testDriverValEdgeCases() {
   };
   // 5% of 1,000,000 revenue = 50,000
   check("ExpenseRow percent_of_revenue", computeExpenseForYear([pctRevRow], 0, 100, 1000000, 0), 50000);
+
+  const staticContractRow: ExpenseRow = {
+    id: "static_contract",
+    lineItem: "Fixed Contract Services",
+    enabled: true,
+    category: "administration",
+    driverType: "annual_fixed",
+    amounts: [10000, 10000, 10000, 10000, 10000],
+    escalationRate: 0,
+    escalationRateOverridden: true,
+  };
+  const floatingRow: ExpenseRow = {
+    id: "floating_contract",
+    lineItem: "Inflation-Linked Services",
+    enabled: true,
+    category: "administration",
+    driverType: "annual_fixed",
+    amounts: [10000, 10000, 10000, 10000, 10000],
+  };
+  check(
+    "Explicit 0 escalation stays static in Y3",
+    computeExpenseForYear([staticContractRow], 2, 100, 0, 3),
+    10000,
+  );
+  check(
+    "Undefined escalation inherits model inflation in Y3",
+    computeExpenseForYear([floatingRow], 2, 100, 0, 3),
+    10609,
+    1,
+  );
+}
+
+function testRevenueEscalationOverrides() {
+  console.log("\n— Revenue Escalation Override Coverage —");
+
+  const revenueRows: RevenueRow[] = [
+    {
+      id: "base_rev",
+      lineItem: "Base Tuition",
+      category: "tuition_and_fees",
+      enabled: true,
+      driverType: "per_student",
+      amounts: [1000, 1000, 1000, 1000, 1000],
+    },
+    {
+      id: "static_percent",
+      lineItem: "Static Discount",
+      category: "tuition_offsets",
+      enabled: true,
+      driverType: "percent_of_base",
+      percentBase: "base_rev",
+      amounts: [10, 10, 10, 10, 10],
+      escalationRate: 0,
+      escalationRateOverridden: true,
+    },
+    {
+      id: "inflating_percent",
+      lineItem: "Inflating Discount",
+      category: "tuition_offsets",
+      enabled: true,
+      driverType: "percent_of_base",
+      percentBase: "base_rev",
+      amounts: [10, 10, 10, 10, 10],
+    },
+  ];
+
+  const staticPctOnly = [revenueRows[0], revenueRows[1]];
+  const floatingPctOnly = [revenueRows[0], revenueRows[2]];
+
+  // Percent-of-base with explicit 0% escalation override should remain exactly 10%.
+  // Base row still inherits 3% fallback: 10,000 * 1.03^2 = 10,609.
+  // Offset: 10% of base = 1,060.9. Net: 9,548.1.
+  check(
+    "Revenue percent_of_base explicit 0 override stays static (Y3)",
+    computeRevenueForYear(staticPctOnly, 2, 10, undefined, 3),
+    9548,
+    1,
+  );
+
+  // Without override, percent row should inherit fallback inflation.
+  // 10% * 1.03^2 = 10.609% => offset 1,125.6 on same base => net 9,483.4.
+  check(
+    "Revenue percent_of_base inherits fallback inflation when not overridden (Y3)",
+    computeRevenueForYear(floatingPctOnly, 2, 10, undefined, 3),
+    9483,
+    1,
+  );
+
+  const staticRevenueRow: RevenueRow = {
+    id: "static_per_student",
+    lineItem: "Static Contract Revenue",
+    category: "other_revenue",
+    enabled: true,
+    driverType: "per_student",
+    amounts: [1000, 1000, 1000, 1000, 1000],
+    escalationRate: 0,
+    escalationRateOverridden: true,
+  };
+  const floatingRevenueRow: RevenueRow = {
+    id: "floating_per_student",
+    lineItem: "Floating Contract Revenue",
+    category: "other_revenue",
+    enabled: true,
+    driverType: "per_student",
+    amounts: [1000, 1000, 1000, 1000, 1000],
+  };
+
+  check(
+    "Revenue per_student explicit 0 override stays flat (Y3)",
+    computeRevenueForYear([staticRevenueRow], 2, 10, undefined, 3),
+    10000,
+  );
+  check(
+    "Revenue per_student without override inflates by fallback (Y3)",
+    computeRevenueForYear([floatingRevenueRow], 2, 10, undefined, 3),
+    10609,
+    1,
+  );
+
+  const coopEnrollment = getEnrollmentArray(homeschoolCoopMixed.enrollment);
+  const coopRows = homeschoolCoopMixed.revenueRows as unknown as RevenueRow[];
+  const coopMaterials = coopRows.find((r) => r.id === "r2");
+  check("Homeschool payload includes explicit override row", coopMaterials?.escalationRateOverridden ? 1 : 0, 1);
+  if (coopMaterials) {
+    check(
+      "Homeschool materials fee override remains static in Y3",
+      computeRevLineItem(coopMaterials, 2, coopEnrollment[2], undefined, 3),
+      200 * coopEnrollment[2],
+    );
+  }
 }
 
 function cellNum(ws: import("exceljs").Worksheet, row: number, col: number): number {
@@ -629,6 +760,48 @@ async function testMonthlyTimingWorkbook() {
   if (pEndRow > 0) check("Priv MCF: Ending Cash", cellNum(privMcf, pEndRow, 2), 864756);
 }
 
+async function testArchetypeWorkbookCoverage() {
+  console.log("\n— Workbook Coverage Across K-12 Archetypes —");
+  const cases: [string, Record<string, unknown>][] = [
+    ["Microschool", microschoolStartup as unknown as Record<string, unknown>],
+    ["Private + ESA", privateSchoolWithESA as unknown as Record<string, unknown>],
+    ["Charter", charterPublicFunding as unknown as Record<string, unknown>],
+    ["Charter ADA Grade-Band", charterADAGradeBand as unknown as Record<string, unknown>],
+    ["Homeschool Co-op", homeschoolCoopMixed as unknown as Record<string, unknown>],
+  ];
+
+  for (const [label, payload] of cases) {
+    const wb = await generateUnderwritingWorkbook(payload);
+    check(`${label} workbook has Assumptions tab`, wb.getWorksheet("Assumptions") ? 1 : 0, 1);
+    check(`${label} workbook has Budget Summary tab`, wb.getWorksheet("Budget Summary") ? 1 : 0, 1);
+    check(`${label} workbook has DSCR & Covenants tab`, wb.getWorksheet("DSCR & Covenants") ? 1 : 0, 1);
+
+    let formulaCount = 0;
+    for (const ws of wb.worksheets) {
+      ws.eachRow((row) => {
+        row.eachCell((cell) => {
+          if (cell.value && typeof cell.value === "object" && "formula" in cell.value) formulaCount++;
+        });
+      });
+    }
+    check(`${label} workbook contains visible formulas`, formulaCount > 50 ? 1 : 0, 1);
+
+    const summary = wb.getWorksheet("Budget Summary");
+    const opStmt = wb.getWorksheet("Operating Statement");
+    if (!summary || !opStmt) continue;
+    const summaryRevRow = findRowByLabel(summary, "Total Revenue");
+    const opStmtRevRow = findRowByLabel(opStmt, "Total Revenue");
+    if (summaryRevRow > 0 && opStmtRevRow > 0) {
+      check(
+        `${label} workbook Y1 revenue tie-out (Summary vs Operating Statement)`,
+        cellNum(summary, summaryRevRow, 2),
+        cellNum(opStmt, opStmtRevRow, 2),
+        2,
+      );
+    }
+  }
+}
+
 function testNewReturningStudents() {
   console.log("\n— New / Returning Student Helpers & Driver Types —");
   const enrollment = [100, 120, 140, 150, 160];
@@ -687,9 +860,11 @@ async function main() {
   testDebtIncludedExclusion();
   testGradeBandEdgeCases();
   testDriverValEdgeCases();
+  testRevenueEscalationOverrides();
   testNewReturningStudents();
   await testWorkbookKPIs();
   await testMonthlyTimingWorkbook();
+  await testArchetypeWorkbookCoverage();
 
   console.log("\n╔══════════════════════════════════════════════════════════════╗");
   console.log("║                      FINAL REPORT                          ║");

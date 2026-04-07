@@ -126,7 +126,7 @@ export const homeschoolCoopMixed = {
   },
   revenueRows: [
     { id: "r1", category: "tuition_and_fees", lineItem: "Co-Op Tuition", enabled: true, driverType: "per_student", amounts: [6000, 6180, 6365, 6556, 6753], billingMonths: 10 },
-    { id: "r2", category: "tuition_and_fees", lineItem: "Materials Fee", enabled: true, driverType: "per_student", amounts: [200, 200, 200, 200, 200], billingMonths: 12 },
+    { id: "r2", category: "tuition_and_fees", lineItem: "Materials Fee", enabled: true, driverType: "per_student", amounts: [200, 200, 200, 200, 200], billingMonths: 12, escalationRate: 0, escalationRateOverridden: true },
     { id: "esa_revenue", category: "school_choice", lineItem: "ESA Revenue", enabled: true, driverType: "per_student", amounts: [7000, 7210, 7426, 7649, 7878], billingMonths: 12 },
     { id: "refundable_tax_credit", category: "school_choice", lineItem: "Refundable Tax Credit", enabled: false, driverType: "per_student", amounts: [0, 0, 0, 0, 0], billingMonths: 12 },
     { id: "r5", category: "philanthropy", lineItem: "Annual Fundraising", enabled: true, driverType: "annual_fixed", amounts: [3000, 4000, 5000, 5000, 5000] },
@@ -150,6 +150,7 @@ export const homeschoolCoopMixed = {
     { id: "e1", category: "occupancy_facility", lineItem: "Rent", enabled: true, driverType: "monthly", amounts: [1800, 1854, 1910, 1967, 2026], escalationRate: 3 },
     { id: "e2", category: "occupancy_facility", lineItem: "Utilities", enabled: true, driverType: "monthly", amounts: [200, 205, 210, 215, 221] },
     { id: "e3", category: "occupancy_facility", lineItem: "Insurance", enabled: true, driverType: "annual_fixed", amounts: [1800, 1845, 1891, 1938, 1987] },
+    { id: "e_static", category: "administrative_general", lineItem: "Compliance Contract", enabled: true, driverType: "annual_fixed", amounts: [4500, 4500, 4500, 4500, 4500], escalationRate: 0, escalationRateOverridden: true },
     { id: "e4", category: "instructional_program", lineItem: "Curriculum & Materials", enabled: true, driverType: "per_student", amounts: [400, 412, 424, 437, 450] },
     { id: "e5", category: "technology", lineItem: "Technology", enabled: true, driverType: "per_student", amounts: [250, 258, 265, 273, 281] },
   ],

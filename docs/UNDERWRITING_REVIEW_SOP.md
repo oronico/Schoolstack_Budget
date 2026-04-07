@@ -166,3 +166,25 @@ Document any of the following:
 - Public export endpoints are stateless — they generate workbooks from the submitted payload and return them immediately
 - For lending reviews, save the underwriting workbook to the deal file
 - All model data should be treated as confidential business information
+
+---
+
+## 5. Comprehensiveness Confirmation (K-12 Universal Coverage)
+
+Before final lender-facing use, reviewers must confirm the model package is comprehensive across program type, scale, and funding method:
+
+- **Program Types:** microschool, private independent/religious, charter, homeschool co-op, hybrid models
+- **Scale Bands:** startup (<50 students), growth (50-250), scaled programs (250+)
+- **Funding Types:** tuition, ADA/per-pupil public funding, ESA/vouchers, grants, philanthropy, mixed funding
+- **Cost Structures:** staffing-heavy models, facility-heavy models, and debt-backed expansion models
+
+### Required Trust Signals
+
+- Workbook formulas are visible and traceable by underwriters in Excel
+- Assumptions are editable without touching code (including escalation/inflation overrides)
+- Static-contract expenses can remain non-escalating while other expenses escalate
+- Output formatting is institutional-quality and ready for board/audit/lender review
+
+If any of the signals above fail, classify the model as **"needs remediation before underwriting"** and return to export QA.
+
+---
