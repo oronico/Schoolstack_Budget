@@ -30,7 +30,7 @@ export default function MilestonesSlide() {
                 <div className="w-[0.5vw] h-[0.5vw] rounded-full bg-primary" />
                 <span className="font-body font-bold text-text" style={{ fontSize: "1.4vw" }}>UX Coaching Co-Pilot</span>
               </div>
-              <p className="font-body text-muted" style={{ fontSize: "1.3vw" }}>Prep checklists, glossary tooltips, step-by-step guidance, health summaries with named metrics</p>
+              <p className="font-body text-muted" style={{ fontSize: "1.3vw" }}>Prep checklists, glossary tooltips, step-by-step guidance, consultant narrative coaching, health summaries</p>
             </div>
             <div className="bg-white rounded-[0.8vw] p-[1.5vw] border border-text/5">
               <div className="flex items-center gap-[0.5vw] mb-[0.5vh]">

@@ -1,15 +1,8 @@
-const base = import.meta.env.BASE_URL;
-
 export default function TitleSlide() {
   return (
-    <div className="w-screen h-screen overflow-hidden relative">
-      <img
-        src={`${base}hero-school.png`}
-        crossOrigin="anonymous"
-        className="absolute inset-0 w-full h-full object-cover"
-        alt="Inspiring school setting"
-      />
-      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(30,41,59,0.82) 0%, rgba(50,133,85,0.7) 100%)" }} />
+    <div className="w-screen h-screen overflow-hidden relative" style={{ background: "linear-gradient(135deg, #1E293B 0%, #2D4A3E 50%, #328555 100%)" }}>
+      <div className="absolute top-[20vh] right-[10vw] w-[35vw] h-[35vw] rounded-full" style={{ background: "radial-gradient(circle, rgba(50,133,85,0.12) 0%, transparent 70%)" }} />
+      <div className="absolute bottom-[5vh] left-[15vw] w-[25vw] h-[25vw] rounded-full" style={{ background: "radial-gradient(circle, rgba(217,119,6,0.06) 0%, transparent 70%)" }} />
       <div className="absolute top-[3vh] left-[5vw] flex items-center gap-[1vw]">
         <div className="w-[2.5vw] h-[2.5vw] rounded-full bg-primary flex items-center justify-center">
           <span className="font-display text-white" style={{ fontSize: "1.4vw" }}>S</span>
