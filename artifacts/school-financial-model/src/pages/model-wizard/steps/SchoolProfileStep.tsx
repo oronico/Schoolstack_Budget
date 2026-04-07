@@ -185,6 +185,10 @@ function EntityTypeSection({ allowedEntityTypes, entityType }: { allowedEntityTy
       <p className="text-sm text-muted-foreground mb-4">
         This helps us use the right financial terminology in your model and reports. There's no wrong answer here.
       </p>
+      <div className="rounded-xl bg-teal-50/60 border border-teal-200/60 px-4 py-3 mb-4 flex items-start gap-2.5">
+        <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-teal-800">Not sure? Most small private schools start as an LLC or 501(c)(3). You can always update this later.</p>
+      </div>
 
       <button
         type="button"
@@ -1578,6 +1582,10 @@ export function SchoolProfileStep() {
 
       <div>
         <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Fiscal Year</h3>
+        <div className="rounded-xl bg-teal-50/60 border border-teal-200/60 px-4 py-3 mb-4 flex items-start gap-2.5">
+          <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-teal-800">Most schools use July as their fiscal year start — it aligns with the school calendar. If you're not sure, July is a safe choice.</p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormSelect
             name="schoolProfile.fiscalYearStartMonth"
@@ -1743,9 +1751,15 @@ export function SchoolProfileStep() {
               <p className="text-sm text-muted-foreground">Your opening balances flow into Year 1 cash projections and give a complete financial picture.</p>
             </div>
           )}
-          <details className="group" open={lendingLabIntent === "plan_to_apply"}>
+          {schoolStage === "new_school" && lendingLabIntent !== "plan_to_apply" && (
+            <div className="rounded-xl bg-teal-50/60 border border-teal-200/60 px-4 py-3 mb-4 flex items-start gap-2.5">
+              <Sprout className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-teal-800">Starting from scratch? That's totally normal — we'll set everything to $0 for you. If you do have existing savings or debts to carry over, you can expand this section and enter them.</p>
+            </div>
+          )}
+          <details className="group" open={lendingLabIntent === "plan_to_apply" || schoolStage === "operating_school"}>
             <summary className="cursor-pointer text-sm font-medium text-primary hover:underline mb-4">
-              {lendingLabIntent === "plan_to_apply" ? "Assets & Liabilities" : "+ Opening balances (optional)"}
+              {lendingLabIntent === "plan_to_apply" ? "Assets & Liabilities" : schoolStage === "new_school" ? "Do you have any existing finances to carry over?" : "+ Opening balances (optional)"}
             </summary>
             <div className="mt-4 space-y-4">
               <div>
