@@ -74,6 +74,8 @@ export interface RevenueRowData {
   driverType: RevenueDriverType;
   amounts: number[];
   percentBase?: string;
+  escalationRate?: number;
+  escalationRateOverridden?: boolean;
   note?: string;
   billingMonths?: 9 | 10 | 12;
   collectionMethod?: CollectionMethod;

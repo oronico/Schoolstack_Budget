@@ -29,6 +29,10 @@ const TAB_NAMES = [
   "Budget Narrative",
 ];
 
+function resolveRowEscalation(escalationRate: number | undefined, fallback: number, overridden?: boolean): number {
+  return overridden ? (escalationRate ?? 0) : resolveEsc(escalationRate, fallback);
+}
+
 function getProrationFactor(sp: SchoolProfile): number {
   if (sp.isPartialFirstYear) return (sp.year1OperatingMonths || 10) / 12;
   return 1;
@@ -771,7 +775,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         const rateRow = r + 1;
         r++;
         ws.getCell(r, 1).value = "  Rate / Student"; dc(ws.getCell(r, 1));
-        const esc = resolveEsc(rv.escalationRate, costInflPct);
+        const esc = resolveRowEscalation(rv.escalationRate, costInflPct, rv.escalationRateOverridden);
         const base = rv.amounts?.[0] ?? 0;
         const hasEsc = esc > 0;
         const escRow = hasEsc ? rateRow + 1 : 0;
@@ -793,7 +797,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         if (hasEsc) {
           r++;
           ws.getCell(r, 1).value = "  Escalation Rate"; dc(ws.getCell(r, 1));
-          const displayEsc = rv.escalationRate !== undefined && rv.escalationRate !== 0 ? rv.escalationRate : costInflPct;
+          const displayEsc = resolveRowEscalation(rv.escalationRate, costInflPct, rv.escalationRateOverridden);
           ws.getCell(r, 2).value = displayEsc / 100;
           ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
         }
@@ -997,11 +1001,11 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
         const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
         let val: number;
         if (ex.driverType === "percent_of_revenue") {
-          const esc = resolveEsc(ex.escalationRate, costInflPct);
+          const esc = resolveRowEscalation(ex.escalationRate, costInflPct, ex.escalationRateOverridden);
           let pct = esc !== 0 && y > 0 ? (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y) : (ex.amounts?.[y] ?? 0);
           val = (pct / 100) * rev;
         } else {
-          val = driverVal(ex.amounts, y, ex.driverType, enrollment[y], ex.escalationRate, costInflPct, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y));
+          val = driverVal(ex.amounts, y, ex.driverType, enrollment[y], ex.escalationRate, costInflPct, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y), ex.escalationRateOverridden);
         }
         const cell = ws.getCell(r, y + 2);
         cell.value = Math.round(val); cell.numFmt = CUR; dc(cell);
@@ -1016,11 +1020,11 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
       let catTotal = 0;
       for (const ex of catRows) {
         if (ex.driverType === "percent_of_revenue") {
-          const esc = resolveEsc(ex.escalationRate, costInflPct);
+          const esc = resolveRowEscalation(ex.escalationRate, costInflPct, ex.escalationRateOverridden);
           let pct = esc !== 0 && y > 0 ? (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y) : (ex.amounts?.[y] ?? 0);
           catTotal += (pct / 100) * rev;
         } else {
-          catTotal += driverVal(ex.amounts, y, ex.driverType, enrollment[y], ex.escalationRate, costInflPct, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y));
+          catTotal += driverVal(ex.amounts, y, ex.driverType, enrollment[y], ex.escalationRate, costInflPct, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y), ex.escalationRateOverridden);
         }
       }
       const col = y + 2;
@@ -1321,12 +1325,12 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
         const rev = revByYear[y];
         let val: number;
         if (ex.driverType === "percent_of_revenue") {
-          const esc = resolveEsc(ex.escalationRate, costInflPct);
+          const esc = resolveRowEscalation(ex.escalationRate, costInflPct, ex.escalationRateOverridden);
           let pct = esc !== 0 && y > 0 ? (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y) : (ex.amounts?.[y] ?? 0);
           val = (pct / 100) * rev;
         } else {
           const pf = y === 0 ? prorationFactor : 1;
-          val = driverVal(ex.amounts, y, ex.driverType, enrollment[y], ex.escalationRate, costInflPct, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y)) * pf;
+          val = driverVal(ex.amounts, y, ex.driverType, enrollment[y], ex.escalationRate, costInflPct, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y), ex.escalationRateOverridden) * pf;
         }
         ws.getCell(r, y + 2).value = Math.round(val); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
       }
@@ -1340,12 +1344,12 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
         const catTotal = catRows.reduce((sum, ex) => {
           const rev = revByYear[y];
           if (ex.driverType === "percent_of_revenue") {
-            const esc = resolveEsc(ex.escalationRate, costInflPct);
+            const esc = resolveRowEscalation(ex.escalationRate, costInflPct, ex.escalationRateOverridden);
             const pct = esc !== 0 && y > 0 ? (ex.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y) : (ex.amounts?.[y] ?? 0);
             return sum + (pct / 100) * rev;
           }
           const pf = y === 0 ? prorationFactor : 1;
-          return sum + driverVal(ex.amounts, y, ex.driverType, enrollment[y], ex.escalationRate, costInflPct, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y)) * pf;
+          return sum + driverVal(ex.amounts, y, ex.driverType, enrollment[y], ex.escalationRate, costInflPct, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y), ex.escalationRateOverridden) * pf;
         }, 0);
         setFormula(ws.getCell(r, col), `SUM(${cn(catFirstRow, col)}:${cn(catLastRow, col)})`, Math.round(catTotal));
         ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
@@ -2505,7 +2509,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
         }
         val = (pct / 100) * revByYear[y];
       } else {
-        val = driverVal(r.amounts, y, r.driverType, enrollment[y], r.escalationRate, costInflPct, computeNewStudents(enrollment, scRR, y), computeReturningStudents(enrollment, scRR, y));
+        val = driverVal(r.amounts, y, r.driverType, enrollment[y], r.escalationRate, costInflPct, computeNewStudents(enrollment, scRR, y), computeReturningStudents(enrollment, scRR, y), r.escalationRateOverridden);
       }
       val *= pf;
       if (r.category === "occupancy_facility") {
