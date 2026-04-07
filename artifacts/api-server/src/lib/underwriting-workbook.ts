@@ -1753,9 +1753,10 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
 
   r++;
   ws.mergeCells(r, 1, r, 6);
-  const basisNote = sp.accountingBasis && sp.accountingBasis !== "accrual"
-    ? `Projections prepared on an accrual basis. School currently keeps books on a ${accountingBasisLabel(sp.accountingBasis).toLowerCase()} basis.`
-    : "Projections prepared on an accrual basis.";
+  const currentBasis = sp.accountingBasis ? accountingBasisLabel(sp.accountingBasis).toLowerCase() : "undetermined";
+  const basisNote = sp.accountingBasis === "accrual"
+    ? "Projections prepared on an accrual basis."
+    : `Projections prepared on an accrual basis. School currently keeps books on a ${currentBasis} basis.`;
   ws.getCell(r, 1).value = basisNote;
   ws.getCell(r, 1).font = { italic: true, size: 10, name: "Calibri", color: { argb: "FF64748B" } };
 

@@ -1651,12 +1651,17 @@ export function SchoolProfileStep() {
           ))}
         </div>
 
-        <div className="rounded-xl bg-teal-50/60 border border-teal-200/60 px-4 py-3 flex items-start gap-2.5">
-          <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-teal-800">
-            <span className="font-semibold">Why we always model on an accrual basis:</span> Accrual accounting shows when revenue is earned and costs are committed — not just when cash moves. This gives your board, authorizer, or any reviewer the most complete picture of your school's financial health. Your day-to-day bookkeeping method is a separate choice.
+        {accountingBasis && (
+          <div className="rounded-xl bg-teal-50/60 border border-teal-200/60 px-4 py-3 flex items-start gap-2.5">
+            <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-teal-800">
+              <span className="font-semibold">Why we always model on an accrual basis:</span> Accrual accounting shows when revenue is earned and costs are committed — not just when cash moves. This gives your board, authorizer, or any reviewer the most complete picture of your school's financial health. Your day-to-day bookkeeping method is a separate choice.
+              {accountingBasis === "not_sure" && (
+                <span className="block mt-2"><span className="font-semibold">What's the difference?</span> With <em>cash basis</em>, you record income when money hits your bank account and expenses when you write the check. With <em>accrual basis</em>, you record income when it's earned (e.g., when a student enrolls) and expenses when they're committed (e.g., when you sign a contract). Most lenders, boards, and authorizers prefer accrual because it paints a fuller picture — and that's what we use here. You can always update this later once you've chosen a bookkeeping method.</span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {schoolStage === "operating_school" && operatingYear === "first_year" && (

@@ -471,9 +471,14 @@ function buildFiveYearProjection(
     sourceEngine: "consultant" as const,
   }));
 
+  const sp = md.schoolProfile || {};
+  const basisNote = sp.accountingBasis && sp.accountingBasis !== "accrual"
+    ? ` All projections are prepared on an accrual basis; the school currently keeps books on a ${accountingBasisLabel(sp.accountingBasis).toLowerCase()} basis.`
+    : " All projections are prepared on an accrual basis.";
+
   return {
     ...s,
-    narrative: `${breakEvenText}${breakevenNote}${priorYearNote} Year 5 ${niLabel.toLowerCase()} is projected at ${fmt(yearlyData[4]?.netIncome || 0)} (${pct(yearlyData[4]?.netMargin || 0)} margin).`,
+    narrative: `${breakEvenText}${breakevenNote}${priorYearNote} Year 5 ${niLabel.toLowerCase()} is projected at ${fmt(yearlyData[4]?.netIncome || 0)} (${pct(yearlyData[4]?.netMargin || 0)} margin).${basisNote}`,
     tables: [{
       title: `5-Year ${niLabel} Projection`,
       headers: ["Year", "Students", "Revenue", "Expenses", niLabel, "Margin"],
