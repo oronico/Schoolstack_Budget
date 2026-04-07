@@ -353,7 +353,11 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   const doc = createDoc();
 
   const schoolName = sp.schoolName || "School";
-  drawHeader(doc, `${schoolName} - Pro Forma Financial Model`, "Multi-Year Financial Projections");
+  const abMap2: Record<string, string> = { cash: "cash", accrual: "accrual", not_sure: "undetermined" };
+  const basisSubtitle = sp.accountingBasis && sp.accountingBasis !== "accrual"
+    ? `Multi-Year Financial Projections — Accrual basis (school currently on ${abMap2[sp.accountingBasis] || sp.accountingBasis} basis)`
+    : "Multi-Year Financial Projections — Accrual basis";
+  drawHeader(doc, `${schoolName} - Pro Forma Financial Model`, basisSubtitle);
 
   sectionTitle(doc, "School Profile");
   labelValue(doc, "School Name", schoolName);

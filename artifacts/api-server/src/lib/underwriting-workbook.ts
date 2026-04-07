@@ -1751,7 +1751,15 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
   ws.getCell(r, 1).value = `${sp.schoolName || "School"} - 5-Year Operating Statement`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
-  r += 2;
+  r++;
+  ws.mergeCells(r, 1, r, 6);
+  const basisNote = sp.accountingBasis && sp.accountingBasis !== "accrual"
+    ? `Projections prepared on an accrual basis. School currently keeps books on a ${accountingBasisLabel(sp.accountingBasis).toLowerCase()} basis.`
+    : "Projections prepared on an accrual basis.";
+  ws.getCell(r, 1).value = basisNote;
+  ws.getCell(r, 1).font = { italic: true, size: 10, name: "Calibri", color: { argb: "FF64748B" } };
+
+  r += 1;
   ws.getRow(r).values = ["", ...yLabels];
   hdr(ws, r, 6);
 
