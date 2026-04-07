@@ -1752,13 +1752,13 @@ export function SchoolProfileStep() {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Assets</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormInput name="openingBalances.cash" label="Cash & Cash Equivalents" type="number" prefix="$" placeholder="0" />
-                  <FormInput name="openingBalances.accountsReceivable" label="Accounts Receivable" type="number" prefix="$" placeholder="0" />
-                  <FormInput name="openingBalances.fixedAssets" label="Fixed Assets (Net)" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="openingBalances.accountsReceivable" label={<><GlossaryTerm termKey="accounts_receivable">Accounts Receivable</GlossaryTerm></>} type="number" prefix="$" placeholder="0" />
+                  <FormInput name="openingBalances.fixedAssets" label={<><GlossaryTerm termKey="fixed_assets">Fixed Assets</GlossaryTerm> (Net)</>} type="number" prefix="$" placeholder="0" />
                   <div className="flex flex-col gap-1.5">
                     <FormInput name="openingBalances.fixedAssetUsefulLife" label="Useful Life (years)" type="number" placeholder="7" />
                     <div className="flex items-start gap-2 mt-1">
                       <Lightbulb className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground">How many years your equipment and furniture will last before needing replacement. We spread the cost evenly across those years — that's depreciation. Most school assets last 5–10 years. Default is 7.</p>
+                      <p className="text-xs text-muted-foreground">How many years your equipment and furniture will last before needing replacement. We spread the cost evenly across those years — that's <GlossaryTerm termKey="depreciation">depreciation</GlossaryTerm>. Most school assets last 5–10 years. Default is 7.</p>
                     </div>
                   </div>
                   <FormInput name="openingBalances.otherAssets" label="Other Assets" type="number" prefix="$" placeholder="0" />
@@ -1767,7 +1767,7 @@ export function SchoolProfileStep() {
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Liabilities</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormInput name="openingBalances.accountsPayable" label="Accounts Payable" type="number" prefix="$" placeholder="0" />
+                  <FormInput name="openingBalances.accountsPayable" label={<><GlossaryTerm termKey="accounts_payable">Accounts Payable</GlossaryTerm></>} type="number" prefix="$" placeholder="0" />
                   <FormInput name="openingBalances.currentDebtPortion" label="Current Portion of Debt" type="number" prefix="$" placeholder="0" />
                   <FormInput name="openingBalances.longTermDebt" label="Long-Term Debt" type="number" prefix="$" placeholder="0" />
                 </div>

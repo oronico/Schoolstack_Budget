@@ -17,7 +17,7 @@ export function getNestedError(errors: FieldErrors, name: string): string | unde
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   name: string;
-  label: string;
+  label: React.ReactNode;
   helperText?: string;
   prefix?: string;
   suffix?: string;

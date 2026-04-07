@@ -340,7 +340,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
               {revenueSummary.total > 0 && (
                 <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${marginPct >= 0 ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-600"}`}>
                   {marginPct >= 0 ? <ArrowUpRight className="h-2.5 w-2.5" /> : <ArrowDownRight className="h-2.5 w-2.5" />}
-                  {Math.abs(marginPct)}% margin
+                  {Math.abs(marginPct)}% <GlossaryTerm termKey="net_margin">margin</GlossaryTerm>
                 </span>
               )}
             </div>
@@ -805,8 +805,8 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Assets</p>
                     <div className="space-y-1.5">
                       {data.openingBalances.cash ? <Item label="Cash & Cash Equivalents" value={formatCurrency(data.openingBalances.cash)} /> : null}
-                      {data.openingBalances.accountsReceivable ? <Item label="Accounts Receivable" value={formatCurrency(data.openingBalances.accountsReceivable)} /> : null}
-                      {data.openingBalances.fixedAssets ? <Item label="Fixed Assets (Net)" value={formatCurrency(data.openingBalances.fixedAssets)} /> : null}
+                      {data.openingBalances.accountsReceivable ? <Item label={<><GlossaryTerm termKey="accounts_receivable">Accounts Receivable</GlossaryTerm></>} value={formatCurrency(data.openingBalances.accountsReceivable)} /> : null}
+                      {data.openingBalances.fixedAssets ? <Item label={<><GlossaryTerm termKey="fixed_assets">Fixed Assets</GlossaryTerm> (Net)</>} value={formatCurrency(data.openingBalances.fixedAssets)} /> : null}
                       {data.openingBalances.otherAssets ? <Item label="Other Assets" value={formatCurrency(data.openingBalances.otherAssets)} /> : null}
                       <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-primary/10 font-semibold">
                         <span className="text-sm text-foreground">Total Assets</span>
@@ -817,7 +817,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Liabilities</p>
                     <div className="space-y-1.5">
-                      {data.openingBalances.accountsPayable ? <Item label="Accounts Payable" value={formatCurrency(data.openingBalances.accountsPayable)} /> : null}
+                      {data.openingBalances.accountsPayable ? <Item label={<><GlossaryTerm termKey="accounts_payable">Accounts Payable</GlossaryTerm></>} value={formatCurrency(data.openingBalances.accountsPayable)} /> : null}
                       {data.openingBalances.currentDebtPortion ? <Item label="Current Portion of Debt" value={formatCurrency(data.openingBalances.currentDebtPortion)} /> : null}
                       {data.openingBalances.longTermDebt ? <Item label="Long-Term Debt" value={formatCurrency(data.openingBalances.longTermDebt)} /> : null}
                       <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-primary/10 font-semibold">
@@ -846,7 +846,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             <div className="space-y-1.5">
               <Item label="Tuition per Student" value={formatCurrency(data.revenue?.tuitionPerStudent)} />
               <Item label="Annual Tuition Increase" value={formatPercent(data.revenue?.annualTuitionIncrease)} />
-              <Item label="Scholarship Rate" value={formatPercent(data.revenue?.scholarshipRate)} />
+              <Item label={<><GlossaryTerm termKey="tuition_offsets">Scholarship</GlossaryTerm> Rate</>} value={formatPercent(data.revenue?.scholarshipRate)} />
               <Item label="Other Fees per Student" value={formatCurrency(data.revenue?.otherRevenuePerStudent)} />
               <Item label="ESA / Voucher per Student" value={formatCurrency(data.revenue?.esaRevenuePerStudent)} />
               <Item label="Public Funding per Student" value={formatCurrency(data.revenue?.publicFundingPerStudent)} />

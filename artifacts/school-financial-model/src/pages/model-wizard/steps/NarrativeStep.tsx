@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { useGetConsultantAnalysis } from "@workspace/api-client-react";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Loader2, BookOpen, Shield, Users, TrendingUp, FileText } from "lucide-react";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 
 interface NarrativeStepProps {
   jumpToStep?: (step: number) => void;
@@ -18,55 +19,55 @@ interface AssumptionFlag {
   defaultPrompt: string;
 }
 
-const NARRATIVE_SECTIONS = [
+const NARRATIVE_SECTIONS: { key: string; label: string; icon: typeof Users; primary: boolean; helpText: React.ReactNode }[] = [
   {
-    key: "enrollmentStrategy" as const,
+    key: "enrollmentStrategy",
     label: "Enrollment Strategy",
     icon: Users,
     primary: true,
     helpText: "This is the most important part of your financial plan. How will you reach your enrollment targets? What's your marketing plan, waitlist strategy, or community pipeline?",
   },
   {
-    key: "retentionPlan" as const,
+    key: "retentionPlan",
     label: "Retention Plan",
     icon: Shield,
     primary: true,
     helpText: "Keeping families is harder than finding them. What will you do to maintain high retention year over year? What's your re-enrollment process?",
   },
   {
-    key: "riskMitigation" as const,
+    key: "riskMitigation",
     label: "Risk Mitigation",
     icon: AlertTriangle,
     primary: true,
     helpText: "What's your plan if enrollment comes in 20% below target in Year 1? What if retention drops to 70%? What expenses can you cut?",
   },
   {
-    key: "missionAndVision" as const,
+    key: "missionAndVision",
     label: "Mission & Vision",
     icon: BookOpen,
     primary: false,
     helpText: "In a few sentences, describe why you're starting this school and what makes it different.",
   },
   {
-    key: "revenueAssumptions" as const,
+    key: "revenueAssumptions",
     label: "Revenue Assumptions",
     icon: TrendingUp,
     primary: false,
-    helpText: "Walk us through your tuition pricing. What are families paying and why is that the right number for your market?",
+    helpText: <>Walk us through your tuition pricing and any <GlossaryTerm termKey="tuition_offsets">tuition offsets</GlossaryTerm> (scholarships, discounts). What are families paying and why is that the right number for your market? What's your expected <GlossaryTerm termKey="collection_rate">collection rate</GlossaryTerm>?</>,
   },
   {
-    key: "staffingPhilosophy" as const,
+    key: "staffingPhilosophy",
     label: "Staffing Philosophy",
     icon: Users,
     primary: false,
-    helpText: "Describe your team structure. Why is this student-teacher ratio right for your model?",
+    helpText: <>Describe your team structure. Why is this student-teacher ratio right for your model? How many <GlossaryTerm termKey="fte">FTE</GlossaryTerm> do you plan per grade level?</>,
   },
   {
-    key: "expenseAssumptions" as const,
+    key: "expenseAssumptions",
     label: "Expense Assumptions",
     icon: TrendingUp,
     primary: false,
-    helpText: "Are there any costs you expect to stay flat, decrease, or grow faster than normal? Explain any unusual choices.",
+    helpText: <>Are there any costs you expect to stay flat, decrease, or grow faster than normal? How are you handling <GlossaryTerm termKey="escalation_rate">escalation</GlossaryTerm> and <GlossaryTerm termKey="depreciation">depreciation</GlossaryTerm>? Explain any unusual choices.</>,
   },
   {
     key: "growthStrategy" as const,
