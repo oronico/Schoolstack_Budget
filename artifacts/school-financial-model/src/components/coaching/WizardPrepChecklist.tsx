@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ClipboardList, CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
+import { ClipboardList, CheckCircle2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
