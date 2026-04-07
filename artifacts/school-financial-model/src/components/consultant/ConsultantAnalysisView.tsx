@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ConsultantOutput } from "@workspace/api-client-react";
+import { SchoolProfileLendingLabIntent } from "@workspace/api-client-react";
 import { KPI_FORMULAS } from "@/lib/coaching/kpi-formulas";
 import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
 import { trackCoachingEvent } from "@/lib/coaching/track";
@@ -54,7 +55,12 @@ function metricNameToKpiId(name: string): string | undefined {
   if (lower.includes("capacity utilization")) return "capacityUtilization";
   if (lower.includes("debt service") || lower.includes("dscr")) return "dscr";
   if (lower.includes("days cash") || lower.includes("cash on hand")) return "daysCashOnHand";
-  if (lower.includes("reserve")) return "reserveMonths";
+  if (lower.includes("cash trough") || lower.includes("minimum cash")) return "cashTrough";
+  if (lower.includes("current ratio")) return "currentRatio";
+  if (lower.includes("philanthropy")) return "philanthropyPct";
+  if (lower.includes("public funding")) return "publicFundingPct";
+  if (lower.includes("operating reserve") || lower.includes("reserve")) return "reserveMonths";
+  if (lower.includes("management fee")) return "managementFee";
   if (lower.includes("breakeven") || lower.includes("break-even") || lower.includes("break even")) return "breakevenEnrollment";
   return undefined;
 }
@@ -127,7 +133,7 @@ interface ConsultantAnalysisViewProps {
   modelId?: number;
   jumpToStep?: (step: number) => void;
   exportStepNumber?: number;
-  lendingLabIntent?: string;
+  lendingLabIntent?: SchoolProfileLendingLabIntent;
   hasLoan?: boolean;
 }
 
@@ -140,6 +146,11 @@ const KPI_PLAIN_ENGLISH: Record<string, (value: string) => string> = {
   dscr: (v) => `For every $1 of loan payments, you earn ${v} — higher is safer`,
   reserveMonths: (v) => `You could run the school for ${v} with no income`,
   daysCashOnHand: (v) => `You have ${v} of cash to cover daily operations`,
+  cashTrough: (v) => `Your lowest cash point is ${v} — plan bridge funding if this dips negative`,
+  currentRatio: (v) => `Short-term assets are ${v} of short-term debts — above 1.0 means you can cover them`,
+  philanthropyPct: (v) => `${v} of your revenue comes from donations and grants`,
+  publicFundingPct: (v) => `${v} of your revenue comes from public funding sources`,
+  managementFee: (v) => `${v} of revenue goes to your management organization or authorizer`,
   revenueGrowth: (v) => `Revenue grows ${v} over the projection period`,
   capacityUtilization: (v) => `Your school is projected to be ${v} full`,
   breakevenEnrollment: (v) => `You need at least ${v} students just to cover costs`,
@@ -148,28 +159,46 @@ const KPI_PLAIN_ENGLISH: Record<string, (value: string) => string> = {
 function generateHealthSummary(data: ConsultantOutput): string {
   const metrics = data.keyMetrics || [];
   const goodCount = metrics.filter(m => m.status === "good").length;
-  const alertCount = metrics.filter(m => m.status !== "good" && m.status !== "warning").length;
-  const warningCount = metrics.filter(m => m.status === "warning").length;
+  const alertMetrics = metrics.filter(m => m.status !== "good" && m.status !== "warning");
+  const warningMetrics = metrics.filter(m => m.status === "warning");
 
-  if (alertCount > 0 && goodCount < alertCount) {
-    return "Your model has some areas that need attention before it's ready. That's completely normal for an early draft — most founders need a few rounds of adjustments. Let's walk through what we found and what you can do about it.";
-  }
-  if (warningCount > 0 && goodCount >= warningCount) {
-    return "Your school looks financially solid overall, with a few areas worth watching. The foundation is strong — let's review the specifics so you can make informed decisions about where to fine-tune.";
-  }
-  if (alertCount === 0 && warningCount === 0 && goodCount > 0) {
-    return "Your financial model looks healthy across the board. Your revenue, costs, and reserves are all in good shape. That's a strong starting point — you should feel good about where this stands.";
-  }
-  if (goodCount === 0 && metrics.length === 0) {
+  if (metrics.length === 0) {
     return "We're still waiting for enough data to generate a full analysis. Once you've filled in your revenue, staffing, and expenses, we'll have insights ready for you.";
   }
-  return "We've reviewed your financial model and have some observations to share. Let's walk through the key findings together.";
+
+  const firstAlert = alertMetrics[0];
+  const firstWarning = warningMetrics[0];
+  const topConcernName = firstAlert?.name || firstWarning?.name;
+
+  const riskDetail = data.biggestRisk
+    ? ` Specifically: ${data.biggestRisk.replace(/\.$/, "")}.`
+    : "";
+
+  const readinessNote =
+    data.lenderReadiness === "Strong"
+      ? " Your lending readiness looks strong."
+      : data.lenderReadiness === "Not Yet Ready"
+        ? " Your lending readiness needs some work before approaching a lender."
+        : "";
+
+  if (alertMetrics.length > 0 && goodCount < alertMetrics.length) {
+    const nameSnippet = topConcernName ? ` — starting with ${topConcernName}` : "";
+    return `Your model has some areas that need attention before it's ready${nameSnippet}. That's completely normal for an early draft — most founders need a few rounds of adjustments.${riskDetail} Let's walk through what we found and what you can do about it.`;
+  }
+  if (warningMetrics.length > 0 && goodCount >= warningMetrics.length) {
+    const nameSnippet = topConcernName ? `, particularly around ${topConcernName}` : "";
+    return `Your school looks financially solid overall, with a few areas worth watching${nameSnippet}. The foundation is strong — let's review the specifics so you can make informed decisions about where to fine-tune.${readinessNote}`;
+  }
+  if (alertMetrics.length === 0 && warningMetrics.length === 0 && goodCount > 0) {
+    return `Your financial model looks healthy across the board. Your revenue, costs, and reserves are all in good shape.${readinessNote} That's a strong starting point — you should feel good about where this stands.`;
+  }
+  return `We've reviewed your financial model and have some observations to share.${riskDetail} Let's walk through the key findings together.`;
 }
 
 export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, lendingLabIntent, hasLoan }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
   const [sensitivityTab, setSensitivityTab] = useState<"revenue" | "expense">("revenue");
-  const lendingRelevant = lendingLabIntent === "plan_to_apply" || lendingLabIntent === "want_to_understand" || hasLoan;
+  const lendingRelevant = lendingLabIntent === SchoolProfileLendingLabIntent.plan_to_apply || lendingLabIntent === SchoolProfileLendingLabIntent.want_to_understand || hasLoan;
   const [lendingLabExpanded, setLendingLabExpanded] = useState(lendingRelevant);
   const healthSummary = generateHealthSummary(data);
   const showLendingLabCollapsed = !lendingRelevant;

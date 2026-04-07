@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-import { useGetConsultantAnalysis } from "@workspace/api-client-react";
+import { useGetConsultantAnalysis, type SchoolProfileLendingLabIntent } from "@workspace/api-client-react";
 import { profitLabel, cumulativeProfitLabel } from "../schema";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { ConsultantAnalysisView } from "@/components/consultant/ConsultantAnalysisView";
@@ -14,7 +14,7 @@ interface ConsultantStepProps {
 export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
   const { watch } = useFormContext();
   const entityType = watch("schoolProfile.entityType");
-  const lendingLabIntent = watch("schoolProfile.lendingLabIntent") as string | undefined;
+  const lendingLabIntent = watch("schoolProfile.lendingLabIntent") as SchoolProfileLendingLabIntent | undefined;
   const loanAmount = watch("schoolProfile.loanAmount") as number | undefined;
   const hasLoan = loanAmount !== undefined && loanAmount !== null && loanAmount > 0;
   const niLabel = profitLabel(entityType);
