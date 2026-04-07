@@ -578,6 +578,7 @@ function StaffCard({
               ]}
               onChange={(v) => onUpdate("staffingMode", v)}
               id={fieldId("staffingMode")}
+              hint={row.staffingMode === "ratio" ? "Headcount adjusts with enrollment" : "Same headcount every year"}
             />
             {!isRatio ? (
               <FieldNumber
@@ -618,6 +619,9 @@ function StaffCard({
                 <TrendingUp className="h-4 w-4 text-teal-600" />
                 <span className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Ratio-Driven Staffing Ramp</span>
               </div>
+              <p className="text-[11px] text-teal-700 leading-relaxed">
+                This role scales automatically with enrollment. Set a student-to-staff ratio and the model will calculate <GlossaryTerm termKey="fte">FTE</GlossaryTerm> for each year. Great for teachers, aides, and other roles that grow as your school grows.
+              </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <FieldNumber
                   label="Min FTE"
@@ -877,6 +881,7 @@ function FieldSelect({
   onChange,
   error,
   id,
+  hint,
 }: {
   label: string;
   value: string;
@@ -884,6 +889,7 @@ function FieldSelect({
   onChange: (v: string) => void;
   error?: string;
   id?: string;
+  hint?: string;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -906,6 +912,7 @@ function FieldSelect({
           </option>
         ))}
       </select>
+      {hint && <p className="text-[10px] text-muted-foreground leading-snug">{hint}</p>}
       {error && <p className="text-xs text-destructive font-medium">{error}</p>}
     </div>
   );

@@ -869,6 +869,17 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         </div>
       </div>
 
+      <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 flex items-start gap-3">
+        <Lightbulb className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-amber-900 space-y-1">
+          <p className="font-semibold">Costs first-time founders often forget</p>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            Background checks, fingerprinting, curriculum licensing, classroom furniture, staff laptops, copier leases, postage, and state compliance fees. 
+            Don't worry about getting every dollar perfect — the goal is to not be surprised. Scroll down and make sure each category feels reasonable.
+          </p>
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
         <div>
           <h3 className="text-lg font-bold text-foreground mb-1">Business Operations</h3>
@@ -1315,7 +1326,11 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             <span className="text-xs text-muted-foreground ml-2">({capitalRows.filter((r) => r.enabled).length} active)</span>
             <span className="ml-auto text-sm font-semibold text-amber-600">{formatCurrency(categorySummaries["capital_financing"] || 0)}</span>
           </button>
-          <p className="px-5 text-xs text-muted-foreground -mt-2 mb-3">These items are separated from operating expenses on financial statements.</p>
+          <p className="px-5 text-xs text-muted-foreground -mt-2 mb-1">These items are separated from operating expenses on financial statements.</p>
+          <div className="mx-5 mb-3 rounded-lg bg-amber-50/60 border border-amber-100 px-3 py-2 text-[11px] text-amber-800 flex items-start gap-2">
+            <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-amber-500" />
+            <span>Include big one-time purchases here — desks, tech, playground equipment, and any buildout costs. If you're financing these with a loan, the model will calculate interest and repayment automatically.</span>
+          </div>
 
           {expandedCategories.has("capital_financing") && (
             <div className="px-5 pb-5 space-y-3">

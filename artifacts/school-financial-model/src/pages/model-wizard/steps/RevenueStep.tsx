@@ -1365,6 +1365,7 @@ function RevenueLineItem({
               <select
                 value={row.driverType}
                 onChange={(e) => onDriverChange(e.target.value as RevenueDriverType)}
+                title="How this revenue is calculated: per student (scales with enrollment), annual fixed (same each year), monthly (×12), or % of base tuition"
                 className={cn(
                   "text-xs border rounded-lg px-2 py-1.5 bg-card text-foreground cursor-pointer",
                   rowErrors?.driverType ? "border-destructive" : "border-border"
@@ -1492,6 +1493,12 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
         )}
       </p>
       
+      {(category === "tuition_and_fees" || category === "tuition_offsets") && (
+        <div className="flex items-start gap-1.5 mb-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-[11px] text-amber-800 dark:text-amber-300">
+          <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+          <span>If parents pay monthly instead of upfront, you may need extra cash to cover summer months when tuition isn't coming in but bills keep going out. Plan for a 2–3 month cash cushion.</span>
+        </div>
+      )}
       {category === "public_funding" && (
         <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
@@ -1701,6 +1708,9 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
                   <option key={dt} value={dt}>{DISBURSEMENT_TYPE_LABELS[dt]}</option>
                 ))}
               </select>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
+                "Direct" means the state sends funds on a schedule. "Reimbursement" means you spend first and get paid back — this creates a cash gap.
+              </p>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">

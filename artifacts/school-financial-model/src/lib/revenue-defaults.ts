@@ -259,7 +259,7 @@ export function computeMonthlyCashInflow(
 
 export const CATEGORY_LABELS: Record<RevenueCategory, string> = {
   tuition_and_fees: "Tuition & Student Fees",
-  tuition_offsets: "Tuition Offsets",
+  tuition_offsets: "Tuition Offsets (Scholarships & Discounts)",
   public_funding: "Public Funding",
   school_choice: "School Choice / Choice Funding",
   philanthropy: "Philanthropy",
