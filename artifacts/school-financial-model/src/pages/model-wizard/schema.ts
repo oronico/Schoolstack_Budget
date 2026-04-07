@@ -257,6 +257,7 @@ export const revenueRowSchema = z.object({
   amounts: z.array(z.number()),
   percentBase: z.string().optional(),
   escalationRate: z.number().optional(),
+  escalationRateOverridden: z.boolean().optional(),
   note: z.string().optional(),
   billingMonths: z.union([z.literal(9), z.literal(10), z.literal(12)]).optional(),
   collectionMethod: z.enum(["autopay", "invoiced", "mixed"]).optional(),
@@ -339,6 +340,7 @@ export const expenseRowSchema = z.object({
   }),
   amounts: z.array(z.number()),
   escalationRate: z.number().optional(),
+  escalationRateOverridden: z.boolean().optional(),
   note: z.string().default(""),
 });
 

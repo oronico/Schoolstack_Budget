@@ -285,9 +285,19 @@ export function computeReturningStudents(enrollment: number[], retentionRate: nu
   return Math.min(enrollment[y] || 0, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
 }
 
-export function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number): number {
+export function driverVal(
+  amounts: number[] | undefined,
+  y: number,
+  dt: string,
+  students: number,
+  escalationRate?: number,
+  fallbackInflation?: number,
+  newStudents?: number,
+  returningStudents?: number,
+  escalationRateOverridden?: boolean,
+): number {
   let base = amounts?.[y] ?? 0;
-  const esc = resolveEsc(escalationRate, fallbackInflation);
+  const esc = escalationRateOverridden ? (escalationRate ?? 0) : resolveEsc(escalationRate, fallbackInflation);
   if (esc !== 0 && y > 0) {
     const y1 = amounts?.[0] ?? 0;
     base = y1 * Math.pow(1 + esc / 100, y);
@@ -396,6 +406,7 @@ export interface RevenueRow {
   id: string; category: string; lineItem: string; enabled: boolean;
   driverType: string; amounts: number[]; percentBase?: string;
   escalationRate?: number; note?: string; billingMonths?: number;
+  escalationRateOverridden?: boolean;
   collectionMethod?: string; collectionRate?: number; collectionDelayDays?: number;
   paymentFrequency?: string; paymentTiming?: string; disbursementType?: string;
   reimbursementLagMonths?: number; grantStatus?: string; receiptQuarter?: number;
@@ -442,6 +453,7 @@ export function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow 
 export interface ExpenseRow {
   id: string; category: string; lineItem: string; enabled: boolean;
   driverType: string; amounts: number[]; escalationRate?: number; note?: string;
+  escalationRateOverridden?: boolean;
 }
 
 export interface CapitalDebtRow {
@@ -607,12 +619,23 @@ export function computeRevLineItem(
     }
     return tuitionWithTiers(perStudentAmount, y, students, tiers);
   }
-  return driverVal(r.amounts, y, r.driverType, students, r.escalationRate);
+  return driverVal(
+    r.amounts,
+    y,
+    r.driverType,
+    students,
+    r.escalationRate,
+    costInflPct,
+    undefined,
+    undefined,
+    r.escalationRateOverridden === true,
+  );
 }
 
 export function computeRevenueForYear(
   rows: RevenueRow[], y: number, students: number, tiers?: TuitionTier[], costInflPct?: number, sp?: SchoolProfile
 ): number {
+  const fallback = costInflPct ?? 0;
   const vals = new Map<string, number>();
   for (const r of rows) {
     if (!r.enabled || r.driverType === "percent_of_base") continue;
@@ -622,8 +645,11 @@ export function computeRevenueForYear(
     if (!r.enabled || r.driverType !== "percent_of_base") continue;
     const baseVal = vals.get(r.percentBase || "") || 0;
     let pctVal = r.amounts?.[y] ?? 0;
-    if (r.escalationRate !== undefined && r.escalationRate !== 0 && y > 0) {
-      pctVal = (r.amounts?.[0] ?? 0) * Math.pow(1 + r.escalationRate / 100, y);
+    const percentEscalation = r.escalationRateOverridden === true
+      ? (r.escalationRate ?? 0)
+      : resolveEsc(r.escalationRate, fallback);
+    if (percentEscalation !== 0 && y > 0) {
+      pctVal = (r.amounts?.[0] ?? 0) * Math.pow(1 + percentEscalation / 100, y);
     }
     vals.set(r.id, baseVal * (pctVal / 100));
   }
@@ -692,7 +718,7 @@ export function computeExpenseForYear(
   for (const r of rows) {
     if (!r.enabled) continue;
     if (r.driverType === "percent_of_revenue") {
-      const esc = resolveEsc(r.escalationRate, fallback);
+      const esc = r.escalationRateOverridden === true ? (r.escalationRate ?? 0) : resolveEsc(r.escalationRate, fallback);
       let pct: number;
       if (esc !== 0 && y > 0) {
         pct = (r.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
@@ -701,7 +727,17 @@ export function computeExpenseForYear(
       }
       total += (pct / 100) * totalRevenue;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents);
+      total += driverVal(
+        r.amounts,
+        y,
+        r.driverType,
+        students,
+        r.escalationRate,
+        fallback,
+        newStudents,
+        returningStudents,
+        r.escalationRateOverridden === true,
+      );
     }
   }
   return total;

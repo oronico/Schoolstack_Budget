@@ -77,6 +77,8 @@ export interface ExpenseRowData {
   enabled: boolean;
   driverType: ExpenseDriverType;
   amounts: number[];
+  escalationRate?: number;
+  escalationRateOverridden?: boolean;
   note?: string;
   accountCode?: string;
 }

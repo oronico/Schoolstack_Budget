@@ -14,6 +14,7 @@
     "qa:phases": "tsx ./tests/phase-boundary.ts",
     "qa:formula-results": "tsx ./tests/export-formula-results.ts",
     "qa:flags": "tsx ./tests/assumption-flags.ts",
+    "qa:smoke-arithmetic": "tsx ./tests/e2e-arithmetic-smoke.ts",
     "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts",
     "generate:ceo-demos": "tsx ./src/scripts/generate-ceo-demos.ts"
   },
