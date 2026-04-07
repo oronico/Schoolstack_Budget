@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
 import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb, Heart } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit } from "../schema";
 
@@ -1224,7 +1225,7 @@ export function SchoolProfileStep() {
                   <div className="border-t border-border pt-4">
                     <FormCheckbox
                       name="schoolProfile.isNNNLease"
-                      label="This is a Triple Net (NNN) lease"
+                      label={<>This is a <GlossaryTerm termKey="nnn">Triple Net (NNN)</GlossaryTerm> lease</>}
                       helperText="NNN leases mean you're responsible for property taxes, maintenance, and utilities on top of base rent"
                     />
                   </div>

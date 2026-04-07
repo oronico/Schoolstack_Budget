@@ -2,6 +2,7 @@ import { useCallback, useMemo, useEffect, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, TrendingUp, Info, School, ShieldCheck, Users, ClipboardList, Sparkles } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -837,7 +838,7 @@ export function EnrollmentStep() {
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
             <span className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              {schoolType === "charter_school" ? "Per-Pupil Revenue Escalation" : "Tuition Escalation"}
+              {schoolType === "charter_school" ? <><GlossaryTerm termKey="per_pupil">Per-Pupil</GlossaryTerm> Revenue <GlossaryTerm termKey="escalation_rate">Escalation</GlossaryTerm></> : <>Tuition <GlossaryTerm termKey="escalation_rate">Escalation</GlossaryTerm></>}
             </span>
           </h3>
 

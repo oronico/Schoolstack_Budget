@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion, TrendingUp, RotateCcw } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
@@ -70,7 +71,7 @@ const CATEGORY_GUIDANCE: Record<string, { tip: string; common: boolean }> = {
     common: true,
   },
   capital_financing: {
-    tip: "Furniture, equipment, buildout, and any loans. New schools often need $10–25K in startup equipment.",
+    tip: "FF\u0026E (furniture, fixtures \u0026 equipment), buildout, and any loans. New schools often need $10–25K in startup equipment.",
     common: false,
   },
 };

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, computeEffectiveFte } from "@workspace/finance";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -224,7 +225,7 @@ export function StaffingStep() {
           <DollarSign className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-foreground space-y-1">
             <p>
-              <span className="font-semibold">COLA — {colaRate}% Cost of Living Adjustment</span>{" "}
+              <span className="font-semibold"><GlossaryTerm termKey="cola">COLA</GlossaryTerm> — {colaRate}% Cost of Living Adjustment</span>{" "}
               applied annually. Schools that don't plan for COLA face teacher turnover — the #1 driver of quality loss.
             </p>
             <p className="text-xs text-muted-foreground">
@@ -271,7 +272,7 @@ export function StaffingStep() {
         <SummaryCard
           label="Headcount"
           value={costs.headcount.toString()}
-          sublabel={`${costs.totalFTE} FTE`}
+          sublabel={<>{costs.totalFTE} <GlossaryTerm termKey="fte">FTE</GlossaryTerm></>}
         />
         <SummaryCard
           label="Salaries & Wages"
@@ -284,6 +285,7 @@ export function StaffingStep() {
         <SummaryCard
           label="Payroll Taxes"
           value={`$${costs.totalPayrollTaxes.toLocaleString()}`}
+          sublabel={<GlossaryTerm termKey="payroll_tax">What's included?</GlossaryTerm>}
         />
         <SummaryCard
           label="Contracted Personnel"
@@ -413,7 +415,7 @@ function SummaryCard({
 }: {
   label: string;
   value: string;
-  sublabel?: string;
+  sublabel?: React.ReactNode;
   highlight?: boolean;
 }) {
   return (

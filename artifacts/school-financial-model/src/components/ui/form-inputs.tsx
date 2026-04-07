@@ -61,8 +61,8 @@ export function FormInput({ name, label, helperText, prefix, suffix, className, 
 
 interface CheckboxProps {
   name: string;
-  label: string;
-  helperText?: string;
+  label: React.ReactNode;
+  helperText?: React.ReactNode;
   className?: string;
 }
 
@@ -78,7 +78,16 @@ export function FormCheckbox({ name, label, helperText, className }: CheckboxPro
         {...register(name)}
       />
       <div>
-        <label htmlFor={name} className="text-sm font-semibold text-foreground cursor-pointer">
+        <label
+          htmlFor={name}
+          className="text-sm font-semibold text-foreground cursor-pointer"
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('[role="button"]') || target.closest('[role="tooltip"]')) {
+              e.preventDefault();
+            }
+          }}
+        >
           {label}
         </label>
         {helperText && <p className="text-sm text-muted-foreground mt-0.5">{helperText}</p>}

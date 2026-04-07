@@ -42,6 +42,8 @@ All in-app guidance uses a warm, school-leader-friendly coaching voice. Key prin
 - **Founder salary detection**: Triggers when leader has no salary in staffing.
 - **Staffing guardrail**: Note when staffing exceeds 60% of revenue.
 - **Insurance/payroll tax reminder**: Amber card in ExpenseStep.
+- **GlossaryTerm tooltips**: `GlossaryTerm` component (`src/components/coaching/GlossaryTerm.tsx`) provides dotted-underline hover/tap tooltips for financial jargon. Terms defined in `src/lib/coaching/glossary.ts` (~20 entries: FTE, DSCR, COLA, FF&E, ADM, ADA, NNN, etc.). Applied across AssumptionsStep, StaffingStep, ReviewStep, FacilitiesStep, SchoolProfileStep, EnrollmentStep, RevenueStep, and ExpenseStep.
+- **WizardPrepChecklist**: Pre-wizard modal with 5-item "what to have ready" checklist; mid-wizard encouragement banners at Steps 5/6.
 - Lender-specific language is preserved ONLY in: ExportStep, LenderPacketPreview, Lender Packet API output, ConsultantAnalysisView `lenderReadiness`, landing/dashboard product descriptions, and Footer.
 
 ### Ratio-Driven Staffing Ramp

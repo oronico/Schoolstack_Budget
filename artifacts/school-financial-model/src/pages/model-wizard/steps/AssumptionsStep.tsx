@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { useEffect, useMemo } from "react";
 import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_BENEFITS_RATE,
@@ -46,12 +47,12 @@ function AssumptionField({
   max,
   step,
 }: {
-  label: string;
+  label: React.ReactNode;
   name: string;
   suffix?: string;
   prefix?: string;
   defaultValue?: number;
-  usageNote: string;
+  usageNote: React.ReactNode;
   placeholder?: string;
   type?: string;
   min?: number;
@@ -102,7 +103,7 @@ function SectionHeader({
   resetLabel,
 }: {
   icon: React.ReactNode;
-  title: string;
+  title: React.ReactNode;
   description: string;
   onReset?: () => void;
   resetLabel?: string;
@@ -303,13 +304,13 @@ export function AssumptionsStep() {
 
                 {watch("schoolProfile.enrollmentRevenueMethod") === "ada" && (
                   <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-3 space-y-3">
-                    <p className="text-xs font-semibold text-amber-800">ADA Attendance Ratio</p>
+                    <p className="text-xs font-semibold text-amber-800"><GlossaryTerm termKey="ada">ADA</GlossaryTerm> Attendance Ratio</p>
                     <p className="text-[11px] text-amber-700">
-                      Your state uses ADA — funding is adjusted by the ratio of actual attendance to enrollment.
+                      Your state uses <GlossaryTerm termKey="ada">ADA</GlossaryTerm> — funding is adjusted by the ratio of actual attendance to enrollment.
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-foreground">Prior-Year ADM</label>
+                        <label className="text-[11px] font-medium text-foreground">Prior-Year <GlossaryTerm termKey="adm">ADM</GlossaryTerm></label>
                         <input
                           type="number"
                           value={watch("schoolProfile.priorYearADM") || ""}
@@ -320,7 +321,7 @@ export function AssumptionsStep() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-foreground">Prior-Year ADA</label>
+                        <label className="text-[11px] font-medium text-foreground">Prior-Year <GlossaryTerm termKey="ada">ADA</GlossaryTerm></label>
                         <input
                           type="number"
                           value={watch("schoolProfile.priorYearADA") || ""}
@@ -427,7 +428,7 @@ export function AssumptionsStep() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <AssumptionField
-                    label="Collection Rate"
+                    label={<><GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm></>}
                     name="revenueDefaults.collectionRate"
                     suffix="%"
                     defaultValue={100}
@@ -470,7 +471,7 @@ export function AssumptionsStep() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <AssumptionField
-                  label="COLA (Cost of Living Adjustment)"
+                  label={<><GlossaryTerm termKey="cola">COLA</GlossaryTerm> (Cost of Living Adjustment)</>}
                   name="facilities.annualSalaryIncrease"
                   suffix="%"
                   defaultValue={DEFAULTS.annualSalaryIncrease}
@@ -498,7 +499,7 @@ export function AssumptionsStep() {
             </div>
 
             <AssumptionField
-              label="Rent Escalation"
+              label={<><GlossaryTerm termKey="escalation_rate">Rent Escalation</GlossaryTerm></>}
               name="facilities.annualRentIncrease"
               suffix="%"
               defaultValue={DEFAULTS.annualRentIncrease}
@@ -525,7 +526,7 @@ export function AssumptionsStep() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <AssumptionField
-                label="Default Benefits Rate"
+                label={<>Default <GlossaryTerm termKey="benefits_rate">Benefits Rate</GlossaryTerm></>}
                 name="staffing.benefitsRate"
                 suffix="%"
                 defaultValue={DEFAULTS.benefitsRate}
@@ -536,7 +537,7 @@ export function AssumptionsStep() {
               />
 
               <AssumptionField
-                label="Payroll Tax Rate"
+                label={<><GlossaryTerm termKey="payroll_tax">Payroll Tax Rate</GlossaryTerm></>}
                 name="staffing.payrollTaxRate"
                 suffix="%"
                 defaultValue={DEFAULTS.payrollTaxRate}
@@ -612,7 +613,7 @@ export function AssumptionsStep() {
         <section>
           <SectionHeader
             icon={<Shield className="h-5 w-5 text-primary" />}
-            title="Step-Up DSCR Covenants"
+            title={<>Step-Up <GlossaryTerm termKey="dscr">DSCR</GlossaryTerm> Covenants</>}
             description="If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets."
           />
           <div className="space-y-4">

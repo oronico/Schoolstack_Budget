@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart, MapPin, Users } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn, formatCurrency } from "@/lib/utils";
 import { YEAR_COUNT } from "@workspace/finance";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -64,7 +65,7 @@ const CATEGORY_GUIDANCE: Record<RevenueCategory, CategoryGuidance> = {
     },
   },
   tuition_offsets: {
-    tip: "Financial aid, sibling discounts, and staff discounts reduce private pay / tuition. Include these so your model reflects realistic net tuition.",
+    tip: "Financial aid, sibling discounts, and staff discounts reduce gross tuition. Include these so your model reflects realistic net tuition.",
     common: true,
   },
   public_funding: {
@@ -1545,7 +1546,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Collection Rate %
+                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"
@@ -1593,7 +1594,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Collection Rate %
+                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"
@@ -1655,7 +1656,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Collection Rate %
+                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"
@@ -1703,7 +1704,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Collection Rate %
+                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"
@@ -1784,7 +1785,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Collection Rate %
+                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"

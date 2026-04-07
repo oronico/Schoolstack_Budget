@@ -1,6 +1,7 @@
 import { FormInput } from "@/components/ui/form-inputs";
 import { Settings, Lightbulb } from "lucide-react";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 
 export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => void }) {
   return (
@@ -210,7 +211,7 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">DSCR check:</span> If you have a loan, aim for a Debt Service Coverage Ratio of at least 1.15-1.2x — meaning your operating cash flow should be 15-20% more than your annual debt payments. Below 1.0x means operations alone can't cover the loan.
+              <span className="font-semibold"><GlossaryTerm termKey="dscr">DSCR</GlossaryTerm> check:</span> If you have a loan, aim for a Debt Service Coverage Ratio of at least 1.15-1.2x — meaning your operating cash flow should be 15-20% more than your annual debt payments. Below 1.0x means operations alone can't cover the loan.
             </p>
           </div>
         </div>

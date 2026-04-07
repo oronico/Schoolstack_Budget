@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2, AlertTriangle, Rocket, Lightbulb } from "lucide-react";
 import { useMemo } from "react";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { computeAnnualDebt } from "@workspace/finance";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -282,7 +283,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
     </div>
   );
 
-  const Item = ({ label, value }: { label: string; value: string | number | undefined }) => (
+  const Item = ({ label, value }: { label: React.ReactNode; value: string | number | undefined }) => (
     <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-secondary/30">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       <span className="text-sm font-semibold text-foreground">{value !== undefined && value !== "" ? value : "-"}</span>
@@ -392,7 +393,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
 
       <Section title="Assumptions" step={2} icon={<DollarSign className="h-5 w-5" />}>
         <div className="space-y-1.5">
-          <Item label="COLA (Cost of Living Adjustment)" value={formatPercent(data.facilities?.annualSalaryIncrease)} />
+          <Item label={<><GlossaryTerm termKey="cola">COLA</GlossaryTerm> (Cost of Living Adjustment)</>} value={formatPercent(data.facilities?.annualSalaryIncrease)} />
           <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
           <Item label="Rent Escalation" value={formatPercent(data.facilities?.annualRentIncrease)} />
           {data.tuitionEscalation?.rate !== undefined && (
@@ -402,8 +403,8 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
           {data.enrollment?.retentionRate !== undefined && (
             <Item label="Student Retention" value={formatPercent(data.enrollment?.retentionRate)} />
           )}
-          <Item label="Benefits Rate" value={formatPercent(data.staffing?.benefitsRate)} />
-          <Item label="Payroll Tax Rate" value={formatPercent(data.staffing?.payrollTaxRate ?? 8)} />
+          <Item label={<><GlossaryTerm termKey="benefits_rate">Benefits Rate</GlossaryTerm></>} value={formatPercent(data.staffing?.benefitsRate)} />
+          <Item label={<><GlossaryTerm termKey="payroll_tax">Payroll Tax Rate</GlossaryTerm></>} value={formatPercent(data.staffing?.payrollTaxRate ?? 8)} />
           {data.schoolProfile?.schoolType === "charter_school" && (
             <>
               <Item label="Charter Methodology" value={data.schoolProfile?.enrollmentRevenueMethod === "ada" ? "ADA" : data.schoolProfile?.enrollmentRevenueMethod === "count_days" ? "Count Days" : "ADM"} />
@@ -421,7 +422,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
             <>
               <Item label="Billing Months" value={`${data.revenueDefaults.billingMonths ?? 10} months`} />
               <Item label="Collection Method" value={(data.revenueDefaults.collectionMethod ?? "autopay").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())} />
-              <Item label="Collection Rate" value={formatPercent(data.revenueDefaults.collectionRate ?? 100)} />
+              <Item label={<><GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm></>} value={formatPercent(data.revenueDefaults.collectionRate ?? 100)} />
               <Item label="Collection Delay" value={`${data.revenueDefaults.collectionDelayDays ?? 0} days`} />
             </>
           )}
@@ -490,7 +491,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                 {staffingSummary.count} positions
               </span>
               <span className="inline-flex items-center gap-1 bg-secondary text-muted-foreground rounded-full px-3 py-1 text-sm font-medium">
-                {staffingSummary.totalFTE} FTE
+                {staffingSummary.totalFTE} <GlossaryTerm termKey="fte">FTE</GlossaryTerm>
               </span>
               <span className="text-sm text-muted-foreground">
                 Total Annual Cost: <span className="font-semibold text-foreground">{formatCurrency(staffingSummary.totalCost)}</span>
