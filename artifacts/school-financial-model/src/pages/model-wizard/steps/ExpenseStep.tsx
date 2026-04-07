@@ -181,12 +181,10 @@ const FORGOTTEN_COSTS: {
 
 function ForgottenCostsPrompt({
   expenseRows,
-  addExpenseRow,
   yearCount,
   syncExpenseRows,
 }: {
   expenseRows: ExpenseRowData[];
-  addExpenseRow: (category: ExpenseCategory) => void;
   yearCount: number;
   syncExpenseRows: (rows: ExpenseRowData[]) => void;
 }) {
@@ -988,7 +986,6 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
 
       <ForgottenCostsPrompt
         expenseRows={expenseRows}
-        addExpenseRow={addExpenseRow}
         yearCount={yearCount}
         syncExpenseRows={syncExpenseRows}
       />
