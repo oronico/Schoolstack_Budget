@@ -19,38 +19,43 @@ interface AssumptionFlag {
   defaultPrompt: string;
 }
 
-const NARRATIVE_SECTIONS: { key: string; label: string; icon: typeof Users; primary: boolean; helpText: React.ReactNode }[] = [
+const NARRATIVE_SECTIONS: { key: string; label: string; conversationalPrompt: string; icon: typeof Users; primary: boolean; helpText: React.ReactNode }[] = [
   {
     key: "enrollmentStrategy",
     label: "Enrollment Strategy",
+    conversationalPrompt: "How will families find out about your school?",
     icon: Users,
     primary: true,
-    helpText: "This is the most important part of your financial plan. How will you reach your enrollment targets? What's your marketing plan, waitlist strategy, or community pipeline?",
+    helpText: "How will families find out about your school? Do you have a waitlist, word-of-mouth network, or marketing plan? This is the most important part of your financial plan — it's the engine behind everything.",
   },
   {
     key: "retentionPlan",
     label: "Retention Plan",
+    conversationalPrompt: "What will keep families coming back year after year?",
     icon: Shield,
     primary: true,
-    helpText: "Keeping families is harder than finding them. What will you do to maintain high retention year over year? What's your re-enrollment process?",
+    helpText: "What will keep families coming back year after year? What makes your school worth staying at? Keeping families is harder than finding them — and much cheaper than replacing them.",
   },
   {
     key: "riskMitigation",
     label: "Risk Mitigation",
+    conversationalPrompt: "What's your biggest worry about Year 1?",
     icon: AlertTriangle,
     primary: true,
-    helpText: "What's your plan if enrollment comes in 20% below target in Year 1? What if retention drops to 70%? What expenses can you cut?",
+    helpText: "What's your biggest worry about Year 1? What's your backup plan if enrollment is lower than expected? What if retention drops to 70%? What expenses could you cut without closing the school?",
   },
   {
     key: "missionAndVision",
     label: "Mission & Vision",
+    conversationalPrompt: "Why does your school need to exist?",
     icon: BookOpen,
     primary: false,
-    helpText: "In a few sentences, describe why you're starting this school and what makes it different.",
+    helpText: "Why does your school need to exist? What will be different for kids who attend? In a few sentences, describe what makes your school worth building.",
   },
   {
     key: "revenueAssumptions",
     label: "Revenue Assumptions",
+    conversationalPrompt: "What are families paying, and why is that the right number?",
     icon: TrendingUp,
     primary: false,
     helpText: <>Walk us through your tuition pricing and any <GlossaryTerm termKey="tuition_offsets">tuition offsets</GlossaryTerm> (scholarships, discounts). What are families paying and why is that the right number for your market? What's your expected <GlossaryTerm termKey="collection_rate">collection rate</GlossaryTerm>?</>,
@@ -58,13 +63,15 @@ const NARRATIVE_SECTIONS: { key: string; label: string; icon: typeof Users; prim
   {
     key: "staffingPhilosophy",
     label: "Staffing Philosophy",
+    conversationalPrompt: "How will you find and keep great teachers?",
     icon: Users,
     primary: false,
-    helpText: <>Describe your team structure. Why is this student-teacher ratio right for your model? How many <GlossaryTerm termKey="fte">FTE</GlossaryTerm> do you plan per grade level?</>,
+    helpText: <>How will you find and keep great teachers? What kind of team culture do you want? Why is this student-teacher ratio right for your model? How many <GlossaryTerm termKey="fte">FTE</GlossaryTerm> do you plan per grade level?</>,
   },
   {
     key: "expenseAssumptions",
     label: "Expense Assumptions",
+    conversationalPrompt: "Are there any costs that might surprise you?",
     icon: TrendingUp,
     primary: false,
     helpText: <>Are there any costs you expect to stay flat, decrease, or grow faster than normal? How are you handling <GlossaryTerm termKey="escalation_rate">escalation</GlossaryTerm> and <GlossaryTerm termKey="depreciation">depreciation</GlossaryTerm>? Explain any unusual choices.</>,
@@ -72,16 +79,18 @@ const NARRATIVE_SECTIONS: { key: string; label: string; icon: typeof Users; prim
   {
     key: "growthStrategy" as const,
     label: "Growth Strategy",
+    conversationalPrompt: "How do you plan to grow over the next 5 years?",
     icon: TrendingUp,
     primary: false,
-    helpText: "How do you plan to grow over 5 years? More students, more grades, new programs, new locations?",
+    helpText: "How do you plan to grow over 5 years? More students, more grades, new programs, new locations? What does success look like by Year 5?",
   },
   {
     key: "additionalContext" as const,
     label: "Additional Context",
+    conversationalPrompt: "Anything else a reviewer should know?",
     icon: BookOpen,
     primary: false,
-    helpText: "Anything else a board member or reviewer should know?",
+    helpText: "Anything else a board member or reviewer should know? This is your chance to share context that doesn't fit neatly into the other sections.",
   },
 ];
 
@@ -333,8 +342,9 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
                   <Icon className={`h-5 w-5 ${section.primary ? "text-amber-600" : "text-muted-foreground"}`} />
                   <div>
                     <span className={`font-semibold ${section.primary ? "text-amber-900" : "text-foreground"}`}>
-                      {section.label}
+                      {section.conversationalPrompt}
                     </span>
+                    <span className="block text-[11px] text-muted-foreground font-normal mt-0.5">{section.label}</span>
                     {section.primary && (
                       <span className="ml-2 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
                         Priority
@@ -358,7 +368,7 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
                   )}
                   <textarea
                     className="w-full min-h-[120px] p-3 text-sm border rounded-lg bg-background resize-y focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400"
-                    placeholder={prefill || `Write about your ${section.label.toLowerCase()}...`}
+                    placeholder={prefill || `${section.conversationalPrompt} Write in your own words...`}
                     {...register(`budgetNarrative.${section.key}`)}
                   />
                 </div>

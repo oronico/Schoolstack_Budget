@@ -4,6 +4,7 @@ import { useGetConsultantAnalysis } from "@workspace/api-client-react";
 import { profitLabel, cumulativeProfitLabel } from "../schema";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { ConsultantAnalysisView } from "@/components/consultant/ConsultantAnalysisView";
+import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 
 interface ConsultantStepProps {
   jumpToStep?: (step: number) => void;
@@ -13,6 +14,7 @@ interface ConsultantStepProps {
 export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
   const { watch } = useFormContext();
   const entityType = watch("schoolProfile.entityType");
+  const lendingLabIntent = watch("schoolProfile.lendingLabIntent") as string | undefined;
   const niLabel = profitLabel(entityType);
   const cumNiLabel = cumulativeProfitLabel(entityType);
   const [hasRequested, setHasRequested] = useState(false);
@@ -70,12 +72,16 @@ export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
   }
 
   return (
-    <ConsultantAnalysisView
-      data={data}
-      niLabel={niLabel}
-      cumNiLabel={cumNiLabel}
-      modelId={modelId ?? undefined}
-      jumpToStep={jumpToStep}
-    />
+    <>
+      <SectionExplainers section="consultant" />
+      <ConsultantAnalysisView
+        data={data}
+        niLabel={niLabel}
+        cumNiLabel={cumNiLabel}
+        modelId={modelId ?? undefined}
+        jumpToStep={jumpToStep}
+        lendingLabIntent={lendingLabIntent}
+      />
+    </>
   );
 }

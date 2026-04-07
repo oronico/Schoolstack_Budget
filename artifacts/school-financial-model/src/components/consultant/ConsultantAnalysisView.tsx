@@ -124,11 +124,50 @@ interface ConsultantAnalysisViewProps {
   modelId?: number;
   jumpToStep?: (step: number) => void;
   exportStepNumber?: number;
+  lendingLabIntent?: string;
 }
 
-export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9 }: ConsultantAnalysisViewProps) {
+const KPI_PLAIN_ENGLISH: Record<string, (value: string) => string> = {
+  revenuePerStudent: (v) => `Your school brings in ${v} for each student enrolled`,
+  staffingCostPct: (v) => `${v} of every dollar goes to paying your team`,
+  operatingCostPct: (v) => `${v} of revenue covers non-staffing operations`,
+  netMargin: (v) => `${v} of revenue is left over after all expenses`,
+  dscr: (v) => `For every $1 of loan payments, you earn ${v} — higher is safer`,
+  reserveMonths: (v) => `You could run the school for ${v} with no income`,
+  revenueGrowth: (v) => `Revenue grows ${v} over the projection period`,
+  capacityUtilization: (v) => `Your school is projected to be ${v} full`,
+  breakevenEnrollment: (v) => `You need at least ${v} students just to cover costs`,
+};
+
+function generateHealthSummary(data: ConsultantOutput): string {
+  const metrics = data.keyMetrics || [];
+  const goodCount = metrics.filter(m => m.status === "good").length;
+  const alertCount = metrics.filter(m => m.status !== "good" && m.status !== "warning").length;
+  const warningCount = metrics.filter(m => m.status === "warning").length;
+
+  if (alertCount > 0 && goodCount < alertCount) {
+    return "Your model has some areas that need attention before it's ready. That's completely normal for an early draft — most founders need a few rounds of adjustments. Let's walk through what we found and what you can do about it.";
+  }
+  if (warningCount > 0 && goodCount >= warningCount) {
+    return "Your school looks financially solid overall, with a few areas worth watching. The foundation is strong — let's review the specifics so you can make informed decisions about where to fine-tune.";
+  }
+  if (alertCount === 0 && warningCount === 0 && goodCount > 0) {
+    return "Your financial model looks healthy across the board. Your revenue, costs, and reserves are all in good shape. That's a strong starting point — you should feel good about where this stands.";
+  }
+  if (goodCount === 0 && metrics.length === 0) {
+    return "We're still waiting for enough data to generate a full analysis. Once you've filled in your revenue, staffing, and expenses, we'll have insights ready for you.";
+  }
+  return "We've reviewed your financial model and have some observations to share. Let's walk through the key findings together.";
+}
+
+export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, lendingLabIntent }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
   const [sensitivityTab, setSensitivityTab] = useState<"revenue" | "expense">("revenue");
+  const [lendingLabExpanded, setLendingLabExpanded] = useState(
+    lendingLabIntent === "plan_to_apply" || lendingLabIntent === "want_to_understand"
+  );
+  const healthSummary = generateHealthSummary(data);
+  const showLendingLabCollapsed = lendingLabIntent === "budget_only" || !lendingLabIntent;
 
   useEffect(() => {
     trackCoachingEvent("analysis_view_opened", {
@@ -221,11 +260,52 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         </div>
       </div>
 
+      <div className="bg-gradient-to-r from-emerald-50/80 to-teal-50/50 border border-emerald-200/60 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Activity className="h-5 w-5 text-emerald-700" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-emerald-900 text-sm mb-1">The bottom line</h3>
+            <p className="text-emerald-800 text-[15px] leading-relaxed">{healthSummary}</p>
+          </div>
+        </div>
+      </div>
+
       {data.lendingLabAssessment && (
-        <LendingLabCard
-          assessment={data.lendingLabAssessment}
-          jumpToStep={jumpToStep}
-        />
+        showLendingLabCollapsed ? (
+          <div className="rounded-2xl border border-border/60 bg-muted/30 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setLendingLabExpanded(!lendingLabExpanded)}
+              className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors"
+            >
+              {lendingLabExpanded ? (
+                <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              )}
+              <Shield className="h-5 w-5 text-muted-foreground" />
+              <div className="flex-1">
+                <span className="font-semibold text-sm text-foreground">Lending Lab Assessment</span>
+                <p className="text-xs text-muted-foreground mt-0.5">Planning to seek financing? These are the benchmarks lenders look at.</p>
+              </div>
+            </button>
+            {lendingLabExpanded && (
+              <div className="px-4 pb-4">
+                <LendingLabCard
+                  assessment={data.lendingLabAssessment}
+                  jumpToStep={jumpToStep}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <LendingLabCard
+            assessment={data.lendingLabAssessment}
+            jumpToStep={jumpToStep}
+          />
+        )
       )}
 
       <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
@@ -303,6 +383,10 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
                   ? "border-amber-200/60"
                   : "border-rose-200/60";
 
+            const kpiId = metricNameToKpiId(metric.name);
+            const plainEnglishFn = kpiId ? KPI_PLAIN_ENGLISH[kpiId] : undefined;
+            const plainEnglish = plainEnglishFn ? plainEnglishFn(metric.value) : undefined;
+
             return (
               <div
                 key={idx}
@@ -323,6 +407,9 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
                 <p className={cn("font-display font-bold text-3xl mb-2", statusColor)}>
                   {metric.value}
                 </p>
+                {plainEnglish && (
+                  <p className="text-sm text-foreground/80 leading-snug mb-2 italic">{plainEnglish}</p>
+                )}
                 <p className="text-muted-foreground text-xs leading-relaxed mt-auto">
                   {metric.interpretation}
                 </p>

@@ -761,6 +761,40 @@ export const EXPLAINERS: Record<string, Explainer> = {
     highFriction: true,
     priority: "high",
   },
+  reading_your_analysis: {
+    id: "reading_your_analysis",
+    title: "How to Read Your Analysis",
+    body: {
+      whatThisMeans: "This page summarizes everything you've entered into your financial model. It translates your numbers into key metrics, charts, and a plain-English health check so you can see how your school looks on paper before you share it with anyone else.",
+      whyItMatters: "A budget spreadsheet tells you what the numbers are. This analysis tells you what the numbers mean. It's the difference between 'staffing costs are $450K' and 'staffing is 65% of revenue — that's typical for a school your size.' Understanding these patterns helps you spot strengths and weaknesses before a board member, authorizer, or lender does.",
+      healthyVsRisky: "Healthy: You understand why each metric is green, yellow, or red, and you've made conscious choices about any watch items. Worth watching: You're not sure what a metric means or why it's flagged. Common misread: Assuming all 'watch' items are problems — some are perfectly normal trade-offs for your school model.",
+      whatToDoNext: "Start with 'The bottom line' summary at the top. Then scan the key metrics — focus on any yellow or red items first. Click 'How is this calculated?' on any metric you don't understand. If something looks off, use the 'Jump to step' buttons to go back and adjust your inputs.",
+    },
+    audienceLevel: ["basics", "extra"],
+    relatedSection: "consultant",
+    dismissible: true,
+    autoExpandFor: ["extra"],
+    order: 37,
+    highFriction: false,
+    priority: "standard",
+  },
+  writing_your_narrative: {
+    id: "writing_your_narrative",
+    title: "Writing Your Budget Narrative",
+    body: {
+      whatThisMeans: "Your budget narrative is the story behind the numbers. It explains why you made the financial choices you did, how you plan to hit your targets, and what you'll do if things don't go as planned. Think of it as the 'why' that complements the 'what' in your spreadsheets.",
+      whyItMatters: "Numbers alone don't tell a complete story. A board member reviewing your budget will want to know: 'Why did you choose this tuition level?' 'How will you actually get 120 students enrolled?' 'What happens if you fall short?' Your narrative answers these questions and builds confidence that you've thought through the plan, not just the math.",
+      healthyVsRisky: "Healthy: Each section is written in your own words, addresses the specific question, and gives concrete details (names of neighborhoods, partner organizations, specific marketing tactics). Worth watching: Generic answers that could apply to any school. Common gap: Skipping the risk mitigation section — that's actually the most important one for building credibility.",
+      whatToDoNext: "Start with the three priority sections (marked in amber): enrollment strategy, retention plan, and risk mitigation. Write naturally, as if you're explaining your plan to a supportive mentor. Don't worry about perfect prose — clarity and specificity matter more than polish.",
+    },
+    audienceLevel: ["basics", "extra"],
+    relatedSection: "narrative",
+    dismissible: true,
+    autoExpandFor: ["extra"],
+    order: 38,
+    highFriction: false,
+    priority: "standard",
+  },
 };
 
 export function getExplainersForSection(section: string, level: GuidanceLevel): Explainer[] {

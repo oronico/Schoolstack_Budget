@@ -281,7 +281,7 @@ const RULES: DiagnosticRule[] = [
       return {
         severity: "warning",
         headline: `I'd keep an eye on this — staffing costs are at ${Math.round(pct)}% of revenue`,
-        explanation: `Personnel costs between ${THRESHOLDS.staffingPctWarning}% and ${THRESHOLDS.staffingPctCritical}% are on the high side. Healthy schools typically stay between 50-60%. You're not in the danger zone yet, but there's not a lot of room.`,
+        explanation: `Personnel costs between ${THRESHOLDS.staffingPctWarning}% and ${THRESHOLDS.staffingPctCritical}% are on the high side. Healthy schools typically stay between 50-60%. You still have room to adjust, but it's worth looking at whether you can trim here.`,
         action: "I'd look at whether some roles can start part-time or be phased in after Year 1. That's usually the quickest way to create breathing room.",
         targetStep: 5,
       };
