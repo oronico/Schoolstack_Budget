@@ -1,8 +1,11 @@
 import { useFormContext } from "react-hook-form";
 import { useEffect, useMemo } from "react";
-import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield } from "lucide-react";
+import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield, Sprout } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
+import { EXPLAINERS } from "@/lib/coaching/explainers";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_BENEFITS_RATE,
@@ -131,6 +134,42 @@ function SectionHeader({
   );
 }
 
+function QuickPickButtons({
+  options,
+  name,
+  suffix,
+}: {
+  options: { label: string; value: number }[];
+  name: string;
+  suffix?: string;
+}) {
+  const { watch, setValue } = useFormContext();
+  const current = watch(name);
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-1">
+      {options.map((opt) => {
+        const isActive = current === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setValue(name, opt.value, { shouldDirty: true })}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+              isActive
+                ? "bg-primary text-white border-primary shadow-sm"
+                : "bg-white text-foreground/70 border-border hover:border-primary/40 hover:text-primary"
+            )}
+          >
+            {opt.label}{suffix}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function InfoBadge({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 p-3.5">
@@ -142,6 +181,11 @@ function InfoBadge({ children }: { children: React.ReactNode }) {
 
 export function AssumptionsStep() {
   const { watch, setValue } = useFormContext<FullModelData>();
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showReassurance = guidanceLevel === "extra" || guidanceLevel === "basics";
+  const loanAmount = watch("schoolProfile.loanAmount") as number | undefined;
+  const hasLoan = loanAmount !== undefined && loanAmount !== null && loanAmount > 0;
 
   const schoolType = watch("schoolProfile.schoolType") as SchoolType | undefined;
   const stateCode = watch("schoolProfile.state") as string || "";
@@ -202,6 +246,22 @@ export function AssumptionsStep() {
           The formula dashboard — every rate and driver that powers your 5-year model, in one place.
         </p>
       </div>
+
+      {showReassurance && (
+        <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-5">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-emerald-100 rounded-xl mt-0.5 flex-shrink-0">
+              <Sprout className="h-5 w-5 text-emerald-700" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-emerald-900 mb-1">The defaults are a great starting point</p>
+              <p className="text-sm text-emerald-800 leading-relaxed">
+                We've pre-filled these with typical rates for schools like yours. Most founders leave them as-is on their first pass — you can always come back and fine-tune later. If a field shows a default badge, it means you've customized it.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-teal-50/60 border border-teal-200 rounded-2xl p-5">
         <div className="flex items-start gap-3">
@@ -437,6 +497,7 @@ export function AssumptionsStep() {
                     min={0}
                     max={100}
                   />
+                  <InlineHelpCard explainer={EXPLAINERS.assumptions_collection_rate} section="assumptions" className="mt-2" />
                   <FinancingInsight text="A 100% collection rate is optimistic for invoiced families — most schools see 92-98%. Building in a realistic rate protects your cash flow projections." />
                 </div>
 
@@ -480,7 +541,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={100}
                 />
-
+                <InlineHelpCard explainer={EXPLAINERS.assumptions_cola} section="assumptions" className="mt-2" />
               </div>
 
               <div>
@@ -494,7 +555,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={100}
                 />
-
+                <InlineHelpCard explainer={EXPLAINERS.assumptions_general_inflation} section="assumptions" className="mt-2" />
               </div>
             </div>
 
@@ -525,27 +586,56 @@ export function AssumptionsStep() {
           />
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <AssumptionField
-                label={<>Default <GlossaryTerm termKey="benefits_rate">Benefits Rate</GlossaryTerm></>}
-                name="staffing.benefitsRate"
-                suffix="%"
-                defaultValue={DEFAULTS.benefitsRate}
-                usageNote="Percentage of salary paid in benefits (health insurance, retirement, etc.) for benefits-eligible employees. Applied as a default to each new staff role."
-                placeholder="25"
-                min={0}
-                max={100}
-              />
+              <div>
+                <AssumptionField
+                  label={<>Default <GlossaryTerm termKey="benefits_rate">Benefits Rate</GlossaryTerm></>}
+                  name="staffing.benefitsRate"
+                  suffix="%"
+                  defaultValue={DEFAULTS.benefitsRate}
+                  usageNote="Percentage of salary paid in benefits (health insurance, retirement, etc.) for benefits-eligible employees. Applied as a default to each new staff role."
+                  placeholder="25"
+                  min={0}
+                  max={100}
+                />
+                <div className="mt-2 px-1">
+                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Quick pick:</p>
+                  <QuickPickButtons
+                    name="staffing.benefitsRate"
+                    suffix="%"
+                    options={[
+                      { label: "20", value: 20 },
+                      { label: "25", value: 25 },
+                      { label: "30", value: 30 },
+                    ]}
+                  />
+                </div>
+                <InlineHelpCard explainer={EXPLAINERS.assumptions_benefits_rate} section="assumptions" className="mt-2" />
+              </div>
 
-              <AssumptionField
-                label={<><GlossaryTerm termKey="payroll_tax">Payroll Tax Rate</GlossaryTerm></>}
-                name="staffing.payrollTaxRate"
-                suffix="%"
-                defaultValue={DEFAULTS.payrollTaxRate}
-                usageNote="Employer-side payroll taxes (FICA, FUTA, state unemployment). Applied as a default to each new staff role — override per role on the Staffing step."
-                placeholder="8"
-                min={0}
-                max={100}
-              />
+              <div>
+                <AssumptionField
+                  label={<><GlossaryTerm termKey="payroll_tax">Payroll Tax Rate</GlossaryTerm></>}
+                  name="staffing.payrollTaxRate"
+                  suffix="%"
+                  defaultValue={DEFAULTS.payrollTaxRate}
+                  usageNote="Employer-side payroll taxes (FICA, FUTA, state unemployment). Applied as a default to each new staff role — override per role on the Staffing step."
+                  placeholder="8"
+                  min={0}
+                  max={100}
+                />
+                <div className="mt-2 px-1">
+                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Quick pick:</p>
+                  <QuickPickButtons
+                    name="staffing.payrollTaxRate"
+                    suffix="%"
+                    options={[
+                      { label: "8", value: 8 },
+                      { label: "10", value: 10 },
+                      { label: "12", value: 12 },
+                    ]}
+                  />
+                </div>
+              </div>
 
               <AssumptionField
                 label="Student Retention Rate"
@@ -614,33 +704,44 @@ export function AssumptionsStep() {
           <SectionHeader
             icon={<Shield className="h-5 w-5 text-primary" />}
             title={<>Step-Up <GlossaryTerm termKey="dscr">DSCR</GlossaryTerm> Covenants</>}
-            description="If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets."
+            description={hasLoan
+              ? "If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets."
+              : "These settings become relevant if you add loan details above."}
           />
-          <div className="space-y-4">
-            <div className="grid grid-cols-5 gap-3">
-              {[0, 1, 2, 3, 4].map(y => (
-                <AssumptionField
-                  key={y}
-                  label={`Year ${y + 1}`}
-                  name={`covenantThresholds.dscrByYear.${y}`}
-                  suffix="x"
-                  usageNote={`Minimum DSCR for Year ${y + 1}`}
-                  placeholder={[1.10, 1.15, 1.20, 1.25, 1.25][y].toFixed(2)}
-                  min={0}
-                  max={10}
-                  step={0.05}
-                />
-              ))}
+          {hasLoan ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-5 gap-3">
+                {[0, 1, 2, 3, 4].map(y => (
+                  <AssumptionField
+                    key={y}
+                    label={`Year ${y + 1}`}
+                    name={`covenantThresholds.dscrByYear.${y}`}
+                    suffix="x"
+                    usageNote={`Minimum DSCR for Year ${y + 1}`}
+                    placeholder={[1.10, 1.15, 1.20, 1.25, 1.25][y].toFixed(2)}
+                    min={0}
+                    max={10}
+                    step={0.05}
+                  />
+                ))}
+              </div>
+              <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900">
+                <Lightbulb className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <span>
+                  Step-up covenants start lower in early years when your school is still growing, then tighten as cash flow stabilizes.
+                  A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.
+                </span>
+              </div>
+              <FinancingInsight text="If you have loan covenants, missing your DSCR targets can trigger default provisions — plan conservatively so you have room to meet each year's target." />
             </div>
-            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900">
-              <Lightbulb className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-              <span>
-                Step-up covenants start lower in early years when your school is still growing, then tighten as cash flow stabilizes.
-                A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.
-              </span>
+          ) : (
+            <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 p-4">
+              <Info className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-slate-500 leading-relaxed">
+                No loan configured — DSCR covenants don't apply yet. If you add a loan amount in the Debt Terms section above, year-by-year covenant targets will appear here.
+              </p>
             </div>
-            <FinancingInsight text="If you have loan covenants, missing your DSCR targets can trigger default provisions — plan conservatively so you have room to meet each year's target." />
-          </div>
+          )}
         </section>
 
         <section>
