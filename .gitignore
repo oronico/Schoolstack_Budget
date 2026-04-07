@@ -48,9 +48,6 @@ Thumbs.db
 .cache/
 .local/
 
-# Budget All-Hands slides artifact
-artifacts/budget-allhands/
-
 # Debug & test artifacts
 *.xlsx
 !artifacts/api-server/qa-output/**/*.xlsx
