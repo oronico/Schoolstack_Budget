@@ -974,6 +974,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                             y1Students={y1Students}
                             locked={false}
                             rowErrors={rowErrors}
+                            schoolType={schoolType}
                           />
                         );
                       })}
@@ -1001,6 +1002,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                             y1Students={y1Students}
                             locked={false}
                             rowErrors={rowErrors}
+                            schoolType={schoolType}
                           />
                         );
                       })}
@@ -1024,6 +1026,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                     locked={row.id === "state_local_perpupil" && gradeBandActive}
                     lockedMessage="This amount is computed from your grade-band enrollment and per-pupil rates above. Edit those inputs to change funding."
                     rowErrors={rowErrors}
+                    schoolType={schoolType}
                   />
                   );
                 })}
@@ -1280,6 +1283,7 @@ interface RevenueLineItemProps {
   locked?: boolean;
   lockedMessage?: string;
   rowErrors?: Record<string, { message?: string }>;
+  schoolType?: string;
 }
 
 function RevenueLineItem({
@@ -1295,6 +1299,7 @@ function RevenueLineItem({
   locked = false,
   lockedMessage,
   rowErrors,
+  schoolType,
 }: RevenueLineItemProps) {
   const [showTiming, setShowTiming] = useState(false);
 
@@ -1477,6 +1482,8 @@ interface TimingControlsProps {
 }
 
 function TimingControls({ row, onTimingChange }: TimingControlsProps) {
+  const { watch } = useFormContext();
+  const schoolType = watch("schoolProfile.schoolType");
   const category = row.category;
   const isOverridden = row.timingOverridden === true;
 

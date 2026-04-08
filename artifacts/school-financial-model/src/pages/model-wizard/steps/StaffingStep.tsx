@@ -434,6 +434,7 @@ export function StaffingStep() {
                     enrollmentArr={enrollmentArr}
                     colaRate={colaRate}
                     rowErrors={thisRowErrors}
+                    schoolType={schoolType}
                   />
                 );
               })}
@@ -500,6 +501,7 @@ interface StaffCardProps {
   enrollmentArr: number[];
   colaRate: number;
   rowErrors?: Record<string, { message?: string }>;
+  schoolType?: string;
 }
 
 function StaffCard({
@@ -511,6 +513,7 @@ function StaffCard({
   enrollmentArr,
   colaRate,
   rowErrors,
+  schoolType,
 }: StaffCardProps) {
   const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
   const isRatio = row.staffingMode === "ratio";

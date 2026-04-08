@@ -188,6 +188,7 @@ function PayrollTaxSection({
   payrollQuickPicks: { label: string; value: number }[];
 }) {
   const { watch, setValue } = useFormContext();
+  const schoolType = watch("schoolProfile.schoolType");
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const currentValue = watch("staffing.payrollTaxRate");
   const effectiveDefault = stateCode ? statePayrollTaxRate : DEFAULT_PAYROLL_TAX_RATE;
