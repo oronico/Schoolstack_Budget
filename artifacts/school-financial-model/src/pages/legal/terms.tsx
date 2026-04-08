@@ -8,7 +8,6 @@ export function TermsPage() {
         title="Terms of Service"
         description="Terms of Service for SchoolStack Budget, a financial modeling tool for school founders operated by Building Hope Impact Fund."
         path="/terms"
-        noIndex
       />
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-2">Terms of Service</h1>

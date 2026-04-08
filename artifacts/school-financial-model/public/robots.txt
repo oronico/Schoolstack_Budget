@@ -4,6 +4,5 @@ Disallow: /dashboard
 Disallow: /model/
 Disallow: /admin
 Disallow: /api/
-Disallow: /shared/
 
 Sitemap: https://budget.schoolstack.ai/sitemap.xml
