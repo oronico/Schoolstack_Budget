@@ -4,7 +4,6 @@ import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, 
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn, formatCurrency } from "@/lib/utils";
-import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
   type ExpenseRowData,
   type CapitalDebtRowData,
@@ -1005,7 +1004,6 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Expenses & Operations</h2>
         <p className="text-muted-foreground text-lg">First, a few quick questions about your business operations. Then we'll review your expense details.</p>
-        <SectionExplainers section="expenses" className="mt-4" />
       </div>
 
       <CollapsibleInfoBox

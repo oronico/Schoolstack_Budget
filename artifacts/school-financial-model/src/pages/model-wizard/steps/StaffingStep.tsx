@@ -5,7 +5,6 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, computeEffectiveFte } from "@workspace/finance";
-import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
   type StaffingRowData,
   type StaffingFunctionCategory,
@@ -30,6 +29,44 @@ const STAFFING_BENCHMARKS = {
   tutoring_center: { ratio: "1:5–1:10", staff: "2–5 staff for 15–40 students" },
   other: { ratio: "1:10–1:15", staff: "varies by model" },
 };
+
+function CollapsibleCallout({
+  icon: Icon,
+  iconColor,
+  borderColor,
+  bgColor,
+  summary,
+  children,
+}: {
+  icon: typeof Lightbulb;
+  iconColor: string;
+  borderColor: string;
+  bgColor: string;
+  summary: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className={cn("rounded-xl border overflow-hidden", borderColor, bgColor)}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsOpen(!isOpen); } }}
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-black/[0.02] transition-colors cursor-pointer"
+      >
+        {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+        <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />
+        <span className="text-sm flex-1">{summary}</span>
+      </div>
+      {isOpen && (
+        <div className="px-4 pb-3 space-y-2 ml-10">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function StaffingStep() {
   const { watch, setValue, formState: { errors } } = useFormContext();
@@ -198,74 +235,83 @@ export function StaffingStep() {
         <p className="text-muted-foreground text-lg">
           Add every person on your team - full-time, part-time, and contract. Include teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
         </p>
-        <SectionExplainers section="staffing" className="mt-4" />
       </div>
 
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-        <div className="flex items-start gap-3">
-          <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-foreground space-y-2">
-            <p>
-              <span className="font-semibold">Think ahead.</span>{" "}
-              This roster is your Year 1 team, but your enrollment grows from{" "}
-              <span className="font-semibold">{y1Students || "?"}</span> to{" "}
-              <span className="font-semibold">{y5Students || "?"} students</span> by Year 5.
-              {y5Students > y1Students && " You'll likely need to hire more staff as you grow."}{" "}
-              The COLA rate you set in Assumptions will increase these salaries automatically each year.
-            </p>
-            <p className="text-muted-foreground">
-              Typical {schoolType.replace(/_/g, " ")} ratio: <span className="font-medium text-foreground">{benchmark.ratio}</span> (student-to-staff). Current staffing benchmark: {benchmark.staff}.
-            </p>
-          </div>
-        </div>
-      </div>
+      <CollapsibleCallout
+        icon={Lightbulb}
+        iconColor="text-primary"
+        borderColor="border-primary/20"
+        bgColor="bg-primary/5"
+        summary={<>
+          <span className="font-semibold">Year 1 roster</span>
+          <span className="text-muted-foreground"> — {y1Students || "?"} → {y5Students || "?"} students over 5 years. Typical ratio: {benchmark.ratio}.</span>
+        </>}
+      >
+        <p className="text-sm text-foreground">
+          This is your Year 1 team, but your enrollment grows to <span className="font-semibold">{y5Students || "?"} students</span> by Year 5.
+          {y5Students > y1Students && " You'll likely need to hire more staff as you grow."}{" "}
+          The COLA rate you set in Assumptions will increase these salaries automatically each year.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Current staffing benchmark for {schoolType.replace(/_/g, " ")}: {benchmark.staff}.
+        </p>
+      </CollapsibleCallout>
 
       {costs.totalSalariesWages > 0 && (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4 flex items-start gap-3">
-          <DollarSign className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-foreground space-y-1">
-            <p>
-              <span className="font-semibold"><GlossaryTerm termKey="cola">COLA</GlossaryTerm> - {colaRate}% Cost of Living Adjustment</span>{" "}
-              applied annually. Keep COLA at or above your general inflation rate - if inflation outpaces COLA, your staff effectively takes a pay cut every year.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Y1 total salaries: <span className="font-semibold text-foreground">${costs.totalSalariesWages.toLocaleString()}</span> → Y5: <span className="font-semibold text-foreground">${Math.round(costs.totalSalariesWages * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}</span> with {colaRate}% COLA.
-              {" "}Adjust the COLA rate in the Assumptions step.
-            </p>
-          </div>
-        </div>
+        <CollapsibleCallout
+          icon={DollarSign}
+          iconColor="text-blue-600"
+          borderColor="border-blue-200"
+          bgColor="bg-blue-50/50"
+          summary={<>
+            <span className="font-semibold"><GlossaryTerm termKey="cola">COLA</GlossaryTerm> {colaRate}%</span>
+            <span className="text-muted-foreground"> — Y1 salaries: ${costs.totalSalariesWages.toLocaleString()} → Y5: ${Math.round(costs.totalSalariesWages * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}</span>
+          </>}
+        >
+          <p className="text-sm text-foreground">
+            Keep COLA at or above your general inflation rate - if inflation outpaces COLA, your staff effectively takes a pay cut every year. Adjust the COLA rate in the Assumptions step.
+          </p>
+        </CollapsibleCallout>
       )}
 
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-start gap-3">
-        <ShieldCheck className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-foreground space-y-1">
-          <p>
-            <span className="font-semibold">Use a payroll provider.</span>{" "}
-            Services like{" "}
-            <span className="font-semibold">Gusto</span>,{" "}
-            <span className="font-semibold">ADP</span>, or{" "}
-            <span className="font-semibold">Paychex</span>{" "}
-            handle tax withholding, benefits, and compliance automatically.
-          </p>
-          <p className="text-muted-foreground">
-            Paying staff through Venmo, Zelle, or Cash App creates serious tax and legal risk.
-          </p>
-
-        </div>
-      </div>
+      <CollapsibleCallout
+        icon={ShieldCheck}
+        iconColor="text-emerald-600"
+        borderColor="border-emerald-200"
+        bgColor="bg-emerald-50/50"
+        summary={<>
+          <span className="font-semibold">Use a payroll provider</span>
+          <span className="text-muted-foreground"> — Gusto, ADP, or Paychex handle tax withholding and compliance automatically.</span>
+        </>}
+      >
+        <p className="text-sm text-foreground">
+          Paying staff through Venmo, Zelle, or Cash App creates serious tax and legal risk. A payroll provider handles tax withholding, benefits administration, and compliance automatically.
+        </p>
+      </CollapsibleCallout>
 
       {maxCapacity && y1Students > 0 && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-foreground">
-            <span className="font-semibold">Building capacity: {maxCapacity} students.</span>{" "}
-            {y5Students > (maxCapacity || 0) ? (
-              <span className="text-amber-700">Your Year 5 enrollment ({y5Students}) exceeds building capacity. You'll want a facility expansion plan or revised enrollment targets before then.</span>
-            ) : (
-              <span>Your enrollment fits within your building ({Math.round((y5Students / maxCapacity) * 100)}% capacity by Year 5). Growing into your space is a sign of smart planning.</span>
-            )}
-          </div>
-        </div>
+        <CollapsibleCallout
+          icon={AlertTriangle}
+          iconColor="text-amber-600"
+          borderColor="border-amber-200"
+          bgColor="bg-amber-50/50"
+          summary={<>
+            <span className="font-semibold">Building capacity: {maxCapacity} students.</span>
+            <span className="text-muted-foreground">
+              {" "}{y5Students > (maxCapacity || 0)
+                ? `Year 5 enrollment (${y5Students}) exceeds capacity.`
+                : `${Math.round((y5Students / maxCapacity) * 100)}% capacity by Year 5.`
+              }
+            </span>
+          </>}
+        >
+          <p className="text-sm text-foreground">
+            {y5Students > (maxCapacity || 0)
+              ? "You'll want a facility expansion plan or revised enrollment targets before then."
+              : "Growing into your space is a sign of smart planning."
+            }
+          </p>
+        </CollapsibleCallout>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

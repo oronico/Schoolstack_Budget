@@ -5,7 +5,6 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
-import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import type { Program } from "../schema";
 import { GRADE_BAND_LABELS } from "@/lib/revenue-defaults";
 import {
@@ -282,7 +281,7 @@ function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOpe
       <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl border border-blue-200">
         <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
         <p className="text-xs text-blue-700">
-          These fields are optional but highly encouraged. Taking stock of your demand pipeline is one of the most valuable steps in building a data-driven model - it turns your enrollment projections from estimates into evidence-backed targets. This is especially important for ESA-funded and charter schools where per-pupil revenue is the primary income stream.
+          These fields are optional. Adding real demand data turns your projections from estimates into evidence-backed targets.
         </p>
       </div>
 
@@ -525,7 +524,6 @@ export function EnrollmentStep() {
         <p className="text-muted-foreground text-lg">
           Define every program you offer - each with its own tuition and enrollment. Full day, half day, drop-in, after school, four-day week - whatever you run. Don't worry about getting this perfect - your budget is a living document you'll refine over time.
         </p>
-        <SectionExplainers section="enrollment" className="mt-4" />
       </div>
 
       {!isNewSchool && currentStudents > 0 && programs.length > 0 && !prefillDismissed && programs.every(p => !p.year1 && !p.currentYear) && (

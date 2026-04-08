@@ -5,7 +5,6 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { cn, formatCurrency } from "@/lib/utils";
 import { YEAR_COUNT } from "@workspace/finance";
-import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import {
   type RevenueRowData,
   type RevenueCategory,
@@ -692,7 +691,6 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         <p className="text-muted-foreground text-lg">
           Enter your expected amounts for each year. We've filled in smart defaults - adjust them to match your school.
         </p>
-        <SectionExplainers section="revenue" className="mt-4" />
       </div>
 
       {stateFundingConfig && stateCode && (

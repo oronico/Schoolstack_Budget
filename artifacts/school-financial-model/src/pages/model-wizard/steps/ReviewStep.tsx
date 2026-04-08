@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { computeAnnualDebt } from "@workspace/finance";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
-import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
 import { QuickLevers } from "@/components/coaching/QuickLevers";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
@@ -298,7 +297,6 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Does Everything Look Right?</h2>
         <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime. Remember, this is your first draft - every version of your budget gets stronger.</p>
-        <SectionExplainers section="review" className="mt-4" />
       </div>
 
       <DiagnosticPanel
