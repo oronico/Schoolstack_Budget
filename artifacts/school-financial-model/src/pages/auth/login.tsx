@@ -42,7 +42,6 @@ export function LoginPage() {
         title="Sign In"
         description="Sign in to SchoolStack Budget to continue building your school's financial model."
         path="/login"
-        noIndex
       />
       <div className="flex-1 flex items-center justify-center p-4 py-16">
         <div className="w-full max-w-md">

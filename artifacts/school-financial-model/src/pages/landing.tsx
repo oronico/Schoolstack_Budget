@@ -127,6 +127,30 @@ const LANDING_JSON_LD = [
           text: "SchoolStack Budget is free during beta. When pricing launches, you'll get advance notice and the option to export everything.",
         },
       },
+      {
+        "@type": "Question",
+        name: "How long does it take to build a financial model?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Most school founders complete their first 5-year financial model in about an hour. You can save your progress and come back anytime.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can I test what happens if enrollment is lower than expected?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. The What-If Scenario Planner lets you adjust enrollment, tuition, staffing costs, and more with sliders, and see the impact on your bottom line instantly. You can compare multiple scenarios side by side.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Is my financial data secure?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. SchoolStack Budget uses encrypted data transmission, hashed passwords, and access controls. Your data is never sold to third parties. You can export or delete your data at any time.",
+        },
+      },
     ],
   },
 ];
