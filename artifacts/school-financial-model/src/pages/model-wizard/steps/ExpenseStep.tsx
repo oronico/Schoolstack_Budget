@@ -762,8 +762,8 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
 
   const personnelCosts = useMemo(() => {
     if (!staffingRows || staffingRows.length === 0) return null;
-    return calculatePersonnelCosts(staffingRows);
-  }, [staffingRows]);
+    return calculatePersonnelCosts(staffingRows, y1Students || undefined);
+  }, [staffingRows, y1Students]);
 
   const totalFTE = useMemo(() => {
     return personnelCosts?.totalFTE || 0;
@@ -1731,9 +1731,11 @@ function ExpenseLineCard({
               )}
             </div>
           </div>
-          <div className="text-xs text-muted-foreground">
-            5yr: {formatCurrency(rowTotal)}
-          </div>
+          {!isPercent && (
+            <div className="text-xs text-muted-foreground">
+              5yr: {formatCurrency(rowTotal)}
+            </div>
+          )}
           <span className="text-[9px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
             {rule.label}
           </span>
