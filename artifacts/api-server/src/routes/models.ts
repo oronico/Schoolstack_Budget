@@ -76,7 +76,6 @@ import { generateBoardPacketPDF } from "../lib/packets/board-packet-pdf";
 import { normalizeRevenueRows } from "../lib/workbook-helpers";
 import { isEmailConfigured, sendReviewRequestToTeam, sendReviewConfirmation } from "../lib/mailer";
 import { schoolTypeDisplay, entityTypeDisplay } from "../lib/pdf-utils";
-import type { Response } from "express";
 
 function sendBinary(res: Response, buffer: Buffer | ArrayBuffer | Uint8Array, contentType: string, filename: string) {
   const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer as unknown as ArrayLike<number>);

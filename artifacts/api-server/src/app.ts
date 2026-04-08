@@ -91,9 +91,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
     if (!res.headersSent) {
       res.status(503).json({ error: "Request timed out. Please try again." });
-    }
-
-    if (req.socket && !req.socket.destroyed) {
+      res.once("finish", () => {
+        if (req.socket && !req.socket.destroyed) {
+          req.socket.destroy();
+        }
+      });
+    } else if (req.socket && !req.socket.destroyed) {
       req.socket.destroy();
     }
   }, timeout);
