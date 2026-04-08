@@ -106,6 +106,7 @@ export type ModelStatus = (typeof ModelStatus)[keyof typeof ModelStatus];
 
 export const ModelStatus = {
   draft: "draft",
+  active: "active",
   complete: "complete",
   archived: "archived",
 } as const;

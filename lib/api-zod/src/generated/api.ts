@@ -95,7 +95,7 @@ export const ResetPasswordResponse = zod.object({
 export const ListModelsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
-  status: zod.enum(["draft", "complete", "archived"]),
+  status: zod.enum(["draft", "active", "complete", "archived"]),
   currentStep: zod.number().optional(),
   schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
   fundingProfile: zod
@@ -563,7 +563,7 @@ export const getModelResponseDataCovenantThresholdsDscrByYearMax = 5;
 export const GetModelResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  status: zod.enum(["draft", "complete", "archived"]),
+  status: zod.enum(["draft", "active", "complete", "archived"]),
   currentStep: zod.number().optional(),
   schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
   fundingProfile: zod
@@ -1007,7 +1007,7 @@ export const updateModelBodyDataCovenantThresholdsDscrByYearMax = 5;
 export const UpdateModelBody = zod.object({
   name: zod.string().optional(),
   currentStep: zod.number().optional(),
-  status: zod.enum(["draft", "complete", "archived"]).optional(),
+  status: zod.enum(["draft", "active", "complete", "archived"]).optional(),
   schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
   fundingProfile: zod
     .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
@@ -1441,7 +1441,7 @@ export const updateModelResponseDataCovenantThresholdsDscrByYearMax = 5;
 export const UpdateModelResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  status: zod.enum(["draft", "complete", "archived"]),
+  status: zod.enum(["draft", "active", "complete", "archived"]),
   currentStep: zod.number().optional(),
   schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
   fundingProfile: zod
@@ -1905,7 +1905,7 @@ export const archiveModelResponseDataCovenantThresholdsDscrByYearMax = 5;
 export const ArchiveModelResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  status: zod.enum(["draft", "complete", "archived"]),
+  status: zod.enum(["draft", "active", "complete", "archived"]),
   currentStep: zod.number().optional(),
   schoolStage: zod.enum(["new_school", "operating_school"]).optional(),
   fundingProfile: zod

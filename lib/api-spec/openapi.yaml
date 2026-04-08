@@ -733,7 +733,7 @@ components:
         - name
     ModelStatus:
       type: string
-      enum: [draft, complete, archived]
+      enum: [draft, active, complete, archived]
     SchoolStage:
       type: string
       enum: [new_school, operating_school]
