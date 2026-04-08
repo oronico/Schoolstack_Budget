@@ -14,6 +14,7 @@ import {
   ArchiveModelParams,
 } from "@workspace/api-zod";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
+import { isRequestAborted } from "../app";
 import { generateProFormaPDF } from "../lib/pdf-proforma";
 import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
@@ -25,6 +26,17 @@ import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
 import { type AssumptionFlag } from "../lib/assumption-flags";
 import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
+import type { Response } from "express";
+
+function abortGuard(req: AuthRequest, res: Response): boolean {
+  if (isRequestAborted(req)) {
+    if (!res.headersSent) {
+      res.status(503).json({ error: "Request aborted." });
+    }
+    return true;
+  }
+  return false;
+}
 
 // DATA MODEL: Assumption flags use a dual-source architecture:
 //   - `assumptionFlags` (computed): Engine-generated flags with field, flagType, severity,
@@ -398,8 +410,12 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
 
     const rawData = data as unknown as Record<string, unknown>;
     const existingResponses = (rawData.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
@@ -458,12 +474,16 @@ router.get("/models/:id/export/pro-forma-pdf", authMiddleware, async (req: AuthR
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
     const buffer = await generateProFormaPDF(data);
+
+    if (abortGuard(req, res)) return;
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
@@ -499,6 +519,8 @@ router.get("/models/:id/export/loan-readiness-pdf", authMiddleware, async (req: 
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
@@ -507,7 +529,11 @@ router.get("/models/:id/export/loan-readiness-pdf", authMiddleware, async (req: 
 
     const consultantOutput = await runConsultantEngine(data);
 
+    if (abortGuard(req, res)) return;
+
     const buffer = await generateLoanReadinessPDF(consultantOutput, schoolName, entityType);
+
+    if (abortGuard(req, res)) return;
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
@@ -543,12 +569,16 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
     const buffer = await generateLenderProFormaWorkbook(data);
+
+    if (abortGuard(req, res)) return;
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
@@ -584,8 +614,12 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
 
     const raw = data as unknown as Record<string, unknown>;
     const flagResponses = (raw.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
@@ -623,8 +657,12 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
 
     const raw = data as unknown as Record<string, unknown>;
     const flagResponses = (raw.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
@@ -640,6 +678,8 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
 
     const packet = buildLenderPacket(data as any, consultantOutput, model.id);
     const buffer = await generateLenderPacketPDF(packet);
+
+    if (abortGuard(req, res)) return;
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
@@ -675,8 +715,12 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
 
     const raw = data as unknown as Record<string, unknown>;
     const flagResponses = (raw.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
@@ -714,8 +758,12 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
 
     const raw = data as unknown as Record<string, unknown>;
     const flagResponses = (raw.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
@@ -731,6 +779,8 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
 
     const packet = buildBoardPacket(data as any, consultantOutput, model.id);
     const buffer = await generateBoardPacketPDF(packet);
+
+    if (abortGuard(req, res)) return;
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
@@ -769,8 +819,12 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
 
     const raw1 = data as unknown as Record<string, unknown>;
     const flagResponses1 = (raw1.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
@@ -793,6 +847,8 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
 
     const workbook = await generateUnderwritingWorkbookV2(data, computedFlags);
     const buffer = await workbook.xlsx.writeBuffer();
+
+    if (abortGuard(req, res)) return;
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
@@ -828,8 +884,12 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
 
     const raw2 = data as unknown as Record<string, unknown>;
     const flagResponses2 = (raw2.assumptionFlagResponses || []) as Array<{ field: string; flagType: string; reason?: string }>;
@@ -852,6 +912,8 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
 
     const workbook = await generateUnderwritingWorkbookV2(data, computedFlags);
     const buffer = await workbook.xlsx.writeBuffer();
+
+    if (abortGuard(req, res)) return;
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
@@ -887,6 +949,8 @@ router.get("/models/:id/export/single-year", authMiddleware, async (req: AuthReq
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const rawYear = parseInt(req.query.year as string || "0", 10);
     const yearIndex = isNaN(rawYear) ? 0 : Math.max(0, Math.min(rawYear, 4));
     const data = normalizeModelData(model.data as Record<string, unknown>);
@@ -895,6 +959,8 @@ router.get("/models/:id/export/single-year", authMiddleware, async (req: AuthReq
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
     const buffer = await generateSingleYearBudget(data, yearIndex);
+
+    if (abortGuard(req, res)) return;
 
     await db.insert(exportsTable).values({
       userId: req.userId!,
@@ -930,6 +996,8 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
       return;
     }
 
+    if (abortGuard(req, res)) return;
+
     const data = normalizeModelData(model.data as Record<string, unknown>);
     const profile = data?.schoolProfile as Record<string, unknown> | undefined;
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
@@ -945,7 +1013,12 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
     const fileName = `${schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_${yearCount}-Year_Financial_Model.xlsx`;
 
     const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
+
     const buffer = await generateWorkbook(data, consultantOutput);
+
+    if (abortGuard(req, res)) return;
 
     await db.update(financialModelsTable)
       .set({ lastExportedAt: new Date() })

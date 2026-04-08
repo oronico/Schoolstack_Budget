@@ -6,6 +6,15 @@ import router from "./routes";
 import { pool, db, errorLogsTable } from "@workspace/db";
 import { stripSensitive } from "./routes/errors";
 
+export interface RequestWithAbort extends Request {
+  abortSignal?: AbortSignal;
+}
+
+export function isRequestAborted(req: Request): boolean {
+  const r = req as RequestWithAbort;
+  return r.abortSignal?.aborted === true || req.socket?.destroyed === true;
+}
+
 const app: Express = express();
 
 app.use(helmet());
@@ -73,10 +82,19 @@ function isExportRoute(path: string): boolean {
 app.use((req: Request, res: Response, next: NextFunction) => {
   const timeout = isExportRoute(req.path) ? EXPORT_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
 
+  const abortController = new AbortController();
+  (req as RequestWithAbort).abortSignal = abortController.signal;
+
   const timer = setTimeout(() => {
+    console.error(`[timeout] ${req.method} ${req.originalUrl} exceeded ${timeout}ms`);
+    abortController.abort();
+
     if (!res.headersSent) {
-      console.error(`[timeout] ${req.method} ${req.originalUrl} exceeded ${timeout}ms`);
       res.status(503).json({ error: "Request timed out. Please try again." });
+    }
+
+    if (req.socket && !req.socket.destroyed) {
+      req.socket.destroy();
     }
   }, timeout);
 
