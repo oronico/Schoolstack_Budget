@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { NpsModal } from "@/components/NpsModal";
+import { CookieConsent } from "@/components/CookieConsent";
 import { useExportTracker } from "@/hooks/useExportTracker";
 
 import { setupFetchInterceptor } from "@/lib/fetch-patch";
@@ -157,6 +158,7 @@ function App() {
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <AuthProvider>
               <AppRouter />
+              <CookieConsent />
             </AuthProvider>
           </WouterRouter>
           <Toaster />

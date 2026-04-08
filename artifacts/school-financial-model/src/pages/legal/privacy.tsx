@@ -99,8 +99,20 @@ export function PrivacyPolicyPage() {
 
           <section>
             <h2 className="font-display text-xl font-bold text-foreground">8. Cookies and Local Storage</h2>
+            <h3 className="font-display text-lg font-semibold text-foreground mt-4">Essential Cookies & Local Storage</h3>
             <p>
-              The Service uses browser local storage and session tokens for authentication and to preserve your wizard progress. We do not use third-party advertising cookies. Essential cookies are used solely for the functioning of the Service.
+              The Service uses browser local storage and session tokens for authentication and to preserve your wizard progress. These are essential for the functioning of the Service and do not require consent.
+            </p>
+
+            <h3 className="font-display text-lg font-semibold text-foreground mt-4">Analytics Cookies</h3>
+            <p>
+              We use Google Analytics (GA4) to understand how visitors interact with the Service, including pages visited, session duration, and general usage patterns. Google Analytics sets cookies (such as <code className="text-sm bg-muted px-1.5 py-0.5 rounded">_ga</code> and <code className="text-sm bg-muted px-1.5 py-0.5 rounded">_ga_*</code>) to distinguish unique users and track sessions.
+            </p>
+            <p className="mt-2">
+              Analytics cookies are <strong>only set after you provide consent</strong> via the cookie notice displayed when you first visit the site. If you decline, no analytics cookies are placed and the Service functions normally. You can change your preference at any time by clearing your browser's local storage for this site, which will re-display the cookie notice on your next visit.
+            </p>
+            <p className="mt-2">
+              We configure Google Analytics with IP anonymization enabled. We do not use advertising cookies or share analytics data with third parties for marketing purposes.
             </p>
           </section>
 
