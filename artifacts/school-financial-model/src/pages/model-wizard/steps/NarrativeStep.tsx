@@ -19,7 +19,7 @@ interface AssumptionFlag {
   defaultPrompt: string;
 }
 
-const NARRATIVE_SECTIONS: { key: string; label: string; conversationalPrompt: string; icon: typeof Users; primary: boolean; helpText: React.ReactNode }[] = [
+function getNarrativeSections(schoolType?: string): { key: string; label: string; conversationalPrompt: string; icon: typeof Users; primary: boolean; helpText: React.ReactNode }[] { return [
   {
     key: "enrollmentStrategy",
     label: "Enrollment Strategy",
@@ -58,7 +58,7 @@ const NARRATIVE_SECTIONS: { key: string; label: string; conversationalPrompt: st
     conversationalPrompt: "What are families paying, and why is that the right number?",
     icon: TrendingUp,
     primary: false,
-    helpText: <>Walk us through your tuition pricing and any <GlossaryTerm termKey="tuition_offsets">tuition offsets</GlossaryTerm> (scholarships, discounts). What are families paying and why is that the right number for your market? What's your expected <GlossaryTerm termKey="collection_rate">collection rate</GlossaryTerm>?</>,
+    helpText: <>Walk us through your tuition pricing and any <GlossaryTerm termKey="tuition_offsets" schoolType={schoolType}>tuition offsets</GlossaryTerm> (scholarships, discounts). What are families paying and why is that the right number for your market? What's your expected <GlossaryTerm termKey="collection_rate" schoolType={schoolType}>collection rate</GlossaryTerm>?</>,
   },
   {
     key: "staffingPhilosophy",
@@ -66,7 +66,7 @@ const NARRATIVE_SECTIONS: { key: string; label: string; conversationalPrompt: st
     conversationalPrompt: "How will you find and keep great teachers?",
     icon: Users,
     primary: false,
-    helpText: <>How will you find and keep great teachers? What kind of team culture do you want? Why is this student-teacher ratio right for your model? How many <GlossaryTerm termKey="fte">FTE</GlossaryTerm> do you plan per grade level?</>,
+    helpText: <>How will you find and keep great teachers? What kind of team culture do you want? Why is this student-teacher ratio right for your model? How many <GlossaryTerm termKey="fte" schoolType={schoolType}>FTE</GlossaryTerm> do you plan per grade level?</>,
   },
   {
     key: "expenseAssumptions",
@@ -74,7 +74,7 @@ const NARRATIVE_SECTIONS: { key: string; label: string; conversationalPrompt: st
     conversationalPrompt: "Are there any costs that might surprise you?",
     icon: TrendingUp,
     primary: false,
-    helpText: <>Are there any costs you expect to stay flat, decrease, or grow faster than normal? How are you handling <GlossaryTerm termKey="escalation_rate">escalation</GlossaryTerm> and <GlossaryTerm termKey="depreciation">depreciation</GlossaryTerm>? Explain any unusual choices.</>,
+    helpText: <>Are there any costs you expect to stay flat, decrease, or grow faster than normal? How are you handling <GlossaryTerm termKey="escalation_rate" schoolType={schoolType}>escalation</GlossaryTerm> and <GlossaryTerm termKey="depreciation" schoolType={schoolType}>depreciation</GlossaryTerm>? Explain any unusual choices.</>,
   },
   {
     key: "growthStrategy" as const,
@@ -92,9 +92,9 @@ const NARRATIVE_SECTIONS: { key: string; label: string; conversationalPrompt: st
     primary: false,
     helpText: "Anything else a board member or reviewer should know? This is your chance to share context that doesn't fit neatly into the other sections.",
   },
-];
+]; }
 
-type NarrativeKey = typeof NARRATIVE_SECTIONS[number]["key"];
+type NarrativeKey = string;
 
 interface ConsultantFlag {
   field: string;
@@ -176,8 +176,9 @@ function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, en
 export function NarrativeStep({ modelId }: NarrativeStepProps) {
   const { watch, setValue, getValues, register } = useFormContext();
   const schoolType = watch("schoolProfile.schoolType");
+  const NARRATIVE_SECTIONS = useMemo(() => getNarrativeSections(schoolType), [schoolType]);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(NARRATIVE_SECTIONS.filter(s => s.primary).map(s => s.key))
+    new Set(getNarrativeSections().filter(s => s.primary).map(s => s.key))
   );
   const [flagResponses, setFlagResponses] = useState<Record<string, string>>({});
 

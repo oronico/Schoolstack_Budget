@@ -67,7 +67,10 @@ export function GlossaryTerm({ termKey, children, className, schoolType }: Gloss
     return <span>{children || termKey}</span>;
   }
 
-  if (entry.applicableTo && schoolType) {
+  if (entry.applicableTo) {
+    if (!schoolType) {
+      return <span className={className}>{children || entry.term}</span>;
+    }
     const track = getSchoolTypeTrack(schoolType);
     if (!entry.applicableTo.includes(track)) {
       return <span className={className}>{children || entry.term}</span>;
