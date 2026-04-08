@@ -10,8 +10,8 @@ if (!databaseUrl) {
   console.error("WARNING: DATABASE_URL is not set. Database features will be unavailable.");
 }
 
-const STATEMENT_TIMEOUT_MS = 30_000;
-const IDLE_TIMEOUT_MS = 10_000;
+const STATEMENT_TIMEOUT_MS = 120_000;
+const IDLE_TIMEOUT_MS = 30_000;
 
 export const pool = databaseUrl
   ? new Pool({

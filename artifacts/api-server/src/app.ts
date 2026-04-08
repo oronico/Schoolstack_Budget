@@ -6,14 +6,8 @@ import router from "./routes";
 import { pool, db, errorLogsTable } from "@workspace/db";
 import { stripSensitive } from "./routes/errors";
 
-export interface RequestWithAbort extends Request {
-  abortSignal?: AbortSignal;
-}
-
-export function isRequestAborted(req: Request): boolean {
-  const r = req as RequestWithAbort;
-  return r.abortSignal?.aborted === true || req.socket?.destroyed === true;
-}
+import { type RequestWithAbort } from "./lib/request-abort";
+export { isRequestAborted, type RequestWithAbort } from "./lib/request-abort";
 
 const app: Express = express();
 

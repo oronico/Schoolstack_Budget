@@ -14,7 +14,7 @@ import {
   ArchiveModelParams,
 } from "@workspace/api-zod";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
-import { isRequestAborted } from "../app";
+import { isRequestAborted } from "../lib/request-abort";
 import { generateProFormaPDF } from "../lib/pdf-proforma";
 import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
