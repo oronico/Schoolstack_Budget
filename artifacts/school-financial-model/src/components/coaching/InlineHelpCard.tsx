@@ -71,11 +71,47 @@ export function InlineHelpCard({ explainer, className, defaultOpen, section }: I
   );
 }
 
+function FormattedText({ text }: { text: string }) {
+  const lines = text.split("\n").filter(Boolean);
+  const blocks: { type: "p" | "ul"; content: string[] }[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("• ") || trimmed.startsWith("- ")) {
+      const bullet = trimmed.replace(/^[•\-]\s*/, "");
+      const last = blocks[blocks.length - 1];
+      if (last?.type === "ul") {
+        last.content.push(bullet);
+      } else {
+        blocks.push({ type: "ul", content: [bullet] });
+      }
+    } else {
+      blocks.push({ type: "p", content: [trimmed] });
+    }
+  }
+
+  return (
+    <>
+      {blocks.map((block, i) =>
+        block.type === "ul" ? (
+          <ul key={i} className="text-[13px] text-foreground/80 leading-relaxed list-disc pl-4 space-y-1">
+            {block.content.map((item, j) => (
+              <li key={j}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p key={i} className="text-[13px] text-foreground/80 leading-relaxed">{block.content[0]}</p>
+        )
+      )}
+    </>
+  );
+}
+
 function ExplainerSection({ label, text }: { label: string; text: string }) {
   return (
     <div>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-primary/60 mb-0.5">{label}</p>
-      <p className="text-[13px] text-foreground/80 leading-relaxed">{text}</p>
+      <FormattedText text={text} />
     </div>
   );
 }
@@ -100,7 +136,7 @@ function ExtraDepthSections({ extra }: { extra: ExtraDepthContent }) {
               <Icon className={cn("h-3 w-3", color)} />
               <p className={cn("text-[10px] font-semibold uppercase tracking-wider", color)}>{label}</p>
             </div>
-            <p className="text-[13px] text-foreground/80 leading-relaxed">{text}</p>
+            <FormattedText text={text} />
           </div>
         );
       })}
