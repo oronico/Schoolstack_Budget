@@ -1043,7 +1043,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         borderColor="border-teal-200"
         bgColor="bg-teal-50/50"
         summary={<>
-          <span className="font-semibold">Smart <GlossaryTerm termKey="escalation_rate">Escalation</GlossaryTerm> Applied</span>
+          <span className="font-semibold">Smart <GlossaryTerm termKey="escalation_rate" schoolType={schoolType}>Escalation</GlossaryTerm> Applied</span>
           <span className="text-muted-foreground"> — Inflation {generalCostInflation}% · Rent {annualRentIncrease}%</span>
           {jumpToStep && <button type="button" onClick={(e) => { e.stopPropagation(); jumpToStep(2); }} className="ml-2 text-teal-600 font-medium underline underline-offset-2 hover:text-teal-800 transition-colors text-xs">Adjust →</button>}
         </>}
@@ -1499,7 +1499,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             <div className="flex-1 min-w-0">
               <span className="font-bold text-lg text-foreground">Capital & Debt</span>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                <GlossaryTerm termKey="ffe">FF&E</GlossaryTerm> (Furniture, Fixtures & Equipment - desks, chairs, whiteboards, etc.) · <GlossaryTerm termKey="leasehold_improvements">Leasehold Improvements</GlossaryTerm> (Costs to build out or modify your space - painting, flooring, adding walls)
+                <GlossaryTerm termKey="ffe" schoolType={schoolType}>FF&E</GlossaryTerm> (Furniture, Fixtures & Equipment - desks, chairs, whiteboards, etc.) · <GlossaryTerm termKey="leasehold_improvements" schoolType={schoolType}>Leasehold Improvements</GlossaryTerm> (Costs to build out or modify your space - painting, flooring, adding walls)
               </p>
             </div>
             <span className="text-xs text-muted-foreground ml-2">({capitalRows.filter((r) => r.enabled).length} active)</span>

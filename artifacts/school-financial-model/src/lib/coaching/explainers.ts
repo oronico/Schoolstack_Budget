@@ -16,6 +16,7 @@ export function getSchoolTypeTrack(schoolType?: string): SchoolTypeTrack {
       return "micro";
     case "tutoring_center":
     case "other":
+      return "micro";
     default:
       return "general";
   }
@@ -757,6 +758,17 @@ export const EXPLAINERS: Record<string, Explainer> = {
       healthyVsRisky: "A good rule of thumb: set COLA at least equal to your general cost inflation rate (which you set on this same page). If inflation is 2%, COLA should be at least 2-3%. Below inflation makes it harder to retain staff. Above 4% is aggressive and can squeeze your budget in later years.",
       whatToDoNext: "Check your general inflation rate on this page and make sure COLA matches or slightly exceeds it. If you're in a high-cost area (SF, NYC, DC), consider 3.5-4%. In lower-cost areas, 2-2.5% may work. The default of 3% is a solid starting point.",
     },
+    schoolTypeVariants: {
+      charter: {
+        whatToDoNext: "Charter schools often need competitive COLA to retain teachers against district pay scales. If your state raises per-pupil funding annually, align COLA with that increase rate. Most charter networks budget 2.5-3.5% COLA.",
+      },
+      private: {
+        whatToDoNext: "Private schools should align COLA with planned tuition increases. If you raise tuition 3% annually, COLA of 2.5-3% keeps compensation growing in step with revenue. Check what competing schools in your area pay to stay competitive.",
+      },
+      micro: {
+        whatToDoNext: "For smaller programs, even modest COLA matters for retention. If your team is small, consider whether individual raises based on performance might work better than a blanket percentage. The default of 3% is a reasonable starting point.",
+      },
+    },
     audienceLevel: ["basics", "extra"],
     relatedSection: "assumptions",
     dismissible: true,
@@ -773,6 +785,19 @@ export const EXPLAINERS: Record<string, Explainer> = {
       whyItMatters: "Benefits are a major hidden cost. Many first-time founders budget salaries but underestimate benefits, which can add 20–35% to every payroll dollar. Getting this rate realistic is essential for an accurate staffing budget.",
       healthyVsRisky: "20–25% is common for schools offering a basic benefits package. 25–30% is typical when including strong health coverage and retirement match. Above 30% is generous but can put pressure on smaller budgets. Below 20% may signal limited benefits that make recruiting harder.",
       whatToDoNext: "If you're not sure, 25% is a safe default. If you've already quoted health insurance plans, you can calculate a more precise rate. Individual roles can override this default on the Staffing step.",
+    },
+    schoolTypeVariants: {
+      charter: {
+        whatThisMeans: "The benefits rate is the percentage of each employee's salary that goes toward benefits. Charter schools often need competitive benefits to attract teachers from district positions where benefits are typically strong.",
+        whatToDoNext: "Research what your local district offers for benefits. Many charter teachers compare total compensation (salary + benefits) against district positions. 25-30% is common for charter schools offering competitive health and retirement packages.",
+      },
+      private: {
+        whatToDoNext: "Private schools vary widely in benefits. Faith-affiliated schools may offer benefits through diocesan or denominational plans. If you're offering a lean benefits package (15-20%), consider whether that affects your ability to recruit. Individual roles can override this on the Staffing step.",
+      },
+      micro: {
+        whatThisMeans: "The benefits rate covers health insurance, retirement, and similar costs on top of salary. For micro programs, benefits costs can be a significant percentage of your total budget since your team is small.",
+        whatToDoNext: "If your team is mostly contractors (1099), benefits may not apply — set this lower. For W-2 employees, 20-25% is a reasonable default. If you're the only employee, research individual health insurance costs in your area to set a more precise rate.",
+      },
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "assumptions",
@@ -791,6 +816,19 @@ export const EXPLAINERS: Record<string, Explainer> = {
       healthyVsRisky: "95–98% is realistic for schools with autopay. 92–96% is typical for invoiced families. Below 90% suggests significant collection challenges worth addressing. 100% is only realistic if all families are on autopay with no exceptions.",
       whatToDoNext: "If you're using autopay for most families, 98–100% is reasonable. If you're invoicing, 93–95% is a safer assumption. You can set this per revenue row on the Revenue step if different programs have different collection profiles.",
     },
+    schoolTypeVariants: {
+      charter: {
+        whatThisMeans: "The collection rate applies to any fees your charter school charges (registration, activity, technology fees). For per-pupil state funding, collection is typically 100% once enrollment is verified — this setting mainly affects ancillary fee revenue.",
+        whatToDoNext: "If your charter school is tuition-free and only charges minimal fees, a 95-98% collection rate is reasonable. If you don't charge any fees, this setting won't significantly impact your model since per-pupil funding flows through a different mechanism.",
+      },
+      private: {
+        whatToDoNext: "Private schools with robust autopay enrollment can plan for 97-99%. For families on payment plans or invoicing, 92-95% is more realistic. Budget your financial aid separately — collection rate applies to the net amount after aid, not gross tuition.",
+      },
+      micro: {
+        whatThisMeans: "The collection rate is the percentage of fees you actually receive from families. With smaller groups and closer relationships, micro programs often see higher collection rates than larger schools.",
+        healthyVsRisky: "Micro programs with upfront or autopay billing often achieve 97-100% collection. If you invoice monthly, 95-98% is realistic. The close relationships in small programs usually mean fewer collection issues.",
+      },
+    },
     audienceLevel: ["basics", "extra"],
     relatedSection: "assumptions",
     dismissible: true,
@@ -807,6 +845,14 @@ export const EXPLAINERS: Record<string, Explainer> = {
       whyItMatters: "Without inflation built in, your Year 5 projections will look artificially strong because expenses stay flat while (hopefully) revenue grows. Realistic inflation keeps your model honest and prevents surprises in later years.",
       healthyVsRisky: "2–3% matches long-term US inflation averages and is appropriate for most schools. 0% means you're assuming costs never rise - optimistic but unrealistic for a 5-year plan. Above 4% may overstate cost growth unless you're in a period of high inflation.",
       whatToDoNext: "The default of 2% is conservative and appropriate for most situations. If you have specific vendor contracts with locked pricing, you might set this lower. Leave it as-is unless you have a reason to change it.",
+    },
+    schoolTypeVariants: {
+      charter: {
+        whatToDoNext: "Charter schools should pay attention to inflation on facility costs if you're leasing commercial space, and on insurance/compliance costs that tend to rise faster than general inflation. The default of 2% is reasonable for most charter operating expenses.",
+      },
+      micro: {
+        whatToDoNext: "Micro programs with low overhead may be less sensitive to inflation, but don't set this to 0%. Even home-based programs see cost increases in supplies, insurance, and technology subscriptions. The default of 2% keeps your projections realistic.",
+      },
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "assumptions",

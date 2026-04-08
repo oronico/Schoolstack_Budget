@@ -1558,7 +1558,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
+                <GlossaryTerm termKey="collection_rate" schoolType={schoolType}>Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"
@@ -1606,7 +1606,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
+                <GlossaryTerm termKey="collection_rate" schoolType={schoolType}>Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"
@@ -1668,7 +1668,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
+                <GlossaryTerm termKey="collection_rate" schoolType={schoolType}>Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"
@@ -1719,7 +1719,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
+                <GlossaryTerm termKey="collection_rate" schoolType={schoolType}>Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"
@@ -1800,7 +1800,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                <GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm> %
+                <GlossaryTerm termKey="collection_rate" schoolType={schoolType}>Collection Rate</GlossaryTerm> %
               </label>
               <input
                 type="number"

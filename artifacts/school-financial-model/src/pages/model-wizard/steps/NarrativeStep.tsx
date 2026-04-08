@@ -175,6 +175,7 @@ function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, en
 
 export function NarrativeStep({ modelId }: NarrativeStepProps) {
   const { watch, setValue, getValues, register } = useFormContext();
+  const schoolType = watch("schoolProfile.schoolType");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(NARRATIVE_SECTIONS.filter(s => s.primary).map(s => s.key))
   );
@@ -265,7 +266,7 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
         </p>
       </div>
 
-      <SectionExplainers section="narrative" />
+      <SectionExplainers section="narrative" schoolType={schoolType} />
 
       <div className="border rounded-xl bg-card p-4">
         <div className="flex items-center justify-between mb-3">

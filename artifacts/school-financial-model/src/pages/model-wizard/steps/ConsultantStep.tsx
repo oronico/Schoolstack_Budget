@@ -14,6 +14,7 @@ interface ConsultantStepProps {
 export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
   const { watch } = useFormContext();
   const entityType = watch("schoolProfile.entityType");
+  const schoolType = watch("schoolProfile.schoolType");
   const lendingLabIntent = watch("schoolProfile.lendingLabIntent") as SchoolProfileLendingLabIntent | undefined;
   const loanAmount = watch("schoolProfile.loanAmount") as number | undefined;
   const hasLoan = loanAmount !== undefined && loanAmount !== null && loanAmount > 0;
@@ -75,7 +76,7 @@ export function ConsultantStep({ jumpToStep, modelId }: ConsultantStepProps) {
 
   return (
     <>
-      <SectionExplainers section="consultant" />
+      <SectionExplainers section="consultant" schoolType={schoolType} />
       <ConsultantAnalysisView
         data={data}
         niLabel={niLabel}

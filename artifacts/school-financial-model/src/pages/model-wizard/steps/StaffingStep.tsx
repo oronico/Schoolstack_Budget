@@ -264,7 +264,7 @@ export function StaffingStep() {
           borderColor="border-blue-200"
           bgColor="bg-blue-50/50"
           summary={<>
-            <span className="font-semibold"><GlossaryTerm termKey="cola">COLA</GlossaryTerm> {colaRate}%</span>
+            <span className="font-semibold"><GlossaryTerm termKey="cola" schoolType={schoolType}>COLA</GlossaryTerm> {colaRate}%</span>
             <span className="text-muted-foreground"> — Y1 salaries: ${costs.totalSalariesWages.toLocaleString()} → Y5: ${Math.round(costs.totalSalariesWages * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}</span>
           </>}
         >
@@ -318,7 +318,7 @@ export function StaffingStep() {
         <SummaryCard
           label="Headcount"
           value={costs.headcount.toString()}
-          sublabel={<>{costs.totalFTE} <GlossaryTerm termKey="fte">FTE</GlossaryTerm> <span className="text-[9px] text-muted-foreground">(Full-Time Equivalent - a part-time teacher working 2 days/week ≈ 0.4 FTE)</span></>}
+          sublabel={<>{costs.totalFTE} <GlossaryTerm termKey="fte" schoolType={schoolType}>FTE</GlossaryTerm> <span className="text-[9px] text-muted-foreground">(Full-Time Equivalent - a part-time teacher working 2 days/week ≈ 0.4 FTE)</span></>}
         />
         <SummaryCard
           label="Salaries & Wages"
@@ -331,7 +331,7 @@ export function StaffingStep() {
         <SummaryCard
           label="Payroll Taxes"
           value={`$${costs.totalPayrollTaxes.toLocaleString()}`}
-          sublabel={<GlossaryTerm termKey="payroll_tax">What's included?</GlossaryTerm>}
+          sublabel={<GlossaryTerm termKey="payroll_tax" schoolType={schoolType}>What's included?</GlossaryTerm>}
         />
         <SummaryCard
           label="Contracted Personnel"
@@ -666,7 +666,7 @@ function StaffCard({
                 <span className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Ratio-Driven Staffing Ramp</span>
               </div>
               <p className="text-[11px] text-teal-700 leading-relaxed">
-                This role scales automatically with enrollment. Set a student-to-staff ratio and the model will calculate <GlossaryTerm termKey="fte">FTE</GlossaryTerm> for each year. As your enrollment grows in later years, this will automatically add staff to keep your ratio - which means costs go up too. That's realistic and expected.
+                This role scales automatically with enrollment. Set a student-to-staff ratio and the model will calculate <GlossaryTerm termKey="fte" schoolType={schoolType}>FTE</GlossaryTerm> for each year. As your enrollment grows in later years, this will automatically add staff to keep your ratio - which means costs go up too. That's realistic and expected.
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <FieldNumber

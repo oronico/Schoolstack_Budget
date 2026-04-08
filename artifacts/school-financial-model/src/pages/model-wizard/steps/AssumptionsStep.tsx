@@ -204,7 +204,7 @@ function PayrollTaxSection({
       <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <label className="text-sm font-semibold text-foreground">
-            <GlossaryTerm termKey="payroll_tax">Payroll Tax Rate</GlossaryTerm>
+            <GlossaryTerm termKey="payroll_tax" schoolType={schoolType}>Payroll Tax Rate</GlossaryTerm>
           </label>
           {isModified && (
             <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
@@ -533,13 +533,13 @@ export function AssumptionsStep() {
 
                 {watch("schoolProfile.enrollmentRevenueMethod") === "ada" && (
                   <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-3 space-y-3">
-                    <p className="text-xs font-semibold text-amber-800"><GlossaryTerm termKey="ada">ADA</GlossaryTerm> Attendance Ratio</p>
+                    <p className="text-xs font-semibold text-amber-800"><GlossaryTerm termKey="ada" schoolType={schoolType}>ADA</GlossaryTerm> Attendance Ratio</p>
                     <p className="text-[11px] text-amber-700">
-                      Your state uses <GlossaryTerm termKey="ada">ADA</GlossaryTerm> - funding is adjusted by the ratio of actual attendance to enrollment.
+                      Your state uses <GlossaryTerm termKey="ada" schoolType={schoolType}>ADA</GlossaryTerm> - funding is adjusted by the ratio of actual attendance to enrollment.
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-foreground">Prior-Year <GlossaryTerm termKey="adm">ADM</GlossaryTerm></label>
+                        <label className="text-[11px] font-medium text-foreground">Prior-Year <GlossaryTerm termKey="adm" schoolType={schoolType}>ADM</GlossaryTerm></label>
                         <input
                           type="number"
                           value={watch("schoolProfile.priorYearADM") || ""}
@@ -550,7 +550,7 @@ export function AssumptionsStep() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-foreground">Prior-Year <GlossaryTerm termKey="ada">ADA</GlossaryTerm></label>
+                        <label className="text-[11px] font-medium text-foreground">Prior-Year <GlossaryTerm termKey="ada" schoolType={schoolType}>ADA</GlossaryTerm></label>
                         <input
                           type="number"
                           value={watch("schoolProfile.priorYearADA") || ""}
@@ -657,7 +657,7 @@ export function AssumptionsStep() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <AssumptionField
-                    label={<><GlossaryTerm termKey="collection_rate">Collection Rate</GlossaryTerm></>}
+                    label={<><GlossaryTerm termKey="collection_rate" schoolType={schoolType}>Collection Rate</GlossaryTerm></>}
                     name="revenueDefaults.collectionRate"
                     suffix="%"
                     defaultValue={100}
@@ -701,7 +701,7 @@ export function AssumptionsStep() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <AssumptionField
-                  label={<><GlossaryTerm termKey="cola">COLA</GlossaryTerm> (Cost of Living Adjustment)</>}
+                  label={<><GlossaryTerm termKey="cola" schoolType={schoolType}>COLA</GlossaryTerm> (Cost of Living Adjustment)</>}
                   name="facilities.annualSalaryIncrease"
                   suffix="%"
                   defaultValue={DEFAULTS.annualSalaryIncrease}
@@ -729,7 +729,7 @@ export function AssumptionsStep() {
             </div>
 
             <AssumptionField
-              label={<><GlossaryTerm termKey="escalation_rate">Rent Escalation</GlossaryTerm></>}
+              label={<><GlossaryTerm termKey="escalation_rate" schoolType={schoolType}>Rent Escalation</GlossaryTerm></>}
               name="facilities.annualRentIncrease"
               suffix="%"
               defaultValue={DEFAULTS.annualRentIncrease}
@@ -757,7 +757,7 @@ export function AssumptionsStep() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <AssumptionField
-                  label={<>Default <GlossaryTerm termKey="benefits_rate">Benefits Rate</GlossaryTerm></>}
+                  label={<>Default <GlossaryTerm termKey="benefits_rate" schoolType={schoolType}>Benefits Rate</GlossaryTerm></>}
                   name="staffing.benefitsRate"
                   suffix="%"
                   defaultValue={DEFAULTS.benefitsRate}
@@ -854,7 +854,7 @@ export function AssumptionsStep() {
         <section>
           <SectionHeader
             icon={<Shield className="h-5 w-5 text-primary" />}
-            title={<>Step-Up <GlossaryTerm termKey="dscr">DSCR</GlossaryTerm> Covenants</>}
+            title={<>Step-Up <GlossaryTerm termKey="dscr" schoolType={schoolType}>DSCR</GlossaryTerm> Covenants</>}
             description={hasLoan
               ? "If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets."
               : "These settings become relevant if you add loan details above."}

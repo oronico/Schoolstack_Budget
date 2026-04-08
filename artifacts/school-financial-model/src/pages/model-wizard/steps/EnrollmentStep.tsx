@@ -836,7 +836,7 @@ export function EnrollmentStep() {
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
             <span className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              {schoolType === "charter_school" ? <><GlossaryTerm termKey="per_pupil">Per-Pupil</GlossaryTerm> Revenue <GlossaryTerm termKey="escalation_rate">Escalation</GlossaryTerm></> : <>Tuition <GlossaryTerm termKey="escalation_rate">Escalation</GlossaryTerm></>}
+              {schoolType === "charter_school" ? <><GlossaryTerm termKey="per_pupil" schoolType={schoolType}>Per-Pupil</GlossaryTerm> Revenue <GlossaryTerm termKey="escalation_rate" schoolType={schoolType}>Escalation</GlossaryTerm></> : <>Tuition <GlossaryTerm termKey="escalation_rate" schoolType={schoolType}>Escalation</GlossaryTerm></>}
             </span>
           </h3>
 
