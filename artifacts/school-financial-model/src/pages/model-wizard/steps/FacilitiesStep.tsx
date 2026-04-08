@@ -1,7 +1,39 @@
+import { useState } from "react";
 import { FormInput } from "@/components/ui/form-inputs";
-import { Settings, Lightbulb } from "lucide-react";
+import { Settings, Lightbulb, ChevronDown, ChevronRight } from "lucide-react";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
+import { cn } from "@/lib/utils";
+
+function FacilityTips() {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className={cn("mt-3 rounded-xl border overflow-hidden transition-colors", isOpen ? "border-amber-200 bg-amber-50/40" : "border-border bg-card")}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-amber-50/40 transition-colors"
+      >
+        {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />}
+        <Lightbulb className={cn("h-3.5 w-3.5 flex-shrink-0", isOpen ? "text-amber-600" : "text-muted-foreground")} />
+        <span className="text-xs font-semibold">Tips for facility costs</span>
+      </button>
+      {isOpen && (
+        <div className="px-3 pb-3 space-y-2 ml-8">
+          <p className="text-xs text-amber-800 leading-relaxed">
+            <span className="font-semibold">Maintenance:</span> Every building needs upkeep - even leased spaces. Plan for at least $2,000-5,000/year for a small school, more for older buildings.
+          </p>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            <span className="font-semibold">Insurance:</span> School insurance typically escalates 5-8% per year. Get quotes from brokers who specialize in schools.
+          </p>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            <span className="font-semibold">Utility deposits:</span> Many utility providers require upfront deposits of $500-2,000 for new commercial accounts.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => void }) {
   return (
@@ -63,24 +95,7 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
               helperText="Janitorial, repairs, grounds upkeep"
             />
           </div>
-          <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
-            <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Common pitfall:</span> Budgeting $0 for maintenance. Every building needs upkeep - even leased spaces. Plan for at least $2,000-5,000/year for a small school, more for older buildings.
-            </p>
-          </div>
-          <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
-            <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Insurance tip:</span> School insurance typically escalates 5-8% per year. Get quotes from brokers who specialize in schools - they'll know the coverage your state requires. Every school needs insurance - don't skip this line item.
-            </p>
-          </div>
-          <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
-            <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Utility deposits:</span> Many utility providers require upfront deposits of $500-2,000 for new commercial accounts. Budget for connection fees, security deposits, and first/last month payments - these hit before your first student walks in the door.
-            </p>
-          </div>
+          <FacilityTips />
         </div>
 
         <div>

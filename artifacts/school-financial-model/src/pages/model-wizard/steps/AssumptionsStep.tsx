@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield, Sprout, ChevronDown, ChevronUp } from "lucide-react";
+import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield, Sprout, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
@@ -287,6 +287,44 @@ function InfoBadge({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AssumptionsCallout({
+  icon: Icon,
+  iconColor,
+  borderColor,
+  bgColor,
+  summary,
+  children,
+}: {
+  icon: typeof Lightbulb;
+  iconColor: string;
+  borderColor: string;
+  bgColor: string;
+  summary: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className={cn("rounded-xl border overflow-hidden", borderColor, bgColor)}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsOpen(!isOpen); } }}
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-black/[0.02] transition-colors cursor-pointer"
+      >
+        {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+        <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />
+        <span className="text-sm flex-1">{summary}</span>
+      </div>
+      {isOpen && (
+        <div className="px-4 pb-3 space-y-2 ml-10">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AssumptionsStep() {
   const { watch, setValue } = useFormContext<FullModelData>();
   const { user } = useAuth();
@@ -384,35 +422,30 @@ export function AssumptionsStep() {
       </div>
 
       {showReassurance && (
-        <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-5">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-emerald-100 rounded-xl mt-0.5 flex-shrink-0">
-              <Sprout className="h-5 w-5 text-emerald-700" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-emerald-900 mb-1">The defaults are a great starting point</p>
-              <p className="text-sm text-emerald-800 leading-relaxed">
-                We've pre-filled these with typical rates for schools like yours. Most founders leave them as-is on their first pass - you can always come back and fine-tune later. If a field shows a default badge, it means you've customized it.
-              </p>
-            </div>
-          </div>
-        </div>
+        <AssumptionsCallout
+          icon={Sprout}
+          iconColor="text-emerald-700"
+          borderColor="border-emerald-200"
+          bgColor="bg-emerald-50/60"
+          summary={<><span className="font-semibold">The defaults are a great starting point</span><span className="text-muted-foreground"> — pre-filled with typical rates for schools like yours.</span></>}
+        >
+          <p className="text-sm text-emerald-800">
+            Most founders leave them as-is on their first pass - you can always come back and fine-tune later. If a field shows a default badge, it means you've customized it.
+          </p>
+        </AssumptionsCallout>
       )}
 
-      <div className="bg-teal-50/60 border border-teal-200 rounded-2xl p-5">
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-teal-100 rounded-xl mt-0.5 flex-shrink-0">
-            <Lightbulb className="h-5 w-5 text-teal-700" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-teal-900 mb-1">Why assumptions matter</p>
-            <p className="text-sm text-teal-800 leading-relaxed">
-              These are the formulas behind your 5-year model. Every projection on the Review page flows from the assumptions you set here.
-              Realistic assumptions are the foundation of a strong plan - they build credibility with anyone reviewing your model.
-            </p>
-          </div>
-        </div>
-      </div>
+      <AssumptionsCallout
+        icon={Lightbulb}
+        iconColor="text-teal-700"
+        borderColor="border-teal-200"
+        bgColor="bg-teal-50/60"
+        summary={<><span className="font-semibold">Why assumptions matter</span><span className="text-muted-foreground"> — every projection flows from the rates you set here.</span></>}
+      >
+        <p className="text-sm text-teal-800">
+          Realistic assumptions are the foundation of a strong plan - they build credibility with anyone reviewing your model.
+        </p>
+      </AssumptionsCallout>
 
       <div className="space-y-10">
         <section>
