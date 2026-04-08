@@ -7,8 +7,11 @@ export interface Article {
   category: ArticleCategory;
   publishedDate: string;
   readTimeMinutes: number;
+  ogImage: string;
   content: string;
 }
+
+const DEFAULT_OG_IMAGE = "https://budget.schoolstack.ai/images/og-image.png?v=5";
 
 export const ARTICLES: Article[] = [
   {
@@ -18,6 +21,7 @@ export const ARTICLES: Article[] = [
     category: "Getting Started",
     publishedDate: "2026-03-01",
     readTimeMinutes: 12,
+    ogImage: DEFAULT_OG_IMAGE,
     content: `
 ## Why your school budget matters more than you think
 
@@ -119,6 +123,7 @@ The most important thing is to start. Your numbers will get more refined as you 
     category: "Getting Started",
     publishedDate: "2026-03-05",
     readTimeMinutes: 10,
+    ogImage: DEFAULT_OG_IMAGE,
     content: `
 ## What is a 5-year financial model?
 
@@ -245,6 +250,7 @@ Tools like SchoolStack Budget generate all of this automatically — including l
     category: "School Finance 101",
     publishedDate: "2026-03-10",
     readTimeMinutes: 7,
+    ogImage: DEFAULT_OG_IMAGE,
     content: `
 ## Two ways to count the same money
 
@@ -327,6 +333,7 @@ What matters most is that your budget and your books use the same method consist
     category: "For Lenders",
     publishedDate: "2026-03-15",
     readTimeMinutes: 9,
+    ogImage: DEFAULT_OG_IMAGE,
     content: `
 ## Lenders want to say yes — help them get there
 
@@ -417,6 +424,7 @@ SchoolStack Budget generates a complete Lender-Ready Packet with all the compone
     category: "School Finance 101",
     publishedDate: "2026-03-20",
     readTimeMinutes: 8,
+    ogImage: DEFAULT_OG_IMAGE,
     content: `
 ## Charter school funding 101
 
@@ -500,6 +508,7 @@ Charter school funding is complex, but it's knowable. The most important thing i
     category: "School Finance 101",
     publishedDate: "2026-03-25",
     readTimeMinutes: 6,
+    ogImage: DEFAULT_OG_IMAGE,
     content: `
 ## What is break-even enrollment?
 
@@ -600,6 +609,7 @@ And it helps you plan with eyes wide open — which is exactly what your school 
     category: "School Finance 101",
     publishedDate: "2026-04-01",
     readTimeMinutes: 7,
+    ogImage: DEFAULT_OG_IMAGE,
     content: `
 ## What are operating reserves?
 
@@ -695,6 +705,7 @@ Building reserves isn't glamorous. But it's one of the most important things you
     category: "School Types",
     publishedDate: "2026-04-05",
     readTimeMinutes: 8,
+    ogImage: DEFAULT_OG_IMAGE,
     content: `
 ## The microschool financial model is different
 

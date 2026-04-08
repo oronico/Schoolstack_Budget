@@ -51,6 +51,7 @@ export function ArticlePage() {
         title={article.title}
         description={article.description}
         path={`/resources/${article.slug}`}
+        image={article.ogImage}
         ogType="article"
         jsonLd={{
           "@context": "https://schema.org",
@@ -61,7 +62,7 @@ export function ArticlePage() {
           mainEntityOfPage: articleUrl,
           datePublished: article.publishedDate,
           dateModified: article.publishedDate,
-          image: "https://budget.schoolstack.ai/images/og-image.png?v=5",
+          image: article.ogImage,
           author: {
             "@type": "Organization",
             name: "SchoolStack Budget",
