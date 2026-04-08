@@ -79,7 +79,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         setCopiedToken(result.token);
         setTimeout(() => setCopiedToken(null), 2000);
       } catch {
-        /* clipboard failed — link still created, user can copy manually */
+        /* clipboard failed - link still created, user can copy manually */
       }
     } catch {
       alert("Failed to create share link. Please try again.");
@@ -225,7 +225,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
               <div className="flex-1 text-left">
                 <h3 className="font-display font-bold text-lg sm:text-xl text-foreground mb-1">Get Your Free Expert Review</h3>
                 <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                  Our school finance advisors will review your model personally and send you feedback — what looks strong, what to watch, and how to strengthen your lending position. Free, no strings attached.
+                  Our school finance advisors will review your model personally and send you feedback - what looks strong, what to watch, and how to strengthen your lending position. Free, no strings attached.
                 </p>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Free of charge</span>
@@ -272,7 +272,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <ExportCard
           icon={<FileSpreadsheet className="h-7 w-7" />}
           title="Formula Workbook"
-          description="Assumptions page with live formulas — lenders can test the math"
+          description="Assumptions page with live formulas - lenders can test the math"
           isLoading={loading === "formula"}
           isExported={exported.has("formula")}
           disabled={loading !== null && loading !== "formula"}
@@ -286,7 +286,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
             <div className="bg-green-50 border border-green-200 rounded-2xl p-8 animate-in fade-in duration-500">
               <div className="flex items-center justify-center gap-3 mb-3">
                 <CheckCircle2 className="h-8 w-8 text-green-600" />
-                <h3 className="font-display font-bold text-xl text-green-900">Review requested — we'll be in touch</h3>
+                <h3 className="font-display font-bold text-xl text-green-900">Review requested - we'll be in touch</h3>
               </div>
               <p className="text-green-700 text-sm">
                 Check your email for a confirmation. Our advisors will review your model and get back to you within 5–7 business days.
@@ -300,7 +300,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
                 </div>
                 <h3 className="font-display font-bold text-xl text-foreground">Request Your Free Review</h3>
               </div>
-              <p className="text-muted-foreground text-sm mb-6">Our school finance advisors will review your model and send personalized feedback within 5–7 business days — completely free.</p>
+              <p className="text-muted-foreground text-sm mb-6">Our school finance advisors will review your model and send personalized feedback within 5–7 business days - completely free.</p>
               <form onSubmit={handleReviewSubmit} className="space-y-4 text-left">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -367,7 +367,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl px-5 py-3 flex items-center gap-3">
             <MessageSquareMore className="h-4 w-4 text-amber-600 flex-shrink-0" />
             <p className="text-sm text-amber-800 flex-1">
-              <span className="font-semibold">Before you go</span> — want an expert to look over your model? <button onClick={() => setShowReviewForm(true)} className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Request a free review</button>
+              <span className="font-semibold">Before you go</span> - want an expert to look over your model? <button onClick={() => setShowReviewForm(true)} className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Request a free review</button>
             </p>
             <button
               type="button"
@@ -385,7 +385,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         {showSharePanel ? (
           <div className="bg-white border border-primary/30 rounded-2xl p-8 shadow-lg animate-in fade-in duration-300">
             <h3 className="font-display font-bold text-xl text-foreground mb-2">Share with Lender or Board</h3>
-            <p className="text-muted-foreground text-sm mb-6">Generate a read-only link anyone can view — no login required.</p>
+            <p className="text-muted-foreground text-sm mb-6">Generate a read-only link anyone can view - no login required.</p>
 
             <div className="space-y-4 text-left">
               <div>
@@ -479,7 +479,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
             </div>
             <div className="text-left">
               <span className="font-display font-bold text-foreground block">Share with Lender or Board</span>
-              <span className="text-sm text-muted-foreground">Generate a read-only link to your financial model — no login required.</span>
+              <span className="text-sm text-muted-foreground">Generate a read-only link to your financial model - no login required.</span>
             </div>
             <ArrowRight className="h-5 w-5 text-primary ml-auto flex-shrink-0" />
           </button>

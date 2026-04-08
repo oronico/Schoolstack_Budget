@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 
 const SITE_NAME = "SchoolStack Budget";
 const BASE_URL = "https://budget.schoolstack.ai";
-const DEFAULT_TITLE = "SchoolStack Budget — Your Mission Deserves a Financial Story";
+const DEFAULT_TITLE = "SchoolStack Budget - Your Mission Deserves a Financial Story";
 const DEFAULT_DESCRIPTION =
   "Build lender-ready 5-year financial projections for your school in under an hour. Guided, professional, exportable. No finance degree required.";
 const DEFAULT_IMAGE = `${BASE_URL}/images/og-image.png?v=5`;

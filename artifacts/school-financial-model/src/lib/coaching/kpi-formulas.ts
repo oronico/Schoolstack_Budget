@@ -38,7 +38,7 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
       "Total Year 1 revenue from all sources",
     ],
     interpretation:
-      "This measures how much of your revenue goes to everything except staffing — rent, materials, technology, debt payments, and other operating costs. Keeping this under 30% generally leaves enough room for staffing and a healthy margin.",
+      "This measures how much of your revenue goes to everything except staffing - rent, materials, technology, debt payments, and other operating costs. Keeping this under 30% generally leaves enough room for staffing and a healthy margin.",
   },
   netMargin: {
     id: "netMargin",
@@ -57,7 +57,7 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
     formula: "(Net Income + Loan Debt Service) / Loan Debt Service",
     inputLabels: [
       "Year 1 net income (already includes loan debt service as a deduction)",
-      "Year 1 loan debt service (annual loan payments only — excludes non-loan capital expenditures)",
+      "Year 1 loan debt service (annual loan payments only - excludes non-loan capital expenditures)",
     ],
     interpretation:
       "DSCR tells you whether your school generates enough operating income to cover its loan payments. The formula adds loan debt service back to net income to calculate operating income before debt service. A ratio of 1.25x or higher is the standard benchmark. Below 1.0x means operations alone cannot cover the loan payments.",
@@ -71,7 +71,7 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
       "Final year average monthly expenses (total annual expenses divided by 12)",
     ],
     interpretation:
-      "Reserve months estimate how long your school could operate on its accumulated surplus if revenue stopped. If cumulative net income is negative, reserve months shows zero rather than a negative number. This is a simplified proxy — actual cash reserves may differ based on timing, starting cash, and capital expenditures. The analysis shows the reserve level at the end of the projection period. Best practice is 3–6 months. Less than one month is a significant risk flag.",
+      "Reserve months estimate how long your school could operate on its accumulated surplus if revenue stopped. If cumulative net income is negative, reserve months shows zero rather than a negative number. This is a simplified proxy - actual cash reserves may differ based on timing, starting cash, and capital expenditures. The analysis shows the reserve level at the end of the projection period. Best practice is 3–6 months. Less than one month is a significant risk flag.",
   },
   revenueGrowth: {
     id: "revenueGrowth",
@@ -100,7 +100,7 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
     title: "Breakeven Enrollment",
     formula: "Fixed Costs / (Revenue per Student − Variable Cost per Student)",
     inputLabels: [
-      "Total fixed costs (expenses that don't change with enrollment — rent, insurance, admin salaries, etc.)",
+      "Total fixed costs (expenses that don't change with enrollment - rent, insurance, admin salaries, etc.)",
       "Revenue per student (total Year 1 revenue ÷ enrollment)",
       "Variable cost per student (per-student expenses like curriculum, devices, supplies)",
     ],

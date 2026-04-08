@@ -609,7 +609,7 @@ export function ScenarioPage() {
                   <h2 className="font-display text-xl font-bold text-foreground">Deep Comparison</h2>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Pick two scenarios to see exactly what changed, what improved, and what worsened — in plain English.
+                  Pick two scenarios to see exactly what changed, what improved, and what worsened - in plain English.
                 </p>
                 <div className="flex flex-wrap items-center gap-3 mb-2">
                   <div className="flex items-center gap-2">
@@ -643,7 +643,7 @@ export function ScenarioPage() {
                   </div>
                 </div>
                 {compareLeft === compareRight && compareRight !== "" && (
-                  <p className="text-xs text-amber-600 mt-2">You are comparing the same scenario — pick a different one to see differences.</p>
+                  <p className="text-xs text-amber-600 mt-2">You are comparing the same scenario - pick a different one to see differences.</p>
                 )}
               </div>
 

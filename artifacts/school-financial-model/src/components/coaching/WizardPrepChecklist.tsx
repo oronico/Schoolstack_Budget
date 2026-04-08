@@ -6,7 +6,7 @@ import { trackCoachingEvent } from "@/lib/coaching/track";
 const PREP_ITEMS = [
   {
     label: "Your expected tuition or enrollment fee",
-    hint: "A rough number is fine — you can adjust later.",
+    hint: "A rough number is fine - you can adjust later.",
   },
   {
     label: "A rough student count for Year 1",
@@ -14,7 +14,7 @@ const PREP_ITEMS = [
   },
   {
     label: "What you plan to pay yourself (and any staff)",
-    hint: "Don't forget to include yourself — your time has value.",
+    hint: "Don't forget to include yourself - your time has value.",
   },
   {
     label: "Your rent or expected facility cost",
@@ -22,7 +22,7 @@ const PREP_ITEMS = [
   },
   {
     label: "Any other staff you plan to hire",
-    hint: "Teachers, aides, an admin — whoever you know you'll need.",
+    hint: "Teachers, aides, an admin - whoever you know you'll need.",
   },
 ];
 
@@ -70,7 +70,7 @@ export function WizardPrepChecklist({ onReady }: WizardPrepChecklistProps) {
           </div>
           <h2 className="font-display text-xl font-bold text-foreground">Before you dive in</h2>
           <p className="text-sm text-muted-foreground mt-2">
-            It helps to have a few things handy. Don't worry if you're not sure about everything — you can always come back and update.
+            It helps to have a few things handy. Don't worry if you're not sure about everything - you can always come back and update.
           </p>
         </div>
 
@@ -115,7 +115,7 @@ export function WizardPrepChecklist({ onReady }: WizardPrepChecklistProps) {
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
           >
             <Sparkles className="h-4 w-4" />
-            I have what I need — let's go
+            I have what I need - let's go
           </button>
           <button
             type="button"

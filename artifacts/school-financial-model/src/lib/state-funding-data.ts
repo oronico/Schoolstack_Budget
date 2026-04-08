@@ -49,19 +49,19 @@ export interface StateFundingEntry {
 }
 
 const ADA_COACHING =
-  "Your state funds charter schools based on Average Daily Attendance (ADA). Funding is calculated on the average number of students physically present each day — so absent students reduce your funding. I'd strongly recommend investing in attendance programs early, because they directly impact your revenue. This is one of those areas where school culture and financial health are directly connected. — SchoolStack Team";
+  "Your state funds charter schools based on Average Daily Attendance (ADA). Funding is calculated on the average number of students physically present each day - so absent students reduce your funding. I'd strongly recommend investing in attendance programs early, because they directly impact your revenue. This is one of those areas where school culture and financial health are directly connected. - SchoolStack Team";
 const ADM_COACHING =
-  "Your state funds charter schools based on Average Daily Membership (ADM). Funding counts every enrolled student each day, regardless of whether they attend. This is generally more favorable for innovative school models, and it gives you more predictability in your revenue planning. — SchoolStack Team";
+  "Your state funds charter schools based on Average Daily Membership (ADM). Funding counts every enrolled student each day, regardless of whether they attend. This is generally more favorable for innovative school models, and it gives you more predictability in your revenue planning. - SchoolStack Team";
 const SINGLE_COUNT_DAY_COACHING =
-  "Your state funds charter schools based on a single count day — your enrollment on that specific date determines your funding for the entire year. I'd pay close attention to this: new schools that haven't reached full enrollment by the count date may receive significantly less funding than expected. Plan your recruitment timeline around this date. — SchoolStack Team";
+  "Your state funds charter schools based on a single count day - your enrollment on that specific date determines your funding for the entire year. I'd pay close attention to this: new schools that haven't reached full enrollment by the count date may receive significantly less funding than expected. Plan your recruitment timeline around this date. - SchoolStack Team";
 const MULTIPLE_COUNT_DATES_COACHING =
-  "Your state uses multiple count dates to determine funding. Enrollment is measured on several specific dates throughout the year, which can help smooth out fluctuations. This is generally more forgiving for new schools, but I'd still recommend tracking your enrollment carefully around each count date. — SchoolStack Team";
+  "Your state uses multiple count dates to determine funding. Enrollment is measured on several specific dates throughout the year, which can help smooth out fluctuations. This is generally more forgiving for new schools, but I'd still recommend tracking your enrollment carefully around each count date. - SchoolStack Team";
 const SINGLE_COUNT_PERIOD_COACHING =
-  "Your state determines funding based on enrollment during a single count period rather than a single day. This gives your school a window to demonstrate enrollment levels, which is helpful for new schools that are still ramping up. — SchoolStack Team";
+  "Your state determines funding based on enrollment during a single count period rather than a single day. This gives your school a window to demonstrate enrollment levels, which is helpful for new schools that are still ramping up. - SchoolStack Team";
 const MULTIPLE_COUNT_PERIODS_COACHING =
-  "Your state uses multiple count periods to calculate funding. Each period's enrollment is measured and typically averaged. This tends to be favorable for growing schools since it captures your enrollment trajectory rather than a single snapshot. — SchoolStack Team";
+  "Your state uses multiple count periods to calculate funding. Each period's enrollment is measured and typically averaged. This tends to be favorable for growing schools since it captures your enrollment trajectory rather than a single snapshot. - SchoolStack Team";
 const OTHER_COACHING =
-  "Your state has a unique funding methodology. I'd recommend checking with your state education agency for details on how charter school funding is calculated — the specifics matter for your revenue planning. — SchoolStack Team";
+  "Your state has a unique funding methodology. I'd recommend checking with your state education agency for details on how charter school funding is calculated - the specifics matter for your revenue planning. - SchoolStack Team";
 
 function methodologyLabel(m: CharterMethodology): string {
   switch (m) {
@@ -163,59 +163,59 @@ function privateScholarship(min: number, max: number, label: string, notes?: str
 
 export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
   AL: entry("single_count_period", [
-    refundableTaxCredit(1000, 2000, "CHOOSE Act — up to $2,000 for homeschoolers", 1000, 2000),
+    refundableTaxCredit(1000, 2000, "CHOOSE Act - up to $2,000 for homeschoolers", 1000, 2000),
   ], false, { min: 8200, max: 9000, notes: "State foundation ~$8,290/pupil" }),
   AK: entry("multiple_count_dates", [
-    correspondenceCharter(2500, 2700, "Correspondence programs — ~$2,700/student"),
+    correspondenceCharter(2500, 2700, "Correspondence programs - ~$2,700/student"),
   ], false, { min: 12000, max: 16000, notes: "BSA ~$7,510 + supplemental; total varies by district" }),
   AZ: entry("multiple_count_dates", [
-    esa(7000, 8000, true, "Universal ESA — ~$7,000-$8,000/student", 7000, 8000),
+    esa(7000, 8000, true, "Universal ESA - ~$7,000-$8,000/student", 7000, 8000),
     taxCreditScholarship(2000, 5000, "4 tax-credit scholarship programs"),
-  ], true, { min: 10400, max: 11000, notes: "Full equalization funding — one of most charter-equitable states" }),
+  ], true, { min: 10400, max: 11000, notes: "Full equalization funding - one of most charter-equitable states" }),
   AR: entry("adm", [
-    esa(6600, 7600, true, "Universal by 2025 — ~$6,600-$7,600/student"),
+    esa(6600, 7600, true, "Universal by 2025 - ~$6,600-$7,600/student"),
     taxCreditScholarship(2000, 5000),
   ], true, { min: 7600, max: 9000, notes: "LEARNS Act 2023 improved charter equity; foundation base ~$7,618" }),
   CA: entry("ada", [
-    correspondenceCharter(2800, 3200, "Charter school enrollment pathway — ~$2,800-$3,200/student"),
-  ], false, { min: 12000, max: 16000, notes: "LCFF rate — varies significantly by resident district" }),
+    correspondenceCharter(2800, 3200, "Charter school enrollment pathway - ~$2,800-$3,200/student"),
+  ], false, { min: 12000, max: 16000, notes: "LCFF rate - varies significantly by resident district" }),
   CO: entry("single_count_day", [
-    privateScholarship(1000, 3000, "ACE Scholarship", "ACE Scholarships (acescholarships.org) — need-based K-12 scholarships for low-income families attending private schools in Colorado. Schools must partner with ACE and accept all qualified families. Not all private schools receive ACE funds; families must apply and qualify. Amounts vary by grade level and family need."),
+    privateScholarship(1000, 3000, "ACE Scholarship", "ACE Scholarships (acescholarships.org) - need-based K-12 scholarships for low-income families attending private schools in Colorado. Schools must partner with ACE and accept all qualified families. Not all private schools receive ACE funds; families must apply and qualify. Amounts vary by grade level and family need."),
   ], true, { min: 10000, max: 11500, notes: "Charter equity law requires 95%+ of district per-pupil revenue" }),
   CT: entry("single_count_day", [], false, { min: 13000, max: 14000, notes: "State charter grant base ~$13,185" }),
   DE: entry("adm", [], false, { min: 15000, max: 16000, notes: "Unit-based formula equivalent to district schools" }),
   FL: entry("adm", [
-    esa(7000, 8000, true, "PEP scholarship for homeschoolers — ~$8,000", 7000, 8000),
+    esa(7000, 8000, true, "PEP scholarship for homeschoolers - ~$8,000", 7000, 8000),
     voucher(5000, 8000, false, "Multiple scholarship programs"),
-  ], true, { min: 9500, max: 10500, notes: "FEFP-based — equalized statewide" }),
+  ], true, { min: 9500, max: 10500, notes: "FEFP-based - equalized statewide" }),
   GA: entry("single_count_day", [
-    esa(5500, 6500, false, "Promise Scholarship — $6,500 for students in lowest-performing districts (not yet launched)", undefined, undefined, "pending"),
+    esa(5500, 6500, false, "Promise Scholarship - $6,500 for students in lowest-performing districts (not yet launched)", undefined, undefined, "pending"),
     voucher(3000, 6000, false, "Georgia Special Needs Scholarship"),
     taxCreditScholarship(2000, 5000),
   ], false, { min: 9000, max: 13000, notes: "State QBE formula + Charter School Supplemental Funding" }),
-  HI: entry("other", [], false, { min: 10500, max: 11500, notes: "Single statewide district — weighted student formula" }),
+  HI: entry("other", [], false, { min: 10500, max: 11500, notes: "Single statewide district - weighted student formula" }),
   ID: entry("ada", [
-    refundableTaxCredit(3000, 5000, "Parental Choice Tax Credit — up to $5,000/student (upheld by Supreme Court Feb 2026)", 3000, 5000),
+    refundableTaxCredit(3000, 5000, "Parental Choice Tax Credit - up to $5,000/student (upheld by Supreme Court Feb 2026)", 3000, 5000),
   ], false, { min: 7500, max: 8500, notes: "State foundation funding; local levy gap can be significant" }),
   IL: entry("multiple_count_periods", [
     individualTaxCredit(100, 250, "25% credit on qualifying expenses, max ~$250"),
   ], false, { min: 9500, max: 11000, notes: "Evidence-Based Funding per-pupil block" }),
   IN: entry("single_count_day", [
-    voucher(5000, 8000, true, "Choice Scholarship — universal (income cap eliminated 2026)"),
+    voucher(5000, 8000, true, "Choice Scholarship - universal (income cap eliminated 2026)"),
     taxCreditScholarship(2000, 5000),
     individualTaxCredit(500, 1000, "~$1,000/child tax deduction"),
   ], true, { min: 7500, max: 9000, notes: "State tuition support + complexity index" }),
   IA: entry("single_count_day", [
-    esa(7000, 8000, true, "Universal ESA — ~$8,000/student", 7000, 8000),
+    esa(7000, 8000, true, "Universal ESA - ~$8,000/student", 7000, 8000),
     taxCreditScholarship(2000, 5000),
   ], true, { min: 7600, max: 8500, notes: "State per-pupil cost ~$7,600 foundation" }),
   KS: entry("single_count_day", [
     taxCreditScholarship(2000, 5000),
   ], false, { min: 7700, max: 8500, notes: "Base state aid per pupil" }),
   KY: entry("ada", [
-  ], true, { min: 8500, max: 10000, notes: "SEEK formula — base guarantee per pupil" }),
+  ], true, { min: 8500, max: 10000, notes: "SEEK formula - base guarantee per pupil" }),
   LA: entry("multiple_count_dates", [
-    esa(5000, 7000, false, "GATOR program — transitioning from voucher to ESA"),
+    esa(5000, 7000, false, "GATOR program - transitioning from voucher to ESA"),
     voucher(4000, 6000, false, "2 voucher programs"),
     taxCreditScholarship(2000, 5000),
     individualTaxCredit(500, 1500, "School expense deduction"),
@@ -225,7 +225,7 @@ export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
   ], false, { min: 10000, max: 13000, notes: "Essential programs & services formula" }),
   MD: entry("single_count_day", [
     voucher(3000, 6000, false, "BOOST Scholarship Program"),
-  ], false, { min: 14000, max: 17000, notes: "Blueprint for Maryland's Future — high per-pupil investment" }),
+  ], false, { min: 14000, max: 17000, notes: "Blueprint for Maryland's Future - high per-pupil investment" }),
   MA: entry("single_count_day", [], false, { min: 14000, max: 17000, notes: "Chapter 70 tuition rate from sending district" }),
   MI: entry("multiple_count_dates", [], false, { min: 9150, max: 9600, notes: "Foundation allowance ~$9,150-$9,608 per pupil" }),
   MN: entry("adm", [
@@ -233,7 +233,7 @@ export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
     refundableTaxCredit(1000, 2000, "Refundable education credit", 500, 1500),
   ], false, { min: 10000, max: 12500, notes: "General education aid formula" }),
   MS: entry("ada", [
-    esa(5500, 6500, false, "Special needs ESA — ~$6,500", 5500, 6500),
+    esa(5500, 6500, false, "Special needs ESA - ~$6,500", 5500, 6500),
     voucher(3000, 6000, false, "2 voucher programs"),
   ], true, { min: 6700, max: 8500, notes: "Mississippi Adequate Education Program" }),
   MO: entry("ada", [], false, { min: 8000, max: 10000, notes: "State adequacy target formula" }),
@@ -246,28 +246,28 @@ export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
     taxCreditScholarship(2000, 5000),
   ], false, { min: 8500, max: 10500, notes: "Distributive School Account per-pupil" }),
   NH: entry("single_count_day", [
-    esa(4000, 4600, false, "Income-capped at 350% FPL — ~$4,600/student", 4000, 4600),
+    esa(4000, 4600, false, "Income-capped at 350% FPL - ~$4,600/student", 4000, 4600),
     voucher(4000, 6000, false),
     taxCreditScholarship(2000, 5000),
   ], true, { min: 8000, max: 10000, notes: "Adequate education grant + local allocation" }),
-  NJ: entry("single_count_day", [], false, { min: 16000, max: 20000, notes: "SFRA formula — varies significantly by district. Among highest nationally" }),
-  NM: entry("single_count_period", [], false, { min: 9500, max: 11000, notes: "State Equalization Guarantee — funding formula units" }),
-  NY: entry("adm", [], false, { min: 14000, max: 18000, notes: "Foundation aid — varies widely by district (NYC charters ~$17,000+)" }),
+  NJ: entry("single_count_day", [], false, { min: 16000, max: 20000, notes: "SFRA formula - varies significantly by district. Among highest nationally" }),
+  NM: entry("single_count_period", [], false, { min: 9500, max: 11000, notes: "State Equalization Guarantee - funding formula units" }),
+  NY: entry("adm", [], false, { min: 14000, max: 18000, notes: "Foundation aid - varies widely by district (NYC charters ~$17,000+)" }),
   NC: entry("adm", [
-    esa(5000, 17000, false, "ESA+ for special needs students — ~$9,000-$17,000", 9000, 17000),
+    esa(5000, 17000, false, "ESA+ for special needs students - ~$9,000-$17,000", 9000, 17000),
     voucher(5000, 8000, true, "Opportunity Scholarship"),
   ], false, { min: 7500, max: 9500, notes: "State allotment per ADM" }),
   ND: entry("adm", [
   ], true, { min: 10000, max: 12000, notes: "Per-pupil payment formula" }),
   OH: entry("multiple_count_periods", [
-    voucher(4000, 8000, false, "5 voucher programs (EdChoice ruled unconstitutional by lower court — appeal expected)", "litigated"),
+    voucher(4000, 8000, false, "5 voucher programs (EdChoice ruled unconstitutional by lower court - appeal expected)", "litigated"),
     taxCreditScholarship(2000, 5000),
     individualTaxCredit(500, 1000, "2 individual tax credit programs"),
-  ], false, { min: 8000, max: 10500, notes: "Fair School Funding Plan — Opportunity Index based" }),
+  ], false, { min: 8000, max: 10500, notes: "Fair School Funding Plan - Opportunity Index based" }),
   OK: entry("adm", [
     voucher(5000, 7500, false),
     taxCreditScholarship(2000, 5000),
-    refundableTaxCredit(5000, 7500, "Parental Choice Tax Credit — $5,000-$7,500/student", 5000, 7500),
+    refundableTaxCredit(5000, 7500, "Parental Choice Tax Credit - $5,000-$7,500/student", 5000, 7500),
   ], false, { min: 7500, max: 9000, notes: "State aid formula per weighted ADM" }),
   OR: entry("adm", [
     correspondenceCharter(2500, 3000, "Charter school enrollment pathway"),
@@ -287,24 +287,24 @@ export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
     taxCreditScholarship(2000, 5000),
   ], false, { min: 7500, max: 9000, notes: "State aid per student formula" }),
   TN: entry("adm", [
-    esa(6000, 7000, false, "Limited geographic eligibility — $7,000/student", 6000, 7000),
+    esa(6000, 7000, false, "Limited geographic eligibility - $7,000/student", 6000, 7000),
   ], true, { min: 8500, max: 10000, notes: "TISA (Tennessee Investment in Student Achievement) base" }),
   TX: entry("ada", [
-    { ...esa(10000, 10474, false, "Texas Education Freedom Accounts — launching 2026-27; ~$10,474/student, up to $30,000 IEP. Schools must choose to accept ESA students. Enable this if your school will participate.", 2000, 2000, "active", 2026), optIn: true },
-  ], false, { min: 7500, max: 9500, notes: "Foundation School Program — basic allotment + tier adjustments" }),
+    { ...esa(10000, 10474, false, "Texas Education Freedom Accounts - launching 2026-27; ~$10,474/student, up to $30,000 IEP. Schools must choose to accept ESA students. Enable this if your school will participate.", 2000, 2000, "active", 2026), optIn: true },
+  ], false, { min: 7500, max: 9500, notes: "Foundation School Program - basic allotment + tier adjustments" }),
   UT: entry("single_count_day", [
-    esa(7000, 8000, false, "Fits All — ~$8,000 (court challenges pending, status uncertain)", 7000, 8000, "litigated"),
+    esa(7000, 8000, false, "Fits All - ~$8,000 (court challenges pending, status uncertain)", 7000, 8000, "litigated"),
     voucher(4000, 6000, false),
   ], false, { min: 8500, max: 10000, notes: "Weighted Pupil Unit value" }),
   VT: entry("adm", [
     voucher(4000, 8000, false, "Town tuitioning program"),
-  ], false, { min: 16000, max: 20000, notes: "Education spending per equalized pupil — among highest nationally" }),
+  ], false, { min: 16000, max: 20000, notes: "Education spending per equalized pupil - among highest nationally" }),
   VA: entry("adm", [
     taxCreditScholarship(2000, 5000),
   ], true, { min: 10000, max: 13000, notes: "Standards of Quality per-pupil funding via local school division" }),
   WA: entry("other", [], false, { min: 12000, max: 15000, notes: "Prototypical school model allocation" }),
   WV: entry("single_count_day", [
-    esa(4500, 5300, true, "Hope Scholarship — ~$5,300, expanding to all homeschoolers 2026", 4500, 5300),
+    esa(4500, 5300, true, "Hope Scholarship - ~$5,300, expanding to all homeschoolers 2026", 4500, 5300),
   ], false, { min: 9000, max: 11000, notes: "State aid formula per net enrollment" }),
   WI: entry("multiple_count_dates", [
     voucher(4000, 8000, false, "4 voucher programs"),
@@ -312,10 +312,10 @@ export const STATE_FUNDING_MAP: Record<string, StateFundingEntry> = {
   ], false, { min: 9500, max: 11000, notes: "Per-pupil revenue limit" }),
   WY: entry("single_count_period", [
     esa(5000, 6000, false, "~$6,000 (blocked by judge, status uncertain)", 5000, 6000, "blocked"),
-  ], false, { min: 16000, max: 18000, notes: "Block grant model — among highest per-pupil nationally" }),
+  ], false, { min: 16000, max: 18000, notes: "Block grant model - among highest per-pupil nationally" }),
   DC: entry("adm", [
     voucher(5000, 12000, false, "DC Opportunity Scholarship"),
-  ], false, { min: 16000, max: 22000, notes: "Uniform Per Student Funding Formula (UPSFF) — highest nationally" }),
+  ], false, { min: 16000, max: 22000, notes: "Uniform Per Student Funding Formula (UPSFF) - highest nationally" }),
 };
 
 export type SchoolType =
@@ -361,7 +361,7 @@ function statusSuffix(p: ProgramInfo): string {
 
 function buildSchoolChoiceCoaching(programs: ProgramInfo[], schoolType: SchoolType, state: string): string {
   if (programs.length === 0) {
-    return `Based on what we know, ${state} does not currently have ESA, voucher, or tax-credit scholarship programs available. I'd recommend checking with your state education agency for the latest information — this landscape changes quickly. — SchoolStack Team`;
+    return `Based on what we know, ${state} does not currently have ESA, voucher, or tax-credit scholarship programs available. I'd recommend checking with your state education agency for the latest information - this landscape changes quickly. - SchoolStack Team`;
   }
 
   const parts: string[] = [];
@@ -373,7 +373,7 @@ function buildSchoolChoiceCoaching(programs: ProgramInfo[], schoolType: SchoolTy
     parts.push(`${p.label}: ${range}/student${statusSuffix(p)}`);
   }
 
-  return `${state} offers: ${parts.join("; ")}. I'd recommend verifying eligibility requirements with your state — amounts shown are estimates and may vary. We keep this data updated, but always confirm before building your model around it. — SchoolStack Team`;
+  return `${state} offers: ${parts.join("; ")}. I'd recommend verifying eligibility requirements with your state - amounts shown are estimates and may vary. We keep this data updated, but always confirm before building your model around it. - SchoolStack Team`;
 }
 
 function filterProgramsForSchoolType(programs: ProgramInfo[], schoolType: SchoolType): ProgramInfo[] {
@@ -440,7 +440,7 @@ export function getStateFundingConfig(
       charterCoachingText: null,
       enrollmentRevenueMethod: null,
       availablePrograms: [],
-      schoolChoiceCoachingText: `We don't have funding data for "${stateCode}" yet. I'd recommend entering your revenue sources manually — and if you know the specifics of your state's programs, we'd love to hear about them. — SchoolStack Team`,
+      schoolChoiceCoachingText: `We don't have funding data for "${stateCode}" yet. I'd recommend entering your revenue sources manually - and if you know the specifics of your state's programs, we'd love to hear about them. - SchoolStack Team`,
       federalTaxCreditSGO: false,
       stateCode: normalized,
       charterBasePerPupil: null,
@@ -463,7 +463,7 @@ export function getStateFundingConfig(
         universal: false,
         status: "active" as ProgramStatus,
         effectiveYear: 2027,
-        notes: "Federal tax credit scholarship via Scholarship Granting Organizations — starting January 2027",
+        notes: "Federal tax credit scholarship via Scholarship Granting Organizations - starting January 2027",
       },
     ];
   }

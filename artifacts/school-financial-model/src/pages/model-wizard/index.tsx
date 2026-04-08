@@ -500,7 +500,7 @@ export function ModelWizardPage() {
           if (a && b && d) {
             const { ok, missing } = checkCoreFieldsForExport();
             if (!ok) {
-              alert(`Before you can continue to Review, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order — just make sure they're done before generating your outputs.`);
+              alert(`Before you can continue to Review, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order - just make sure they're done before generating your outputs.`);
               return false;
             }
           }
@@ -665,7 +665,7 @@ export function ModelWizardPage() {
                 {isSaving ? (
                   <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</span>
                 ) : saveError ? (
-                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save failed — retrying</span>
+                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save failed - retrying</span>
                 ) : lastSaved ? (
                   <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved</span>
                 ) : null}
@@ -698,7 +698,7 @@ export function ModelWizardPage() {
                       if (step.id >= 7) {
                         const { ok, missing } = checkCoreFieldsForExport();
                         if (!ok) {
-                          alert(`Before you can access ${step.title}, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order — just make sure they're done before generating your outputs.`);
+                          alert(`Before you can access ${step.title}, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order - just make sure they're done before generating your outputs.`);
                           return;
                         }
                       }

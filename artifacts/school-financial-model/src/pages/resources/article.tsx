@@ -123,8 +123,8 @@ export function ArticlePage() {
               Ready to build your school's financial plan?
             </h3>
             <p className="text-[#1E293B]/60 leading-relaxed mb-6">
-              SchoolStack Budget walks you through every step — enrollment,
-              revenue, staffing, expenses — and generates lender-ready documents
+              SchoolStack Budget walks you through every step - enrollment,
+              revenue, staffing, expenses - and generates lender-ready documents
               automatically. Free during beta.
             </p>
             <Link

@@ -114,7 +114,7 @@ export function NpsModal({ exportCount }: NpsModalProps) {
               How likely are you to recommend SchoolStack Budget?
             </h3>
             <p className="text-sm text-muted-foreground mb-5">
-              Help us improve — rate your experience so far.
+              Help us improve - rate your experience so far.
             </p>
 
             <div className="flex gap-1.5 justify-center mb-2">

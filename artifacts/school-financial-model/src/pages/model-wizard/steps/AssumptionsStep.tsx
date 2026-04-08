@@ -243,7 +243,7 @@ export function AssumptionsStep() {
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Assumptions</h2>
         <p className="text-muted-foreground text-lg">
-          The formula dashboard — every rate and driver that powers your 5-year model, in one place.
+          The formula dashboard - every rate and driver that powers your 5-year model, in one place.
         </p>
       </div>
 
@@ -256,7 +256,7 @@ export function AssumptionsStep() {
             <div>
               <p className="text-sm font-semibold text-emerald-900 mb-1">The defaults are a great starting point</p>
               <p className="text-sm text-emerald-800 leading-relaxed">
-                We've pre-filled these with typical rates for schools like yours. Most founders leave them as-is on their first pass — you can always come back and fine-tune later. If a field shows a default badge, it means you've customized it.
+                We've pre-filled these with typical rates for schools like yours. Most founders leave them as-is on their first pass - you can always come back and fine-tune later. If a field shows a default badge, it means you've customized it.
               </p>
             </div>
           </div>
@@ -272,7 +272,7 @@ export function AssumptionsStep() {
             <p className="text-sm font-semibold text-teal-900 mb-1">Why assumptions matter</p>
             <p className="text-sm text-teal-800 leading-relaxed">
               These are the formulas behind your 5-year model. Every projection on the Review page flows from the assumptions you set here.
-              Realistic assumptions are the foundation of a strong plan — they build credibility with anyone reviewing your model.
+              Realistic assumptions are the foundation of a strong plan - they build credibility with anyone reviewing your model.
             </p>
           </div>
         </div>
@@ -331,7 +331,7 @@ export function AssumptionsStep() {
               <div className="rounded-xl border border-teal-200 bg-teal-50/40 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-teal-700" />
-                  <span className="text-sm font-semibold text-teal-900">Charter Revenue — {stateCode}</span>
+                  <span className="text-sm font-semibold text-teal-900">Charter Revenue - {stateCode}</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -366,7 +366,7 @@ export function AssumptionsStep() {
                   <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-3 space-y-3">
                     <p className="text-xs font-semibold text-amber-800"><GlossaryTerm termKey="ada">ADA</GlossaryTerm> Attendance Ratio</p>
                     <p className="text-[11px] text-amber-700">
-                      Your state uses <GlossaryTerm termKey="ada">ADA</GlossaryTerm> — funding is adjusted by the ratio of actual attendance to enrollment.
+                      Your state uses <GlossaryTerm termKey="ada">ADA</GlossaryTerm> - funding is adjusted by the ratio of actual attendance to enrollment.
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
@@ -406,7 +406,7 @@ export function AssumptionsStep() {
                             {(ratio * 100).toFixed(1)}%
                           </span>
                           <span className="text-muted-foreground">
-                            {adm > 0 ? "(from your data)" : "(default — enter prior-year data for accuracy)"}
+                            {adm > 0 ? "(from your data)" : "(default - enter prior-year data for accuracy)"}
                           </span>
                         </div>
                       );
@@ -492,13 +492,13 @@ export function AssumptionsStep() {
                     name="revenueDefaults.collectionRate"
                     suffix="%"
                     defaultValue={100}
-                    usageNote="Expected percentage of billed tuition actually collected. Most schools see 92–98% for invoiced families — building in a realistic rate matters."
+                    usageNote="Expected percentage of billed tuition actually collected. Most schools see 92–98% for invoiced families - building in a realistic rate matters."
                     placeholder="95"
                     min={0}
                     max={100}
                   />
                   <InlineHelpCard explainer={EXPLAINERS.assumptions_collection_rate} section="assumptions" className="mt-2" />
-                  <FinancingInsight text="A 100% collection rate is optimistic for invoiced families — most schools see 92-98%. Building in a realistic rate protects your cash flow projections." />
+                  <FinancingInsight text="A 100% collection rate is optimistic for invoiced families - most schools see 92-98%. Building in a realistic rate protects your cash flow projections." />
                 </div>
 
                 <AssumptionField
@@ -618,7 +618,7 @@ export function AssumptionsStep() {
                   name="staffing.payrollTaxRate"
                   suffix="%"
                   defaultValue={DEFAULTS.payrollTaxRate}
-                  usageNote="Employer-side payroll taxes (FICA, FUTA, state unemployment). Applied as a default to each new staff role — override per role on the Staffing step."
+                  usageNote="Employer-side payroll taxes (FICA, FUTA, state unemployment). Applied as a default to each new staff role - override per role on the Staffing step."
                   placeholder="8"
                   min={0}
                   max={100}
@@ -732,13 +732,13 @@ export function AssumptionsStep() {
                   A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.
                 </span>
               </div>
-              <FinancingInsight text="If you have loan covenants, missing your DSCR targets can trigger default provisions — plan conservatively so you have room to meet each year's target." />
+              <FinancingInsight text="If you have loan covenants, missing your DSCR targets can trigger default provisions - plan conservatively so you have room to meet each year's target." />
             </div>
           ) : (
             <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 p-4">
               <Info className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-slate-500 leading-relaxed">
-                No loan configured — DSCR covenants don't apply yet. If you add a loan amount in the Debt Terms section above, year-by-year covenant targets will appear here.
+                No loan configured - DSCR covenants don't apply yet. If you add a loan amount in the Debt Terms section above, year-by-year covenant targets will appear here.
               </p>
             </div>
           )}
@@ -774,7 +774,7 @@ export function AssumptionsStep() {
                       ? "bg-amber-50 border-amber-200 text-amber-800"
                       : "bg-green-50 border-green-200 text-green-800"
                   )}>
-                    {isPartialFirstYear ? `Partial — ${year1OperatingMonths} months` : "Full 12 months"}
+                    {isPartialFirstYear ? `Partial - ${year1OperatingMonths} months` : "Full 12 months"}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">

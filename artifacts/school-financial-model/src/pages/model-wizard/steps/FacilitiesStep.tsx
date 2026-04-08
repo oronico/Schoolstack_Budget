@@ -8,7 +8,7 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Operations & Expenses</h2>
-        <p className="text-muted-foreground text-lg">Define your facility costs, student services, and any outstanding debt. If you're not sure about some of these numbers yet, use your best estimate — you can always come back and update them.</p>
+        <p className="text-muted-foreground text-lg">Define your facility costs, student services, and any outstanding debt. If you're not sure about some of these numbers yet, use your best estimate - you can always come back and update them.</p>
       </div>
 
       <SectionExplainers section="facilities" />
@@ -67,19 +67,19 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Common pitfall:</span> Budgeting $0 for maintenance. Every building needs upkeep — even leased spaces. Plan for at least $2,000-5,000/year for a small school, more for older buildings.
+              <span className="font-semibold">Common pitfall:</span> Budgeting $0 for maintenance. Every building needs upkeep - even leased spaces. Plan for at least $2,000-5,000/year for a small school, more for older buildings.
             </p>
           </div>
           <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Insurance tip:</span> School insurance typically escalates 5-8% per year. Get quotes from brokers who specialize in schools — they'll know the coverage your state requires. Every school needs insurance — don't skip this line item.
+              <span className="font-semibold">Insurance tip:</span> School insurance typically escalates 5-8% per year. Get quotes from brokers who specialize in schools - they'll know the coverage your state requires. Every school needs insurance - don't skip this line item.
             </p>
           </div>
           <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Utility deposits:</span> Many utility providers require upfront deposits of $500-2,000 for new commercial accounts. Budget for connection fees, security deposits, and first/last month payments — these hit before your first student walks in the door.
+              <span className="font-semibold">Utility deposits:</span> Many utility providers require upfront deposits of $500-2,000 for new commercial accounts. Budget for connection fees, security deposits, and first/last month payments - these hit before your first student walks in the door.
             </p>
           </div>
         </div>
@@ -139,7 +139,7 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Transportation note:</span> Check whether your state or authorizer requires you to provide transportation. Bus contracts typically lock in for a full year regardless of ridership — budget $800-2,000 per student annually for full service.
+              <span className="font-semibold">Transportation note:</span> Check whether your state or authorizer requires you to provide transportation. Bus contracts typically lock in for a full year regardless of ridership - budget $800-2,000 per student annually for full service.
             </p>
           </div>
         </div>
@@ -176,7 +176,7 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">PD matters:</span> Budget at least $500 per staff member for professional development. Schools that skip PD see higher teacher turnover — which costs far more than training. Investing in your team signals quality leadership.
+              <span className="font-semibold">PD matters:</span> Budget at least $500 per staff member for professional development. Schools that skip PD see higher teacher turnover - which costs far more than training. Investing in your team signals quality leadership.
             </p>
           </div>
         </div>
@@ -211,7 +211,7 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold"><GlossaryTerm termKey="dscr">DSCR</GlossaryTerm> check:</span> If you have a loan, aim for a Debt Service Coverage Ratio of at least 1.15-1.2x — meaning your operating cash flow should be 15-20% more than your annual debt payments. Below 1.0x means operations alone can't cover the loan.
+              <span className="font-semibold"><GlossaryTerm termKey="dscr">DSCR</GlossaryTerm> check:</span> If you have a loan, aim for a Debt Service Coverage Ratio of at least 1.15-1.2x - meaning your operating cash flow should be 15-20% more than your annual debt payments. Below 1.0x means operations alone can't cover the loan.
             </p>
           </div>
         </div>

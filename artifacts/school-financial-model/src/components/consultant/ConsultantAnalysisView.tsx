@@ -143,11 +143,11 @@ const KPI_PLAIN_ENGLISH: Record<string, (value: string) => string> = {
   staffingCostPct: (v) => `${v} of every dollar goes to paying your team`,
   operatingCostPct: (v) => `${v} of revenue covers non-staffing operations`,
   netMargin: (v) => `${v} of revenue is left over after all expenses`,
-  dscr: (v) => `For every $1 of loan payments, you earn ${v} — higher is safer`,
+  dscr: (v) => `For every $1 of loan payments, you earn ${v} - higher is safer`,
   reserveMonths: (v) => `You could run the school for ${v} with no income`,
   daysCashOnHand: (v) => `You have ${v} of cash to cover daily operations`,
-  cashTrough: (v) => `Your lowest cash point is ${v} — plan bridge funding if this dips negative`,
-  currentRatio: (v) => `Short-term assets are ${v} of short-term debts — above 1.0 means you can cover them`,
+  cashTrough: (v) => `Your lowest cash point is ${v} - plan bridge funding if this dips negative`,
+  currentRatio: (v) => `Short-term assets are ${v} of short-term debts - above 1.0 means you can cover them`,
   philanthropyPct: (v) => `${v} of your revenue comes from donations and grants`,
   publicFundingPct: (v) => `${v} of your revenue comes from public funding sources`,
   managementFee: (v) => `${v} of revenue goes to your management organization or authorizer`,
@@ -187,16 +187,16 @@ function generateHealthSummary(data: ConsultantOutput): string {
   const anyMetricName = topConcernName || firstGoodName || metrics[0]?.name;
 
   if (alertMetrics.length > 0) {
-    const nameSnippet = topConcernName ? ` — starting with ${topConcernName}` : "";
-    return `Your model has some areas that need attention before it's ready${nameSnippet}. That's completely normal for an early draft — most founders need a few rounds of adjustments.${riskDetail} Let's walk through what we found and what you can do about it.`;
+    const nameSnippet = topConcernName ? ` - starting with ${topConcernName}` : "";
+    return `Your model has some areas that need attention before it's ready${nameSnippet}. That's completely normal for an early draft - most founders need a few rounds of adjustments.${riskDetail} Let's walk through what we found and what you can do about it.`;
   }
   if (warningMetrics.length > 0) {
     const nameSnippet = topConcernName ? `, particularly around ${topConcernName}` : "";
-    return `Your school looks financially solid overall, with a few areas worth watching${nameSnippet}.${riskDetail} The foundation is strong — let's review the specifics so you can make informed decisions about where to fine-tune.${readinessNote}`;
+    return `Your school looks financially solid overall, with a few areas worth watching${nameSnippet}.${riskDetail} The foundation is strong - let's review the specifics so you can make informed decisions about where to fine-tune.${readinessNote}`;
   }
   if (goodCount > 0) {
     const strengthSnippet = firstGoodName ? ` ${firstGoodName} is looking strong.` : "";
-    return `Your financial model looks healthy across the board.${strengthSnippet} Your revenue, costs, and reserves are all in good shape.${readinessNote} That's a strong starting point — you should feel good about where this stands.`;
+    return `Your financial model looks healthy across the board.${strengthSnippet} Your revenue, costs, and reserves are all in good shape.${readinessNote} That's a strong starting point - you should feel good about where this stands.`;
   }
   const fallbackSnippet = anyMetricName ? ` We looked at ${anyMetricName} and more.` : "";
   return `We've reviewed your financial model and have some observations to share.${fallbackSnippet}${riskDetail} Let's walk through the key findings together.`;
@@ -772,7 +772,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
             <h3 className="font-display font-bold text-lg text-foreground">Sensitivity Analysis</h3>
           </div>
           <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            Sensitivity analysis shows how your bottom line changes under different scenarios. Lenders use these tables to stress-test your model — green cells indicate healthy margins while red signals risk.
+            Sensitivity analysis shows how your bottom line changes under different scenarios. Lenders use these tables to stress-test your model - green cells indicate healthy margins while red signals risk.
           </p>
           {data.expenseSensitivityMatrix && data.expenseSensitivityMatrix.length > 0 && (
             <div className="flex gap-1 mb-3 bg-secondary/30 rounded-lg p-1 w-fit">
@@ -1015,7 +1015,7 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
         <div className="flex-1">
           <p className="text-sm font-semibold text-foreground mb-1">Want a real advisor to look at this?</p>
           <p className="text-sm text-muted-foreground">
-            Request a free expert review — our school finance team will walk through your model and send you personalized feedback within 5–7 business days.
+            Request a free expert review - our school finance team will walk through your model and send you personalized feedback within 5–7 business days.
           </p>
         </div>
         <button

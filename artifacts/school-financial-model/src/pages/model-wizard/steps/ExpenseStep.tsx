@@ -225,7 +225,7 @@ function ForgottenCostsPrompt({
         <Lightbulb className="h-5 w-5 text-amber-600 flex-shrink-0" />
         <div className="flex-1">
           <p className="font-semibold text-sm text-amber-900">Common costs schools forget</p>
-          <p className="text-xs text-amber-700 mt-0.5">Quick-check these items — click to add any you're missing</p>
+          <p className="text-xs text-amber-700 mt-0.5">Quick-check these items - click to add any you're missing</p>
         </div>
       </button>
 
@@ -272,7 +272,7 @@ function ForgottenCostsPrompt({
             );
           })}
           <p className="text-[11px] text-amber-700 mt-2 leading-relaxed">
-            Don't worry about getting every dollar perfect — the goal is to not be surprised. You can adjust amounts in the categories below.
+            Don't worry about getting every dollar perfect - the goal is to not be surprised. You can adjust amounts in the categories below.
           </p>
         </div>
       )}
@@ -969,9 +969,9 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         <div className="text-sm text-foreground space-y-1.5">
           <p>
             <span className="font-semibold">Smart <GlossaryTerm termKey="escalation_rate">Escalation</GlossaryTerm> Applied.</span>{" "}
-            A strong financial model reflects how costs actually behave. Lease payments follow your contract terms. Vendor costs increase with inflation. Per-student expenses scale with enrollment. We've applied realistic escalation — you can adjust any year.
+            A strong financial model reflects how costs actually behave. Lease payments follow your contract terms. Vendor costs increase with inflation. Per-student expenses scale with enrollment. We've applied realistic escalation - you can adjust any year.
           </p>
-          <FinancingInsight text="A good rule of thumb: keep facility costs between 15-25% of revenue. Above 30% can crowd out staffing and programs — worth watching." />
+          <FinancingInsight text="A good rule of thumb: keep facility costs between 15-25% of revenue. Above 30% can crowd out staffing and programs - worth watching." />
           <div className="flex flex-wrap gap-3 text-xs text-teal-800">
             <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Inflation: {generalCostInflation}%</span>
             <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Rent escalation: {annualRentIncrease}%</span>
@@ -1068,7 +1068,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             <div className="text-sm text-amber-800 space-y-1">
               <p>
                 <span className="font-semibold">Don't forget insurance and payroll taxes.</span>{" "}
-                General liability insurance is typically $1,500–$4,000/year for a small school. Payroll taxes (FICA, SUTA, FUTA) add roughly 8–10% on top of gross wages — these are already calculated in the Staffing step.
+                General liability insurance is typically $1,500–$4,000/year for a small school. Payroll taxes (FICA, SUTA, FUTA) add roughly 8–10% on top of gross wages - these are already calculated in the Staffing step.
               </p>
               <p>
                 If you're not sure what coverage you need, a local insurance broker can give you a quote before you open. Most charter authorizers and landlords require proof of insurance.
@@ -1083,7 +1083,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             label="Savings Account"
             description="A dedicated savings account for the school"
           />
-          <FinancingInsight text="Aim for 45-90 days of operating reserves. A dedicated savings account is a simple way to show you're managing cash well — and it protects your school from surprises." className="ml-12 -mt-2" />
+          <FinancingInsight text="Aim for 45-90 days of operating reserves. A dedicated savings account is a simple way to show you're managing cash well - and it protects your school from surprises." className="ml-12 -mt-2" />
 
           <BusinessOperationsToggle
             checked={hasBusinessAccount === true}
@@ -1192,7 +1192,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             {y5Students > (maxCapacity || 0) ? (
               <span className="text-amber-700 font-semibold"> - that exceeds your building capacity. You'll want to address this before finalizing your plan.</span>
             ) : (
-              <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5 — room to grow).</span>
+              <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5 - room to grow).</span>
             )}
           </div>
         </div>
@@ -1230,7 +1230,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           <div className="text-sm text-foreground space-y-2">
             <p>
               <span className="font-semibold">Build your Chart of Accounts as you go.</span>{" "}
-              Each expense line has an optional account code (the <Hash className="h-3 w-3 inline text-muted-foreground" /> field). We've pre-filled standard codes used by most schools — you can customize them to match your accounting software.
+              Each expense line has an optional account code (the <Hash className="h-3 w-3 inline text-muted-foreground" /> field). We've pre-filled standard codes used by most schools - you can customize them to match your accounting software.
             </p>
             <p className="text-muted-foreground">
               A chart of accounts is how QuickBooks, Xero, and other accounting software organize your money. By setting codes now, your budget will align with your bookkeeping from day one. When you're done, you can export your chart of accounts to import directly into your accounting software.
@@ -1435,7 +1435,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             <div className="flex-1 min-w-0">
               <span className="font-bold text-lg text-foreground">Capital & Debt</span>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                <GlossaryTerm termKey="ffe">FF&E</GlossaryTerm> (Furniture, Fixtures & Equipment — desks, chairs, whiteboards, etc.) · <GlossaryTerm termKey="leasehold_improvements">Leasehold Improvements</GlossaryTerm> (Costs to build out or modify your space — painting, flooring, adding walls)
+                <GlossaryTerm termKey="ffe">FF&E</GlossaryTerm> (Furniture, Fixtures & Equipment - desks, chairs, whiteboards, etc.) · <GlossaryTerm termKey="leasehold_improvements">Leasehold Improvements</GlossaryTerm> (Costs to build out or modify your space - painting, flooring, adding walls)
               </p>
             </div>
             <span className="text-xs text-muted-foreground ml-2">({capitalRows.filter((r) => r.enabled).length} active)</span>
@@ -1444,7 +1444,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           <p className="px-5 text-xs text-muted-foreground -mt-2 mb-1">These items are separated from operating expenses on financial statements.</p>
           <div className="mx-5 mb-3 rounded-lg bg-amber-50/60 border border-amber-100 px-3 py-2 text-[11px] text-amber-800 flex items-start gap-2">
             <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-amber-500" />
-            <span>Include big one-time purchases here — desks, tech, playground equipment, and any buildout costs. If you're financing these with a loan, the model will calculate interest and repayment automatically.</span>
+            <span>Include big one-time purchases here - desks, tech, playground equipment, and any buildout costs. If you're financing these with a loan, the model will calculate interest and repayment automatically.</span>
           </div>
 
           {expandedCategories.has("capital_financing") && (
@@ -1495,7 +1495,7 @@ function GuidedQuestionPanel({
         <div>
           <p className="text-sm font-medium text-violet-900">{catQuestions.intro}</p>
           <p className="text-xs text-violet-600 mt-0.5">
-            {answeredCount} of {totalQuestions} answered — say "Yes" to auto-enable related expense lines
+            {answeredCount} of {totalQuestions} answered - say "Yes" to auto-enable related expense lines
           </p>
         </div>
       </div>

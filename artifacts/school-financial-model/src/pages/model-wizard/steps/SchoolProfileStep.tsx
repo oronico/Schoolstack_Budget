@@ -70,9 +70,9 @@ function EINInput() {
       {display && !isComplete ? (
         <p className="text-xs text-muted-foreground">{raw.replace(/\D/g, "").length}/9 digits</p>
       ) : !display ? (
-        <p className="text-xs text-muted-foreground">Optional — you can add this later</p>
+        <p className="text-xs text-muted-foreground">Optional - you can add this later</p>
       ) : null}
-      <FinancingInsight text="If you're applying for financing, banks will verify your EIN against IRS records — having it ready saves time." />
+      <FinancingInsight text="If you're applying for financing, banks will verify your EIN against IRS records - having it ready saves time." />
     </div>
   );
 }
@@ -170,9 +170,9 @@ const ENTITY_TYPE_GUIDE = [
   {
     key: "undetermined",
     name: "Undetermined",
-    pros: "No pressure to decide right now — your financial model works with any entity type",
+    pros: "No pressure to decide right now - your financial model works with any entity type",
     cons: "You'll want to choose before applying for loans, grants, or opening a bank account",
-    goodFor: "Early-stage founders still exploring options — you can update this anytime",
+    goodFor: "Early-stage founders still exploring options - you can update this anytime",
   },
 ];
 
@@ -392,7 +392,7 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
               <input type="number" value={phase.postLeaseRenewalBump as number ?? ""} onChange={e => onUpdate("postLeaseRenewalBump", Number(e.target.value))} placeholder="15" className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
             </div>
           </div>
-          <FinancingInsight text="If your lease expires during the 5-year plan, think about what happens next — renewal terms, a relocation plan, or a backup option. This is something banks focus on." />
+          <FinancingInsight text="If your lease expires during the 5-year plan, think about what happens next - renewal terms, a relocation plan, or a backup option. This is something banks focus on." />
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={!!isNNN} onChange={e => onUpdate("isNNNLease", e.target.checked)} className="rounded" />
             <span className="text-muted-foreground">Triple Net (NNN) lease</span>
@@ -775,7 +775,7 @@ export function SchoolProfileStep() {
           <div className="flex flex-wrap gap-2">
             {([
               { value: "plan_to_apply", label: "Yes, I plan to apply" },
-              { value: "want_to_understand", label: "Maybe — I want to explore" },
+              { value: "want_to_understand", label: "Maybe - I want to explore" },
               { value: "budget_only", label: "No, budget only" },
             ] as const).map((opt) => (
               <button
@@ -804,7 +804,7 @@ export function SchoolProfileStep() {
             </div>
           )}
           <p className="text-xs text-muted-foreground italic">
-            This selection tailors your export and next steps — it does not submit a loan application.
+            This selection tailors your export and next steps - it does not submit a loan application.
           </p>
         </div>
       )}
@@ -949,7 +949,7 @@ export function SchoolProfileStep() {
               <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-amber-900 space-y-1">
                 <p className="font-semibold">For-profit schools and tax-deductible donations</p>
-                <p>Donors generally cannot take a tax deduction for gifts to a for-profit entity. Many for-profit schools work with a <span className="font-semibold">fiscal sponsor</span> — a 501(c)(3) nonprofit that receives donations on the school's behalf and passes the funds through, minus a fee (typically 5–10% of donations received).</p>
+                <p>Donors generally cannot take a tax deduction for gifts to a for-profit entity. Many for-profit schools work with a <span className="font-semibold">fiscal sponsor</span> - a 501(c)(3) nonprofit that receives donations on the school's behalf and passes the funds through, minus a fee (typically 5–10% of donations received).</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -1000,7 +1000,7 @@ export function SchoolProfileStep() {
                   <div className="rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 flex items-start gap-3">
                     <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-teal-900 space-y-1">
-                      <p>Look for community foundations, education-focused nonprofits, or national fiscal sponsors like the <span className="font-semibold">National Network of Fiscal Sponsors</span>. Most charge 5–10% of funds received. Start the conversation early — approval can take 4–8 weeks.</p>
+                      <p>Look for community foundations, education-focused nonprofits, or national fiscal sponsors like the <span className="font-semibold">National Network of Fiscal Sponsors</span>. Most charge 5–10% of funds received. Start the conversation early - approval can take 4–8 weeks.</p>
                     </div>
                   </div>
                 )}
@@ -1067,7 +1067,7 @@ export function SchoolProfileStep() {
               <div className="flex items-start gap-3">
                 <HelpCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-foreground">
-                  <span className="font-semibold">No worries — an estimate is fine.</span>{" "}
+                  <span className="font-semibold">No worries - an estimate is fine.</span>{" "}
                   {schoolType && FACILITY_BENCHMARKS[schoolType]
                     ? `Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${FACILITY_BENCHMARKS[schoolType]} for facility costs.`
                     : "Most small schools budget $2,000–$8,000/month for facility costs."}
@@ -1085,7 +1085,7 @@ export function SchoolProfileStep() {
                 <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
                   <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-800">
-                    A $0 facility budget means your model assumes free space indefinitely. That's rare — most programs have some facility cost, even if it's modest. Consider what you'd pay if your current arrangement changed.
+                    A $0 facility budget means your model assumes free space indefinitely. That's rare - most programs have some facility cost, even if it's modest. Consider what you'd pay if your current arrangement changed.
                   </p>
                 </div>
               )}
@@ -1275,7 +1275,7 @@ export function SchoolProfileStep() {
                   <div className="flex items-start gap-3">
                     <Gift className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-foreground">
-                      <span className="font-semibold">That's a great start.</span> Let's make sure your plan accounts for what happens when this arrangement changes — being prepared is what separates thriving programs from vulnerable ones.
+                      <span className="font-semibold">That's a great start.</span> Let's make sure your plan accounts for what happens when this arrangement changes - being prepared is what separates thriving programs from vulnerable ones.
                     </div>
                   </div>
 
@@ -1288,7 +1288,7 @@ export function SchoolProfileStep() {
                   <div>
                     <h4 className="text-sm font-bold text-foreground mb-2">When does this arrangement end?</h4>
                     <p className="text-xs text-muted-foreground mb-3">
-                      If there's no set end date, that's okay — but it's smart to plan for what rent would cost if things change.
+                      If there's no set end date, that's okay - but it's smart to plan for what rent would cost if things change.
                     </p>
                     <FormInput
                       name="schoolProfile.facilityArrangementEndDate"
@@ -1313,7 +1313,7 @@ export function SchoolProfileStep() {
                       <div className="flex items-start gap-2 mt-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
                         <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-amber-800 dark:text-amber-200">
-                          Leaving this at $0 means your model won't show what rent would cost if this arrangement ends. Adding a realistic estimate — even a rough one — makes your plan stronger and helps you prepare.
+                          Leaving this at $0 means your model won't show what rent would cost if this arrangement ends. Adding a realistic estimate - even a rough one - makes your plan stronger and helps you prepare.
                         </p>
                       </div>
                     )}
@@ -1326,7 +1326,7 @@ export function SchoolProfileStep() {
                   <div className="flex items-start gap-3">
                     <Sprout className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-foreground">
-                      <span className="font-semibold">Running from home keeps costs low</span> — but there are still real costs to account for. Being honest about them now means fewer surprises later.
+                      <span className="font-semibold">Running from home keeps costs low</span> - but there are still real costs to account for. Being honest about them now means fewer surprises later.
                     </div>
                   </div>
 
@@ -1354,7 +1354,7 @@ export function SchoolProfileStep() {
                   <FormCheckbox
                     name="schoolProfile.hasWrittenAgreement"
                     label="We have a written use agreement for this space"
-                    helperText="A simple agreement — even with yourself — clarifies what space is dedicated to the program and protects you if questions arise."
+                    helperText="A simple agreement - even with yourself - clarifies what space is dedicated to the program and protects you if questions arise."
                   />
                 </div>
               )}
@@ -1417,7 +1417,7 @@ export function SchoolProfileStep() {
                     Plan a facility transition
                   </button>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Many schools evolve their space over 5 years — home-based to donated, donated to lease, lease to own. Add a transition to model that journey.
+                    Many schools evolve their space over 5 years - home-based to donated, donated to lease, lease to own. Add a transition to model that journey.
                   </p>
                 </div>
               )}
@@ -1589,7 +1589,7 @@ export function SchoolProfileStep() {
         <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Fiscal Year</h3>
         <div className="rounded-xl bg-teal-50/60 border border-teal-200/60 px-4 py-3 mb-4 flex items-start gap-2.5">
           <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-teal-800">Most schools use July as their fiscal year start — it aligns with the school calendar. If you're not sure, July is a safe choice.</p>
+          <p className="text-sm text-teal-800">Most schools use July as their fiscal year start - it aligns with the school calendar. If you're not sure, July is a safe choice.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormSelect
@@ -1655,9 +1655,9 @@ export function SchoolProfileStep() {
           <div className="rounded-xl bg-teal-50/60 border border-teal-200/60 px-4 py-3 flex items-start gap-2.5">
             <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-teal-800">
-              <span className="font-semibold">Why we always model on an accrual basis:</span> Accrual accounting shows when revenue is earned and costs are committed — not just when cash moves. This gives your board, authorizer, or any reviewer the most complete picture of your school's financial health. Your day-to-day bookkeeping method is a separate choice.
+              <span className="font-semibold">Why we always model on an accrual basis:</span> Accrual accounting shows when revenue is earned and costs are committed - not just when cash moves. This gives your board, authorizer, or any reviewer the most complete picture of your school's financial health. Your day-to-day bookkeeping method is a separate choice.
               {accountingBasis === "not_sure" && (
-                <span className="block mt-2"><span className="font-semibold">What's the difference?</span> With <em>cash basis</em>, you record income when money hits your bank account and expenses when you write the check. With <em>accrual basis</em>, you record income when it's earned (e.g., when a student enrolls) and expenses when they're committed (e.g., when you sign a contract). Most lenders, boards, and authorizers prefer accrual because it paints a fuller picture — and that's what we use here. You can always update this later once you've chosen a bookkeeping method.</span>
+                <span className="block mt-2"><span className="font-semibold">What's the difference?</span> With <em>cash basis</em>, you record income when money hits your bank account and expenses when you write the check. With <em>accrual basis</em>, you record income when it's earned (e.g., when a student enrolls) and expenses when they're committed (e.g., when you sign a contract). Most lenders, boards, and authorizers prefer accrual because it paints a fuller picture - and that's what we use here. You can always update this later once you've chosen a bookkeeping method.</span>
               )}
             </div>
           </div>
@@ -1668,7 +1668,7 @@ export function SchoolProfileStep() {
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Current Year Projections</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Knowing where you stand right now helps us build projections grounded in reality — not just hope. Be honest here; it makes the whole model stronger.
+            Knowing where you stand right now helps us build projections grounded in reality - not just hope. Be honest here; it makes the whole model stronger.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput
@@ -1727,7 +1727,7 @@ export function SchoolProfileStep() {
             </div>
           )}
           <p className="text-sm text-muted-foreground mb-4">
-            Last year's real numbers are the foundation for credible projections — they help us stress-test assumptions and strengthen your financial story.
+            Last year's real numbers are the foundation for credible projections - they help us stress-test assumptions and strengthen your financial story.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <FormInput
@@ -1792,7 +1792,7 @@ export function SchoolProfileStep() {
           {lendingLabIntent === "plan_to_apply" && (
             <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
               <Rocket className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-800">An opening balance sheet shows your current financial position — it's standard for any financing application and helps reviewers understand where you're starting from.</p>
+              <p className="text-sm text-amber-800">An opening balance sheet shows your current financial position - it's standard for any financing application and helps reviewers understand where you're starting from.</p>
             </div>
           )}
           {lendingLabIntent === "want_to_understand" && (
@@ -1803,7 +1803,7 @@ export function SchoolProfileStep() {
           {schoolStage === "new_school" && (
             <div className="rounded-xl bg-teal-50/60 border border-teal-200/60 px-4 py-3 mb-4 flex items-start gap-2.5">
               <Sprout className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-teal-800">Starting from scratch? That's totally normal — we'll set everything to $0 for you. If you do have existing savings or debts to carry over, you can expand this section and enter them.</p>
+              <p className="text-sm text-teal-800">Starting from scratch? That's totally normal - we'll set everything to $0 for you. If you do have existing savings or debts to carry over, you can expand this section and enter them.</p>
             </div>
           )}
           <details className="group" open={schoolStage === "operating_school" && lendingLabIntent === "plan_to_apply"}>
@@ -1821,7 +1821,7 @@ export function SchoolProfileStep() {
                     <FormInput name="openingBalances.fixedAssetUsefulLife" label="Useful Life (years)" type="number" placeholder="7" />
                     <div className="flex items-start gap-2 mt-1">
                       <Lightbulb className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground">How many years your equipment and furniture will last before needing replacement. We spread the cost evenly across those years — that's <GlossaryTerm termKey="depreciation">depreciation</GlossaryTerm>. Most school assets last 5–10 years. Default is 7.</p>
+                      <p className="text-xs text-muted-foreground">How many years your equipment and furniture will last before needing replacement. We spread the cost evenly across those years - that's <GlossaryTerm termKey="depreciation">depreciation</GlossaryTerm>. Most school assets last 5–10 years. Default is 7.</p>
                     </div>
                   </div>
                   <FormInput name="openingBalances.otherAssets" label="Other Assets" type="number" prefix="$" placeholder="0" />

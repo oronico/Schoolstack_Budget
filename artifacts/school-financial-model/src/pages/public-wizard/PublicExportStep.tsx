@@ -29,7 +29,7 @@ const FULL_MODEL_FEATURES = [
 const PLUS_FEATURES = [
   "Lender-ready PDF packet",
   "Scenario planner (what-if analysis)",
-  "Decision engine — \"What should I fix first?\"",
+  "Decision engine - \"What should I fix first?\"",
 ];
 
 export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: number) => void; modelId: number | null }) {
@@ -154,7 +154,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
 
           <div className="px-6 pb-4 flex-1">
             <p className="text-sm text-muted-foreground mb-4">
-              A clean Excel workbook — great for exploring your numbers and sharing early projections.
+              A clean Excel workbook - great for exploring your numbers and sharing early projections.
             </p>
             <ul className="space-y-2.5">
               {STARTER_FEATURES.map((feature) => (
@@ -215,7 +215,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
 
           <div className="px-6 pb-4 flex-1">
             <p className="text-sm text-muted-foreground mb-4">
-              The package you'd hand to a lender — 21 tabs covering every angle of your school's financials.
+              The package you'd hand to a lender - 21 tabs covering every angle of your school's financials.
             </p>
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">21-tab workbook includes</p>
             <ul className="space-y-2">
@@ -254,7 +254,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
         <div className="mt-10 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-5 py-2.5 text-sm font-medium">
             <CheckCircle2 className="h-4 w-4" />
-            Starter workbook downloaded — check your downloads folder
+            Starter workbook downloaded - check your downloads folder
           </div>
         </div>
       )}
@@ -288,7 +288,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
           <div className="bg-amber-50/60 border border-amber-200/60 rounded-xl px-5 py-3 flex items-center gap-3">
             <MessageSquareMore className="h-4 w-4 text-amber-600 flex-shrink-0" />
             <p className="text-sm text-amber-800 flex-1">
-              <span className="font-semibold">Before you go</span> — want an expert to look over your model? <button onClick={() => setShowReviewForm(true)} className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Request a free review</button>
+              <span className="font-semibold">Before you go</span> - want an expert to look over your model? <button onClick={() => setShowReviewForm(true)} className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Request a free review</button>
             </p>
             <button
               type="button"
@@ -324,7 +324,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
           <div className="bg-green-50 border border-green-200 rounded-2xl p-8 animate-in fade-in duration-500">
             <div className="flex items-center justify-center gap-3 mb-3">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
-              <h3 className="font-display font-bold text-xl text-green-900">Review requested — we'll be in touch</h3>
+              <h3 className="font-display font-bold text-xl text-green-900">Review requested - we'll be in touch</h3>
             </div>
             <p className="text-green-700 text-sm text-center">
               Check your email for a confirmation. Our team will review your model and get back to you within 5–7 business days.
@@ -338,7 +338,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
               </div>
               <h3 className="font-display font-bold text-xl text-foreground">Request Expert Review</h3>
             </div>
-            <p className="text-muted-foreground text-sm mb-6">Our team will review your financial model and send personalized feedback within 5–7 business days — completely free.</p>
+            <p className="text-muted-foreground text-sm mb-6">Our team will review your financial model and send personalized feedback within 5–7 business days - completely free.</p>
             <form onSubmit={handleReviewSubmit} className="space-y-4 text-left">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -408,7 +408,7 @@ export function PublicExportStep({ jumpToStep, modelId }: { jumpToStep?: (s: num
               <div className="flex-1 text-left">
                 <h3 className="font-display font-bold text-lg sm:text-xl text-foreground mb-1">Get a Free Expert Review</h3>
                 <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                  Our team of school finance specialists will review your model and send you personalized feedback — what looks strong, what to watch, and how to improve your lending position.
+                  Our team of school finance specialists will review your model and send you personalized feedback - what looks strong, what to watch, and how to improve your lending position.
                 </p>
                 <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Free of charge</span>

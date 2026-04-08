@@ -60,12 +60,12 @@ const HOW_IT_WORKS = [
   {
     icon: <MessageCircle className="w-6 h-6" />,
     title: "See what your numbers are really saying.",
-    desc: "Budget analyzes your model and gives you specific, practical recommendations. Not generic advice. Guidance based on YOUR numbers — automatically, as you build.",
+    desc: "Budget analyzes your model and gives you specific, practical recommendations. Not generic advice. Guidance based on YOUR numbers - automatically, as you build.",
   },
   {
     icon: <Download className="w-6 h-6" />,
     title: "Export and share.",
-    desc: "Lender-Ready Packet PDF, Board Summary PDF, a 21-tab Underwriting Package, and a Formula Workbook with live Excel math. Or generate a shareable read-only link so your lender or board can view the model online — no login required.",
+    desc: "Lender-Ready Packet PDF, Board Summary PDF, a 21-tab Underwriting Package, and a Formula Workbook with live Excel math. Or generate a shareable read-only link so your lender or board can view the model online - no login required.",
   },
 ];
 
@@ -100,7 +100,7 @@ const LANDING_JSON_LD = [
         name: "What types of schools does SchoolStack Budget support?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "SchoolStack Budget supports charter schools, private schools, microschools, pods, co-ops, and tutoring centers — both new and already operating.",
+          text: "SchoolStack Budget supports charter schools, private schools, microschools, pods, co-ops, and tutoring centers - both new and already operating.",
         },
       },
       {
@@ -188,7 +188,7 @@ export function LandingPage() {
 
               <p className="text-lg text-[#1E293B]/70 mb-10 leading-relaxed max-w-2xl">
                 You started a school because you're a great educator, not because you love spreadsheets.
-                We help school founders build lender-ready budgets — with a platform that
+                We help school founders build lender-ready budgets - with a platform that
                 makes the math make sense.
               </p>
 
@@ -238,7 +238,7 @@ export function LandingPage() {
               </div>
               <h3 className="font-display text-xl font-bold text-[#1E293B] mb-3">Guided financial planning</h3>
               <p className="text-[#1E293B]/60 leading-relaxed">
-                Our platform walks you through enrollment, revenue, staffing, and expenses — step by step, in plain English. You answer questions about your school; we build a professional 5-year financial model.
+                Our platform walks you through enrollment, revenue, staffing, and expenses - step by step, in plain English. You answer questions about your school; we build a professional 5-year financial model.
               </p>
             </motion.div>
             <motion.div
@@ -249,9 +249,9 @@ export function LandingPage() {
               <div className="w-14 h-14 bg-[#D97706]/10 rounded-xl flex items-center justify-center mb-5">
                 <MessageCircle className="w-7 h-7 text-[#D97706]" />
               </div>
-              <h3 className="font-display text-xl font-bold text-[#1E293B] mb-3">Expert review available — free</h3>
+              <h3 className="font-display text-xl font-bold text-[#1E293B] mb-3">Expert review available - free</h3>
               <p className="text-[#1E293B]/60 leading-relaxed">
-                When your model is ready, you can request a review from our school finance advisors. They'll share what's strong, what needs work, and what a lender will look for. Free, no strings — but entirely your choice.
+                When your model is ready, you can request a review from our school finance advisors. They'll share what's strong, what needs work, and what a lender will look for. Free, no strings - but entirely your choice.
               </p>
             </motion.div>
           </div>
@@ -284,12 +284,12 @@ export function LandingPage() {
               {
                 icon: <MessageCircle className="w-8 h-8 text-[#328555]" />,
                 title: "Analysis you can actually understand.",
-                desc: "Budget flags where you're healthy, where you're at risk, and what to do about it. No jargon. No judgment. Just clear, practical guidance — built right into the platform.",
+                desc: "Budget flags where you're healthy, where you're at risk, and what to do about it. No jargon. No judgment. Just clear, practical guidance - built right into the platform.",
               },
               {
                 icon: <CheckCircle2 className="w-8 h-8 text-[#0D9488]" />,
                 title: "Expert review when you want it.",
-                desc: "Once your model is complete, you can request a free review from our school finance team. They'll tell you what looks strong, what needs work, and what a lender will ask about. Totally optional — your model stands on its own.",
+                desc: "Once your model is complete, you can request a free review from our school finance team. They'll tell you what looks strong, what needs work, and what a lender will ask about. Totally optional - your model stands on its own.",
               },
             ].map((item, i) => (
               <motion.div
@@ -378,7 +378,7 @@ export function LandingPage() {
               <p className="text-[#1E293B]/60 leading-relaxed text-sm">
                 Entering salaries? We'll show you that most schools spend 50–60% on staffing, right next to the input.
                 Setting tuition? You'll see what similar schools charge. Every section has contextual guidance
-                that helps you make confident decisions — like having a consultant sitting next to you.
+                that helps you make confident decisions - like having a consultant sitting next to you.
               </p>
             </motion.div>
             <motion.div
@@ -396,7 +396,7 @@ export function LandingPage() {
               </div>
               <p className="text-[#1E293B]/60 leading-relaxed text-sm">
                 What does DSCR mean? Why do lenders care about your staffing ratio?
-                Budget explains every metric in language you actually understand — what it means,
+                Budget explains every metric in language you actually understand - what it means,
                 why it matters, what's healthy vs. risky, and what to do about it.
               </p>
             </motion.div>
@@ -435,7 +435,7 @@ export function LandingPage() {
                 </h3>
                 <p className="text-[#1E293B]/60 leading-relaxed mb-4">
                   After you build your base model, use sliders to test what happens when assumptions change.
-                  Adjust enrollment, tuition, staffing costs, facility expenses, and more — and see the impact
+                  Adjust enrollment, tuition, staffing costs, facility expenses, and more - and see the impact
                   on your bottom line instantly.
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -471,7 +471,7 @@ export function LandingPage() {
                   Compare scenarios side by side
                 </h3>
                 <p className="text-[#1E293B]/60 leading-relaxed">
-                  Create multiple scenarios — "Conservative," "Optimistic," "What if we lose the lease" — and
+                  Create multiple scenarios - "Conservative," "Optimistic," "What if we lose the lease" - and
                   compare them against your base model. We show you which metrics improve, which get worse,
                   and give you a clear verdict. It's the analysis that answers: <span className="font-semibold text-[#1E293B]">can
                   my school survive the downside?</span>
@@ -493,7 +493,7 @@ export function LandingPage() {
               What to have handy before you start.
             </h2>
             <p className="text-lg text-[#1E293B]/60 max-w-2xl mx-auto">
-              You don't need all of this — estimates work fine for most fields.
+              You don't need all of this - estimates work fine for most fields.
               But having these nearby will make the process faster and your model stronger.
             </p>
           </motion.div>
@@ -600,8 +600,8 @@ export function LandingPage() {
               </p>
               <p>
                 Sometimes the model shows you something difficult. That's the point.
-                Better to find out now — while you can adjust your plan, rethink your staffing,
-                or renegotiate your lease — than after you've committed. The hard truths are the
+                Better to find out now - while you can adjust your plan, rethink your staffing,
+                or renegotiate your lease - than after you've committed. The hard truths are the
                 ones that save schools.
               </p>
               <p className="font-semibold text-[#1E293B]">
@@ -684,7 +684,7 @@ export function LandingPage() {
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mb-10 text-sm text-white/70">
               <span className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4" />
-                Save and return anytime — adjust assumptions and re-run your model
+                Save and return anytime - adjust assumptions and re-run your model
               </span>
               <span className="flex items-center gap-2">
                 <Lock className="w-4 h-4" />

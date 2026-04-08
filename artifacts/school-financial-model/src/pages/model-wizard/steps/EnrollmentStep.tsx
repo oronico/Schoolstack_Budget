@@ -830,7 +830,7 @@ export function EnrollmentStep() {
         />
       )}
       {hasYear1Data && (
-        <FinancingInsight text="Having evidence for your Year 1 enrollment — applications, waitlist data, letters of intent — strengthens your model whether you're seeking financing or not." />
+        <FinancingInsight text="Having evidence for your Year 1 enrollment - applications, waitlist data, letters of intent - strengthens your model whether you're seeking financing or not." />
       )}
 
       {hasYear1Data && (

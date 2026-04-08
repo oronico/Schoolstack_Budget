@@ -196,7 +196,7 @@ export function StaffingStep() {
           Tell Us About Your Leadership and Staff
         </h2>
         <p className="text-muted-foreground text-lg">
-          Add every person on your team — full-time, part-time, and contract. Include teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small — many great schools launch with just a founder and one or two team members.
+          Add every person on your team - full-time, part-time, and contract. Include teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
         </p>
         <SectionExplainers section="staffing" className="mt-4" />
       </div>
@@ -225,8 +225,8 @@ export function StaffingStep() {
           <DollarSign className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-foreground space-y-1">
             <p>
-              <span className="font-semibold"><GlossaryTerm termKey="cola">COLA</GlossaryTerm> — {colaRate}% Cost of Living Adjustment</span>{" "}
-              applied annually. Schools that don't plan for COLA face teacher turnover — the #1 driver of quality loss.
+              <span className="font-semibold"><GlossaryTerm termKey="cola">COLA</GlossaryTerm> - {colaRate}% Cost of Living Adjustment</span>{" "}
+              applied annually. Schools that don't plan for COLA face teacher turnover - the #1 driver of quality loss.
             </p>
             <p className="text-xs text-muted-foreground">
               Y1 total salaries: <span className="font-semibold text-foreground">${costs.totalSalariesWages.toLocaleString()}</span> → Y5: <span className="font-semibold text-foreground">${Math.round(costs.totalSalariesWages * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}</span> with {colaRate}% COLA.
@@ -272,7 +272,7 @@ export function StaffingStep() {
         <SummaryCard
           label="Headcount"
           value={costs.headcount.toString()}
-          sublabel={<>{costs.totalFTE} <GlossaryTerm termKey="fte">FTE</GlossaryTerm> <span className="text-[9px] text-muted-foreground">(Full-Time Equivalent — a part-time teacher working 2 days/week ≈ 0.4 FTE)</span></>}
+          sublabel={<>{costs.totalFTE} <GlossaryTerm termKey="fte">FTE</GlossaryTerm> <span className="text-[9px] text-muted-foreground">(Full-Time Equivalent - a part-time teacher working 2 days/week ≈ 0.4 FTE)</span></>}
         />
         <SummaryCard
           label="Salaries & Wages"
@@ -308,7 +308,7 @@ export function StaffingStep() {
           <div className="text-sm text-teal-800">
             <p>
               <span className="font-semibold">A note on founder compensation.</span>{" "}
-              We notice a leadership role without a salary. If you're the head of school, pay yourself a real salary — you deserve it, and it makes your model more realistic. A budget that assumes the founder works for free isn't sustainable.
+              We notice a leadership role without a salary. If you're the head of school, pay yourself a real salary - you deserve it, and it makes your model more realistic. A budget that assumes the founder works for free isn't sustainable.
             </p>
           </div>
         </div>
@@ -319,7 +319,7 @@ export function StaffingStep() {
           <Lightbulb className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
             <p>
-              We don't see a school leadership role yet. Most models include a head of school or executive director — even if that's you as the founder. Adding one with a real salary makes your model more complete.
+              We don't see a school leadership role yet. Most models include a head of school or executive director - even if that's you as the founder. Adding one with a real salary makes your model more complete.
             </p>
           </div>
         </div>
@@ -620,7 +620,7 @@ function StaffCard({
                 <span className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Ratio-Driven Staffing Ramp</span>
               </div>
               <p className="text-[11px] text-teal-700 leading-relaxed">
-                This role scales automatically with enrollment. Set a student-to-staff ratio and the model will calculate <GlossaryTerm termKey="fte">FTE</GlossaryTerm> for each year. As your enrollment grows in later years, this will automatically add staff to keep your ratio — which means costs go up too. That's realistic and expected.
+                This role scales automatically with enrollment. Set a student-to-staff ratio and the model will calculate <GlossaryTerm termKey="fte">FTE</GlossaryTerm> for each year. As your enrollment grows in later years, this will automatically add staff to keep your ratio - which means costs go up too. That's realistic and expected.
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <FieldNumber

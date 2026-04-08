@@ -207,7 +207,7 @@ export function DashboardPage() {
                           className="flex items-center gap-2.5 text-left text-sm bg-white border border-border/60 rounded-xl px-4 py-3 hover:border-teal-300 hover:shadow-sm transition-all group"
                         >
                           <RefreshCw className="h-4 w-4 text-teal-600 flex-shrink-0" />
-                          <span className="text-foreground/80 group-hover:text-foreground">Update your assumptions — a lot can change in a quarter</span>
+                          <span className="text-foreground/80 group-hover:text-foreground">Update your assumptions - a lot can change in a quarter</span>
                         </button>
                       )}
                     </div>

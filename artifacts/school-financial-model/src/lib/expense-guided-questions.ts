@@ -24,7 +24,7 @@ export const GUIDED_EXPENSE_QUESTIONS: CategoryQuestions[] = [
       },
       {
         id: "q_classroom_supplies",
-        question: "What classroom supplies will students need — art supplies, science materials, manipulatives?",
+        question: "What classroom supplies will students need - art supplies, science materials, manipulatives?",
         hint: "Most schools budget $75–$150 per student for consumable classroom supplies.",
         relatedLineItems: ["Classroom Supplies"],
       },
@@ -49,7 +49,7 @@ export const GUIDED_EXPENSE_QUESTIONS: CategoryQuestions[] = [
       {
         id: "q_enrichment",
         question: "Will you offer enrichment programs, after-school activities, or summer programs?",
-        hint: "These can be revenue-generating but also have costs — instructors, supplies, insurance.",
+        hint: "These can be revenue-generating but also have costs - instructors, supplies, insurance.",
         relatedLineItems: ["Enrichment / After-School Programs"],
       },
       {
@@ -80,7 +80,7 @@ export const GUIDED_EXPENSE_QUESTIONS: CategoryQuestions[] = [
   },
   {
     category: "technology",
-    intro: "Technology is essential for modern schools — even small ones. Let's figure out what you need.",
+    intro: "Technology is essential for modern schools - even small ones. Let's figure out what you need.",
     questions: [
       {
         id: "q_devices",
@@ -97,7 +97,7 @@ export const GUIDED_EXPENSE_QUESTIONS: CategoryQuestions[] = [
       {
         id: "q_software_licensing",
         question: "Is there an annual or monthly licensing fee for your software?",
-        hint: "Many education platforms charge per-student or flat annual fees. Check if pricing is monthly or annual — it affects cash flow timing.",
+        hint: "Many education platforms charge per-student or flat annual fees. Check if pricing is monthly or annual - it affects cash flow timing.",
         relatedLineItems: ["Software & Subscriptions (SIS, LMS)"],
       },
       {
@@ -108,7 +108,7 @@ export const GUIDED_EXPENSE_QUESTIONS: CategoryQuestions[] = [
       },
       {
         id: "q_it_support",
-        question: "Who handles IT issues — a staff member, a parent volunteer, or a managed service?",
+        question: "Who handles IT issues - a staff member, a parent volunteer, or a managed service?",
         hint: "Managed IT services for small schools run $500–$1,500/month. Some schools train a staff member to handle basic issues.",
         relatedLineItems: ["IT Support / Managed Services"],
       },
@@ -144,20 +144,20 @@ export const GUIDED_EXPENSE_QUESTIONS: CategoryQuestions[] = [
       },
       {
         id: "q_maintenance",
-        question: "Who handles building maintenance — you, your landlord, or a contractor?",
+        question: "Who handles building maintenance - you, your landlord, or a contractor?",
         hint: "Even in leased spaces, you're often responsible for interior maintenance. Budget for unexpected repairs.",
         relatedLineItems: ["Maintenance & Repairs (General)"],
       },
       {
         id: "q_janitorial",
-        question: "How will you handle cleaning — hire a service or do it in-house?",
+        question: "How will you handle cleaning - hire a service or do it in-house?",
         hint: "Janitorial contracts run $500–$2,000/month depending on facility size. Some schools have staff handle daily cleaning.",
         relatedLineItems: ["Janitorial / Cleaning"],
       },
       {
         id: "q_security",
         question: "Do you need security systems, cameras, or a security guard?",
-        hint: "Basic security systems cost $50–$200/month. On-site security personnel is much more — $15–$25/hour.",
+        hint: "Basic security systems cost $50–$200/month. On-site security personnel is much more - $15–$25/hour.",
         relatedLineItems: ["Security"],
       },
     ],
@@ -168,7 +168,7 @@ export const GUIDED_EXPENSE_QUESTIONS: CategoryQuestions[] = [
     questions: [
       {
         id: "q_marketing",
-        question: "How will families find your school — word of mouth, social media, paid advertising?",
+        question: "How will families find your school - word of mouth, social media, paid advertising?",
         hint: "Even established schools spend $3,000–$10,000/year on marketing. New schools should budget more for initial awareness.",
         relatedLineItems: ["Marketing & Admissions"],
       },
@@ -186,7 +186,7 @@ export const GUIDED_EXPENSE_QUESTIONS: CategoryQuestions[] = [
       },
       {
         id: "q_bank_fees",
-        question: "How do families pay tuition — credit card, ACH, check?",
+        question: "How do families pay tuition - credit card, ACH, check?",
         hint: "Credit card processing fees are typically 2.5–3.5% of the transaction. ACH is much cheaper ($0.25–$1.00 per transaction).",
         relatedLineItems: ["Bank & Merchant Processing Fees"],
       },

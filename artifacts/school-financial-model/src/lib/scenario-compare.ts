@@ -80,8 +80,8 @@ function expenseExplanation(base: number, compare: number, delta: number): strin
 
 function netIncomeExplanation(base: number, compare: number, delta: number): string {
   if (Math.abs(delta) < 1000) return "Net income is essentially the same in both scenarios.";
-  if (compare > 0 && base <= 0) return `The scenario turns a deficit into a surplus of ${fmt(compare)} by Year 5 — a meaningful improvement.`;
-  if (compare <= 0 && base > 0) return `The scenario turns a Year 5 surplus into a deficit of ${fmt(Math.abs(compare))} — this needs attention.`;
+  if (compare > 0 && base <= 0) return `The scenario turns a deficit into a surplus of ${fmt(compare)} by Year 5 - a meaningful improvement.`;
+  if (compare <= 0 && base > 0) return `The scenario turns a Year 5 surplus into a deficit of ${fmt(Math.abs(compare))} - this needs attention.`;
   const dir = delta > 0 ? "stronger" : "weaker";
   return `Year 5 bottom line is ${dir} by ${fmt(Math.abs(delta))} (${fmt(base)} → ${fmt(compare)}).`;
 }
@@ -89,7 +89,7 @@ function netIncomeExplanation(base: number, compare: number, delta: number): str
 function marginExplanation(base: number, compare: number): string {
   if (Math.abs(compare - base) < 0.005) return "Net margin is essentially unchanged.";
   if (compare >= 0.05) return `Net margin of ${pct(compare)} gives the school a healthy cushion for unexpected costs.`;
-  if (compare >= 0 && compare < 0.05) return `Net margin of ${pct(compare)} is thin — the school is breaking even but has little room for error.`;
+  if (compare >= 0 && compare < 0.05) return `Net margin of ${pct(compare)} is thin - the school is breaking even but has little room for error.`;
   return `Net margin of ${pct(compare)} means the school is spending more than it earns. This needs to be addressed.`;
 }
 
@@ -108,7 +108,7 @@ function reserveExplanation(base: number, compare: number): string {
 }
 
 function cashRunwayExplanation(base: number, compare: number): string {
-  if (compare >= 60 && base >= 60) return "Cash stays positive throughout both scenarios — no liquidity concerns.";
+  if (compare >= 60 && base >= 60) return "Cash stays positive throughout both scenarios - no liquidity concerns.";
   if (compare >= 60 && base < 60) return `Cash now stays positive for the full 5 years, up from month ${base}. A significant improvement in liquidity.`;
   if (compare < 60 && base >= 60) return `Cash goes negative in month ${compare}, down from staying positive the full period. This introduces liquidity risk.`;
   if (compare > base) return `Cash runway extends to month ${compare}, up from month ${base}. Better, but still an area to watch.`;
@@ -307,10 +307,10 @@ export function compareScenarios(
     const worScore = worsened.reduce((s, d) => s + Math.abs(d.deltaPct), 0);
     if (impScore > worScore * 1.5) {
       verdict = "stronger";
-      verdictExplanation = `On balance, this scenario is stronger — ${improved.length} metric${improved.length > 1 ? "s" : ""} improve${improved.length === 1 ? "s" : ""} while ${worsened.length} worsen${worsened.length === 1 ? "s" : ""}, but the improvements outweigh the trade-offs.`;
+      verdictExplanation = `On balance, this scenario is stronger - ${improved.length} metric${improved.length > 1 ? "s" : ""} improve${improved.length === 1 ? "s" : ""} while ${worsened.length} worsen${worsened.length === 1 ? "s" : ""}, but the improvements outweigh the trade-offs.`;
     } else if (worScore > impScore * 1.5) {
       verdict = "weaker";
-      verdictExplanation = `On balance, this scenario is weaker — ${worsened.length} metric${worsened.length > 1 ? "s" : ""} worsen${worsened.length === 1 ? "s" : ""} while ${improved.length} improve${improved.length === 1 ? "s" : ""}, and the downsides outweigh the gains.`;
+      verdictExplanation = `On balance, this scenario is weaker - ${worsened.length} metric${worsened.length > 1 ? "s" : ""} worsen${worsened.length === 1 ? "s" : ""} while ${improved.length} improve${improved.length === 1 ? "s" : ""}, and the downsides outweigh the gains.`;
     } else {
       verdict = "mixed";
       verdictExplanation = `This scenario involves real trade-offs: ${improved.length} metric${improved.length > 1 ? "s" : ""} improve${improved.length === 1 ? "s" : ""} and ${worsened.length} worsen${worsened.length === 1 ? "s" : ""}. Review each change to decide which matters more for your school.`;

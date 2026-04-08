@@ -26,7 +26,7 @@ const NARRATIVE_SECTIONS: { key: string; label: string; conversationalPrompt: st
     conversationalPrompt: "How will families find out about your school?",
     icon: Users,
     primary: true,
-    helpText: "How will families find out about your school? Do you have a waitlist, word-of-mouth network, or marketing plan? This is the most important part of your financial plan — it's the engine behind everything.",
+    helpText: "How will families find out about your school? Do you have a waitlist, word-of-mouth network, or marketing plan? This is the most important part of your financial plan - it's the engine behind everything.",
   },
   {
     key: "retentionPlan",
@@ -34,7 +34,7 @@ const NARRATIVE_SECTIONS: { key: string; label: string; conversationalPrompt: st
     conversationalPrompt: "What will keep families coming back year after year?",
     icon: Shield,
     primary: true,
-    helpText: "What will keep families coming back year after year? What makes your school worth staying at? Keeping families is harder than finding them — and much cheaper than replacing them.",
+    helpText: "What will keep families coming back year after year? What makes your school worth staying at? Keeping families is harder than finding them - and much cheaper than replacing them.",
   },
   {
     key: "riskMitigation",

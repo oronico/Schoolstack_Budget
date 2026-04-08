@@ -284,7 +284,7 @@ export function SharedModelPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <SEOHead
-        title={`${data.schoolName} — Shared Model`}
+        title={`${data.schoolName} - Shared Model`}
         description="Shared financial model view on SchoolStack Budget."
         path={`/shared/${params.token}`}
         noIndex

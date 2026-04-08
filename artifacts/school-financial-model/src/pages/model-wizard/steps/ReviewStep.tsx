@@ -621,7 +621,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                   <div className="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 flex items-start gap-3 mb-4">
                     <AlertTriangle className="h-4 w-4 text-rose-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-rose-800">
-                      <span className="font-bold">Cash Trough Alert:</span> Your cash balance drops to {formatCurrency(minAmt)} in {monthLabel}. You'll run out of money before collections catch up — plan bridge financing or a line of credit to cover this gap.
+                      <span className="font-bold">Cash Trough Alert:</span> Your cash balance drops to {formatCurrency(minAmt)} in {monthLabel}. You'll run out of money before collections catch up - plan bridge financing or a line of credit to cover this gap.
                     </p>
                   </div>
                 );
@@ -629,7 +629,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                   <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 mb-4">
                     <Lightbulb className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-amber-800">
-                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. This is below 25% of your starting reserves — it's worth building more cushion. Consider increasing reserves or adjusting collection timing.
+                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. This is below 25% of your starting reserves - it's worth building more cushion. Consider increasing reserves or adjusting collection timing.
                     </p>
                   </div>
                 );
@@ -637,7 +637,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
                   <div className="rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 flex items-start gap-3 mb-4">
                     <Lightbulb className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-teal-800">
-                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. You have enough reserves to weather the collection gap — this is a strong position.
+                      <span className="font-bold">Cash Trough:</span> Your lowest cash point is {formatCurrency(minAmt)} in {monthLabel}. You have enough reserves to weather the collection gap - this is a strong position.
                     </p>
                   </div>
                 );

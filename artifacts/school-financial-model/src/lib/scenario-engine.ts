@@ -445,7 +445,7 @@ function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): 
       after: upLM,
       coaching: upLM.netIncome > baseLM.netIncome
         ? `Adding ${Math.round(baseEnrollment * 0.1)} students could improve Year 1 net income by ${fmtCurrency(upLM.netIncome - baseLM.netIncome)}. Make sure your facility and staffing can absorb the growth.`
-        : `Even with 10% more students, net income doesn't improve — check whether your per-student costs exceed per-student revenue.`,
+        : `Even with 10% more students, net income doesn't improve - check whether your per-student costs exceed per-student revenue.`,
       relatedDiagnosticIds: ["near_breakeven_enrollment", "fast_enrollment_growth"],
     });
 
@@ -461,7 +461,7 @@ function computeLeverNudges(data: FullModelData, baseMetrics: ScenarioMetrics): 
       after: downLM,
       coaching: downLM.netIncome < baseLM.netIncome
         ? `Losing ${Math.round(baseEnrollment * 0.1)} students would reduce Year 1 net income by ${fmtCurrencyAbs(baseLM.netIncome - downLM.netIncome)}. ${downLM.breakEvenEnrollment > 0 && Math.round(baseEnrollment * 0.9) <= downLM.breakEvenEnrollment ? `At ${Math.round(baseEnrollment * 0.9)} students you'd be at or below your break-even enrollment of ${downLM.breakEvenEnrollment}.` : "Build a contingency plan for lower-than-projected enrollment."}`
-        : `A 10% enrollment drop has minimal financial impact — your cost structure is not enrollment-driven.`,
+        : `A 10% enrollment drop has minimal financial impact - your cost structure is not enrollment-driven.`,
       relatedDiagnosticIds: ["near_breakeven_enrollment"],
     });
   }
@@ -545,7 +545,7 @@ function generateNudges(metrics: ScenarioMetrics, name: string, leverNudges?: Qu
   if (avgStaffPct > 0.7) {
     const staffLever = leverNudges?.find(l => l.id === "staff_minus_1");
     const leverHint = staffLever ? ` ${staffLever.coaching}` : "";
-    nudges.push({ signal: "red", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue — above 70% leaves very little room for other costs.${leverHint}` });
+    nudges.push({ signal: "red", label: "Staffing", message: `Staffing costs average ${Math.round(avgStaffPct * 100)}% of revenue - above 70% leaves very little room for other costs.${leverHint}` });
   } else if (avgStaffPct > 0.6) {
     const staffLever = leverNudges?.find(l => l.id === "staff_minus_1");
     const leverHint = staffLever ? ` ${staffLever.coaching}` : "";
@@ -558,7 +558,7 @@ function generateNudges(metrics: ScenarioMetrics, name: string, leverNudges?: Qu
   if (hasDscr) {
     const y1Dscr = metrics.dscr[0];
     if (y1Dscr >= BENCHMARK_DSCR_GREEN) {
-      nudges.push({ signal: "green", label: "DSCR", message: `Debt service coverage of ${y1Dscr.toFixed(2)}x exceeds the ${BENCHMARK_DSCR_GREEN}x benchmark — strong position.` });
+      nudges.push({ signal: "green", label: "DSCR", message: `Debt service coverage of ${y1Dscr.toFixed(2)}x exceeds the ${BENCHMARK_DSCR_GREEN}x benchmark - strong position.` });
     } else if (y1Dscr >= BENCHMARK_DSCR_AMBER) {
       nudges.push({ signal: "amber", label: "DSCR", message: `DSCR of ${y1Dscr.toFixed(2)}x is tight. A target of at least ${BENCHMARK_DSCR_GREEN}x gives more breathing room.` });
     } else {

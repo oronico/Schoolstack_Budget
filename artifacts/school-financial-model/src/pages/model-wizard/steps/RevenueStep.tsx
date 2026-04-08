@@ -622,7 +622,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-foreground">
               <span className="font-semibold">Revenue needs to cover {y1Students} students in Year 1{y5Students > y1Students ? `, growing to ${y5Students} by Year 5` : ""}.</span>{" "}
-              Demand is the engine — the strongest models anchor revenue to enrollment-driven income that grows reliably as you fill seats.
+              Demand is the engine - the strongest models anchor revenue to enrollment-driven income that grows reliably as you fill seats.
             </div>
           </div>
         )}
@@ -768,7 +768,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                   <Lightbulb className="h-4 w-4 text-teal-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-teal-900 mb-1">Charter Revenue Coaching — {stateCode}</p>
+                  <p className="text-sm font-semibold text-teal-900 mb-1">Charter Revenue Coaching - {stateCode}</p>
                   {stateFundingConfig.charterCoachingText && (
                     <p className="text-xs text-teal-800 leading-relaxed">{stateFundingConfig.charterCoachingText}</p>
                   )}
@@ -1515,13 +1515,13 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
       {category === "school_choice" && (
         <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-          <span>ESA/voucher disbursements vary by state. Reimbursement programs can lag 45-60 days — plan bridge funding if this is a major revenue source.</span>
+          <span>ESA/voucher disbursements vary by state. Reimbursement programs can lag 45-60 days - plan bridge funding if this is a major revenue source.</span>
         </div>
       )}
       {category === "philanthropy" && (
         <div className="flex items-start gap-1.5 mb-2 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-          <span>Grants and donations often arrive in lump sums. Mark "projected" grants as such — it's good practice to plan for the possibility that uncommitted funds don't come through.</span>
+          <span>Grants and donations often arrive in lump sums. Mark "projected" grants as such - it's good practice to plan for the possibility that uncommitted funds don't come through.</span>
         </div>
       )}
       {category === "philanthropy" && (
@@ -1716,7 +1716,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
                 ))}
               </select>
               <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
-                "Direct" means the state sends funds on a schedule. "Reimbursement" means you spend first and get paid back — this creates a cash gap.
+                "Direct" means the state sends funds on a schedule. "Reimbursement" means you spend first and get paid back - this creates a cash gap.
               </p>
             </div>
             <div className="flex flex-col gap-1">

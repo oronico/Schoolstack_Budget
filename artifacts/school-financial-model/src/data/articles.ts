@@ -17,7 +17,7 @@ export const ARTICLES: Article[] = [
   {
     slug: "complete-guide-to-school-budgeting",
     title: "The Complete Guide to School Budgeting",
-    description: "Everything school founders need to know about creating a budget that keeps your school financially healthy — from enrollment projections to operating reserves.",
+    description: "Everything school founders need to know about creating a budget that keeps your school financially healthy - from enrollment projections to operating reserves.",
     category: "Getting Started",
     publishedDate: "2026-03-01",
     readTimeMinutes: 12,
@@ -25,7 +25,7 @@ export const ARTICLES: Article[] = [
     content: `
 ## Why your school budget matters more than you think
 
-A budget isn't just a spreadsheet exercise. For school founders, it's the document that tells you whether your mission is financially sustainable. It's what lenders and authorizers will use to decide whether to fund you. And it's the tool that helps you sleep at night — because you know what's coming.
+A budget isn't just a spreadsheet exercise. For school founders, it's the document that tells you whether your mission is financially sustainable. It's what lenders and authorizers will use to decide whether to fund you. And it's the tool that helps you sleep at night - because you know what's coming.
 
 The good news? You don't need a finance degree to build a solid school budget. You just need to think through a handful of important questions, and then put the numbers together in a way that tells a clear story.
 
@@ -33,13 +33,13 @@ The good news? You don't need a finance degree to build a solid school budget. Y
 
 Every school budget has the same basic structure, regardless of whether you're running a charter, a private school, a microschool, or a tutoring center:
 
-- **Revenue** — How much money is coming in? From tuition, per-pupil funding, grants, donations, and other sources.
-- **Staffing costs** — What you pay your people. This is almost always the largest line item.
-- **Operating expenses** — Everything else: rent, curriculum, technology, insurance, marketing, and professional services.
-- **Capital expenditures** — One-time or large purchases like furniture, equipment, or facility improvements.
-- **Debt service** — If you have loans, what are the monthly payments?
+- **Revenue** - How much money is coming in? From tuition, per-pupil funding, grants, donations, and other sources.
+- **Staffing costs** - What you pay your people. This is almost always the largest line item.
+- **Operating expenses** - Everything else: rent, curriculum, technology, insurance, marketing, and professional services.
+- **Capital expenditures** - One-time or large purchases like furniture, equipment, or facility improvements.
+- **Debt service** - If you have loans, what are the monthly payments?
 
-## Start with enrollment — everything else follows
+## Start with enrollment - everything else follows
 
 Your enrollment projection is the single most important assumption in your entire budget. Revenue depends on it. Staffing depends on it. Even your facility choice depends on it.
 
@@ -55,42 +55,42 @@ Here's how to think about it:
 
 Once you have enrollment, you can build your revenue model. The key revenue sources for most schools include:
 
-**Tuition** — The most straightforward source. Know your rate, your expected enrollment, and be realistic about collection timing. Not every family pays on time, and some may need financial aid or payment plans.
+**Tuition** - The most straightforward source. Know your rate, your expected enrollment, and be realistic about collection timing. Not every family pays on time, and some may need financial aid or payment plans.
 
-**Per-pupil funding** (charter schools) — If you're a charter, your state provides a per-pupil allocation. This varies widely by state — from under $7,000 to over $15,000 per student. Know your state's rate and any weighted funding categories.
+**Per-pupil funding** (charter schools) - If you're a charter, your state provides a per-pupil allocation. This varies widely by state - from under $7,000 to over $15,000 per student. Know your state's rate and any weighted funding categories.
 
-**Grants** — Federal grants (like Title I or CSP grants), state grants, and private foundation grants can provide significant revenue. But be careful: grant funding is often time-limited and shouldn't be relied on for ongoing operating costs.
+**Grants** - Federal grants (like Title I or CSP grants), state grants, and private foundation grants can provide significant revenue. But be careful: grant funding is often time-limited and shouldn't be relied on for ongoing operating costs.
 
-**Donations and fundraising** — Many schools supplement revenue with annual fund drives, capital campaigns, or church/parish support. Be conservative in your projections here.
+**Donations and fundraising** - Many schools supplement revenue with annual fund drives, capital campaigns, or church/parish support. Be conservative in your projections here.
 
 ## Staffing: your biggest cost and most important investment
 
 For most schools, staffing accounts for 50–65% of total expenses. Getting this right is critical.
 
-**List every position you need** — teachers, assistant teachers, office staff, a principal or director, custodial support, and specialists. Don't forget the founder's salary — if you're working full-time, you need to be compensated.
+**List every position you need** - teachers, assistant teachers, office staff, a principal or director, custodial support, and specialists. Don't forget the founder's salary - if you're working full-time, you need to be compensated.
 
-**Use realistic salary numbers** — Research what schools in your area pay for each role. If you're in a competitive market, underpaying teachers makes it hard to hire and keep good people.
+**Use realistic salary numbers** - Research what schools in your area pay for each role. If you're in a competitive market, underpaying teachers makes it hard to hire and keep good people.
 
-**Think in FTE** — Full-time equivalent. A half-time reading specialist is 0.5 FTE. This helps you compare staffing costs across different configurations.
+**Think in FTE** - Full-time equivalent. A half-time reading specialist is 0.5 FTE. This helps you compare staffing costs across different configurations.
 
-**Include benefits** — Health insurance, payroll taxes, retirement contributions, and workers' comp can add 20–30% on top of base salaries. Don't skip this.
+**Include benefits** - Health insurance, payroll taxes, retirement contributions, and workers' comp can add 20–30% on top of base salaries. Don't skip this.
 
 ## Operating expenses: the details that matter
 
 After staffing, your operating expenses include everything from rent to paper clips. The major categories to think through:
 
-- **Facility costs** — Rent or mortgage, utilities, maintenance, insurance
-- **Curriculum and instruction** — Textbooks, materials, software licenses, assessments
-- **Technology** — Devices for students and staff, internet, IT support
-- **Administration** — Office supplies, accounting, legal, HR services
-- **Insurance** — General liability, property, directors & officers, student accident
-- **Marketing** — Website, advertising, open house events, enrollment outreach
-- **Professional development** — Training and conferences for staff
-- **Transportation and food** — If your school provides these services
+- **Facility costs** - Rent or mortgage, utilities, maintenance, insurance
+- **Curriculum and instruction** - Textbooks, materials, software licenses, assessments
+- **Technology** - Devices for students and staff, internet, IT support
+- **Administration** - Office supplies, accounting, legal, HR services
+- **Insurance** - General liability, property, directors & officers, student accident
+- **Marketing** - Website, advertising, open house events, enrollment outreach
+- **Professional development** - Training and conferences for staff
+- **Transportation and food** - If your school provides these services
 
 ## The five-year view: why one year isn't enough
 
-Lenders and authorizers want to see a multi-year projection — typically five years. This shows them that your school isn't just viable in Year 1, but that it can grow and sustain itself over time.
+Lenders and authorizers want to see a multi-year projection - typically five years. This shows them that your school isn't just viable in Year 1, but that it can grow and sustain itself over time.
 
 A five-year model helps you answer critical questions:
 
@@ -105,7 +105,7 @@ A five-year model helps you answer critical questions:
 
 **Forgetting about cash timing.** Revenue doesn't always arrive when you need it. Per-pupil funding may come quarterly. Grants may reimburse after you've already spent the money. Build a cash flow projection, not just a profit/loss statement.
 
-**Ignoring escalation.** Costs go up every year. Rent increases, salary raises, insurance premiums — if your budget stays flat while expenses grow 3–5% annually, you'll have a problem by Year 3.
+**Ignoring escalation.** Costs go up every year. Rent increases, salary raises, insurance premiums - if your budget stays flat while expenses grow 3–5% annually, you'll have a problem by Year 3.
 
 **Not building a reserve.** Operating reserves are what keep your school alive when something unexpected happens. Aim for 60–90 days of operating expenses by Year 3–5.
 
@@ -119,7 +119,7 @@ The most important thing is to start. Your numbers will get more refined as you 
   {
     slug: "how-to-build-5-year-financial-model",
     title: "How to Build a 5-Year Financial Model for Your School",
-    description: "A step-by-step walkthrough for creating a professional multi-year financial projection — the document lenders, authorizers, and board members need to see.",
+    description: "A step-by-step walkthrough for creating a professional multi-year financial projection - the document lenders, authorizers, and board members need to see.",
     category: "Getting Started",
     publishedDate: "2026-03-05",
     readTimeMinutes: 10,
@@ -127,7 +127,7 @@ The most important thing is to start. Your numbers will get more refined as you 
     content: `
 ## What is a 5-year financial model?
 
-A 5-year financial model is a structured projection of your school's finances across five years. It shows expected revenue, expenses, staffing costs, and cash position for each year — and tells the story of how your school grows from launch to sustainability.
+A 5-year financial model is a structured projection of your school's finances across five years. It shows expected revenue, expenses, staffing costs, and cash position for each year - and tells the story of how your school grows from launch to sustainability.
 
 This isn't guesswork. It's a disciplined exercise that forces you to think through every major financial assumption: How many students will you enroll? What will you charge? How many teachers will you hire? What will rent cost in Year 3?
 
@@ -144,11 +144,11 @@ One year isn't enough. Lenders and authorizers need to see that your school can 
 
 Before you touch any numbers, document the basics:
 
-- **School type** — Charter, private, microschool, pod, co-op, or tutoring center
-- **State** — Funding formulas and regulations vary significantly by state
-- **Grade levels** — Which grades will you serve, and when will you add new ones?
-- **Building capacity** — How many students can your facility hold at maximum?
-- **Operating status** — Are you pre-launch, or already operating?
+- **School type** - Charter, private, microschool, pod, co-op, or tutoring center
+- **State** - Funding formulas and regulations vary significantly by state
+- **Grade levels** - Which grades will you serve, and when will you add new ones?
+- **Building capacity** - How many students can your facility hold at maximum?
+- **Operating status** - Are you pre-launch, or already operating?
 
 These details shape everything that follows. A charter school in Arizona has a completely different financial profile than a private school in Connecticut.
 
@@ -156,11 +156,11 @@ These details shape everything that follows. A charter school in Arizona has a c
 
 Map out expected enrollment for each year. Be specific:
 
-- **Year 1:** Starting enrollment (be conservative — 60–75% of capacity)
+- **Year 1:** Starting enrollment (be conservative - 60–75% of capacity)
 - **Year 2–3:** Growth phase (add grades, fill existing seats)
 - **Year 4–5:** Stabilization (approaching or at capacity)
 
-Build in attrition — 5–10% of students may leave each year. And if you're adding grades over time, show exactly when each new grade opens.
+Build in attrition - 5–10% of students may leave each year. And if you're adding grades over time, show exactly when each new grade opens.
 
 ## Step 3: Build your revenue model
 
@@ -172,7 +172,7 @@ With enrollment set, calculate revenue for each year:
 - **Fundraising** = conservative annual targets
 - **Other income** = after-school programs, facility rentals, etc.
 
-Apply annual increases where appropriate — tuition might increase 2–3% per year, and per-pupil funding often has an annual adjustment.
+Apply annual increases where appropriate - tuition might increase 2–3% per year, and per-pupil funding often has an annual adjustment.
 
 ## Step 4: Plan your staffing
 
@@ -182,17 +182,17 @@ Staffing is typically 50–65% of your budget. For each year, list:
 - Benefits cost (typically 20–30% of salary)
 - Any positions that phase in as enrollment grows
 
-A common approach is ratio-based staffing: one teacher per 20 students, one admin per 100 students. As enrollment grows, your staffing grows with it — but in planned increments.
+A common approach is ratio-based staffing: one teacher per 20 students, one admin per 100 students. As enrollment grows, your staffing grows with it - but in planned increments.
 
 ## Step 5: Estimate operating expenses
 
 For each category, estimate monthly or annual costs and apply escalation:
 
-- **Rent** — Often increases 2–3% per year per lease terms
-- **Curriculum** — May scale with enrollment
-- **Technology** — Per-student device costs plus infrastructure
-- **Insurance** — Typically increases 5–8% annually
-- **Marketing** — May decrease as enrollment stabilizes
+- **Rent** - Often increases 2–3% per year per lease terms
+- **Curriculum** - May scale with enrollment
+- **Technology** - Per-student device costs plus infrastructure
+- **Insurance** - Typically increases 5–8% annually
+- **Marketing** - May decrease as enrollment stabilizes
 
 Be thorough. Missing a category means your model understates expenses.
 
@@ -210,16 +210,16 @@ If you have major capital purchases, show them in the year they occur.
 
 With all the pieces in place, calculate the metrics that lenders and authorizers look for:
 
-- **Net income** — Revenue minus all expenses, for each year
-- **Net margin** — Net income as a percentage of revenue
-- **Break-even enrollment** — The minimum number of students you need to cover expenses
-- **Cash on hand** — How many days of expenses you can cover with available cash
-- **Debt service coverage ratio (DSCR)** — Can you comfortably make your loan payments?
-- **Staffing ratio** — What percentage of revenue goes to staffing?
+- **Net income** - Revenue minus all expenses, for each year
+- **Net margin** - Net income as a percentage of revenue
+- **Break-even enrollment** - The minimum number of students you need to cover expenses
+- **Cash on hand** - How many days of expenses you can cover with available cash
+- **Debt service coverage ratio (DSCR)** - Can you comfortably make your loan payments?
+- **Staffing ratio** - What percentage of revenue goes to staffing?
 
 ## Step 8: Stress-test your assumptions
 
-The best financial models aren't the optimistic ones — they're the ones that have already thought about what could go wrong.
+The best financial models aren't the optimistic ones - they're the ones that have already thought about what could go wrong.
 
 Test scenarios like:
 
@@ -240,7 +240,7 @@ A professional financial model includes:
 - A cover page with school name and date
 - Operating statement, balance sheet projections, and cash flow
 
-Tools like SchoolStack Budget generate all of this automatically — including lender-ready PDFs and Excel workbooks with live formulas.
+Tools like SchoolStack Budget generate all of this automatically - including lender-ready PDFs and Excel workbooks with live formulas.
 `,
   },
   {
@@ -256,30 +256,30 @@ Tools like SchoolStack Budget generate all of this automatically — including l
 
 When you build a school budget, one of the first decisions you'll make is your accounting basis: cash or accrual. This choice affects how your financial statements look, when revenue and expenses show up in your reports, and how lenders and auditors evaluate your school's health.
 
-Neither method is "better" — they just tell different parts of the story. Here's what you need to know.
+Neither method is "better" - they just tell different parts of the story. Here's what you need to know.
 
 ## Cash basis: simple and intuitive
 
 With cash-basis accounting, you record revenue when money actually hits your bank account, and you record expenses when you actually pay them.
 
-**Example:** A family pays September tuition on October 5th. Under cash basis, that revenue shows up in October — because that's when the cash arrived.
+**Example:** A family pays September tuition on October 5th. Under cash basis, that revenue shows up in October - because that's when the cash arrived.
 
 **Advantages:**
-- Easy to understand — your books match your bank statement
+- Easy to understand - your books match your bank statement
 - Simpler bookkeeping for small schools
 - You always know exactly how much cash you have
 - Good for very small operations (under $1M in annual revenue)
 
 **Limitations:**
 - Doesn't show money you're owed but haven't received yet
-- Can make your financial health look lumpy — a big grant arriving in one month inflates that month's revenue
+- Can make your financial health look lumpy - a big grant arriving in one month inflates that month's revenue
 - May not satisfy auditor or authorizer requirements for larger schools
 
 ## Accrual basis: the fuller picture
 
 With accrual-basis accounting, you record revenue when it's earned (even if you haven't been paid yet) and expenses when they're incurred (even if you haven't written the check yet).
 
-**Example:** That same September tuition? Under accrual basis, it shows up in September — because that's when the service was provided, regardless of when the payment arrived.
+**Example:** That same September tuition? Under accrual basis, it shows up in September - because that's when the service was provided, regardless of when the payment arrived.
 
 **Advantages:**
 - Gives a more accurate picture of financial health at any given time
@@ -291,7 +291,7 @@ With accrual-basis accounting, you record revenue when it's earned (even if you 
 **Limitations:**
 - More complex bookkeeping
 - Requires tracking receivables and payables
-- Revenue on paper doesn't mean cash in the bank — you still need to watch cash flow
+- Revenue on paper doesn't mean cash in the bank - you still need to watch cash flow
 
 ## Which should your school use?
 
@@ -314,14 +314,14 @@ Here's a practical guide:
 
 When building your 5-year financial model, the accounting basis affects how you project revenue timing:
 
-- **Cash basis** — Revenue shows up when payments are expected to arrive. If families pay monthly, your monthly revenue is spread across the year.
-- **Accrual basis** — Revenue is allocated to the months when services are delivered, regardless of payment timing. Your operating statement reflects the economic activity of each period.
+- **Cash basis** - Revenue shows up when payments are expected to arrive. If families pay monthly, your monthly revenue is spread across the year.
+- **Accrual basis** - Revenue is allocated to the months when services are delivered, regardless of payment timing. Your operating statement reflects the economic activity of each period.
 
 Most financial modeling tools, including SchoolStack Budget, let you choose your accounting basis and adjust the projections accordingly. This is important because a lender reviewing your model will want to see it presented on the same basis as your school's actual books.
 
 ## The key takeaway
 
-Don't overthink this decision. If you're not sure, accrual basis is the safer choice — it's what lenders expect, what auditors prefer, and what gives the most accurate picture of your school's financial health. You can always work with your accountant to set up the right system for your bookkeeping.
+Don't overthink this decision. If you're not sure, accrual basis is the safer choice - it's what lenders expect, what auditors prefer, and what gives the most accurate picture of your school's financial health. You can always work with your accountant to set up the right system for your bookkeeping.
 
 What matters most is that your budget and your books use the same method consistently.
 `,
@@ -329,13 +329,13 @@ What matters most is that your budget and your books use the same method consist
   {
     slug: "what-lenders-look-for-in-school-loan-application",
     title: "What Lenders Look For in a School Loan Application",
-    description: "A practical guide to understanding how lenders evaluate school loan applications — and how to present your financial model in the strongest possible light.",
+    description: "A practical guide to understanding how lenders evaluate school loan applications - and how to present your financial model in the strongest possible light.",
     category: "For Lenders",
     publishedDate: "2026-03-15",
     readTimeMinutes: 9,
     ogImage: DEFAULT_OG_IMAGE,
     content: `
-## Lenders want to say yes — help them get there
+## Lenders want to say yes - help them get there
 
 Here's something school founders often don't realize: most lenders who specialize in school facilities or education loans actually want to fund your school. They believe in the mission. But they need to justify the decision with solid financial evidence.
 
@@ -366,9 +366,9 @@ They'll pay special attention to how much of your loan payment depends on revenu
 
 A school spending 75% of revenue on staffing has very little room for error. Lenders look for:
 
-- **Staffing costs at 50–65% of revenue** — the healthy range for most school types
-- **A plan to hire incrementally** — adding staff as enrollment grows, not all upfront
-- **Competitive but reasonable salaries** — underpaying leads to turnover; overpaying strains the budget
+- **Staffing costs at 50–65% of revenue** - the healthy range for most school types
+- **A plan to hire incrementally** - adding staff as enrollment grows, not all upfront
+- **Competitive but reasonable salaries** - underpaying leads to turnover; overpaying strains the budget
 
 ### 4. Debt service coverage ratio (DSCR)
 
@@ -376,7 +376,7 @@ This is the single most important metric for lenders. DSCR measures whether your
 
 **DSCR = Net Operating Income ÷ Annual Debt Service**
 
-- **1.0x** means you're making exactly enough to cover payments — no cushion
+- **1.0x** means you're making exactly enough to cover payments - no cushion
 - **1.2x** is the minimum most lenders require
 - **1.5x or higher** makes lenders comfortable
 
@@ -394,13 +394,13 @@ Lenders want to know you have a financial cushion:
 
 A strong loan application tells a complete financial story. At minimum, include:
 
-- **Executive summary** — Your school's mission, location, structure, and funding request
-- **5-year financial projections** — Revenue, expenses, and cash flow for each year
-- **Enrollment plan** — Year-by-year enrollment with supporting evidence
-- **Staffing plan** — Every position, with FTE and compensation
-- **Assumptions page** — Every major assumption documented and justified
-- **Sensitivity analysis** — What happens if enrollment is 10–20% below target?
-- **Balance sheet projection** — Assets, liabilities, and equity over time
+- **Executive summary** - Your school's mission, location, structure, and funding request
+- **5-year financial projections** - Revenue, expenses, and cash flow for each year
+- **Enrollment plan** - Year-by-year enrollment with supporting evidence
+- **Staffing plan** - Every position, with FTE and compensation
+- **Assumptions page** - Every major assumption documented and justified
+- **Sensitivity analysis** - What happens if enrollment is 10–20% below target?
+- **Balance sheet projection** - Assets, liabilities, and equity over time
 
 ## Common mistakes that weaken your application
 
@@ -414,13 +414,13 @@ A strong loan application tells a complete financial story. At minimum, include:
 
 ## How SchoolStack Budget helps
 
-SchoolStack Budget generates a complete Lender-Ready Packet with all the components above — including formatted PDFs, a 21-tab underwriting workbook with live Excel formulas, and a board summary. The platform also calculates DSCR, break-even enrollment, and cash reserves automatically, so you can see exactly what a lender will see before you submit your application.
+SchoolStack Budget generates a complete Lender-Ready Packet with all the components above - including formatted PDFs, a 21-tab underwriting workbook with live Excel formulas, and a board summary. The platform also calculates DSCR, break-even enrollment, and cash reserves automatically, so you can see exactly what a lender will see before you submit your application.
 `,
   },
   {
     slug: "charter-school-funding-models-explained",
     title: "Charter School Funding Models Explained",
-    description: "How charter school funding works across different states — per-pupil allocations, weighted funding, federal grants, and what it all means for your budget.",
+    description: "How charter school funding works across different states - per-pupil allocations, weighted funding, federal grants, and what it all means for your budget.",
     category: "School Finance 101",
     publishedDate: "2026-03-20",
     readTimeMinutes: 8,
@@ -428,13 +428,13 @@ SchoolStack Budget generates a complete Lender-Ready Packet with all the compone
     content: `
 ## Charter school funding 101
 
-If you're starting a charter school, understanding your funding model is essential. Unlike private schools that rely on tuition, charter schools are publicly funded — meaning your revenue comes primarily from government allocations based on how many students you enroll.
+If you're starting a charter school, understanding your funding model is essential. Unlike private schools that rely on tuition, charter schools are publicly funded - meaning your revenue comes primarily from government allocations based on how many students you enroll.
 
 But "publicly funded" doesn't mean simple. Charter funding varies dramatically by state, and the details matter.
 
 ## Per-pupil funding: the foundation
 
-The core of charter school revenue is per-pupil funding — a dollar amount the state provides for each student enrolled in your school.
+The core of charter school revenue is per-pupil funding - a dollar amount the state provides for each student enrolled in your school.
 
 This amount varies widely:
 
@@ -448,10 +448,10 @@ Your per-pupil amount depends on your state's funding formula, and in many state
 
 Many states use weighted funding formulas that provide additional dollars for students with specific needs:
 
-- **Special education** — Students with IEPs typically generate 1.5x–3x the base per-pupil amount
-- **English language learners** — Additional funding for ELL students, typically 10–25% above base
-- **Free and reduced lunch** — Students from low-income families may generate additional Title I or state compensatory funding
-- **Gifted education** — Some states provide supplemental funding for identified gifted students
+- **Special education** - Students with IEPs typically generate 1.5x–3x the base per-pupil amount
+- **English language learners** - Additional funding for ELL students, typically 10–25% above base
+- **Free and reduced lunch** - Students from low-income families may generate additional Title I or state compensatory funding
+- **Gifted education** - Some states provide supplemental funding for identified gifted students
 
 When building your budget, it's important to estimate the demographics of your student population and factor in weighted funding where applicable.
 
@@ -459,25 +459,25 @@ When building your budget, it's important to estimate the demographics of your s
 
 In addition to state per-pupil funding, charter schools may be eligible for several federal programs:
 
-**Title I** — Provides additional funding for schools with high percentages of students from low-income families. The amount depends on your district's allocation and your school's qualifying percentage.
+**Title I** - Provides additional funding for schools with high percentages of students from low-income families. The amount depends on your district's allocation and your school's qualifying percentage.
 
-**Title II** — Supports teacher quality and professional development. Typically a smaller amount per school.
+**Title II** - Supports teacher quality and professional development. Typically a smaller amount per school.
 
-**IDEA (Part B)** — Federal special education funding that flows through your state and district. Charter schools are entitled to a proportional share.
+**IDEA (Part B)** - Federal special education funding that flows through your state and district. Charter schools are entitled to a proportional share.
 
-**Charter School Program (CSP) grants** — Federal startup grants specifically for new charter schools. These are competitive and time-limited (typically 3 years), but can provide significant startup capital — sometimes $500,000 or more.
+**Charter School Program (CSP) grants** - Federal startup grants specifically for new charter schools. These are competitive and time-limited (typically 3 years), but can provide significant startup capital - sometimes $500,000 or more.
 
-**ESSER / pandemic relief** — While most of these funds have been allocated, some may still be available in certain states.
+**ESSER / pandemic relief** - While most of these funds have been allocated, some may still be available in certain states.
 
 ## What charter schools don't get
 
 It's equally important to understand what charter schools typically don't receive:
 
-- **Facilities funding** — Most states don't provide facilities funding to charter schools, meaning you need to cover rent or mortgage from your operating budget
-- **Bond authority** — Unlike districts, most charter schools can't issue tax-exempt bonds
-- **Local levy revenue** — In many states, charter schools don't receive a share of local property tax revenue
+- **Facilities funding** - Most states don't provide facilities funding to charter schools, meaning you need to cover rent or mortgage from your operating budget
+- **Bond authority** - Unlike districts, most charter schools can't issue tax-exempt bonds
+- **Local levy revenue** - In many states, charter schools don't receive a share of local property tax revenue
 
-This is why facility costs are often the biggest financial challenge for charter schools — and why your budget needs to account for them carefully.
+This is why facility costs are often the biggest financial challenge for charter schools - and why your budget needs to account for them carefully.
 
 ## Building your charter budget
 
@@ -504,7 +504,7 @@ Charter school funding is complex, but it's knowable. The most important thing i
   {
     slug: "how-to-calculate-break-even-enrollment",
     title: "How to Calculate Your School's Break-Even Enrollment",
-    description: "Learn how to find the minimum number of students your school needs to cover its costs — and why this number should be at the center of your financial planning.",
+    description: "Learn how to find the minimum number of students your school needs to cover its costs - and why this number should be at the center of your financial planning.",
     category: "School Finance 101",
     publishedDate: "2026-03-25",
     readTimeMinutes: 6,
@@ -512,7 +512,7 @@ Charter school funding is complex, but it's knowable. The most important thing i
     content: `
 ## What is break-even enrollment?
 
-Break-even enrollment is the minimum number of students your school needs to cover all of its expenses — staffing, rent, curriculum, insurance, debt service, everything. Below this number, you're losing money. Above it, you're generating a surplus.
+Break-even enrollment is the minimum number of students your school needs to cover all of its expenses - staffing, rent, curriculum, insurance, debt service, everything. Below this number, you're losing money. Above it, you're generating a surplus.
 
 This is one of the most important numbers in your entire financial plan. It tells you how much enrollment risk you're carrying and whether your school can survive a slower-than-expected start.
 
@@ -552,9 +552,9 @@ The challenge is that not all expenses are fixed, and not all revenue comes from
 
 To get a more precise break-even number:
 
-1. **Calculate total fixed costs** — everything you'd pay even with zero students (though some of these are only relevant once you're operational)
-2. **Calculate variable cost per student** — the additional cost of each student beyond your fixed base
-3. **Calculate net revenue per student** — revenue per student minus variable cost per student
+1. **Calculate total fixed costs** - everything you'd pay even with zero students (though some of these are only relevant once you're operational)
+2. **Calculate variable cost per student** - the additional cost of each student beyond your fixed base
+3. **Calculate net revenue per student** - revenue per student minus variable cost per student
 
 **Break-even = Fixed costs ÷ Net revenue per student**
 
@@ -583,7 +583,7 @@ Break-even is especially useful for stress-testing your model:
 - What if you lose a grant? How does that change the break-even number?
 - What if rent increases? Does your break-even shift significantly?
 
-Running these scenarios helps you understand where your biggest financial risks are — and what you can do to mitigate them.
+Running these scenarios helps you understand where your biggest financial risks are - and what you can do to mitigate them.
 
 ## Track it across all five years
 
@@ -599,7 +599,7 @@ SchoolStack Budget calculates your break-even enrollment automatically for each 
 
 Knowing your break-even enrollment gives you confidence in conversations with lenders, board members, and your own team. It lets you answer the question: "How many students do we need to make this work?" with a specific, well-supported number.
 
-And it helps you plan with eyes wide open — which is exactly what your school deserves.
+And it helps you plan with eyes wide open - which is exactly what your school deserves.
 `,
   },
   {
@@ -613,9 +613,9 @@ And it helps you plan with eyes wide open — which is exactly what your school 
     content: `
 ## What are operating reserves?
 
-Operating reserves are the savings your school keeps on hand to cover unexpected expenses or revenue shortfalls. Think of them as your school's financial cushion — the safety net that keeps you operating when something doesn't go as planned.
+Operating reserves are the savings your school keeps on hand to cover unexpected expenses or revenue shortfalls. Think of them as your school's financial cushion - the safety net that keeps you operating when something doesn't go as planned.
 
-Reserves are typically expressed in "days of operating expenses" — how many days your school could continue operating using only its cash reserves, with no new revenue coming in.
+Reserves are typically expressed in "days of operating expenses" - how many days your school could continue operating using only its cash reserves, with no new revenue coming in.
 
 ## Why reserves matter so much
 
@@ -627,16 +627,16 @@ Schools face all kinds of financial surprises:
 - A key donor doesn't renew their annual gift
 - Insurance premiums increase more than expected
 
-Without reserves, any of these situations could force difficult decisions — cutting programs, delaying payroll, or worse. With adequate reserves, you can absorb the hit and keep your focus on educating students.
+Without reserves, any of these situations could force difficult decisions - cutting programs, delaying payroll, or worse. With adequate reserves, you can absorb the hit and keep your focus on educating students.
 
 ## How much is enough?
 
 There's no single "right" answer, but here are widely accepted benchmarks:
 
-- **30 days** — The absolute minimum. Enough to handle minor disruptions.
-- **60 days** — A reasonable target for schools in their first 2–3 years of operation.
-- **90 days** — The standard recommendation for established schools. This is what most financial advisors and authorizers consider healthy.
-- **120+ days** — Excellent. Provides significant flexibility for strategic investments or weathering major disruptions.
+- **30 days** - The absolute minimum. Enough to handle minor disruptions.
+- **60 days** - A reasonable target for schools in their first 2–3 years of operation.
+- **90 days** - The standard recommendation for established schools. This is what most financial advisors and authorizers consider healthy.
+- **120+ days** - Excellent. Provides significant flexibility for strategic investments or weathering major disruptions.
 
 For context, 90 days of operating reserves for a school with $1 million in annual expenses means keeping about $247,000 in accessible cash.
 
@@ -652,7 +652,7 @@ If you have $150,000 in cash and your annual operating expenses are $900,000:
 
 ## Building reserves into your financial model
 
-The best time to plan for reserves is before your school opens — during the financial modeling phase. Here's how:
+The best time to plan for reserves is before your school opens - during the financial modeling phase. Here's how:
 
 **Year 1:** Don't expect to build significant reserves in your first year. You may even operate at a small deficit as enrollment ramps up. That's okay.
 
@@ -664,7 +664,7 @@ The best time to plan for reserves is before your school opens — during the fi
 
 ## Where to keep your reserves
 
-Reserves should be liquid — meaning easily accessible when you need them. Good options include:
+Reserves should be liquid - meaning easily accessible when you need them. Good options include:
 
 - High-yield savings accounts
 - Money market accounts
@@ -685,7 +685,7 @@ Conversely, a school with no reserves (or a plan that never builds them) signals
 
 ## Common misconceptions
 
-**"We can't afford reserves — every dollar needs to go to students."** Building reserves doesn't mean shortchanging students. It means protecting the school's ability to serve students over the long term. A school that runs out of cash can't serve anyone.
+**"We can't afford reserves - every dollar needs to go to students."** Building reserves doesn't mean shortchanging students. It means protecting the school's ability to serve students over the long term. A school that runs out of cash can't serve anyone.
 
 **"Reserves are just savings we're not using."** Reserves aren't idle money. They're working capital that gives you the flexibility to make good decisions under pressure instead of desperate ones.
 
@@ -693,7 +693,7 @@ Conversely, a school with no reserves (or a plan that never builds them) signals
 
 ## Getting started
 
-When you build your financial model in SchoolStack Budget, the platform tracks your projected cash position across all five years and calculates your days of reserves automatically. You can see exactly when you'll reach 30, 60, and 90 days — and adjust your plan if the timeline isn't where you want it.
+When you build your financial model in SchoolStack Budget, the platform tracks your projected cash position across all five years and calculates your days of reserves automatically. You can see exactly when you'll reach 30, 60, and 90 days - and adjust your plan if the timeline isn't where you want it.
 
 Building reserves isn't glamorous. But it's one of the most important things you can do to make sure your school is still serving students five, ten, and twenty years from now.
 `,
@@ -701,7 +701,7 @@ Building reserves isn't glamorous. But it's one of the most important things you
   {
     slug: "starting-a-microschool-financial-planning",
     title: "Starting a Microschool: Financial Planning Essentials",
-    description: "A financial planning guide specifically for microschool founders — from setting tuition to managing costs in a small-scale learning environment.",
+    description: "A financial planning guide specifically for microschool founders - from setting tuition to managing costs in a small-scale learning environment.",
     category: "School Types",
     publishedDate: "2026-04-05",
     readTimeMinutes: 8,
@@ -709,7 +709,7 @@ Building reserves isn't glamorous. But it's one of the most important things you
     content: `
 ## The microschool financial model is different
 
-Microschools are small by design — typically serving 10–50 students in a home, community space, or small commercial facility. This intentional smallness is their strength: personalized learning, close-knit community, and flexibility that larger schools can't match.
+Microschools are small by design - typically serving 10–50 students in a home, community space, or small commercial facility. This intentional smallness is their strength: personalized learning, close-knit community, and flexibility that larger schools can't match.
 
 But it also means the financial model looks different. With fewer students, every enrollment decision, every expense line, and every pricing choice carries more weight. A microschool with 25 students that loses 5 of them has lost 20% of its revenue. That same loss at a 500-student school is 1%.
 
@@ -723,7 +723,7 @@ For most microschools, tuition is the primary (and often only) revenue source. G
 
 **What you need to cover your costs.** Work backwards from your expenses: if your total costs are $200,000/year and you plan to serve 20 students, you need at least $10,000 per student just to break even.
 
-**What the market values.** Small class sizes, personalized attention, and flexible scheduling are valuable. Don't underprice yourself out of a sense of modesty — parents who choose a microschool are choosing quality, and they're often willing to pay for it.
+**What the market values.** Small class sizes, personalized attention, and flexible scheduling are valuable. Don't underprice yourself out of a sense of modesty - parents who choose a microschool are choosing quality, and they're often willing to pay for it.
 
 **Typical ranges:** Microschool tuition varies widely, from $5,000–$8,000/year for co-op models to $15,000–$25,000/year for full-service private microschools in competitive markets.
 
@@ -731,31 +731,31 @@ For most microschools, tuition is the primary (and often only) revenue source. G
 
 While tuition is the foundation, explore additional revenue sources:
 
-- **Education Savings Accounts (ESAs)** — In states with ESA programs (Arizona, Florida, West Virginia, and others), families can use state-funded accounts to pay microschool tuition. This can significantly expand your accessible market.
-- **Scholarships and financial aid** — Offering scholarships funded by donations helps serve a broader range of families and strengthens your mission.
-- **After-school or enrichment programs** — Additional programs can generate supplementary revenue and serve the community.
-- **Summer camps** — Using your space and team for summer programming generates revenue during months when tuition income may be lower.
+- **Education Savings Accounts (ESAs)** - In states with ESA programs (Arizona, Florida, West Virginia, and others), families can use state-funded accounts to pay microschool tuition. This can significantly expand your accessible market.
+- **Scholarships and financial aid** - Offering scholarships funded by donations helps serve a broader range of families and strengthens your mission.
+- **After-school or enrichment programs** - Additional programs can generate supplementary revenue and serve the community.
+- **Summer camps** - Using your space and team for summer programming generates revenue during months when tuition income may be lower.
 
 ## Staffing: lean but not too lean
 
-In a microschool, staffing is typically the single largest expense — often 60–70% of total costs. The key roles:
+In a microschool, staffing is typically the single largest expense - often 60–70% of total costs. The key roles:
 
-**Lead teacher / learning guide** — The heart of the operation. Compensation should be competitive enough to attract and retain excellent educators. For a full-time lead, budget $45,000–$75,000 depending on your market.
+**Lead teacher / learning guide** - The heart of the operation. Compensation should be competitive enough to attract and retain excellent educators. For a full-time lead, budget $45,000–$75,000 depending on your market.
 
-**Assistant or co-teacher** — As enrollment grows past 15–20 students, you'll likely need a second educator. This can start as part-time.
+**Assistant or co-teacher** - As enrollment grows past 15–20 students, you'll likely need a second educator. This can start as part-time.
 
-**The founder** — If you're running the school full-time, you need to pay yourself. Budget a realistic salary from Year 1 — even if it's modest. Your long-term sustainability depends on not burning out.
+**The founder** - If you're running the school full-time, you need to pay yourself. Budget a realistic salary from Year 1 - even if it's modest. Your long-term sustainability depends on not burning out.
 
-**Administrative support** — Bookkeeping, enrollment management, and communications take time. This might be contracted or part-time to start.
+**Administrative support** - Bookkeeping, enrollment management, and communications take time. This might be contracted or part-time to start.
 
 ## Facility costs: think creatively
 
 One advantage of microschools is flexibility in facilities:
 
-- **Home-based** — Lowest cost, but check local zoning and licensing requirements
-- **Church or community center space** — Often available at below-market rates
-- **Shared commercial space** — Co-working for education; becoming more common
-- **Small commercial lease** — More expensive, but provides stability and room to grow
+- **Home-based** - Lowest cost, but check local zoning and licensing requirements
+- **Church or community center space** - Often available at below-market rates
+- **Shared commercial space** - Co-working for education; becoming more common
+- **Small commercial lease** - More expensive, but provides stability and room to grow
 
 Budget 10–20% of revenue for facility costs, including rent, utilities, and any required modifications for educational use.
 
@@ -791,15 +791,15 @@ Not every microschool wants to grow. That's perfectly fine. But your financial m
 
 **If you plan to stay small:** Show how your finances stabilize at your target size. Can you build adequate reserves? Can you give raises over time? Is the model sustainable at this scale for 10+ years?
 
-Either path is valid — what matters is that you've thought it through.
+Either path is valid - what matters is that you've thought it through.
 
 ## The tools are the same
 
 Whether you're building a 500-student charter school or a 15-student microschool, the financial planning process is the same: project enrollment, model revenue, plan staffing, estimate expenses, and see if the numbers work.
 
-SchoolStack Budget supports microschool models out of the box — including microschool-specific benchmarks and guidance throughout the planning process.
+SchoolStack Budget supports microschool models out of the box - including microschool-specific benchmarks and guidance throughout the planning process.
 
-The most important step? Start. Open the tool, enter what you know, and let the platform help you fill in the rest. Your microschool deserves a clear financial plan — and building one is easier than you think.
+The most important step? Start. Open the tool, enter what you know, and let the platform help you fill in the rest. Your microschool deserves a clear financial plan - and building one is easier than you think.
 `,
   },
 ];

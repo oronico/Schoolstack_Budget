@@ -305,10 +305,10 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
   { id: "scholarships_aid", category: "tuition_offsets", lineItem: "Scholarships / Financial Aid / Discount Rate", driverType: "percent_of_base", enabledFor: ["tuition_based", "hybrid_mixed"] },
 
   { id: "state_local_perpupil", category: "public_funding", lineItem: "State / Local Per-Pupil Revenue", driverType: "per_student", enabledFor: ["charter_public_funded", "hybrid_mixed"] },
-  { id: "title_i", category: "public_funding", lineItem: "Title I — Low-Income Students", driverType: "per_student", enabledFor: ["charter_public_funded"] },
-  { id: "title_ii", category: "public_funding", lineItem: "Title II — Teacher Quality", driverType: "annual_fixed", enabledFor: ["charter_public_funded"] },
-  { id: "title_iii", category: "public_funding", lineItem: "Title III — English Learners", driverType: "per_student", enabledFor: ["charter_public_funded"] },
-  { id: "sped_funding", category: "public_funding", lineItem: "IDEA — Special Education", driverType: "per_student", enabledFor: ["charter_public_funded"] },
+  { id: "title_i", category: "public_funding", lineItem: "Title I - Low-Income Students", driverType: "per_student", enabledFor: ["charter_public_funded"] },
+  { id: "title_ii", category: "public_funding", lineItem: "Title II - Teacher Quality", driverType: "annual_fixed", enabledFor: ["charter_public_funded"] },
+  { id: "title_iii", category: "public_funding", lineItem: "Title III - English Learners", driverType: "per_student", enabledFor: ["charter_public_funded"] },
+  { id: "sped_funding", category: "public_funding", lineItem: "IDEA - Special Education", driverType: "per_student", enabledFor: ["charter_public_funded"] },
   { id: "sped_weighted", category: "public_funding", lineItem: "SPED Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
   { id: "ell_weighted", category: "public_funding", lineItem: "ELL Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
   { id: "at_risk_weighted", category: "public_funding", lineItem: "At-Risk Weighted Funding (State)", driverType: "per_student", enabledFor: [] },
@@ -375,9 +375,9 @@ export function generateDefaultRevenueRows(
     title_ii: "Title II: Annual fixed allocation for professional development & teacher quality. Confirm amount with your authorizer.",
     title_iii: "Title III: ~$130/qualifying English Learner student. Enter your projected EL student count.",
     sped_funding: "IDEA: ~$1,500-$2,500/IEP student. Enter your projected IEP student count.",
-    sped_weighted: "State-level SPED weighting — varies by state and disability category. Check your state's weighted formula.",
-    ell_weighted: "State-level ELL weighting — varies by state. Check your state's weighted formula.",
-    at_risk_weighted: "State-level at-risk weighting — varies by state. Check your state's weighted formula.",
+    sped_weighted: "State-level SPED weighting - varies by state and disability category. Check your state's weighted formula.",
+    ell_weighted: "State-level ELL weighting - varies by state. Check your state's weighted formula.",
+    at_risk_weighted: "State-level at-risk weighting - varies by state. Check your state's weighted formula.",
   };
 
   const FAITH_FUNDRAISE_IDS: Record<string, boolean> = {};

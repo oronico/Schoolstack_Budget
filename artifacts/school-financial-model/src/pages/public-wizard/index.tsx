@@ -382,7 +382,7 @@ export function PublicWizardPage() {
               Before you start.
             </h1>
             <p className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
-              Gathering a few things first will make this go faster. You don't need exact numbers — estimates work fine.
+              Gathering a few things first will make this go faster. You don't need exact numbers - estimates work fine.
             </p>
           </div>
 
@@ -413,7 +413,7 @@ export function PublicWizardPage() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground mb-8">
-            Don't have everything? No problem — you can save your progress and come back anytime.
+            Don't have everything? No problem - you can save your progress and come back anytime.
           </p>
 
           <div className="flex flex-col items-center gap-3">

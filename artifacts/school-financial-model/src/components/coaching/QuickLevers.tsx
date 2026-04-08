@@ -157,10 +157,10 @@ export function QuickLevers({ data, className }: QuickLeversProps) {
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center gap-2">
         <TrendingUp className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-bold text-foreground">Quick Levers — What If You...</h3>
+        <h3 className="text-sm font-bold text-foreground">Quick Levers - What If You...</h3>
       </div>
       <p className="text-xs text-muted-foreground -mt-1">
-        Your budget is never perfect on the first try — and that's okay. These quick levers help you see how small changes affect your bottom line, so you can make adjustments with confidence.
+        Your budget is never perfect on the first try - and that's okay. These quick levers help you see how small changes affect your bottom line, so you can make adjustments with confidence.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {levers.map((lever, i) => (

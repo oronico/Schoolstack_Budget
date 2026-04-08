@@ -824,7 +824,7 @@ function ReviewsSection() {
               </div>
               <p className="text-sm text-muted-foreground mb-4">
                 This will be emailed to {analysis.requesterName} ({analysis.requesterEmail}).
-                The fields below are pre-filled from the consultant engine — edit them to personalize.
+                The fields below are pre-filled from the consultant engine - edit them to personalize.
               </p>
 
               {sendSuccess ? (
