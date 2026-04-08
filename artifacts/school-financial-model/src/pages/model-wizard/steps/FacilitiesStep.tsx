@@ -2,7 +2,6 @@ import { useState } from "react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { Settings, Lightbulb, ChevronDown, ChevronRight } from "lucide-react";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
-import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { cn } from "@/lib/utils";
 
 function FacilityTips() {
@@ -35,13 +34,34 @@ function FacilityTips() {
   );
 }
 
+function CollapsibleTip({ summary, detail }: { summary: React.ReactNode; detail: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className={cn("mt-3 rounded-lg border overflow-hidden transition-colors", isOpen ? "border-amber-200 bg-amber-50/40" : "border-border bg-card")}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-amber-50/40 transition-colors"
+      >
+        {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />}
+        <Lightbulb className={cn("h-3.5 w-3.5 flex-shrink-0", isOpen ? "text-amber-600" : "text-muted-foreground")} />
+        <span className="text-xs font-semibold">{summary}</span>
+      </button>
+      {isOpen && (
+        <div className="px-3 pb-2.5 ml-8">
+          <p className="text-xs text-amber-800 leading-relaxed">{detail}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => void }) {
   return (
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Operations & Expenses</h2>
         <p className="text-muted-foreground text-lg">Define your facility costs, student services, and any outstanding debt. If you're not sure about some of these numbers yet, use your best estimate - you can always come back and update them.</p>
-        <SectionExplainers section="facilities" className="mt-4" />
       </div>
 
       <div className="flex items-center gap-2.5 rounded-xl bg-teal-50/60 border border-teal-200 px-4 py-3">
@@ -150,12 +170,10 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
               helperText="Counseling, special ed, health services"
             />
           </div>
-          <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
-            <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Transportation note:</span> Check whether your state or authorizer requires you to provide transportation. Bus contracts typically lock in for a full year regardless of ridership - budget $800-2,000 per student annually for full service.
-            </p>
-          </div>
+          <CollapsibleTip
+            summary="Transportation note"
+            detail="Check whether your state or authorizer requires you to provide transportation. Bus contracts typically lock in for a full year regardless of ridership - budget $800-2,000 per student annually for full service."
+          />
         </div>
 
         <div>
@@ -187,12 +205,10 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
               helperText="Legal, accounting, software, office supplies"
             />
           </div>
-          <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
-            <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">PD matters:</span> Budget at least $500 per staff member for professional development. Schools that skip PD see higher teacher turnover - which costs far more than training. Investing in your team signals quality leadership.
-            </p>
-          </div>
+          <CollapsibleTip
+            summary="PD matters"
+            detail="Budget at least $500 per staff member for professional development. Schools that skip PD see higher teacher turnover - which costs far more than training."
+          />
         </div>
 
         <div>
@@ -222,12 +238,10 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
               placeholder="0"
             />
           </div>
-          <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/60 px-3 py-2.5">
-            <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold"><GlossaryTerm termKey="dscr">DSCR</GlossaryTerm> check:</span> If you have a loan, aim for a Debt Service Coverage Ratio of at least 1.15-1.2x - meaning your operating cash flow should be 15-20% more than your annual debt payments. Below 1.0x means operations alone can't cover the loan.
-            </p>
-          </div>
+          <CollapsibleTip
+            summary={<><GlossaryTerm termKey="dscr">DSCR</GlossaryTerm> check</>}
+            detail="If you have a loan, aim for a Debt Service Coverage Ratio of at least 1.15-1.2x - meaning your operating cash flow should be 15-20% more than your annual debt payments. Below 1.0x means operations alone can't cover the loan."
+          />
         </div>
       </div>
     </div>
