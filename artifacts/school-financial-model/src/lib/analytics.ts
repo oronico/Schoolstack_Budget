@@ -33,11 +33,18 @@ function disableGA() {
   (window as Record<string, unknown>)[`ga-disable-${GA_MEASUREMENT_ID}`] = true;
 
   const gaCookies = document.cookie.split(";").map(c => c.trim());
+  const hostname = window.location.hostname;
+  const parts = hostname.split(".");
+  const domains = [hostname];
+  if (parts.length > 2) {
+    domains.push(parts.slice(-2).join("."));
+  }
   for (const cookie of gaCookies) {
     const name = cookie.split("=")[0];
     if (name.startsWith("_ga")) {
-      const domain = window.location.hostname;
-      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.${domain}`;
+      for (const d of domains) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.${d}`;
+      }
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
     }
   }
