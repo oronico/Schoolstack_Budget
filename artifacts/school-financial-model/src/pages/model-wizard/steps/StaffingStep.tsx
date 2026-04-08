@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, computeEffectiveFte } from "@workspace/finance";
 import {
@@ -235,6 +236,7 @@ export function StaffingStep() {
         <p className="text-muted-foreground text-lg">
           Add every person on your team - full-time, part-time, and contract. Include teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
         </p>
+        <SectionExplainers section="staffing" className="mt-4" />
       </div>
 
       <CollapsibleCallout

@@ -1,6 +1,7 @@
 import { FormInput } from "@/components/ui/form-inputs";
 import { Settings, Lightbulb } from "lucide-react";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 
 export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => void }) {
   return (
@@ -8,8 +9,8 @@ export function FacilitiesStep({ jumpToStep }: { jumpToStep?: (s: number) => voi
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Operations & Expenses</h2>
         <p className="text-muted-foreground text-lg">Define your facility costs, student services, and any outstanding debt. If you're not sure about some of these numbers yet, use your best estimate - you can always come back and update them.</p>
+        <SectionExplainers section="facilities" className="mt-4" />
       </div>
-
 
       <div className="flex items-center gap-2.5 rounded-xl bg-teal-50/60 border border-teal-200 px-4 py-3">
         <Settings className="h-4 w-4 text-teal-700 flex-shrink-0" />
