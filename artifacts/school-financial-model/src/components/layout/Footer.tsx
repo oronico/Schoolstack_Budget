@@ -27,6 +27,7 @@ export function Footer() {
           <div>
             <h4 className="font-display text-sm font-bold uppercase tracking-wider text-white/50 mb-4">Resources</h4>
             <ul className="space-y-2.5">
+              <li><Link href="/resources" className="text-sm text-white/70 hover:text-white transition-colors">Guides & Articles</Link></li>
               <li><Link href="/privacy" className="text-sm text-white/70 hover:text-white transition-colors">Privacy Policy</Link></li>
               <li><Link href="/terms" className="text-sm text-white/70 hover:text-white transition-colors">Terms of Service</Link></li>
             </ul>

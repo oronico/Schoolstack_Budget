@@ -110,6 +110,9 @@ export function Navbar() {
               </>
             ) : (
               <>
+                <Link href="/resources" className="px-4 py-2 text-sm font-semibold text-foreground hover:text-primary transition-colors">
+                  Resources
+                </Link>
                 <Link href="/login" className="px-4 py-2 text-sm font-semibold text-foreground hover:text-primary transition-colors">
                   Log in
                 </Link>

@@ -13,6 +13,7 @@ interface SEOHeadProps {
   path?: string;
   image?: string;
   noIndex?: boolean;
+  ogType?: string;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
@@ -22,6 +23,7 @@ export function SEOHead({
   path = "/",
   image = DEFAULT_IMAGE,
   noIndex = false,
+  ogType = "website",
   jsonLd,
 }: SEOHeadProps) {
   const fullTitle = title === "" ? DEFAULT_TITLE : title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE;
@@ -35,7 +37,7 @@ export function SEOHead({
         <link rel="canonical" href={canonicalUrl} />
         {noIndex && <meta name="robots" content="noindex, nofollow" />}
 
-        <meta property="og:type" content="website" />
+        <meta property="og:type" content={ogType} />
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:title" content={fullTitle} />
         <meta property="og:description" content={description} />

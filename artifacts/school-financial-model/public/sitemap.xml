@@ -16,6 +16,51 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://budget.schoolstack.ai/resources</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://budget.schoolstack.ai/resources/complete-guide-to-school-budgeting</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://budget.schoolstack.ai/resources/how-to-build-5-year-financial-model</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://budget.schoolstack.ai/resources/cash-vs-accrual-accounting-for-schools</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://budget.schoolstack.ai/resources/what-lenders-look-for-in-school-loan-application</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://budget.schoolstack.ai/resources/charter-school-funding-models-explained</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://budget.schoolstack.ai/resources/how-to-calculate-break-even-enrollment</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://budget.schoolstack.ai/resources/understanding-operating-reserves-for-schools</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://budget.schoolstack.ai/resources/starting-a-microschool-financial-planning</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://budget.schoolstack.ai/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
