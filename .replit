@@ -31,6 +31,7 @@ timeoutMs = 20000
 ADMIN_EMAILS = "aserafin@gmail.com"
 EMAIL_FROM = "admin@contact.schoolstack.ai"
 REVIEW_NOTIFY_EMAIL = "hello@schoolstack.ai"
+VITE_GA_MEASUREMENT_ID = "G-BYCDHVP29R"
 
 [userenv.development]
 
