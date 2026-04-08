@@ -1,5 +1,4 @@
 import {
-  School,
   DollarSign,
   Users,
   BarChart3,
@@ -7,12 +6,9 @@ import {
   MessageCircle,
   CheckCircle2,
   SlidersHorizontal,
-  Building2,
   BookOpen,
   TrendingUp,
-  Shield,
   FileText,
-  Landmark,
   Home,
   Lightbulb,
   Target,
@@ -20,7 +16,6 @@ import {
   PiggyBank,
   Handshake,
   ClipboardCheck,
-  type LucideIcon,
 } from "lucide-react";
 import { type ReactNode } from "react";
 
