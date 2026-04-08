@@ -3,6 +3,7 @@ import { Link, useSearch } from "wouter";
 import { useResetPassword } from "@workspace/api-client-react";
 import { Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { SEOHead } from "@/components/SEOHead";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export function ResetPasswordPage() {
@@ -35,6 +36,7 @@ export function ResetPasswordPage() {
   if (!token) {
     return (
       <Layout>
+        <SEOHead title="Reset Password" description="Reset your SchoolStack Budget password." path="/reset-password" noIndex />
         <div className="flex-1 flex items-center justify-center p-4 py-16 text-center">
           <div className="max-w-md">
             <h1 className="text-2xl font-bold mb-4">Invalid Reset Link</h1>
@@ -50,6 +52,7 @@ export function ResetPasswordPage() {
 
   return (
     <Layout>
+      <SEOHead title="Reset Password" description="Reset your SchoolStack Budget password." path="/reset-password" noIndex />
       <div className="flex-1 flex items-center justify-center p-4 py-16">
         <div className="w-full max-w-md">
           <div className="bg-card rounded-3xl p-8 sm:p-10 shadow-xl shadow-black/5 border border-border/50">

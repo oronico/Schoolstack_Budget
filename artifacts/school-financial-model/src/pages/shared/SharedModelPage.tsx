@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { TrendingUp, TrendingDown, Users, DollarSign, Shield, Clock, AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "@/lib/benchmark-thresholds";
+import { SEOHead } from "@/components/SEOHead";
 
 interface SharedModelData {
   schoolName: string;
@@ -282,6 +283,12 @@ export function SharedModelPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SEOHead
+        title={`${data.schoolName} — Shared Model`}
+        description="Shared financial model view on SchoolStack Budget."
+        path={`/shared/${params.token}`}
+        noIndex
+      />
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
           <div>

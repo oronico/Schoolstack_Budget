@@ -1,10 +1,16 @@
 import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
+import { SEOHead } from "@/components/SEOHead";
 import { AlertCircle } from "lucide-react";
 
 export default function NotFound() {
   return (
     <Layout>
+      <SEOHead
+        title="Page Not Found"
+        description="The page you're looking for doesn't exist or has been moved."
+        noIndex
+      />
       <div className="flex-1 flex items-center justify-center p-4 py-20">
         <div className="text-center max-w-md">
           <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-2xl flex items-center justify-center mb-6">

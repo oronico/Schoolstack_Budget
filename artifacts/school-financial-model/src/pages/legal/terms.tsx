@@ -1,8 +1,15 @@
 import { Layout } from "@/components/layout/Layout";
+import { SEOHead } from "@/components/SEOHead";
 
 export function TermsPage() {
   return (
     <Layout>
+      <SEOHead
+        title="Terms of Service"
+        description="Terms of Service for SchoolStack Budget, a financial modeling tool for school founders operated by Building Hope Impact Fund."
+        path="/terms"
+        noIndex
+      />
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-2">Terms of Service</h1>
         <p className="text-sm text-muted-foreground mb-10">Last updated: March 15, 2026</p>

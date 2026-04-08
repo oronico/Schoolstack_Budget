@@ -18,6 +18,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { SEOHead } from "@/components/SEOHead";
 import { motion } from "framer-motion";
 
 const SampleModelShowcase = lazy(() =>
@@ -68,9 +69,76 @@ const HOW_IT_WORKS = [
   },
 ];
 
+const LANDING_JSON_LD = [
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "SchoolStack Budget",
+    applicationCategory: "FinanceApplication",
+    operatingSystem: "Web",
+    url: "https://budget.schoolstack.ai",
+    description:
+      "Build lender-ready 5-year financial projections for your school in under an hour. Guided, professional, exportable.",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+    },
+    creator: {
+      "@type": "Organization",
+      name: "Building Hope Impact Fund",
+      url: "https://schoolstack.ai",
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "What types of schools does SchoolStack Budget support?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "SchoolStack Budget supports charter schools, private schools, microschools, pods, co-ops, and tutoring centers — both new and already operating.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Do I need a finance degree to use SchoolStack Budget?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "No. SchoolStack Budget walks you through every step in plain English with inline coaching. You answer questions about your school; we build a professional 5-year financial model.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What can I export from SchoolStack Budget?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "You can export a Lender-Ready Packet PDF, Board Summary PDF, a 21-tab Underwriting Package, and a Formula Workbook with live Excel formulas. You can also generate a shareable read-only link.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How much does SchoolStack Budget cost?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "SchoolStack Budget is free during beta. When pricing launches, you'll get advance notice and the option to export everything.",
+        },
+      },
+    ],
+  },
+];
+
 export function LandingPage() {
   return (
     <Layout>
+      <SEOHead
+        title=""
+        path="/"
+        jsonLd={LANDING_JSON_LD}
+      />
       <section className="relative pt-20 pb-32 overflow-hidden">
         <div className="absolute top-0 right-0 -mr-40 -mt-40 w-96 h-96 bg-[#328555]/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 -ml-40 -mb-40 w-[500px] h-[500px] bg-[#328555]/10 rounded-full blur-3xl" />

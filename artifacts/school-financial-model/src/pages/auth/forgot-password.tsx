@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { useForgotPassword } from "@workspace/api-client-react";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { SEOHead } from "@/components/SEOHead";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export function ForgotPasswordPage() {
@@ -29,6 +30,12 @@ export function ForgotPasswordPage() {
 
   return (
     <Layout>
+      <SEOHead
+        title="Forgot Password"
+        description="Reset your SchoolStack Budget password."
+        path="/forgot-password"
+        noIndex
+      />
       <div className="flex-1 flex items-center justify-center p-4 py-16">
         <div className="w-full max-w-md">
           <div className="bg-card rounded-3xl p-8 sm:p-10 shadow-xl shadow-black/5 border border-border/50">

@@ -4,6 +4,7 @@ import { useRegister, useCreateModel } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { SEOHead } from "@/components/SEOHead";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export function RegisterPage() {
@@ -53,6 +54,11 @@ export function RegisterPage() {
 
   return (
     <Layout>
+      <SEOHead
+        title="Create Account"
+        description="Create a free SchoolStack Budget account and start building a professional 5-year financial model for your school."
+        path="/register"
+      />
       <div className="flex-1 flex items-center justify-center p-4 py-16">
         <div className="w-full max-w-md">
           <div className="bg-card rounded-3xl p-8 sm:p-10 shadow-xl shadow-black/5 border border-border/50">

@@ -1,8 +1,15 @@
 import { Layout } from "@/components/layout/Layout";
+import { SEOHead } from "@/components/SEOHead";
 
 export function PrivacyPolicyPage() {
   return (
     <Layout>
+      <SEOHead
+        title="Privacy Policy"
+        description="Learn how SchoolStack Budget collects, uses, and protects your personal information and financial model data."
+        path="/privacy"
+        noIndex
+      />
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-2">Privacy Policy</h1>
         <p className="text-sm text-muted-foreground mb-10">Last updated: March 15, 2026</p>

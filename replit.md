@@ -109,3 +109,4 @@ Identifies and surfaces critical financial issues with severity ranking, model-s
 - **PDF Export**: PDFKit
 - **Authentication**: bcryptjs, jsonwebtoken
 - **Email**: Resend
+- **SEO**: react-helmet-async (per-route meta tags, JSON-LD structured data)

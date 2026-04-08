@@ -4,6 +4,7 @@ import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { SEOHead } from "@/components/SEOHead";
 import { getApiErrorMessage } from "@/lib/api-error";
 
 export function LoginPage() {
@@ -37,6 +38,12 @@ export function LoginPage() {
 
   return (
     <Layout>
+      <SEOHead
+        title="Sign In"
+        description="Sign in to SchoolStack Budget to continue building your school's financial model."
+        path="/login"
+        noIndex
+      />
       <div className="flex-1 flex items-center justify-center p-4 py-16">
         <div className="w-full max-w-md">
           <div className="bg-card rounded-3xl p-8 sm:p-10 shadow-xl shadow-black/5 border border-border/50">
