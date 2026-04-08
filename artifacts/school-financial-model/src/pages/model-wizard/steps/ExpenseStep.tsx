@@ -29,6 +29,7 @@ import {
   COA_CATEGORY_RANGES,
   getEscalationRule,
   computeEscalatedAmounts,
+  getExpenseRationale,
 } from "@/lib/expense-defaults";
 import {
   type StaffingRowData,
@@ -111,8 +112,47 @@ function exportChartOfAccounts(
 }
 
 
-function annualize(amount: number, driverType: ExpenseDriverType): number {
+function CollapsibleInfoBox({
+  icon: Icon,
+  iconColor,
+  borderColor,
+  bgColor,
+  summary,
+  children,
+}: {
+  icon: typeof DollarSign;
+  iconColor: string;
+  borderColor: string;
+  bgColor: string;
+  summary: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className={cn("rounded-xl border overflow-hidden", borderColor, bgColor)}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsOpen(!isOpen); } }}
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-black/[0.02] transition-colors cursor-pointer"
+      >
+        {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+        <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />
+        <span className="text-sm flex-1">{summary}</span>
+      </div>
+      {isOpen && (
+        <div className="px-4 pb-3 space-y-2 ml-10">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function annualize(amount: number, driverType: ExpenseDriverType, totalFTE?: number): number {
   if (driverType === "monthly") return amount * 12;
+  if (driverType === "per_fte") return amount * (totalFTE || 0);
   return amount;
 }
 
@@ -175,7 +215,7 @@ const FORGOTTEN_COSTS: {
   { label: "Liability Insurance", category: "administrative_general", defaultAmount: 5000, driverType: "annual_fixed" },
   { label: "Marketing & Enrollment Outreach", category: "administrative_general", defaultAmount: 8000, driverType: "annual_fixed" },
   { label: "Technology (Devices + WiFi)", category: "technology", defaultAmount: 300, driverType: "per_student" },
-  { label: "Professional Development", category: "instructional_program", defaultAmount: 500, driverType: "per_student" },
+  { label: "Professional Development", category: "instructional_program", defaultAmount: 1500, driverType: "per_fte" },
   { label: "Payment Processing Fees", category: "administrative_general", defaultAmount: 3000, driverType: "annual_fixed" },
 ];
 
@@ -253,7 +293,7 @@ function ForgottenCostsPrompt({
                     {item.label}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    ({item.driverType === "per_student" ? `~$${item.defaultAmount}/student` : `~$${item.defaultAmount.toLocaleString()}/yr`})
+                    ({item.driverType === "per_student" ? `~$${item.defaultAmount}/student` : item.driverType === "per_fte" ? `~$${item.defaultAmount.toLocaleString()}/FTE` : `~$${item.defaultAmount.toLocaleString()}/yr`})
                   </span>
                 </div>
                 {!alreadyExists && (
@@ -725,6 +765,10 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     return calculatePersonnelCosts(staffingRows);
   }, [staffingRows]);
 
+  const totalFTE = useMemo(() => {
+    return personnelCosts?.totalFTE || 0;
+  }, [personnelCosts]);
+
   const categorySummaries = useMemo(() => {
     const sums: Record<string, number> = {};
     for (const cat of allOperatingCategories) {
@@ -732,7 +776,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       sums[cat] = catRows.reduce((acc, r) => {
         let total = 0;
         for (let y = 0; y < yearCount; y++) {
-          total += annualize(r.amounts[y] || 0, r.driverType);
+          total += annualize(r.amounts[y] || 0, r.driverType, totalFTE);
         }
         return acc + total;
       }, 0);
@@ -741,12 +785,12 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     sums["capital_financing"] = capitalEnabled.reduce((acc, r) => {
       let total = 0;
       for (let y = 0; y < yearCount; y++) {
-        total += annualize(r.amounts[y] || 0, r.driverType);
+        total += annualize(r.amounts[y] || 0, r.driverType, totalFTE);
       }
       return acc + total;
     }, 0);
     return sums;
-  }, [expenseRows, capitalRows, allOperatingCategories, yearCount]);
+  }, [expenseRows, capitalRows, allOperatingCategories, yearCount, totalFTE]);
 
   const personnel5yrTotal = useMemo(() => {
     const y1 = personnelCosts?.grandTotal || 0;
@@ -770,10 +814,10 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     let total = (personnelCosts?.grandTotal || 0);
     for (const cat of allOperatingCategories) {
       const catRows = expenseRows.filter((r) => r.category === cat && r.enabled);
-      total += catRows.reduce((acc, r) => acc + annualize(r.amounts[0] || 0, r.driverType), 0);
+      total += catRows.reduce((acc, r) => acc + annualize(r.amounts[0] || 0, r.driverType, totalFTE), 0);
     }
     return total;
-  }, [personnelCosts, expenseRows, allOperatingCategories]);
+  }, [personnelCosts, expenseRows, allOperatingCategories, totalFTE]);
   const costPerStudent = y1Students > 0 ? Math.round(y1OperatingTotal / y1Students) : 0;
 
   const yearLabels = Array.from({ length: yearCount }, (_, i) => `Y${i + 1}`);
@@ -964,25 +1008,22 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         <SectionExplainers section="expenses" className="mt-4" />
       </div>
 
-      <div className="rounded-2xl border border-teal-200 bg-teal-50/50 p-4 flex items-start gap-3">
-        <TrendingUp className="h-5 w-5 text-teal-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-foreground space-y-1.5">
-          <p>
-            <span className="font-semibold">Smart <GlossaryTerm termKey="escalation_rate">Escalation</GlossaryTerm> Applied.</span>{" "}
-            A strong financial model reflects how costs actually behave. Lease payments follow your contract terms. Vendor costs increase with inflation. Per-student expenses scale with enrollment. We've applied realistic escalation - you can adjust any year.
-          </p>
-          <FinancingInsight text="A good rule of thumb: keep facility costs between 15-25% of revenue. Above 30% can crowd out staffing and programs - worth watching." />
-          <div className="flex flex-wrap gap-3 text-xs text-teal-800">
-            <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Inflation: {generalCostInflation}%</span>
-            <span className="bg-teal-100 px-2 py-0.5 rounded-full font-medium">Rent escalation: {annualRentIncrease}%</span>
-            {jumpToStep ? (
-              <button type="button" onClick={() => jumpToStep(2)} className="text-teal-600 font-medium underline underline-offset-2 hover:text-teal-800 transition-colors">Adjust rates in Assumptions →</button>
-            ) : (
-              <span className="text-teal-600">Adjust rates in the Assumptions step</span>
-            )}
-          </div>
-        </div>
-      </div>
+      <CollapsibleInfoBox
+        icon={TrendingUp}
+        iconColor="text-teal-600"
+        borderColor="border-teal-200"
+        bgColor="bg-teal-50/50"
+        summary={<>
+          <span className="font-semibold">Smart <GlossaryTerm termKey="escalation_rate">Escalation</GlossaryTerm> Applied</span>
+          <span className="text-muted-foreground"> — Inflation {generalCostInflation}% · Rent {annualRentIncrease}%</span>
+          {jumpToStep && <button type="button" onClick={(e) => { e.stopPropagation(); jumpToStep(2); }} className="ml-2 text-teal-600 font-medium underline underline-offset-2 hover:text-teal-800 transition-colors text-xs">Adjust →</button>}
+        </>}
+      >
+        <p className="text-sm text-foreground">
+          Costs escalate realistically: leases follow contract terms, vendor costs rise with inflation, per-student expenses scale with enrollment. You can override any year.
+        </p>
+        <FinancingInsight text="Keep facility costs between 15–25% of revenue. Above 30% can crowd out staffing and programs." />
+      </CollapsibleInfoBox>
 
       <ForgottenCostsPrompt
         expenseRows={expenseRows}
@@ -1063,17 +1104,11 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             </div>
           </BusinessOperationsToggle>
 
-          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3 ml-12 -mt-1 mb-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-800 space-y-1">
-              <p>
-                <span className="font-semibold">Don't forget insurance and payroll taxes.</span>{" "}
-                General liability insurance is typically $1,500–$4,000/year for a small school. Payroll taxes (FICA, SUTA, FUTA) add roughly 8–10% on top of gross wages - these are already calculated in the Staffing step.
-              </p>
-              <p>
-                If you're not sure what coverage you need, a local insurance broker can give you a quote before you open. Most charter authorizers and landlords require proof of insurance.
-              </p>
-            </div>
+          <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 flex items-center gap-2 ml-12 -mt-1 mb-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+            <span className="text-xs text-amber-800">
+              <span className="font-semibold">Reminder:</span> Liability insurance typically $1,500–$4,000/yr. Payroll taxes (8–10% of wages) are already in the Staffing step.
+            </span>
           </div>
 
           <BusinessOperationsToggle
@@ -1224,34 +1259,34 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         </button>
       </div>
 
-      <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-4 space-y-3">
-        <div className="flex items-start gap-3">
-          <BookOpenCheck className="h-5 w-5 text-indigo-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-foreground space-y-2">
-            <p>
-              <span className="font-semibold">Build your Chart of Accounts as you go.</span>{" "}
-              Each expense line has an optional account code (the <Hash className="h-3 w-3 inline text-muted-foreground" /> field). We've pre-filled standard codes used by most schools - you can customize them to match your accounting software.
-            </p>
-            <p className="text-muted-foreground">
-              A chart of accounts is how QuickBooks, Xero, and other accounting software organize your money. By setting codes now, your budget will align with your bookkeeping from day one. When you're done, you can export your chart of accounts to import directly into your accounting software.
-            </p>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {Object.entries(COA_CATEGORY_RANGES).map(([, info]) => (
-                <span key={info.range} className="text-[10px] font-medium text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
-                  {info.range}: {info.label}
-                </span>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => exportChartOfAccounts(expenseRows, capitalRows, customCategoryLabels)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors mt-1"
-            >
-              <FileDown className="h-3.5 w-3.5" /> Export Chart of Accounts (CSV)
-            </button>
-          </div>
+      <CollapsibleInfoBox
+        icon={BookOpenCheck}
+        iconColor="text-indigo-600"
+        borderColor="border-indigo-200"
+        bgColor="bg-indigo-50/50"
+        summary={<>
+          <span className="font-semibold">Chart of Accounts</span>
+          <span className="text-muted-foreground"> — Pre-filled account codes align with QuickBooks/Xero</span>
+        </>}
+      >
+        <p className="text-sm text-foreground">
+          Each expense line has an optional account code (<Hash className="h-3 w-3 inline text-muted-foreground" /> field). Customize codes to match your accounting software — your budget will align with bookkeeping from day one.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(COA_CATEGORY_RANGES).map(([, info]) => (
+            <span key={info.range} className="text-[10px] font-medium text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+              {info.range}: {info.label}
+            </span>
+          ))}
         </div>
-      </div>
+        <button
+          type="button"
+          onClick={() => exportChartOfAccounts(expenseRows, capitalRows, customCategoryLabels)}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+        >
+          <FileDown className="h-3.5 w-3.5" /> Export Chart of Accounts (CSV)
+        </button>
+      </CollapsibleInfoBox>
 
       {personnelCosts && (
         <div className="rounded-2xl border border-border bg-blue-50/50 p-5">
@@ -1371,7 +1406,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                   />
                 )}
                 {catRows.map((row) => (
-                  <ExpenseLineCard key={row.id} row={row} yearCount={yearCount} yearLabels={yearLabels} onUpdate={updateExpenseRow} onRemove={removeExpenseRow} y1Students={y1Students} escalationRates={escalationRates} />
+                  <ExpenseLineCard key={row.id} row={row} yearCount={yearCount} yearLabels={yearLabels} onUpdate={updateExpenseRow} onRemove={removeExpenseRow} y1Students={y1Students} totalFTE={totalFTE} escalationRates={escalationRates} />
                 ))}
                 <button type="button" onClick={() => addExpenseRow(cat)} className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-2">
                   <Plus className="h-4 w-4" /> Add expense line
@@ -1564,6 +1599,7 @@ function ExpenseLineCard({
   onUpdate,
   onRemove,
   y1Students,
+  totalFTE,
   escalationRates,
 }: {
   row: ExpenseRowData;
@@ -1572,6 +1608,7 @@ function ExpenseLineCard({
   onUpdate: (id: string, field: keyof ExpenseRowData, value: string | number | boolean | number[]) => void;
   onRemove: (id: string) => void;
   y1Students: number;
+  totalFTE: number;
   escalationRates: EscalationRates;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -1616,27 +1653,31 @@ function ExpenseLineCard({
   };
 
   const y1Raw = row.amounts[0] || 0;
-  const y1Amount = row.driverType === "monthly" ? y1Raw * 12 : y1Raw;
+  const y1Amount = row.driverType === "monthly" ? y1Raw * 12 : row.driverType === "per_fte" ? y1Raw * totalFTE : y1Raw;
   const rowTotal = row.amounts.reduce((s, a) => {
     const v = a || 0;
-    return s + (row.driverType === "monthly" ? v * 12 : v);
+    return s + annualize(v, row.driverType, totalFTE);
   }, 0);
 
-  const perStudentHint = row.driverType === "per_student" && y1Students > 0
+  const rationale = useMemo(() => getExpenseRationale(row.canonicalKey || row.lineItem), [row.canonicalKey, row.lineItem]);
+
+  const driverHint = row.driverType === "per_student" && y1Students > 0
     ? `Y1 total: ${formatCurrency((row.amounts[0] || 0) * y1Students)}`
     : row.driverType === "per_new_student" && y1Students > 0
-      ? `Y1 total: ${formatCurrency((row.amounts[0] || 0) * y1Students)} (all students are new in Year 1)`
+      ? `Y1 total: ${formatCurrency((row.amounts[0] || 0) * y1Students)} (all new in Y1)`
       : row.driverType === "per_returning_student"
-        ? "Y1 total: $0 (no returning students in Year 1)"
-        : row.driverType === "annual_fixed" && y1Students > 0 && row.amounts[0] > 0
-          ? `≈ ${formatCurrency(Math.round(row.amounts[0] / y1Students))} / student`
-          : null;
+        ? "Y1 total: $0 (no returning students in Y1)"
+        : row.driverType === "per_fte" && totalFTE > 0
+          ? `Y1 total: ${formatCurrency((row.amounts[0] || 0) * totalFTE)} for ${totalFTE} FTE`
+          : row.driverType === "per_fte" && totalFTE === 0
+            ? "Add staff in Staffing step to calculate"
+            : null;
 
   if (!row.enabled) {
     return (
-      <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-muted/20 opacity-50">
+      <div className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-muted/20 opacity-50">
         <input type="checkbox" checked={false} onChange={toggleEnabled} className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary" />
-        <span className="text-xs text-muted-foreground line-through flex-1">{row.lineItem || "Unnamed"}</span>
+        <span className="text-sm text-muted-foreground line-through flex-1">{row.lineItem || "Unnamed"}</span>
         <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5">
           <Trash2 className="h-3 w-3" />
         </button>
@@ -1645,48 +1686,60 @@ function ExpenseLineCard({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-white transition-all">
-      <div className="flex items-center gap-2 px-3 py-2">
-        <input type="checkbox" checked={row.enabled} onChange={toggleEnabled} className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary flex-shrink-0" />
-        <button type="button" onClick={() => setIsOpen(!isOpen)} className="flex-shrink-0 p-0.5">
-          {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
-        </button>
-        <input
-          type="text"
-          value={row.lineItem}
-          onChange={(e) => onUpdate(row.id, "lineItem", e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          className={cn("font-medium text-sm bg-transparent border-none focus:outline-none focus:ring-0 flex-1 min-w-0", !row.lineItem && "border-b border-dashed border-red-300")}
-          placeholder="Name *"
-        />
-        <select
-          value={row.driverType}
-          onChange={(e) => onUpdate(row.id, "driverType", e.target.value)}
-          className="text-[11px] border border-border rounded px-1.5 py-0.5 bg-background text-muted-foreground flex-shrink-0 w-24"
-        >
-          {Object.entries(DRIVER_TYPE_LABELS).map(([val, label]) => (
-            <option key={val} value={val}>{label}</option>
-          ))}
-        </select>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <span className="text-[10px] text-muted-foreground">Y1:</span>
-          <span className="text-xs font-semibold text-foreground w-16 text-right">
-            {row.driverType === "percent_of_revenue" ? `${y1Amount}%` : formatCurrency(y1Amount)}
-          </span>
+    <div className="rounded-xl border border-border bg-white transition-all">
+      <div className="px-4 py-3 space-y-2">
+        <div className="flex items-center gap-3">
+          <input type="checkbox" checked={row.enabled} onChange={toggleEnabled} className="h-4 w-4 rounded border-border text-primary focus:ring-primary flex-shrink-0" />
+          <button type="button" onClick={() => setIsOpen(!isOpen)} className="p-0.5 rounded-md hover:bg-muted transition-colors flex-shrink-0">
+            {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+          </button>
+          <input
+            type="text"
+            value={row.lineItem}
+            onChange={(e) => onUpdate(row.id, "lineItem", e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            className={cn("font-semibold text-sm bg-transparent border-none focus:outline-none focus:ring-0 flex-1 min-w-0", !row.lineItem && "border-b border-dashed border-red-300")}
+            placeholder="Expense name *"
+          />
+          <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1 flex-shrink-0">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
-        <span className="text-[10px] text-muted-foreground flex-shrink-0">
-          5yr: {row.driverType === "percent_of_revenue" ? "—" : formatCurrency(rowTotal)}
-        </span>
-        <span className="text-[9px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
-          {rule.label}
-        </span>
-        <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5 flex-shrink-0">
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+
+        <div className="flex items-center gap-3 ml-[52px] flex-wrap">
+          <select
+            value={row.driverType}
+            onChange={(e) => onUpdate(row.id, "driverType", e.target.value)}
+            className="text-xs border border-border rounded-md px-2 py-1 bg-background text-muted-foreground"
+          >
+            {Object.entries(DRIVER_TYPE_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1.5 text-sm">
+            <span className="text-muted-foreground text-xs">Y1:</span>
+            <span className="font-bold text-foreground">
+              {row.driverType === "percent_of_revenue" ? `${y1Raw}%` : formatCurrency(y1Amount)}
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            5yr: {formatCurrency(rowTotal)}
+          </div>
+          <span className="text-[9px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+            {rule.label}
+          </span>
+          {driverHint && (
+            <span className="text-[11px] text-muted-foreground">{driverHint}</span>
+          )}
+        </div>
+
+        {rationale && (
+          <p className="text-[11px] text-muted-foreground/80 italic leading-snug ml-[52px]">{rationale}</p>
+        )}
       </div>
 
       {isOpen && (
-        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-border/50">
+        <div className="px-4 pb-4 pt-1 space-y-3 border-t border-border/50">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1.5">
               <Hash className="h-3 w-3 text-muted-foreground" />
@@ -1694,7 +1747,7 @@ function ExpenseLineCard({
                 type="text"
                 value={row.accountCode || ""}
                 onChange={(e) => onUpdate(row.id, "accountCode", e.target.value)}
-                className="w-16 text-xs text-center border border-border rounded px-1.5 py-1 bg-background font-mono"
+                className="w-16 text-xs text-center border border-border rounded-md px-1.5 py-1 bg-background font-mono"
                 placeholder="Code"
               />
             </div>
@@ -1702,18 +1755,18 @@ function ExpenseLineCard({
               type="text"
               value={row.note || ""}
               onChange={(e) => onUpdate(row.id, "note", e.target.value)}
-              className="flex-1 text-xs border border-border rounded px-2 py-1 bg-background min-w-[120px]"
+              className="flex-1 text-xs border border-border rounded-md px-2.5 py-1.5 bg-background min-w-[150px]"
               placeholder="Note (optional)"
             />
           </div>
 
-          <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${yearCount}, 1fr)` }}>
             {yearLabels.map((label, i) => {
               const isAutoFilled = i > 0 && !overriddenYears[i];
               const isOverridden = i > 0 && overriddenYears[i];
               return (
                 <div key={i} className="text-center">
-                  <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">{label}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 font-medium">{label}</div>
                   <div className="relative">
                     <input
                       type="number"
@@ -1724,7 +1777,7 @@ function ExpenseLineCard({
                         else updateYearN(i, val);
                       }}
                       className={cn(
-                        "w-full text-xs text-center border rounded px-1 py-1",
+                        "w-full text-sm text-center border rounded-md px-1 py-1.5",
                         isAutoFilled
                           ? "bg-teal-50/60 border-teal-200 italic text-teal-900"
                           : isOverridden
@@ -1734,7 +1787,7 @@ function ExpenseLineCard({
                       step={row.driverType === "percent_of_revenue" ? "0.1" : "1"}
                     />
                     {row.driverType === "percent_of_revenue" && (
-                      <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
+                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
                     )}
                   </div>
                   {isAutoFilled && (
@@ -1753,9 +1806,14 @@ function ExpenseLineCard({
               );
             })}
           </div>
-          {(row.driverType === "monthly" || perStudentHint) && (
-            <div className="text-[10px] text-muted-foreground text-center">
-              {row.driverType === "monthly" ? `Y1 annual: ${formatCurrency((row.amounts[0] || 0) * 12)}` : perStudentHint}
+          {row.driverType === "monthly" && (
+            <div className="text-[11px] text-muted-foreground text-center">
+              Y1 annual: {formatCurrency((row.amounts[0] || 0) * 12)}
+            </div>
+          )}
+          {row.driverType !== "percent_of_revenue" && (
+            <div className="text-[11px] text-muted-foreground text-right">
+              5-year total: {formatCurrency(rowTotal)}
             </div>
           )}
         </div>

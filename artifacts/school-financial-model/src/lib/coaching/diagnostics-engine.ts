@@ -137,6 +137,11 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
     y1StaffingCost += rowCost;
   }
 
+  let y1TotalFTE = 0;
+  for (const s of staffingRows) {
+    y1TotalFTE += s.fte || 0;
+  }
+
   let y1OpExpenses = 0;
   let y1FacilityCost = 0;
   let y1VariableCostPerStudent = 0;
@@ -147,6 +152,8 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
     let val: number;
     if (e.driverType === "percent_of_revenue") {
       val = ((e.amounts?.[0] ?? 0) / 100) * y1Revenue;
+    } else if (e.driverType === "per_fte") {
+      val = (e.amounts?.[0] ?? 0) * y1TotalFTE;
     } else {
       val = driverVal(e.amounts, 0, e.driverType, y1Students, e.escalationRate, costInflation);
     }

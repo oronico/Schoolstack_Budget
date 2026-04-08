@@ -43,7 +43,7 @@ export const GUIDED_EXPENSE_QUESTIONS: CategoryQuestions[] = [
       {
         id: "q_pd",
         question: "How will you invest in teacher training and professional development?",
-        hint: "Workshops, conferences, coaching. Most schools spend $1,000–$3,000 per teacher per year.",
+        hint: "Workshops, conferences, coaching. Most schools spend $1,000–$3,000 per staff FTE per year.",
         relatedLineItems: ["Professional Development"],
       },
       {

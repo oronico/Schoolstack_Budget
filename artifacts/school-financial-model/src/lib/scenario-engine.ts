@@ -83,6 +83,23 @@ function driverVal(
   }
 }
 
+function computeTotalFTE(staffingRows: Array<{ fte?: number; startYear?: number; endYear?: number; staffingMode?: string; studentRatio?: number; minFte?: number; maxFte?: number }>, year: number, students: number): number {
+  let total = 0;
+  for (const r of staffingRows) {
+    let fte = r.fte || 0;
+    if (r.startYear && (year + 1) < r.startYear) fte = 0;
+    else if (r.endYear && (year + 1) > r.endYear) fte = 0;
+    else if (r.staffingMode === "ratio" && r.studentRatio && r.studentRatio > 0) {
+      let computed = students / r.studentRatio;
+      if (r.minFte !== undefined) computed = Math.max(computed, r.minFte);
+      if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte);
+      fte = Math.ceil(computed * 2) / 2;
+    }
+    total += fte;
+  }
+  return total;
+}
+
 function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const sp = data.schoolProfile;
   const en = (data.enrollment || {}) as Record<string, unknown>;
@@ -193,6 +210,8 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     const persEsc = Math.pow(1 + salaryEscRate, y);
     persTotal = persTotal * persEsc * pf;
 
+    const yearFTE = computeTotalFTE(staffingRows, y, students);
+
     let facTotal = 0;
     let opexTotal = 0;
     for (const r of expenseRows) {
@@ -206,6 +225,9 @@ function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
           pct = r.amounts?.[y] ?? 0;
         }
         val = (pct / 100) * revTotal;
+      } else if (r.driverType === "per_fte") {
+        val = driverVal(r.amounts, y, "annual_fixed", students, r.escalationRate, costInflation);
+        val = val * yearFTE * pf;
       } else {
         val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, seNewStudents(enrollment, seRR, y), seReturningStudents(enrollment, seRR, y));
         val *= pf;

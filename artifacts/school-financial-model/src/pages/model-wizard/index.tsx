@@ -728,7 +728,7 @@ export function ModelWizardPage() {
         </div>
       </div>
 
-      <div className="flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto w-full">
+      <div className={cn("flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 mx-auto w-full", currentStep === 6 ? "max-w-6xl" : "max-w-3xl")}>
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <MicroLessonContainer data={methods.getValues() as FullModelData} currentStep={currentStep} className="mb-4" />

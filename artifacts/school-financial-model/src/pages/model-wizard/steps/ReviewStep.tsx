@@ -84,11 +84,12 @@ const FUNC_CATEGORY_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number): number {
+function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driverType: string, students: number, totalFTE?: number): number {
   const base = amounts?.[yearIdx] ?? 0;
   switch (driverType) {
     case "monthly": return base * 12;
     case "per_student": return base * students;
+    case "per_fte": return base * (totalFTE || 0);
     case "annual_fixed": return base;
     default: return base;
   }
@@ -181,7 +182,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
       if (row.driverType === "percent_of_revenue") {
         val = ((row.amounts?.[0] ?? 0) / 100) * revenueSummary.total;
       } else {
-        val = computeDriverValue(row.amounts, 0, row.driverType, year1Students);
+        val = computeDriverValue(row.amounts, 0, row.driverType, year1Students, staffingSummary.totalFTE);
       }
       total += val;
       const cat = row.category;
@@ -189,7 +190,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
     }
 
     return { count: enabled.length, byCategory, total };
-  }, [expenseRows, year1Students, revenueSummary.total]);
+  }, [expenseRows, year1Students, revenueSummary.total, staffingSummary.totalFTE]);
 
   const capitalDebtSummary = useMemo(() => {
     const enabled = (capitalAndDebtRows as ReviewCapDebtRow[]).filter((r) => r.enabled);
