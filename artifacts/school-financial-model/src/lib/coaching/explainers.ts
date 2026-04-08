@@ -42,7 +42,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     },
     extraBody: {
       workedExample: "A school with 100 students charging $10,000 tuition:\n• Tuition revenue: $1M\n• Per-pupil state funding at $8,500: +$850K\n• Annual grant: +$50K\n• Total Year 1 revenue: $1.9M\n• If the grant ends in Year 3, Year 4 revenue drops to $1.85M unless enrollment grows to offset it\n• Enrollment-driven revenue compounds over time; grants are temporary",
-      benchmarkDetail: "Industry benchmarks:\n• Charter schools: $8,000-$15,000 per pupil in public funding (varies by state)\n• Private school tuition: $8,000-$25,000\n• Revenue per student below $8,000 is very lean\n• Schools with >70% from a single source need strong justification",
+      benchmarkDetail: "Industry benchmarks:\n• Per-pupil public funding: $8,000-$15,000 (varies by state and school type)\n• Private school tuition: $8,000-$25,000\n• Revenue per student below $8,000 is very lean\n• Schools with >70% from a single source need strong justification",
       glossaryTerms: "• Per-Pupil Revenue: Total enrollment-driven revenue divided by total students\n• Revenue Concentration: Percentage of total revenue from your largest single source (above 80% warrants explanation)\n• Earned Revenue: Income directly tied to delivering educational services, as opposed to philanthropic or grant income",
       financingInsight: "Banks rank revenue by reliability:\n• Contracted per-pupil public funding (strongest)\n• Tuition with documented collection rates\n• Multi-year grants with signed agreements\n• Annual fundraising (weakest)\nKeeping your strongest revenue sources front and center strengthens any application.",
     },
@@ -65,7 +65,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     },
     extraBody: {
       workedExample: "Starting with 80 students, 85% retention:\n• Year 1: 80 students\n• Year 2: 68 return + 32 new = 100\n• Year 3: 85 return + 35 new = 120\n• Year 4: 102 return + 28 new = 130\n• Year 5: 111 return + 29 new = 140\nStrong retention means you need fewer new students each year. At 75% retention, you'd need 52 new students in Year 2 just to reach 100.",
-      benchmarkDetail: "Enrollment benchmarks by school type:\n• Urban charters: 85-95% of capacity by Year 3\n• Rural schools: 70-85% by Year 3 (often slower to fill)\n• Private schools without public funding: typically fill slowest\n• Year-over-year growth above 30% is rare and requires documented demand\n• Schools that grow too fast often face quality and staffing problems",
+      benchmarkDetail: "Enrollment benchmarks by setting:\n• Urban schools: 85-95% of capacity by Year 3\n• Rural schools: 70-85% by Year 3 (often slower to fill)\n• Schools without public funding: typically fill slowest\n• Year-over-year growth above 30% is rare and requires documented demand\n• Schools that grow too fast often face quality and staffing problems",
       glossaryTerms: "• Capacity Utilization: Enrolled students divided by facility maximum capacity\n• Retention Rate: Percentage of current students who re-enroll the following year\n• Net Enrollment Growth: New students minus departing students\n• Waitlist Depth: Number of qualified families waiting for a spot (the strongest evidence of demand)",
       financingInsight: "Banks typically stress-test enrollment by 10-20%:\n• The strongest models remain viable at 70-80% of projected Year 1 enrollment\n• That kind of cushion gives everyone confidence the school can weather a slow start",
     },
@@ -387,7 +387,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
       whatThisMeans: "Food service covers the cost of providing meals to students - whether you run your own kitchen, contract with a vendor, or participate in the National School Lunch Program (NSLP). This is a per-student cost that scales with enrollment.",
       whyItMatters: "Meal programs can be a significant expense or a revenue-neutral service depending on your approach. Schools participating in NSLP receive federal reimbursement that can offset most costs. Schools providing meals without reimbursement should budget carefully - food costs add up fast.",
       healthyVsRisky: "NSLP reimbursement covers $3.50-4.50 per free lunch. If you're self-funding, expect $4-7 per student per day, or $700-1,300 per student annually. Schools that promise meals without budgeting for them often face mid-year shortfalls.",
-      whatToDoNext: "Decide whether you'll participate in NSLP (most charter and public schools do) or self-fund meals. If you're not providing meals, enter $0 - but note that some charter authorizers require a meal program. If providing meals, get vendor quotes or estimate per-student daily costs.",
+      whatToDoNext: "Decide whether you'll participate in NSLP or self-fund meals. If you're not providing meals, enter $0 - but note that some authorizers or state regulations require a meal program. If providing meals, get vendor quotes or estimate per-student daily costs.",
     },
     extraBody: {
       workedExample: "100 students, 180 school days:\n• Self-funded meals at $5/student/day = $90K/year\n• With NSLP and 70% free/reduced-price eligibility:\n• Reimbursement: $4.00/meal x 70 students x 180 days = $50.4K\n• Net cost: $90K - $50.4K = $39.6K ($396/student)\n• That's a 56% reduction from self-funding\nIf you're eligible for NSLP, participation dramatically changes your food service economics.",
@@ -405,9 +405,9 @@ export const EXPLAINERS: Record<string, Explainer> = {
     id: "transportation",
     title: "Transportation",
     body: {
-      whatThisMeans: "Transportation costs include school bus contracts, ride-share partnerships, parent stipends, or any other arrangement to get students to and from school. Some states require charter schools to provide transportation; others leave it optional.",
+      whatThisMeans: "Transportation costs include school bus contracts, ride-share partnerships, parent stipends, or any other arrangement to get students to and from school. Some states require schools to provide transportation; others leave it optional.",
       whyItMatters: "Transportation can be a make-or-break factor for enrollment. Families who can't get their children to school won't enroll. But bus contracts are expensive and often locked in for a full year regardless of ridership. We see founders underestimate this cost or commit to transportation they can't sustain.",
-      healthyVsRisky: "Full bus service typically costs $800-2,000 per student per year depending on distance and region. Ride-share or stipend models run $500-1,000. If transportation is required by your charter or state law, budget for it - $0 isn't an option.",
+      healthyVsRisky: "Full bus service typically costs $800-2,000 per student per year depending on distance and region. Ride-share or stipend models run $500-1,000. If transportation is required by your authorizer or state law, budget for it - $0 isn't an option.",
       whatToDoNext: "Check whether your state or authorizer requires you to provide transportation. If so, get quotes from local bus companies early - prices vary significantly by region. If optional, consider whether offering transportation would meaningfully increase your enrollment.",
     },
     extraBody: {
@@ -428,12 +428,12 @@ export const EXPLAINERS: Record<string, Explainer> = {
     body: {
       whatThisMeans: "Professional development (PD) covers teacher training, conferences, certifications, coaching, and any investment in growing your staff's skills. This includes both external programs and internal training time.",
       whyItMatters: "Schools that invest in PD retain teachers longer and deliver better outcomes. A PD budget signals that leadership takes quality seriously. Skipping PD to save money is a false economy - it leads to higher turnover, which costs far more.",
-      healthyVsRisky: "Most schools budget $500-1,500 per staff member per year for PD. Less than $200 per person signals underinvestment. Some charter authorizers require a minimum PD budget as a condition of the charter.",
+      healthyVsRisky: "Schools typically budget $500-1,500 per staff member per year for PD. Less than $200 per person signals underinvestment. Some authorizers require a minimum PD budget as a condition of approval.",
       whatToDoNext: "Budget at least $500 per staff member for Year 1. As revenue grows, increase PD spending - it's one of the best investments you can make in school quality and staff retention.",
     },
     extraBody: {
       workedExample: "12 staff members at $1,000/person = $12K PD budget:\n• 4 teachers attend a $2,000 national conference ($8K)\n• Remaining $4K covers online PD subscriptions for all staff\n• Teacher turnover costs $8K-$15K per departure (recruiting, training, lost productivity)\n• If PD prevents even 1 teacher from leaving, it pays for itself\n• Schools with robust PD programs see 15-25% lower turnover",
-      benchmarkDetail: "PD spending benchmarks:\n• High-performing charter networks: $1,500-$3,000 per staff member\n• Traditional districts: $500-$800\n• Best practice: allocate 1-3% of total personnel budget to PD\n• Required PD hours vary by state: typically 15-30 hours/year for certification",
+      benchmarkDetail: "PD spending benchmarks:\n• High-performing school networks: $1,500-$3,000 per staff member\n• Traditional districts: $500-$800\n• Best practice: allocate 1-3% of total personnel budget to PD\n• Required PD hours vary by state: typically 15-30 hours/year for certification",
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "facilities",
@@ -475,7 +475,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     },
     extraBody: {
       workedExample: "$500K loan at 7% interest over 10 years:\n• Annual payment: $71,187 ($35K interest + $36K principal in Year 1)\n• Year 1 net operating income (before debt): $85,000\n• DSCR = $85K / $71K = 1.19x (just below 1.2x threshold)\n• Adding 10 students at $10K each pushes NOI to $165K\n• New DSCR = 2.32x\nSmall enrollment changes have outsized DSCR impact.",
-      benchmarkDetail: "Debt benchmarks for schools:\n• Charter school loan rates: 5-9% (varies with credit and collateral)\n• Facility loan terms: 7-15 years\n• Working capital terms: 3-5 years\n• Total debt service should not exceed 15% of revenue\n• Bank DSCR requirements: minimum 1.15x-1.25x\n• CDFIs may accept lower DSCR for mission-aligned schools",
+      benchmarkDetail: "Debt benchmarks for schools:\n• School loan rates: 5-9% (varies with credit and collateral)\n• Facility loan terms: 7-15 years\n• Working capital terms: 3-5 years\n• Total debt service should not exceed 15% of revenue\n• Bank DSCR requirements: minimum 1.15x-1.25x\n• CDFIs may accept lower DSCR for mission-aligned schools",
       glossaryTerms: "• DSCR: Net operating income divided by total annual debt payments (1.5x = you earn 50% more than owed)\n• Principal: Portion of payment that reduces outstanding balance\n• Amortization: Schedule by which loan principal is paid down\n• Covenant: Loan condition (like maintaining 1.2x DSCR) you must meet or risk default",
       financingInsight: "DSCR is the single most important metric banks evaluate:\n• Below 1.0x: school can't cover debt from operations\n• 1.0x-1.15x: may require additional security\n• Above 1.25x: gives confidence the school can handle a 10-15% enrollment dip",
     },
@@ -519,7 +519,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     },
     extraBody: {
       workedExample: "Retention compounding over 5 years (100 Year 1 students):\n• At 90% retention: Year 2 returning = 90 (need 10 new)\n• At 80% retention: Year 2 returning = 80 (need 20 new)\n• By Year 5, cumulative new students needed:\n• 90% retention: 41 total\n• 80% retention: 82 total (double the recruitment effort)\n• At $500/student acquisition cost: $20K vs $41K over 5 years",
-      benchmarkDetail: "Retention benchmarks:\n• High-performing charters: 90-95%\n• Average charters: 82-88%\n• Below 80%: constant recruitment just to stay flat\nRe-enrollment best practices:\n• Begin process in January\n• Confirm by March\n• Fill remaining seats April-August\n• Schools that wait until summer consistently underperform",
+      benchmarkDetail: "Retention benchmarks:\n• High-performing schools: 90-95%\n• Average: 82-88%\n• Below 80%: constant recruitment just to stay flat\nRe-enrollment best practices:\n• Begin process in January\n• Confirm by March\n• Fill remaining seats April-August\n• Schools that wait until summer consistently underperform",
       glossaryTerms: "• Retention Rate: Returning students divided by prior year enrollment (excluding graduates)\n• Attrition: The opposite - students who leave\n• Churn Cost: Total cost of replacing a departing student (marketing, processing, onboarding)\n• Net Promoter Score (NPS): Parent satisfaction measure - scores above 50 correlate with >90% retention",
     },
     audienceLevel: ["basics", "extra"],
@@ -583,7 +583,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     },
     extraBody: {
       workedExample: "Fixed costs $600K, revenue $10K/student, variable cost $2K/student:\n• Contribution margin: $10K - $2K = $8K per student\n• Break-even: $600K / $8K = 75 students\n• At 100 students (projected): cushion of 25 students (25%)\n• At 80 students: surplus = 5 x $8K = $40K\n• At 70 students (below break-even): deficit = 5 x $8K = -$40K",
-      benchmarkDetail: "Break-even benchmarks:\n• Most viable models break even at 65-80% of target capacity\n• Above 90% of capacity = high risk\n• National average for new charters: ~72% of Year 1 target\n• High fixed costs (expensive leases, large admin teams) push break-even higher",
+      benchmarkDetail: "Break-even benchmarks:\n• Most viable models break even at 65-80% of target capacity\n• Above 90% of capacity = high risk\n• National average for new schools: ~72% of Year 1 target\n• High fixed costs (expensive leases, large admin teams) push break-even higher",
       glossaryTerms: "• Break-Even Enrollment: Exact number of students needed for revenue to equal expenses\n• Contribution Margin: Revenue per student minus variable cost per student\n• Margin of Safety: Projected enrollment minus break-even enrollment (as a percentage)\n• Operating Leverage: High fixed costs mean fast profit above break-even but fast losses below it",
       financingInsight: "Banks will independently calculate your break-even enrollment:\n• The strongest models show break-even at or below 70% of projected enrollment\n• That cushion gives confidence the school can weather a slow start\n• If break-even exceeds 85% of projections, consider reducing fixed costs before applying",
     },
