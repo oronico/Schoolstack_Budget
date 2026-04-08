@@ -154,8 +154,9 @@ router.post("/models", authMiddleware, async (req: AuthRequest, res) => {
       res.status(400).json({ error: "Model name and data are required." });
       return;
     }
-    const { name, data, currentStep, schoolStage, fundingProfile } = parsed.data;
-    const normalizedData = normalizeModelData(data as Record<string, unknown>);
+    const { name, currentStep, schoolStage, fundingProfile } = parsed.data;
+    const rawData = (req.body as Record<string, unknown>).data as Record<string, unknown> | undefined;
+    const normalizedData = normalizeModelData(rawData ?? {});
     const rowCols = extractRowColumns(normalizedData);
 
     const [model] = await db.insert(financialModelsTable).values({
@@ -212,7 +213,7 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
     }
     const parsed = UpdateModelBody.safeParse(req.body);
     if (!parsed.success) {
-      if (process.env.NODE_ENV !== "production") console.error("Update validation errors:", JSON.stringify(parsed.error.issues, null, 2));
+      console.error("Update validation errors:", JSON.stringify(parsed.error.issues, null, 2));
       res.status(400).json({ error: "Invalid model data.", details: parsed.error.issues });
       return;
     }
@@ -228,8 +229,9 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
 
-    const { name, data, currentStep, status, schoolStage, fundingProfile } = parsed.data;
-    const normalizedData = normalizeModelData(data as Record<string, unknown>);
+    const { name, currentStep, status, schoolStage, fundingProfile } = parsed.data;
+    const rawData = (req.body as Record<string, unknown>).data as Record<string, unknown> | undefined;
+    const normalizedData = normalizeModelData(rawData ?? {});
     const rowCols = extractRowColumns(normalizedData);
     const [model] = await db
       .update(financialModelsTable)

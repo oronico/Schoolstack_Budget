@@ -36,7 +36,8 @@ Operating schools can include prior-year actuals and an opening balance sheet. F
 ### Coaching System (Kind Coaching Tone)
 All in-app guidance uses a warm, school-leader-friendly coaching voice. Key principles: "Coach don't preach — be kind — give grace." Never uses lender jargon (no "red flag," "deal-breaker," "underwriters will flag") in coaching contexts. Uses "worth thinking about" or "worth watching" instead.
 - **FinancingInsight** (Landmark icon): 10 curated instances across wizard steps providing practical financing context for school leaders.
-- **InlineHelpCard**: Tabbed help cards with "Financing Insight" tab (renamed from lender perspective).
+- **InlineHelpCard**: Tabbed help cards with "Financing Insight" tab (renamed from lender perspective). All cards start collapsed by default (no auto-expand).
+- **SectionExplainers**: Removed from main wizard step headers; coaching content is placed inline near relevant fields.
 - **Diagnostics engine**: Kind coaching language with no team signatures.
 - **Faith affirmation**: Conditional coaching card for faith-affiliated schools (Heart icon, teal).
 - **Founder salary detection**: Triggers when leader has no salary in staffing.
@@ -98,6 +99,7 @@ Identifies and surfaces critical financial issues with severity ranking, model-s
 - **DNS**: Squarespace
 - **Proxy**: Netlify rewrites `/api/*` to Railway.
 - **Schema management**: Runtime DDL migrations in api-server startup.
+- **Auto-save**: Wizard auto-saves on debounced form changes with up to 3 retries (exponential backoff). Classifies errors as auth/network/validation/unknown with targeted UI messages. The API server stores raw `req.body.data` (not Zod-stripped output) to preserve frontend-only fields like `programs`, `tuitionEscalation`, and `revenueSources`.
 
 # External Dependencies
 

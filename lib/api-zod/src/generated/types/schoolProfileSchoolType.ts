@@ -10,6 +10,7 @@ export type SchoolProfileSchoolType =
   (typeof SchoolProfileSchoolType)[keyof typeof SchoolProfileSchoolType];
 
 export const SchoolProfileSchoolType = {
+  catholic_school: "catholic_school",
   charter_school: "charter_school",
   homeschool_coop: "homeschool_coop",
   learning_pod: "learning_pod",

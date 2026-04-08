@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense, useMemo, type ComponentType } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense, useMemo, type ComponentType } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
@@ -105,7 +105,9 @@ export function ModelWizardPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [saveError, setSaveError] = useState(false);
+  const [saveError, setSaveError] = useState<false | "network" | "auth" | "validation" | "unknown">(false);
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stepInitialized, setStepInitialized] = useState(false);
   const [showImportBanner, setShowImportBanner] = useState(false);
   const [showPrepChecklist, setShowPrepChecklist] = useState(false);
@@ -328,54 +330,96 @@ export function ModelWizardPage() {
   const lastSavedRef = useRef<string>("");
   latestValuesRef.current = formValues;
 
+  const performSave = useCallback(async (valuesToSave: Record<string, unknown>): Promise<boolean> => {
+    if (!modelId || !initialData) return false;
+    setIsSaving(true);
+    try {
+      const profile = valuesToSave.schoolProfile as Record<string, unknown> | undefined;
+      const stageVal = profile?.schoolStage as "new_school" | "operating_school" | undefined;
+      const fundingVal = profile?.fundingProfile as "tuition_based" | "charter_public_funded" | "hybrid_mixed" | undefined;
+      const cleanedValues = JSON.parse(JSON.stringify(valuesToSave)) as Record<string, unknown>;
+      let sp = cleanedValues.schoolProfile as Record<string, unknown> | undefined;
+      if (sp) {
+        sp = cleanFacilityFieldsForSave(sp, sp.ownershipType as string | undefined);
+        const phases = sp.facilityPhases as Array<Record<string, unknown>> | undefined;
+        if (phases) {
+          sp.facilityPhases = phases.map(phase =>
+            cleanFacilityFieldsForSave(phase, phase.ownershipType as string | undefined)
+          );
+        }
+        cleanedValues.schoolProfile = sp;
+      }
+      const normalizedValues = normalizeEscalationOverrideRows(cleanedValues);
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: {
+          name: (profile?.schoolName as string) || initialData.name,
+          currentStep,
+          ...(stageVal ? { schoolStage: stageVal } : {}),
+          ...(fundingVal ? { fundingProfile: fundingVal } : {}),
+          data: normalizedValues,
+        }
+      });
+      setLastSaved(new Date());
+      setSaveError(false);
+      retryCountRef.current = 0;
+      return true;
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      if (status === 401 || status === 403) {
+        setSaveError("auth");
+      } else if (status === 400) {
+        setSaveError("validation");
+      } else if (!navigator.onLine || status === 0 || (err instanceof TypeError && /fetch|network/i.test((err as Error).message))) {
+        setSaveError("network");
+      } else {
+        setSaveError("unknown");
+      }
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [modelId, initialData, currentStep, updateMutation]);
+
   useEffect(() => {
     if (!modelId || !initialData) return;
-    
-    const save = async (): Promise<boolean> => {
-      setIsSaving(true);
-      try {
-        const profile = debouncedValues.schoolProfile as Record<string, unknown> | undefined;
-        const stageVal = profile?.schoolStage as "new_school" | "operating_school" | undefined;
-        const fundingVal = profile?.fundingProfile as "tuition_based" | "charter_public_funded" | "hybrid_mixed" | undefined;
-        const cleanedValues = JSON.parse(JSON.stringify(debouncedValues)) as Record<string, unknown>;
-        let sp = cleanedValues.schoolProfile as Record<string, unknown> | undefined;
-        if (sp) {
-          sp = cleanFacilityFieldsForSave(sp, sp.ownershipType as string | undefined);
-          const phases = sp.facilityPhases as Array<Record<string, unknown>> | undefined;
-          if (phases) {
-            sp.facilityPhases = phases.map(phase =>
-              cleanFacilityFieldsForSave(phase, phase.ownershipType as string | undefined)
-            );
-          }
-          cleanedValues.schoolProfile = sp;
-        }
-        const normalizedValues = normalizeEscalationOverrideRows(cleanedValues);
-        await updateMutation.mutateAsync({
-          id: modelId,
-          data: {
-            name: (profile?.schoolName as string) || initialData.name,
-            currentStep,
-            ...(stageVal ? { schoolStage: stageVal } : {}),
-            ...(fundingVal ? { fundingProfile: fundingVal } : {}),
-            data: normalizedValues,
+
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
+    if (Object.keys(methods.formState.dirtyFields).length === 0) return;
+
+    const scheduleRetry = (attempt: number) => {
+      if (attempt >= 3) return;
+      const delay = Math.min(2000 * Math.pow(2, attempt), 10000);
+      retryCountRef.current = attempt + 1;
+      retryTimerRef.current = setTimeout(() => {
+        performSave(latestValuesRef.current as unknown as Record<string, unknown>).then((retryOk) => {
+          if (retryOk) {
+            lastSavedRef.current = JSON.stringify(latestValuesRef.current);
+          } else {
+            scheduleRetry(attempt + 1);
           }
         });
-        setLastSaved(new Date());
-        setSaveError(false);
-        return true;
-      } catch {
-        setSaveError(true);
-        return false;
-      } finally {
-        setIsSaving(false);
+      }, delay);
+    };
+
+    performSave(debouncedValues as unknown as Record<string, unknown>).then((ok) => {
+      if (ok) {
+        lastSavedRef.current = JSON.stringify(debouncedValues);
+      } else {
+        scheduleRetry(retryCountRef.current);
+      }
+    });
+
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
       }
     };
-    
-    if (Object.keys(methods.formState.dirtyFields).length > 0) {
-       save().then((ok) => {
-         if (ok) lastSavedRef.current = JSON.stringify(debouncedValues);
-       });
-    }
   }, [debouncedValues, currentStep, modelId]);
 
   useEffect(() => {
@@ -664,8 +708,16 @@ export function ModelWizardPage() {
               <div className="text-xs font-medium text-muted-foreground">
                 {isSaving ? (
                   <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</span>
+                ) : saveError === "auth" ? (
+                  <button type="button" onClick={() => { localStorage.removeItem("auth_token"); setLocation("/login"); }} className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 underline underline-offset-2">
+                    <AlertCircle className="h-3 w-3" /> Session expired - log in again
+                  </button>
+                ) : saveError === "network" ? (
+                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Offline - will retry</span>
+                ) : saveError === "validation" ? (
+                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Could not save - check your entries</span>
                 ) : saveError ? (
-                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save failed - retrying</span>
+                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save issue - retrying</span>
                 ) : lastSaved ? (
                   <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved</span>
                 ) : null}
