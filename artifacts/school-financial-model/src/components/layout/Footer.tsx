@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { reopenCookieConsent } from "@/components/CookieConsent";
 
 export function Footer() {
   return (
@@ -63,6 +64,7 @@ export function Footer() {
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-xs text-white/40 hover:text-white/70 transition-colors">Privacy</Link>
             <Link href="/terms" className="text-xs text-white/40 hover:text-white/70 transition-colors">Terms</Link>
+            <button onClick={reopenCookieConsent} className="text-xs text-white/40 hover:text-white/70 transition-colors">Cookie Preferences</button>
             <a href="mailto:admin@schoolstack.ai" className="text-xs text-white/40 hover:text-white/70 transition-colors">Contact</a>
           </div>
         </div>

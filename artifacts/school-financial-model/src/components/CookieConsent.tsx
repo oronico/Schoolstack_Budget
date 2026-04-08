@@ -1,20 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getConsent, setConsent, initGA } from "@/lib/analytics";
 import { Link } from "wouter";
+
+const REOPEN_EVENT = "cookie-consent:reopen";
+
+export function reopenCookieConsent() {
+  window.dispatchEvent(new CustomEvent(REOPEN_EVENT));
+}
 
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
 
+  const show = useCallback(() => setVisible(true), []);
+
   useEffect(() => {
     const consent = getConsent();
     if (consent === null) {
-      const timer = setTimeout(() => setVisible(true), 1500);
+      const timer = setTimeout(show, 1500);
       return () => clearTimeout(timer);
     }
     if (consent === "accepted") {
       initGA();
     }
-  }, []);
+  }, [show]);
+
+  useEffect(() => {
+    window.addEventListener(REOPEN_EVENT, show);
+    return () => window.removeEventListener(REOPEN_EVENT, show);
+  }, [show]);
 
   if (!visible) return null;
 
