@@ -25,6 +25,22 @@ export function initGA() {
   initialized = true;
 }
 
+function disableGA() {
+  if (!GA_MEASUREMENT_ID) return;
+
+  (window as Record<string, unknown>)[`ga-disable-${GA_MEASUREMENT_ID}`] = true;
+
+  const gaCookies = document.cookie.split(";").map(c => c.trim());
+  for (const cookie of gaCookies) {
+    const name = cookie.split("=")[0];
+    if (name.startsWith("_ga")) {
+      const domain = window.location.hostname;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.${domain}`;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    }
+  }
+}
+
 export function getConsent(): "accepted" | "declined" | null {
   const value = localStorage.getItem("cookie_consent");
   if (value === "accepted" || value === "declined") return value;
@@ -35,6 +51,8 @@ export function setConsent(choice: "accepted" | "declined") {
   localStorage.setItem("cookie_consent", choice);
   if (choice === "accepted") {
     initGA();
+  } else {
+    disableGA();
   }
 }
 
