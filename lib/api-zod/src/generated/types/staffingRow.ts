@@ -27,4 +27,5 @@ export interface StaffingRow {
   maxFte?: number;
   startYear?: number;
   endYear?: number;
+  [key: string]: unknown;
 }

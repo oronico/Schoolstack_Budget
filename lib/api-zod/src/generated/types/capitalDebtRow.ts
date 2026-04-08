@@ -20,4 +20,5 @@ export interface CapitalDebtRow {
   loanRate?: number;
   loanTermYears?: number;
   purpose?: CapitalDebtRowPurpose;
+  [key: string]: unknown;
 }

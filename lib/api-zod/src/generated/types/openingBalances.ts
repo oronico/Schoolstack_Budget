@@ -14,4 +14,5 @@ export interface OpeningBalances {
   accountsPayable?: number;
   currentDebtPortion?: number;
   longTermDebt?: number;
+  [key: string]: unknown;
 }

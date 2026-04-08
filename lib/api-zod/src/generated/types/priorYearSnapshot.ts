@@ -11,4 +11,5 @@ export interface PriorYearSnapshot {
   totalRevenue?: number;
   totalExpenses?: number;
   endingCash?: number;
+  [key: string]: unknown;
 }

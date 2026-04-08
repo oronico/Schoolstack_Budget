@@ -409,14 +409,11 @@ export const CreateModelBody = zod.object({
       .array(
         zod.object({
           id: zod.string(),
-          category: zod.enum([
-            "personnel",
-            "instructional_program",
-            "technology",
-            "occupancy_facility",
-            "administrative_general",
-            "capital_financing",
-          ]),
+          category: zod
+            .string()
+            .describe(
+              "Built-in categories (personnel, instructional_program, technology, occupancy_facility, administrative_general, capital_financing) plus user-defined custom categories",
+            ),
           lineItem: zod.string(),
           enabled: zod.boolean(),
           driverType: zod.enum([
@@ -539,6 +536,14 @@ export const CreateModelBody = zod.object({
     assumptionFlags: zod
       .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
+    programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
+    escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
 });
 
@@ -851,14 +856,11 @@ export const GetModelResponse = zod.object({
       .array(
         zod.object({
           id: zod.string(),
-          category: zod.enum([
-            "personnel",
-            "instructional_program",
-            "technology",
-            "occupancy_facility",
-            "administrative_general",
-            "capital_financing",
-          ]),
+          category: zod
+            .string()
+            .describe(
+              "Built-in categories (personnel, instructional_program, technology, occupancy_facility, administrative_general, capital_financing) plus user-defined custom categories",
+            ),
           lineItem: zod.string(),
           enabled: zod.boolean(),
           driverType: zod.enum([
@@ -981,6 +983,14 @@ export const GetModelResponse = zod.object({
     assumptionFlags: zod
       .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
+    programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
+    escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
   updatedAt: zod.date(),
   createdAt: zod.date(),
@@ -1294,14 +1304,11 @@ export const UpdateModelBody = zod.object({
       .array(
         zod.object({
           id: zod.string(),
-          category: zod.enum([
-            "personnel",
-            "instructional_program",
-            "technology",
-            "occupancy_facility",
-            "administrative_general",
-            "capital_financing",
-          ]),
+          category: zod
+            .string()
+            .describe(
+              "Built-in categories (personnel, instructional_program, technology, occupancy_facility, administrative_general, capital_financing) plus user-defined custom categories",
+            ),
           lineItem: zod.string(),
           enabled: zod.boolean(),
           driverType: zod.enum([
@@ -1424,6 +1431,14 @@ export const UpdateModelBody = zod.object({
     assumptionFlags: zod
       .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
+    programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
+    escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
 });
 
@@ -1731,14 +1746,11 @@ export const UpdateModelResponse = zod.object({
       .array(
         zod.object({
           id: zod.string(),
-          category: zod.enum([
-            "personnel",
-            "instructional_program",
-            "technology",
-            "occupancy_facility",
-            "administrative_general",
-            "capital_financing",
-          ]),
+          category: zod
+            .string()
+            .describe(
+              "Built-in categories (personnel, instructional_program, technology, occupancy_facility, administrative_general, capital_financing) plus user-defined custom categories",
+            ),
           lineItem: zod.string(),
           enabled: zod.boolean(),
           driverType: zod.enum([
@@ -1861,6 +1873,14 @@ export const UpdateModelResponse = zod.object({
     assumptionFlags: zod
       .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
+    programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
+    escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
   updatedAt: zod.date(),
   createdAt: zod.date(),
@@ -2195,14 +2215,11 @@ export const ArchiveModelResponse = zod.object({
       .array(
         zod.object({
           id: zod.string(),
-          category: zod.enum([
-            "personnel",
-            "instructional_program",
-            "technology",
-            "occupancy_facility",
-            "administrative_general",
-            "capital_financing",
-          ]),
+          category: zod
+            .string()
+            .describe(
+              "Built-in categories (personnel, instructional_program, technology, occupancy_facility, administrative_general, capital_financing) plus user-defined custom categories",
+            ),
           lineItem: zod.string(),
           enabled: zod.boolean(),
           driverType: zod.enum([
@@ -2325,6 +2342,14 @@ export const ArchiveModelResponse = zod.object({
     assumptionFlags: zod
       .array(zod.record(zod.string(), zod.unknown()))
       .optional(),
+    programs: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionTiers: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+    tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
+    revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
+    escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
   updatedAt: zod.date(),
   createdAt: zod.date(),

@@ -184,17 +184,10 @@ export const RevenueCategory = {
   other_revenue: "other_revenue",
 } as const;
 
-export type ExpenseCategory =
-  (typeof ExpenseCategory)[keyof typeof ExpenseCategory];
-
-export const ExpenseCategory = {
-  personnel: "personnel",
-  instructional_program: "instructional_program",
-  technology: "technology",
-  occupancy_facility: "occupancy_facility",
-  administrative_general: "administrative_general",
-  capital_financing: "capital_financing",
-} as const;
+/**
+ * Built-in categories (personnel, instructional_program, technology, occupancy_facility, administrative_general, capital_financing) plus user-defined custom categories
+ */
+export type ExpenseCategory = string;
 
 export type RevenueRowBillingMonths =
   (typeof RevenueRowBillingMonths)[keyof typeof RevenueRowBillingMonths];
@@ -278,6 +271,7 @@ export interface RevenueRow {
   grantStatus?: RevenueRowGrantStatus;
   receiptQuarter?: RevenueRowReceiptQuarter;
   escalationRate?: number;
+  [key: string]: unknown;
 }
 
 export type StaffingRowStaffingMode =
@@ -306,6 +300,7 @@ export interface StaffingRow {
   maxFte?: number;
   startYear?: number;
   endYear?: number;
+  [key: string]: unknown;
 }
 
 export interface ExpenseRow {
@@ -317,6 +312,7 @@ export interface ExpenseRow {
   amounts: number[];
   note?: string;
   escalationRate?: number;
+  [key: string]: unknown;
 }
 
 export type CapitalDebtRowPurpose =
@@ -340,6 +336,7 @@ export interface CapitalDebtRow {
   loanRate?: number;
   loanTermYears?: number;
   purpose?: CapitalDebtRowPurpose;
+  [key: string]: unknown;
 }
 
 export interface OpeningBalances {
@@ -350,6 +347,7 @@ export interface OpeningBalances {
   accountsPayable?: number;
   currentDebtPortion?: number;
   longTermDebt?: number;
+  [key: string]: unknown;
 }
 
 export interface SourcesAndUsesItem {
@@ -390,6 +388,7 @@ export interface PriorYearSnapshot {
   totalRevenue?: number;
   totalExpenses?: number;
   endingCash?: number;
+  [key: string]: unknown;
 }
 
 export type SchoolProfileSchoolType =
@@ -497,6 +496,7 @@ export interface FacilityPhase {
   comparableMarketRent?: number;
   hasWrittenAgreement?: boolean;
   monthlyFacilityAllocation?: number;
+  [key: string]: unknown;
 }
 
 export type SchoolProfileGradeBandEnrollment = {
@@ -564,6 +564,7 @@ export interface SchoolProfile {
   lendingLabIntent?: SchoolProfileLendingLabIntent;
   accountingBasis?: SchoolProfileAccountingBasis;
   facilityPhases?: FacilityPhase[];
+  [key: string]: unknown;
 }
 
 export interface Enrollment {
@@ -581,6 +582,7 @@ export interface Enrollment {
   applicationsReceived?: number;
   /** @minimum 0 */
   waitlistCount?: number;
+  [key: string]: unknown;
 }
 
 export interface Revenue {
@@ -594,6 +596,7 @@ export interface Revenue {
   foundationGrants?: number;
   capitalGifts?: number;
   annualTuitionIncrease?: number;
+  [key: string]: unknown;
 }
 
 export interface Staffing {
@@ -603,6 +606,7 @@ export interface Staffing {
   adminSalary?: number;
   founderSalary?: number;
   benefitsRate?: number;
+  [key: string]: unknown;
 }
 
 export interface Facilities {
@@ -626,6 +630,7 @@ export interface Facilities {
   loanAmount?: number;
   squareFootage?: number;
   hasRenewalOption?: boolean;
+  [key: string]: unknown;
 }
 
 export type ModelFormDataBudgetNarrative = { [key: string]: unknown };
@@ -637,6 +642,22 @@ export type ModelFormDataAssumptionFlagResponsesItem = {
 };
 
 export type ModelFormDataAssumptionFlagsItem = { [key: string]: unknown };
+
+export type ModelFormDataProgramsItem = { [key: string]: unknown };
+
+export type ModelFormDataTuitionTiersItem = { [key: string]: unknown };
+
+export type ModelFormDataTuitionEscalation = { [key: string]: unknown };
+
+export type ModelFormDataRevenueDefaults = { [key: string]: unknown };
+
+export type ModelFormDataRevenueSources = { [key: string]: unknown };
+
+export type ModelFormDataCurrentYearProjection = { [key: string]: unknown };
+
+export type ModelFormDataCustomCategoryLabels = { [key: string]: string };
+
+export type ModelFormDataEscalationRates = { [key: string]: unknown };
 
 export interface ModelFormData {
   schoolProfile?: SchoolProfile;
@@ -656,6 +677,15 @@ export interface ModelFormData {
   budgetNarrative?: ModelFormDataBudgetNarrative;
   assumptionFlagResponses?: ModelFormDataAssumptionFlagResponsesItem[];
   assumptionFlags?: ModelFormDataAssumptionFlagsItem[];
+  programs?: ModelFormDataProgramsItem[];
+  tuitionTiers?: ModelFormDataTuitionTiersItem[];
+  tuitionEscalation?: ModelFormDataTuitionEscalation;
+  revenueDefaults?: ModelFormDataRevenueDefaults;
+  revenueSources?: ModelFormDataRevenueSources;
+  currentYearProjection?: ModelFormDataCurrentYearProjection;
+  customCategoryLabels?: ModelFormDataCustomCategoryLabels;
+  escalationRates?: ModelFormDataEscalationRates;
+  [key: string]: unknown;
 }
 
 export interface CreateFinancialModelData {

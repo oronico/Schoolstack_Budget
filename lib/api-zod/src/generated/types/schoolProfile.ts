@@ -71,4 +71,5 @@ export interface SchoolProfile {
   lendingLabIntent?: SchoolProfileLendingLabIntent;
   accountingBasis?: SchoolProfileAccountingBasis;
   facilityPhases?: FacilityPhase[];
+  [key: string]: unknown;
 }

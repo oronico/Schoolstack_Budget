@@ -6,14 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ExpenseCategory =
-  (typeof ExpenseCategory)[keyof typeof ExpenseCategory];
-
-export const ExpenseCategory = {
-  personnel: "personnel",
-  instructional_program: "instructional_program",
-  technology: "technology",
-  occupancy_facility: "occupancy_facility",
-  administrative_general: "administrative_general",
-  capital_financing: "capital_financing",
-} as const;
+/**
+ * Built-in categories (personnel, instructional_program, technology, occupancy_facility, administrative_general, capital_financing) plus user-defined custom categories
+ */
+export type ExpenseCategory = string;

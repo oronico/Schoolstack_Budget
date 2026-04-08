@@ -13,4 +13,5 @@ export interface Staffing {
   adminSalary?: number;
   founderSalary?: number;
   benefitsRate?: number;
+  [key: string]: unknown;
 }

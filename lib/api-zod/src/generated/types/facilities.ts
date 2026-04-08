@@ -27,4 +27,5 @@ export interface Facilities {
   loanAmount?: number;
   squareFootage?: number;
   hasRenewalOption?: boolean;
+  [key: string]: unknown;
 }

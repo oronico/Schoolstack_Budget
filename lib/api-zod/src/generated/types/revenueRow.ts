@@ -35,4 +35,5 @@ export interface RevenueRow {
   grantStatus?: RevenueRowGrantStatus;
   receiptQuarter?: RevenueRowReceiptQuarter;
   escalationRate?: number;
+  [key: string]: unknown;
 }

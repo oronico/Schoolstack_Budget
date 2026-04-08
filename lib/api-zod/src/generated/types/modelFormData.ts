@@ -13,6 +13,14 @@ import type { Facilities } from "./facilities";
 import type { ModelFormDataAssumptionFlagResponsesItem } from "./modelFormDataAssumptionFlagResponsesItem";
 import type { ModelFormDataAssumptionFlagsItem } from "./modelFormDataAssumptionFlagsItem";
 import type { ModelFormDataBudgetNarrative } from "./modelFormDataBudgetNarrative";
+import type { ModelFormDataCurrentYearProjection } from "./modelFormDataCurrentYearProjection";
+import type { ModelFormDataCustomCategoryLabels } from "./modelFormDataCustomCategoryLabels";
+import type { ModelFormDataEscalationRates } from "./modelFormDataEscalationRates";
+import type { ModelFormDataProgramsItem } from "./modelFormDataProgramsItem";
+import type { ModelFormDataRevenueDefaults } from "./modelFormDataRevenueDefaults";
+import type { ModelFormDataRevenueSources } from "./modelFormDataRevenueSources";
+import type { ModelFormDataTuitionEscalation } from "./modelFormDataTuitionEscalation";
+import type { ModelFormDataTuitionTiersItem } from "./modelFormDataTuitionTiersItem";
 import type { OpeningBalances } from "./openingBalances";
 import type { PriorYearSnapshot } from "./priorYearSnapshot";
 import type { Revenue } from "./revenue";
@@ -41,4 +49,13 @@ export interface ModelFormData {
   budgetNarrative?: ModelFormDataBudgetNarrative;
   assumptionFlagResponses?: ModelFormDataAssumptionFlagResponsesItem[];
   assumptionFlags?: ModelFormDataAssumptionFlagsItem[];
+  programs?: ModelFormDataProgramsItem[];
+  tuitionTiers?: ModelFormDataTuitionTiersItem[];
+  tuitionEscalation?: ModelFormDataTuitionEscalation;
+  revenueDefaults?: ModelFormDataRevenueDefaults;
+  revenueSources?: ModelFormDataRevenueSources;
+  currentYearProjection?: ModelFormDataCurrentYearProjection;
+  customCategoryLabels?: ModelFormDataCustomCategoryLabels;
+  escalationRates?: ModelFormDataEscalationRates;
+  [key: string]: unknown;
 }

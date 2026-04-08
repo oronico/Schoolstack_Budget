@@ -28,4 +28,5 @@ export interface FacilityPhase {
   comparableMarketRent?: number;
   hasWrittenAgreement?: boolean;
   monthlyFacilityAllocation?: number;
+  [key: string]: unknown;
 }

@@ -17,4 +17,5 @@ export interface Revenue {
   foundationGrants?: number;
   capitalGifts?: number;
   annualTuitionIncrease?: number;
+  [key: string]: unknown;
 }

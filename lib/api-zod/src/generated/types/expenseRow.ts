@@ -17,4 +17,5 @@ export interface ExpenseRow {
   amounts: number[];
   note?: string;
   escalationRate?: number;
+  [key: string]: unknown;
 }

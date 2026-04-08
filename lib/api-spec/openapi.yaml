@@ -764,15 +764,10 @@ components:
         - other_revenue
     ExpenseCategory:
       type: string
-      enum:
-        - personnel
-        - instructional_program
-        - technology
-        - occupancy_facility
-        - administrative_general
-        - capital_financing
+      description: Built-in categories (personnel, instructional_program, technology, occupancy_facility, administrative_general, capital_financing) plus user-defined custom categories
     RevenueRow:
       type: object
+      additionalProperties: true
       properties:
         id:
           type: string
@@ -830,6 +825,7 @@ components:
         - amounts
     StaffingRow:
       type: object
+      additionalProperties: true
       properties:
         id:
           type: string
@@ -880,6 +876,7 @@ components:
         - payrollLike
     ExpenseRow:
       type: object
+      additionalProperties: true
       properties:
         id:
           type: string
@@ -908,6 +905,7 @@ components:
         - amounts
     CapitalDebtRow:
       type: object
+      additionalProperties: true
       properties:
         id:
           type: string
@@ -942,6 +940,7 @@ components:
         - amounts
     OpeningBalances:
       type: object
+      additionalProperties: true
       properties:
         cash:
           type: number
@@ -1013,6 +1012,7 @@ components:
           maxItems: 5
     PriorYearSnapshot:
       type: object
+      additionalProperties: true
       properties:
         endingEnrollment:
           type: integer
@@ -1057,6 +1057,7 @@ components:
         - data
     ModelFormData:
       type: object
+      additionalProperties: true
       properties:
         schoolProfile:
           $ref: "#/components/schemas/SchoolProfile"
@@ -1115,8 +1116,38 @@ components:
           items:
             type: object
             additionalProperties: true
+        programs:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        tuitionTiers:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        tuitionEscalation:
+          type: object
+          additionalProperties: true
+        revenueDefaults:
+          type: object
+          additionalProperties: true
+        revenueSources:
+          type: object
+          additionalProperties: true
+        currentYearProjection:
+          type: object
+          additionalProperties: true
+        customCategoryLabels:
+          type: object
+          additionalProperties:
+            type: string
+        escalationRates:
+          type: object
+          additionalProperties: true
     SchoolProfile:
       type: object
+      additionalProperties: true
       properties:
         schoolName:
           type: string
@@ -1259,6 +1290,7 @@ components:
             $ref: "#/components/schemas/FacilityPhase"
     FacilityPhase:
       type: object
+      additionalProperties: true
       properties:
         id:
           type: string
@@ -1308,6 +1340,7 @@ components:
         - endYear
     Enrollment:
       type: object
+      additionalProperties: true
       properties:
         year1:
           type: integer
@@ -1331,6 +1364,7 @@ components:
           minimum: 0
     Revenue:
       type: object
+      additionalProperties: true
       properties:
         tuitionPerStudent:
           type: number
@@ -1354,6 +1388,7 @@ components:
           type: number
     Staffing:
       type: object
+      additionalProperties: true
       properties:
         studentsPerTeacher:
           type: number
@@ -1369,6 +1404,7 @@ components:
           type: number
     Facilities:
       type: object
+      additionalProperties: true
       properties:
         monthlyRent:
           type: number

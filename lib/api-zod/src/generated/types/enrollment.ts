@@ -21,4 +21,5 @@ export interface Enrollment {
   applicationsReceived?: number;
   /** @minimum 0 */
   waitlistCount?: number;
+  [key: string]: unknown;
 }
