@@ -1716,11 +1716,20 @@ function ExpenseLineCard({
               <option key={val} value={val}>{label}</option>
             ))}
           </select>
-          <div className="flex items-center gap-1.5 text-sm">
+          <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground text-xs">Y1:</span>
-            <span className="font-bold text-foreground">
-              {row.driverType === "percent_of_revenue" ? `${y1Raw}%` : formatCurrency(y1Amount)}
-            </span>
+            <div className="relative">
+              <input
+                type="number"
+                value={row.amounts[0] ?? 0}
+                onChange={(e) => updateY1(parseFloat(e.target.value) || 0)}
+                className="w-24 text-sm font-bold text-center border border-border rounded-md px-2 py-1 bg-background"
+                step={row.driverType === "percent_of_revenue" ? "0.1" : "1"}
+              />
+              {row.driverType === "percent_of_revenue" && (
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">%</span>
+              )}
+            </div>
           </div>
           <div className="text-xs text-muted-foreground">
             5yr: {formatCurrency(rowTotal)}
@@ -1733,6 +1742,16 @@ function ExpenseLineCard({
           )}
         </div>
 
+        <div className="ml-[52px]">
+          <input
+            type="text"
+            value={row.note || ""}
+            onChange={(e) => onUpdate(row.id, "note", e.target.value)}
+            className="w-full text-xs border border-border rounded-md px-2.5 py-1.5 bg-background"
+            placeholder="Note (optional)"
+          />
+        </div>
+
         {rationale && (
           <p className="text-[11px] text-muted-foreground/80 italic leading-snug ml-[52px]">{rationale}</p>
         )}
@@ -1740,23 +1759,14 @@ function ExpenseLineCard({
 
       {isOpen && (
         <div className="px-4 pb-4 pt-1 space-y-3 border-t border-border/50">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <Hash className="h-3 w-3 text-muted-foreground" />
-              <input
-                type="text"
-                value={row.accountCode || ""}
-                onChange={(e) => onUpdate(row.id, "accountCode", e.target.value)}
-                className="w-16 text-xs text-center border border-border rounded-md px-1.5 py-1 bg-background font-mono"
-                placeholder="Code"
-              />
-            </div>
+          <div className="flex items-center gap-1.5">
+            <Hash className="h-3 w-3 text-muted-foreground" />
             <input
               type="text"
-              value={row.note || ""}
-              onChange={(e) => onUpdate(row.id, "note", e.target.value)}
-              className="flex-1 text-xs border border-border rounded-md px-2.5 py-1.5 bg-background min-w-[150px]"
-              placeholder="Note (optional)"
+              value={row.accountCode || ""}
+              onChange={(e) => onUpdate(row.id, "accountCode", e.target.value)}
+              className="w-20 text-xs text-center border border-border rounded-md px-1.5 py-1 bg-background font-mono"
+              placeholder="Acct code"
             />
           </div>
 

@@ -77,7 +77,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
 
   function driverVal(
     amounts: number[] | undefined, y: number, driverType: string, students: number,
-    escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number
+    escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number, fte?: number
   ): number {
     let base = amounts?.[y] ?? 0;
     const esc = escalationRate ?? fallbackInflation ?? 0;
@@ -89,6 +89,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
       case "per_student": return base * students;
       case "per_new_student": return base * (newStudents ?? students);
       case "per_returning_student": return base * (returningStudents ?? 0);
+      case "per_fte": return base * (fte ?? 0);
       case "annual_fixed": return base;
       default: return base;
     }
@@ -204,7 +205,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
         }
         opY += (pct / 100) * revenueByYear[y];
       } else {
-        opY += driverVal(e.amounts, y, e.driverType, students, e.escalationRate, costInflation, ns, rs);
+        opY += driverVal(e.amounts, y, e.driverType, students, e.escalationRate, costInflation, ns, rs, y1TotalFTE);
       }
     }
     let capDebtY = 0;
