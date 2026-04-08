@@ -132,7 +132,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
     },
     extraBody: {
       workedExample: "A school with $1.2M revenue and 10 staff members:\n• Base salaries total $650K\n• Add 25% for benefits and payroll taxes (FICA 7.65%, health insurance ~$6K/employee, workers comp ~2%)\n• Loaded cost = $812K\n• That's 68% of revenue - a warning zone\n• Reducing to 9 staff saves ~$81K loaded, dropping to 61% - much healthier\n• Each additional FTE at $65K salary actually costs ~$81K loaded",
-      glossaryTerms: "• Loaded Cost: Total compensation including salary, benefits, and employer-paid taxes\n• FTE (Full-Time Equivalent): 1.0 = full-time, 0.5 = half-time\n• Student-to-Teacher Ratio: Total students divided by instructional FTE (most schools target 12:1 to 20:1)\n• Benefits Load: Percentage added to base salary for health insurance, retirement, and payroll taxes (typically 25-35%)",
+      glossaryTerms: "• Loaded Cost: Total compensation including salary, benefits, and employer-paid taxes\n• FTE (Full-Time Equivalent): 1.0 = full-time, 0.5 = half-time\n• Student-to-Teacher Ratio: Total students divided by instructional FTE\n• Fringe: Cost of benefits that may include health insurance, retirement, and payroll taxes - typically 25-35%",
       financingInsight: "Staffing above 65% of revenue leaves little room for facilities, debt, and reserves:\n• Banks look at whether staffing scales with enrollment\n• Building lean and growing thoughtfully signals strong leadership\n• A staffing plan that phases in roles as revenue grows is more credible than front-loading hires",
     },
     audienceLevel: ["basics", "extra"],
