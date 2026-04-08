@@ -562,33 +562,97 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
 
   const categoryOrder = getCategoryOrder(fundingProfile, schoolType);
 
-  const getCategoryTotal = (cat: RevenueCategory): number => {
-    return rows
-      .filter((r) => r.category === cat && r.enabled)
-      .reduce((sum, r) => sum + (r.amounts[0] ?? 0), 0);
-  };
 
   const monthlyCashInflow = useMemo(
     () => computeMonthlyCashInflow(rows, 0, y1Students),
     [rows, y1Students]
   );
 
+  const gradeBandEnrollment = watch("schoolProfile.gradeBandEnrollment");
+  const gradeBandPerPupil = watch("schoolProfile.gradeBandPerPupil");
+  const enrollmentRevenueMethod = watch("schoolProfile.enrollmentRevenueMethod") as string | undefined;
+  const priorYearADM = watch("schoolProfile.priorYearADM") as number | undefined;
+  const priorYearADA = watch("schoolProfile.priorYearADA") as number | undefined;
+
   const gradeBandActive = useMemo(() => {
-    const gbe = watch("schoolProfile.gradeBandEnrollment");
-    const gbp = watch("schoolProfile.gradeBandPerPupil");
+    const gbe = gradeBandEnrollment;
+    const gbp = gradeBandPerPupil;
     if (!gbe || !gbp) return false;
     const hasEnrollment = [gbe.k5, gbe.m68, gbe.h912].some(
       (arr: number[] | undefined) => arr && arr.some((v: number) => (v ?? 0) > 0),
     );
     const hasRates = (gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0;
     return hasEnrollment && hasRates;
-  }, [watch("schoolProfile.gradeBandEnrollment"), watch("schoolProfile.gradeBandPerPupil")]);
+  }, [gradeBandEnrollment, gradeBandPerPupil]);
+
+  useEffect(() => {
+    if (!gradeBandActive) return;
+    const gbe = gradeBandEnrollment || { k5: [0,0,0,0,0], m68: [0,0,0,0,0], h912: [0,0,0,0,0] };
+    const gbp = gradeBandPerPupil || { k5: 0, m68: 0, h912: 0 };
+    const method = enrollmentRevenueMethod || "adm";
+    const adm = priorYearADM || 0;
+    const ada = priorYearADA || 0;
+    const ratio = method === "ada"
+      ? (adm > 0 && ada > 0 ? Math.min(ada / adm, 1) : 0.95)
+      : 1;
+
+    const newAmounts: number[] = [];
+    for (let y = 0; y < yearCount; y++) {
+      const total = (
+        ((gbe.k5?.[y] || 0) * (gbp.k5 || 0)) +
+        ((gbe.m68?.[y] || 0) * (gbp.m68 || 0)) +
+        ((gbe.h912?.[y] || 0) * (gbp.h912 || 0))
+      ) * ratio;
+      const yearEnrollment = (gbe.k5?.[y] || 0) + (gbe.m68?.[y] || 0) + (gbe.h912?.[y] || 0);
+      newAmounts.push(yearEnrollment > 0 ? Math.round(total / yearEnrollment) : 0);
+    }
+
+    const perPupilRow = rows.find(r => r.id === "state_local_perpupil");
+    if (!perPupilRow) return;
+    const changed = newAmounts.some((a, i) => a !== (perPupilRow.amounts[i] ?? 0));
+    if (!changed) return;
+
+    const updated = rows.map(r =>
+      r.id === "state_local_perpupil"
+        ? { ...r, amounts: newAmounts }
+        : r
+    );
+    syncToForm(updated);
+  }, [gradeBandActive, gradeBandEnrollment, gradeBandPerPupil, enrollmentRevenueMethod, priorYearADM, priorYearADA, yearCount, rows, syncToForm]);
 
   const hasAnyRevenue = rows.some((r) => r.enabled && r.amounts[0] > 0);
 
+  const allRowY1Values = useMemo(() => {
+    const enabled = rows.filter(r => r.enabled);
+    const values = new Map<string, number>();
+    for (const r of enabled) {
+      if (r.driverType === "percent_of_base") continue;
+      const base = r.amounts[0] ?? 0;
+      if (r.driverType === "per_student") values.set(r.id, base * y1Students);
+      else if (r.driverType === "monthly") values.set(r.id, base * 12);
+      else values.set(r.id, base);
+    }
+    for (const r of enabled) {
+      if (r.driverType !== "percent_of_base") continue;
+      const baseVal = values.get(r.percentBase || "") || 0;
+      const pct = (r.amounts?.[0] ?? 0) / 100;
+      values.set(r.id, baseVal * pct);
+    }
+    return values;
+  }, [rows, y1Students]);
+
+  const getCategoryY1Total = (cat: RevenueCategory): number => {
+    return rows
+      .filter(r => r.category === cat && r.enabled)
+      .reduce((sum, r) => {
+        const val = allRowY1Values.get(r.id) || 0;
+        return cat === "tuition_offsets" ? sum - Math.abs(val) : sum + val;
+      }, 0);
+  };
+
   const totalY1Revenue = useMemo(() => {
-    return categoryOrder.reduce((sum, cat) => sum + getCategoryTotal(cat), 0);
-  }, [rows, categoryOrder]);
+    return categoryOrder.reduce((sum, cat) => sum + getCategoryY1Total(cat), 0);
+  }, [allRowY1Values, categoryOrder]);
 
   const revenuePerStudent = y1Students > 0 ? Math.round(totalY1Revenue / y1Students) : 0;
 
@@ -852,7 +916,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         {categoryOrder.filter((cat) => enabledCategories.has(cat)).map((cat) => (
           <div key={cat} className="rounded-2xl border border-border/60 bg-white p-4 text-center shadow-sm">
             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{CATEGORY_LABELS[cat]}</div>
-            <div className="font-display text-xl font-bold text-foreground">{formatCurrency(getCategoryTotal(cat))}</div>
+            <div className="font-display text-xl font-bold text-foreground">{formatCurrency(getCategoryY1Total(cat))}</div>
           </div>
         ))}
         <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center shadow-sm">
@@ -883,7 +947,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         const catRows = rows.filter((r) => r.category === cat);
         const enabledCount = catRows.filter((r) => r.enabled).length;
         const isExpanded = expandedCategories.has(cat);
-        const total = getCategoryTotal(cat);
+        const total = getCategoryY1Total(cat);
         let availableItems = getAvailableLineItems(cat, rows.map((r) => r.id));
         if (cat === "school_choice" && stateFundingConfig && !isCharter) {
           const existingRowIds = new Set(rows.map(r => r.id));
