@@ -93,7 +93,8 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   payroll_tax: {
     term: "Payroll Tax",
-    short: "Employer-side taxes on wages - Social Security (6.2%), Medicare (1.45%), and state unemployment tax. Typically 7.65–10% of salary.",
+    short: "Employer-side taxes on wages - Social Security (6.2%), Medicare (1.45%), FUTA, and state unemployment tax. The rate is auto-populated based on your school's state and typically ranges from 8–12% of salary.",
+    long: "This rate is automatically set based on the state you selected in your School Profile, using new-employer SUTA rates plus any mandatory state employer taxes (like disability insurance or paid family leave). You can see the full breakdown on the Assumptions step. Your actual rate may differ once you establish an experience rating with your state — you can override it anytime.",
   },
   per_pupil: {
     term: "Per-Pupil Funding",

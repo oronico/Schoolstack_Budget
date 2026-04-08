@@ -328,6 +328,7 @@ export const staffingSchema = z.object({
   founderSalary: z.coerce.number(numMsg("founder salary")).min(0, "Please enter a positive salary amount").optional(),
   benefitsRate: z.coerce.number(numMsg("benefits rate")).min(0, "Please enter a rate of 0% or higher").max(100, "Benefits rate can't exceed 100%").optional(),
   payrollTaxRate: z.coerce.number(numMsg("payroll tax rate")).min(0, "Please enter a rate of 0% or higher").max(100, "Payroll tax rate can't exceed 100%").optional(),
+  payrollTaxRateUserOverride: z.boolean().optional(),
 });
 
 export const expenseRowSchema = z.object({

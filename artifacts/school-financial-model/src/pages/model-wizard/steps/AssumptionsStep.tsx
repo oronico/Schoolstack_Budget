@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
-import { useEffect, useMemo } from "react";
-import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield, Sprout } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield, Sprout, ChevronDown, ChevronUp } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
@@ -17,6 +17,7 @@ import {
   DEFAULT_RETENTION_RATE,
 } from "@workspace/finance";
 import { getStateFundingConfig, type SchoolType } from "@/lib/state-funding-data";
+import { getStatePayrollTaxEntry, getStatePayrollTaxRate, getQuickPickOptions } from "@/lib/state-payroll-tax-data";
 import {
   ENROLLMENT_REVENUE_METHOD_LABELS,
   CHARTER_DEPOSIT_TIMING_LABELS,
@@ -138,10 +139,12 @@ function QuickPickButtons({
   options,
   name,
   suffix,
+  onSelect,
 }: {
   options: { label: string; value: number }[];
   name: string;
   suffix?: string;
+  onSelect?: (value: number) => void;
 }) {
   const { watch, setValue } = useFormContext();
   const current = watch(name);
@@ -154,7 +157,10 @@ function QuickPickButtons({
           <button
             key={opt.value}
             type="button"
-            onClick={() => setValue(name, opt.value, { shouldDirty: true })}
+            onClick={() => {
+              setValue(name, opt.value, { shouldDirty: true });
+              onSelect?.(opt.value);
+            }}
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
               isActive
@@ -166,6 +172,108 @@ function QuickPickButtons({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function PayrollTaxSection({
+  stateCode,
+  statePayrollTaxEntry,
+  statePayrollTaxRate,
+  payrollQuickPicks,
+}: {
+  stateCode: string;
+  statePayrollTaxEntry: ReturnType<typeof getStatePayrollTaxEntry>;
+  statePayrollTaxRate: number;
+  payrollQuickPicks: { label: string; value: number }[];
+}) {
+  const { watch, setValue } = useFormContext();
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const currentValue = watch("staffing.payrollTaxRate");
+  const effectiveDefault = stateCode ? statePayrollTaxRate : DEFAULT_PAYROLL_TAX_RATE;
+  const isModified = currentValue !== undefined && currentValue !== null && currentValue !== effectiveDefault;
+  const stateName = stateCode || null;
+
+  const handleChange = (val: number | undefined) => {
+    setValue("staffing.payrollTaxRate", val, { shouldDirty: true });
+    setValue("staffing.payrollTaxRateUserOverride", true, { shouldDirty: true });
+  };
+
+  return (
+    <div>
+      <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-sm font-semibold text-foreground">
+            <GlossaryTerm termKey="payroll_tax">Payroll Tax Rate</GlossaryTerm>
+          </label>
+          {isModified && (
+            <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+              {stateName ? `${stateName} default` : "default"}: {effectiveDefault}%
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            value={currentValue ?? ""}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              handleChange(isNaN(val) ? undefined : val);
+            }}
+            className="w-28 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+            placeholder={String(effectiveDefault)}
+            min={0}
+            max={100}
+          />
+          <span className="text-sm text-muted-foreground font-medium">%</span>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Employer-side payroll taxes (FICA, FUTA, state unemployment).
+          {stateName ? ` Auto-populated for ${stateName} — ` : " "}
+          Applied as a default to each new staff role - override per role on the Staffing step.
+        </p>
+        {statePayrollTaxEntry.components.length > 0 && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setBreakdownOpen(!breakdownOpen)}
+              className="flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              <Info className="h-3 w-3" />
+              {breakdownOpen ? "Hide breakdown" : "What's included"}
+              {breakdownOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+            {breakdownOpen && (
+              <div className="mt-2 rounded-lg bg-slate-50 border border-slate-200/60 p-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="space-y-1">
+                  {statePayrollTaxEntry.components.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-600">{c.label}</span>
+                      <span className="font-medium text-slate-800">{c.rate}%</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-slate-300 mt-1.5 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+                    <span className="text-slate-700">Total (recommended)</span>
+                    <span className="text-primary">{statePayrollTaxEntry.totalRate}%</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                  Uses new-employer SUTA rates. Your actual rate may differ based on experience rating.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="mt-2 px-1">
+        <p className="text-[10px] font-medium text-muted-foreground mb-1">Quick pick:</p>
+        <QuickPickButtons
+          name="staffing.payrollTaxRate"
+          suffix="%"
+          options={payrollQuickPicks}
+          onSelect={() => setValue("staffing.payrollTaxRateUserOverride", true, { shouldDirty: true })}
+        />
+      </div>
     </div>
   );
 }
@@ -210,6 +318,33 @@ export function AssumptionsStep() {
     }
   }, [isCharter, stateFundingConfig, setValue]);
 
+  const statePayrollTaxEntry = useMemo(
+    () => getStatePayrollTaxEntry(stateCode),
+    [stateCode]
+  );
+  const statePayrollTaxRate = useMemo(
+    () => getStatePayrollTaxRate(stateCode),
+    [stateCode]
+  );
+  const payrollQuickPicks = useMemo(
+    () => getQuickPickOptions(stateCode),
+    [stateCode]
+  );
+
+  const prevStateRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!stateCode) return;
+    const isOverridden = watch("staffing.payrollTaxRateUserOverride");
+    const isFirstRun = prevStateRef.current === null;
+    const stateChanged = prevStateRef.current !== stateCode;
+    prevStateRef.current = stateCode;
+
+    if (isOverridden) return;
+    if (isFirstRun || stateChanged) {
+      setValue("staffing.payrollTaxRate", statePayrollTaxRate, { shouldDirty: true });
+    }
+  }, [stateCode, statePayrollTaxRate, setValue, watch]);
+
   const fiscalYearStartMonth = watch("schoolProfile.fiscalYearStartMonth") || 7;
   const isPartialFirstYear = watch("schoolProfile.isPartialFirstYear") || false;
   const year1OperatingMonths = watch("schoolProfile.year1OperatingMonths") || 12;
@@ -223,7 +358,8 @@ export function AssumptionsStep() {
 
   const resetStaffingParams = () => {
     setValue("staffing.benefitsRate", DEFAULTS.benefitsRate, { shouldDirty: true });
-    setValue("staffing.payrollTaxRate", DEFAULTS.payrollTaxRate, { shouldDirty: true });
+    setValue("staffing.payrollTaxRate", stateCode ? statePayrollTaxRate : DEFAULTS.payrollTaxRate, { shouldDirty: true });
+    setValue("staffing.payrollTaxRateUserOverride", false, { shouldDirty: true });
     setValue("enrollment.retentionRate", DEFAULTS.retentionRate, { shouldDirty: true });
   };
 
@@ -612,30 +748,12 @@ export function AssumptionsStep() {
                 <InlineHelpCard explainer={EXPLAINERS.assumptions_benefits_rate} section="assumptions" className="mt-2" />
               </div>
 
-              <div>
-                <AssumptionField
-                  label={<><GlossaryTerm termKey="payroll_tax">Payroll Tax Rate</GlossaryTerm></>}
-                  name="staffing.payrollTaxRate"
-                  suffix="%"
-                  defaultValue={DEFAULTS.payrollTaxRate}
-                  usageNote="Employer-side payroll taxes (FICA, FUTA, state unemployment). Applied as a default to each new staff role - override per role on the Staffing step."
-                  placeholder="8"
-                  min={0}
-                  max={100}
-                />
-                <div className="mt-2 px-1">
-                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Quick pick:</p>
-                  <QuickPickButtons
-                    name="staffing.payrollTaxRate"
-                    suffix="%"
-                    options={[
-                      { label: "8", value: 8 },
-                      { label: "10", value: 10 },
-                      { label: "12", value: 12 },
-                    ]}
-                  />
-                </div>
-              </div>
+              <PayrollTaxSection
+                stateCode={stateCode}
+                statePayrollTaxEntry={statePayrollTaxEntry}
+                statePayrollTaxRate={statePayrollTaxRate}
+                payrollQuickPicks={payrollQuickPicks}
+              />
 
               <AssumptionField
                 label="Student Retention Rate"
