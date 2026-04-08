@@ -5,9 +5,10 @@ import { InlineHelpCard } from "./InlineHelpCard";
 interface SectionExplainersProps {
   section: string;
   className?: string;
+  schoolType?: string;
 }
 
-export function SectionExplainers({ section, className }: SectionExplainersProps) {
+export function SectionExplainers({ section, className, schoolType }: SectionExplainersProps) {
   const { user } = useAuth();
   const level = (user?.guidanceLevel as GuidanceLevel) || "basics";
   const explainers = getExplainersForSection(section, level);
@@ -18,7 +19,7 @@ export function SectionExplainers({ section, className }: SectionExplainersProps
     <div className={className}>
       <div className="space-y-2">
         {explainers.map((e) => (
-          <InlineHelpCard key={e.id} explainer={e} section={section} />
+          <InlineHelpCard key={e.id} explainer={e} section={section} schoolType={schoolType} />
         ))}
       </div>
     </div>

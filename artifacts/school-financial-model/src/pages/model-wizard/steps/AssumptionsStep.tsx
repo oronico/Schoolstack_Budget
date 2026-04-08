@@ -666,7 +666,7 @@ export function AssumptionsStep() {
                     min={0}
                     max={100}
                   />
-                  <InlineHelpCard explainer={EXPLAINERS.assumptions_collection_rate} section="assumptions" className="mt-2" />
+                  <InlineHelpCard explainer={EXPLAINERS.assumptions_collection_rate} section="assumptions" className="mt-2" schoolType={schoolType} />
                   <FinancingInsight text="A 100% collection rate is optimistic for invoiced families - most schools see 92-98%. Building in a realistic rate protects your cash flow projections." />
                 </div>
 
@@ -710,7 +710,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={100}
                 />
-                <InlineHelpCard explainer={EXPLAINERS.assumptions_cola} section="assumptions" className="mt-2" />
+                <InlineHelpCard explainer={EXPLAINERS.assumptions_cola} section="assumptions" className="mt-2" schoolType={schoolType} />
               </div>
 
               <div>
@@ -724,7 +724,7 @@ export function AssumptionsStep() {
                   min={0}
                   max={100}
                 />
-                <InlineHelpCard explainer={EXPLAINERS.assumptions_general_inflation} section="assumptions" className="mt-2" />
+                <InlineHelpCard explainer={EXPLAINERS.assumptions_general_inflation} section="assumptions" className="mt-2" schoolType={schoolType} />
               </div>
             </div>
 
@@ -778,7 +778,7 @@ export function AssumptionsStep() {
                     ]}
                   />
                 </div>
-                <InlineHelpCard explainer={EXPLAINERS.assumptions_benefits_rate} section="assumptions" className="mt-2" />
+                <InlineHelpCard explainer={EXPLAINERS.assumptions_benefits_rate} section="assumptions" className="mt-2" schoolType={schoolType} />
               </div>
 
               <PayrollTaxSection

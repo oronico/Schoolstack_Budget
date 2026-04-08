@@ -35,6 +35,7 @@ import {
   calculatePersonnelCosts,
 } from "@/lib/staffing-defaults";
 import { GUIDED_EXPENSE_QUESTIONS } from "@/lib/expense-guided-questions";
+import { getSchoolTypeTrack } from "@/lib/coaching/explainers";
 
 const CATEGORY_ICONS: Record<string, typeof DollarSign> = {
   personnel: Users,
@@ -53,7 +54,7 @@ function getCategoryLabel(cat: string, customLabels: Record<string, string>): st
   return customLabels[cat] || EXPENSE_CATEGORY_LABELS[cat] || cat;
 }
 
-const CATEGORY_GUIDANCE: Record<string, { tip: string; common: boolean }> = {
+const CATEGORY_GUIDANCE_BASE: Record<string, { tip: string; common: boolean }> = {
   instructional_program: {
     tip: "Curriculum, supplies, field trips. Most schools spend $300–$800 per student here.",
     common: true,
@@ -75,6 +76,35 @@ const CATEGORY_GUIDANCE: Record<string, { tip: string; common: boolean }> = {
     common: false,
   },
 };
+
+const CATEGORY_GUIDANCE_BY_TRACK: Record<string, Record<string, Partial<{ tip: string }>>> = {
+  charter: {
+    instructional_program: { tip: "Curriculum, supplies, assessments. Charter schools typically spend $400–$900 per student. Check your charter agreement for any minimum spending requirements." },
+    occupancy_facility: { tip: "Rent, utilities, insurance. Charter schools often lease commercial spaces - budget 12–20% of revenue for total occupancy." },
+    administrative_general: { tip: "Marketing, legal, accounting, authorizer fees. Include any charter management organization (CMO) fees and compliance costs." },
+  },
+  private: {
+    instructional_program: { tip: "Curriculum, textbooks, supplies, enrichment. Private schools typically spend $400–$1,000 per student. Program quality is part of your value proposition." },
+    occupancy_facility: { tip: "Rent, utilities, insurance. If your space is parish- or congregation-provided, include comparable market rent for planning purposes." },
+    administrative_general: { tip: "Marketing, enrollment outreach, legal, accounting. Include payment processing fees (~2.5% of tuition revenue) and financial aid administration costs." },
+  },
+  micro: {
+    instructional_program: { tip: "Curriculum, supplies, enrichment. Micro programs often spend $200–$500 per student using creative and open-source resources." },
+    technology: { tip: "Devices, software, internet. Smaller programs can often share devices - budget $100–$250 per student." },
+    occupancy_facility: { tip: "Facility costs - which may be minimal for home-based or shared-space programs. Even if space is free, budget for utilities and a contingency." },
+    administrative_general: { tip: "Marketing, legal, accounting. Keep it lean - many micro programs handle admin with simple tools and part-time bookkeeping." },
+    capital_financing: { tip: "Furniture, equipment, and any setup costs. Micro programs typically need $3–10K in startup equipment." },
+  },
+};
+
+function getCategoryGuidance(category: string, schoolTypeVal?: string): { tip: string; common: boolean } {
+  const base = CATEGORY_GUIDANCE_BASE[category] || { tip: "", common: false };
+  if (!schoolTypeVal) return base;
+  const track = getSchoolTypeTrack(schoolTypeVal);
+  const override = CATEGORY_GUIDANCE_BY_TRACK[track]?.[category];
+  if (!override) return base;
+  return { ...base, ...override };
+}
 
 function exportChartOfAccounts(
   expenseRows: ExpenseRowData[],
@@ -323,6 +353,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const { watch, setValue } = useFormContext();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
+  const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
   const yearCount = getYearCount(schoolStage);
 
   const generalCostInflation = (watch("facilities.generalCostInflation") as number) ?? 3;
@@ -844,7 +875,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         <div className="space-y-3">
           {([...OPERATING_CATEGORIES, "capital_financing" as ExpenseCategory]).map((cat) => {
             const Icon = getCategoryIcon(cat);
-            const guidance = CATEGORY_GUIDANCE[cat];
+            const guidance = getCategoryGuidance(cat, schoolType);
             const isEnabled = enabledCategories.has(cat);
 
             return (
@@ -1313,7 +1344,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         const Icon = getCategoryIcon(cat);
         const isExpanded = expandedCategories.has(cat);
         const enabledCount = catRows.filter((r) => r.enabled).length;
-        const guidance = CATEGORY_GUIDANCE[cat];
+        const guidance = getCategoryGuidance(cat, schoolType);
         const isCustom = isCustomCategory(cat);
         const label = getCategoryLabel(cat, customCategoryLabels);
 

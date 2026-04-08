@@ -1,5 +1,26 @@
 export type GuidanceLevel = "advanced" | "basics" | "extra";
 
+export type SchoolTypeTrack = "charter" | "private" | "micro" | "general";
+
+export function getSchoolTypeTrack(schoolType?: string): SchoolTypeTrack {
+  if (!schoolType) return "general";
+  switch (schoolType) {
+    case "charter_school":
+      return "charter";
+    case "private_school":
+    case "catholic_school":
+      return "private";
+    case "microschool":
+    case "learning_pod":
+    case "homeschool_coop":
+      return "micro";
+    case "tutoring_center":
+    case "other":
+    default:
+      return "general";
+  }
+}
+
 export interface ExplainerBody {
   whatThisMeans: string;
   whyItMatters: string;
@@ -21,6 +42,7 @@ export interface Explainer {
   title: string;
   body: ExplainerBody;
   extraBody?: ExtraDepthContent;
+  schoolTypeVariants?: Partial<Record<SchoolTypeTrack, Partial<ExplainerBody>>>;
   audienceLevel: GuidanceLevel[];
   relatedSection: string;
   dismissible: boolean;
@@ -28,6 +50,13 @@ export interface Explainer {
   order: number;
   highFriction: boolean;
   priority: ExplainerPriority;
+}
+
+export function resolveExplainerBody(explainer: Explainer, schoolType?: string): ExplainerBody {
+  const track = getSchoolTypeTrack(schoolType);
+  const variant = explainer.schoolTypeVariants?.[track];
+  if (!variant) return explainer.body;
+  return { ...explainer.body, ...variant };
 }
 
 export const EXPLAINERS: Record<string, Explainer> = {
@@ -45,6 +74,23 @@ export const EXPLAINERS: Record<string, Explainer> = {
       benchmarkDetail: "Industry benchmarks:\n• Per-pupil public funding: $8,000-$15,000 (varies by state and school type)\n• Private school tuition: $8,000-$25,000\n• Revenue per student below $8,000 is very lean\n• Schools with >70% from a single source need strong justification",
       glossaryTerms: "• Per-Pupil Revenue: Total enrollment-driven revenue divided by total students\n• Revenue Concentration: Percentage of total revenue from your largest single source (above 80% warrants explanation)\n• Earned Revenue: Income directly tied to delivering educational services, as opposed to philanthropic or grant income",
       financingInsight: "Banks rank revenue by reliability:\n• Contracted per-pupil public funding (strongest)\n• Tuition with documented collection rates\n• Multi-year grants with signed agreements\n• Annual fundraising (weakest)\nKeeping your strongest revenue sources front and center strengthens any application.",
+    },
+    schoolTypeVariants: {
+      charter: {
+        whatThisMeans: "Revenue for your charter school comes primarily from per-pupil state funding, calculated using your state's ADA or ADM methodology. Additional sources may include federal CSP grants, Title funding, and special education allocations.",
+        whyItMatters: "Per-pupil funding is your financial engine. Unlike tuition-based schools, your revenue scales directly with enrollment through a formula set by your state. Understanding your state's funding methodology - ADA vs ADM, count day timing, and payment schedules - is essential for accurate cash flow projections.",
+        whatToDoNext: "Start with your state's per-pupil funding formula and your projected enrollment. Layer in any federal or state grants you've applied for or expect to receive. If your state funds on ADA, factor in a realistic attendance rate (typically 93-96%).",
+      },
+      private: {
+        whatThisMeans: "Revenue for your school comes primarily from tuition and fees paid by families. Additional sources may include financial aid endowments, annual fund campaigns, parish or congregation subsidies, and enrollment-based fees.",
+        whyItMatters: "Tuition is your primary revenue driver, so your enrollment marketing and retention strategy directly determines financial health. Collection rates, financial aid budgets, and tuition escalation all affect how much revenue you actually realize from enrolled families.",
+        whatToDoNext: "Start with your tuition rate and realistic enrollment projections. Factor in your financial aid and scholarship budget - most private schools discount 10-20% of gross tuition. Add registration fees and any other family-paid charges, then layer in fundraising or parish support as supplemental income.",
+      },
+      micro: {
+        whatThisMeans: "Revenue for your school comes from tuition, membership fees, or per-session charges paid by participating families. Some micro and pod models also receive ESA (Education Savings Account) or school choice funds where available.",
+        whyItMatters: "With smaller enrollment, each family represents a larger share of your total revenue. Retention is especially important - losing even 2-3 families can significantly impact your budget. Keeping your revenue model simple and predictable helps you plan with confidence.",
+        whatToDoNext: "Start with your per-family or per-student charge and your expected group size. If families in your state can use ESA or school choice funds, factor those in. Keep your revenue projections conservative - smaller programs have less room for enrollment shortfalls.",
+      },
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "revenue",
@@ -69,6 +115,23 @@ export const EXPLAINERS: Record<string, Explainer> = {
       glossaryTerms: "• Capacity Utilization: Enrolled students divided by facility maximum capacity\n• Retention Rate: Percentage of current students who re-enroll the following year\n• Net Enrollment Growth: New students minus departing students\n• Waitlist Depth: Number of qualified families waiting for a spot (the strongest evidence of demand)",
       financingInsight: "Banks typically stress-test enrollment by 10-20%:\n• The strongest models remain viable at 70-80% of projected Year 1 enrollment\n• That kind of cushion gives everyone confidence the school can weather a slow start",
     },
+    schoolTypeVariants: {
+      charter: {
+        whatThisMeans: "Enrollment assumptions are your best estimate of how many students will attend your charter school each year. Your authorizer and state funding agency will scrutinize these numbers closely - they drive your per-pupil allocation and staffing plan.",
+        healthyVsRisky: "Most new charter schools fill 60-80% of capacity in Year 1, growing 15-25% annually. Your authorizer will want to see evidence of demand: lottery applications, waitlist depth, and community engagement data. If your state uses count days, plan your enrollment marketing around those dates.",
+        whatToDoNext: "Start with your charter application's projected enrollment - your authorizer will hold you to these numbers. Document demand through lottery applications, community surveys, and info session attendance. If your state uses count days, build your recruitment calendar around them.",
+      },
+      private: {
+        whatThisMeans: "Enrollment assumptions are your best estimate of how many students will attend your school each year. For tuition-driven schools, enrollment is the single most important input - it determines both your revenue and your staffing needs.",
+        healthyVsRisky: "Most new private schools fill 40-60% of capacity in Year 1. Growth of 15-25% per year is strong. Retention rates above 85% are a major advantage - returning families are your most reliable enrollment pipeline. Strong schools invest in both recruitment and retention from day one.",
+        whatToDoNext: "Start with families who've expressed serious interest - application deposits, signed enrollment agreements, or waitlist positions. Factor in your retention rate for returning families, then estimate how many new families you'll need to recruit each year to hit your targets.",
+      },
+      micro: {
+        whatThisMeans: "Enrollment assumptions are your best estimate of how many students will participate in your program each year. With smaller group sizes, each student has a bigger impact on your financial picture.",
+        healthyVsRisky: "Micro programs typically operate with 8-25 students. Growth may mean adding a second cohort or session rather than expanding a single group. A realistic Year 1 target is 60-80% of your ideal group size. With small numbers, losing even 2-3 students can shift your budget significantly - plan for that possibility.",
+        whatToDoNext: "Start with the families in your immediate network who've committed or expressed strong interest. For pods and micro models, word-of-mouth and local community connections are usually more effective than broad marketing. Plan your budget to work at 75% of your target enrollment.",
+      },
+    },
     audienceLevel: ["basics", "extra"],
     relatedSection: "enrollment",
     dismissible: true,
@@ -90,6 +153,23 @@ export const EXPLAINERS: Record<string, Explainer> = {
       workedExample: "120 students at $12,000 tuition:\n• Gross tuition: $1.44M\n• At 92% collection rate: $1.325M actually collected\n• The $115K gap comes from late payments, financial aid, and uncollectable accounts\n• If you modeled 100% collection, you'd be $115K short\nWith 3% annual tuition increases:\n• Year 1: $12,000\n• Year 2: $12,360\n• Year 3: $12,731\n• Year 4: $13,113\n• Year 5: $13,506",
       benchmarkDetail: "Tuition by school type:\n• Urban independent: $12,000-$22,000\n• Suburban: $15,000-$30,000\n• Faith-based: $5,000-$12,000\n• Montessori: $10,000-$18,000\nCollection rates:\n• New schools: 88-93% in Year 1\n• By Year 3: 93-97% as families stabilize",
       glossaryTerms: "• Gross Tuition: Full tuition amount before financial aid or discounts\n• Net Tuition: What you actually collect after aid, discounts, and uncollected amounts\n• Collection Rate: Percentage of billed tuition you actually receive\n• Tuition Elasticity: How enrollment changes in response to tuition increases (a 5% increase typically reduces enrollment 2-3%)",
+    },
+    schoolTypeVariants: {
+      charter: {
+        whatThisMeans: "If your charter school charges any fees (registration, activity, technology), those assumptions go here. Many charter schools are tuition-free but still collect ancillary fees. Your primary revenue comes from per-pupil state funding, covered in the revenue section.",
+        whyItMatters: "For charter schools, ancillary fees are a small but meaningful revenue supplement. Some authorizers restrict what fees you can charge, so check your charter agreement. The bigger picture is your per-pupil funding - that's where the real revenue planning happens.",
+        whatToDoNext: "Check your charter agreement for any restrictions on fees. If you charge registration, activity, or technology fees, enter them here. Keep fee amounts reasonable - they should supplement your per-pupil funding, not create a barrier to enrollment.",
+      },
+      private: {
+        whatThisMeans: "Your tuition assumptions include the amount you charge per student, financial aid and scholarship budgets, sibling discounts, and how tuition changes over time. This is the largest share of your revenue.",
+        whyItMatters: "Setting tuition too high limits enrollment. Setting it too low leaves you short on revenue. Financial aid strategy matters too - most private schools discount 10-20% of gross tuition. Collection rates below 95% should be budgeted for. Be realistic here rather than optimistic.",
+        whatToDoNext: "Research what comparable schools in your area charge. Set tuition that balances affordability with your school's financial needs. Budget your financial aid and scholarship commitments explicitly - they're real costs that reduce your net tuition revenue.",
+      },
+      micro: {
+        whatThisMeans: "Your tuition or membership fee assumptions include what you charge per student (or per family), any sibling discounts, and how fees change over time. For smaller programs, keeping the fee structure simple is usually best.",
+        healthyVsRisky: "For micro and pod programs, a collection rate of 95-100% is typical because of closer family relationships. Annual fee increases of 2-4% are reasonable. If you offer sibling or multi-session discounts, budget for their impact on total revenue.",
+        whatToDoNext: "Set your fee based on what families in your community can sustain, your operating costs, and what comparable programs charge. If you offer different session types or schedules, model each one separately so you can see the revenue impact clearly.",
+      },
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "revenue",
@@ -136,6 +216,23 @@ export const EXPLAINERS: Record<string, Explainer> = {
       glossaryTerms: "• Loaded Cost: Total compensation including salary, benefits, and employer-paid taxes\n• FTE (Full-Time Equivalent): 1.0 = full-time, 0.5 = half-time\n• Student-to-Teacher Ratio: Total students divided by instructional FTE (most schools target 12:1 to 20:1)\n• Benefits Load: Percentage added to base salary for health insurance, retirement, and payroll taxes (typically 25-35%)",
       financingInsight: "Staffing above 65% of revenue leaves very little room for facilities, debt, and reserves. Banks look at whether staffing scales with enrollment. Building lean and growing thoughtfully signals strong leadership.",
     },
+    schoolTypeVariants: {
+      charter: {
+        whatThisMeans: "Payroll is the total cost of compensating your team - salaries, benefits, payroll taxes, and any other personnel-related expenses. Charter schools typically have structured staffing plans that align with their charter agreement and authorizer expectations.",
+        healthyVsRisky: "Charter schools typically spend 55-65% of revenue on personnel. Your authorizer may have expectations about student-to-teacher ratios and minimum staffing levels. Staying under 60% gives you room for facilities and reserves while meeting compliance requirements.",
+        whatToDoNext: "Start with the positions required by your charter agreement. Add instructional staff based on your target student-to-teacher ratio, then include operations and administrative roles. Make sure your staffing plan scales with enrollment - authorizers look for this alignment.",
+      },
+      private: {
+        whatThisMeans: "Payroll is the total cost of compensating your team - salaries, benefits, payroll taxes, and any other personnel-related expenses. For private schools, competitive compensation is key to attracting and retaining quality teachers.",
+        healthyVsRisky: "Private schools typically spend 50-60% of revenue on personnel. Competitive salaries help with retention, but keeping total personnel costs under 55% of revenue leaves healthy room for programs, facilities, and financial aid. Benefits packages can be a differentiator for recruitment.",
+        whatToDoNext: "Research teacher salaries at comparable schools in your area. Start with your essential roles - head of school, lead teachers, and one operations person. Consider which roles can be part-time or shared in early years, and plan to add staff as enrollment grows.",
+      },
+      micro: {
+        whatThisMeans: "Payroll covers the cost of your teaching team and any support staff. In smaller programs, founders often wear multiple hats - teaching, administration, and operations - which keeps personnel costs lean but requires realistic time planning.",
+        healthyVsRisky: "Micro programs typically spend 40-55% of revenue on personnel because of smaller teams and multi-role positions. If you're the founder and primary teacher, make sure to include fair compensation for yourself - even if modest at first. Not paying yourself is not a sustainable plan.",
+        whatToDoNext: "List every role needed to run your program, including your own. For small teams, define who handles each function (instruction, admin, marketing, bookkeeping). Consider whether part-time specialists or contractors make more sense than full-time hires in the early stages.",
+      },
+    },
     audienceLevel: ["basics", "extra"],
     relatedSection: "staffing",
     dismissible: true,
@@ -158,6 +255,23 @@ export const EXPLAINERS: Record<string, Explainer> = {
       benchmarkDetail: "Facility cost benchmarks:\n• Lease rates: $8-$25/sqft depending on market\n• Utilities: $1.50-$3.00/sqft\n• Space needed: 50-80 sqft per student for classrooms + 30-50% for common areas\n• Total facility cost per student: $1,200-$3,000/year is typical\n• Above $3,500/student is a concern",
       glossaryTerms: "• Triple Net Lease (NNN): Tenant pays base rent plus property taxes, insurance, and maintenance (common for school spaces)\n• CAM Charges: Common Area Maintenance fees in shared buildings\n• Occupancy Rate: Facility cost as a percentage of total revenue\n• TI Allowance: Money the landlord provides for build-out (negotiate aggressively for school conversions)",
     },
+    schoolTypeVariants: {
+      charter: {
+        whatThisMeans: "Occupancy costs include your rent or mortgage, utilities, maintenance, insurance, and any other facility-related expenses. Charter schools often lease commercial or repurposed spaces, which may need significant build-out to meet school use requirements.",
+        healthyVsRisky: "Charter school occupancy costs between 12-20% of revenue are typical. Above 22% puts pressure on your budget. Many charter schools negotiate below-market leases with community partners or municipalities. If you're in a district-provided space, factor in whether that arrangement has an expiration date.",
+        whatToDoNext: "If you have a facility, enter your actual costs including any build-out amortization. If you're still searching, factor in the costs of converting a commercial space to school use (fire safety, ADA compliance, classroom build-out). Consider co-location with community organizations to share costs.",
+      },
+      private: {
+        whatThisMeans: "Occupancy costs include your rent or mortgage, utilities, maintenance, insurance, and any other facility-related expenses. For faith-affiliated schools, this may include parish or congregation-provided space at below-market rates.",
+        healthyVsRisky: "Private school occupancy costs between 10-18% of revenue are typical. If your space is donated or provided by a congregation, enter the comparable market rent so your model reflects what would happen if that arrangement changed. Schools in donated spaces should still budget for utilities and maintenance.",
+        whatToDoNext: "If your space is provided by a church or organization, enter both the actual cost (which may be $0) and the comparable market rent. This creates a more resilient financial plan. If you're leasing, compare your per-student facility cost against $1,500-$2,500/student benchmarks.",
+      },
+      micro: {
+        whatThisMeans: "Occupancy costs cover your physical space - whether that's a dedicated space, shared facility, community center, or home-based setup. For smaller programs, creative space solutions can significantly reduce overhead.",
+        healthyVsRisky: "Micro programs often keep occupancy under 15% of revenue through creative arrangements - home-based setups, shared community spaces, or church partnerships. Even if your space is free or very low cost, budget for utilities, supplies, and a contingency in case the arrangement changes.",
+        whatToDoNext: "Enter your actual facility costs, even if they're minimal. If you're home-based, consider costs like additional insurance, dedicated supplies, and any modifications. If you're in a shared space, clarify the terms - especially how much notice you'd get if the arrangement ended.",
+      },
+    },
     audienceLevel: ["basics", "extra"],
     relatedSection: "expenses",
     dismissible: true,
@@ -178,6 +292,21 @@ export const EXPLAINERS: Record<string, Explainer> = {
     extraBody: {
       workedExample: "A school with 100 students:\n• Curriculum: $500/student ($50K)\n• Technology: $200/student ($20K)\n• Supplies: $100/student ($10K)\n• Assessments: $50/student ($5K)\n• Total program expenses: $85K ($850/student)\n• With 2% annual inflation, Year 5 costs rise to $92K\n• Adding 40 students by Year 5 increases total to $119K, but per-student cost stays flat (these are variable costs)",
       benchmarkDetail: "Program expense benchmarks per student:\n• Curriculum/textbooks: $300-$600 (higher for STEM or specialty)\n• Technology (1:1 devices): $200-$400 including replacement cycles\n• Assessment platforms: $30-$75\n• Classroom supplies: $75-$150\n• Field trips and enrichment: $50-$200\n• Total program costs: typically 5-10% of total budget",
+    },
+    schoolTypeVariants: {
+      charter: {
+        whatThisMeans: "Program expenses cover the costs directly related to running your educational program: curriculum, technology, assessments, supplies, and professional development. Your charter agreement may specify minimum spending levels for instructional materials.",
+        whatToDoNext: "Review your charter agreement for any program spending requirements. Start with your core curriculum costs, then add technology (1:1 devices if required), assessment platforms, and professional development. Many charter schools can access bulk purchasing discounts through their authorizer or network.",
+      },
+      private: {
+        whatThisMeans: "Program expenses cover the costs directly related to running your educational program: curriculum, textbooks, technology, supplies, field trips, assessments, and professional development. For private schools, program quality is a key part of your value proposition to families.",
+        whatToDoNext: "Start with your core instructional materials and technology needs. Private schools often invest more in enrichment programs, field trips, and specialty materials that differentiate their offering. Balance program quality with sustainability - start with essentials and add enrichment as enrollment supports it.",
+      },
+      micro: {
+        whatThisMeans: "Program expenses cover your instructional materials, curriculum resources, technology, supplies, and any enrichment activities. Smaller programs can often be more creative and cost-effective with program materials.",
+        healthyVsRisky: "Micro programs typically spend $200-500 per student on instructional materials. You may be able to leverage open-source curriculum, shared resources, and community partnerships to keep costs lower. Budget for technology basics but don't over-invest before you know what works.",
+        whatToDoNext: "List your essential instructional materials first. Consider free and open-source curriculum options, library partnerships, and shared resources with other educators. Start lean and invest more as you learn what your students need most.",
+      },
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "expenses",

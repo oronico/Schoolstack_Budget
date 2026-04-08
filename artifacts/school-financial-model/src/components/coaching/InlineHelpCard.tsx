@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { ChevronDown, ChevronUp, HelpCircle, Calculator, BarChart3, BookOpen, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Explainer, ExtraDepthContent } from "@/lib/coaching/explainers";
+import { resolveExplainerBody } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
@@ -10,12 +11,14 @@ interface InlineHelpCardProps {
   className?: string;
   defaultOpen?: boolean;
   section?: string;
+  schoolType?: string;
 }
 
-export function InlineHelpCard({ explainer, className, defaultOpen, section }: InlineHelpCardProps) {
+export function InlineHelpCard({ explainer, className, defaultOpen, section, schoolType }: InlineHelpCardProps) {
   const { user } = useAuth();
   const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const [isOpen, setIsOpen] = useState(defaultOpen ?? false);
+  const body = resolveExplainerBody(explainer, schoolType);
 
   const toggle = useCallback(() => {
     const next = !isOpen;
@@ -48,10 +51,10 @@ export function InlineHelpCard({ explainer, className, defaultOpen, section }: I
 
       {isOpen && (
         <div className="border-t border-primary/10 px-3 py-3 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
-          <ExplainerSection label="What this means" text={explainer.body.whatThisMeans} />
-          <ExplainerSection label="Why it matters" text={explainer.body.whyItMatters} />
-          <ExplainerSection label="Healthy vs risky" text={explainer.body.healthyVsRisky} />
-          <ExplainerSection label="What to do next" text={explainer.body.whatToDoNext} />
+          <ExplainerSection label="What this means" text={body.whatThisMeans} />
+          <ExplainerSection label="Why it matters" text={body.whyItMatters} />
+          <ExplainerSection label="Healthy vs risky" text={body.healthyVsRisky} />
+          <ExplainerSection label="What to do next" text={body.whatToDoNext} />
           {showExtra && <ExtraDepthSections extra={explainer.extraBody!} />}
         </div>
       )}
@@ -136,15 +139,16 @@ interface ExplainThisTriggerProps {
   explainer: Explainer;
   className?: string;
   section?: string;
+  schoolType?: string;
 }
 
-export function ExplainThisTrigger({ explainer, className, section }: ExplainThisTriggerProps) {
+export function ExplainThisTrigger({ explainer, className, section, schoolType }: ExplainThisTriggerProps) {
   const [showCard, setShowCard] = useState(false);
 
   if (showCard) {
     return (
       <div className={className}>
-        <InlineHelpCard explainer={explainer} defaultOpen section={section} />
+        <InlineHelpCard explainer={explainer} defaultOpen section={section} schoolType={schoolType} />
       </div>
     );
   }

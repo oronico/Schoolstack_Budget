@@ -1,7 +1,10 @@
+import type { SchoolTypeTrack } from "./explainers";
+
 export interface GlossaryEntry {
   term: string;
   short: string;
   long?: string;
+  applicableTo?: SchoolTypeTrack[];
 }
 
 export const GLOSSARY: Record<string, GlossaryEntry> = {
@@ -29,11 +32,13 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     term: "ADM",
     short: "Average Daily Membership - the average number of students enrolled each day, used to calculate state funding for charter schools.",
     long: "ADM counts enrolled students whether or not they attend on a given day. Some states use ADM as the basis for per-pupil funding. It's usually higher than ADA.",
+    applicableTo: ["charter"],
   },
   ada: {
     term: "ADA",
     short: "Average Daily Attendance - the average number of students actually present each day. Some states base funding on ADA rather than ADM.",
     long: "ADA is always less than or equal to ADM because it only counts students who show up. If your state funds on ADA, a 95% attendance rate means you receive 95% of the per-pupil amount.",
+    applicableTo: ["charter"],
   },
   nnn: {
     term: "NNN",
@@ -44,6 +49,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     term: "Tuition Offsets",
     short: "Reductions to gross tuition revenue - scholarships, financial aid, sibling discounts, and other fee waivers.",
     long: "Tuition offsets reduce the total tuition you actually collect. If you charge $10,000 tuition but offer an average $1,000 discount, your net tuition per student is $9,000. Budget these realistically.",
+    applicableTo: ["private"],
   },
   accounts_receivable: {
     term: "Accounts Receivable",
@@ -100,6 +106,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     term: "Per-Pupil Funding",
     short: "The dollar amount a school receives from public sources for each enrolled student. Varies widely by state.",
     long: "Per-pupil funding ranges from about $6,000 to over $20,000 depending on the state and district. Charter schools typically receive 70–95% of what traditional public schools get.",
+    applicableTo: ["charter"],
   },
   benefits_rate: {
     term: "Benefits Rate",

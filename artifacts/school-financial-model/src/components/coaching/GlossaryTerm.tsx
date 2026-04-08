@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect, useCallback, useId } from "react";
 import { GLOSSARY, type GlossaryEntry } from "@/lib/coaching/glossary";
+import { getSchoolTypeTrack } from "@/lib/coaching/explainers";
 import { cn } from "@/lib/utils";
 
 interface GlossaryTermProps {
   termKey: string;
   children?: React.ReactNode;
   className?: string;
+  schoolType?: string;
 }
 
-export function GlossaryTerm({ termKey, children, className }: GlossaryTermProps) {
+export function GlossaryTerm({ termKey, children, className, schoolType }: GlossaryTermProps) {
   const entry: GlossaryEntry | undefined = GLOSSARY[termKey];
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<"above" | "below">("below");
@@ -63,6 +65,13 @@ export function GlossaryTerm({ termKey, children, className }: GlossaryTermProps
 
   if (!entry) {
     return <span>{children || termKey}</span>;
+  }
+
+  if (entry.applicableTo && schoolType) {
+    const track = getSchoolTypeTrack(schoolType);
+    if (!entry.applicableTo.includes(track)) {
+      return <span className={className}>{children || entry.term}</span>;
+    }
   }
 
   const handleClick = (e: React.MouseEvent) => {
