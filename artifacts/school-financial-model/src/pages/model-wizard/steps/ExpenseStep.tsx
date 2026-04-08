@@ -250,22 +250,22 @@ function ForgottenCostsPrompt({
   }, [expenseRows, yearCount, syncExpenseRows]);
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/40 overflow-hidden">
+    <div className={cn("rounded-xl border overflow-hidden transition-colors", isOpen ? "border-amber-200 bg-amber-50/40" : "border-border bg-card")}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-amber-50/60 transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-amber-50/40 transition-colors"
       >
         {isOpen ? (
-          <ChevronDown className="h-5 w-5 text-amber-600 flex-shrink-0" />
+          <ChevronDown className="h-4 w-4 text-amber-600 flex-shrink-0" />
         ) : (
-          <ChevronRight className="h-5 w-5 text-amber-600 flex-shrink-0" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
         )}
-        <Lightbulb className="h-5 w-5 text-amber-600 flex-shrink-0" />
-        <div className="flex-1">
-          <p className="font-semibold text-sm text-amber-900">Common costs schools forget</p>
-          <p className="text-xs text-amber-700 mt-0.5">Quick-check these items - click to add any you're missing</p>
-        </div>
+        <Lightbulb className={cn("h-4 w-4 flex-shrink-0", isOpen ? "text-amber-600" : "text-muted-foreground")} />
+        <span className="text-sm">
+          <span className="font-semibold">Common costs schools forget</span>
+          {!isOpen && <span className="text-muted-foreground"> — quick-check items you may be missing</span>}
+        </span>
       </button>
 
       {isOpen && (
