@@ -226,7 +226,7 @@ export function StaffingStep() {
           <div className="text-sm text-foreground space-y-1">
             <p>
               <span className="font-semibold"><GlossaryTerm termKey="cola">COLA</GlossaryTerm> - {colaRate}% Cost of Living Adjustment</span>{" "}
-              applied annually. Schools that don't plan for COLA face teacher turnover - the #1 driver of quality loss.
+              applied annually. Keep COLA at or above your general inflation rate - if inflation outpaces COLA, your staff effectively takes a pay cut every year.
             </p>
             <p className="text-xs text-muted-foreground">
               Y1 total salaries: <span className="font-semibold text-foreground">${costs.totalSalariesWages.toLocaleString()}</span> → Y5: <span className="font-semibold text-foreground">${Math.round(costs.totalSalariesWages * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}</span> with {colaRate}% COLA.

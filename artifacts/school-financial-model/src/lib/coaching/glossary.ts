@@ -18,7 +18,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   cola: {
     term: "COLA",
     short: "Cost of Living Adjustment - the annual percentage increase applied to salaries to keep pace with inflation.",
-    long: "Typically 2–4% per year. If you set COLA at 3%, a $50,000 salary becomes $51,500 in Year 2. Forgetting COLA is one of the most common budgeting mistakes for new schools.",
+    long: "Typically 2-4% per year. At 3%, a $50,000 salary becomes $51,500 in Year 2. Set COLA at or above your general inflation rate - if inflation outpaces COLA, your staff effectively takes a pay cut every year.",
   },
   ffe: {
     term: "FF&E",
@@ -27,7 +27,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   adm: {
     term: "ADM",
-    short: "Average Daily Membership - the average number of students enrolled each day, used to calculate state funding for charter schools.",
+    short: "Average Daily Membership - the average number of students enrolled each day, used by many states to calculate per-pupil funding.",
     long: "ADM counts enrolled students whether or not they attend on a given day. Some states use ADM as the basis for per-pupil funding. It's usually higher than ADA.",
   },
   ada: {

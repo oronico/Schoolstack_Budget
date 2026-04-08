@@ -623,9 +623,9 @@ export const EXPLAINERS: Record<string, Explainer> = {
     title: "COLA (Cost of Living Adjustment)",
     body: {
       whatThisMeans: "COLA is the annual percentage increase applied to every staff salary in your model. It keeps compensation competitive as the cost of living rises - think of it as the automatic raise your team gets each year.",
-      whyItMatters: "If salaries don't keep pace with the cost of living, you'll lose good teachers to higher-paying schools. But if you set COLA too high, payroll costs can outpace revenue growth. Finding the right balance matters for both retention and sustainability.",
-      healthyVsRisky: "2–3% is typical for most schools and matches national cost-of-living trends. Below 2% may make it harder to retain staff. Above 4% is aggressive and can squeeze your budget in later years - worth watching closely.",
-      whatToDoNext: "The default of 3% is a solid starting point for most schools. If you're in a high-cost area (SF, NYC, DC), you might consider 3.5–4%. In lower-cost areas, 2–2.5% may be appropriate. You can always adjust later.",
+      whyItMatters: "If COLA falls below inflation, your staff takes a real pay cut every year - even if their number looks bigger on paper. That's one of the fastest paths to turnover. On the other hand, setting COLA too high without matching revenue growth can squeeze your budget. The goal is to keep COLA at or slightly above your general inflation rate.",
+      healthyVsRisky: "A good rule of thumb: set COLA at least equal to your general cost inflation rate (which you set on this same page). If inflation is 2%, COLA should be at least 2-3%. Below inflation makes it harder to retain staff. Above 4% is aggressive and can squeeze your budget in later years.",
+      whatToDoNext: "Check your general inflation rate on this page and make sure COLA matches or slightly exceeds it. If you're in a high-cost area (SF, NYC, DC), consider 3.5-4%. In lower-cost areas, 2-2.5% may work. The default of 3% is a solid starting point.",
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "assumptions",
