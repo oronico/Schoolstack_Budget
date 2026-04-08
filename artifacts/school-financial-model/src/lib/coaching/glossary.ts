@@ -27,7 +27,7 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   adm: {
     term: "ADM",
-    short: "Average Daily Membership - the average number of students enrolled each day, used by many states to calculate per-pupil funding.",
+    short: "Average Daily Membership - the average number of students enrolled each day, used to calculate state funding for charter schools.",
     long: "ADM counts enrolled students whether or not they attend on a given day. Some states use ADM as the basis for per-pupil funding. It's usually higher than ADA.",
   },
   ada: {
