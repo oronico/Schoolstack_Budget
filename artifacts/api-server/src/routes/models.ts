@@ -204,6 +204,21 @@ router.get("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+function stripEmptyValues(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return undefined;
+  if (typeof obj === "string") return obj === "" ? undefined : obj;
+  if (Array.isArray(obj)) return obj.map(stripEmptyValues);
+  if (typeof obj === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      const cleaned = stripEmptyValues(value);
+      if (cleaned !== undefined) result[key] = cleaned;
+    }
+    return result;
+  }
+  return obj;
+}
+
 router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = UpdateModelParams.safeParse(req.params);
@@ -211,6 +226,7 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
+    req.body = stripEmptyValues(req.body);
     const parsed = UpdateModelBody.safeParse(req.body);
     if (!parsed.success) {
       console.error("Update validation errors:", JSON.stringify(parsed.error.issues, null, 2));

@@ -27,6 +27,21 @@ const ConsultantStep = lazy(() => import("./steps/ConsultantStep").then(m => ({ 
 const NarrativeStep = lazy(() => import("./steps/NarrativeStep").then(m => ({ default: m.NarrativeStep })));
 const ExportStep = lazy(() => import("./steps/ExportStep").then(m => ({ default: m.ExportStep })));
 
+function stripEmptyValues(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return undefined;
+  if (typeof obj === "string") return obj === "" ? undefined : obj;
+  if (Array.isArray(obj)) return obj.map(stripEmptyValues);
+  if (typeof obj === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      const cleaned = stripEmptyValues(value);
+      if (cleaned !== undefined) result[key] = cleaned;
+    }
+    return result;
+  }
+  return obj;
+}
+
 function cleanFacilityFieldsForSave(obj: Record<string, unknown>, ot: string | undefined): Record<string, unknown> {
   if (!ot) return obj;
   const cleaned = { ...obj };
@@ -337,7 +352,7 @@ export function ModelWizardPage() {
       const profile = valuesToSave.schoolProfile as Record<string, unknown> | undefined;
       const stageVal = profile?.schoolStage as "new_school" | "operating_school" | undefined;
       const fundingVal = profile?.fundingProfile as "tuition_based" | "charter_public_funded" | "hybrid_mixed" | undefined;
-      const cleanedValues = JSON.parse(JSON.stringify(valuesToSave)) as Record<string, unknown>;
+      const cleanedValues = stripEmptyValues(JSON.parse(JSON.stringify(valuesToSave))) as Record<string, unknown>;
       let sp = cleanedValues.schoolProfile as Record<string, unknown> | undefined;
       if (sp) {
         sp = cleanFacilityFieldsForSave(sp, sp.ownershipType as string | undefined);
@@ -431,7 +446,7 @@ export function ModelWizardPage() {
       const profile = latestValuesRef.current.schoolProfile as Record<string, unknown> | undefined;
       const stageVal = profile?.schoolStage as string | undefined;
       const fundingVal = profile?.fundingProfile as string | undefined;
-      const cleanedValues = JSON.parse(current) as Record<string, unknown>;
+      const cleanedValues = stripEmptyValues(JSON.parse(current)) as Record<string, unknown>;
       let sp = cleanedValues.schoolProfile as Record<string, unknown> | undefined;
       if (sp) {
         sp = cleanFacilityFieldsForSave(sp, sp.ownershipType as string | undefined);
