@@ -16,11 +16,13 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-display text-sm font-bold uppercase tracking-wider text-white/50 mb-4">Product</h4>
+            <h4 className="font-display text-sm font-bold uppercase tracking-wider text-white/50 mb-4">Solutions</h4>
             <ul className="space-y-2.5">
-              <li><Link href="/" className="text-sm text-white/70 hover:text-white transition-colors">Home</Link></li>
-              <li><Link href="/register" className="text-sm text-white/70 hover:text-white transition-colors">Get Started</Link></li>
-              <li><Link href="/login" className="text-sm text-white/70 hover:text-white transition-colors">Sign In</Link></li>
+              <li><Link href="/for/charter-schools" className="text-sm text-white/70 hover:text-white transition-colors">Charter Schools</Link></li>
+              <li><Link href="/for/private-schools" className="text-sm text-white/70 hover:text-white transition-colors">Private Schools</Link></li>
+              <li><Link href="/for/microschools" className="text-sm text-white/70 hover:text-white transition-colors">Microschools</Link></li>
+              <li><Link href="/for/school-founders" className="text-sm text-white/70 hover:text-white transition-colors">School Founders</Link></li>
+              <li><Link href="/for/lenders" className="text-sm text-white/70 hover:text-white transition-colors">Lenders & CDFIs</Link></li>
             </ul>
           </div>
 
@@ -28,6 +30,8 @@ export function Footer() {
             <h4 className="font-display text-sm font-bold uppercase tracking-wider text-white/50 mb-4">Resources</h4>
             <ul className="space-y-2.5">
               <li><Link href="/resources" className="text-sm text-white/70 hover:text-white transition-colors">Guides & Articles</Link></li>
+              <li><Link href="/register" className="text-sm text-white/70 hover:text-white transition-colors">Get Started</Link></li>
+              <li><Link href="/login" className="text-sm text-white/70 hover:text-white transition-colors">Sign In</Link></li>
               <li><Link href="/privacy" className="text-sm text-white/70 hover:text-white transition-colors">Privacy Policy</Link></li>
               <li><Link href="/terms" className="text-sm text-white/70 hover:text-white transition-colors">Terms of Service</Link></li>
             </ul>
