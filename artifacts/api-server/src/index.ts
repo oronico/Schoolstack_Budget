@@ -1,6 +1,7 @@
 import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
-import { pool } from "@workspace/db";
+import { pool, db, errorLogsTable } from "@workspace/db";
+import type { Server } from "http";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -116,19 +117,105 @@ async function runMigrations() {
   }
 }
 
+function logCrashToDb(message: string, stack: string | undefined) {
+  if (!db) return;
+  db.insert(errorLogsTable)
+    .values({
+      userId: null,
+      errorMessage: String(message).slice(0, 2000),
+      errorStack: stack ? String(stack).slice(0, 5000) : null,
+      route: "process_crash",
+      requestBody: null,
+    })
+    .catch(() => {});
+}
+
+process.on("uncaughtException", (err) => {
+  console.error("[FATAL] Uncaught exception:", err);
+  logCrashToDb(err.message, err.stack);
+  setTimeout(() => process.exit(1), 500);
+});
+
+process.on("unhandledRejection", (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  console.error("[FATAL] Unhandled promise rejection:", err);
+  logCrashToDb(err.message, err.stack);
+  setTimeout(() => process.exit(1), 500);
+});
+
 validateEnv();
 
 const port = Number(process.env["PORT"] || "3000");
+const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 15_000;
+let server: Server | undefined;
+let cleanupTimer: ReturnType<typeof setInterval>;
+let isShuttingDown = false;
+
+function drainAndExit(forceTimer: ReturnType<typeof setTimeout>) {
+  console.log("[shutdown] Draining database pool...");
+  if (pool) {
+    pool.end()
+      .then(() => {
+        console.log("[shutdown] Database pool drained. Exiting.");
+        clearTimeout(forceTimer);
+        process.exit(0);
+      })
+      .catch((err: unknown) => {
+        console.error("[shutdown] Error draining pool:", err);
+        clearTimeout(forceTimer);
+        process.exit(1);
+      });
+  } else {
+    console.log("[shutdown] No pool to drain. Exiting.");
+    clearTimeout(forceTimer);
+    process.exit(0);
+  }
+}
+
+function gracefulShutdown(signal: string) {
+  if (isShuttingDown) {
+    console.error(`[shutdown] Received ${signal} again — forcing immediate exit.`);
+    process.exit(1);
+  }
+  isShuttingDown = true;
+  console.log(`[shutdown] Received ${signal}, starting graceful shutdown...`);
+
+  const forceTimer = setTimeout(() => {
+    console.error("[shutdown] Graceful shutdown timed out, forcing exit.");
+    process.exit(1);
+  }, GRACEFUL_SHUTDOWN_TIMEOUT_MS);
+  forceTimer.unref();
+
+  if (cleanupTimer) clearInterval(cleanupTimer);
+
+  if (!server || !server.listening) {
+    console.log("[shutdown] Server not yet listening, skipping server.close.");
+    drainAndExit(forceTimer);
+    return;
+  }
+
+  server.close((err) => {
+    if (err) {
+      console.error("[shutdown] Error closing HTTP server:", err);
+    } else {
+      console.log("[shutdown] HTTP server closed.");
+    }
+    drainAndExit(forceTimer);
+  });
+}
+
+process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.once("SIGINT", () => gracefulShutdown("SIGINT"));
 
 runMigrations().then(() => {
-app.listen(port, "0.0.0.0", () => {
-  console.log(`Server listening on 0.0.0.0:${port}`);
-  if (isProduction) {
-    console.log(`[startup] Production mode — CORS origins: ${process.env.ALLOWED_ORIGINS || "(not set)"}`);
-  }
-});
+  server = app.listen(port, "0.0.0.0", () => {
+    console.log(`Server listening on 0.0.0.0:${port}`);
+    if (isProduction) {
+      console.log(`[startup] Production mode — CORS origins: ${process.env.ALLOWED_ORIGINS || "(not set)"}`);
+    }
+  });
 });
 
-setInterval(() => {
+cleanupTimer = setInterval(() => {
   cleanupExpiredRateLimits().catch(() => {});
 }, 300_000);

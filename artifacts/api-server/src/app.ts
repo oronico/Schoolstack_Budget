@@ -60,6 +60,32 @@ app.use(
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+const EXPORT_TIMEOUT_MS = 120_000;
+
+function isExportRoute(path: string): boolean {
+  return /\/models\/\d+\/export/.test(path) ||
+    /\/models\/\d+\/consultant/.test(path) ||
+    /\/models\/\d+\/lender-packet/.test(path) ||
+    /\/models\/\d+\/board-packet/.test(path);
+}
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const timeout = isExportRoute(req.path) ? EXPORT_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+
+  const timer = setTimeout(() => {
+    if (!res.headersSent) {
+      console.error(`[timeout] ${req.method} ${req.originalUrl} exceeded ${timeout}ms`);
+      res.status(503).json({ error: "Request timed out. Please try again." });
+    }
+  }, timeout);
+
+  res.on("close", () => clearTimeout(timer));
+  res.on("finish", () => clearTimeout(timer));
+
+  next();
+});
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
