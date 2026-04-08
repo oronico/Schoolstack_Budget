@@ -138,10 +138,30 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
     y1StaffingCost += rowCost;
   }
 
-  let y1TotalFTE = 0;
-  for (const s of staffingRows) {
-    y1TotalFTE += s.fte || 0;
+  function computeFTEForYear(year: number, students: number): number {
+    let total = 0;
+    for (const s of staffingRows) {
+      let fte = s.fte || 0;
+      const startYr = (s as Record<string, unknown>).startYear as number | undefined;
+      const endYr = (s as Record<string, unknown>).endYear as number | undefined;
+      const staffMode = (s as Record<string, unknown>).staffingMode as string | undefined;
+      const ratio = (s as Record<string, unknown>).studentRatio as number | undefined;
+      const minF = (s as Record<string, unknown>).minFte as number | undefined;
+      const maxF = (s as Record<string, unknown>).maxFte as number | undefined;
+      if (startYr && (year + 1) < startYr) fte = 0;
+      else if (endYr && (year + 1) > endYr) fte = 0;
+      else if (staffMode === "ratio" && ratio && ratio > 0) {
+        let computed = students / ratio;
+        if (minF !== undefined) computed = Math.max(computed, minF);
+        if (maxF !== undefined) computed = Math.min(computed, maxF);
+        fte = Math.ceil(computed * 2) / 2;
+      }
+      total += fte;
+    }
+    return total;
   }
+
+  const y1TotalFTE = computeFTEForYear(0, y1Students);
 
   let y1OpExpenses = 0;
   let y1FacilityCost = 0;
@@ -192,6 +212,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
     const ns = y === 0 ? students : Math.max(0, students - Math.min(students, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100))));
     const rs = y === 0 ? 0 : Math.min(students, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
     const staffY = y1StaffingCost * Math.pow(1 + cola / 100, y);
+    const yearFTE = computeFTEForYear(y, students);
     let opY = 0;
     for (const e of expenseRows) {
       if (!e.enabled) continue;
@@ -205,7 +226,7 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
         }
         opY += (pct / 100) * revenueByYear[y];
       } else {
-        opY += driverVal(e.amounts, y, e.driverType, students, e.escalationRate, costInflation, ns, rs, y1TotalFTE);
+        opY += driverVal(e.amounts, y, e.driverType, students, e.escalationRate, costInflation, ns, rs, yearFTE);
       }
     }
     let capDebtY = 0;
