@@ -16,4 +16,5 @@ export const ExpenseDriverType = {
   per_new_student: "per_new_student",
   per_returning_student: "per_returning_student",
   percent_of_revenue: "percent_of_revenue",
+  per_fte: "per_fte",
 } as const;

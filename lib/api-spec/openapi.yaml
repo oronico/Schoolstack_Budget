@@ -745,7 +745,7 @@ components:
       enum: [annual_fixed, monthly, per_student, percent_of_base]
     ExpenseDriverType:
       type: string
-      enum: [annual_fixed, monthly, per_student, per_new_student, per_returning_student, percent_of_revenue]
+      enum: [annual_fixed, monthly, per_student, per_new_student, per_returning_student, percent_of_revenue, per_fte]
     StaffingFunctionCategory:
       type: string
       enum: [instructional, school_leadership, student_support, operations, administrative, other]

@@ -222,9 +222,7 @@ export const CreateModelBody = zod.object({
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
-        accountingBasis: zod
-          .enum(["cash", "accrual", "not_sure"])
-          .optional(),
+        accountingBasis: zod.enum(["cash", "accrual", "not_sure"]).optional(),
         facilityPhases: zod
           .array(
             zod.object({
@@ -427,6 +425,7 @@ export const CreateModelBody = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
@@ -447,6 +446,7 @@ export const CreateModelBody = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
@@ -663,9 +663,7 @@ export const GetModelResponse = zod.object({
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
-        accountingBasis: zod
-          .enum(["cash", "accrual", "not_sure"])
-          .optional(),
+        accountingBasis: zod.enum(["cash", "accrual", "not_sure"]).optional(),
         facilityPhases: zod
           .array(
             zod.object({
@@ -868,6 +866,7 @@ export const GetModelResponse = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
@@ -888,6 +887,7 @@ export const GetModelResponse = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
@@ -1105,9 +1105,7 @@ export const UpdateModelBody = zod.object({
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
-        accountingBasis: zod
-          .enum(["cash", "accrual", "not_sure"])
-          .optional(),
+        accountingBasis: zod.enum(["cash", "accrual", "not_sure"]).optional(),
         facilityPhases: zod
           .array(
             zod.object({
@@ -1310,6 +1308,7 @@ export const UpdateModelBody = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
@@ -1330,6 +1329,7 @@ export const UpdateModelBody = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
@@ -1539,9 +1539,7 @@ export const UpdateModelResponse = zod.object({
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
-        accountingBasis: zod
-          .enum(["cash", "accrual", "not_sure"])
-          .optional(),
+        accountingBasis: zod.enum(["cash", "accrual", "not_sure"]).optional(),
         facilityPhases: zod
           .array(
             zod.object({
@@ -1746,6 +1744,7 @@ export const UpdateModelResponse = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
@@ -1766,6 +1765,7 @@ export const UpdateModelResponse = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
@@ -2002,9 +2002,7 @@ export const ArchiveModelResponse = zod.object({
         lendingLabIntent: zod
           .enum(["plan_to_apply", "want_to_understand", "budget_only"])
           .optional(),
-        accountingBasis: zod
-          .enum(["cash", "accrual", "not_sure"])
-          .optional(),
+        accountingBasis: zod.enum(["cash", "accrual", "not_sure"]).optional(),
         facilityPhases: zod
           .array(
             zod.object({
@@ -2209,6 +2207,7 @@ export const ArchiveModelResponse = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),
@@ -2229,6 +2228,7 @@ export const ArchiveModelResponse = zod.object({
             "per_new_student",
             "per_returning_student",
             "percent_of_revenue",
+            "per_fte",
           ]),
           amounts: zod.array(zod.number()),
           note: zod.string().optional(),

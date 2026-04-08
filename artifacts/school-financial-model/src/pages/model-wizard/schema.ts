@@ -336,7 +336,7 @@ export const expenseRowSchema = z.object({
   category: z.string().min(1, "Please select an expense category"),
   lineItem: z.string(),
   enabled: z.boolean(),
-  driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_revenue"], {
+  driverType: z.enum(["annual_fixed", "monthly", "per_student", "per_new_student", "per_returning_student", "percent_of_revenue", "per_fte"], {
     required_error: "Please select how this expense is calculated",
     invalid_type_error: "Please select a valid calculation method",
   }),
@@ -350,7 +350,7 @@ export const capitalDebtRowSchema = z.object({
   id: z.string(),
   lineItem: z.string(),
   enabled: z.boolean(),
-  driverType: z.enum(["annual_fixed", "monthly", "per_student", "percent_of_revenue"], {
+  driverType: z.enum(["annual_fixed", "monthly", "per_student", "per_new_student", "per_returning_student", "percent_of_revenue", "per_fte"], {
     required_error: "Please select how this is calculated",
     invalid_type_error: "Please select a valid calculation method",
   }),

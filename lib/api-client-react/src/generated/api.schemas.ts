@@ -146,6 +146,7 @@ export const ExpenseDriverType = {
   per_new_student: "per_new_student",
   per_returning_student: "per_returning_student",
   percent_of_revenue: "percent_of_revenue",
+  per_fte: "per_fte",
 } as const;
 
 export type StaffingFunctionCategory =
@@ -454,6 +455,15 @@ export const SchoolProfileLendingLabIntent = {
   budget_only: "budget_only",
 } as const;
 
+export type SchoolProfileAccountingBasis =
+  (typeof SchoolProfileAccountingBasis)[keyof typeof SchoolProfileAccountingBasis];
+
+export const SchoolProfileAccountingBasis = {
+  cash: "cash",
+  accrual: "accrual",
+  not_sure: "not_sure",
+} as const;
+
 export type FacilityPhaseOwnershipType =
   (typeof FacilityPhaseOwnershipType)[keyof typeof FacilityPhaseOwnershipType];
 
@@ -550,6 +560,7 @@ export interface SchoolProfile {
   stateFundingMethodology?: string;
   debtIncluded?: boolean;
   lendingLabIntent?: SchoolProfileLendingLabIntent;
+  accountingBasis?: SchoolProfileAccountingBasis;
   facilityPhases?: FacilityPhase[];
 }
 

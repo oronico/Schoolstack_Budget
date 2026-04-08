@@ -15,7 +15,6 @@ import type { ExpenseSensitivityCell } from "./expenseSensitivityCell";
 import type { HealthSignal } from "./healthSignal";
 import type { LendingLabAssessment } from "./lendingLabAssessment";
 import type { RevenueComposition } from "./revenueComposition";
-import type { ExpenseSensitivityCell } from "./expenseSensitivityCell";
 import type { SensitivityCell } from "./sensitivityCell";
 import type { StressScenario } from "./stressScenario";
 

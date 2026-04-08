@@ -7,6 +7,7 @@
  */
 import type { FacilityPhase } from "./facilityPhase";
 import type { FundingProfile } from "./fundingProfile";
+import type { SchoolProfileAccountingBasis } from "./schoolProfileAccountingBasis";
 import type { SchoolProfileCharterDepositTiming } from "./schoolProfileCharterDepositTiming";
 import type { SchoolProfileEnrollmentRevenueMethod } from "./schoolProfileEnrollmentRevenueMethod";
 import type { SchoolProfileEntityType } from "./schoolProfileEntityType";
@@ -68,5 +69,6 @@ export interface SchoolProfile {
   stateFundingMethodology?: string;
   debtIncluded?: boolean;
   lendingLabIntent?: SchoolProfileLendingLabIntent;
+  accountingBasis?: SchoolProfileAccountingBasis;
   facilityPhases?: FacilityPhase[];
 }
