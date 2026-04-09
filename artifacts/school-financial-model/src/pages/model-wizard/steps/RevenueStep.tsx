@@ -1548,6 +1548,7 @@ interface TimingControlsProps {
 function TimingControls({ row, onTimingChange }: TimingControlsProps) {
   const { watch } = useFormContext();
   const schoolType = watch("schoolProfile.schoolType");
+  const isCharter = schoolType === "charter_school";
   const category = row.category;
   const isOverridden = row.timingOverridden === true;
 
@@ -1559,7 +1560,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
     <div className="mt-3 pt-3 border-t border-border/50">
       <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2 flex items-center gap-1">
         <Clock className="h-3 w-3" /> Payment Timing
-        {(category === "tuition_and_fees" || category === "tuition_offsets") && (
+        {!isCharter && (category === "tuition_and_fees" || category === "tuition_offsets") && (
           <span className={cn(
             "ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
             isOverridden ? "bg-amber-100 text-amber-800" : "bg-teal-100 text-teal-800"
@@ -1569,7 +1570,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
         )}
       </p>
       
-      {(category === "tuition_and_fees" || category === "tuition_offsets") && (
+      {!isCharter && (category === "tuition_and_fees" || category === "tuition_offsets") && (
         <div className="flex items-start gap-1.5 mb-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-[11px] text-amber-800 dark:text-amber-300">
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
           <span>If parents pay monthly instead of upfront, you may need extra cash to cover summer months when tuition isn't coming in but bills keep going out. Plan for a 2–3 month cash cushion.</span>
@@ -1597,7 +1598,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
         <FinancingInsight text="If donations make up a large share of your revenue, consider how sustainable that is year over year. Diversifying toward enrollment-driven income builds long-term stability." className="mb-2" />
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {category === "tuition_and_fees" && (
+        {category === "tuition_and_fees" && !isCharter && (
           <>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
@@ -1658,8 +1659,14 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
             </div>
           </>
         )}
+        {category === "tuition_and_fees" && isCharter && (
+          <div className="col-span-full flex items-start gap-1.5 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
+            <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+            <span>Charter school revenue is publicly funded — billing months and collection method don't apply.</span>
+          </div>
+        )}
 
-        {category === "tuition_offsets" && (
+        {category === "tuition_offsets" && !isCharter && (
           <>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">

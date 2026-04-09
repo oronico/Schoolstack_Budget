@@ -176,6 +176,86 @@ function QuickPickButtons({
   );
 }
 
+function BenefitsToggleSection({ schoolType }: { schoolType: string }) {
+  const { watch, setValue } = useFormContext();
+  const offersBenefits = watch("staffing.offersBenefits");
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={offersBenefits === true}
+          onClick={() => {
+            const next = !offersBenefits;
+            setValue("staffing.offersBenefits", next, { shouldDirty: true });
+            if (!next) {
+              setValue("staffing.benefitsRate", 0, { shouldDirty: true });
+            } else {
+              const current = watch("staffing.benefitsRate");
+              if (!current || current === 0) {
+                setValue("staffing.benefitsRate", DEFAULTS.benefitsRate, { shouldDirty: true });
+              }
+            }
+          }}
+          className={cn(
+            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+            offersBenefits ? "bg-primary" : "bg-gray-300"
+          )}
+        >
+          <span className={cn(
+            "inline-block h-4 w-4 rounded-full bg-white transition-transform",
+            offersBenefits ? "translate-x-6" : "translate-x-1"
+          )} />
+        </button>
+        <label className="text-sm font-semibold text-foreground cursor-pointer" onClick={() => {
+          const next = !offersBenefits;
+          setValue("staffing.offersBenefits", next, { shouldDirty: true });
+          if (!next) setValue("staffing.benefitsRate", 0, { shouldDirty: true });
+          else {
+            const current = watch("staffing.benefitsRate");
+            if (!current || current === 0) setValue("staffing.benefitsRate", DEFAULTS.benefitsRate, { shouldDirty: true });
+          }
+        }}>
+          Do you offer benefits to FTE staff?
+        </label>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Health insurance, retirement contributions, and other benefits for full-time employees.
+      </p>
+
+      {offersBenefits && (
+        <div className="pt-2 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          <AssumptionField
+            label={<>Default <GlossaryTerm termKey="benefits_rate" schoolType={schoolType}>Benefits Rate</GlossaryTerm></>}
+            name="staffing.benefitsRate"
+            suffix="%"
+            defaultValue={DEFAULTS.benefitsRate}
+            usageNote="Percentage of salary paid in benefits. Applied as a default to each new staff role."
+            placeholder="25"
+            min={0}
+            max={100}
+          />
+          <div className="px-1">
+            <p className="text-[10px] font-medium text-muted-foreground mb-1">Quick pick:</p>
+            <QuickPickButtons
+              name="staffing.benefitsRate"
+              suffix="%"
+              options={[
+                { label: "20", value: 20 },
+                { label: "25", value: 25 },
+                { label: "30", value: 30 },
+              ]}
+            />
+          </div>
+          <InlineHelpCard explainer={EXPLAINERS.assumptions_benefits_rate} section="assumptions" className="mt-2" schoolType={schoolType} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PayrollTaxSection({
   stateCode,
   statePayrollTaxEntry,
@@ -357,6 +437,15 @@ export function AssumptionsStep() {
     }
   }, [isCharter, stateFundingConfig, setValue]);
 
+  useEffect(() => {
+    const currentToggle = watch("staffing.offersBenefits");
+    if (currentToggle === undefined || currentToggle === null) {
+      const rate = watch("staffing.benefitsRate");
+      const hasExplicitRate = rate !== undefined && rate !== null;
+      setValue("staffing.offersBenefits", hasExplicitRate ? rate > 0 : true, { shouldDirty: false });
+    }
+  }, []);
+
   const statePayrollTaxEntry = useMemo(
     () => getStatePayrollTaxEntry(stateCode),
     [stateCode]
@@ -396,10 +485,10 @@ export function AssumptionsStep() {
   };
 
   const resetStaffingParams = () => {
+    setValue("staffing.offersBenefits", true, { shouldDirty: true });
     setValue("staffing.benefitsRate", DEFAULTS.benefitsRate, { shouldDirty: true });
     setValue("staffing.payrollTaxRate", stateCode ? statePayrollTaxRate : DEFAULTS.payrollTaxRate, { shouldDirty: true });
     setValue("staffing.payrollTaxRateUserOverride", false, { shouldDirty: true });
-    setValue("enrollment.retentionRate", DEFAULTS.retentionRate, { shouldDirty: true });
   };
 
   const resetRevenueDrivers = () => {
@@ -754,52 +843,15 @@ export function AssumptionsStep() {
             description="Default rates applied to staff compensation. Individual roles can override these on the Staffing step."
             onReset={resetStaffingParams}
           />
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <AssumptionField
-                  label={<>Default <GlossaryTerm termKey="benefits_rate" schoolType={schoolType}>Benefits Rate</GlossaryTerm></>}
-                  name="staffing.benefitsRate"
-                  suffix="%"
-                  defaultValue={DEFAULTS.benefitsRate}
-                  usageNote="Percentage of salary paid in benefits (health insurance, retirement, etc.) for benefits-eligible employees. Applied as a default to each new staff role."
-                  placeholder="25"
-                  min={0}
-                  max={100}
-                />
-                <div className="mt-2 px-1">
-                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Quick pick:</p>
-                  <QuickPickButtons
-                    name="staffing.benefitsRate"
-                    suffix="%"
-                    options={[
-                      { label: "20", value: 20 },
-                      { label: "25", value: 25 },
-                      { label: "30", value: 30 },
-                    ]}
-                  />
-                </div>
-                <InlineHelpCard explainer={EXPLAINERS.assumptions_benefits_rate} section="assumptions" className="mt-2" schoolType={schoolType} />
-              </div>
+          <div className="space-y-5">
+            <BenefitsToggleSection schoolType={schoolType} />
 
-              <PayrollTaxSection
-                stateCode={stateCode}
-                statePayrollTaxEntry={statePayrollTaxEntry}
-                statePayrollTaxRate={statePayrollTaxRate}
-                payrollQuickPicks={payrollQuickPicks}
-              />
-
-              <AssumptionField
-                label="Student Retention Rate"
-                name="enrollment.retentionRate"
-                suffix="%"
-                defaultValue={DEFAULTS.retentionRate}
-                usageNote="Percentage of students expected to return each year. Used for enrollment projections and returning-student revenue calculations. Industry average: 80–90%."
-                placeholder="85"
-                min={0}
-                max={100}
-              />
-            </div>
+            <PayrollTaxSection
+              stateCode={stateCode}
+              statePayrollTaxEntry={statePayrollTaxEntry}
+              statePayrollTaxRate={statePayrollTaxRate}
+              payrollQuickPicks={payrollQuickPicks}
+            />
 
             <InfoBadge>
               Individual staff roles, salaries, and FTE counts are configured on the Staffing step.

@@ -216,7 +216,7 @@ export function ModelWizardPage() {
         escalationRateOverridden?: boolean;
         note?: string;
       }>,
-      staffing: { studentsPerTeacher: 12, benefitsRate: DEFAULT_BENEFITS_RATE, payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE },
+      staffing: { studentsPerTeacher: 12, offersBenefits: true, benefitsRate: DEFAULT_BENEFITS_RATE, payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE },
       staffingRows: [] as Array<{
         id: string;
         roleName: string;
