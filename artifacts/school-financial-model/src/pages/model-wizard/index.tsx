@@ -686,7 +686,7 @@ export function ModelWizardPage() {
       )}
       {showImportBanner && (
         <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-teal-200">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="p-1.5 bg-teal-100 rounded-lg">
                 <Building2 className="h-4 w-4 text-teal-700" />
@@ -709,7 +709,7 @@ export function ModelWizardPage() {
         </div>
       )}
       <div className="bg-card border-b border-border sticky top-20 z-40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-display font-bold text-lg text-foreground">
@@ -795,7 +795,7 @@ export function ModelWizardPage() {
         </div>
       </div>
 
-      <div className={cn("flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 mx-auto w-full", currentStep === 6 ? "max-w-6xl" : "max-w-3xl")}>
+      <div className="flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 mx-auto w-full max-w-6xl">
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <MicroLessonContainer data={methods.getValues() as FullModelData} currentStep={currentStep} className="mb-4" />
