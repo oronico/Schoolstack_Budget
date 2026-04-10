@@ -4,6 +4,7 @@ import {
   microschoolFixture,
   privateSchoolFixture,
   charterFixture,
+  computeBackendValues,
   type TestModelPayload,
 } from "@workspace/finance";
 
@@ -13,76 +14,39 @@ function toFullModelData(fixture: TestModelPayload): FullModelData {
   return fixture as FullModelData;
 }
 
-interface BackendGoldenValues {
-  revenue: number[];
-  personnel: number[];
-  opex: number[];
-  capDebt: number[];
-  netIncome: number[];
-  loanDebtService: number[];
-}
-
-const microschoolGolden: BackendGoldenValues = {
-  revenue: [184667, 340512, 427946, 500518, 516085],
-  personnel: [118934, 147003, 151413, 155955, 160634],
-  opex: [40500, 54885, 59774, 64012, 65776],
-  capDebt: [6960, 6960, 6960, 6960, 6960],
-  netIncome: [18273, 131664, 209799, 273591, 282715],
-  loanDebtService: [6960, 6960, 6960, 6960, 6960],
-};
-
-const privateSchoolGolden: BackendGoldenValues = {
-  revenue: [1975000, 2612670, 3286760, 3895050, 4323000],
-  personnel: [854772, 854772, 854772, 854772, 854772],
-  opex: [271400, 310442, 351598, 389496, 417905],
-  capDebt: [59064, 44064, 44064, 39064, 39064],
-  netIncome: [789764, 1403392, 2036326, 2611718, 3011259],
-  loanDebtService: [34064, 34064, 34064, 34064, 34064],
-};
-
-const charterGolden: BackendGoldenValues = {
-  revenue: [1288333, 2522800, 3784600, 4759125, 5184400],
-  personnel: [997040, 1478601, 1796022, 2042905, 2113443],
-  opex: [545000, 887860, 1190521, 1439089, 1554924],
-  capDebt: [164825, 89825, 89825, 74825, 69825],
-  netIncome: [-418532, 66514, 708232, 1202306, 1446208],
-  loanDebtService: [49825, 49825, 49825, 49825, 49825],
-};
-
 function withinPct(actual: number, expected: number, pct: number): boolean {
   const tol = Math.max(Math.abs(expected) * (pct / 100), 5);
   return Math.abs(actual - expected) <= tol;
 }
 
-function describeParity(label: string, fixture: TestModelPayload, golden: BackendGoldenValues) {
-  describe(`parity: ${label}`, () => {
-    const result = computeScenarios(toFullModelData(fixture), []);
-    const m = result.base.metrics;
+function describeCrossEngineParity(label: string, fixture: TestModelPayload) {
+  describe(`cross-engine parity: ${label}`, () => {
+    const feResult = computeScenarios(toFullModelData(fixture), []);
+    const fe = feResult.base.metrics;
+    const be = computeBackendValues(fixture);
 
     for (let y = 0; y < 5; y++) {
-      it(`Y${y + 1} revenue within 1% of backend`, () => {
-        expect(withinPct(m.revenue[y], golden.revenue[y], 1)).toBe(true);
+      it(`Y${y + 1} revenue: FE vs BE within 1%`, () => {
+        expect(withinPct(fe.revenue[y], be.revenue[y], 1)).toBe(true);
       });
 
-      it(`Y${y + 1} staffing within 1% of backend`, () => {
-        expect(withinPct(m.staffingCost[y], golden.personnel[y], 1)).toBe(true);
+      it(`Y${y + 1} staffing: FE vs BE within 1%`, () => {
+        expect(withinPct(fe.staffingCost[y], be.personnel[y], 1)).toBe(true);
       });
 
-      it(`Y${y + 1} total expenses within 1% of backend`, () => {
-        const feExp = m.facilityCost[y] + m.opex[y];
-        expect(withinPct(feExp, golden.opex[y], 1)).toBe(true);
+      it(`Y${y + 1} expenses (facility+opex): FE vs BE within 1%`, () => {
+        const feExp = fe.facilityCost[y] + fe.opex[y];
+        expect(withinPct(feExp, be.expenses[y], 1)).toBe(true);
       });
 
-      it(`Y${y + 1} net income within 1% of backend`, () => {
-        expect(withinPct(m.netIncome[y], golden.netIncome[y], 1)).toBe(true);
+      it(`Y${y + 1} net income: FE vs BE within 1%`, () => {
+        expect(withinPct(fe.netIncome[y], be.netIncome[y], 1)).toBe(true);
       });
 
-      if (golden.loanDebtService[y] > 0) {
-        it(`Y${y + 1} DSCR within 1% of backend`, () => {
-          const feDscr = m.dscr[y];
-          const beNI = golden.netIncome[y];
-          const beDS = golden.loanDebtService[y];
-          const beDscr = Math.round(((beNI + beDS) / beDS) * 100) / 100;
+      if (be.loanDS[y] > 0) {
+        it(`Y${y + 1} DSCR: FE vs BE within 1%`, () => {
+          const feDscr = fe.dscr[y];
+          const beDscr = Math.round(((be.netIncome[y] + be.loanDS[y]) / be.loanDS[y]) * 100) / 100;
           expect(withinPct(feDscr, beDscr, 1)).toBe(true);
         });
       }
@@ -90,11 +54,11 @@ function describeParity(label: string, fixture: TestModelPayload, golden: Backen
   });
 }
 
-describeParity("microschool", microschoolFixture, microschoolGolden);
-describeParity("private school", privateSchoolFixture, privateSchoolGolden);
-describeParity("charter school", charterFixture, charterGolden);
+describeCrossEngineParity("microschool", microschoolFixture);
+describeCrossEngineParity("private school", privateSchoolFixture);
+describeCrossEngineParity("charter school", charterFixture);
 
-describe("parity: charter loan PMT exactness", () => {
+describe("cross-engine: charter loan PMT exactness", () => {
   const result = computeScenarios(toFullModelData(charterFixture), []);
   const m = result.base.metrics;
 
@@ -107,7 +71,7 @@ describe("parity: charter loan PMT exactness", () => {
   });
 });
 
-describe("parity: computeBaseFinancials output shape", () => {
+describe("cross-engine: computeBaseFinancials output shape", () => {
   const m = computeBaseFinancials(toFullModelData(microschoolFixture));
 
   it("returns 5-year arrays for all metric fields", () => {

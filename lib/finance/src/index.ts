@@ -42,6 +42,12 @@ export {
   type TestOpeningBalances,
 } from "./test-fixtures.js";
 
+export {
+  driverVal,
+  computeBackendValues,
+  type BackendComputedValues,
+} from "./backend-compute.js";
+
 export function computeStraightLineDepreciation(
   fixedAssets: number,
   usefulLifeYears: number,

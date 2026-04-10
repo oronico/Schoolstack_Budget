@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { computeScenarios, type ScenarioAdjustments } from "../scenario-engine";
 
-function buildBaseModel(overrides: Record<string, unknown> = {}) {
+type ModelInput = Parameters<typeof computeScenarios>[0];
+
+function buildBaseModel(overrides: Record<string, unknown> = {}): ModelInput {
   return {
     schoolProfile: {
       isPartialFirstYear: false,
@@ -33,7 +35,7 @@ function buildBaseModel(overrides: Record<string, unknown> = {}) {
       ...(overrides.openingBalances as Record<string, unknown> || {}),
     },
     tuitionEscalation: overrides.tuitionEscalation || undefined,
-  } as any;
+  } as ModelInput;
 }
 
 function run(overrides: Record<string, unknown> = {}) {
@@ -656,7 +658,7 @@ describe("scenario-engine: golden parity — microschool payload", () => {
     ],
     tuitionTiers: [],
     openingBalances: { cash: 15000 },
-  } as any;
+  } as ModelInput;
 
   it("Y1 revenue matches backend golden value within 1%", () => {
     const result = computeScenarios(microschoolData, []);
