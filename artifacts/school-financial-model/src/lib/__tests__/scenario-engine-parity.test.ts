@@ -6,6 +6,7 @@ import {
   charterFixture,
   computeBackendValues,
   type TestModelPayload,
+  type BackendComputedValues,
 } from "@workspace/finance";
 
 type FullModelData = Parameters<typeof computeBaseFinancials>[0];
@@ -23,7 +24,7 @@ function describeCrossEngineParity(label: string, fixture: TestModelPayload) {
   describe(`cross-engine parity: ${label}`, () => {
     const feResult = computeScenarios(toFullModelData(fixture), []);
     const fe = feResult.base.metrics;
-    const be = computeBackendValues(fixture);
+    const be: BackendComputedValues = computeBackendValues(fixture);
 
     for (let y = 0; y < 5; y++) {
       it(`Y${y + 1} revenue: FE vs BE within 1%`, () => {
