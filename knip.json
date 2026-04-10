@@ -1,0 +1,15 @@
+{
+  "workspaces": {
+    "artifacts/school-financial-model": {
+      "entry": ["src/main.tsx"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignore": ["src/**/__tests__/**", "src/**/*.test.*"]
+    },
+    "artifacts/api-server": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/__tests__/**", "src/**/*.test.*", "src/scripts/**"]
+    }
+  },
+  "ignoreWorkspaces": ["artifacts/budget-allhands", "artifacts/mockup-sandbox", "lib/*"]
+}

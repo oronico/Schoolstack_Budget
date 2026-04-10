@@ -1,7 +1,6 @@
 import ExcelJS from "exceljs";
 import {
   computeAnnualDebt,
-  computeMonthlyDebt,
   computeAnnualDebtForYear,
   computeInterestPortion,
   computePrincipalPortion,
@@ -11,7 +10,6 @@ import {
 } from "@workspace/finance";
 export {
   computeAnnualDebt,
-  computeMonthlyDebt,
   computeAnnualDebtForYear,
   computeInterestPortion,
   computePrincipalPortion,
@@ -27,12 +25,12 @@ export const AMBER_BG = "FFFFF8E1";
 export const TEAL = "FF0D9488";
 export const EVERGREEN = "FF328555";
 export const CREAM = "FFFAF9F7";
-export const BLUE_INPUT_BG = "FFDBEAFE";
-export const BLUE_INPUT_FONT = "FF1E3A5F";
+const BLUE_INPUT_BG = "FFDBEAFE";
+const BLUE_INPUT_FONT = "FF1E3A5F";
 export const DASHBOARD_GREEN = "FF16A34A";
-export const DASHBOARD_AMBER = "FFD97706";
-export const DASHBOARD_RED = "FFDC2626";
-export const VIOLET = "FF7C3AED";
+const DASHBOARD_AMBER = "FFD97706";
+const DASHBOARD_RED = "FFDC2626";
+const VIOLET = "FF7C3AED";
 
 import {
   BENCHMARK_PAYROLL_GREEN,
@@ -55,10 +53,6 @@ export {
   BENCHMARK_FACILITY_AMBER,
   BENCHMARK_DSCR_GREEN,
   BENCHMARK_DSCR_AMBER,
-  BENCHMARK_REV_PER_STUDENT_GREEN,
-  BENCHMARK_REV_PER_STUDENT_AMBER,
-  BENCHMARK_REV_SOURCES_GREEN,
-  BENCHMARK_REV_SOURCES_AMBER,
   BENCHMARK_DCOH_GREEN,
   BENCHMARK_DCOH_AMBER,
 };
@@ -89,7 +83,7 @@ export const SUBTOTAL_BORDER: Partial<ExcelJS.Borders> = {
   left: { style: "thin", color: { argb: "FFD0D0D0" } },
   right: { style: "thin", color: { argb: "FFD0D0D0" } },
 };
-export const GREEN_OUTPUT_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG } };
+const GREEN_OUTPUT_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: GREEN_BG } };
 
 export const MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -120,7 +114,6 @@ export const INPUT_CELL_FONT: Partial<ExcelJS.Font> = { name: "Calibri", size: 1
 export const INPUT_CELL_BORDER: Partial<ExcelJS.Borders> = {
   bottom: { style: "thin", color: { argb: "FFB0C4DE" } },
 };
-export const FORMULA_CELL_FONT: Partial<ExcelJS.Font> = { name: "Calibri", size: 11, color: { argb: NAVY } };
 
 export function applyInputStyle(cell: ExcelJS.Cell) {
   cell.fill = INPUT_CELL_FILL;
@@ -207,10 +200,6 @@ export function equityLabel(entityType?: string): string {
   return isNonprofit(entityType) ? "Net Assets" : "Equity";
 }
 
-export function profitLabel(entityType?: string): string {
-  return isNonprofit(entityType) ? "Change in Net Assets" : "Profit / (Loss)";
-}
-
 export function funcLabel(fc: string): string {
   const map: Record<string, string> = {
     instructional: "Instructional", school_leadership: "School Leadership",
@@ -276,9 +265,6 @@ export function schoolModelFromType(schoolType?: string): string {
   return "private";
 }
 
-export function isCharterModel(schoolType?: string, fundingProfile?: string): boolean {
-  return schoolType === "charter_school" || fundingProfile === "charter_public_funded";
-}
 
 
 export { resolveEsc };
@@ -712,14 +698,6 @@ export function computeStaffingLoaded(r: StaffingRow, y?: number, enrollment?: n
   return annual + benefits + tax;
 }
 
-export function computeTotalFte(rows: StaffingRow[], y: number, enrollment: number): number {
-  let total = 0;
-  for (const r of rows) {
-    total += computeEffectiveFte(r, y, enrollment);
-  }
-  return total;
-}
-
 export function computeExpenseForYear(
   rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number
 ): number {
@@ -800,12 +778,6 @@ export function computeDebtServiceForYear(rows: CapitalDebtRow[], y: number): nu
     total += computeAnnualDebtForYear(r.loanPrincipal || 0, (r.loanRate || 0) / 100, r.loanTermYears || 0, y);
   }
   return total;
-}
-
-export function getEnrollment(enrollment: Enrollment | undefined, y: number): number {
-  if (!enrollment) return 0;
-  const arr = [enrollment.year1, enrollment.year2, enrollment.year3, enrollment.year4, enrollment.year5];
-  return arr[y] ?? 0;
 }
 
 export function getEnrollmentArray(enrollment: Enrollment | undefined): number[] {
@@ -1509,7 +1481,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   }
 }
 
-export const OWNERSHIP_LABELS: Record<string, string> = {
+const OWNERSHIP_LABELS: Record<string, string> = {
   own: "Own",
   rent: "Rent / Lease",
   donated: "Donated / No-Cost",

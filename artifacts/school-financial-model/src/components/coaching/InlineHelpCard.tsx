@@ -142,7 +142,7 @@ interface ExplainThisTriggerProps {
   schoolType?: string;
 }
 
-export function ExplainThisTrigger({ explainer, className, section, schoolType }: ExplainThisTriggerProps) {
+function ExplainThisTrigger({ explainer, className, section, schoolType }: ExplainThisTriggerProps) {
   const [showCard, setShowCard] = useState(false);
 
   if (showCard) {

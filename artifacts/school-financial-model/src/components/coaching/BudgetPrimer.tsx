@@ -10,7 +10,7 @@ interface BudgetPrimerProps {
 
 const PRIMER_COMPLETED_KEY = "schoolstack_primer_completed";
 
-export function isPrimerCompleted(): boolean {
+function isPrimerCompleted(): boolean {
   return localStorage.getItem(PRIMER_COMPLETED_KEY) === "true";
 }
 

@@ -999,11 +999,3 @@ export function getExplainersForSection(section: string, level: GuidanceLevel): 
     .sort((a, b) => a.order - b.order);
 }
 
-export function getExplainerById(id: string): Explainer | undefined {
-  return EXPLAINERS[id];
-}
-
-export function shouldAutoExpand(level: GuidanceLevel, explainer: Explainer): boolean {
-  if (level === "advanced") return false;
-  return explainer.autoExpandFor.includes(level);
-}

@@ -131,6 +131,6 @@ export const KPI_FORMULAS: Record<string, KpiFormula> = {
   },
 };
 
-export function getKpiFormula(id: string): KpiFormula | undefined {
+function getKpiFormula(id: string): KpiFormula | undefined {
   return KPI_FORMULAS[id];
 }
