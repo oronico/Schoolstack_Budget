@@ -59,10 +59,11 @@ function driverVal(
   escalationRate?: number,
   fallbackEsc?: number,
   newStudents?: number,
-  returningStudents?: number
+  returningStudents?: number,
+  escalationRateOverridden?: boolean,
 ): number {
   const raw = amounts?.[y] ?? 0;
-  const esc = (escalationRate !== undefined && escalationRate !== 0) ? escalationRate : (fallbackEsc ?? 0);
+  const esc = escalationRateOverridden ? (escalationRate ?? 0) : ((escalationRate !== undefined && escalationRate !== 0) ? escalationRate : (fallbackEsc ?? 0));
   let base: number;
   if (esc !== 0 && y > 0) {
     base = (amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
@@ -217,7 +218,7 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     for (const r of expenseRows) {
       let val: number;
       if (r.driverType === "percent_of_revenue") {
-        const esc = (r.escalationRate !== undefined && r.escalationRate !== 0) ? r.escalationRate : (costInflation ?? 0);
+        const esc = r.escalationRateOverridden ? (r.escalationRate ?? 0) : ((r.escalationRate !== undefined && r.escalationRate !== 0) ? r.escalationRate : (costInflation ?? 0));
         let pct: number;
         if (esc !== 0 && y > 0) {
           pct = (r.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
@@ -226,10 +227,10 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
         }
         val = (pct / 100) * revTotal;
       } else if (r.driverType === "per_fte") {
-        val = driverVal(r.amounts, y, "annual_fixed", students, r.escalationRate, costInflation);
+        val = driverVal(r.amounts, y, "annual_fixed", students, r.escalationRate, costInflation, undefined, undefined, r.escalationRateOverridden);
         val = val * yearFTE * pf;
       } else {
-        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, seNewStudents(enrollment, seRR, y), seReturningStudents(enrollment, seRR, y));
+        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, seNewStudents(enrollment, seRR, y), seReturningStudents(enrollment, seRR, y), r.escalationRateOverridden);
         val *= pf;
       }
       if (r.category === "occupancy_facility") {

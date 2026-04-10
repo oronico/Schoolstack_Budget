@@ -146,7 +146,7 @@ describe("scenario-engine: escalation logic", () => {
     expect(m.opex[2]).toBeCloseTo(10000 * 1.03 ** 2, 0);
   });
 
-  it("uses escalationRate=0 literally when escalationRateOverridden is true (no fallback) — known FE simplification", () => {
+  it("uses escalationRate=0 literally when escalationRateOverridden is true (no fallback)", () => {
     const m = run({
       facilities: { annualSalaryIncrease: 0, generalCostInflation: 5 },
       expenseRows: [
@@ -156,7 +156,7 @@ describe("scenario-engine: escalation logic", () => {
         { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [100000, 100000, 100000, 100000, 100000] },
       ],
     });
-    expect(m.opex[2]).toBeCloseTo(10000 * 1.05 ** 2, 0);
+    expect(m.opex[2]).toBe(10000);
   });
 });
 

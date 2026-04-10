@@ -193,11 +193,9 @@ async function main() {
     for (const f of failures) console.log(f);
   }
 
-  console.log("\n— Known parity gap —");
-  console.log("escalationRateOverridden=true + escalationRate=0:");
-  console.log("  Backend: treats as literally 0% escalation");
-  console.log("  Frontend: falls back to costInflation (ignores override flag)");
-  console.log("  Impact: Only affects expense rows with explicit 0% override; none in shared fixtures");
+  console.log("\n— Parity status —");
+  console.log("escalationRateOverridden=true + escalationRate=0: RESOLVED");
+  console.log("  Both engines now treat literal 0% when override flag is set (no costInflation fallback)");
 
   if (failed > 0) process.exit(1);
 }
