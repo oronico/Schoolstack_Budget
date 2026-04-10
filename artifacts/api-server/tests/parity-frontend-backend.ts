@@ -7,6 +7,7 @@ import {
   driverVal,
   getEnrollmentArray,
   computeEffectiveFte,
+  normalizeStaffingRow,
   type RevenueRow,
   type ExpenseRow,
   type StaffingRow,
@@ -18,6 +19,10 @@ import {
   privateSchoolFixture,
   charterFixture,
   type TestModelPayload,
+  type TestRevenueRow,
+  type TestStaffingRow,
+  type TestExpenseRow,
+  type TestCapDebtRow,
 } from "@workspace/finance";
 import { microschoolStartup, privateSchoolWithESA, charterPublicFunding, homeschoolCoopMixed } from "./sample-payloads.js";
 
@@ -44,29 +49,38 @@ function bool(label: string, ok: boolean, detail?: string) {
   }
 }
 
-function normalizeRow(raw: Record<string, unknown>): StaffingRow {
-  return {
-    id: (raw.id as string) || "",
-    roleName: (raw.roleName as string) || "",
-    functionCategory: (raw.functionCategory as string) || "",
-    employmentType: (raw.employmentType as string) || "full_time",
-    fte: (raw.fte as number) || 1,
-    annualizedRate: (raw.annualizedRate as number) || 0,
-    benefitsEligible: raw.benefitsEligible !== false,
-    benefitsRate: (raw.benefitsRate as number) || 0,
-    payrollTaxRate: (raw.payrollTaxRate as number) || 7.65,
-    payrollLike: (raw.payrollLike as boolean) || false,
-    notes: (raw.notes as string) || "",
-    staffingMode: (raw.staffingMode as "fixed" | "ratio") || "fixed",
-    studentRatio: raw.studentRatio != null ? (raw.studentRatio as number) : undefined,
-    minFte: raw.minFte != null ? (raw.minFte as number) : undefined,
-    maxFte: raw.maxFte != null ? (raw.maxFte as number) : undefined,
-    startYear: raw.startYear != null ? (raw.startYear as number) : undefined,
-    endYear: raw.endYear != null ? (raw.endYear as number) : undefined,
-  };
+function adaptRevenueRows(rows: TestRevenueRow[]): RevenueRow[] {
+  return rows.map(r => ({
+    id: r.id, category: r.category, lineItem: r.lineItem,
+    enabled: r.enabled, driverType: r.driverType, amounts: r.amounts,
+    billingMonths: r.billingMonths, escalationRate: r.escalationRate,
+    escalationRateOverridden: r.escalationRateOverridden,
+    percentBase: r.percentBase,
+  }));
 }
 
-interface GoldenValues {
+function adaptStaffingRows(rows: TestStaffingRow[]): StaffingRow[] {
+  return rows.map(r => normalizeStaffingRow(r));
+}
+
+function adaptExpenseRows(rows: TestExpenseRow[]): ExpenseRow[] {
+  return rows.map(r => ({
+    id: r.id, category: r.category, lineItem: r.lineItem,
+    enabled: r.enabled, driverType: r.driverType, amounts: r.amounts,
+    escalationRate: r.escalationRate, escalationRateOverridden: r.escalationRateOverridden,
+  }));
+}
+
+function adaptCapDebtRows(rows: TestCapDebtRow[]): CapitalDebtRow[] {
+  return rows.map(r => ({
+    id: r.id, lineItem: r.lineItem, enabled: r.enabled,
+    driverType: r.driverType, amounts: r.amounts, isLoan: r.isLoan,
+    loanPrincipal: r.loanPrincipal, loanRate: r.loanRate,
+    loanTermYears: r.loanTermYears, purpose: r.purpose,
+  }));
+}
+
+interface ComputedValues {
   revenue: number[];
   personnel: number[];
   expenses: number[];
@@ -75,23 +89,22 @@ interface GoldenValues {
   loanDS: number[];
 }
 
-function computeBackendValues(payload: Record<string, unknown>): GoldenValues {
-  const sp = (payload.schoolProfile || {}) as Record<string, unknown>;
-  const enrollment = getEnrollmentArray(payload.enrollment as Record<string, unknown>);
-  const revRows = payload.revenueRows as unknown as RevenueRow[];
-  const staffRows = ((payload.staffingRows as unknown as Record<string, unknown>[]) || []).map(normalizeRow);
-  const expRows = payload.expenseRows as unknown as ExpenseRow[];
-  const cdRows = (payload.capitalAndDebtRows || []) as unknown as CapitalDebtRow[];
-  const pf = sp.isPartialFirstYear ? ((sp.year1OperatingMonths as number) || 10) / 12 : 1;
-  const salaryEsc = ((payload.facilities as Record<string, unknown>)?.annualSalaryIncrease as number || 0) / 100;
-  const costInfl = (payload.facilities as Record<string, unknown>)?.generalCostInflation as number || 0;
+function computeFromFixture(fixture: TestModelPayload): ComputedValues {
+  const sp = fixture.schoolProfile;
+  const enrollment = getEnrollmentArray(fixture.enrollment);
+  const revRows = adaptRevenueRows(fixture.revenueRows);
+  const staffRows = adaptStaffingRows(fixture.staffingRows);
+  const expRows = adaptExpenseRows(fixture.expenseRows);
+  const cdRows = adaptCapDebtRows(fixture.capitalAndDebtRows);
+  const pf = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
+  const salaryEsc = (fixture.facilities.annualSalaryIncrease || 0) / 100;
+  const costInfl = fixture.facilities.generalCostInflation || 0;
 
-  const revenue: number[] = [], personnel: number[] = [], expenses: number[] = [], capDebt: number[] = [];
   const loanRows = cdRows.filter(r => r.isLoan);
-  const loanDS: number[] = [];
+  const revenue: number[] = [], personnel: number[] = [], expenses: number[] = [], capDebt: number[] = [], loanDS: number[] = [];
   for (let y = 0; y < 5; y++) {
     const yPf = y === 0 ? pf : 1;
-    revenue.push(Math.round(computeRevenueForYear(revRows, y, enrollment[y], undefined, undefined, sp as never) * yPf));
+    revenue.push(Math.round(computeRevenueForYear(revRows, y, enrollment[y], undefined, undefined, sp) * yPf));
     personnel.push(Math.round(computePersonnelForYear(staffRows, salaryEsc, pf, y, enrollment[y])));
     expenses.push(Math.round(computeExpenseForYear(expRows, y, enrollment[y], revenue[y], costInfl) * yPf));
     capDebt.push(Math.round(computeCapDebtForYear(cdRows, y, enrollment[y])));
@@ -103,17 +116,66 @@ function computeBackendValues(payload: Record<string, unknown>): GoldenValues {
   };
 }
 
+interface SamplePayload {
+  schoolProfile: Record<string, unknown>;
+  enrollment: Record<string, unknown>;
+  facilities?: { annualSalaryIncrease?: number; generalCostInflation?: number; [k: string]: unknown };
+  revenueRows: RevenueRow[];
+  staffingRows: Record<string, unknown>[];
+  expenseRows: ExpenseRow[];
+  capitalAndDebtRows?: CapitalDebtRow[];
+}
+
+function computeFromSamplePayload(payload: SamplePayload): ComputedValues {
+  const sp = payload.schoolProfile;
+  const enrollment = getEnrollmentArray(payload.enrollment);
+  const revRows = payload.revenueRows;
+  const staffRows = payload.staffingRows.map(normalizeStaffingRow);
+  const expRows = payload.expenseRows;
+  const cdRows = payload.capitalAndDebtRows || [];
+  const pf = sp.isPartialFirstYear ? ((sp.year1OperatingMonths as number) || 10) / 12 : 1;
+  const salaryEsc = (payload.facilities?.annualSalaryIncrease || 0) / 100;
+  const costInfl = payload.facilities?.generalCostInflation || 0;
+
+  const loanRows = cdRows.filter(r => r.isLoan);
+  const revenue: number[] = [], personnel: number[] = [], expenses: number[] = [], capDebt: number[] = [], loanDS: number[] = [];
+  for (let y = 0; y < 5; y++) {
+    const yPf = y === 0 ? pf : 1;
+    revenue.push(Math.round(computeRevenueForYear(revRows, y, enrollment[y], undefined, undefined, sp) * yPf));
+    personnel.push(Math.round(computePersonnelForYear(staffRows, salaryEsc, pf, y, enrollment[y])));
+    expenses.push(Math.round(computeExpenseForYear(expRows, y, enrollment[y], revenue[y], costInfl) * yPf));
+    capDebt.push(Math.round(computeCapDebtForYear(cdRows, y, enrollment[y])));
+    loanDS.push(Math.round(computeCapDebtForYear(loanRows, y, enrollment[y])));
+  }
+  return {
+    revenue, personnel, expenses, capDebt, loanDS,
+    netIncome: revenue.map((r, i) => r - personnel[i] - expenses[i] - capDebt[i]),
+  };
+}
+
+function testFixtureVsSamplePayloadParity() {
+  console.log("\n— Shared fixture vs sample payload cross-validation —");
+
+  const fixtureVals = computeFromFixture(microschoolFixture);
+  const sampleVals = computeFromSamplePayload(microschoolStartup as SamplePayload);
+
+  for (let y = 0; y < 5; y++) {
+    check(`Micro fixture Y${y + 1} revenue = sample revenue`, fixtureVals.revenue[y], sampleVals.revenue[y], 0.01);
+    check(`Micro fixture Y${y + 1} personnel = sample personnel`, fixtureVals.personnel[y], sampleVals.personnel[y], 0.01);
+  }
+}
+
 function testBackendGoldenValues() {
   console.log("\n— Backend golden value consistency (sample payloads) —");
 
-  const microGolden = computeBackendValues(microschoolStartup as unknown as Record<string, unknown>);
-  const privateGolden = computeBackendValues(privateSchoolWithESA as unknown as Record<string, unknown>);
-  const charterGolden = computeBackendValues(charterPublicFunding as unknown as Record<string, unknown>);
+  const microGolden = computeFromSamplePayload(microschoolStartup as SamplePayload);
+  const privateGolden = computeFromSamplePayload(privateSchoolWithESA as SamplePayload);
+  const charterGolden = computeFromSamplePayload(charterPublicFunding as SamplePayload);
 
   check("Microschool Y1 revenue", microGolden.revenue[0], 184667, 0.01);
   check("Microschool Y3 revenue", microGolden.revenue[2], 427946, 0.01);
   check("Microschool Y1 personnel", microGolden.personnel[0], 118934, 0.01);
-  check("Microschool Y1 netIncome positive", microGolden.netIncome[0], 18273, 1);
+  check("Microschool Y1 netIncome", microGolden.netIncome[0], 18273, 1);
   bool("Microschool net income trend positive", microGolden.netIncome[4] > microGolden.netIncome[0]);
 
   check("Private Y1 revenue", privateGolden.revenue[0], 1975000, 0.01);
@@ -122,37 +184,76 @@ function testBackendGoldenValues() {
   bool("Private all years profitable", privateGolden.netIncome.every(n => n > 0));
 
   check("Charter Y1 revenue", charterGolden.revenue[0], 1288333, 0.01);
+  check("Charter Y5 revenue", charterGolden.revenue[4], 5184400, 0.01);
   bool("Charter Y1 net income negative (startup)", charterGolden.netIncome[0] < 0);
   bool("Charter Y5 net income positive (growth)", charterGolden.netIncome[4] > 0);
+
+  for (let y = 0; y < 5; y++) {
+    check(`Charter Y${y + 1} revenue`, charterGolden.revenue[y],
+      [1288333, 2522800, 3784600, 4759125, 5184400][y], 0.01);
+    check(`Charter Y${y + 1} personnel`, charterGolden.personnel[y],
+      [997040, 1478601, 1796022, 2042905, 2113443][y], 0.01);
+    check(`Charter Y${y + 1} netIncome`, charterGolden.netIncome[y],
+      [-418532, 66514, 708232, 1202306, 1446208][y], 1);
+  }
 }
 
 function testSharedFixturesParity() {
-  console.log("\n— Shared fixtures: backend golden values match frontend expectations —");
+  console.log("\n— Shared fixtures: full Y1-Y5 1% parity (all 3 fixtures) —");
 
-  const fixtureGolden = computeBackendValues(microschoolFixture as unknown as Record<string, unknown>);
-
+  const microVals = computeFromFixture(microschoolFixture);
+  const microExpected = {
+    rev: [184667, 340512, 427946, 500518, 516085],
+    pers: [118934, 147003, 151413, 155955, 160634],
+    exp: [40500, 54885, 59774, 64012, 65776],
+    ni: [18273, 131664, 209799, 273591, 282715],
+  };
   for (let y = 0; y < 5; y++) {
-    bool(`Microschool fixture Y${y + 1} revenue positive`, fixtureGolden.revenue[y] > 0);
-    bool(`Microschool fixture Y${y + 1} personnel positive`, fixtureGolden.personnel[y] > 0);
+    check(`Micro fixture Y${y + 1} revenue`, microVals.revenue[y], microExpected.rev[y], 1);
+    check(`Micro fixture Y${y + 1} personnel`, microVals.personnel[y], microExpected.pers[y], 1);
+    check(`Micro fixture Y${y + 1} expenses`, microVals.expenses[y], microExpected.exp[y], 1);
+    check(`Micro fixture Y${y + 1} netIncome`, microVals.netIncome[y], microExpected.ni[y], 1);
   }
-  bool("Microschool fixture 5Y net income trend improves", fixtureGolden.netIncome[4] > fixtureGolden.netIncome[0]);
 
-  const pvtGolden = computeBackendValues(privateSchoolFixture as unknown as Record<string, unknown>);
+  const pvtVals = computeFromFixture(privateSchoolFixture);
+  const pvtExpected = {
+    rev: [1975000, 2612670, 3286760, 3895050, 4323000],
+    pers: [854772, 854772, 854772, 854772, 854772],
+    exp: [271400, 310442, 351598, 389496, 417905],
+    ni: [789764, 1403392, 2036326, 2611718, 3011259],
+  };
   for (let y = 0; y < 5; y++) {
-    bool(`Private fixture Y${y + 1} revenue positive`, pvtGolden.revenue[y] > 0);
+    check(`Private fixture Y${y + 1} revenue`, pvtVals.revenue[y], pvtExpected.rev[y], 1);
+    check(`Private fixture Y${y + 1} personnel`, pvtVals.personnel[y], pvtExpected.pers[y], 1);
+    check(`Private fixture Y${y + 1} expenses`, pvtVals.expenses[y], pvtExpected.exp[y], 1);
+    check(`Private fixture Y${y + 1} netIncome`, pvtVals.netIncome[y], pvtExpected.ni[y], 1);
   }
-  bool("Private fixture all years profitable", pvtGolden.netIncome.every(n => n > 0));
 
-  const chGolden = computeBackendValues(charterFixture as unknown as Record<string, unknown>);
-  bool("Charter fixture Y1 has significant revenue (>1M)", chGolden.revenue[0] > 1000000);
-  bool("Charter fixture revenue grows Y1→Y5", chGolden.revenue[4] > chGolden.revenue[0]);
+  const chVals = computeFromFixture(charterFixture);
+  const chExpected = {
+    rev: [1288333, 2522800, 3784600, 4759125, 5184400],
+    pers: [997040, 1478601, 1796022, 2042905, 2113443],
+    exp: [545000, 887860, 1190521, 1439089, 1554924],
+    ni: [-418532, 66514, 708232, 1202306, 1446208],
+    ds: [49825, 49825, 49825, 49825, 49825],
+  };
+  for (let y = 0; y < 5; y++) {
+    check(`Charter fixture Y${y + 1} revenue`, chVals.revenue[y], chExpected.rev[y], 1);
+    check(`Charter fixture Y${y + 1} personnel`, chVals.personnel[y], chExpected.pers[y], 1);
+    check(`Charter fixture Y${y + 1} expenses`, chVals.expenses[y], chExpected.exp[y], 1);
+    check(`Charter fixture Y${y + 1} netIncome`, chVals.netIncome[y], chExpected.ni[y], 1);
+    if (chExpected.ds[y] > 0) {
+      const dscr = (chVals.netIncome[y] + chVals.loanDS[y]) / chVals.loanDS[y];
+      const expectedDscr = (chExpected.ni[y] + chExpected.ds[y]) / chExpected.ds[y];
+      check(`Charter fixture Y${y + 1} DSCR`, dscr, expectedDscr, 1);
+    }
+  }
 }
 
 function testDriverValBackend() {
   console.log("\n— driverVal backend smoke tests —");
 
   const amts = [1000, 1000, 1000, 1000, 1000];
-
   check("annual_fixed Y0", driverVal(amts, 0, "annual_fixed", 50), 1000, 0);
   check("monthly Y0", driverVal(amts, 0, "monthly", 50), 12000, 0);
   check("per_student Y0 50 students", driverVal(amts, 0, "per_student", 50), 50000, 0);
@@ -189,28 +290,19 @@ function testEscalationOverrideBackend() {
   console.log("\n— escalationRateOverridden backend behavior —");
 
   const staticRow: ExpenseRow = {
-    id: "static",
-    lineItem: "Fixed Contract",
-    enabled: true,
-    category: "administration",
-    driverType: "annual_fixed",
+    id: "static", lineItem: "Fixed Contract", enabled: true,
+    category: "administration", driverType: "annual_fixed",
     amounts: [10000, 10000, 10000, 10000, 10000],
-    escalationRate: 0,
-    escalationRateOverridden: true,
+    escalationRate: 0, escalationRateOverridden: true,
   };
   const floatingRow: ExpenseRow = {
-    id: "floating",
-    lineItem: "Inflation-Linked",
-    enabled: true,
-    category: "administration",
-    driverType: "annual_fixed",
+    id: "floating", lineItem: "Inflation-Linked", enabled: true,
+    category: "administration", driverType: "annual_fixed",
     amounts: [10000, 10000, 10000, 10000, 10000],
   };
 
-  const beStatic = computeExpenseForYear([staticRow], 2, 100, 0, 3);
-  const beFloating = computeExpenseForYear([floatingRow], 2, 100, 0, 3);
-  check("BE: static escalation stays at 10000 in Y3", beStatic, 10000, 0);
-  check("BE: floating inherits 3% inflation in Y3", beFloating, 10000 * Math.pow(1.03, 2), 1);
+  check("BE: static escalation stays at 10000 in Y3", computeExpenseForYear([staticRow], 2, 100, 0, 3), 10000, 0);
+  check("BE: floating inherits 3% inflation in Y3", computeExpenseForYear([floatingRow], 2, 100, 0, 3), 10000 * Math.pow(1.03, 2), 1);
 
   console.log("  ℹ️  Known parity gap: frontend driverVal doesn't check escalationRateOverridden flag.");
   console.log("     Backend treats escalationRate=0 + overridden=true as literally 0%.");
@@ -229,9 +321,7 @@ function testEffectiveFteBackend() {
 
   check("fixed 3 FTE", computeEffectiveFte(baseRow, 0, 100), 3, 0);
 
-  const ratioRow: StaffingRow = {
-    ...baseRow, fte: 6, staffingMode: "ratio", studentRatio: 22, minFte: 4,
-  };
+  const ratioRow: StaffingRow = { ...baseRow, fte: 6, staffingMode: "ratio", studentRatio: 22, minFte: 4 };
   check("ratio 120/22 min4 → ceil=6", computeEffectiveFte(ratioRow, 0, 120), 6, 0);
   check("ratio 300/22 min4 → ceil=14", computeEffectiveFte(ratioRow, 2, 300), 14, 0);
 
@@ -255,12 +345,10 @@ function testMultiPayloadNetIncomeTrend() {
     ["Charter", charterPublicFunding],
     ["Homeschool Co-Op", homeschoolCoopMixed],
   ] as const) {
-    const g = computeBackendValues(payload as unknown as Record<string, unknown>);
+    const g = computeFromSamplePayload(payload as SamplePayload);
     const cumNI = g.netIncome.reduce((a, b) => a + b, 0);
     bool(`${label}: 5Y cumulative NI has expected sign`,
-      (label === "Charter" || label === "Homeschool Co-Op")
-        ? true
-        : cumNI > 0,
+      (label === "Charter" || label === "Homeschool Co-Op") ? true : cumNI > 0,
       `cumNI=${Math.round(cumNI)}`);
     bool(`${label}: revenue grows Y1→Y5`, g.revenue[4] > g.revenue[0],
       `Y1=${g.revenue[0]} Y5=${g.revenue[4]}`);
@@ -276,7 +364,7 @@ async function testWorkbookGeneration() {
     ["Charter", charterFixture],
   ] as const) {
     try {
-      const wb = await generateUnderwritingWorkbook(fixture as unknown as Record<string, unknown>);
+      const wb = await generateUnderwritingWorkbook(fixture as Record<string, unknown>);
       bool(`${label}: workbook generated without error`, true);
 
       const sheetNames = wb.worksheets.map(ws => ws.name);
@@ -305,6 +393,7 @@ async function main() {
   testEffectiveFteBackend();
   testBackendGoldenValues();
   testSharedFixturesParity();
+  testFixtureVsSamplePayloadParity();
   testMultiPayloadNetIncomeTrend();
   await testWorkbookGeneration();
 

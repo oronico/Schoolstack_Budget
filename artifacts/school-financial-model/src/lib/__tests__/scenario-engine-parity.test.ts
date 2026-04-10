@@ -7,6 +7,12 @@ import {
   type TestModelPayload,
 } from "@workspace/finance";
 
+type FullModelData = Parameters<typeof computeBaseFinancials>[0];
+
+function toFullModelData(fixture: TestModelPayload): FullModelData {
+  return fixture as FullModelData;
+}
+
 interface BackendGoldenValues {
   revenue: number[];
   personnel: number[];
@@ -34,9 +40,14 @@ const privateSchoolGolden: BackendGoldenValues = {
   loanDebtService: [34064, 34064, 34064, 34064, 34064],
 };
 
-function asFullModelData(fixture: TestModelPayload) {
-  return fixture as Parameters<typeof computeBaseFinancials>[0];
-}
+const charterGolden: BackendGoldenValues = {
+  revenue: [1288333, 2522800, 3784600, 4759125, 5184400],
+  personnel: [997040, 1478601, 1796022, 2042905, 2113443],
+  opex: [545000, 887860, 1190521, 1439089, 1554924],
+  capDebt: [164825, 89825, 89825, 74825, 69825],
+  netIncome: [-418532, 66514, 708232, 1202306, 1446208],
+  loanDebtService: [49825, 49825, 49825, 49825, 49825],
+};
 
 function withinPct(actual: number, expected: number, pct: number): boolean {
   const tol = Math.max(Math.abs(expected) * (pct / 100), 5);
@@ -45,7 +56,7 @@ function withinPct(actual: number, expected: number, pct: number): boolean {
 
 function describeParity(label: string, fixture: TestModelPayload, golden: BackendGoldenValues) {
   describe(`parity: ${label}`, () => {
-    const result = computeScenarios(asFullModelData(fixture), []);
+    const result = computeScenarios(toFullModelData(fixture), []);
     const m = result.base.metrics;
 
     for (let y = 0; y < 5; y++) {
@@ -57,7 +68,7 @@ function describeParity(label: string, fixture: TestModelPayload, golden: Backen
         expect(withinPct(m.staffingCost[y], golden.personnel[y], 1)).toBe(true);
       });
 
-      it(`Y${y + 1} opex+facility within 1% of backend`, () => {
+      it(`Y${y + 1} total expenses within 1% of backend`, () => {
         const feExp = m.facilityCost[y] + m.opex[y];
         expect(withinPct(feExp, golden.opex[y], 1)).toBe(true);
       });
@@ -81,22 +92,11 @@ function describeParity(label: string, fixture: TestModelPayload, golden: Backen
 
 describeParity("microschool", microschoolFixture, microschoolGolden);
 describeParity("private school", privateSchoolFixture, privateSchoolGolden);
+describeParity("charter school", charterFixture, charterGolden);
 
-describe("parity: charter school", () => {
-  const result = computeScenarios(asFullModelData(charterFixture), []);
+describe("parity: charter loan PMT exactness", () => {
+  const result = computeScenarios(toFullModelData(charterFixture), []);
   const m = result.base.metrics;
-
-  it("Y1 revenue is positive and non-trivial", () => {
-    expect(m.revenue[0]).toBeGreaterThan(1000000);
-  });
-
-  it("Y5 revenue > Y1 revenue (growth trend matches backend)", () => {
-    expect(m.revenue[4]).toBeGreaterThan(m.revenue[0]);
-  });
-
-  it("staffing cost is positive and > 50% of revenue in Y1 (charter pattern)", () => {
-    expect(m.staffingCost[0] / m.revenue[0]).toBeGreaterThan(0.5);
-  });
 
   it("loan debt service matches PMT formula exactly", () => {
     const mr = 0.0575 / 12;
@@ -105,14 +105,10 @@ describe("parity: charter school", () => {
     const annualPmt = monthlyPmt * 12;
     expect(Math.abs(m.loanDebtService![0] - annualPmt)).toBeLessThan(1);
   });
-
-  it("DSCR is computed when debt exists (can be negative with Y1 losses)", () => {
-    expect(m.dscr[0]).not.toBe(0);
-  });
 });
 
 describe("parity: computeBaseFinancials output shape", () => {
-  const m = computeBaseFinancials(asFullModelData(microschoolFixture));
+  const m = computeBaseFinancials(toFullModelData(microschoolFixture));
 
   it("returns 5-year arrays for all metric fields", () => {
     expect(m.revenue).toHaveLength(5);
@@ -126,16 +122,6 @@ describe("parity: computeBaseFinancials output shape", () => {
     expect(m.staffingPctOfRevenue).toHaveLength(5);
     expect(m.enrollment).toHaveLength(5);
     expect(m.loanDebtService).toHaveLength(5);
-  });
-
-  it("totalExpenses = staffingCost + facilityCost + opex + capDebt for each year", () => {
-    for (let y = 0; y < 5; y++) {
-      const capDebt = m.totalExpenses[y] - m.staffingCost[y] - m.facilityCost[y] - m.opex[y];
-      expect(m.totalExpenses[y]).toBeCloseTo(
-        m.staffingCost[y] + m.facilityCost[y] + m.opex[y] + capDebt,
-        0,
-      );
-    }
   });
 
   it("netIncome = revenue - totalExpenses for each year", () => {
