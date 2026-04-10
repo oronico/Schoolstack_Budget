@@ -37,6 +37,17 @@ function check(label: string, actual: number, expected: number, tolerancePct = 1
   }
 }
 
+function checkRatio(label: string, actual: number, expected: number, tolerancePct = 1) {
+  const absTol = Math.max(Math.abs(expected) * (tolerancePct / 100), 0.01);
+  const diff = Math.abs(actual - expected);
+  if (diff <= absTol) {
+    passed++;
+  } else {
+    failed++;
+    failures.push(`  FAIL: ${label} — FE=${actual.toFixed(4)}, BE=${expected.toFixed(4)}, diff=${diff.toFixed(4)}, tol=${absTol.toFixed(4)}`);
+  }
+}
+
 function bool(label: string, ok: boolean, detail?: string) {
   if (ok) { passed++; }
   else {
@@ -140,7 +151,7 @@ function testCrossEngineParity(label: string, fixture: TestModelPayload) {
 
     if (d.beLoanDS[y] > 0) {
       const beDscr = (d.beNetIncome[y] + d.beLoanDS[y]) / d.beLoanDS[y];
-      check(`${label} Y${y + 1} DSCR`, d.feDscr[y], Math.round(beDscr * 100) / 100, 1);
+      checkRatio(`${label} Y${y + 1} DSCR`, d.feDscr[y], Math.round(beDscr * 100) / 100, 1);
     }
   }
 }

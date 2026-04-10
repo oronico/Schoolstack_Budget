@@ -15,8 +15,9 @@ function toFullModelData(fixture: TestModelPayload): FullModelData {
   return fixture as FullModelData;
 }
 
-function withinPct(actual: number, expected: number, pct: number): boolean {
-  const tol = Math.max(Math.abs(expected) * (pct / 100), 5);
+function withinPct(actual: number, expected: number, pct: number, isRatio = false): boolean {
+  const floor = isRatio ? 0.01 : 5;
+  const tol = Math.max(Math.abs(expected) * (pct / 100), floor);
   return Math.abs(actual - expected) <= tol;
 }
 
@@ -48,7 +49,7 @@ function describeCrossEngineParity(label: string, fixture: TestModelPayload) {
         it(`Y${y + 1} DSCR: FE vs BE within 1%`, () => {
           const feDscr = fe.dscr[y];
           const beDscr = Math.round(((be.netIncome[y] + be.loanDS[y]) / be.loanDS[y]) * 100) / 100;
-          expect(withinPct(feDscr, beDscr, 1)).toBe(true);
+          expect(withinPct(feDscr, beDscr, 1, true)).toBe(true);
         });
       }
     }

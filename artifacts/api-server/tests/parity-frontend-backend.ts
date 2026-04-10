@@ -41,6 +41,17 @@ function check(label: string, actual: number, expected: number, tolerancePct = 1
   }
 }
 
+function checkRatio(label: string, actual: number, expected: number, tolerancePct = 1) {
+  const absTol = Math.max(Math.abs(expected) * (tolerancePct / 100), 0.01);
+  const diff = Math.abs(actual - expected);
+  if (diff <= absTol) {
+    passed++;
+  } else {
+    failed++;
+    failures.push(`  FAIL: ${label} — expected ${expected.toFixed(4)}, got ${actual.toFixed(4)} (diff ${diff.toFixed(4)}, tol ${absTol.toFixed(4)})`);
+  }
+}
+
 function bool(label: string, ok: boolean, detail?: string) {
   if (ok) { passed++; }
   else {
@@ -245,7 +256,7 @@ function testSharedFixturesParity() {
     if (chExpected.ds[y] > 0) {
       const dscr = (chVals.netIncome[y] + chVals.loanDS[y]) / chVals.loanDS[y];
       const expectedDscr = (chExpected.ni[y] + chExpected.ds[y]) / chExpected.ds[y];
-      check(`Charter fixture Y${y + 1} DSCR`, dscr, expectedDscr, 1);
+      checkRatio(`Charter fixture Y${y + 1} DSCR`, dscr, expectedDscr, 1);
     }
   }
 }
@@ -304,9 +315,8 @@ function testEscalationOverrideBackend() {
   check("BE: static escalation stays at 10000 in Y3", computeExpenseForYear([staticRow], 2, 100, 0, 3), 10000, 0);
   check("BE: floating inherits 3% inflation in Y3", computeExpenseForYear([floatingRow], 2, 100, 0, 3), 10000 * Math.pow(1.03, 2), 1);
 
-  console.log("  ℹ️  Known parity gap: frontend driverVal doesn't check escalationRateOverridden flag.");
-  console.log("     Backend treats escalationRate=0 + overridden=true as literally 0%.");
-  console.log("     Frontend treats escalationRate=0 as 'use fallback' regardless of override flag.");
+  console.log("  ✅ Parity resolved: both FE and BE now honor escalationRateOverridden flag.");
+  console.log("     escalationRate=0 + overridden=true → literal 0% (no costInflation fallback).");
 }
 
 function testEffectiveFteBackend() {
