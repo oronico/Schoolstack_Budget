@@ -100,7 +100,7 @@ function computeTotalFTE(staffingRows: Array<{ fte?: number; startYear?: number;
   return total;
 }
 
-function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
+export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const sp = data.schoolProfile;
   const en = (data.enrollment || {}) as Record<string, unknown>;
   const enrollment = [(en.year1 as number) || 0, (en.year2 as number) || 0, (en.year3 as number) || 0, (en.year4 as number) || 0, (en.year5 as number) || 0];

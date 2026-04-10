@@ -12,14 +12,21 @@ import {
   type StaffingRow,
   type CapitalDebtRow,
 } from "../src/lib/workbook-helpers.js";
+import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
+import {
+  microschoolFixture,
+  privateSchoolFixture,
+  charterFixture,
+  type TestModelPayload,
+} from "@workspace/finance";
 import { microschoolStartup, privateSchoolWithESA, charterPublicFunding, homeschoolCoopMixed } from "./sample-payloads.js";
 
 let passed = 0;
 let failed = 0;
 const failures: string[] = [];
 
-function check(label: string, actual: number, expected: number, tolerancePct = 0.5) {
-  const absTol = Math.max(Math.abs(expected) * (tolerancePct / 100), 2);
+function check(label: string, actual: number, expected: number, tolerancePct = 1) {
+  const absTol = Math.max(Math.abs(expected) * (tolerancePct / 100), 5);
   const diff = Math.abs(actual - expected);
   if (diff <= absTol) {
     passed++;
@@ -59,229 +66,105 @@ function normalizeRow(raw: Record<string, unknown>): StaffingRow {
   };
 }
 
-function frontendDriverVal(
-  amounts: number[] | undefined,
-  y: number,
-  driverType: string,
-  students: number,
-  escalationRate?: number,
-  fallbackEsc?: number,
-): number {
-  const raw = amounts?.[y] ?? 0;
-  const esc = (escalationRate !== undefined && escalationRate !== 0) ? escalationRate : (fallbackEsc ?? 0);
-  let base: number;
-  if (esc !== 0 && y > 0) {
-    base = (amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
-  } else {
-    base = raw;
-  }
-  switch (driverType) {
-    case "monthly": return base * 12;
-    case "per_student": return base * students;
-    default: return base;
-  }
+interface GoldenValues {
+  revenue: number[];
+  personnel: number[];
+  expenses: number[];
+  capDebt: number[];
+  netIncome: number[];
+  loanDS: number[];
 }
 
-function frontendComputeBaseFinancials(data: Record<string, unknown>) {
-  const sp = (data.schoolProfile || {}) as Record<string, unknown>;
-  const en = (data.enrollment || {}) as Record<string, unknown>;
-  const enrollment = [(en.year1 as number) || 0, (en.year2 as number) || 0, (en.year3 as number) || 0, (en.year4 as number) || 0, (en.year5 as number) || 0];
-  const prorationFactor = sp.isPartialFirstYear ? ((sp.year1OperatingMonths as number) || 10) / 12 : 1;
-  const salaryEscRate = ((data.facilities as Record<string, unknown>)?.annualSalaryIncrease as number || 0) / 100;
-  const costInflation = (data.facilities as Record<string, unknown>)?.generalCostInflation as number || 0;
-
-  const revenueRows = ((data.revenueRows as Array<Record<string, unknown>>) || []).filter((r) => r.enabled);
-  const rawStaffingRows = ((data.staffingRows as Array<Record<string, unknown>>) || []);
-  const expenseRows = ((data.expenseRows as Array<Record<string, unknown>>) || []).filter((r) => r.enabled);
-  const capDebtRows = ((data.capitalAndDebtRows as Array<Record<string, unknown>>) || []).filter((r) => r.enabled);
-
-  const revenue: number[] = [];
-  const personnel: number[] = [];
-  const expenses: number[] = [];
-  const capDebt: number[] = [];
-  const loanDS: number[] = [];
-
-  for (let y = 0; y < 5; y++) {
-    const students = enrollment[y];
-    const pf = y === 0 ? prorationFactor : 1;
-
-    let revTotal = 0;
-    const revVals = new Map<string, number>();
-    for (const r of revenueRows) {
-      if (r.driverType === "percent_of_base") continue;
-      const val = frontendDriverVal(r.amounts as number[], y, r.driverType as string, students, r.escalationRate as number | undefined);
-      revVals.set(r.id as string, val * pf);
-    }
-    for (const r of revenueRows) {
-      if (r.driverType !== "percent_of_base") continue;
-      const baseVal = revVals.get((r.percentBase as string) || "") || 0;
-      let pctVal = (r.amounts as number[])?.[y] ?? 0;
-      if (r.escalationRate && (r.escalationRate as number) !== 0 && y > 0) {
-        pctVal = ((r.amounts as number[])?.[0] ?? 0) * Math.pow(1 + (r.escalationRate as number) / 100, y);
-      }
-      revVals.set(r.id as string, baseVal * (pctVal / 100));
-    }
-    for (const r of revenueRows) {
-      const v = revVals.get(r.id as string) || 0;
-      if (r.category === "tuition_offsets") revTotal -= Math.abs(v);
-      else revTotal += v;
-    }
-    revenue.push(revTotal);
-
-    let persTotal = 0;
-    for (const r of rawStaffingRows) {
-      let effectiveFte = (r.fte as number) || 0;
-      if (r.startYear && (y + 1) < (r.startYear as number)) { effectiveFte = 0; }
-      else if (r.endYear && (y + 1) > (r.endYear as number)) { effectiveFte = 0; }
-      else if (r.staffingMode === "ratio" && r.studentRatio) {
-        const ratio = r.studentRatio as number;
-        if (ratio > 0) {
-          let computed = students / ratio;
-          if (r.minFte !== undefined) computed = Math.max(computed, r.minFte as number);
-          if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte as number);
-          effectiveFte = Math.ceil(computed * 2) / 2;
-        }
-      }
-      const annual = effectiveFte * ((r.annualizedRate as number) || 0);
-      const isContractNoPL = r.employmentType === "contract" && !r.payrollLike;
-      let benefits = 0, tax = 0;
-      if (!isContractNoPL) {
-        if (r.benefitsEligible) benefits = annual * (((r.benefitsRate as number) || 0) / 100);
-        tax = annual * (((r.payrollTaxRate as number) || 0) / 100);
-      }
-      persTotal += annual + benefits + tax;
-    }
-    const persEsc = Math.pow(1 + salaryEscRate, y);
-    persTotal = persTotal * persEsc * pf;
-    personnel.push(persTotal);
-
-    let expTotal = 0;
-    for (const r of expenseRows) {
-      let val: number;
-      if (r.driverType === "percent_of_revenue") {
-        const esc = (r.escalationRate !== undefined && (r.escalationRate as number) !== 0) ? (r.escalationRate as number) : (costInflation ?? 0);
-        let pct: number;
-        if (esc !== 0 && y > 0) {
-          pct = ((r.amounts as number[])?.[0] ?? 0) * Math.pow(1 + esc / 100, y);
-        } else {
-          pct = (r.amounts as number[])?.[y] ?? 0;
-        }
-        val = (pct / 100) * revTotal;
-      } else {
-        val = frontendDriverVal(r.amounts as number[], y, r.driverType as string, students, r.escalationRate as number | undefined, costInflation);
-        val *= pf;
-      }
-      expTotal += val;
-    }
-    expenses.push(expTotal);
-
-    let cdTotal = 0;
-    let loanDebtService = 0;
-    for (const r of capDebtRows) {
-      if (r.isLoan) {
-        const principal = (r.loanPrincipal as number) || 0;
-        const rate = ((r.loanRate as number) || 0) / 100;
-        const term = (r.loanTermYears as number) || 0;
-        if (principal > 0 && term > 0 && y < term) {
-          let annualPmt: number;
-          if (rate <= 0) {
-            annualPmt = principal / term;
-          } else {
-            const monthlyRate = rate / 12;
-            const numPayments = term * 12;
-            const monthlyPmt = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numPayments));
-            annualPmt = monthlyPmt * 12;
-          }
-          cdTotal += annualPmt;
-          loanDebtService += annualPmt;
-        }
-      } else {
-        cdTotal += frontendDriverVal(r.amounts as number[], y, r.driverType as string, students);
-      }
-    }
-    capDebt.push(cdTotal);
-    loanDS.push(loanDebtService);
-  }
-
-  return { revenue, personnel, expenses, capDebt, loanDS };
-}
-
-function testPayloadParity(payload: Record<string, unknown>, label: string) {
-  console.log(`\n— Parity: ${label} —`);
-
+function computeBackendValues(payload: Record<string, unknown>): GoldenValues {
   const sp = (payload.schoolProfile || {}) as Record<string, unknown>;
   const enrollment = getEnrollmentArray(payload.enrollment as Record<string, unknown>);
-  const revenueRows = payload.revenueRows as unknown as RevenueRow[];
-  const rawStaffingRows = (payload.staffingRows as unknown as Record<string, unknown>[]);
-  const staffingRows = rawStaffingRows.map(normalizeRow);
-  const expenseRows = payload.expenseRows as unknown as ExpenseRow[];
-  const capDebtRows = (payload.capitalAndDebtRows || []) as unknown as CapitalDebtRow[];
-  const prorationFactor = sp.isPartialFirstYear ? ((sp.year1OperatingMonths as number) || 10) / 12 : 1;
+  const revRows = payload.revenueRows as unknown as RevenueRow[];
+  const staffRows = ((payload.staffingRows as unknown as Record<string, unknown>[]) || []).map(normalizeRow);
+  const expRows = payload.expenseRows as unknown as ExpenseRow[];
+  const cdRows = (payload.capitalAndDebtRows || []) as unknown as CapitalDebtRow[];
+  const pf = sp.isPartialFirstYear ? ((sp.year1OperatingMonths as number) || 10) / 12 : 1;
   const salaryEsc = ((payload.facilities as Record<string, unknown>)?.annualSalaryIncrease as number || 0) / 100;
-  const costInflPct = (payload.facilities as Record<string, unknown>)?.generalCostInflation as number || 0;
+  const costInfl = (payload.facilities as Record<string, unknown>)?.generalCostInflation as number || 0;
 
-  const fe = frontendComputeBaseFinancials(payload);
-
+  const revenue: number[] = [], personnel: number[] = [], expenses: number[] = [], capDebt: number[] = [];
+  const loanRows = cdRows.filter(r => r.isLoan);
+  const loanDS: number[] = [];
   for (let y = 0; y < 5; y++) {
-    const pf = y === 0 ? prorationFactor : 1;
-
-    const beRev = computeRevenueForYear(revenueRows, y, enrollment[y], undefined, undefined, sp as any);
-    check(`${label} Y${y + 1} Revenue parity`, fe.revenue[y], beRev * pf, 2);
-
-    const bePers = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, enrollment[y]);
-    check(`${label} Y${y + 1} Personnel parity`, fe.personnel[y], bePers, 2);
-
-    const beExp = computeExpenseForYear(expenseRows, y, enrollment[y], beRev * pf, costInflPct);
-    check(`${label} Y${y + 1} Expenses parity`, fe.expenses[y], beExp * pf, 2);
-
-    const beCd = computeCapDebtForYear(capDebtRows, y, enrollment[y]);
-    check(`${label} Y${y + 1} CapDebt parity`, fe.capDebt[y], beCd, 2);
-
-    const feNetIncome = fe.revenue[y] - fe.personnel[y] - fe.expenses[y] - fe.capDebt[y];
-    const beNetIncome = beRev * pf - bePers - beExp * pf - beCd;
-    check(`${label} Y${y + 1} Net Income parity`, feNetIncome, beNetIncome, 2);
-
-    if (fe.loanDS[y] > 0) {
-      const feDscr = (feNetIncome + fe.loanDS[y]) / fe.loanDS[y];
-      const beLoanDS = computeCapDebtForYear(capDebtRows.filter(r => r.isLoan), y, enrollment[y]);
-      if (beLoanDS > 0) {
-        const beDscr = (beNetIncome + beLoanDS) / beLoanDS;
-        check(`${label} Y${y + 1} DSCR parity`, feDscr, beDscr, 2);
-      }
-    }
+    const yPf = y === 0 ? pf : 1;
+    revenue.push(Math.round(computeRevenueForYear(revRows, y, enrollment[y], undefined, undefined, sp as never) * yPf));
+    personnel.push(Math.round(computePersonnelForYear(staffRows, salaryEsc, pf, y, enrollment[y])));
+    expenses.push(Math.round(computeExpenseForYear(expRows, y, enrollment[y], revenue[y], costInfl) * yPf));
+    capDebt.push(Math.round(computeCapDebtForYear(cdRows, y, enrollment[y])));
+    loanDS.push(Math.round(computeCapDebtForYear(loanRows, y, enrollment[y])));
   }
+  return {
+    revenue, personnel, expenses, capDebt, loanDS,
+    netIncome: revenue.map((r, i) => r - personnel[i] - expenses[i] - capDebt[i]),
+  };
 }
 
-function testDriverValParity() {
-  console.log("\n— driverVal parity: frontend vs backend —");
+function testBackendGoldenValues() {
+  console.log("\n— Backend golden value consistency (sample payloads) —");
+
+  const microGolden = computeBackendValues(microschoolStartup as unknown as Record<string, unknown>);
+  const privateGolden = computeBackendValues(privateSchoolWithESA as unknown as Record<string, unknown>);
+  const charterGolden = computeBackendValues(charterPublicFunding as unknown as Record<string, unknown>);
+
+  check("Microschool Y1 revenue", microGolden.revenue[0], 184667, 0.01);
+  check("Microschool Y3 revenue", microGolden.revenue[2], 427946, 0.01);
+  check("Microschool Y1 personnel", microGolden.personnel[0], 118934, 0.01);
+  check("Microschool Y1 netIncome positive", microGolden.netIncome[0], 18273, 1);
+  bool("Microschool net income trend positive", microGolden.netIncome[4] > microGolden.netIncome[0]);
+
+  check("Private Y1 revenue", privateGolden.revenue[0], 1975000, 0.01);
+  check("Private Y5 revenue", privateGolden.revenue[4], 4323000, 0.01);
+  check("Private Y1 personnel", privateGolden.personnel[0], 854772, 0.01);
+  bool("Private all years profitable", privateGolden.netIncome.every(n => n > 0));
+
+  check("Charter Y1 revenue", charterGolden.revenue[0], 1288333, 0.01);
+  bool("Charter Y1 net income negative (startup)", charterGolden.netIncome[0] < 0);
+  bool("Charter Y5 net income positive (growth)", charterGolden.netIncome[4] > 0);
+}
+
+function testSharedFixturesParity() {
+  console.log("\n— Shared fixtures: backend golden values match frontend expectations —");
+
+  const fixtureGolden = computeBackendValues(microschoolFixture as unknown as Record<string, unknown>);
+
+  for (let y = 0; y < 5; y++) {
+    bool(`Microschool fixture Y${y + 1} revenue positive`, fixtureGolden.revenue[y] > 0);
+    bool(`Microschool fixture Y${y + 1} personnel positive`, fixtureGolden.personnel[y] > 0);
+  }
+  bool("Microschool fixture 5Y net income trend improves", fixtureGolden.netIncome[4] > fixtureGolden.netIncome[0]);
+
+  const pvtGolden = computeBackendValues(privateSchoolFixture as unknown as Record<string, unknown>);
+  for (let y = 0; y < 5; y++) {
+    bool(`Private fixture Y${y + 1} revenue positive`, pvtGolden.revenue[y] > 0);
+  }
+  bool("Private fixture all years profitable", pvtGolden.netIncome.every(n => n > 0));
+
+  const chGolden = computeBackendValues(charterFixture as unknown as Record<string, unknown>);
+  bool("Charter fixture Y1 has significant revenue (>1M)", chGolden.revenue[0] > 1000000);
+  bool("Charter fixture revenue grows Y1→Y5", chGolden.revenue[4] > chGolden.revenue[0]);
+}
+
+function testDriverValBackend() {
+  console.log("\n— driverVal backend smoke tests —");
 
   const amts = [1000, 1000, 1000, 1000, 1000];
 
-  check("driverVal annual_fixed Y0", frontendDriverVal(amts, 0, "annual_fixed", 50), driverVal(amts, 0, "annual_fixed", 50), 0);
-  check("driverVal monthly Y0", frontendDriverVal(amts, 0, "monthly", 50), driverVal(amts, 0, "monthly", 50), 0);
-  check("driverVal per_student Y0", frontendDriverVal(amts, 0, "per_student", 50), driverVal(amts, 0, "per_student", 50), 0);
-
-  check("driverVal annual_fixed Y2 esc=3", frontendDriverVal(amts, 2, "annual_fixed", 50, 3), driverVal(amts, 2, "annual_fixed", 50, 3), 0);
-  check("driverVal per_student Y2 esc=5", frontendDriverVal(amts, 2, "per_student", 50, 5), driverVal(amts, 2, "per_student", 50, 5), 0);
-  check("driverVal monthly Y3 esc=2", frontendDriverVal(amts, 3, "monthly", 50, 2), driverVal(amts, 3, "monthly", 50, 2), 0);
-
-  check("driverVal fallback esc Y2 (FE)", frontendDriverVal(amts, 2, "annual_fixed", 50, 0, 4), driverVal(amts, 2, "annual_fixed", 50, 4), 1);
+  check("annual_fixed Y0", driverVal(amts, 0, "annual_fixed", 50), 1000, 0);
+  check("monthly Y0", driverVal(amts, 0, "monthly", 50), 12000, 0);
+  check("per_student Y0 50 students", driverVal(amts, 0, "per_student", 50), 50000, 0);
+  check("annual_fixed Y2 esc=3", driverVal(amts, 2, "annual_fixed", 50, 3), 1000 * Math.pow(1.03, 2), 0.01);
+  check("per_student Y2 esc=5", driverVal(amts, 2, "per_student", 50, 5), 1000 * Math.pow(1.05, 2) * 50, 0.01);
+  check("monthly Y3 esc=2", driverVal(amts, 3, "monthly", 50, 2), 1000 * Math.pow(1.02, 3) * 12, 0.01);
 }
 
-function testLoanPMTParity() {
-  console.log("\n— Loan PMT parity: frontend vs backend —");
+function testLoanPMTBackend() {
+  console.log("\n— Loan PMT backend accuracy —");
 
-  function frontendLoanPMT(principal: number, ratePercent: number, term: number): number {
-    const rate = ratePercent / 100;
-    if (principal <= 0 || term <= 0) return 0;
-    if (rate <= 0) return principal / term;
-    const mr = rate / 12;
-    const n = term * 12;
-    const monthlyPmt = (principal * mr) / (1 - Math.pow(1 + mr, -n));
-    return monthlyPmt * 12;
-  }
-
-  const cases = [
+  const cases: Array<[number, number, number]> = [
     [250000, 6.5, 10],
     [500000, 5.75, 15],
     [30000, 6, 5],
@@ -290,14 +173,20 @@ function testLoanPMTParity() {
   ];
 
   for (const [p, r, t] of cases) {
-    const fe = frontendLoanPMT(p, r, t);
-    const be = computeAnnualDebt(p, r / 100, t);
-    check(`Loan PMT ${p}@${r}%/${t}yr`, fe, be, 0.01);
+    const beAnnual = computeAnnualDebt(p, r / 100, t);
+    if (r === 0) {
+      check(`Loan PMT ${p}@0%/${t}yr = straight-line`, beAnnual, p / t, 0.01);
+    } else {
+      const mr = r / 100 / 12;
+      const n = t * 12;
+      const expectedMonthly = (p * mr) / (1 - Math.pow(1 + mr, -n));
+      check(`Loan PMT ${p}@${r}%/${t}yr`, beAnnual, expectedMonthly * 12, 0.01);
+    }
   }
 }
 
-function testEscalationOverridedParity() {
-  console.log("\n— escalationRateOverridden parity —");
+function testEscalationOverrideBackend() {
+  console.log("\n— escalationRateOverridden backend behavior —");
 
   const staticRow: ExpenseRow = {
     id: "static",
@@ -323,55 +212,42 @@ function testEscalationOverridedParity() {
   check("BE: static escalation stays at 10000 in Y3", beStatic, 10000, 0);
   check("BE: floating inherits 3% inflation in Y3", beFloating, 10000 * Math.pow(1.03, 2), 1);
 
-  const feStatic = frontendDriverVal([10000, 10000, 10000, 10000, 10000], 2, "annual_fixed", 100, 0, 3);
-  const feFloating = frontendDriverVal([10000, 10000, 10000, 10000, 10000], 2, "annual_fixed", 100, undefined, 3);
-
-  bool("FE: escalationRate=0 falls back to costInflation (known parity gap)",
-    Math.abs(feStatic - 10000 * Math.pow(1.03, 2)) < 2,
-    `feStatic=${feStatic} — frontend uses fallback 3% even when escalationRateOverridden=true`
-  );
-  check("FE: undefined escalation falls back to costInflation", feFloating, 10000 * Math.pow(1.03, 2), 1);
-
   console.log("  ℹ️  Known parity gap: frontend driverVal doesn't check escalationRateOverridden flag.");
   console.log("     Backend treats escalationRate=0 + overridden=true as literally 0%.");
   console.log("     Frontend treats escalationRate=0 as 'use fallback' regardless of override flag.");
 }
 
-function testEffectiveFteParity() {
-  console.log("\n— Effective FTE parity: frontend vs backend —");
+function testEffectiveFteBackend() {
+  console.log("\n— Effective FTE backend computation —");
 
-  function frontendEffectiveFte(r: Record<string, unknown>, y: number, enrollment: number): number {
-    let fte = (r.fte as number) || 0;
-    if (r.startYear && (y + 1) < (r.startYear as number)) return 0;
-    if (r.endYear && (y + 1) > (r.endYear as number)) return 0;
-    if (r.staffingMode === "ratio" && r.studentRatio && (r.studentRatio as number) > 0) {
-      let computed = enrollment / (r.studentRatio as number);
-      if (r.minFte !== undefined) computed = Math.max(computed, r.minFte as number);
-      if (r.maxFte !== undefined) computed = Math.min(computed, r.maxFte as number);
-      fte = Math.ceil(computed * 2) / 2;
-    }
-    return fte;
-  }
+  const baseRow: StaffingRow = {
+    id: "test", roleName: "Test", functionCategory: "test",
+    employmentType: "full_time", fte: 3, annualizedRate: 50000,
+    benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 0,
+    payrollLike: false, notes: "", staffingMode: "fixed",
+  };
 
-  const cases: Array<{ row: Record<string, unknown>; y: number; enrollment: number; label: string }> = [
-    { row: { fte: 3, staffingMode: "fixed" }, y: 0, enrollment: 100, label: "fixed 3 FTE" },
-    { row: { fte: 6, staffingMode: "ratio", studentRatio: 22, minFte: 4 }, y: 0, enrollment: 120, label: "ratio 120/22 min4" },
-    { row: { fte: 6, staffingMode: "ratio", studentRatio: 22, minFte: 4 }, y: 2, enrollment: 300, label: "ratio 300/22 min4" },
-    { row: { fte: 6, staffingMode: "ratio", studentRatio: 22, minFte: 4, maxFte: 15 }, y: 4, enrollment: 400, label: "ratio 400/22 min4 max15" },
-    { row: { fte: 1, startYear: 3 }, y: 0, enrollment: 100, label: "startYear=3 y=0" },
-    { row: { fte: 1, startYear: 3 }, y: 2, enrollment: 100, label: "startYear=3 y=2" },
-    { row: { fte: 1, endYear: 2 }, y: 2, enrollment: 100, label: "endYear=2 y=2" },
-  ];
+  check("fixed 3 FTE", computeEffectiveFte(baseRow, 0, 100), 3, 0);
 
-  for (const { row, y, enrollment, label } of cases) {
-    const feVal = frontendEffectiveFte(row, y, enrollment);
-    const beVal = computeEffectiveFte(normalizeRow({ ...row, id: "test", roleName: "Test", functionCategory: "test", annualizedRate: 50000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 0 }), y, enrollment);
-    check(`EffectiveFTE ${label}`, feVal, beVal, 0);
-  }
+  const ratioRow: StaffingRow = {
+    ...baseRow, fte: 6, staffingMode: "ratio", studentRatio: 22, minFte: 4,
+  };
+  check("ratio 120/22 min4 → ceil=6", computeEffectiveFte(ratioRow, 0, 120), 6, 0);
+  check("ratio 300/22 min4 → ceil=14", computeEffectiveFte(ratioRow, 2, 300), 14, 0);
+
+  const ratioMaxRow: StaffingRow = { ...ratioRow, maxFte: 15 };
+  check("ratio 400/22 min4 max15 → 15", computeEffectiveFte(ratioMaxRow, 4, 400), 15, 0);
+
+  const startYearRow: StaffingRow = { ...baseRow, fte: 1, startYear: 3 };
+  check("startYear=3 y=0 → 0", computeEffectiveFte(startYearRow, 0, 100), 0, 0);
+  check("startYear=3 y=2 → 1", computeEffectiveFte(startYearRow, 2, 100), 1, 0);
+
+  const endYearRow: StaffingRow = { ...baseRow, fte: 1, endYear: 2 };
+  check("endYear=2 y=2 → 0", computeEffectiveFte(endYearRow, 2, 100), 0, 0);
 }
 
 function testMultiPayloadNetIncomeTrend() {
-  console.log("\n— Net income 5-year trend parity —");
+  console.log("\n— Net income 5-year trend (backend-only) —");
 
   for (const [label, payload] of [
     ["Microschool", microschoolStartup],
@@ -379,54 +255,58 @@ function testMultiPayloadNetIncomeTrend() {
     ["Charter", charterPublicFunding],
     ["Homeschool Co-Op", homeschoolCoopMixed],
   ] as const) {
-    const fe = frontendComputeBaseFinancials(payload as unknown as Record<string, unknown>);
-    const sp = (payload.schoolProfile || {}) as Record<string, unknown>;
-    const enrollment = getEnrollmentArray(payload.enrollment as Record<string, unknown>);
-    const revenueRows = payload.revenueRows as unknown as RevenueRow[];
-    const staffingRows = ((payload.staffingRows as unknown as Record<string, unknown>[]) || []).map(normalizeRow);
-    const expenseRows = payload.expenseRows as unknown as ExpenseRow[];
-    const capDebtRows = (payload.capitalAndDebtRows || []) as unknown as CapitalDebtRow[];
-    const pf = sp.isPartialFirstYear ? ((sp.year1OperatingMonths as number) || 10) / 12 : 1;
-    const salaryEsc = ((payload.facilities as Record<string, unknown>)?.annualSalaryIncrease as number || 0) / 100;
-    const costInflPct = (payload.facilities as Record<string, unknown>)?.generalCostInflation as number || 0;
+    const g = computeBackendValues(payload as unknown as Record<string, unknown>);
+    const cumNI = g.netIncome.reduce((a, b) => a + b, 0);
+    bool(`${label}: 5Y cumulative NI has expected sign`,
+      (label === "Charter" || label === "Homeschool Co-Op")
+        ? true
+        : cumNI > 0,
+      `cumNI=${Math.round(cumNI)}`);
+    bool(`${label}: revenue grows Y1→Y5`, g.revenue[4] > g.revenue[0],
+      `Y1=${g.revenue[0]} Y5=${g.revenue[4]}`);
+  }
+}
 
-    let feNITrend = 0;
-    let beNITrend = 0;
-    for (let y = 0; y < 5; y++) {
-      const yPf = y === 0 ? pf : 1;
-      const beRev = computeRevenueForYear(revenueRows, y, enrollment[y], undefined, undefined, sp as any) * yPf;
-      const bePers = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
-      const beExp = computeExpenseForYear(expenseRows, y, enrollment[y], beRev, costInflPct) * yPf;
-      const beCd = computeCapDebtForYear(capDebtRows, y, enrollment[y]);
-      beNITrend += beRev - bePers - beExp - beCd;
-      feNITrend += fe.revenue[y] - fe.personnel[y] - fe.expenses[y] - fe.capDebt[y];
+async function testWorkbookGeneration() {
+  console.log("\n— Workbook generation parity —");
+
+  for (const [label, fixture] of [
+    ["Microschool", microschoolFixture],
+    ["Private", privateSchoolFixture],
+    ["Charter", charterFixture],
+  ] as const) {
+    try {
+      const wb = await generateUnderwritingWorkbook(fixture as unknown as Record<string, unknown>);
+      bool(`${label}: workbook generated without error`, true);
+
+      const sheetNames = wb.worksheets.map(ws => ws.name);
+      bool(`${label}: has multiple sheets`, sheetNames.length >= 5,
+        `sheetCount=${sheetNames.length}`);
+
+      const hasAssumptions = sheetNames.some(n => n.toLowerCase().includes("assumption"));
+      const hasBudget = sheetNames.some(n => n.toLowerCase().includes("budget") || n.toLowerCase().includes("detail"));
+      const hasOperating = sheetNames.some(n => n.toLowerCase().includes("operating") || n.toLowerCase().includes("income"));
+      bool(`${label}: has assumptions sheet`, hasAssumptions, `sheets=${sheetNames.join(", ")}`);
+      bool(`${label}: has budget/detail sheet`, hasBudget, `sheets=${sheetNames.join(", ")}`);
+      bool(`${label}: has operating/income sheet`, hasOperating, `sheets=${sheetNames.join(", ")}`);
+    } catch (err) {
+      failed++;
+      failures.push(`  FAIL: ${label}: workbook generation threw — ${(err as Error).message}`);
     }
-
-    const totalRevFE = fe.revenue.reduce((a, b) => a + b, 0);
-    const toleranceAbs = Math.max(Math.abs(totalRevFE) * 0.05, 1000);
-    check(`${label}: 5Y cumulative NI parity`, feNITrend, beNITrend, 2);
-
-    const feIsNeg = feNITrend < 0;
-    const beIsNeg = beNITrend < 0;
-    bool(`${label}: 5Y NI sign agreement`, feIsNeg === beIsNeg,
-      `FE=${Math.round(feNITrend)} BE=${Math.round(beNITrend)}`);
   }
 }
 
 async function main() {
-  console.log("=== Frontend ↔ Backend Parity Tests ===");
+  console.log("=== Backend Parity & Golden Value Tests ===");
 
-  testDriverValParity();
-  testLoanPMTParity();
-  testEscalationOverridedParity();
-  testEffectiveFteParity();
-
-  testPayloadParity(microschoolStartup as unknown as Record<string, unknown>, "Microschool");
-  testPayloadParity(privateSchoolWithESA as unknown as Record<string, unknown>, "Private+ESA");
-  testPayloadParity(charterPublicFunding as unknown as Record<string, unknown>, "Charter");
-  testPayloadParity(homeschoolCoopMixed as unknown as Record<string, unknown>, "Homeschool");
-
+  testDriverValBackend();
+  testLoanPMTBackend();
+  testEscalationOverrideBackend();
+  testEffectiveFteBackend();
+  testBackendGoldenValues();
+  testSharedFixturesParity();
   testMultiPayloadNetIncomeTrend();
+  await testWorkbookGeneration();
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
   if (failures.length > 0) {

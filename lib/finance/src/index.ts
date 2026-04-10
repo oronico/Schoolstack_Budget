@@ -27,6 +27,21 @@ export {
   type StaffingRowLike,
 } from "./staffing.js";
 
+export {
+  microschoolFixture,
+  privateSchoolFixture,
+  charterFixture,
+  type TestModelPayload,
+  type TestRevenueRow,
+  type TestStaffingRow,
+  type TestExpenseRow,
+  type TestCapDebtRow,
+  type TestEnrollment,
+  type TestSchoolProfile,
+  type TestFacilities,
+  type TestOpeningBalances,
+} from "./test-fixtures.js";
+
 export function computeStraightLineDepreciation(
   fixedAssets: number,
   usefulLifeYears: number,
