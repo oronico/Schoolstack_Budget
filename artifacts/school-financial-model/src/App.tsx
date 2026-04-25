@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, useRef, lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,6 +10,7 @@ import { useExportTracker } from "@/hooks/useExportTracker";
 
 import { setupFetchInterceptor } from "@/lib/fetch-patch";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { trackPageView } from "@/lib/analytics";
 
 const LandingPage = lazy(() => import("@/pages/landing").then(m => ({ default: m.LandingPage })));
 const LoginPage = lazy(() => import("@/pages/auth/login").then(m => ({ default: m.LoginPage })));
@@ -110,9 +111,25 @@ function NpsWrapper() {
   return <NpsModal exportCount={exportCount} />;
 }
 
+function RouteTracker() {
+  const [location] = useLocation();
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    const fullPath = `${base}${location}` || "/";
+    trackPageView(fullPath);
+  }, [location]);
+  return null;
+}
+
 function AppRouter() {
   return (
     <Suspense fallback={<PageLoader />}>
+      <RouteTracker />
       <NpsWrapper />
       <Switch>
         <Route path="/" component={LandingPage} />

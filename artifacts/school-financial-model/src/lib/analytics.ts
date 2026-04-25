@@ -27,6 +27,25 @@ function enableGA() {
   });
 }
 
+export function trackPageView(path: string, title?: string) {
+  if (!GA_MEASUREMENT_ID) return;
+  if (import.meta.env.DEV) return;
+  if (getConsent() !== "accepted") return;
+  if (!initialized) return;
+
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push([
+    "event",
+    "page_view",
+    {
+      page_path: path,
+      page_location: window.location.origin + path,
+      page_title: title ?? document.title,
+      send_to: GA_MEASUREMENT_ID,
+    },
+  ]);
+}
+
 function disableGA() {
   if (!GA_MEASUREMENT_ID) return;
 
