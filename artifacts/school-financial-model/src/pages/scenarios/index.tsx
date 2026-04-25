@@ -16,13 +16,14 @@ import {
   XCircle,
   RotateCcw,
   ArrowRightLeft,
+  Wand2,
 } from "lucide-react";
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
 import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
 import type { FullModelData } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
-import type { WhatIfOverrides } from "@/lib/whatif-engine";
+import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
 
 const DEFAULT_SCENARIO: ScenarioAdjustments = {
   name: "",
@@ -710,6 +711,103 @@ export function ScenarioPage() {
             </div>
           </>
         )}
+
+        {/* Custom What-If scenarios — saved from the Live What-If Planner drawer */}
+        {(() => {
+          const custom = ((modelData as Record<string, unknown>).customScenarios as
+            | Array<{ name: string; createdAt: string; overrides: WhatIfOverrides }>
+            | undefined) || [];
+          if (custom.length === 0) return null;
+          const fmtDate = (iso: string) => {
+            const d = new Date(iso);
+            return isNaN(d.getTime()) ? iso : d.toLocaleDateString();
+          };
+          const removeCustom = async (target: { name: string; createdAt: string }) => {
+            if (!modelId) return;
+            const fresh = queryClient.getQueryData<{ data?: Record<string, unknown> }>([
+              `/api/models/${modelId}`,
+            ]);
+            const freshData = (fresh?.data ?? modelData) as Record<string, unknown>;
+            const list = ((freshData.customScenarios as typeof custom) || []).filter(
+              (cs) => !(cs.name === target.name && cs.createdAt === target.createdAt)
+            );
+            await updateMutation.mutateAsync({
+              id: modelId,
+              data: { data: { ...freshData, customScenarios: list } as Record<string, unknown> },
+            });
+            await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+          };
+          const openInPlanner = (overrides: WhatIfOverrides) => {
+            const hash = encodeOverridesToHash(overrides);
+            if (hash) {
+              window.location.hash = hash;
+            }
+          };
+          return (
+            <div className="mb-10" data-testid="custom-scenarios-section">
+              <div className="flex items-center gap-2 mb-4">
+                <Wand2 className="h-5 w-5 text-amber-700" />
+                <h2 className="font-display text-xl font-bold text-foreground">Saved What-If scenarios</h2>
+                <span className="text-sm text-muted-foreground">({custom.length})</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {custom.map((cs, idx) => {
+                  const o = cs.overrides;
+                  const bullets: string[] = [];
+                  if (o.enrollmentDelta && o.enrollmentDelta.some((v) => v !== 0)) {
+                    const sum = o.enrollmentDelta.reduce((a, b) => a + b, 0);
+                    bullets.push(`Enrollment ${sum > 0 ? "+" : ""}${sum} cumulative`);
+                  }
+                  if (o.retentionRate !== undefined) bullets.push(`Retention ${o.retentionRate}%`);
+                  if (o.tuitionDeltaPerStudent !== undefined && o.tuitionDeltaPerStudent !== 0) {
+                    bullets.push(`Tuition ${o.tuitionDeltaPerStudent > 0 ? "+" : ""}$${o.tuitionDeltaPerStudent}/student`);
+                  }
+                  if (o.monthlyRent !== undefined) bullets.push(`Rent $${o.monthlyRent.toLocaleString()}/mo`);
+                  if (o.rentEscalation !== undefined) bullets.push(`Rent escalation ${o.rentEscalation}%`);
+                  if (o.sqftDelta !== undefined && o.sqftDelta !== 0) {
+                    bullets.push(`Sqft ${o.sqftDelta > 0 ? "+" : ""}${o.sqftDelta}`);
+                  }
+                  return (
+                    <div
+                      key={`${cs.name}-${cs.createdAt}-${idx}`}
+                      className="bg-card border border-amber-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+                      data-testid={`custom-scenario-card-${idx}`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-display font-bold text-foreground">{cs.name}</h3>
+                          <p className="text-[11px] text-muted-foreground">Saved {fmtDate(cs.createdAt)}</p>
+                        </div>
+                        <button
+                          onClick={() => removeCustom({ name: cs.name, createdAt: cs.createdAt })}
+                          className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors"
+                          aria-label={`Delete ${cs.name}`}
+                          data-testid={`custom-scenario-delete-${idx}`}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <ul className="text-xs text-muted-foreground space-y-1 mb-4">
+                        {bullets.length === 0 ? (
+                          <li>(No overrides — baseline)</li>
+                        ) : (
+                          bullets.map((b, i) => <li key={i}>• {b}</li>)
+                        )}
+                      </ul>
+                      <button
+                        onClick={() => openInPlanner(o)}
+                        className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-sm font-medium border border-amber-200 transition-colors"
+                        data-testid={`custom-scenario-open-${idx}`}
+                      >
+                        <Wand2 className="h-3.5 w-3.5" /> Open in planner
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {scenarios.length === 0 && (
           <div className="bg-gradient-to-br from-primary/5 via-card to-card border border-primary/20 rounded-3xl p-10 sm:p-16 text-center shadow-sm">

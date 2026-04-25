@@ -17,6 +17,9 @@ import { fullModelSchema, type FullModelData } from "./schema";
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import type { WhatIfOverrides } from "@/lib/whatif-engine";
+import type { CustomScenario } from "./schema";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
 
@@ -488,33 +491,59 @@ export function ModelWizardPage() {
     };
   }, [modelId, initialData, currentStep]);
 
+  const { toast } = useToast();
+
   const handleApplyWhatIfToModel = useCallback(async (adjustedData: FullModelData) => {
+    if (!modelId) return;
+    // Snapshot the current model BEFORE applying so we can offer one-click undo.
+    const priorSnapshot = methods.getValues() as FullModelData;
     methods.reset(adjustedData);
-    if (modelId) {
-      const cleaned = stripEmptyValues(JSON.parse(JSON.stringify(adjustedData))) as Record<string, unknown>;
-      const normalized = normalizeEscalationOverrideRows(cleaned);
-      await updateMutation.mutateAsync({
-        id: modelId,
-        data: { data: normalized },
-      });
-      setLastSaved(new Date());
-    }
-  }, [methods, modelId, updateMutation]);
+    const cleaned = stripEmptyValues(JSON.parse(JSON.stringify(adjustedData))) as Record<string, unknown>;
+    const normalized = normalizeEscalationOverrideRows(cleaned);
+    await updateMutation.mutateAsync({
+      id: modelId,
+      data: { data: normalized },
+    });
+    setLastSaved(new Date());
+    toast({
+      title: "Applied to model",
+      description: "What-If overrides are now part of your saved model.",
+      action: (
+        <ToastAction
+          altText="Undo apply"
+          onClick={async () => {
+            methods.reset(priorSnapshot);
+            const undoCleaned = stripEmptyValues(JSON.parse(JSON.stringify(priorSnapshot))) as Record<string, unknown>;
+            const undoNormalized = normalizeEscalationOverrideRows(undoCleaned);
+            await updateMutation.mutateAsync({
+              id: modelId,
+              data: { data: undoNormalized },
+            });
+            setLastSaved(new Date());
+            toast({ title: "Undone", description: "Your previous model values are restored." });
+          }}
+        >
+          Undo
+        </ToastAction>
+      ),
+    });
+  }, [methods, modelId, updateMutation, toast]);
 
   const handleSaveAsScenarioFromWhatIf = useCallback(
     async (overrides: WhatIfOverrides, name: string) => {
       if (!modelId) return;
       const current = methods.getValues() as Record<string, unknown>;
-      const existing = (current.customScenarios as Array<{ name: string; overrides: WhatIfOverrides; createdAt: string }> | undefined) || [];
-      const updated = [
+      const existing: CustomScenario[] =
+        (current.customScenarios as CustomScenario[] | undefined) ?? [];
+      const updated: CustomScenario[] = [
         ...existing,
         { name, overrides, createdAt: new Date().toISOString() },
       ];
       // Sync the form state immediately so subsequent saves merge against the latest list
       // rather than a stale snapshot — react-query refetch may not have completed yet.
-      (methods.setValue as unknown as (n: string, v: unknown, opts?: Record<string, unknown>) => void)(
-        "customScenarios",
-        updated,
+      methods.setValue(
+        "customScenarios" as Parameters<typeof methods.setValue>[0],
+        updated as never,
         { shouldDirty: false }
       );
       const next = { ...current, customScenarios: updated };

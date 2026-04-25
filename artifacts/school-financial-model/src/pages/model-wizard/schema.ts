@@ -443,6 +443,21 @@ export const assumptionFlagResponseSchema = z.object({
   reason: z.string().default(""),
 });
 
+export const customScenarioSchema = z.object({
+  name: z.string(),
+  createdAt: z.string(),
+  overrides: z.object({
+    enrollmentDelta: z.array(z.number()).length(5).optional(),
+    retentionRate: z.number().optional(),
+    tuitionDeltaPerStudent: z.number().optional(),
+    monthlyRent: z.number().optional(),
+    rentEscalation: z.number().optional(),
+    rentChangeStartYear: z.number().optional(),
+    sqftDelta: z.number().optional(),
+  }),
+});
+export type CustomScenario = z.infer<typeof customScenarioSchema>;
+
 export const fullModelSchema = z.object({
   schoolProfile: schoolProfileSchema.optional(),
   enrollment: enrollmentSchema.optional(),
@@ -464,6 +479,7 @@ export const fullModelSchema = z.object({
   openingBalances: openingBalancesSchema.optional(),
   sourcesAndUses: sourcesAndUsesSchema.optional(),
   scenarios: z.array(scenarioDefSchema).optional(),
+  customScenarios: z.array(customScenarioSchema).optional(),
   covenantThresholds: covenantThresholdsSchema.optional(),
   budgetNarrative: budgetNarrativeSchema.optional(),
   assumptionFlagResponses: z.array(assumptionFlagResponseSchema).optional(),

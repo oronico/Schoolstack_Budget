@@ -206,10 +206,8 @@ export function WhatIfDrawer({
     try {
       const adjustedData = applyWhatIfOverrides(data, overrides);
       await onApplyToModel(adjustedData);
-      toast({
-        title: "Applied to model",
-        description: "Your what-if changes have been written to the model.",
-      });
+      // Note: success toast is intentionally fired by the parent (wizard) so that
+      // its undo affordance isn't displaced by a competing toast (TOAST_LIMIT=1).
       reset();
       setShowApplyConfirm(false);
       onOpenChange(false);
@@ -546,31 +544,97 @@ export function WhatIfDrawer({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-4" data-testid="whatif-impact-grid">
-                  <ImpactCell
-                    label="Y1 Net Income"
-                    base={impact.base.netIncome[0]}
-                    adjusted={impact.adjusted.netIncome[0]}
-                  />
-                  <ImpactCell
-                    label="Y5 Net Income"
-                    base={impact.base.netIncome[4]}
-                    adjusted={impact.adjusted.netIncome[4]}
-                  />
-                  <ImpactCell
-                    label="Y1 Revenue"
-                    base={impact.base.revenue[0]}
-                    adjusted={impact.adjusted.revenue[0]}
-                  />
-                  <ImpactCell
-                    label="Y1 DSCR"
-                    base={impact.base.dscr[0]}
-                    adjusted={impact.adjusted.dscr[0]}
-                    format={(v) => (isFinite(v) ? v.toFixed(2) : "—")}
-                    isCurrency={false}
-                  />
+                {/* Per-year metrics table — Net Income $/% delta and DSCR before/after */}
+                <div className="bg-card border border-border/60 rounded-lg overflow-hidden mb-3" data-testid="whatif-impact-grid">
+                  <table className="w-full text-[11px]">
+                    <thead className="bg-slate-50">
+                      <tr className="text-left text-muted-foreground">
+                        <th className="px-2 py-1.5 font-medium">Metric</th>
+                        {[1, 2, 3, 4, 5].map((y) => (
+                          <th key={y} className="px-1.5 py-1.5 font-medium text-right">Y{y}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="font-mono">
+                      <tr className="border-t border-border/60">
+                        <td className="px-2 py-1.5 font-sans text-muted-foreground">Net income Δ</td>
+                        {impact.deltas.netIncome.map((d, i) => (
+                          <td key={i} className="px-1.5 py-1.5 text-right" data-testid={`whatif-ni-delta-Y${i + 1}`}>
+                            <span className={cn(d > 0 ? "text-emerald-700" : d < 0 ? "text-rose-700" : "text-muted-foreground")}>
+                              {fmtMoneyDelta(d)}
+                            </span>
+                          </td>
+                        ))}
+                      </tr>
+                      <tr className="border-t border-border/60 bg-slate-50/40">
+                        <td className="px-2 py-1.5 font-sans text-muted-foreground">Net income Δ%</td>
+                        {impact.deltas.netIncomePct.map((p, i) => (
+                          <td key={i} className="px-1.5 py-1.5 text-right">
+                            <span className={cn(p > 0 ? "text-emerald-700" : p < 0 ? "text-rose-700" : "text-muted-foreground")}>
+                              {p === 0 ? "0%" : `${p > 0 ? "+" : ""}${(p * 100).toFixed(0)}%`}
+                            </span>
+                          </td>
+                        ))}
+                      </tr>
+                      <tr className="border-t border-border/60">
+                        <td className="px-2 py-1.5 font-sans text-muted-foreground">DSCR before</td>
+                        {impact.base.dscr.map((v, i) => (
+                          <td key={i} className="px-1.5 py-1.5 text-right text-muted-foreground">
+                            {isFinite(v) ? v.toFixed(2) : "—"}
+                          </td>
+                        ))}
+                      </tr>
+                      <tr className="border-t border-border/60 bg-slate-50/40">
+                        <td className="px-2 py-1.5 font-sans text-muted-foreground">DSCR after</td>
+                        {impact.adjusted.dscr.map((v, i) => {
+                          const baseV = impact.base.dscr[i];
+                          const better = isFinite(v) && isFinite(baseV) && v > baseV;
+                          const worse = isFinite(v) && isFinite(baseV) && v < baseV;
+                          return (
+                            <td key={i} className="px-1.5 py-1.5 text-right" data-testid={`whatif-dscr-after-Y${i + 1}`}>
+                              <span className={cn(better && "text-emerald-700", worse && "text-rose-700")}>
+                                {isFinite(v) ? v.toFixed(2) : "—"}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                      <tr className="border-t border-border/60">
+                        <td className="px-2 py-1.5 font-sans text-muted-foreground">Revenue Δ</td>
+                        {impact.deltas.revenue.map((d, i) => (
+                          <td key={i} className="px-1.5 py-1.5 text-right" data-testid={`whatif-rev-delta-Y${i + 1}`}>
+                            <span className={cn(d > 0 ? "text-emerald-700" : d < 0 ? "text-rose-700" : "text-muted-foreground")}>
+                              {fmtMoneyDelta(d)}
+                            </span>
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
 
+                {/* Revenue overlay sparkline */}
+                <div className="bg-card border border-border/60 rounded-lg p-3 mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-muted-foreground">Revenue trajectory</span>
+                    <span className="text-[10px] text-muted-foreground">5-year</span>
+                  </div>
+                  <Sparkline
+                    values={impact.adjusted.revenue}
+                    baseValues={impact.base.revenue}
+                    color="#0D9488"
+                  />
+                  <div className="flex items-center justify-between mt-2 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block w-3 h-px border-t-2 border-dashed border-slate-400" /> Base
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block w-3 h-0.5 bg-teal-600" /> Adjusted
+                    </span>
+                  </div>
+                </div>
+
+                {/* Net income overlay sparkline */}
                 <div className="bg-card border border-border/60 rounded-lg p-3 mb-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-muted-foreground">Net income trajectory</span>
