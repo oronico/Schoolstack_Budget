@@ -495,15 +495,24 @@ export function ModelWizardPage() {
 
   const handleApplyWhatIfToModel = useCallback(async (adjustedData: FullModelData) => {
     if (!modelId) return;
-    // Snapshot the current model BEFORE applying so we can offer one-click undo.
+    // Snapshot the current model BEFORE applying so we can offer one-click undo
+    // and so we can roll the form state back if the API write fails.
     const priorSnapshot = methods.getValues() as FullModelData;
-    methods.reset(adjustedData);
     const cleaned = stripEmptyValues(JSON.parse(JSON.stringify(adjustedData))) as Record<string, unknown>;
     const normalized = normalizeEscalationOverrideRows(cleaned);
-    await updateMutation.mutateAsync({
-      id: modelId,
-      data: { data: normalized },
-    });
+    try {
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: normalized },
+      });
+    } catch (err) {
+      // Server write failed — keep the form on the prior snapshot so the UI
+      // doesn't drift from server state. Surface the error to the caller.
+      methods.reset(priorSnapshot);
+      throw err;
+    }
+    // Only commit the form to the adjusted data after the server confirms.
+    methods.reset(adjustedData);
     setLastSaved(new Date());
     toast({
       title: "Applied to model",

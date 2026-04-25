@@ -365,7 +365,7 @@ export function WhatIfDrawer({
                   </div>
                   <Slider
                     value={[overrides.retentionRate ?? baseRetention ?? 85]}
-                    min={50}
+                    min={60}
                     max={100}
                     step={1}
                     onValueChange={([v]) => setOverrides((o) => ({ ...o, retentionRate: v }))}
