@@ -7,6 +7,7 @@ import {
   computeEffectiveFte as sharedComputeEffectiveFte,
   computeStaffingLoaded,
   computeExpenseForYear as sharedComputeExpense,
+  computeTotalFTE,
   computeDebtServiceForYear as sharedComputeDebtService,
   computeFacilityCostByYear,
   computeInstructionalCostByYear,
@@ -365,7 +366,7 @@ function resolveRowEsc(rowEsc?: number, fallback?: number, overridden?: boolean)
   return overridden ? (rowEsc ?? 0) : resolveEsc(rowEsc, fallback);
 }
 
-function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number, escalationRateOverridden?: boolean): number {
+function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number, escalationRateOverridden?: boolean, fte?: number): number {
   let base = amounts?.[y] ?? 0;
   const esc = resolveRowEsc(escalationRate, fallbackInflation, escalationRateOverridden);
   if (esc !== 0 && y > 0) {
@@ -377,6 +378,7 @@ function driverVal(amounts: number[] | undefined, y: number, dt: string, student
     case "per_student": return base * students;
     case "per_new_student": return base * (newStudents ?? students);
     case "per_returning_student": return base * (returningStudents ?? 0);
+    case "per_fte": return base * (fte ?? 0);
     case "annual_fixed": return base;
     default: return base;
   }
@@ -490,7 +492,7 @@ function computePersonnelForYear(
 }
 
 function computeExpenseForYear(
-  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number
+  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number, totalFTE?: number,
 ): number {
   let total = 0;
   const fallback = costInflationPct ?? 0;
@@ -506,7 +508,7 @@ function computeExpenseForYear(
       }
       total += (pct / 100) * totalRevenue;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents, r.escalationRateOverridden);
+      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents, r.escalationRateOverridden, totalFTE);
     }
   }
   return total;
@@ -1370,7 +1372,8 @@ function buildFiveYearModel(
     const students = enrollment[y];
     const rev = computeRevenueForYear(revenueRows, y, students, tiers, costInflPct, sp);
     const pf = y === 0 ? prorationFactor : 1;
-    const expVal = computeExpenseForYear(expenseRows, y, students, rev, costInflPct, computeNewStudents(enrollment, rr, y), computeReturningStudents(enrollment, rr, y)) * pf;
+    const feFTE = computeTotalFTE(staffingRows, y, students);
+    const expVal = computeExpenseForYear(expenseRows, y, students, rev, costInflPct, computeNewStudents(enrollment, rr, y), computeReturningStudents(enrollment, rr, y), feFTE) * pf;
     const sumParts = opexCatTotalRows.map(tr => cn(tr, y + 2)).join("+");
     setFormula(cell, sumParts, Math.round(expVal));
     cell.numFmt = CUR; gc(cell);
@@ -1424,7 +1427,8 @@ function buildFiveYearModel(
     const pf = y === 0 ? prorationFactor : 1;
     const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
     const pers = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, enrollment[y]);
-    const exp = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct, computeNewStudents(enrollment, rr, y), computeReturningStudents(enrollment, rr, y)) * pf;
+    const feFTE2 = computeTotalFTE(staffingRows, y, enrollment[y]);
+    const exp = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct, computeNewStudents(enrollment, rr, y), computeReturningStudents(enrollment, rr, y), feFTE2) * pf;
     const cd = computeCapDebtForYear(capDebtRows, y, enrollment[y]);
     const revRounded = Math.round(rev * pf);
     const persRounded = Math.round(pers);
@@ -1900,7 +1904,8 @@ function buildProForma(
   const pfOpexFirstRow = r + 1;
 
   const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp);
-  const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct, computeNewStudents(enrollment, rr2, 0), computeReturningStudents(enrollment, rr2, 0)) * prorationFactor;
+  const pfFTE = computeTotalFTE(staffingRows, 0, students);
+  const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct, computeNewStudents(enrollment, rr2, 0), computeReturningStudents(enrollment, rr2, 0), pfFTE) * prorationFactor;
   const monthlyOps = opex0 / (opMonths || 12);
 
   const pfBaseOpexCats = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
@@ -2131,8 +2136,10 @@ function buildActualsVsProjections(
   const pf = prorationFactor;
   const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, enrollment[0]);
   const pers1 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 1, enrollment[1]);
-  const exp0 = computeExpenseForYear(expenseRows, 0, enrollment[0], rev0, costInflPct, computeNewStudents(enrollment, rr3, 0), computeReturningStudents(enrollment, rr3, 0)) * pf;
-  const exp1 = computeExpenseForYear(expenseRows, 1, enrollment[1], rev1, costInflPct, computeNewStudents(enrollment, rr3, 1), computeReturningStudents(enrollment, rr3, 1));
+  const dbFTE0 = computeTotalFTE(staffingRows, 0, enrollment[0]);
+  const dbFTE1 = computeTotalFTE(staffingRows, 1, enrollment[1]);
+  const exp0 = computeExpenseForYear(expenseRows, 0, enrollment[0], rev0, costInflPct, computeNewStudents(enrollment, rr3, 0), computeReturningStudents(enrollment, rr3, 0), dbFTE0) * pf;
+  const exp1 = computeExpenseForYear(expenseRows, 1, enrollment[1], rev1, costInflPct, computeNewStudents(enrollment, rr3, 1), computeReturningStudents(enrollment, rr3, 1), dbFTE1);
   const cd0 = computeCapDebtForYear(capDebtRows, 0, enrollment[0]);
   const cd1 = computeCapDebtForYear(capDebtRows, 1, enrollment[1]);
   const totalExp0 = Math.round(pers0) + Math.round(exp0) + Math.round(cd0);

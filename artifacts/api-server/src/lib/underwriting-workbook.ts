@@ -12,7 +12,7 @@ import {
   computeAnnualDebt, computeAnnualDebtForYear, computeInterestPortion, computePrincipalPortion, computeRemainingBalance, computeDaysCashOnHand,
   computeRevLineItem, computeRevenueForYear, computePersonnelForYear, computeStaffingLoaded,
   computeExpenseForYear, computeFacilityCostByYear, computeInstructionalCostByYear, computeCapDebtForYear, computeDebtServiceForYear,
-  driverVal, resolveEsc, tuitionWithTiers, computeNewStudents, computeReturningStudents,
+  driverVal, resolveEsc, tuitionWithTiers, computeNewStudents, computeReturningStudents, computeTotalFTE,
   buildPhaseTimelineData, buildPhaseDetails,
   OWNERSHIP_COLORS, OWNERSHIP_BG_COLORS,
   ModelData, SchoolProfile, RevenueRow, StaffingRow, ExpenseRow, CapitalDebtRow, TuitionTier,
@@ -969,6 +969,7 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   const sp = data.schoolProfile || {};
   const oeRR = data.enrollment?.retentionRate ?? 85;
   const expenseRows = (data.expenseRows || []).filter(r => r.enabled);
+  const staffingRows = data.staffingRows || [];
   const yLabels = yearLabels(sp.openingYear);
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
@@ -1044,7 +1045,8 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL OPERATING EXPENSES";
   for (let y = 0; y < 5; y++) {
     const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
-    const val = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y));
+    const oeFTE = computeTotalFTE(staffingRows, y, enrollment[y]);
+    const val = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y), oeFTE);
     const col = y + 2;
     const cell = ws.getCell(r, col);
     if (catTotalRows.length > 0) {
@@ -1368,7 +1370,8 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   const unproRev = revByYear.map((r, y) => y === 0 && prorationFactor !== 1 ? r / prorationFactor : r);
   for (let y = 0; y < 5; y++) {
     const pf = y === 0 ? prorationFactor : 1;
-    const val = computeExpenseForYear(expenseRows, y, enrollment[y], unproRev[y], costInflPct, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y)) * pf;
+    const bdFTE = computeTotalFTE(staffingRows, y, enrollment[y]);
+    const val = computeExpenseForYear(expenseRows, y, enrollment[y], unproRev[y], costInflPct, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y), bdFTE) * pf;
     opexByYear.push(val);
     const col = y + 2;
     if (bdCatSumRows.length > 0) {
@@ -1556,7 +1559,8 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp);
   const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, students);
   const mcfRR = data.enrollment?.retentionRate ?? 85;
-  const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0)) * prorationFactor;
+  const mcfFTE = computeTotalFTE(staffingRows, 0, students);
+  const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0), mcfFTE) * prorationFactor;
   const cd0 = computeCapDebtForYear(capDebtRows, 0, students);
   const monthlyPers = pers0 / (opMonths || 12);
   const monthlyOps = opex0 / (opMonths || 12);

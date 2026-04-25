@@ -4,6 +4,7 @@ import {
   computeExpenseForYear,
   computeCapDebtForYear,
   computeAnnualDebt,
+  computeTotalFTE,
   driverVal,
   getEnrollmentArray,
   computeEffectiveFte,
@@ -117,7 +118,8 @@ function computeFromFixture(fixture: TestModelPayload): ComputedValues {
     const yPf = y === 0 ? pf : 1;
     revenue.push(Math.round(computeRevenueForYear(revRows, y, enrollment[y], undefined, undefined, sp) * yPf));
     personnel.push(Math.round(computePersonnelForYear(staffRows, salaryEsc, pf, y, enrollment[y])));
-    expenses.push(Math.round(computeExpenseForYear(expRows, y, enrollment[y], revenue[y], costInfl) * yPf));
+    const fte = computeTotalFTE(staffRows, y, enrollment[y]);
+    expenses.push(Math.round(computeExpenseForYear(expRows, y, enrollment[y], revenue[y], costInfl, undefined, undefined, fte) * yPf));
     capDebt.push(Math.round(computeCapDebtForYear(cdRows, y, enrollment[y])));
     loanDS.push(Math.round(computeCapDebtForYear(loanRows, y, enrollment[y])));
   }
@@ -154,7 +156,8 @@ function computeFromSamplePayload(payload: SamplePayload): ComputedValues {
     const yPf = y === 0 ? pf : 1;
     revenue.push(Math.round(computeRevenueForYear(revRows, y, enrollment[y], undefined, undefined, sp) * yPf));
     personnel.push(Math.round(computePersonnelForYear(staffRows, salaryEsc, pf, y, enrollment[y])));
-    expenses.push(Math.round(computeExpenseForYear(expRows, y, enrollment[y], revenue[y], costInfl) * yPf));
+    const fte = computeTotalFTE(staffRows, y, enrollment[y]);
+    expenses.push(Math.round(computeExpenseForYear(expRows, y, enrollment[y], revenue[y], costInfl, undefined, undefined, fte) * yPf));
     capDebt.push(Math.round(computeCapDebtForYear(cdRows, y, enrollment[y])));
     loanDS.push(Math.round(computeCapDebtForYear(loanRows, y, enrollment[y])));
   }
@@ -230,8 +233,8 @@ function testSharedFixturesParity() {
   const pvtExpected = {
     rev: [1975000, 2612670, 3286760, 3895050, 4323000],
     pers: [854772, 854772, 854772, 854772, 854772],
-    exp: [271400, 310442, 351598, 389496, 417905],
-    ni: [789764, 1403392, 2036326, 2611718, 3011259],
+    exp: [282900, 321702, 362611, 400254, 428401],
+    ni: [778264, 1392132, 2025313, 2600960, 3000763],
   };
   for (let y = 0; y < 5; y++) {
     check(`Private fixture Y${y + 1} revenue`, pvtVals.revenue[y], pvtExpected.rev[y], 1);

@@ -2,7 +2,7 @@
 // The /export/underwriting route has been removed; only /export/underwriting-v2 is active.
 // Retained for reference only — do not add new code here.
 import ExcelJS from "exceljs";
-import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear, computeInstructionalCostByYear, resolveEsc as resolveEscShared, computeEffectiveFte, BENCHMARK_DSCR_GREEN } from "./workbook-helpers.js";
+import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear, computeInstructionalCostByYear, resolveEsc as resolveEscShared, computeEffectiveFte, computeTotalFTE, BENCHMARK_DSCR_GREEN } from "./workbook-helpers.js";
 import { computeAnnualDebt } from "@workspace/finance";
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
@@ -354,7 +354,7 @@ function resolveEsc(rowEsc: number | undefined, fallback: number): number {
   return resolveEscShared(rowEsc, fallback);
 }
 
-function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number): number {
+function driverVal(amounts: number[] | undefined, y: number, dt: string, students: number, escalationRate?: number, fallbackInflation?: number, newStudents?: number, returningStudents?: number, _escalationRateOverridden?: boolean, fte?: number): number {
   let base = amounts?.[y] ?? 0;
   const esc = (escalationRate !== undefined && escalationRate !== 0) ? escalationRate : (fallbackInflation ?? 0);
   if (esc !== 0 && y > 0) {
@@ -366,6 +366,7 @@ function driverVal(amounts: number[] | undefined, y: number, dt: string, student
     case "per_student": return base * students;
     case "per_new_student": return base * (newStudents ?? students);
     case "per_returning_student": return base * (returningStudents ?? 0);
+    case "per_fte": return base * (fte ?? 0);
     case "annual_fixed": return base;
     default: return base;
   }
@@ -472,7 +473,7 @@ function computeRevenueForYear(
 }
 
 function computeExpenseForYear(
-  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number
+  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number, totalFTE?: number,
 ): number {
   let total = 0;
   const fallback = costInflationPct ?? 0;
@@ -488,7 +489,7 @@ function computeExpenseForYear(
       }
       total += (pct / 100) * totalRevenue;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents);
+      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, fallback, newStudents, returningStudents, undefined, totalFTE);
     }
   }
   return total;
@@ -603,7 +604,8 @@ export async function generateUnderwritingWorkbook(rawData: Record<string, unkno
     const pf = y === 0 ? prorationFactor : 1;
     const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, students);
     const costInflPct = costInflation * 100;
-    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct, localNewStudents(enrollment, uwRR, y), localReturningStudents(enrollment, uwRR, y)) * (y === 0 ? prorationFactor : 1);
+    const uwFTE = computeTotalFTE(staffingRows, y, students);
+    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct, localNewStudents(enrollment, uwRR, y), localReturningStudents(enrollment, uwRR, y), uwFTE) * (y === 0 ? prorationFactor : 1);
     const capDebt = computeCapDebtForYear(capDebtRows, y, students);
     const totalExp = personnel + ops + capDebt;
     const ni = (rev * pf) - totalExp;
@@ -751,7 +753,8 @@ export async function generateUnderwritingWorkbookToFile(rawData: Record<string,
     const pf = y === 0 ? prorationFactor : 1;
     const personnel = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, y, students);
     const costInflPct = costInflation * 100;
-    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct, localNewStudents(enrollment, uwRR, y), localReturningStudents(enrollment, uwRR, y)) * (y === 0 ? prorationFactor : 1);
+    const uwFTE = computeTotalFTE(staffingRows, y, students);
+    const ops = computeExpenseForYear(expenseRows, y, students, rev, costInflPct, localNewStudents(enrollment, uwRR, y), localReturningStudents(enrollment, uwRR, y), uwFTE) * (y === 0 ? prorationFactor : 1);
     const capDebt = computeCapDebtForYear(capDebtRows, y, students);
     const totalExp = personnel + ops + capDebt;
     const ni = (rev * pf) - totalExp;
@@ -887,7 +890,8 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
   const annualRevRaw = computeRevenueForYear(revenueRows, yi, students, data.tuitionTiers, sp);
   const annualRev = Math.round(annualRevRaw * pf);
   const annualPersonnel = Math.round(computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, yi, students));
-  const annualOps = Math.round(computeExpenseForYear(expenseRows, yi, students, annualRevRaw, costInflPct, localNewStudents(enrollment, sybRR, yi), localReturningStudents(enrollment, sybRR, yi)) * pf);
+  const sybFTE = computeTotalFTE(staffingRows, yi, students);
+  const annualOps = Math.round(computeExpenseForYear(expenseRows, yi, students, annualRevRaw, costInflPct, localNewStudents(enrollment, sybRR, yi), localReturningStudents(enrollment, sybRR, yi), sybFTE) * pf);
   const annualCapDebt = Math.round(computeCapDebtForYear(capDebtRows, yi, students));
   const annualNI = annualRev - annualPersonnel - annualOps - annualCapDebt;
 

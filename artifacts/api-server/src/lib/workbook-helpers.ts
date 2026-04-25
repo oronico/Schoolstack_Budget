@@ -290,6 +290,7 @@ export function driverVal(
   newStudents?: number,
   returningStudents?: number,
   escalationRateOverridden?: boolean,
+  fte?: number,
 ): number {
   let base = amounts?.[y] ?? 0;
   const esc = escalationRateOverridden ? (escalationRate ?? 0) : resolveEsc(escalationRate, fallbackInflation);
@@ -302,6 +303,7 @@ export function driverVal(
     case "per_student": return base * students;
     case "per_new_student": return base * (newStudents ?? students);
     case "per_returning_student": return base * (returningStudents ?? 0);
+    case "per_fte": return base * (fte ?? 0);
     case "annual_fixed": return base;
     default: return base;
   }
@@ -698,8 +700,16 @@ export function computeStaffingLoaded(r: StaffingRow, y?: number, enrollment?: n
   return annual + benefits + tax;
 }
 
+export function computeTotalFTE(staffingRows: StaffingRow[], y: number, enrollment: number): number {
+  let total = 0;
+  for (const r of staffingRows) {
+    total += computeEffectiveFte(r, y, enrollment);
+  }
+  return total;
+}
+
 export function computeExpenseForYear(
-  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number
+  rows: ExpenseRow[], y: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number, totalFTE?: number,
 ): number {
   let total = 0;
   const fallback = costInflationPct ?? 0;
@@ -725,6 +735,7 @@ export function computeExpenseForYear(
         newStudents,
         returningStudents,
         r.escalationRateOverridden === true,
+        totalFTE,
       );
     }
   }
@@ -733,7 +744,7 @@ export function computeExpenseForYear(
 
 export function computeFacilityCostByYear(
   expenseRows: Pick<ExpenseRow, "enabled" | "category" | "driverType" | "amounts" | "escalationRate" | "lineItem">[],
-  enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number, retentionRate?: number
+  enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number, retentionRate?: number, staffingRows?: StaffingRow[],
 ): number[] {
   const facilRows = (expenseRows as ExpenseRow[]).filter(r => r.enabled && r.category === "occupancy_facility");
   const result: number[] = [];
@@ -741,19 +752,21 @@ export function computeFacilityCostByYear(
   for (let y = 0; y < yearCount; y++) {
     const ns = computeNewStudents(enrollment, rr, y);
     const rs = computeReturningStudents(enrollment, rr, y);
-    result.push(computeExpenseForYear(facilRows, y, enrollment[y], revenueByYear[y], costInflationPct, ns, rs));
+    const fte = staffingRows ? computeTotalFTE(staffingRows, y, enrollment[y]) : undefined;
+    result.push(computeExpenseForYear(facilRows, y, enrollment[y], revenueByYear[y], costInflationPct, ns, rs, fte));
   }
   return result;
 }
 
 export function computeInstructionalCostByYear(
   expenseRows: Pick<ExpenseRow, "enabled" | "category" | "driverType" | "amounts" | "escalationRate" | "lineItem">[],
-  enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number
+  enrollment: number[], revenueByYear: number[], yearCount: number, costInflationPct?: number, staffingRows?: StaffingRow[],
 ): number[] {
   const instrRows = (expenseRows as ExpenseRow[]).filter(r => r.enabled && r.category === "instructional_program");
   const result: number[] = [];
   for (let y = 0; y < yearCount; y++) {
-    result.push(computeExpenseForYear(instrRows, y, enrollment[y], revenueByYear[y], costInflationPct));
+    const fte = staffingRows ? computeTotalFTE(staffingRows, y, enrollment[y]) : undefined;
+    result.push(computeExpenseForYear(instrRows, y, enrollment[y], revenueByYear[y], costInflationPct, undefined, undefined, fte));
   }
   return result;
 }

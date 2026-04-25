@@ -189,7 +189,7 @@ export const privateSchoolFixture: TestModelPayload = {
     { id: "e5", category: "instructional_program", lineItem: "Curriculum", enabled: true, driverType: "per_student", amounts: [600, 618, 637, 656, 675] },
     { id: "e6", category: "technology", lineItem: "Technology", enabled: true, driverType: "per_student", amounts: [400, 412, 424, 437, 450] },
     { id: "e7", category: "administrative_general", lineItem: "Marketing", enabled: true, driverType: "annual_fixed", amounts: [15000, 15450, 15914, 16391, 16883] },
-    { id: "e8", category: "administrative_general", lineItem: "Professional Development", enabled: true, driverType: "annual_fixed", amounts: [8000, 8240, 8487, 8742, 9004] },
+    { id: "e8", category: "administrative_general", lineItem: "Professional Development", enabled: true, driverType: "per_fte", amounts: [1500, 1500, 1500, 1500, 1500] },
     { id: "e9", category: "administrative_general", lineItem: "Accounting & Legal", enabled: true, driverType: "annual_fixed", amounts: [12000, 12360, 12731, 13113, 13506] },
   ],
   capitalAndDebtRows: [

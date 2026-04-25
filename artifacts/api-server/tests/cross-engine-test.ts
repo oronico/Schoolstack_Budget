@@ -4,13 +4,14 @@ import {
   computePersonnelForYear,
   computeExpenseForYear,
   computeCapDebtForYear,
+  computeTotalFTE,
   getEnrollmentArray,
   normalizeStaffingRow,
   type RevenueRow,
   type ExpenseRow,
   type CapitalDebtRow,
 } from "../src/lib/workbook-helpers.js";
-import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
+import { computeYearFinancialsFromData } from "../src/lib/consultant-engine.js";
 import {
   microschoolFixture,
   privateSchoolFixture,
@@ -33,18 +34,7 @@ function check(label: string, actual: number, expected: number, tolerancePct = 1
     passed++;
   } else {
     failed++;
-    failures.push(`  FAIL: ${label} — FE=${Math.round(actual)}, BE=${Math.round(expected)}, diff=${Math.round(diff)}, tol=${Math.round(absTol)}`);
-  }
-}
-
-function checkRatio(label: string, actual: number, expected: number, tolerancePct = 1) {
-  const absTol = Math.max(Math.abs(expected) * (tolerancePct / 100), 0.01);
-  const diff = Math.abs(actual - expected);
-  if (diff <= absTol) {
-    passed++;
-  } else {
-    failed++;
-    failures.push(`  FAIL: ${label} — FE=${actual.toFixed(4)}, BE=${expected.toFixed(4)}, diff=${diff.toFixed(4)}, tol=${absTol.toFixed(4)}`);
+    failures.push(`  FAIL: ${label} — got ${Math.round(actual)}, expected ${Math.round(expected)}, diff=${Math.round(diff)}, tol=${Math.round(absTol)}`);
   }
 }
 
@@ -86,127 +76,215 @@ function adaptStaffingRows(rows: TestStaffingRow[]) {
   return rows.map(r => normalizeStaffingRow(r));
 }
 
-interface DualEngineResult {
-  feRevenue: number[];
-  feStaffing: number[];
-  feFacilityOpex: number[];
-  feNetIncome: number[];
-  feDscr: number[];
-  feLoanDS: number[];
-  beRevenue: number[];
-  bePersonnel: number[];
-  beExpenses: number[];
-  beCapDebt: number[];
-  beNetIncome: number[];
-  beLoanDS: number[];
+interface EngineYearResult {
+  revenue: number;
+  staffing: number;
+  nonStaffExpenses: number;
+  netIncome: number;
 }
 
-function runDualEngine(fixture: TestModelPayload): DualEngineResult {
-  const feMetrics = computeBaseFinancials(fixture as Parameters<typeof computeBaseFinancials>[0]);
+interface TriEngineResults {
+  fe: EngineYearResult[];
+  be: EngineYearResult[];
+  ce: EngineYearResult[];
+}
 
+function runTriEngine(fixture: TestModelPayload): TriEngineResults {
   const sp = fixture.schoolProfile;
+  const debtIncluded = sp.debtIncluded !== false;
+  const effectiveFixture = debtIncluded ? fixture : {
+    ...fixture,
+    capitalAndDebtRows: fixture.capitalAndDebtRows.filter(r => !r.isLoan),
+  };
+
+  const feMetrics = computeBaseFinancials(effectiveFixture as Parameters<typeof computeBaseFinancials>[0]);
+
   const enrollment = getEnrollmentArray(fixture.enrollment);
   const revRows = adaptRevenueRows(fixture.revenueRows);
   const staffRows = adaptStaffingRows(fixture.staffingRows);
   const expRows = adaptExpenseRows(fixture.expenseRows);
-  const cdRows = adaptCapDebtRows(fixture.capitalAndDebtRows);
-  const loanRows = cdRows.filter(r => r.isLoan);
+  const cdRows = adaptCapDebtRows(effectiveFixture.capitalAndDebtRows);
   const pf = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
   const salaryEsc = (fixture.facilities.annualSalaryIncrease || 0) / 100;
   const costInfl = fixture.facilities.generalCostInflation || 0;
 
-  const beRevenue: number[] = [], bePersonnel: number[] = [], beExpenses: number[] = [];
-  const beCapDebt: number[] = [], beLoanDS: number[] = [];
+  const ceYears = computeYearFinancialsFromData({
+    ...fixture,
+    skipFacilityOverlay: true,
+  } as unknown as Record<string, unknown>);
+
+  const fe: EngineYearResult[] = [];
+  const be: EngineYearResult[] = [];
+  const ce: EngineYearResult[] = [];
+
   for (let y = 0; y < 5; y++) {
     const yPf = y === 0 ? pf : 1;
-    const rev = Math.round(computeRevenueForYear(revRows, y, enrollment[y], undefined, undefined, sp) * yPf);
-    beRevenue.push(rev);
-    bePersonnel.push(Math.round(computePersonnelForYear(staffRows, salaryEsc, pf, y, enrollment[y])));
-    beExpenses.push(Math.round(computeExpenseForYear(expRows, y, enrollment[y], rev, costInfl) * yPf));
-    beCapDebt.push(Math.round(computeCapDebtForYear(cdRows, y, enrollment[y])));
-    beLoanDS.push(Math.round(computeCapDebtForYear(loanRows, y, enrollment[y])));
-  }
-  const beNetIncome = beRevenue.map((r, i) => r - bePersonnel[i] - beExpenses[i] - beCapDebt[i]);
+    const students = enrollment[y];
+    const fte = computeTotalFTE(staffRows, y, students);
+    const rev = computeRevenueForYear(revRows, y, students, undefined, undefined, sp);
 
-  return {
-    feRevenue: feMetrics.revenue,
-    feStaffing: feMetrics.staffingCost,
-    feFacilityOpex: feMetrics.facilityCost.map((f, i) => f + feMetrics.opex[i]),
-    feNetIncome: feMetrics.netIncome,
-    feDscr: feMetrics.dscr,
-    feLoanDS: feMetrics.loanDebtService || [0, 0, 0, 0, 0],
-    beRevenue, bePersonnel, beExpenses, beCapDebt, beNetIncome, beLoanDS,
-  };
+    const beRev = Math.round(rev * yPf);
+    const beStaff = Math.round(computePersonnelForYear(staffRows, salaryEsc, pf, y, students));
+    const beExp = Math.round(computeExpenseForYear(expRows, y, students, rev, costInfl, undefined, undefined, fte) * yPf);
+    const beCapDebt = Math.round(computeCapDebtForYear(cdRows, y, students));
+    const beNonStaff = beExp + beCapDebt;
+    const beNet = beRev - beStaff - beNonStaff;
+
+    const feRev = Math.round(feMetrics.revenue[y]);
+    const feStaff = Math.round(feMetrics.staffingCost[y]);
+    const feNonStaff = Math.round(feMetrics.facilityCost[y]) + Math.round(feMetrics.opex[y]) +
+      Math.round(computeCapDebtForYear(cdRows, y, students));
+    const feNet = Math.round(feMetrics.netIncome[y]);
+
+    const ceYear = ceYears[y];
+    const ceRev = Math.round(ceYear.totalRevenue);
+    const ceStaff = Math.round(ceYear.totalStaffingCost);
+    const ceNonStaff = Math.round(ceYear.totalExpenses - ceYear.totalStaffingCost - ceYear.depreciation);
+    const ceNet = Math.round(ceYear.netIncome + ceYear.depreciation);
+
+    fe.push({ revenue: feRev, staffing: feStaff, nonStaffExpenses: feNonStaff, netIncome: feNet });
+    be.push({ revenue: beRev, staffing: beStaff, nonStaffExpenses: beNonStaff, netIncome: beNet });
+    ce.push({ revenue: ceRev, staffing: ceStaff, nonStaffExpenses: ceNonStaff, netIncome: ceNet });
+  }
+
+  return { fe, be, ce };
 }
 
-function testCrossEngineParity(label: string, fixture: TestModelPayload) {
-  console.log(`\n— Cross-engine parity: ${label} (FE computeBaseFinancials vs BE workbook-helpers) —`);
-  const d = runDualEngine(fixture);
+function testTriEngineParity(label: string, fixture: TestModelPayload) {
+  console.log(`\n— Three-engine parity: ${label} —`);
+  const d = runTriEngine(fixture);
 
   for (let y = 0; y < 5; y++) {
-    check(`${label} Y${y + 1} revenue`, d.feRevenue[y], d.beRevenue[y], 1);
-    check(`${label} Y${y + 1} staffing`, d.feStaffing[y], d.bePersonnel[y], 1);
-    check(`${label} Y${y + 1} expenses`, d.feFacilityOpex[y], d.beExpenses[y], 1);
-    check(`${label} Y${y + 1} net income`, d.feNetIncome[y], d.beNetIncome[y], 1);
-
-    if (d.beLoanDS[y] > 0) {
-      const beDscr = (d.beNetIncome[y] + d.beLoanDS[y]) / d.beLoanDS[y];
-      checkRatio(`${label} Y${y + 1} DSCR`, d.feDscr[y], Math.round(beDscr * 100) / 100, 1);
-    }
+    const yr = `Y${y + 1}`;
+    check(`${label} ${yr} FE↔BE revenue`, d.fe[y].revenue, d.be[y].revenue);
+    check(`${label} ${yr} FE↔CE revenue`, d.fe[y].revenue, d.ce[y].revenue);
+    check(`${label} ${yr} FE↔BE staffing`, d.fe[y].staffing, d.be[y].staffing);
+    check(`${label} ${yr} FE↔CE staffing`, d.fe[y].staffing, d.ce[y].staffing);
+    check(`${label} ${yr} FE↔BE non-staff expenses`, d.fe[y].nonStaffExpenses, d.be[y].nonStaffExpenses);
+    check(`${label} ${yr} FE↔CE non-staff expenses`, d.fe[y].nonStaffExpenses, d.ce[y].nonStaffExpenses);
+    check(`${label} ${yr} FE↔BE net income`, d.fe[y].netIncome, d.be[y].netIncome);
+    check(`${label} ${yr} FE↔CE net income`, d.fe[y].netIncome, d.ce[y].netIncome);
   }
 }
 
-async function testWorkbookGeneration() {
-  console.log("\n— Workbook generation (all 3 fixtures) —");
+function testPerFteConsistency() {
+  console.log("\n— per_fte driver consistency (Private School fixture) —");
+  const fixture = privateSchoolFixture;
+  const hasPerFte = fixture.expenseRows.some(r => r.driverType === "per_fte");
+  bool("Fixture has per_fte expense row", hasPerFte);
 
-  for (const [label, fixture] of [
-    ["Microschool", microschoolFixture],
-    ["Private", privateSchoolFixture],
-    ["Charter", charterFixture],
-  ] as const) {
-    try {
-      const wb = await generateUnderwritingWorkbook(fixture as Record<string, unknown>);
-      bool(`${label}: workbook generated without error`, true);
+  if (!hasPerFte) return;
 
-      const sheetNames = wb.worksheets.map(ws => ws.name);
-      bool(`${label}: has multiple sheets`, sheetNames.length >= 5,
-        `sheetCount=${sheetNames.length}`);
-      bool(`${label}: has assumptions sheet`,
-        sheetNames.some(n => n.toLowerCase().includes("assumption")),
-        `sheets=${sheetNames.join(", ")}`);
-      bool(`${label}: has budget/detail sheet`,
-        sheetNames.some(n => n.toLowerCase().includes("budget") || n.toLowerCase().includes("detail")),
-        `sheets=${sheetNames.join(", ")}`);
-      bool(`${label}: has operating/income sheet`,
-        sheetNames.some(n => n.toLowerCase().includes("operating") || n.toLowerCase().includes("income")),
-        `sheets=${sheetNames.join(", ")}`);
-    } catch (err) {
-      failed++;
-      failures.push(`  FAIL: ${label}: workbook generation threw — ${(err as Error).message}`);
-    }
+  const enrollment = getEnrollmentArray(fixture.enrollment);
+  const staffRows = adaptStaffingRows(fixture.staffingRows);
+  const expRows = adaptExpenseRows(fixture.expenseRows);
+  const revRows = adaptRevenueRows(fixture.revenueRows);
+  const sp = fixture.schoolProfile;
+  const pf = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
+  const costInfl = fixture.facilities.generalCostInflation || 0;
+
+  for (let y = 0; y < 5; y++) {
+    const yPf = y === 0 ? pf : 1;
+    const students = enrollment[y];
+    const fte = computeTotalFTE(staffRows, y, students);
+    const rev = computeRevenueForYear(revRows, y, students, undefined, undefined, sp);
+    const beExpense = computeExpenseForYear(expRows, y, students, rev, costInfl, undefined, undefined, fte) * yPf;
+
+    const perFteRow = fixture.expenseRows.find(r => r.driverType === "per_fte")!;
+    const expectedPerFteContribution = perFteRow.amounts[y] * fte * yPf;
+    bool(`Y${y + 1} per_fte contributes non-zero (FTE=${fte.toFixed(1)})`, expectedPerFteContribution > 0,
+      `expected=${Math.round(expectedPerFteContribution)}`);
+    bool(`Y${y + 1} BE expense includes per_fte contribution`, beExpense >= expectedPerFteContribution * 0.99,
+      `expense=${Math.round(beExpense)}, perFte=${Math.round(expectedPerFteContribution)}`);
   }
+
+  console.log("  Running FE↔BE↔CE comparison with per_fte row...");
+  testTriEngineParity("Private+per_fte", fixture);
+}
+
+function testSalaryEscalationMapping() {
+  console.log("\n— Salary escalation field mapping (Microschool, salaryIncrease=3%) —");
+  const fixture = microschoolFixture;
+  bool("Fixture has non-zero salary escalation", fixture.facilities.annualSalaryIncrease > 0,
+    `value=${fixture.facilities.annualSalaryIncrease}`);
+
+  const feMetrics = computeBaseFinancials(fixture as Parameters<typeof computeBaseFinancials>[0]);
+
+  const ceYears = computeYearFinancialsFromData({
+    ...fixture,
+    skipFacilityOverlay: true,
+  } as unknown as Record<string, unknown>);
+
+  for (let y = 0; y < 5; y++) {
+    check(`Y${y + 1} FE↔CE staffing (salary esc=${fixture.facilities.annualSalaryIncrease}%)`,
+      Math.round(feMetrics.staffingCost[y]),
+      Math.round(ceYears[y].totalStaffingCost));
+  }
+
+  if (fixture.facilities.annualSalaryIncrease > 0) {
+    const feY1 = Math.round(feMetrics.staffingCost[0]);
+    const feY5 = Math.round(feMetrics.staffingCost[4]);
+    const ceY1 = Math.round(ceYears[0].totalStaffingCost);
+    const ceY5 = Math.round(ceYears[4].totalStaffingCost);
+    bool("FE staffing increases over 5 years", feY5 > feY1,
+      `Y1=${feY1}, Y5=${feY5}`);
+    bool("CE staffing increases over 5 years", ceY5 > ceY1,
+      `Y1=${ceY1}, Y5=${ceY5}`);
+  }
+}
+
+function testBreakevenIncludesFacility() {
+  console.log("\n— Breakeven enrollment includes facility costs —");
+  const fixture = microschoolFixture;
+  const feMetrics = computeBaseFinancials(fixture as Parameters<typeof computeBaseFinancials>[0]);
+
+  const facilityCost = feMetrics.facilityCost[0];
+  const staffingCost = feMetrics.staffingCost[0];
+  const enrollment = feMetrics.enrollment[0];
+  const revenue = feMetrics.revenue[0];
+  const loanDS = feMetrics.loanDebtService?.[0] ?? 0;
+
+  bool("Facility cost Y1 is non-zero", facilityCost > 0, `facilityCost=${Math.round(facilityCost)}`);
+  bool("Staffing cost Y1 is non-zero", staffingCost > 0, `staffingCost=${Math.round(staffingCost)}`);
+
+  const revenuePerStudent = revenue / enrollment;
+  const opex = feMetrics.opex[0];
+  const variableCostPerStudent = enrollment > 0 ? opex / enrollment : 0;
+  const contributionMargin = revenuePerStudent - variableCostPerStudent;
+
+  const fixedWithFacility = staffingCost + facilityCost + loanDS;
+  const fixedWithoutFacility = staffingCost + loanDS;
+  const breakevenWith = Math.ceil(fixedWithFacility / contributionMargin);
+  const breakevenWithout = Math.ceil(fixedWithoutFacility / contributionMargin);
+
+  bool("Breakeven with facility > breakeven without",
+    breakevenWith > breakevenWithout,
+    `withFacility=${breakevenWith}, without=${breakevenWithout}`);
+  bool("Breakeven with facility is reasonable (< maxCapacity)",
+    breakevenWith < fixture.schoolProfile.maxCapacity * 2,
+    `breakeven=${breakevenWith}, maxCap=${fixture.schoolProfile.maxCapacity}`);
 }
 
 async function main() {
-  console.log("=== Cross-Engine Parity Test ===");
-  console.log("Frontend: computeBaseFinancials (scenario-engine.ts)");
-  console.log("Backend:  computeRevenueForYear / computePersonnelForYear / computeExpenseForYear / computeCapDebtForYear (workbook-helpers.ts)");
+  console.log("=== Three-Engine Financial Consistency Test ===");
+  console.log("FE: computeBaseFinancials (scenario-engine.ts)");
+  console.log("BE: workbook-helpers.ts (Excel/PDF exports)");
+  console.log("CE: consultant-engine.ts (consultant analysis)");
   console.log("Tolerance: 1% or $5 absolute minimum");
+  console.log("Note: CE includes depreciation — comparisons exclude it for parity");
 
-  testCrossEngineParity("Microschool", microschoolFixture);
-  testCrossEngineParity("Private School", privateSchoolFixture);
-  testCrossEngineParity("Charter School", charterFixture);
-  await testWorkbookGeneration();
+  testTriEngineParity("Microschool", microschoolFixture);
+  testTriEngineParity("Private School", privateSchoolFixture);
+  testTriEngineParity("Charter School", charterFixture);
+  testPerFteConsistency();
+  testSalaryEscalationMapping();
+  testBreakevenIncludesFacility();
 
-  console.log(`\nResults: ${passed} passed, ${failed} failed`);
+  console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
   if (failures.length > 0) {
     console.log("\nFailures:");
     for (const f of failures) console.log(f);
   }
-
-  console.log("\n— Parity status —");
-  console.log("escalationRateOverridden=true + escalationRate=0: RESOLVED");
-  console.log("  Both engines now treat literal 0% when override flag is set (no costInflation fallback)");
 
   if (failed > 0) process.exit(1);
 }

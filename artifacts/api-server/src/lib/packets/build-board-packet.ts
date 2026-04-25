@@ -9,6 +9,7 @@ import {
   normalizeStaffingRow,
   computeNewStudents,
   computeReturningStudents,
+  computeTotalFTE,
 } from "../workbook-helpers";
 import { buildPacketData } from "./build-packet-data";
 import type { PacketData, PacketSection, PacketTable, PacketTableRow, LinkedMetric, SectionId } from "./packet-types";
@@ -212,8 +213,8 @@ function buildScenarioSnapshots(md: ModelData, co: ConsultantOutput): ScenarioSn
     (r) => normalizeStaffingRow(r as unknown as Record<string, unknown>),
   );
   const prorationFactor = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 12) / 12 : 1;
-  const salaryEsc = (sp as Record<string, unknown>).salaryEscalation as number | undefined;
-  const costInflPct = (sp as Record<string, unknown>).costInflationPct as number | undefined;
+  const salaryEsc = ((md.facilities as Record<string, unknown> | undefined)?.annualSalaryIncrease as number | undefined ?? 0) / 100;
+  const costInflPct = (md.facilities as Record<string, unknown> | undefined)?.generalCostInflation as number | undefined ?? 0;
   const boardRR = (md.enrollment as Record<string, unknown> | undefined)?.retentionRate as number | undefined ?? 85;
 
   for (const scenario of scenarios.slice(0, 3)) {
@@ -227,7 +228,8 @@ function buildScenarioSnapshots(md: ModelData, co: ConsultantOutput): ScenarioSn
       const revenue = baseRevenue * (1 + (scenario.tuitionAdjustment || 0) / 100);
       const baseStaffing = computePersonnelForYear(normalized, salaryEsc || 0, prorationFactor, y, students);
       const staffing = baseStaffing * (1 + (scenario.staffingAdjustment || 0) / 100);
-      const baseOpex = computeExpenseForYear(md.expenseRows || [], y, students, revenue, costInflPct, bns, brs);
+      const bfte = computeTotalFTE(normalized, y, students);
+      const baseOpex = computeExpenseForYear(md.expenseRows || [], y, students, revenue, costInflPct, bns, brs, bfte);
       const opex = baseOpex * (1 + (scenario.expenseAdjustment || 0) / 100);
       const baseCapDebt = computeCapDebtForYear(md.capitalAndDebtRows || [], y, students);
       const capDebt = baseCapDebt * (1 + (scenario.facilityAdjustment || 0) / 100);

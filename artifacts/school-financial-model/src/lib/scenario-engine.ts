@@ -430,7 +430,7 @@ function computeBreakEvenEnrollment(m: ScenarioMetrics): number {
   const y1Students = m.enrollment[0] || 0;
   if (y1Students <= 0) return -1;
   const revenuePerStudent = m.revenue[0] / y1Students;
-  const fixedCosts = m.staffingCost[0] + (m.loanDebtService?.[0] ?? 0);
+  const fixedCosts = m.staffingCost[0] + (m.facilityCost?.[0] ?? 0) + (m.loanDebtService?.[0] ?? 0);
   const variableOpex = m.opex[0] ?? 0;
   const variableCostPerStudent = y1Students > 0 ? variableOpex / y1Students : 0;
   const contributionMargin = revenuePerStudent - variableCostPerStudent;
