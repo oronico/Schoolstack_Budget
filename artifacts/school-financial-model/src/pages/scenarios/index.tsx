@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -20,6 +21,8 @@ import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type N
 import { compareScenarios } from "@/lib/scenario-compare";
 import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
 import type { FullModelData } from "@/pages/model-wizard/schema";
+import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
+import type { WhatIfOverrides } from "@/lib/whatif-engine";
 
 const DEFAULT_SCENARIO: ScenarioAdjustments = {
   name: "",
@@ -129,6 +132,7 @@ export function ScenarioPage() {
     query: { queryKey: [`/api/models/${modelId || 0}`], enabled: !!modelId },
   });
   const updateMutation = useUpdateModel();
+  const queryClient = useQueryClient();
 
   const [scenarios, setScenarios] = useState<ScenarioAdjustments[]>([]);
   const [initialized, setInitialized] = useState(false);
@@ -232,6 +236,45 @@ export function ScenarioPage() {
     setScenarios(updated);
     persistScenarios(updated);
   };
+
+  const handleApplyWhatIfFromScenarios = useCallback(
+    async (adjustedData: FullModelData) => {
+      if (!modelId) return;
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: adjustedData as Record<string, unknown> },
+      });
+      await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+    },
+    [modelId, updateMutation, queryClient]
+  );
+
+  const handleSaveAsScenarioFromWhatIf = useCallback(
+    async (overrides: WhatIfOverrides, name: string) => {
+      if (!modelId) return;
+      // Read freshest snapshot from the query cache to avoid losing any concurrently
+      // saved customScenarios that haven't yet propagated to the `model` prop.
+      const fresh = queryClient.getQueryData<{ data?: Record<string, unknown> }>([
+        `/api/models/${modelId}`,
+      ]);
+      const freshData = (fresh?.data ?? modelData) as Record<string, unknown>;
+      const existing = freshData.customScenarios as
+        | Array<{ name: string; overrides: WhatIfOverrides; createdAt: string }>
+        | undefined;
+      const updated = [
+        ...(existing || []),
+        { name, overrides, createdAt: new Date().toISOString() },
+      ];
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: {
+          data: { ...freshData, customScenarios: updated } as Record<string, unknown>,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+    },
+    [modelId, modelData, updateMutation, queryClient]
+  );
 
   const resetScenario = (idx: number) => {
     const updated = scenarios.map((s, i) =>
@@ -687,6 +730,14 @@ export function ScenarioPage() {
           </div>
         )}
       </div>
+      {model && initialized && (
+        <WhatIfTrigger
+          data={modelData}
+          modelId={modelId}
+          onApplyToModel={handleApplyWhatIfFromScenarios}
+          onSaveAsScenario={handleSaveAsScenarioFromWhatIf}
+        />
+      )}
     </Layout>
   );
 }

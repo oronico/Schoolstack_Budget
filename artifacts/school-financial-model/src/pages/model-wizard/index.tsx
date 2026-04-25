@@ -15,6 +15,8 @@ import { useAuth } from "@/lib/auth-context";
 
 import { fullModelSchema, type FullModelData } from "./schema";
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
+import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
+import type { WhatIfOverrides } from "@/lib/whatif-engine";
 import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
 
@@ -486,6 +488,46 @@ export function ModelWizardPage() {
     };
   }, [modelId, initialData, currentStep]);
 
+  const handleApplyWhatIfToModel = useCallback(async (adjustedData: FullModelData) => {
+    methods.reset(adjustedData);
+    if (modelId) {
+      const cleaned = stripEmptyValues(JSON.parse(JSON.stringify(adjustedData))) as Record<string, unknown>;
+      const normalized = normalizeEscalationOverrideRows(cleaned);
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: normalized },
+      });
+      setLastSaved(new Date());
+    }
+  }, [methods, modelId, updateMutation]);
+
+  const handleSaveAsScenarioFromWhatIf = useCallback(
+    async (overrides: WhatIfOverrides, name: string) => {
+      if (!modelId) return;
+      const current = methods.getValues() as Record<string, unknown>;
+      const existing = (current.customScenarios as Array<{ name: string; overrides: WhatIfOverrides; createdAt: string }> | undefined) || [];
+      const updated = [
+        ...existing,
+        { name, overrides, createdAt: new Date().toISOString() },
+      ];
+      // Sync the form state immediately so subsequent saves merge against the latest list
+      // rather than a stale snapshot — react-query refetch may not have completed yet.
+      (methods.setValue as unknown as (n: string, v: unknown, opts?: Record<string, unknown>) => void)(
+        "customScenarios",
+        updated,
+        { shouldDirty: false }
+      );
+      const next = { ...current, customScenarios: updated };
+      const cleaned = stripEmptyValues(JSON.parse(JSON.stringify(next))) as Record<string, unknown>;
+      const normalized = normalizeEscalationOverrideRows(cleaned);
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: normalized },
+      });
+    },
+    [modelId, methods, updateMutation]
+  );
+
   if (!modelId) {
     setLocation("/dashboard");
     return null;
@@ -843,6 +885,14 @@ export function ModelWizardPage() {
           )}
         </FormProvider>
       </div>
+      {stepInitialized && currentStep >= 3 && (
+        <WhatIfTrigger
+          data={methods.getValues() as FullModelData}
+          modelId={modelId}
+          onApplyToModel={handleApplyWhatIfToModel}
+          onSaveAsScenario={handleSaveAsScenarioFromWhatIf}
+        />
+      )}
     </Layout>
   );
 }
