@@ -786,39 +786,3 @@ export function WhatIfDrawer({
   );
 }
 
-function ImpactCell({
-  label,
-  base,
-  adjusted,
-  format,
-  isCurrency = true,
-}: {
-  label: string;
-  base: number;
-  adjusted: number;
-  format?: (v: number) => string;
-  isCurrency?: boolean;
-}) {
-  const delta = adjusted - base;
-  const formatter = format || ((v: number) => (isCurrency ? fmtMoney(v) : v.toString()));
-  const deltaFormatter = format || ((v: number) => (isCurrency ? fmtMoneyDelta(v) : v.toFixed(2)));
-  const isPositiveImpact = delta > 0;
-  const isNegativeImpact = delta < 0;
-  return (
-    <div className="bg-card border border-border/60 rounded-lg px-3 py-2">
-      <p className="text-[10px] text-muted-foreground">{label}</p>
-      <p className="font-mono font-semibold text-sm mt-0.5">{formatter(adjusted)}</p>
-      {delta !== 0 && (
-        <p
-          className={cn(
-            "text-[10px] font-mono mt-0.5 flex items-center gap-0.5",
-            isPositiveImpact ? "text-emerald-700" : isNegativeImpact ? "text-red-600" : "text-muted-foreground"
-          )}
-        >
-          {isPositiveImpact ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-          {deltaFormatter(delta)}
-        </p>
-      )}
-    </div>
-  );
-}

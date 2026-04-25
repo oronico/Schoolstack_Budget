@@ -914,7 +914,7 @@ export function ModelWizardPage() {
           )}
         </FormProvider>
       </div>
-      {stepInitialized && currentStep >= 3 && (
+      {stepInitialized && (
         <WhatIfTrigger
           data={methods.getValues() as FullModelData}
           modelId={modelId}

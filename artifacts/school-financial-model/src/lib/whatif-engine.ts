@@ -169,8 +169,18 @@ export function applyWhatIfOverrides(data: FullModelData, overrides: WhatIfOverr
       if (target) {
         const origAmts = target.amounts || [];
         const origEsc = (target.escalationRate ?? 0) as number;
+        // When the user only changes escalation (or only the start year), the
+        // rent basis at startYear should be the *projected* original rent at
+        // that year — not Y1 — so we don't accidentally reset rent to its Y1
+        // value. Only fall back to Y1 when no monthlyRent override is given
+        // AND the change applies from year 1.
+        const projectedOriginalAtStart = origEsc !== 0 && startIdx > 0
+          ? (origAmts[0] ?? 0) * Math.pow(1 + origEsc / 100, startIdx)
+          : (origAmts[startIdx] ?? origAmts[0] ?? 0);
         const newRent =
-          overrides.monthlyRent !== undefined ? Math.max(0, overrides.monthlyRent) : (origAmts[0] ?? 0);
+          overrides.monthlyRent !== undefined
+            ? Math.max(0, overrides.monthlyRent)
+            : projectedOriginalAtStart;
         const newEsc = overrides.rentEscalation !== undefined ? overrides.rentEscalation : origEsc;
         const out: number[] = [];
         for (let i = 0; i < 5; i++) {

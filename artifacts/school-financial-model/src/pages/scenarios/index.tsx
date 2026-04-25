@@ -24,6 +24,8 @@ import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparis
 import type { FullModelData } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 
 const DEFAULT_SCENARIO: ScenarioAdjustments = {
   name: "",
@@ -238,16 +240,44 @@ export function ScenarioPage() {
     persistScenarios(updated);
   };
 
+  const { toast } = useToast();
+
   const handleApplyWhatIfFromScenarios = useCallback(
     async (adjustedData: FullModelData) => {
       if (!modelId) return;
+      // Snapshot prior model from the freshest cache entry so undo restores
+      // exactly what the user had before applying — even if other concurrent
+      // changes landed.
+      const fresh = queryClient.getQueryData<{ data?: Record<string, unknown> }>([
+        `/api/models/${modelId}`,
+      ]);
+      const priorSnapshot = (fresh?.data ?? modelData) as Record<string, unknown>;
       await updateMutation.mutateAsync({
         id: modelId,
         data: { data: adjustedData as Record<string, unknown> },
       });
       await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+      toast({
+        title: "Applied to model",
+        description: "What-If overrides are now part of your saved model.",
+        action: (
+          <ToastAction
+            altText="Undo apply"
+            onClick={async () => {
+              await updateMutation.mutateAsync({
+                id: modelId,
+                data: { data: priorSnapshot },
+              });
+              await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+              toast({ title: "Undone", description: "Your previous model values are restored." });
+            }}
+          >
+            Undo
+          </ToastAction>
+        ),
+      });
     },
-    [modelId, updateMutation, queryClient]
+    [modelId, updateMutation, queryClient, modelData, toast]
   );
 
   const handleSaveAsScenarioFromWhatIf = useCallback(

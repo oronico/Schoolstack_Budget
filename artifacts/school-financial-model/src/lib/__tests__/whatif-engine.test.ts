@@ -246,6 +246,30 @@ describe("whatif-engine: applyWhatIfOverrides — lease overrides", () => {
     expect(amts[4]).toBe(7000);
   });
 
+  it("preserves projected rent basis when only escalation is overridden mid-stream", () => {
+    // Regression: when rentEscalation is overridden with a start year > 1
+    // and no monthlyRent is given, the basis at the start year should be the
+    // *projected* original rent at that year — not Y1 — so the trajectory
+    // continues smoothly instead of resetting to Y1's value.
+    const data = buildBaseModel({
+      expenseRows: [
+        { id: "e1", enabled: true, category: "occupancy_facility", driverType: "monthly", amounts: [10000, 10000, 10000, 10000, 10000], escalationRate: 5 },
+      ],
+    });
+    const adjusted = applyWhatIfOverrides(data, { rentEscalation: 10, rentChangeStartYear: 3 });
+    const rows = adjusted.expenseRows as Array<Record<string, unknown>>;
+    const amts = rows[0].amounts as number[];
+    // Years 1 & 2 unchanged from original projection (5% escalation).
+    expect(amts[0]).toBeCloseTo(10000, 2);
+    expect(amts[1]).toBeCloseTo(10000 * 1.05, 2);
+    // Year 3 picks up the projected basis (10000 * 1.05^2), not 10000.
+    const projY3 = 10000 * Math.pow(1.05, 2);
+    expect(amts[2]).toBeCloseTo(projY3, 2);
+    // Years 4 & 5 escalate from Y3 basis at the new 10% rate.
+    expect(amts[3]).toBeCloseTo(projY3 * 1.10, 2);
+    expect(amts[4]).toBeCloseTo(projY3 * Math.pow(1.10, 2), 2);
+  });
+
   it("compounds rent escalation override from start year", () => {
     const data = buildBaseModel({
       expenseRows: [
