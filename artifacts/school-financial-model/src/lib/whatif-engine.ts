@@ -121,7 +121,8 @@ export function applyWhatIfOverrides(data: FullModelData, overrides: WhatIfOverr
     cloned.enrollment = en as FullModelData["enrollment"];
   }
 
-  // Tuition delta per student (additive on per_student tuition_and_fees rows).
+  // Tuition delta per student (additive on all per-student tuition_and_fees rows,
+  // including per_student, per_new_student, and per_returning_student drivers).
   // The base engine has two paths:
   //   (a) tier-mode (when data.tuitionTiers has rows) — only reads amounts[0] and escalates
   //       per year using `data.tuitionEscalation.rate ?? r.escalationRate`.
@@ -137,8 +138,17 @@ export function applyWhatIfOverrides(data: FullModelData, overrides: WhatIfOverr
       | undefined;
     const globalEsc = tuitionEsc?.rate ?? 0;
     const rows = (cloned.revenueRows || []) as Array<Record<string, unknown>>;
+    const PER_STUDENT_DRIVERS = new Set([
+      "per_student",
+      "per_new_student",
+      "per_returning_student",
+    ]);
     for (const r of rows) {
-      if (r.category === "tuition_and_fees" && r.driverType === "per_student") {
+      if (
+        r.category === "tuition_and_fees" &&
+        typeof r.driverType === "string" &&
+        PER_STUDENT_DRIVERS.has(r.driverType)
+      ) {
         const amts = ((r.amounts as number[] | undefined) || []).slice();
         const rowEsc = (r.escalationRate as number | undefined) ?? 0;
         const effectiveEsc = globalEsc !== 0 ? globalEsc : rowEsc;

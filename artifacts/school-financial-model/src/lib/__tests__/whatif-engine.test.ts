@@ -174,6 +174,79 @@ describe("whatif-engine: applyWhatIfOverrides — tuition delta", () => {
     const rows = adjusted.revenueRows as Array<Record<string, unknown>>;
     expect((rows[0].amounts as number[])[0]).toBe(0);
   });
+
+  it("adds tuition delta to per_new_student tuition rows (no escalation bumps every year)", () => {
+    const data = buildBaseModel({
+      revenueRows: [
+        { id: "rn", enabled: true, category: "tuition_and_fees", driverType: "per_new_student", amounts: [9000, 9200, 9400, 9600, 9800], escalationRate: 0 },
+        { id: "ro", enabled: true, category: "tuition_and_fees", driverType: "per_returning_student", amounts: [8000, 8200, 8400, 8600, 8800], escalationRate: 0 },
+        { id: "other", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [10000, 10000, 10000, 10000, 10000] },
+      ],
+    });
+    const adjusted = applyWhatIfOverrides(data, { tuitionDeltaPerStudent: 500 });
+    const rows = adjusted.revenueRows as Array<Record<string, unknown>>;
+    const newAmts = rows[0].amounts as number[];
+    const retAmts = rows[1].amounts as number[];
+    expect(newAmts[0]).toBe(9500);
+    expect(newAmts[2]).toBe(9900);
+    expect(newAmts[4]).toBe(10300);
+    expect(retAmts[0]).toBe(8500);
+    expect(retAmts[4]).toBe(9300);
+    // Untouched non-tuition row stays the same.
+    expect((rows[2].amounts as number[])[0]).toBe(10000);
+  });
+
+  it("with row escalation set on per_new_student / per_returning_student, bumps amounts[0] only", () => {
+    const data = buildBaseModel({
+      revenueRows: [
+        { id: "rn", enabled: true, category: "tuition_and_fees", driverType: "per_new_student", amounts: [9000, 9000, 9000, 9000, 9000], escalationRate: 5 },
+        { id: "ro", enabled: true, category: "tuition_and_fees", driverType: "per_returning_student", amounts: [8000, 8000, 8000, 8000, 8000], escalationRate: 3 },
+      ],
+    });
+    const adjusted = applyWhatIfOverrides(data, { tuitionDeltaPerStudent: 250 });
+    const rows = adjusted.revenueRows as Array<Record<string, unknown>>;
+    const newAmts = rows[0].amounts as number[];
+    const retAmts = rows[1].amounts as number[];
+    expect(newAmts[0]).toBe(9250);
+    expect(newAmts[1]).toBe(9000);
+    expect(newAmts[4]).toBe(9000);
+    expect(rows[0].escalationRate).toBe(5);
+    expect(retAmts[0]).toBe(8250);
+    expect(retAmts[1]).toBe(8000);
+    expect(retAmts[4]).toBe(8000);
+    expect(rows[1].escalationRate).toBe(3);
+  });
+
+  it("with global tuitionEscalation set, bumps amounts[0] for per_new_student / per_returning_student rows", () => {
+    const base = buildBaseModel({
+      revenueRows: [
+        { id: "rn", enabled: true, category: "tuition_and_fees", driverType: "per_new_student", amounts: [12000, 12000, 12000, 12000, 12000], escalationRate: 0 },
+        { id: "ro", enabled: true, category: "tuition_and_fees", driverType: "per_returning_student", amounts: [11000, 11000, 11000, 11000, 11000], escalationRate: 0 },
+      ],
+    });
+    const data = { ...(base as Record<string, unknown>), tuitionEscalation: { rate: 4 } } as FullModelData;
+    const adjusted = applyWhatIfOverrides(data, { tuitionDeltaPerStudent: 1000 });
+    const rows = adjusted.revenueRows as Array<Record<string, unknown>>;
+    expect((rows[0].amounts as number[])[0]).toBe(13000);
+    expect((rows[0].amounts as number[])[1]).toBe(12000);
+    expect((rows[1].amounts as number[])[0]).toBe(12000);
+    expect((rows[1].amounts as number[])[1]).toBe(11000);
+  });
+
+  it("clamps per_new_student / per_returning_student rows to 0 if delta is more negative than base", () => {
+    const data = buildBaseModel({
+      revenueRows: [
+        { id: "rn", enabled: true, category: "tuition_and_fees", driverType: "per_new_student", amounts: [800, 800, 800, 800, 800] },
+        { id: "ro", enabled: true, category: "tuition_and_fees", driverType: "per_returning_student", amounts: [600, 600, 600, 600, 600] },
+      ],
+    });
+    const adjusted = applyWhatIfOverrides(data, { tuitionDeltaPerStudent: -5000 });
+    const rows = adjusted.revenueRows as Array<Record<string, unknown>>;
+    expect((rows[0].amounts as number[])[0]).toBe(0);
+    expect((rows[0].amounts as number[])[4]).toBe(0);
+    expect((rows[1].amounts as number[])[0]).toBe(0);
+    expect((rows[1].amounts as number[])[4]).toBe(0);
+  });
 });
 
 describe("whatif-engine: detectFacilityRent", () => {

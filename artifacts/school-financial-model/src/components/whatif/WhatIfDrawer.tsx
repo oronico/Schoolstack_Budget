@@ -408,7 +408,7 @@ export function WhatIfDrawer({
                     data-testid="whatif-tuition-slider"
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    Applied to all per-student tuition lines, every year
+                    Applies to all per-student tuition rows (including new vs. returning), every year
                   </p>
                 </div>
               </section>
