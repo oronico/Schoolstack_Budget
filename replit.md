@@ -45,7 +45,9 @@ All in-app guidance uses a warm, school-leader-friendly coaching voice. Key prin
 - **Staffing guardrail**: Note when staffing exceeds 60% of revenue.
 - **Insurance/payroll tax reminder**: Amber card in ExpenseStep.
 - **GlossaryTerm tooltips**: `GlossaryTerm` component (`src/components/coaching/GlossaryTerm.tsx`) provides dotted-underline hover/tap tooltips for financial jargon. Terms defined in `src/lib/coaching/glossary.ts` (~20 entries: FTE, DSCR, COLA, FF&E, ADM, ADA, NNN, etc.). Applied across AssumptionsStep, StaffingStep, ReviewStep, FacilitiesStep, SchoolProfileStep, EnrollmentStep, RevenueStep, and ExpenseStep.
-- **WizardPrepChecklist**: Pre-wizard modal with 5-item "what to have ready" checklist; mid-wizard encouragement banners at Steps 5/6.
+- **WizardPrepChecklist**: Pre-wizard modal with a 5-step "Here's what to expect" overview (no longer a checkable list); single "Let's get started" CTA and "living document" footer tagline. Mid-wizard encouragement banners at Steps 6/7 (post Story-step reorder).
+- **Story-first wizard (11 steps)**: Story → School Details → Assumptions → Enrollment → Revenue → Staffing → Expenses → Review → Consultant → Lender Narrative → Export. Story step (StoryStep.tsx) collects school name, school type, opening story, and founding-question chips, with `WhyThisMatters` callouts on every data step and `IDontKnowYet` affordances where founders commonly stall (Enrollment programs). The Lender Narrative pre-fills mission from the Story's opening narrative.
+- **Wizard step migration**: Models created before the Story step shipped get a one-time `currentStep + 1` bump on first load; the bump is gated by a per-model `wizard:storyMigration:<id>` localStorage marker that is also pre-set at `dashboard.handleCreate` and carried forward by `handleDuplicate`, so brand-new models are never bumped.
 - Lender-specific language is preserved ONLY in: ExportStep, LenderPacketPreview, Lender Packet API output, ConsultantAnalysisView `lenderReadiness`, landing/dashboard product descriptions, and Footer.
 
 ### Ratio-Driven Staffing Ramp

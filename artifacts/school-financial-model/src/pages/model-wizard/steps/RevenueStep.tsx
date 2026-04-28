@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, GraduationCap, Building2, Landmark, Gift, HandCoins, Wallet, AlertTriangle, DollarSign, Vote, Info, Heart, MapPin, Users } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { cn, formatCurrency } from "@/lib/utils";
 import { YEAR_COUNT } from "@workspace/finance";
 import {
@@ -672,6 +673,11 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget. Most founders start with just one or two sources - you can always add more as your school grows.
           </p>
         </div>
+
+        <WhyThisMatters
+          why="Naming every source up front — even the small ones — keeps your model honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
+          revisit="Add new sources as you confirm grants, sponsors, or new program lines."
+        />
 
         {isCharterType && (
           <div className="flex items-start gap-2 p-4 bg-blue-50 rounded-xl border border-blue-200">

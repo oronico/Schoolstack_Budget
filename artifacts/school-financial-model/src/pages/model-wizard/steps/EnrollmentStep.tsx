@@ -3,6 +3,8 @@ import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, TrendingUp, Info, School, ShieldCheck, Users, ClipboardList, Sparkles } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { IDontKnowYet } from "@/components/coaching/IDontKnowYet";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import type { Program } from "../schema";
@@ -525,6 +527,33 @@ export function EnrollmentStep() {
           Define every program you offer - each with its own tuition and enrollment. Full day, half day, drop-in, after school, four-day week - whatever you run. Don't worry about getting this perfect - your budget is a living document you'll refine over time.
         </p>
       </div>
+
+      <WhyThisMatters
+        why="Enrollment is the engine of your model. Every other number — revenue, staffing, even rent per student — moves with it. We'd rather have your honest best guess today than a perfect number you don't have yet."
+        revisit="Update this whenever you finish an enrollment cycle, sign a new lead family, or get a clearer sense of demand."
+      />
+
+      {programs.length === 0 && (
+        <IDontKnowYet
+          label="I don't have programs mapped out yet — start me with one"
+          helperText="We'll add a single 'Full Day' program seeded for your school type. You can rename it, split it, or add more later."
+          appliedMessage="One starter program added — rename or expand below."
+          onApply={() => {
+            const seeded = availableSuggestions[0] || "Full Day";
+            const newProgram: Program = {
+              id: `prog-${Date.now()}`,
+              name: seeded,
+              annualTuition: 0,
+              year1: 0,
+              year2: 0,
+              year3: 0,
+              year4: 0,
+              year5: 0,
+            };
+            setValue("programs", [newProgram], { shouldDirty: true });
+          }}
+        />
+      )}
 
       {!isNewSchool && currentStudents > 0 && programs.length > 0 && !prefillDismissed && programs.every(p => !p.year1 && !p.currentYear) && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">

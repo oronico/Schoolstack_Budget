@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion, TrendingUp, RotateCcw } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
   type ExpenseRowData,
@@ -1036,6 +1037,11 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Expenses & Operations</h2>
         <p className="text-muted-foreground text-lg">First, a few quick questions about your business operations. Then we'll review your expense details.</p>
       </div>
+
+      <WhyThisMatters
+        why="Expenses are where most first-time budgets quietly break — small categories like insurance, technology, and curriculum add up fast. We'll surface the categories typical for your school type so nothing important slips through."
+        revisit="Come back when you sign a lease, switch vendors, or adopt a new curriculum."
+      />
 
       <CollapsibleInfoBox
         icon={TrendingUp}

@@ -370,7 +370,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
         </div>
       )}
 
-      <Section title="School Profile" step={1} icon={<Building2 className="h-5 w-5" />}>
+      <Section title="School Details" step={2} icon={<Building2 className="h-5 w-5" />}>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <Item label="School Name" value={data.schoolProfile?.schoolName} />
           <Item label="Type" value={data.schoolProfile?.schoolType === "other" && data.schoolProfile?.schoolTypeOther ? data.schoolProfile.schoolTypeOther : SCHOOL_TYPE_LABELS[data.schoolProfile?.schoolType] || data.schoolProfile?.schoolType} />

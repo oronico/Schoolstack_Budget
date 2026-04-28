@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, computeEffectiveFte } from "@workspace/finance";
 import {
@@ -236,6 +237,11 @@ export function StaffingStep() {
           Add every person on your team - full-time, part-time, and contract. Include teachers, leaders, support staff, and contractors. We'll calculate total personnel costs automatically. It's okay to start small - many great schools launch with just a founder and one or two team members.
         </p>
       </div>
+
+      <WhyThisMatters
+        why="Salaries and benefits are typically the biggest line in a school budget — often 60–70% of expenses. We've pre-loaded a typical roster for your school type so you have a credible starting point even before you've made hires."
+        revisit="Revisit each time you confirm a hire, change a role's hours, or update your benefits package."
+      />
 
       <CollapsibleCallout
         icon={Lightbulb}

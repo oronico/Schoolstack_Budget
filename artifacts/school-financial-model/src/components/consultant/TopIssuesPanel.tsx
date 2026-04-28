@@ -3,12 +3,17 @@ import { cn } from "@/lib/utils";
 import type { DecisionIssue } from "@workspace/api-client-react";
 
 const STEP_LABELS: Record<number, string> = {
-  1: "Profile",
-  2: "Enrollment",
-  3: "Revenue",
-  4: "Staffing",
-  5: "Expenses & Facilities",
-  6: "Review",
+  1: "Story",
+  2: "School Details",
+  3: "Assumptions",
+  4: "Enrollment",
+  5: "Revenue",
+  6: "Staffing",
+  7: "Expenses",
+  8: "Review",
+  9: "Consultant",
+  10: "Lender Narrative",
+  11: "Export",
 };
 
 const SEVERITY_CONFIG = {

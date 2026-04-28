@@ -38,13 +38,17 @@ const SEVERITY_CONFIG: Record<DiagnosticSeverity, { icon: typeof AlertTriangle; 
 };
 
 const STEP_NAMES: Record<number, string> = {
-  1: "School Profile",
-  2: "Assumptions",
-  3: "Enrollment",
-  4: "Revenue",
-  5: "Staffing",
-  6: "Expenses",
-  7: "Review",
+  1: "Story",
+  2: "School Details",
+  3: "Assumptions",
+  4: "Enrollment",
+  5: "Revenue",
+  6: "Staffing",
+  7: "Expenses",
+  8: "Review",
+  9: "Consultant",
+  10: "Lender Narrative",
+  11: "Export",
 };
 
 function DiagnosticCard({ finding, onNavigate, whatIf }: { finding: DiagnosticFinding; onNavigate?: (step: number) => void; whatIf?: WhatIfSuggestion }) {

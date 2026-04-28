@@ -205,6 +205,18 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
   const formValues = watch();
   const narrative = (formValues.budgetNarrative || {}) as Record<string, string>;
 
+  // Pre-fill missionAndVision from the Story step's openingStory when it's still empty,
+  // so founders don't have to rewrite their answer.
+  useEffect(() => {
+    const opening = (narrative.openingStory || "").trim();
+    const mission = (narrative.missionAndVision || "").trim();
+    if (opening && !mission) {
+      setValue("budgetNarrative.missionAndVision", opening, { shouldDirty: true });
+    }
+    // Run once when the step mounts and we have data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleFlagResponse = (flag: AssumptionFlag, reason: string) => {
     const flagKey = `${flag.flagType}:${flag.field}`;
     const updated = { ...flagResponses, [flagKey]: reason };
@@ -260,10 +272,10 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
           <BookOpen className="h-7 w-7 text-amber-700" />
         </div>
         <h2 className="font-display text-2xl font-bold text-foreground">
-          Budget Narrative
+          Lender Narrative
         </h2>
         <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-          Reviewers read the story before the numbers. Explain your assumptions in your own words so anyone reviewing your model understands the "why" behind your financial plan.
+          You already shared your school's story at the start. This is the polished version — the one lenders, board members, and grant reviewers will read alongside your numbers. We've pre-filled what we can from your earlier answers.
         </p>
       </div>
 

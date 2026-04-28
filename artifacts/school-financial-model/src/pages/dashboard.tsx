@@ -12,7 +12,20 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   archived: { label: "Archived", className: "bg-gray-100 text-gray-500" },
 };
 
-const STEP_LABELS = ["Profile", "Enrollment", "Revenue", "Staffing", "Expenses", "Review", "Analysis", "Export"];
+const STEP_LABELS = [
+  "Story",
+  "School Details",
+  "Assumptions",
+  "Enrollment",
+  "Revenue",
+  "Staffing",
+  "Expenses",
+  "Review",
+  "Consultant",
+  "Lender Narrative",
+  "Export",
+];
+const TOTAL_STEPS = STEP_LABELS.length;
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -51,6 +64,14 @@ export function DashboardPage() {
           data: {}
         }
       });
+      // Mark this model as already past the legacy Story-step migration so
+      // the wizard's load-time bump logic never fires for brand-new models
+      // created in the new (Story-first) flow.
+      try {
+        window.localStorage.setItem(`wizard:storyMigration:${newModel.id}`, "1");
+      } catch {
+        /* noop */
+      }
       setLocation(`/model/${newModel.id}`);
     } catch (e) {
       console.error(e);
@@ -67,6 +88,17 @@ export function DashboardPage() {
   const handleDuplicate = async (id: number) => {
     try {
       const newModel = await duplicateMutation.mutateAsync({ id });
+      // Carry the source model's migration marker forward so a duplicated
+      // legacy model isn't double-bumped, and so a duplicated new-flow model
+      // isn't legacy-bumped on first open.
+      try {
+        const sourceMarked = window.localStorage.getItem(`wizard:storyMigration:${id}`) === "1";
+        if (sourceMarked) {
+          window.localStorage.setItem(`wizard:storyMigration:${newModel.id}`, "1");
+        }
+      } catch {
+        /* noop */
+      }
       refetch();
     } catch (e) {
       console.error(e);
@@ -221,7 +253,7 @@ export function DashboardPage() {
               {models?.map(model => {
                 const status = statusConfig[model.status] || statusConfig.draft;
                 const isArchived = model.status === "archived";
-                const stepProgress = Math.round(((model.currentStep || 1) / 8) * 100);
+                const stepProgress = Math.round(((model.currentStep || 1) / TOTAL_STEPS) * 100);
 
                 return (
                   <div key={model.id} className={`group flex flex-col bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 ${isArchived ? "opacity-70" : ""}`}>
@@ -239,8 +271,8 @@ export function DashboardPage() {
                       </h3>
                       <div className="mb-3">
                         <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-                          <span>{STEP_LABELS[(model.currentStep || 1) - 1] || "Profile"}</span>
-                          <span>Step {model.currentStep || 1} of 8</span>
+                          <span>{STEP_LABELS[(model.currentStep || 1) - 1] || "Story"}</span>
+                          <span>Step {model.currentStep || 1} of {TOTAL_STEPS}</span>
                         </div>
                         <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
                           <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${stepProgress}%` }} />

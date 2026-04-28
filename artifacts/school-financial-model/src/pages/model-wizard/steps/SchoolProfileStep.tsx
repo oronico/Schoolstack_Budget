@@ -4,6 +4,7 @@ import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/component
 import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb, Heart } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit } from "../schema";
 
@@ -676,6 +677,11 @@ export function SchoolProfileStep() {
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Tell Us About Your School</h2>
         <p className="text-muted-foreground text-lg">We'll tailor everything to your school's type, stage, and structure. There are no wrong answers here - just tell us where you are today, and we'll meet you there.</p>
       </div>
+
+      <WhyThisMatters
+        why="Your state, school type, and stage shape every default we recommend — from per-pupil funding bands and salary benchmarks to staffing ratios and rent norms. Getting these right up front means the rest of the wizard is pre-tuned for schools like yours."
+        revisit="If your governance changes (for example, you decide to pursue a charter or apply for nonprofit status), come back here first."
+      />
 
       <div>
         <FormInput 

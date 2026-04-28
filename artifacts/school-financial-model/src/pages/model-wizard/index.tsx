@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { SchoolProfileStep } from "./steps/SchoolProfileStep";
 import { EnrollmentStep } from "./steps/EnrollmentStep";
+import { StoryStep } from "./steps/StoryStep";
 
 const AssumptionsStep = lazy(() => import("./steps/AssumptionsStep").then(m => ({ default: m.AssumptionsStep })));
 const RevenueStep = lazy(() => import("./steps/RevenueStep").then(m => ({ default: m.RevenueStep })));
@@ -95,17 +96,23 @@ function normalizeEscalationOverrideRows(data: Record<string, unknown>): Record<
 type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null };
 
 const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[] = [
-  { id: 1, title: "Profile", component: SchoolProfileStep },
-  { id: 2, title: "Assumptions", component: AssumptionsStep as ComponentType<StepProps> },
-  { id: 3, title: "Enrollment", component: EnrollmentStep },
-  { id: 4, title: "Revenue", component: RevenueStep as ComponentType<StepProps> },
-  { id: 5, title: "Staffing", component: StaffingStep as ComponentType<StepProps> },
-  { id: 6, title: "Expenses", component: ExpenseStep as ComponentType<StepProps> },
-  { id: 7, title: "Review", component: ReviewStep as ComponentType<StepProps> },
-  { id: 8, title: "Consultant", component: ConsultantStep as ComponentType<StepProps> },
-  { id: 9, title: "Narrative", component: NarrativeStep as ComponentType<StepProps> },
-  { id: 10, title: "Export", component: ExportStep as ComponentType<StepProps> },
+  { id: 1, title: "Story", component: StoryStep as ComponentType<StepProps> },
+  { id: 2, title: "School Details", component: SchoolProfileStep },
+  { id: 3, title: "Assumptions", component: AssumptionsStep as ComponentType<StepProps> },
+  { id: 4, title: "Enrollment", component: EnrollmentStep },
+  { id: 5, title: "Revenue", component: RevenueStep as ComponentType<StepProps> },
+  { id: 6, title: "Staffing", component: StaffingStep as ComponentType<StepProps> },
+  { id: 7, title: "Expenses", component: ExpenseStep as ComponentType<StepProps> },
+  { id: 8, title: "Review", component: ReviewStep as ComponentType<StepProps> },
+  { id: 9, title: "Consultant", component: ConsultantStep as ComponentType<StepProps> },
+  { id: 10, title: "Lender Narrative", component: NarrativeStep as ComponentType<StepProps> },
+  { id: 11, title: "Export", component: ExportStep as ComponentType<StepProps> },
 ];
+
+const REVIEW_STEP_ID = 8;
+const CONSULTANT_STEP_ID = 9;
+const NARRATIVE_STEP_ID = 10;
+const EXPORT_STEP_ID = 11;
 
 function sendModelTiming(step: number, stepName: string, durationSeconds: number, modelId: number) {
   if (durationSeconds < 2) return;
@@ -326,7 +333,27 @@ export function ModelWizardPage() {
       }
       methods.reset(d);
       if (initialData.currentStep) {
-        setCurrentStep(initialData.currentStep);
+        // Migration: an earlier wizard had 10 steps with Profile at step 1.
+        // We inserted a new "Story" step at position 1, so any model that has
+        // already advanced past the old Profile step needs to shift forward
+        // by one. Use a per-model localStorage marker so the bump is applied
+        // exactly once — `openingStory` is optional and may legitimately stay
+        // empty after migration, so we cannot rely on its presence as a flag.
+        const migrationKey = initialData.id != null ? `wizard:storyMigration:${initialData.id}` : null;
+        let alreadyMigrated = false;
+        try {
+          alreadyMigrated = migrationKey ? window.localStorage.getItem(migrationKey) === "1" : false;
+        } catch {
+          alreadyMigrated = false;
+        }
+        const needsMigration = !alreadyMigrated && initialData.currentStep >= 2;
+        const target = needsMigration
+          ? Math.min(initialData.currentStep + 1, STEPS.length)
+          : Math.min(initialData.currentStep, STEPS.length);
+        if (needsMigration && migrationKey) {
+          try { window.localStorage.setItem(migrationKey, "1"); } catch { /* noop */ }
+        }
+        setCurrentStep(target);
       }
       setStepInitialized(true);
     }
@@ -582,16 +609,15 @@ export function ModelWizardPage() {
   }
 
   const ActiveStepComponent = STEPS[currentStep - 1].component;
-  const isLastStep = currentStep === STEPS.length;
-  const isExportStep = currentStep === STEPS.length;
+  const isExportStep = currentStep === EXPORT_STEP_ID;
 
   const checkCoreFieldsForExport = (): { ok: boolean; missing: string[] } => {
     const vals = methods.getValues();
     const missing: string[] = [];
     const profile = vals.schoolProfile as Record<string, unknown> | undefined;
-    if (!profile?.schoolName || !(profile.schoolName as string).trim()) missing.push("School Name (Profile)");
-    if (!profile?.state) missing.push("State (Profile)");
-    if (!profile?.schoolType) missing.push("School Type (Profile)");
+    if (!profile?.schoolName || !(profile.schoolName as string).trim()) missing.push("School Name (School Details)");
+    if (!profile?.state) missing.push("State (School Details)");
+    if (!profile?.schoolType) missing.push("School Type (School Details)");
     const enrollment = vals.enrollment as Record<string, number> | undefined;
     const programs = vals.programs as unknown[] | undefined;
     const hasEnrollment = enrollment && (enrollment.year1 > 0 || enrollment.year2 > 0);
@@ -607,30 +633,42 @@ export function ModelWizardPage() {
   const handleNext = async () => {
     const validateStep = async (step: number): Promise<boolean> => {
       switch (step) {
-        case 1: return methods.trigger('schoolProfile');
-        case 2: return true;
-        case 3: {
+        case 1: {
+          // Story step — require school name & type only; everything else is soft.
+          const profile = methods.getValues("schoolProfile") as Record<string, unknown> | undefined;
+          const missing: string[] = [];
+          if (!profile?.schoolName || !(profile.schoolName as string).trim()) missing.push("School name");
+          if (!profile?.schoolType) missing.push("School type");
+          if (missing.length > 0) {
+            alert(`Before we go further, please tell us:\n\n• ${missing.join("\n• ")}\n\nEverything else on this page is optional — you can come back any time.`);
+            return false;
+          }
+          return true;
+        }
+        case 2: return methods.trigger('schoolProfile');
+        case 3: return true;
+        case 4: {
           const progs = methods.getValues('programs') as unknown[];
           if (progs && progs.length > 0) {
             return methods.trigger('programs');
           }
           return methods.trigger('enrollment');
         }
-        case 4: {
+        case 5: {
           const [a, b] = await Promise.all([
             methods.trigger('revenue'),
             methods.trigger('revenueRows'),
           ]);
           return a && b;
         }
-        case 5: {
+        case 6: {
           const [a, b] = await Promise.all([
             methods.trigger('staffing'),
             methods.trigger('staffingRows'),
           ]);
           return a && b;
         }
-        case 6: {
+        case 7: {
           const [a, b, d] = await Promise.all([
             methods.trigger('facilities'),
             methods.trigger('expenseRows'),
@@ -645,7 +683,7 @@ export function ModelWizardPage() {
           }
           return a && b && d;
         }
-        case 9: {
+        case NARRATIVE_STEP_ID: {
           const flagResponses = methods.getValues("assumptionFlagResponses") as Array<{ field: string; flagType: string; reason: string }> | undefined;
           const responseMap = new Map<string, string>();
           if (flagResponses) {
@@ -744,7 +782,7 @@ export function ModelWizardPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const showEncouragement = (currentStep === 5 || currentStep === 6) && !encouragementDismissed;
+  const showEncouragement = (currentStep === 6 || currentStep === 7) && !encouragementDismissed;
   const handleDismissEncouragement = () => {
     setEncouragementDismissed(true);
     if (modelId) {
@@ -842,7 +880,7 @@ export function ModelWizardPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (step.id >= 7) {
+                      if (step.id >= REVIEW_STEP_ID) {
                         const { ok, missing } = checkCoreFieldsForExport();
                         if (!ok) {
                           alert(`Before you can access ${step.title}, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order - just make sure they're done before generating your outputs.`);
@@ -917,10 +955,21 @@ export function ModelWizardPage() {
                 onClick={handleNext}
                 className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
               >
-                {currentStep === 7 ? "View Consultant Analysis" : currentStep === 8 ? "Generate Excel Model" : "Continue"} <ArrowRight className="h-5 w-5" />
+                {currentStep === REVIEW_STEP_ID
+                  ? "View Consultant Analysis"
+                  : currentStep === CONSULTANT_STEP_ID
+                    ? "Continue to Lender Narrative"
+                    : currentStep === NARRATIVE_STEP_ID
+                      ? "Generate Excel Model"
+                      : "Continue"}{" "}
+                <ArrowRight className="h-5 w-5" />
               </button>
             </div>
           )}
+
+          <p className="mt-6 text-center text-xs text-muted-foreground italic">
+            Your budget is a living document. Refine it whenever you learn something new.
+          </p>
         </FormProvider>
       </div>
       {stepInitialized && (

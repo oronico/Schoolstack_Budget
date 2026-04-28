@@ -426,6 +426,8 @@ export const facilitiesSchema = z.object({
 });
 
 export const budgetNarrativeSchema = z.object({
+  openingStory: z.string().default(""),
+  foundingQuestions: z.array(z.string()).default([]),
   missionAndVision: z.string().default(""),
   enrollmentStrategy: z.string().default(""),
   retentionPlan: z.string().default(""),

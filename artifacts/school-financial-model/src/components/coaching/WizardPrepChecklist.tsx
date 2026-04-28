@@ -1,28 +1,26 @@
-import { useState } from "react";
-import { ClipboardList, CheckCircle2, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Sparkles, BookOpen } from "lucide-react";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
 const PREP_ITEMS = [
   {
-    label: "Your expected tuition or enrollment fee",
-    hint: "A rough number is fine - you can adjust later.",
+    label: "Tell us your story (about 5 minutes)",
+    hint: "What kind of school you're building and who it's for. No numbers required.",
   },
   {
-    label: "A rough student count for Year 1",
-    hint: "Even a ballpark like \"20–30 students\" works.",
+    label: "Set up the basics",
+    hint: "State, opening year, entity type. We'll fill in defaults you can tweak later.",
   },
   {
-    label: "What you plan to pay yourself (and any staff)",
-    hint: "Don't forget to include yourself - your time has value.",
+    label: "Project enrollment & revenue",
+    hint: "Even rough ballparks work — you can refine when you have real numbers.",
   },
   {
-    label: "Your rent or expected facility cost",
-    hint: "If you're using a donated space or your home, that's fine too.",
+    label: "Plan staffing & expenses",
+    hint: "We'll suggest typical staffing for your school type so you're not starting from scratch.",
   },
   {
-    label: "Any other staff you plan to hire",
-    hint: "Teachers, aides, an admin - whoever you know you'll need.",
+    label: "Review, refine, and export",
+    hint: "Your budget is a living document. Come back anytime as your plans evolve.",
   },
 ];
 
@@ -31,31 +29,11 @@ interface WizardPrepChecklistProps {
 }
 
 export function WizardPrepChecklist({ onReady }: WizardPrepChecklistProps) {
-  const [checked, setChecked] = useState<Set<number>>(new Set());
-
-  const toggle = (idx: number) => {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-      return next;
-    });
-  };
-
   const handleReady = () => {
     trackCoachingEvent("wizard_prep_completed", {
-      checkedCount: checked.size,
+      checkedCount: 0,
       totalItems: PREP_ITEMS.length,
       skipped: false,
-    });
-    onReady();
-  };
-
-  const handleSkip = () => {
-    trackCoachingEvent("wizard_prep_completed", {
-      checkedCount: checked.size,
-      totalItems: PREP_ITEMS.length,
-      skipped: true,
     });
     onReady();
   };
@@ -66,46 +44,29 @@ export function WizardPrepChecklist({ onReady }: WizardPrepChecklistProps) {
       <div className="relative w-full max-w-lg bg-background rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-300">
         <div className="px-6 pt-8 pb-4 text-center">
           <div className="mx-auto h-12 w-12 rounded-xl bg-amber-100 flex items-center justify-center mb-4">
-            <ClipboardList className="h-6 w-6 text-amber-600" aria-hidden="true" />
+            <BookOpen className="h-6 w-6 text-amber-700" aria-hidden="true" />
           </div>
-          <h2 className="font-display text-xl font-bold text-foreground">Before you dive in</h2>
+          <h2 className="font-display text-xl font-bold text-foreground">Here's what to expect</h2>
           <p className="text-sm text-muted-foreground mt-2">
-            It helps to have a few things handy. Don't worry if you're not sure about everything - you can always come back and update.
+            We start with your school's story, then walk through the numbers together. You don't need every answer ready — smart defaults and "I don't know yet" options are everywhere.
           </p>
         </div>
 
         <div className="px-6 pb-4 space-y-2">
-          {PREP_ITEMS.map((item, idx) => {
-            const isChecked = checked.has(idx);
-            return (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => toggle(idx)}
-                className={cn(
-                  "w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all duration-150",
-                  isChecked
-                    ? "bg-emerald-50 border-emerald-200"
-                    : "bg-secondary/30 border-border/60 hover:border-border"
-                )}
-              >
-                <div
-                  className={cn(
-                    "mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors",
-                    isChecked ? "bg-primary text-primary-foreground" : "border-2 border-muted-foreground/30"
-                  )}
-                >
-                  {isChecked && <CheckCircle2 className="h-3.5 w-3.5" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm font-medium", isChecked ? "text-foreground" : "text-foreground/80")}>
-                    {item.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{item.hint}</p>
-                </div>
-              </button>
-            );
-          })}
+          {PREP_ITEMS.map((item, idx) => (
+            <div
+              key={idx}
+              className="w-full flex items-start gap-3 p-3 rounded-xl border border-border/60 bg-secondary/20"
+            >
+              <div className="mt-0.5 shrink-0 w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-bold">
+                {idx + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{item.hint}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="px-6 pb-6 space-y-2">
@@ -115,15 +76,11 @@ export function WizardPrepChecklist({ onReady }: WizardPrepChecklistProps) {
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
           >
             <Sparkles className="h-4 w-4" />
-            I have what I need - let's go
+            Let's get started
           </button>
-          <button
-            type="button"
-            onClick={handleSkip}
-            className="w-full px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all duration-200"
-          >
-            I'll figure it out as I go
-          </button>
+          <p className="text-center text-xs text-muted-foreground italic">
+            Your budget is a living document. You can refine it any time.
+          </p>
         </div>
       </div>
     </div>
