@@ -445,6 +445,9 @@ export const assumptionFlagResponseSchema = z.object({
   reason: z.string().default(""),
 });
 
+export const decisionTypeSchema = z.enum(["add_program", "evaluate_site", "change_enrollment"]);
+export type DecisionType = z.infer<typeof decisionTypeSchema>;
+
 export const customScenarioSchema = z.object({
   name: z.string(),
   createdAt: z.string(),
@@ -456,7 +459,17 @@ export const customScenarioSchema = z.object({
     rentEscalation: z.number().optional(),
     rentChangeStartYear: z.number().optional(),
     sqftDelta: z.number().optional(),
+    // Decision-flow extras (forward-compatible — engine ignores unknown overrides)
+    addProgramName: z.string().optional(),
+    addProgramTuition: z.number().optional(),
+    addProgramEnrollment: z.array(z.number()).length(5).optional(),
+    addProgramAddedFte: z.number().optional(),
+    addProgramAddedFteSalary: z.number().optional(),
+    addProgramAddedAnnualSpace: z.number().optional(),
+    siteFitOutCost: z.number().optional(),
   }),
+  decisionType: decisionTypeSchema.optional(),
+  narrative: z.string().optional(),
 });
 export type CustomScenario = z.infer<typeof customScenarioSchema>;
 

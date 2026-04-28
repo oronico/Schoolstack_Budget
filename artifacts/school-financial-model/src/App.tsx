@@ -22,6 +22,7 @@ const NewModelPage = lazy(() => import("@/pages/model-new").then(m => ({ default
 const ModelWizardPage = lazy(() => import("@/pages/model-wizard").then(m => ({ default: m.ModelWizardPage })));
 const PublicWizardRedirect = lazy(() => Promise.resolve({ default: () => { window.location.replace((import.meta.env.BASE_URL || "/").replace(/\/$/, "") + "/register"); return null; } }));
 const ScenarioPage = lazy(() => import("@/pages/scenarios").then(m => ({ default: m.ScenarioPage })));
+const DecisionFlowDispatcher = lazy(() => import("@/pages/decision-flows").then(m => ({ default: m.DecisionFlowDispatcher })));
 const AdminPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPage })));
 const TermsPage = lazy(() => import("@/pages/legal/terms").then(m => ({ default: m.TermsPage })));
 const PrivacyPolicyPage = lazy(() => import("@/pages/legal/privacy").then(m => ({ default: m.PrivacyPolicyPage })));
@@ -153,6 +154,9 @@ function AppRouter() {
         </Route>
         <Route path="/model/:id/scenarios">
           {() => <ProtectedRoute component={ScenarioPage} />}
+        </Route>
+        <Route path="/decisions/:type/:modelId">
+          {() => <ProtectedRoute component={DecisionFlowDispatcher} />}
         </Route>
         <Route path="/model/:id">
           {() => <ProtectedRoute component={ModelWizardPage} />}

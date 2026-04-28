@@ -24,6 +24,7 @@ import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparis
 import type { FullModelData } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
+import { buildDecisionBullets, DECISION_LABELS, DECISION_THEME } from "@/lib/decision-flows";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -745,7 +746,7 @@ export function ScenarioPage() {
         {/* Custom What-If scenarios — saved from the Live What-If Planner drawer */}
         {(() => {
           const custom = ((modelData as Record<string, unknown>).customScenarios as
-            | Array<{ name: string; createdAt: string; overrides: WhatIfOverrides }>
+            | Array<{ name: string; createdAt: string; overrides: WhatIfOverrides; decisionType?: "add_program" | "evaluate_site" | "change_enrollment"; narrative?: string }>
             | undefined) || [];
           if (custom.length === 0) return null;
           const fmtDate = (iso: string) => {
@@ -783,40 +784,67 @@ export function ScenarioPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {custom.map((cs, idx) => {
                   const o = cs.overrides;
-                  const bullets: string[] = [];
-                  if (o.enrollmentDelta && o.enrollmentDelta.some((v) => v !== 0)) {
-                    const sum = o.enrollmentDelta.reduce((a, b) => a + b, 0);
-                    bullets.push(`Enrollment ${sum > 0 ? "+" : ""}${sum} cumulative`);
-                  }
-                  if (o.retentionRate !== undefined) bullets.push(`Retention ${o.retentionRate}%`);
-                  if (o.tuitionDeltaPerStudent !== undefined && o.tuitionDeltaPerStudent !== 0) {
-                    bullets.push(`Tuition ${o.tuitionDeltaPerStudent > 0 ? "+" : ""}$${o.tuitionDeltaPerStudent}/student`);
-                  }
-                  if (o.monthlyRent !== undefined) bullets.push(`Rent $${o.monthlyRent.toLocaleString()}/mo`);
-                  if (o.rentEscalation !== undefined) bullets.push(`Rent escalation ${o.rentEscalation}%`);
-                  if (o.sqftDelta !== undefined && o.sqftDelta !== 0) {
-                    bullets.push(`Sqft ${o.sqftDelta > 0 ? "+" : ""}${o.sqftDelta}`);
-                  }
+                  const bulletsFromDecision = buildDecisionBullets(o, cs.decisionType);
+                  const bullets: string[] = bulletsFromDecision.length > 0 ? bulletsFromDecision : (() => {
+                    const arr: string[] = [];
+                    if (o.enrollmentDelta && o.enrollmentDelta.some((v) => v !== 0)) {
+                      const sum = o.enrollmentDelta.reduce((a, b) => a + b, 0);
+                      arr.push(`Enrollment ${sum > 0 ? "+" : ""}${sum} cumulative`);
+                    }
+                    if (o.retentionRate !== undefined) arr.push(`Retention ${o.retentionRate}%`);
+                    if (o.tuitionDeltaPerStudent !== undefined && o.tuitionDeltaPerStudent !== 0) {
+                      arr.push(`Tuition ${o.tuitionDeltaPerStudent > 0 ? "+" : ""}$${o.tuitionDeltaPerStudent}/student`);
+                    }
+                    if (o.monthlyRent !== undefined) arr.push(`Rent $${o.monthlyRent.toLocaleString()}/mo`);
+                    if (o.rentEscalation !== undefined) arr.push(`Rent escalation ${o.rentEscalation}%`);
+                    if (o.sqftDelta !== undefined && o.sqftDelta !== 0) {
+                      arr.push(`Sqft ${o.sqftDelta > 0 ? "+" : ""}${o.sqftDelta}`);
+                    }
+                    return arr;
+                  })();
+                  const decisionTheme = cs.decisionType ? DECISION_THEME[cs.decisionType] : null;
+                  const decisionLabel = cs.decisionType ? DECISION_LABELS[cs.decisionType] : null;
+                  const narrativeExcerpt = cs.narrative
+                    ? cs.narrative.length > 140
+                      ? `${cs.narrative.slice(0, 140).trimEnd()}…`
+                      : cs.narrative
+                    : null;
                   return (
                     <div
                       key={`${cs.name}-${cs.createdAt}-${idx}`}
-                      className="bg-card border border-amber-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+                      className={`bg-card border ${decisionTheme ? decisionTheme.border : "border-amber-200"} rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow`}
                       data-testid={`custom-scenario-card-${idx}`}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-display font-bold text-foreground">{cs.name}</h3>
+                        <div className="min-w-0">
+                          {decisionLabel && decisionTheme && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider mb-1.5 ${decisionTheme.bg} ${decisionTheme.text} border ${decisionTheme.border}`}
+                              data-testid={`custom-scenario-decision-badge-${idx}`}
+                            >
+                              {decisionLabel}
+                            </span>
+                          )}
+                          <h3 className="font-display font-bold text-foreground truncate">{cs.name}</h3>
                           <p className="text-[11px] text-muted-foreground">Saved {fmtDate(cs.createdAt)}</p>
                         </div>
                         <button
                           onClick={() => removeCustom({ name: cs.name, createdAt: cs.createdAt })}
-                          className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors"
+                          className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors flex-shrink-0"
                           aria-label={`Delete ${cs.name}`}
                           data-testid={`custom-scenario-delete-${idx}`}
                         >
                           <XCircle className="h-4 w-4" />
                         </button>
                       </div>
+                      {narrativeExcerpt && (
+                        <p
+                          className="text-xs text-foreground/70 italic border-l-2 border-border/60 pl-2.5 mb-3 leading-relaxed"
+                          data-testid={`custom-scenario-narrative-${idx}`}
+                        >
+                          “{narrativeExcerpt}”
+                        </p>
+                      )}
                       <ul className="text-xs text-muted-foreground space-y-1 mb-4">
                         {bullets.length === 0 ? (
                           <li>(No overrides — baseline)</li>
@@ -824,13 +852,22 @@ export function ScenarioPage() {
                           bullets.map((b, i) => <li key={i}>• {b}</li>)
                         )}
                       </ul>
-                      <button
-                        onClick={() => openInPlanner(o)}
-                        className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-sm font-medium border border-amber-200 transition-colors"
-                        data-testid={`custom-scenario-open-${idx}`}
-                      >
-                        <Wand2 className="h-3.5 w-3.5" /> Open in planner
-                      </button>
+                      {cs.decisionType === "add_program" ? (
+                        <p
+                          className="w-full text-center text-[11px] text-muted-foreground italic px-3 py-2 rounded-lg bg-muted/40 border border-border/60"
+                          data-testid={`custom-scenario-open-${idx}`}
+                        >
+                          Re-run the “Add a program” flow to revise this decision.
+                        </p>
+                      ) : (
+                        <button
+                          onClick={() => openInPlanner(o)}
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-sm font-medium border border-amber-200 transition-colors"
+                          data-testid={`custom-scenario-open-${idx}`}
+                        >
+                          <Wand2 className="h-3.5 w-3.5" /> Open in planner
+                        </button>
+                      )}
                     </div>
                   );
                 })}

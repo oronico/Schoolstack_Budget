@@ -5,6 +5,7 @@ import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive, Sparkles,
 import { format, differenceInDays } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
 import { GuidanceModePrompt } from "@/components/coaching/GuidanceModePrompt";
+import { DecisionLauncher, ThingsHaveChangedBanner } from "@/components/decision-flow/DecisionLauncher";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: { label: "Draft", className: "bg-amber-100 text-amber-800" },
@@ -207,6 +208,17 @@ export function DashboardPage() {
           </div>
         ) : (
           <div>
+            <DecisionLauncher
+              models={(models || []).map((m) => ({ id: m.id, name: m.name, status: m.status, currentStep: m.currentStep, updatedAt: m.updatedAt }))}
+              onStartNew={handleCreate}
+              startNewPending={createMutation.isPending}
+            />
+
+            <ThingsHaveChangedBanner
+              models={(models || []).map((m) => ({ id: m.id, name: m.name, status: m.status, currentStep: m.currentStep, updatedAt: m.updatedAt }))}
+              staleDays={30}
+            />
+
             {completedModels.length > 0 && (
               <div className="mb-8 bg-gradient-to-r from-amber-50/80 via-white to-amber-50/80 border border-amber-200/60 rounded-2xl p-6">
                 <div className="flex items-start gap-4">
