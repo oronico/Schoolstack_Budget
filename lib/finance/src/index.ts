@@ -114,6 +114,12 @@ export {
 
 export { buildDecisionBullets as buildDecisionFlowBullets } from "./decision-engine/decision-flows.js";
 
+export {
+  buildActualsSuggestion,
+  type ActualsSuggestion,
+  type ActualsSuggestionField,
+} from "./decision-engine/decision-flows.js";
+
 export function computeStraightLineDepreciation(
   fixedAssets: number,
   usefulLifeYears: number,

@@ -26,3 +26,8 @@ export {
   type SiteInputs,
   type PersistedDecisionOverrides,
 } from "@workspace/finance";
+export {
+  buildActualsSuggestion,
+  type ActualsSuggestion,
+  type ActualsSuggestionField,
+} from "@workspace/finance";

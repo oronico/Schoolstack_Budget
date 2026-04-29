@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyDecisionToData,
   applyAddProgramDecision,
+  buildActualsSuggestion,
   buildDecisionBullets,
   computeDecisionImpact,
   computeProjectedSnapshot,
@@ -588,5 +589,136 @@ describe("computeProjectedSnapshot", () => {
     expect(computeProjectedSnapshot(data, persisted, "change_enrollment", 99).asOfYear).toBe(5);
     // NaN / undefined fall back to year 1 (the helper's default).
     expect(computeProjectedSnapshot(data, persisted, "change_enrollment", Number.NaN).asOfYear).toBe(1);
+  });
+});
+
+// --- buildActualsSuggestion -------------------------------------------------
+//
+// Powers the "Suggest from latest data" affordance in the saved-scenario
+// actuals editor. The helper must:
+// 1) Prefer prior-year actuals when they're populated (closed books beat
+//    in-progress projections).
+// 2) Fall back to current-year projections, annualizing partial years.
+// 3) Surface a signed-rent suggestion only for evaluate_site decisions.
+// 4) Return an empty suggestion (and source list) when the founder hasn't
+//    captured any source data, so the UI can disable the button.
+
+describe("buildActualsSuggestion", () => {
+  it("returns an empty suggestion when the model has no prior-year or current-year data", () => {
+    const data = buildBaseModel();
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values).toEqual({});
+    expect(suggestion.sourceLabels).toEqual([]);
+  });
+
+  it("prefers prior-year actuals over current-year projections at year 1", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      priorYearSnapshot: {
+        endingEnrollment: 95,
+        totalRevenue: 1_200_000,
+        totalExpenses: 1_100_000,
+      },
+      currentYearProjection: {
+        currentEnrollment: 999, // should be ignored — prior wins
+        projectedRevenue: 999_999,
+        projectedExpenses: 999_999,
+        monthsCompleted: 6,
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values.enrollmentActual).toBe(95);
+    expect(suggestion.values.revenueActual).toBe(1_200_000);
+    expect(suggestion.values.expenseActual).toBe(1_100_000);
+    // Net income is derived so the founder doesn't have to subtract by hand.
+    expect(suggestion.values.netIncomeActual).toBe(100_000);
+    expect(suggestion.sourceLabels).toContain("Prior-year actuals from setup");
+  });
+
+  it("annualizes current-year projections from a partial year when prior-year is missing", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      currentYearProjection: {
+        currentEnrollment: 80,
+        projectedRevenue: 600_000,
+        projectedExpenses: 540_000,
+        monthsCompleted: 6,
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values.enrollmentActual).toBe(80);
+    // 600k over 6 months → 1.2M annualized.
+    expect(suggestion.values.revenueActual).toBe(1_200_000);
+    expect(suggestion.values.expenseActual).toBe(1_080_000);
+    expect(suggestion.sourceLabels.some((s) => s.includes("annualized from 6 months"))).toBe(true);
+  });
+
+  it("only suggests signedMonthlyRent for evaluate_site decisions, sourcing from active facility phase", () => {
+    const base = buildBaseModel({
+      schoolProfile: {
+        isPartialFirstYear: false,
+        year1OperatingMonths: 12,
+        debtIncluded: true,
+        facilityPhases: [
+          { ownershipType: "rent", startYear: 1, endYear: 5, monthlyRent: 8500 },
+        ],
+      },
+    });
+    const data = {
+      ...base,
+      priorYearSnapshot: { endingEnrollment: 50, totalRevenue: 100_000, totalExpenses: 90_000 },
+    } as unknown as FullModelData;
+    const sitePersisted = decisionToPersistedOverrides(data, {
+      type: "evaluate_site",
+      inputs: { newMonthlyRent: 9000 },
+    });
+    const siteSuggestion = buildActualsSuggestion(data, sitePersisted, "evaluate_site", 1);
+    expect(siteSuggestion.values.signedMonthlyRent).toBe(8500);
+    expect(siteSuggestion.sourceLabels).toContain("Signed rent from facility plan");
+
+    // Same data, different decision type — no rent suggestion since the
+    // editor doesn't surface a "signed rent" row for non-site decisions.
+    const enrollmentPersisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const enrollmentSuggestion = buildActualsSuggestion(data, enrollmentPersisted, "change_enrollment", 1);
+    expect(enrollmentSuggestion.values.signedMonthlyRent).toBeUndefined();
+  });
+
+  it("does not suggest enrollment/revenue/expense beyond year 1 (no source data)", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      priorYearSnapshot: {
+        endingEnrollment: 95,
+        totalRevenue: 1_200_000,
+        totalExpenses: 1_100_000,
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    // Year 3 actuals can't legitimately be inferred from prior-year setup data,
+    // so the helper stays silent rather than fabricate numbers.
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 3);
+    expect(suggestion.values.enrollmentActual).toBeUndefined();
+    expect(suggestion.values.revenueActual).toBeUndefined();
+    expect(suggestion.values.expenseActual).toBeUndefined();
   });
 });

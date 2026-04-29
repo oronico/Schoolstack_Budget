@@ -103,6 +103,21 @@ export interface OpeningBalancesLike {
   [key: string]: unknown;
 }
 
+export interface PriorYearSnapshotLike {
+  endingEnrollment?: number;
+  totalRevenue?: number;
+  totalExpenses?: number;
+  [key: string]: unknown;
+}
+
+export interface CurrentYearProjectionLike {
+  currentEnrollment?: number;
+  projectedRevenue?: number;
+  projectedExpenses?: number;
+  monthsCompleted?: number;
+  [key: string]: unknown;
+}
+
 export interface FullModelData {
   schoolProfile?: SchoolProfileLike;
   enrollment?: EnrollmentLike;
@@ -116,6 +131,8 @@ export interface FullModelData {
   tuitionEscalation?: { rate?: number };
   openingBalances?: OpeningBalancesLike;
   customScenarios?: Array<Record<string, unknown>>;
+  priorYearSnapshot?: PriorYearSnapshotLike;
+  currentYearProjection?: CurrentYearProjectionLike;
 }
 
 export type DecisionType = "add_program" | "evaluate_site" | "change_enrollment";

@@ -32,11 +32,14 @@ import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
 import {
   applyPersistedScenarioToData,
+  buildActualsSuggestion,
   buildDecisionBullets,
   computeDecisionImpactFromPersisted,
   computeProjectedSnapshot,
   DECISION_LABELS,
   DECISION_THEME,
+  type ActualsSuggestion,
+  type ActualsSuggestionField,
   type PersistedDecisionOverrides,
   type ProjectedSnapshot,
 } from "@/lib/decision-flows";
@@ -238,6 +241,10 @@ interface CustomScenarioCardProps {
   // Done up here (rather than in the card) so the card stays decoupled from
   // the freshest base model data and we don't recompute it on every render.
   getProjectedSnapshot: (asOfYear: number) => ProjectedSnapshot;
+  // Builds a suggested set of actuals from the founder's existing model data
+  // (prior-year snapshot, current-year projection, signed lease) so the
+  // editor can prefill values they already entered once.
+  getActualsSuggestion: (asOfYear: number) => ActualsSuggestion;
 }
 
 // Tiny formatter for the actuals-vs-projected lines. Keeps zeros short and
@@ -271,6 +278,11 @@ function actualsDeltaPct(actual: number, projected: number): { text: string; ton
 // right, and a small delta callout once both are present. `betterWhen` lets
 // the row render the delta in green/red based on whether higher or lower
 // realized values are favorable for that line.
+//
+// `suggested` (with optional `suggestionSource`) renders a small "Suggested"
+// pill so the founder can tell at a glance which inputs were pre-filled from
+// model data and still need their confirmation. The pill clears as soon as
+// they edit the field — see the consumer's onChange handler.
 function ActualsLine({
   label,
   projected,
@@ -279,6 +291,8 @@ function ActualsLine({
   testId,
   kind,
   betterWhen,
+  suggested,
+  suggestionSource,
 }: {
   label: string;
   projected: number | undefined;
@@ -287,6 +301,8 @@ function ActualsLine({
   testId: string;
   kind: "money" | "count";
   betterWhen: "higher" | "lower";
+  suggested?: boolean;
+  suggestionSource?: string;
 }) {
   const hasActual = actual !== undefined && !Number.isNaN(actual);
   const hasProjected = projected !== undefined && !Number.isNaN(projected);
@@ -332,10 +348,24 @@ function ActualsLine({
             onChange(Number.isNaN(n) ? undefined : n);
           }}
           placeholder={kind === "money" ? "$" : "#"}
-          className="w-24 text-[11px] border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono text-right"
+          className={`w-24 text-[11px] border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono text-right ${
+            suggested
+              ? "bg-amber-50 border-amber-300 text-amber-900"
+              : "bg-background border-border"
+          }`}
           data-testid={testId}
+          title={suggested && suggestionSource ? `Suggested from: ${suggestionSource}` : undefined}
         />
-        {deltaPill && (
+        {suggested && (
+          <span
+            className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-800"
+            data-testid={`${testId}-suggested`}
+            title={suggestionSource ? `Source: ${suggestionSource}` : undefined}
+          >
+            Suggested
+          </span>
+        )}
+        {!suggested && deltaPill && (
           <span
             className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${toneClass}`}
             data-testid={`${testId}-delta`}
@@ -363,6 +393,7 @@ function CustomScenarioCard({
   onOpenInPlanner,
   onApplyToModel,
   getProjectedSnapshot,
+  getActualsSuggestion,
 }: CustomScenarioCardProps) {
   const [editingRetro, setEditingRetro] = useState(false);
   const [retroDraft, setRetroDraft] = useState(cs.retrospective ?? "");
@@ -377,9 +408,98 @@ function CustomScenarioCard({
   // collapsed otherwise behind a single "Add actuals" affordance.
   const [editingActuals, setEditingActuals] = useState(false);
   const [actualsDraft, setActualsDraft] = useState<CustomScenarioActuals>(cs.actuals ?? { asOfYear: 1 });
+  // Tracks which fields in the current draft were populated by the
+  // "Suggest from latest data" action vs typed by the founder. We use this
+  // to render a "Suggested" pill on each prefilled input, and to clear that
+  // marking the moment the founder edits the field. Suggestions are local
+  // state only — once the founder hits Save they become regular actuals.
+  const [suggestedFields, setSuggestedFields] = useState<Set<ActualsSuggestionField>>(new Set());
+  const [suggestionFeedback, setSuggestionFeedback] = useState<string | null>(null);
   useEffect(() => {
-    if (!editingActuals) setActualsDraft(cs.actuals ?? { asOfYear: 1 });
+    if (!editingActuals) {
+      setActualsDraft(cs.actuals ?? { asOfYear: 1 });
+      setSuggestedFields(new Set());
+      setSuggestionFeedback(null);
+    }
   }, [cs.actuals, editingActuals]);
+
+  // Helper: write a field into the draft and clear its "suggested" marker so
+  // any direct edit by the user immediately overrides the suggestion.
+  const setActualsField = (field: ActualsSuggestionField | "programEnrollmentActual", value: number | undefined) => {
+    setActualsDraft((d) => ({ ...d, [field]: value }));
+    if (suggestedFields.has(field as ActualsSuggestionField)) {
+      setSuggestedFields((prev) => {
+        const next = new Set(prev);
+        next.delete(field as ActualsSuggestionField);
+        return next;
+      });
+    }
+    if (suggestionFeedback) setSuggestionFeedback(null);
+  };
+
+  // Pulls suggestions from the founder's existing model data and merges them
+  // into the editor without overwriting anything they've already typed. The
+  // "manual edits take precedence" guarantee lives here: a field is only
+  // populated when its current value is undefined.
+  const suggestFromLatestData = () => {
+    const yr = actualsDraft.asOfYear ?? 1;
+    const suggestion = getActualsSuggestion(yr);
+    let filled = 0;
+    let skipped = 0;
+    const nextSuggested = new Set(suggestedFields);
+    setActualsDraft((d) => {
+      const next: CustomScenarioActuals = { ...d };
+      const fields: ActualsSuggestionField[] = [
+        "enrollmentActual",
+        "revenueActual",
+        "expenseActual",
+        "netIncomeActual",
+        "signedMonthlyRent",
+      ];
+      // Hide signedMonthlyRent for non-site decisions — the suggestion helper
+      // already won't return it, but this is belt-and-braces.
+      for (const f of fields) {
+        const suggested = suggestion.values[f];
+        if (suggested === undefined) continue;
+        const existing = next[f];
+        if (existing !== undefined && !nextSuggested.has(f)) {
+          // Manual entry already there — never overwrite.
+          skipped += 1;
+          continue;
+        }
+        next[f] = suggested;
+        nextSuggested.add(f);
+        filled += 1;
+      }
+      return next;
+    });
+    setSuggestedFields(nextSuggested);
+    if (filled === 0) {
+      setSuggestionFeedback(
+        suggestion.sourceLabels.length === 0
+          ? "No suggestions available — add prior-year actuals or current-year projections in setup to enable this."
+          : "Nothing to suggest — every field is already filled in.",
+      );
+    } else {
+      const sourceList = suggestion.sourceLabels.slice(0, 2).join(" · ");
+      setSuggestionFeedback(
+        `Filled ${filled} field${filled === 1 ? "" : "s"} from ${sourceList}. Edit any value before saving.${
+          skipped > 0 ? ` Kept ${skipped} field${skipped === 1 ? "" : "s"} you'd already entered.` : ""
+        }`,
+      );
+    }
+  };
+
+  // Cached suggestion preview — used to enable/disable the suggest button and
+  // surface its source label so the founder knows what's available before
+  // they click. Recomputes when the as-of year changes since suggestions are
+  // year-aware.
+  const previewSuggestion = useMemo<ActualsSuggestion | null>(() => {
+    if (!editingActuals) return null;
+    const yr = actualsDraft.asOfYear ?? 1;
+    return getActualsSuggestion(yr);
+  }, [editingActuals, actualsDraft.asOfYear, getActualsSuggestion]);
+  const hasAnySuggestion = !!previewSuggestion && Object.keys(previewSuggestion.values).length > 0;
 
   const decisionTheme = cs.decisionType ? DECISION_THEME[cs.decisionType] : null;
   const decisionLabel = cs.decisionType ? DECISION_LABELS[cs.decisionType] : null;
@@ -448,11 +568,15 @@ function CustomScenarioCard({
       a.programEnrollmentActual !== undefined ||
       (a.notes !== undefined && a.notes.length > 0);
     await onPatch(target, { actuals: hasAny ? a : undefined });
+    setSuggestedFields(new Set());
+    setSuggestionFeedback(null);
     setEditingActuals(false);
   };
 
   const clearActuals = async () => {
     await onPatch(target, { actuals: undefined });
+    setSuggestedFields(new Set());
+    setSuggestionFeedback(null);
     setEditingActuals(false);
   };
 
@@ -713,64 +837,110 @@ function CustomScenarioCard({
           )}
           {editingActuals && projectedSnapshot && (
             <div className="space-y-2" data-testid={`custom-scenario-actuals-editor-${idx}`}>
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] font-medium text-foreground">As of</label>
-                <select
-                  value={String(actualsDraft.asOfYear ?? 1)}
-                  onChange={(e) => setActualsDraft({ ...actualsDraft, asOfYear: Number(e.target.value) })}
-                  className="text-[11px] border border-border rounded-md px-1.5 py-0.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  data-testid={`custom-scenario-actuals-year-${idx}`}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-medium text-foreground">As of</label>
+                  <select
+                    value={String(actualsDraft.asOfYear ?? 1)}
+                    onChange={(e) => {
+                      const nextYear = Number(e.target.value);
+                      setActualsDraft({ ...actualsDraft, asOfYear: nextYear });
+                      // Clear suggestion markers when the year changes — the
+                      // suggestion source is year-aware, so previously-filled
+                      // values may no longer match what we'd suggest now.
+                      setSuggestedFields(new Set());
+                      setSuggestionFeedback(null);
+                    }}
+                    className="text-[11px] border border-border rounded-md px-1.5 py-0.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    data-testid={`custom-scenario-actuals-year-${idx}`}
+                  >
+                    {[1, 2, 3, 4, 5].map((y) => (
+                      <option key={y} value={y}>Year {y}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={suggestFromLatestData}
+                  disabled={!hasAnySuggestion}
+                  className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md border transition-colors ${
+                    hasAnySuggestion
+                      ? "bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300"
+                      : "bg-muted/40 text-muted-foreground border-border cursor-not-allowed"
+                  }`}
+                  data-testid={`custom-scenario-actuals-suggest-${idx}`}
+                  title={
+                    hasAnySuggestion
+                      ? `Pulls suggestions from your model setup (${previewSuggestion!.sourceLabels.join(" · ")})`
+                      : "Add prior-year actuals or current-year projections in setup to enable suggestions"
+                  }
                 >
-                  {[1, 2, 3, 4, 5].map((y) => (
-                    <option key={y} value={y}>Year {y}</option>
-                  ))}
-                </select>
+                  <Wand2 className="h-3 w-3" /> Suggest from latest data
+                </button>
               </div>
+              {suggestionFeedback && (
+                <p
+                  className="text-[10px] text-amber-900 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-snug"
+                  data-testid={`custom-scenario-actuals-suggestion-feedback-${idx}`}
+                >
+                  {suggestionFeedback}
+                </p>
+              )}
               <ActualsLine
                 label="Total enrollment"
                 projected={projectedSnapshot.enrollment}
                 actual={actualsDraft.enrollmentActual}
-                onChange={(v) => setActualsDraft({ ...actualsDraft, enrollmentActual: v })}
+                onChange={(v) => setActualsField("enrollmentActual", v)}
                 testId={`custom-scenario-actuals-enrollment-${idx}`}
                 kind="count"
                 betterWhen="higher"
+                suggested={suggestedFields.has("enrollmentActual")}
+                suggestionSource={previewSuggestion?.sources.enrollmentActual}
               />
               <ActualsLine
                 label="Revenue"
                 projected={projectedSnapshot.revenue}
                 actual={actualsDraft.revenueActual}
-                onChange={(v) => setActualsDraft({ ...actualsDraft, revenueActual: v })}
+                onChange={(v) => setActualsField("revenueActual", v)}
                 testId={`custom-scenario-actuals-revenue-${idx}`}
                 kind="money"
                 betterWhen="higher"
+                suggested={suggestedFields.has("revenueActual")}
+                suggestionSource={previewSuggestion?.sources.revenueActual}
               />
               <ActualsLine
                 label="Expenses"
                 projected={projectedSnapshot.expense}
                 actual={actualsDraft.expenseActual}
-                onChange={(v) => setActualsDraft({ ...actualsDraft, expenseActual: v })}
+                onChange={(v) => setActualsField("expenseActual", v)}
                 testId={`custom-scenario-actuals-expense-${idx}`}
                 kind="money"
                 betterWhen="lower"
+                suggested={suggestedFields.has("expenseActual")}
+                suggestionSource={previewSuggestion?.sources.expenseActual}
               />
               <ActualsLine
                 label="Net income"
                 projected={projectedSnapshot.netIncome}
                 actual={actualsDraft.netIncomeActual}
-                onChange={(v) => setActualsDraft({ ...actualsDraft, netIncomeActual: v })}
+                onChange={(v) => setActualsField("netIncomeActual", v)}
                 testId={`custom-scenario-actuals-netincome-${idx}`}
                 kind="money"
                 betterWhen="higher"
+                suggested={suggestedFields.has("netIncomeActual")}
+                suggestionSource={previewSuggestion?.sources.netIncomeActual}
               />
               {cs.decisionType === "evaluate_site" && (
                 <ActualsLine
                   label="Signed rent (mo)"
                   projected={projectedSnapshot.monthlyRent}
                   actual={actualsDraft.signedMonthlyRent}
-                  onChange={(v) => setActualsDraft({ ...actualsDraft, signedMonthlyRent: v })}
+                  onChange={(v) => setActualsField("signedMonthlyRent", v)}
                   testId={`custom-scenario-actuals-rent-${idx}`}
                   kind="money"
                   betterWhen="lower"
+                  suggested={suggestedFields.has("signedMonthlyRent")}
+                  suggestionSource={previewSuggestion?.sources.signedMonthlyRent}
                 />
               )}
               {cs.decisionType === "add_program" && (
@@ -806,6 +976,8 @@ function CustomScenarioCard({
                   <button
                     onClick={() => {
                       setActualsDraft(cs.actuals ?? { asOfYear: 1 });
+                      setSuggestedFields(new Set());
+                      setSuggestionFeedback(null);
                       setEditingActuals(false);
                     }}
                     className="text-[10px] px-2 py-1 rounded text-muted-foreground hover:text-foreground"
@@ -818,7 +990,7 @@ function CustomScenarioCard({
                     className="text-[10px] px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90"
                     data-testid={`custom-scenario-actuals-save-${idx}`}
                   >
-                    Save actuals
+                    {suggestedFields.size > 0 ? "Confirm & save" : "Save actuals"}
                   </button>
                 </div>
               </div>
@@ -2227,6 +2399,14 @@ export function ScenarioPage() {
                       onApplyToModel={applyScenarioToModel}
                       getProjectedSnapshot={(asOfYear) =>
                         computeProjectedSnapshot(
+                          modelData,
+                          cs.overrides as PersistedDecisionOverrides,
+                          cs.decisionType,
+                          asOfYear,
+                        )
+                      }
+                      getActualsSuggestion={(asOfYear) =>
+                        buildActualsSuggestion(
                           modelData,
                           cs.overrides as PersistedDecisionOverrides,
                           cs.decisionType,

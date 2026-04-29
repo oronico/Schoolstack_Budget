@@ -632,6 +632,167 @@ export function buildDecisionBullets(
   return sharedBuildDecisionBullets(persisted, decisionType);
 }
 
+// --- Actuals suggestion ------------------------------------------------------
+//
+// Pulls candidate values for the saved-scenario actuals editor from data the
+// founder already entered into the base model — chiefly the Prior-Year
+// Snapshot (last completed year), the Current-Year Projection (this year, if
+// they've been operating), and the detected facility rent. This means the
+// founder doesn't have to re-type figures they've already captured once.
+//
+// We deliberately keep this scoped to in-model fields (no live integrations
+// yet); even so, those fields function as the school's "source of truth" once
+// they've been populated from accounting/SIS exports during onboarding.
+//
+// Each suggested field carries a short `source` string so the UI can explain
+// where the number came from ("From your prior-year snapshot"), which makes
+// the suggestion auditable rather than mysterious.
+export type ActualsSuggestionField =
+  | "enrollmentActual"
+  | "revenueActual"
+  | "expenseActual"
+  | "netIncomeActual"
+  | "signedMonthlyRent";
+
+export interface ActualsSuggestion {
+  values: Partial<Record<ActualsSuggestionField, number>>;
+  sources: Partial<Record<ActualsSuggestionField, string>>;
+  // Concise human-readable descriptions of where data came from. The UI shows
+  // these as a short list so the founder understands the basis (e.g. "Prior
+  // year actuals from setup"). Order is meaningful — most-trusted first.
+  sourceLabels: string[];
+}
+
+function annualizeFromCurrent(value: number | undefined, monthsCompleted: number | undefined): number | undefined {
+  if (value === undefined || value === null || !isFinite(value)) return undefined;
+  const m = monthsCompleted ?? 0;
+  if (m <= 0 || m >= 12) return value;
+  // Project the year-end figure from a partial year of data. We only do this
+  // when the founder explicitly recorded months-completed > 0.
+  return Math.round((value / m) * 12);
+}
+
+export function buildActualsSuggestion(
+  data: FullModelData,
+  persisted: PersistedDecisionOverrides,
+  decisionType: DecisionType | undefined,
+  asOfYear: number,
+): ActualsSuggestion {
+  const values: ActualsSuggestion["values"] = {};
+  const sources: ActualsSuggestion["sources"] = {};
+  const sourceLabels: string[] = [];
+  const yr = Math.max(1, Math.min(5, Math.round(asOfYear || 1)));
+
+  // Prior-year snapshot — last completed academic year. Most credible
+  // analogue for "actuals you can pull from your books today".
+  const prior = data.priorYearSnapshot;
+  const current = data.currentYearProjection;
+
+  // For Year 1 we prefer prior-year actuals (truly closed books); if those
+  // aren't there, we fall back to current-year-in-progress and annualize.
+  if (yr === 1) {
+    const priorEnrollment = prior?.endingEnrollment;
+    const priorRevenue = prior?.totalRevenue;
+    const priorExpenses = prior?.totalExpenses;
+    const hasPrior =
+      (priorEnrollment !== undefined && priorEnrollment > 0) ||
+      (priorRevenue !== undefined && priorRevenue > 0) ||
+      (priorExpenses !== undefined && priorExpenses > 0);
+
+    if (hasPrior) {
+      const label = "Prior-year actuals from setup";
+      let used = false;
+      if (priorEnrollment !== undefined) {
+        values.enrollmentActual = Math.round(priorEnrollment);
+        sources.enrollmentActual = label;
+        used = true;
+      }
+      if (priorRevenue !== undefined) {
+        values.revenueActual = Math.round(priorRevenue);
+        sources.revenueActual = label;
+        used = true;
+      }
+      if (priorExpenses !== undefined) {
+        values.expenseActual = Math.round(priorExpenses);
+        sources.expenseActual = label;
+        used = true;
+      }
+      if (priorRevenue !== undefined && priorExpenses !== undefined) {
+        values.netIncomeActual = Math.round(priorRevenue - priorExpenses);
+        sources.netIncomeActual = label;
+      }
+      if (used) sourceLabels.push(label);
+    } else if (current) {
+      const months = current.monthsCompleted;
+      const annualized = (months ?? 0) > 0 && (months ?? 0) < 12;
+      const label = annualized
+        ? `Current-year projection (annualized from ${months} months)`
+        : "Current-year projection from setup";
+      let used = false;
+      if (current.currentEnrollment !== undefined && current.currentEnrollment > 0) {
+        values.enrollmentActual = Math.round(current.currentEnrollment);
+        sources.enrollmentActual = label;
+        used = true;
+      }
+      const projRev = annualizeFromCurrent(current.projectedRevenue, months);
+      const projExp = annualizeFromCurrent(current.projectedExpenses, months);
+      if (projRev !== undefined && projRev > 0) {
+        values.revenueActual = projRev;
+        sources.revenueActual = label;
+        used = true;
+      }
+      if (projExp !== undefined && projExp > 0) {
+        values.expenseActual = projExp;
+        sources.expenseActual = label;
+        used = true;
+      }
+      if (projRev !== undefined && projExp !== undefined) {
+        values.netIncomeActual = Math.round(projRev - projExp);
+        sources.netIncomeActual = label;
+      }
+      if (used) sourceLabels.push(label);
+    }
+  }
+
+  // Signed lease rent — relevant only for evaluate_site decisions, since the
+  // generic "monthly rent" question on other decision types isn't a realized
+  // figure to capture. We prefer a phase that actually contains the as-of
+  // year, so a multi-phase model still surfaces the right rent.
+  if (decisionType === "evaluate_site") {
+    const sp = data.schoolProfile as Record<string, unknown> | undefined;
+    let phaseRent: number | undefined;
+    let phaseLabel: string | undefined;
+    const phases = sp?.facilityPhases as Array<Record<string, unknown>> | undefined;
+    if (phases && phases.length > 0) {
+      const active = phases.find((p) => {
+        const start = (p.startYear as number | undefined) ?? 1;
+        const end = (p.endYear as number | undefined) ?? 5;
+        const ownership = p.ownershipType as string | undefined;
+        const rent = (p.monthlyRent as number | undefined) ?? 0;
+        return ownership === "rent" && rent > 0 && yr >= start && yr <= end;
+      });
+      if (active) {
+        phaseRent = (active.monthlyRent as number | undefined) ?? undefined;
+        phaseLabel = "Signed rent from facility plan";
+      }
+    }
+    if (phaseRent === undefined) {
+      const detected = detectFacilityRent(data);
+      if (detected.monthlyRent && detected.monthlyRent > 0) {
+        phaseRent = detected.monthlyRent;
+        phaseLabel = "Detected from your facility expense";
+      }
+    }
+    if (phaseRent !== undefined && phaseRent > 0 && phaseLabel) {
+      values.signedMonthlyRent = Math.round(phaseRent);
+      sources.signedMonthlyRent = phaseLabel;
+      sourceLabels.push(phaseLabel);
+    }
+  }
+
+  return { values, sources, sourceLabels };
+}
+
 // --- Replay a persisted custom scenario ---------------------------------------
 //
 // Saved decision scenarios live as `customScenarios` entries with a stored
