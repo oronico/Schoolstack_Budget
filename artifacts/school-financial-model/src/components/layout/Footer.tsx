@@ -24,6 +24,7 @@ export function Footer() {
               <li><Link href="/solutions/scenario-planning" className="text-sm text-white/70 hover:text-white transition-colors">Scenario Planning</Link></li>
               <li><Link href="/solutions/debt-analysis" className="text-sm text-white/70 hover:text-white transition-colors">Debt Analysis</Link></li>
               <li><Link href="/solutions/budgeting-accounting-guidance" className="text-sm text-white/70 hover:text-white transition-colors">Budgeting & Accounting Guidance</Link></li>
+              <li><Link href="/solutions" className="text-sm text-white/90 font-semibold hover:text-white transition-colors">All capabilities</Link></li>
             </ul>
           </div>
 
