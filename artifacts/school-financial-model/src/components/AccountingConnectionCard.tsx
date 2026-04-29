@@ -7,12 +7,21 @@
 // same card so the founder can pick whichever accounting system their school
 // already uses, and we surface a clear "not configured" message when the
 // server is missing OAuth credentials so the button never silently fails.
+//
+// After a successful sync, founders can expand a "Customize account mapping"
+// panel to confirm which accounts feed which suggestion bucket
+// (revenue / expense / rent / ignore). Schools whose chart of accounts uses
+// non-standard names like "Facility Lease" or "Building Costs" can fix the
+// monthly-rent suggestion in one click without re-typing anything.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Building2,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Loader2,
   RefreshCw,
+  SlidersHorizontal,
   Unplug,
   AlertTriangle,
 } from "lucide-react";
@@ -22,6 +31,19 @@ import {
   type AccountingSnapshotProvider,
   type AccountingSnapshotLike,
 } from "@/lib/decision-flows";
+
+// Mirrors the AccountKind / DiscoveredAccount types from @workspace/db. We
+// duplicate them here (rather than importing) because the school-financial-
+// model bundle should not pull in the server's drizzle dependency tree.
+type AccountKind = "revenue" | "expense" | "rent" | "ignore";
+
+interface DiscoveredAccount {
+  key: string;
+  name: string;
+  section: "income" | "expense" | "other";
+  amount: number;
+  defaultKind: AccountKind;
+}
 
 interface ProviderConfig {
   provider: AccountingSnapshotProvider;
@@ -36,6 +58,8 @@ interface AccountingConnection {
   lastSyncedAt: string | null;
   lastSyncError: string | null;
   snapshot: (AccountingSnapshotLike & { realmDisplayName?: string }) | null;
+  discoveredAccounts: DiscoveredAccount[];
+  accountMappings: Record<string, AccountKind>;
   configured: boolean;
 }
 
@@ -51,6 +75,24 @@ export interface AccountingConnectionCardProps {
   // hands back the *Year-1* eligible snapshot (no-arg here means "give me the
   // best available snapshot").
   onSnapshotChange: (snapshot: AccountingSnapshotLike | null) => void;
+}
+
+const KIND_LABELS: Record<AccountKind, string> = {
+  revenue: "Revenue",
+  expense: "Expense",
+  rent: "Rent",
+  ignore: "Ignore",
+};
+
+const KIND_OPTIONS: AccountKind[] = ["revenue", "expense", "rent", "ignore"];
+
+function formatCurrency(n: number): string {
+  if (!isFinite(n)) return "$0";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Math.round(n));
 }
 
 function authHeader(): Record<string, string> {
@@ -217,6 +259,28 @@ export function AccountingConnectionCard({
     }
   }
 
+  async function handleSaveMapping(
+    provider: AccountingSnapshotProvider,
+    mappings: Record<string, AccountKind>,
+  ) {
+    setBusy(`mapping-${provider}`);
+    setError(null);
+    try {
+      const res = await fetch(`/api/models/${modelId}/accounting/${provider}/mapping`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+        body: JSON.stringify({ mappings }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || `Save failed (${res.status})`);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <div
       className="rounded-2xl border border-border bg-card p-5 shadow-sm"
@@ -361,9 +425,207 @@ export function AccountingConnectionCard({
                     )}
                   </div>
                 </div>
+                {conn && conn.discoveredAccounts.length > 0 && (
+                  <AccountMappingPanel
+                    provider={p.provider}
+                    accounts={conn.discoveredAccounts}
+                    saved={conn.accountMappings}
+                    saving={busy === `mapping-${p.provider}`}
+                    onSave={(m) => handleSaveMapping(p.provider, m)}
+                  />
+                )}
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface AccountMappingPanelProps {
+  provider: AccountingSnapshotProvider;
+  accounts: DiscoveredAccount[];
+  saved: Record<string, AccountKind>;
+  saving: boolean;
+  onSave: (mappings: Record<string, AccountKind>) => void;
+}
+
+// Founder-facing override grid. We seed each row with the saved override
+// (falling back to the auto-detection) so opening the panel shows the
+// current behaviour rather than a blank slate. "Save mapping" is disabled
+// until something actually changes — keeps accidental writes out of the DB.
+function AccountMappingPanel({
+  provider,
+  accounts,
+  saved,
+  saving,
+  onSave,
+}: AccountMappingPanelProps) {
+  const [open, setOpen] = useState(false);
+  const initial = useMemo(() => {
+    const m: Record<string, AccountKind> = {};
+    for (const a of accounts) m[a.key] = saved[a.key] ?? a.defaultKind;
+    return m;
+  }, [accounts, saved]);
+  const [draft, setDraft] = useState<Record<string, AccountKind>>(initial);
+  // Re-seed the draft whenever the upstream accounts/saved data changes
+  // (e.g. after a sync). Keeps the panel in sync without manual reset.
+  useEffect(() => {
+    setDraft(initial);
+  }, [initial]);
+
+  const dirty = useMemo(() => {
+    for (const k of Object.keys(initial)) {
+      if (initial[k] !== draft[k]) return true;
+    }
+    return false;
+  }, [initial, draft]);
+
+  const groups = useMemo(() => {
+    const g: Record<DiscoveredAccount["section"], DiscoveredAccount[]> = {
+      income: [],
+      expense: [],
+      other: [],
+    };
+    for (const a of accounts) g[a.section].push(a);
+    return g;
+  }, [accounts]);
+
+  // Only count accounts whose saved bucket differs from the auto-detected
+  // default — otherwise simply re-saving without changes would inflate the
+  // "customized" count even though nothing was overridden.
+  const customizedCount = useMemo(() => {
+    let n = 0;
+    for (const a of accounts) {
+      const s = saved[a.key];
+      if (s !== undefined && s !== a.defaultKind) n += 1;
+    }
+    return n;
+  }, [accounts, saved]);
+
+  // Only persist true overrides so the saved map mirrors what the founder
+  // explicitly changed. Defaults stay implicit and continue to apply.
+  const overridesOnly = useCallback(
+    (m: Record<string, AccountKind>): Record<string, AccountKind> => {
+      const out: Record<string, AccountKind> = {};
+      for (const a of accounts) {
+        const v = m[a.key];
+        if (v !== undefined && v !== a.defaultKind) out[a.key] = v;
+      }
+      return out;
+    },
+    [accounts],
+  );
+
+  return (
+    <div className="mt-3 border-t border-border/60 pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+        data-testid={`accounting-mapping-toggle-${provider}`}
+        aria-expanded={open}
+      >
+        {open ? (
+          <ChevronDown className="h-3.5 w-3.5" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5" />
+        )}
+        <SlidersHorizontal className="h-3.5 w-3.5" />
+        Customize account mapping
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+          ({accounts.length} account{accounts.length === 1 ? "" : "s"}
+          {customizedCount > 0 ? ` · ${customizedCount} customized` : ""})
+        </span>
+      </button>
+      {open && (
+        <div
+          className="mt-3 space-y-3"
+          data-testid={`accounting-mapping-panel-${provider}`}
+        >
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Choose which accounts feed each suggestion. Anything you don't change keeps
+            the auto-detected default — schools that skip this step still get the
+            standard heuristic.
+          </p>
+          {(["income", "expense", "other"] as const).map((section) => {
+            const list = groups[section];
+            if (list.length === 0) return null;
+            const sectionLabel =
+              section === "income"
+                ? "Income accounts"
+                : section === "expense"
+                  ? "Expense accounts"
+                  : "Other accounts";
+            return (
+              <div key={section}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                  {sectionLabel}
+                </div>
+                <div className="space-y-1">
+                  {list.map((acc) => (
+                    <div
+                      key={acc.key}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/40 px-2.5 py-1.5"
+                      data-testid={`accounting-mapping-row-${provider}-${acc.key}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium truncate" title={acc.name}>
+                          {acc.name}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {formatCurrency(acc.amount)} this period
+                        </div>
+                      </div>
+                      <select
+                        value={draft[acc.key] ?? acc.defaultKind}
+                        onChange={(e) =>
+                          setDraft((prev) => ({
+                            ...prev,
+                            [acc.key]: e.target.value as AccountKind,
+                          }))
+                        }
+                        className="text-xs rounded-md border border-border bg-background px-2 py-1 focus:border-primary focus:outline-none"
+                        data-testid={`accounting-mapping-select-${provider}-${acc.key}`}
+                      >
+                        {KIND_OPTIONS.map((k) => (
+                          <option key={k} value={k}>
+                            {KIND_LABELS[k]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={!dirty || saving}
+              onClick={() => onSave(overridesOnly(draft))}
+              className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid={`accounting-mapping-save-${provider}`}
+            >
+              {saving ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3 w-3" />
+              )}
+              Save mapping
+            </button>
+            <button
+              type="button"
+              disabled={!dirty || saving}
+              onClick={() => setDraft(initial)}
+              className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+              data-testid={`accounting-mapping-reset-${provider}`}
+            >
+              Reset
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -8,6 +8,14 @@
 // constructing "Suggest from latest data" suggestions, so we deliberately
 // keep the cached snapshot self-contained rather than re-querying the
 // provider on each render.
+//
+// `discoveredAccountsJson` and `accountMappingsJson` power the founder-facing
+// account-mapping UI: after a sync we cache the per-account totals from the
+// provider's P&L so the founder can confirm which accounts feed which
+// suggestion bucket (revenue / expense / rent / ignore). The mapping is then
+// applied on the next sync (and immediately, when saved) to recompute the
+// snapshot — so a school whose chart of accounts uses non-standard names
+// like "Facility Lease" can still get the right monthly-rent suggestion.
 import {
   pgTable,
   serial,
@@ -22,6 +30,33 @@ import { usersTable } from "./users";
 import { financialModelsTable } from "./financial-models";
 
 export type AccountingProvider = "quickbooks" | "xero";
+
+// How a single account contributes to the snapshot. "rent" still rolls into
+// total expenses but additionally drives the monthly-rent estimate; "ignore"
+// drops the account from both totals (useful for non-operating items like
+// owner draws or interest income that would distort the simple snapshot).
+export type AccountKind = "revenue" | "expense" | "rent" | "ignore";
+
+// One row per detail account discovered in the most recent P&L. We store the
+// per-account amount (over the period covered by the snapshot) so the
+// account-mapping UI can re-classify and recompute totals locally without
+// hitting the provider again.
+export type DiscoveredAccount = {
+  // Stable, case-insensitive lookup key so the mapping survives small label
+  // changes from the provider. We lowercase the account name on write.
+  key: string;
+  // Display name as it appears in the founder's chart of accounts.
+  name: string;
+  // Which P&L section the account was found under. Drives the default UI
+  // grouping and the heuristic kind below.
+  section: "income" | "expense" | "other";
+  // Amount reported by the provider for this account over the snapshot
+  // window (revenue is positive; expense is positive; we strip signs upstream).
+  amount: number;
+  // What the auto-detection would classify this account as if the founder
+  // doesn't override it. Mirrored to the mapping when missing.
+  defaultKind: AccountKind;
+};
 
 export type AccountingSyncSnapshot = {
   // ISO date string (YYYY-MM-DD) for the last day of the period summarized.
@@ -70,6 +105,13 @@ export const accountingConnectionsTable = pgTable(
     lastSyncedAt: timestamp("last_synced_at"),
     lastSyncError: text("last_sync_error"),
     snapshotJson: jsonb("snapshot_json").$type<AccountingSyncSnapshot>(),
+    // Per-account amounts captured at the most recent sync. Null until the
+    // first sync runs (the OAuth callback only stores tokens).
+    discoveredAccountsJson: jsonb("discovered_accounts_json").$type<DiscoveredAccount[]>(),
+    // Founder overrides keyed by `DiscoveredAccount.key`. Missing keys fall
+    // back to `defaultKind`, so an empty mapping is equivalent to the
+    // pre-mapping heuristic behaviour.
+    accountMappingsJson: jsonb("account_mappings_json").$type<Record<string, AccountKind>>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

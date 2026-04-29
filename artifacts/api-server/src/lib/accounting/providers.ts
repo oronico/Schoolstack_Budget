@@ -11,7 +11,18 @@
 // when those aren't configured the route layer returns a friendly 503 instead
 // of attempting a request that would otherwise leak unauthenticated calls or
 // crash the server.
-import type { AccountingProvider, AccountingSyncSnapshot } from "@workspace/db";
+//
+// `fetchProfitAndLoss` returns both the auto-detected snapshot AND the raw
+// per-account amounts ("discovered accounts") so the founder-facing mapping
+// UI can re-classify accounts (e.g. "Facility Lease" → rent) without having
+// to re-hit the provider. `applyAccountMappings` then recomputes the snapshot
+// from those discovered amounts plus the founder's overrides.
+import type {
+  AccountingProvider,
+  AccountingSyncSnapshot,
+  AccountKind,
+  DiscoveredAccount,
+} from "@workspace/db";
 
 export interface ProviderTokens {
   accessToken: string;
@@ -19,6 +30,11 @@ export interface ProviderTokens {
   expiresAt: Date;
   realmId: string;
   realmDisplayName?: string;
+}
+
+export interface SyncResult {
+  snapshot: AccountingSyncSnapshot;
+  discoveredAccounts: DiscoveredAccount[];
 }
 
 export interface ProviderClient {
@@ -34,7 +50,7 @@ export interface ProviderClient {
   fetchProfitAndLoss(
     accessToken: string,
     realmId: string,
-  ): Promise<AccountingSyncSnapshot>;
+  ): Promise<SyncResult>;
 }
 
 const QB_AUTH_URL = "https://appcenter.intuit.com/connect/oauth2";
@@ -62,6 +78,60 @@ function monthsBetween(start: Date, end: Date): number {
     (end.getUTCMonth() - start.getUTCMonth()) +
     1;
   return Math.min(12, Math.max(1, m));
+}
+
+// Normalise an account name into a stable lookup key. We lowercase + trim so
+// minor formatting drift in the chart of accounts doesn't orphan a saved
+// mapping ("Facility Lease " === "facility lease").
+export function accountKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+// Default heuristic: which bucket should an account fall into when the
+// founder hasn't customised the mapping? Mirrors the legacy logic so an
+// unmapped connection behaves identically to before.
+function defaultKindFor(section: DiscoveredAccount["section"], name: string): AccountKind {
+  const label = name.toLowerCase();
+  if (section === "income") return "revenue";
+  if (section === "expense") {
+    if (label.includes("rent") || label.includes("lease")) return "rent";
+    return "expense";
+  }
+  return "ignore";
+}
+
+// Recompute snapshot totals from per-account amounts + founder mappings.
+// Falls back to `defaultKind` for any account the founder hasn't explicitly
+// reclassified, so an empty mapping behaves identically to the auto-detected
+// snapshot we built during the parse.
+export function applyAccountMappings(
+  base: AccountingSyncSnapshot,
+  discovered: DiscoveredAccount[],
+  mappings: Record<string, AccountKind> | null | undefined,
+): AccountingSyncSnapshot {
+  if (!discovered.length) return base;
+  const months = base.monthsCompleted > 0 ? base.monthsCompleted : 12;
+  let revenue = 0;
+  let expenses = 0;
+  let rentTotal = 0;
+  for (const acc of discovered) {
+    const kind = mappings?.[acc.key] ?? acc.defaultKind;
+    if (kind === "revenue") revenue += acc.amount;
+    else if (kind === "expense") expenses += acc.amount;
+    else if (kind === "rent") {
+      rentTotal += acc.amount;
+      // Rent is still an operating expense — fold it into expenses so the
+      // founder's "total expenses" suggestion stays apples-to-apples with
+      // the prior-year snapshot.
+      expenses += acc.amount;
+    }
+  }
+  return {
+    ...base,
+    revenue: revenue > 0 ? Math.round(revenue) : undefined,
+    expenses: expenses > 0 ? Math.round(expenses) : undefined,
+    monthlyRent: rentTotal > 0 ? Math.round(rentTotal / months) : undefined,
+  };
 }
 
 // --- QuickBooks --------------------------------------------------------------
@@ -174,12 +244,11 @@ const quickbooksClient: ProviderClient = {
   },
 };
 
-// Internal: extract { revenue, expenses, monthlyRent, periodEnd, monthsCompleted }
-// from the QuickBooks `ProfitAndLoss` JSON response. Exported under a `__test`
-// suffix below for unit coverage.
+// Internal: extract { snapshot, discoveredAccounts } from the QuickBooks
+// `ProfitAndLoss` JSON response. Exported for unit coverage.
 export function parseQuickBooksProfitAndLoss(
   payload: Record<string, unknown>,
-): AccountingSyncSnapshot {
+): SyncResult {
   const header = (payload.Header as Record<string, unknown>) || {};
   const startStr = String(header.StartPeriod || "");
   const endStr = String(header.EndPeriod || "");
@@ -190,9 +259,13 @@ export function parseQuickBooksProfitAndLoss(
 
   let revenue = 0;
   let expenses = 0;
-  let monthlyRent: number | undefined;
+  const discovered: DiscoveredAccount[] = [];
+  const seen = new Set<string>();
 
-  const walkRows = (rows: unknown): void => {
+  // Walk a tree of P&L rows. We pass the active section ("income" /
+  // "expense" / "other") down to detail rows so the discovered accounts
+  // know which bucket they sit in.
+  const walkRows = (rows: unknown, section: DiscoveredAccount["section"]): void => {
     if (!rows || typeof rows !== "object") return;
     const list = (rows as { Row?: unknown[] }).Row;
     if (!Array.isArray(list)) return;
@@ -204,37 +277,53 @@ export function parseQuickBooksProfitAndLoss(
       const colData = (summary?.ColData as Array<Record<string, unknown>> | undefined) ?? [];
       const totalCell = colData[colData.length - 1];
       const totalValue = Number(totalCell?.value || 0);
-      if (group === "Income") revenue = Math.max(revenue, totalValue);
-      else if (group === "Expenses") expenses = Math.max(expenses, totalValue);
-      // Look for a "Rent" or "Rent or Lease" account inside Expenses to surface
-      // a monthly-rent estimate. We divide by months completed to keep the
-      // founder's number comparable to a lease document.
+      let nextSection: DiscoveredAccount["section"] = section;
+      if (group === "Income") {
+        revenue = Math.max(revenue, totalValue);
+        nextSection = "income";
+      } else if (group === "Expenses") {
+        expenses = Math.max(expenses, totalValue);
+        nextSection = "expense";
+      }
       const rowsInner = r.Rows as Record<string, unknown> | undefined;
-      if (rowsInner) walkRows(rowsInner);
+      if (rowsInner) walkRows(rowsInner, nextSection);
       const detailRow = (r.ColData as Array<Record<string, unknown>> | undefined) ?? [];
       if (detailRow.length > 0) {
-        const label = String(detailRow[0]?.value || "").toLowerCase();
-        if (label.includes("rent")) {
-          const last = detailRow[detailRow.length - 1];
-          const v = Number(last?.value || 0);
-          if (v > 0) {
-            const m = monthsCompleted > 0 ? monthsCompleted : 12;
-            const perMonth = Math.round(v / m);
-            if (!monthlyRent || perMonth > monthlyRent) monthlyRent = perMonth;
-          }
-        }
+        const name = String(detailRow[0]?.value || "").trim();
+        if (!name) continue;
+        const last = detailRow[detailRow.length - 1];
+        const amount = Number(last?.value || 0);
+        if (!isFinite(amount)) continue;
+        const key = accountKey(name);
+        if (seen.has(key)) continue;
+        const absAmount = Math.abs(amount);
+        if (absAmount === 0) continue;
+        seen.add(key);
+        discovered.push({
+          key,
+          name,
+          section,
+          amount: absAmount,
+          defaultKind: defaultKindFor(section, name),
+        });
       }
     }
   };
-  walkRows(payload.Rows);
+  walkRows(payload.Rows, "other");
 
-  return {
+  const baseSnapshot: AccountingSyncSnapshot = {
     periodEnd,
     monthsCompleted,
     revenue: revenue > 0 ? Math.round(revenue) : undefined,
     expenses: expenses > 0 ? Math.round(expenses) : undefined,
-    monthlyRent,
+    monthlyRent: undefined,
   };
+  // Re-derive the snapshot via the mapping helper with no overrides so that
+  // the auto-detected monthlyRent (from rent-named accounts) is computed by
+  // the same code path that founder mappings will later use. Keeps a single
+  // source of truth for "rent → monthly rent" arithmetic.
+  const snapshot = applyAccountMappings(baseSnapshot, discovered, null);
+  return { snapshot, discoveredAccounts: discovered };
 }
 
 // --- Xero --------------------------------------------------------------------
@@ -357,11 +446,11 @@ const xeroClient: ProviderClient = {
 
 // Parse a Xero `ProfitAndLoss` report payload. Xero returns a `Reports` array
 // whose `Rows` mirror the QuickBooks structure but with a different field
-// naming convention. We collect Income / Expenses totals and look for a
-// dedicated rent row inside the expenses section.
+// naming convention. We collect Income / Expenses totals and capture every
+// detail account so the founder mapping UI can re-classify them.
 export function parseXeroProfitAndLoss(
   payload: Record<string, unknown>,
-): AccountingSyncSnapshot {
+): SyncResult {
   const reports = (payload.Reports as Array<Record<string, unknown>> | undefined) ?? [];
   const report = reports[0] ?? {};
   const titles = (report.ReportTitles as string[] | undefined) ?? [];
@@ -374,7 +463,8 @@ export function parseXeroProfitAndLoss(
 
   let revenue = 0;
   let expenses = 0;
-  let monthlyRent: number | undefined;
+  const discovered: DiscoveredAccount[] = [];
+  const seen = new Set<string>();
 
   const sections = (report.Rows as Array<Record<string, unknown>> | undefined) ?? [];
   for (const section of sections) {
@@ -382,34 +472,49 @@ export function parseXeroProfitAndLoss(
     const titleVal = String((section as { Title?: string }).Title || "").toLowerCase();
     const rows = ((section as { Rows?: Array<Record<string, unknown>> }).Rows) ?? [];
     let summary = 0;
+    const sectionKind: DiscoveredAccount["section"] =
+      titleVal.includes("income") || titleVal.includes("revenue")
+        ? "income"
+        : titleVal.includes("expense")
+          ? "expense"
+          : "other";
     for (const row of rows) {
       const cells = ((row as { Cells?: Array<Record<string, unknown>> }).Cells) ?? [];
       if (cells.length === 0) continue;
-      const label = String(cells[0]?.Value || "").toLowerCase();
+      const name = String(cells[0]?.Value || "").trim();
       const lastCell = cells[cells.length - 1];
       const v = Number(lastCell?.Value || 0);
       if ((row as { RowType?: string }).RowType === "SummaryRow") {
         summary = Math.max(summary, Math.abs(v));
+        continue;
       }
-      if (titleVal.includes("expense") && label.includes("rent") && v > 0) {
-        const perMonth = Math.round(v / monthsCompleted);
-        if (!monthlyRent || perMonth > monthlyRent) monthlyRent = perMonth;
-      }
+      if (!name || !isFinite(v)) continue;
+      const key = accountKey(name);
+      if (seen.has(key)) continue;
+      const absAmount = Math.abs(v);
+      if (absAmount === 0) continue;
+      seen.add(key);
+      discovered.push({
+        key,
+        name,
+        section: sectionKind,
+        amount: absAmount,
+        defaultKind: defaultKindFor(sectionKind, name),
+      });
     }
-    if (titleVal.includes("income") || titleVal.includes("revenue")) {
-      revenue = Math.max(revenue, summary);
-    } else if (titleVal.includes("expense")) {
-      expenses = Math.max(expenses, summary);
-    }
+    if (sectionKind === "income") revenue = Math.max(revenue, summary);
+    else if (sectionKind === "expense") expenses = Math.max(expenses, summary);
   }
 
-  return {
+  const baseSnapshot: AccountingSyncSnapshot = {
     periodEnd,
     monthsCompleted,
     revenue: revenue > 0 ? Math.round(revenue) : undefined,
     expenses: expenses > 0 ? Math.round(expenses) : undefined,
-    monthlyRent,
+    monthlyRent: undefined,
   };
+  const snapshot = applyAccountMappings(baseSnapshot, discovered, null);
+  return { snapshot, discoveredAccounts: discovered };
 }
 
 function extractIsoDate(input: string | undefined): string | undefined {
@@ -442,4 +547,13 @@ export function isAccountingProvider(value: unknown): value is AccountingProvide
 
 export function providerDisplayName(provider: AccountingProvider): string {
   return provider === "quickbooks" ? "QuickBooks" : "Xero";
+}
+
+export function isAccountKind(value: unknown): value is AccountKind {
+  return (
+    value === "revenue" ||
+    value === "expense" ||
+    value === "rent" ||
+    value === "ignore"
+  );
 }

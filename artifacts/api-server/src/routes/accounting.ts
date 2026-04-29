@@ -9,6 +9,7 @@
 //   POST   /api/models/:id/accounting/:provider/connect   — initiate OAuth
 //   GET    /api/accounting/:provider/callback             — finalize OAuth
 //   POST   /api/models/:id/accounting/:provider/sync      — pull latest snapshot
+//   PUT    /api/models/:id/accounting/:provider/mapping   — save account mapping
 //   DELETE /api/models/:id/accounting/:provider           — disconnect
 import { Router, type IRouter, type Response } from "express";
 import crypto from "crypto";
@@ -19,10 +20,14 @@ import {
   financialModelsTable,
   type AccountingProvider,
   type AccountingSyncSnapshot,
+  type AccountKind,
+  type DiscoveredAccount,
 } from "@workspace/db";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 import {
+  applyAccountMappings,
   getProviderClient,
+  isAccountKind,
   isAccountingProvider,
   providerDisplayName,
 } from "../lib/accounting/providers";
@@ -83,7 +88,8 @@ async function ownsModel(userId: number, modelId: number): Promise<boolean> {
 }
 
 // Public-facing connection summary (never includes tokens). We expose the
-// snapshot so the founder UI can render the "Suggest from latest data" badge
+// snapshot, the per-account totals from the latest sync, and the founder's
+// saved mapping so the UI can render the "Customize account mapping" panel
 // without a second round-trip.
 type PublicConnection = {
   provider: AccountingProvider;
@@ -92,6 +98,8 @@ type PublicConnection = {
   lastSyncedAt: string | null;
   lastSyncError: string | null;
   snapshot: AccountingSyncSnapshot | null;
+  discoveredAccounts: DiscoveredAccount[];
+  accountMappings: Record<string, AccountKind>;
   configured: boolean;
 };
 
@@ -102,6 +110,8 @@ function toPublicConnection(row: {
   lastSyncedAt: Date | null;
   lastSyncError: string | null;
   snapshotJson: AccountingSyncSnapshot | null;
+  discoveredAccountsJson: DiscoveredAccount[] | null;
+  accountMappingsJson: Record<string, AccountKind> | null;
 }): PublicConnection {
   const provider = row.provider as AccountingProvider;
   const client = getProviderClient(provider);
@@ -112,6 +122,8 @@ function toPublicConnection(row: {
     lastSyncedAt: row.lastSyncedAt ? row.lastSyncedAt.toISOString() : null,
     lastSyncError: row.lastSyncError,
     snapshot: row.snapshotJson,
+    discoveredAccounts: row.discoveredAccountsJson ?? [],
+    accountMappings: row.accountMappingsJson ?? {},
     configured: client.isConfigured(),
   };
 }
@@ -139,6 +151,8 @@ router.get(
           lastSyncedAt: accountingConnectionsTable.lastSyncedAt,
           lastSyncError: accountingConnectionsTable.lastSyncError,
           snapshotJson: accountingConnectionsTable.snapshotJson,
+          discoveredAccountsJson: accountingConnectionsTable.discoveredAccountsJson,
+          accountMappingsJson: accountingConnectionsTable.accountMappingsJson,
         })
         .from(accountingConnectionsTable)
         .where(eq(accountingConnectionsTable.modelId, modelId));
@@ -343,7 +357,23 @@ router.post(
           .where(eq(accountingConnectionsTable.id, conn.id));
       }
 
-      const snapshot = await client.fetchProfitAndLoss(accessToken, conn.realmId);
+      const result = await client.fetchProfitAndLoss(accessToken, conn.realmId);
+      // Drop any saved mapping entries that no longer have a matching account
+      // in the latest sync — keeps the persisted mapping tidy when the chart
+      // of accounts changes between syncs.
+      const currentKeys = new Set(result.discoveredAccounts.map((a) => a.key));
+      const prunedMappings: Record<string, AccountKind> = {};
+      for (const [k, v] of Object.entries(conn.accountMappingsJson ?? {})) {
+        if (currentKeys.has(k)) prunedMappings[k] = v;
+      }
+      // Apply the founder's mapping (if any) on top of the auto-detected
+      // snapshot so a school whose chart of accounts uses non-standard names
+      // still gets the right revenue/expense/rent totals.
+      const snapshot = applyAccountMappings(
+        result.snapshot,
+        result.discoveredAccounts,
+        prunedMappings,
+      );
       // Annotate the snapshot with the realm display name so the actuals
       // editor can show "From QuickBooks (Acme School - QBO)".
       if (conn.realmDisplayName && !snapshot.realmDisplayName) {
@@ -355,6 +385,8 @@ router.post(
         .update(accountingConnectionsTable)
         .set({
           snapshotJson: snapshot,
+          discoveredAccountsJson: result.discoveredAccounts,
+          accountMappingsJson: prunedMappings,
           lastSyncedAt: now,
           lastSyncError: null,
           status: "connected",
@@ -368,6 +400,8 @@ router.post(
           lastSyncedAt: accountingConnectionsTable.lastSyncedAt,
           lastSyncError: accountingConnectionsTable.lastSyncError,
           snapshotJson: accountingConnectionsTable.snapshotJson,
+          discoveredAccountsJson: accountingConnectionsTable.discoveredAccountsJson,
+          accountMappingsJson: accountingConnectionsTable.accountMappingsJson,
         });
       res.json({ connection: toPublicConnection(updated) });
     } catch (err) {
@@ -383,6 +417,106 @@ router.post(
         .where(eq(accountingConnectionsTable.id, conn.id));
       res.status(502).json({ error: `Sync failed: ${message}` });
     }
+  },
+);
+
+// --- PUT /api/models/:id/accounting/:provider/mapping ----------------------
+// Save founder overrides for which accounts feed which suggestion bucket. We
+// recompute the cached snapshot immediately from the discovered amounts so
+// the actuals editor reflects the new mapping without waiting for the next
+// sync. Body shape:  { mappings: { [accountKey]: "revenue"|"expense"|"rent"|"ignore" } }
+router.put(
+  "/models/:id/accounting/:provider/mapping",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    const modelId = Number(req.params.id);
+    const provider = req.params.provider;
+    if (!Number.isFinite(modelId) || modelId <= 0) {
+      res.status(400).json({ error: "Invalid model id." });
+      return;
+    }
+    if (!isAccountingProvider(provider)) {
+      res.status(400).json({ error: "Unsupported accounting provider." });
+      return;
+    }
+    if (!(await ownsModel(req.userId!, modelId))) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+    const body = (req.body ?? {}) as { mappings?: unknown };
+    if (!body.mappings || typeof body.mappings !== "object" || Array.isArray(body.mappings)) {
+      res.status(400).json({ error: "Body must include a `mappings` object." });
+      return;
+    }
+
+    const [conn] = await db
+      .select()
+      .from(accountingConnectionsTable)
+      .where(
+        and(
+          eq(accountingConnectionsTable.modelId, modelId),
+          eq(accountingConnectionsTable.provider, provider),
+        ),
+      )
+      .limit(1);
+    if (!conn) {
+      res.status(404).json({ error: "No connection for this provider." });
+      return;
+    }
+    const discovered = conn.discoveredAccountsJson ?? [];
+    if (discovered.length === 0) {
+      res.status(409).json({
+        error:
+          "Run a sync before customising the account mapping — there are no detected accounts yet.",
+      });
+      return;
+    }
+
+    // Validate + filter the incoming mapping. We silently drop unknown
+    // account keys (defensive against stale UI state) and reject unknown
+    // kinds so a typo can't quietly mis-classify a row.
+    const validKeys = new Set(discovered.map((a) => a.key));
+    const cleaned: Record<string, AccountKind> = {};
+    for (const [k, v] of Object.entries(body.mappings as Record<string, unknown>)) {
+      if (!validKeys.has(k)) continue;
+      if (!isAccountKind(v)) {
+        res.status(400).json({ error: `Invalid account kind for "${k}".` });
+        return;
+      }
+      cleaned[k] = v;
+    }
+
+    // Recompute the cached snapshot in-place. Preserve the existing period /
+    // months / enrollment / realm metadata since those came from the last
+    // sync's report header.
+    const baseSnapshot: AccountingSyncSnapshot = conn.snapshotJson ?? {
+      periodEnd: new Date().toISOString().slice(0, 10),
+      monthsCompleted: 12,
+    };
+    const snapshot = applyAccountMappings(baseSnapshot, discovered, cleaned);
+    if (conn.realmDisplayName && !snapshot.realmDisplayName) {
+      snapshot.realmDisplayName = conn.realmDisplayName;
+    }
+
+    const [updated] = await db
+      .update(accountingConnectionsTable)
+      .set({
+        snapshotJson: snapshot,
+        accountMappingsJson: cleaned,
+        updatedAt: new Date(),
+      })
+      .where(eq(accountingConnectionsTable.id, conn.id))
+      .returning({
+        provider: accountingConnectionsTable.provider,
+        status: accountingConnectionsTable.status,
+        realmDisplayName: accountingConnectionsTable.realmDisplayName,
+        lastSyncedAt: accountingConnectionsTable.lastSyncedAt,
+        lastSyncError: accountingConnectionsTable.lastSyncError,
+        snapshotJson: accountingConnectionsTable.snapshotJson,
+        discoveredAccountsJson: accountingConnectionsTable.discoveredAccountsJson,
+        accountMappingsJson: accountingConnectionsTable.accountMappingsJson,
+      });
+    res.json({ connection: toPublicConnection(updated) });
   },
 );
 

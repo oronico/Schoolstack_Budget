@@ -17,6 +17,7 @@
     "qa:smoke-arithmetic": "tsx ./tests/e2e-arithmetic-smoke.ts",
     "test:parity": "tsx ./tests/parity-frontend-backend.ts",
     "test:cross-engine": "tsx ./tests/cross-engine-test.ts",
+    "test:accounting-mapping": "tsx ./tests/accounting-account-mapping.ts",
     "test:decision-history": "tsx ./tests/decision-history.ts",
     "test:decision-history-pdf": "tsx ./tests/decision-history-pdf.ts",
     "test:decision-comparison-pdf-route": "tsx ./tests/decision-comparison-pdf-route.ts",
