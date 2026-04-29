@@ -700,6 +700,120 @@ describe("buildActualsSuggestion", () => {
     expect(enrollmentSuggestion.values.signedMonthlyRent).toBeUndefined();
   });
 
+  it("prefers an uploaded accounting export over typed-in prior-year actuals", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      // Both sources present — export should win for revenue/expense/net
+      // since it came straight from the books.
+      priorYearSnapshot: {
+        endingEnrollment: 95,
+        totalRevenue: 1_000_000,
+        totalExpenses: 950_000,
+      },
+      accountingExport: {
+        filename: "quickbooks-2026Q1.csv",
+        // Use a fixed timestamp so the formatted date is stable across CI.
+        uploadedAt: "2026-03-14T12:00:00.000Z",
+        totals: {
+          totalRevenue: 1_250_000,
+          totalExpenses: 1_180_000,
+          netIncome: 70_000,
+        },
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values.revenueActual).toBe(1_250_000);
+    expect(suggestion.values.expenseActual).toBe(1_180_000);
+    expect(suggestion.values.netIncomeActual).toBe(70_000);
+    // Source label calls out the filename + a friendly date so the
+    // founder can audit where the number came from. The date format is
+    // locale-sensitive but should always include the filename verbatim.
+    expect(suggestion.sources.revenueActual).toContain("quickbooks-2026Q1.csv");
+    expect(suggestion.sources.revenueActual).toContain("uploaded ");
+    // Enrollment isn't in a P&L export, so we still pull it from the
+    // typed-in prior-year snapshot.
+    expect(suggestion.values.enrollmentActual).toBe(95);
+    expect(suggestion.sources.enrollmentActual).toBe("Prior-year actuals from setup");
+    // Both source labels show up so the editor's caption can list them.
+    expect(suggestion.sourceLabels.some((l) => l.includes("quickbooks-2026Q1.csv"))).toBe(true);
+    expect(suggestion.sourceLabels).toContain("Prior-year actuals from setup");
+  });
+
+  it("derives net income from the export's totals when the file omits a Net Income row", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      accountingExport: {
+        filename: "books-q1.csv",
+        uploadedAt: "2026-04-01T00:00:00.000Z",
+        totals: {
+          totalRevenue: 600_000,
+          totalExpenses: 540_000,
+          // netIncome intentionally omitted — engine should compute it.
+        },
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values.netIncomeActual).toBe(60_000);
+  });
+
+  it("falls back to prior-year actuals when the accounting export has no usable totals", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      priorYearSnapshot: {
+        endingEnrollment: 88,
+        totalRevenue: 800_000,
+        totalExpenses: 760_000,
+      },
+      // Export is present but totals couldn't be extracted — treat as if
+      // it isn't there so the wizard's typed-in numbers still suggest.
+      accountingExport: {
+        filename: "weird.csv",
+        uploadedAt: "2026-05-01T00:00:00.000Z",
+        totals: {},
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values.revenueActual).toBe(800_000);
+    expect(suggestion.values.expenseActual).toBe(760_000);
+    expect(suggestion.sources.revenueActual).toBe("Prior-year actuals from setup");
+  });
+
+  it("does not surface the accounting export beyond year 1", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      accountingExport: {
+        filename: "quickbooks.csv",
+        uploadedAt: "2026-03-14T12:00:00.000Z",
+        totals: { totalRevenue: 1_000_000, totalExpenses: 900_000, netIncome: 100_000 },
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    // Year 3 — the export reflects historical books, not a future year.
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 3);
+    expect(suggestion.values.revenueActual).toBeUndefined();
+    expect(suggestion.values.expenseActual).toBeUndefined();
+    expect(suggestion.sourceLabels).toEqual([]);
+  });
+
   // --- live accounting snapshot ------------------------------------------
   //
   // When a founder has connected QuickBooks/Xero, we want the suggestion to
@@ -829,6 +943,44 @@ describe("buildActualsSuggestion", () => {
     // The facility-phase fallback label should not appear, since the live
     // source already filled the field.
     expect(suggestion.sourceLabels).not.toContain("Signed rent from facility plan");
+  });
+
+  // Crossover precedence: when BOTH a live snapshot and a CSV export are
+  // present, live wins for the financial fields it covers and the CSV gap-
+  // fills nothing because the live source already populated everything. This
+  // pins the priority order: Live > CSV > Prior > Current.
+  it("prefers the live snapshot over the CSV export when both are present", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      accountingSnapshot: {
+        provider: "quickbooks" as const,
+        syncedAt: new Date().toISOString(),
+        monthsCompleted: 12,
+        revenue: 2_000_000,
+        expenses: 1_800_000,
+      },
+      accountingExport: {
+        filename: "stale-export.csv",
+        uploadedAt: "2026-01-01T00:00:00.000Z",
+        totals: {
+          totalRevenue: 1_000_000,
+          totalExpenses: 900_000,
+          netIncome: 100_000,
+        },
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values.revenueActual).toBe(2_000_000);
+    expect(suggestion.values.expenseActual).toBe(1_800_000);
+    expect(suggestion.values.netIncomeActual).toBe(200_000);
+    // CSV did not contribute — its label should not appear in the source list.
+    expect(suggestion.sourceLabels.some((l) => l.includes("stale-export.csv"))).toBe(false);
+    expect(suggestion.sourceLabels[0]).toMatch(/^From QuickBooks/);
   });
 
   it("does not suggest enrollment/revenue/expense beyond year 1 (no source data)", () => {

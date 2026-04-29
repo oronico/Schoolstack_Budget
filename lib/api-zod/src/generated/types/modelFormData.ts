@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AccountingExport } from "./accountingExport";
 import type { CapitalDebtRow } from "./capitalDebtRow";
 import type { CovenantThresholds } from "./covenantThresholds";
 import type { Enrollment } from "./enrollment";
@@ -42,6 +43,7 @@ export interface ModelFormData {
   expenseRows?: ExpenseRow[];
   capitalAndDebtRows?: CapitalDebtRow[];
   priorYearSnapshot?: PriorYearSnapshot;
+  accountingExport?: AccountingExport;
   openingBalances?: OpeningBalances;
   sourcesAndUses?: SourcesAndUses;
   scenarios?: Scenario[];

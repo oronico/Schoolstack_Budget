@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb, Heart } from "lucide-react";
+import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb, Heart, Upload, FileSpreadsheet, X as XIcon } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit } from "../schema";
+import {
+  parseAccountingExportCsv,
+  MAX_ACCOUNTING_EXPORT_BYTES,
+  type AccountingExportLike,
+} from "@/lib/decision-flows";
 
 const STATES = [
   { value: "AL", label: "Alabama" }, { value: "AK", label: "Alaska" }, { value: "AZ", label: "Arizona" },
@@ -493,6 +498,233 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// "Mar 14" formatter — keeps the upload card readable without yanking in
+// the model summary's heavier date-fns helpers. Falls back to "today" if
+// the timestamp can't be parsed (shouldn't happen since we set it
+// ourselves, but defensive against round-tripped data).
+function formatUploadedAt(iso: string | undefined): string {
+  if (!iso) return "today";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "today";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+}
+
+function fmtMoney(n: number): string {
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  return `${sign}$${abs.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+// Reads a CSV the founder has uploaded, parses out the headline P&L
+// totals, and persists the result on the form so the saved-scenario
+// actuals editor's "Suggest from latest data" affordance can pull from
+// real books. Re-uploading replaces the prior file in place — that's the
+// "automatically refreshes" behavior the task calls for, since the
+// suggestion engine reads `accountingExport` lazily on each render.
+function AccountingExportUploader() {
+  const { watch, setValue } = useFormContext();
+  const exportData = watch("accountingExport") as AccountingExportLike | undefined;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+
+  const totals = exportData?.totals;
+  const hasAnyTotal =
+    !!totals &&
+    (totals.totalRevenue !== undefined ||
+      totals.totalExpenses !== undefined ||
+      totals.netIncome !== undefined);
+
+  const triggerPicker = () => {
+    setError(null);
+    fileInputRef.current?.click();
+  };
+
+  const handleFile = async (file: File) => {
+    setError(null);
+    if (file.size > MAX_ACCOUNTING_EXPORT_BYTES) {
+      setError(
+        `File is larger than ${Math.round(MAX_ACCOUNTING_EXPORT_BYTES / 1000)} KB. Trim it to a single P&L summary and re-upload.`,
+      );
+      return;
+    }
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith(".csv")) {
+      setError("Only CSV exports are supported right now. Most accounting tools (QuickBooks, Xero, Wave) can export a Profit & Loss as CSV.");
+      return;
+    }
+    setIsParsing(true);
+    try {
+      const text = await file.text();
+      const parsed = parseAccountingExportCsv(text);
+      const next: AccountingExportLike = {
+        filename: file.name,
+        uploadedAt: new Date().toISOString(),
+        totals: parsed.totals,
+        parseWarnings: parsed.parseWarnings.length > 0 ? parsed.parseWarnings : undefined,
+      };
+      // setValue marks the form dirty so the wizard's autosave picks it up
+      // and the saved-scenario editor on the scenarios page will see the
+      // new export the next time it computes a suggestion.
+      setValue("accountingExport", next, { shouldDirty: true });
+    } catch (e) {
+      setError("Couldn't read that file. Make sure it's a plain-text CSV and try again.");
+    } finally {
+      setIsParsing(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) void handleFile(file);
+  };
+
+  const removeUpload = () => {
+    setError(null);
+    setValue("accountingExport", undefined, { shouldDirty: true });
+  };
+
+  return (
+    <div data-testid="accounting-export-uploader">
+      <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
+        Accounting Export (Optional)
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        Drop in your latest QuickBooks, Xero, or Wave Profit &amp; Loss
+        export and we'll auto-fill the actuals editor on saved scenarios so
+        you don't re-type figures already in your books.
+      </p>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="sr-only"
+        onChange={onChange}
+        data-testid="accounting-export-file-input"
+      />
+      {!exportData ? (
+        <button
+          type="button"
+          onClick={triggerPicker}
+          disabled={isParsing}
+          className="w-full rounded-xl border-2 border-dashed border-border bg-muted/20 hover:border-primary/40 hover:bg-primary/5 transition-colors px-4 py-6 flex flex-col items-center gap-2 text-center"
+          data-testid="accounting-export-upload-button"
+        >
+          <Upload className="h-5 w-5 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">
+            {isParsing ? "Reading file…" : "Upload accounting export (CSV)"}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            Profit &amp; Loss CSV, up to {Math.round(MAX_ACCOUNTING_EXPORT_BYTES / 1000)} KB
+          </span>
+        </button>
+      ) : (
+        <div
+          className="rounded-xl border border-border bg-card px-4 py-3"
+          data-testid="accounting-export-summary"
+        >
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <FileSpreadsheet className="h-4 w-4 text-primary flex-shrink-0" />
+                <span
+                  className="truncate"
+                  data-testid="accounting-export-filename"
+                  title={exportData.filename}
+                >
+                  {exportData.filename}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Uploaded {formatUploadedAt(exportData.uploadedAt)}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={triggerPicker}
+                disabled={isParsing}
+                className="text-xs font-medium px-2 py-1 rounded-md border border-border hover:bg-muted transition-colors"
+                data-testid="accounting-export-replace-button"
+              >
+                {isParsing ? "Reading…" : "Replace"}
+              </button>
+              <button
+                type="button"
+                onClick={removeUpload}
+                className="text-muted-foreground hover:text-rose-600 transition-colors"
+                aria-label={`Remove ${exportData.filename}`}
+                data-testid="accounting-export-remove-button"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {hasAnyTotal ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/60">
+              <div data-testid="accounting-export-revenue">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Revenue
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {totals?.totalRevenue !== undefined ? fmtMoney(totals.totalRevenue) : "—"}
+                </p>
+              </div>
+              <div data-testid="accounting-export-expenses">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Expenses
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {totals?.totalExpenses !== undefined ? fmtMoney(totals.totalExpenses) : "—"}
+                </p>
+              </div>
+              <div data-testid="accounting-export-net">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Net income
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {totals?.netIncome !== undefined ? fmtMoney(totals.netIncome) : "—"}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p
+              className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2"
+              data-testid="accounting-export-no-totals"
+            >
+              We couldn't read any totals from that file — try re-exporting as a Profit &amp; Loss summary.
+            </p>
+          )}
+
+          {exportData.parseWarnings && exportData.parseWarnings.length > 0 && (
+            <ul
+              className="mt-2 pt-2 border-t border-border/60 text-xs text-amber-800 space-y-0.5"
+              data-testid="accounting-export-warnings"
+            >
+              {exportData.parseWarnings.map((w, i) => (
+                <li key={i} className="flex items-start gap-1.5">
+                  <AlertTriangle className="h-3 w-3 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <span>{w}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {error && (
+        <p
+          className="mt-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1"
+          data-testid="accounting-export-error"
+        >
+          {error}
+        </p>
       )}
     </div>
   );
@@ -1669,6 +1901,10 @@ export function SchoolProfileStep() {
           </div>
         )}
       </div>
+
+      {schoolStage === "operating_school" && (
+        <AccountingExportUploader />
+      )}
 
       {schoolStage === "operating_school" && operatingYear === "first_year" && (
         <div>

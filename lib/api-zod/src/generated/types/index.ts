@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./accountingExport";
+export * from "./accountingExportTotals";
 export * from "./authResponse";
 export * from "./capitalDebtRow";
 export * from "./capitalDebtRowPurpose";

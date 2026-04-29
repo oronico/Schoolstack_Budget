@@ -122,7 +122,16 @@ export {
   type ActualsSuggestionField,
 } from "./decision-engine/decision-flows.js";
 
+export {
+  parseAccountingExportCsv,
+  parseAccountingNumber,
+  MAX_ACCOUNTING_EXPORT_BYTES,
+  type AccountingExportTotals,
+  type ParsedAccountingExport,
+} from "./decision-engine/accounting-export-parser.js";
+
 export type {
+  AccountingExportLike,
   AccountingSnapshotLike,
   AccountingSnapshotProvider,
 } from "./decision-engine/model-shape.js";

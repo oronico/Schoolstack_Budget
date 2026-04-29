@@ -464,6 +464,29 @@ export const CreateModelBody = zod.object({
         endingCash: zod.number().optional(),
       })
       .optional(),
+    accountingExport: zod
+      .object({
+        filename: zod
+          .string()
+          .optional()
+          .describe("Original filename of the uploaded export."),
+        uploadedAt: zod
+          .string()
+          .optional()
+          .describe("ISO-8601 timestamp string of when the file was uploaded."),
+        totals: zod
+          .object({
+            totalRevenue: zod.number().nullish(),
+            totalExpenses: zod.number().nullish(),
+            netIncome: zod.number().nullish(),
+          })
+          .optional(),
+        parseWarnings: zod.array(zod.string()).optional(),
+      })
+      .optional()
+      .describe(
+        "Parsed totals from an uploaded accounting P&L export (e.g. QuickBooks CSV). Stored alongside the model so the actuals editor can suggest from real books. Re-uploading replaces this object in place.\n",
+      ),
     openingBalances: zod
       .object({
         cash: zod.number().optional(),
@@ -911,6 +934,29 @@ export const GetModelResponse = zod.object({
         endingCash: zod.number().optional(),
       })
       .optional(),
+    accountingExport: zod
+      .object({
+        filename: zod
+          .string()
+          .optional()
+          .describe("Original filename of the uploaded export."),
+        uploadedAt: zod
+          .string()
+          .optional()
+          .describe("ISO-8601 timestamp string of when the file was uploaded."),
+        totals: zod
+          .object({
+            totalRevenue: zod.number().nullish(),
+            totalExpenses: zod.number().nullish(),
+            netIncome: zod.number().nullish(),
+          })
+          .optional(),
+        parseWarnings: zod.array(zod.string()).optional(),
+      })
+      .optional()
+      .describe(
+        "Parsed totals from an uploaded accounting P&L export (e.g. QuickBooks CSV). Stored alongside the model so the actuals editor can suggest from real books. Re-uploading replaces this object in place.\n",
+      ),
     openingBalances: zod
       .object({
         cash: zod.number().optional(),
@@ -1359,6 +1405,29 @@ export const UpdateModelBody = zod.object({
         endingCash: zod.number().optional(),
       })
       .optional(),
+    accountingExport: zod
+      .object({
+        filename: zod
+          .string()
+          .optional()
+          .describe("Original filename of the uploaded export."),
+        uploadedAt: zod
+          .string()
+          .optional()
+          .describe("ISO-8601 timestamp string of when the file was uploaded."),
+        totals: zod
+          .object({
+            totalRevenue: zod.number().nullish(),
+            totalExpenses: zod.number().nullish(),
+            netIncome: zod.number().nullish(),
+          })
+          .optional(),
+        parseWarnings: zod.array(zod.string()).optional(),
+      })
+      .optional()
+      .describe(
+        "Parsed totals from an uploaded accounting P&L export (e.g. QuickBooks CSV). Stored alongside the model so the actuals editor can suggest from real books. Re-uploading replaces this object in place.\n",
+      ),
     openingBalances: zod
       .object({
         cash: zod.number().optional(),
@@ -1801,6 +1870,29 @@ export const UpdateModelResponse = zod.object({
         endingCash: zod.number().optional(),
       })
       .optional(),
+    accountingExport: zod
+      .object({
+        filename: zod
+          .string()
+          .optional()
+          .describe("Original filename of the uploaded export."),
+        uploadedAt: zod
+          .string()
+          .optional()
+          .describe("ISO-8601 timestamp string of when the file was uploaded."),
+        totals: zod
+          .object({
+            totalRevenue: zod.number().nullish(),
+            totalExpenses: zod.number().nullish(),
+            netIncome: zod.number().nullish(),
+          })
+          .optional(),
+        parseWarnings: zod.array(zod.string()).optional(),
+      })
+      .optional()
+      .describe(
+        "Parsed totals from an uploaded accounting P&L export (e.g. QuickBooks CSV). Stored alongside the model so the actuals editor can suggest from real books. Re-uploading replaces this object in place.\n",
+      ),
     openingBalances: zod
       .object({
         cash: zod.number().optional(),
@@ -2270,6 +2362,29 @@ export const ArchiveModelResponse = zod.object({
         endingCash: zod.number().optional(),
       })
       .optional(),
+    accountingExport: zod
+      .object({
+        filename: zod
+          .string()
+          .optional()
+          .describe("Original filename of the uploaded export."),
+        uploadedAt: zod
+          .string()
+          .optional()
+          .describe("ISO-8601 timestamp string of when the file was uploaded."),
+        totals: zod
+          .object({
+            totalRevenue: zod.number().nullish(),
+            totalExpenses: zod.number().nullish(),
+            netIncome: zod.number().nullish(),
+          })
+          .optional(),
+        parseWarnings: zod.array(zod.string()).optional(),
+      })
+      .optional()
+      .describe(
+        "Parsed totals from an uploaded accounting P&L export (e.g. QuickBooks CSV). Stored alongside the model so the actuals editor can suggest from real books. Re-uploading replaces this object in place.\n",
+      ),
     openingBalances: zod
       .object({
         cash: zod.number().optional(),

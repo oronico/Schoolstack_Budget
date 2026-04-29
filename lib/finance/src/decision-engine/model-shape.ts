@@ -118,6 +118,28 @@ export interface CurrentYearProjectionLike {
   [key: string]: unknown;
 }
 
+// Persisted accounting-export upload (e.g. a QuickBooks Profit & Loss
+// CSV). Kept on the model so the actuals-suggestion engine can pull
+// directly from real books, with a clear source label like
+// "From quickbooks-2026Q1.csv uploaded Mar 14".
+export interface AccountingExportLike {
+  filename?: string;
+  // ISO-8601 timestamp of when the founder uploaded the file. Rendered as a
+  // friendly month-day in the source label.
+  uploadedAt?: string;
+  // Top-level totals extracted from the export. Optional fields stay
+  // undefined when the parser couldn't confidently identify a row, so the
+  // wizard's other suggestion sources can still fill the gap.
+  totals?: {
+    totalRevenue?: number;
+    totalExpenses?: number;
+    netIncome?: number;
+  };
+  // Short founder-facing notes from the parser, surfaced near the upload
+  // affordance ("Couldn't find a Total Expenses row.").
+  parseWarnings?: string[];
+}
+
 // Snapshot of actuals pulled from a live accounting connection (QuickBooks /
 // Xero). Sourced from `accounting_connections.snapshot_json` and threaded into
 // the model data when the scenarios page loads — not persisted with the rest
@@ -163,6 +185,7 @@ export interface FullModelData {
   // founder has connected QuickBooks / Xero. Highest-priority source for the
   // actuals editor.
   accountingSnapshot?: AccountingSnapshotLike;
+  accountingExport?: AccountingExportLike;
 }
 
 export type DecisionType = "add_program" | "evaluate_site" | "change_enrollment";

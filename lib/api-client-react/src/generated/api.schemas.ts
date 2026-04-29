@@ -391,6 +391,27 @@ export interface PriorYearSnapshot {
   [key: string]: unknown;
 }
 
+export type AccountingExportTotals = {
+  totalRevenue?: number | null;
+  totalExpenses?: number | null;
+  netIncome?: number | null;
+  [key: string]: unknown;
+};
+
+/**
+ * Parsed totals from an uploaded accounting P&L export (e.g. QuickBooks CSV). Stored alongside the model so the actuals editor can suggest from real books. Re-uploading replaces this object in place.
+
+ */
+export interface AccountingExport {
+  /** Original filename of the uploaded export. */
+  filename?: string;
+  /** ISO-8601 timestamp string of when the file was uploaded. */
+  uploadedAt?: string;
+  totals?: AccountingExportTotals;
+  parseWarnings?: string[];
+  [key: string]: unknown;
+}
+
 export type SchoolProfileSchoolType =
   (typeof SchoolProfileSchoolType)[keyof typeof SchoolProfileSchoolType];
 
@@ -670,6 +691,7 @@ export interface ModelFormData {
   expenseRows?: ExpenseRow[];
   capitalAndDebtRows?: CapitalDebtRow[];
   priorYearSnapshot?: PriorYearSnapshot;
+  accountingExport?: AccountingExport;
   openingBalances?: OpeningBalances;
   sourcesAndUses?: SourcesAndUses;
   scenarios?: Scenario[];

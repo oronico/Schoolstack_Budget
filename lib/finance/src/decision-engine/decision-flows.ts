@@ -635,19 +635,27 @@ export function buildDecisionBullets(
 // --- Actuals suggestion ------------------------------------------------------
 //
 // Pulls candidate values for the saved-scenario actuals editor from the most
-// trustworthy source available, in priority order:
-//   1. Live accounting snapshot (QuickBooks / Xero)  — books-of-record numbers.
-//   2. Prior-year snapshot (last completed academic year from setup).
-//   3. Current-year projection (in-progress year, annualized if partial).
-//   4. Signed lease rent for evaluate_site decisions (from facility plan).
-//
-// The live source jumps the queue because once a founder connects their
-// accounting system the number on the screen is the same number that hit
-// their books — no founder re-typing required.
+// trustworthy source available, in priority order for Year 1:
+//   1. Live accounting snapshot (QuickBooks / Xero) — books-of-record numbers
+//      synced through the live integration. Sourced as
+//      "From QuickBooks (synced 2 hours ago)".
+//   2. Uploaded accounting export (e.g. a QuickBooks P&L CSV the founder
+//      uploaded in the wizard) — closest thing to ground truth when no live
+//      connection is wired up. Sourced as "From <filename> uploaded <date>".
+//   3. Prior-Year Snapshot the founder typed in during setup — closed books
+//      from the last completed year.
+//   4. Current-Year Projection — in-progress numbers, annualized when the
+//      founder recorded a partial-year (months completed > 0).
+// Each tier *gap-fills* fields the higher-priority tier didn't populate
+// (e.g. QuickBooks doesn't carry enrollment, so we still source enrollment
+// from the prior-year snapshot when both are present). Detected facility
+// rent (for evaluate_site decisions) is layered on independently from the
+// schoolProfile facility plan, but is skipped when the live snapshot
+// already supplied last month's actual rent.
 //
 // Each suggested field carries a short `source` string so the UI can explain
-// where the number came from ("From QuickBooks (synced 2 hours ago)"), which
-// makes the suggestion auditable rather than mysterious.
+// where the number came from ("From your prior-year snapshot"), which makes
+// the suggestion auditable rather than mysterious.
 export type ActualsSuggestionField =
   | "enrollmentActual"
   | "revenueActual"
@@ -704,6 +712,20 @@ export function relativeTimeAgo(
   if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
   const years = Math.floor(days / 365);
   return `${years} year${years === 1 ? "" : "s"} ago`;
+}
+
+// Renders an upload timestamp like "Mar 14" for use in source labels.
+// Stays undefined if the timestamp is missing or unparseable so the label
+// degrades gracefully to just the filename.
+function formatUploadDateForLabel(iso: string | undefined): string | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return undefined;
+  try {
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+  } catch {
+    return undefined;
+  }
 }
 
 export function buildActualsSuggestion(
@@ -768,18 +790,21 @@ export function buildActualsSuggestion(
     if (used) sourceLabels.push(label);
   }
 
-  // 2) Prior-year snapshot — last completed academic year. Most credible
-  //    analogue for "actuals you can pull from your books today" when there
-  //    isn't a live accounting connection.
+  // 2) Uploaded accounting export, prior-year snapshot, then current-year
+  //    projection — each tier *gap-fills* fields the higher-priority tier
+  //    didn't populate, so a live snapshot's revenue isn't overwritten by a
+  //    stale CSV but a P&L export's missing enrollment can still be sourced
+  //    from the prior-year typed-in numbers.
   const prior = data.priorYearSnapshot;
   const current = data.currentYearProjection;
+  const accountingExport = data.accountingExport;
+  const exportTotals = accountingExport?.totals;
+  const hasExport =
+    !!exportTotals &&
+    (exportTotals.totalRevenue !== undefined ||
+      exportTotals.totalExpenses !== undefined ||
+      exportTotals.netIncome !== undefined);
 
-  // For Year 1 we prefer prior-year actuals (truly closed books); if those
-  // aren't there, we fall back to current-year-in-progress and annualize.
-  // When a live accounting snapshot already populated some fields above, we
-  // *fill the gaps* rather than overwrite — e.g. QuickBooks doesn't track
-  // student enrollment, so we still want the prior-year enrollment number
-  // when the live source has revenue/expense but no enrollment.
   if (yr === 1) {
     const priorEnrollment = prior?.endingEnrollment;
     const priorRevenue = prior?.totalRevenue;
@@ -789,6 +814,46 @@ export function buildActualsSuggestion(
       (priorRevenue !== undefined && priorRevenue > 0) ||
       (priorExpenses !== undefined && priorExpenses > 0);
 
+    // CSV export (gap-fill) — only fills financial fields the live snapshot
+    // didn't already supply. P&L exports don't carry enrollment, so we leave
+    // that to the prior/current chain below.
+    if (hasExport) {
+      const filename = accountingExport!.filename || "uploaded export";
+      const friendlyDate = formatUploadDateForLabel(accountingExport!.uploadedAt);
+      // "From quickbooks-2026Q1.csv uploaded Mar 14" — explicit so the
+      // founder can audit (and re-verify) where the number came from.
+      const label = friendlyDate
+        ? `From ${filename} uploaded ${friendlyDate}`
+        : `From ${filename}`;
+      let usedFromExport = false;
+      if (exportTotals!.totalRevenue !== undefined && values.revenueActual === undefined) {
+        values.revenueActual = Math.round(exportTotals!.totalRevenue);
+        sources.revenueActual = label;
+        usedFromExport = true;
+      }
+      if (exportTotals!.totalExpenses !== undefined && values.expenseActual === undefined) {
+        values.expenseActual = Math.round(exportTotals!.totalExpenses);
+        sources.expenseActual = label;
+        usedFromExport = true;
+      }
+      if (exportTotals!.netIncome !== undefined && values.netIncomeActual === undefined) {
+        values.netIncomeActual = Math.round(exportTotals!.netIncome);
+        sources.netIncomeActual = label;
+        usedFromExport = true;
+      } else if (
+        exportTotals!.totalRevenue !== undefined &&
+        exportTotals!.totalExpenses !== undefined &&
+        values.netIncomeActual === undefined
+      ) {
+        values.netIncomeActual = Math.round(
+          exportTotals!.totalRevenue - exportTotals!.totalExpenses,
+        );
+        sources.netIncomeActual = label;
+      }
+      if (usedFromExport) sourceLabels.push(label);
+    }
+
+    // Prior-year typed-in snapshot (gap-fill).
     if (hasPrior) {
       const label = "Prior-year actuals from setup";
       let used = false;
@@ -816,7 +881,12 @@ export function buildActualsSuggestion(
         sources.netIncomeActual = label;
       }
       if (used) sourceLabels.push(label);
-    } else if (current) {
+    }
+
+    // Current-year projection (gap-fill). Runs only when prior-year wasn't
+    // available — preserves the original "prior beats current" precedence
+    // even though both can technically gap-fill.
+    if (!hasPrior && current) {
       const months = current.monthsCompleted;
       const annualized = (months ?? 0) > 0 && (months ?? 0) < 12;
       const label = annualized

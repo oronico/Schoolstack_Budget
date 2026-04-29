@@ -224,6 +224,24 @@ export const priorYearSnapshotSchema = z.object({
   adminExpenses: z.coerce.number(numMsg("admin expenses")).min(0).optional(),
 });
 
+// Persisted snapshot of an uploaded accounting export (e.g. a QuickBooks
+// Profit & Loss CSV). The parsed top-level totals feed the saved-scenario
+// actuals editor's "Suggest from latest data" affordance, with a source
+// label like "From quickbooks-2026Q1.csv uploaded Mar 14". Re-uploading
+// replaces this entire object so suggestions auto-refresh on next render.
+export const accountingExportTotalsSchema = z.object({
+  totalRevenue: z.number().optional(),
+  totalExpenses: z.number().optional(),
+  netIncome: z.number().optional(),
+});
+
+export const accountingExportSchema = z.object({
+  filename: z.string().min(1),
+  uploadedAt: z.string(),
+  totals: accountingExportTotalsSchema.optional(),
+  parseWarnings: z.array(z.string()).optional(),
+});
+
 export const currentYearProjectionSchema = z.object({
   currentEnrollment: z.coerce.number(numMsg("current enrollment")).min(0, "Please enter a positive number for enrollment").optional(),
   projectedRevenue: z.coerce.number(numMsg("projected revenue")).min(0, "Please enter a positive revenue amount").optional(),
@@ -533,6 +551,7 @@ export const fullModelSchema = z.object({
   capitalAndDebtRows: z.array(capitalDebtRowSchema).optional(),
   priorYearSnapshot: priorYearSnapshotSchema.optional(),
   currentYearProjection: currentYearProjectionSchema.optional(),
+  accountingExport: accountingExportSchema.optional(),
   openingBalances: openingBalancesSchema.optional(),
   sourcesAndUses: sourcesAndUsesSchema.optional(),
   scenarios: z.array(scenarioDefSchema).optional(),

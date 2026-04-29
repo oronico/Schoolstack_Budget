@@ -35,3 +35,11 @@ export {
   type AccountingSnapshotLike,
   type AccountingSnapshotProvider,
 } from "@workspace/finance";
+export {
+  parseAccountingExportCsv,
+  parseAccountingNumber,
+  MAX_ACCOUNTING_EXPORT_BYTES,
+  type AccountingExportLike,
+  type AccountingExportTotals,
+  type ParsedAccountingExport,
+} from "@workspace/finance";
