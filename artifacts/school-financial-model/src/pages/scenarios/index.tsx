@@ -465,11 +465,14 @@ export function ScenarioPage() {
   const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [compareLeft, setCompareLeft] = useState<string>("base");
   const [compareRight, setCompareRight] = useState<string>("");
-  // "Compare two decisions" picker — values are the saved scenario's
+  // "Compare decisions" picker — values are the saved scenario's
   // `${name}|${createdAt}` composite key, so a deleted scenario simply
-  // clears the picker without triggering a stale lookup.
-  const [decisionCompareAKey, setDecisionCompareAKey] = useState<string>("");
-  const [decisionCompareBKey, setDecisionCompareBKey] = useState<string>("");
+  // drops out of the selection without triggering a stale lookup.
+  // Supports 2-4 columns; the user can add or remove columns within that range.
+  const [decisionCompareKeys, setDecisionCompareKeys] = useState<string[]>([]);
+  // Hard cap so the comparison stays readable on a typical laptop screen.
+  // Matches the column palette in ImpactSummary; raise both together.
+  const MAX_DECISION_COMPARE = 4;
 
   useEffect(() => {
     return () => {
@@ -1070,10 +1073,10 @@ export function ScenarioPage() {
           </>
         )}
 
-        {/* Compare two saved decision scenarios — uses computeDecisionImpactFromPersisted
-            so each side is rerun against the *current* base model. Only shown when the
-            founder has at least two saved decision-flow scenarios (i.e. those with a
-            decisionType). What-If-only scenarios use the deep comparison above instead. */}
+        {/* Compare 2-4 saved decision scenarios — uses computeDecisionImpactFromPersisted
+            so each column is rerun against the *current* base model. Only shown when
+            the founder has at least two saved decision-flow scenarios (i.e. those with
+            a decisionType). What-If-only scenarios use the deep comparison above. */}
         {(() => {
           const custom = ((modelData as Record<string, unknown>).customScenarios as
             | Array<{ name: string; createdAt: string; overrides: WhatIfOverrides; decisionType?: DecisionType; narrative?: string }>
@@ -1085,98 +1088,168 @@ export function ScenarioPage() {
           const findByKey = (key: string) =>
             decisionScenarios.find((c) => keyOf(c) === key);
 
-          // Default selection: first two decision scenarios.
-          const aKey = decisionCompareAKey || keyOf(decisionScenarios[0]);
-          const bKey =
-            decisionCompareBKey ||
-            keyOf(decisionScenarios[1] ?? decisionScenarios[0]);
-          const a = findByKey(aKey);
-          const b = findByKey(bKey);
+          // Reconcile saved selection against the current scenario list. Drop
+          // keys that no longer exist (deleted scenarios), then top up with the
+          // first available unused scenarios so we always have at least 2 cols.
+          const validKeys = decisionCompareKeys.filter((k) => !!findByKey(k));
+          let effectiveKeys = [...validKeys];
+          for (const cs of decisionScenarios) {
+            if (effectiveKeys.length >= 2) break;
+            const k = keyOf(cs);
+            if (!effectiveKeys.includes(k)) effectiveKeys.push(k);
+          }
+          // Cap at 4 in case state somehow exceeds it.
+          effectiveKeys = effectiveKeys.slice(0, MAX_DECISION_COMPARE);
 
-          let aImpact = null;
-          let bImpact = null;
+          const usedSet = new Set(effectiveKeys);
+          const remainingScenarios = decisionScenarios.filter((cs) => !usedSet.has(keyOf(cs)));
+          const canAddMore =
+            effectiveKeys.length < MAX_DECISION_COMPARE && remainingScenarios.length > 0;
+
+          const setKeyAt = (idx: number, value: string) => {
+            const next = [...effectiveKeys];
+            next[idx] = value;
+            setDecisionCompareKeys(next);
+          };
+          const removeAt = (idx: number) => {
+            if (effectiveKeys.length <= 2) return;
+            setDecisionCompareKeys(effectiveKeys.filter((_, i) => i !== idx));
+          };
+          const addColumn = () => {
+            if (!canAddMore) return;
+            const next = [...effectiveKeys, keyOf(remainingScenarios[0])];
+            setDecisionCompareKeys(next);
+          };
+
+          // Detect any duplicate selection so we can surface a clear warning
+          // and skip computing the impact (which would render a confusing tie).
+          const dupSet = new Set<string>();
+          let hasDup = false;
+          for (const k of effectiveKeys) {
+            if (dupSet.has(k)) {
+              hasDup = true;
+              break;
+            }
+            dupSet.add(k);
+          }
+
+          const selectedScenarios = effectiveKeys.map((k) => findByKey(k));
+          let columns: { impact: ReturnType<typeof computeDecisionImpactFromPersisted>; label: string; narrative?: string }[] = [];
           let computeError: string | null = null;
           try {
-            if (a && b && a !== b) {
-              aImpact = computeDecisionImpactFromPersisted(
-                modelData,
-                a.decisionType as DecisionType,
-                a.overrides as PersistedDecisionOverrides,
-              );
-              bImpact = computeDecisionImpactFromPersisted(
-                modelData,
-                b.decisionType as DecisionType,
-                b.overrides as PersistedDecisionOverrides,
-              );
+            if (!hasDup && selectedScenarios.every((s) => !!s)) {
+              columns = selectedScenarios.map((cs) => ({
+                impact: computeDecisionImpactFromPersisted(
+                  modelData,
+                  cs!.decisionType as DecisionType,
+                  cs!.overrides as PersistedDecisionOverrides,
+                ),
+                label: cs!.name,
+                narrative: cs!.narrative,
+              }));
             }
           } catch (err) {
             computeError = err instanceof Error ? err.message : String(err);
+            columns = [];
           }
 
-          const sameSelected = aKey === bKey;
+          // Per-column option list: each select shows all decision scenarios,
+          // but disables those already chosen in *other* columns so the user
+          // can't pick the same scenario twice.
+          const optionDisabled = (csKey: string, ownIdx: number) =>
+            effectiveKeys.some((k, i) => i !== ownIdx && k === csKey);
+
           return (
             <div className="mb-10" data-testid="decision-comparison-section">
               <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                   <ArrowRightLeft className="h-5 w-5 text-primary" />
                   <h2 className="font-display text-xl font-bold text-foreground">
-                    Compare two decisions side-by-side
+                    Compare decisions side-by-side
                   </h2>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Pick two saved decisions — two real-estate sites, two enrollment paths,
-                  two new programs — and see Y5 net income, break-even shift, DSCR, and
-                  cash runway head-to-head, with the better number highlighted.
+                  Pick 2-4 saved decisions — candidate sites, enrollment paths, or new
+                  programs — and see Y5 net income, break-even shift, DSCR, and cash
+                  runway side-by-side, with the strongest column highlighted per metric.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">
-                      Decision A
-                    </label>
-                    <select
-                      value={aKey}
-                      onChange={(e) => setDecisionCompareAKey(e.target.value)}
-                      data-testid="decision-compare-a-select"
-                      className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    >
-                      {decisionScenarios.map((cs) => (
-                        <option key={keyOf(cs)} value={keyOf(cs)}>
-                          {cs.decisionType ? `[${DECISION_LABELS[cs.decisionType]}] ` : ""}
-                          {cs.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">
-                      Decision B
-                    </label>
-                    <select
-                      value={bKey}
-                      onChange={(e) => setDecisionCompareBKey(e.target.value)}
-                      data-testid="decision-compare-b-select"
-                      className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    >
-                      {decisionScenarios.map((cs) => (
-                        <option
-                          key={keyOf(cs)}
-                          value={keyOf(cs)}
-                          disabled={keyOf(cs) === aKey}
+                <div
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3"
+                  data-testid="decision-compare-pickers"
+                >
+                  {effectiveKeys.map((key, idx) => {
+                    const palette = ["A", "B", "C", "D"][idx] ?? "?";
+                    return (
+                      <div key={idx} className="min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            Decision {palette}
+                          </label>
+                          {effectiveKeys.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => removeAt(idx)}
+                              className="text-[11px] text-muted-foreground hover:text-rose-600 transition-colors"
+                              data-testid={`decision-compare-remove-${idx}`}
+                              aria-label={`Remove decision ${palette}`}
+                              title={`Remove decision ${palette}`}
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <select
+                          value={key}
+                          onChange={(e) => setKeyAt(idx, e.target.value)}
+                          data-testid={`decision-compare-select-${idx}`}
+                          className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
                         >
-                          {cs.decisionType ? `[${DECISION_LABELS[cs.decisionType]}] ` : ""}
-                          {cs.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                          {decisionScenarios.map((cs) => {
+                            const k = keyOf(cs);
+                            return (
+                              <option
+                                key={k}
+                                value={k}
+                                disabled={optionDisabled(k, idx)}
+                              >
+                                {cs.decisionType ? `[${DECISION_LABELS[cs.decisionType]}] ` : ""}
+                                {cs.name}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    );
+                  })}
                 </div>
-                {sameSelected && (
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={addColumn}
+                    disabled={!canAddMore}
+                    data-testid="decision-compare-add"
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border bg-background text-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title={
+                      effectiveKeys.length >= MAX_DECISION_COMPARE
+                        ? `Maximum ${MAX_DECISION_COMPARE} decisions`
+                        : remainingScenarios.length === 0
+                        ? "No more saved decisions to add"
+                        : "Add another decision to the comparison"
+                    }
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add another decision
+                  </button>
+                  <span className="text-[11px] text-muted-foreground">
+                    {effectiveKeys.length} of {MAX_DECISION_COMPARE} columns
+                  </span>
+                </div>
+                {hasDup && (
                   <p
                     className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2"
                     data-testid="decision-compare-same-warning"
                   >
-                    You picked the same decision twice. Pick a different one for B to see a
-                    head-to-head comparison.
+                    You picked the same decision more than once. Pick distinct scenarios
+                    to see a head-to-head comparison.
                   </p>
                 )}
                 {computeError && (
@@ -1189,16 +1262,9 @@ export function ScenarioPage() {
                 )}
               </div>
 
-              {a && b && aImpact && bImpact && !sameSelected && (
+              {columns.length >= 2 && !hasDup && (
                 <div className="mt-6" data-testid="decision-compare-result">
-                  <ImpactSummary
-                    impact={aImpact}
-                    compareWith={bImpact}
-                    primaryLabel={a.name}
-                    compareLabel={b.name}
-                    primaryNarrative={a.narrative}
-                    compareNarrative={b.narrative}
-                  />
+                  <ImpactSummary impact={columns[0].impact} columns={columns} />
                 </div>
               )}
             </div>
