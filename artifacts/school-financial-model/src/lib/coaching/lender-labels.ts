@@ -36,7 +36,7 @@ export const LENDER_LABELS: Record<string, LenderLabelEntry> = {
   cashReserve: {
     id: "cashReserve",
     founder: "Cash Reserve",
-    lender: "Working Capital (months)",
+    lender: "Working Capital / Months of Liquidity",
     glossaryKey: "working_capital",
   },
 };

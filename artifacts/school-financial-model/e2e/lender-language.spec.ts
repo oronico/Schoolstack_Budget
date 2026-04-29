@@ -141,3 +141,4 @@ test("financial-statements-101 primer is reachable with all three statement sect
   await expect(page.getByText(/Balance Sheet/i).first()).toBeVisible();
   await expect(page.getByText(/Cash Flow Statement/i).first()).toBeVisible();
 });
+
