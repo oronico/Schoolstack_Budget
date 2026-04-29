@@ -17,6 +17,7 @@
     "qa:smoke-arithmetic": "tsx ./tests/e2e-arithmetic-smoke.ts",
     "test:parity": "tsx ./tests/parity-frontend-backend.ts",
     "test:cross-engine": "tsx ./tests/cross-engine-test.ts",
+    "test:decision-history": "tsx ./tests/decision-history.ts",
     "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts",
     "generate:ceo-demos": "tsx ./src/scripts/generate-ceo-demos.ts"
   },
