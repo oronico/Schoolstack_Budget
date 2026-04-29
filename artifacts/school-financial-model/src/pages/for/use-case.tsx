@@ -5,6 +5,11 @@ import { SEOHead } from "@/components/SEOHead";
 import { getUseCaseBySlug } from "@/data/use-case-pages";
 import { SOLUTION_LINK_SUMMARIES } from "@/data/solution-pages";
 import { motion } from "framer-motion";
+import {
+  trackCapabilityCrossLink,
+  type AudienceSlug,
+  type CapabilitySlug,
+} from "@/lib/cta-tracking";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -173,6 +178,12 @@ export function UseCasePage() {
                 <Link
                   key={sol.slug}
                   href={`/solutions/${sol.slug}`}
+                  onClick={() =>
+                    trackCapabilityCrossLink(
+                      page.slug as AudienceSlug,
+                      sol.slug as CapabilitySlug,
+                    )
+                  }
                   className="group rounded-2xl border border-[#1E293B]/10 bg-white p-4 hover:border-[#328555]/40 hover:shadow-md transition-all"
                   data-testid={`solution-link-${sol.slug}`}
                 >

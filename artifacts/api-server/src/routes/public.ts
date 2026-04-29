@@ -270,6 +270,85 @@ router.post("/public/request-review", rateLimiter, async (req: Request, res: Res
   }
 });
 
+const CTA_EVENT_NAMES = new Set([
+  "capability_cta_click",
+  "audience_card_click",
+  "capability_cross_link_click",
+]);
+
+const CAPABILITY_SLUGS = new Set([
+  "single-year-pro-forma",
+  "five-year-pro-forma",
+  "scenario-planning",
+  "debt-analysis",
+  "budgeting-accounting-guidance",
+]);
+
+const AUDIENCE_SLUGS = new Set([
+  "charter-schools",
+  "private-schools",
+  "microschools",
+  "school-founders",
+  "lenders",
+]);
+
+const CTA_POSITIONS = new Set(["primary", "closing"]);
+
+function sanitizeSlug(value: unknown, allowed: Set<string>): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().slice(0, 64);
+  return allowed.has(trimmed) ? trimmed : null;
+}
+
+router.post("/public/track-cta", rateLimiter, async (req: Request, res: Response) => {
+  try {
+    const { event, source, audience, position, sessionId } = req.body || {};
+    if (typeof event !== "string" || !CTA_EVENT_NAMES.has(event)) {
+      res.status(400).json({ error: "Invalid event name." });
+      return;
+    }
+
+    const metadata: Record<string, unknown> = {};
+
+    if (event === "capability_cta_click") {
+      const sourceSlug = sanitizeSlug(source, CAPABILITY_SLUGS);
+      if (!sourceSlug) {
+        res.status(400).json({ error: "Invalid capability source." });
+        return;
+      }
+      metadata.source = sourceSlug;
+      const pos = typeof position === "string" && CTA_POSITIONS.has(position) ? position : "primary";
+      metadata.position = pos;
+    } else if (event === "audience_card_click") {
+      const audienceSlug = sanitizeSlug(audience, AUDIENCE_SLUGS);
+      if (!audienceSlug) {
+        res.status(400).json({ error: "Invalid audience." });
+        return;
+      }
+      metadata.audience = audienceSlug;
+    } else if (event === "capability_cross_link_click") {
+      const audienceSlug = sanitizeSlug(audience, AUDIENCE_SLUGS);
+      const sourceSlug = sanitizeSlug(source, CAPABILITY_SLUGS);
+      if (!audienceSlug || !sourceSlug) {
+        res.status(400).json({ error: "Invalid audience or capability." });
+        return;
+      }
+      metadata.audience = audienceSlug;
+      metadata.source = sourceSlug;
+    }
+
+    if (typeof sessionId === "string" && sessionId.length > 0 && sessionId.length <= 64) {
+      metadata.sessionId = sessionId;
+    }
+
+    await trackEvent(event, null, metadata);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("CTA tracking error:", err);
+    res.status(500).json({ error: "Failed to record CTA." });
+  }
+});
+
 router.post("/public/timing", rateLimiter, async (req: Request, res: Response) => {
   try {
     const { step, stepName, durationSeconds, sessionId, wizard } = req.body;

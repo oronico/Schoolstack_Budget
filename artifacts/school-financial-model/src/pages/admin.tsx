@@ -30,6 +30,7 @@ import {
   CheckCircle2,
   ArrowLeft,
   Eye,
+  MousePointerClick,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -131,6 +132,255 @@ const EXPENSE_CAT_LABELS: Record<string, string> = {
   occupancy_facility: "Facility",
   administrative_general: "Admin & Operations",
 };
+
+interface CtaConversionData {
+  capability: {
+    summary: { source: string; clicks: number; signups: number; conversionRate: number }[];
+    byPosition: { source: string; position: string; clicks: number }[];
+  };
+  audience: {
+    summary: { audience: string; clicks: number; signups: number; conversionRate: number }[];
+  };
+  crossLinks: { audience: string; source: string; clicks: number; signups: number; conversionRate: number }[];
+}
+
+const CAPABILITY_LABELS: Record<string, string> = {
+  "single-year-pro-forma": "Single-Year Pro Forma",
+  "five-year-pro-forma": "Five-Year Pro Forma",
+  "scenario-planning": "Scenario Planning",
+  "debt-analysis": "Debt Analysis",
+  "budgeting-accounting-guidance": "Budgeting & Accounting",
+};
+
+const AUDIENCE_LABELS: Record<string, string> = {
+  "charter-schools": "Charter Schools",
+  "private-schools": "Private Schools",
+  "microschools": "Microschools & Pods",
+  "school-founders": "School Founders",
+  "lenders": "Lenders & CDFIs",
+};
+
+function CtaConversionSection() {
+  const [data, setData] = useState<CtaConversionData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchCta() {
+      try {
+        const res = await fetch("/api/admin/cta-conversion");
+        if (!res.ok) throw new Error("Failed to fetch CTA conversion");
+        const json = await res.json();
+        setData(json);
+      } catch {
+        setError("Failed to load CTA conversion data.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCta();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm flex items-center justify-center py-10">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+        <p className="text-sm text-destructive">{error || "No CTA data available."}</p>
+      </div>
+    );
+  }
+
+  const positionByCapability = new Map<string, Record<string, number>>();
+  for (const row of data.capability.byPosition) {
+    const map = positionByCapability.get(row.source) || {};
+    map[row.position] = row.clicks;
+    positionByCapability.set(row.source, map);
+  }
+
+  const totalCapClicks = data.capability.summary.reduce((s, r) => s + r.clicks, 0);
+  const totalCapSignups = data.capability.summary.reduce((s, r) => s + r.signups, 0);
+  const totalAudClicks = data.audience.summary.reduce((s, r) => s + r.clicks, 0);
+  const totalAudSignups = data.audience.summary.reduce((s, r) => s + r.signups, 0);
+
+  return (
+    <div className="space-y-6 mb-10">
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <MousePointerClick className="h-5 w-5 text-primary" />
+          <h2 className="font-display text-lg font-bold">Capability Page CTA Conversion</h2>
+        </div>
+        <p className="text-xs text-muted-foreground mb-5">
+          Clicks on capability page CTAs (primary hero + closing) and the share of those
+          clicks that completed sign-up in the same browser session.
+        </p>
+        {data.capability.summary.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No capability CTA clicks yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs font-semibold uppercase text-muted-foreground border-b border-border/60">
+                  <th className="py-2 pr-3">Capability page</th>
+                  <th className="py-2 px-3 text-right">Primary CTA</th>
+                  <th className="py-2 px-3 text-right">Closing CTA</th>
+                  <th className="py-2 px-3 text-right">Total clicks</th>
+                  <th className="py-2 px-3 text-right">Sign-ups</th>
+                  <th className="py-2 pl-3 text-right">Conversion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.capability.summary.map((row) => {
+                  const positions = positionByCapability.get(row.source) || {};
+                  return (
+                    <tr key={row.source} className="border-b border-border/40 last:border-0">
+                      <td className="py-2 pr-3 font-medium text-foreground">
+                        {CAPABILITY_LABELS[row.source] || row.source}
+                      </td>
+                      <td className="py-2 px-3 text-right text-muted-foreground">
+                        {positions.primary || 0}
+                      </td>
+                      <td className="py-2 px-3 text-right text-muted-foreground">
+                        {positions.closing || 0}
+                      </td>
+                      <td className="py-2 px-3 text-right font-semibold text-foreground">
+                        {row.clicks}
+                      </td>
+                      <td className="py-2 px-3 text-right text-muted-foreground">
+                        {row.signups}
+                      </td>
+                      <td className="py-2 pl-3 text-right font-bold text-primary">
+                        {(row.conversionRate * 100).toFixed(1)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr className="text-xs uppercase text-muted-foreground font-semibold">
+                  <td className="py-2 pr-3">Total</td>
+                  <td></td>
+                  <td></td>
+                  <td className="py-2 px-3 text-right">{totalCapClicks}</td>
+                  <td className="py-2 px-3 text-right">{totalCapSignups}</td>
+                  <td className="py-2 pl-3 text-right">
+                    {totalCapClicks > 0
+                      ? ((totalCapSignups / totalCapClicks) * 100).toFixed(1)
+                      : "0.0"}
+                    %
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Users className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-lg font-bold">Audience Carousel Cards</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-5">
+            Which audience card on the landing page draws clicks - and how many of those
+            visitors finish sign-up.
+          </p>
+          {data.audience.summary.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No audience card clicks yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs font-semibold uppercase text-muted-foreground border-b border-border/60">
+                  <th className="py-2 pr-3">Audience</th>
+                  <th className="py-2 px-3 text-right">Clicks</th>
+                  <th className="py-2 px-3 text-right">Sign-ups</th>
+                  <th className="py-2 pl-3 text-right">Conversion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.audience.summary.map((row) => (
+                  <tr key={row.audience} className="border-b border-border/40 last:border-0">
+                    <td className="py-2 pr-3 font-medium text-foreground">
+                      {AUDIENCE_LABELS[row.audience] || row.audience}
+                    </td>
+                    <td className="py-2 px-3 text-right font-semibold text-foreground">
+                      {row.clicks}
+                    </td>
+                    <td className="py-2 px-3 text-right text-muted-foreground">
+                      {row.signups}
+                    </td>
+                    <td className="py-2 pl-3 text-right font-bold text-primary">
+                      {(row.conversionRate * 100).toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+                <tr className="text-xs uppercase text-muted-foreground font-semibold">
+                  <td className="py-2 pr-3">Total</td>
+                  <td className="py-2 px-3 text-right">{totalAudClicks}</td>
+                  <td className="py-2 px-3 text-right">{totalAudSignups}</td>
+                  <td className="py-2 pl-3 text-right">
+                    {totalAudClicks > 0
+                      ? ((totalAudSignups / totalAudClicks) * 100).toFixed(1)
+                      : "0.0"}
+                    %
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-lg font-bold">Audience to Capability Cross-Links</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-5">
+            Which capability tile gets clicked from each audience page, and how many of
+            those visitors completed sign-up.
+          </p>
+          {data.crossLinks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No cross-link clicks yet.</p>
+          ) : (
+            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+              {data.crossLinks.map((row, i) => (
+                <div
+                  key={`${row.audience}-${row.source}-${i}`}
+                  className="flex items-center justify-between py-2 border-b border-border/40 last:border-0 gap-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {AUDIENCE_LABELS[row.audience] || row.audience}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      → {CAPABILITY_LABELS[row.source] || row.source}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 flex-shrink-0 text-right">
+                    <span className="text-xs text-muted-foreground">
+                      {row.clicks} clicks
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {row.signups} signups
+                    </span>
+                    <span className="text-sm font-bold text-primary w-12">
+                      {(row.conversionRate * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function MetricCard({
   title,
@@ -1242,6 +1492,8 @@ export function AdminPage() {
             />
           </div>
         </div>
+
+        <CtaConversionSection />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
           <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">

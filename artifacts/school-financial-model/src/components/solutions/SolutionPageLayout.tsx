@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { SEOHead } from "@/components/SEOHead";
 import { motion } from "framer-motion";
 import type { SolutionPageData } from "@/data/solution-pages";
+import { trackCapabilityCta, type CapabilitySlug } from "@/lib/cta-tracking";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -68,6 +69,8 @@ export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
 
             <Link
               href={page.primaryCta.href}
+              onClick={() => trackCapabilityCta(page.slug as CapabilitySlug, "primary")}
+              data-testid={`capability-cta-primary-${page.slug}`}
               className="inline-flex items-center gap-2 bg-[#328555] hover:bg-[#276844] text-white px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg shadow-[#328555]/20"
             >
               {page.primaryCta.label}
@@ -196,6 +199,8 @@ export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
             </p>
             <Link
               href={page.closingCta.href}
+              onClick={() => trackCapabilityCta(page.slug as CapabilitySlug, "closing")}
+              data-testid={`capability-cta-closing-${page.slug}`}
               className="inline-flex items-center gap-2 bg-white text-[#328555] hover:bg-gray-50 px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg"
             >
               {page.closingCta.label}

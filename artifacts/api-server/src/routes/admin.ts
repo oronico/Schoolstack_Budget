@@ -238,6 +238,131 @@ router.get(
 );
 
 router.get(
+  "/admin/cta-conversion",
+  authMiddleware,
+  adminMiddleware,
+  async (_req: AuthRequest, res) => {
+    try {
+      const capabilityClicks = await db
+        .select({
+          source: sql<string>`metadata->>'source'`.as("source"),
+          position: sql<string>`metadata->>'position'`.as("position"),
+          count: count(),
+        })
+        .from(eventsTable)
+        .where(eq(eventsTable.eventName, "capability_cta_click"))
+        .groupBy(sql`metadata->>'source'`, sql`metadata->>'position'`);
+
+      const audienceClicks = await db
+        .select({
+          audience: sql<string>`metadata->>'audience'`.as("audience"),
+          count: count(),
+        })
+        .from(eventsTable)
+        .where(eq(eventsTable.eventName, "audience_card_click"))
+        .groupBy(sql`metadata->>'audience'`);
+
+      const crossLinkClicks = await db
+        .select({
+          audience: sql<string>`metadata->>'audience'`.as("audience"),
+          source: sql<string>`metadata->>'source'`.as("source"),
+          count: count(),
+        })
+        .from(eventsTable)
+        .where(eq(eventsTable.eventName, "capability_cross_link_click"))
+        .groupBy(sql`metadata->>'audience'`, sql`metadata->>'source'`);
+
+      const attributedSignups = await db
+        .select({
+          channel: sql<string>`metadata->>'channel'`.as("channel"),
+          source: sql<string>`metadata->>'source'`.as("source"),
+          audience: sql<string>`metadata->>'audience'`.as("audience"),
+          count: count(),
+        })
+        .from(eventsTable)
+        .where(eq(eventsTable.eventName, "cta_attributed_signup"))
+        .groupBy(
+          sql`metadata->>'channel'`,
+          sql`metadata->>'source'`,
+          sql`metadata->>'audience'`,
+        );
+
+      const capabilityClickTotals = new Map<string, number>();
+      const capabilityRows = capabilityClicks.map((r) => {
+        const source = r.source || "unknown";
+        capabilityClickTotals.set(source, (capabilityClickTotals.get(source) || 0) + r.count);
+        return { source, position: r.position || "primary", clicks: r.count };
+      });
+
+      const capabilitySignups = new Map<string, number>();
+      const audienceSignups = new Map<string, number>();
+      const crossLinkSignups = new Map<string, number>();
+      for (const s of attributedSignups) {
+        if (s.channel === "capability" && s.source) {
+          capabilitySignups.set(s.source, (capabilitySignups.get(s.source) || 0) + s.count);
+        } else if (s.channel === "audience" && s.audience) {
+          audienceSignups.set(s.audience, (audienceSignups.get(s.audience) || 0) + s.count);
+        } else if (s.channel === "cross_link" && s.audience && s.source) {
+          const key = `${s.audience}|${s.source}`;
+          crossLinkSignups.set(key, (crossLinkSignups.get(key) || 0) + s.count);
+        }
+      }
+
+      const capabilitySummary = Array.from(capabilityClickTotals.entries()).map(
+        ([source, clicks]) => {
+          const signups = capabilitySignups.get(source) || 0;
+          return {
+            source,
+            clicks,
+            signups,
+            conversionRate: clicks > 0 ? signups / clicks : 0,
+          };
+        },
+      );
+
+      const audienceSummary = audienceClicks.map((r) => {
+        const audience = r.audience || "unknown";
+        const signups = audienceSignups.get(audience) || 0;
+        return {
+          audience,
+          clicks: r.count,
+          signups,
+          conversionRate: r.count > 0 ? signups / r.count : 0,
+        };
+      });
+
+      capabilitySummary.sort((a, b) => b.clicks - a.clicks);
+      audienceSummary.sort((a, b) => b.clicks - a.clicks);
+
+      res.json({
+        capability: {
+          summary: capabilitySummary,
+          byPosition: capabilityRows,
+        },
+        audience: {
+          summary: audienceSummary,
+        },
+        crossLinks: crossLinkClicks.map((r) => {
+          const audience = r.audience || "unknown";
+          const source = r.source || "unknown";
+          const signups = crossLinkSignups.get(`${audience}|${source}`) || 0;
+          return {
+            audience,
+            source,
+            clicks: r.count,
+            signups,
+            conversionRate: r.count > 0 ? signups / r.count : 0,
+          };
+        }).sort((a, b) => b.clicks - a.clicks),
+      });
+    } catch (err) {
+      console.error("CTA conversion analytics error:", err);
+      res.status(500).json({ error: "Failed to fetch CTA conversion data." });
+    }
+  },
+);
+
+router.get(
   "/admin/reviews",
   authMiddleware,
   adminMiddleware,

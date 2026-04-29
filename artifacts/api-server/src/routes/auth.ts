@@ -339,6 +339,7 @@ const ALLOWED_EVENTS = new Set([
   "founder_persona_selected",
   "founder_persona_prompt_shown",
   "founder_persona_changed",
+  "cta_attributed_signup",
 ]);
 
 router.post("/auth/track", authMiddleware, async (req: AuthRequest, res) => {

@@ -12,9 +12,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { trackAudienceCard, type AudienceSlug } from "@/lib/cta-tracking";
 
 interface AudienceCard {
-  slug: string;
+  slug: AudienceSlug;
   name: string;
   tagline: string;
   Icon: LucideIcon;
@@ -184,6 +185,7 @@ export function AudienceCarousel() {
                 <Link
                   key={a.slug}
                   href={`/for/${a.slug}`}
+                  onClick={() => trackAudienceCard(a.slug)}
                   className={`snap-center shrink-0 w-[85%] sm:w-[60%] lg:w-[42%] rounded-3xl border bg-gradient-to-br ${a.accent} p-8 transition-all duration-500 group ${
                     isActive
                       ? "border-[#1E293B]/15 shadow-xl scale-100 opacity-100"

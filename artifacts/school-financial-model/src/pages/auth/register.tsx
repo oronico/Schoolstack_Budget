@@ -6,6 +6,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { SEOHead } from "@/components/SEOHead";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { reportAttributedSignup } from "@/lib/cta-tracking";
 
 export function RegisterPage() {
   const [, setLocation] = useLocation();
@@ -26,6 +27,7 @@ export function RegisterPage() {
     try {
       const res = await registerMutation.mutateAsync({ data: { name, email, password } });
       login(res.token, res.user);
+      reportAttributedSignup(res.token);
 
       const returnTo = sessionStorage.getItem("auth_return_to");
       if (returnTo) {
