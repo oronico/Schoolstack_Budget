@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, useMemo, type ComponentType } from "react";
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, useSearch } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -93,7 +93,11 @@ function normalizeEscalationOverrideRows(data: Record<string, unknown>): Record<
   return normalized;
 }
 
-type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null };
+// `focus` is an opaque hint forwarded from a `?focus=...` query param so steps
+// can scroll/highlight a specific section on mount (e.g. the saved-scenario
+// "Replace export" link sets `focus=accounting-export` on the School Profile
+// step). Steps that don't recognise the value simply ignore it.
+type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null; focus?: string };
 
 const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[] = [
   { id: 1, title: "Story", component: StoryStep as ComponentType<StepProps> },
@@ -128,7 +132,30 @@ export function ModelWizardPage() {
   const [match, params] = useRoute("/model/:id");
   const modelId = params?.id ? parseInt(params.id) : null;
   const [, setLocation] = useLocation();
-  
+  // Captured once on mount so refresh / navigation back doesn't re-trigger
+  // the deep-link scroll. We treat the URL params as a one-shot intent rather
+  // than reactive state — the wizard owns step persistence after that.
+  const searchString = useSearch();
+  const initialDeepLinkRef = useRef<{ step: number | null; focus: string | null }>({
+    step: null,
+    focus: null,
+  });
+  const deepLinkParsedRef = useRef(false);
+  if (!deepLinkParsedRef.current) {
+    deepLinkParsedRef.current = true;
+    try {
+      const sp = new URLSearchParams(searchString || "");
+      const rawStep = sp.get("step");
+      const stepNum = rawStep !== null ? Number(rawStep) : NaN;
+      initialDeepLinkRef.current = {
+        step: Number.isFinite(stepNum) && stepNum >= 1 ? Math.floor(stepNum) : null,
+        focus: sp.get("focus"),
+      };
+    } catch {
+      initialDeepLinkRef.current = { step: null, focus: null };
+    }
+  }
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -332,7 +359,13 @@ export function ModelWizardPage() {
         }];
       }
       methods.reset(d);
-      if (initialData.currentStep) {
+      // Deep-link `?step=N` overrides the persisted progress so links from
+      // the saved-scenarios "Replace export" affordance land directly on the
+      // School Profile step instead of wherever the founder left off.
+      const deepLinkStep = initialDeepLinkRef.current.step;
+      if (deepLinkStep && deepLinkStep >= 1 && deepLinkStep <= STEPS.length) {
+        setCurrentStep(Math.min(deepLinkStep, STEPS.length));
+      } else if (initialData.currentStep) {
         // Migration: an earlier wizard had 10 steps with Profile at step 1.
         // We inserted a new "Story" step at position 1, so any model that has
         // already advanced past the old Profile step needs to shift forward
@@ -937,7 +970,19 @@ export function ModelWizardPage() {
               </div>
             )}
             <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
-              <ActiveStepComponent jumpToStep={setCurrentStep} modelId={modelId} />
+              <ActiveStepComponent
+                jumpToStep={setCurrentStep}
+                modelId={modelId}
+                focus={
+                  // Only forward the deep-link focus hint while we're still
+                  // on the originally-targeted step. Once the founder
+                  // navigates away (Continue / Back / step rail) the hint
+                  // would be stale, so we drop it.
+                  initialDeepLinkRef.current.step === currentStep
+                    ? initialDeepLinkRef.current.focus ?? undefined
+                    : undefined
+                }
+              />
             </Suspense>
           </div>
 

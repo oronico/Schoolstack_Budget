@@ -528,12 +528,28 @@ function fmtMoney(n: number): string {
 // real books. Re-uploading replaces the prior file in place — that's the
 // "automatically refreshes" behavior the task calls for, since the
 // suggestion engine reads `accountingExport` lazily on each render.
-function AccountingExportUploader() {
+function AccountingExportUploader({ focused }: { focused?: boolean }) {
   const { watch, setValue } = useFormContext();
   const exportData = watch("accountingExport") as AccountingExportLike | undefined;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
+  // Brief amber ring shown when the founder lands here from the saved-scenario
+  // "Replace export" deep-link, so the upload section is visually called out
+  // after the scroll-into-view. Cleared after a few seconds so it doesn't
+  // hang around the next time they visit the step manually.
+  const [highlight, setHighlight] = useState(false);
+  useEffect(() => {
+    if (!focused) return;
+    const node = containerRef.current;
+    if (node && typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    setHighlight(true);
+    const t = window.setTimeout(() => setHighlight(false), 2400);
+    return () => window.clearTimeout(t);
+  }, [focused]);
 
   const totals = exportData?.totals;
   const hasAnyTotal =
@@ -627,7 +643,15 @@ function AccountingExportUploader() {
   };
 
   return (
-    <div data-testid="accounting-export-uploader">
+    <div
+      ref={containerRef}
+      data-testid="accounting-export-uploader"
+      className={cn(
+        "rounded-2xl transition-shadow duration-500",
+        highlight && "ring-2 ring-amber-400 ring-offset-2 ring-offset-card shadow-lg shadow-amber-200/40 -m-1 p-1",
+      )}
+      data-focused={highlight ? "true" : undefined}
+    >
       <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
         Accounting Export (Optional)
       </h3>
@@ -766,7 +790,7 @@ function AccountingExportUploader() {
   );
 }
 
-export function SchoolProfileStep() {
+export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
   const { watch, setValue } = useFormContext();
   const isPartialFirstYear = watch("schoolProfile.isPartialFirstYear");
   const schoolStage = watch("schoolProfile.schoolStage");
@@ -1939,7 +1963,7 @@ export function SchoolProfileStep() {
       </div>
 
       {schoolStage === "operating_school" && (
-        <AccountingExportUploader />
+        <AccountingExportUploader focused={focus === "accounting-export"} />
       )}
 
       {schoolStage === "operating_school" && operatingYear === "first_year" && (

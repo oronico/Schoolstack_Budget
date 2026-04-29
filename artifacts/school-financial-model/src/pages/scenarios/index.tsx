@@ -248,6 +248,29 @@ interface CustomScenarioCardProps {
   // (prior-year snapshot, current-year projection, signed lease) so the
   // editor can prefill values they already entered once.
   getActualsSuggestion: (asOfYear: number) => ActualsSuggestion;
+  // The most recent CSV the founder uploaded in the wizard's School Profile
+  // step. Used to render a "Pulled from your books: filename.csv · uploaded
+  // Mar 14" caption when the suggestion engine sourced fields from it, plus
+  // a "Replace export" deep-link back into the wizard step that owns the
+  // upload UI. Undefined when no export is present.
+  accountingExportInfo?: { filename?: string; uploadedAt?: string };
+  // URL the "Replace export" link should navigate to — built once at the
+  // page level so the card stays decoupled from the route shape.
+  replaceExportHref?: string;
+}
+
+// "Mar 14" formatter shared with the wizard upload card so the caption in
+// the saved-scenario editor reads identically to the one shown next to the
+// upload UI itself.
+function formatExportUploadDate(iso: string | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  try {
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+  } catch {
+    return null;
+  }
 }
 
 // Tiny formatter for the actuals-vs-projected lines. Keeps zeros short and
@@ -438,6 +461,8 @@ function CustomScenarioCard({
   onApplyToModel,
   getProjectedSnapshot,
   getActualsSuggestion,
+  accountingExportInfo,
+  replaceExportHref,
 }: CustomScenarioCardProps) {
   const [editingRetro, setEditingRetro] = useState(false);
   const [retroDraft, setRetroDraft] = useState(cs.retrospective ?? "");
@@ -922,6 +947,66 @@ function CustomScenarioCard({
                   <Wand2 className="h-3 w-3" /> Suggest from latest data
                 </button>
               </div>
+              {(() => {
+                // "Pulled from your books" callout — only renders when the
+                // suggestion engine actually sourced one or more fields from
+                // the founder's uploaded CSV. We detect that by matching the
+                // export filename against each per-field source string (the
+                // suggestion helper formats it as "From <filename> uploaded
+                // <Mon D>"), so a stale CSV that was overridden by a fresher
+                // live snapshot won't trigger the callout.
+                const exportFilename = accountingExportInfo?.filename;
+                if (!exportFilename || !previewSuggestion) return null;
+                const sources = previewSuggestion.sources;
+                const exportPrefix = `From ${exportFilename}`;
+                // Only surface the callout when one or more *currently-applied*
+                // suggestion fields are sourced from this export. We intersect
+                // `suggestedFields` (the fields the founder hasn't manually
+                // touched since clicking "Suggest from latest data") with the
+                // per-field source labels so the callout doesn't claim
+                // book-sourced provenance for typed-in or not-yet-suggested
+                // values.
+                const fromExport = Array.from(suggestedFields).some((f) => {
+                  const s = sources[f];
+                  return typeof s === "string" && s.startsWith(exportPrefix);
+                });
+                if (!fromExport) return null;
+                const friendlyDate = formatExportUploadDate(accountingExportInfo?.uploadedAt);
+                return (
+                  <div
+                    className="flex items-start justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1.5"
+                    data-testid={`custom-scenario-actuals-export-source-${idx}`}
+                  >
+                    <div className="text-[10px] text-emerald-900 leading-snug min-w-0">
+                      <span className="font-semibold">Pulled from your books:</span>{" "}
+                      <span
+                        className="font-mono break-all"
+                        data-testid={`custom-scenario-actuals-export-filename-${idx}`}
+                      >
+                        {exportFilename}
+                      </span>
+                      {friendlyDate && (
+                        <span
+                          className="text-emerald-800/80"
+                          data-testid={`custom-scenario-actuals-export-date-${idx}`}
+                        >
+                          {" "}· uploaded {friendlyDate}
+                        </span>
+                      )}
+                    </div>
+                    {replaceExportHref && (
+                      <a
+                        href={replaceExportHref}
+                        className="text-[10px] font-semibold text-emerald-800 hover:text-emerald-900 underline whitespace-nowrap shrink-0"
+                        data-testid={`custom-scenario-actuals-replace-export-${idx}`}
+                        title="Jump back to the wizard's School Profile step to upload a fresh export"
+                      >
+                        Replace export →
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
               {suggestionFeedback && (
                 <p
                   className="text-[10px] text-amber-900 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-snug"
@@ -2487,6 +2572,19 @@ export function ScenarioPage() {
                           cs.decisionType,
                           asOfYear,
                         )
+                      }
+                      accountingExportInfo={
+                        modelData.accountingExport
+                          ? {
+                              filename: modelData.accountingExport.filename,
+                              uploadedAt: modelData.accountingExport.uploadedAt,
+                            }
+                          : undefined
+                      }
+                      replaceExportHref={
+                        modelId
+                          ? `/model/${modelId}?step=2&focus=accounting-export`
+                          : undefined
                       }
                     />
                   ))}
