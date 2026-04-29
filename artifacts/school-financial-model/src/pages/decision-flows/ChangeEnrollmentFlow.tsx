@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { Loader2, Users, ArrowRight } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { DecisionFlowShell } from "@/components/decision-flow/DecisionFlowShell";
 import { ModelMiniSummary } from "@/components/decision-flow/ModelMiniSummary";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
@@ -47,6 +48,8 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
     inputs.enrollmentDelta.some((v) => v !== 0) ||
     (inputs.retentionRate !== undefined && inputs.retentionRate !== (en?.retentionRate ?? 85)) ||
     (inputs.tuitionDeltaPerStudent !== undefined && inputs.tuitionDeltaPerStudent !== 0);
+
+  const cumulativeDelta = inputs.enrollmentDelta.reduce((a, b) => a + b, 0);
 
   const canAdvance = step === 1 ? true : step === 2 ? hasAnyChange : true;
 
@@ -158,31 +161,87 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
       )}
 
       {step === 2 && (
-        <section className="max-w-2xl space-y-5" data-testid="change-enrollment-inputs">
+        <section className="max-w-2xl space-y-6" data-testid="change-enrollment-inputs">
           <div>
             <h2 className="font-display text-xl font-bold text-foreground mb-1">What's changing?</h2>
-            <p className="text-sm text-muted-foreground">Use positive numbers for more students, negative for fewer.</p>
+            <p className="text-sm text-muted-foreground">
+              Drag each year's slider to model how enrollment differs from your current plan. Move
+              right for more students, left for fewer. The cumulative change running across all
+              years shows beneath each slider.
+            </p>
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Enrollment Δ vs. base
-            </p>
-            <div className="grid grid-cols-5 gap-2">
-              {([0, 1, 2, 3, 4] as const).map((i) => (
-                <Field key={i} label={`Y${i + 1} (now ${baseEnrollment[i]})`}>
-                  <NumberInput
-                    value={inputs.enrollmentDelta[i]}
-                    onChange={(v) => setInputs((s) => {
-                      const next = [...s.enrollmentDelta] as [number, number, number, number, number];
-                      next[i] = v;
-                      return { ...s, enrollmentDelta: next };
-                    })}
-                    allowNegative
-                    testid={`change-enrollment-delta-${i + 1}`}
-                  />
-                </Field>
-              ))}
+            <div className="flex items-baseline justify-between mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Per-year enrollment Δ vs. base
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Cumulative shift over 5 years:{" "}
+                <span className={`font-mono font-bold ${cumulativeDelta > 0 ? "text-emerald-700" : cumulativeDelta < 0 ? "text-red-600" : "text-foreground"}`}>
+                  {cumulativeDelta > 0 ? "+" : ""}{cumulativeDelta} students
+                </span>
+              </p>
+            </div>
+            <div className="space-y-4">
+              {([0, 1, 2, 3, 4] as const).map((i) => {
+                const base = baseEnrollment[i];
+                const delta = inputs.enrollmentDelta[i];
+                const newVal = base + delta;
+                const cumThruYear = inputs.enrollmentDelta.slice(0, i + 1).reduce((a, b) => a + b, 0);
+                // Range: ±50 or ±max(60% of base, 25), whichever is greater. Keeps the slider
+                // useful for tiny pre-K cohorts and very large 6-12 schools alike.
+                const sliderRange = Math.max(50, Math.round(base * 0.6), 25);
+                return (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-border/60 bg-card/50 px-4 py-3"
+                    data-testid={`change-enrollment-delta-row-${i + 1}`}
+                  >
+                    <div className="flex items-baseline justify-between mb-2">
+                      <span className="text-sm font-semibold text-foreground">Year {i + 1}</span>
+                      <div className="flex items-baseline gap-3 text-xs">
+                        <span className="text-muted-foreground">
+                          base <span className="font-mono font-semibold text-foreground">{base}</span>
+                        </span>
+                        <span className="text-muted-foreground">→</span>
+                        <span className="text-muted-foreground">
+                          new <span className="font-mono font-bold text-foreground">{newVal}</span>
+                        </span>
+                        <span
+                          className={`font-mono font-bold ${
+                            delta > 0 ? "text-emerald-700" : delta < 0 ? "text-red-600" : "text-muted-foreground"
+                          }`}
+                        >
+                          ({delta > 0 ? "+" : ""}{delta})
+                        </span>
+                      </div>
+                    </div>
+                    <Slider
+                      min={-sliderRange}
+                      max={sliderRange}
+                      step={1}
+                      value={[delta]}
+                      onValueChange={([v]: number[]) => setInputs((s) => {
+                        const next = [...s.enrollmentDelta] as [number, number, number, number, number];
+                        next[i] = v;
+                        return { ...s, enrollmentDelta: next };
+                      })}
+                      data-testid={`change-enrollment-delta-${i + 1}`}
+                    />
+                    <div className="flex items-baseline justify-between mt-1.5">
+                      <span className="text-[11px] text-muted-foreground">−{sliderRange}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        cumulative thru Y{i + 1}:{" "}
+                        <span className={`font-mono font-semibold ${cumThruYear > 0 ? "text-emerald-700" : cumThruYear < 0 ? "text-red-600" : "text-foreground"}`}>
+                          {cumThruYear > 0 ? "+" : ""}{cumThruYear}
+                        </span>
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">+{sliderRange}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -206,7 +265,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
 
           {!hasAnyChange && (
             <p className="text-xs text-amber-700">
-              Make at least one change to continue.
+              Move at least one slider (or change retention/tuition) to continue.
             </p>
           )}
         </section>

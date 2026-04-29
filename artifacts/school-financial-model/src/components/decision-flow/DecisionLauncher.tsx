@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { GraduationCap, Building2, Users, Sparkles, X, FileSpreadsheet, ChevronRight } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 type LaunchableType = "add_program" | "evaluate_site" | "change_enrollment";
 
@@ -72,8 +73,15 @@ const decisionCards: Array<{
   },
 ];
 
+const TITLE_FOR_TYPE: Record<LaunchableType, string> = {
+  add_program: "Add a program or grade",
+  evaluate_site: "Evaluate a site or lease",
+  change_enrollment: "Change enrollment",
+};
+
 export function DecisionLauncher({ models, onStartNew, startNewPending }: DecisionLauncherProps) {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingType, setPendingType] = useState<LaunchableType | null>(null);
 
@@ -84,8 +92,14 @@ export function DecisionLauncher({ models, onStartNew, startNewPending }: Decisi
 
   const launch = (type: LaunchableType) => {
     if (eligibleModels.length === 0) {
-      setPendingType(type);
-      setPickerOpen(true);
+      // Friendly nudge + redirect straight into the wizard. Decision flows need
+      // a base model to run against, so we send the founder there directly
+      // rather than dead-ending in a modal.
+      toast({
+        title: "Let's build a base model first",
+        description: `${TITLE_FOR_TYPE[type]} runs on top of an existing model — about 30–45 minutes to set one up, then your decision plugs right in.`,
+      });
+      onStartNew();
       return;
     }
     if (eligibleModels.length === 1) {

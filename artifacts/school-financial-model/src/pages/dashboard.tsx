@@ -165,6 +165,12 @@ export function DashboardPage() {
           </div>
         ) : models?.length === 0 ? (
           <div className="space-y-8">
+            <DecisionLauncher
+              models={[]}
+              onStartNew={handleCreate}
+              startNewPending={createMutation.isPending}
+            />
+
             <div className="bg-gradient-to-br from-primary/5 via-card to-card border border-primary/20 rounded-3xl p-10 sm:p-16 text-center shadow-sm">
               <div className="mx-auto w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
                 <Sparkles className="h-10 w-10 text-primary" />
