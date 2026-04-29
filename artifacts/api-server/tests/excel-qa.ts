@@ -947,11 +947,11 @@ const UNDERWRITING_V2_TABS = [
 ];
 
 const STANDARD_TABS = [
-  "Cover", "Assumptions", "Revenue Schedule", "Staffing", "Operating Expenses", "Financial Model", "Summary", "Financial Health",
+  "Cover", "Assumptions", "Revenue Schedule", "Staffing", "Operating Expenses", "Financial Model", "Summary", "Decision History", "Financial Health",
 ];
 
 const FORMULA_TABS = [
-  "Instructions", "Assumptions", "5-Year Model", "Financial Health",
+  "Instructions", "Assumptions", "5-Year Model", "Decision History", "Financial Health",
 ];
 
 const UNDERWRITING_V1_TABS = [

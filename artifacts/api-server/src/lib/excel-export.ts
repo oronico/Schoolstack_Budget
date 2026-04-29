@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { computeAnnualDebt } from "@workspace/finance";
 import { accountingBasisLabel, addDashboardSheet, computeFacilityCostByYear, computeInstructionalCostByYear, setFormula } from "./workbook-helpers.js";
+import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 
 function safeResult(v: unknown): number | string {
   if (v === null || v === undefined) return "0";
@@ -887,6 +888,8 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
       buildPriorYearTab(priorWs, data.priorYearSnapshot, sp.entityType);
     }
 
+    addDecisionHistorySheet(wb, rawData as Parameters<typeof addDecisionHistorySheet>[1]);
+
     buildCoverSheet(wb, sp, yearCount, precomputed, consultantData, enrollmentByYear);
     setPrintArea(revenueWs, revTotalRow, cols);
     setPrintArea(expensesWs, expTotalRow, cols);
@@ -960,6 +963,8 @@ export async function generateWorkbook(rawData: Record<string, unknown>, consult
       const notesWs = wb.addWorksheet("Consultant Notes");
       buildConsultantNotesTab(notesWs, consultantData);
     }
+
+    addDecisionHistorySheet(wb, rawData as Parameters<typeof addDecisionHistorySheet>[1]);
 
     buildCoverSheet(wb, sp, yearCount, undefined, consultantData, enrollmentByYear);
 

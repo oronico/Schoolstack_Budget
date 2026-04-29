@@ -24,6 +24,7 @@ import {
   computeSchoolProfileFacilityOverlay,
   hasSchoolProfileFacilityData,
 } from "./consultant-engine.js";
+import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 
 interface SchoolProfile {
   schoolName?: string;
@@ -2429,6 +2430,8 @@ export async function generateFormulaWorkbook(rawData: Record<string, unknown>):
     }
   }
   const instrCostByYrF = computeInstructionalCostByYear(dbExpRows, enrollment, revByYear, 5, costInflPct);
+
+  addDecisionHistorySheet(wb, rawData as Parameters<typeof addDecisionHistorySheet>[1]);
 
   await addDashboardSheet(wb, {
     schoolName: sp.schoolName || "School",
