@@ -1,11 +1,90 @@
 import { Link } from "wouter";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen, UserCog } from "lucide-react";
+import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen, UserCog, ChevronDown } from "lucide-react";
 import { GuidanceModeSelector } from "@/components/coaching/GuidanceModeSelector";
 import { BudgetPrimer } from "@/components/coaching/BudgetPrimer";
 import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
 import { trackCoachingEvent } from "@/lib/coaching/track";
+import { SOLUTION_LINK_SUMMARIES } from "@/data/solution-pages";
+
+function SolutionsMenu() {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <Link
+        href="/solutions"
+        onClick={() => setOpen(false)}
+        className="hidden sm:inline-flex items-center gap-1 px-4 py-2 text-sm font-semibold text-foreground hover:text-primary transition-colors"
+        data-testid="navbar-solutions-link"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        Solutions
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+      </Link>
+      <Link
+        href="/solutions"
+        className="sm:hidden inline-flex items-center px-3 py-2 text-sm font-semibold text-foreground hover:text-primary transition-colors"
+        data-testid="navbar-solutions-link-mobile"
+      >
+        Solutions
+      </Link>
+      {open && (
+        <div
+          className="hidden sm:block absolute left-0 top-full pt-2 w-72 z-50"
+          role="menu"
+        >
+          <div className="rounded-xl border border-border bg-background shadow-xl animate-in fade-in slide-in-from-top-1 duration-150 overflow-hidden">
+            {SOLUTION_LINK_SUMMARIES.map(({ slug, title, tagline, Icon }) => (
+              <Link
+                key={slug}
+                href={`/solutions/${slug}`}
+                onClick={() => setOpen(false)}
+                className="flex items-start gap-3 px-4 py-3 text-sm text-foreground hover:bg-black/5 transition-colors"
+                role="menuitem"
+                data-testid={`navbar-solutions-item-${slug}`}
+              >
+                <Icon className="h-4 w-4 mt-0.5 text-primary shrink-0" aria-hidden="true" />
+                <span className="flex flex-col">
+                  <span className="font-semibold leading-tight">{title}</span>
+                  <span className="text-xs text-muted-foreground mt-0.5 leading-snug">{tagline}</span>
+                </span>
+              </Link>
+            ))}
+            <div className="border-t border-border" />
+            <Link
+              href="/solutions"
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
+              role="menuitem"
+              data-testid="navbar-solutions-view-all"
+            >
+              View all capabilities
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -41,6 +120,7 @@ export function Navbar() {
           <div className="flex items-center gap-4">
             {user ? (
               <>
+                <SolutionsMenu />
                 <Link href="/dashboard" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors">
                   <LayoutDashboard className="h-4 w-4" />
                   Dashboard
@@ -125,6 +205,7 @@ export function Navbar() {
               </>
             ) : (
               <>
+                <SolutionsMenu />
                 <Link href="/resources" className="px-4 py-2 text-sm font-semibold text-foreground hover:text-primary transition-colors">
                   Resources
                 </Link>
