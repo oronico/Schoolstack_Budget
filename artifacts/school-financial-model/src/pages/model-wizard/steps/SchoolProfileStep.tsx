@@ -829,24 +829,29 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
             </ul>
           )}
           {showCoach && (() => {
-            // Post-upload coach line — recap the headline totals the parser
-            // pulled out so the founder can confirm we're reading what they
-            // expect ("revenue $X, expenses $Y" beats "upload succeeded"
-            // every time). When the parser couldn't confidently identify
-            // either total, we steer them toward re-exporting a detailed
-            // P&L instead of a summary.
+            // Post-upload coach line — tell the founder *which* account
+            // categories we recognized (revenue / expenses / net income)
+            // and explicitly cue them to map accounts in the next step.
+            // The parser today only emits category-level totals, so we
+            // count the categories present rather than per-account rows;
+            // the explicit "next step" cue is what the CR asked for.
             const totals = exportData.totals ?? {};
-            const fmt = (n?: number) =>
-              typeof n === "number"
-                ? n.toLocaleString("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                    maximumFractionDigits: 0,
-                  })
-                : "—";
-            const haveAny =
-              typeof totals.totalRevenue === "number" ||
-              typeof totals.totalExpenses === "number";
+            const recognized = exportData.recognizedRowCount ?? 0;
+            const haveRevenue = typeof totals.totalRevenue === "number";
+            const haveExpenses = typeof totals.totalExpenses === "number";
+            const haveNet = typeof totals.netIncome === "number";
+            const found: string[] = [];
+            if (haveRevenue) found.push("a revenue total");
+            if (haveExpenses) found.push("an expenses total");
+            if (haveNet) found.push("a net income line");
+            const foundList =
+              found.length === 0
+                ? ""
+                : found.length === 1
+                ? found[0]
+                : found.length === 2
+                ? `${found[0]} and ${found[1]}`
+                : `${found[0]}, ${found[1]}, and ${found[2]}`;
             return (
               <div
                 className="mt-2 pt-2 border-t border-border/60 flex items-start gap-2 text-[11px] text-amber-900 leading-snug"
@@ -855,21 +860,22 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
                 <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-700" />
                 <p>
                   <span className="font-semibold">Coach:</span>{" "}
-                  {haveAny ? (
+                  {recognized > 0 ? (
                     <>
-                      we read revenue {fmt(totals.totalRevenue)} and expenses{" "}
-                      {fmt(totals.totalExpenses)} from this export. If those
-                      totals look off, re-export your{" "}
-                      <GlossaryTerm termKey="pl_statement">P&amp;L</GlossaryTerm>
-                      {" "}as a detailed (not summary) report so we can match
-                      every line to your model.
+                      we recognized {foundList} in this export ({recognized}{" "}
+                      account {recognized === 1 ? "category" : "categories"}{" "}
+                      detected). The next step in this wizard is where you
+                      map each account to a budget bucket — line up rent,
+                      payroll, and tuition there so future syncs can keep
+                      your model honest.
                     </>
                   ) : (
                     <>
-                      we couldn't pull totals from this file. Re-export your{" "}
+                      we couldn't recognize any account totals in this file,
+                      so there's nothing to map yet. Re-export your{" "}
                       <GlossaryTerm termKey="pl_statement">P&amp;L</GlossaryTerm>
-                      {" "}as a detailed report (not a summary) so the actuals
-                      editor has real numbers to suggest from.
+                      {" "}as a detailed report (not a summary) so the next
+                      step has real accounts to map into your budget.
                     </>
                   )}
                 </p>

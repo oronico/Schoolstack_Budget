@@ -242,6 +242,18 @@ function describeScenario(cs: CustomScenario): string[] {
 function ActualsCoachIntro({ idx }: { idx: number }) {
   const { user } = useAuth();
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  // Track once per mount per scenario index. Advanced founders never see
+  // this intro so we skip the ping for them too — keeps the analytics
+  // signal aligned with what's actually rendered.
+  const trackedRef = useRef(false);
+  useEffect(() => {
+    if (trackedRef.current || guidanceLevel === "advanced") return;
+    trackedRef.current = true;
+    trackCoachingEvent("actuals_coach_intro_shown", {
+      scenarioIndex: idx,
+      guidanceLevel,
+    });
+  }, [idx, guidanceLevel]);
   if (guidanceLevel === "advanced") return null;
   return (
     <div data-testid={`custom-scenario-actuals-coach-intro-${idx}`}>

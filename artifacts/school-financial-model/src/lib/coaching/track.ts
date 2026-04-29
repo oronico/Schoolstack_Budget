@@ -33,6 +33,7 @@ type CoachingEvent =
   | "reuse_mapping_nudge_shown"
   | "actuals_variance_nudge_shown"
   | "actuals_editor_explainer_shown"
+  | "actuals_coach_intro_shown"
   | "accounting_export_lesson_shown"
   | "accounting_export_post_upload_coach_shown"
   | "accounting_mapping_coach_shown"

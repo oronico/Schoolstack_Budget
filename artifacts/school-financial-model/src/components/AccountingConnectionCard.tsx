@@ -1471,6 +1471,20 @@ function DroppedMappingsNotice({
   // is reserved for basics/extra so advanced doesn't get a wall of text.
   const verboseCoach = guidanceLevel !== "advanced";
   const count = dropped.length;
+  // Track once per (provider, count) — if the founder dismisses the
+  // notice and a future sync surfaces a *new* dropped set, we want a
+  // fresh ping so we can measure how often this surface fires.
+  const trackedKeyRef = useRef<string>("");
+  useEffect(() => {
+    const key = `${provider}:${count}`;
+    if (trackedKeyRef.current === key || count === 0) return;
+    trackedKeyRef.current = key;
+    trackCoachingEvent("dropped_mappings_coach_shown", {
+      provider,
+      droppedCount: count,
+      guidanceLevel,
+    });
+  }, [provider, count, guidanceLevel]);
   const summary = `${count} mapped account${count === 1 ? "" : "s"} no longer appear${count === 1 ? "s" : ""} in your books`;
   return (
     <div

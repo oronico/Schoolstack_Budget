@@ -135,6 +135,11 @@ export interface AccountingExportLike {
     totalExpenses?: number;
     netIncome?: number;
   };
+  // Number of recognized rows the parser matched (revenue / expenses /
+  // net income lines). Used by the post-upload coach to tell the founder
+  // *how many* account categories we picked up before they head into
+  // mapping.
+  recognizedRowCount?: number;
   // Short founder-facing notes from the parser, surfaced near the upload
   // affordance ("Couldn't find a Total Expenses row.").
   parseWarnings?: string[];

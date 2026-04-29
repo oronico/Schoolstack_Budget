@@ -11,6 +11,12 @@ interface DiagnosticPanelProps {
   onNavigateToStep?: (step: number) => void;
   className?: string;
   maxResults?: number;
+  /** When provided, only diagnostic findings whose id is in this list are
+   * shown — used by decision-flow shells to surface coaching that's
+   * relevant to the active decision (e.g. "add a program" pulls staffing
+   * + breakeven, not facility cost). The full diagnostic engine still
+   * runs so analytics on the global model stay accurate. */
+  relevantIds?: readonly string[];
 }
 
 const SEVERITY_CONFIG: Record<DiagnosticSeverity, { icon: typeof AlertTriangle; color: string; bg: string; border: string; label: string }> = {
@@ -114,11 +120,22 @@ function DiagnosticCard({ finding, onNavigate, whatIf }: { finding: DiagnosticFi
   );
 }
 
-export function DiagnosticPanel({ data, onNavigateToStep, className, maxResults = 3 }: DiagnosticPanelProps) {
+export function DiagnosticPanel({ data, onNavigateToStep, className, maxResults = 3, relevantIds }: DiagnosticPanelProps) {
   const { user } = useAuth();
   const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
 
-  const findings = useMemo(() => runDiagnostics(data, maxResults), [data, maxResults]);
+  const findings = useMemo(() => {
+    // When a decision-flow shell scopes us via `relevantIds`, fetch a wider
+    // pool from the engine first and then filter so we still surface up to
+    // `maxResults` *relevant* findings rather than getting unlucky with the
+    // global top-N.
+    if (relevantIds && relevantIds.length > 0) {
+      const pool = runDiagnostics(data, 50);
+      const allowed = new Set(relevantIds);
+      return pool.filter((f) => allowed.has(f.id)).slice(0, maxResults);
+    }
+    return runDiagnostics(data, maxResults);
+  }, [data, maxResults, relevantIds]);
   const whatIfSuggestions = useMemo(() => computeWhatIfSuggestions(data), [data]);
   const whatIfMap = useMemo(() => {
     const map = new Map<string, WhatIfSuggestion>();

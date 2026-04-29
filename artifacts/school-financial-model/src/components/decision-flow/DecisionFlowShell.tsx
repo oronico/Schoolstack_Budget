@@ -11,6 +11,44 @@ import { trackCoachingEvent } from "@/lib/coaching/track";
 
 export const STEP_LABELS = ["Why", "Inputs", "Impact", "Save"] as const;
 
+// Per-decision filter for the sidebar DiagnosticPanel. Each entry lists the
+// diagnostic rule IDs that are most actionable in the context of that
+// decision — so a founder thinking about adding a program isn't distracted
+// by a facility-cost finding, and a site-evaluator isn't distracted by an
+// enrollment-growth-rate finding. Rule IDs are kept in sync with
+// `RULES` in src/lib/coaching/diagnostics-engine.ts.
+const DECISION_RELEVANT_DIAGNOSTICS: Record<DecisionType, readonly string[]> = {
+  // Adding a program changes staffing, revenue mix, breakeven and reserves.
+  add_program: [
+    "high_staffing_critical",
+    "high_staffing_warning",
+    "near_breakeven_enrollment",
+    "no_reserves",
+    "negative_cash",
+    "no_revenue_entered",
+  ],
+  // Site evaluation is dominated by occupancy cost, reserves to absorb
+  // moving / build-out costs, and cash-runway risk.
+  evaluate_site: [
+    "high_occupancy",
+    "no_reserves",
+    "negative_cash",
+    "surplus_but_tight_cash",
+    "expense_growth_exceeds_revenue",
+  ],
+  // Enrollment changes interact with breakeven, growth-rate plausibility,
+  // staffing leverage, and grant dependency (since per-pupil revenue
+  // shifts the mix).
+  change_enrollment: [
+    "near_breakeven_enrollment",
+    "fast_enrollment_growth",
+    "high_staffing_critical",
+    "high_staffing_warning",
+    "grant_dependency",
+    "no_revenue_entered",
+  ],
+};
+
 interface DecisionFlowShellProps {
   decisionType: DecisionType;
   modelId: number;
@@ -162,7 +200,11 @@ export function DecisionFlowShell({
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                     Coach's notes on your base model
                   </p>
-                  <DiagnosticPanel data={data} maxResults={2} />
+                  <DiagnosticPanel
+                    data={data}
+                    maxResults={2}
+                    relevantIds={DECISION_RELEVANT_DIAGNOSTICS[decisionType]}
+                  />
                 </div>
               )}
               <p className="text-[11px] leading-relaxed text-muted-foreground">
