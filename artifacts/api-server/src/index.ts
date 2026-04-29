@@ -1,7 +1,7 @@
 import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
 import { pool, db, errorLogsTable, runMigrations } from "@workspace/db";
-import { setMigrationOk, setMigrationFailed } from "./lib/server-state";
+import { applyMigrations as runApplyMigrations } from "./lib/apply-migrations";
 import type { Server } from "http";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -60,31 +60,13 @@ function validateEnv() {
   }
 }
 
-async function applyMigrations(): Promise<void> {
-  if (!pool) {
-    setMigrationOk();
-    return;
-  }
-  try {
-    await runMigrations();
-    setMigrationOk();
-    console.log("[migrations] Schema up to date.");
-  } catch (err) {
-    console.error("[migrations] Failed to run migrations:", err);
-    setMigrationFailed(err);
-    if (isProduction) {
-      // In production a failed migration leaves the schema in an unknown state,
-      // so refuse to start serving traffic against it.
-      process.exit(1);
-    }
-    // In dev we keep the server up so the failure is visible from the preview
-    // pane via /health (which now reports a degraded state with the error
-    // message), instead of disappearing into the console and surfacing later
-    // as cryptic 500s.
-    console.error(
-      "[migrations] Continuing to start in dev mode with DEGRADED state — /health will report the failure.",
-    );
-  }
+function applyMigrations(): Promise<void> {
+  return runApplyMigrations({
+    hasPool: !!pool,
+    runMigrations,
+    isProduction,
+    exit: (code) => process.exit(code),
+  });
 }
 
 function logCrashToDb(message: string, stack: string | undefined) {

@@ -20,3 +20,11 @@ export function getMigrationStatus(): MigrationStatus {
 export function getMigrationError(): string | null {
   return migrationError;
 }
+
+// Reset the migration tracker back to its initial "pending" state. Intended for
+// tests that need a clean slate between cases, or for any future code path that
+// re-runs migrations and needs to reflect that state from /health endpoints.
+export function resetMigrationStatus(): void {
+  migrationStatus = "pending";
+  migrationError = null;
+}
