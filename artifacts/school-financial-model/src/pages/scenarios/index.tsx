@@ -24,16 +24,18 @@ import {
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
 import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
-import type { FullModelData, OutcomeStatus, CustomScenario } from "@/pages/model-wizard/schema";
+import type { FullModelData, OutcomeStatus, CustomScenario, CustomScenarioActuals } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
 import {
   applyPersistedScenarioToData,
   buildDecisionBullets,
   computeDecisionImpactFromPersisted,
+  computeProjectedSnapshot,
   DECISION_LABELS,
   DECISION_THEME,
   type PersistedDecisionOverrides,
+  type ProjectedSnapshot,
 } from "@/lib/decision-flows";
 import type { DecisionType } from "@/pages/model-wizard/schema";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
@@ -227,6 +229,118 @@ interface CustomScenarioCardProps {
   ) => Promise<void>;
   onOpenInPlanner: (overrides: WhatIfOverrides) => void;
   onApplyToModel: (cs: CustomScenario) => Promise<void>;
+  // Computes the projected snapshot for this scenario at a given model year.
+  // Done up here (rather than in the card) so the card stays decoupled from
+  // the freshest base model data and we don't recompute it on every render.
+  getProjectedSnapshot: (asOfYear: number) => ProjectedSnapshot;
+}
+
+// Tiny formatter for the actuals-vs-projected lines. Keeps zeros short and
+// large numbers readable, matching the rest of the scenario UI.
+function fmtActualVal(v: number, kind: "money" | "count"): string {
+  if (kind === "count") return v.toLocaleString();
+  if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(v) >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+  const sign = v < 0 ? "-" : "";
+  return `${sign}$${Math.abs(Math.round(v)).toLocaleString()}`;
+}
+
+// Computes a percentage delta string with leading sign — "Came in 12% under
+// plan" / "+8% vs plan". Returns null when the projection is zero so we don't
+// show a misleading "+∞%" callout.
+function actualsDeltaPct(actual: number, projected: number): { text: string; tone: "good" | "bad" | "neutral" } | null {
+  if (!isFinite(projected) || projected === 0) return null;
+  const diff = actual - projected;
+  const pct = (diff / Math.abs(projected)) * 100;
+  if (Math.abs(pct) < 0.5) return { text: "on plan", tone: "neutral" };
+  const sign = pct > 0 ? "+" : "";
+  return {
+    text: `${sign}${pct.toFixed(0)}% vs plan`,
+    // For revenue / enrollment / net income / program enrollment, "more" is
+    // good. The caller decides tone — see ActualsLine below.
+    tone: "neutral",
+  };
+}
+
+// One row in the actuals editor: projected on the left, actual input on the
+// right, and a small delta callout once both are present. `betterWhen` lets
+// the row render the delta in green/red based on whether higher or lower
+// realized values are favorable for that line.
+function ActualsLine({
+  label,
+  projected,
+  actual,
+  onChange,
+  testId,
+  kind,
+  betterWhen,
+}: {
+  label: string;
+  projected: number | undefined;
+  actual: number | undefined;
+  onChange: (v: number | undefined) => void;
+  testId: string;
+  kind: "money" | "count";
+  betterWhen: "higher" | "lower";
+}) {
+  const hasActual = actual !== undefined && !Number.isNaN(actual);
+  const hasProjected = projected !== undefined && !Number.isNaN(projected);
+  let deltaPill: { text: string; tone: "good" | "bad" | "neutral" } | null = null;
+  if (hasActual && hasProjected) {
+    const base = actualsDeltaPct(actual!, projected!);
+    if (base) {
+      const diff = actual! - projected!;
+      let tone: "good" | "bad" | "neutral" = "neutral";
+      if (Math.abs(diff) >= Math.max(1, Math.abs(projected!) * 0.005)) {
+        const favoredHigher = betterWhen === "higher";
+        tone = (diff > 0) === favoredHigher ? "good" : "bad";
+      }
+      deltaPill = { text: base.text, tone };
+    }
+  }
+  const toneClass =
+    deltaPill?.tone === "good"
+      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+      : deltaPill?.tone === "bad"
+      ? "text-rose-700 bg-rose-50 border-rose-200"
+      : "text-muted-foreground bg-muted/40 border-border/60";
+  return (
+    <div className="grid grid-cols-[1fr_auto] gap-2 items-center" data-testid={`${testId}-row`}>
+      <div className="min-w-0">
+        <div className="text-[11px] font-medium text-foreground truncate">{label}</div>
+        <div className="text-[10px] text-muted-foreground font-mono">
+          Projected {hasProjected ? fmtActualVal(projected!, kind) : "—"}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="number"
+          inputMode="decimal"
+          value={hasActual ? String(actual) : ""}
+          onChange={(e) => {
+            const raw = e.target.value;
+            if (raw === "") {
+              onChange(undefined);
+              return;
+            }
+            const n = Number(raw);
+            onChange(Number.isNaN(n) ? undefined : n);
+          }}
+          placeholder={kind === "money" ? "$" : "#"}
+          className="w-24 text-[11px] border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono text-right"
+          data-testid={testId}
+        />
+        {deltaPill && (
+          <span
+            className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${toneClass}`}
+            data-testid={`${testId}-delta`}
+          >
+            {deltaPill.text}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // Renders a single saved decision-flow scenario card with outcome controls.
@@ -243,6 +357,7 @@ function CustomScenarioCard({
   onPatch,
   onOpenInPlanner,
   onApplyToModel,
+  getProjectedSnapshot,
 }: CustomScenarioCardProps) {
   const [editingRetro, setEditingRetro] = useState(false);
   const [retroDraft, setRetroDraft] = useState(cs.retrospective ?? "");
@@ -251,6 +366,15 @@ function CustomScenarioCard({
   useEffect(() => {
     if (!editingRetro) setRetroDraft(cs.retrospective ?? "");
   }, [cs.retrospective, editingRetro]);
+
+  // Actuals editor state — opens automatically when the scenario already has
+  // actuals saved (so the founder lands on their previous entries) and stays
+  // collapsed otherwise behind a single "Add actuals" affordance.
+  const [editingActuals, setEditingActuals] = useState(false);
+  const [actualsDraft, setActualsDraft] = useState<CustomScenarioActuals>(cs.actuals ?? { asOfYear: 1 });
+  useEffect(() => {
+    if (!editingActuals) setActualsDraft(cs.actuals ?? { asOfYear: 1 });
+  }, [cs.actuals, editingActuals]);
 
   const decisionTheme = cs.decisionType ? DECISION_THEME[cs.decisionType] : null;
   const decisionLabel = cs.decisionType ? DECISION_LABELS[cs.decisionType] : null;
@@ -281,6 +405,51 @@ function CustomScenarioCard({
   };
 
   const showApplyNudge = cs.outcomeStatus === "pursued" && !cs.appliedToModelAt;
+  // Actuals are most useful for Pursued scenarios but we also keep them
+  // visible if the user already saved some so they're never accidentally
+  // hidden by toggling status.
+  const showActualsSurface = cs.outcomeStatus === "pursued" || !!cs.actuals;
+  const actualsAsOfYear = actualsDraft.asOfYear ?? cs.actuals?.asOfYear ?? 1;
+  // Compute projected snapshot lazily — only when the editor is open or when
+  // we're about to render the saved-actuals summary, to avoid recomputing it
+  // for every saved scenario on first render.
+  const projectedSnapshot = useMemo(
+    () => (showActualsSurface ? getProjectedSnapshot(actualsAsOfYear) : null),
+    [showActualsSurface, actualsAsOfYear, getProjectedSnapshot],
+  );
+
+  const saveActuals = async () => {
+    // Strip out empty fields so the persisted shape stays minimal — easier
+    // to evolve into the future "forecast accuracy" view.
+    const a: CustomScenarioActuals = {
+      asOfYear: actualsDraft.asOfYear ?? 1,
+      enrollmentActual: actualsDraft.enrollmentActual,
+      revenueActual: actualsDraft.revenueActual,
+      expenseActual: actualsDraft.expenseActual,
+      netIncomeActual: actualsDraft.netIncomeActual,
+      signedMonthlyRent: actualsDraft.signedMonthlyRent,
+      programEnrollmentActual: actualsDraft.programEnrollmentActual,
+      notes: actualsDraft.notes && actualsDraft.notes.trim().length > 0 ? actualsDraft.notes.trim() : undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    // If literally nothing was entered (only asOfYear), clear instead of saving
+    // a hollow object.
+    const hasAny =
+      a.enrollmentActual !== undefined ||
+      a.revenueActual !== undefined ||
+      a.expenseActual !== undefined ||
+      a.netIncomeActual !== undefined ||
+      a.signedMonthlyRent !== undefined ||
+      a.programEnrollmentActual !== undefined ||
+      (a.notes !== undefined && a.notes.length > 0);
+    await onPatch(target, { actuals: hasAny ? a : undefined });
+    setEditingActuals(false);
+  };
+
+  const clearActuals = async () => {
+    await onPatch(target, { actuals: undefined });
+    setEditingActuals(false);
+  };
 
   return (
     <div
@@ -428,6 +597,230 @@ function CustomScenarioCard({
           </button>
         )}
       </div>
+
+      {/* Actuals snapshot — projected vs realized numbers for one model year.
+          Surfaces only for Pursued scenarios (or when actuals already exist)
+          since founders won't have realized numbers for declined / on-hold
+          decisions. The schema accepts optional fields so this stays a
+          forward-compatible foundation for a future "forecast accuracy" view. */}
+      {showActualsSurface && (
+        <div className="mb-3 border border-border/60 rounded-lg p-2.5 bg-muted/20" data-testid={`custom-scenario-actuals-${idx}`}>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Actuals snapshot
+            </p>
+            {!editingActuals && (
+              <button
+                onClick={() => setEditingActuals(true)}
+                className="text-[10px] text-primary hover:underline inline-flex items-center gap-1"
+                data-testid={`custom-scenario-actuals-edit-${idx}`}
+              >
+                <Pencil className="h-2.5 w-2.5" />
+                {cs.actuals ? "Edit" : "Add actuals"}
+              </button>
+            )}
+          </div>
+          {!editingActuals && cs.actuals && projectedSnapshot && (
+            <div className="space-y-1.5" data-testid={`custom-scenario-actuals-summary-${idx}`}>
+              <p className="text-[10px] text-muted-foreground">
+                As of Year {cs.actuals.asOfYear ?? 1}
+                {cs.actuals.updatedAt && (
+                  <span> · Updated {fmtDate(cs.actuals.updatedAt)}</span>
+                )}
+              </p>
+              {cs.actuals.enrollmentActual !== undefined && (
+                <ActualsLine
+                  label="Total enrollment"
+                  projected={projectedSnapshot.enrollment}
+                  actual={cs.actuals.enrollmentActual}
+                  onChange={() => {}}
+                  testId={`custom-scenario-actuals-enrollment-display-${idx}`}
+                  kind="count"
+                  betterWhen="higher"
+                />
+              )}
+              {cs.actuals.revenueActual !== undefined && (
+                <ActualsLine
+                  label="Revenue"
+                  projected={projectedSnapshot.revenue}
+                  actual={cs.actuals.revenueActual}
+                  onChange={() => {}}
+                  testId={`custom-scenario-actuals-revenue-display-${idx}`}
+                  kind="money"
+                  betterWhen="higher"
+                />
+              )}
+              {cs.actuals.expenseActual !== undefined && (
+                <ActualsLine
+                  label="Expenses"
+                  projected={projectedSnapshot.expense}
+                  actual={cs.actuals.expenseActual}
+                  onChange={() => {}}
+                  testId={`custom-scenario-actuals-expense-display-${idx}`}
+                  kind="money"
+                  betterWhen="lower"
+                />
+              )}
+              {cs.actuals.netIncomeActual !== undefined && (
+                <ActualsLine
+                  label="Net income"
+                  projected={projectedSnapshot.netIncome}
+                  actual={cs.actuals.netIncomeActual}
+                  onChange={() => {}}
+                  testId={`custom-scenario-actuals-netincome-display-${idx}`}
+                  kind="money"
+                  betterWhen="higher"
+                />
+              )}
+              {cs.decisionType === "evaluate_site" && cs.actuals.signedMonthlyRent !== undefined && (
+                <ActualsLine
+                  label="Signed rent (mo)"
+                  projected={projectedSnapshot.monthlyRent}
+                  actual={cs.actuals.signedMonthlyRent}
+                  onChange={() => {}}
+                  testId={`custom-scenario-actuals-rent-display-${idx}`}
+                  kind="money"
+                  betterWhen="lower"
+                />
+              )}
+              {cs.decisionType === "add_program" && cs.actuals.programEnrollmentActual !== undefined && (
+                <ActualsLine
+                  label="Program enrollment"
+                  projected={projectedSnapshot.programEnrollment}
+                  actual={cs.actuals.programEnrollmentActual}
+                  onChange={() => {}}
+                  testId={`custom-scenario-actuals-progenroll-display-${idx}`}
+                  kind="count"
+                  betterWhen="higher"
+                />
+              )}
+              {cs.actuals.notes && (
+                <p className="text-[10px] italic text-foreground/70 pt-1 border-t border-border/40">
+                  {cs.actuals.notes}
+                </p>
+              )}
+            </div>
+          )}
+          {!editingActuals && !cs.actuals && (
+            <p className="text-[10px] text-muted-foreground">
+              Record what actually happened so you can compare your forecast to reality.
+            </p>
+          )}
+          {editingActuals && projectedSnapshot && (
+            <div className="space-y-2" data-testid={`custom-scenario-actuals-editor-${idx}`}>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-medium text-foreground">As of</label>
+                <select
+                  value={String(actualsDraft.asOfYear ?? 1)}
+                  onChange={(e) => setActualsDraft({ ...actualsDraft, asOfYear: Number(e.target.value) })}
+                  className="text-[11px] border border-border rounded-md px-1.5 py-0.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  data-testid={`custom-scenario-actuals-year-${idx}`}
+                >
+                  {[1, 2, 3, 4, 5].map((y) => (
+                    <option key={y} value={y}>Year {y}</option>
+                  ))}
+                </select>
+              </div>
+              <ActualsLine
+                label="Total enrollment"
+                projected={projectedSnapshot.enrollment}
+                actual={actualsDraft.enrollmentActual}
+                onChange={(v) => setActualsDraft({ ...actualsDraft, enrollmentActual: v })}
+                testId={`custom-scenario-actuals-enrollment-${idx}`}
+                kind="count"
+                betterWhen="higher"
+              />
+              <ActualsLine
+                label="Revenue"
+                projected={projectedSnapshot.revenue}
+                actual={actualsDraft.revenueActual}
+                onChange={(v) => setActualsDraft({ ...actualsDraft, revenueActual: v })}
+                testId={`custom-scenario-actuals-revenue-${idx}`}
+                kind="money"
+                betterWhen="higher"
+              />
+              <ActualsLine
+                label="Expenses"
+                projected={projectedSnapshot.expense}
+                actual={actualsDraft.expenseActual}
+                onChange={(v) => setActualsDraft({ ...actualsDraft, expenseActual: v })}
+                testId={`custom-scenario-actuals-expense-${idx}`}
+                kind="money"
+                betterWhen="lower"
+              />
+              <ActualsLine
+                label="Net income"
+                projected={projectedSnapshot.netIncome}
+                actual={actualsDraft.netIncomeActual}
+                onChange={(v) => setActualsDraft({ ...actualsDraft, netIncomeActual: v })}
+                testId={`custom-scenario-actuals-netincome-${idx}`}
+                kind="money"
+                betterWhen="higher"
+              />
+              {cs.decisionType === "evaluate_site" && (
+                <ActualsLine
+                  label="Signed rent (mo)"
+                  projected={projectedSnapshot.monthlyRent}
+                  actual={actualsDraft.signedMonthlyRent}
+                  onChange={(v) => setActualsDraft({ ...actualsDraft, signedMonthlyRent: v })}
+                  testId={`custom-scenario-actuals-rent-${idx}`}
+                  kind="money"
+                  betterWhen="lower"
+                />
+              )}
+              {cs.decisionType === "add_program" && (
+                <ActualsLine
+                  label="Program enrollment"
+                  projected={projectedSnapshot.programEnrollment}
+                  actual={actualsDraft.programEnrollmentActual}
+                  onChange={(v) => setActualsDraft({ ...actualsDraft, programEnrollmentActual: v })}
+                  testId={`custom-scenario-actuals-progenroll-${idx}`}
+                  kind="count"
+                  betterWhen="higher"
+                />
+              )}
+              <textarea
+                value={actualsDraft.notes ?? ""}
+                onChange={(e) => setActualsDraft({ ...actualsDraft, notes: e.target.value })}
+                rows={2}
+                maxLength={300}
+                placeholder="Optional context — e.g. 'Pre-K projected 24, came in at 19'"
+                className="w-full text-[11px] border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                data-testid={`custom-scenario-actuals-notes-${idx}`}
+              />
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button
+                  onClick={clearActuals}
+                  className="text-[10px] px-2 py-1 rounded text-muted-foreground hover:text-rose-600"
+                  data-testid={`custom-scenario-actuals-clear-${idx}`}
+                  title="Remove the saved actuals snapshot"
+                >
+                  Clear all
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      setActualsDraft(cs.actuals ?? { asOfYear: 1 });
+                      setEditingActuals(false);
+                    }}
+                    className="text-[10px] px-2 py-1 rounded text-muted-foreground hover:text-foreground"
+                    data-testid={`custom-scenario-actuals-cancel-${idx}`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveActuals}
+                    className="text-[10px] px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90"
+                    data-testid={`custom-scenario-actuals-save-${idx}`}
+                  >
+                    Save actuals
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Pursued nudge — fold the change into the base model so future decision
           flows compare against current reality, not stale assumptions. */}
@@ -1598,6 +1991,14 @@ export function ScenarioPage() {
                       onPatch={patchCustom}
                       onOpenInPlanner={openInPlanner}
                       onApplyToModel={applyScenarioToModel}
+                      getProjectedSnapshot={(asOfYear) =>
+                        computeProjectedSnapshot(
+                          modelData,
+                          cs.overrides as PersistedDecisionOverrides,
+                          cs.decisionType,
+                          asOfYear,
+                        )
+                      }
                     />
                   ))}
                 </div>

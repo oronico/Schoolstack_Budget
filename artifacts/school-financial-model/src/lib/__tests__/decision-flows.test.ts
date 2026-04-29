@@ -4,6 +4,7 @@ import {
   applyAddProgramDecision,
   buildDecisionBullets,
   computeDecisionImpact,
+  computeProjectedSnapshot,
   decisionToPersistedOverrides,
   type AddProgramInputs,
   type DecisionInputs,
@@ -528,5 +529,64 @@ describe("decisionToPersistedOverrides → buildDecisionBullets round-trip", () 
     // carry its own sign, so a -$250 delta renders as "Tuition $-250/student".
     // Locked in so any future formatting change is intentional.
     expect(bullets).toContain("Tuition $-250/student");
+  });
+});
+
+// --- computeProjectedSnapshot ----------------------------------------------
+//
+// The actuals editor on the saved-scenario card calls this to fill the
+// "Projected" column next to each "Actual" input. We need:
+// 1) Common fields (enrollment / revenue / expense / netIncome) for any
+//    decision type, drawn from the same engine the rest of the app uses.
+// 2) Decision-specific fields (signedMonthlyRent for sites, programEnrollment
+//    for add-program) appear only when relevant so the UI can hide rows that
+//    don't apply to the saved scenario.
+// 3) asOfYear clamps to 1..5 so a stale or out-of-range value never explodes.
+
+describe("computeProjectedSnapshot", () => {
+  it("returns common metrics for an add_program scenario at the requested year", () => {
+    const data = buildBaseModel();
+    const decision: DecisionInputs = {
+      type: "add_program",
+      inputs: blankAddProgram({ enrollment: [10, 20, 30, 40, 50], annualTuition: 12000 }),
+    };
+    const persisted = decisionToPersistedOverrides(data, decision);
+    const snap = computeProjectedSnapshot(data, persisted, "add_program", 3);
+    expect(snap.asOfYear).toBe(3);
+    // Engine reports total student count for the year — for add_program we don't
+    // mutate baseline enrollment, so it stays at the base year-3 number.
+    expect(snap.enrollment).toBe(140);
+    // Program added 30 × $12,000 = $360,000 of revenue in year 3.
+    expect(snap.revenue).toBeGreaterThanOrEqual(360_000);
+    // Decision-specific surface populated for add_program:
+    expect(snap.programEnrollment).toBe(30);
+    // Site-specific field stays absent so the UI doesn't render an empty row.
+    expect(snap.monthlyRent).toBeUndefined();
+  });
+
+  it("populates monthlyRent for an evaluate_site scenario", () => {
+    const data = buildBaseModel();
+    const decision: DecisionInputs = {
+      type: "evaluate_site",
+      inputs: { newMonthlyRent: 9500 },
+    };
+    const persisted = decisionToPersistedOverrides(data, decision);
+    const snap = computeProjectedSnapshot(data, persisted, "evaluate_site", 1);
+    expect(snap.asOfYear).toBe(1);
+    expect(snap.monthlyRent).toBe(9500);
+    // Add-program-specific field stays absent on a site scenario.
+    expect(snap.programEnrollment).toBeUndefined();
+  });
+
+  it("clamps asOfYear into 1..5 so out-of-range inputs don't crash", () => {
+    const data = buildBaseModel();
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    expect(computeProjectedSnapshot(data, persisted, "change_enrollment", 0).asOfYear).toBe(1);
+    expect(computeProjectedSnapshot(data, persisted, "change_enrollment", 99).asOfYear).toBe(5);
+    // NaN / undefined fall back to year 1 (the helper's default).
+    expect(computeProjectedSnapshot(data, persisted, "change_enrollment", Number.NaN).asOfYear).toBe(1);
   });
 });

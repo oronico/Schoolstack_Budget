@@ -590,6 +590,52 @@ export function applyPersistedScenarioToData(
   return withOverrides;
 }
 
+// --- Actuals snapshot helpers ------------------------------------------------
+
+// What we project for a saved scenario at a given model year. Used to populate
+// the projected column in the actuals editor so the founder can compare their
+// realized numbers against the modeled prediction. Decision-specific fields
+// (monthlyRent for sites, programEnrollment for add-program) are filled in only
+// when relevant — the UI hides them otherwise.
+export interface ProjectedSnapshot {
+  asOfYear: number;
+  enrollment: number;
+  revenue: number;
+  expense: number;
+  netIncome: number;
+  monthlyRent?: number;
+  programEnrollment?: number;
+}
+
+// Reuses applyPersistedScenarioToData + computeBaseFinancials so the projection
+// always matches what the rest of the app shows for the saved scenario. Falls
+// back to year 1 if the caller doesn't pin an asOfYear yet.
+export function computeProjectedSnapshot(
+  data: FullModelData,
+  persisted: PersistedDecisionOverrides,
+  decisionType: DecisionType | undefined,
+  asOfYear: number = 1,
+): ProjectedSnapshot {
+  const yr = Math.max(1, Math.min(5, Math.round(asOfYear || 1)));
+  const idx = yr - 1;
+  const adjustedData = applyPersistedScenarioToData(data, persisted, decisionType);
+  const metrics = computeBaseFinancials(adjustedData);
+  const snap: ProjectedSnapshot = {
+    asOfYear: yr,
+    enrollment: Math.round(metrics.enrollment[idx] ?? 0),
+    revenue: Math.round(metrics.revenue[idx] ?? 0),
+    expense: Math.round(metrics.totalExpenses[idx] ?? 0),
+    netIncome: Math.round(metrics.netIncome[idx] ?? 0),
+  };
+  if (decisionType === "evaluate_site" && persisted.monthlyRent !== undefined) {
+    snap.monthlyRent = Math.round(persisted.monthlyRent);
+  }
+  if (decisionType === "add_program" && persisted.addProgramEnrollment) {
+    snap.programEnrollment = Math.round(persisted.addProgramEnrollment[idx] ?? 0);
+  }
+  return snap;
+}
+
 export function buildDecisionBullets(persisted: PersistedDecisionOverrides, decisionType?: DecisionType): string[] {
   const bullets: string[] = [];
   if (decisionType === "add_program" || persisted.addProgramName) {

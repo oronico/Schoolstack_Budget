@@ -451,6 +451,27 @@ export type DecisionType = z.infer<typeof decisionTypeSchema>;
 export const outcomeStatusSchema = z.enum(["pursued", "declined", "on_hold"]);
 export type OutcomeStatus = z.infer<typeof outcomeStatusSchema>;
 
+// Actuals snapshot — what *actually* happened after the decision was pursued.
+// Lets a founder record realized numbers for one model year alongside their
+// projection so they can see at a glance how good their forecasting was. The
+// shape is intentionally a flat record (rather than nested per-year) so the
+// future "forecast accuracy" view can aggregate across many scenarios without
+// shape gymnastics. Decision-specific fields (signedMonthlyRent for sites,
+// programEnrollmentActual for add-program) sit alongside the common metrics
+// and are only shown by the UI when relevant.
+export const customScenarioActualsSchema = z.object({
+  asOfYear: z.coerce.number().min(1, "Pick the model year these actuals reflect").max(5, "Pick a year between 1 and 5").optional(),
+  enrollmentActual: z.coerce.number().min(0, "Enrollment can't be negative").optional(),
+  revenueActual: z.coerce.number().optional(),
+  expenseActual: z.coerce.number().optional(),
+  netIncomeActual: z.coerce.number().optional(),
+  signedMonthlyRent: z.coerce.number().min(0, "Signed rent can't be negative").optional(),
+  programEnrollmentActual: z.coerce.number().min(0, "Program enrollment can't be negative").optional(),
+  notes: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+export type CustomScenarioActuals = z.infer<typeof customScenarioActualsSchema>;
+
 export const customScenarioSchema = z.object({
   name: z.string(),
   createdAt: z.string(),
@@ -486,6 +507,11 @@ export const customScenarioSchema = z.object({
   // Set once the founder folds a Pursued scenario back into their base model so
   // we can hide the "Apply to model" nudge and avoid re-applying it twice.
   appliedToModelAt: z.string().optional(),
+  // Optional realized-numbers snapshot — see customScenarioActualsSchema.
+  // Surfaced in the saved scenario card once a decision is marked Pursued so
+  // founders can record what actually happened (signed rent, realized
+  // enrollment, etc.) and compare it side-by-side with the projection.
+  actuals: customScenarioActualsSchema.optional(),
 });
 export type CustomScenario = z.infer<typeof customScenarioSchema>;
 
