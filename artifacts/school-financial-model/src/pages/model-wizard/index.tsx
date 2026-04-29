@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { MicroLessonContainer } from "@/components/coaching/MicroLessonCard";
+import { WhatThisMeansInYourBooks } from "@/components/coaching/WhatThisMeansInYourBooks";
 import { WizardPrepChecklist } from "@/components/coaching/WizardPrepChecklist";
 import { useAuth } from "@/lib/auth-context";
 
@@ -950,6 +951,11 @@ export function ModelWizardPage() {
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <MicroLessonContainer data={methods.getValues() as FullModelData} currentStep={currentStep} className="mb-4" />
+            <WhatThisMeansInYourBooks
+              step={currentStep}
+              schoolType={(methods.getValues() as FullModelData).schoolProfile?.schoolType}
+              className="mb-4"
+            />
             {showEncouragement && (
               <div className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
                 <div className="shrink-0 mt-0.5 w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">

@@ -344,6 +344,15 @@ function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachPro
           </p>
         </div>
       ))}
+      {verbose && (
+        <p className="text-[11px] text-amber-800/90 leading-snug pt-0.5 border-t border-amber-200/70">
+          This same gap is what your bookkeeper calls{" "}
+          <GlossaryTerm termKey="variance_analysis">variance analysis</GlossaryTerm>{" "}
+          on your monthly{" "}
+          <GlossaryTerm termKey="pl_statement">P&amp;L</GlossaryTerm> — the model
+          line and the bookkeeping line are the same conversation.
+        </p>
+      )}
       <div className="pt-1">
         <WhatIfLink source="actuals_variance" className="text-[11px]" />
       </div>

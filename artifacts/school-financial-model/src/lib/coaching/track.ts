@@ -44,7 +44,9 @@ type CoachingEvent =
   | "stale_banner_coach_shown"
   | "whatif_link_clicked"
   | "mapping_heuristic_suggested"
-  | "mapping_heuristic_accepted";
+  | "mapping_heuristic_accepted"
+  | "bookkeeping_sidebar_shown"
+  | "budget_to_books_lesson_shown";
 
 export function trackCoachingEvent(
   event: CoachingEvent,

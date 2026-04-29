@@ -1,8 +1,10 @@
 import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2, AlertTriangle, Rocket, Lightbulb } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { MicroLessonCardInner } from "@/components/coaching/MicroLessonCard";
+import { dismissLesson, getDismissedLessons } from "@/lib/coaching/micro-lessons";
 import { computeAnnualDebt } from "@workspace/finance";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
@@ -10,7 +12,52 @@ import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
 import { QuickLevers } from "@/components/coaching/QuickLevers";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import { computeMonthlyCashInflow } from "@/lib/revenue-defaults";
+import { useAuth } from "@/lib/auth-context";
+import { trackCoachingEvent } from "@/lib/coaching/track";
 import type { FullModelData } from "../schema";
+
+const BUDGET_TO_BOOKS_LESSON = {
+  id: "budget_to_books_review",
+  title: "From budget to books",
+  body:
+    "Your budget lives here, but it pays off inside your accounting system. Each month, ask your bookkeeper to put this plan in the Budget column of a Budget vs. Actual report - then spend ten minutes writing one sentence per material variance. That single habit turns a five-year model into a steering tool you actually use.",
+  readTimeSeconds: 30,
+  triggerStep: 8,
+  checkTrigger: () => true,
+};
+
+function BudgetToBooksLesson() {
+  const { user } = useAuth();
+  const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const [dismissed, setDismissed] = useState(() =>
+    getDismissedLessons().has(BUDGET_TO_BOOKS_LESSON.id),
+  );
+  const trackedRef = useRef(false);
+
+  useEffect(() => {
+    if (trackedRef.current || level === "advanced" || dismissed) return;
+    trackedRef.current = true;
+    trackCoachingEvent("budget_to_books_lesson_shown", {
+      guidanceLevel: level,
+    });
+  }, [level, dismissed]);
+
+  if (level === "advanced" || dismissed) return null;
+
+  const handleDismiss = () => {
+    dismissLesson(BUDGET_TO_BOOKS_LESSON.id);
+    setDismissed(true);
+  };
+
+  return (
+    <div data-testid="budget-to-books-lesson" className="mt-2">
+      <MicroLessonCardInner
+        lesson={BUDGET_TO_BOOKS_LESSON}
+        onDismiss={handleDismiss}
+      />
+    </div>
+  );
+}
 
 interface ReviewRevenueRow {
   id: string;
@@ -887,6 +934,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
           </Section>
         </>
       )}
+      <BudgetToBooksLesson />
     </div>
   );
 }

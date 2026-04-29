@@ -148,4 +148,79 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     short: "The 'Sign in with Google'-style handshake your accounting system uses to grant us read-only access without ever sharing your password.",
     long: "OAuth lets you click 'Connect to QuickBooks/Xero', approve a specific scope (typically read-only access to your Profit & Loss), and revoke it any time from inside your accounting tool. We never see or store your bookkeeping login.",
   },
+  assets: {
+    term: "Assets",
+    short: "Everything your school owns or is owed - cash in the bank, tuition not yet collected, the building if you own it, computers, furniture.",
+    long: "Assets sit on the left side of the balance sheet. They're broken into 'current' (cash and things turning into cash within a year, like receivables) and 'long-term' (buildings, vehicles, leasehold improvements).",
+  },
+  liabilities: {
+    term: "Liabilities",
+    short: "Everything your school owes - unpaid vendor bills, payroll due, the balance on a loan, deposits you're holding for families.",
+    long: "Liabilities sit on the right side of the balance sheet. 'Current' are due within a year (accounts payable, the next 12 months of loan payments); 'long-term' is the rest of the loan principal and any multi-year obligations.",
+  },
+  equity: {
+    term: "Equity",
+    short: "What's left after you subtract liabilities from assets - the school's net worth on paper. Nonprofits call this 'net assets'.",
+    long: "Equity grows when the school earns a surplus and shrinks when it runs a deficit. For a 501(c)(3), it's split between unrestricted and restricted net assets depending on whether donors put strings on the money.",
+  },
+  balance_sheet: {
+    term: "Balance Sheet",
+    short: "A one-page snapshot of what your school owns, owes, and is worth on a single day - assets on the left, liabilities and equity on the right.",
+    long: "Unlike the P&L (which covers a period), the balance sheet is a moment-in-time picture. Lenders read it to see your reserves and your debt; the two sides always balance because every dollar is either owned outright or financed by debt or equity.",
+  },
+  cash_flow_statement: {
+    term: "Cash Flow Statement",
+    short: "The report that explains why your bank balance changed over a period - even when the P&L said you made a profit.",
+    long: "It splits cash movement into three buckets: operating (tuition in, payroll out), investing (a buildout, new computers), and financing (loan draws, loan payments). It's the bridge between what the P&L says you earned and what actually showed up in the bank.",
+  },
+  accrual_vs_cash: {
+    term: "Accrual vs Cash",
+    short: "Two ways to keep the books: cash basis records money when it moves; accrual records revenue when earned and expenses when incurred, even if cash hasn't changed hands yet.",
+    long: "Most schools start cash-basis (simpler) and switch to accrual once they grow. Accrual gives a truer picture of a given month - you book September tuition in September even if a family pays late, and you book the rent expense even if the check clears next month.",
+  },
+  retained_earnings: {
+    term: "Retained Earnings",
+    short: "The cumulative surplus your school has kept (vs. distributed) since it opened. Nonprofits call the equivalent 'unrestricted net assets'.",
+    long: "It's the running total of every year's net income added to the equity section. A negative number means cumulative losses; a growing one means the school has been quietly building reserves on paper.",
+  },
+  debt_service: {
+    term: "Debt Service",
+    short: "The total cash you'll send to a lender over a year - principal repayment plus interest.",
+    long: "On the P&L, only the interest portion shows up as an expense; the principal portion reduces the loan liability on the balance sheet. Lenders compare your full annual debt service to net operating income to compute DSCR.",
+  },
+  ebitda: {
+    term: "EBITDA",
+    short: "Earnings Before Interest, Taxes, Depreciation, and Amortization - a rough proxy for operating cash generation.",
+    long: "Calculated as net income plus interest, taxes, depreciation, and amortization added back. Lenders and analysts use it to compare schools regardless of how they're financed or what year they bought their equipment.",
+  },
+  net_income: {
+    term: "Net Income",
+    short: "The bottom line of your P&L - total revenue minus total expenses for the period. Nonprofits call this 'change in net assets'.",
+    long: "Positive net income means you ran a surplus; negative means a deficit. It flows up into retained earnings on the balance sheet at year-end, so each year's bottom line compounds into the school's long-term net worth.",
+  },
+  gross_margin: {
+    term: "Gross Margin",
+    short: "Revenue minus the direct cost of delivering the program (mostly instructional staff and classroom supplies), shown as a percent of revenue.",
+    long: "Schools rarely report a true gross margin the way a retail business does, but the concept matters: if instruction alone eats more than ~75% of revenue, there's not enough room left for facility, admin, and reserves.",
+  },
+  operating_income: {
+    term: "Operating Income",
+    short: "Net income before interest, taxes, and any one-time items - the profit (or loss) from running the school itself.",
+    long: "Operating income strips out financing decisions (interest) and one-time gains/losses, so you can see whether the day-to-day operation - tuition vs. salaries, rent, and supplies - is sustainable on its own.",
+  },
+  payroll_expense: {
+    term: "Payroll Expense",
+    short: "The total cost of employing your team - gross wages plus the employer share of payroll taxes and benefits.",
+    long: "On the P&L, most schools split it into three lines: Salaries & Wages, Payroll Tax Expense, and Employee Benefits. The fully-loaded number is usually 1.15-1.30× gross wages depending on your state and benefits plan.",
+  },
+  rent_expense: {
+    term: "Rent Expense",
+    short: "The monthly facility cost your books recognize - base rent plus any NNN charges (CAM, taxes, insurance, utilities) that the lease passes through to you.",
+    long: "If you own instead of rent, this line is replaced by Mortgage Interest Expense plus Depreciation on the building. Either way, lenders watch this line closely because facility is usually the second-largest expense after staffing.",
+  },
+  variance_analysis: {
+    term: "Variance Analysis",
+    short: "The monthly habit of comparing each P&L line to its budgeted amount, explaining the gap, and deciding whether the budget or the operation needs to change.",
+    long: "Most accounting systems can produce a 'Budget vs. Actual' report in two clicks. The discipline is doing it every month and writing one sentence per material variance - that's what turns a budget from a setup task into a steering tool.",
+  },
 };
