@@ -9,7 +9,7 @@ import {
   syncAccountingConnection,
   type AccountingDbAdapter,
 } from "../src/lib/accounting/sync.js";
-import { runSyncSweep } from "../src/lib/accounting/scheduler.js";
+import { runSyncSweep, decideRefresh } from "../src/lib/accounting/scheduler.js";
 import type { ProviderClient } from "../src/lib/accounting/providers.js";
 import { encryptToken } from "../src/lib/accounting/crypto.js";
 import type { NotifyConnectionError } from "../src/lib/accounting/notify.js";
@@ -388,12 +388,173 @@ async function testSweepNotifiesOnConnectedToErrorTransition(): Promise<void> {
   );
 }
 
+function testDecideRefresh(): void {
+  console.log("\n— scheduler: decideRefresh staleness rules —");
+  // Token is far away AND snapshot is fresh — leave alone.
+  const fresh = decideRefresh(
+    {
+      tokenExpiresAt: new Date(FIXED_NOW.getTime() + 48 * 60 * 60 * 1000),
+      lastSyncedAt: new Date(FIXED_NOW.getTime() - 1 * 24 * 60 * 60 * 1000),
+    },
+    FIXED_NOW,
+  );
+  check("fresh row is skipped", fresh.refresh === false, `decision=${JSON.stringify(fresh)}`);
+
+  // Token is within 24h of expiry — refresh to keep grant warm.
+  const tokenSoon = decideRefresh(
+    {
+      tokenExpiresAt: new Date(FIXED_NOW.getTime() + 6 * 60 * 60 * 1000),
+      lastSyncedAt: new Date(FIXED_NOW.getTime() - 1 * 24 * 60 * 60 * 1000),
+    },
+    FIXED_NOW,
+  );
+  check(
+    "token-expiring row triggers refresh",
+    tokenSoon.refresh === true && tokenSoon.reason === "token-expiring",
+    `decision=${JSON.stringify(tokenSoon)}`,
+  );
+
+  // Snapshot is older than 7 days — refresh even if token is fine.
+  const stale = decideRefresh(
+    {
+      tokenExpiresAt: new Date(FIXED_NOW.getTime() + 48 * 60 * 60 * 1000),
+      lastSyncedAt: new Date(FIXED_NOW.getTime() - 8 * 24 * 60 * 60 * 1000),
+    },
+    FIXED_NOW,
+  );
+  check(
+    "stale-snapshot row triggers refresh",
+    stale.refresh === true && stale.reason === "snapshot-stale",
+    `decision=${JSON.stringify(stale)}`,
+  );
+
+  // Never synced — refresh.
+  const neverSynced = decideRefresh(
+    {
+      tokenExpiresAt: new Date(FIXED_NOW.getTime() + 48 * 60 * 60 * 1000),
+      lastSyncedAt: null,
+    },
+    FIXED_NOW,
+  );
+  check(
+    "never-synced row triggers refresh",
+    neverSynced.refresh === true && neverSynced.reason === "never-synced",
+    `decision=${JSON.stringify(neverSynced)}`,
+  );
+
+  // Missing token expiry is treated as "unknown / probably expired" — refresh.
+  const noExpiry = decideRefresh(
+    { tokenExpiresAt: null, lastSyncedAt: new Date(FIXED_NOW.getTime() - 60_000) },
+    FIXED_NOW,
+  );
+  check(
+    "missing tokenExpiresAt triggers refresh",
+    noExpiry.refresh === true && noExpiry.reason === "token-expiring",
+    `decision=${JSON.stringify(noExpiry)}`,
+  );
+}
+
+async function testSweepSkipsFreshConnections(): Promise<void> {
+  console.log("\n— scheduler: sweep skips fresh connections, refreshes stale ones —");
+  const freshConn = makeConnection({
+    id: 10,
+    modelId: 500,
+    // Token has 48h left, snapshot synced 1 day ago.
+    tokenExpiresAt: new Date(FIXED_NOW.getTime() + 48 * 60 * 60 * 1000),
+    lastSyncedAt: new Date(FIXED_NOW.getTime() - 1 * 24 * 60 * 60 * 1000),
+    snapshotJson: {
+      periodEnd: "2026-04-28",
+      monthsCompleted: 4,
+      revenue: 100_000,
+      expenses: 90_000,
+    },
+  });
+  const staleConn = makeConnection({
+    id: 11,
+    modelId: 501,
+    // Token has 48h left, but snapshot is 8 days old.
+    tokenExpiresAt: new Date(FIXED_NOW.getTime() + 48 * 60 * 60 * 1000),
+    lastSyncedAt: new Date(FIXED_NOW.getTime() - 8 * 24 * 60 * 60 * 1000),
+    snapshotJson: {
+      periodEnd: "2026-04-21",
+      monthsCompleted: 3,
+      revenue: 80_000,
+      expenses: 70_000,
+    },
+  });
+  const tokenSoonConn = makeConnection({
+    id: 12,
+    modelId: 502,
+    // Token expires in 1h, snapshot synced 1h ago.
+    tokenExpiresAt: new Date(FIXED_NOW.getTime() + 60 * 60 * 1000),
+    lastSyncedAt: new Date(FIXED_NOW.getTime() - 60 * 60 * 1000),
+  });
+  const { adapter, rowMap } = makeAdapter([freshConn, staleConn, tokenSoonConn]);
+
+  let fetchCount = 0;
+  const sharedClient: ProviderClient = {
+    provider: "quickbooks",
+    isConfigured: () => true,
+    getAuthorizeUrl: () => "https://example.com/auth",
+    exchangeCode: async () => {
+      throw new Error("not used");
+    },
+    refreshAccessToken: async () => ({
+      accessToken: "x",
+      refreshToken: "y",
+      expiresAt: new Date(FIXED_NOW.getTime() + 60 * 60 * 1000),
+    }),
+    fetchProfitAndLoss: async () => {
+      fetchCount++;
+      return {
+        periodEnd: "2026-04-30",
+        monthsCompleted: 4,
+        revenue: 999_000,
+        expenses: 800_000,
+      };
+    },
+  };
+
+  const summary = await runSyncSweep({
+    dbAdapter: adapter,
+    getProviderClient: () => sharedClient,
+    // Stub out the notifier so the sweep doesn't try to load the real mailer.
+    notifyConnectionError: async () => {},
+  });
+
+  check(
+    "fresh row was skipped",
+    summary.skipped === 1,
+    `summary=${JSON.stringify(summary)}`,
+  );
+  check(
+    "two stale rows were attempted",
+    summary.attempted === 2,
+    `summary=${JSON.stringify(summary)}`,
+  );
+  check(
+    "fetchProfitAndLoss called only for stale rows",
+    fetchCount === 2,
+    `fetchCount=${fetchCount}`,
+  );
+  check(
+    "fresh row's snapshot left untouched",
+    rowMap.get(freshConn.id)!.snapshotJson?.revenue === 100_000,
+  );
+  check(
+    "stale row's snapshot was updated",
+    rowMap.get(staleConn.id)!.snapshotJson?.revenue === 999_000,
+  );
+}
+
 async function main(): Promise<void> {
   await testHappyPath();
   await testFailurePreservesLastSync();
   await testProactiveTokenRefresh();
   await testSweepIteratesAllConnections();
   await testSweepNotifiesOnConnectedToErrorTransition();
+  testDecideRefresh();
+  await testSweepSkipsFreshConnections();
 
   console.log("\n========================");
   console.log(`PASSED: ${passed}`);

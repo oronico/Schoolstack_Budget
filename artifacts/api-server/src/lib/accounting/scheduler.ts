@@ -36,6 +36,47 @@ const DEFAULT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
 const DEFAULT_INITIAL_DELAY_MS = 60_000; // 1 min after boot
 const PER_CONNECTION_DELAY_MS = 250; // small spacing between provider calls
 
+// Refresh policy. We sync a connection when *either*:
+//   - the access token is within 24h of expiry (keeps the refresh-token grant
+//     warm; QuickBooks lets refresh tokens expire after 100 days of disuse,
+//     Xero after 60 days), OR
+//   - the cached snapshot is older than 7 days (keeps the founder-facing
+//     numbers fresh even if the access-token cadence wouldn't otherwise
+//     trigger a sync).
+// Connections that pass *both* freshness checks are left alone so we don't
+// hammer the providers on every tick.
+const TOKEN_REFRESH_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
+const SNAPSHOT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7d
+
+// Exported so the test suite can assert against the same thresholds.
+export interface RefreshDecision {
+  refresh: boolean;
+  reason: "token-expiring" | "snapshot-stale" | "never-synced" | "fresh";
+}
+
+export function decideRefresh(
+  conn: {
+    tokenExpiresAt: Date | null;
+    lastSyncedAt: Date | null;
+  },
+  now: Date = new Date(),
+): RefreshDecision {
+  const tokenMsLeft = conn.tokenExpiresAt
+    ? conn.tokenExpiresAt.getTime() - now.getTime()
+    : -Infinity;
+  if (tokenMsLeft < TOKEN_REFRESH_WINDOW_MS) {
+    return { refresh: true, reason: "token-expiring" };
+  }
+  if (!conn.lastSyncedAt) {
+    return { refresh: true, reason: "never-synced" };
+  }
+  const snapshotAgeMs = now.getTime() - conn.lastSyncedAt.getTime();
+  if (snapshotAgeMs > SNAPSHOT_MAX_AGE_MS) {
+    return { refresh: true, reason: "snapshot-stale" };
+  }
+  return { refresh: false, reason: "fresh" };
+}
+
 let initialTimer: ReturnType<typeof setTimeout> | null = null;
 let recurringTimer: ReturnType<typeof setInterval> | null = null;
 let inFlight = false;
@@ -156,6 +197,18 @@ export async function runSyncSweep(deps: SweepDeps = {}): Promise<SweepSummary> 
         // Server is missing OAuth credentials for this provider — the
         // connection rows survive across credential rotations but we can't
         // do anything useful here, so skip silently.
+        summary.skipped++;
+        continue;
+      }
+      // Skip rows that already have a recent snapshot AND a token that's
+      // not close to expiring. Keeps provider call volume low and avoids
+      // racing the on-demand "Sync now" button when a founder just
+      // refreshed manually.
+      const decision = decideRefresh(
+        { tokenExpiresAt: conn.tokenExpiresAt, lastSyncedAt: conn.lastSyncedAt },
+        new Date(),
+      );
+      if (!decision.refresh) {
         summary.skipped++;
         continue;
       }
