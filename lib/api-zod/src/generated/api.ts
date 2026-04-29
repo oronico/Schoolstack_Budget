@@ -43,6 +43,7 @@ export const LoginResponse = zod.object({
     email: zod.string(),
     name: zod.string(),
     guidanceLevel: zod.enum(["advanced", "basics", "extra"]).nullish(),
+    lenderLanguageEnabled: zod.boolean().optional(),
   }),
   token: zod.string(),
 });
@@ -62,6 +63,22 @@ export const GetMeResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
   guidanceLevel: zod.enum(["advanced", "basics", "extra"]).nullish(),
+  lenderLanguageEnabled: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update lender-language preference
+ */
+export const UpdateLenderLanguageBody = zod.object({
+  enabled: zod.boolean(),
+});
+
+export const UpdateLenderLanguageResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  guidanceLevel: zod.enum(["advanced", "basics", "extra"]).nullish(),
+  lenderLanguageEnabled: zod.boolean().optional(),
 });
 
 /**

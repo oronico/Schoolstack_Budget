@@ -1,4 +1,4 @@
-export type ArticleCategory = "Getting Started" | "School Finance 101" | "For Lenders" | "School Types";
+export type ArticleCategory = "Getting Started" | "School Finance 101" | "Accounting Literacy" | "For Lenders" | "School Types";
 
 export interface Article {
   slug: string;
@@ -802,6 +802,183 @@ SchoolStack Budget supports microschool models out of the box - including micros
 The most important step? Start. Open the tool, enter what you know, and let the platform help you fill in the rest. Your microschool deserves a clear financial plan - and building one is easier than you think.
 `,
   },
+  {
+    slug: "financial-statements-101",
+    title: "Financial Statements 101 for School Founders",
+    description: "The three reports your bookkeeper produces every month - P&L, Balance Sheet, Cash Flow Statement - explained in plain English with one worked example each.",
+    category: "Accounting Literacy",
+    publishedDate: "2026-04-29",
+    readTimeMinutes: 8,
+    ogImage: DEFAULT_OG_IMAGE,
+    content: `
+## Three reports, one school
+
+Your school's books produce three financial statements every month. They look intimidating in a board packet, but each one answers a single question:
+
+- **The P&L** - Did we make or lose money this month?
+- **The Balance Sheet** - What do we own and owe right now?
+- **The Cash Flow Statement** - Why did our bank balance change?
+
+Once you can read them, you can talk to a banker, a board treasurer, or an authorizer without flinching. Here's how each one works, with a worked example from one school.
+
+Throughout this primer, we'll use the same school: **Riverbend Academy**, a 120-student K-5 charter, fictional but built on numbers similar to what the SchoolStack Budget wizard would produce in Year 1.
+
+## 1. The Profit & Loss Statement (P&L)
+
+**One-sentence definition:** The P&L lists every dollar of revenue you earned and every dollar of expense you incurred over a period (usually a month or a year), and shows what's left at the bottom.
+
+It's also called the **Income Statement** or, for nonprofits, the **Statement of Activities**. They are the same report under different names.
+
+### How a P&L is structured
+
+A P&L runs top to bottom in roughly this order:
+
+1. **Revenue** - Tuition, per-pupil funding, grants, fundraising, fees
+2. **Personnel costs** - Salaries, payroll taxes, benefits
+3. **Program costs** - Curriculum, materials, technology, professional development
+4. **Facility costs** - Rent or mortgage interest, utilities, insurance
+5. **Administrative costs** - Office supplies, accounting, legal, marketing
+6. **= Net Income** (or "change in net assets" for nonprofits)
+
+Each line is **time-bounded**: it covers exactly the period the report says it covers. A "September P&L" only includes September's revenue and September's expenses.
+
+### A worked example: Riverbend Academy, September
+
+| Line | Amount |
+|---|---|
+| Per-pupil funding revenue | $128,000 |
+| Tuition fees revenue | $4,200 |
+| **Total revenue** | **$132,200** |
+| Salaries & wages | $78,000 |
+| Payroll taxes & benefits | $19,500 |
+| Curriculum & supplies | $6,200 |
+| Rent | $11,000 |
+| Utilities, insurance, office | $4,800 |
+| **Total expenses** | **$119,500** |
+| **Net Income** | **$12,700** |
+
+Riverbend ran a $12,700 surplus in September. That's not the same as having $12,700 more in the bank - we'll get to that in the cash flow section - but it does mean the school's economic activity for the month was positive.
+
+### What to ask your bookkeeper for
+
+Ask for "the P&L for the month, and a year-to-date P&L next to it" - usually as a Budget vs. Actual report. Two columns of actuals (this month, year-to-date) and two columns of budget (this month, year-to-date), with variance columns next to each.
+
+## 2. The Balance Sheet
+
+**One-sentence definition:** The Balance Sheet is a snapshot, on a single day, of what your school owns (assets), what it owes (liabilities), and what's left over for the school itself (equity, or "net assets" in nonprofit terms).
+
+The defining identity of the balance sheet is:
+
+> **Assets = Liabilities + Equity**
+
+It always balances. If it doesn't, the books are wrong.
+
+### How a Balance Sheet is structured
+
+Three sections:
+
+1. **Assets** - Cash, accounts receivable (money owed to you), prepaid expenses, equipment, buildings
+2. **Liabilities** - Accounts payable (bills you owe), payroll due, loans, deferred tuition revenue
+3. **Equity / Net Assets** - Money the founders contributed, plus accumulated surpluses (or losses) since the school opened
+
+Unlike the P&L, the balance sheet is **point-in-time**: it shows exactly what was true at midnight on the date of the report.
+
+### A worked example: Riverbend Academy, September 30
+
+**Assets**
+| Line | Amount |
+|---|---|
+| Cash in bank | $185,000 |
+| Tuition receivable | $8,400 |
+| Prepaid insurance | $3,200 |
+| Furniture & equipment (net) | $42,000 |
+| **Total assets** | **$238,600** |
+
+**Liabilities**
+| Line | Amount |
+|---|---|
+| Accounts payable | $14,300 |
+| Payroll & benefits payable | $9,800 |
+| Equipment loan (long-term portion) | $28,000 |
+| **Total liabilities** | **$52,100** |
+
+**Equity / Net Assets**
+| Line | Amount |
+|---|---|
+| Founder contributions | $150,000 |
+| Retained earnings (cumulative surplus) | $36,500 |
+| **Total equity** | **$186,500** |
+
+**Total liabilities + equity = $238,600 ✓** (matches total assets)
+
+Riverbend has $185,000 of cash, owes $52,100, and has built up $36,500 of cumulative surplus on top of the founder's original $150,000 contribution. A lender looking at this would feel comfortable: cash is more than 3x liabilities, and equity is growing.
+
+### What to ask your bookkeeper for
+
+Ask for "the balance sheet as of the last day of the month, with comparative columns for the same date one year ago." That comparison shows whether the school is building or burning equity over time, which is what board members and lenders actually care about.
+
+## 3. The Cash Flow Statement
+
+**One-sentence definition:** The Cash Flow Statement explains *why* your bank balance went up or down over a period - the bridge between the P&L's net income and the actual cash you ended up with.
+
+This is the report most founders find counterintuitive at first. You earned a $12,700 surplus on the P&L - so why does your bank balance look basically flat?
+
+The cash flow statement answers exactly that question.
+
+### How a Cash Flow Statement is structured
+
+Three sections, always in the same order:
+
+1. **Operating activities** - Cash from running the school day-to-day. Starts with net income, then adjusts for non-cash items (depreciation) and timing of receivables and payables.
+2. **Investing activities** - Cash spent on or received from long-term assets (equipment purchases, sale of property)
+3. **Financing activities** - Cash from loans, debt repayment, founder contributions, distributions
+
+Each section ends with a subtotal, and the three subtotals together equal the change in cash for the period.
+
+### A worked example: Riverbend Academy, September
+
+**Operating activities**
+| Line | Amount |
+|---|---|
+| Net income (from P&L) | $12,700 |
+| Add: depreciation (non-cash expense) | $700 |
+| Less: increase in tuition receivable | ($2,400) |
+| Add: increase in accounts payable | $3,100 |
+| **Cash from operations** | **$14,100** |
+
+**Investing activities**
+| Line | Amount |
+|---|---|
+| Purchase of classroom technology | ($8,500) |
+| **Cash from investing** | **($8,500)** |
+
+**Financing activities**
+| Line | Amount |
+|---|---|
+| Equipment loan principal repayment | ($1,200) |
+| **Cash from financing** | **($1,200)** |
+
+**Net change in cash:** $14,100 - $8,500 - $1,200 = **$4,400**
+
+So Riverbend's $12,700 surplus on the P&L only translated to $4,400 of new cash - the rest got spent on Chromebooks and ate into receivables and the loan principal. This is exactly why founders need both reports: the P&L tells you whether the school is *economically* viable, and the cash flow statement tells you whether it can pay next month's rent.
+
+### What to ask your bookkeeper for
+
+Most accounting systems can produce the cash flow statement automatically. Ask for "the cash flow statement using the indirect method, monthly and year-to-date." If your bookkeeper can't produce one, that's a sign the chart of accounts may need cleanup before you next apply for a loan.
+
+## Putting it together
+
+The three statements form a closed loop:
+
+1. The **P&L** shows the period's net income.
+2. That net income flows into **retained earnings** on the **Balance Sheet**, increasing equity.
+3. The **Cash Flow Statement** explains the gap between that net income and the actual change in cash on the balance sheet.
+
+Once you can hold all three in your head, "what's the school's financial health" becomes a question you can actually answer. You'll know which one a lender is looking at when they ask about coverage. You'll know which one a board member is looking at when they ask about reserves. And you'll know which one to bring up first when something feels off.
+
+That's what financial literacy buys you: the ability to steer with the same instruments your banker, your board, and your authorizer use.
+`,
+  },
 ];
 
 export function getArticleBySlug(slug: string): Article | undefined {
@@ -815,6 +992,7 @@ export function getArticlesByCategory(category: ArticleCategory): Article[] {
 export const CATEGORIES: ArticleCategory[] = [
   "Getting Started",
   "School Finance 101",
+  "Accounting Literacy",
   "For Lenders",
   "School Types",
 ];

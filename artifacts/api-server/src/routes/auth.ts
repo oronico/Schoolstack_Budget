@@ -114,7 +114,13 @@ router.get("/auth/me", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
     await db.update(usersTable).set({ lastSeenAt: new Date() }).where(eq(usersTable.id, user.id));
-    res.json({ id: user.id, email: user.email, name: user.name, guidanceLevel: user.guidanceLevel ?? null });
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      guidanceLevel: user.guidanceLevel ?? null,
+      lenderLanguageEnabled: user.lenderLanguageEnabled ?? false,
+    });
   } catch (err) {
     console.error("Get me error:", err);
     res.status(500).json({ error: "Something went wrong." });
@@ -138,9 +144,43 @@ router.patch("/auth/guidance-level", authMiddleware, async (req: AuthRequest, re
       res.status(404).json({ error: "User not found." });
       return;
     }
-    res.json({ id: updated.id, email: updated.email, name: updated.name, guidanceLevel: updated.guidanceLevel ?? null });
+    res.json({
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      guidanceLevel: updated.guidanceLevel ?? null,
+      lenderLanguageEnabled: updated.lenderLanguageEnabled ?? false,
+    });
   } catch (err) {
     console.error("Update guidance level error:", err);
+    res.status(500).json({ error: "Something went wrong." });
+  }
+});
+
+router.patch("/auth/lender-language", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { enabled } = req.body ?? {};
+    if (typeof enabled !== "boolean") {
+      res.status(400).json({ error: "enabled must be a boolean" });
+      return;
+    }
+    const [updated] = await db.update(usersTable)
+      .set({ lenderLanguageEnabled: enabled, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.userId!))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "User not found." });
+      return;
+    }
+    res.json({
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      guidanceLevel: updated.guidanceLevel ?? null,
+      lenderLanguageEnabled: updated.lenderLanguageEnabled ?? false,
+    });
+  } catch (err) {
+    console.error("Update lender-language error:", err);
     res.status(500).json({ error: "Something went wrong." });
   }
 });
@@ -229,6 +269,7 @@ const ALLOWED_EVENTS = new Set([
   "primer_skipped",
   "primer_opened",
   "help_menu_opened",
+  "lender_language_toggled",
 ]);
 
 router.post("/auth/track", authMiddleware, async (req: AuthRequest, res) => {

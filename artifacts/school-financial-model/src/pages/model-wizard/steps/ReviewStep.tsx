@@ -13,7 +13,7 @@ import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import { computeMonthlyCashInflow } from "@/lib/revenue-defaults";
 import { useAuth } from "@/lib/auth-context";
 import { trackCoachingEvent } from "@/lib/coaching/track";
-import { BookOpen, X } from "lucide-react";
+import { BookOpen, X, ArrowRight } from "lucide-react";
 import type { FullModelData } from "../schema";
 
 const BUDGET_TO_BOOKS_LESSON_ID = "budget_to_books_review";
@@ -135,6 +135,19 @@ function BudgetToBooksLesson() {
         <GlossaryTerm termKey="variance_analysis">variance analysis</GlossaryTerm>,
         and it's how a budget becomes a steering tool instead of a setup task.
       </p>
+
+      <div className="mt-4 pt-4 border-t border-teal-200/60">
+        <a
+          href="/resources/financial-statements-101"
+          target="_blank"
+          rel="noreferrer"
+          data-testid="budget-to-books-primer-link"
+          className="group inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 hover:text-teal-800 transition-colors"
+        >
+          Read the primer: Financial Statements 101
+          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+        </a>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { format, differenceInDays } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
 import { GuidanceModePrompt } from "@/components/coaching/GuidanceModePrompt";
 import { DecisionLauncher, ThingsHaveChangedBanner } from "@/components/decision-flow/DecisionLauncher";
+import { FinancialSnapshot } from "@/components/dashboard/FinancialSnapshot";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: { label: "Draft", className: "bg-amber-100 text-amber-800" },
@@ -55,6 +56,10 @@ export function DashboardPage() {
   const completedModels = activeModels.filter(m => m.status === "complete");
   const draftModels = activeModels.filter(m => m.status !== "complete");
   const archivedModels = models?.filter(m => m.status === "archived") || [];
+  // Pick the most recently updated non-archived model as the source for the
+  // financial snapshot block. The list endpoint already orders by updatedAt
+  // desc, so we just take the first eligible row.
+  const snapshotModel = activeModels[0];
 
   const handleCreate = async () => {
     try {
@@ -136,6 +141,13 @@ export function DashboardPage() {
               New Model
             </button>
           </div>
+
+          {!isLoading && snapshotModel && (
+            <FinancialSnapshot
+              modelId={snapshotModel.id}
+              modelName={snapshotModel.name || "Untitled Model"}
+            />
+          )}
 
           {!isLoading && models && models.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">

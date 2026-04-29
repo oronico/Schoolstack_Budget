@@ -79,6 +79,9 @@ A shared layer supports lender-ready and board-ready deliverables, including nar
 ### Decision Engine
 Identifies and surfaces critical financial issues with severity ranking, summaries, explanations, and recommended actions.
 
+### Lender Language Toggle
+Dashboard's Year-1 Financial Snapshot exposes a "Lender language" switch that swaps four KPI labels to lender/accounting equivalents (Operating Surplus→NOI, Net Income→EBITDA, Coverage Ratio→DSCR, Cash Reserve→Working Capital). Persisted server-side via `PATCH /auth/lender-language` for authed users; falls back to localStorage (`schoolstack:lenderLanguageEnabled`) for guests. Hook: `src/lib/coaching/use-lender-language.tsx`. Label registry: `src/lib/coaching/lender-labels.ts`. Analytics: `lender_language_toggled` (allow-listed in `/auth/track`). Companion primer at `/resources/financial-statements-101` (P&L, Balance Sheet, Cash Flow Statement) is linked from the wizard's "From budget to books" lesson.
+
 ## Quality Gates
 CI gates include `typecheck`, `test` (vitest), and `e2e` (Playwright) to ensure code quality and prevent regressions.
 

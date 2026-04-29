@@ -46,7 +46,8 @@ type CoachingEvent =
   | "mapping_heuristic_suggested"
   | "mapping_heuristic_accepted"
   | "bookkeeping_sidebar_shown"
-  | "budget_to_books_lesson_shown";
+  | "budget_to_books_lesson_shown"
+  | "lender_language_toggled";
 
 export function trackCoachingEvent(
   event: CoachingEvent,

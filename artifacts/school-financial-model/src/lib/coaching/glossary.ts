@@ -223,4 +223,14 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     short: "The monthly habit of comparing each P&L line to its budgeted amount, explaining the gap, and deciding whether the budget or the operation needs to change.",
     long: "Most accounting systems can produce a 'Budget vs. Actual' report in two clicks. The discipline is doing it every month and writing one sentence per material variance - that's what turns a budget from a setup task into a steering tool.",
   },
+  noi: {
+    term: "Net Operating Income (NOI)",
+    short: "Operating revenue minus operating expenses, before debt service and any non-cash items - the cash an operation throws off before paying lenders.",
+    long: "Lenders compare NOI to annual debt service to compute DSCR. Because it's measured before interest and depreciation, it's the closest accounting cousin to what the wizard calls 'operating surplus'.",
+  },
+  working_capital: {
+    term: "Working Capital",
+    short: "The cash and short-term assets you can spend in the next 90 days, minus the bills you owe in that same window. Often expressed in 'months of liquidity'.",
+    long: "Lenders translate 'cash reserve' as working capital and ask 'how many months of operating expenses does this cover?'. 3-6 months is the bank-comfort zone; less than 1 month is a covenant-watch zone.",
+  },
 };

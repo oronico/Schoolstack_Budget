@@ -133,6 +133,7 @@ ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "mailing_list_opt_in" boolean DEFAU
 ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "terms_accepted_at" timestamp;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "last_seen_at" timestamp;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT now() NOT NULL;--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lender_language_enabled" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "financial_models" ADD COLUMN IF NOT EXISTS "school_id" integer;--> statement-breakpoint
 ALTER TABLE "financial_models" ADD COLUMN IF NOT EXISTS "status" varchar(20) DEFAULT 'draft' NOT NULL;--> statement-breakpoint
 ALTER TABLE "financial_models" ADD COLUMN IF NOT EXISTS "school_stage" varchar(30);--> statement-breakpoint

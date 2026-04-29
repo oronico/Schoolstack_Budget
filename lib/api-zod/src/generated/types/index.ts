@@ -41,6 +41,7 @@ export * from "./fundingProfile";
 export * from "./healthSignal";
 export * from "./healthSignalStatus";
 export * from "./healthStatus";
+export * from "./lenderLanguageRequest";
 export * from "./lendingLabAssessment";
 export * from "./lendingLabCriterion";
 export * from "./lendingLabCriterionStatus";

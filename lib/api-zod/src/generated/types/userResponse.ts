@@ -12,4 +12,5 @@ export interface UserResponse {
   email: string;
   name: string;
   guidanceLevel?: UserResponseGuidanceLevel;
+  lenderLanguageEnabled?: boolean;
 }

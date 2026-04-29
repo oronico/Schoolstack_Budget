@@ -95,11 +95,16 @@ export interface UserResponse {
   email: string;
   name: string;
   guidanceLevel?: UserResponseGuidanceLevel;
+  lenderLanguageEnabled?: boolean;
 }
 
 export interface AuthResponse {
   user: UserResponse;
   token: string;
+}
+
+export interface LenderLanguageRequest {
+  enabled: boolean;
 }
 
 export type ModelStatus = (typeof ModelStatus)[keyof typeof ModelStatus];

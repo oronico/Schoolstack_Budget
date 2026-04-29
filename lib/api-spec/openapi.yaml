@@ -114,6 +114,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /auth/lender-language:
+    patch:
+      operationId: updateLenderLanguage
+      tags: [auth]
+      summary: Update lender-language preference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LenderLanguageRequest"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /auth/forgot-password:
     post:
       operationId: forgotPassword
@@ -727,10 +757,19 @@ components:
             - advanced
             - basics
             - extra
+        lenderLanguageEnabled:
+          type: boolean
       required:
         - id
         - email
         - name
+    LenderLanguageRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required:
+        - enabled
     ModelStatus:
       type: string
       enum: [draft, active, complete, archived]

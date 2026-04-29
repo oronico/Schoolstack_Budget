@@ -25,6 +25,7 @@ import type {
   FinancialModelSummary,
   ForgotPasswordRequest,
   HealthStatus,
+  LenderLanguageRequest,
   LoginRequest,
   MessageResponse,
   PublicExportRequest,
@@ -434,6 +435,92 @@ export function useGetMe<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Update lender-language preference
+ */
+export const getUpdateLenderLanguageUrl = () => {
+  return `/api/auth/lender-language`;
+};
+
+export const updateLenderLanguage = async (
+  lenderLanguageRequest: LenderLanguageRequest,
+  options?: RequestInit,
+): Promise<UserResponse> => {
+  return customFetch<UserResponse>(getUpdateLenderLanguageUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(lenderLanguageRequest),
+  });
+};
+
+export const getUpdateLenderLanguageMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLenderLanguage>>,
+    TError,
+    { data: BodyType<LenderLanguageRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateLenderLanguage>>,
+  TError,
+  { data: BodyType<LenderLanguageRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateLenderLanguage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateLenderLanguage>>,
+    { data: BodyType<LenderLanguageRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateLenderLanguage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateLenderLanguageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateLenderLanguage>>
+>;
+export type UpdateLenderLanguageMutationBody = BodyType<LenderLanguageRequest>;
+export type UpdateLenderLanguageMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update lender-language preference
+ */
+export const useUpdateLenderLanguage = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLenderLanguage>>,
+    TError,
+    { data: BodyType<LenderLanguageRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateLenderLanguage>>,
+  TError,
+  { data: BodyType<LenderLanguageRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateLenderLanguageMutationOptions(options));
+};
 
 /**
  * @summary Request password reset
