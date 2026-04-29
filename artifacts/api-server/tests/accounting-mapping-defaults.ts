@@ -263,6 +263,16 @@ async function run() {
       availB?.totalCount === 3,
       String(availB?.totalCount),
     );
+    check(
+      "availableDefault carries the source model id (the model where the mapping was last edited)",
+      availB?.sourceModelId === modelA,
+      String(availB?.sourceModelId),
+    );
+    check(
+      "availableDefault resolves the source model name via JOIN",
+      availB?.sourceModelName === "Model A",
+      String(availB?.sourceModelName),
+    );
 
     console.log("Model with no realm never sees a default");
     const getNoRealm = await fetchAccounting(server.baseUrl, modelNoRealm, user.token);
@@ -359,6 +369,59 @@ async function run() {
     check(
       "availableDefault is still surfaced after edits",
       !!connBAfter?.availableDefault,
+    );
+    const availBAfter = connBAfter?.availableDefault as Record<string, unknown> | null;
+    check(
+      "availableDefault.sourceModelId follows the latest editor (Model B)",
+      availBAfter?.sourceModelId === modelB,
+      String(availBAfter?.sourceModelId),
+    );
+    check(
+      "availableDefault.sourceModelName resolves to 'Model B' after the edit",
+      availBAfter?.sourceModelName === "Model B",
+      String(availBAfter?.sourceModelName),
+    );
+
+    console.log("Deleting the source model → sourceModelName falls back to null gracefully");
+    // Exercise the real ON DELETE SET NULL behaviour end-to-end: at this
+    // point the defaults row's sourceModelId points at Model B (set by
+    // the edit step above), so deleting Model B should both null the FK
+    // and leave the saved overrides intact. We then fetch from Model A
+    // (which still has its connection on the same realm) to confirm the
+    // reuse prompt still surfaces with both source fields null.
+    await db.delete(financialModelsTable).where(eq(financialModelsTable.id, modelB));
+    const [defaultAfterDelete] = await db
+      .select()
+      .from(accountingMappingDefaultsTable)
+      .where(
+        and(
+          eq(accountingMappingDefaultsTable.userId, user.id),
+          eq(accountingMappingDefaultsTable.realmId, REALM),
+        ),
+      );
+    check(
+      "FK ON DELETE SET NULL clears sourceModelId without losing the row",
+      !!defaultAfterDelete && defaultAfterDelete.sourceModelId === null,
+      String(defaultAfterDelete?.sourceModelId),
+    );
+    const getAOrphan = await fetchAccounting(server.baseUrl, modelA, user.token);
+    const connAOrphan = (getAOrphan.body as {
+      connections: Array<Record<string, unknown>>;
+    }).connections.find((c) => c.provider === "quickbooks");
+    const availOrphan = connAOrphan?.availableDefault as Record<string, unknown> | null;
+    check(
+      "availableDefault is still surfaced when the source model is gone",
+      !!availOrphan,
+    );
+    check(
+      "sourceModelId is null after the source model was deleted",
+      availOrphan?.sourceModelId === null,
+      String(availOrphan?.sourceModelId),
+    );
+    check(
+      "sourceModelName is null after the source model was deleted",
+      availOrphan?.sourceModelName === null,
+      String(availOrphan?.sourceModelName),
     );
 
     console.log("apply-default 404s when no default exists for the realm");

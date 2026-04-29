@@ -109,6 +109,13 @@ type AvailableDefault = {
   // The model the default was last saved from. Null when that source
   // model has been deleted (the default itself survives via SET NULL).
   sourceModelId: number | null;
+  // Human-readable name of the source model, resolved server-side via a
+  // JOIN against financial_models. Null when the source model has been
+  // deleted (mirrors `sourceModelId === null`) or — defensively — when
+  // the JOIN otherwise turns up empty. The UI shows this alongside the
+  // realm so founders running multiple what-if models against the same
+  // QuickBooks file know which model last edited the saved mapping.
+  sourceModelName: string | null;
 };
 
 type PublicConnection = {
@@ -167,14 +174,24 @@ async function loadAvailableDefault(
   discovered: DiscoveredAccount[],
 ): Promise<AvailableDefault | null> {
   if (!realmId) return null;
+  // LEFT JOIN financial_models so we can show the source model name in the
+  // reuse prompt ("Last edited in 'Annex Site Plan'"). The defaults row's
+  // sourceModelId column is ON DELETE SET NULL, so a deleted source model
+  // simply yields a null on the join side — we surface that cleanly to the
+  // UI rather than dropping the whole prompt.
   const [row] = await db
     .select({
       realmDisplayName: accountingMappingDefaultsTable.realmDisplayName,
       accountMappingsJson: accountingMappingDefaultsTable.accountMappingsJson,
       updatedAt: accountingMappingDefaultsTable.updatedAt,
       sourceModelId: accountingMappingDefaultsTable.sourceModelId,
+      sourceModelName: financialModelsTable.name,
     })
     .from(accountingMappingDefaultsTable)
+    .leftJoin(
+      financialModelsTable,
+      eq(financialModelsTable.id, accountingMappingDefaultsTable.sourceModelId),
+    )
     .where(
       and(
         eq(accountingMappingDefaultsTable.userId, userId),
@@ -196,6 +213,7 @@ async function loadAvailableDefault(
     totalCount: Object.keys(mapping).length,
     updatedAt: row.updatedAt.toISOString(),
     sourceModelId: row.sourceModelId,
+    sourceModelName: row.sourceModelName ?? null,
   };
 }
 

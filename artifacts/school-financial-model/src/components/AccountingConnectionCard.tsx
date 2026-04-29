@@ -62,6 +62,10 @@ interface AvailableDefault {
   totalCount: number;
   updatedAt: string;
   sourceModelId: number | null;
+  // Server-resolved name of the model that last edited the saved
+  // mapping. Null when the source model has been deleted (the saved
+  // mapping itself survives via SET NULL on `sourceModelId`).
+  sourceModelName: string | null;
 }
 
 interface AccountingConnection {
@@ -824,10 +828,44 @@ function ReuseLastMappingPrompt({
   const summary = needsSync
     ? `${available.totalCount} customization${available.totalCount === 1 ? "" : "s"} available`
     : `${available.matchedCount} of ${available.totalCount} match${available.totalCount === 1 ? "es" : ""} this connection's accounts`;
+  // Format the last-edited date once so we can use it in both the
+  // hover/tap tooltip and (when we know the source model name) the
+  // visible source-model byline. We use a short date with a 4-digit year
+  // — matches the rest of the card's date copy ("Apr 12, 2026").
+  const updated = new Date(available.updatedAt);
+  const updatedAbsolute = isFinite(updated.getTime())
+    ? updated.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
+  // "Last edited in 'Annex Site Plan' on Apr 12, 2026" when we know the
+  // source model. When the source model has been deleted (sourceModelId
+  // is null OR the JOIN turned up nothing), we fall back to a name-less
+  // "Last edited on Apr 12, 2026" so founders still see the recency hint.
+  let sourceLine: string | null = null;
+  if (available.sourceModelName) {
+    sourceLine = updatedAbsolute
+      ? `Last edited in “${available.sourceModelName}” on ${updatedAbsolute}`
+      : `Last edited in “${available.sourceModelName}”`;
+  } else if (updatedAbsolute) {
+    sourceLine = `Last edited on ${updatedAbsolute}`;
+  }
+  // Hover/tap tooltip — surfaces the precise last-updated timestamp so a
+  // founder can audit which save they're about to reuse without us
+  // burning chrome on it inline. Falls back to just the source-line copy
+  // when we can't parse the timestamp.
+  const tooltip = updatedAbsolute
+    ? available.sourceModelName
+      ? `Last updated ${updatedAbsolute} (saved from “${available.sourceModelName}”)`
+      : `Last updated ${updatedAbsolute}`
+    : sourceLine ?? undefined;
   return (
     <div
       className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2"
       data-testid={`accounting-reuse-prompt-${provider}`}
+      title={tooltip}
     >
       <div className="flex items-start gap-2 min-w-0">
         <History className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-700" />
@@ -840,6 +878,14 @@ function ReuseLastMappingPrompt({
               ? `Run a sync first, then apply ${summary} so you don't have to redo them.`
               : `${summary}. You can edit anything afterwards without affecting your other model.`}
           </div>
+          {sourceLine && (
+            <div
+              className="mt-0.5 text-[11px] text-amber-800/80 leading-snug"
+              data-testid={`accounting-reuse-source-${provider}`}
+            >
+              {sourceLine}
+            </div>
+          )}
         </div>
       </div>
       <button
