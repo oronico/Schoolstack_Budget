@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { microschoolStartup, homeschoolCoopMixed, privateSchoolWithESA, charterPublicFunding, charterADAGradeBand } from "./sample-payloads.js";
+import { microschoolStartup, homeschoolCoopMixed, privateSchoolWithESA, charterPublicFunding, charterADAGradeBand, microschoolWithDecisions } from "./sample-payloads.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, "..", "qa-output");
@@ -848,6 +848,301 @@ function runDashboardTieOuts(wb: ExcelJS.Workbook): TestResult[] {
   return results;
 }
 
+// ---------------------------------------------------------------------------
+// Decision History sheet content checks (task #208).
+//
+// Task #197 added the "Decision History" sheet to the lender pro-forma and
+// underwriting workbooks. The Excel QA suite already verifies the tab exists
+// (via the tab presence check), but until now nothing validated the contents:
+// a regression that dropped the retrospective column, broke the empty-state
+// copy, or scrambled the sort order would not have been caught.
+//
+// These checks run on every Lender / Underwriting export and verify either
+// the populated state (when the payload includes customScenarios with an
+// outcome status) or the empty-state (when there are no tracked decisions),
+// matching the dual rendering paths in `addDecisionHistorySheet`.
+// ---------------------------------------------------------------------------
+
+const DECISION_HISTORY_SHEET = "Decision History";
+const DECISION_HISTORY_HEADERS = [
+  "Decision",
+  "Type",
+  "Outcome",
+  "Applied to base model?",
+  "Outcome logged",
+  "Modeled change",
+  "What happened (retrospective)",
+];
+const DECISION_HISTORY_EMPTY_COPY =
+  "Once decisions are saved with a Pursued / Declined / On hold outcome";
+const OUTCOME_LABEL_FOR_STATUS: Record<string, string> = {
+  pursued: "Pursued",
+  declined: "Declined",
+  on_hold: "On hold",
+};
+// Mirror the OUTCOME_FILL_COLOR map in build-decision-history.ts so the test
+// fails loudly if either side drifts. Using the same color constants the
+// builder pulls from workbook-helpers.
+const DH_GREEN_BG = "FFE8F5E9";
+const DH_RED_BG = "FFFCE4EC";
+const DH_AMBER_BG = "FFFFF8E1";
+const OUTCOME_FILL_FOR_STATUS: Record<string, string> = {
+  pursued: DH_GREEN_BG,
+  declined: DH_RED_BG,
+  on_hold: DH_AMBER_BG,
+};
+
+interface ExpectedDecisionScenario {
+  name: string;
+  outcomeStatus: "pursued" | "declined" | "on_hold";
+  appliedToModelAt?: string;
+  retrospective?: string;
+}
+
+function getCellFillColor(cell: ExcelJS.Cell): string | undefined {
+  const fill = cell.fill as { fgColor?: { argb?: string } } | undefined;
+  return fill?.fgColor?.argb;
+}
+
+function runDecisionHistoryChecks(
+  wb: ExcelJS.Workbook,
+  payload: Record<string, unknown>,
+): TestResult[] {
+  const results: TestResult[] = [];
+
+  const ws = wb.worksheets.find((w) => w.name === DECISION_HISTORY_SHEET);
+  const presenceResult: TestResult = {
+    name: "Decision History: sheet present",
+    passed: !!ws,
+    details: ws ? [`Found "${DECISION_HISTORY_SHEET}" sheet`] : [],
+    errors: ws ? [] : [`"${DECISION_HISTORY_SHEET}" sheet not found in workbook`],
+  };
+  results.push(presenceResult);
+  if (!ws) return results;
+
+  const rawScenarios = payload.customScenarios;
+  const expectedScenarios: ExpectedDecisionScenario[] = Array.isArray(rawScenarios)
+    ? (rawScenarios as Array<Record<string, unknown>>)
+        .filter((s) => {
+          const o = s.outcomeStatus;
+          return o === "pursued" || o === "declined" || o === "on_hold";
+        })
+        .map((s) => ({
+          name: typeof s.name === "string" && s.name.trim() ? s.name : "Untitled scenario",
+          outcomeStatus: s.outcomeStatus as "pursued" | "declined" | "on_hold",
+          appliedToModelAt:
+            typeof s.appliedToModelAt === "string" ? s.appliedToModelAt : undefined,
+          retrospective:
+            typeof s.retrospective === "string" ? s.retrospective : undefined,
+        }))
+    : [];
+
+  // ---- Empty-state path -------------------------------------------------
+  if (expectedScenarios.length === 0) {
+    let foundEmptyCopy = false;
+    ws.eachRow((row) => {
+      row.eachCell((cell) => {
+        const text = extractTextValue(cell.value);
+        if (text.includes(DECISION_HISTORY_EMPTY_COPY)) foundEmptyCopy = true;
+      });
+    });
+    results.push({
+      name: "Decision History: empty-state hint copy renders",
+      passed: foundEmptyCopy,
+      details: foundEmptyCopy ? ["Found empty-state guidance copy"] : [],
+      errors: foundEmptyCopy
+        ? []
+        : [`Empty-state copy starting "${DECISION_HISTORY_EMPTY_COPY}…" not found`],
+    });
+    return results;
+  }
+
+  // ---- Populated path ---------------------------------------------------
+
+  // 1. Header row (column B onward) at row 4 — matches addDecisionHistorySheet.
+  const headerRow = 4;
+  const headerErrors: string[] = [];
+  for (let i = 0; i < DECISION_HISTORY_HEADERS.length; i++) {
+    const cell = ws.getCell(headerRow, 2 + i);
+    const text = extractTextValue(cell.value).trim();
+    if (text !== DECISION_HISTORY_HEADERS[i]) {
+      headerErrors.push(
+        `Column ${i + 1}: expected "${DECISION_HISTORY_HEADERS[i]}", got "${text}"`,
+      );
+    }
+  }
+  results.push({
+    name: "Decision History: header row has expected column titles",
+    passed: headerErrors.length === 0,
+    details:
+      headerErrors.length === 0
+        ? [`All ${DECISION_HISTORY_HEADERS.length} column titles match`]
+        : [],
+    errors: headerErrors,
+  });
+
+  // 2. Walk item rows starting at headerRow + 1 until we hit a blank decision
+  //    name (the footer line is preceded by a blank gap row).
+  interface ParsedRow {
+    rowNumber: number;
+    name: string;
+    outcomeLabel: string;
+    appliedText: string;
+    bulletsText: string;
+    retroText: string;
+    outcomeFill: string | undefined;
+  }
+  const parsed: ParsedRow[] = [];
+  let r = headerRow + 1;
+  while (r < headerRow + 200) {
+    const nameCell = ws.getCell(r, 2);
+    const name = extractTextValue(nameCell.value).trim();
+    if (!name) break;
+    parsed.push({
+      rowNumber: r,
+      name,
+      outcomeLabel: extractTextValue(ws.getCell(r, 4).value).trim(),
+      appliedText: extractTextValue(ws.getCell(r, 5).value).trim(),
+      bulletsText: extractTextValue(ws.getCell(r, 7).value),
+      retroText: extractTextValue(ws.getCell(r, 8).value).trim(),
+      outcomeFill: getCellFillColor(ws.getCell(r, 4)),
+    });
+    r++;
+  }
+
+  results.push({
+    name: "Decision History: row count matches expected scenarios",
+    passed: parsed.length === expectedScenarios.length,
+    details: [`Found ${parsed.length} item rows; expected ${expectedScenarios.length}`],
+    errors:
+      parsed.length === expectedScenarios.length
+        ? []
+        : [
+            `Row count mismatch: sheet has ${parsed.length}, payload has ${expectedScenarios.length} tracked scenarios`,
+          ],
+  });
+
+  // 3. Each expected scenario shows up with the right outcome label, applied
+  //    tag (for pursued), bullets, and retrospective note.
+  for (const exp of expectedScenarios) {
+    const row = parsed.find((p) => p.name === exp.name);
+    const found = !!row;
+    const errors: string[] = [];
+    const details: string[] = [];
+
+    if (!found) {
+      errors.push(`Scenario "${exp.name}" missing from Decision History sheet`);
+    } else {
+      const expectedLabel = OUTCOME_LABEL_FOR_STATUS[exp.outcomeStatus];
+      if (row.outcomeLabel !== expectedLabel) {
+        errors.push(
+          `Outcome label mismatch: expected "${expectedLabel}", got "${row.outcomeLabel}"`,
+        );
+      }
+
+      if (exp.outcomeStatus === "pursued") {
+        const wantTag = exp.appliedToModelAt ? "[APPLIED]" : "[PENDING]";
+        if (!row.appliedText.startsWith(wantTag)) {
+          errors.push(
+            `Pursued applied tag wrong: expected starts-with "${wantTag}", got "${row.appliedText}"`,
+          );
+        }
+      } else if (row.appliedText !== "—") {
+        errors.push(
+          `Non-pursued row should show "—" in Applied column, got "${row.appliedText}"`,
+        );
+      }
+
+      if (!row.bulletsText.includes("•") && row.bulletsText !== "—") {
+        errors.push(
+          `Bullets cell should contain bullet markers or "—"; got "${row.bulletsText}"`,
+        );
+      }
+
+      if (exp.retrospective) {
+        if (!row.retroText.includes(exp.retrospective)) {
+          errors.push(
+            `Retrospective note missing: expected to contain "${exp.retrospective.slice(0, 40)}…"`,
+          );
+        }
+      }
+
+      // 4. Outcome cell color-coded green / amber / red.
+      const expectedFill = OUTCOME_FILL_FOR_STATUS[exp.outcomeStatus];
+      if (row.outcomeFill?.toUpperCase() !== expectedFill.toUpperCase()) {
+        errors.push(
+          `Outcome cell fill mismatch: expected ${expectedFill}, got ${row.outcomeFill ?? "<none>"}`,
+        );
+      }
+
+      details.push(
+        `row ${row.rowNumber}: ${row.outcomeLabel} / fill=${row.outcomeFill ?? "<none>"}`,
+      );
+    }
+
+    results.push({
+      name: `Decision History: row content for "${exp.name}"`,
+      passed: errors.length === 0,
+      details,
+      errors,
+    });
+  }
+
+  // 5. Sort order: pursued → on_hold → declined (group-level), with most
+  //    recently updated first within each group — mirrors the comparator in
+  //    `buildDecisionHistory`.
+  const statusOrder: Record<string, number> = { pursued: 0, on_hold: 1, declined: 2 };
+  const rawScenarioMap = new Map<string, Record<string, unknown>>();
+  if (Array.isArray(rawScenarios)) {
+    for (const s of rawScenarios as Array<Record<string, unknown>>) {
+      if (typeof s.name === "string") rawScenarioMap.set(s.name, s);
+    }
+  }
+  const observedOrder: string[] = [];
+  const observedTimestamps: string[] = [];
+  const sortErrors: string[] = [];
+  for (const row of parsed) {
+    const exp = expectedScenarios.find((s) => s.name === row.name);
+    if (!exp) continue;
+    observedOrder.push(exp.outcomeStatus);
+    const raw = rawScenarioMap.get(row.name) ?? {};
+    const ts =
+      (typeof raw.outcomeUpdatedAt === "string" && raw.outcomeUpdatedAt) ||
+      (typeof raw.createdAt === "string" && raw.createdAt) ||
+      "";
+    observedTimestamps.push(ts);
+  }
+  for (let i = 1; i < observedOrder.length; i++) {
+    const prevStatus = observedOrder[i - 1];
+    const curStatus = observedOrder[i];
+    if (statusOrder[curStatus] < statusOrder[prevStatus]) {
+      sortErrors.push(
+        `Group order violated at index ${i}: ${prevStatus} should come after ${curStatus}`,
+      );
+      break;
+    }
+    // Within a status group, more recent timestamp must come first.
+    if (curStatus === prevStatus) {
+      const prevTs = observedTimestamps[i - 1];
+      const curTs = observedTimestamps[i];
+      if (prevTs && curTs && curTs > prevTs) {
+        sortErrors.push(
+          `Within-group order violated at index ${i} (${curStatus}): ${curTs} should come before ${prevTs}`,
+        );
+        break;
+      }
+    }
+  }
+  results.push({
+    name: "Decision History: items sorted pursued → on_hold → declined (recent first within group)",
+    passed: sortErrors.length === 0,
+    details: [`Observed status order: ${observedOrder.join(" → ")}`],
+    errors: sortErrors,
+  });
+
+  return results;
+}
+
 async function testExport(
   exportName: string,
   payloadName: string,
@@ -909,6 +1204,23 @@ async function testExport(
     const dashboardResults = runDashboardTieOuts(wb);
     qaResult.results.push(...dashboardResults);
     for (const t of dashboardResults) logResult(t);
+
+    // Decision History sheet exists in the lender pro forma, 21-tab
+    // underwriting workbook, the standard "Export to Excel" workbook, and
+    // the formula-based Loan Readiness export. Run the content checks
+    // against every code path that emits the sheet so all four stay in
+    // sync. The single-year pro forma and 14-tab underwriting workbook do
+    // not yet emit the sheet (tracked as follow-ups #224/#225).
+    if (
+      exportName.includes("Lender Pro Forma") ||
+      exportName.includes("Underwriting V2") ||
+      exportName.includes("Standard Export") ||
+      exportName.includes("Formula Export")
+    ) {
+      const dhResults = runDecisionHistoryChecks(wb, payload);
+      qaResult.results.push(...dhResults);
+      for (const t of dhResults) logResult(t);
+    }
 
   } catch (err) {
     const errorResult: TestResult = {
@@ -983,6 +1295,10 @@ async function main() {
     ["Private School + ESA", privateSchoolWithESA as unknown as Record<string, unknown>],
     ["Charter Public Funding", charterPublicFunding as unknown as Record<string, unknown>],
     ["Charter ADA Grade-Band", charterADAGradeBand as unknown as Record<string, unknown>],
+    // Includes a `customScenarios` array spanning every outcome so the
+    // Decision History sheet content checks have a populated payload to
+    // validate (not just empty-state).
+    ["Microschool With Decisions", microschoolWithDecisions as unknown as Record<string, unknown>],
   ];
 
   const allResults: ExportQAResult[] = [];

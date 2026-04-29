@@ -443,3 +443,88 @@ export const charterADAGradeBand = {
   ],
   covenantThresholds: { minDSCR: 1.15, minDaysCashOnHand: 45, minMonthsRunway: 2, minCapacityUtil: 70 },
 };
+
+// Sample payload that exercises the Decision History sheet end-to-end. It
+// reuses the microschoolStartup base and layers in customScenarios that cover
+// every outcome (pursued/applied, pursued/pending, on_hold, declined) plus
+// retrospective notes — so the Excel QA suite can verify the "Decision
+// History" sheet's contents (headers, row order, color coding, applied tag,
+// retrospective copy) end-to-end in lender + underwriting workbooks.
+export const microschoolWithDecisions = {
+  ...microschoolStartup,
+  customScenarios: [
+    {
+      // Pursued + already folded into the base model. Should sort first
+      // (pursued group, most recent outcomeUpdatedAt).
+      name: "Add Middle School program",
+      decisionType: "add_program",
+      outcomeStatus: "pursued",
+      createdAt: "2025-02-01T10:00:00Z",
+      outcomeUpdatedAt: "2025-04-10T10:00:00Z",
+      appliedToModelAt: "2025-04-12T09:00:00Z",
+      retrospective: "Launched in fall 2025; enrollment hit plan within 1 student.",
+      overrides: {
+        addProgramName: "Middle School",
+        addProgramGradeBand: "6-8",
+        addProgramTuition: 14000,
+        addProgramEnrollment: [8, 12, 16, 18, 18],
+        addProgramAddedFte: 2,
+      },
+    },
+    {
+      // Pursued but not yet applied — should render the [PENDING] tag.
+      // Older outcomeUpdatedAt → sorts after the applied pursued item.
+      name: "Increase retention focus",
+      decisionType: "change_enrollment",
+      outcomeStatus: "pursued",
+      createdAt: "2025-01-15T10:00:00Z",
+      outcomeUpdatedAt: "2025-03-05T10:00:00Z",
+      retrospective: "Retention initiatives approved; planner will reflect after Q2 board review.",
+      overrides: {
+        retentionRate: 92,
+        enrollmentDelta: [2, 3, 3, 3, 3],
+      },
+    },
+    {
+      // On hold — should sort after pursued, before declined.
+      name: "Evaluate downtown campus",
+      decisionType: "evaluate_site",
+      outcomeStatus: "on_hold",
+      createdAt: "2025-02-20T10:00:00Z",
+      outcomeUpdatedAt: "2025-03-25T10:00:00Z",
+      retrospective: "Landlord negotiations paused while waiting on city zoning ruling.",
+      overrides: {
+        monthlyRent: 8500,
+        rentEscalation: 4,
+        sqftDelta: 1500,
+        siteFitOutCost: 75000,
+      },
+    },
+    {
+      // Declined — most recent in declined group → sorts first within group.
+      name: "Reduce K cohort",
+      decisionType: "change_enrollment",
+      outcomeStatus: "declined",
+      createdAt: "2025-01-10T10:00:00Z",
+      outcomeUpdatedAt: "2025-03-15T10:00:00Z",
+      retrospective: "Board declined; enrollment goals retained as originally modeled.",
+      overrides: {
+        enrollmentDelta: [-5, -3, 0, 0, 0],
+        tuitionDeltaPerStudent: -500,
+      },
+    },
+    {
+      // Declined with older outcomeUpdatedAt → sorts last within declined.
+      name: "Move to larger building",
+      decisionType: "evaluate_site",
+      outcomeStatus: "declined",
+      createdAt: "2024-12-01T10:00:00Z",
+      outcomeUpdatedAt: "2025-02-10T10:00:00Z",
+      retrospective: "Costs out of reach; revisited next year after capital campaign.",
+      overrides: {
+        monthlyRent: 12000,
+        sqftDelta: 4000,
+      },
+    },
+  ],
+};

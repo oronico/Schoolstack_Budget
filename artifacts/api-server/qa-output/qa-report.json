@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 47310,
+    "fileSize": 47309,
     "tabs": [
       "Instructions",
       "Cover",
@@ -144,6 +144,22 @@
           "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -231,6 +247,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -296,6 +328,22 @@
         "passed": true,
         "details": [
           "8 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
         ],
         "errors": []
       }
@@ -701,6 +749,22 @@
           "5 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -908,6 +972,22 @@
           "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -995,6 +1075,22 @@
           "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1062,6 +1158,22 @@
           "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1069,7 +1181,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 37150,
+    "fileSize": 37151,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -1425,6 +1537,22 @@
           "5 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1672,6 +1800,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1760,6 +1904,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1828,6 +1988,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -1835,7 +2011,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Private School + ESA",
-    "fileSize": 38778,
+    "fileSize": 38779,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -2231,6 +2407,22 @@
           "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -2478,6 +2670,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -2565,6 +2773,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -2632,6 +2856,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -2639,7 +2879,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 38959,
+    "fileSize": 38960,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -3035,6 +3275,22 @@
           "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -3282,6 +3538,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -3369,6 +3641,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -3436,6 +3724,22 @@
           "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -3443,7 +3747,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 38697,
+    "fileSize": 38698,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -3895,6 +4199,22 @@
           "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: empty-state hint copy renders",
+        "passed": true,
+        "details": [
+          "Found empty-state guidance copy"
+        ],
+        "errors": []
       }
     ],
     "overallPass": true
@@ -3951,6 +4271,1058 @@
         "passed": true,
         "details": [
           "Net Income (Annual): -212164"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Underwriting V2 (21-tab)",
+    "payload": "Microschool With Decisions",
+    "fileSize": 48160,
+    "tabs": [
+      "Instructions",
+      "Cover",
+      "Assumptions",
+      "Program Profile",
+      "Enrollment Drivers",
+      "Tuition & Funding",
+      "Staffing Drivers",
+      "OpEx Drivers",
+      "Capital Stack",
+      "Enrollment Tuition Fcst",
+      "Staffing Costs Fcst",
+      "Budget Detail",
+      "Budget Summary",
+      "Monthly Cash Flow Y1",
+      "5-Year Operating Stmt",
+      "Debt Schedule",
+      "Balance Sheet",
+      "DSCR & Covenants",
+      "Sources & Uses",
+      "Scenarios",
+      "Underwriting Snapshot",
+      "Financial Health",
+      "Budget Narrative",
+      "Decision History"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 47.0 KB",
+          "Successfully opened workbook",
+          "Worksheets: 24"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 24 tabs: Instructions, Cover, Assumptions, Program Profile, Enrollment Drivers, Tuition & Funding, Staffing Drivers, OpEx Drivers, Capital Stack, Enrollment Tuition Fcst, Staffing Costs Fcst, Budget Detail, Budget Summary, Monthly Cash Flow Y1, 5-Year Operating Stmt, Debt Schedule, Balance Sheet, DSCR & Covenants, Sources & Uses, Scenarios, Underwriting Snapshot, Financial Health, Budget Narrative, Decision History"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 1923 cells across 24 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Sources = Uses",
+        "passed": true,
+        "details": [
+          "Sources: 20000, Uses: N/A — no S&U data entered or partial data"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y1) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y2) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y3) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y4) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Balance Check Row (Y5) = 0",
+        "passed": true,
+        "details": [
+          "Value A: 0, Value B: 0, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Cash Flow Ending → Balance Sheet Cash (Y1)",
+        "passed": true,
+        "details": [
+          "Value A: 62170, Value B: 62170, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "DSCR Values (No Debt)",
+        "passed": true,
+        "details": [
+          "DSCR row present — N/A or 0 is correct when no debt exists"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "7 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: header row has expected column titles",
+        "passed": true,
+        "details": [
+          "All 7 column titles match"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row count matches expected scenarios",
+        "passed": true,
+        "details": [
+          "Found 5 item rows; expected 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Add Middle School program\"",
+        "passed": true,
+        "details": [
+          "row 5: Pursued / fill=FFE8F5E9"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Increase retention focus\"",
+        "passed": true,
+        "details": [
+          "row 6: Pursued / fill=FFE8F5E9"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Evaluate downtown campus\"",
+        "passed": true,
+        "details": [
+          "row 7: On hold / fill=FFFFF8E1"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Reduce K cohort\"",
+        "passed": true,
+        "details": [
+          "row 8: Declined / fill=FFFCE4EC"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Move to larger building\"",
+        "passed": true,
+        "details": [
+          "row 9: Declined / fill=FFFCE4EC"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: items sorted pursued → on_hold → declined (recent first within group)",
+        "passed": true,
+        "details": [
+          "Observed status order: pursued → pursued → on_hold → declined → declined"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Standard Export",
+    "payload": "Microschool With Decisions",
+    "fileSize": 29321,
+    "tabs": [
+      "Cover",
+      "Assumptions",
+      "Revenue Schedule",
+      "Staffing & Personnel",
+      "Operating Expenses",
+      "Capital & Debt",
+      "Financial Model",
+      "Summary",
+      "Decision History",
+      "Financial Health"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 28.6 KB",
+          "Successfully opened workbook",
+          "Worksheets: 10"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 10 tabs: Cover, Assumptions, Revenue Schedule, Staffing & Personnel, Operating Expenses, Capital & Debt, Financial Model, Summary, Decision History, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 845 cells across 10 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue: 221600"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income: 47106"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "8 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: header row has expected column titles",
+        "passed": true,
+        "details": [
+          "All 7 column titles match"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row count matches expected scenarios",
+        "passed": true,
+        "details": [
+          "Found 5 item rows; expected 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Add Middle School program\"",
+        "passed": true,
+        "details": [
+          "row 5: Pursued / fill=FFE8F5E9"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Increase retention focus\"",
+        "passed": true,
+        "details": [
+          "row 6: Pursued / fill=FFE8F5E9"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Evaluate downtown campus\"",
+        "passed": true,
+        "details": [
+          "row 7: On hold / fill=FFFFF8E1"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Reduce K cohort\"",
+        "passed": true,
+        "details": [
+          "row 8: Declined / fill=FFFCE4EC"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Move to larger building\"",
+        "passed": true,
+        "details": [
+          "row 9: Declined / fill=FFFCE4EC"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: items sorted pursued → on_hold → declined (recent first within group)",
+        "passed": true,
+        "details": [
+          "Observed status order: pursued → pursued → on_hold → declined → declined"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Formula Export",
+    "payload": "Microschool With Decisions",
+    "fileSize": 27461,
+    "tabs": [
+      "Instructions",
+      "Assumptions",
+      "5-Year Model",
+      "Year 1 Pro Forma",
+      "Decision History",
+      "Financial Health"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 26.8 KB",
+          "Successfully opened workbook",
+          "Worksheets: 6"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 6 tabs: Instructions, Assumptions, 5-Year Model, Year 1 Pro Forma, Decision History, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 1301 cells across 6 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "8 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: header row has expected column titles",
+        "passed": true,
+        "details": [
+          "All 7 column titles match"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row count matches expected scenarios",
+        "passed": true,
+        "details": [
+          "Found 5 item rows; expected 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Add Middle School program\"",
+        "passed": true,
+        "details": [
+          "row 5: Pursued / fill=FFE8F5E9"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Increase retention focus\"",
+        "passed": true,
+        "details": [
+          "row 6: Pursued / fill=FFE8F5E9"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Evaluate downtown campus\"",
+        "passed": true,
+        "details": [
+          "row 7: On hold / fill=FFFFF8E1"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Reduce K cohort\"",
+        "passed": true,
+        "details": [
+          "row 8: Declined / fill=FFFCE4EC"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Move to larger building\"",
+        "passed": true,
+        "details": [
+          "row 9: Declined / fill=FFFCE4EC"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: items sorted pursued → on_hold → declined (recent first within group)",
+        "passed": true,
+        "details": [
+          "Observed status order: pursued → pursued → on_hold → declined → declined"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Underwriting V1 (14-tab)",
+    "payload": "Microschool With Decisions",
+    "fileSize": 38061,
+    "tabs": [
+      "Assumptions",
+      "Enrollment & Rev Drivers",
+      "Tuition & Funding Detail",
+      "Staffing Plan",
+      "Operating Expenses",
+      "Facilities & Occupancy",
+      "Capital Stack & Startup Uses",
+      "Debt Schedule",
+      "Cash Flow Monthly Y1",
+      "5-Year P&L",
+      "5-Year Balance Sheet",
+      "DSCR & Covenants",
+      "Underwriting Snapshot",
+      "Summary",
+      "Cover",
+      "Financial Health"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 37.2 KB",
+          "Successfully opened workbook",
+          "Worksheets: 16"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 16 tabs: Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 1180 cells across 16 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue: 184667"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income: 18273"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "8 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Lender Pro Forma",
+    "payload": "Microschool With Decisions",
+    "fileSize": 28782,
+    "tabs": [
+      "Instructions",
+      "Cover",
+      "Assumptions",
+      "Drivers",
+      "5-Year P&L",
+      "Cash Flow & DSCR",
+      "Staffing",
+      "Loan Snapshot",
+      "Summary",
+      "Decision History",
+      "Financial Health"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 28.1 KB",
+          "Successfully opened workbook",
+          "Worksheets: 11"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 11 tabs: Instructions, Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Decision History, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 813 cells across 11 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Core Sheets Present",
+        "passed": true,
+        "details": [
+          "Sheets: Instructions, Cover, Assumptions, Drivers, 5-Year P&L, Cash Flow & DSCR, Staffing, Loan Snapshot, Summary, Decision History, Financial Health"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Workbook Has Data",
+        "passed": true,
+        "details": [],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 202200, Value B: 202200, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -113200, Value B: -113200, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y1: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -120160, Value B: -120160, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 262920, Value B: 262920, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -128140, Value B: -128140, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y2: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -135100, Value B: -135100, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 285125, Value B: 285125, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -116746, Value B: -116746, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y3: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -123706, Value B: -123706, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 363718, Value B: 363718, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -167491, Value B: -167491, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y4: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -174451, Value B: -174451, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Total Expenses = Staffing + OpEx",
+        "passed": true,
+        "details": [
+          "Value A: 402466, Value B: 402466, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: NOI = Revenue - Expenses",
+        "passed": true,
+        "details": [
+          "Value A: -200502, Value B: -200502, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L Y5: Net Income = NOI - Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -207462, Value B: -207462, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender P&L: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -120160, Value B: -120160, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y1: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -16, Value B: -16, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -255260, Value B: -255260, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y2: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -18, Value B: -18, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -378965, Value B: -378965, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y3: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -17, Value B: -17, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -553416, Value B: -553416, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y4: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -24, Value B: -24, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: Ending Cash = Beginning + Net Cash Flow",
+        "passed": true,
+        "details": [
+          "Value A: -760878, Value B: -760878, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow Y5: DSCR = NOI / Debt Service",
+        "passed": true,
+        "details": [
+          "Value A: -29, Value B: -29, Diff: 0"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Cash Flow: All formula cells have cached results",
+        "passed": true,
+        "details": [
+          "All formulas have cached results"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Lender Summary: Key Ratios Present",
+        "passed": true,
+        "details": [
+          "All key ratios found: net margin, personnel %, revenue per student, expense per student, dscr"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Metrics Present",
+        "passed": true,
+        "details": [
+          "Found 8/8 metrics"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Benchmark Column",
+        "passed": true,
+        "details": [
+          "Benchmark header found in column H"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Dashboard Conditional Formatting",
+        "passed": true,
+        "details": [
+          "5 scorecard metrics have conditional color formatting"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: sheet present",
+        "passed": true,
+        "details": [
+          "Found \"Decision History\" sheet"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: header row has expected column titles",
+        "passed": true,
+        "details": [
+          "All 7 column titles match"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row count matches expected scenarios",
+        "passed": true,
+        "details": [
+          "Found 5 item rows; expected 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Add Middle School program\"",
+        "passed": true,
+        "details": [
+          "row 5: Pursued / fill=FFE8F5E9"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Increase retention focus\"",
+        "passed": true,
+        "details": [
+          "row 6: Pursued / fill=FFE8F5E9"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Evaluate downtown campus\"",
+        "passed": true,
+        "details": [
+          "row 7: On hold / fill=FFFFF8E1"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Reduce K cohort\"",
+        "passed": true,
+        "details": [
+          "row 8: Declined / fill=FFFCE4EC"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: row content for \"Move to larger building\"",
+        "passed": true,
+        "details": [
+          "row 9: Declined / fill=FFFCE4EC"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Decision History: items sorted pursued → on_hold → declined (recent first within group)",
+        "passed": true,
+        "details": [
+          "Observed status order: pursued → pursued → on_hold → declined → declined"
+        ],
+        "errors": []
+      }
+    ],
+    "overallPass": true
+  },
+  {
+    "exportType": "Single-Year Pro Forma",
+    "payload": "Microschool With Decisions",
+    "fileSize": 14056,
+    "tabs": [
+      "Assumptions",
+      "Revenue",
+      "Personnel",
+      "Operating Expenses",
+      "P&L Summary"
+    ],
+    "results": [
+      {
+        "name": "File Integrity",
+        "passed": true,
+        "details": [
+          "File size: 13.7 KB",
+          "Successfully opened workbook",
+          "Worksheets: 5"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Tab Presence",
+        "passed": true,
+        "details": [
+          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+        ],
+        "errors": []
+      },
+      {
+        "name": "Formula & Value Error Scan",
+        "passed": true,
+        "details": [
+          "Scanned 396 cells across 5 sheets",
+          "No formula errors, NaN, undefined, or bad values found"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Revenue",
+        "passed": true,
+        "details": [
+          "Total Revenue (Annual): 221600"
+        ],
+        "errors": []
+      },
+      {
+        "name": "P&L Has Net Income Row",
+        "passed": true,
+        "details": [
+          "Net Income (Annual): 18273"
         ],
         "errors": []
       }
