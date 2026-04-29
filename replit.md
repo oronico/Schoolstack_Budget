@@ -17,7 +17,7 @@ The project is a pnpm workspace monorepo built with TypeScript.
 - **Frontend**: React, Vite, Tailwind CSS v4.
 - **Authentication**: JWT-based (7-day expiry, `auth_token` in localStorage).
 - **Model Status Enum**: `draft`, `active`, `complete`, `archived` (defined in `ModelStatus` in OpenAPI spec).
-- **Export Capabilities**: Utilizes ExcelJS for Excel exports (8-tab Lender Pro Forma, 3-tab public wizard, 21-tab full underwriting model) and PDFKit for PDF exports (lender and board packets), ensuring print-ready formatting and school-specific branding.
+- **Export Capabilities**: Utilizes ExcelJS for Excel exports (8-tab Lender Pro Forma, 3-tab public wizard, 21-tab full underwriting model) and PDFKit for PDF exports (lender packet, board packet, decision-comparison side-by-side), ensuring print-ready formatting and school-specific branding.
 - **Monorepo Structure**: Organized into `artifacts/` for deployable applications, `lib/` for shared libraries, and `scripts/` for utilities.
 - **Shared Finance Library** (`@workspace/finance`): Provides canonical financial constants and loan amortization functions for both frontend and backend.
 

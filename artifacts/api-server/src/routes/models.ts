@@ -73,6 +73,11 @@ import { buildLenderPacket } from "../lib/packets/build-lender-packet";
 import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
 import { generateBoardPacketPDF } from "../lib/packets/board-packet-pdf";
+import {
+  generateDecisionComparisonPDF,
+  validateDecisionComparisonRequest,
+  buildComparisonFileName,
+} from "../lib/decision-comparison-pdf";
 import { normalizeRevenueRows } from "../lib/workbook-helpers";
 import { isEmailConfigured, sendReviewRequestToTeam, sendReviewConfirmation } from "../lib/mailer";
 import { schoolTypeDisplay, entityTypeDisplay } from "../lib/pdf-utils";
@@ -795,6 +800,79 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
     res.status(500).json({ error: "Something went wrong generating the Board Summary PDF." });
   }
 });
+
+// Side-by-side decision comparison PDF. Founders compose the comparison on
+// the scenarios page (two saved decision-flow scenarios re-run against the
+// current base model). The client posts the already-computed impacts plus
+// labels/narratives — no model math runs here, only layout — and we return a
+// board-ready PDF that mirrors the on-screen ImpactComparison block.
+router.post(
+  "/models/:id/export/decision-comparison-pdf",
+  authMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const params = ExportModelParams.safeParse(req.params);
+      if (!params.success) {
+        res.status(400).json({ error: "Invalid model ID." });
+        return;
+      }
+
+      const [model] = await db
+        .select()
+        .from(financialModelsTable)
+        .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+        .limit(1);
+
+      if (!model) {
+        res.status(404).json({ error: "Model not found." });
+        return;
+      }
+
+      if (abortGuard(req, res)) return;
+
+      const validated = validateDecisionComparisonRequest(req.body);
+      if (!validated) {
+        res.status(400).json({
+          error: "Invalid comparison payload. Expected primary and compare sides with computed impacts.",
+        });
+        return;
+      }
+
+      // If the client didn't tag a school name, fall back to the persisted one
+      // so the PDF subtitle still reads naturally.
+      if (!validated.schoolName) {
+        const data = normalizeModelData(model.data as Record<string, unknown>);
+        const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+        const sn = typeof profile?.schoolName === "string" ? profile.schoolName : "";
+        if (sn) validated.schoolName = sn;
+      }
+
+      const buffer = await generateDecisionComparisonPDF(validated);
+
+      if (abortGuard(req, res)) return;
+
+      await db.insert(exportsTable).values({
+        userId: req.userId!,
+        modelId: model.id,
+        format: "pdf",
+      });
+
+      await trackEvent("exported_decision_comparison_pdf", req.userId, {
+        modelId: model.id,
+        primary: validated.primary.label,
+        compare: validated.compare.label,
+      });
+
+      const filename = buildComparisonFileName(validated.primary.label, validated.compare.label);
+      sendBinary(res, buffer, "application/pdf", filename);
+    } catch (err) {
+      console.error("Decision comparison PDF error:", err);
+      res.status(500).json({
+        error: "Something went wrong generating the Decision Comparison PDF.",
+      });
+    }
+  },
+);
 
 // QUARANTINED: v1 underwriting export route — backward-compatible shim only.
 // Calls generateUnderwritingWorkbookV2 (v2 engine); no v1 math runs here.

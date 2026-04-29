@@ -20,6 +20,7 @@ import {
   PauseCircle,
   CircleSlash,
   Pencil,
+  Download,
 } from "lucide-react";
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
@@ -899,6 +900,13 @@ export function ScenarioPage() {
   // Hard cap so the comparison stays readable on a typical laptop screen.
   // Matches the column palette in ImpactSummary; raise both together.
   const MAX_DECISION_COMPARE = 4;
+  // Tracks the in-flight Download-as-PDF request for the comparison block so
+  // the button can show a spinner and we can disable it during generation.
+  // The PDF endpoint is currently scoped to a binary A vs B comparison, so
+  // the button only appears when exactly two columns are selected.
+  const [decisionCompareDownloading, setDecisionCompareDownloading] =
+    useState<boolean>(false);
+  const [decisionCompareError, setDecisionCompareError] = useState<string | null>(null);
 
   // Filter/sort selections for the Saved What-If list. Persist to URL query
   // string so a chosen view (e.g. "what's still on hold?") survives reloads
@@ -1733,7 +1741,141 @@ export function ScenarioPage() {
               </div>
 
               {columns.length >= 2 && !hasDup && (
-                <div className="mt-6" data-testid="decision-compare-result">
+                <div className="mt-6 space-y-4" data-testid="decision-compare-result">
+                  {/* Download-as-PDF action — only shown for the binary
+                      A vs B case because the backend PDF generator renders
+                      a side-by-side comparison of exactly two scenarios.
+                      For 3-4 column comparisons the user can drop a column
+                      and the button reappears. The pre-computed impacts are
+                      sent in the request body so the PDF mirrors what's on
+                      screen. */}
+                  {columns.length === 2 && selectedScenarios[0] && selectedScenarios[1] && (
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <p className="text-xs text-muted-foreground">
+                        Take this comparison straight to the board — one page, the same numbers
+                        you see here.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!modelId || decisionCompareDownloading) return;
+                          const a = selectedScenarios[0]!;
+                          const b = selectedScenarios[1]!;
+                          const aImpact = columns[0].impact;
+                          const bImpact = columns[1].impact;
+                          setDecisionCompareDownloading(true);
+                          setDecisionCompareError(null);
+                          try {
+                            const profile = (modelData as Record<string, unknown>).schoolProfile as
+                              | { schoolName?: string }
+                              | undefined;
+                            const decLabelOf = (cs: typeof a) =>
+                              cs.decisionType ? DECISION_LABELS[cs.decisionType] : undefined;
+                            const serializeImpact = (im: typeof aImpact) => ({
+                              base: {
+                                revenue: im.base.revenue,
+                                netIncome: im.base.netIncome,
+                                netMargin: im.base.netMargin,
+                                dscr: im.base.dscr,
+                                breakEvenYear: im.base.breakEvenYear,
+                                cashRunwayMonths: im.base.cashRunwayMonths,
+                              },
+                              adjusted: {
+                                revenue: im.adjusted.revenue,
+                                netIncome: im.adjusted.netIncome,
+                                netMargin: im.adjusted.netMargin,
+                                dscr: im.adjusted.dscr,
+                                breakEvenYear: im.adjusted.breakEvenYear,
+                                cashRunwayMonths: im.adjusted.cashRunwayMonths,
+                              },
+                              deltas: {
+                                revenue: im.deltas.revenue,
+                                netIncome: im.deltas.netIncome,
+                                breakEvenYearShift: im.deltas.breakEvenYearShift,
+                                cashRunwayDeltaMonths: im.deltas.cashRunwayDeltaMonths,
+                              },
+                              nudges: im.nudges,
+                            });
+                            const payload = {
+                              schoolName: profile?.schoolName,
+                              primary: {
+                                label: a.name,
+                                decisionLabel: decLabelOf(a),
+                                narrative: a.narrative,
+                                impact: serializeImpact(aImpact),
+                              },
+                              compare: {
+                                label: b.name,
+                                decisionLabel: decLabelOf(b),
+                                narrative: b.narrative,
+                                impact: serializeImpact(bImpact),
+                              },
+                            };
+                            const token = localStorage.getItem("auth_token");
+                            const res = await fetch(
+                              `/api/models/${modelId}/export/decision-comparison-pdf`,
+                              {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                                },
+                                body: JSON.stringify(payload),
+                              },
+                            );
+                            if (!res.ok) {
+                              const errText = await res.text().catch(() => "");
+                              throw new Error(
+                                `PDF generation failed (${res.status})${errText ? `: ${errText.slice(0, 200)}` : ""}`,
+                              );
+                            }
+                            const blob = await res.blob();
+                            const disposition = res.headers.get("content-disposition") || "";
+                            const m = disposition.match(/filename="?([^";\n]+)"?/);
+                            const safe = (s: string) =>
+                              s.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "Scenario";
+                            const fallback = `Decision_Comparison_${safe(a.name)}_vs_${safe(b.name)}.pdf`;
+                            const filename = m?.[1] || fallback;
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement("a");
+                            link.href = url;
+                            link.download = filename;
+                            document.body.appendChild(link);
+                            link.click();
+                            window.URL.revokeObjectURL(url);
+                            link.remove();
+                          } catch (err) {
+                            setDecisionCompareError(
+                              err instanceof Error ? err.message : "Failed to download PDF.",
+                            );
+                          } finally {
+                            setDecisionCompareDownloading(false);
+                          }
+                        }}
+                        disabled={decisionCompareDownloading}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                        data-testid="decision-compare-download-pdf"
+                      >
+                        {decisionCompareDownloading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" /> Preparing PDF…
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4" /> Download as PDF
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                  {decisionCompareError && (
+                    <p
+                      className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"
+                      data-testid="decision-compare-download-error"
+                    >
+                      {decisionCompareError}
+                    </p>
+                  )}
                   <ImpactSummary impact={columns[0].impact} columns={columns} />
                 </div>
               )}
