@@ -75,6 +75,10 @@ export interface AccountingConnectionCardProps {
   // hands back the *Year-1* eligible snapshot (no-arg here means "give me the
   // best available snapshot").
   onSnapshotChange: (snapshot: AccountingSnapshotLike | null) => void;
+  // Override the freshness threshold used to surface the "stale snapshot"
+  // warning. Defaults to `DEFAULT_STALE_THRESHOLD_MS` (~36h). Tests pass a
+  // smaller value so they don't have to fast-forward the clock by days.
+  staleThresholdMs?: number;
 }
 
 const KIND_LABELS: Record<AccountKind, string> = {
@@ -93,6 +97,37 @@ function formatCurrency(n: number): string {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(Math.round(n));
+}
+
+// Default freshness threshold for the snapshot. The daily scheduler runs every
+// 24h, so 36h gives ~1.5x the cadence — enough to absorb a single missed tick
+// (e.g. a deploy at the wrong moment) without spamming a warning, but tight
+// enough that two missed days in a row are visible right away.
+export const DEFAULT_STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000;
+
+// Pure helper extracted so it can be unit-tested without rendering React.
+// Returns null when the timestamp is missing or unparseable so the caller can
+// fall back to existing "never synced" copy.
+//
+// `ageLabel` is phrased as a noun ("2 days", "40 hours") so the call site can
+// drop it into "Snapshot is X old" without re-grammaring.
+export function computeSnapshotStaleness(
+  syncedAt: string | null | undefined,
+  nowMs: number = Date.now(),
+  thresholdMs: number = DEFAULT_STALE_THRESHOLD_MS,
+): { stale: boolean; ageLabel: string } | null {
+  if (!syncedAt) return null;
+  const t = Date.parse(syncedAt);
+  if (!isFinite(t)) return null;
+  const diffMs = Math.max(0, nowMs - t);
+  const stale = diffMs >= thresholdMs;
+  const hours = Math.floor(diffMs / 3_600_000);
+  const days = Math.floor(hours / 24);
+  const ageLabel =
+    days >= 1
+      ? `${days} day${days === 1 ? "" : "s"}`
+      : `${hours} hour${hours === 1 ? "" : "s"}`;
+  return { stale, ageLabel };
 }
 
 function authHeader(): Record<string, string> {
@@ -141,6 +176,7 @@ function pickActiveSnapshot(
 export function AccountingConnectionCard({
   modelId,
   onSnapshotChange,
+  staleThresholdMs = DEFAULT_STALE_THRESHOLD_MS,
 }: AccountingConnectionCardProps) {
   const [state, setState] = useState<AccountingState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -342,6 +378,15 @@ export function AccountingConnectionCard({
               ? relativeTimeAgo(conn.lastSyncedAt)
               : null;
             const realmText = conn?.realmDisplayName ? ` · ${conn.realmDisplayName}` : "";
+            // Suppress the freshness warning when `lastSyncError` is already
+            // shown — that error is the more actionable signal (auth revoked,
+            // provider down) and stacking an amber pill underneath it would
+            // just be redundant noise.
+            const staleness =
+              conn && !conn.lastSyncError
+                ? computeSnapshotStaleness(conn.lastSyncedAt, Date.now(), staleThresholdMs)
+                : null;
+            const showStaleWarning = staleness?.stale === true;
             return (
               <div
                 key={p.provider}
@@ -387,6 +432,38 @@ export function AccountingConnectionCard({
                     {conn?.lastSyncError && (
                       <div className="text-[11px] text-rose-700 mt-0.5">
                         Last sync error: {conn.lastSyncError}
+                      </div>
+                    )}
+                    {showStaleWarning && staleness && (
+                      <div
+                        className="mt-2 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900"
+                        data-testid={`accounting-stale-warning-${p.provider}`}
+                        role="status"
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-600" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium">
+                            Snapshot is {staleness.ageLabel} old
+                          </div>
+                          <div className="text-amber-800/80 leading-snug">
+                            The daily auto-refresh hasn't run recently. Run a manual sync
+                            to confirm the connection is still healthy.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => handleSync(p.provider)}
+                          className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+                          data-testid={`accounting-stale-sync-${p.provider}`}
+                        >
+                          {isBusy ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                          Sync now
+                        </button>
                       </div>
                     )}
                   </div>
