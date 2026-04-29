@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, Wand2, FileSpreadsheet, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DecisionType } from "@/pages/model-wizard/schema";
@@ -33,6 +33,17 @@ export function SaveActions({
 }: SaveActionsProps) {
   const theme = DECISION_THEME[decisionType];
   const [hover, setHover] = useState<SaveAction | null>(null);
+
+  // Auto-populate the scenario name with the suggested default the first time
+  // the user lands on the save step, so the action tiles are immediately
+  // usable. The user can still edit or clear the name; we only fill it once.
+  useEffect(() => {
+    if (!scenarioName && defaultName) {
+      setScenarioName(defaultName);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const valid = scenarioName.trim().length > 0;
 
   return (
@@ -90,7 +101,7 @@ export function SaveActions({
           testid="save-action-later"
           Icon={ClipboardList}
           title="Save & review later"
-          subtitle="Save this scenario as a reference and head back to your dashboard."
+          subtitle="Save this scenario alongside your other what-ifs so you can compare and revisit it any time."
           theme={theme}
           disabled={!valid || isSaving}
           isLoading={isSaving && hover === "later"}
