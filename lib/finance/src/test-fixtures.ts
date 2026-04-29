@@ -251,3 +251,57 @@ export const charterFixture: TestModelPayload = {
   ],
   openingBalances: { cash: 50000, accountsReceivable: 0, fixedAssets: 0, otherAssets: 0, accountsPayable: 0, currentDebtPortion: 0, longTermDebt: 0 },
 };
+
+/**
+ * Synthetic fixture that exercises every supported driver type at least once,
+ * so that the cross-engine parity suite catches drift in any driver — not just
+ * the handful exercised by the per-school fixtures above. New driver types
+ * added to the FE engine must be wired through here too.
+ *
+ * Drivers covered:
+ *   Revenue:  per_student, monthly, annual_fixed, percent_of_base
+ *   Expense:  per_student, monthly, annual_fixed, per_fte,
+ *             percent_of_revenue, per_new_student, per_returning_student
+ *   CapDebt:  PMT loan, monthly (non-loan), per_student (non-loan),
+ *             annual_fixed (non-loan)
+ */
+export const driverCoverageFixture: TestModelPayload = {
+  schoolProfile: {
+    schoolName: "Driver Coverage Test School",
+    state: "CA",
+    schoolType: "private_school",
+    isPartialFirstYear: false,
+    year1OperatingMonths: 12,
+    debtIncluded: true,
+    maxCapacity: 30,
+    fiscalYearStartMonth: 7,
+  },
+  enrollment: { year1: 10, year2: 15, year3: 20, year4: 25, year5: 25, retentionRate: 80 },
+  facilities: { annualSalaryIncrease: 0, generalCostInflation: 0 },
+  revenueRows: [
+    { id: "r1", category: "tuition_and_fees", lineItem: "Tuition", enabled: true, driverType: "per_student", amounts: [8000, 8000, 8000, 8000, 8000] },
+    { id: "r2", category: "tuition_and_fees", lineItem: "Monthly Add-On Fee", enabled: true, driverType: "monthly", amounts: [50, 50, 50, 50, 50] },
+    { id: "r3", category: "philanthropy", lineItem: "Annual Grant", enabled: true, driverType: "annual_fixed", amounts: [12000, 12000, 12000, 12000, 12000] },
+    { id: "r4", category: "tuition_offsets", lineItem: "Scholarship Discount", enabled: true, driverType: "percent_of_base", amounts: [5, 5, 5, 5, 5], percentBase: "r1" },
+  ],
+  staffingRows: [
+    { id: "s1", roleName: "Lead Teacher", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 50000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false },
+    { id: "s2", roleName: "Assistant", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 30000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false },
+  ],
+  expenseRows: [
+    { id: "e1", category: "occupancy_facility", lineItem: "Rent (monthly)", enabled: true, driverType: "monthly", amounts: [1500, 1500, 1500, 1500, 1500] },
+    { id: "e2", category: "instructional_program", lineItem: "Curriculum (per student)", enabled: true, driverType: "per_student", amounts: [200, 200, 200, 200, 200] },
+    { id: "e3", category: "administrative_general", lineItem: "Marketing (annual fixed)", enabled: true, driverType: "annual_fixed", amounts: [3000, 3000, 3000, 3000, 3000] },
+    { id: "e4", category: "administrative_general", lineItem: "Prof Dev (per FTE)", enabled: true, driverType: "per_fte", amounts: [500, 500, 500, 500, 500] },
+    { id: "e5", category: "administrative_general", lineItem: "Mgmt Fee (% of revenue)", enabled: true, driverType: "percent_of_revenue", amounts: [3, 3, 3, 3, 3] },
+    { id: "e6", category: "administrative_general", lineItem: "Onboarding (per new student)", enabled: true, driverType: "per_new_student", amounts: [150, 150, 150, 150, 150] },
+    { id: "e7", category: "administrative_general", lineItem: "Retention Bonus (per returning student)", enabled: true, driverType: "per_returning_student", amounts: [50, 50, 50, 50, 50] },
+  ],
+  capitalAndDebtRows: [
+    { id: "cd1", lineItem: "Equipment Loan", enabled: true, driverType: "annual_fixed", amounts: [0, 0, 0, 0, 0], isLoan: true, loanPrincipal: 25000, loanRate: 6, loanTermYears: 5 },
+    { id: "cd2", lineItem: "Equipment Lease (monthly)", enabled: true, driverType: "monthly", amounts: [200, 200, 200, 200, 200], isLoan: false },
+    { id: "cd3", lineItem: "Tech Refresh (per student)", enabled: true, driverType: "per_student", amounts: [100, 100, 100, 100, 100], isLoan: false },
+    { id: "cd4", lineItem: "FF&E (annual fixed)", enabled: true, driverType: "annual_fixed", amounts: [4000, 2000, 2000, 2000, 2000], isLoan: false },
+  ],
+  openingBalances: { cash: 50000, accountsReceivable: 0, fixedAssets: 0, otherAssets: 0, accountsPayable: 0, currentDebtPortion: 0, longTermDebt: 0 },
+};

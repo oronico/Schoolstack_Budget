@@ -10,6 +10,8 @@ export function driverVal(
   escalationRate?: number,
   fallbackInflation?: number,
   escalationRateOverridden?: boolean,
+  newStudents?: number,
+  returningStudents?: number,
 ): number {
   let base = amounts?.[y] ?? 0;
   const esc = escalationRateOverridden ? (escalationRate ?? 0) : resolveEsc(escalationRate, fallbackInflation);
@@ -20,9 +22,22 @@ export function driverVal(
   switch (dt) {
     case "monthly": return base * 12;
     case "per_student": return base * students;
+    case "per_new_student": return base * (newStudents ?? students);
+    case "per_returning_student": return base * (returningStudents ?? 0);
     case "annual_fixed": return base;
     default: return base;
   }
+}
+
+function beNewStudents(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return enrollment[0] || 0;
+  const returning = Math.round((enrollment[y - 1] || 0) * (retentionRate / 100));
+  return Math.max(0, (enrollment[y] || 0) - Math.min(returning, enrollment[y] || 0));
+}
+
+function beReturningStudents(enrollment: number[], retentionRate: number, y: number): number {
+  if (y === 0) return 0;
+  return Math.min(enrollment[y] || 0, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100)));
 }
 
 function computeRevenueForYear(
@@ -86,6 +101,8 @@ function computeExpenseForYear(
   costInflation: number,
   pf: number,
   yearFTE: number,
+  newStudents: number,
+  returningStudents: number,
 ): number {
   const enabled = rows.filter(r => r.enabled);
   const yPf = y === 0 ? pf : 1;
@@ -104,7 +121,7 @@ function computeExpenseForYear(
       const perFte = driverVal(r.amounts, y, "annual_fixed", students, r.escalationRate, costInflation, r.escalationRateOverridden);
       total += perFte * yearFTE * yPf;
     } else {
-      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, r.escalationRateOverridden) * yPf;
+      total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, r.escalationRateOverridden, newStudents, returningStudents) * yPf;
     }
   }
   return total;
@@ -155,6 +172,7 @@ export function computeBackendValues(fixture: TestModelPayload): BackendComputed
     fixture.enrollment.year1, fixture.enrollment.year2, fixture.enrollment.year3,
     fixture.enrollment.year4, fixture.enrollment.year5,
   ];
+  const retentionRate = fixture.enrollment.retentionRate ?? 85;
   const pf = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
   const salaryEsc = (fixture.facilities.annualSalaryIncrease || 0) / 100;
   const costInfl = fixture.facilities.generalCostInflation || 0;
@@ -167,7 +185,9 @@ export function computeBackendValues(fixture: TestModelPayload): BackendComputed
     revenue.push(rev);
     personnel.push(Math.round(computePersonnelForYear(fixture.staffingRows, salaryEsc, pf, y, enrollment[y])));
     const yearFTE = computeYearFTE(fixture.staffingRows, y, enrollment[y]);
-    expenses.push(Math.round(computeExpenseForYear(fixture.expenseRows, y, enrollment[y], rev, costInfl, pf, yearFTE)));
+    const newStud = beNewStudents(enrollment, retentionRate, y);
+    const retStud = beReturningStudents(enrollment, retentionRate, y);
+    expenses.push(Math.round(computeExpenseForYear(fixture.expenseRows, y, enrollment[y], rev, costInfl, pf, yearFTE, newStud, retStud)));
     capDebt.push(Math.round(computeCapDebtForYear(fixture.capitalAndDebtRows, y, enrollment[y])));
     loanDS.push(Math.round(computeCapDebtForYear(loanRows, y, enrollment[y])));
   }

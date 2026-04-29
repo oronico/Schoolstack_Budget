@@ -31,6 +31,7 @@ export {
   microschoolFixture,
   privateSchoolFixture,
   charterFixture,
+  driverCoverageFixture,
   type TestModelPayload,
   type TestRevenueRow,
   type TestStaffingRow,
