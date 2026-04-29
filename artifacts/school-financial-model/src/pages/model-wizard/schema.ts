@@ -487,6 +487,15 @@ export const customScenarioActualsSchema = z.object({
   programEnrollmentActual: z.coerce.number().min(0, "Program enrollment can't be negative").optional(),
   notes: z.string().optional(),
   updatedAt: z.string().optional(),
+  // Per-field provenance captured at save time so the saved-actuals summary
+  // can render a compact "Pulled from quickbooks-q1.csv (uploaded Mar 14)"
+  // caption alongside the numbers — not just while the editor is open. Map
+  // keys are CustomScenarioActuals field names (e.g. "revenueActual"); values
+  // are the human-readable source label string from `buildActualsSuggestion`
+  // (e.g. "From quickbooks-q1.csv uploaded Mar 14"). A field that is manually
+  // edited after being suggested drops its entry here so the caption never
+  // misrepresents typed-in numbers as books-sourced.
+  sourceByField: z.record(z.string(), z.string()).optional(),
 });
 export type CustomScenarioActuals = z.infer<typeof customScenarioActualsSchema>;
 

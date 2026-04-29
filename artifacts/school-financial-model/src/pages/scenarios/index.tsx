@@ -32,6 +32,7 @@ import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparis
 import type { FullModelData, OutcomeStatus, CustomScenario, CustomScenarioActuals } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
+import { parseExportSourceLabel } from "@/lib/actuals-source";
 import {
   applyPersistedScenarioToData,
   buildActualsSuggestion,
@@ -493,9 +494,20 @@ function CustomScenarioCard({
   }, [cs.actuals, editingActuals]);
 
   // Helper: write a field into the draft and clear its "suggested" marker so
-  // any direct edit by the user immediately overrides the suggestion.
+  // any direct edit by the user immediately overrides the suggestion. Also
+  // strips the field's persisted source label so the saved-actuals summary
+  // doesn't keep claiming a books-sourced provenance for a value the
+  // founder has since typed over.
   const setActualsField = (field: ActualsSuggestionField | "programEnrollmentActual", value: number | undefined) => {
-    setActualsDraft((d) => ({ ...d, [field]: value }));
+    setActualsDraft((d) => {
+      const next: CustomScenarioActuals = { ...d, [field]: value };
+      if (next.sourceByField && field in next.sourceByField) {
+        const rest = { ...next.sourceByField };
+        delete rest[field];
+        next.sourceByField = Object.keys(rest).length > 0 ? rest : undefined;
+      }
+      return next;
+    });
     if (suggestedFields.has(field as ActualsSuggestionField)) {
       setSuggestedFields((prev) => {
         const next = new Set(prev);
@@ -518,6 +530,13 @@ function CustomScenarioCard({
     const nextSuggested = new Set(suggestedFields);
     setActualsDraft((d) => {
       const next: CustomScenarioActuals = { ...d };
+      // Per-field source labels are persisted on the saved actuals so the
+      // read-only summary can render the same "Pulled from your books"
+      // caption that this editor shows. We layer onto whatever sources
+      // were already saved (so previously-pulled fields the founder hasn't
+      // touched keep their provenance) and overwrite for fields we're
+      // about to fill from this fresh suggestion.
+      const nextSources: Record<string, string> = { ...(d.sourceByField ?? {}) };
       const fields: ActualsSuggestionField[] = [
         "enrollmentActual",
         "revenueActual",
@@ -538,8 +557,12 @@ function CustomScenarioCard({
         }
         next[f] = suggested;
         nextSuggested.add(f);
+        const src = suggestion.sources[f];
+        if (src) nextSources[f] = src;
         filled += 1;
       }
+      next.sourceByField =
+        Object.keys(nextSources).length > 0 ? nextSources : undefined;
       return next;
     });
     setSuggestedFields(nextSuggested);
@@ -613,6 +636,21 @@ function CustomScenarioCard({
   );
 
   const saveActuals = async () => {
+    // Per-field provenance: only keep entries whose value survived to the
+    // final save. A field that was suggested and then cleared shouldn't
+    // persist a stale source label; manual edits already strip the entry
+    // via `setActualsField`.
+    let sourceByField: Record<string, string> | undefined;
+    if (actualsDraft.sourceByField) {
+      const filtered: Record<string, string> = {};
+      for (const [field, src] of Object.entries(actualsDraft.sourceByField)) {
+        const fieldVal = (actualsDraft as Record<string, unknown>)[field];
+        if (fieldVal !== undefined && typeof src === "string") {
+          filtered[field] = src;
+        }
+      }
+      sourceByField = Object.keys(filtered).length > 0 ? filtered : undefined;
+    }
     // Strip out empty fields so the persisted shape stays minimal — easier
     // to evolve into the future "forecast accuracy" view.
     const a: CustomScenarioActuals = {
@@ -624,6 +662,7 @@ function CustomScenarioCard({
       signedMonthlyRent: actualsDraft.signedMonthlyRent,
       programEnrollmentActual: actualsDraft.programEnrollmentActual,
       notes: actualsDraft.notes && actualsDraft.notes.trim().length > 0 ? actualsDraft.notes.trim() : undefined,
+      sourceByField,
       updatedAt: new Date().toISOString(),
     };
     // If literally nothing was entered (only asOfYear), clear instead of saving
@@ -826,6 +865,45 @@ function CustomScenarioCard({
                   <span> · Updated {fmtDate(cs.actuals.updatedAt)}</span>
                 )}
               </p>
+              {(() => {
+                // Compact "Pulled from your books" caption mirrored from the
+                // editor so the books-vs-typed distinction stays visible
+                // after save. We scan the saved per-field source labels for
+                // an export-shaped one (parser knows the format) and render
+                // the captured filename + upload date — captured at save
+                // time so a later "Replace export" in the wizard doesn't
+                // retroactively rewrite the historical caption.
+                const sources = cs.actuals.sourceByField;
+                if (!sources) return null;
+                for (const src of Object.values(sources)) {
+                  if (typeof src !== "string") continue;
+                  const parsed = parseExportSourceLabel(src);
+                  if (!parsed) continue;
+                  return (
+                    <p
+                      className="text-[10px] text-emerald-900 bg-emerald-50 border border-emerald-200 rounded px-2 py-1 leading-snug"
+                      data-testid={`custom-scenario-actuals-summary-export-source-${idx}`}
+                    >
+                      <span className="font-semibold">Pulled from your books:</span>{" "}
+                      <span
+                        className="font-mono break-all"
+                        data-testid={`custom-scenario-actuals-summary-export-filename-${idx}`}
+                      >
+                        {parsed.filename}
+                      </span>
+                      {parsed.uploadedLabel && (
+                        <span
+                          className="text-emerald-800/80"
+                          data-testid={`custom-scenario-actuals-summary-export-date-${idx}`}
+                        >
+                          {" "}· uploaded {parsed.uploadedLabel}
+                        </span>
+                      )}
+                    </p>
+                  );
+                }
+                return null;
+              })()}
               {cs.actuals.enrollmentActual !== undefined && (
                 <ActualsLine
                   label="Total enrollment"

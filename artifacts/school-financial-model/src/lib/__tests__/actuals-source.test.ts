@@ -1,0 +1,59 @@
+import { describe, it, expect } from "vitest";
+import { parseExportSourceLabel } from "../actuals-source";
+
+// `parseExportSourceLabel` underpins the "Pulled from your books" caption
+// that the saved-actuals summary renders next to a saved snapshot. The
+// label format is an internal contract with `buildActualsSuggestion` in
+// `lib/finance/decision-engine`; if that helper changes its output, this
+// test will surface the mismatch before the caption silently disappears.
+describe("parseExportSourceLabel", () => {
+  it("parses a CSV export label with an upload date", () => {
+    expect(
+      parseExportSourceLabel("From quickbooks-q1.csv uploaded Mar 14"),
+    ).toEqual({
+      filename: "quickbooks-q1.csv",
+      uploadedLabel: "Mar 14",
+    });
+  });
+
+  it("parses an XLSX export label with an upload date", () => {
+    expect(
+      parseExportSourceLabel("From acme-2026Q1.xlsx uploaded Apr 2"),
+    ).toEqual({
+      filename: "acme-2026Q1.xlsx",
+      uploadedLabel: "Apr 2",
+    });
+  });
+
+  it("parses a CSV export label without an upload date (fallback)", () => {
+    expect(parseExportSourceLabel("From quickbooks-q1.csv")).toEqual({
+      filename: "quickbooks-q1.csv",
+    });
+  });
+
+  it("returns null for live-snapshot labels", () => {
+    expect(
+      parseExportSourceLabel("From QuickBooks (synced 2 hours ago)"),
+    ).toBeNull();
+    expect(parseExportSourceLabel("From Xero · Acme Realm")).toBeNull();
+    expect(parseExportSourceLabel("From QuickBooks")).toBeNull();
+  });
+
+  it("returns null for prior-year and current-year labels", () => {
+    expect(parseExportSourceLabel("Prior-year actuals from setup")).toBeNull();
+    expect(
+      parseExportSourceLabel("Current-year projection from setup"),
+    ).toBeNull();
+    expect(
+      parseExportSourceLabel(
+        "Current-year projection (annualized from 6 months)",
+      ),
+    ).toBeNull();
+  });
+
+  it("returns null for unrelated strings", () => {
+    expect(parseExportSourceLabel("")).toBeNull();
+    expect(parseExportSourceLabel("Detected from your facility expense")).toBeNull();
+    expect(parseExportSourceLabel("Signed rent from facility plan")).toBeNull();
+  });
+});
