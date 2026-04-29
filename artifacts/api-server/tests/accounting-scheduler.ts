@@ -12,6 +12,7 @@ import {
 import { runSyncSweep } from "../src/lib/accounting/scheduler.js";
 import type { ProviderClient } from "../src/lib/accounting/providers.js";
 import { encryptToken } from "../src/lib/accounting/crypto.js";
+import type { NotifyConnectionError } from "../src/lib/accounting/notify.js";
 
 let passed = 0;
 let failed = 0;
@@ -254,6 +255,7 @@ async function testSweepIteratesAllConnections(): Promise<void> {
   const summary = await runSyncSweep({
     dbAdapter: adapter,
     getProviderClient: () => sharedClient,
+    notifyConnectionError: async () => {},
   });
 
   check(
@@ -293,11 +295,105 @@ async function testSweepIteratesAllConnections(): Promise<void> {
   );
 }
 
+async function testSweepNotifiesOnConnectedToErrorTransition(): Promise<void> {
+  console.log(
+    "\n— scheduler: emails founder only when a connection flips connected → error —",
+  );
+
+  // Three rows exercise every relevant transition case in a single sweep:
+  //   1. previously connected, this sync fails → MUST notify
+  //   2. previously errored, this sync also fails → MUST NOT re-notify
+  //      (satisfies "one notification per failure-onset" from the task spec)
+  //   3. previously connected, this sync succeeds → MUST NOT notify
+  const flippingConn = makeConnection({ id: 11, modelId: 110, status: "connected" });
+  const stayingErrConn = makeConnection({
+    id: 12,
+    modelId: 120,
+    status: "error",
+    lastSyncError: "previous failure",
+  });
+  const recoveringConn = makeConnection({ id: 13, modelId: 130, status: "connected" });
+  const { adapter, rowMap } = makeAdapter([
+    flippingConn,
+    stayingErrConn,
+    recoveringConn,
+  ]);
+
+  let fetchCount = 0;
+  const sharedClient: ProviderClient = {
+    provider: "quickbooks",
+    isConfigured: () => true,
+    getAuthorizeUrl: () => "https://example.com/auth",
+    exchangeCode: async () => {
+      throw new Error("not used");
+    },
+    refreshAccessToken: async () => ({
+      accessToken: "x",
+      refreshToken: "y",
+      expiresAt: new Date(FIXED_NOW.getTime() + 60 * 60 * 1000),
+    }),
+    fetchProfitAndLoss: async () => {
+      fetchCount++;
+      // Fail on the first two rows (the connected→error and the error→error
+      // cases), succeed on the third (the recovery case). Iteration order is
+      // insertion order, so this aligns with the row layout above.
+      if (fetchCount <= 2) throw new Error(`provider exploded: row ${fetchCount}`);
+      return {
+        periodEnd: "2026-04-30",
+        monthsCompleted: 4,
+        revenue: 100_000,
+        expenses: 90_000,
+      };
+    },
+  };
+
+  const notified: { connectionId: number; errorMessage: string }[] = [];
+  const notify: NotifyConnectionError = async (conn, errorMessage) => {
+    notified.push({ connectionId: conn.id, errorMessage });
+  };
+
+  const summary = await runSyncSweep({
+    dbAdapter: adapter,
+    getProviderClient: () => sharedClient,
+    notifyConnectionError: notify,
+  });
+
+  check(
+    "summary reflects 2 failures + 1 success",
+    summary.attempted === 3 && summary.failed === 2 && summary.succeeded === 1,
+    `summary=${JSON.stringify(summary)}`,
+  );
+  check(
+    "exactly one notification fired",
+    notified.length === 1,
+    `notified=${JSON.stringify(notified)}`,
+  );
+  check(
+    "notification targets the row that just flipped",
+    notified[0]?.connectionId === flippingConn.id,
+    `notified[0]=${JSON.stringify(notified[0])}`,
+  );
+  check(
+    "notification carries the provider error message",
+    notified[0]?.errorMessage.includes("provider exploded"),
+    `errorMessage=${notified[0]?.errorMessage}`,
+  );
+  check(
+    "previously-errored row stayed in error",
+    rowMap.get(stayingErrConn.id)!.status === "error",
+  );
+  check(
+    "recovered row is back to connected",
+    rowMap.get(recoveringConn.id)!.status === "connected",
+  );
+}
+
 async function main(): Promise<void> {
   await testHappyPath();
   await testFailurePreservesLastSync();
   await testProactiveTokenRefresh();
   await testSweepIteratesAllConnections();
+  await testSweepNotifiesOnConnectedToErrorTransition();
 
   console.log("\n========================");
   console.log(`PASSED: ${passed}`);

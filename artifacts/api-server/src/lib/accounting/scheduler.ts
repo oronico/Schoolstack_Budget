@@ -27,6 +27,10 @@ import {
   getProviderClient as defaultGetProviderClient,
   isAccountingProvider,
 } from "./providers";
+import {
+  defaultNotifyConnectionError,
+  type NotifyConnectionError,
+} from "./notify";
 
 const DEFAULT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
 const DEFAULT_INITIAL_DELAY_MS = 60_000; // 1 min after boot
@@ -115,9 +119,18 @@ export interface SweepSummary {
   skipped: number;
 }
 
-export async function runSyncSweep(deps: SyncDeps = {}): Promise<SweepSummary> {
+export interface SweepDeps extends SyncDeps {
+  // Called once per (connected → error) status transition observed during the
+  // sweep. Defaults to dispatching a transactional email via the shared
+  // mailer; tests stub a capture function instead.
+  notifyConnectionError?: NotifyConnectionError;
+}
+
+export async function runSyncSweep(deps: SweepDeps = {}): Promise<SweepSummary> {
   const dbAdapter = deps.dbAdapter ?? getDefaultDbAdapter();
   const getProviderClient = deps.getProviderClient ?? defaultGetProviderClient;
+  const notifyConnectionError =
+    deps.notifyConnectionError ?? defaultNotifyConnectionError;
   const summary: SweepSummary = { attempted: 0, succeeded: 0, failed: 0, skipped: 0 };
   if (!dbAdapter) return summary;
   // Two parallel sweeps would race on token-refresh updates; if a previous
@@ -147,6 +160,12 @@ export async function runSyncSweep(deps: SyncDeps = {}): Promise<SweepSummary> {
         continue;
       }
       summary.attempted++;
+      // Capture the prior status before the sync so we can detect a
+      // (connected → error) transition. We deliberately key the email off
+      // the *transition* rather than the post-sync status: rows that were
+      // already in error stay quiet, satisfying the "one notification per
+      // failure-onset" contract from the task spec.
+      const priorStatus = conn.status;
       const result = await syncAccountingConnection(conn, {
         dbAdapter,
         getProviderClient,
@@ -158,6 +177,29 @@ export async function runSyncSweep(deps: SyncDeps = {}): Promise<SweepSummary> {
         console.warn(
           `[accounting:scheduler] Sync failed for connection ${conn.id} (${conn.provider}): ${result.error}`,
         );
+        // Only notify when the sync actually persisted a (connected → error)
+        // transition. We confirm both the prior status AND the post-sync
+        // status to avoid emailing on edge cases where the row was deleted
+        // mid-sync or the update path returned no row at all.
+        if (
+          priorStatus === "connected" &&
+          result.connection?.status === "error"
+        ) {
+          // Prefer the truncated error that was persisted on the row so the
+          // email body matches what the in-app banner shows. Falls back to
+          // the raw error string only if, somehow, the persisted column is
+          // empty.
+          const updated = result.connection;
+          const errorMessage = updated.lastSyncError ?? result.error;
+          try {
+            await notifyConnectionError(updated, errorMessage);
+          } catch (err) {
+            console.error(
+              `[accounting:scheduler] notifyConnectionError threw for connection ${conn.id}:`,
+              err,
+            );
+          }
+        }
       }
       if (PER_CONNECTION_DELAY_MS > 0) {
         await new Promise((resolve) => setTimeout(resolve, PER_CONNECTION_DELAY_MS));

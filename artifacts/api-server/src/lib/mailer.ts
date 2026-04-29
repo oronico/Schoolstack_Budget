@@ -461,6 +461,117 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
   }
 }
 
+// --- Accounting connection error notification -----------------------------
+// Sent by the daily background sync when a connection transitions from
+// `connected` to `error`. The founder won't see the in-app banner unless they
+// happen to visit the scenarios page, so we proactively email them with the
+// truncated provider error and a deep link straight to the reconnect button.
+
+export interface AccountingConnectionErrorEmailData {
+  toEmail: string;
+  recipientName: string;
+  // Display label for the provider, e.g. "QuickBooks" or "Xero".
+  providerLabel: string;
+  // School / model name the connection belongs to. Used in the subject line
+  // and copy so a founder with multiple models knows which one needs action.
+  schoolName: string;
+  // Raw provider error message; we truncate inside this helper to keep the
+  // template safe regardless of upstream length.
+  errorMessage: string;
+  // Deep link to the scenarios page where the reconnect button lives.
+  reconnectUrl: string;
+}
+
+const ERROR_MESSAGE_MAX = 200;
+
+export async function sendAccountingConnectionErrorEmail(
+  data: AccountingConnectionErrorEmailData,
+): Promise<{ success: boolean; error?: string }> {
+  const resend = getResend();
+  const fromAddress = process.env.EMAIL_FROM;
+  if (!resend || !fromAddress) {
+    return { success: false, error: "Email service is not configured." };
+  }
+
+  const firstName =
+    (data.recipientName || "").trim().split(/\s+/)[0] || "there";
+  const truncatedError =
+    data.errorMessage.length > ERROR_MESSAGE_MAX
+      ? data.errorMessage.slice(0, ERROR_MESSAGE_MAX - 1).trimEnd() + "…"
+      : data.errorMessage;
+
+  const html = `
+    <div style="font-family:'Nunito',Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;">
+      <div style="background:#1E293B;border-radius:12px 12px 0 0;padding:18px 24px;text-align:center;">
+        <span style="color:#328555;font-family:'Quicksand',Arial,sans-serif;font-size:18px;font-weight:700;">SchoolStack</span>
+        <span style="color:white;font-family:'Quicksand',Arial,sans-serif;font-size:18px;font-weight:700;"> Budget</span>
+      </div>
+      <div style="border:1px solid #E2E8F0;border-top:none;border-radius:0 0 12px 12px;padding:28px 24px;">
+        <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;font-size:18px;margin:0 0 12px;">
+          Your ${escapeHtml(data.providerLabel)} connection needs attention
+        </h2>
+        <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 14px;">
+          Hi ${escapeHtml(firstName)},
+        </p>
+        <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 14px;">
+          We weren't able to sync the latest actuals from <strong>${escapeHtml(data.providerLabel)}</strong> for
+          <strong>${escapeHtml(data.schoolName)}</strong> during today's background refresh. Until the connection is
+          restored, the live-data badge on your scenarios page will keep showing the last successful snapshot.
+        </p>
+        <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:12px 16px;margin:0 0 20px;">
+          <div style="color:#991B1B;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Provider error</div>
+          <div style="color:#1E293B;font-size:13px;line-height:1.5;font-family:'Menlo',Consolas,monospace;">${escapeHtml(truncatedError)}</div>
+        </div>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${escapeHtml(data.reconnectUrl)}" style="background:#D97706;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;font-family:'Quicksand',Arial,sans-serif;">Reconnect ${escapeHtml(data.providerLabel)}</a>
+        </div>
+        <p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 8px;">
+          Most disconnections happen when the access token expires after a long break. Reconnecting takes about 30
+          seconds and will restore daily syncs automatically.
+        </p>
+        <p style="color:#475569;font-size:14px;line-height:1.6;margin:14px 0 0;">
+          — The SchoolStack Team
+        </p>
+      </div>
+      <div style="text-align:center;padding:14px 0;">
+        <p style="color:#94A3B8;font-size:12px;margin:0;">SchoolStack Budget by SchoolStack.ai</p>
+      </div>
+    </div>
+  `;
+
+  const text = [
+    `Hi ${firstName},`,
+    "",
+    `We weren't able to sync the latest actuals from ${data.providerLabel} for ${data.schoolName} during today's background refresh.`,
+    "",
+    `Provider error: ${truncatedError}`,
+    "",
+    `Reconnect ${data.providerLabel}: ${data.reconnectUrl}`,
+    "",
+    "Most disconnections happen when the access token expires after a long break. Reconnecting takes about 30 seconds and will restore daily syncs automatically.",
+    "",
+    "— The SchoolStack Team",
+  ].join("\n");
+
+  try {
+    const { error } = await resend.emails.send({
+      from: fromAddress,
+      to: [data.toEmail],
+      subject: `Action needed: reconnect ${data.providerLabel} for ${data.schoolName}`,
+      html,
+      text,
+    });
+    if (error) {
+      console.error("[mailer] Accounting connection error email failed:", error);
+      return { success: false, error: "Failed to send connection error email." };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error("[mailer] Accounting connection error email threw:", err);
+    return { success: false, error: "Failed to send connection error email." };
+  }
+}
+
 export async function sendPasswordResetEmail(
   toEmail: string,
   resetToken: string,
