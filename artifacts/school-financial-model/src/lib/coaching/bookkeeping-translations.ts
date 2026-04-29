@@ -28,9 +28,17 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
     lines: [
       {
         label: "Mission and program scope",
+        glossaryKey: "pl_statement",
         account: "Used to design your Chart of Accounts categories",
         statement: "memo",
         note: "Programs you describe here become the natural P&L sub-classes (e.g. Lower School, Aftercare).",
+      },
+      {
+        label: "Restricted vs. unrestricted donor intent",
+        glossaryKey: "equity",
+        account: "Net Assets - Restricted vs Unrestricted (nonprofits) on the Balance Sheet",
+        statement: "balance_sheet",
+        note: "Your story shapes which donor gifts get tagged restricted in the books and which fund general operations.",
       },
     ],
   },

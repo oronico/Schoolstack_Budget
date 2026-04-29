@@ -62,7 +62,10 @@ export function WhatThisMeansInYourBooks({
       <button
         type="button"
         onClick={() =>
-          setOpenByStep((prev) => ({ ...prev, [step]: !(prev[step] ?? true) }))
+          setOpenByStep((prev) => ({
+            ...prev,
+            [step]: !(prev[step] ?? defaultOpen),
+          }))
         }
         aria-expanded={open}
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"

@@ -27,14 +27,14 @@ function BudgetToBooksLesson() {
   const trackedRef = useRef(false);
 
   useEffect(() => {
-    if (trackedRef.current || level === "advanced" || dismissed) return;
+    if (trackedRef.current || dismissed) return;
     trackedRef.current = true;
     trackCoachingEvent("budget_to_books_lesson_shown", {
       guidanceLevel: level,
     });
   }, [level, dismissed]);
 
-  if (level === "advanced" || dismissed) return null;
+  if (dismissed) return null;
 
   const handleDismiss = () => {
     dismissLesson(BUDGET_TO_BOOKS_LESSON_ID);
