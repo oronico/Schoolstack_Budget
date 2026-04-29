@@ -19,6 +19,7 @@ import {
   BENCHMARK_DSCR_GREEN,
 } from "./workbook-helpers.js";
 import { BENCHMARK_CURRENT_RATIO } from "./benchmark-thresholds.js";
+import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 
 const TAB_NAMES = [
   "Instructions", "Cover", "Assumptions", "Program Profile",
@@ -2842,6 +2843,7 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   });
 
   buildNarrativeTab(wb, data, computedFlags);
+  addDecisionHistorySheet(wb, data);
 
   return wb;
 }

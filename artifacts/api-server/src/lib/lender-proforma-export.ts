@@ -17,6 +17,7 @@ import {
   type SchoolProfile as SharedSchoolProfile,
   type RevenueRow as SharedRevenueRow,
 } from "./workbook-helpers.js";
+import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 
 const SCHOOL_TYPE_DISPLAY: Record<string, string> = {
   charter_school: "Charter School",
@@ -1686,6 +1687,7 @@ export async function generateLenderProFormaWorkbook(rawData: Record<string, unk
   buildStaffing(wb, res);
   buildLoanSnapshot(wb, input, res);
   buildSummary(wb, input, res);
+  addDecisionHistorySheet(wb, rawData as Parameters<typeof addDecisionHistorySheet>[1]);
 
   const lenderRevCats: Record<string, number[]> = {};
   if (res.tuitionCollected.some(v => v > 0)) lenderRevCats["tuition_and_fees"] = res.tuitionCollected;

@@ -943,6 +943,7 @@ const UNDERWRITING_V2_TABS = [
   "Budget Detail", "Budget Summary", "Cash Flow",
   "Operating", "Debt", "Balance",
   "DSCR", "Sources", "Scenario", "Snapshot", "Financial Health",
+  "Decision History",
 ];
 
 const STANDARD_TABS = [
@@ -959,7 +960,7 @@ const UNDERWRITING_V1_TABS = [
   "P&L", "Balance Sheet", "DSCR", "Snapshot", "Summary", "Financial Health",
 ];
 
-const LENDER_TABS = ["Instructions", "Cover", "Assumptions", "Drivers", "P&L", "Cash Flow", "Staffing", "Loan Snapshot", "Summary", "Financial Health"];
+const LENDER_TABS = ["Instructions", "Cover", "Assumptions", "Drivers", "P&L", "Cash Flow", "Staffing", "Loan Snapshot", "Summary", "Decision History", "Financial Health"];
 
 const SINGLE_YEAR_TABS = ["Assumptions", "Revenue", "Personnel", "Operating Expenses", "P&L Summary"];
 
