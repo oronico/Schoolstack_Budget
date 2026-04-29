@@ -138,4 +138,14 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     short: "The year your school's revenue first covers its expenses - the point at which you're no longer running at a loss.",
     long: "Most new schools take 2-4 years to break even. Lenders and authorizers want to see a credible path to break-even before Year 5; a model that never gets there is a red flag.",
   },
+  realm: {
+    term: "Realm",
+    short: "QuickBooks' name for the specific company file you're connected to - one realm per company in your QuickBooks account.",
+    long: "When you authorize an accounting connection, the realm ID identifies which set of books we're reading. If you switch QuickBooks companies you'll need to reconnect, and your account mappings are saved per realm so they don't bleed between companies.",
+  },
+  oauth: {
+    term: "OAuth",
+    short: "The 'Sign in with Google'-style handshake your accounting system uses to grant us read-only access without ever sharing your password.",
+    long: "OAuth lets you click 'Connect to QuickBooks/Xero', approve a specific scope (typically read-only access to your Profit & Loss), and revoke it any time from inside your accounting tool. We never see or store your bookkeeping login.",
+  },
 };
