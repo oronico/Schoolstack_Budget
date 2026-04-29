@@ -246,6 +246,14 @@ const quickbooksClient: ProviderClient = {
 
 // Internal: extract { snapshot, discoveredAccounts } from the QuickBooks
 // `ProfitAndLoss` JSON response. Exported for unit coverage.
+//
+// QuickBooks Online groups P&L sections by an opaque `group` token. We treat
+// "Income" as the revenue line, and SUM across every expense-like group
+// (`Expenses`, `COGS`, `OtherExpense` / `OtherExpenses`) to get a complete
+// total — taking only `Expenses` would understate the founder's true outflows
+// when COGS or other charges are present. Detail rows underneath each group
+// are captured as `discoveredAccounts` (tagged with the right section) so
+// the founder mapping UI can re-classify them later.
 export function parseQuickBooksProfitAndLoss(
   payload: Record<string, unknown>,
 ): SyncResult {
@@ -256,6 +264,16 @@ export function parseQuickBooksProfitAndLoss(
   const start = startStr ? new Date(`${startStr}T00:00:00Z`) : new Date(`${periodEnd}T00:00:00Z`);
   const end = new Date(`${periodEnd}T00:00:00Z`);
   const monthsCompleted = startStr ? monthsBetween(start, end) : 12;
+
+  // Groups whose Summary row counts toward "expenses". Sandbox + production
+  // payloads use both `OtherExpense` (singular) and `OtherExpenses` (plural)
+  // depending on the company file's preferences, so we accept either.
+  const EXPENSE_GROUPS = new Set([
+    "Expenses",
+    "COGS",
+    "OtherExpense",
+    "OtherExpenses",
+  ]);
 
   let revenue = 0;
   let expenses = 0;
@@ -281,8 +299,11 @@ export function parseQuickBooksProfitAndLoss(
       if (group === "Income") {
         revenue = Math.max(revenue, totalValue);
         nextSection = "income";
-      } else if (group === "Expenses") {
-        expenses = Math.max(expenses, totalValue);
+      } else if (EXPENSE_GROUPS.has(group)) {
+        // Sum because COGS / Operating / Other are siblings, not nested.
+        // Use absolute value so a credit-balanced expense section (negative
+        // refund) doesn't subtract from the total.
+        expenses += Math.abs(totalValue);
         nextSection = "expense";
       }
       const rowsInner = r.Rows as Record<string, unknown> | undefined;
@@ -446,20 +467,36 @@ const xeroClient: ProviderClient = {
 
 // Parse a Xero `ProfitAndLoss` report payload. Xero returns a `Reports` array
 // whose `Rows` mirror the QuickBooks structure but with a different field
-// naming convention. We collect Income / Expenses totals and capture every
-// detail account so the founder mapping UI can re-classify them.
+// naming convention. We:
+//   * pull the period-end date from the report title (handles both single
+//     "30 September 2024" titles and "1 January 2024 to 30 September 2024"
+//     ranges, in which case we take the END date and compute the number of
+//     months elapsed),
+//   * sum every expense-like section (Operating Expenses + Cost of
+//     Sales/Goods + Other Expenses) — taking only "Operating Expenses" would
+//     understate the total when cost-of-sales rows are present,
+//   * skip Gross Profit / Net Profit / Net Income summary sections (they're
+//     subtotals, not real revenue or expenses), and
+//   * capture every detail account as a `discoveredAccount` so the founder
+//     mapping UI can re-classify them (and so rent → monthly rent is derived
+//     by the same `applyAccountMappings` path used for QuickBooks).
 export function parseXeroProfitAndLoss(
   payload: Record<string, unknown>,
 ): SyncResult {
   const reports = (payload.Reports as Array<Record<string, unknown>> | undefined) ?? [];
   const report = reports[0] ?? {};
   const titles = (report.ReportTitles as string[] | undefined) ?? [];
+  const titleString = titles.join(" | ");
+  const range = extractDateRange(titleString);
   const periodEnd =
+    range?.end ||
     extractIsoDate(titles[titles.length - 1]) ||
     new Date().toISOString().slice(0, 10);
-  // Xero reports default to the current fiscal-YTD; assume 12 months unless
-  // a date range narrower than a year is reflected in the title.
-  const monthsCompleted = 12;
+  // If the title carries an explicit date range we can compute the months
+  // completed; otherwise fall back to a fiscal-YTD assumption of 12 months.
+  const monthsCompleted = range
+    ? monthsBetween(new Date(`${range.start}T00:00:00Z`), new Date(`${range.end}T00:00:00Z`))
+    : 12;
 
   let revenue = 0;
   let expenses = 0;
@@ -471,13 +508,12 @@ export function parseXeroProfitAndLoss(
     if ((section as { RowType?: string }).RowType !== "Section") continue;
     const titleVal = String((section as { Title?: string }).Title || "").toLowerCase();
     const rows = ((section as { Rows?: Array<Record<string, unknown>> }).Rows) ?? [];
+    const sectionKind = classifyXeroSection(titleVal);
+    // Gross/Net subtotal sections (and sections we don't recognise) are not
+    // real revenue/expense buckets — skip them so they don't double-count.
+    if (sectionKind === "skip") continue;
+
     let summary = 0;
-    const sectionKind: DiscoveredAccount["section"] =
-      titleVal.includes("income") || titleVal.includes("revenue")
-        ? "income"
-        : titleVal.includes("expense")
-          ? "expense"
-          : "other";
     for (const row of rows) {
       const cells = ((row as { Cells?: Array<Record<string, unknown>> }).Cells) ?? [];
       if (cells.length === 0) continue;
@@ -502,8 +538,14 @@ export function parseXeroProfitAndLoss(
         defaultKind: defaultKindFor(sectionKind, name),
       });
     }
-    if (sectionKind === "income") revenue = Math.max(revenue, summary);
-    else if (sectionKind === "expense") expenses = Math.max(expenses, summary);
+    if (sectionKind === "income") {
+      revenue = Math.max(revenue, summary);
+    } else if (sectionKind === "expense") {
+      // Sum because operating, cost-of-sales, and other-expenses are sibling
+      // sections in the report — taking the max would silently drop the
+      // smaller buckets.
+      expenses += summary;
+    }
   }
 
   const baseSnapshot: AccountingSyncSnapshot = {
@@ -517,17 +559,65 @@ export function parseXeroProfitAndLoss(
   return { snapshot, discoveredAccounts: discovered };
 }
 
+// Categorize a Xero section by its title. Xero localises section titles
+// (e.g. "Less Operating Expenses", "Less Cost of Sales", "Plus Other
+// Income") so we work off keyword rules rather than exact strings, and
+// explicitly skip Gross/Net subtotal sections that would otherwise be
+// double-counted.
+function classifyXeroSection(title: string): "income" | "expense" | "skip" {
+  const t = title.toLowerCase();
+  if (!t) return "skip";
+  // Gross Profit, Net Profit, Net Income, Net Loss — subtotals.
+  if (t.includes("gross profit") || t.includes("gross loss")) return "skip";
+  if (t.includes("net profit") || t.includes("net loss") || t.includes("net income")) {
+    return "skip";
+  }
+  if (t.includes("expense") || t.includes("cost of sales") || t.includes("cost of goods")) {
+    return "expense";
+  }
+  if (t.includes("income") || t.includes("revenue")) return "income";
+  return "skip";
+}
+
+// Returns the LAST date found inside `input`. Useful when a Xero title is a
+// single date string ("30 September 2024").
 function extractIsoDate(input: string | undefined): string | undefined {
   if (!input) return undefined;
-  const m = input.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
-  if (!m) return undefined;
   const months: Record<string, string> = {
     jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
     jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
   };
-  const mm = months[m[2].slice(0, 3).toLowerCase()];
+  const re = /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/g;
+  let last: RegExpExecArray | null = null;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(input)) !== null) last = m;
+  if (!last) return undefined;
+  const mm = months[last[2].slice(0, 3).toLowerCase()];
   if (!mm) return undefined;
-  return `${m[3]}-${mm}-${m[1].padStart(2, "0")}`;
+  return `${last[3]}-${mm}-${last[1].padStart(2, "0")}`;
+}
+
+// Detects a "<start> to <end>" date range inside a title string and returns
+// both endpoints in ISO form. Returns undefined when no two dates are
+// present (e.g. a single-date title).
+function extractDateRange(
+  input: string | undefined,
+): { start: string; end: string } | undefined {
+  if (!input) return undefined;
+  const months: Record<string, string> = {
+    jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+    jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+  };
+  const re = /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/g;
+  const dates: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(input)) !== null) {
+    const mm = months[m[2].slice(0, 3).toLowerCase()];
+    if (!mm) continue;
+    dates.push(`${m[3]}-${mm}-${m[1].padStart(2, "0")}`);
+  }
+  if (dates.length < 2) return undefined;
+  return { start: dates[0], end: dates[dates.length - 1] };
 }
 
 // --- Registry ----------------------------------------------------------------

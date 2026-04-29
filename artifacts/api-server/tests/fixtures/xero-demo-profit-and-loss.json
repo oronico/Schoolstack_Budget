@@ -1,0 +1,67 @@
+{
+  "Status": "OK",
+  "ProviderName": "Xero API Demo",
+  "DateTimeUTC": "/Date(1727740800000)/",
+  "Reports": [
+    {
+      "ReportID": "ProfitAndLoss",
+      "ReportName": "Profit and Loss",
+      "ReportType": "ProfitAndLoss",
+      "ReportTitles": [
+        "Profit & Loss",
+        "Demo Company (US)",
+        "1 January 2024 to 30 September 2024"
+      ],
+      "ReportDate": "30 September 2024",
+      "UpdatedDateUTC": "/Date(1727740800000)/",
+      "Fields": [],
+      "Rows": [
+        {
+          "RowType": "Header",
+          "Cells": [{ "Value": "" }, { "Value": "30 Sep 2024" }]
+        },
+        {
+          "RowType": "Section",
+          "Title": "Income",
+          "Rows": [
+            { "RowType": "Row", "Cells": [{ "Value": "Tuition Revenue" }, { "Value": "180000.00" }] },
+            { "RowType": "Row", "Cells": [{ "Value": "Application Fees" }, { "Value": "12000.00" }] },
+            { "RowType": "SummaryRow", "Cells": [{ "Value": "Total Income" }, { "Value": "192000.00" }] }
+          ]
+        },
+        {
+          "RowType": "Section",
+          "Title": "Less Cost of Sales",
+          "Rows": [
+            { "RowType": "Row", "Cells": [{ "Value": "Curriculum Materials" }, { "Value": "8000.00" }] },
+            { "RowType": "SummaryRow", "Cells": [{ "Value": "Total Cost of Sales" }, { "Value": "8000.00" }] }
+          ]
+        },
+        {
+          "RowType": "Section",
+          "Title": "Gross Profit",
+          "Rows": [
+            { "RowType": "SummaryRow", "Cells": [{ "Value": "Gross Profit" }, { "Value": "184000.00" }] }
+          ]
+        },
+        {
+          "RowType": "Section",
+          "Title": "Less Operating Expenses",
+          "Rows": [
+            { "RowType": "Row", "Cells": [{ "Value": "Salaries & Wages" }, { "Value": "120000.00" }] },
+            { "RowType": "Row", "Cells": [{ "Value": "Rent" }, { "Value": "27000.00" }] },
+            { "RowType": "Row", "Cells": [{ "Value": "Utilities" }, { "Value": "6300.00" }] },
+            { "RowType": "SummaryRow", "Cells": [{ "Value": "Total Operating Expenses" }, { "Value": "153300.00" }] }
+          ]
+        },
+        {
+          "RowType": "Section",
+          "Title": "Net Profit",
+          "Rows": [
+            { "RowType": "SummaryRow", "Cells": [{ "Value": "Net Profit" }, { "Value": "30700.00" }] }
+          ]
+        }
+      ]
+    }
+  ]
+}
