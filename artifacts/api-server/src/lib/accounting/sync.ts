@@ -11,10 +11,12 @@ import {
 } from "@workspace/db";
 import { encryptToken, decryptToken } from "./crypto";
 import {
+  applyAccountMappings,
   getProviderClient as defaultGetProviderClient,
   isAccountingProvider,
   type ProviderClient,
 } from "./providers";
+import type { AccountKind } from "@workspace/db";
 
 export type AccountingSyncResult =
   | { ok: true; connection: AccountingConnection }
@@ -106,7 +108,27 @@ export async function syncAccountingConnection(
       });
     }
 
-    const snapshot = await client.fetchProfitAndLoss(accessToken, conn.realmId);
+    const { snapshot: rawSnapshot, discoveredAccounts } =
+      await client.fetchProfitAndLoss(accessToken, conn.realmId);
+
+    // Drop any saved mapping entries that no longer have a matching account
+    // in the latest sync — keeps the persisted mapping tidy when the chart
+    // of accounts changes between syncs.
+    const currentKeys = new Set(discoveredAccounts.map((a) => a.key));
+    const prunedMappings: Record<string, AccountKind> = {};
+    for (const [k, v] of Object.entries(conn.accountMappingsJson ?? {})) {
+      if (currentKeys.has(k)) prunedMappings[k] = v;
+    }
+    // Apply the founder's mapping (if any) on top of the auto-detected
+    // snapshot so a school whose chart of accounts uses non-standard names
+    // still gets the right revenue/expense/rent totals.
+    const snapshot = applyAccountMappings(
+      rawSnapshot,
+      discoveredAccounts,
+      prunedMappings,
+    );
+    // Annotate the snapshot with the realm display name so the actuals
+    // editor can show "From QuickBooks (Acme School - QBO)".
     if (conn.realmDisplayName && !snapshot.realmDisplayName) {
       snapshot.realmDisplayName = conn.realmDisplayName;
     }
@@ -114,6 +136,8 @@ export async function syncAccountingConnection(
     const now = new Date();
     const updated = await dbAdapter.updateConnection(conn.id, {
       snapshotJson: snapshot,
+      discoveredAccountsJson: discoveredAccounts,
+      accountMappingsJson: prunedMappings,
       lastSyncedAt: now,
       lastSyncError: null,
       status: "connected",

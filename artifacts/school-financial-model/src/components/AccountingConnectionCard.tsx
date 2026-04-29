@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  History,
   Loader2,
   RefreshCw,
   SlidersHorizontal,
@@ -51,6 +52,18 @@ interface ProviderConfig {
   configured: boolean;
 }
 
+// Server-side summary of the user's saved (provider, realm) default — the
+// last mapping they confirmed against this same QuickBooks/Xero company
+// file in any model. Present when the founder previously mapped this realm
+// in another model; null when this is their first mapping for the realm.
+interface AvailableDefault {
+  realmDisplayName: string | null;
+  matchedCount: number;
+  totalCount: number;
+  updatedAt: string;
+  sourceModelId: number | null;
+}
+
 interface AccountingConnection {
   provider: AccountingSnapshotProvider;
   status: string;
@@ -61,6 +74,7 @@ interface AccountingConnection {
   discoveredAccounts: DiscoveredAccount[];
   accountMappings: Record<string, AccountKind>;
   configured: boolean;
+  availableDefault: AvailableDefault | null;
 }
 
 interface AccountingState {
@@ -133,6 +147,25 @@ export function computeSnapshotStaleness(
 function authHeader(): Record<string, string> {
   const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+// True when we should surface the "Reuse last mapping" affordance for the
+// given connection. We only nudge founders who haven't yet customized this
+// model's mapping (an empty `accountMappings`) and whose saved default
+// would actually move at least one account in their current chart — that
+// avoids advertising a stale default for a chart of accounts that has
+// since changed.
+function shouldOfferReuse(conn: AccountingConnection): boolean {
+  if (!conn.availableDefault) return false;
+  if (Object.keys(conn.accountMappings).length > 0) return false;
+  // matchedCount can be 0 when discoveredAccounts is empty (no sync yet)
+  // *or* when the chart has fully changed. We still offer it pre-sync so
+  // the founder sees the option immediately after connecting; the prompt
+  // itself nudges them to sync first.
+  if (conn.discoveredAccounts.length > 0 && conn.availableDefault.matchedCount === 0) {
+    return false;
+  }
+  return true;
 }
 
 // Picks the most recently-synced connection across providers. The actuals
@@ -322,6 +355,38 @@ export function AccountingConnectionCard({
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Copies the user's saved default for this (provider, realm) into the
+  // current model's connection. The founder can still tweak any row
+  // afterwards — a subsequent Save just upserts the default again so the
+  // most recent edit wins. We surface a confirmation banner instead of an
+  // alert so it matches the rest of the card's interaction style.
+  async function handleApplyDefault(provider: AccountingSnapshotProvider) {
+    setBusy(`default-${provider}`);
+    setError(null);
+    try {
+      const res = await fetch(`/api/models/${modelId}/accounting/${provider}/apply-default`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        appliedCount?: number;
+      };
+      if (!res.ok) throw new Error(json.error || `Reuse failed (${res.status})`);
+      const n = json.appliedCount ?? 0;
+      setBanner(
+        n > 0
+          ? `Reused ${n} mapping${n === 1 ? "" : "s"} from your saved default for ${providerDisplayName(provider)}.`
+          : `Saved default for ${providerDisplayName(provider)} had no overrides that match this connection's chart of accounts.`,
+      );
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Reuse failed.");
     } finally {
       setBusy(null);
     }
@@ -518,6 +583,15 @@ export function AccountingConnectionCard({
                     )}
                   </div>
                 </div>
+                {conn && shouldOfferReuse(conn) && (
+                  <ReuseLastMappingPrompt
+                    provider={p.provider}
+                    available={conn.availableDefault!}
+                    busy={busy === `default-${p.provider}`}
+                    onApply={() => handleApplyDefault(p.provider)}
+                    needsSync={conn.discoveredAccounts.length === 0}
+                  />
+                )}
                 {conn && conn.discoveredAccounts.length > 0 && (
                   <AccountMappingPanel
                     provider={p.provider}
@@ -721,6 +795,72 @@ function AccountMappingPanel({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface ReuseLastMappingPromptProps {
+  provider: AccountingSnapshotProvider;
+  available: AvailableDefault;
+  busy: boolean;
+  needsSync: boolean;
+  onApply: () => void;
+}
+
+// Inline prompt that appears on a freshly-connected model when the founder
+// has previously mapped the same QuickBooks/Xero company file in another
+// model. The button stays disabled until the founder runs a sync (we need
+// the chart of accounts before we can re-apply the saved overrides).
+function ReuseLastMappingPrompt({
+  provider,
+  available,
+  busy,
+  needsSync,
+  onApply,
+}: ReuseLastMappingPromptProps) {
+  const realmText = available.realmDisplayName
+    ? ` from ${available.realmDisplayName}`
+    : "";
+  const summary = needsSync
+    ? `${available.totalCount} customization${available.totalCount === 1 ? "" : "s"} available`
+    : `${available.matchedCount} of ${available.totalCount} match${available.totalCount === 1 ? "es" : ""} this connection's accounts`;
+  return (
+    <div
+      className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2"
+      data-testid={`accounting-reuse-prompt-${provider}`}
+    >
+      <div className="flex items-start gap-2 min-w-0">
+        <History className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-700" />
+        <div className="min-w-0">
+          <div className="text-xs font-medium text-amber-900">
+            Reuse your last mapping{realmText}
+          </div>
+          <div className="text-[11px] text-amber-800/90 leading-snug">
+            {needsSync
+              ? `Run a sync first, then apply ${summary} so you don't have to redo them.`
+              : `${summary}. You can edit anything afterwards without affecting your other model.`}
+          </div>
+        </div>
+      </div>
+      <button
+        type="button"
+        disabled={busy || needsSync}
+        onClick={onApply}
+        title={
+          needsSync
+            ? "Sync this connection first to detect the chart of accounts."
+            : "Apply your saved mapping to this model."
+        }
+        className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/60 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+        data-testid={`accounting-reuse-apply-${provider}`}
+      >
+        {busy ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <History className="h-3 w-3" />
+        )}
+        Reuse last mapping
+      </button>
     </div>
   );
 }
