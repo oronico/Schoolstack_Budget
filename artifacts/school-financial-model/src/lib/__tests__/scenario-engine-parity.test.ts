@@ -5,67 +5,133 @@ import {
   privateSchoolFixture,
   charterFixture,
   driverCoverageFixture,
-  computeBackendValues,
   type TestModelPayload,
   type TestRevenueRow,
   type TestExpenseRow,
   type TestCapDebtRow,
-  type BackendComputedValues,
 } from "@workspace/finance";
+import goldenJson from "./scenario-engine-golden.json";
+
+/**
+ * GOLDEN-SNAPSHOT PARITY TEST
+ *
+ * The "engine of record" is `lib/finance/src/decision-engine/scenario-engine.ts`.
+ * It is the single source of truth used by both the front-end planner and the
+ * api-server (precomputed share-link impacts, lender packets, etc).
+ *
+ * We previously kept a parallel "shadow" implementation in
+ * `lib/finance/src/backend-compute.ts` to cross-check the engine, but that
+ * shadow engine drifted from the real one whenever a new driver / escalation
+ * rule landed (which is how the `per_fte` bug stayed hidden). We replaced it
+ * with frozen golden-value snapshots: this test re-runs the production engine
+ * against representative fixtures (microschool, private school, charter,
+ * driver coverage) and asserts the numeric output matches the committed
+ * snapshot exactly.
+ *
+ * If the engine output changes intentionally, regenerate the snapshot with:
+ *   pnpm --filter @workspace/school-financial-model exec \
+ *     tsx scripts/gen-golden-snapshots.ts
+ * and review the JSON diff carefully before committing.
+ */
 
 type FullModelData = Parameters<typeof computeBaseFinancials>[0];
 
 function toFullModelData(fixture: TestModelPayload): FullModelData {
-  return fixture as FullModelData;
+  return fixture as unknown as FullModelData;
 }
 
-function withinPct(actual: number, expected: number, pct: number, isRatio = false): boolean {
-  const floor = isRatio ? 0.01 : 5;
-  const tol = Math.max(Math.abs(expected) * (pct / 100), floor);
-  return Math.abs(actual - expected) <= tol;
+interface GoldenSnapshot {
+  enrollment: number[];
+  revenue: number[];
+  staffingCost: number[];
+  facilityCost: number[];
+  opex: number[];
+  totalExpenses: number[];
+  netIncome: number[];
+  netMargin: number[];
+  dscr: number[];
+  staffingPctOfRevenue: number[];
+  cashPosition: number[];
+  cashRunwayMonths: number;
+  reserveMonths: number;
+  breakEvenYear: number | null;
+  loanDebtService: number[] | null;
 }
 
-function describeCrossEngineParity(label: string, fixture: TestModelPayload) {
-  describe(`cross-engine parity: ${label}`, () => {
-    const feResult = computeScenarios(toFullModelData(fixture), []);
-    const fe = feResult.base.metrics;
-    const be: BackendComputedValues = computeBackendValues(fixture);
+const golden = goldenJson as Record<
+  "microschool" | "privateSchool" | "charter" | "driverCoverage",
+  GoldenSnapshot
+>;
 
-    for (let y = 0; y < 5; y++) {
-      it(`Y${y + 1} revenue: FE vs BE within 1%`, () => {
-        expect(withinPct(fe.revenue[y], be.revenue[y], 1)).toBe(true);
+const ARRAY_FIELDS: Array<keyof GoldenSnapshot> = [
+  "enrollment",
+  "revenue",
+  "staffingCost",
+  "facilityCost",
+  "opex",
+  "totalExpenses",
+  "netIncome",
+  "netMargin",
+  "dscr",
+  "staffingPctOfRevenue",
+  "cashPosition",
+];
+
+const SCALAR_FIELDS: Array<keyof GoldenSnapshot> = [
+  "cashRunwayMonths",
+  "reserveMonths",
+  "breakEvenYear",
+];
+
+function describeGoldenSnapshot(label: string, fixture: TestModelPayload, expected: GoldenSnapshot) {
+  describe(`golden snapshot: ${label}`, () => {
+    const m = computeBaseFinancials(toFullModelData(fixture));
+
+    for (const field of ARRAY_FIELDS) {
+      const expectedArr = expected[field] as number[];
+      const actualArr = m[field as keyof typeof m] as number[];
+
+      it(`${field} matches snapshot (length 5)`, () => {
+        expect(actualArr).toHaveLength(5);
       });
 
-      it(`Y${y + 1} staffing: FE vs BE within 1%`, () => {
-        expect(withinPct(fe.staffingCost[y], be.personnel[y], 1)).toBe(true);
-      });
+      for (let y = 0; y < 5; y++) {
+        it(`Y${y + 1} ${field} matches snapshot`, () => {
+          expect(actualArr[y]).toBeCloseTo(expectedArr[y], 6);
+        });
+      }
+    }
 
-      it(`Y${y + 1} expenses (facility+opex): FE vs BE within 1%`, () => {
-        const feExp = fe.facilityCost[y] + fe.opex[y];
-        expect(withinPct(feExp, be.expenses[y], 1)).toBe(true);
+    for (const field of SCALAR_FIELDS) {
+      it(`${field} matches snapshot`, () => {
+        const actual = m[field as keyof typeof m] as number | null;
+        const exp = expected[field] as number | null;
+        if (exp === null) {
+          expect(actual).toBeNull();
+        } else {
+          expect(actual as number).toBeCloseTo(exp, 6);
+        }
       });
+    }
 
-      it(`Y${y + 1} net income: FE vs BE within 1%`, () => {
-        expect(withinPct(fe.netIncome[y], be.netIncome[y], 1)).toBe(true);
-      });
-
-      if (be.loanDS[y] > 0) {
-        it(`Y${y + 1} DSCR: FE vs BE within 1%`, () => {
-          const feDscr = fe.dscr[y];
-          const beDscr = Math.round(((be.netIncome[y] + be.loanDS[y]) / be.loanDS[y]) * 100) / 100;
-          expect(withinPct(feDscr, beDscr, 1, true)).toBe(true);
+    const expectedDS = expected.loanDebtService;
+    if (expectedDS !== null) {
+      for (let y = 0; y < 5; y++) {
+        it(`Y${y + 1} loanDebtService matches snapshot`, () => {
+          expect(m.loanDebtService).toBeDefined();
+          expect((m.loanDebtService as number[])[y]).toBeCloseTo(expectedDS[y], 6);
         });
       }
     }
   });
 }
 
-describeCrossEngineParity("microschool", microschoolFixture);
-describeCrossEngineParity("private school", privateSchoolFixture);
-describeCrossEngineParity("charter school", charterFixture);
-describeCrossEngineParity("driver coverage", driverCoverageFixture);
+describeGoldenSnapshot("microschool", microschoolFixture, golden.microschool);
+describeGoldenSnapshot("private school", privateSchoolFixture, golden.privateSchool);
+describeGoldenSnapshot("charter school", charterFixture, golden.charter);
+describeGoldenSnapshot("driver coverage", driverCoverageFixture, golden.driverCoverage);
 
-describe("cross-engine: charter loan PMT exactness", () => {
+describe("golden snapshot: charter loan PMT exactness", () => {
   const result = computeScenarios(toFullModelData(charterFixture), []);
   const m = result.base.metrics;
 
@@ -78,7 +144,7 @@ describe("cross-engine: charter loan PMT exactness", () => {
   });
 });
 
-describe("cross-engine: computeBaseFinancials output shape", () => {
+describe("golden snapshot: computeBaseFinancials output shape", () => {
   const m = computeBaseFinancials(toFullModelData(microschoolFixture));
 
   it("returns 5-year arrays for all metric fields", () => {
@@ -106,16 +172,15 @@ describe("cross-engine: computeBaseFinancials output shape", () => {
  * Per-driver fail-fast guards.
  *
  * Each test below builds a minimal one-row model that exercises a single
- * driver type and asserts BE applies the driver multiplier (rather than
- * silently returning the raw amount, as the BE engine did for `per_fte`
- * for a long time before anyone noticed). The tests are deliberately
- * structured so the failure mode is "BE returned the raw amount", which
- * is the exact drift class we want to catch. They also assert FE/BE
- * parity on the same model so any new driver added to FE has to be
- * wired through BE too.
+ * driver type and asserts the engine of record applies the driver
+ * multiplier (rather than silently returning the raw amount, as the
+ * removed shadow engine did for `per_fte` for a long time before anyone
+ * noticed). The tests are deliberately structured so the failure mode is
+ * "engine returned the raw amount", which is the exact drift class we
+ * want to catch in the real engine going forward.
  *
- * Multipliers are chosen so raw vs. driven differ by far more than the
- * 1% parity tolerance — e.g. 10 students or 12 months — making "BE
+ * Multipliers are chosen so raw vs. driven differ by far more than
+ * floating-point noise — e.g. 10 students or 12 months — making "engine
  * returned raw" obvious.
  * --------------------------------------------------------------------- */
 
@@ -177,51 +242,49 @@ function withCapDebtRow(row: TestCapDebtRow): TestModelPayload {
   return m;
 }
 
-function feAndBe(fixture: TestModelPayload) {
-  return {
-    fe: computeBaseFinancials(toFullModelData(fixture)),
-    be: computeBackendValues(fixture),
-  };
+function feOnly(fixture: TestModelPayload) {
+  return computeBaseFinancials(toFullModelData(fixture));
+}
+
+function feExpenses(fe: ReturnType<typeof computeBaseFinancials>, y = 0): number {
+  return fe.opex[y] + fe.facilityCost[y];
 }
 
 describe("driver guard: revenue drivers are not silently dropped", () => {
-  it("per_student: BE multiplies by enrollment (not raw amount)", () => {
+  it("per_student: engine multiplies by enrollment (not raw amount)", () => {
     const raw = 100;
     const fixture = withRevenueRow({
       id: "r1", category: "tuition_and_fees", lineItem: "T",
       enabled: true, driverType: "per_student", amounts: [raw, raw, raw, raw, raw],
     });
-    const { fe, be } = feAndBe(fixture);
+    const fe = feOnly(fixture);
     // 10 students × $100 = $1000 — must NOT equal $100 (raw)
-    expect(be.revenue[0]).toBe(1000);
-    expect(be.revenue[0]).not.toBe(raw);
-    expect(withinPct(fe.revenue[0], be.revenue[0], 1)).toBe(true);
+    expect(fe.revenue[0]).toBe(1000);
+    expect(fe.revenue[0]).not.toBe(raw);
   });
 
-  it("monthly: BE multiplies by 12 (not raw amount)", () => {
+  it("monthly: engine multiplies by 12 (not raw amount)", () => {
     const raw = 200;
     const fixture = withRevenueRow({
       id: "r1", category: "other_revenue", lineItem: "M",
       enabled: true, driverType: "monthly", amounts: [raw, raw, raw, raw, raw],
     });
-    const { fe, be } = feAndBe(fixture);
-    expect(be.revenue[0]).toBe(2400);
-    expect(be.revenue[0]).not.toBe(raw);
-    expect(withinPct(fe.revenue[0], be.revenue[0], 1)).toBe(true);
+    const fe = feOnly(fixture);
+    expect(fe.revenue[0]).toBe(2400);
+    expect(fe.revenue[0]).not.toBe(raw);
   });
 
-  it("annual_fixed: BE returns raw amount (driver is identity)", () => {
+  it("annual_fixed: engine returns raw amount (driver is identity)", () => {
     const raw = 7500;
     const fixture = withRevenueRow({
       id: "r1", category: "philanthropy", lineItem: "G",
       enabled: true, driverType: "annual_fixed", amounts: [raw, raw, raw, raw, raw],
     });
-    const { fe, be } = feAndBe(fixture);
-    expect(be.revenue[0]).toBe(raw);
-    expect(withinPct(fe.revenue[0], be.revenue[0], 1)).toBe(true);
+    const fe = feOnly(fixture);
+    expect(fe.revenue[0]).toBe(raw);
   });
 
-  it("percent_of_base: BE applies pct to base (not raw)", () => {
+  it("percent_of_base: engine applies pct to base (not raw)", () => {
     const m = makeMinimalModel();
     m.revenueRows = [
       { id: "r1", category: "tuition_and_fees", lineItem: "Tuition",
@@ -229,80 +292,72 @@ describe("driver guard: revenue drivers are not silently dropped", () => {
       { id: "r2", category: "tuition_offsets", lineItem: "Discount",
         enabled: true, driverType: "percent_of_base", amounts: [10, 10, 10, 10, 10], percentBase: "r1" },
     ];
-    const { fe, be } = feAndBe(m);
+    const fe = feOnly(m);
     // base = 10 × 1000 = 10000; discount = 10% × 10000 = 1000; net rev = 9000
-    expect(be.revenue[0]).toBe(9000);
-    // If BE silently treated percent_of_base as raw, it would compute
+    expect(fe.revenue[0]).toBe(9000);
+    // If the engine silently treated percent_of_base as raw, it would compute
     // 10000 - 10 = 9990 (off by ~990).
-    expect(be.revenue[0]).not.toBe(9990);
-    expect(withinPct(fe.revenue[0], be.revenue[0], 1)).toBe(true);
+    expect(fe.revenue[0]).not.toBe(9990);
   });
 });
 
 describe("driver guard: expense drivers are not silently dropped", () => {
-  it("per_student: BE multiplies by enrollment (not raw)", () => {
+  it("per_student: engine multiplies by enrollment (not raw)", () => {
     const raw = 100;
     const fixture = withExpenseRow({
       id: "e1", category: "instructional_program", lineItem: "X",
       enabled: true, driverType: "per_student", amounts: [raw, raw, raw, raw, raw],
     });
-    const { fe, be } = feAndBe(fixture);
-    expect(be.expenses[0]).toBe(1000);
-    expect(be.expenses[0]).not.toBe(raw);
-    expect(withinPct(fe.opex[0] + fe.facilityCost[0], be.expenses[0], 1)).toBe(true);
+    const fe = feOnly(fixture);
+    expect(feExpenses(fe)).toBe(1000);
+    expect(feExpenses(fe)).not.toBe(raw);
   });
 
-  it("monthly: BE multiplies by 12 (not raw)", () => {
+  it("monthly: engine multiplies by 12 (not raw)", () => {
     const raw = 500;
     const fixture = withExpenseRow({
       id: "e1", category: "occupancy_facility", lineItem: "Rent",
       enabled: true, driverType: "monthly", amounts: [raw, raw, raw, raw, raw],
     });
-    const { fe, be } = feAndBe(fixture);
-    expect(be.expenses[0]).toBe(6000);
-    expect(be.expenses[0]).not.toBe(raw);
-    expect(withinPct(fe.opex[0] + fe.facilityCost[0], be.expenses[0], 1)).toBe(true);
+    const fe = feOnly(fixture);
+    expect(feExpenses(fe)).toBe(6000);
+    expect(feExpenses(fe)).not.toBe(raw);
   });
 
-  it("annual_fixed: BE returns raw (driver is identity)", () => {
+  it("annual_fixed: engine returns raw (driver is identity)", () => {
     const raw = 4321;
     const fixture = withExpenseRow({
       id: "e1", category: "administrative_general", lineItem: "F",
       enabled: true, driverType: "annual_fixed", amounts: [raw, raw, raw, raw, raw],
     });
-    const { fe, be } = feAndBe(fixture);
-    expect(be.expenses[0]).toBe(raw);
-    expect(withinPct(fe.opex[0] + fe.facilityCost[0], be.expenses[0], 1)).toBe(true);
+    const fe = feOnly(fixture);
+    expect(feExpenses(fe)).toBe(raw);
   });
 
-  it("per_fte: BE multiplies by total FTE (not raw) — caught a real BE drift bug", () => {
+  it("per_fte: engine multiplies by total FTE (not raw) — caught a real engine drift bug", () => {
     const raw = 1500;
     const fixture = withExpenseRow({
       id: "e1", category: "administrative_general", lineItem: "PD",
       enabled: true, driverType: "per_fte", amounts: [raw, raw, raw, raw, raw],
     }, /* withOneFte */ true);
-    const { fe, be } = feAndBe(fixture);
-    // 1 FTE × $1500 = $1500. With multiple FTEs it would be N×raw.
-    // The key assertion: even with 1 FTE, BE must apply the multiplier
-    // (i.e. NOT silently fall through to "annual_fixed = raw").
-    // Strengthen with multiple FTEs:
+    const feSingle = feOnly(fixture);
+    // 1 FTE × $1500 = $1500. The key assertion: even with 1 FTE, the engine
+    // must apply the multiplier (i.e. NOT silently fall through to
+    // "annual_fixed = raw"). Strengthen with multiple FTEs:
     fixture.staffingRows.push({
       id: "s2", roleName: "T2", functionCategory: "instructional",
       employmentType: "full_time", fte: 3, annualizedRate: 0,
       benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 0, payrollLike: false,
     });
-    const reBe = computeBackendValues(fixture);
-    const reFe = computeBaseFinancials(toFullModelData(fixture));
+    const feMulti = feOnly(fixture);
     // 4 FTE × $1500 = $6000 — must NOT equal $1500 (raw)
-    expect(reBe.expenses[0]).toBe(6000);
-    expect(reBe.expenses[0]).not.toBe(raw);
-    expect(withinPct(reFe.opex[0] + reFe.facilityCost[0], reBe.expenses[0], 1)).toBe(true);
+    expect(feExpenses(feMulti)).toBe(6000);
+    expect(feExpenses(feMulti)).not.toBe(raw);
     // Also keep the original 1-FTE result in scope so the assertion above still ran.
-    expect(be.expenses[0]).toBe(1500);
-    expect(fe.opex[0] + fe.facilityCost[0]).toBeGreaterThan(0);
+    expect(feExpenses(feSingle)).toBe(1500);
   });
 
-  it("percent_of_revenue: BE applies pct to revenue (not raw pct)", () => {
+  it("percent_of_revenue: engine applies pct to revenue (not raw pct)", () => {
     const m = makeMinimalModel();
     m.revenueRows = [
       { id: "r1", category: "philanthropy", lineItem: "G",
@@ -312,90 +367,79 @@ describe("driver guard: expense drivers are not silently dropped", () => {
       { id: "e1", category: "administrative_general", lineItem: "Mgmt Fee",
         enabled: true, driverType: "percent_of_revenue", amounts: [5, 5, 5, 5, 5] },
     ];
-    const { fe, be } = feAndBe(m);
+    const fe = feOnly(m);
     // 5% × $100,000 = $5,000 — must NOT equal $5 (raw pct as dollars)
-    expect(be.expenses[0]).toBe(5000);
-    expect(be.expenses[0]).not.toBe(5);
-    expect(withinPct(fe.opex[0] + fe.facilityCost[0], be.expenses[0], 1)).toBe(true);
+    expect(feExpenses(fe)).toBe(5000);
+    expect(feExpenses(fe)).not.toBe(5);
   });
 
-  it("per_new_student: BE multiplies by new students (not raw)", () => {
+  it("per_new_student: engine multiplies by new students (not raw)", () => {
     const raw = 200;
     const fixture = withExpenseRow({
       id: "e1", category: "administrative_general", lineItem: "Onboard",
       enabled: true, driverType: "per_new_student", amounts: [raw, raw, raw, raw, raw],
     });
-    const { fe, be } = feAndBe(fixture);
+    const fe = feOnly(fixture);
     // Y1: all 10 students are new → 10 × $200 = $2000
-    expect(be.expenses[0]).toBe(2000);
-    expect(be.expenses[0]).not.toBe(raw);
+    expect(feExpenses(fe, 0)).toBe(2000);
+    expect(feExpenses(fe, 0)).not.toBe(raw);
     // Y2: enrollment=15, returning=round(10×0.8)=8, new=15-8=7 → 7×$200 = $1400
-    expect(be.expenses[1]).toBe(1400);
-    expect(be.expenses[1]).not.toBe(raw);
-    for (let y = 0; y < 5; y++) {
-      expect(withinPct(fe.opex[y] + fe.facilityCost[y], be.expenses[y], 1)).toBe(true);
-    }
+    expect(feExpenses(fe, 1)).toBe(1400);
+    expect(feExpenses(fe, 1)).not.toBe(raw);
   });
 
-  it("per_returning_student: BE multiplies by returning students (not raw, not all students)", () => {
+  it("per_returning_student: engine multiplies by returning students (not raw, not all students)", () => {
     const raw = 100;
     const fixture = withExpenseRow({
       id: "e1", category: "administrative_general", lineItem: "Retain",
       enabled: true, driverType: "per_returning_student", amounts: [raw, raw, raw, raw, raw],
     });
-    const { fe, be } = feAndBe(fixture);
+    const fe = feOnly(fixture);
     // Y1: 0 returning → $0 (must NOT silently use enrollment=10 → $1000)
-    expect(be.expenses[0]).toBe(0);
-    expect(be.expenses[0]).not.toBe(raw);
-    expect(be.expenses[0]).not.toBe(1000);
+    expect(feExpenses(fe, 0)).toBe(0);
+    expect(feExpenses(fe, 0)).not.toBe(raw);
+    expect(feExpenses(fe, 0)).not.toBe(1000);
     // Y2: returning = min(15, round(10×0.8)) = 8 → 8 × $100 = $800
-    expect(be.expenses[1]).toBe(800);
-    expect(be.expenses[1]).not.toBe(raw);
-    for (let y = 0; y < 5; y++) {
-      expect(withinPct(fe.opex[y] + fe.facilityCost[y], be.expenses[y], 1)).toBe(true);
-    }
+    expect(feExpenses(fe, 1)).toBe(800);
+    expect(feExpenses(fe, 1)).not.toBe(raw);
   });
 });
 
 describe("driver guard: capital & debt drivers are not silently dropped", () => {
-  it("non-loan annual_fixed: BE returns raw amount", () => {
+  it("non-loan annual_fixed: engine returns raw amount", () => {
     const raw = 6000;
     const fixture = withCapDebtRow({
       id: "cd1", lineItem: "FF&E", enabled: true,
       driverType: "annual_fixed", amounts: [raw, raw, raw, raw, raw], isLoan: false,
     });
-    const { fe, be } = feAndBe(fixture);
-    expect(be.capDebt[0]).toBe(raw);
+    const fe = feOnly(fixture);
     // Net income: 0 revenue - 0 personnel - 0 expense - 6000 capDebt
     expect(fe.netIncome[0]).toBeCloseTo(-raw, 0);
-    expect(withinPct(fe.netIncome[0], be.netIncome[0], 1)).toBe(true);
   });
 
-  it("non-loan monthly: BE multiplies by 12 (not raw)", () => {
+  it("non-loan monthly: engine multiplies by 12 (not raw)", () => {
     const raw = 250;
     const fixture = withCapDebtRow({
       id: "cd1", lineItem: "Lease", enabled: true,
       driverType: "monthly", amounts: [raw, raw, raw, raw, raw], isLoan: false,
     });
-    const { fe, be } = feAndBe(fixture);
-    expect(be.capDebt[0]).toBe(3000);
-    expect(be.capDebt[0]).not.toBe(raw);
-    expect(withinPct(fe.netIncome[0], be.netIncome[0], 1)).toBe(true);
+    const fe = feOnly(fixture);
+    expect(fe.netIncome[0]).toBeCloseTo(-3000, 0);
+    expect(fe.netIncome[0]).not.toBe(-raw);
   });
 
-  it("non-loan per_student: BE multiplies by enrollment (not raw)", () => {
+  it("non-loan per_student: engine multiplies by enrollment (not raw)", () => {
     const raw = 100;
     const fixture = withCapDebtRow({
       id: "cd1", lineItem: "Tech", enabled: true,
       driverType: "per_student", amounts: [raw, raw, raw, raw, raw], isLoan: false,
     });
-    const { fe, be } = feAndBe(fixture);
-    expect(be.capDebt[0]).toBe(1000);
-    expect(be.capDebt[0]).not.toBe(raw);
-    expect(withinPct(fe.netIncome[0], be.netIncome[0], 1)).toBe(true);
+    const fe = feOnly(fixture);
+    expect(fe.netIncome[0]).toBeCloseTo(-1000, 0);
+    expect(fe.netIncome[0]).not.toBe(-raw);
   });
 
-  it("loan PMT: BE applies amortization (not raw amount=0)", () => {
+  it("loan PMT: engine applies amortization (not raw amount=0)", () => {
     const principal = 60000;
     const rate = 6;
     const term = 5;
@@ -404,29 +448,25 @@ describe("driver guard: capital & debt drivers are not silently dropped", () => 
       driverType: "annual_fixed", amounts: [0, 0, 0, 0, 0], isLoan: true,
       loanPrincipal: principal, loanRate: rate, loanTermYears: term,
     });
-    const { fe, be } = feAndBe(fixture);
+    const fe = feOnly(fixture);
     // PMT formula: monthly = P*r/(1-(1+r)^-n), annual = monthly*12
     const mr = rate / 100 / 12;
     const n = term * 12;
     const annualPmt = (principal * mr) / (1 - Math.pow(1 + mr, -n)) * 12;
-    expect(be.loanDS[0]).toBeGreaterThan(0);
-    // Within rounding (BE rounds capDebt to nearest dollar)
-    expect(Math.abs(be.loanDS[0] - annualPmt)).toBeLessThan(2);
+    expect(fe.loanDebtService?.[0] ?? 0).toBeGreaterThan(0);
     expect(Math.abs((fe.loanDebtService?.[0] ?? 0) - annualPmt)).toBeLessThan(1);
   });
 
-  it("loan amortization stops after term ends in both engines", () => {
+  it("loan amortization stops after term ends", () => {
     const fixture = withCapDebtRow({
       id: "cd1", lineItem: "Short Loan", enabled: true,
       driverType: "annual_fixed", amounts: [0, 0, 0, 0, 0], isLoan: true,
       loanPrincipal: 10000, loanRate: 5, loanTermYears: 3,
     });
-    const { fe, be } = feAndBe(fixture);
-    expect(be.loanDS[0]).toBeGreaterThan(0);
-    expect(be.loanDS[1]).toBeGreaterThan(0);
-    expect(be.loanDS[2]).toBeGreaterThan(0);
-    expect(be.loanDS[3]).toBe(0);
-    expect(be.loanDS[4]).toBe(0);
+    const fe = feOnly(fixture);
+    expect(fe.loanDebtService?.[0]).toBeGreaterThan(0);
+    expect(fe.loanDebtService?.[1]).toBeGreaterThan(0);
+    expect(fe.loanDebtService?.[2]).toBeGreaterThan(0);
     expect(fe.loanDebtService?.[3]).toBe(0);
     expect(fe.loanDebtService?.[4]).toBe(0);
   });

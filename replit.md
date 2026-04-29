@@ -88,13 +88,16 @@ Step 9 in the wizard allows founders to write lender-facing narratives for 9 sec
 ### Consultant Engine
 Provides deterministic financial analysis, including lender readiness scores, stress tests, sensitivity analysis, cash runway, industry benchmarks, and prior-year variance analysis. Also outputs assumption flags for the Narrative step. Uses the same escalation source resolution as the workbook: `facilities.annualSalaryIncrease` for salary, `facilities.generalCostInflation` for cost inflation (both read from `data.facilities`). `computeYearFinancialsFromData` skips the facility overlay to match workbook parity. Y1 proration applies uniformly to revenue, personnel, and OpEx.
 
-### Three-Engine Financial Consistency
-All three calculation engines (frontend scenario-engine, backend consultant-engine, backend workbook-helpers) produce matching financial projections within 1% tolerance. Key consistency points:
-- **`per_fte` driver type**: Supported in all three engines; computes `base_amount × total_FTE`. `computeTotalFTE` helper in workbook-helpers.ts provides shared FTE computation.
-- **Salary escalation**: All engines read from `data.facilities.annualSalaryIncrease` (stored as percentage, divided by 100 for rate).
-- **Tuition offsets**: All engines use `Math.abs(val)` for tuition_offsets category to handle negative amounts consistently.
+### Scenario Engine of Record
+The single source of truth for Y1–Y5 scenario math is `lib/finance/src/decision-engine/scenario-engine.ts` (re-exported from `@workspace/finance`). Both the front-end planner and api-server features that need scenario projections call this engine. There is no parallel "shadow" scenario engine — the previous `lib/finance/src/backend-compute.ts` was removed because it kept drifting from the real engine and hid bugs (e.g. the `per_fte` regression). Parity is now enforced by frozen golden-value snapshots in `artifacts/school-financial-model/src/lib/__tests__/scenario-engine-golden.json`, asserted per fixture/year/metric by `scenario-engine-parity.test.ts`. To intentionally update the snapshot after an engine change, run `pnpm --filter @workspace/school-financial-model exec tsx scripts/gen-golden-snapshots.ts` and review the JSON diff before committing.
+
+### Api-Server Calculation Helpers (cross-engine consistency)
+Independent of the canonical scenario engine, the api-server still has two parallel calculator paths used by Excel exports and the consultant analysis: `artifacts/api-server/src/lib/workbook-helpers.ts` (Excel underwriting workbook) and `artifacts/api-server/src/lib/consultant-engine.ts` (consultant analysis, lender packets, advisor briefs). These compute their own Y1–Y5 totals and are kept within 1% tolerance of the canonical engine via hand-written parity checks in `tests/cross-engine-test.ts` and `tests/parity-frontend-backend.ts`. Consolidating these onto the engine of record is tracked as follow-up tech debt. Until then, anyone touching driver behavior, escalation, pro-ration, or FTE math should verify all three paths:
+- **`per_fte` driver type**: Supported in all three paths; computes `base_amount × total_FTE`. `computeTotalFTE` helper in `workbook-helpers.ts` provides shared FTE computation.
+- **Salary escalation**: All paths read from `data.facilities.annualSalaryIncrease` (stored as percentage, divided by 100 for rate).
+- **Tuition offsets**: All paths use `Math.abs(val)` for tuition_offsets category to handle negative amounts consistently.
 - **Breakeven enrollment**: Includes facility costs alongside staffing and loan debt service in fixed costs.
-- **Cross-engine test**: `tests/cross-engine-test.ts` validates all three engines against each other for all fixtures.
+- **Cross-engine test**: `tests/cross-engine-test.ts` validates all three paths against each other for all fixtures.
 
 ### Packet Architecture
 A shared packet-generation layer supports lender-ready and board-ready deliverables, including narrative generation and enrichment with risk/mitigant pairs from the Decision Engine.

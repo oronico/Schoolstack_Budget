@@ -44,12 +44,6 @@ export {
 } from "./test-fixtures.js";
 
 export {
-  driverVal,
-  computeBackendValues,
-  type BackendComputedValues,
-} from "./backend-compute.js";
-
-export {
   DECISION_LABELS,
   OUTCOME_LABELS,
   buildDecisionBullets,
