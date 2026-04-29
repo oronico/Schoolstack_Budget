@@ -90,6 +90,46 @@ test.describe("Solutions hub page", () => {
     ).toBeVisible();
   });
 
+  // Task #316: lock in that EVERY /solutions/<slug> detail page renders
+  // without throwing. The hub-click test above only exercises one slug
+  // (debt-analysis); if a slug is renamed in SOLUTION_PAGES but the
+  // corresponding detail data or visuals component breaks, the regression
+  // would only surface when a user clicked through. This parameterized
+  // test visits each detail URL directly and asserts the expected H1
+  // (composed of `headline` + `headlineAccent` in SolutionPageLayout) is
+  // visible, which both proves the page rendered and that the slug still
+  // resolves to the expected content.
+  for (const { slug, detailHeadline } of EXPECTED_SOLUTIONS) {
+    test(`renders /solutions/${slug} detail page without errors`, async ({
+      page,
+    }) => {
+      const pageErrors: Error[] = [];
+      page.on("pageerror", (err) => {
+        pageErrors.push(err);
+      });
+
+      await page.goto(`/solutions/${slug}`);
+
+      await expect(
+        page.getByRole("heading", { level: 1, name: detailHeadline }),
+        `expected detail page H1 for slug "${slug}" to match ${detailHeadline}`,
+      ).toBeVisible();
+
+      // The "Page not found" fallback in src/pages/solutions/index.tsx
+      // also renders an h1, so explicitly assert we did not land on it.
+      await expect(
+        page.getByRole("heading", { level: 1, name: /Page not found/i }),
+      ).toHaveCount(0);
+
+      expect(
+        pageErrors,
+        `expected no uncaught page errors on /solutions/${slug}, got: ${pageErrors
+          .map((e) => e.message)
+          .join("; ")}`,
+      ).toEqual([]);
+    });
+  }
+
   test("'All capabilities' footer link navigates back to /solutions", async ({
     page,
   }) => {
