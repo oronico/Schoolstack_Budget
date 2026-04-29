@@ -10,9 +10,11 @@
 
 import {
   applyAccountMappings,
+  computeMappingPrune,
   parseQuickBooksProfitAndLoss,
   parseXeroProfitAndLoss,
 } from "../src/lib/accounting/providers.js";
+import type { DiscoveredAccount } from "@workspace/db";
 
 let passed = 0;
 let failed = 0;
@@ -226,6 +228,144 @@ check(
   ignoreAll.revenue === undefined &&
     ignoreAll.expenses === undefined &&
     ignoreAll.monthlyRent === undefined,
+);
+
+// --- computeMappingPrune (drop tracking across syncs) ---------------------
+// Mirrors the production scenario: the founder mapped "Facility Lease" as
+// rent. The bookkeeper renames the account to "Building Lease" between
+// syncs. The next sync should:
+//  (a) prune the obsolete mapping entry from `accountMappingsJson`,
+//  (b) record the dropped entry (with its old display name + saved kind) in
+//      `droppedMappingsJson` so the UI can warn the founder.
+
+console.log("computeMappingPrune");
+
+const prevDiscovered: DiscoveredAccount[] = [
+  {
+    key: "tuition income",
+    name: "Tuition Income",
+    section: "income",
+    amount: 240000,
+    defaultKind: "revenue",
+  },
+  {
+    key: "facility lease",
+    name: "Facility Lease",
+    section: "expense",
+    amount: 60000,
+    defaultKind: "rent",
+  },
+  {
+    key: "salaries",
+    name: "Salaries",
+    section: "expense",
+    amount: 120000,
+    defaultKind: "expense",
+  },
+];
+const prevMappings = {
+  "facility lease": "rent" as const,
+  "tuition income": "revenue" as const,
+};
+
+const renamedKeys = new Set(["tuition income", "salaries", "building lease"]);
+const renamed = computeMappingPrune(
+  prevMappings,
+  prevDiscovered,
+  null,
+  renamedKeys,
+);
+check(
+  "rename: tuition income mapping survives because key still present",
+  renamed.prunedMappings["tuition income"] === "revenue",
+);
+check(
+  "rename: facility lease mapping is pruned (key vanished)",
+  renamed.prunedMappings["facility lease"] === undefined,
+);
+check(
+  "rename: dropped list captures Facility Lease with previous name + kind",
+  renamed.droppedMappings.length === 1 &&
+    renamed.droppedMappings[0]?.key === "facility lease" &&
+    renamed.droppedMappings[0]?.name === "Facility Lease" &&
+    renamed.droppedMappings[0]?.kind === "rent",
+  JSON.stringify(renamed.droppedMappings),
+);
+
+// A *second* sync where the founder hasn't dismissed the previous warning
+// and the chart of accounts still doesn't have the renamed account: the
+// previous drop should carry forward unchanged (no duplicates).
+const secondSync = computeMappingPrune(
+  renamed.prunedMappings, // pruned set is what would have been persisted
+  [
+    {
+      key: "tuition income",
+      name: "Tuition Income",
+      section: "income",
+      amount: 250000,
+      defaultKind: "revenue",
+    },
+    {
+      key: "salaries",
+      name: "Salaries",
+      section: "expense",
+      amount: 130000,
+      defaultKind: "expense",
+    },
+    {
+      key: "building lease",
+      name: "Building Lease",
+      section: "expense",
+      amount: 62000,
+      defaultKind: "rent",
+    },
+  ],
+  renamed.droppedMappings,
+  renamedKeys,
+);
+check(
+  "second sync: drop persists when key is still missing",
+  secondSync.droppedMappings.length === 1 &&
+    secondSync.droppedMappings[0]?.key === "facility lease",
+  JSON.stringify(secondSync.droppedMappings),
+);
+
+// Bookkeeper restores the original account name. The drop should clear.
+const restoredKeys = new Set(["tuition income", "salaries", "facility lease"]);
+const restored = computeMappingPrune(
+  renamed.prunedMappings,
+  prevDiscovered,
+  renamed.droppedMappings,
+  restoredKeys,
+);
+check(
+  "restore: drop clears once the missing key reappears in the sync",
+  restored.droppedMappings.length === 0,
+  JSON.stringify(restored.droppedMappings),
+);
+
+// Defensive: when the previous sync didn't have a discovered account list
+// for some reason we still produce a dropped entry, falling back to the key
+// itself for the display name.
+const noPrevDiscovered = computeMappingPrune(
+  { "missing key": "expense" },
+  null,
+  null,
+  new Set(["something else"]),
+);
+check(
+  "no previous discovered list: falls back to key as the display name",
+  noPrevDiscovered.droppedMappings.length === 1 &&
+    noPrevDiscovered.droppedMappings[0]?.name === "missing key",
+);
+
+// Defensive: empty mappings + empty drops + empty current keys returns
+// empty results (no crashes, no spurious drops).
+const empty2 = computeMappingPrune({}, [], [], new Set());
+check(
+  "empty inputs produce empty outputs",
+  Object.keys(empty2.prunedMappings).length === 0 &&
+    empty2.droppedMappings.length === 0,
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

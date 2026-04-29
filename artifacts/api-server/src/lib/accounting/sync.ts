@@ -12,12 +12,12 @@ import {
 import { encryptToken, decryptToken } from "./crypto";
 import {
   applyAccountMappings,
+  computeMappingPrune,
   deriveEnrollmentFromTag,
   getProviderClient as defaultGetProviderClient,
   isAccountingProvider,
   type ProviderClient,
 } from "./providers";
-import type { AccountKind } from "@workspace/db";
 
 export type AccountingSyncResult =
   | { ok: true; connection: AccountingConnection }
@@ -120,12 +120,17 @@ export async function syncAccountingConnection(
 
     // Drop any saved mapping entries that no longer have a matching account
     // in the latest sync — keeps the persisted mapping tidy when the chart
-    // of accounts changes between syncs.
+    // of accounts changes between syncs. We also capture each pruned entry
+    // (with the previously-known display name) so the UI can warn the
+    // founder rather than silently reverting to auto-detection — see
+    // `droppedMappingsJson` on the connection schema.
     const currentKeys = new Set(discoveredAccounts.map((a) => a.key));
-    const prunedMappings: Record<string, AccountKind> = {};
-    for (const [k, v] of Object.entries(conn.accountMappingsJson ?? {})) {
-      if (currentKeys.has(k)) prunedMappings[k] = v;
-    }
+    const { prunedMappings, droppedMappings: mergedDropped } = computeMappingPrune(
+      conn.accountMappingsJson,
+      conn.discoveredAccountsJson,
+      conn.droppedMappingsJson,
+      currentKeys,
+    );
     // Apply the founder's (pruned) mapping on top of the auto-detected
     // snapshot so a school whose chart of accounts uses non-standard names
     // still gets the right revenue/expense/rent totals.
@@ -194,6 +199,7 @@ export async function syncAccountingConnection(
       discoveredAccountsJson: discoveredAccounts,
       accountMappingsJson: prunedMappings,
       discoveredEnrollmentTagsJson: discoveredEnrollmentTags,
+      droppedMappingsJson: mergedDropped,
       lastSyncedAt: now,
       lastSyncError: null,
       status: "connected",

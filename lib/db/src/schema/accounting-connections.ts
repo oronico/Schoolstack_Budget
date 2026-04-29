@@ -16,6 +16,14 @@
 // applied on the next sync (and immediately, when saved) to recompute the
 // snapshot — so a school whose chart of accounts uses non-standard names
 // like "Facility Lease" can still get the right monthly-rent suggestion.
+//
+// `droppedMappingsJson` records mapping entries that the most recent sync(s)
+// silently pruned because their account keys disappeared from the provider's
+// P&L (e.g. the bookkeeper renamed "Facility Lease" → "Building Lease"). We
+// surface the list as a warning on the connection card so a renamed account
+// doesn't quietly revert to the auto-detection. The list survives across
+// page loads and accumulates across syncs until the founder either dismisses
+// it, re-saves the mapping, or the dropped key reappears in a later sync.
 import {
   pgTable,
   serial,
@@ -56,6 +64,16 @@ export type DiscoveredAccount = {
   // What the auto-detection would classify this account as if the founder
   // doesn't override it. Mirrored to the mapping when missing.
   defaultKind: AccountKind;
+};
+
+// One mapping entry that the sync route had to prune because its key no
+// longer appears in the provider's P&L. We keep the founder's previously-
+// chosen `kind` so the warning can read "rent / expense / revenue" alongside
+// the dropped account name.
+export type DroppedAccountMapping = {
+  key: string;
+  name: string;
+  kind: AccountKind;
 };
 
 export type AccountingSyncSnapshot = {
@@ -157,6 +175,11 @@ export const accountingConnectionsTable = pgTable(
     // entry includes its current child/option count so the founder can pick
     // the right one ("Students FY26 — 82 students").
     discoveredEnrollmentTagsJson: jsonb("discovered_enrollment_tags_json").$type<DiscoveredEnrollmentTag[]>(),
+    // Mapping entries pruned by recent sync(s) because their keys no longer
+    // appear in the provider's P&L. Surfaced as a dismissible warning on the
+    // connection card. Cleared when the founder dismisses, re-saves the
+    // mapping, or the dropped key reappears in a later sync.
+    droppedMappingsJson: jsonb("dropped_mappings_json").$type<DroppedAccountMapping[]>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

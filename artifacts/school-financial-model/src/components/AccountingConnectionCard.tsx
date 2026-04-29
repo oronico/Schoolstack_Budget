@@ -26,6 +26,7 @@ import {
   SlidersHorizontal,
   Unplug,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import {
   providerDisplayName,
@@ -65,6 +66,15 @@ interface DiscoveredEnrollmentTag {
   count: number;
 }
 
+// Mirrors `DroppedAccountMapping` on the server. Surfaced when the most
+// recent sync had to prune mapping entries because their account keys
+// vanished from the latest P&L (e.g. the bookkeeper renamed an account).
+interface DroppedAccountMapping {
+  key: string;
+  name: string;
+  kind: AccountKind;
+}
+
 interface ProviderConfig {
   provider: AccountingSnapshotProvider;
   displayName: string;
@@ -98,6 +108,7 @@ interface AccountingConnection {
   accountMappings: Record<string, AccountKind>;
   enrollmentTag: EnrollmentTagRef | null;
   discoveredEnrollmentTags: DiscoveredEnrollmentTag[];
+  droppedMappings: DroppedAccountMapping[];
   configured: boolean;
   availableDefault: AvailableDefault | null;
 }
@@ -450,6 +461,30 @@ export function AccountingConnectionCard({
     }
   }
 
+  // Dismisses the dropped-mapping warning for a provider. Clears the
+  // accumulated `droppedMappingsJson` server-side so the amber notice
+  // disappears across page loads.
+  async function handleDismissDropped(provider: AccountingSnapshotProvider) {
+    setBusy(`dismiss-${provider}`);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/models/${modelId}/accounting/${provider}/dismiss-dropped`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeader() },
+        },
+      );
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || `Dismiss failed (${res.status})`);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Dismiss failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // Copies the user's saved default for this (provider, realm) into the
   // current model's connection. The founder can still tweak any row
   // afterwards — a subsequent Save just upserts the default again so the
@@ -481,6 +516,19 @@ export function AccountingConnectionCard({
       setBusy(null);
     }
   }
+
+  // Tracks which providers' mapping panels are open. Lifted out of the
+  // child so the dropped-mapping notice can programmatically expand the
+  // panel via "Re-tag accounts".
+  const [openMapping, setOpenMapping] = useState<
+    Partial<Record<AccountingSnapshotProvider, boolean>>
+  >({});
+  const setMappingOpen = useCallback(
+    (provider: AccountingSnapshotProvider, open: boolean) => {
+      setOpenMapping((prev) => ({ ...prev, [provider]: open }));
+    },
+    [],
+  );
 
   return (
     <div
@@ -684,6 +732,17 @@ export function AccountingConnectionCard({
                     needsSync={conn.discoveredAccounts.length === 0}
                   />
                 )}
+                {conn && conn.droppedMappings.length > 0 && (
+                  <DroppedMappingsNotice
+                    provider={p.provider}
+                    dropped={conn.droppedMappings}
+                    dismissing={busy === `dismiss-${p.provider}`}
+                    onDismiss={() => handleDismissDropped(p.provider)}
+                    onReTag={() => {
+                      setMappingOpen(p.provider, true);
+                    }}
+                  />
+                )}
                 {conn && conn.discoveredAccounts.length > 0 && (
                   <AccountMappingPanel
                     provider={p.provider}
@@ -691,6 +750,8 @@ export function AccountingConnectionCard({
                     saved={conn.accountMappings}
                     saving={busy === `mapping-${p.provider}`}
                     onSave={(m) => handleSaveMapping(p.provider, m)}
+                    open={openMapping[p.provider] ?? false}
+                    onOpenChange={(v) => setMappingOpen(p.provider, v)}
                   />
                 )}
                 {conn && (
@@ -717,6 +778,10 @@ interface AccountMappingPanelProps {
   saved: Record<string, AccountKind>;
   saving: boolean;
   onSave: (mappings: Record<string, AccountKind>) => void;
+  // Open/close is controlled by the parent so the dropped-mappings notice
+  // can programmatically expand the panel via "Re-tag accounts".
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 // Founder-facing override grid. We seed each row with the saved override
@@ -729,8 +794,9 @@ function AccountMappingPanel({
   saved,
   saving,
   onSave,
+  open,
+  onOpenChange,
 }: AccountMappingPanelProps) {
-  const [open, setOpen] = useState(false);
   const initial = useMemo(() => {
     const m: Record<string, AccountKind> = {};
     for (const a of accounts) m[a.key] = saved[a.key] ?? a.defaultKind;
@@ -790,7 +856,7 @@ function AccountMappingPanel({
     <div className="mt-3 border-t border-border/60 pt-3">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => onOpenChange(!open)}
         className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
         data-testid={`accounting-mapping-toggle-${provider}`}
         aria-expanded={open}
@@ -1147,6 +1213,88 @@ function EnrollmentTagPanel({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+interface DroppedMappingsNoticeProps {
+  provider: AccountingSnapshotProvider;
+  dropped: DroppedAccountMapping[];
+  dismissing: boolean;
+  onDismiss: () => void;
+  onReTag: () => void;
+}
+
+// Amber warning shown after a sync prunes mapping entries whose account keys
+// no longer appear in the latest P&L. Without this notice a renamed rent
+// account would silently revert to the auto-detection and the monthly-rent
+// suggestion would shift without explanation. The founder can dismiss the
+// notice (POST /dismiss-dropped) or click "Re-tag accounts" to expand the
+// mapping panel below and pick the new name.
+function DroppedMappingsNotice({
+  provider,
+  dropped,
+  dismissing,
+  onDismiss,
+  onReTag,
+}: DroppedMappingsNoticeProps) {
+  const count = dropped.length;
+  const summary = `${count} mapped account${count === 1 ? "" : "s"} no longer appear${count === 1 ? "s" : ""} in your books`;
+  return (
+    <div
+      className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+      data-testid={`accounting-dropped-notice-${provider}`}
+      role="alert"
+    >
+      <div className="flex items-start gap-2">
+        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-700" />
+        <div className="min-w-0 flex-1">
+          <div className="font-medium" data-testid={`accounting-dropped-summary-${provider}`}>
+            {summary}
+          </div>
+          <ul
+            className="mt-1 list-disc pl-4 space-y-0.5 leading-snug"
+            data-testid={`accounting-dropped-list-${provider}`}
+          >
+            {dropped.map((d) => (
+              <li key={d.key}>
+                <span className="font-medium">{d.name}</span>
+                <span className="text-amber-800"> (was tagged as {KIND_LABELS[d.kind].toLowerCase()})</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-amber-800 leading-snug">
+            We auto-detected the rest of this sync, so totals like the monthly-rent
+            suggestion may have shifted. Re-tag the renamed accounts or dismiss this
+            notice if the changes are intentional.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onReTag}
+              className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+              data-testid={`accounting-dropped-retag-${provider}`}
+            >
+              <SlidersHorizontal className="h-3 w-3" />
+              Re-tag accounts
+            </button>
+            <button
+              type="button"
+              onClick={onDismiss}
+              disabled={dismissing}
+              className="inline-flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-xs text-amber-800 hover:text-amber-900 disabled:opacity-60"
+              data-testid={`accounting-dropped-dismiss-${provider}`}
+            >
+              {dismissing ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <X className="h-3 w-3" />
+              )}
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -26,6 +26,7 @@ import {
   type AccountKind,
   type DiscoveredAccount,
   type DiscoveredEnrollmentTag,
+  type DroppedAccountMapping,
   type EnrollmentTagRef,
 } from "@workspace/db";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
@@ -139,6 +140,10 @@ type PublicConnection = {
   // Candidate tags from the most recent sync. Drives the picker dropdown
   // ("Students FY26 — 82 students"). Empty until the first sync runs.
   discoveredEnrollmentTags: DiscoveredEnrollmentTag[];
+  // Mapping entries pruned by recent sync(s) because their keys vanished
+  // from the latest P&L. The UI surfaces this as a "X mapped accounts no
+  // longer appear in your books" warning.
+  droppedMappings: DroppedAccountMapping[];
   configured: boolean;
   availableDefault: AvailableDefault | null;
 };
@@ -154,6 +159,7 @@ type ConnectionRowForPublic = {
   accountMappingsJson: Record<string, AccountKind> | null;
   enrollmentTagJson: EnrollmentTagRef | null;
   discoveredEnrollmentTagsJson: DiscoveredEnrollmentTag[] | null;
+  droppedMappingsJson: DroppedAccountMapping[] | null;
 };
 
 function toPublicConnection(
@@ -173,6 +179,7 @@ function toPublicConnection(
     accountMappings: row.accountMappingsJson ?? {},
     enrollmentTag: row.enrollmentTagJson,
     discoveredEnrollmentTags: row.discoveredEnrollmentTagsJson ?? [],
+    droppedMappings: row.droppedMappingsJson ?? [],
     configured: client.isConfigured(),
     availableDefault,
   };
@@ -288,6 +295,7 @@ const publicConnectionColumns = {
   enrollmentTagJson: accountingConnectionsTable.enrollmentTagJson,
   discoveredEnrollmentTagsJson:
     accountingConnectionsTable.discoveredEnrollmentTagsJson,
+  droppedMappingsJson: accountingConnectionsTable.droppedMappingsJson,
 } as const;
 
 // --- GET /api/models/:id/accounting ----------------------------------------
@@ -506,7 +514,9 @@ router.post(
     }
 
     // Delegate to the shared sync helper so the on-demand "Sync now" route
-    // and the daily background scheduler stay byte-for-byte equivalent.
+    // and the daily background scheduler stay byte-for-byte equivalent. The
+    // helper handles the dropped-mappings detection so any newly-renamed
+    // accounts are surfaced to the founder via the connection card warning.
     const result = await syncAccountingConnection(conn);
     if (!result.ok) {
       console.error("[accounting] sync error:", result.error);
@@ -608,11 +618,16 @@ router.put(
       snapshot.realmDisplayName = conn.realmDisplayName;
     }
 
+    // Saving the mapping is the founder's signal that they've reviewed the
+    // current chart of accounts, so clear any outstanding "dropped mapping"
+    // warning at the same time. Anything still missing will show up again
+    // on the next sync if it's still missing then.
     const [updated] = await db
       .update(accountingConnectionsTable)
       .set({
         snapshotJson: snapshot,
         accountMappingsJson: cleaned,
+        droppedMappingsJson: [],
         updatedAt: new Date(),
       })
       .where(eq(accountingConnectionsTable.id, conn.id))
@@ -913,6 +928,47 @@ router.put(
       conn.discoveredAccountsJson ?? [],
     );
     res.json({ connection: toPublicConnection(updated, availableDefault) });
+  },
+);
+
+// --- POST /api/models/:id/accounting/:provider/dismiss-dropped ------------
+// Acknowledges the "X mapped accounts no longer appear in your books" notice
+// without re-saving the mapping. Used when the founder confirms they're aware
+// that an account is gone (e.g. they truly deleted "Facility Lease" because
+// the school stopped paying rent) and just wants the warning to go away.
+router.post(
+  "/models/:id/accounting/:provider/dismiss-dropped",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    const modelId = Number(req.params.id);
+    const provider = req.params.provider;
+    if (!Number.isFinite(modelId) || modelId <= 0) {
+      res.status(400).json({ error: "Invalid model id." });
+      return;
+    }
+    if (!isAccountingProvider(provider)) {
+      res.status(400).json({ error: "Unsupported accounting provider." });
+      return;
+    }
+    if (!(await ownsModel(req.userId!, modelId))) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+    const [updated] = await db
+      .update(accountingConnectionsTable)
+      .set({ droppedMappingsJson: [], updatedAt: new Date() })
+      .where(
+        and(
+          eq(accountingConnectionsTable.modelId, modelId),
+          eq(accountingConnectionsTable.provider, provider),
+        ),
+      )
+      .returning(publicConnectionColumns);
+    if (!updated) {
+      res.status(404).json({ error: "No connection for this provider." });
+      return;
+    }
+    res.json({ connection: toPublicConnection(updated) });
   },
 );
 

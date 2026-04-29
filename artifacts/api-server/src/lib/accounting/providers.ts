@@ -23,6 +23,7 @@ import type {
   AccountKind,
   DiscoveredAccount,
   DiscoveredEnrollmentTag,
+  DroppedAccountMapping,
   EnrollmentTagRef,
 } from "@workspace/db";
 
@@ -124,6 +125,60 @@ function defaultKindFor(section: DiscoveredAccount["section"], name: string): Ac
     return "expense";
   }
   return "ignore";
+}
+
+// Compute the next prune state when a sync is about to overwrite the cached
+// per-account list. Pure helper so the routes layer stays small and the
+// behaviour is easy to unit-test.
+//
+// Inputs:
+//   prevMappings    — founder overrides from the previous sync
+//   prevDiscovered  — per-account list from the previous sync (gives names)
+//   prevDropped     — drops accumulated from earlier sync(s) and not yet
+//                     dismissed by the founder
+//   currentKeys     — keys present in the latest P&L
+//
+// Returns:
+//   prunedMappings  — overrides whose key still exists; safe to persist
+//   droppedMappings — newly-pruned drops merged with carried-over ones,
+//                     deduped by key (newer entries win), with any drop whose
+//                     key reappeared in this sync removed.
+export function computeMappingPrune(
+  prevMappings: Record<string, AccountKind> | null | undefined,
+  prevDiscovered: DiscoveredAccount[] | null | undefined,
+  prevDropped: DroppedAccountMapping[] | null | undefined,
+  currentKeys: ReadonlySet<string>,
+): {
+  prunedMappings: Record<string, AccountKind>;
+  droppedMappings: DroppedAccountMapping[];
+} {
+  const prevByKey = new Map<string, DiscoveredAccount>();
+  for (const a of prevDiscovered ?? []) prevByKey.set(a.key, a);
+
+  const prunedMappings: Record<string, AccountKind> = {};
+  const newlyDropped: DroppedAccountMapping[] = [];
+  for (const [k, v] of Object.entries(prevMappings ?? {})) {
+    if (currentKeys.has(k)) {
+      prunedMappings[k] = v;
+    } else {
+      newlyDropped.push({
+        key: k,
+        name: prevByKey.get(k)?.name ?? k,
+        kind: v,
+      });
+    }
+  }
+
+  const carriedDropped = (prevDropped ?? []).filter((d) => !currentKeys.has(d.key));
+
+  const merged: DroppedAccountMapping[] = [];
+  const seen = new Set<string>();
+  for (const d of [...newlyDropped, ...carriedDropped]) {
+    if (seen.has(d.key)) continue;
+    seen.add(d.key);
+    merged.push(d);
+  }
+  return { prunedMappings, droppedMappings: merged };
 }
 
 // Recompute snapshot totals from per-account amounts + founder mappings.
