@@ -24,7 +24,13 @@ import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparis
 import type { FullModelData } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
-import { buildDecisionBullets, DECISION_LABELS, DECISION_THEME } from "@/lib/decision-flows";
+import {
+  applyDecisionToData,
+  buildDecisionBullets,
+  DECISION_LABELS,
+  DECISION_THEME,
+  type AddProgramInputs,
+} from "@/lib/decision-flows";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -774,6 +780,62 @@ export function ScenarioPage() {
               window.location.hash = hash;
             }
           };
+          const applyAddProgramScenario = async (
+            overrides: WhatIfOverrides & {
+              addProgramName?: string;
+              addProgramGradeBand?: string;
+              addProgramTuition?: number;
+              addProgramEnrollment?: number[];
+              addProgramAddedFte?: number;
+              addProgramAddedFteSalary?: number;
+              addProgramAddedAnnualSpace?: number;
+              addProgramStaffingTbd?: boolean;
+            },
+          ) => {
+            if (!modelId) return;
+            const enrollment = (overrides.addProgramEnrollment ?? [0, 0, 0, 0, 0]).slice(0, 5);
+            while (enrollment.length < 5) enrollment.push(0);
+            const inputs: AddProgramInputs = {
+              name: overrides.addProgramName ?? "Program",
+              gradeBand: overrides.addProgramGradeBand,
+              annualTuition: overrides.addProgramTuition ?? 0,
+              enrollment: [enrollment[0], enrollment[1], enrollment[2], enrollment[3], enrollment[4]],
+              addedFte: overrides.addProgramAddedFte,
+              addedFteSalary: overrides.addProgramAddedFteSalary,
+              addedAnnualSpace: overrides.addProgramAddedAnnualSpace,
+              staffingTbd: !!overrides.addProgramStaffingTbd,
+            };
+            const fresh = queryClient.getQueryData<{ data?: Record<string, unknown> }>([
+              `/api/models/${modelId}`,
+            ]);
+            const baseData = (fresh?.data ?? modelData) as FullModelData;
+            const priorSnapshot = baseData as Record<string, unknown>;
+            const applied = applyDecisionToData(baseData, { type: "add_program", inputs });
+            await updateMutation.mutateAsync({
+              id: modelId,
+              data: { data: applied as unknown as Record<string, unknown> },
+            });
+            await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+            toast({
+              title: "Applied to model",
+              description: `Added “${inputs.name}” into your base model.`,
+              action: (
+                <ToastAction
+                  altText="Undo apply"
+                  onClick={async () => {
+                    await updateMutation.mutateAsync({
+                      id: modelId,
+                      data: { data: priorSnapshot },
+                    });
+                    await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+                    toast({ title: "Undone", description: "Your previous model values are restored." });
+                  }}
+                >
+                  Undo
+                </ToastAction>
+              ),
+            });
+          };
           return (
             <div className="mb-10" data-testid="custom-scenarios-section">
               <div className="flex items-center gap-2 mb-4">
@@ -853,12 +915,14 @@ export function ScenarioPage() {
                         )}
                       </ul>
                       {cs.decisionType === "add_program" ? (
-                        <p
-                          className="w-full text-center text-[11px] text-muted-foreground italic px-3 py-2 rounded-lg bg-muted/40 border border-border/60"
+                        <button
+                          onClick={() => applyAddProgramScenario(o)}
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium border border-amber-700 transition-colors"
                           data-testid={`custom-scenario-open-${idx}`}
+                          title="Fold this Add-a-program scenario into your base model"
                         >
-                          Re-run the “Add a program” flow to revise this decision.
-                        </p>
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Apply to my model
+                        </button>
                       ) : (
                         <button
                           onClick={() => openInPlanner(o)}

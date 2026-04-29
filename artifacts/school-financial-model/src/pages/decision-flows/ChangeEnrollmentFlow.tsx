@@ -1,16 +1,21 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
-import { Loader2, Users, ArrowRight, FileSpreadsheet } from "lucide-react";
+import { Loader2, Users, ArrowRight } from "lucide-react";
 import { DecisionFlowShell } from "@/components/decision-flow/DecisionFlowShell";
 import { ModelMiniSummary } from "@/components/decision-flow/ModelMiniSummary";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
+import { WhyStep } from "@/components/decision-flow/WhyStep";
+import { SaveActions, type SaveAction } from "@/components/decision-flow/SaveActions";
 import {
+  applyDecisionToData,
   buildBlankEnrollmentChangeInputs,
   computeDecisionImpact,
   decisionToPersistedOverrides,
+  enrollmentChangeInputsToOverrides,
   type EnrollmentChangeInputs,
 } from "@/lib/decision-flows";
+import { encodeOverridesToHash } from "@/lib/whatif-engine";
 import type { FullModelData, CustomScenario } from "@/pages/model-wizard/schema";
 
 interface ChangeEnrollmentFlowProps {
@@ -27,6 +32,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
   const [scenarioName, setScenarioName] = useState("");
   const [narrative, setNarrative] = useState("");
   const [done, setDone] = useState(false);
+  const [doneAction, setDoneAction] = useState<SaveAction | null>(null);
 
   const data = (model?.data ?? {}) as FullModelData;
   const en = data.enrollment;
@@ -42,7 +48,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
     (inputs.retentionRate !== undefined && inputs.retentionRate !== (en?.retentionRate ?? 85)) ||
     (inputs.tuitionDeltaPerStudent !== undefined && inputs.tuitionDeltaPerStudent !== 0);
 
-  const canAdvance = step === 1 ? true : step === 2 ? hasAnyChange : step === 3 ? true : scenarioName.trim().length > 0;
+  const canAdvance = step === 1 ? true : step === 2 ? hasAnyChange : true;
 
   if (isLoading || !model) {
     return (
@@ -52,7 +58,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
     );
   }
 
-  const handleSave = async () => {
+  const handleSave = async (action: SaveAction) => {
     const persistedOverrides = decisionToPersistedOverrides(data, { type: "change_enrollment", inputs });
     const existing = ((data as Record<string, unknown>).customScenarios as CustomScenario[] | undefined) ?? [];
     const entry: CustomScenario = {
@@ -62,13 +68,36 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
       decisionType: "change_enrollment",
       narrative: narrative.trim(),
     };
+
+    let nextData: Record<string, unknown> = {
+      ...(data as Record<string, unknown>),
+      customScenarios: [...existing, entry],
+    };
+
+    if (action === "apply") {
+      const applied = applyDecisionToData(data, { type: "change_enrollment", inputs });
+      nextData = {
+        ...(applied as Record<string, unknown>),
+        customScenarios: [...existing, entry],
+      };
+    }
+
     await updateMutation.mutateAsync({
       id: modelId,
-      data: {
-        data: { ...(data as Record<string, unknown>), customScenarios: [...existing, entry] } as Record<string, unknown>,
-      },
+      data: { data: nextData as Record<string, unknown> },
     });
+    setDoneAction(action);
     setDone(true);
+
+    if (action === "apply") {
+      setTimeout(() => setLocation(`/model/${modelId}`), 800);
+    } else if (action === "later") {
+      setTimeout(() => setLocation(`/model/${modelId}/scenarios`), 800);
+    } else if (action === "planner") {
+      const ov = enrollmentChangeInputsToOverrides(inputs);
+      const hash = encodeOverridesToHash(ov);
+      setTimeout(() => setLocation(`/model/${modelId}/scenarios${hash ? `#${hash}` : ""}`), 600);
+    }
   };
 
   return (
@@ -79,8 +108,8 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
       step={step}
       setStep={setStep}
       canAdvance={canAdvance}
-      onSave={handleSave}
       isSaving={updateMutation.isPending}
+      ownSaveActions={step === 4}
       done={done}
       doneCta={
         <button
@@ -94,33 +123,38 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
       sidebar={<ModelMiniSummary data={data} />}
     >
       {step === 1 && (
-        <section className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
-            <Users className="h-3.5 w-3.5" /> Decision: Change enrollment
-          </div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-3">
-            Adjusting your enrollment plan?
-          </h1>
-          <p className="text-base text-muted-foreground leading-relaxed mb-5">
-            Whether your re-enrollment came in stronger than expected, you're tightening a recruitment
-            target, or your board wants to plan for a slower ramp — let's see what the new enrollment
-            picture does to revenue, cash, and break-even.
-          </p>
-          <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-900/90">
-            <p className="font-semibold mb-1">What you'll set</p>
-            <ul className="list-disc pl-4 space-y-1 text-emerald-900/80">
-              <li>How many more (or fewer) students per year — relative to the model</li>
-              <li>Optional: a new retention rate</li>
-              <li>Optional: a tuition adjustment per student</li>
-            </ul>
-          </div>
-          <div className="mt-5 text-xs text-muted-foreground">
-            Current enrollment in this model:{" "}
-            <span className="font-mono font-semibold text-foreground">
-              {baseEnrollment.map((n, i) => `Y${i + 1}: ${n}`).join(" • ")}
-            </span>
-          </div>
-        </section>
+        <WhyStep
+          decisionType="change_enrollment"
+          narrative={narrative}
+          setNarrative={setNarrative}
+          intro={
+            <>
+              <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+                <Users className="h-3.5 w-3.5" /> Decision: Change enrollment
+              </div>
+              <h1 className="font-display text-3xl font-bold text-foreground mb-3">
+                Adjusting your enrollment plan?
+              </h1>
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Whether your re-enrollment came in stronger than expected, you're tightening a
+                recruitment target, or your board wants to plan for a slower ramp — let's see what
+                the new enrollment picture does to revenue, cash, and break-even.
+              </p>
+              <p className="mt-4 text-xs text-muted-foreground">
+                Current enrollment in this model:{" "}
+                <span className="font-mono font-semibold text-foreground">
+                  {baseEnrollment.map((n, i) => `Y${i + 1}: ${n}`).join(" • ")}
+                </span>
+              </p>
+            </>
+          }
+          prepareList={[
+            "How many more (or fewer) students per year — relative to your current model",
+            "Optional: a new retention rate",
+            "Optional: a tuition adjustment per student",
+            "Why this change is on the table (re-enrollment, board ask, downside test)",
+          ]}
+        />
       )}
 
       {step === 2 && (
@@ -183,7 +217,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
           <div>
             <h2 className="font-display text-xl font-bold text-foreground mb-1">Impact on your model</h2>
             <p className="text-sm text-muted-foreground">
-              Here's what this enrollment shift does to your 5-year picture.
+              Here's what this enrollment shift does to your 5-year picture — and whether your staffing plan still fits.
             </p>
           </div>
           <ImpactSummary impact={impact} />
@@ -191,45 +225,17 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
       )}
 
       {step === 4 && (
-        <section className="max-w-xl space-y-4" data-testid="change-enrollment-save">
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground mb-1">Save this decision</h2>
-            <p className="text-sm text-muted-foreground">
-              We'll save it as a named scenario tagged "Change enrollment" — easy to revisit when
-              re-enrollment numbers come in.
-            </p>
-          </div>
-          <Field label="Scenario name">
-            <input
-              type="text"
-              value={scenarioName}
-              onChange={(e) => setScenarioName(e.target.value)}
-              placeholder="e.g. Q3 re-enrollment update"
-              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
-              data-testid="change-enrollment-scenario-name"
-            />
-          </Field>
-          <Field label="What's behind this change? (optional)">
-            <textarea
-              value={narrative}
-              onChange={(e) => setNarrative(e.target.value)}
-              placeholder="Recruitment update, retention surprise, board target, what's driving the shift…"
-              rows={4}
-              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
-              data-testid="change-enrollment-narrative"
-            />
-          </Field>
-          {done && (
-            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-900">
-              <p className="font-semibold mb-1 inline-flex items-center gap-1.5">
-                <FileSpreadsheet className="h-4 w-4" /> Saved as a scenario
-              </p>
-              <p className="text-emerald-900/80">
-                You'll find this under Saved What-If scenarios on your Scenarios page.
-              </p>
-            </div>
-          )}
-        </section>
+        <SaveActions
+          decisionType="change_enrollment"
+          scenarioName={scenarioName}
+          setScenarioName={setScenarioName}
+          defaultName="Q3 re-enrollment update"
+          isSaving={updateMutation.isPending}
+          done={done}
+          doneAction={doneAction}
+          onSave={handleSave}
+          plannerAvailable={true}
+        />
       )}
     </DecisionFlowShell>
   );

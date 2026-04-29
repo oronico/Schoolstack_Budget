@@ -1,17 +1,21 @@
 import { useMemo, useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
-import { Loader2, Building2, ArrowRight, FileSpreadsheet } from "lucide-react";
+import { Loader2, Building2, ArrowRight } from "lucide-react";
 import { DecisionFlowShell } from "@/components/decision-flow/DecisionFlowShell";
 import { ModelMiniSummary } from "@/components/decision-flow/ModelMiniSummary";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
+import { WhyStep } from "@/components/decision-flow/WhyStep";
+import { SaveActions, type SaveAction } from "@/components/decision-flow/SaveActions";
 import {
+  applyDecisionToData,
   buildBlankSiteInputs,
   computeDecisionImpact,
   decisionToPersistedOverrides,
+  siteInputsToOverrides,
   type SiteInputs,
 } from "@/lib/decision-flows";
-import { detectFacilityRent } from "@/lib/whatif-engine";
+import { detectFacilityRent, encodeOverridesToHash } from "@/lib/whatif-engine";
 import type { FullModelData, CustomScenario } from "@/pages/model-wizard/schema";
 
 interface EvaluateSiteFlowProps {
@@ -28,6 +32,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
   const [scenarioName, setScenarioName] = useState("");
   const [narrative, setNarrative] = useState("");
   const [done, setDone] = useState(false);
+  const [doneAction, setDoneAction] = useState<SaveAction | null>(null);
 
   const data = (model?.data ?? {}) as FullModelData;
 
@@ -49,7 +54,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
   }, [step, model, data, inputs]);
 
   const inputsValid = inputs.newMonthlyRent >= 0;
-  const canAdvance = step === 1 ? true : step === 2 ? inputsValid : step === 3 ? true : scenarioName.trim().length > 0;
+  const canAdvance = step === 1 ? true : step === 2 ? inputsValid : true;
 
   if (isLoading || !model) {
     return (
@@ -59,7 +64,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
     );
   }
 
-  const handleSave = async () => {
+  const handleSave = async (action: SaveAction) => {
     const persistedOverrides = decisionToPersistedOverrides(data, { type: "evaluate_site", inputs });
     const existing = ((data as Record<string, unknown>).customScenarios as CustomScenario[] | undefined) ?? [];
     const entry: CustomScenario = {
@@ -69,13 +74,36 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
       decisionType: "evaluate_site",
       narrative: narrative.trim(),
     };
+
+    let nextData: Record<string, unknown> = {
+      ...(data as Record<string, unknown>),
+      customScenarios: [...existing, entry],
+    };
+
+    if (action === "apply") {
+      const applied = applyDecisionToData(data, { type: "evaluate_site", inputs });
+      nextData = {
+        ...(applied as Record<string, unknown>),
+        customScenarios: [...existing, entry],
+      };
+    }
+
     await updateMutation.mutateAsync({
       id: modelId,
-      data: {
-        data: { ...(data as Record<string, unknown>), customScenarios: [...existing, entry] } as Record<string, unknown>,
-      },
+      data: { data: nextData as Record<string, unknown> },
     });
+    setDoneAction(action);
     setDone(true);
+
+    if (action === "apply") {
+      setTimeout(() => setLocation(`/model/${modelId}`), 800);
+    } else if (action === "later") {
+      setTimeout(() => setLocation(`/model/${modelId}/scenarios`), 800);
+    } else if (action === "planner") {
+      const ov = siteInputsToOverrides(data, inputs);
+      const hash = encodeOverridesToHash(ov);
+      setTimeout(() => setLocation(`/model/${modelId}/scenarios${hash ? `#${hash}` : ""}`), 600);
+    }
   };
 
   return (
@@ -86,8 +114,8 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
       step={step}
       setStep={setStep}
       canAdvance={canAdvance}
-      onSave={handleSave}
       isSaving={updateMutation.isPending}
+      ownSaveActions={step === 4}
       done={done}
       doneCta={
         <button
@@ -101,34 +129,41 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
       sidebar={<ModelMiniSummary data={data} />}
     >
       {step === 1 && (
-        <section className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold">
-            <Building2 className="h-3.5 w-3.5" /> Decision: Evaluate a site
-          </div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-3">
-            Considering a new building or lease?
-          </h1>
-          <p className="text-base text-muted-foreground leading-relaxed mb-5">
-            Real estate is the single biggest fixed-cost decision a school makes. Before you sign a
-            lease — or commit to fit-out — let's see what happens to your DSCR, cash runway, and
-            break-even year if this site becomes reality.
-          </p>
-          <div className="bg-teal-50/60 border border-teal-200 rounded-xl p-4 text-sm text-teal-900/90">
-            <p className="font-semibold mb-1">What you'll need handy</p>
-            <ul className="list-disc pl-4 space-y-1 text-teal-900/80">
-              <li>Proposed monthly rent (gross — include CAM/NNN if you have it)</li>
-              <li>Annual rent escalation in the lease</li>
-              <li>Optional: square footage and a one-time fit-out estimate</li>
-              <li>What year this kicks in (signing now? Year 2?)</li>
-            </ul>
-          </div>
-          {detected.monthlyRent && (
-            <p className="mt-5 text-xs text-muted-foreground">
-              We detected your current modeled rent at <span className="font-mono font-semibold">${detected.monthlyRent.toLocaleString()}/mo</span>.
-              We'll compare the new site against that.
-            </p>
-          )}
-        </section>
+        <WhyStep
+          decisionType="evaluate_site"
+          narrative={narrative}
+          setNarrative={setNarrative}
+          intro={
+            <>
+              <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold">
+                <Building2 className="h-3.5 w-3.5" /> Decision: Evaluate a site
+              </div>
+              <h1 className="font-display text-3xl font-bold text-foreground mb-3">
+                Considering a new building or lease?
+              </h1>
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Real estate is the single biggest fixed-cost decision a school makes. Before you sign
+                a lease — or commit to fit-out — let's see what happens to your DSCR, cash runway, and
+                break-even year if this site becomes reality.
+              </p>
+              {detected.monthlyRent && (
+                <p className="mt-4 text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2 inline-block">
+                  We detected your current modeled rent at{" "}
+                  <span className="font-mono font-semibold text-foreground">
+                    ${detected.monthlyRent.toLocaleString()}/mo
+                  </span>
+                  . We'll compare the new site against that.
+                </p>
+              )}
+            </>
+          }
+          prepareList={[
+            "Proposed monthly rent (gross — include CAM/NNN if you have it)",
+            "Annual rent escalation in the lease",
+            "Optional: square footage and a one-time fit-out estimate",
+            "What year this kicks in (signing now? Year 2?)",
+          ]}
+        />
       )}
 
       {step === 2 && (
@@ -196,7 +231,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
           <div>
             <h2 className="font-display text-xl font-bold text-foreground mb-1">Impact on your model</h2>
             <p className="text-sm text-muted-foreground">
-              Here's what moving to this site would do to your 5-year picture.
+              Here's what moving to this site would do to your 5-year picture — through a lender's eyes.
             </p>
           </div>
           <ImpactSummary impact={impact} />
@@ -204,44 +239,17 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
       )}
 
       {step === 4 && (
-        <section className="max-w-xl space-y-4" data-testid="evaluate-site-save">
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground mb-1">Save this decision</h2>
-            <p className="text-sm text-muted-foreground">
-              We'll save it as a named scenario tagged "Evaluate a site" — easy to share with your board or lender.
-            </p>
-          </div>
-          <Field label="Scenario name">
-            <input
-              type="text"
-              value={scenarioName}
-              onChange={(e) => setScenarioName(e.target.value)}
-              placeholder="e.g. Maple St. lease"
-              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
-              data-testid="evaluate-site-scenario-name"
-            />
-          </Field>
-          <Field label="Notes for your future self (optional)">
-            <textarea
-              value={narrative}
-              onChange={(e) => setNarrative(e.target.value)}
-              placeholder="Address, broker contact, lease term, why this site, what's still uncertain…"
-              rows={4}
-              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
-              data-testid="evaluate-site-narrative"
-            />
-          </Field>
-          {done && (
-            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-900">
-              <p className="font-semibold mb-1 inline-flex items-center gap-1.5">
-                <FileSpreadsheet className="h-4 w-4" /> Saved as a scenario
-              </p>
-              <p className="text-emerald-900/80">
-                You'll find this under Saved What-If scenarios on your Scenarios page.
-              </p>
-            </div>
-          )}
-        </section>
+        <SaveActions
+          decisionType="evaluate_site"
+          scenarioName={scenarioName}
+          setScenarioName={setScenarioName}
+          defaultName="Maple St. lease"
+          isSaving={updateMutation.isPending}
+          done={done}
+          doneAction={doneAction}
+          onSave={handleSave}
+          plannerAvailable={true}
+        />
       )}
     </DecisionFlowShell>
   );

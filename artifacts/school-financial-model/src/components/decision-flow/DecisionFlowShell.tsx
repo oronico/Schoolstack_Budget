@@ -14,13 +14,17 @@ interface DecisionFlowShellProps {
   step: 1 | 2 | 3 | 4;
   setStep: (n: 1 | 2 | 3 | 4) => void;
   canAdvance: boolean;
-  onSave: () => void;
-  isSaving: boolean;
+  /** Optional footer-level save handler (used when step 4 still needs a single CTA). */
+  onSave?: () => void;
+  isSaving?: boolean;
   saveLabel?: string;
   done?: boolean;
   doneCta?: ReactNode;
   sidebar: ReactNode;
   children: ReactNode;
+  /** When true, the shell hides its built-in Save button on step 4 — the page's
+   *  step-4 content provides its own actions (e.g. SaveActions). */
+  ownSaveActions?: boolean;
 }
 
 export function DecisionFlowShell({
@@ -37,6 +41,7 @@ export function DecisionFlowShell({
   doneCta,
   sidebar,
   children,
+  ownSaveActions = false,
 }: DecisionFlowShellProps) {
   const [, setLocation] = useLocation();
   const theme = DECISION_THEME[decisionType];
@@ -159,7 +164,11 @@ export function DecisionFlowShell({
             >
               Continue <ChevronRight className="h-4 w-4" />
             </button>
-          ) : (
+          ) : ownSaveActions ? (
+            <p className="ml-auto text-xs text-muted-foreground italic">
+              Pick how you'd like to save it →
+            </p>
+          ) : onSave ? (
             <button
               type="button"
               onClick={onSave}
@@ -172,7 +181,7 @@ export function DecisionFlowShell({
             >
               {isSaving ? "Saving…" : saveLabel}
             </button>
-          )}
+          ) : null}
         </div>
       </footer>
     </div>

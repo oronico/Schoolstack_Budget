@@ -10,11 +10,13 @@ import {
 
 export interface AddProgramInputs {
   name: string;
+  gradeBand?: string;
   annualTuition: number;
   enrollment: [number, number, number, number, number];
   addedFte?: number;
   addedFteSalary?: number;
   addedAnnualSpace?: number;
+  staffingTbd?: boolean;
 }
 
 export interface SiteInputs {
@@ -146,8 +148,10 @@ export function applyAddProgramDecision(
   ] as FullModelData["revenueRows"];
 
   // 3) Optional: synthesize a staffing row for new program-related FTE.
-  const addedFte = Math.max(0, inputs.addedFte ?? 0);
-  const addedSalary = Math.max(0, inputs.addedFteSalary ?? 0);
+  //    Skipped when the founder marked staffing as "to be determined" — the
+  //    impact step will surface a nudge so they remember to come back.
+  const addedFte = inputs.staffingTbd ? 0 : Math.max(0, inputs.addedFte ?? 0);
+  const addedSalary = inputs.staffingTbd ? 0 : Math.max(0, inputs.addedFteSalary ?? 0);
   if (addedFte > 0 && addedSalary > 0) {
     const staffRow = {
       id: `__decision_program_staff_${stamp}__`,
@@ -273,7 +277,12 @@ export function applyDecisionToData(
 
 // --- Compute decision impact ------------------------------------------------
 
-function genDecisionNudges(impact: DecisionImpact, decisionType: DecisionType): NudgeItem[] {
+function genDecisionNudges(
+  impact: DecisionImpact,
+  decisionType: DecisionType,
+  data: FullModelData,
+  decisionInputs: DecisionInputs,
+): NudgeItem[] {
   const nudges: NudgeItem[] = [];
   const { adjusted, deltas } = impact;
   const yr5Net = adjusted.netIncome[4] ?? 0;
@@ -318,13 +327,112 @@ function genDecisionNudges(impact: DecisionImpact, decisionType: DecisionType): 
       message: `Break-even pulls in by ${Math.abs(deltas.breakEvenYearShift)} year${Math.abs(deltas.breakEvenYearShift) === 1 ? "" : "s"}.`,
     });
   }
-  if (decisionType === "add_program" && yr5Delta > 0 && deltas.cashRunwayDeltaMonths < 0) {
-    nudges.push({
-      signal: "amber",
-      label: "Profitable, but watch year 1 cash",
-      message: "The program improves Year 5 net income but draws down cash short term — plan ramp-up reserves.",
-    });
+  if (decisionType === "add_program") {
+    if (yr5Delta > 0 && deltas.cashRunwayDeltaMonths < 0) {
+      nudges.push({
+        signal: "amber",
+        label: "Profitable, but watch year 1 cash",
+        message: "The program improves Year 5 net income but draws down cash short term — plan ramp-up reserves.",
+      });
+    }
+    if (decisionInputs.type === "add_program" && decisionInputs.inputs.staffingTbd) {
+      nudges.push({
+        signal: "amber",
+        label: "Staffing not yet modeled",
+        message: "You marked staffing as TBD. The numbers above don't include any new salaries or benefits yet — make sure you revisit this before sharing with a lender.",
+      });
+    }
   }
+
+  if (decisionType === "evaluate_site") {
+    // Lender-focused DSCR thresholds (charter lenders typically want 1.25x+,
+    // some healthcare/SBA lenders accept 1.20x). Highlight the worst year.
+    let worstDscr = Infinity;
+    let worstYear = 0;
+    for (let i = 0; i < adjusted.dscr.length; i++) {
+      if (isFinite(adjusted.dscr[i]) && adjusted.dscr[i] < worstDscr) {
+        worstDscr = adjusted.dscr[i];
+        worstYear = i + 1;
+      }
+    }
+    if (isFinite(worstDscr)) {
+      if (worstDscr < 1.0) {
+        nudges.push({
+          signal: "red",
+          label: `DSCR falls below 1.00× in Year ${worstYear}`,
+          message: `At ${worstDscr.toFixed(2)}×, lenders see this as cash flow that can't service debt. Most won't underwrite a school lease at this level.`,
+        });
+      } else if (worstDscr < 1.20) {
+        nudges.push({
+          signal: "red",
+          label: `DSCR is ${worstDscr.toFixed(2)}× in Year ${worstYear} — below most lender thresholds`,
+          message: "Charter and school lenders typically require 1.20–1.25× minimum DSCR. Plan to negotiate the lease, raise tuition, or grow enrollment before signing.",
+        });
+      } else if (worstDscr < 1.25) {
+        nudges.push({
+          signal: "amber",
+          label: `DSCR is ${worstDscr.toFixed(2)}× in Year ${worstYear} — borderline for school lenders`,
+          message: "Most school lenders look for 1.25× or better. You're close — a small operating cushion (extra enrollment, tighter expenses) would put this firmly in approval range.",
+        });
+      } else {
+        // Compare worst adjusted year against the same base year (and any year
+        // where adjusted DSCR meaningfully drops vs base) so we don't miss
+        // weakening that's localized to mid-plan years.
+        let largestDrop = 0;
+        let dropYear = 0;
+        for (let i = 0; i < adjusted.dscr.length; i++) {
+          const baseY = impact.base.dscr[i];
+          const adjY = adjusted.dscr[i];
+          if (!isFinite(baseY) || !isFinite(adjY)) continue;
+          const drop = baseY - adjY;
+          if (drop > largestDrop) {
+            largestDrop = drop;
+            dropYear = i + 1;
+          }
+        }
+        if (largestDrop >= 0.05) {
+          nudges.push({
+            signal: "amber",
+            label: `Site weakens DSCR by ${largestDrop.toFixed(2)}× in Year ${dropYear}`,
+            message: "Coverage holds above lender thresholds, but be ready to explain the trade-off (capacity, location) when a lender asks why coverage thinned out.",
+          });
+        }
+      }
+    }
+    // Cash runway under 6 months at any point is a lender red flag.
+    if (adjusted.cashRunwayMonths < 6) {
+      nudges.push({
+        signal: "red",
+        label: "Cash runway under 6 months",
+        message: `Adjusted runway is ${adjusted.cashRunwayMonths.toFixed(1)} months. Most lenders want to see at least 60–90 days of operating cash on hand at all times.`,
+      });
+    }
+  }
+
+  if (decisionType === "change_enrollment" && decisionInputs.type === "change_enrollment") {
+    // Staffing-implications nudge: if enrollment shifted but no compensating
+    // staffing change is in the model, flag it so the founder revisits FTE.
+    const en = data.enrollment;
+    const baseTotal = (en?.year1 ?? 0) + (en?.year2 ?? 0) + (en?.year3 ?? 0) + (en?.year4 ?? 0) + (en?.year5 ?? 0);
+    const deltaTotal = decisionInputs.inputs.enrollmentDelta.reduce((a, b) => a + b, 0);
+    const baselineFte = (data.staffingRows ?? []).reduce((acc, r) => acc + (r.fte ?? 0), 0);
+    const adjustedFte = baselineFte; // enrollment-change flow doesn't touch staffing
+    const studentsPerFte = adjustedFte > 0 ? Math.round((((en?.year5 ?? 0) + (decisionInputs.inputs.enrollmentDelta[4] ?? 0))) / adjustedFte) : 0;
+    if (baseTotal > 0 && Math.abs(deltaTotal) >= Math.max(20, baseTotal * 0.1)) {
+      const direction = deltaTotal > 0 ? "more" : "fewer";
+      nudges.push({
+        signal: "amber",
+        label: "Enrollment shift may strain your staffing plan",
+        message:
+          deltaTotal > 0
+            ? `You're modeling ${Math.abs(deltaTotal)} ${direction} students cumulatively but didn't add any FTE. ${
+                studentsPerFte > 0 ? `That pushes you to ~${studentsPerFte} students per FTE in Year 5 — ` : ""
+              }revisit your staffing plan before sharing this scenario.`
+            : `You're modeling ${Math.abs(deltaTotal)} ${direction} students cumulatively but didn't reduce FTE. Salaries and benefits will run higher per student than your base — consider whether staffing should also adjust.`,
+      });
+    }
+  }
+
   if (nudges.length === 0) {
     nudges.push({
       signal: "green",
@@ -373,7 +481,7 @@ export function computeDecisionImpact(
     },
     nudges: [],
   };
-  partial.nudges = genDecisionNudges(partial, decision.type);
+  partial.nudges = genDecisionNudges(partial, decision.type, data, decision);
   return partial;
 }
 
@@ -389,11 +497,13 @@ export interface PersistedDecisionOverrides {
   rentChangeStartYear?: number;
   sqftDelta?: number;
   addProgramName?: string;
+  addProgramGradeBand?: string;
   addProgramTuition?: number;
   addProgramEnrollment?: number[];
   addProgramAddedFte?: number;
   addProgramAddedFteSalary?: number;
   addProgramAddedAnnualSpace?: number;
+  addProgramStaffingTbd?: boolean;
   siteFitOutCost?: number;
 }
 
@@ -406,11 +516,13 @@ export function decisionToPersistedOverrides(
       const i = decision.inputs;
       return {
         addProgramName: i.name,
+        addProgramGradeBand: i.gradeBand,
         addProgramTuition: i.annualTuition,
         addProgramEnrollment: [...i.enrollment],
-        addProgramAddedFte: i.addedFte,
-        addProgramAddedFteSalary: i.addedFteSalary,
+        addProgramAddedFte: i.staffingTbd ? undefined : i.addedFte,
+        addProgramAddedFteSalary: i.staffingTbd ? undefined : i.addedFteSalary,
         addProgramAddedAnnualSpace: i.addedAnnualSpace,
+        addProgramStaffingTbd: i.staffingTbd ? true : undefined,
       };
     }
     case "evaluate_site": {
@@ -430,13 +542,17 @@ export function decisionToPersistedOverrides(
 export function buildDecisionBullets(persisted: PersistedDecisionOverrides, decisionType?: DecisionType): string[] {
   const bullets: string[] = [];
   if (decisionType === "add_program" || persisted.addProgramName) {
-    if (persisted.addProgramName) bullets.push(`Program: ${persisted.addProgramName}`);
+    if (persisted.addProgramName) {
+      const band = persisted.addProgramGradeBand ? ` (${persisted.addProgramGradeBand})` : "";
+      bullets.push(`Program: ${persisted.addProgramName}${band}`);
+    }
     if (persisted.addProgramTuition) bullets.push(`Tuition $${persisted.addProgramTuition.toLocaleString()}/yr`);
     if (persisted.addProgramEnrollment) {
       const total = persisted.addProgramEnrollment.reduce((a, b) => a + b, 0);
       bullets.push(`Adds ${total} cumulative students (5 yrs)`);
     }
     if (persisted.addProgramAddedFte) bullets.push(`+${persisted.addProgramAddedFte} FTE`);
+    if (persisted.addProgramStaffingTbd) bullets.push(`Staffing: TBD`);
     return bullets;
   }
   if (persisted.enrollmentDelta && persisted.enrollmentDelta.some((v) => v !== 0)) {
@@ -463,11 +579,13 @@ export function buildDecisionBullets(persisted: PersistedDecisionOverrides, deci
 export function buildBlankAddProgramInputs(): AddProgramInputs {
   return {
     name: "",
+    gradeBand: "",
     annualTuition: 0,
     enrollment: [...Z5] as [number, number, number, number, number],
     addedFte: 0,
     addedFteSalary: 0,
     addedAnnualSpace: 0,
+    staffingTbd: false,
   };
 }
 

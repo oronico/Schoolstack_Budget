@@ -1,11 +1,15 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
-import { Loader2, GraduationCap, ArrowRight, FileSpreadsheet } from "lucide-react";
+import { Loader2, GraduationCap, ArrowRight } from "lucide-react";
 import { DecisionFlowShell } from "@/components/decision-flow/DecisionFlowShell";
 import { ModelMiniSummary } from "@/components/decision-flow/ModelMiniSummary";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
+import { WhyStep } from "@/components/decision-flow/WhyStep";
+import { SaveActions, type SaveAction } from "@/components/decision-flow/SaveActions";
+import { cn } from "@/lib/utils";
 import {
+  applyDecisionToData,
   buildBlankAddProgramInputs,
   computeDecisionImpact,
   decisionToPersistedOverrides,
@@ -17,6 +21,8 @@ interface AddProgramFlowProps {
   modelId: number;
 }
 
+const GRADE_BAND_PRESETS = ["Pre-K", "Kindergarten", "K-2", "3-5", "6-8", "9-12"];
+
 export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
   const [, setLocation] = useLocation();
   const { data: model, isLoading } = useGetModel(modelId);
@@ -27,6 +33,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
   const [scenarioName, setScenarioName] = useState("");
   const [narrative, setNarrative] = useState("");
   const [done, setDone] = useState(false);
+  const [doneAction, setDoneAction] = useState<SaveAction | null>(null);
 
   const data = (model?.data ?? {}) as FullModelData;
 
@@ -40,7 +47,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
     inputs.annualTuition >= 0 &&
     inputs.enrollment.some((n) => n > 0);
 
-  const canAdvance = step === 1 ? true : step === 2 ? inputsValid : step === 3 ? true : scenarioName.trim().length > 0;
+  const canAdvance = step === 1 ? true : step === 2 ? inputsValid : step === 3 ? true : true;
 
   if (isLoading || !model) {
     return (
@@ -50,7 +57,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
     );
   }
 
-  const handleSave = async () => {
+  const handleSave = async (action: SaveAction) => {
     const persistedOverrides = decisionToPersistedOverrides(data, { type: "add_program", inputs });
     const existing = ((data as Record<string, unknown>).customScenarios as CustomScenario[] | undefined) ?? [];
     const entry: CustomScenario = {
@@ -60,14 +67,33 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
       decisionType: "add_program",
       narrative: narrative.trim(),
     };
-    const next = [...existing, entry];
+
+    let nextData: Record<string, unknown> = {
+      ...(data as Record<string, unknown>),
+      customScenarios: [...existing, entry],
+    };
+
+    if (action === "apply") {
+      const applied = applyDecisionToData(data, { type: "add_program", inputs });
+      nextData = {
+        ...(applied as Record<string, unknown>),
+        customScenarios: [...existing, entry],
+      };
+    }
+
     await updateMutation.mutateAsync({
       id: modelId,
-      data: {
-        data: { ...(data as Record<string, unknown>), customScenarios: next } as Record<string, unknown>,
-      },
+      data: { data: nextData as Record<string, unknown> },
     });
+    setDoneAction(action);
     setDone(true);
+
+    if (action === "apply") {
+      setTimeout(() => setLocation(`/model/${modelId}`), 800);
+    } else if (action === "later") {
+      setTimeout(() => setLocation(`/model/${modelId}/scenarios`), 800);
+    }
+    // "planner" disabled for add_program (handled below)
   };
 
   return (
@@ -78,49 +104,47 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
       step={step}
       setStep={setStep}
       canAdvance={canAdvance}
-      onSave={handleSave}
       isSaving={updateMutation.isPending}
+      ownSaveActions={step === 4}
       done={done}
       doneCta={
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLocation(`/model/${modelId}/scenarios`)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-md bg-amber-600 text-white hover:bg-amber-700"
-            data-testid="decision-flow-view-scenarios"
-          >
-            View on Scenarios <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        <button
+          onClick={() => setLocation(`/model/${modelId}/scenarios`)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-md bg-amber-600 text-white hover:bg-amber-700"
+          data-testid="decision-flow-view-scenarios"
+        >
+          View on Scenarios <ArrowRight className="h-4 w-4" />
+        </button>
       }
       sidebar={<ModelMiniSummary data={data} />}
     >
       {step === 1 && (
-        <section className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
-            <GraduationCap className="h-3.5 w-3.5" /> Decision: Add a program
-          </div>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-3">
-            Adding a new grade or program?
-          </h1>
-          <p className="text-base text-muted-foreground leading-relaxed mb-5">
-            Whether it's a new grade band, an after-school enrichment, or a special-education track,
-            adding a program changes both your revenue and your cost base. We'll model the trade-off
-            in four short steps so you can decide with the numbers — not just the gut.
-          </p>
-          <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-4 text-sm text-amber-900/90">
-            <p className="font-semibold mb-1">What you'll need handy</p>
-            <ul className="list-disc pl-4 space-y-1 text-amber-900/80">
-              <li>Program name and the annual tuition you'd charge per student</li>
-              <li>Rough enrollment for years 1 through 5</li>
-              <li>Any added FTE (teachers, aides) and a typical salary</li>
-              <li>Any extra space or facility cost (optional)</li>
-            </ul>
-          </div>
-          <p className="mt-5 text-xs text-muted-foreground italic">
-            None of this rewrites your base model. We'll save the result as a named scenario you can
-            revisit, share, or apply later.
-          </p>
-        </section>
+        <WhyStep
+          decisionType="add_program"
+          narrative={narrative}
+          setNarrative={setNarrative}
+          intro={
+            <>
+              <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+                <GraduationCap className="h-3.5 w-3.5" /> Decision: Add a program
+              </div>
+              <h1 className="font-display text-3xl font-bold text-foreground mb-3">
+                Adding a new grade or program?
+              </h1>
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Whether it's a new grade band, an after-school enrichment, or a special-education
+                track, adding a program changes both your revenue and your cost base. We'll model the
+                trade-off in four short steps so you can decide with the numbers — not just the gut.
+              </p>
+            </>
+          }
+          prepareList={[
+            "Program name and grade band",
+            "Annual tuition you'd charge per student",
+            "Rough enrollment for years 1 through 5",
+            "Optional: added FTE, salary, and any extra space cost",
+          ]}
+        />
       )}
 
       {step === 2 && (
@@ -151,6 +175,35 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
             </Field>
           </div>
 
+          <Field label="Grade band">
+            <input
+              type="text"
+              value={inputs.gradeBand ?? ""}
+              onChange={(e) => setInputs((s) => ({ ...s, gradeBand: e.target.value }))}
+              placeholder="e.g. K-2, 6-8, Pre-K"
+              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
+              data-testid="add-program-grade-band"
+            />
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {GRADE_BAND_PRESETS.map((preset) => (
+                <button
+                  type="button"
+                  key={preset}
+                  onClick={() => setInputs((s) => ({ ...s, gradeBand: preset }))}
+                  className={cn(
+                    "text-[11px] rounded-full px-2.5 py-1 border transition-colors",
+                    inputs.gradeBand === preset
+                      ? "bg-amber-600 text-white border-amber-600"
+                      : "bg-background text-foreground border-border hover:border-amber-400",
+                  )}
+                  data-testid={`add-program-grade-band-preset-${preset.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </Field>
+
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Projected enrollment
@@ -173,15 +226,36 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
           </div>
 
           <div className="border-t border-border/60 pt-5">
-            <p className="text-sm font-semibold text-foreground mb-1">Optional: cost side</p>
-            <p className="text-xs text-muted-foreground mb-3">Skip these if your existing staff and space cover the program.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Cost side: staffing & space</p>
+                <p className="text-xs text-muted-foreground">Skip these if your existing staff and space cover the program.</p>
+              </div>
+              <label className="inline-flex items-center gap-2 text-xs text-foreground cursor-pointer select-none whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={!!inputs.staffingTbd}
+                  onChange={(e) => setInputs((s) => ({ ...s, staffingTbd: e.target.checked }))}
+                  className="h-4 w-4 rounded border-border text-amber-600"
+                  data-testid="add-program-staffing-tbd"
+                />
+                I haven't figured out staffing yet
+              </label>
+            </div>
+            {inputs.staffingTbd && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-3">
+                Got it — we'll skip staff costs in this scenario and surface a reminder in the impact step so
+                you remember to fold them in before sharing this with a lender.
+              </p>
+            )}
+            <div className={cn("grid grid-cols-1 sm:grid-cols-3 gap-4", inputs.staffingTbd && "opacity-50 pointer-events-none")}>
               <Field label="Added FTE">
                 <NumberInput
                   value={inputs.addedFte ?? 0}
                   onChange={(v) => setInputs((s) => ({ ...s, addedFte: v }))}
                   step={0.5}
                   testid="add-program-fte"
+                  disabled={inputs.staffingTbd}
                 />
               </Field>
               <Field label="Salary / FTE">
@@ -189,6 +263,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
                   value={inputs.addedFteSalary ?? 0}
                   onChange={(v) => setInputs((s) => ({ ...s, addedFteSalary: v }))}
                   testid="add-program-salary"
+                  disabled={inputs.staffingTbd}
                 />
               </Field>
               <Field label="Extra annual space cost">
@@ -222,45 +297,18 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
       )}
 
       {step === 4 && (
-        <section className="max-w-xl space-y-4" data-testid="add-program-save">
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground mb-1">Save this decision</h2>
-            <p className="text-sm text-muted-foreground">
-              We'll save it as a named scenario tagged "Add a program" — you can find it on the Scenarios page.
-            </p>
-          </div>
-          <Field label="Scenario name">
-            <input
-              type="text"
-              value={scenarioName}
-              onChange={(e) => setScenarioName(e.target.value)}
-              placeholder={`e.g. Add ${inputs.name || "Pre-K"}`}
-              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
-              data-testid="add-program-scenario-name"
-            />
-          </Field>
-          <Field label="Why are you considering this? (optional)">
-            <textarea
-              value={narrative}
-              onChange={(e) => setNarrative(e.target.value)}
-              placeholder="What's driving this decision? Demand, mission, capacity, board ask…"
-              rows={4}
-              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background"
-              data-testid="add-program-narrative"
-            />
-          </Field>
-          {done && (
-            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-900">
-              <p className="font-semibold mb-1 inline-flex items-center gap-1.5">
-                <FileSpreadsheet className="h-4 w-4" /> Saved as a scenario
-              </p>
-              <p className="text-emerald-900/80">
-                You'll find this under Saved What-If scenarios on your Scenarios page, with the
-                "Add a program" tag and your notes.
-              </p>
-            </div>
-          )}
-        </section>
+        <SaveActions
+          decisionType="add_program"
+          scenarioName={scenarioName}
+          setScenarioName={setScenarioName}
+          defaultName={`Add ${inputs.name || "Pre-K"}`}
+          isSaving={updateMutation.isPending}
+          done={done}
+          doneAction={doneAction}
+          onSave={handleSave}
+          plannerAvailable={false}
+          plannerUnavailableReason="Add-a-program scenarios use a synthesized revenue row that the live planner can't replay — pick Apply to my model to fold it in instead."
+        />
       )}
     </DecisionFlowShell>
   );
@@ -275,12 +323,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function NumberInput({ value, onChange, step = 1, placeholder, testid }: {
+function NumberInput({ value, onChange, step = 1, placeholder, testid, disabled }: {
   value: number;
   onChange: (v: number) => void;
   step?: number;
   placeholder?: string;
   testid?: string;
+  disabled?: boolean;
 }) {
   return (
     <input
@@ -290,11 +339,12 @@ function NumberInput({ value, onChange, step = 1, placeholder, testid }: {
       step={step}
       value={value}
       placeholder={placeholder}
+      disabled={disabled}
       onChange={(e) => {
         const v = parseFloat(e.target.value);
         onChange(isNaN(v) ? 0 : v);
       }}
-      className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background font-mono"
+      className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background font-mono disabled:opacity-50"
       data-testid={testid}
     />
   );

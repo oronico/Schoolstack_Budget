@@ -461,11 +461,13 @@ export const customScenarioSchema = z.object({
     sqftDelta: z.number().optional(),
     // Decision-flow extras (forward-compatible — engine ignores unknown overrides)
     addProgramName: z.string().optional(),
+    addProgramGradeBand: z.string().optional(),
     addProgramTuition: z.number().optional(),
     addProgramEnrollment: z.array(z.number()).length(5).optional(),
     addProgramAddedFte: z.number().optional(),
     addProgramAddedFteSalary: z.number().optional(),
     addProgramAddedAnnualSpace: z.number().optional(),
+    addProgramStaffingTbd: z.boolean().optional(),
     siteFitOutCost: z.number().optional(),
   }),
   decisionType: decisionTypeSchema.optional(),
