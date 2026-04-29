@@ -85,6 +85,7 @@ function computeExpenseForYear(
   revenue: number,
   costInflation: number,
   pf: number,
+  yearFTE: number,
 ): number {
   const enabled = rows.filter(r => r.enabled);
   const yPf = y === 0 ? pf : 1;
@@ -99,9 +100,20 @@ function computeExpenseForYear(
         pct = r.amounts?.[y] ?? 0;
       }
       total += (pct / 100) * revenue;
+    } else if (r.driverType === "per_fte") {
+      const perFte = driverVal(r.amounts, y, "annual_fixed", students, r.escalationRate, costInflation, r.escalationRateOverridden);
+      total += perFte * yearFTE * yPf;
     } else {
       total += driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, r.escalationRateOverridden) * yPf;
     }
+  }
+  return total;
+}
+
+function computeYearFTE(rows: TestStaffingRow[], y: number, students: number): number {
+  let total = 0;
+  for (const r of rows) {
+    total += computeEffectiveFte(r, y, students);
   }
   return total;
 }
@@ -154,7 +166,8 @@ export function computeBackendValues(fixture: TestModelPayload): BackendComputed
     const rev = Math.round(computeRevenueForYear(fixture.revenueRows, y, enrollment[y], sp) * yPf);
     revenue.push(rev);
     personnel.push(Math.round(computePersonnelForYear(fixture.staffingRows, salaryEsc, pf, y, enrollment[y])));
-    expenses.push(Math.round(computeExpenseForYear(fixture.expenseRows, y, enrollment[y], rev, costInfl, pf)));
+    const yearFTE = computeYearFTE(fixture.staffingRows, y, enrollment[y]);
+    expenses.push(Math.round(computeExpenseForYear(fixture.expenseRows, y, enrollment[y], rev, costInfl, pf, yearFTE)));
     capDebt.push(Math.round(computeCapDebtForYear(fixture.capitalAndDebtRows, y, enrollment[y])));
     loanDS.push(Math.round(computeCapDebtForYear(loanRows, y, enrollment[y])));
   }
