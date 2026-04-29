@@ -118,16 +118,6 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     short: "The list of every income and expense category your bookkeeper uses - the labels behind every line on your Profit & Loss.",
     long: "When we map your accounting system, we look at this list and decide which accounts feed Revenue, which feed Expenses, and which feed Rent. If your bookkeeper renames an account, the mapping breaks until you re-tag it.",
   },
-  realm: {
-    term: "Realm",
-    short: "QuickBooks' name for a single company file. Every QuickBooks login has at least one realm; we connect to a specific one.",
-    long: "Switching realms means switching the underlying books. If a school has separate QuickBooks files for the school and a foundation, each one is its own realm and needs its own connection.",
-  },
-  oauth: {
-    term: "OAuth",
-    short: "The standard way one app gets read access to another app's data without you sharing your password.",
-    long: "When you click 'Connect QuickBooks,' you're sent to QuickBooks' login screen, you sign in there, and QuickBooks hands us a time-limited token. We never see your password and you can revoke access from QuickBooks' settings any time.",
-  },
   pl_statement: {
     term: "P&L Statement",
     short: "Profit & Loss statement - a one-page summary of revenue, expenses, and net income over a period of time.",

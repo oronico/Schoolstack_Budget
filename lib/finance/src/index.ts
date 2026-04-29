@@ -111,8 +111,6 @@ export { buildDecisionBullets as buildDecisionFlowBullets } from "./decision-eng
 
 export {
   buildActualsSuggestion,
-  providerDisplayName,
-  relativeTimeAgo,
   type ActualsSuggestion,
   type ActualsSuggestionField,
   type ActualsContributor,
@@ -127,13 +125,7 @@ export {
   type ParsedAccountingExport,
 } from "./decision-engine/accounting-export-parser.js";
 
-export type {
-  AccountingExportLike,
-  AccountingSnapshotLike,
-  AccountingSnapshotProvider,
-  AccountingDiscoveredAccountLike,
-  AccountingAccountKindLike,
-} from "./decision-engine/model-shape.js";
+export type { AccountingExportLike } from "./decision-engine/model-shape.js";
 
 export function computeStraightLineDepreciation(
   fixedAssets: number,

@@ -1,9 +1,5 @@
 import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
-import {
-  startAccountingSyncScheduler,
-  stopAccountingSyncScheduler,
-} from "./lib/accounting/scheduler";
 import { pool, db, errorLogsTable } from "@workspace/db";
 import type { Server } from "http";
 
@@ -111,50 +107,12 @@ async function runMigrations() {
       )`,
       `CREATE INDEX IF NOT EXISTS shared_links_model_id_idx ON shared_links(model_id)`,
       `CREATE INDEX IF NOT EXISTS shared_links_token_idx ON shared_links(token)`,
-      // --- accounting_connections ---
-      // Live QuickBooks/Xero integration. Mirrors migrations/005 and 006
-      // verbatim so a fresh dev DB has the columns the routes expect even
-      // if the file-based migrations haven't been applied separately.
-      `CREATE TABLE IF NOT EXISTS accounting_connections (
-        id SERIAL PRIMARY KEY,
-        model_id INTEGER NOT NULL REFERENCES financial_models(id) ON DELETE CASCADE,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        provider VARCHAR(20) NOT NULL,
-        status VARCHAR(20) NOT NULL DEFAULT 'connected',
-        realm_id TEXT,
-        realm_display_name TEXT,
-        access_token_encrypted TEXT,
-        refresh_token_encrypted TEXT,
-        token_expires_at TIMESTAMP,
-        last_synced_at TIMESTAMP,
-        last_sync_error TEXT,
-        snapshot_json JSONB,
-        created_at TIMESTAMP NOT NULL DEFAULT now(),
-        updated_at TIMESTAMP NOT NULL DEFAULT now()
-      )`,
-      `CREATE UNIQUE INDEX IF NOT EXISTS accounting_connections_model_provider_unq
-        ON accounting_connections (model_id, provider)`,
-      `ALTER TABLE accounting_connections
-        ADD COLUMN IF NOT EXISTS discovered_accounts_json JSONB`,
-      `ALTER TABLE accounting_connections
-        ADD COLUMN IF NOT EXISTS account_mappings_json JSONB`,
-      // --- accounting_mapping_defaults ---
-      // See lib/db/src/schema/accounting-mapping-defaults.ts. Backs the
-      // "Reuse last mapping" affordance when a founder connects the same
-      // QB/Xero company file to a second what-if model.
-      `CREATE TABLE IF NOT EXISTS accounting_mapping_defaults (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        provider VARCHAR(20) NOT NULL,
-        realm_id TEXT NOT NULL,
-        realm_display_name TEXT,
-        account_mappings_json JSONB NOT NULL,
-        source_model_id INTEGER REFERENCES financial_models(id) ON DELETE SET NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT now(),
-        updated_at TIMESTAMP NOT NULL DEFAULT now()
-      )`,
-      `CREATE UNIQUE INDEX IF NOT EXISTS accounting_mapping_defaults_user_provider_realm_unq
-        ON accounting_mapping_defaults (user_id, provider, realm_id)`,
+      // --- accounting integration removed (Task #233) ---
+      // The live QuickBooks/Xero integration was dropped in favor of the
+      // CSV upload flow. Drop the legacy tables on boot so dev databases
+      // converge with production after the live integration is removed.
+      `DROP TABLE IF EXISTS accounting_mapping_defaults`,
+      `DROP TABLE IF EXISTS accounting_connections`,
     ];
     for (const stmt of migrations) {
       await pool.query(stmt);
@@ -235,7 +193,6 @@ function gracefulShutdown(signal: string) {
   forceTimer.unref();
 
   if (cleanupTimer) clearInterval(cleanupTimer);
-  stopAccountingSyncScheduler();
 
   if (!server || !server.listening) {
     console.log("[shutdown] Server not yet listening, skipping server.close.");
@@ -263,9 +220,6 @@ runMigrations().then(() => {
       console.log(`[startup] Production mode — CORS origins: ${process.env.ALLOWED_ORIGINS || "(not set)"}`);
     }
   });
-  // Background daily sync of QuickBooks/Xero connections so founders don't
-  // have to visit the scenarios page just to refresh actuals.
-  startAccountingSyncScheduler();
 });
 
 cleanupTimer = setInterval(() => {

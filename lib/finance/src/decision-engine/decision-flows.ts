@@ -1,7 +1,6 @@
 import type {
   FullModelData,
   DecisionType,
-  AccountingSnapshotLike,
 } from "./model-shape.js";
 import {
   DECISION_LABELS as SHARED_DECISION_LABELS,
@@ -640,22 +639,19 @@ export function buildDecisionBullets(
 //
 // Pulls candidate values for the saved-scenario actuals editor from the most
 // trustworthy source available, in priority order for Year 1:
-//   1. Live accounting snapshot (QuickBooks / Xero) — books-of-record numbers
-//      synced through the live integration. Sourced as
-//      "From QuickBooks (synced 2 hours ago)".
-//   2. Uploaded accounting export (e.g. a QuickBooks P&L CSV the founder
-//      uploaded in the wizard) — closest thing to ground truth when no live
-//      connection is wired up. Sourced as "From <filename> uploaded <date>".
-//   3. Prior-Year Snapshot the founder typed in during setup — closed books
+//   1. Uploaded accounting export (e.g. a QuickBooks P&L CSV the founder
+//      uploaded in the wizard) — closest thing to ground truth available
+//      from the founder's books-of-record. Sourced as "From <filename>
+//      uploaded <date>".
+//   2. Prior-Year Snapshot the founder typed in during setup — closed books
 //      from the last completed year.
-//   4. Current-Year Projection — in-progress numbers, annualized when the
+//   3. Current-Year Projection — in-progress numbers, annualized when the
 //      founder recorded a partial-year (months completed > 0).
 // Each tier *gap-fills* fields the higher-priority tier didn't populate
-// (e.g. QuickBooks doesn't carry enrollment, so we still source enrollment
+// (e.g. P&L exports don't carry enrollment, so we still source enrollment
 // from the prior-year snapshot when both are present). Detected facility
 // rent (for evaluate_site decisions) is layered on independently from the
-// schoolProfile facility plan, but is skipped when the live snapshot
-// already supplied last month's actual rent.
+// schoolProfile facility plan.
 //
 // Each suggested field carries a short `source` string so the UI can explain
 // where the number came from ("From your prior-year snapshot"), which makes
@@ -684,55 +680,10 @@ export interface ActualsSuggestion {
   // these as a short list so the founder understands the basis (e.g. "Prior
   // year actuals from setup"). Order is meaningful — most-trusted first.
   sourceLabels: string[];
-  // Top contributing accounts per field. Only populated when the source for
-  // that field is a live accounting snapshot that carries `discoveredAccounts`
-  // — typed-in priors and CSV exports don't have per-account detail.
+  // Top contributing accounts per field. Reserved for future sources that
+  // carry per-account breakdowns; current sources (typed-in priors and CSV
+  // exports) don't have per-account detail, so this is typically empty.
   contributors: Partial<Record<ActualsSuggestionField, ActualsContributor[]>>;
-}
-
-// How many contributing accounts to show per field. Five keeps the caption
-// scannable at a glance while still covering the long-tail "other" buckets
-// most charts of accounts have.
-const CONTRIBUTOR_LIMIT = 5;
-
-// Build the per-field contributor lists from a live snapshot's discovered
-// accounts. Effective mapping = founder override (if any) → discovered
-// `defaultKind`. Rent rolls into both the expense breakdown (since rent is
-// folded into expenses for the snapshot total) and the rent breakdown,
-// where it's normalized to per-month so the figures tie to `monthlyRent`.
-function buildLiveContributors(snapshot: AccountingSnapshotLike): {
-  revenue: ActualsContributor[];
-  expense: ActualsContributor[];
-  rent: ActualsContributor[];
-} {
-  const empty = { revenue: [], expense: [], rent: [] };
-  const discovered = snapshot.discoveredAccounts;
-  if (!discovered || discovered.length === 0) return empty;
-  const mappings = snapshot.accountMappings ?? {};
-  const months =
-    snapshot.monthsCompleted && snapshot.monthsCompleted > 0
-      ? snapshot.monthsCompleted
-      : 12;
-  const rev: ActualsContributor[] = [];
-  const exp: ActualsContributor[] = [];
-  const rent: ActualsContributor[] = [];
-  for (const acc of discovered) {
-    if (!isFinite(acc.amount) || acc.amount <= 0) continue;
-    const kind = mappings[acc.key] ?? acc.defaultKind;
-    if (kind === "revenue") {
-      rev.push({ name: acc.name, amount: Math.round(acc.amount) });
-    } else if (kind === "expense") {
-      exp.push({ name: acc.name, amount: Math.round(acc.amount) });
-    } else if (kind === "rent") {
-      // Rent is also folded into the expense total — list it in both
-      // breakdowns so the math the founder sees ties out to each suggestion.
-      exp.push({ name: acc.name, amount: Math.round(acc.amount) });
-      rent.push({ name: acc.name, amount: Math.round(acc.amount / months) });
-    }
-  }
-  const cap = (a: ActualsContributor[]) =>
-    a.sort((x, y) => y.amount - x.amount).slice(0, CONTRIBUTOR_LIMIT);
-  return { revenue: cap(rev), expense: cap(exp), rent: cap(rent) };
 }
 
 function annualizeFromCurrent(value: number | undefined, monthsCompleted: number | undefined): number | undefined {
@@ -742,39 +693,6 @@ function annualizeFromCurrent(value: number | undefined, monthsCompleted: number
   // Project the year-end figure from a partial year of data. We only do this
   // when the founder explicitly recorded months-completed > 0.
   return Math.round((value / m) * 12);
-}
-
-// Source-label helpers for live accounting snapshots ------------------------
-
-export function providerDisplayName(provider: "quickbooks" | "xero"): string {
-  return provider === "quickbooks" ? "QuickBooks" : "Xero";
-}
-
-// Renders a relative-time string ("2 hours ago", "3 days ago") for the
-// suggestion source caption. We deliberately keep this rough — minute-level
-// precision would feel jittery as the page lingers, and the founder cares
-// about "is this fresh enough to trust?", not the exact second.
-//
-// Returns null when the input is unparseable so the caller can fall back to a
-// label that omits the relative time entirely.
-export function relativeTimeAgo(
-  syncedAt: string,
-  nowMs: number = Date.now(),
-): string | null {
-  const t = Date.parse(syncedAt);
-  if (!isFinite(t)) return null;
-  const diffMs = Math.max(0, nowMs - t);
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
-  const years = Math.floor(days / 365);
-  return `${years} year${years === 1 ? "" : "s"} ago`;
 }
 
 // Renders an upload timestamp like "Mar 14" for use in source labels.
@@ -803,75 +721,11 @@ export function buildActualsSuggestion(
   const contributors: ActualsSuggestion["contributors"] = {};
   const yr = Math.max(1, Math.min(5, Math.round(asOfYear || 1)));
 
-  // 1) Live accounting connection — highest priority. We only surface this
-  //    for Year 1 because the snapshot represents one books-of-record period
-  //    (typically fiscal YTD); claiming it as a Year 3 actual would mislead.
-  const liveSnapshot = data.accountingSnapshot;
-  if (yr === 1 && liveSnapshot) {
-    const providerName = providerDisplayName(liveSnapshot.provider);
-    const relTime = relativeTimeAgo(liveSnapshot.syncedAt);
-    const realm = liveSnapshot.realmDisplayName ? ` · ${liveSnapshot.realmDisplayName}` : "";
-    const label = relTime
-      ? `From ${providerName} (synced ${relTime})${realm}`
-      : `From ${providerName}${realm}`;
-    let used = false;
-
-    const months = liveSnapshot.monthsCompleted;
-    const annualizedRev = annualizeFromCurrent(liveSnapshot.revenue, months);
-    const annualizedExp = annualizeFromCurrent(liveSnapshot.expenses, months);
-
-    if (liveSnapshot.enrollment !== undefined && liveSnapshot.enrollment > 0) {
-      values.enrollmentActual = Math.round(liveSnapshot.enrollment);
-      sources.enrollmentActual = label;
-      used = true;
-    }
-    // Compute per-account contributors once; we attach them to the fields
-    // the live snapshot actually populated below. Stays empty when the
-    // snapshot doesn't carry `discoveredAccounts` (e.g. older syncs).
-    const liveBreakdown = buildLiveContributors(liveSnapshot);
-    if (annualizedRev !== undefined && annualizedRev > 0) {
-      values.revenueActual = Math.round(annualizedRev);
-      sources.revenueActual = label;
-      if (liveBreakdown.revenue.length > 0) {
-        contributors.revenueActual = liveBreakdown.revenue;
-      }
-      used = true;
-    }
-    if (annualizedExp !== undefined && annualizedExp > 0) {
-      values.expenseActual = Math.round(annualizedExp);
-      sources.expenseActual = label;
-      if (liveBreakdown.expense.length > 0) {
-        contributors.expenseActual = liveBreakdown.expense;
-      }
-      used = true;
-    }
-    if (annualizedRev !== undefined && annualizedExp !== undefined) {
-      values.netIncomeActual = Math.round(annualizedRev - annualizedExp);
-      sources.netIncomeActual = label;
-    }
-    // Site-decision rent: prefer the live monthly rent over the signed-lease
-    // fallback, since this represents what the school actually paid last
-    // month rather than what's in the lease document.
-    if (
-      decisionType === "evaluate_site" &&
-      liveSnapshot.monthlyRent !== undefined &&
-      liveSnapshot.monthlyRent > 0
-    ) {
-      values.signedMonthlyRent = Math.round(liveSnapshot.monthlyRent);
-      sources.signedMonthlyRent = label;
-      if (liveBreakdown.rent.length > 0) {
-        contributors.signedMonthlyRent = liveBreakdown.rent;
-      }
-      used = true;
-    }
-    if (used) sourceLabels.push(label);
-  }
-
-  // 2) Uploaded accounting export, prior-year snapshot, then current-year
-  //    projection — each tier *gap-fills* fields the higher-priority tier
-  //    didn't populate, so a live snapshot's revenue isn't overwritten by a
-  //    stale CSV but a P&L export's missing enrollment can still be sourced
-  //    from the prior-year typed-in numbers.
+  // Source priority: uploaded accounting export, prior-year snapshot, then
+  // current-year projection — each tier *gap-fills* fields the higher-
+  // priority tier didn't populate, so a CSV-export's revenue isn't
+  // overwritten by a stale prior-year typed-in number but a P&L export's
+  // missing enrollment can still be sourced from the typed-in numbers.
   const prior = data.priorYearSnapshot;
   const current = data.currentYearProjection;
   const accountingExport = data.accountingExport;
@@ -891,9 +745,8 @@ export function buildActualsSuggestion(
       (priorRevenue !== undefined && priorRevenue > 0) ||
       (priorExpenses !== undefined && priorExpenses > 0);
 
-    // CSV export (gap-fill) — only fills financial fields the live snapshot
-    // didn't already supply. P&L exports don't carry enrollment, so we leave
-    // that to the prior/current chain below.
+    // CSV export — fills financial fields when present. P&L exports don't
+    // carry enrollment, so we leave that to the prior/current chain below.
     if (hasExport) {
       const filename = accountingExport!.filename || "uploaded export";
       const friendlyDate = formatUploadDateForLabel(accountingExport!.uploadedAt);
@@ -1007,7 +860,7 @@ export function buildActualsSuggestion(
   // generic "monthly rent" question on other decision types isn't a realized
   // figure to capture. We prefer a phase that actually contains the as-of
   // year, so a multi-phase model still surfaces the right rent. Skipped when
-  // the live accounting snapshot already filled in monthly rent above.
+  // an upstream source has already filled in monthly rent above.
   if (decisionType === "evaluate_site" && values.signedMonthlyRent === undefined) {
     const sp = data.schoolProfile as Record<string, unknown> | undefined;
     let phaseRent: number | undefined;

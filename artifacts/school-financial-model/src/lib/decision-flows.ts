@@ -28,15 +28,9 @@ export {
 } from "@workspace/finance";
 export {
   buildActualsSuggestion,
-  providerDisplayName,
-  relativeTimeAgo,
   type ActualsSuggestion,
   type ActualsSuggestionField,
   type ActualsContributor,
-  type AccountingSnapshotLike,
-  type AccountingSnapshotProvider,
-  type AccountingDiscoveredAccountLike,
-  type AccountingAccountKindLike,
 } from "@workspace/finance";
 export {
   parseAccountingExportCsv,

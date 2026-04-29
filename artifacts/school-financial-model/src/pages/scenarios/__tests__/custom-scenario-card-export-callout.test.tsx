@@ -126,13 +126,13 @@ describe("CustomScenarioCard — export callout & replace-export deep-link", () 
 
   it("hides the callout when no suggestion field came from the export", async () => {
     const user = userEvent.setup();
-    const liveSuggestion: ActualsSuggestion = {
+    const nonExportSuggestion: ActualsSuggestion = {
       values: { revenueActual: 480_000 },
-      sources: { revenueActual: "From QuickBooks Online (synced 2 hours ago)" },
-      sourceLabels: ["From QuickBooks Online (synced 2 hours ago)"],
+      sources: { revenueActual: "From your prior-year snapshot" },
+      sourceLabels: ["From your prior-year snapshot"],
       contributors: {},
     };
-    renderCard({ suggestion: liveSuggestion });
+    renderCard({ suggestion: nonExportSuggestion });
     await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
     await user.click(screen.getByTestId("custom-scenario-actuals-suggest-0"));
 
