@@ -9,8 +9,10 @@ import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit } from "../schema";
 import {
   parseAccountingExportCsv,
+  parseAccountingExportRows,
   MAX_ACCOUNTING_EXPORT_BYTES,
   type AccountingExportLike,
+  type ParsedAccountingExport,
 } from "@/lib/decision-flows";
 
 const STATES = [
@@ -554,14 +556,44 @@ function AccountingExportUploader() {
       return;
     }
     const lower = file.name.toLowerCase();
-    if (!lower.endsWith(".csv")) {
-      setError("Only CSV exports are supported right now. Most accounting tools (QuickBooks, Xero, Wave) can export a Profit & Loss as CSV.");
+    const isXlsx = lower.endsWith(".xlsx");
+    const isCsv = lower.endsWith(".csv");
+    if (!isCsv && !isXlsx) {
+      setError("Only CSV and Excel (.xlsx) exports are supported. Re-export your Profit & Loss from QuickBooks, Xero, or Wave as CSV or Excel.");
       return;
     }
     setIsParsing(true);
     try {
-      const text = await file.text();
-      const parsed = parseAccountingExportCsv(text);
+      let parsed: ParsedAccountingExport;
+      if (isXlsx) {
+        // Parse client-side via SheetJS so the founder's books never leave
+        // their browser. We take the first sheet, convert to a string[][]
+        // grid, and feed it through the same row processor the CSV path
+        // uses so label aliases and right-most-column logic stay
+        // identical across formats. SheetJS is loaded lazily here so its
+        // ~600 KB bundle only ships to founders who actually upload an
+        // .xlsx file.
+        const XLSX = await import("xlsx");
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array" });
+        const firstName = wb.SheetNames[0];
+        if (!firstName) {
+          setError("That Excel file didn't have any sheets we could read. Re-export the Profit & Loss as a single sheet and try again.");
+          return;
+        }
+        const sheet = wb.Sheets[firstName];
+        const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+          header: 1,
+          blankrows: false,
+          raw: false,
+          defval: "",
+        });
+        const rows: string[][] = grid.map((r) => (r ?? []).map((c) => (c == null ? "" : String(c))));
+        parsed = parseAccountingExportRows(rows);
+      } else {
+        const text = await file.text();
+        parsed = parseAccountingExportCsv(text);
+      }
       const next: AccountingExportLike = {
         filename: file.name,
         uploadedAt: new Date().toISOString(),
@@ -573,7 +605,11 @@ function AccountingExportUploader() {
       // new export the next time it computes a suggestion.
       setValue("accountingExport", next, { shouldDirty: true });
     } catch (e) {
-      setError("Couldn't read that file. Make sure it's a plain-text CSV and try again.");
+      setError(
+        isXlsx
+          ? "Couldn't read that Excel file. Re-save it as .xlsx (or export as CSV) and try again."
+          : "Couldn't read that file. Make sure it's a plain-text CSV and try again.",
+      );
     } finally {
       setIsParsing(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -603,7 +639,7 @@ function AccountingExportUploader() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".csv,text/csv"
+        accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         className="sr-only"
         onChange={onChange}
         data-testid="accounting-export-file-input"
@@ -618,10 +654,10 @@ function AccountingExportUploader() {
         >
           <Upload className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm font-medium text-foreground">
-            {isParsing ? "Reading file…" : "Upload accounting export (CSV)"}
+            {isParsing ? "Reading file…" : "Upload accounting export (CSV or Excel)"}
           </span>
           <span className="text-xs text-muted-foreground">
-            Profit &amp; Loss CSV, up to {Math.round(MAX_ACCOUNTING_EXPORT_BYTES / 1000)} KB
+            Profit &amp; Loss .csv or .xlsx, up to {Math.round(MAX_ACCOUNTING_EXPORT_BYTES / 1000)} KB
           </span>
         </button>
       ) : (

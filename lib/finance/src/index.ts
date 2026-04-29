@@ -125,6 +125,7 @@ export {
 
 export {
   parseAccountingExportCsv,
+  parseAccountingExportRows,
   parseAccountingNumber,
   MAX_ACCOUNTING_EXPORT_BYTES,
   type AccountingExportTotals,
