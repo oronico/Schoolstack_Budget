@@ -700,6 +700,137 @@ describe("buildActualsSuggestion", () => {
     expect(enrollmentSuggestion.values.signedMonthlyRent).toBeUndefined();
   });
 
+  // --- live accounting snapshot ------------------------------------------
+  //
+  // When a founder has connected QuickBooks/Xero, we want the suggestion to
+  // come from the freshest source — never the stale setup numbers. These
+  // tests pin down the labelling and the gap-filling behaviour: live data
+  // wins for what it knows, but doesn't overwrite enrollment when the
+  // accounting system has no concept of student counts.
+
+  it("prefers a live accounting snapshot over prior-year actuals at year 1", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      priorYearSnapshot: {
+        endingEnrollment: 95,
+        totalRevenue: 1_200_000,
+        totalExpenses: 1_100_000,
+      },
+      accountingSnapshot: {
+        provider: "quickbooks" as const,
+        // Two hours before "now" — the test passes a fixed nowMs equivalent
+        // via Date.now mocking below to keep the relative-time string stable.
+        syncedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        periodEnd: "2026-04-30",
+        monthsCompleted: 6,
+        enrollment: 110,
+        revenue: 700_000, // → 1,400,000 annualized
+        expenses: 600_000, // → 1,200,000 annualized
+        realmDisplayName: "Lighthouse Academy",
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values.enrollmentActual).toBe(110);
+    expect(suggestion.values.revenueActual).toBe(1_400_000);
+    expect(suggestion.values.expenseActual).toBe(1_200_000);
+    expect(suggestion.values.netIncomeActual).toBe(200_000);
+    // Highest-priority source label, with realm name appended.
+    expect(suggestion.sourceLabels[0]).toMatch(/^From QuickBooks \(synced [^)]+\) · Lighthouse Academy$/);
+  });
+
+  it("gap-fills from prior-year when the live snapshot lacks enrollment", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      priorYearSnapshot: {
+        endingEnrollment: 95,
+        totalRevenue: 0,
+        totalExpenses: 0,
+      },
+      accountingSnapshot: {
+        provider: "xero" as const,
+        syncedAt: new Date().toISOString(),
+        monthsCompleted: 12,
+        revenue: 1_500_000,
+        expenses: 1_350_000,
+        // No enrollment field — Xero doesn't know about students.
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values.revenueActual).toBe(1_500_000);
+    expect(suggestion.values.expenseActual).toBe(1_350_000);
+    // Enrollment came from the prior-year snapshot — the gap-fill path.
+    expect(suggestion.values.enrollmentActual).toBe(95);
+    // Both source labels should be present, live first.
+    expect(suggestion.sourceLabels[0]).toMatch(/^From Xero/);
+    expect(suggestion.sourceLabels).toContain("Prior-year actuals from setup");
+  });
+
+  it("ignores the live accounting snapshot for years other than 1", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      accountingSnapshot: {
+        provider: "quickbooks" as const,
+        syncedAt: new Date().toISOString(),
+        monthsCompleted: 12,
+        revenue: 1_500_000,
+        expenses: 1_350_000,
+        enrollment: 110,
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 3);
+    // Snapshot is books-of-record for one period; we don't extrapolate it
+    // forward into Year 3 actuals.
+    expect(suggestion.values.revenueActual).toBeUndefined();
+    expect(suggestion.values.expenseActual).toBeUndefined();
+    expect(suggestion.values.enrollmentActual).toBeUndefined();
+  });
+
+  it("uses live monthly rent over the facility-phase rent for evaluate_site", () => {
+    const base = buildBaseModel({
+      schoolProfile: {
+        isPartialFirstYear: false,
+        year1OperatingMonths: 12,
+        debtIncluded: true,
+        facilityPhases: [
+          { ownershipType: "rent", startYear: 1, endYear: 5, monthlyRent: 8500 },
+        ],
+      },
+    });
+    const data = {
+      ...base,
+      accountingSnapshot: {
+        provider: "quickbooks" as const,
+        syncedAt: new Date().toISOString(),
+        monthsCompleted: 12,
+        monthlyRent: 9100, // last month's actual rent paid
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "evaluate_site",
+      inputs: { newMonthlyRent: 9000 },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "evaluate_site", 1);
+    expect(suggestion.values.signedMonthlyRent).toBe(9100);
+    // The facility-phase fallback label should not appear, since the live
+    // source already filled the field.
+    expect(suggestion.sourceLabels).not.toContain("Signed rent from facility plan");
+  });
+
   it("does not suggest enrollment/revenue/expense beyond year 1 (no source data)", () => {
     const base = buildBaseModel();
     const data = {

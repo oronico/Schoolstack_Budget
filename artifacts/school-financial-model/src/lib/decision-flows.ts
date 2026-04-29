@@ -28,6 +28,10 @@ export {
 } from "@workspace/finance";
 export {
   buildActualsSuggestion,
+  providerDisplayName,
+  relativeTimeAgo,
   type ActualsSuggestion,
   type ActualsSuggestionField,
+  type AccountingSnapshotLike,
+  type AccountingSnapshotProvider,
 } from "@workspace/finance";

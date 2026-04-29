@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2, AlertTriangle, Rocket, Lightbulb } from "lucide-react";
 import { useMemo } from "react";
+import { AccountingConnectionCard } from "@/components/AccountingConnectionCard";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { computeAnnualDebt } from "@workspace/finance";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
@@ -97,7 +98,7 @@ function computeDriverValue(amounts: number[] | undefined, yearIdx: number, driv
 
 const computeAnnualDebtService = computeAnnualDebt;
 
-export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void, modelId?: number }) {
+export function ReviewStep({ jumpToStep, modelId }: { jumpToStep: (step: number) => void, modelId?: number | null }) {
   const { getValues, watch } = useFormContext();
   const data = getValues();
   const entityType = watch("schoolProfile.entityType");
@@ -301,6 +302,16 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void,
         <p className="text-muted-foreground text-lg">Review your inputs before we run the numbers. You can go back and make changes anytime. Remember, this is your first draft - every version of your budget gets stronger.</p>
         <SectionExplainers section="review" className="mt-4" schoolType={schoolType} />
       </div>
+
+      {/* Live accounting integration is part of the model's standing
+          configuration — it lives here on the Review step (the model's
+          settings surface) so a founder can connect once during setup and
+          the actuals editor in scenarios will automatically prefer the live
+          source. We accept a no-op snapshot callback because the suggestion
+          logic that consumes the snapshot lives on the scenarios page. */}
+      {typeof modelId === "number" && (
+        <AccountingConnectionCard modelId={modelId} onSnapshotChange={() => {}} />
+      )}
 
       <DiagnosticPanel
         data={data as FullModelData}

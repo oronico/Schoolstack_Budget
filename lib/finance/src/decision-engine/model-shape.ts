@@ -118,6 +118,32 @@ export interface CurrentYearProjectionLike {
   [key: string]: unknown;
 }
 
+// Snapshot of actuals pulled from a live accounting connection (QuickBooks /
+// Xero). Sourced from `accounting_connections.snapshot_json` and threaded into
+// the model data when the scenarios page loads — not persisted with the rest
+// of the model. Treated as the highest-priority source for the actuals editor
+// because it represents books-of-record numbers, not founder estimates.
+export type AccountingSnapshotProvider = "quickbooks" | "xero";
+
+export interface AccountingSnapshotLike {
+  provider: AccountingSnapshotProvider;
+  // ISO-8601 timestamp of when the sync that produced this snapshot ran.
+  syncedAt: string;
+  // ISO-8601 date string for the last day covered by the P&L. Used for the
+  // year-1 / year-N matching the suggestion helper does.
+  periodEnd?: string;
+  // 1..12; needed to annualize partial-year P&L numbers like the
+  // current-year projection helper does.
+  monthsCompleted?: number;
+  enrollment?: number;
+  revenue?: number;
+  expenses?: number;
+  monthlyRent?: number;
+  // Optional human label for the source company file ("Acme School - QBO"),
+  // shown in the source caption so the founder knows which books were pulled.
+  realmDisplayName?: string;
+}
+
 export interface FullModelData {
   schoolProfile?: SchoolProfileLike;
   enrollment?: EnrollmentLike;
@@ -133,6 +159,10 @@ export interface FullModelData {
   customScenarios?: Array<Record<string, unknown>>;
   priorYearSnapshot?: PriorYearSnapshotLike;
   currentYearProjection?: CurrentYearProjectionLike;
+  // Live accounting snapshot, threaded in by the scenarios page when the
+  // founder has connected QuickBooks / Xero. Highest-priority source for the
+  // actuals editor.
+  accountingSnapshot?: AccountingSnapshotLike;
 }
 
 export type DecisionType = "add_program" | "evaluate_site" | "change_enrollment";

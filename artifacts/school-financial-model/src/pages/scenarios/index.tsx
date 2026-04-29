@@ -24,6 +24,8 @@ import {
   Search,
   X,
 } from "lucide-react";
+import { AccountingConnectionCard } from "@/components/AccountingConnectionCard";
+import type { AccountingSnapshotLike } from "@/lib/decision-flows";
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
 import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
@@ -1177,7 +1179,25 @@ export function ScenarioPage() {
     }
   }, [model, initialized, setLocation, modelId]);
 
-  const modelData = (model?.data as FullModelData) || {};
+  const baseModelData = (model?.data as FullModelData) || {};
+
+  // Live accounting snapshot pulled from the connected QuickBooks/Xero
+  // realm. We thread it into `modelData` so `buildActualsSuggestion` can
+  // prefer the freshest source. Owned at the page level (rather than inside
+  // the card) so the actuals editor instantly reflects a successful sync.
+  const [accountingSnapshot, setAccountingSnapshot] =
+    useState<AccountingSnapshotLike | null>(null);
+
+  const modelData = useMemo<FullModelData>(
+    () =>
+      accountingSnapshot
+        ? ({
+            ...(baseModelData as unknown as Record<string, unknown>),
+            accountingSnapshot,
+          } as unknown as FullModelData)
+        : baseModelData,
+    [baseModelData, accountingSnapshot],
+  );
 
   const results = useMemo(() => {
     if (!initialized || !model) return null;
@@ -1363,6 +1383,15 @@ export function ScenarioPage() {
             </p>
           </div>
         </div>
+
+        {modelId !== null && (
+          <div className="mb-8">
+            <AccountingConnectionCard
+              modelId={modelId}
+              onSnapshotChange={setAccountingSnapshot}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
           {scenarios.map((scenario, idx) => (

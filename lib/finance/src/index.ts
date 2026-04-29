@@ -116,9 +116,16 @@ export { buildDecisionBullets as buildDecisionFlowBullets } from "./decision-eng
 
 export {
   buildActualsSuggestion,
+  providerDisplayName,
+  relativeTimeAgo,
   type ActualsSuggestion,
   type ActualsSuggestionField,
 } from "./decision-engine/decision-flows.js";
+
+export type {
+  AccountingSnapshotLike,
+  AccountingSnapshotProvider,
+} from "./decision-engine/model-shape.js";
 
 export function computeStraightLineDepreciation(
   fixedAssets: number,

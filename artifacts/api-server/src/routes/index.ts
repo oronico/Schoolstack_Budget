@@ -6,6 +6,7 @@ import adminRouter from "./admin";
 import publicRouter from "./public";
 import feedbackRouter from "./feedback";
 import errorsRouter from "./errors";
+import accountingRouter from "./accounting";
 
 const router: IRouter = Router();
 
@@ -15,6 +16,7 @@ router.use(feedbackRouter);
 router.use(errorsRouter);
 router.use(authRouter);
 router.use(modelsRouter);
+router.use(accountingRouter);
 router.use(adminRouter);
 
 export default router;

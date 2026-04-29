@@ -634,19 +634,20 @@ export function buildDecisionBullets(
 
 // --- Actuals suggestion ------------------------------------------------------
 //
-// Pulls candidate values for the saved-scenario actuals editor from data the
-// founder already entered into the base model — chiefly the Prior-Year
-// Snapshot (last completed year), the Current-Year Projection (this year, if
-// they've been operating), and the detected facility rent. This means the
-// founder doesn't have to re-type figures they've already captured once.
+// Pulls candidate values for the saved-scenario actuals editor from the most
+// trustworthy source available, in priority order:
+//   1. Live accounting snapshot (QuickBooks / Xero)  — books-of-record numbers.
+//   2. Prior-year snapshot (last completed academic year from setup).
+//   3. Current-year projection (in-progress year, annualized if partial).
+//   4. Signed lease rent for evaluate_site decisions (from facility plan).
 //
-// We deliberately keep this scoped to in-model fields (no live integrations
-// yet); even so, those fields function as the school's "source of truth" once
-// they've been populated from accounting/SIS exports during onboarding.
+// The live source jumps the queue because once a founder connects their
+// accounting system the number on the screen is the same number that hit
+// their books — no founder re-typing required.
 //
 // Each suggested field carries a short `source` string so the UI can explain
-// where the number came from ("From your prior-year snapshot"), which makes
-// the suggestion auditable rather than mysterious.
+// where the number came from ("From QuickBooks (synced 2 hours ago)"), which
+// makes the suggestion auditable rather than mysterious.
 export type ActualsSuggestionField =
   | "enrollmentActual"
   | "revenueActual"
@@ -672,6 +673,39 @@ function annualizeFromCurrent(value: number | undefined, monthsCompleted: number
   return Math.round((value / m) * 12);
 }
 
+// Source-label helpers for live accounting snapshots ------------------------
+
+export function providerDisplayName(provider: "quickbooks" | "xero"): string {
+  return provider === "quickbooks" ? "QuickBooks" : "Xero";
+}
+
+// Renders a relative-time string ("2 hours ago", "3 days ago") for the
+// suggestion source caption. We deliberately keep this rough — minute-level
+// precision would feel jittery as the page lingers, and the founder cares
+// about "is this fresh enough to trust?", not the exact second.
+//
+// Returns null when the input is unparseable so the caller can fall back to a
+// label that omits the relative time entirely.
+export function relativeTimeAgo(
+  syncedAt: string,
+  nowMs: number = Date.now(),
+): string | null {
+  const t = Date.parse(syncedAt);
+  if (!isFinite(t)) return null;
+  const diffMs = Math.max(0, nowMs - t);
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
+  const years = Math.floor(days / 365);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
+}
+
 export function buildActualsSuggestion(
   data: FullModelData,
   persisted: PersistedDecisionOverrides,
@@ -683,13 +717,69 @@ export function buildActualsSuggestion(
   const sourceLabels: string[] = [];
   const yr = Math.max(1, Math.min(5, Math.round(asOfYear || 1)));
 
-  // Prior-year snapshot — last completed academic year. Most credible
-  // analogue for "actuals you can pull from your books today".
+  // 1) Live accounting connection — highest priority. We only surface this
+  //    for Year 1 because the snapshot represents one books-of-record period
+  //    (typically fiscal YTD); claiming it as a Year 3 actual would mislead.
+  const liveSnapshot = data.accountingSnapshot;
+  if (yr === 1 && liveSnapshot) {
+    const providerName = providerDisplayName(liveSnapshot.provider);
+    const relTime = relativeTimeAgo(liveSnapshot.syncedAt);
+    const realm = liveSnapshot.realmDisplayName ? ` · ${liveSnapshot.realmDisplayName}` : "";
+    const label = relTime
+      ? `From ${providerName} (synced ${relTime})${realm}`
+      : `From ${providerName}${realm}`;
+    let used = false;
+
+    const months = liveSnapshot.monthsCompleted;
+    const annualizedRev = annualizeFromCurrent(liveSnapshot.revenue, months);
+    const annualizedExp = annualizeFromCurrent(liveSnapshot.expenses, months);
+
+    if (liveSnapshot.enrollment !== undefined && liveSnapshot.enrollment > 0) {
+      values.enrollmentActual = Math.round(liveSnapshot.enrollment);
+      sources.enrollmentActual = label;
+      used = true;
+    }
+    if (annualizedRev !== undefined && annualizedRev > 0) {
+      values.revenueActual = Math.round(annualizedRev);
+      sources.revenueActual = label;
+      used = true;
+    }
+    if (annualizedExp !== undefined && annualizedExp > 0) {
+      values.expenseActual = Math.round(annualizedExp);
+      sources.expenseActual = label;
+      used = true;
+    }
+    if (annualizedRev !== undefined && annualizedExp !== undefined) {
+      values.netIncomeActual = Math.round(annualizedRev - annualizedExp);
+      sources.netIncomeActual = label;
+    }
+    // Site-decision rent: prefer the live monthly rent over the signed-lease
+    // fallback, since this represents what the school actually paid last
+    // month rather than what's in the lease document.
+    if (
+      decisionType === "evaluate_site" &&
+      liveSnapshot.monthlyRent !== undefined &&
+      liveSnapshot.monthlyRent > 0
+    ) {
+      values.signedMonthlyRent = Math.round(liveSnapshot.monthlyRent);
+      sources.signedMonthlyRent = label;
+      used = true;
+    }
+    if (used) sourceLabels.push(label);
+  }
+
+  // 2) Prior-year snapshot — last completed academic year. Most credible
+  //    analogue for "actuals you can pull from your books today" when there
+  //    isn't a live accounting connection.
   const prior = data.priorYearSnapshot;
   const current = data.currentYearProjection;
 
   // For Year 1 we prefer prior-year actuals (truly closed books); if those
   // aren't there, we fall back to current-year-in-progress and annualize.
+  // When a live accounting snapshot already populated some fields above, we
+  // *fill the gaps* rather than overwrite — e.g. QuickBooks doesn't track
+  // student enrollment, so we still want the prior-year enrollment number
+  // when the live source has revenue/expense but no enrollment.
   if (yr === 1) {
     const priorEnrollment = prior?.endingEnrollment;
     const priorRevenue = prior?.totalRevenue;
@@ -702,22 +792,26 @@ export function buildActualsSuggestion(
     if (hasPrior) {
       const label = "Prior-year actuals from setup";
       let used = false;
-      if (priorEnrollment !== undefined) {
+      if (priorEnrollment !== undefined && values.enrollmentActual === undefined) {
         values.enrollmentActual = Math.round(priorEnrollment);
         sources.enrollmentActual = label;
         used = true;
       }
-      if (priorRevenue !== undefined) {
+      if (priorRevenue !== undefined && values.revenueActual === undefined) {
         values.revenueActual = Math.round(priorRevenue);
         sources.revenueActual = label;
         used = true;
       }
-      if (priorExpenses !== undefined) {
+      if (priorExpenses !== undefined && values.expenseActual === undefined) {
         values.expenseActual = Math.round(priorExpenses);
         sources.expenseActual = label;
         used = true;
       }
-      if (priorRevenue !== undefined && priorExpenses !== undefined) {
+      if (
+        priorRevenue !== undefined &&
+        priorExpenses !== undefined &&
+        values.netIncomeActual === undefined
+      ) {
         values.netIncomeActual = Math.round(priorRevenue - priorExpenses);
         sources.netIncomeActual = label;
       }
@@ -729,24 +823,32 @@ export function buildActualsSuggestion(
         ? `Current-year projection (annualized from ${months} months)`
         : "Current-year projection from setup";
       let used = false;
-      if (current.currentEnrollment !== undefined && current.currentEnrollment > 0) {
+      if (
+        current.currentEnrollment !== undefined &&
+        current.currentEnrollment > 0 &&
+        values.enrollmentActual === undefined
+      ) {
         values.enrollmentActual = Math.round(current.currentEnrollment);
         sources.enrollmentActual = label;
         used = true;
       }
       const projRev = annualizeFromCurrent(current.projectedRevenue, months);
       const projExp = annualizeFromCurrent(current.projectedExpenses, months);
-      if (projRev !== undefined && projRev > 0) {
+      if (projRev !== undefined && projRev > 0 && values.revenueActual === undefined) {
         values.revenueActual = projRev;
         sources.revenueActual = label;
         used = true;
       }
-      if (projExp !== undefined && projExp > 0) {
+      if (projExp !== undefined && projExp > 0 && values.expenseActual === undefined) {
         values.expenseActual = projExp;
         sources.expenseActual = label;
         used = true;
       }
-      if (projRev !== undefined && projExp !== undefined) {
+      if (
+        projRev !== undefined &&
+        projExp !== undefined &&
+        values.netIncomeActual === undefined
+      ) {
         values.netIncomeActual = Math.round(projRev - projExp);
         sources.netIncomeActual = label;
       }
@@ -757,8 +859,9 @@ export function buildActualsSuggestion(
   // Signed lease rent — relevant only for evaluate_site decisions, since the
   // generic "monthly rent" question on other decision types isn't a realized
   // figure to capture. We prefer a phase that actually contains the as-of
-  // year, so a multi-phase model still surfaces the right rent.
-  if (decisionType === "evaluate_site") {
+  // year, so a multi-phase model still surfaces the right rent. Skipped when
+  // the live accounting snapshot already filled in monthly rent above.
+  if (decisionType === "evaluate_site" && values.signedMonthlyRent === undefined) {
     const sp = data.schoolProfile as Record<string, unknown> | undefined;
     let phaseRent: number | undefined;
     let phaseLabel: string | undefined;
