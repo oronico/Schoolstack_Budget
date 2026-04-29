@@ -12,6 +12,7 @@ import { QuickLevers } from "@/components/coaching/QuickLevers";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import { computeMonthlyCashInflow } from "@/lib/revenue-defaults";
 import { useAuth } from "@/lib/auth-context";
+import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { BookOpen, X, ArrowRight } from "lucide-react";
 import type { FullModelData } from "../schema";
@@ -21,6 +22,9 @@ const BUDGET_TO_BOOKS_LESSON_ID = "budget_to_books_review";
 function BudgetToBooksLesson() {
   const { user } = useAuth();
   const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  // Skip the variance/Actuals prompt for yet_to_launch founders — Task #302
+  // hides every actuals-vs-budget surface until they're actually operating.
+  const yetToLaunch = isYetToLaunch(user);
   const [dismissed, setDismissed] = useState(() =>
     getDismissedLessons().has(BUDGET_TO_BOOKS_LESSON_ID),
   );
@@ -35,6 +39,8 @@ function BudgetToBooksLesson() {
   }, [level, dismissed]);
 
   if (dismissed) return null;
+  // Yet-to-launch founders never see the budget-to-books / variance lesson.
+  if (yetToLaunch) return null;
 
   const handleDismiss = () => {
     dismissLesson(BUDGET_TO_BOOKS_LESSON_ID);
@@ -129,12 +135,14 @@ function BudgetToBooksLesson() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground leading-relaxed mt-4 italic">
-        Then close the loop: every month, compare this Budget to your Actual
-        P&amp;L. That habit is called{" "}
-        <GlossaryTerm termKey="variance_analysis">variance analysis</GlossaryTerm>,
-        and it's how a budget becomes a steering tool instead of a setup task.
-      </p>
+      {!yetToLaunch && (
+        <p className="text-xs text-muted-foreground leading-relaxed mt-4 italic">
+          Then close the loop: every month, compare this Budget to your Actual
+          P&amp;L. That habit is called{" "}
+          <GlossaryTerm termKey="variance_analysis">variance analysis</GlossaryTerm>,
+          and it's how a budget becomes a steering tool instead of a setup task.
+        </p>
+      )}
 
       <div className="mt-4 pt-4 border-t border-teal-200/60">
         <a

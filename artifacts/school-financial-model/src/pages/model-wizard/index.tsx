@@ -13,6 +13,8 @@ import { MicroLessonContainer } from "@/components/coaching/MicroLessonCard";
 import { WhatThisMeansInYourBooks } from "@/components/coaching/WhatThisMeansInYourBooks";
 import { WizardPrepChecklist } from "@/components/coaching/WizardPrepChecklist";
 import { useAuth } from "@/lib/auth-context";
+import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
+import { hasCompletePersona } from "@/lib/coaching/founder-persona";
 
 import { fullModelSchema, type FullModelData } from "./schema";
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
@@ -826,6 +828,16 @@ export function ModelWizardPage() {
 
   return (
     <Layout>
+      {/* Wizard-entry guard (Task #302): if a signed-in founder lands here
+          without picking a persona, force the prompt before they can touch
+          any wizard fields. Otherwise the persona-conditional copy in each
+          step has nothing to key off and the experience defaults to the
+          generic operator tone. */}
+      {user && !hasCompletePersona(user) && (
+        // Re-prompt on partial-data records too — both stage AND comfort
+        // must be present before we let the founder touch the wizard.
+        <FounderPersonaPrompt onComplete={() => {}} />
+      )}
       {showPrepChecklist && currentStep === 1 && (
         <WizardPrepChecklist
           onReady={() => {

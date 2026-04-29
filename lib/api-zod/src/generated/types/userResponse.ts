@@ -6,11 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { UserResponseGuidanceLevel } from "./userResponseGuidanceLevel";
+import type { UserResponsePersonaComfort } from "./userResponsePersonaComfort";
+import type { UserResponsePersonaStage } from "./userResponsePersonaStage";
 
 export interface UserResponse {
   id: number;
   email: string;
   name: string;
   guidanceLevel?: UserResponseGuidanceLevel;
+  personaStage?: UserResponsePersonaStage;
+  personaComfort?: UserResponsePersonaComfort;
   lenderLanguageEnabled?: boolean;
 }

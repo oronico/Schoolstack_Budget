@@ -130,6 +130,11 @@ export const schoolProfileSchema = z.object({
   }).optional(),
   openingYear: z.coerce.number(numMsg("opening year")).min(2000, "Enter a valid year (2000 or later)").max(2100, "Enter a valid year (2100 or earlier)").optional(),
   currentStudents: z.coerce.number(numMsg("current students")).min(0, "Please enter a positive number for students").optional(),
+  // Long-term enrollment goal — captured up front in the Story step's
+  // "Your program" sequence so we have a year-5 target to grow toward
+  // even before the founder reaches the Enrollment step. Optional so
+  // legacy models without it keep validating.
+  longTermEnrollmentGoal: z.coerce.number(numMsg("long-term enrollment goal")).min(0, "Please enter a positive enrollment goal").optional(),
   maxCapacity: z.coerce.number(numMsg("capacity")).min(1, "Enter your building's maximum student capacity (at least 1)"),
   fiscalYearStartMonth: z.coerce.number(numMsg("fiscal year start month")).min(1, "Choose a fiscal year start month").max(12, "Month must be between 1 and 12"),
   isPartialFirstYear: z.boolean(),
@@ -176,16 +181,45 @@ export const schoolProfileSchema = z.object({
   loanTermYears: z.coerce.number(numMsg("loan term")).min(0, "Please enter a positive loan term").max(50, "Loan term can't exceed 50 years").optional().default(0),
   lendingLabIntent: lendingLabIntentSchema,
   debtIncluded: z.boolean().optional().default(true),
+  // Grade band fields. Task #302 added optional toddlers/preK/other so the
+  // gentle "Your program" sequence in StoryStep can capture early-childhood
+  // and custom-named programs. RevenueStep + EnrollmentStep iterate via the
+  // shared GRADE_BAND_KEYS constant so adding a band only requires touching
+  // the schema + the constant below.
   gradeBandEnrollment: z.object({
+    toddlers: z.array(z.coerce.number().min(0)).optional(),
+    preK: z.array(z.coerce.number().min(0)).optional(),
     k5: z.array(z.coerce.number().min(0)).default([0, 0, 0, 0, 0]),
     m68: z.array(z.coerce.number().min(0)).default([0, 0, 0, 0, 0]),
     h912: z.array(z.coerce.number().min(0)).default([0, 0, 0, 0, 0]),
+    other: z.array(z.coerce.number().min(0)).optional(),
   }).optional(),
   gradeBandPerPupil: z.object({
+    toddlers: z.coerce.number().min(0).optional(),
+    preK: z.coerce.number().min(0).optional(),
     k5: z.coerce.number().min(0).default(0),
     m68: z.coerce.number().min(0).default(0),
     h912: z.coerce.number().min(0).default(0),
+    other: z.coerce.number().min(0).optional(),
   }).optional(),
+  gradeBandLongTermGoal: z.object({
+    toddlers: z.coerce.number().min(0).optional(),
+    preK: z.coerce.number().min(0).optional(),
+    k5: z.coerce.number().min(0).optional(),
+    m68: z.coerce.number().min(0).optional(),
+    h912: z.coerce.number().min(0).optional(),
+    other: z.coerce.number().min(0).optional(),
+  }).optional(),
+  gradeBandRatio: z.object({
+    toddlers: z.coerce.number().min(1).optional(),
+    preK: z.coerce.number().min(1).optional(),
+    k5: z.coerce.number().min(1).optional(),
+    m68: z.coerce.number().min(1).optional(),
+    h912: z.coerce.number().min(1).optional(),
+    other: z.coerce.number().min(1).optional(),
+  }).optional(),
+  gradeBandOtherLabel: z.string().max(40).optional(),
+  sameTuitionForAllBands: z.boolean().optional(),
   enrollmentRevenueMethod: z.enum(["count_days", "adm", "ada"]).optional(),
   charterDepositTiming: z.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
   priorYearADM: z.coerce.number().min(0).optional(),

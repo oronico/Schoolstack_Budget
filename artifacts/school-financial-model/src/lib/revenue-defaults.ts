@@ -26,10 +26,41 @@ export const CHARTER_DEPOSIT_TIMING_LABELS: Record<CharterDepositTiming, string>
   annual: "Annual",
 };
 
-export const GRADE_BAND_LABELS: Record<string, string> = {
+// Task #302: bands ordered ascending by typical age. Toddlers / preK / other
+// are optional and only show up in StoryStep + downstream views when the
+// founder turns them on. RevenueStep + EnrollmentStep iterate using
+// `GRADE_BAND_KEYS` so adding a band only requires updating this constant
+// and the schema.
+export type GradeBandKey = "toddlers" | "preK" | "k5" | "m68" | "h912" | "other";
+
+export const GRADE_BAND_KEYS: readonly GradeBandKey[] = [
+  "toddlers",
+  "preK",
+  "k5",
+  "m68",
+  "h912",
+  "other",
+] as const;
+
+export const GRADE_BAND_LABELS: Record<GradeBandKey, string> = {
+  toddlers: "Toddlers (0-2)",
+  preK: "Pre-K (3-4)",
   k5: "K-5 (Elementary)",
   m68: "6-8 (Middle)",
   h912: "9-12 (High)",
+  other: "Other",
+};
+
+// Default students-per-teacher when the founder hasn't overridden the band's
+// own ratio. Lower for early childhood (state licensing usually requires
+// tighter ratios), looser for older grades.
+export const GRADE_BAND_DEFAULT_RATIO: Record<GradeBandKey, number> = {
+  toddlers: 4,
+  preK: 8,
+  k5: 12,
+  m68: 14,
+  h912: 16,
+  other: 12,
 };
 
 export type CollectionMethod = "autopay" | "invoiced" | "mixed";

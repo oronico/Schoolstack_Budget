@@ -8,7 +8,7 @@ import { IDontKnowYet } from "@/components/coaching/IDontKnowYet";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import type { Program } from "../schema";
-import { GRADE_BAND_LABELS } from "@/lib/revenue-defaults";
+import { GRADE_BAND_LABELS, GRADE_BAND_KEYS, type GradeBandKey } from "@/lib/revenue-defaults";
 import {
   BarChart,
   Bar,
@@ -783,12 +783,17 @@ export function EnrollmentStep() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(["k5", "m68", "h912"] as const).map((band) => {
-                    const bandValues = watch(`schoolProfile.gradeBandEnrollment.${band}`) || [0, 0, 0, 0, 0];
+                  {GRADE_BAND_KEYS.map((band) => {
+                    const rawValues = watch(`schoolProfile.gradeBandEnrollment.${band}`) as number[] | undefined;
+                    if ((band === "toddlers" || band === "preK" || band === "other") && (!rawValues || !rawValues.some((v) => (v ?? 0) > 0))) {
+                      return null;
+                    }
+                    const bandValues = rawValues || [0, 0, 0, 0, 0];
+                    const otherLabel = (watch("schoolProfile.gradeBandOtherLabel") as string | undefined) || "Other";
                     return (
                       <tr key={band} className="border-b border-border/50 hover:bg-secondary/20">
                         <td className="py-2 px-3 font-medium text-foreground text-sm">
-                          {GRADE_BAND_LABELS[band]}
+                          {band === "other" ? otherLabel : GRADE_BAND_LABELS[band]}
                         </td>
                         {futureYearLabels.map((_, i) => (
                           <td key={i} className="py-1.5 px-1.5">
@@ -812,10 +817,8 @@ export function EnrollmentStep() {
                   <tr className="bg-secondary/40 font-semibold">
                     <td className="py-2 px-3 text-sm text-foreground">Band Total</td>
                     {futureYearLabels.map((_, i) => {
-                      const k5 = (watch("schoolProfile.gradeBandEnrollment.k5") || [])[i] || 0;
-                      const m68 = (watch("schoolProfile.gradeBandEnrollment.m68") || [])[i] || 0;
-                      const h912 = (watch("schoolProfile.gradeBandEnrollment.h912") || [])[i] || 0;
-                      const bandTotal = k5 + m68 + h912;
+                      const gbe = (watch("schoolProfile.gradeBandEnrollment") as Partial<Record<GradeBandKey, number[]>> | undefined) ?? {};
+                      const bandTotal = GRADE_BAND_KEYS.reduce((sum, k) => sum + (gbe[k]?.[i] ?? 0), 0);
                       const enrollTotal = totalsByYear[`year${i + 1}`] || 0;
                       const mismatch = bandTotal > 0 && enrollTotal > 0 && bandTotal !== enrollTotal;
                       return (

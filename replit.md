@@ -41,6 +41,13 @@ In-app guidance uses a warm, school-leader-friendly coaching voice. Key elements
 - **GlossaryTerm tooltips**: Provides definitions for financial jargon.
 - **Story-first wizard (11 steps)**: Guides users through Story, School Details, Assumptions, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, Lender Narrative, and Export.
 
+### Founder personas (Task #302)
+Every authenticated user is asked for a `personaStage` (`yet_to_launch` | `existing`) and `personaComfort` (`new_to_budgeting` | `comfortable`) at sign-in via `FounderPersonaPrompt`. The prompt is required for all users without a persona — including legacy users who only have a `guidanceLevel` — and can be re-opened from the navbar's settings dropdown ("Founder profile"). The wizard also guards entry: opening a model without a persona surfaces the prompt as an overlay.
+
+`yet_to_launch` founders never see actuals / prior-year / QuickBooks / variance / forecast-accuracy surfaces anywhere in the app (dashboard, wizard, scenarios, review). Tone copy adjusts by `personaComfort`: `new_to_budgeting` gets plain-English greetings + helper text, `comfortable` gets terser, more technical copy. Test coverage in `persona-yet-to-launch.test.tsx` mounts the wizard with each yet_to_launch step and asserts the forbidden terms never appear.
+
+The Story step's "Your program" sequence asks for the founder's program design first: which age/grade bands they serve (toddlers / pre-K / K-5 / 6-8 / 9-12 / Other with a custom label), year-1 enrollment + tuition + students-per-teacher per band, with a "same tuition for every band" shortcut and per-band 5-year goals (defaulted proportionally from a single total). Bands are defined once in `src/lib/revenue-defaults.ts` (`GRADE_BAND_KEYS`, `GRADE_BAND_DEFAULT_RATIO`) and consumed by Story / Revenue / Enrollment steps.
+
 ### Ratio-Driven Staffing Ramp
 Staffing can be fixed or ratio-based, where FTE is computed from enrollment ÷ studentRatio.
 

@@ -119,10 +119,72 @@ router.get("/auth/me", authMiddleware, async (req: AuthRequest, res) => {
       email: user.email,
       name: user.name,
       guidanceLevel: user.guidanceLevel ?? null,
+      personaStage: user.personaStage ?? null,
+      personaComfort: user.personaComfort ?? null,
       lenderLanguageEnabled: user.lenderLanguageEnabled ?? false,
     });
   } catch (err) {
     console.error("Get me error:", err);
+    res.status(500).json({ error: "Something went wrong." });
+  }
+});
+
+const VALID_PERSONA_STAGES = ["yet_to_launch", "existing"];
+const VALID_PERSONA_COMFORTS = ["new_to_budgeting", "comfortable"];
+
+// PATCH /auth/persona — sets the founder's stage + comfort. We also seed
+// `guidanceLevel` here when it's not yet set so that picking a persona is
+// the *single* onboarding choice for new users (Task #302). Comfort
+// determines the seed: new-to-budgeting founders get the verbose "extra"
+// guidance while comfortable founders default to the compact "advanced"
+// view; either can be changed later from the user menu.
+router.patch("/auth/persona", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { stage, comfort } = (req.body ?? {}) as { stage?: unknown; comfort?: unknown };
+    if (typeof stage !== "string" || !VALID_PERSONA_STAGES.includes(stage)) {
+      res.status(400).json({ error: "stage must be yet_to_launch or existing" });
+      return;
+    }
+    if (typeof comfort !== "string" || !VALID_PERSONA_COMFORTS.includes(comfort)) {
+      res.status(400).json({ error: "comfort must be new_to_budgeting or comfortable" });
+      return;
+    }
+
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+    if (!existing) {
+      res.status(404).json({ error: "User not found." });
+      return;
+    }
+
+    const seededGuidance = existing.guidanceLevel
+      ? existing.guidanceLevel
+      : comfort === "new_to_budgeting"
+        ? "extra"
+        : "advanced";
+
+    const [updated] = await db.update(usersTable)
+      .set({
+        personaStage: stage,
+        personaComfort: comfort,
+        guidanceLevel: seededGuidance,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, req.userId!))
+      .returning();
+
+    await trackEvent("founder_persona_selected", req.userId!, { stage, comfort });
+
+    res.json({
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      guidanceLevel: updated.guidanceLevel ?? null,
+      personaStage: updated.personaStage ?? null,
+      personaComfort: updated.personaComfort ?? null,
+      lenderLanguageEnabled: updated.lenderLanguageEnabled ?? false,
+    });
+  } catch (err) {
+    console.error("Update persona error:", err);
     res.status(500).json({ error: "Something went wrong." });
   }
 });
@@ -149,6 +211,8 @@ router.patch("/auth/guidance-level", authMiddleware, async (req: AuthRequest, re
       email: updated.email,
       name: updated.name,
       guidanceLevel: updated.guidanceLevel ?? null,
+      personaStage: updated.personaStage ?? null,
+      personaComfort: updated.personaComfort ?? null,
       lenderLanguageEnabled: updated.lenderLanguageEnabled ?? false,
     });
   } catch (err) {
@@ -177,6 +241,8 @@ router.patch("/auth/lender-language", authMiddleware, async (req: AuthRequest, r
       email: updated.email,
       name: updated.name,
       guidanceLevel: updated.guidanceLevel ?? null,
+      personaStage: updated.personaStage ?? null,
+      personaComfort: updated.personaComfort ?? null,
       lenderLanguageEnabled: updated.lenderLanguageEnabled ?? false,
     });
   } catch (err) {
@@ -270,6 +336,9 @@ const ALLOWED_EVENTS = new Set([
   "primer_opened",
   "help_menu_opened",
   "lender_language_toggled",
+  "founder_persona_selected",
+  "founder_persona_prompt_shown",
+  "founder_persona_changed",
 ]);
 
 router.post("/auth/track", authMiddleware, async (req: AuthRequest, res) => {

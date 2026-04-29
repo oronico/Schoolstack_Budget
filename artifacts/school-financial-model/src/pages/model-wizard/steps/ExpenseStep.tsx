@@ -37,6 +37,8 @@ import {
 } from "@/lib/staffing-defaults";
 import { GUIDED_EXPENSE_QUESTIONS } from "@/lib/expense-guided-questions";
 import { getSchoolTypeTrack } from "@/lib/coaching/explainers";
+import { useAuth } from "@/lib/auth-context";
+import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
 
 const CATEGORY_ICONS: Record<string, typeof DollarSign> = {
   personnel: Users,
@@ -352,6 +354,11 @@ function ForgottenCostsPrompt({
 
 export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => void; modelId?: number | null }) {
   const { watch, setValue } = useFormContext();
+  // Yet-to-launch founders never see the QuickBooks/Xero name-drop in the
+  // Chart of Accounts callout — Task #302 keeps accounting-software framing
+  // out of the pre-opening flow.
+  const { user: authUser } = useAuth();
+  const yetToLaunch = personaIsYetToLaunch(authUser);
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
@@ -1301,11 +1308,17 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         bgColor="bg-indigo-50/50"
         summary={<>
           <span className="font-semibold">Chart of Accounts</span>
-          <span className="text-muted-foreground"> — Pre-filled account codes align with QuickBooks/Xero</span>
+          <span className="text-muted-foreground">
+            {yetToLaunch
+              ? " — Pre-filled account codes you can hand to a bookkeeper later"
+              : " — Pre-filled account codes align with QuickBooks/Xero"}
+          </span>
         </>}
       >
         <p className="text-sm text-foreground">
-          Each expense line has an optional account code (<Hash className="h-3 w-3 inline text-muted-foreground" /> field). Customize codes to match your accounting software — your budget will align with bookkeeping from day one.
+          {yetToLaunch
+            ? <>Each expense line has an optional account code (<Hash className="h-3 w-3 inline text-muted-foreground" /> field). Once you're ready to start tracking the books, you can hand these codes to whoever is keeping your books so your budget and bookkeeping line up from day one.</>
+            : <>Each expense line has an optional account code (<Hash className="h-3 w-3 inline text-muted-foreground" /> field). Customize codes to match your accounting software — your budget will align with bookkeeping from day one.</>}
         </p>
         <div className="flex flex-wrap gap-2">
           {Object.entries(COA_CATEGORY_RANGES).map(([, info]) => (

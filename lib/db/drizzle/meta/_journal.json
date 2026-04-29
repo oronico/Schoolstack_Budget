@@ -8,6 +8,13 @@
       "when": 1777478148400,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777495563489,
+      "tag": "0001_skinny_banshee",
+      "breakpoints": true
     }
   ]
 }

@@ -90,11 +90,31 @@ export const UserResponseGuidanceLevel = {
   extra: "extra",
 } as const;
 
+export type UserResponsePersonaStage =
+  | (typeof UserResponsePersonaStage)[keyof typeof UserResponsePersonaStage]
+  | null;
+
+export const UserResponsePersonaStage = {
+  yet_to_launch: "yet_to_launch",
+  existing: "existing",
+} as const;
+
+export type UserResponsePersonaComfort =
+  | (typeof UserResponsePersonaComfort)[keyof typeof UserResponsePersonaComfort]
+  | null;
+
+export const UserResponsePersonaComfort = {
+  new_to_budgeting: "new_to_budgeting",
+  comfortable: "comfortable",
+} as const;
+
 export interface UserResponse {
   id: number;
   email: string;
   name: string;
   guidanceLevel?: UserResponseGuidanceLevel;
+  personaStage?: UserResponsePersonaStage;
+  personaComfort?: UserResponsePersonaComfort;
   lenderLanguageEnabled?: boolean;
 }
 

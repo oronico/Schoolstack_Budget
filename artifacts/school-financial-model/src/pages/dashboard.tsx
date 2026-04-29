@@ -1,12 +1,13 @@
 import { Link, useLocation } from "wouter";
-import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel } from "@workspace/api-client-react";
+import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel, type ModelFormData } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive, Sparkles, ArrowRight, BarChart3, CheckCircle2, Lightbulb, GitBranch, Lock, MessageSquareMore, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
-import { GuidanceModePrompt } from "@/components/coaching/GuidanceModePrompt";
+import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
 import { DecisionLauncher, ThingsHaveChangedBanner } from "@/components/decision-flow/DecisionLauncher";
 import { FinancialSnapshot } from "@/components/dashboard/FinancialSnapshot";
+import { getPersonaTone, hasCompletePersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: { label: "Draft", className: "bg-amber-100 text-amber-800" },
@@ -63,11 +64,26 @@ export function DashboardPage() {
 
   const handleCreate = async () => {
     try {
+      // Seed `schoolStage` from persona so a yet-to-launch founder skips the
+      // "are you operating?" radio entirely (and never sees the actuals /
+      // prior-year / QuickBooks panels that hang off `operating_school`).
+      // We only seed when persona is set so legacy users keep the manual
+      // pick. Existing-school founders default to `operating_school` for the
+      // same reason — they expect those panels.
+      const seededSchoolStage: "new_school" | "operating_school" | undefined =
+        yetToLaunch
+          ? "new_school"
+          : user?.personaStage === "existing"
+            ? "operating_school"
+            : undefined;
+      const seededData: ModelFormData = seededSchoolStage
+        ? { schoolProfile: { schoolStage: seededSchoolStage } }
+        : {};
       const newModel = await createMutation.mutateAsync({
         data: {
           name: "Untitled Model",
           currentStep: 1,
-          data: {}
+          data: seededData
         }
       });
       // Mark this model as already past the legacy Story-step migration so
@@ -118,19 +134,32 @@ export function DashboardPage() {
     }
   };
 
+  const tone = getPersonaTone(user);
+  const yetToLaunch = isYetToLaunch(user);
+  const greetingPrefix = getGreeting();
+  const dashboardSubtitle = yetToLaunch
+    ? "Here's where your school plans live. Keep building, run a what-if, or start a fresh plan."
+    : "Here's where your financial models live. Pick up where you left off or start something new.";
+
   return (
     <Layout>
-      {user && !user.guidanceLevel && (
-        <GuidanceModePrompt onComplete={() => {}} />
+      {user && !hasCompletePersona(user) && (
+        // Task #302: force every signed-in founder without a *complete*
+        // persona to pick one before they continue. Legacy users (created
+        // before personas shipped) get prompted on next sign-in too — they
+        // can re-pick later from the Navbar settings menu if their situation
+        // changes. We require both stage and comfort so partial-data records
+        // don't slip through into the generic operator tone.
+        <FounderPersonaPrompt onComplete={() => {}} />
       )}
       <div className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="mb-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
               <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
-                {getGreeting()}, {getFirstName(user.name)}
+                {greetingPrefix}, {getFirstName(user.name)}
               </h1>
-              <p className="text-muted-foreground mt-2">Here's where your financial models live. Pick up where you left off or start something new.</p>
+              <p className="text-muted-foreground mt-2">{dashboardSubtitle}</p>
             </div>
             <button
               onClick={handleCreate}
@@ -187,9 +216,9 @@ export function DashboardPage() {
               <div className="mx-auto w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
                 <Sparkles className="h-10 w-10 text-primary" />
               </div>
-              <h3 className="font-display text-2xl font-bold mb-3">Let's build your first financial model</h3>
+              <h3 className="font-display text-2xl font-bold mb-3">{tone.emptyStateTitle}</h3>
               <p className="text-muted-foreground max-w-md mx-auto mb-8 leading-relaxed">
-                In about 30-45 minutes, you'll have a lender-ready 5-year projection. We'll walk you through it step by step.
+                {tone.emptyStateBody}
               </p>
               <button
                 onClick={handleCreate}

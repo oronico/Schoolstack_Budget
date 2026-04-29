@@ -757,6 +757,18 @@ components:
             - advanced
             - basics
             - extra
+        personaStage:
+          type: string
+          nullable: true
+          enum:
+            - yet_to_launch
+            - existing
+        personaComfort:
+          type: string
+          nullable: true
+          enum:
+            - new_to_budgeting
+            - comfortable
         lenderLanguageEnabled:
           type: boolean
       required:

@@ -43,6 +43,8 @@ export const LoginResponse = zod.object({
     email: zod.string(),
     name: zod.string(),
     guidanceLevel: zod.enum(["advanced", "basics", "extra"]).nullish(),
+    personaStage: zod.enum(["yet_to_launch", "existing"]).nullish(),
+    personaComfort: zod.enum(["new_to_budgeting", "comfortable"]).nullish(),
     lenderLanguageEnabled: zod.boolean().optional(),
   }),
   token: zod.string(),
@@ -63,6 +65,8 @@ export const GetMeResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
   guidanceLevel: zod.enum(["advanced", "basics", "extra"]).nullish(),
+  personaStage: zod.enum(["yet_to_launch", "existing"]).nullish(),
+  personaComfort: zod.enum(["new_to_budgeting", "comfortable"]).nullish(),
   lenderLanguageEnabled: zod.boolean().optional(),
 });
 
@@ -78,6 +82,8 @@ export const UpdateLenderLanguageResponse = zod.object({
   email: zod.string(),
   name: zod.string(),
   guidanceLevel: zod.enum(["advanced", "basics", "extra"]).nullish(),
+  personaStage: zod.enum(["yet_to_launch", "existing"]).nullish(),
+  personaComfort: zod.enum(["new_to_budgeting", "comfortable"]).nullish(),
   lenderLanguageEnabled: zod.boolean().optional(),
 });
 

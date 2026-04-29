@@ -55,6 +55,7 @@ import type { DecisionType } from "@/pages/model-wizard/schema";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
 import { ForecastAccuracyView } from "@/components/forecast-accuracy/ForecastAccuracyView";
 import { computeForecastAccuracy } from "@/lib/forecast-accuracy";
+import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -361,6 +362,10 @@ function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachPro
   );
 }
 
+// Hides the actuals editor / variance / QuickBooks affordances on a saved
+// scenario card. Set by the page level for `yet_to_launch` founders so the
+// onboarding never surfaces concepts that don't yet apply to a school
+// they're still planning. See Task #302.
 interface CustomScenarioCardProps {
   scenario: CustomScenario;
   index: number;
@@ -395,6 +400,10 @@ interface CustomScenarioCardProps {
   // suggestion runs. Undefined when the page can't (or won't) expose
   // removal — the button stays hidden in that case.
   onRemoveExport?: () => Promise<void>;
+  // When true (set by the page for yet_to_launch founders), suppress every
+  // actuals/variance/QuickBooks surface on this card. The scenario card
+  // still renders projections and decision rationale.
+  hideActualsSurfaces?: boolean;
 }
 
 // "Mar 14" formatter shared with the wizard upload card so the caption in
@@ -602,6 +611,7 @@ export function CustomScenarioCard({
   accountingExportInfo,
   replaceExportHref,
   onRemoveExport,
+  hideActualsSurfaces,
 }: CustomScenarioCardProps) {
   const [editingRetro, setEditingRetro] = useState(false);
   // Two-step confirmation for the destructive "Remove uploaded export"
@@ -768,8 +778,11 @@ export function CustomScenarioCard({
   const showApplyNudge = cs.outcomeStatus === "pursued" && !cs.appliedToModelAt;
   // Actuals are most useful for Pursued scenarios but we also keep them
   // visible if the user already saved some so they're never accidentally
-  // hidden by toggling status.
-  const showActualsSurface = cs.outcomeStatus === "pursued" || !!cs.actuals;
+  // hidden by toggling status. yet_to_launch founders never see the
+  // surface (Task #302) — actuals/variance only make sense once a school
+  // is operating.
+  const showActualsSurface =
+    !hideActualsSurfaces && (cs.outcomeStatus === "pursued" || !!cs.actuals);
   const actualsAsOfYear = actualsDraft.asOfYear ?? cs.actuals?.asOfYear ?? 1;
   // Compute projected snapshot lazily — only when the editor is open or when
   // we're about to render the saved-actuals summary, to avoid recomputing it
@@ -1505,6 +1518,12 @@ export function ScenarioPage() {
   const [match, params] = useRoute("/model/:id/scenarios");
   const modelId = params?.id ? parseInt(params.id) : null;
   const [, setLocation] = useLocation();
+  // Hide actuals / variance / QuickBooks / forecast-accuracy surfaces for
+  // yet_to_launch founders (Task #302). Computed once at the page level so
+  // every CustomScenarioCard and the page-level Forecast Accuracy roll-up
+  // share the same gate.
+  const { user: authUser } = useAuth();
+  const hideActualsForPersona = personaIsYetToLaunch(authUser);
 
   const { data: model, isLoading } = useGetModel(modelId || 0, {
     query: { queryKey: [`/api/models/${modelId || 0}`], enabled: !!modelId },
@@ -2594,7 +2613,7 @@ export function ScenarioPage() {
             ("you tend to over-project enrollment by 5%") before drilling into
             individual cards below. Hidden when there's nothing to roll up so
             we don't render an empty surface for newer accounts. */}
-        {forecastAccuracyRollup.entries.length > 0 && (
+        {!hideActualsForPersona && forecastAccuracyRollup.entries.length > 0 && (
           <ForecastAccuracyView rollup={forecastAccuracyRollup} />
         )}
 
@@ -2897,6 +2916,7 @@ export function ScenarioPage() {
                       onPatch={patchCustom}
                       onOpenInPlanner={openInPlanner}
                       onApplyToModel={applyScenarioToModel}
+                      hideActualsSurfaces={hideActualsForPersona}
                       getProjectedSnapshot={(asOfYear) =>
                         computeProjectedSnapshot(
                           modelData,

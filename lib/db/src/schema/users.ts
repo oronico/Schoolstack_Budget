@@ -10,6 +10,14 @@ export const usersTable = pgTable("users", {
   resetToken: varchar("reset_token", { length: 255 }),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   guidanceLevel: varchar("guidance_level", { length: 20 }),
+  // Founder persona — see Task #302. `personaStage` tells us whether the
+  // founder is planning a brand-new school ("yet_to_launch") or already
+  // running one ("existing"). `personaComfort` captures how much budgeting
+  // experience they have ("new_to_budgeting" vs "comfortable"). Both are
+  // nullable so legacy users can backfill via the persona picker the next
+  // time they sign in.
+  personaStage: varchar("persona_stage", { length: 30 }),
+  personaComfort: varchar("persona_comfort", { length: 30 }),
   lenderLanguageEnabled: boolean("lender_language_enabled").default(false).notNull(),
   schoolName: text("school_name"),
   profileRole: text("profile_role"),

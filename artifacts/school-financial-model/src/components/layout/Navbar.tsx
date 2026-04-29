@@ -1,9 +1,10 @@
 import { Link } from "wouter";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen } from "lucide-react";
+import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen, UserCog } from "lucide-react";
 import { GuidanceModeSelector } from "@/components/coaching/GuidanceModeSelector";
 import { BudgetPrimer } from "@/components/coaching/BudgetPrimer";
+import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
 export function Navbar() {
@@ -11,6 +12,7 @@ export function Navbar() {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showPrimer, setShowPrimer] = useState(false);
+  const [showPersonaEdit, setShowPersonaEdit] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
 
@@ -97,8 +99,21 @@ export function Navbar() {
                     {showSettings && (
                       <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-background shadow-xl animate-in fade-in slide-in-from-top-1 duration-150 z-50">
                         <button
+                          onClick={() => {
+                            setShowPersonaEdit(true);
+                            setShowSettings(false);
+                            trackCoachingEvent("founder_persona_changed", { source: "navbar_settings" });
+                          }}
+                          data-testid="navbar-persona-edit"
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-black/5 rounded-t-xl transition-colors"
+                        >
+                          <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
+                          Founder profile
+                        </button>
+                        <div className="border-t border-border mx-2" />
+                        <button
                           onClick={logout}
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-xl transition-colors"
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-b-xl transition-colors"
                         >
                           <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
                           Log out
@@ -125,6 +140,13 @@ export function Navbar() {
         </div>
       </nav>
       {showPrimer && <BudgetPrimer onClose={() => setShowPrimer(false)} />}
+      {showPersonaEdit && (
+        <FounderPersonaPrompt
+          mode="edit"
+          onClose={() => setShowPersonaEdit(false)}
+          onComplete={() => setShowPersonaEdit(false)}
+        />
+      )}
     </>
   );
 }

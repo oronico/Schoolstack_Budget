@@ -1,3 +1,4 @@
+import { seedPersona } from "./utils/seed-persona";
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 
 // Verifies the saved-scenario outcome status pills round-trip through the
@@ -34,6 +35,7 @@ async function seedScenarioFixture(
     `register failed: ${registerRes.status()} ${await registerRes.text()}`,
   ).toBeTruthy();
   const { token } = (await registerRes.json()) as { token: string };
+  await seedPersona(request, token);
 
   const authHeaders = { Authorization: `Bearer ${token}` };
 

@@ -6,6 +6,7 @@ import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
 import { EXPLAINERS } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
+import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_BENEFITS_RATE,
@@ -621,7 +622,7 @@ export function AssumptionsStep() {
                   </div>
                 </div>
 
-                {watch("schoolProfile.enrollmentRevenueMethod") === "ada" && (
+                {watch("schoolProfile.enrollmentRevenueMethod") === "ada" && !isYetToLaunch(user) && (
                   <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-3 space-y-3">
                     <p className="text-xs font-semibold text-amber-800"><GlossaryTerm termKey="ada" schoolType={schoolType}>ADA</GlossaryTerm> Attendance Ratio</p>
                     <p className="text-[11px] text-amber-700">

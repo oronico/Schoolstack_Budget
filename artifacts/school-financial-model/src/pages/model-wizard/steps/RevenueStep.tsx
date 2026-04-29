@@ -28,6 +28,8 @@ import {
   ENROLLMENT_REVENUE_METHOD_LABELS,
   CHARTER_DEPOSIT_TIMING_LABELS,
   GRADE_BAND_LABELS,
+  GRADE_BAND_KEYS,
+  type GradeBandKey,
   generateDefaultRevenueRows,
   getCategoryOrder,
   getAvailableLineItems,
@@ -576,20 +578,21 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const priorYearADA = watch("schoolProfile.priorYearADA") as number | undefined;
 
   const gradeBandActive = useMemo(() => {
-    const gbe = gradeBandEnrollment;
-    const gbp = gradeBandPerPupil;
+    const gbe = gradeBandEnrollment as Partial<Record<GradeBandKey, number[]>> | undefined;
+    const gbp = gradeBandPerPupil as Partial<Record<GradeBandKey, number>> | undefined;
     if (!gbe || !gbp) return false;
-    const hasEnrollment = [gbe.k5, gbe.m68, gbe.h912].some(
-      (arr: number[] | undefined) => arr && arr.some((v: number) => (v ?? 0) > 0),
-    );
-    const hasRates = (gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0;
+    const hasEnrollment = GRADE_BAND_KEYS.some((k) => {
+      const arr = gbe[k];
+      return Array.isArray(arr) && arr.some((v) => (v ?? 0) > 0);
+    });
+    const hasRates = GRADE_BAND_KEYS.some((k) => (gbp[k] ?? 0) > 0);
     return hasEnrollment && hasRates;
   }, [gradeBandEnrollment, gradeBandPerPupil]);
 
   useEffect(() => {
     if (!gradeBandActive) return;
-    const gbe = gradeBandEnrollment || { k5: [0,0,0,0,0], m68: [0,0,0,0,0], h912: [0,0,0,0,0] };
-    const gbp = gradeBandPerPupil || { k5: 0, m68: 0, h912: 0 };
+    const gbe = (gradeBandEnrollment ?? {}) as Partial<Record<GradeBandKey, number[]>>;
+    const gbp = (gradeBandPerPupil ?? {}) as Partial<Record<GradeBandKey, number>>;
     const method = enrollmentRevenueMethod || "adm";
     const adm = priorYearADM || 0;
     const ada = priorYearADA || 0;
@@ -599,12 +602,15 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
 
     const newAmounts: number[] = [];
     for (let y = 0; y < yearCount; y++) {
-      const total = (
-        ((gbe.k5?.[y] || 0) * (gbp.k5 || 0)) +
-        ((gbe.m68?.[y] || 0) * (gbp.m68 || 0)) +
-        ((gbe.h912?.[y] || 0) * (gbp.h912 || 0))
-      ) * ratio;
-      const yearEnrollment = (gbe.k5?.[y] || 0) + (gbe.m68?.[y] || 0) + (gbe.h912?.[y] || 0);
+      let total = 0;
+      let yearEnrollment = 0;
+      for (const k of GRADE_BAND_KEYS) {
+        const headcount = gbe[k]?.[y] ?? 0;
+        const perPupil = gbp[k] ?? 0;
+        total += headcount * perPupil;
+        yearEnrollment += headcount;
+      }
+      total *= ratio;
       newAmounts.push(yearEnrollment > 0 ? Math.round(total / yearEnrollment) : 0);
     }
 
@@ -874,34 +880,44 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
               Enter your state's per-pupil funding rate for each grade band you serve. Leave bands at $0 if you don't serve those grades.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {(["k5", "m68", "h912"] as const).map((band) => (
-                <div key={band} className="space-y-1">
-                  <label className="text-xs font-medium text-foreground">{GRADE_BAND_LABELS[band]}</label>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground">$</span>
-                    <input
-                      type="number"
-                      value={watch(`schoolProfile.gradeBandPerPupil.${band}`) || ""}
-                      onChange={(e) => setValue(`schoolProfile.gradeBandPerPupil.${band}`, parseFloat(e.target.value) || 0, { shouldDirty: true })}
-                      className="w-full rounded-lg border border-border bg-background px-2 py-2 text-sm outline-none focus:border-primary"
-                      placeholder="0"
-                      min={0}
-                    />
+              {GRADE_BAND_KEYS.map((band) => {
+                const enrolled = ((watch(`schoolProfile.gradeBandEnrollment.${band}`) as number[] | undefined) ?? []).some((v) => (v ?? 0) > 0);
+                const perPupil = watch(`schoolProfile.gradeBandPerPupil.${band}`) as number | undefined;
+                if (!enrolled && (perPupil ?? 0) === 0 && (band === "toddlers" || band === "preK" || band === "other")) {
+                  return null;
+                }
+                const otherLabel = (watch("schoolProfile.gradeBandOtherLabel") as string | undefined) || "Other";
+                return (
+                  <div key={band} className="space-y-1">
+                    <label className="text-xs font-medium text-foreground">
+                      {band === "other" ? otherLabel : GRADE_BAND_LABELS[band]}
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm text-muted-foreground">$</span>
+                      <input
+                        type="number"
+                        value={perPupil || ""}
+                        onChange={(e) => setValue(`schoolProfile.gradeBandPerPupil.${band}`, parseFloat(e.target.value) || 0, { shouldDirty: true })}
+                        className="w-full rounded-lg border border-border bg-background px-2 py-2 text-sm outline-none focus:border-primary"
+                        placeholder="0"
+                        min={0}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {(() => {
-              const gbp = watch("schoolProfile.gradeBandPerPupil") || { k5: 0, m68: 0, h912: 0 };
-              const gbe = watch("schoolProfile.gradeBandEnrollment") || { k5: [0,0,0,0,0], m68: [0,0,0,0,0], h912: [0,0,0,0,0] };
-              const hasRates = gbp.k5 > 0 || gbp.m68 > 0 || gbp.h912 > 0;
-              const hasBands = (gbe.k5?.[0] || 0) + (gbe.m68?.[0] || 0) + (gbe.h912?.[0] || 0) > 0;
+              const gbp = (watch("schoolProfile.gradeBandPerPupil") as Partial<Record<GradeBandKey, number>> | undefined) ?? {};
+              const gbe = (watch("schoolProfile.gradeBandEnrollment") as Partial<Record<GradeBandKey, number[]>> | undefined) ?? {};
+              const hasRates = GRADE_BAND_KEYS.some((k) => (gbp[k] ?? 0) > 0);
+              const hasBands = GRADE_BAND_KEYS.some((k) => (gbe[k]?.[0] ?? 0) > 0);
               if (!hasRates || !hasBands) return null;
               const method = watch("schoolProfile.enrollmentRevenueMethod") || "adm";
               const adm = watch("schoolProfile.priorYearADM") || 0;
               const ada = watch("schoolProfile.priorYearADA") || 0;
               const ratio = method === "ada" ? (adm > 0 ? ada / adm : 0.95) : 1;
-              const y1Total = ((gbe.k5?.[0] || 0) * gbp.k5 + (gbe.m68?.[0] || 0) * gbp.m68 + (gbe.h912?.[0] || 0) * gbp.h912) * ratio;
+              const y1Total = GRADE_BAND_KEYS.reduce((sum, k) => sum + (gbe[k]?.[0] ?? 0) * (gbp[k] ?? 0), 0) * ratio;
               return (
                 <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl">
                   <p className="text-sm text-green-800">
