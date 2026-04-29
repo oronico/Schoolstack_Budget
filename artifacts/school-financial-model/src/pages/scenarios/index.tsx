@@ -452,7 +452,7 @@ function ActualsLine({
 // When a Pursued scenario hasn't yet been folded into the base model, we
 // surface an "Apply to model" nudge so future decision flows compare against
 // current reality instead of the older base assumptions.
-function CustomScenarioCard({
+export function CustomScenarioCard({
   scenario: cs,
   index: idx,
   fmtDate,
