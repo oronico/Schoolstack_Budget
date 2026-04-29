@@ -1266,6 +1266,12 @@ const FORMULA_TABS = [
   "Instructions", "Assumptions", "5-Year Model", "Decision History", "Financial Health",
 ];
 
+// Intentionally omits "Decision History" — the 14-tab V1 underwriting workbook
+// is deprecated (no production route exports it; see the deprecation header in
+// underwriting-export.ts) and was left without the Decision History sheet that
+// every other Excel export now includes (tasks #197, #207, #225). If the V1
+// workbook is ever revived for a real export route, add "Decision History" here
+// and call `addDecisionHistorySheet` from `generateUnderwritingWorkbook`.
 const UNDERWRITING_V1_TABS = [
   "Cover", "Assumptions", "Enrollment", "Tuition", "Staffing",
   "Operating", "Capital Stack", "Debt Schedule", "Cash Flow",

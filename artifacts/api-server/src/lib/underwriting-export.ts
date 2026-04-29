@@ -1,6 +1,20 @@
 // @deprecated — This module is superseded by underwriting-workbook.ts (v2).
-// The /export/underwriting route has been removed; only /export/underwriting-v2 is active.
+// The /export/underwriting route has been removed; only /export/underwriting-v2
+// is active. `generateUnderwritingWorkbook` here is no longer reachable from any
+// production route — it survives only because the QA suite (excel-qa.ts) still
+// snapshots the legacy 14-tab shape. `generateSingleYearBudget` lower in this
+// file IS still wired into models.ts / public.ts and must keep working.
+//
 // Retained for reference only — do not add new code here.
+//
+// Intentional inconsistency: the "Decision History" sheet (added to every
+// other Excel export by `addDecisionHistorySheet` — see tasks #197 / #207) is
+// deliberately NOT added to this 14-tab workbook. Reviewers cannot download
+// this workbook through the app, so the missing sheet has no user-visible
+// impact, and adding it would violate the "do not add new code here" rule
+// above. If this module is ever revived for an actual export route, wire in
+// `addDecisionHistorySheet` from ./packets/build-decision-history.ts and add
+// "Decision History" to UNDERWRITING_V1_TABS in tests/excel-qa.ts.
 import ExcelJS from "exceljs";
 import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear, computeInstructionalCostByYear, resolveEsc as resolveEscShared, computeEffectiveFte, computeTotalFTE, BENCHMARK_DSCR_GREEN } from "./workbook-helpers.js";
 import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
