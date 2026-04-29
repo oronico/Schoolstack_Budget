@@ -1266,18 +1266,6 @@ const FORMULA_TABS = [
   "Instructions", "Assumptions", "5-Year Model", "Decision History", "Financial Health",
 ];
 
-// Intentionally omits "Decision History" — the 14-tab V1 underwriting workbook
-// is deprecated (no production route exports it; see the deprecation header in
-// underwriting-export.ts) and was left without the Decision History sheet that
-// every other Excel export now includes (tasks #197, #207, #225). If the V1
-// workbook is ever revived for a real export route, add "Decision History" here
-// and call `addDecisionHistorySheet` from `generateUnderwritingWorkbook`.
-const UNDERWRITING_V1_TABS = [
-  "Cover", "Assumptions", "Enrollment", "Tuition", "Staffing",
-  "Operating", "Capital Stack", "Debt Schedule", "Cash Flow",
-  "P&L", "Balance Sheet", "DSCR", "Snapshot", "Summary", "Financial Health",
-];
-
 const LENDER_TABS = ["Instructions", "Cover", "Assumptions", "Drivers", "P&L", "Cash Flow", "Staffing", "Loan Snapshot", "Summary", "Decision History", "Financial Health"];
 
 const SINGLE_YEAR_TABS = ["Assumptions", "Revenue", "Personnel", "Operating Expenses", "P&L Summary", "Decision History"];
@@ -1291,7 +1279,7 @@ async function main() {
 
   const { generateWorkbook: genStandard } = await import("../src/lib/excel-export.js");
   const { generateUnderwritingWorkbook: genUWv2 } = await import("../src/lib/underwriting-workbook.js");
-  const { generateUnderwritingWorkbook: genUWv1, generateSingleYearBudget: genSingleYear } = await import("../src/lib/underwriting-export.js");
+  const { generateSingleYearBudget: genSingleYear } = await import("../src/lib/underwriting-export.js");
   const { generateFormulaWorkbook: genFormula } = await import("../src/lib/formula-export.js");
   const { generateLenderProFormaWorkbook: genLender } = await import("../src/lib/lender-proforma-export.js");
 
@@ -1313,7 +1301,6 @@ async function main() {
     allResults.push(await testExport("Underwriting V2 (21-tab)", payloadName, payload, genUWv2, UNDERWRITING_V2_TABS, runUnderwritingV2TieOuts));
     allResults.push(await testExport("Standard Export", payloadName, payload, genStandard, STANDARD_TABS, runStandardTieOuts));
     allResults.push(await testExport("Formula Export", payloadName, payload, genFormula, FORMULA_TABS, runFormulaTieOuts));
-    allResults.push(await testExport("Underwriting V1 (14-tab)", payloadName, payload, genUWv1, UNDERWRITING_V1_TABS, runStandardTieOuts));
     const lenderTieOut = payloadName.includes("Grade-Band") ? runLenderGradeBandTieOuts : runLenderTieOuts;
     allResults.push(await testExport("Lender Pro Forma", payloadName, payload, genLender, LENDER_TABS, lenderTieOut));
     allResults.push(await testExport("Single-Year Pro Forma", payloadName, payload, (d) => genSingleYear(d, 0), SINGLE_YEAR_TABS, runSingleYearTieOuts));

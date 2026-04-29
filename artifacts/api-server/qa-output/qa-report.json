@@ -351,102 +351,9 @@
     "overallPass": true
   },
   {
-    "exportType": "Underwriting V1 (14-tab)",
-    "payload": "Microschool Startup",
-    "fileSize": 38061,
-    "tabs": [
-      "Assumptions",
-      "Enrollment & Rev Drivers",
-      "Tuition & Funding Detail",
-      "Staffing Plan",
-      "Operating Expenses",
-      "Facilities & Occupancy",
-      "Capital Stack & Startup Uses",
-      "Debt Schedule",
-      "Cash Flow Monthly Y1",
-      "5-Year P&L",
-      "5-Year Balance Sheet",
-      "DSCR & Covenants",
-      "Underwriting Snapshot",
-      "Summary",
-      "Cover",
-      "Financial Health"
-    ],
-    "results": [
-      {
-        "name": "File Integrity",
-        "passed": true,
-        "details": [
-          "File size: 37.2 KB",
-          "Successfully opened workbook",
-          "Worksheets: 16"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Tab Presence",
-        "passed": true,
-        "details": [
-          "Found 16 tabs: Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover, Financial Health"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Formula & Value Error Scan",
-        "passed": true,
-        "details": [
-          "Scanned 1180 cells across 16 sheets",
-          "No formula errors, NaN, undefined, or bad values found"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Revenue",
-        "passed": true,
-        "details": [
-          "Total Revenue: 184667"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Net Income Row",
-        "passed": true,
-        "details": [
-          "Net Income: 18273"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Metrics Present",
-        "passed": true,
-        "details": [
-          "Found 8/8 metrics"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Benchmark Column",
-        "passed": true,
-        "details": [
-          "Benchmark header found in column H"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Conditional Formatting",
-        "passed": true,
-        "details": [
-          "8 scorecard metrics have conditional color formatting"
-        ],
-        "errors": []
-      }
-    ],
-    "overallPass": true
-  },
-  {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 27942,
+    "fileSize": 27941,
     "tabs": [
       "Instructions",
       "Cover",
@@ -1099,7 +1006,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 25806,
+    "fileSize": 25802,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1173,99 +1080,6 @@
         "passed": true,
         "details": [
           "Found empty-state guidance copy"
-        ],
-        "errors": []
-      }
-    ],
-    "overallPass": true
-  },
-  {
-    "exportType": "Underwriting V1 (14-tab)",
-    "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 37151,
-    "tabs": [
-      "Assumptions",
-      "Enrollment & Rev Drivers",
-      "Tuition & Funding Detail",
-      "Staffing Plan",
-      "Operating Expenses",
-      "Facilities & Occupancy",
-      "Capital Stack & Startup Uses",
-      "Debt Schedule",
-      "Cash Flow Monthly Y1",
-      "5-Year P&L",
-      "5-Year Balance Sheet",
-      "DSCR & Covenants",
-      "Underwriting Snapshot",
-      "Summary",
-      "Cover",
-      "Financial Health"
-    ],
-    "results": [
-      {
-        "name": "File Integrity",
-        "passed": true,
-        "details": [
-          "File size: 36.3 KB",
-          "Successfully opened workbook",
-          "Worksheets: 16"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Tab Presence",
-        "passed": true,
-        "details": [
-          "Found 16 tabs: Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover, Financial Health"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Formula & Value Error Scan",
-        "passed": true,
-        "details": [
-          "Scanned 1117 cells across 16 sheets",
-          "No formula errors, NaN, undefined, or bad values found"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Revenue",
-        "passed": true,
-        "details": [
-          "Total Revenue: 167500"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Net Income Row",
-        "passed": true,
-        "details": [
-          "Net Income: 69609"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Metrics Present",
-        "passed": true,
-        "details": [
-          "Found 8/8 metrics"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Benchmark Column",
-        "passed": true,
-        "details": [
-          "Benchmark header found in column H"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Conditional Formatting",
-        "passed": true,
-        "details": [
-          "7 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -1929,7 +1743,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 29690,
+    "fileSize": 29686,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -2004,99 +1818,6 @@
         "passed": true,
         "details": [
           "Found empty-state guidance copy"
-        ],
-        "errors": []
-      }
-    ],
-    "overallPass": true
-  },
-  {
-    "exportType": "Underwriting V1 (14-tab)",
-    "payload": "Private School + ESA",
-    "fileSize": 38779,
-    "tabs": [
-      "Assumptions",
-      "Enrollment & Rev Drivers",
-      "Tuition & Funding Detail",
-      "Staffing Plan",
-      "Operating Expenses",
-      "Facilities & Occupancy",
-      "Capital Stack & Startup Uses",
-      "Debt Schedule",
-      "Cash Flow Monthly Y1",
-      "5-Year P&L",
-      "5-Year Balance Sheet",
-      "DSCR & Covenants",
-      "Underwriting Snapshot",
-      "Summary",
-      "Cover",
-      "Financial Health"
-    ],
-    "results": [
-      {
-        "name": "File Integrity",
-        "passed": true,
-        "details": [
-          "File size: 37.9 KB",
-          "Successfully opened workbook",
-          "Worksheets: 16"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Tab Presence",
-        "passed": true,
-        "details": [
-          "Found 16 tabs: Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover, Financial Health"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Formula & Value Error Scan",
-        "passed": true,
-        "details": [
-          "Scanned 1261 cells across 16 sheets",
-          "No formula errors, NaN, undefined, or bad values found"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Revenue",
-        "passed": true,
-        "details": [
-          "Total Revenue: 1975000"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Net Income Row",
-        "passed": true,
-        "details": [
-          "Net Income: 789764"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Metrics Present",
-        "passed": true,
-        "details": [
-          "Found 8/8 metrics"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Benchmark Column",
-        "passed": true,
-        "details": [
-          "Benchmark header found in column H"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Conditional Formatting",
-        "passed": true,
-        "details": [
-          "8 scorecard metrics have conditional color formatting"
         ],
         "errors": []
       }
@@ -2696,7 +2417,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter Public Funding",
-    "fileSize": 29300,
+    "fileSize": 29299,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -2799,7 +2520,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 28604,
+    "fileSize": 28600,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -2880,102 +2601,9 @@
     "overallPass": true
   },
   {
-    "exportType": "Underwriting V1 (14-tab)",
-    "payload": "Charter Public Funding",
-    "fileSize": 38959,
-    "tabs": [
-      "Assumptions",
-      "Enrollment & Rev Drivers",
-      "Tuition & Funding Detail",
-      "Staffing Plan",
-      "Operating Expenses",
-      "Facilities & Occupancy",
-      "Capital Stack & Startup Uses",
-      "Debt Schedule",
-      "Cash Flow Monthly Y1",
-      "5-Year P&L",
-      "5-Year Balance Sheet",
-      "DSCR & Covenants",
-      "Underwriting Snapshot",
-      "Summary",
-      "Cover",
-      "Financial Health"
-    ],
-    "results": [
-      {
-        "name": "File Integrity",
-        "passed": true,
-        "details": [
-          "File size: 38.0 KB",
-          "Successfully opened workbook",
-          "Worksheets: 16"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Tab Presence",
-        "passed": true,
-        "details": [
-          "Found 16 tabs: Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover, Financial Health"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Formula & Value Error Scan",
-        "passed": true,
-        "details": [
-          "Scanned 1261 cells across 16 sheets",
-          "No formula errors, NaN, undefined, or bad values found"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Revenue",
-        "passed": true,
-        "details": [
-          "Total Revenue: 1288333"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Net Income Row",
-        "passed": true,
-        "details": [
-          "Net Income: -418532"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Metrics Present",
-        "passed": true,
-        "details": [
-          "Found 8/8 metrics"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Benchmark Column",
-        "passed": true,
-        "details": [
-          "Benchmark header found in column H"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Conditional Formatting",
-        "passed": true,
-        "details": [
-          "8 scorecard metrics have conditional color formatting"
-        ],
-        "errors": []
-      }
-    ],
-    "overallPass": true
-  },
-  {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 28235,
+    "fileSize": 28234,
     "tabs": [
       "Instructions",
       "Cover",
@@ -3301,7 +2929,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 16283,
+    "fileSize": 16282,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -3360,7 +2988,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 51471,
+    "fileSize": 51470,
     "tabs": [
       "Instructions",
       "Cover",
@@ -3565,7 +3193,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 29034,
+    "fileSize": 29033,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -3668,7 +3296,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 28327,
+    "fileSize": 28323,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -3749,102 +3377,9 @@
     "overallPass": true
   },
   {
-    "exportType": "Underwriting V1 (14-tab)",
-    "payload": "Charter ADA Grade-Band",
-    "fileSize": 38697,
-    "tabs": [
-      "Assumptions",
-      "Enrollment & Rev Drivers",
-      "Tuition & Funding Detail",
-      "Staffing Plan",
-      "Operating Expenses",
-      "Facilities & Occupancy",
-      "Capital Stack & Startup Uses",
-      "Debt Schedule",
-      "Cash Flow Monthly Y1",
-      "5-Year P&L",
-      "5-Year Balance Sheet",
-      "DSCR & Covenants",
-      "Underwriting Snapshot",
-      "Summary",
-      "Cover",
-      "Financial Health"
-    ],
-    "results": [
-      {
-        "name": "File Integrity",
-        "passed": true,
-        "details": [
-          "File size: 37.8 KB",
-          "Successfully opened workbook",
-          "Worksheets: 16"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Tab Presence",
-        "passed": true,
-        "details": [
-          "Found 16 tabs: Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover, Financial Health"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Formula & Value Error Scan",
-        "passed": true,
-        "details": [
-          "Scanned 1231 cells across 16 sheets",
-          "No formula errors, NaN, undefined, or bad values found"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Revenue",
-        "passed": true,
-        "details": [
-          "Total Revenue: 1178333"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Net Income Row",
-        "passed": true,
-        "details": [
-          "Net Income: -212164"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Metrics Present",
-        "passed": true,
-        "details": [
-          "Found 8/8 metrics"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Benchmark Column",
-        "passed": true,
-        "details": [
-          "Benchmark header found in column H"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Conditional Formatting",
-        "passed": true,
-        "details": [
-          "8 scorecard metrics have conditional color formatting"
-        ],
-        "errors": []
-      }
-    ],
-    "overallPass": true
-  },
-  {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 28662,
+    "fileSize": 28661,
     "tabs": [
       "Instructions",
       "Cover",
@@ -4226,7 +3761,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 16047,
+    "fileSize": 16046,
     "tabs": [
       "Assumptions",
       "Revenue",
@@ -4285,7 +3820,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool With Decisions",
-    "fileSize": 48161,
+    "fileSize": 48160,
     "tabs": [
       "Instructions",
       "Cover",
@@ -4506,7 +4041,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool With Decisions",
-    "fileSize": 29322,
+    "fileSize": 29321,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -4665,7 +4200,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool With Decisions",
-    "fileSize": 27465,
+    "fileSize": 27461,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -4802,102 +4337,9 @@
     "overallPass": true
   },
   {
-    "exportType": "Underwriting V1 (14-tab)",
-    "payload": "Microschool With Decisions",
-    "fileSize": 38060,
-    "tabs": [
-      "Assumptions",
-      "Enrollment & Rev Drivers",
-      "Tuition & Funding Detail",
-      "Staffing Plan",
-      "Operating Expenses",
-      "Facilities & Occupancy",
-      "Capital Stack & Startup Uses",
-      "Debt Schedule",
-      "Cash Flow Monthly Y1",
-      "5-Year P&L",
-      "5-Year Balance Sheet",
-      "DSCR & Covenants",
-      "Underwriting Snapshot",
-      "Summary",
-      "Cover",
-      "Financial Health"
-    ],
-    "results": [
-      {
-        "name": "File Integrity",
-        "passed": true,
-        "details": [
-          "File size: 37.2 KB",
-          "Successfully opened workbook",
-          "Worksheets: 16"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Tab Presence",
-        "passed": true,
-        "details": [
-          "Found 16 tabs: Assumptions, Enrollment & Rev Drivers, Tuition & Funding Detail, Staffing Plan, Operating Expenses, Facilities & Occupancy, Capital Stack & Startup Uses, Debt Schedule, Cash Flow Monthly Y1, 5-Year P&L, 5-Year Balance Sheet, DSCR & Covenants, Underwriting Snapshot, Summary, Cover, Financial Health"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Formula & Value Error Scan",
-        "passed": true,
-        "details": [
-          "Scanned 1180 cells across 16 sheets",
-          "No formula errors, NaN, undefined, or bad values found"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Revenue",
-        "passed": true,
-        "details": [
-          "Total Revenue: 184667"
-        ],
-        "errors": []
-      },
-      {
-        "name": "P&L Has Net Income Row",
-        "passed": true,
-        "details": [
-          "Net Income: 18273"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Metrics Present",
-        "passed": true,
-        "details": [
-          "Found 8/8 metrics"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Benchmark Column",
-        "passed": true,
-        "details": [
-          "Benchmark header found in column H"
-        ],
-        "errors": []
-      },
-      {
-        "name": "Dashboard Conditional Formatting",
-        "passed": true,
-        "details": [
-          "8 scorecard metrics have conditional color formatting"
-        ],
-        "errors": []
-      }
-    ],
-    "overallPass": true
-  },
-  {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool With Decisions",
-    "fileSize": 28783,
+    "fileSize": 28782,
     "tabs": [
       "Instructions",
       "Cover",
@@ -5279,7 +4721,7 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool With Decisions",
-    "fileSize": 16385,
+    "fileSize": 16384,
     "tabs": [
       "Assumptions",
       "Revenue",

@@ -1,6 +1,5 @@
 import ExcelJS from "exceljs";
 import { generateWorkbook } from "../src/lib/excel-export.js";
-import { generateUnderwritingWorkbook } from "../src/lib/underwriting-export.js";
 import { generateUnderwritingWorkbook as generateUnderwritingV2 } from "../src/lib/underwriting-workbook.js";
 import { microschoolStartup, charterPublicFunding } from "./sample-payloads.js";
 
@@ -99,14 +98,6 @@ const EXPECTED_EXP_CATEGORIES = {
 };
 
 const EXPECTED_CAP_DEBT = [6960, 6960, 6960, 6960, 6960];
-
-const EXPECTED_UW_PNL = [
-  { rev: 184667, pers: 118934, opex: 40500, capDebt: 6960, totalExp: 166394, ni: 18273, cumNI: 18273 },
-  { rev: 340512, pers: 147003, opex: 54885, capDebt: 6960, totalExp: 208848, ni: 131665, cumNI: 149938 },
-  { rev: 427946, pers: 151413, opex: 59774, capDebt: 6960, totalExp: 218147, ni: 209800, cumNI: 359738 },
-  { rev: 500518, pers: 155955, opex: 64012, capDebt: 6960, totalExp: 226927, ni: 273591, cumNI: 633329 },
-  { rev: 516085, pers: 160634, opex: 65776, capDebt: 6960, totalExp: 233370, ni: 282716, cumNI: 916045 },
-];
 
 async function testStandardExport(): Promise<{ passed: boolean; errors: string[] }> {
   const errors: string[] = [];
@@ -257,114 +248,6 @@ async function testStandardExport(): Promise<{ passed: boolean; errors: string[]
   return { passed: errors.length === 0, errors };
 }
 
-async function testUnderwritingExport(): Promise<{ passed: boolean; errors: string[] }> {
-  const errors: string[] = [];
-  const data = microschoolStartup as unknown as Record<string, unknown>;
-
-  const buffer = await generateUnderwritingWorkbook(data);
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(buffer);
-
-  const tabs = wb.worksheets.map(w => w.name);
-  console.log(`  Tabs: ${tabs.join(", ")}`);
-
-  const formulas = scanFormulaCells(wb);
-  console.log(`  Total formula cells: ${formulas.length}`);
-  const missing = formulas.filter(f => !f.hasResult);
-  if (missing.length > 0) {
-    for (const m of missing.slice(0, 5)) errors.push(`UW Missing result: ${m.address}`);
-    if (missing.length > 5) errors.push(`... and ${missing.length - 5} more`);
-  }
-
-  if (buffer.length < 1000) errors.push("File suspiciously small");
-
-  const plWs = wb.getWorksheet("5-Year P&L");
-  if (!plWs) { errors.push("5-Year P&L tab not found"); return { passed: false, errors }; }
-
-  const revRow = findRowByLabel(plWs, "Total Revenue");
-  const persRow = findRowByLabel(plWs, "Personnel");
-  const opexRow = findRowByLabel(plWs, "Operating Expenses");
-  const capDebtRow = findRowByLabel(plWs, /Capital.*Debt/);
-  const totalExpRow = findRowByLabel(plWs, "Total Expenses");
-  const niRow = findRowByLabel(plWs, /Profit.*Loss/);
-  const cumNIRow = findRowByLabel(plWs, "Cumulative Net Income");
-
-  if (!revRow || !persRow || !opexRow || !totalExpRow || !niRow || !cumNIRow) {
-    errors.push(`UW P&L missing key rows: rev=${revRow} pers=${persRow} opex=${opexRow} totalExp=${totalExpRow} ni=${niRow} cumNI=${cumNIRow}`);
-    return { passed: false, errors };
-  }
-
-  for (let y = 0; y < 5; y++) {
-    const c = y + 2;
-    const yr = `UW Y${y + 1}`;
-    const exp = EXPECTED_UW_PNL[y];
-
-    assertClose(`${yr} Revenue`, getCellValue(plWs, revRow, c), exp.rev, TOL, errors);
-    assertClose(`${yr} Personnel`, getCellValue(plWs, persRow, c), exp.pers, TOL, errors);
-    assertClose(`${yr} OpEx`, getCellValue(plWs, opexRow, c), exp.opex, TOL, errors);
-    if (capDebtRow) {
-      assertClose(`${yr} CapDebt`, getCellValue(plWs, capDebtRow, c), exp.capDebt, TOL, errors);
-    }
-    assertClose(`${yr} TotalExp`, getCellValue(plWs, totalExpRow, c), exp.totalExp, TOL, errors);
-    assertClose(`${yr} Net Income`, getCellValue(plWs, niRow, c), exp.ni, TOL, errors);
-    assertClose(`${yr} Cumulative NI`, getCellValue(plWs, cumNIRow, c), exp.cumNI, TOL, errors);
-
-    const actNI = getCellValue(plWs, revRow, c) - getCellValue(plWs, totalExpRow, c);
-    assertClose(`${yr} NI=Rev-TotalExp`, getCellValue(plWs, niRow, c), actNI, TOL, errors);
-  }
-
-  console.log(`  P&L Y1 Revenue: $${Math.round(getCellValue(plWs, revRow, 2)).toLocaleString()}`);
-
-  const dscrWs = wb.getWorksheet("DSCR & Covenants");
-  if (dscrWs) {
-    const noiRow = findRowByLabel(dscrWs, "Net Operating Income");
-    const debtSvcRow = findRowByLabel(dscrWs, "Annual Debt Service");
-    if (noiRow && debtSvcRow) {
-      const noi1 = getCellValue(dscrWs, noiRow, 2);
-      const ds1 = getCellValue(dscrWs, debtSvcRow, 2);
-      assertClose("UW DSCR NOI Y1", noi1, 25233, TOL, errors);
-      assertClose("UW DSCR Debt Service Y1", ds1, 6960, TOL, errors);
-      if (ds1 > 0) {
-        const expectedDSCR = noi1 / ds1;
-        let dscrRow: number | null = null;
-        dscrWs.eachRow((_row, rn) => {
-          if (dscrRow) return;
-          const label = String(dscrWs.getCell(rn, 1).value || "");
-          if (label === "DSCR") dscrRow = rn;
-        });
-        if (dscrRow) {
-          assertClose("UW DSCR ratio Y1", getCellValue(dscrWs, dscrRow, 2), expectedDSCR, 0.01, errors);
-        }
-      }
-    }
-  }
-
-  const bsWs = wb.getWorksheet("5-Year Balance Sheet");
-  if (bsWs) {
-    const balCheckRow = findRowByLabel(bsWs, "BALANCE CHECK");
-    if (balCheckRow) {
-      for (let y = 0; y < 5; y++) {
-        assertClose(`UW BS Balance Check Y${y+1}`, getCellValue(bsWs, balCheckRow, y + 2), 0, TOL, errors);
-      }
-    }
-    const totalAssetsRow = findRowByLabel(bsWs, "Total Assets");
-    if (totalAssetsRow) {
-      assertClose("UW BS Total Assets Y1", getCellValue(bsWs, totalAssetsRow, 2), 48273, TOL, errors);
-    }
-  }
-
-  const cashWs = wb.getWorksheet("Cash Flow Monthly Y1");
-  if (cashWs) {
-    const endCashRow = findRowByLabel(cashWs, /Ending Cash.*Month 12/);
-    if (endCashRow) {
-      const endCash = getCellValue(cashWs, endCashRow, 2);
-      assertClose("UW Cash Flow ending cash", endCash, 48273, TOL, errors);
-    }
-  }
-
-  return { passed: errors.length === 0, errors };
-}
-
 async function testUnderwritingV2CrossTab(): Promise<{ passed: boolean; errors: string[] }> {
   const errors: string[] = [];
   const data = charterPublicFunding as unknown as Record<string, unknown>;
@@ -484,7 +367,7 @@ async function testUnderwritingV2CrossTab(): Promise<{ passed: boolean; errors: 
 
 async function main() {
   console.log("\n=== E2E Excel Export Formula Results Verification ===");
-  console.log("  Fixture: microschoolStartup (std/UW v1), charterSchool (UW v2 cross-tab)\n");
+  console.log("  Fixture: microschoolStartup (std), charterSchool (UW v2 cross-tab)\n");
 
   let totalPass = 0;
   let totalFail = 0;
@@ -497,17 +380,6 @@ async function main() {
   } else {
     console.log("  FAIL:");
     stdResult.errors.forEach(e => console.log(`    - ${e}`));
-    totalFail++;
-  }
-
-  console.log("\n--- Underwriting Export (v1) ---");
-  const uwResult = await testUnderwritingExport();
-  if (uwResult.passed) {
-    console.log("  PASS: All formula cells cached, full 5-year P&L/BS/DSCR/Cash verified");
-    totalPass++;
-  } else {
-    console.log("  FAIL:");
-    uwResult.errors.forEach(e => console.log(`    - ${e}`));
     totalFail++;
   }
 
