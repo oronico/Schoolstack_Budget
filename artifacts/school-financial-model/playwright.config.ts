@@ -65,7 +65,9 @@ export default defineConfig({
           // The api-server defaults to PORT=3000 when unset, but the
           // school-financial-model Vite dev server proxies /api to
           // http://localhost:8080. Pin the API to 8080 here so the
-          // proxy + the Playwright health check both resolve.
+          // proxy + the Playwright health check both resolve (otherwise
+          // the wait URL polls :8080 forever while the server listens
+          // on :3000).
           env: { PORT: "8080" },
         },
         {
