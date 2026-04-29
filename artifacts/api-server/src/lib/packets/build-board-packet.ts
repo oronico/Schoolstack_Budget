@@ -12,6 +12,7 @@ import {
   computeTotalFTE,
 } from "../workbook-helpers";
 import { buildPacketData } from "./build-packet-data";
+import { buildDecisionHistory, type DecisionHistoryItem } from "./build-decision-history";
 import type { PacketData, PacketSection, PacketTable, PacketTableRow, LinkedMetric, SectionId } from "./packet-types";
 
 export interface BoardFocusArea {
@@ -68,6 +69,7 @@ export interface BoardPacket extends PacketData {
   };
   boardNarrative: BoardNarrativeData;
   boardFlaggedAssumptions: BoardFlaggedAssumption[];
+  decisionHistory: DecisionHistoryItem[];
 }
 
 const BOARD_PACKET_SECTIONS: SectionId[] = [
@@ -80,6 +82,7 @@ const BOARD_PACKET_SECTIONS: SectionId[] = [
   "key_risks",
   "cash_flow",
   "board_action_items",
+  "decision_history",
 ];
 
 export function buildBoardPacket(
@@ -146,6 +149,8 @@ export function buildBoardPacket(
       };
     });
 
+  const decisionHistory = buildDecisionHistory(modelData);
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -156,6 +161,7 @@ export function buildBoardPacket(
     financialOutlook,
     boardNarrative,
     boardFlaggedAssumptions,
+    decisionHistory,
   };
 }
 

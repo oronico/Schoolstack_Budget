@@ -24,7 +24,8 @@ export type SectionId =
   | "appendix_assumptions"
   | "prior_year_actuals"
   | "opening_balance_sheet"
-  | "facility_kpis";
+  | "facility_kpis"
+  | "decision_history";
 
 export interface LinkedAssumption {
   label: string;
@@ -117,6 +118,7 @@ export const LENDER_SECTIONS: SectionId[] = [
   "lender_readiness",
   "health_assessment",
   "key_risks",
+  "decision_history",
   "appendix_assumptions",
 ];
 
@@ -133,6 +135,7 @@ export const BOARD_SECTIONS: SectionId[] = [
   "key_strengths",
   "key_risks",
   "board_action_items",
+  "decision_history",
   "appendix_assumptions",
 ];
 
@@ -158,4 +161,5 @@ export const SECTION_META: Record<SectionId, { title: string; description: strin
   prior_year_actuals: { title: "Prior-Year Actuals", description: "Categorized prior-year revenue and expense actuals with Year 1 variance" },
   opening_balance_sheet: { title: "Opening Balance Sheet", description: "Assets, liabilities, and net position at model start" },
   facility_kpis: { title: "Facility & Key Performance Indicators", description: "Facility cost metrics and breakeven enrollment analysis" },
+  decision_history: { title: "Decision History", description: "Outcomes of saved decision scenarios — what was pursued, declined, or put on hold" },
 };

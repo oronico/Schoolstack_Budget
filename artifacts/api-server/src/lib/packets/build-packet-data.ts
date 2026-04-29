@@ -23,6 +23,7 @@ import {
   computeReturningStudents,
 } from "../workbook-helpers";
 import { buildNarrative } from "./build-narrative";
+import { buildDecisionHistory, buildDecisionHistoryNarrative } from "./build-decision-history";
 import {
   type PacketData,
   type PacketInput,
@@ -212,9 +213,23 @@ function buildSection(
       return buildBoardActionItems(base, co);
     case "appendix_assumptions":
       return buildAppendixAssumptions(base, md, enrollment);
+    case "decision_history":
+      return buildDecisionHistorySection(base, md);
     default:
       return base;
   }
+}
+
+function buildDecisionHistorySection(s: PacketSection, md: ModelData): PacketSection {
+  // Detailed item list lives on the packet (LenderPacket.decisionHistory /
+  // BoardPacket.decisionHistory) so the PDF renderers can lay it out richly.
+  // Keep the JSON section narrative useful for non-PDF consumers and to keep
+  // the empty-state copy here too.
+  const items = buildDecisionHistory(md);
+  return {
+    ...s,
+    narrative: buildDecisionHistoryNarrative(items),
+  };
 }
 
 function buildCover(s: PacketSection, md: ModelData): PacketSection {

@@ -3,6 +3,7 @@ import type { ModelData } from "../workbook-helpers";
 import type { AssumptionFlag } from "../assumption-flags";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
 import { buildPacketData } from "./build-packet-data";
+import { buildDecisionHistory, type DecisionHistoryItem } from "./build-decision-history";
 import type { PacketData, PacketSection, PacketTable, PacketTableRow, LinkedMetric } from "./packet-types";
 
 export interface RiskMitigant {
@@ -39,6 +40,7 @@ export interface LenderPacket extends PacketData {
   };
   budgetNarrative: BudgetNarrativeData;
   flaggedAssumptions: FlaggedAssumptionExport[];
+  decisionHistory: DecisionHistoryItem[];
 }
 
 export interface DSCRSummary {
@@ -87,6 +89,8 @@ export function buildLenderPacket(
     };
   });
 
+  const decisionHistory = buildDecisionHistory(modelData);
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -98,6 +102,7 @@ export function buildLenderPacket(
     },
     budgetNarrative,
     flaggedAssumptions,
+    decisionHistory,
   };
 }
 
