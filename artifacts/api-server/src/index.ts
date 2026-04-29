@@ -1,6 +1,6 @@
 import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
-import { pool, db, errorLogsTable } from "@workspace/db";
+import { pool, db, errorLogsTable, runMigrations } from "@workspace/db";
 import type { Server } from "http";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -59,67 +59,18 @@ function validateEnv() {
   }
 }
 
-async function runMigrations() {
+async function applyMigrations(): Promise<void> {
   if (!pool) return;
   try {
-    const migrations = [
-      // --- users ---
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'user'`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS guidance_level VARCHAR(20)`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS school_name TEXT`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_role TEXT`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS planning_stage TEXT`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS mailing_list_opt_in BOOLEAN NOT NULL DEFAULT false`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT now()`,
-      // --- financial_models ---
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS school_id INTEGER REFERENCES schools(id)`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'draft'`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS school_stage VARCHAR(30)`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS funding_profile VARCHAR(30)`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS prior_year_snapshot_json JSONB`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS staffing_rows_json JSONB`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS revenue_rows_json JSONB`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS expense_rows_json JSONB`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS capital_and_debt_rows_json JSONB`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS last_exported_at TIMESTAMP`,
-      `ALTER TABLE financial_models ADD COLUMN IF NOT EXISTS consultant_summary_json JSONB`,
-      // --- feedback ---
-      `ALTER TABLE feedback ADD COLUMN IF NOT EXISTS score INTEGER`,
-      // --- indexes ---
-      `CREATE INDEX IF NOT EXISTS financial_models_user_id_idx ON financial_models(user_id)`,
-      `CREATE INDEX IF NOT EXISTS exports_user_id_idx ON exports(user_id)`,
-      `CREATE INDEX IF NOT EXISTS exports_model_id_idx ON exports(model_id)`,
-      `CREATE INDEX IF NOT EXISTS events_user_id_idx ON events(user_id)`,
-      `CREATE INDEX IF NOT EXISTS events_event_name_idx ON events(event_name)`,
-      // --- shared_links ---
-      `CREATE TABLE IF NOT EXISTS shared_links (
-        id SERIAL PRIMARY KEY,
-        model_id INTEGER NOT NULL REFERENCES financial_models(id) ON DELETE CASCADE,
-        token VARCHAR(64) NOT NULL UNIQUE,
-        viewer_label TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT now(),
-        revoked_at TIMESTAMP
-      )`,
-      `CREATE INDEX IF NOT EXISTS shared_links_model_id_idx ON shared_links(model_id)`,
-      `CREATE INDEX IF NOT EXISTS shared_links_token_idx ON shared_links(token)`,
-      // --- accounting integration removed (Task #233) ---
-      // The live QuickBooks/Xero integration was dropped in favor of the
-      // CSV upload flow. Drop the legacy tables on boot so dev databases
-      // converge with production after the live integration is removed.
-      `DROP TABLE IF EXISTS accounting_mapping_defaults`,
-      `DROP TABLE IF EXISTS accounting_connections`,
-    ];
-    for (const stmt of migrations) {
-      await pool.query(stmt);
-    }
+    await runMigrations();
     console.log("[migrations] Schema up to date.");
   } catch (err) {
     console.error("[migrations] Failed to run migrations:", err);
+    if (isProduction) {
+      // In production a failed migration leaves the schema in an unknown state,
+      // so refuse to start serving traffic against it.
+      process.exit(1);
+    }
   }
 }
 
@@ -213,7 +164,7 @@ function gracefulShutdown(signal: string) {
 process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.once("SIGINT", () => gracefulShutdown("SIGINT"));
 
-runMigrations().then(() => {
+applyMigrations().then(() => {
   server = app.listen(port, "0.0.0.0", () => {
     console.log(`Server listening on 0.0.0.0:${port}`);
     if (isProduction) {

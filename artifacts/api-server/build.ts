@@ -1,7 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import { build as esbuild } from "esbuild";
-import { rm, readFile } from "fs/promises";
+import { rm, readFile, cp } from "fs/promises";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,11 +51,24 @@ async function buildAll() {
     define: {
       "process.env.NODE_ENV": '"production"',
     },
+    // Point @workspace/db at the migrations folder we copy below. Done in a
+    // banner (not via `define`) because we need the value computed at runtime
+    // from __dirname, which only exists inside the CJS module wrapper.
+    banner: {
+      js: "process.env.DRIZZLE_MIGRATIONS_DIR = process.env.DRIZZLE_MIGRATIONS_DIR || require('path').resolve(__dirname, 'drizzle');",
+    },
     minify: true,
     external: externals,
     logLevel: "info",
   });
 
+  // Ship the SQL migrations alongside the bundle so drizzle's migrator can find
+  // them at runtime (resolveMigrationsFolder() in @workspace/db looks for a
+  // sibling `drizzle/` directory).
+  const migrationsSrc = path.resolve(__dirname, "..", "..", "lib", "db", "drizzle");
+  const migrationsDest = path.resolve(distDir, "drizzle");
+  console.log(`copying migrations: ${migrationsSrc} -> ${migrationsDest}`);
+  await cp(migrationsSrc, migrationsDest, { recursive: true });
 }
 
 buildAll().catch((err) => {

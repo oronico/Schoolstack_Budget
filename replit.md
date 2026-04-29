@@ -115,7 +115,7 @@ Two validation steps run together as the project's CI gate (Replit invokes the s
 - **API + DB**: Railway (Express API server + managed PostgreSQL)
 - **DNS**: Squarespace
 - **Proxy**: Netlify rewrites `/api/*` to Railway.
-- **Schema management**: Runtime DDL migrations in api-server startup.
+- **Schema management**: Drizzle migrations live in `lib/db/drizzle/`. The api-server runs `runMigrations()` from `@workspace/db` on boot, which calls drizzle-orm's migrator against the SQL files in that folder. To change the schema, edit `lib/db/src/schema/*.ts` then run `pnpm --filter @workspace/db generate -- --name <change>` (and `pnpm --filter @workspace/db migrate` to apply locally). The baseline migration is intentionally idempotent (`IF NOT EXISTS`, DO blocks for FK constraints) so it is safe to run against existing production databases that were originally provisioned via `drizzle-kit push`.
 - **Auto-save**: Wizard auto-saves on debounced form changes with up to 3 retries (exponential backoff). Classifies errors as auth/network/validation/unknown with targeted UI messages. The API server stores raw `req.body.data` (not Zod-stripped output) to preserve frontend-only fields like `programs`, `tuitionEscalation`, and `revenueSources`.
 
 # External Dependencies
