@@ -1,6 +1,9 @@
-import { TrendingUp, AlertTriangle, CircleCheckBig, Trophy } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
+import { TrendingUp, AlertTriangle, CircleCheckBig, Trophy, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DecisionImpact } from "@/lib/decision-flows";
+import { useAuth } from "@/lib/auth-context";
+import { trackCoachingEvent } from "@/lib/coaching/track";
 
 export interface ComparisonColumn {
   impact: DecisionImpact;
@@ -90,6 +93,55 @@ export function ImpactSummary(props: ImpactSummaryProps) {
 
 function ImpactSingle({ impact }: { impact: DecisionImpact }) {
   const { base, adjusted, deltas, nudges } = impact;
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+
+  // KPI threshold coach nudges — fires when the *adjusted* model crosses
+  // common red lines: DSCR below 1.20 in any year, runway under 6 months,
+  // or any negative net income year. These echo what a board / lender
+  // would flag the moment they see the model.
+  const coachNudges = useMemo(() => {
+    if (!showCoach) return [] as Array<{ key: string; label: string; body: string }>;
+    const items: Array<{ key: string; label: string; body: string }> = [];
+    const dscrYearIdx = adjusted.dscr.findIndex((d) => isFinite(d) && d < 1.2);
+    if (dscrYearIdx >= 0) {
+      items.push({
+        key: "dscr",
+        label: "DSCR slips below 1.20",
+        body: `Your adjusted DSCR drops to ${adjusted.dscr[dscrYearIdx].toFixed(2)} in Year ${dscrYearIdx + 1}. Most lenders want at least 1.20 — flag this on the board memo, or pair the decision with an enrollment or expense lever before you commit.`,
+      });
+    }
+    if (adjusted.cashRunwayMonths < 6) {
+      items.push({
+        key: "runway",
+        label: "Cash runway under 6 months",
+        body: `After this decision, the model only has ${adjusted.cashRunwayMonths.toFixed(1)} months of runway. That's the threshold where a single missed enrollment month becomes a payroll problem — line up a reserve, line of credit, or smaller starting commitment first.`,
+      });
+    }
+    const niYearIdx = adjusted.netIncome.findIndex((n) => n < 0);
+    if (niYearIdx >= 0) {
+      items.push({
+        key: "ni",
+        label: `Net income negative in Year ${niYearIdx + 1}`,
+        body: `Adjusted net income is ${adjusted.netIncome[niYearIdx] < 0 ? "negative" : "thin"} in Year ${niYearIdx + 1}. New schools often plan for a year or two of red ink, but it should be a deliberate choice — make sure your reserves and your board memo line up with that plan.`,
+      });
+    }
+    return items;
+  }, [showCoach, adjusted]);
+
+  const trackedRef = useRef<string>("");
+  useEffect(() => {
+    if (coachNudges.length === 0) return;
+    const key = coachNudges.map((n) => n.key).join(",");
+    if (trackedRef.current === key) return;
+    trackedRef.current = key;
+    trackCoachingEvent("impact_kpi_nudge_shown", {
+      nudgeKeys: coachNudges.map((n) => n.key),
+      guidanceLevel,
+    });
+  }, [coachNudges, guidanceLevel]);
+
   return (
     <div className="space-y-5" data-testid="decision-impact-summary">
       {/* Headline tiles */}
@@ -212,6 +264,25 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
               <div className="text-sm">
                 <p className="font-semibold text-foreground">{n.label}</p>
                 <p className="text-foreground/80 text-xs mt-0.5">{n.message}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Coach KPI threshold nudges (basics + extra only) */}
+      {coachNudges.length > 0 && (
+        <div className="space-y-2" data-testid="impact-coach-nudges">
+          {coachNudges.map((n) => (
+            <div
+              key={n.key}
+              className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/70 p-3"
+              data-testid={`impact-coach-nudge-${n.key}`}
+            >
+              <Lightbulb className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-semibold text-amber-900">Coach: {n.label}</p>
+                <p className="text-amber-900/85 text-xs mt-0.5 leading-relaxed">{n.body}</p>
               </div>
             </div>
           ))}

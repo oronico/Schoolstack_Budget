@@ -1,9 +1,13 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { ChevronLeft, ChevronRight, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { DecisionType } from "@/pages/model-wizard/schema";
+import type { DecisionType, FullModelData } from "@/pages/model-wizard/schema";
 import { DECISION_LABELS, DECISION_THEME } from "@/lib/decision-flows";
+import { SectionExplainers } from "@/components/coaching/SectionExplainers";
+import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
+import { useAuth } from "@/lib/auth-context";
+import { trackCoachingEvent } from "@/lib/coaching/track";
 
 export const STEP_LABELS = ["Why", "Inputs", "Impact", "Save"] as const;
 
@@ -25,6 +29,10 @@ interface DecisionFlowShellProps {
   /** When true, the shell hides its built-in Save button on step 4 — the page's
    *  step-4 content provides its own actions (e.g. SaveActions). */
   ownSaveActions?: boolean;
+  /** When provided, the shell renders a small DiagnosticPanel under the sidebar
+   *  using the founder's base model data. Filtered to a couple findings so it
+   *  acts as a coach hint, not a full re-run of the wizard's review step. */
+  data?: FullModelData;
 }
 
 export function DecisionFlowShell({
@@ -42,10 +50,24 @@ export function DecisionFlowShell({
   sidebar,
   children,
   ownSaveActions = false,
+  data,
 }: DecisionFlowShellProps) {
   const [, setLocation] = useLocation();
   const theme = DECISION_THEME[decisionType];
   const title = DECISION_LABELS[decisionType];
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoaching = guidanceLevel !== "advanced";
+  const sidebarSection = `decision_${decisionType}`;
+  const trackedDiagnosticRef = useRef(false);
+  useEffect(() => {
+    if (!showCoaching || !data || trackedDiagnosticRef.current) return;
+    trackedDiagnosticRef.current = true;
+    trackCoachingEvent("decision_flow_diagnostic_shown", {
+      decisionType,
+      guidanceLevel,
+    });
+  }, [showCoaching, data, decisionType, guidanceLevel]);
 
   const handleBack = () => {
     if (step === 1) {
@@ -120,14 +142,30 @@ export function DecisionFlowShell({
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-[1fr_18rem] gap-8">
           <div className="min-w-0">{children}</div>
           <aside className="hidden lg:block">
-            <div className="sticky top-24">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Your model so far
-              </p>
-              <div className="bg-card border border-border/60 rounded-2xl p-4 shadow-sm">
-                {sidebar}
+            <div className="sticky top-24 space-y-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  Your model so far
+                </p>
+                <div className="bg-card border border-border/60 rounded-2xl p-4 shadow-sm">
+                  {sidebar}
+                </div>
               </div>
-              <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+              {showCoaching && (
+                <SectionExplainers
+                  section={sidebarSection}
+                  schoolType={data?.schoolProfile?.schoolType as string | undefined}
+                />
+              )}
+              {showCoaching && data && (
+                <div data-testid={`decision-flow-sidebar-diagnostics-${decisionType}`}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Coach's notes on your base model
+                  </p>
+                  <DiagnosticPanel data={data} maxResults={2} />
+                </div>
+              )}
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
                 Your model is a living document — changes here are saved as a scenario, not a rewrite.
               </p>
             </div>

@@ -113,4 +113,39 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     short: "The percentage of salary allocated for employee benefits - health insurance, retirement contributions, and other perks.",
     long: "Typical school benefits rates range from 15–30% of salary. This is on top of payroll taxes. A teacher earning $50,000 with 20% benefits adds $10,000 in benefit costs.",
   },
+  chart_of_accounts: {
+    term: "Chart of Accounts",
+    short: "The list of every income and expense category your bookkeeper uses - the labels behind every line on your Profit & Loss.",
+    long: "When we map your accounting system, we look at this list and decide which accounts feed Revenue, which feed Expenses, and which feed Rent. If your bookkeeper renames an account, the mapping breaks until you re-tag it.",
+  },
+  realm: {
+    term: "Realm",
+    short: "QuickBooks' name for a single company file. Every QuickBooks login has at least one realm; we connect to a specific one.",
+    long: "Switching realms means switching the underlying books. If a school has separate QuickBooks files for the school and a foundation, each one is its own realm and needs its own connection.",
+  },
+  oauth: {
+    term: "OAuth",
+    short: "The standard way one app gets read access to another app's data without you sharing your password.",
+    long: "When you click 'Connect QuickBooks,' you're sent to QuickBooks' login screen, you sign in there, and QuickBooks hands us a time-limited token. We never see your password and you can revoke access from QuickBooks' settings any time.",
+  },
+  pl_statement: {
+    term: "P&L Statement",
+    short: "Profit & Loss statement - a one-page summary of revenue, expenses, and net income over a period of time.",
+    long: "Also called the Income Statement. Most accounting systems can export it as CSV or Excel in two clicks. We read the totals from this report to suggest 'actuals' on saved scenarios so you don't re-type numbers your books already have.",
+  },
+  actuals: {
+    term: "Actuals",
+    short: "The real numbers that came in - what actually happened - as opposed to the 'projected' numbers in your model.",
+    long: "Tracking actuals next to projections is how you tell whether the plan is working. A 5% miss on enrollment is normal noise; a 25% miss is a signal that the model needs an update.",
+  },
+  variance: {
+    term: "Variance",
+    short: "The gap between what you projected and what actually happened, usually shown as a dollar amount or a percentage.",
+    long: "A 'favorable variance' means actuals beat the plan; an 'unfavorable variance' means they came in short. Most boards want explanations for any variance bigger than ~10% on a major line.",
+  },
+  break_even: {
+    term: "Break-even",
+    short: "The year your school's revenue first covers its expenses - the point at which you're no longer running at a loss.",
+    long: "Most new schools take 2-4 years to break even. Lenders and authorizers want to see a credible path to break-even before Year 5; a model that never gets there is a red flag.",
+  },
 };

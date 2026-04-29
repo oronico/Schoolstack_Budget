@@ -1,8 +1,9 @@
+import type { ReactNode } from "react";
 import { Lightbulb } from "lucide-react";
 
 interface WhyThisMattersProps {
   title?: string;
-  why: string;
+  why: ReactNode;
   revisit?: string;
 }
 

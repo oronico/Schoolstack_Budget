@@ -127,6 +127,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
         </button>
       }
       sidebar={<ModelMiniSummary data={data} />}
+      data={data}
     >
       {step === 1 && (
         <WhyStep

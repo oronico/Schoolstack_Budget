@@ -13,7 +13,12 @@
 // (revenue / expense / rent / ignore). Schools whose chart of accounts uses
 // non-standard names like "Facility Lease" or "Building Costs" can fix the
 // monthly-rent suggestion in one click without re-typing anything.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { trackCoachingEvent } from "@/lib/coaching/track";
+import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { Lightbulb } from "lucide-react";
 import {
   Building2,
   CheckCircle2,
@@ -530,6 +535,19 @@ export function AccountingConnectionCard({
     [],
   );
 
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+  const coachTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!showCoach || coachTrackedRef.current) return;
+    coachTrackedRef.current = true;
+    trackCoachingEvent("accounting_mapping_coach_shown", {
+      surface: "card",
+      guidanceLevel,
+    });
+  }, [showCoach, guidanceLevel]);
+
   return (
     <div
       className="rounded-2xl border border-border bg-card p-5 shadow-sm"
@@ -545,10 +563,27 @@ export function AccountingConnectionCard({
           </h3>
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
             Connect QuickBooks or Xero so the actuals editor can suggest the most recent
-            revenue, expenses, and rent without re-typing.
+            revenue, expenses, and rent without re-typing. We pull your{" "}
+            <GlossaryTerm termKey="chart_of_accounts">chart of accounts</GlossaryTerm>
+            {" "}and your latest{" "}
+            <GlossaryTerm termKey="pl_statement">P&amp;L</GlossaryTerm>
+            {" "}from the{" "}
+            <GlossaryTerm termKey="realm">company file</GlossaryTerm>
+            {" "}you authorize via{" "}
+            <GlossaryTerm termKey="oauth">OAuth</GlossaryTerm>.
           </p>
         </div>
       </div>
+
+      {showCoach && (
+        <div className="mb-4" data-testid="accounting-card-why">
+          <WhyThisMatters
+            title="Why connect your books at all?"
+            why="Your projections are only as honest as your actuals. Pulling real revenue, expenses, and rent from QuickBooks or Xero turns variance from guesswork into a number — so you can see month over month whether the model still fits the school you're actually running."
+            revisit="Run a sync at the end of every month, then open the actuals editor and accept the suggestions. The whole loop should take under 5 minutes."
+          />
+        </div>
+      )}
 
       {banner && (
         <div
@@ -797,6 +832,19 @@ function AccountMappingPanel({
   open,
   onOpenChange,
 }: AccountMappingPanelProps) {
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+  const openTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!open || !showCoach || openTrackedRef.current) return;
+    openTrackedRef.current = true;
+    trackCoachingEvent("accounting_mapping_coach_shown", {
+      surface: "panel",
+      guidanceLevel,
+      accountCount: accounts.length,
+    });
+  }, [open, showCoach, guidanceLevel, accounts.length]);
   const initial = useMemo(() => {
     const m: Record<string, AccountKind> = {};
     for (const a of accounts) m[a.key] = saved[a.key] ?? a.defaultKind;
@@ -883,6 +931,20 @@ function AccountMappingPanel({
             the auto-detected default — schools that skip this step still get the
             standard heuristic.
           </p>
+          {showCoach && (
+            <div
+              className="rounded-md border border-amber-200 bg-amber-50/60 px-2.5 py-2 flex items-start gap-2"
+              data-testid={`accounting-mapping-coach-${provider}`}
+            >
+              <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-700" />
+              <p className="text-[11px] leading-relaxed text-amber-900">
+                Coach: review anything tagged "Ignore" with a meaningful dollar amount —
+                that usually means we couldn't tell whether it's revenue or an expense.
+                If "Rent" is empty but you pay rent, find your facility account and tag
+                it so the monthly-rent suggestion is right.
+              </p>
+            </div>
+          )}
           {(["income", "expense", "other"] as const).map((section) => {
             const list = groups[section];
             if (list.length === 0) return null;
@@ -991,6 +1053,20 @@ function ReuseLastMappingPrompt({
   onApply,
   onForget,
 }: ReuseLastMappingPromptProps) {
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+  const trackedRef = useRef(false);
+  useEffect(() => {
+    if (!showCoach || trackedRef.current) return;
+    trackedRef.current = true;
+    trackCoachingEvent("accounting_reuse_prompt_coach_shown", {
+      provider,
+      guidanceLevel,
+      matchedCount: available.matchedCount,
+      totalCount: available.totalCount,
+    });
+  }, [showCoach, provider, guidanceLevel, available.matchedCount, available.totalCount]);
   const realmText = available.realmDisplayName
     ? ` from ${available.realmDisplayName}`
     : "";
@@ -1053,6 +1129,15 @@ function ReuseLastMappingPrompt({
               data-testid={`accounting-reuse-source-${provider}`}
             >
               {sourceLine}
+            </div>
+          )}
+          {showCoach && (
+            <div
+              className="mt-1 text-[11px] text-amber-900/85 leading-snug italic"
+              data-testid={`accounting-reuse-coach-${provider}`}
+            >
+              Coach: reusing your last mapping is safe — it only sets the tags. Your
+              other model stays put, and you can still tweak any account here.
             </div>
           )}
         </div>
@@ -1238,6 +1323,9 @@ function DroppedMappingsNotice({
   onDismiss,
   onReTag,
 }: DroppedMappingsNoticeProps) {
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   const count = dropped.length;
   const summary = `${count} mapped account${count === 1 ? "" : "s"} no longer appear${count === 1 ? "s" : ""} in your books`;
   return (
@@ -1268,6 +1356,17 @@ function DroppedMappingsNotice({
             suggestion may have shifted. Re-tag the renamed accounts or dismiss this
             notice if the changes are intentional.
           </p>
+          {showCoach && (
+            <p
+              className="mt-1 text-[11px] italic text-amber-900/85 leading-snug"
+              data-testid={`accounting-dropped-coach-${provider}`}
+            >
+              Coach: this usually happens when someone renamed an account in
+              QuickBooks or Xero ("Rent" → "Facility Lease"). Re-tagging keeps your
+              monthly-rent suggestion right; dismissing tells us the change was
+              intentional and you don't want to be reminded again.
+            </p>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button
               type="button"

@@ -1,6 +1,10 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import type { DecisionType } from "@/pages/model-wizard/schema";
 import { cn } from "@/lib/utils";
+import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { useAuth } from "@/lib/auth-context";
+import { EXPLAINERS } from "@/lib/coaching/explainers";
+import { trackCoachingEvent } from "@/lib/coaching/track";
 
 const REASON_CHIPS: Record<DecisionType, string[]> = {
   add_program: [
@@ -39,6 +43,20 @@ interface WhyStepProps {
 
 export function WhyStep({ decisionType, intro, prepareList, narrative, setNarrative }: WhyStepProps) {
   const chips = REASON_CHIPS[decisionType];
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+  const coachExplainer = EXPLAINERS[`decision_${decisionType}`];
+  const trackedRef = useRef(false);
+  useEffect(() => {
+    if (!showCoach || !coachExplainer || trackedRef.current) return;
+    trackedRef.current = true;
+    trackCoachingEvent("decision_why_explainer_shown", {
+      decisionType,
+      explainerId: coachExplainer.id,
+      guidanceLevel,
+    });
+  }, [showCoach, coachExplainer, decisionType, guidanceLevel]);
   const toggleChip = (chip: string) => {
     const lines = narrative.split("\n").map((l) => l.trim()).filter(Boolean);
     const tag = `• ${chip}`;
@@ -53,6 +71,16 @@ export function WhyStep({ decisionType, intro, prepareList, narrative, setNarrat
   return (
     <section className="max-w-2xl space-y-5" data-testid={`why-step-${decisionType}`}>
       {intro}
+
+      {showCoach && coachExplainer && (
+        <div data-testid={`why-step-coach-${decisionType}`}>
+          <WhyThisMatters
+            title={coachExplainer.title}
+            why={coachExplainer.body.whyItMatters}
+            revisit={coachExplainer.body.whatToDoNext}
+          />
+        </div>
+      )}
 
       <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm">
         <label htmlFor="decision-why-text" className="block text-sm font-semibold text-foreground mb-1">

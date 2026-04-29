@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRoute, useLocation, useSearchParams } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,6 +33,11 @@ import type { FullModelData, OutcomeStatus, CustomScenario, CustomScenarioActual
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
 import { parseExportSourceLabel } from "@/lib/actuals-source";
+import { useAuth } from "@/lib/auth-context";
+import { trackCoachingEvent } from "@/lib/coaching/track";
+import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { Lightbulb } from "lucide-react";
 import {
   applyPersistedScenarioToData,
   buildActualsSuggestion,
@@ -228,6 +233,104 @@ function describeScenario(cs: CustomScenario): string[] {
     arr.push(`Sqft ${o.sqftDelta > 0 ? "+" : ""}${o.sqftDelta}`);
   }
   return arr;
+}
+
+// Coach intro shown above the actuals editor for basics/extra users.
+// Explains what actuals are vs projections in plain terms, with the two
+// terms wrapped in glossary popovers so newer founders can dig deeper.
+function ActualsCoachIntro({ idx }: { idx: number }) {
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  if (guidanceLevel === "advanced") return null;
+  return (
+    <div data-testid={`custom-scenario-actuals-coach-intro-${idx}`}>
+      <WhyThisMatters
+        title="Why fill in actuals?"
+        why={
+          <>
+            <GlossaryTerm termKey="actuals">Actuals</GlossaryTerm> are what really
+            happened — the enrollment, revenue, and expenses you can read off
+            your bank statement and bookkeeping. Comparing them to your
+            projections gives you{" "}
+            <GlossaryTerm termKey="variance">variance</GlossaryTerm>: where you
+            beat the plan, where you missed, and by how much. That's the loop
+            that turns a model into a tool you actually steer with.
+          </>
+        }
+        revisit="Update actuals at the end of every month or quarter — the more recent the data, the better the next decision you make."
+      />
+    </div>
+  );
+}
+
+// Inline variance nudge that fires when any of the four headline lines
+// (enrollment / revenue / expense / net income) misses the projection by
+// more than 10%. Surfaces a one-line plain-English read so founders see
+// the implication at a glance, and emits an event the first time we light
+// up so the coaching dashboard can measure exposure.
+interface ActualsVarianceCoachProps {
+  idx: number;
+  projected: ProjectedSnapshot;
+  draft: CustomScenarioActuals;
+  decisionType: CustomScenario["decisionType"];
+}
+function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachProps) {
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+
+  const items = useMemo(() => {
+    if (!showCoach) return [] as Array<{ key: string; label: string; pct: number; direction: "good" | "bad" }>;
+    const checks: Array<{ key: string; label: string; actual?: number; projected: number; betterWhen: "higher" | "lower" }> = [
+      { key: "enrollment", label: "Enrollment", actual: draft.enrollmentActual, projected: projected.enrollment, betterWhen: "higher" },
+      { key: "revenue", label: "Revenue", actual: draft.revenueActual, projected: projected.revenue, betterWhen: "higher" },
+      { key: "expense", label: "Expenses", actual: draft.expenseActual, projected: projected.expense, betterWhen: "lower" },
+      { key: "netIncome", label: "Net income", actual: draft.netIncomeActual, projected: projected.netIncome, betterWhen: "higher" },
+    ];
+    const out: Array<{ key: string; label: string; pct: number; direction: "good" | "bad" }> = [];
+    for (const c of checks) {
+      if (c.actual === undefined || !isFinite(c.actual)) continue;
+      const denom = Math.abs(c.projected);
+      if (denom < 1) continue;
+      const pct = (c.actual - c.projected) / denom;
+      if (Math.abs(pct) <= 0.1) continue;
+      const better = c.betterWhen === "higher" ? pct > 0 : pct < 0;
+      out.push({ key: c.key, label: c.label, pct, direction: better ? "good" : "bad" });
+    }
+    return out;
+  }, [showCoach, draft.enrollmentActual, draft.revenueActual, draft.expenseActual, draft.netIncomeActual, projected.enrollment, projected.revenue, projected.expense, projected.netIncome]);
+
+  const trackedRef = useRef<string>("");
+  useEffect(() => {
+    if (items.length === 0) return;
+    const k = items.map((i) => `${i.key}:${i.direction}`).join(",");
+    if (trackedRef.current === k) return;
+    trackedRef.current = k;
+    trackCoachingEvent("actuals_variance_nudge_shown", {
+      keys: items.map((i) => i.key),
+      guidanceLevel,
+    });
+  }, [items, guidanceLevel]);
+
+  if (items.length === 0) return null;
+  return (
+    <div
+      className="rounded-md border border-amber-200 bg-amber-50/70 px-2.5 py-2 space-y-1"
+      data-testid={`custom-scenario-actuals-variance-coach-${idx}`}
+    >
+      {items.map((it) => (
+        <div key={it.key} className="flex items-start gap-2 text-[11px] text-amber-900 leading-snug">
+          <Lightbulb className="h-3 w-3 mt-0.5 shrink-0 text-amber-700" />
+          <p>
+            <span className="font-semibold">Coach: {it.label} variance {it.direction === "good" ? "beat" : "missed"} by {Math.abs(it.pct * 100).toFixed(0)}%.</span>{" "}
+            {it.direction === "good"
+              ? "Worth noting in your board memo — and worth understanding so you can plan around it next year."
+              : "A 10%+ miss usually means an assumption needs revisiting before the next decision rolls. Open the planner and see if it's enrollment, pricing, or a single line item."}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 interface CustomScenarioCardProps {
@@ -984,6 +1087,13 @@ export function CustomScenarioCard({
           )}
           {editingActuals && projectedSnapshot && (
             <div className="space-y-2" data-testid={`custom-scenario-actuals-editor-${idx}`}>
+              <ActualsCoachIntro idx={idx} />
+              <ActualsVarianceCoach
+                idx={idx}
+                projected={projectedSnapshot}
+                draft={actualsDraft}
+                decisionType={cs.decisionType}
+              />
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <label className="text-[10px] font-medium text-foreground">As of</label>

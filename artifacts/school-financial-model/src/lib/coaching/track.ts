@@ -22,7 +22,25 @@ type CoachingEvent =
   | "help_menu_opened"
   | "quick_lever_viewed"
   | "quick_levers_shown"
-  | "wizard_prep_completed";
+  | "wizard_prep_completed"
+  | "decision_flow_diagnostic_shown"
+  | "decision_why_explainer_shown"
+  | "impact_kpi_nudge_shown"
+  | "save_action_apply_reminder_shown"
+  | "accounting_card_glossary_opened"
+  | "accounting_mapping_explainer_shown"
+  | "dropped_mappings_coach_shown"
+  | "reuse_mapping_nudge_shown"
+  | "actuals_variance_nudge_shown"
+  | "actuals_editor_explainer_shown"
+  | "accounting_export_lesson_shown"
+  | "accounting_export_post_upload_coach_shown"
+  | "accounting_mapping_coach_shown"
+  | "accounting_reuse_prompt_coach_shown"
+  | "dashboard_launcher_coach_shown"
+  | "things_changed_coach_shown"
+  | "launcher_subtitle_shown"
+  | "stale_banner_coach_shown";
 
 export function trackCoachingEvent(
   event: CoachingEvent,

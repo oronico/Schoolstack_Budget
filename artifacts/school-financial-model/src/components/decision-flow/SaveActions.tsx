@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
-import { CheckCircle2, Wand2, FileSpreadsheet, ClipboardList } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { CheckCircle2, Wand2, FileSpreadsheet, ClipboardList, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DecisionType } from "@/pages/model-wizard/schema";
 import { DECISION_THEME } from "@/lib/decision-flows";
+import { useAuth } from "@/lib/auth-context";
+import { trackCoachingEvent } from "@/lib/coaching/track";
 
 export type SaveAction = "apply" | "planner" | "later";
 
@@ -33,6 +35,19 @@ export function SaveActions({
 }: SaveActionsProps) {
   const theme = DECISION_THEME[decisionType];
   const [hover, setHover] = useState<SaveAction | null>(null);
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+
+  const trackedRef = useRef(false);
+  useEffect(() => {
+    if (!showCoach || trackedRef.current) return;
+    trackedRef.current = true;
+    trackCoachingEvent("save_action_apply_reminder_shown", {
+      decisionType,
+      guidanceLevel,
+    });
+  }, [showCoach, decisionType, guidanceLevel]);
 
   // Auto-populate the scenario name with the suggested default the first time
   // the user lands on the save step, so the action tiles are immediately
@@ -68,6 +83,21 @@ export function SaveActions({
           data-testid="decision-flow-scenario-name"
         />
       </label>
+
+      {showCoach && (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 flex items-start gap-2.5"
+          data-testid="save-action-apply-coach"
+        >
+          <Lightbulb className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
+          <div className="text-xs leading-relaxed text-amber-900">
+            <p className="font-semibold">Coach: pick "Apply to my model" only when you're ready</p>
+            <p className="text-amber-900/85 mt-0.5">
+              "Apply" rewrites your base model to assume this decision is happening — every future scenario will compare against the new baseline. If you're still weighing options, "Save &amp; review later" keeps the scenario without changing your base.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3" data-testid="decision-flow-save-actions">
         <ActionTile

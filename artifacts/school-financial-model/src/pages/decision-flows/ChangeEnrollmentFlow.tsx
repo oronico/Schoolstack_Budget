@@ -124,6 +124,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
         </button>
       }
       sidebar={<ModelMiniSummary data={data} />}
+      data={data}
     >
       {step === 1 && (
         <WhyStep

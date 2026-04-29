@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { GraduationCap, Building2, Users, Sparkles, X, FileSpreadsheet, ChevronRight } from "lucide-react";
+import { GraduationCap, Building2, Users, Sparkles, X, FileSpreadsheet, ChevronRight, Lightbulb } from "lucide-react";
 import { differenceInDays, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { trackCoachingEvent } from "@/lib/coaching/track";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 
 type LaunchableType = "add_program" | "evaluate_site" | "change_enrollment";
 
@@ -27,10 +30,17 @@ interface DecisionLauncherProps {
   startNewPending: boolean;
 }
 
+// `coachSubtitle` is the plain-English line we show under the blurb for
+// basics + extra users — concrete examples, no jargon, sets expectations
+// for how long the flow takes. `tooltip` is the lender/board framing that
+// shows on hover (and as accessible title) for every guidance level so
+// even advanced users can scan the framing fast.
 const decisionCards: Array<{
   type: LaunchableType;
   title: string;
-  blurb: string;
+  blurb: React.ReactNode;
+  coachSubtitle: string;
+  tooltip: string;
   Icon: typeof GraduationCap;
   bg: string;
   border: string;
@@ -41,7 +51,14 @@ const decisionCards: Array<{
   {
     type: "add_program",
     title: "Add a program or grade",
-    blurb: "Model what a new grade band, after-school track, or program adds to revenue and cost.",
+    blurb: (
+      <>
+        Model what a new grade band, after-school track, or program adds to
+        revenue and cost.
+      </>
+    ),
+    coachSubtitle: "Best for: \"Should we add 6th grade next year?\" or \"Is the after-school track worth it?\" — about 5 minutes.",
+    tooltip: "Holds your base model fixed and layers a new program on top, so you see the marginal revenue, marginal cost, and net effect on DSCR / cash / break-even.",
     Icon: GraduationCap,
     bg: "bg-amber-50/50",
     border: "border-amber-200/70 hover:border-amber-400",
@@ -52,7 +69,15 @@ const decisionCards: Array<{
   {
     type: "evaluate_site",
     title: "Evaluate a site or lease",
-    blurb: "See how a new building, rent, or fit-out cost moves DSCR, cash, and break-even.",
+    blurb: (
+      <>
+        See how a new building, rent, or fit-out cost moves{" "}
+        <GlossaryTerm termKey="dscr">DSCR</GlossaryTerm>, cash, and{" "}
+        <GlossaryTerm termKey="break_even">break-even</GlossaryTerm>.
+      </>
+    ),
+    coachSubtitle: "Best for: comparing two lease offers, stress-testing a fit-out budget, or pressure-testing rent before you sign — about 5 minutes.",
+    tooltip: "Plugs in monthly rent, fit-out, and concessions, then re-runs the model so you can compare the new debt-service coverage and cash trough against your base.",
     Icon: Building2,
     bg: "bg-teal-50/50",
     border: "border-teal-200/70 hover:border-teal-400",
@@ -63,7 +88,14 @@ const decisionCards: Array<{
   {
     type: "change_enrollment",
     title: "Change enrollment",
-    blurb: "Test a new re-enrollment number, retention rate, or tuition adjustment.",
+    blurb: (
+      <>
+        Test a new re-enrollment number, retention rate, or tuition adjustment
+        against your <GlossaryTerm termKey="break_even">break-even</GlossaryTerm>.
+      </>
+    ),
+    coachSubtitle: "Best for: deciding whether to bump tuition 4%, what happens if 5 families don't return, or how aggressive your re-enroll target should be — about 5 minutes.",
+    tooltip: "Holds program structure fixed and re-projects revenue, runway, and net income against the new enrollment / pricing assumption.",
     Icon: Users,
     bg: "bg-emerald-50/50",
     border: "border-emerald-200/70 hover:border-emerald-400",
@@ -84,6 +116,21 @@ export function DecisionLauncher({ models, onStartNew, startNewPending }: Decisi
   const { toast } = useToast();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingType, setPendingType] = useState<LaunchableType | null>(null);
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+
+  // Fire once per mount when the launcher renders for a coach-mode user, so
+  // the coaching dashboard can measure how often the subtitles actually show.
+  const trackedRef = useRef(false);
+  useEffect(() => {
+    if (!showCoach || trackedRef.current) return;
+    trackedRef.current = true;
+    trackCoachingEvent("dashboard_launcher_coach_shown", {
+      guidanceLevel,
+      modelCount: models.length,
+    });
+  }, [showCoach, guidanceLevel, models.length]);
 
   const eligibleModels = useMemo(
     () => models.filter((m) => m.status !== "archived"),
@@ -155,11 +202,12 @@ export function DecisionLauncher({ models, onStartNew, startNewPending }: Decisi
           </span>
         </button>
 
-        {decisionCards.map(({ type, title, blurb, Icon, bg, border, iconBg, iconColor, testid }) => (
+        {decisionCards.map(({ type, title, blurb, coachSubtitle, tooltip, Icon, bg, border, iconBg, iconColor, testid }) => (
           <button
             key={type}
             type="button"
             onClick={() => launch(type)}
+            title={tooltip}
             className={cn(
               "group flex flex-col text-left rounded-2xl border bg-card p-5 transition-all hover:shadow-md",
               border,
@@ -171,7 +219,16 @@ export function DecisionLauncher({ models, onStartNew, startNewPending }: Decisi
               <Icon className="h-5 w-5" />
             </div>
             <h3 className="font-display font-bold text-foreground mb-1">{title}</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed flex-1">{blurb}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{blurb}</p>
+            {showCoach && (
+              <p
+                className="mt-1.5 text-[11px] text-amber-900/85 leading-snug flex-1"
+                data-testid={`${testid}-coach-subtitle`}
+              >
+                <span className="font-semibold">Coach:</span> {coachSubtitle}
+              </p>
+            )}
+            {!showCoach && <div className="flex-1" />}
             <span className={cn("mt-3 inline-flex items-center gap-1 text-xs font-semibold", iconColor)}>
               {eligibleModels.length === 0 ? "Start a model first" : eligibleModels.length === 1 ? "Open flow" : "Pick a model"}
               <ChevronRight className="h-3 w-3" />
@@ -269,6 +326,10 @@ interface ThingsHaveChangedBannerProps {
 
 export function ThingsHaveChangedBanner({ models, staleDays = 30 }: ThingsHaveChangedBannerProps) {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+  const trackedRef = useRef(false);
   const stale = useMemo(() => {
     return models
       .filter((m) => m.status === "complete")
@@ -277,11 +338,28 @@ export function ThingsHaveChangedBanner({ models, staleDays = 30 }: ThingsHaveCh
       .sort((a, b) => b.days - a.days);
   }, [models, staleDays]);
 
-  if (stale.length === 0) return null;
-
   // Pick the most stale completed model as the default target for the chips.
-  const target = stale[0].m;
-  const oldestDays = stale[0].days;
+  // Compute these even when stale.length === 0 so the useEffect deps below
+  // stay stable across renders; we early-return the JSX further down.
+  const target = stale[0]?.m;
+  const oldestDays = stale[0]?.days ?? 0;
+
+  // Fire the "things changed" coach-shown event once per mount when the
+  // banner is actually visible to a coach-mode user. Kept in an effect (not
+  // the render path) so React StrictMode double-invocation and remounts
+  // don't double-emit, and the ref guard still prevents re-fires when deps
+  // change while the banner is still on screen.
+  useEffect(() => {
+    if (!showCoach || stale.length === 0 || trackedRef.current) return;
+    trackedRef.current = true;
+    trackCoachingEvent("things_changed_coach_shown", {
+      guidanceLevel,
+      oldestDays,
+      staleCount: stale.length,
+    });
+  }, [showCoach, guidanceLevel, oldestDays, stale.length]);
+
+  if (stale.length === 0 || !target) return null;
 
   const launch = (type: LaunchableType) => {
     setLocation(`/decisions/${URL_FOR_TYPE[type]}/${target.id}`);
@@ -305,6 +383,21 @@ export function ThingsHaveChangedBanner({ models, staleDays = 30 }: ThingsHaveCh
                 <span className="text-muted-foreground"> ({stale.length - 1} other completed model{stale.length - 1 === 1 ? "" : "s"} also stale.)</span>
               )}
             </p>
+            {showCoach && (
+              <p
+                className="text-[11px] text-amber-900/85 mt-1.5 leading-snug flex items-start gap-1.5"
+                data-testid="things-changed-coach"
+              >
+                <Lightbulb className="h-3 w-3 mt-0.5 shrink-0 text-amber-700" />
+                <span>
+                  <span className="font-semibold">Coach:</span> a model older
+                  than ~30 days usually means enrollment, payroll, or rent has
+                  drifted from your projection. The fastest way to catch up is
+                  a 5-minute decision flow — pick the chip that matches what
+                  changed and we'll re-run the math against today.
+                </span>
+              </p>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

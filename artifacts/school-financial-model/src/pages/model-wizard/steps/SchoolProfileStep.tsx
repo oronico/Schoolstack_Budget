@@ -5,6 +5,10 @@ import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
+import { EXPLAINERS } from "@/lib/coaching/explainers";
+import { useAuth } from "@/lib/auth-context";
+import { trackCoachingEvent } from "@/lib/coaching/track";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit } from "../schema";
 import {
@@ -535,6 +539,32 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
+  const { user } = useAuth();
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
+
+  // Track the lesson + post-upload coach-line surfacings exactly once each
+  // per mount so the analytics view doesn't get spammed by re-renders.
+  const lessonTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!showCoach || lessonTrackedRef.current) return;
+    lessonTrackedRef.current = true;
+    trackCoachingEvent("accounting_export_lesson_shown", {
+      surface: "uploader",
+      guidanceLevel,
+    });
+  }, [showCoach, guidanceLevel]);
+  const postUploadTrackedRef = useRef<string>("");
+  useEffect(() => {
+    if (!showCoach || !exportData) return;
+    const key = exportData.filename ?? "";
+    if (postUploadTrackedRef.current === key) return;
+    postUploadTrackedRef.current = key;
+    trackCoachingEvent("accounting_export_post_upload_coach_shown", {
+      filename: exportData.filename,
+      guidanceLevel,
+    });
+  }, [showCoach, exportData, guidanceLevel]);
   // Brief amber ring shown when the founder lands here from the saved-scenario
   // "Replace export" deep-link, so the upload section is visually called out
   // after the scroll-into-view. Cleared after a few seconds so it doesn't
@@ -660,6 +690,14 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
         export and we'll auto-fill the actuals editor on saved scenarios so
         you don't re-type figures already in your books.
       </p>
+      {showCoach && EXPLAINERS.accounting_export && (
+        <div className="mb-4" data-testid="accounting-export-lesson">
+          <InlineHelpCard
+            explainer={EXPLAINERS.accounting_export}
+            section="accounting_export"
+          />
+        </div>
+      )}
       <input
         ref={fileInputRef}
         type="file"
@@ -776,6 +814,54 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
               ))}
             </ul>
           )}
+          {showCoach && (() => {
+            // Post-upload coach line — recap the headline totals the parser
+            // pulled out so the founder can confirm we're reading what they
+            // expect ("revenue $X, expenses $Y" beats "upload succeeded"
+            // every time). When the parser couldn't confidently identify
+            // either total, we steer them toward re-exporting a detailed
+            // P&L instead of a summary.
+            const totals = exportData.totals ?? {};
+            const fmt = (n?: number) =>
+              typeof n === "number"
+                ? n.toLocaleString("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 0,
+                  })
+                : "—";
+            const haveAny =
+              typeof totals.totalRevenue === "number" ||
+              typeof totals.totalExpenses === "number";
+            return (
+              <div
+                className="mt-2 pt-2 border-t border-border/60 flex items-start gap-2 text-[11px] text-amber-900 leading-snug"
+                data-testid="accounting-export-post-upload-coach"
+              >
+                <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-700" />
+                <p>
+                  <span className="font-semibold">Coach:</span>{" "}
+                  {haveAny ? (
+                    <>
+                      we read revenue {fmt(totals.totalRevenue)} and expenses{" "}
+                      {fmt(totals.totalExpenses)} from this export. If those
+                      totals look off, re-export your{" "}
+                      <GlossaryTerm termKey="pl_statement">P&amp;L</GlossaryTerm>
+                      {" "}as a detailed (not summary) report so we can match
+                      every line to your model.
+                    </>
+                  ) : (
+                    <>
+                      we couldn't pull totals from this file. Re-export your{" "}
+                      <GlossaryTerm termKey="pl_statement">P&amp;L</GlossaryTerm>
+                      {" "}as a detailed report (not a summary) so the actuals
+                      editor has real numbers to suggest from.
+                    </>
+                  )}
+                </p>
+              </div>
+            );
+          })()}
         </div>
       )}
       {error && (
