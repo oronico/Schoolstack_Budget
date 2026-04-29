@@ -12,7 +12,7 @@ interface MicroLessonContainerProps {
   className?: string;
 }
 
-function MicroLessonCardInner({ lesson, onDismiss }: { lesson: MicroLesson; onDismiss: (id: string) => void }) {
+export function MicroLessonCardInner({ lesson, onDismiss }: { lesson: MicroLesson; onDismiss: (id: string) => void }) {
   return (
     <div className="rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50/80 to-emerald-50/60 p-4 shadow-sm animate-in slide-in-from-top-2 fade-in duration-300">
       <div className="flex items-start gap-3">

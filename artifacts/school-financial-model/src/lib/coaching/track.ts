@@ -40,7 +40,10 @@ type CoachingEvent =
   | "dashboard_launcher_coach_shown"
   | "things_changed_coach_shown"
   | "launcher_subtitle_shown"
-  | "stale_banner_coach_shown";
+  | "stale_banner_coach_shown"
+  | "whatif_link_clicked"
+  | "mapping_heuristic_suggested"
+  | "mapping_heuristic_accepted";
 
 export function trackCoachingEvent(
   event: CoachingEvent,

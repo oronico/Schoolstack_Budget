@@ -29,12 +29,34 @@ export function WhatIfTrigger({ data, modelId, onApplyToModel, onSaveAsScenario 
     return () => window.removeEventListener("hashchange", check);
   }, []);
 
-  // Auto-open if URL hash has whatif on first mount
+  // Auto-open if URL hash has whatif on first mount. We honour two
+  // shapes: legacy override-encoded hashes (`#whatif=<encoded>`) for
+  // shared deep-links, and a bare `whatif=open` flag that the budget
+  // coach uses to deep-link from a coach nudge into the planner without
+  // needing to know what to override.
   useEffect(() => {
     const ov = decodeOverridesFromHash(window.location.hash);
     if (!isEmptyOverrides(ov)) {
       setOpen(true);
+      return;
     }
+    if (/(?:^|[#&?])whatif=open(?:&|$)/.test(window.location.hash)) {
+      setOpen(true);
+    }
+  }, []);
+
+  // Same `whatif=open` handshake, but for the case where the trigger is
+  // already mounted when the hash changes (e.g. the founder is on the
+  // scenarios page, taps the coach nudge, and the hash flips without a
+  // full route navigation).
+  useEffect(() => {
+    const onHash = () => {
+      if (/(?:^|[#&?])whatif=open(?:&|$)/.test(window.location.hash)) {
+        setOpen(true);
+      }
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
   // Re-check overrides whenever drawer closes (so the badge stays accurate)

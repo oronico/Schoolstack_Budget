@@ -37,6 +37,7 @@ import { useAuth } from "@/lib/auth-context";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { WhatIfLink } from "@/components/coaching/WhatIfLink";
 import { Lightbulb } from "lucide-react";
 import {
   applyPersistedScenarioToData,
@@ -277,10 +278,12 @@ interface ActualsVarianceCoachProps {
 function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachProps) {
   const { user } = useAuth();
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  const verbose = guidanceLevel !== "advanced";
 
+  // Variance computation runs at every guidance level so even an advanced
+  // founder sees a quiet one-liner when actuals miss projections by more
+  // than 10%. Only the explanatory body changes by guidance level.
   const items = useMemo(() => {
-    if (!showCoach) return [] as Array<{ key: string; label: string; pct: number; direction: "good" | "bad" }>;
     const checks: Array<{ key: string; label: string; actual?: number; projected: number; betterWhen: "higher" | "lower" }> = [
       { key: "enrollment", label: "Enrollment", actual: draft.enrollmentActual, projected: projected.enrollment, betterWhen: "higher" },
       { key: "revenue", label: "Revenue", actual: draft.revenueActual, projected: projected.revenue, betterWhen: "higher" },
@@ -298,7 +301,7 @@ function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachPro
       out.push({ key: c.key, label: c.label, pct, direction: better ? "good" : "bad" });
     }
     return out;
-  }, [showCoach, draft.enrollmentActual, draft.revenueActual, draft.expenseActual, draft.netIncomeActual, projected.enrollment, projected.revenue, projected.expense, projected.netIncome]);
+  }, [draft.enrollmentActual, draft.revenueActual, draft.expenseActual, draft.netIncomeActual, projected.enrollment, projected.revenue, projected.expense, projected.netIncome]);
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
@@ -322,13 +325,18 @@ function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachPro
         <div key={it.key} className="flex items-start gap-2 text-[11px] text-amber-900 leading-snug">
           <Lightbulb className="h-3 w-3 mt-0.5 shrink-0 text-amber-700" />
           <p>
-            <span className="font-semibold">Coach: {it.label} variance {it.direction === "good" ? "beat" : "missed"} by {Math.abs(it.pct * 100).toFixed(0)}%.</span>{" "}
-            {it.direction === "good"
-              ? "Worth noting in your board memo — and worth understanding so you can plan around it next year."
-              : "A 10%+ miss usually means an assumption needs revisiting before the next decision rolls. Open the planner and see if it's enrollment, pricing, or a single line item."}
+            <span className="font-semibold">{it.label} {it.direction === "good" ? "beat" : "missed"} by {Math.abs(it.pct * 100).toFixed(0)}%.</span>{" "}
+            {verbose ? (
+              it.direction === "good"
+                ? "Worth noting in your board memo — and worth understanding so you can plan around it next year."
+                : "A 10%+ miss usually means an assumption needs revisiting before the next decision rolls. Open the planner and see if it's enrollment, pricing, or a single line item."
+            ) : null}
           </p>
         </div>
       ))}
+      <div className="pt-1">
+        <WhatIfLink source="actuals_variance" className="text-[11px]" />
+      </div>
     </div>
   );
 }

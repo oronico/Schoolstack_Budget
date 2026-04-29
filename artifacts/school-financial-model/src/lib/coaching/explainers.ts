@@ -27,6 +27,10 @@ export interface ExplainerBody {
   whyItMatters: string;
   healthyVsRisky: string;
   whatToDoNext: string;
+  // Optional, decision-flow-specific. When present, the WhyStep replaces its
+  // hard-coded "Common reasons" chips with these so the chip set lives in the
+  // same authoritative place as the rest of the coach copy.
+  commonReasons?: string[];
 }
 
 export interface ExtraDepthContent {
@@ -999,6 +1003,14 @@ export const EXPLAINERS: Record<string, Explainer> = {
       whyItMatters: "Adding a program looks small on paper - one new grade, a handful of seats - but it almost always touches three lines at once: tuition revenue, teacher salaries, and classroom space. Modelling it explicitly is how you avoid the 'we forgot the second teacher' surprise after the board says yes.",
       healthyVsRisky: "Healthy: the new program holds its own contribution margin within Year 2 and doesn't push DSCR below 1.20. Worth watching: a program that only breaks even in Year 4+ is fine if it's mission-critical, but flag it to the board so the runway question is on the table from day one.",
       whatToDoNext: "Spend a sentence on Step 1 capturing why you're considering it (board ask, family demand, etc.), keep Step 2 inputs realistic (don't assume max enrollment in Year 1), and on Step 3 watch the Y5 net income and break-even shifts before you save.",
+      commonReasons: [
+        "Mission expansion",
+        "Demand from families",
+        "Capacity at current grades",
+        "Authorizer ask",
+        "Board direction",
+        "Funding opportunity",
+      ],
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "decision_add_program",
@@ -1016,6 +1028,14 @@ export const EXPLAINERS: Record<string, Explainer> = {
       whyItMatters: "Facilities are the single biggest decision most school founders make. A monthly rent change of $5,000 quietly compounds into $300,000 over a 5-year lease - and that's before triple-net charges, escalators, and tenant improvements. Modelling the deal is how you keep that conversation honest.",
       healthyVsRisky: "Healthy: the site keeps facilities under 18-22% of revenue and DSCR at or above 1.20 by Year 2. Worth watching: any site that pushes facilities over 25% of revenue is a risk lenders will challenge, even if the building itself is perfect.",
       whatToDoNext: "On Step 2, enter the all-in monthly rent (base + NNN + escalator) - don't just type the headline number. On Step 3, look at the cash-runway delta in addition to DSCR; a site can pencil and still leave you cash-thin in Year 1.",
+      commonReasons: [
+        "Outgrowing current space",
+        "Lease ending",
+        "Better neighborhood fit",
+        "Lower rent opportunity",
+        "Capacity for new programs",
+        "Lender / authorizer ask",
+      ],
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "decision_evaluate_site",
@@ -1033,6 +1053,14 @@ export const EXPLAINERS: Record<string, Explainer> = {
       whyItMatters: "Enrollment is the single biggest swing factor in a school budget. A 10% miss on re-enrollment can wipe out a full year's surplus, even if every other line holds. Running the downside scenarios on purpose - before you have to - is how boards stay calm when the actuals come in.",
       healthyVsRisky: "Healthy: your model still hits a positive net margin and keeps reserve months above 1.5 even at a 10% enrollment shortfall. Worth watching: any scenario where a single bad re-enrollment year tips DSCR below 1.0 - that's the conversation to have with your board now, not in October.",
       whatToDoNext: "Run two passes: one optimistic, one pessimistic. Save both - the goal is to give your board a range, not a point estimate. Then 'Apply to model' the one that best matches your current best guess.",
+      commonReasons: [
+        "Re-enrollment exceeded plan",
+        "Re-enrollment under plan",
+        "Stress-testing for the board",
+        "Authorizer requirement",
+        "Conservative downside",
+        "Recruitment update",
+      ],
     },
     audienceLevel: ["basics", "extra"],
     relatedSection: "decision_change_enrollment",

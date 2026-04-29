@@ -6,6 +6,7 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
+import { MicroLessonCardInner } from "@/components/coaching/MicroLessonCard";
 import { EXPLAINERS } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
 import { trackCoachingEvent } from "@/lib/coaching/track";
@@ -690,11 +691,24 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
         export and we'll auto-fill the actuals editor on saved scenarios so
         you don't re-type figures already in your books.
       </p>
-      {showCoach && EXPLAINERS.accounting_export && (
+      {showCoach && (
         <div className="mb-4" data-testid="accounting-export-lesson">
-          <InlineHelpCard
-            explainer={EXPLAINERS.accounting_export}
-            section="accounting_export"
+          <MicroLessonCardInner
+            lesson={{
+              id: "accounting_export_uploader_lesson",
+              title: "Quick lesson: what makes a clean P&L export",
+              body:
+                "From QuickBooks, Xero, or Wave, run a Profit & Loss for the most recent full month or year. Export as CSV or Excel — no edits, no merged cells. We read the rightmost numeric column, so summary rows like \"Total Revenue\" and \"Net Income\" land in the right buckets automatically. Skip exports with multiple sheets, pivot tables, or dashboard formatting.",
+              readTimeSeconds: 25,
+              triggerStep: 0,
+              checkTrigger: () => true,
+            }}
+            onDismiss={() => {
+              // No-op: the lesson is contextual to this uploader and is
+              // re-shown each time the founder revisits the step. We rely
+              // on the parent's containerRef + highlight to hint that the
+              // section is here when needed.
+            }}
           />
         </div>
       )}

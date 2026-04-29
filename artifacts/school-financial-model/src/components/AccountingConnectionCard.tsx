@@ -145,6 +145,109 @@ const KIND_LABELS: Record<AccountKind, string> = {
 
 const KIND_OPTIONS: AccountKind[] = ["revenue", "expense", "rent", "ignore"];
 
+// Per-account name-based heuristics. Only kicks in when the auto-detected
+// default has already given up (`ignore`) — at that point we read the
+// account name and try to guess a more useful bucket from the words the
+// bookkeeper used. Conservative on purpose: a wrong suggestion is worse
+// than no suggestion because the founder is more likely to click "accept"
+// than "switch to something else".
+function suggestAccountKindFromName(
+  name: string,
+  defaultKind: AccountKind,
+): AccountKind | null {
+  if (defaultKind !== "ignore") return null;
+  const n = name.toLowerCase();
+  // Rent / facilities — single highest-value override the actuals editor
+  // can use, so we look for it first.
+  if (
+    /\b(rent|lease|facility|facilities|occupancy|building|premises|landlord)\b/.test(n)
+  ) {
+    return "rent";
+  }
+  // Revenue-side hints. Deliberately narrow vocabulary so we don't
+  // mis-bucket asset / liability accounts as revenue.
+  if (
+    /\b(tuition|enrollment fee|registration fee|esa|scholarship|grant|donation|gift|fundraising|fees? (?:earned|collected)|workshop|camp|after[- ]?school|aftercare|extended day)\b/.test(n)
+  ) {
+    return "revenue";
+  }
+  // Expense-side hints. Common school P&L lines that bookkeepers leave in
+  // unconventional buckets ("instructional supplies", "curriculum", etc).
+  if (
+    /\b(salary|salaries|payroll|wages|benefits?|insurance|utilities|supplies|curriculum|textbook|software|subscription|technology|cleaning|janitorial|maintenance|repair|professional development|marketing|advertising|food|meals|transportation|bus)\b/.test(n)
+  ) {
+    return "expense";
+  }
+  return null;
+}
+
+// Sibling-of-render tracker that fires `mapping_heuristic_suggested`
+// whenever the visible set of suggested account keys changes inside the
+// mapping panel. Living next to the rows (not inside each row) lets us
+// emit one event per change rather than once per row, which keeps the
+// analytics view clean even on books with many "ignore" accounts.
+function SuggestedHeuristicsTracker({
+  provider,
+  accounts,
+  draft,
+}: {
+  provider: AccountingSnapshotProvider;
+  accounts: DiscoveredAccount[];
+  draft: Record<string, AccountKind>;
+}) {
+  const suggested = useMemo(() => {
+    const out: Array<{ key: string; suggestion: AccountKind }> = [];
+    for (const acc of accounts) {
+      const current = draft[acc.key] ?? acc.defaultKind;
+      if (acc.amount === 0 || current !== "ignore") continue;
+      const s = suggestAccountKindFromName(acc.name, acc.defaultKind);
+      if (s) out.push({ key: acc.key, suggestion: s });
+    }
+    return out;
+  }, [accounts, draft]);
+  const lastKeyRef = useRef<string>("");
+  useEffect(() => {
+    if (suggested.length === 0) {
+      lastKeyRef.current = "";
+      return;
+    }
+    const key = suggested.map((s) => `${s.key}:${s.suggestion}`).join(",");
+    if (key === lastKeyRef.current) return;
+    lastKeyRef.current = key;
+    trackCoachingEvent("mapping_heuristic_suggested", {
+      provider,
+      count: suggested.length,
+      suggestions: suggested,
+    });
+  }, [suggested, provider]);
+  return null;
+}
+
+// Wraps GlossaryTerm with a one-shot tracking call so the analytics view
+// can measure how often the founder reaches for definitions on this card.
+// The wrapper fires once per term-key per mount on the first interaction
+// (mouseenter or focus), which mirrors how GlossaryTerm itself opens the
+// tooltip — we don't want a hover storm to inflate the metric.
+function TrackedGlossaryTerm({
+  termKey,
+  children,
+}: {
+  termKey: string;
+  children?: React.ReactNode;
+}) {
+  const firedRef = useRef(false);
+  const fire = useCallback(() => {
+    if (firedRef.current) return;
+    firedRef.current = true;
+    trackCoachingEvent("accounting_card_glossary_opened", { termKey });
+  }, [termKey]);
+  return (
+    <span onPointerEnter={fire} onFocus={fire}>
+      <GlossaryTerm termKey={termKey}>{children}</GlossaryTerm>
+    </span>
+  );
+}
+
 function formatCurrency(n: number): string {
   if (!isFinite(n)) return "$0";
   return new Intl.NumberFormat("en-US", {
@@ -564,13 +667,13 @@ export function AccountingConnectionCard({
           <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
             Connect QuickBooks or Xero so the actuals editor can suggest the most recent
             revenue, expenses, and rent without re-typing. We pull your{" "}
-            <GlossaryTerm termKey="chart_of_accounts">chart of accounts</GlossaryTerm>
+            <TrackedGlossaryTerm termKey="chart_of_accounts">chart of accounts</TrackedGlossaryTerm>
             {" "}and your latest{" "}
-            <GlossaryTerm termKey="pl_statement">P&amp;L</GlossaryTerm>
+            <TrackedGlossaryTerm termKey="pl_statement">P&amp;L</TrackedGlossaryTerm>
             {" "}from the{" "}
-            <GlossaryTerm termKey="realm">company file</GlossaryTerm>
+            <TrackedGlossaryTerm termKey="realm">company file</TrackedGlossaryTerm>
             {" "}you authorize via{" "}
-            <GlossaryTerm termKey="oauth">OAuth</GlossaryTerm>.
+            <TrackedGlossaryTerm termKey="oauth">OAuth</TrackedGlossaryTerm>.
           </p>
         </div>
       </div>
@@ -945,6 +1048,11 @@ function AccountMappingPanel({
               </p>
             </div>
           )}
+          <SuggestedHeuristicsTracker
+            provider={provider}
+            accounts={accounts}
+            draft={draft}
+          />
           {(["income", "expense", "other"] as const).map((section) => {
             const list = groups[section];
             if (list.length === 0) return null;
@@ -960,39 +1068,72 @@ function AccountMappingPanel({
                   {sectionLabel}
                 </div>
                 <div className="space-y-1">
-                  {list.map((acc) => (
-                    <div
-                      key={acc.key}
-                      className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/40 px-2.5 py-1.5"
-                      data-testid={`accounting-mapping-row-${provider}-${acc.key}`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium truncate" title={acc.name}>
-                          {acc.name}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {formatCurrency(acc.amount)} this period
-                        </div>
-                      </div>
-                      <select
-                        value={draft[acc.key] ?? acc.defaultKind}
-                        onChange={(e) =>
-                          setDraft((prev) => ({
-                            ...prev,
-                            [acc.key]: e.target.value as AccountKind,
-                          }))
-                        }
-                        className="text-xs rounded-md border border-border bg-background px-2 py-1 focus:border-primary focus:outline-none"
-                        data-testid={`accounting-mapping-select-${provider}-${acc.key}`}
+                  {list.map((acc) => {
+                    const current = draft[acc.key] ?? acc.defaultKind;
+                    // Suggestion only fires for accounts the auto-detector
+                    // gave up on (`ignore`) AND that the founder hasn't
+                    // already moved off "ignore" themselves. Showing it
+                    // alongside accept/dismiss keeps a wrong guess from
+                    // ever silently writing.
+                    const suggestion =
+                      acc.amount !== 0 && current === "ignore"
+                        ? suggestAccountKindFromName(acc.name, acc.defaultKind)
+                        : null;
+                    return (
+                      <div
+                        key={acc.key}
+                        className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/40 px-2.5 py-1.5"
+                        data-testid={`accounting-mapping-row-${provider}-${acc.key}`}
                       >
-                        {KIND_OPTIONS.map((k) => (
-                          <option key={k} value={k}>
-                            {KIND_LABELS[k]}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium truncate" title={acc.name}>
+                            {acc.name}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {formatCurrency(acc.amount)} this period
+                          </div>
+                          {suggestion && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDraft((prev) => ({
+                                  ...prev,
+                                  [acc.key]: suggestion,
+                                }));
+                                trackCoachingEvent("mapping_heuristic_accepted", {
+                                  provider,
+                                  accountKey: acc.key,
+                                  suggestion,
+                                });
+                              }}
+                              data-testid={`accounting-mapping-suggest-${provider}-${acc.key}`}
+                              className="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 hover:bg-amber-100"
+                            >
+                              <Lightbulb className="h-2.5 w-2.5" />
+                              Coach: looks like {KIND_LABELS[suggestion]} — tap to apply
+                            </button>
+                          )}
+                        </div>
+                        <select
+                          value={current}
+                          onChange={(e) =>
+                            setDraft((prev) => ({
+                              ...prev,
+                              [acc.key]: e.target.value as AccountKind,
+                            }))
+                          }
+                          className="text-xs rounded-md border border-border bg-background px-2 py-1 focus:border-primary focus:outline-none"
+                          data-testid={`accounting-mapping-select-${provider}-${acc.key}`}
+                        >
+                          {KIND_OPTIONS.map((k) => (
+                            <option key={k} value={k}>
+                              {KIND_LABELS[k]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -1325,7 +1466,10 @@ function DroppedMappingsNotice({
 }: DroppedMappingsNoticeProps) {
   const { user } = useAuth();
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Coach line is now ungated — even an advanced founder benefits from a
+  // single sentence explaining why the account list shifted. Verbose copy
+  // is reserved for basics/extra so advanced doesn't get a wall of text.
+  const verboseCoach = guidanceLevel !== "advanced";
   const count = dropped.length;
   const summary = `${count} mapped account${count === 1 ? "" : "s"} no longer appear${count === 1 ? "s" : ""} in your books`;
   return (
@@ -1356,17 +1500,14 @@ function DroppedMappingsNotice({
             suggestion may have shifted. Re-tag the renamed accounts or dismiss this
             notice if the changes are intentional.
           </p>
-          {showCoach && (
-            <p
-              className="mt-1 text-[11px] italic text-amber-900/85 leading-snug"
-              data-testid={`accounting-dropped-coach-${provider}`}
-            >
-              Coach: this usually happens when someone renamed an account in
-              QuickBooks or Xero ("Rent" → "Facility Lease"). Re-tagging keeps your
-              monthly-rent suggestion right; dismissing tells us the change was
-              intentional and you don't want to be reminded again.
-            </p>
-          )}
+          <p
+            className="mt-1 text-[11px] italic text-amber-900/85 leading-snug"
+            data-testid={`accounting-dropped-coach-${provider}`}
+          >
+            {verboseCoach
+              ? `Coach: this usually happens when someone renamed an account in QuickBooks or Xero ("Rent" → "Facility Lease"). Re-tagging keeps your monthly-rent suggestion right; dismissing tells us the change was intentional and you don't want to be reminded again.`
+              : `Renamed accounts in your books usually trigger this — re-tag to keep totals stable, or dismiss if the change was intentional.`}
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button
               type="button"

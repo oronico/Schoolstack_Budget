@@ -39,15 +39,23 @@ export function SaveActions({
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const showCoach = guidanceLevel !== "advanced";
 
+  // The "Apply to my model" reminder is the most consequential message in
+  // this step (Apply rewrites the base model), so we only surface it when
+  // the founder signals intent toward that specific action — i.e. they
+  // hover or keyboard-focus the Apply tile. Showing it unconditionally
+  // for every coach-mode visitor turned out to feel like noise during
+  // QA. We still emit the *_shown event the first time it appears so the
+  // coaching dashboard can measure reach.
+  const showApplyReminder = showCoach && hover === "apply";
   const trackedRef = useRef(false);
   useEffect(() => {
-    if (!showCoach || trackedRef.current) return;
+    if (!showApplyReminder || trackedRef.current) return;
     trackedRef.current = true;
     trackCoachingEvent("save_action_apply_reminder_shown", {
       decisionType,
       guidanceLevel,
     });
-  }, [showCoach, decisionType, guidanceLevel]);
+  }, [showApplyReminder, decisionType, guidanceLevel]);
 
   // Auto-populate the scenario name with the suggested default the first time
   // the user lands on the save step, so the action tiles are immediately
@@ -84,7 +92,7 @@ export function SaveActions({
         />
       </label>
 
-      {showCoach && (
+      {showApplyReminder && (
         <div
           className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 flex items-start gap-2.5"
           data-testid="save-action-apply-coach"
@@ -110,6 +118,10 @@ export function SaveActions({
           disabled={!valid || isSaving}
           isLoading={isSaving && hover === "apply"}
           done={done && doneAction === "apply"}
+          onPointerEnter={() => setHover("apply")}
+          onPointerLeave={() => setHover((h) => (h === "apply" ? null : h))}
+          onFocus={() => setHover("apply")}
+          onBlur={() => setHover((h) => (h === "apply" ? null : h))}
           onClick={() => { setHover("apply"); onSave("apply"); }}
         />
         <ActionTile
@@ -125,6 +137,10 @@ export function SaveActions({
           disabled={!valid || isSaving || !plannerAvailable}
           isLoading={isSaving && hover === "planner"}
           done={done && doneAction === "planner"}
+          onPointerEnter={() => setHover("planner")}
+          onPointerLeave={() => setHover((h) => (h === "planner" ? null : h))}
+          onFocus={() => setHover("planner")}
+          onBlur={() => setHover((h) => (h === "planner" ? null : h))}
           onClick={() => { setHover("planner"); onSave("planner"); }}
         />
         <ActionTile
@@ -136,6 +152,10 @@ export function SaveActions({
           disabled={!valid || isSaving}
           isLoading={isSaving && hover === "later"}
           done={done && doneAction === "later"}
+          onPointerEnter={() => setHover("later")}
+          onPointerLeave={() => setHover((h) => (h === "later" ? null : h))}
+          onFocus={() => setHover("later")}
+          onBlur={() => setHover((h) => (h === "later" ? null : h))}
           onClick={() => { setHover("later"); onSave("later"); }}
         />
       </div>
@@ -169,13 +189,21 @@ interface ActionTileProps {
   isLoading: boolean;
   done: boolean;
   onClick: () => void;
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
-function ActionTile({ testid, Icon, title, subtitle, isPrimary, theme, disabled, isLoading, done, onClick }: ActionTileProps) {
+function ActionTile({ testid, Icon, title, subtitle, isPrimary, theme, disabled, isLoading, done, onClick, onPointerEnter, onPointerLeave, onFocus, onBlur }: ActionTileProps) {
   return (
     <button
       type="button"
       onClick={onClick}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+      onFocus={onFocus}
+      onBlur={onBlur}
       disabled={disabled}
       data-testid={testid}
       className={cn(

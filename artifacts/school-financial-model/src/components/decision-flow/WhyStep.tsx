@@ -6,31 +6,15 @@ import { useAuth } from "@/lib/auth-context";
 import { EXPLAINERS } from "@/lib/coaching/explainers";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
-const REASON_CHIPS: Record<DecisionType, string[]> = {
-  add_program: [
-    "Mission expansion",
-    "Demand from families",
-    "Capacity at current grades",
-    "Authorizer ask",
-    "Board direction",
-    "Funding opportunity",
-  ],
-  evaluate_site: [
-    "Outgrowing current space",
-    "Lease ending",
-    "Better neighborhood fit",
-    "Lower rent opportunity",
-    "Capacity for new programs",
-    "Lender / authorizer ask",
-  ],
-  change_enrollment: [
-    "Re-enrollment exceeded plan",
-    "Re-enrollment under plan",
-    "Stress-testing for the board",
-    "Authorizer requirement",
-    "Conservative downside",
-    "Recruitment update",
-  ],
+// Last-resort fallback if a decision explainer is missing its
+// `commonReasons` list. We never expect to hit this in production because
+// every DecisionType has explainer-sourced chips, but the empty arrays
+// keep WhyStep render-safe if a future decision type is added without
+// updating explainers.ts at the same time.
+const FALLBACK_REASON_CHIPS: Record<DecisionType, string[]> = {
+  add_program: [],
+  evaluate_site: [],
+  change_enrollment: [],
 };
 
 interface WhyStepProps {
@@ -42,11 +26,14 @@ interface WhyStepProps {
 }
 
 export function WhyStep({ decisionType, intro, prepareList, narrative, setNarrative }: WhyStepProps) {
-  const chips = REASON_CHIPS[decisionType];
   const { user } = useAuth();
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const showCoach = guidanceLevel !== "advanced";
   const coachExplainer = EXPLAINERS[`decision_${decisionType}`];
+  // Pull "common reasons" chips from the explainer so the coach copy and
+  // the chip set stay in lockstep — explainers.ts is now the single source
+  // of truth for both the WhyThisMatters callout and the tap-to-add chips.
+  const chips = coachExplainer?.body.commonReasons ?? FALLBACK_REASON_CHIPS[decisionType];
   const trackedRef = useRef(false);
   useEffect(() => {
     if (!showCoach || !coachExplainer || trackedRef.current) return;

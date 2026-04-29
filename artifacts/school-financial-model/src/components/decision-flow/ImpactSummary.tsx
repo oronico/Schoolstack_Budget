@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import type { DecisionImpact } from "@/lib/decision-flows";
 import { useAuth } from "@/lib/auth-context";
 import { trackCoachingEvent } from "@/lib/coaching/track";
+import { WhatIfLink } from "@/components/coaching/WhatIfLink";
 
 export interface ComparisonColumn {
   impact: DecisionImpact;
@@ -97,18 +98,21 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const showCoach = guidanceLevel !== "advanced";
 
-  // KPI threshold coach nudges — fires when the *adjusted* model crosses
-  // common red lines: DSCR below 1.20 in any year, runway under 6 months,
-  // or any negative net income year. These echo what a board / lender
-  // would flag the moment they see the model.
-  const coachNudges = useMemo(() => {
-    if (!showCoach) return [] as Array<{ key: string; label: string; body: string }>;
-    const items: Array<{ key: string; label: string; body: string }> = [];
+  // KPI threshold nudges — fire when the *adjusted* model crosses common
+  // red lines: DSCR below 1.20 in any year, runway under 6 months, or any
+  // negative net income year. These echo what a board / lender would flag
+  // the moment they see the model and are *always shown* (even in
+  // advanced mode) because they're decision-blocking, not just coaching.
+  // The verbose `body` paragraph is gated behind `showCoach` so advanced
+  // founders see a tight one-liner instead of the full coaching script.
+  const kpiNudges = useMemo(() => {
+    const items: Array<{ key: string; label: string; body: string; oneLiner: string }> = [];
     const dscrYearIdx = adjusted.dscr.findIndex((d) => isFinite(d) && d < 1.2);
     if (dscrYearIdx >= 0) {
       items.push({
         key: "dscr",
         label: "DSCR slips below 1.20",
+        oneLiner: `Adjusted DSCR ${adjusted.dscr[dscrYearIdx].toFixed(2)} in Year ${dscrYearIdx + 1}.`,
         body: `Your adjusted DSCR drops to ${adjusted.dscr[dscrYearIdx].toFixed(2)} in Year ${dscrYearIdx + 1}. Most lenders want at least 1.20 — flag this on the board memo, or pair the decision with an enrollment or expense lever before you commit.`,
       });
     }
@@ -116,6 +120,7 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
       items.push({
         key: "runway",
         label: "Cash runway under 6 months",
+        oneLiner: `Adjusted runway ${adjusted.cashRunwayMonths.toFixed(1)} months.`,
         body: `After this decision, the model only has ${adjusted.cashRunwayMonths.toFixed(1)} months of runway. That's the threshold where a single missed enrollment month becomes a payroll problem — line up a reserve, line of credit, or smaller starting commitment first.`,
       });
     }
@@ -124,23 +129,24 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
       items.push({
         key: "ni",
         label: `Net income negative in Year ${niYearIdx + 1}`,
+        oneLiner: `Adjusted Year ${niYearIdx + 1} net income negative.`,
         body: `Adjusted net income is ${adjusted.netIncome[niYearIdx] < 0 ? "negative" : "thin"} in Year ${niYearIdx + 1}. New schools often plan for a year or two of red ink, but it should be a deliberate choice — make sure your reserves and your board memo line up with that plan.`,
       });
     }
     return items;
-  }, [showCoach, adjusted]);
+  }, [adjusted]);
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
-    if (coachNudges.length === 0) return;
-    const key = coachNudges.map((n) => n.key).join(",");
+    if (kpiNudges.length === 0) return;
+    const key = kpiNudges.map((n) => n.key).join(",");
     if (trackedRef.current === key) return;
     trackedRef.current = key;
     trackCoachingEvent("impact_kpi_nudge_shown", {
-      nudgeKeys: coachNudges.map((n) => n.key),
+      nudgeKeys: kpiNudges.map((n) => n.key),
       guidanceLevel,
     });
-  }, [coachNudges, guidanceLevel]);
+  }, [kpiNudges, guidanceLevel]);
 
   return (
     <div className="space-y-5" data-testid="decision-impact-summary">
@@ -270,19 +276,33 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
         </div>
       )}
 
-      {/* Coach KPI threshold nudges (basics + extra only) */}
-      {coachNudges.length > 0 && (
+      {/* KPI threshold nudges — always shown (DSCR<1.20, runway<6mo, NI<0).
+          Advanced founders get the tight one-liner + What-If link only;
+          basics/extra also get the full coaching paragraph. */}
+      {kpiNudges.length > 0 && (
         <div className="space-y-2" data-testid="impact-coach-nudges">
-          {coachNudges.map((n) => (
+          {kpiNudges.map((n) => (
             <div
               key={n.key}
               className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/70 p-3"
               data-testid={`impact-coach-nudge-${n.key}`}
             >
               <Lightbulb className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <p className="font-semibold text-amber-900">Coach: {n.label}</p>
-                <p className="text-amber-900/85 text-xs mt-0.5 leading-relaxed">{n.body}</p>
+              <div className="text-sm flex-1 min-w-0">
+                <p className="font-semibold text-amber-900">
+                  {showCoach ? `Coach: ${n.label}` : n.label}
+                </p>
+                <p className="text-amber-900/85 text-xs mt-0.5 leading-relaxed">
+                  {showCoach ? n.body : n.oneLiner}
+                </p>
+                <div className="mt-2">
+                  <WhatIfLink
+                    source="impact_summary"
+                    detail={{ kpi: n.key, guidanceLevel }}
+                  >
+                    Try a What-If to fix it
+                  </WhatIfLink>
+                </div>
               </div>
             </div>
           ))}
