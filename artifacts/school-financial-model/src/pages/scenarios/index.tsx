@@ -42,6 +42,8 @@ import {
 } from "@/lib/decision-flows";
 import type { DecisionType } from "@/pages/model-wizard/schema";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
+import { ForecastAccuracyView } from "@/components/forecast-accuracy/ForecastAccuracyView";
+import { computeForecastAccuracy } from "@/lib/forecast-accuracy";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -1010,6 +1012,16 @@ export function ScenarioPage() {
     return computeScenarios(modelData, scenarios);
   }, [modelData, scenarios, initialized, model]);
 
+  // Memoize the forecast-accuracy roll-up so we re-run the per-scenario
+  // engine projections only when the saved scenarios actually change. The
+  // helper internally calls `computeProjectedSnapshot` (which re-runs the
+  // financial engine) for every Pursued saved scenario, so this matters once
+  // a founder accumulates several decisions.
+  const forecastAccuracyRollup = useMemo(
+    () => computeForecastAccuracy(modelData),
+    [modelData],
+  );
+
   const comparisonResult = useMemo(() => {
     if (!results || scenarios.length === 0) return null;
     const leftIdx = compareLeft === "base" ? -1 : parseInt(compareLeft);
@@ -1903,6 +1915,16 @@ export function ScenarioPage() {
             </div>
           );
         })()}
+
+        {/* Forecast accuracy — roll-up of projected vs actual across every
+            Pursued saved scenario that has actuals captured. Sits above the
+            saved-scenarios list so a founder lands on the aggregate insight
+            ("you tend to over-project enrollment by 5%") before drilling into
+            individual cards below. Hidden when there's nothing to roll up so
+            we don't render an empty surface for newer accounts. */}
+        {forecastAccuracyRollup.entries.length > 0 && (
+          <ForecastAccuracyView rollup={forecastAccuracyRollup} />
+        )}
 
         {/* Custom What-If scenarios — saved from the Live What-If Planner drawer */}
         {(() => {
