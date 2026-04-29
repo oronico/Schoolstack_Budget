@@ -356,10 +356,16 @@ export function AccountingConnectionCard({
                       )}
                     </div>
                     {conn ? (
-                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                      <div
+                        className="text-[11px] text-muted-foreground mt-0.5"
+                        data-testid={`accounting-last-sync-${p.provider}`}
+                      >
                         {synced
-                          ? `Synced ${synced}${realmText}`
+                          ? `Last successful sync ${synced}${realmText}`
                           : `Connected — never synced${realmText}`}
+                        <span className="ml-1 text-muted-foreground/70">
+                          · Auto-refreshes daily
+                        </span>
                       </div>
                     ) : (
                       <div className="text-[11px] text-muted-foreground mt-0.5">

@@ -31,10 +31,8 @@ import {
   isAccountingProvider,
   providerDisplayName,
 } from "../lib/accounting/providers";
-import {
-  encryptToken,
-  decryptToken,
-} from "../lib/accounting/crypto";
+import { encryptToken } from "../lib/accounting/crypto";
+import { syncAccountingConnection } from "../lib/accounting/sync";
 
 const router: IRouter = Router();
 
@@ -332,91 +330,15 @@ router.post(
       return;
     }
 
-    const client = getProviderClient(provider);
-    try {
-      let accessToken = decryptToken(conn.accessTokenEncrypted);
-      let refreshToken = decryptToken(conn.refreshTokenEncrypted);
-      let tokenExpiresAt = conn.tokenExpiresAt ?? new Date(0);
-
-      // Refresh proactively if the access token has less than a minute of
-      // life — provider tokens default to ~60 minutes so this is rare but
-      // saves a round-trip the next call.
-      if (tokenExpiresAt.getTime() - Date.now() < 60_000) {
-        const refreshed = await client.refreshAccessToken(refreshToken);
-        accessToken = refreshed.accessToken;
-        refreshToken = refreshed.refreshToken;
-        tokenExpiresAt = refreshed.expiresAt;
-        await db
-          .update(accountingConnectionsTable)
-          .set({
-            accessTokenEncrypted: encryptToken(accessToken),
-            refreshTokenEncrypted: encryptToken(refreshToken),
-            tokenExpiresAt,
-            updatedAt: new Date(),
-          })
-          .where(eq(accountingConnectionsTable.id, conn.id));
-      }
-
-      const result = await client.fetchProfitAndLoss(accessToken, conn.realmId);
-      // Drop any saved mapping entries that no longer have a matching account
-      // in the latest sync — keeps the persisted mapping tidy when the chart
-      // of accounts changes between syncs.
-      const currentKeys = new Set(result.discoveredAccounts.map((a) => a.key));
-      const prunedMappings: Record<string, AccountKind> = {};
-      for (const [k, v] of Object.entries(conn.accountMappingsJson ?? {})) {
-        if (currentKeys.has(k)) prunedMappings[k] = v;
-      }
-      // Apply the founder's mapping (if any) on top of the auto-detected
-      // snapshot so a school whose chart of accounts uses non-standard names
-      // still gets the right revenue/expense/rent totals.
-      const snapshot = applyAccountMappings(
-        result.snapshot,
-        result.discoveredAccounts,
-        prunedMappings,
-      );
-      // Annotate the snapshot with the realm display name so the actuals
-      // editor can show "From QuickBooks (Acme School - QBO)".
-      if (conn.realmDisplayName && !snapshot.realmDisplayName) {
-        snapshot.realmDisplayName = conn.realmDisplayName;
-      }
-
-      const now = new Date();
-      const [updated] = await db
-        .update(accountingConnectionsTable)
-        .set({
-          snapshotJson: snapshot,
-          discoveredAccountsJson: result.discoveredAccounts,
-          accountMappingsJson: prunedMappings,
-          lastSyncedAt: now,
-          lastSyncError: null,
-          status: "connected",
-          updatedAt: now,
-        })
-        .where(eq(accountingConnectionsTable.id, conn.id))
-        .returning({
-          provider: accountingConnectionsTable.provider,
-          status: accountingConnectionsTable.status,
-          realmDisplayName: accountingConnectionsTable.realmDisplayName,
-          lastSyncedAt: accountingConnectionsTable.lastSyncedAt,
-          lastSyncError: accountingConnectionsTable.lastSyncError,
-          snapshotJson: accountingConnectionsTable.snapshotJson,
-          discoveredAccountsJson: accountingConnectionsTable.discoveredAccountsJson,
-          accountMappingsJson: accountingConnectionsTable.accountMappingsJson,
-        });
-      res.json({ connection: toPublicConnection(updated) });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[accounting] sync error:", message);
-      await db
-        .update(accountingConnectionsTable)
-        .set({
-          status: "error",
-          lastSyncError: message.slice(0, 500),
-          updatedAt: new Date(),
-        })
-        .where(eq(accountingConnectionsTable.id, conn.id));
-      res.status(502).json({ error: `Sync failed: ${message}` });
+    // Delegate to the shared sync helper so the on-demand "Sync now" route
+    // and the daily background scheduler stay byte-for-byte equivalent.
+    const result = await syncAccountingConnection(conn);
+    if (!result.ok) {
+      console.error("[accounting] sync error:", result.error);
+      res.status(502).json({ error: `Sync failed: ${result.error}` });
+      return;
     }
+    res.json({ connection: toPublicConnection(result.connection) });
   },
 );
 

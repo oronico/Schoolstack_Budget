@@ -1,5 +1,9 @@
 import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
+import {
+  startAccountingSyncScheduler,
+  stopAccountingSyncScheduler,
+} from "./lib/accounting/scheduler";
 import { pool, db, errorLogsTable } from "@workspace/db";
 import type { Server } from "http";
 
@@ -187,6 +191,7 @@ function gracefulShutdown(signal: string) {
   forceTimer.unref();
 
   if (cleanupTimer) clearInterval(cleanupTimer);
+  stopAccountingSyncScheduler();
 
   if (!server || !server.listening) {
     console.log("[shutdown] Server not yet listening, skipping server.close.");
@@ -214,6 +219,9 @@ runMigrations().then(() => {
       console.log(`[startup] Production mode — CORS origins: ${process.env.ALLOWED_ORIGINS || "(not set)"}`);
     }
   });
+  // Background daily sync of QuickBooks/Xero connections so founders don't
+  // have to visit the scenarios page just to refresh actuals.
+  startAccountingSyncScheduler();
 });
 
 cleanupTimer = setInterval(() => {
