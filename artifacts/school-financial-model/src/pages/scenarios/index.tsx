@@ -30,10 +30,13 @@ import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine
 import {
   applyPersistedScenarioToData,
   buildDecisionBullets,
+  computeDecisionImpactFromPersisted,
   DECISION_LABELS,
   DECISION_THEME,
   type PersistedDecisionOverrides,
 } from "@/lib/decision-flows";
+import type { DecisionType } from "@/pages/model-wizard/schema";
+import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -462,6 +465,11 @@ export function ScenarioPage() {
   const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [compareLeft, setCompareLeft] = useState<string>("base");
   const [compareRight, setCompareRight] = useState<string>("");
+  // "Compare two decisions" picker — values are the saved scenario's
+  // `${name}|${createdAt}` composite key, so a deleted scenario simply
+  // clears the picker without triggering a stale lookup.
+  const [decisionCompareAKey, setDecisionCompareAKey] = useState<string>("");
+  const [decisionCompareBKey, setDecisionCompareBKey] = useState<string>("");
 
   useEffect(() => {
     return () => {
@@ -1061,6 +1069,141 @@ export function ScenarioPage() {
             </div>
           </>
         )}
+
+        {/* Compare two saved decision scenarios — uses computeDecisionImpactFromPersisted
+            so each side is rerun against the *current* base model. Only shown when the
+            founder has at least two saved decision-flow scenarios (i.e. those with a
+            decisionType). What-If-only scenarios use the deep comparison above instead. */}
+        {(() => {
+          const custom = ((modelData as Record<string, unknown>).customScenarios as
+            | Array<{ name: string; createdAt: string; overrides: WhatIfOverrides; decisionType?: DecisionType; narrative?: string }>
+            | undefined) || [];
+          const decisionScenarios = custom.filter((c) => !!c.decisionType);
+          if (decisionScenarios.length < 2) return null;
+
+          const keyOf = (cs: { name: string; createdAt: string }) => `${cs.name}|${cs.createdAt}`;
+          const findByKey = (key: string) =>
+            decisionScenarios.find((c) => keyOf(c) === key);
+
+          // Default selection: first two decision scenarios.
+          const aKey = decisionCompareAKey || keyOf(decisionScenarios[0]);
+          const bKey =
+            decisionCompareBKey ||
+            keyOf(decisionScenarios[1] ?? decisionScenarios[0]);
+          const a = findByKey(aKey);
+          const b = findByKey(bKey);
+
+          let aImpact = null;
+          let bImpact = null;
+          let computeError: string | null = null;
+          try {
+            if (a && b && a !== b) {
+              aImpact = computeDecisionImpactFromPersisted(
+                modelData,
+                a.decisionType as DecisionType,
+                a.overrides as PersistedDecisionOverrides,
+              );
+              bImpact = computeDecisionImpactFromPersisted(
+                modelData,
+                b.decisionType as DecisionType,
+                b.overrides as PersistedDecisionOverrides,
+              );
+            }
+          } catch (err) {
+            computeError = err instanceof Error ? err.message : String(err);
+          }
+
+          const sameSelected = aKey === bKey;
+          return (
+            <div className="mb-10" data-testid="decision-comparison-section">
+              <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <ArrowRightLeft className="h-5 w-5 text-primary" />
+                  <h2 className="font-display text-xl font-bold text-foreground">
+                    Compare two decisions side-by-side
+                  </h2>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Pick two saved decisions — two real-estate sites, two enrollment paths,
+                  two new programs — and see Y5 net income, break-even shift, DSCR, and
+                  cash runway head-to-head, with the better number highlighted.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">
+                      Decision A
+                    </label>
+                    <select
+                      value={aKey}
+                      onChange={(e) => setDecisionCompareAKey(e.target.value)}
+                      data-testid="decision-compare-a-select"
+                      className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      {decisionScenarios.map((cs) => (
+                        <option key={keyOf(cs)} value={keyOf(cs)}>
+                          {cs.decisionType ? `[${DECISION_LABELS[cs.decisionType]}] ` : ""}
+                          {cs.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">
+                      Decision B
+                    </label>
+                    <select
+                      value={bKey}
+                      onChange={(e) => setDecisionCompareBKey(e.target.value)}
+                      data-testid="decision-compare-b-select"
+                      className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      {decisionScenarios.map((cs) => (
+                        <option
+                          key={keyOf(cs)}
+                          value={keyOf(cs)}
+                          disabled={keyOf(cs) === aKey}
+                        >
+                          {cs.decisionType ? `[${DECISION_LABELS[cs.decisionType]}] ` : ""}
+                          {cs.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {sameSelected && (
+                  <p
+                    className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2"
+                    data-testid="decision-compare-same-warning"
+                  >
+                    You picked the same decision twice. Pick a different one for B to see a
+                    head-to-head comparison.
+                  </p>
+                )}
+                {computeError && (
+                  <p
+                    className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-2"
+                    data-testid="decision-compare-error"
+                  >
+                    Couldn't compute the comparison: {computeError}
+                  </p>
+                )}
+              </div>
+
+              {a && b && aImpact && bImpact && !sameSelected && (
+                <div className="mt-6" data-testid="decision-compare-result">
+                  <ImpactSummary
+                    impact={aImpact}
+                    compareWith={bImpact}
+                    primaryLabel={a.name}
+                    compareLabel={b.name}
+                    primaryNarrative={a.narrative}
+                    compareNarrative={b.narrative}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Custom What-If scenarios — saved from the Live What-If Planner drawer */}
         {(() => {

@@ -625,6 +625,155 @@ export function buildDecisionBullets(persisted: PersistedDecisionOverrides, deci
   return bullets;
 }
 
+// --- Replay a persisted custom scenario ---------------------------------------
+//
+// Saved decision scenarios live as `customScenarios` entries with a stored
+// `PersistedDecisionOverrides` payload + a `decisionType`. To compare two saved
+// decisions side-by-side we need to recompute their impact against the *current*
+// base model. Reconstructing a clean `DecisionInputs` is lossy for the
+// "evaluate_site" branch (it stores `sqftDelta`, not the original `newSqft`),
+// so we apply the overrides directly here and only synthesise inputs for the
+// downstream nudge generator.
+
+function applyPersistedDecisionToData(
+  data: FullModelData,
+  decisionType: DecisionType,
+  persisted: PersistedDecisionOverrides,
+): FullModelData {
+  switch (decisionType) {
+    case "add_program": {
+      const en = persisted.addProgramEnrollment ?? [0, 0, 0, 0, 0];
+      return applyAddProgramDecision(data, {
+        name: persisted.addProgramName ?? "Program",
+        gradeBand: persisted.addProgramGradeBand,
+        annualTuition: persisted.addProgramTuition ?? 0,
+        enrollment: [
+          en[0] ?? 0, en[1] ?? 0, en[2] ?? 0, en[3] ?? 0, en[4] ?? 0,
+        ] as [number, number, number, number, number],
+        addedFte: persisted.addProgramAddedFte,
+        addedFteSalary: persisted.addProgramAddedFteSalary,
+        addedAnnualSpace: persisted.addProgramAddedAnnualSpace,
+        staffingTbd: persisted.addProgramStaffingTbd ?? false,
+      });
+    }
+    case "evaluate_site": {
+      const overrides: WhatIfOverrides = {
+        monthlyRent: persisted.monthlyRent,
+        rentEscalation: persisted.rentEscalation,
+        rentChangeStartYear: persisted.rentChangeStartYear,
+        sqftDelta: persisted.sqftDelta,
+      };
+      const withOverrides = applyWhatIfOverrides(data, overrides);
+      return applyOneTimeFitOut(withOverrides, persisted.siteFitOutCost ?? 0);
+    }
+    case "change_enrollment": {
+      const en = persisted.enrollmentDelta;
+      const overrides: WhatIfOverrides = {
+        enrollmentDelta:
+          en && en.length === 5
+            ? ([en[0], en[1], en[2], en[3], en[4]] as [number, number, number, number, number])
+            : undefined,
+        retentionRate: persisted.retentionRate,
+        tuitionDeltaPerStudent: persisted.tuitionDeltaPerStudent,
+      };
+      return applyWhatIfOverrides(data, overrides);
+    }
+  }
+}
+
+function persistedToSyntheticInputs(
+  decisionType: DecisionType,
+  persisted: PersistedDecisionOverrides,
+): DecisionInputs {
+  switch (decisionType) {
+    case "add_program": {
+      const en = persisted.addProgramEnrollment ?? [0, 0, 0, 0, 0];
+      return {
+        type: "add_program",
+        inputs: {
+          name: persisted.addProgramName ?? "Program",
+          gradeBand: persisted.addProgramGradeBand,
+          annualTuition: persisted.addProgramTuition ?? 0,
+          enrollment: [
+            en[0] ?? 0, en[1] ?? 0, en[2] ?? 0, en[3] ?? 0, en[4] ?? 0,
+          ] as [number, number, number, number, number],
+          addedFte: persisted.addProgramAddedFte,
+          addedFteSalary: persisted.addProgramAddedFteSalary,
+          addedAnnualSpace: persisted.addProgramAddedAnnualSpace,
+          staffingTbd: persisted.addProgramStaffingTbd ?? false,
+        },
+      };
+    }
+    case "evaluate_site":
+      return {
+        type: "evaluate_site",
+        inputs: {
+          newMonthlyRent: persisted.monthlyRent ?? 0,
+          newRentEscalation: persisted.rentEscalation,
+          startYear: persisted.rentChangeStartYear,
+          oneTimeFitOut: persisted.siteFitOutCost,
+        },
+      };
+    case "change_enrollment": {
+      const en = persisted.enrollmentDelta ?? [0, 0, 0, 0, 0];
+      return {
+        type: "change_enrollment",
+        inputs: {
+          enrollmentDelta: [
+            en[0] ?? 0, en[1] ?? 0, en[2] ?? 0, en[3] ?? 0, en[4] ?? 0,
+          ] as [number, number, number, number, number],
+          retentionRate: persisted.retentionRate,
+          tuitionDeltaPerStudent: persisted.tuitionDeltaPerStudent,
+        },
+      };
+    }
+  }
+}
+
+export function computeDecisionImpactFromPersisted(
+  data: FullModelData,
+  decisionType: DecisionType,
+  persisted: PersistedDecisionOverrides,
+): DecisionImpact {
+  const base = computeBaseFinancials(data);
+  const adjustedData = applyPersistedDecisionToData(data, decisionType, persisted);
+  const adjusted = computeBaseFinancials(adjustedData);
+
+  const revenueDelta: number[] = [];
+  const netIncomeDelta: number[] = [];
+  const netIncomePctDelta: number[] = [];
+  const dscrDelta: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    revenueDelta.push(adjusted.revenue[i] - base.revenue[i]);
+    netIncomeDelta.push(adjusted.netIncome[i] - base.netIncome[i]);
+    const baseAbs = Math.abs(base.netIncome[i]);
+    netIncomePctDelta.push(baseAbs > 0 ? netIncomeDelta[i] / baseAbs : 0);
+    dscrDelta.push(adjusted.dscr[i] - base.dscr[i]);
+  }
+  const breakEvenYearShift =
+    base.breakEvenYear !== null && adjusted.breakEvenYear !== null
+      ? adjusted.breakEvenYear - base.breakEvenYear
+      : null;
+  const cashRunwayDeltaMonths = adjusted.cashRunwayMonths - base.cashRunwayMonths;
+
+  const synthetic = persistedToSyntheticInputs(decisionType, persisted);
+  const partial: DecisionImpact = {
+    base,
+    adjusted,
+    deltas: {
+      revenue: revenueDelta,
+      netIncome: netIncomeDelta,
+      netIncomePct: netIncomePctDelta,
+      dscr: dscrDelta,
+      breakEvenYearShift,
+      cashRunwayDeltaMonths,
+    },
+    nudges: [],
+  };
+  partial.nudges = genDecisionNudges(partial, decisionType, data, synthetic);
+  return partial;
+}
+
 // --- Empty-state helpers used by UIs ----------------------------------------
 
 export function buildBlankAddProgramInputs(): AddProgramInputs {
