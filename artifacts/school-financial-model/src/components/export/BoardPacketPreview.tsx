@@ -56,7 +56,14 @@ interface CashRunwayView {
   runwayMonths: number;
   runwayLabel: string;
   status: "good" | "warning" | "danger";
-  yearByYearCash: { year: number; cumulative: string; reserveMonths: string }[];
+  yearByYearCash: {
+    year: number;
+    cumulative: string;
+    reserveMonths: string;
+    endingCash: string;
+    isTrough: boolean;
+  }[];
+  troughCallout: { year: number; endingCash: string; isNegative: boolean } | null;
 }
 
 interface NarrativeSummary {
@@ -296,22 +303,52 @@ function CashRunwayCard({ cash }: { cash: CashRunwayView }) {
         : "bg-red-50 border-red-200";
 
   return (
-    <div className={`mt-4 rounded-xl border p-4 ${bg}`}>
+    <div className={`mt-4 rounded-xl border p-4 ${bg}`} data-testid="board-packet-cash-runway">
       <div className="flex items-center gap-2 mb-2">
         <TrendingUp className="h-4 w-4" />
         <span className="font-bold text-sm text-[#1E293B]">Cash & Runway</span>
       </div>
       <p className="text-sm text-muted-foreground mb-3">{cash.runwayLabel}</p>
       {cash.yearByYearCash.length > 0 && (
-        <div className="grid grid-cols-5 gap-2">
-          {cash.yearByYearCash.map((c) => (
-            <div key={c.year} className="text-center bg-white/60 rounded-lg p-2">
-              <p className="text-[10px] text-muted-foreground font-medium">Year {c.year}</p>
-              <p className="text-xs font-bold text-[#1E293B]">{c.cumulative}</p>
-              <p className="text-[10px] text-muted-foreground">{c.reserveMonths}</p>
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-5 gap-2" data-testid="board-packet-ending-cash-row">
+            {cash.yearByYearCash.map((c) => {
+              const isNegative = c.endingCash.startsWith("-") || c.endingCash.startsWith("(");
+              const tileBg = c.isTrough
+                ? "bg-red-100 border-red-300 ring-1 ring-red-300"
+                : "bg-white/60 border-transparent";
+              return (
+                <div
+                  key={c.year}
+                  className={`text-center rounded-lg p-2 border ${tileBg}`}
+                  data-testid={`board-packet-ending-cash-y${c.year}`}
+                  data-trough={c.isTrough ? "true" : "false"}
+                >
+                  <p className="text-[10px] text-muted-foreground font-medium">
+                    Year {c.year}
+                    {c.isTrough && (
+                      <span className="ml-1 text-[9px] font-bold text-red-700 uppercase">Trough</span>
+                    )}
+                  </p>
+                  <p className={`text-xs font-bold ${isNegative ? "text-red-700" : "text-[#1E293B]"}`}>
+                    {c.endingCash}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">{c.reserveMonths}</p>
+                </div>
+              );
+            })}
+          </div>
+          {cash.troughCallout && (
+            <p
+              className={`mt-3 text-xs font-medium ${cash.troughCallout.isNegative ? "text-red-700" : "text-[#1E293B]"}`}
+              data-testid="board-packet-trough-callout"
+            >
+              {cash.troughCallout.isNegative
+                ? `Tightest cash year: Year ${cash.troughCallout.year} dips to ${cash.troughCallout.endingCash} — additional funding or cost cuts needed before then.`
+                : `Tightest cash year: Year ${cash.troughCallout.year} ends at ${cash.troughCallout.endingCash}.`}
+            </p>
+          )}
+        </>
       )}
     </div>
   );

@@ -193,16 +193,32 @@ function renderCashRunway(doc: PDFDoc, cash: CashRunwayView, section: PacketSect
 
   if (cash.yearByYearCash.length > 0) {
     const cols: TableColumn[] = [
-      { header: "Year", width: 80 },
-      { header: "Cumulative Cash", width: 150, align: "right" },
-      { header: "Reserve", width: 120, align: "right" },
+      { header: "Year", width: 70 },
+      { header: "Ending Cash", width: 130, align: "right" },
+      { header: "Cumulative Net Income", width: 150, align: "right" },
+      { header: "Reserve", width: 90, align: "right" },
     ];
     const rows = cash.yearByYearCash.map((c) => [
-      `Year ${c.year}`,
+      `Year ${c.year}${c.isTrough ? "  (trough)" : ""}`,
+      c.endingCash,
       c.cumulative,
       c.reserveMonths,
     ]);
     drawTable(doc, cols, rows, { zebra: true });
+
+    if (cash.troughCallout) {
+      doc.moveDown(0.3);
+      const calloutColor = cash.troughCallout.isNegative ? BRAND.red : BRAND.navy;
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(calloutColor);
+      doc.text(
+        cash.troughCallout.isNegative
+          ? `Tightest cash year: Year ${cash.troughCallout.year} dips to ${cash.troughCallout.endingCash} — additional funding or cost cuts needed before then.`
+          : `Tightest cash year: Year ${cash.troughCallout.year} ends at ${cash.troughCallout.endingCash}.`,
+        doc.page.margins.left,
+        doc.y,
+        { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
+      );
+    }
   }
 }
 
