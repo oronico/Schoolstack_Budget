@@ -19,11 +19,11 @@ export function Footer() {
           <div>
             <h4 className="font-display text-sm font-bold uppercase tracking-wider text-white/50 mb-4">Solutions</h4>
             <ul className="space-y-2.5">
-              <li><Link href="/for/charter-schools" className="text-sm text-white/70 hover:text-white transition-colors">Charter Schools</Link></li>
-              <li><Link href="/for/private-schools" className="text-sm text-white/70 hover:text-white transition-colors">Private Schools</Link></li>
-              <li><Link href="/for/microschools" className="text-sm text-white/70 hover:text-white transition-colors">Microschools</Link></li>
-              <li><Link href="/for/school-founders" className="text-sm text-white/70 hover:text-white transition-colors">School Founders</Link></li>
-              <li><Link href="/for/lenders" className="text-sm text-white/70 hover:text-white transition-colors">Lenders & CDFIs</Link></li>
+              <li><Link href="/solutions/single-year-pro-forma" className="text-sm text-white/70 hover:text-white transition-colors">Single Year Pro Forma</Link></li>
+              <li><Link href="/solutions/five-year-pro-forma" className="text-sm text-white/70 hover:text-white transition-colors">Five Year Pro Forma</Link></li>
+              <li><Link href="/solutions/scenario-planning" className="text-sm text-white/70 hover:text-white transition-colors">Scenario Planning</Link></li>
+              <li><Link href="/solutions/debt-analysis" className="text-sm text-white/70 hover:text-white transition-colors">Debt Analysis</Link></li>
+              <li><Link href="/solutions/budgeting-accounting-guidance" className="text-sm text-white/70 hover:text-white transition-colors">Budgeting & Accounting Guidance</Link></li>
             </ul>
           </div>
 

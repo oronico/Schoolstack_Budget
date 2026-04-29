@@ -30,6 +30,7 @@ const SharedModelPage = lazy(() => import("@/pages/shared/SharedModelPage").then
 const ResourcesPage = lazy(() => import("@/pages/resources").then(m => ({ default: m.ResourcesPage })));
 const ArticlePage = lazy(() => import("@/pages/resources/article").then(m => ({ default: m.ArticlePage })));
 const UseCasePage = lazy(() => import("@/pages/for/use-case").then(m => ({ default: m.UseCasePage })));
+const SolutionPage = lazy(() => import("@/pages/solutions").then(m => ({ default: m.SolutionPage })));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 setupFetchInterceptor();
@@ -143,6 +144,7 @@ function AppRouter() {
         <Route path="/resources/:slug" component={ArticlePage} />
         <Route path="/resources" component={ResourcesPage} />
         <Route path="/for/:type" component={UseCasePage} />
+        <Route path="/solutions/:slug" component={SolutionPage} />
         <Route path="/terms" component={TermsPage} />
         <Route path="/privacy" component={PrivacyPolicyPage} />
 

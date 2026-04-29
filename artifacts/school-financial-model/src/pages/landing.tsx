@@ -24,6 +24,9 @@ import { motion } from "framer-motion";
 const SampleModelShowcase = lazy(() =>
   import("@/components/landing/SampleModelShowcase").then(m => ({ default: m.SampleModelShowcase }))
 );
+const AudienceCarousel = lazy(() =>
+  import("@/components/landing/AudienceCarousel").then(m => ({ default: m.AudienceCarousel }))
+);
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -581,6 +584,10 @@ export function LandingPage() {
           <SampleModelShowcase />
         </Suspense>
       </div>
+
+      <Suspense fallback={<div className="py-24 bg-white" />}>
+        <AudienceCarousel />
+      </Suspense>
 
       <section className="py-24 bg-[#FAF9F7]">
         <div className="max-w-3xl mx-auto px-6">

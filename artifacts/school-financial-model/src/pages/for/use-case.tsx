@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { SEOHead } from "@/components/SEOHead";
 import { getUseCaseBySlug } from "@/data/use-case-pages";
+import { SOLUTION_LINK_SUMMARIES } from "@/data/solution-pages";
 import { motion } from "framer-motion";
 
 const fadeUp = {
@@ -147,7 +148,51 @@ export function UseCasePage() {
         </div>
       </section>
 
-      <section className="py-24 bg-white border-t border-[#1E293B]/5">
+      <section className="py-20 bg-white border-t border-[#1E293B]/5">
+        <div className="max-w-5xl mx-auto px-6">
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-10"
+          >
+            <p className="text-sm font-bold tracking-widest text-[#328555] uppercase mb-3">
+              Explore by capability
+            </p>
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-[#1E293B] mb-3">
+              See exactly what the platform does.
+            </h2>
+            <p className="text-[#1E293B]/60 max-w-2xl mx-auto">
+              The same features, sliced by what you actually want to build.
+            </p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {SOLUTION_LINK_SUMMARIES.map((sol) => {
+              const Icon = sol.Icon;
+              return (
+                <Link
+                  key={sol.slug}
+                  href={`/solutions/${sol.slug}`}
+                  className="group rounded-2xl border border-[#1E293B]/10 bg-white p-4 hover:border-[#328555]/40 hover:shadow-md transition-all"
+                  data-testid={`solution-link-${sol.slug}`}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[#328555]/10 flex items-center justify-center mb-3">
+                    <Icon className="w-5 h-5 text-[#328555]" />
+                  </div>
+                  <p className="font-display font-semibold text-sm text-[#1E293B] group-hover:text-[#328555] transition-colors mb-1">
+                    {sol.title}
+                  </p>
+                  <p className="text-xs text-[#1E293B]/60 leading-relaxed">
+                    {sol.tagline}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-24 bg-[#FAF9F7] border-t border-[#1E293B]/5">
         <div className="max-w-3xl mx-auto px-6 text-center">
           <motion.div {...fadeUp} transition={{ duration: 0.5 }}>
             <h2 className="font-display text-3xl md:text-4xl font-bold text-[#1E293B] mb-4">
