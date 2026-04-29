@@ -539,6 +539,57 @@ export function decisionToPersistedOverrides(
   }
 }
 
+// Apply a *persisted* decision-flow scenario back into the founder's base model.
+// This is the bridge that turns a saved projection into reality: once the founder
+// marks a scenario "Pursued", folding it into the base model means future decision
+// flows compare against current reality instead of stale assumptions.
+//
+// We dispatch on `decisionType` so each flow folds in the way that matches how it
+// was modeled originally (add_program inserts explicit rows, evaluate_site rewrites
+// the rent + fit-out, change_enrollment shifts enrollment counts and tuition).
+// When `decisionType` is missing (older saved entries from the Live What-If
+// drawer), we fall back to applying the raw overrides via the what-if engine —
+// safe because that engine ignores keys it doesn't recognize.
+export function applyPersistedScenarioToData(
+  data: FullModelData,
+  persisted: PersistedDecisionOverrides,
+  decisionType?: DecisionType,
+): FullModelData {
+  if (decisionType === "add_program") {
+    const enrollment = (persisted.addProgramEnrollment ?? []).slice(0, 5);
+    while (enrollment.length < 5) enrollment.push(0);
+    return applyAddProgramDecision(data, {
+      name: persisted.addProgramName ?? "Program",
+      gradeBand: persisted.addProgramGradeBand,
+      annualTuition: persisted.addProgramTuition ?? 0,
+      enrollment: [enrollment[0], enrollment[1], enrollment[2], enrollment[3], enrollment[4]],
+      addedFte: persisted.addProgramAddedFte,
+      addedFteSalary: persisted.addProgramAddedFteSalary,
+      addedAnnualSpace: persisted.addProgramAddedAnnualSpace,
+      staffingTbd: persisted.addProgramStaffingTbd,
+    });
+  }
+
+  // For site + enrollment flows (and untyped legacy entries) we lean on the
+  // what-if engine, then layer any one-time fit-out cost on top.
+  const overrides: WhatIfOverrides = {};
+  if (persisted.enrollmentDelta && persisted.enrollmentDelta.length === 5) {
+    overrides.enrollmentDelta = [...persisted.enrollmentDelta] as [number, number, number, number, number];
+  }
+  if (persisted.retentionRate !== undefined) overrides.retentionRate = persisted.retentionRate;
+  if (persisted.tuitionDeltaPerStudent !== undefined) overrides.tuitionDeltaPerStudent = persisted.tuitionDeltaPerStudent;
+  if (persisted.monthlyRent !== undefined) overrides.monthlyRent = persisted.monthlyRent;
+  if (persisted.rentEscalation !== undefined) overrides.rentEscalation = persisted.rentEscalation;
+  if (persisted.rentChangeStartYear !== undefined) overrides.rentChangeStartYear = persisted.rentChangeStartYear;
+  if (persisted.sqftDelta !== undefined) overrides.sqftDelta = persisted.sqftDelta;
+
+  const withOverrides = applyWhatIfOverrides(data, overrides);
+  if (decisionType === "evaluate_site" && persisted.siteFitOutCost) {
+    return applyOneTimeFitOut(withOverrides, persisted.siteFitOutCost);
+  }
+  return withOverrides;
+}
+
 export function buildDecisionBullets(persisted: PersistedDecisionOverrides, decisionType?: DecisionType): string[] {
   const bullets: string[] = [];
   if (decisionType === "add_program" || persisted.addProgramName) {

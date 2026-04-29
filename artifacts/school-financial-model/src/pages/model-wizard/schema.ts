@@ -448,6 +448,9 @@ export const assumptionFlagResponseSchema = z.object({
 export const decisionTypeSchema = z.enum(["add_program", "evaluate_site", "change_enrollment"]);
 export type DecisionType = z.infer<typeof decisionTypeSchema>;
 
+export const outcomeStatusSchema = z.enum(["pursued", "declined", "on_hold"]);
+export type OutcomeStatus = z.infer<typeof outcomeStatusSchema>;
+
 export const customScenarioSchema = z.object({
   name: z.string(),
   createdAt: z.string(),
@@ -472,6 +475,17 @@ export const customScenarioSchema = z.object({
   }),
   decisionType: decisionTypeSchema.optional(),
   narrative: z.string().optional(),
+  // Outcome tracking — captures what actually happened after the decision was modeled.
+  // Pursued / Declined / On hold lets the saved scenario become a historical record
+  // rather than a one-off projection, and the optional retrospective note lets the
+  // founder jot a short reflection ("we signed the lease, but enrollment came in 5
+  // students under plan", etc.).
+  outcomeStatus: outcomeStatusSchema.optional(),
+  retrospective: z.string().optional(),
+  outcomeUpdatedAt: z.string().optional(),
+  // Set once the founder folds a Pursued scenario back into their base model so
+  // we can hide the "Apply to model" nudge and avoid re-applying it twice.
+  appliedToModelAt: z.string().optional(),
 });
 export type CustomScenario = z.infer<typeof customScenarioSchema>;
 

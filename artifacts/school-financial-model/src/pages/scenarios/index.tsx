@@ -17,22 +17,45 @@ import {
   RotateCcw,
   ArrowRightLeft,
   Wand2,
+  PauseCircle,
+  CircleSlash,
+  Pencil,
 } from "lucide-react";
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
 import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
-import type { FullModelData } from "@/pages/model-wizard/schema";
+import type { FullModelData, OutcomeStatus, CustomScenario } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
 import {
-  applyDecisionToData,
+  applyPersistedScenarioToData,
   buildDecisionBullets,
   DECISION_LABELS,
   DECISION_THEME,
-  type AddProgramInputs,
+  type PersistedDecisionOverrides,
 } from "@/lib/decision-flows";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+
+const OUTCOME_STATUS_META: Record<OutcomeStatus, { label: string; pillClass: string; Icon: typeof CheckCircle2 }> = {
+  pursued: {
+    label: "Pursued",
+    pillClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    Icon: CheckCircle2,
+  },
+  declined: {
+    label: "Declined",
+    pillClass: "bg-rose-50 text-rose-800 border-rose-200",
+    Icon: CircleSlash,
+  },
+  on_hold: {
+    label: "On hold",
+    pillClass: "bg-amber-50 text-amber-800 border-amber-200",
+    Icon: PauseCircle,
+  },
+};
+
+const OUTCOME_STATUS_OPTIONS: OutcomeStatus[] = ["pursued", "declined", "on_hold"];
 
 const DEFAULT_SCENARIO: ScenarioAdjustments = {
   name: "",
@@ -130,6 +153,296 @@ function MetricRow({
         );
       })}
     </tr>
+  );
+}
+
+// Build human-readable bullets describing what a saved scenario changed.
+// Mirrors the original IIFE logic but lives at the top level so the card
+// component can reuse it without re-deriving it inline.
+function describeScenario(cs: CustomScenario): string[] {
+  const o = cs.overrides;
+  const decisionBullets = buildDecisionBullets(o, cs.decisionType);
+  if (decisionBullets.length > 0) return decisionBullets;
+  const arr: string[] = [];
+  if (o.enrollmentDelta && o.enrollmentDelta.some((v) => v !== 0)) {
+    const sum = o.enrollmentDelta.reduce((a, b) => a + b, 0);
+    arr.push(`Enrollment ${sum > 0 ? "+" : ""}${sum} cumulative`);
+  }
+  if (o.retentionRate !== undefined) arr.push(`Retention ${o.retentionRate}%`);
+  if (o.tuitionDeltaPerStudent !== undefined && o.tuitionDeltaPerStudent !== 0) {
+    arr.push(`Tuition ${o.tuitionDeltaPerStudent > 0 ? "+" : ""}$${o.tuitionDeltaPerStudent}/student`);
+  }
+  if (o.monthlyRent !== undefined) arr.push(`Rent $${o.monthlyRent.toLocaleString()}/mo`);
+  if (o.rentEscalation !== undefined) arr.push(`Rent escalation ${o.rentEscalation}%`);
+  if (o.sqftDelta !== undefined && o.sqftDelta !== 0) {
+    arr.push(`Sqft ${o.sqftDelta > 0 ? "+" : ""}${o.sqftDelta}`);
+  }
+  return arr;
+}
+
+interface CustomScenarioCardProps {
+  scenario: CustomScenario;
+  index: number;
+  fmtDate: (iso: string) => string;
+  onRemove: (target: { name: string; createdAt: string }) => Promise<void>;
+  onPatch: (
+    target: { name: string; createdAt: string },
+    updates: Partial<CustomScenario>,
+  ) => Promise<void>;
+  onOpenInPlanner: (overrides: WhatIfOverrides) => void;
+  onApplyToModel: (cs: CustomScenario) => Promise<void>;
+}
+
+// Renders a single saved decision-flow scenario card with outcome controls.
+// Founders can mark Pursued / Declined / On hold and add a short retrospective
+// note so the saved scenario becomes a historical record, not just a projection.
+// When a Pursued scenario hasn't yet been folded into the base model, we
+// surface an "Apply to model" nudge so future decision flows compare against
+// current reality instead of the older base assumptions.
+function CustomScenarioCard({
+  scenario: cs,
+  index: idx,
+  fmtDate,
+  onRemove,
+  onPatch,
+  onOpenInPlanner,
+  onApplyToModel,
+}: CustomScenarioCardProps) {
+  const [editingRetro, setEditingRetro] = useState(false);
+  const [retroDraft, setRetroDraft] = useState(cs.retrospective ?? "");
+  // Keep the draft in sync if the persisted note changes (e.g. another tab,
+  // or after a save round-trip) and we're not currently editing it.
+  useEffect(() => {
+    if (!editingRetro) setRetroDraft(cs.retrospective ?? "");
+  }, [cs.retrospective, editingRetro]);
+
+  const decisionTheme = cs.decisionType ? DECISION_THEME[cs.decisionType] : null;
+  const decisionLabel = cs.decisionType ? DECISION_LABELS[cs.decisionType] : null;
+  const narrativeExcerpt = cs.narrative
+    ? cs.narrative.length > 140
+      ? `${cs.narrative.slice(0, 140).trimEnd()}…`
+      : cs.narrative
+    : null;
+  const bullets = describeScenario(cs);
+  const target = { name: cs.name, createdAt: cs.createdAt };
+  const statusMeta = cs.outcomeStatus ? OUTCOME_STATUS_META[cs.outcomeStatus] : null;
+
+  const setStatus = async (status: OutcomeStatus | null) => {
+    // Toggle off when the user re-clicks the active status (acts like a clear).
+    const next = status && cs.outcomeStatus === status ? undefined : status ?? undefined;
+    await onPatch(target, {
+      outcomeStatus: next,
+      outcomeUpdatedAt: next ? new Date().toISOString() : undefined,
+    });
+  };
+
+  const saveRetro = async () => {
+    const trimmed = retroDraft.trim();
+    await onPatch(target, {
+      retrospective: trimmed.length > 0 ? trimmed : undefined,
+    });
+    setEditingRetro(false);
+  };
+
+  const showApplyNudge = cs.outcomeStatus === "pursued" && !cs.appliedToModelAt;
+
+  return (
+    <div
+      className={`bg-card border ${decisionTheme ? decisionTheme.border : "border-amber-200"} rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow`}
+      data-testid={`custom-scenario-card-${idx}`}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center flex-wrap gap-1.5 mb-1.5">
+            {decisionLabel && decisionTheme && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${decisionTheme.bg} ${decisionTheme.text} border ${decisionTheme.border}`}
+                data-testid={`custom-scenario-decision-badge-${idx}`}
+              >
+                {decisionLabel}
+              </span>
+            )}
+            {statusMeta && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${statusMeta.pillClass}`}
+                data-testid={`custom-scenario-status-pill-${idx}`}
+              >
+                <statusMeta.Icon className="h-3 w-3" />
+                {statusMeta.label}
+              </span>
+            )}
+          </div>
+          <h3 className="font-display font-bold text-foreground truncate">{cs.name}</h3>
+          <p className="text-[11px] text-muted-foreground">
+            Saved {fmtDate(cs.createdAt)}
+            {cs.outcomeUpdatedAt && (
+              <span> · Status updated {fmtDate(cs.outcomeUpdatedAt)}</span>
+            )}
+          </p>
+        </div>
+        <button
+          onClick={() => onRemove(target)}
+          className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors flex-shrink-0"
+          aria-label={`Delete ${cs.name}`}
+          data-testid={`custom-scenario-delete-${idx}`}
+        >
+          <XCircle className="h-4 w-4" />
+        </button>
+      </div>
+      {narrativeExcerpt && (
+        <p
+          className="text-xs text-foreground/70 italic border-l-2 border-border/60 pl-2.5 mb-3 leading-relaxed"
+          data-testid={`custom-scenario-narrative-${idx}`}
+        >
+          “{narrativeExcerpt}”
+        </p>
+      )}
+      <ul className="text-xs text-muted-foreground space-y-1 mb-4">
+        {bullets.length === 0 ? (
+          <li>(No overrides — baseline)</li>
+        ) : (
+          bullets.map((b, i) => <li key={i}>• {b}</li>)
+        )}
+      </ul>
+
+      {/* Outcome status controls — what actually happened with this decision? */}
+      <div className="mb-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+          What happened?
+        </p>
+        <div className="flex flex-wrap gap-1.5" data-testid={`custom-scenario-status-controls-${idx}`}>
+          {OUTCOME_STATUS_OPTIONS.map((s) => {
+            const meta = OUTCOME_STATUS_META[s];
+            const active = cs.outcomeStatus === s;
+            return (
+              <button
+                key={s}
+                onClick={() => setStatus(s)}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                  active
+                    ? meta.pillClass
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                }`}
+                aria-pressed={active}
+                data-testid={`custom-scenario-status-${s}-${idx}`}
+                title={active ? "Click again to clear" : `Mark this scenario as ${meta.label}`}
+              >
+                <meta.Icon className="h-3 w-3" />
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Retrospective note — short reflection on how it actually landed */}
+      <div className="mb-4">
+        {editingRetro ? (
+          <div data-testid={`custom-scenario-retro-editor-${idx}`}>
+            <textarea
+              value={retroDraft}
+              onChange={(e) => setRetroDraft(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Short reflection — e.g. 'Signed the lease in March; enrollment came in 5 students under plan'"
+              className="w-full text-xs border border-border rounded-md px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              data-testid={`custom-scenario-retro-textarea-${idx}`}
+            />
+            <div className="flex items-center justify-end gap-2 mt-1.5">
+              <button
+                onClick={() => {
+                  setRetroDraft(cs.retrospective ?? "");
+                  setEditingRetro(false);
+                }}
+                className="text-[11px] px-2 py-1 rounded text-muted-foreground hover:text-foreground"
+                data-testid={`custom-scenario-retro-cancel-${idx}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveRetro}
+                className="text-[11px] px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90"
+                data-testid={`custom-scenario-retro-save-${idx}`}
+              >
+                Save note
+              </button>
+            </div>
+          </div>
+        ) : cs.retrospective ? (
+          <button
+            type="button"
+            onClick={() => setEditingRetro(true)}
+            className="w-full text-left text-xs text-foreground/80 bg-muted/40 rounded-md px-2.5 py-1.5 border border-border/60 hover:bg-muted transition-colors group"
+            data-testid={`custom-scenario-retro-note-${idx}`}
+          >
+            <span className="font-semibold text-[10px] uppercase tracking-wider text-muted-foreground block mb-0.5">
+              Retrospective
+              <Pencil className="inline-block h-2.5 w-2.5 ml-1 opacity-0 group-hover:opacity-60 transition-opacity" />
+            </span>
+            {cs.retrospective}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditingRetro(true)}
+            className="text-[11px] text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+            data-testid={`custom-scenario-retro-add-${idx}`}
+          >
+            <Pencil className="h-3 w-3" /> Add a retro note
+          </button>
+        )}
+      </div>
+
+      {/* Pursued nudge — fold the change into the base model so future decision
+          flows compare against current reality, not stale assumptions. */}
+      {showApplyNudge && (
+        <div
+          className="mb-3 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-2"
+          data-testid={`custom-scenario-apply-nudge-${idx}`}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 mt-0.5 shrink-0" />
+          <p className="text-[11px] text-emerald-900 leading-snug">
+            You're pursuing this. Fold it into your base model so future flows compare against current reality.
+          </p>
+        </div>
+      )}
+      {cs.appliedToModelAt && (
+        <p
+          className="mb-3 text-[11px] text-emerald-800 inline-flex items-center gap-1"
+          data-testid={`custom-scenario-applied-marker-${idx}`}
+        >
+          <CheckCircle2 className="h-3 w-3" /> Applied to model on {fmtDate(cs.appliedToModelAt)}
+        </p>
+      )}
+
+      {showApplyNudge ? (
+        <button
+          onClick={() => onApplyToModel(cs)}
+          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium border border-emerald-700 transition-colors"
+          data-testid={`custom-scenario-apply-${idx}`}
+          title="Fold this scenario into your base model"
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" /> Apply to my model
+        </button>
+      ) : cs.decisionType === "add_program" && !cs.appliedToModelAt ? (
+        <button
+          onClick={() => onApplyToModel(cs)}
+          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium border border-amber-700 transition-colors"
+          data-testid={`custom-scenario-open-${idx}`}
+          title="Fold this Add-a-program scenario into your base model"
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" /> Apply to my model
+        </button>
+      ) : (
+        <button
+          onClick={() => onOpenInPlanner(cs.overrides as WhatIfOverrides)}
+          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-sm font-medium border border-amber-200 transition-colors"
+          data-testid={`custom-scenario-open-${idx}`}
+        >
+          <Wand2 className="h-3.5 w-3.5" /> Open in planner
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -752,21 +1065,45 @@ export function ScenarioPage() {
         {/* Custom What-If scenarios — saved from the Live What-If Planner drawer */}
         {(() => {
           const custom = ((modelData as Record<string, unknown>).customScenarios as
-            | Array<{ name: string; createdAt: string; overrides: WhatIfOverrides; decisionType?: "add_program" | "evaluate_site" | "change_enrollment"; narrative?: string }>
+            | CustomScenario[]
             | undefined) || [];
           if (custom.length === 0) return null;
           const fmtDate = (iso: string) => {
             const d = new Date(iso);
             return isNaN(d.getTime()) ? iso : d.toLocaleDateString();
           };
-          const removeCustom = async (target: { name: string; createdAt: string }) => {
-            if (!modelId) return;
+          // Re-read the freshest cached server state so concurrent edits aren't
+          // clobbered when we patch a single scenario in place.
+          const readFreshData = (): Record<string, unknown> => {
             const fresh = queryClient.getQueryData<{ data?: Record<string, unknown> }>([
               `/api/models/${modelId}`,
             ]);
-            const freshData = (fresh?.data ?? modelData) as Record<string, unknown>;
-            const list = ((freshData.customScenarios as typeof custom) || []).filter(
+            return (fresh?.data ?? modelData) as Record<string, unknown>;
+          };
+          const removeCustom = async (target: { name: string; createdAt: string }) => {
+            if (!modelId) return;
+            const freshData = readFreshData();
+            const list = ((freshData.customScenarios as CustomScenario[]) || []).filter(
               (cs) => !(cs.name === target.name && cs.createdAt === target.createdAt)
+            );
+            await updateMutation.mutateAsync({
+              id: modelId,
+              data: { data: { ...freshData, customScenarios: list } as Record<string, unknown> },
+            });
+            await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+          };
+          // Patch a single scenario in the customScenarios array and persist.
+          // We match by (name, createdAt) which together act as a stable id.
+          const patchCustom = async (
+            target: { name: string; createdAt: string },
+            updates: Partial<CustomScenario>,
+          ) => {
+            if (!modelId) return;
+            const freshData = readFreshData();
+            const list = ((freshData.customScenarios as CustomScenario[]) || []).map((cs) =>
+              cs.name === target.name && cs.createdAt === target.createdAt
+                ? { ...cs, ...updates }
+                : cs,
             );
             await updateMutation.mutateAsync({
               id: modelId,
@@ -780,45 +1117,38 @@ export function ScenarioPage() {
               window.location.hash = hash;
             }
           };
-          const applyAddProgramScenario = async (
-            overrides: WhatIfOverrides & {
-              addProgramName?: string;
-              addProgramGradeBand?: string;
-              addProgramTuition?: number;
-              addProgramEnrollment?: number[];
-              addProgramAddedFte?: number;
-              addProgramAddedFteSalary?: number;
-              addProgramAddedAnnualSpace?: number;
-              addProgramStaffingTbd?: boolean;
-            },
-          ) => {
+          const applyScenarioToModel = async (cs: CustomScenario) => {
             if (!modelId) return;
-            const enrollment = (overrides.addProgramEnrollment ?? [0, 0, 0, 0, 0]).slice(0, 5);
-            while (enrollment.length < 5) enrollment.push(0);
-            const inputs: AddProgramInputs = {
-              name: overrides.addProgramName ?? "Program",
-              gradeBand: overrides.addProgramGradeBand,
-              annualTuition: overrides.addProgramTuition ?? 0,
-              enrollment: [enrollment[0], enrollment[1], enrollment[2], enrollment[3], enrollment[4]],
-              addedFte: overrides.addProgramAddedFte,
-              addedFteSalary: overrides.addProgramAddedFteSalary,
-              addedAnnualSpace: overrides.addProgramAddedAnnualSpace,
-              staffingTbd: !!overrides.addProgramStaffingTbd,
-            };
-            const fresh = queryClient.getQueryData<{ data?: Record<string, unknown> }>([
-              `/api/models/${modelId}`,
-            ]);
-            const baseData = (fresh?.data ?? modelData) as FullModelData;
-            const priorSnapshot = baseData as Record<string, unknown>;
-            const applied = applyDecisionToData(baseData, { type: "add_program", inputs });
+            const freshData = readFreshData();
+            const baseData = freshData as FullModelData;
+            const priorSnapshot = freshData;
+            const applied = applyPersistedScenarioToData(
+              baseData,
+              cs.overrides as PersistedDecisionOverrides,
+              cs.decisionType,
+            );
+            // Mark the saved scenario as applied so we hide the "Apply to model"
+            // nudge after the fold-in lands. We do it in the same write so the
+            // nudge disappears immediately on success.
+            const stamp = new Date().toISOString();
+            const list = ((freshData.customScenarios as CustomScenario[]) || []).map((entry) =>
+              entry.name === cs.name && entry.createdAt === cs.createdAt
+                ? { ...entry, appliedToModelAt: stamp }
+                : entry,
+            );
             await updateMutation.mutateAsync({
               id: modelId,
-              data: { data: applied as unknown as Record<string, unknown> },
+              data: {
+                data: {
+                  ...(applied as unknown as Record<string, unknown>),
+                  customScenarios: list,
+                } as Record<string, unknown>,
+              },
             });
             await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
             toast({
               title: "Applied to model",
-              description: `Added “${inputs.name}” into your base model.`,
+              description: `Folded “${cs.name}” into your base model.`,
               action: (
                 <ToastAction
                   altText="Undo apply"
@@ -844,97 +1174,18 @@ export function ScenarioPage() {
                 <span className="text-sm text-muted-foreground">({custom.length})</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {custom.map((cs, idx) => {
-                  const o = cs.overrides;
-                  const bulletsFromDecision = buildDecisionBullets(o, cs.decisionType);
-                  const bullets: string[] = bulletsFromDecision.length > 0 ? bulletsFromDecision : (() => {
-                    const arr: string[] = [];
-                    if (o.enrollmentDelta && o.enrollmentDelta.some((v) => v !== 0)) {
-                      const sum = o.enrollmentDelta.reduce((a, b) => a + b, 0);
-                      arr.push(`Enrollment ${sum > 0 ? "+" : ""}${sum} cumulative`);
-                    }
-                    if (o.retentionRate !== undefined) arr.push(`Retention ${o.retentionRate}%`);
-                    if (o.tuitionDeltaPerStudent !== undefined && o.tuitionDeltaPerStudent !== 0) {
-                      arr.push(`Tuition ${o.tuitionDeltaPerStudent > 0 ? "+" : ""}$${o.tuitionDeltaPerStudent}/student`);
-                    }
-                    if (o.monthlyRent !== undefined) arr.push(`Rent $${o.monthlyRent.toLocaleString()}/mo`);
-                    if (o.rentEscalation !== undefined) arr.push(`Rent escalation ${o.rentEscalation}%`);
-                    if (o.sqftDelta !== undefined && o.sqftDelta !== 0) {
-                      arr.push(`Sqft ${o.sqftDelta > 0 ? "+" : ""}${o.sqftDelta}`);
-                    }
-                    return arr;
-                  })();
-                  const decisionTheme = cs.decisionType ? DECISION_THEME[cs.decisionType] : null;
-                  const decisionLabel = cs.decisionType ? DECISION_LABELS[cs.decisionType] : null;
-                  const narrativeExcerpt = cs.narrative
-                    ? cs.narrative.length > 140
-                      ? `${cs.narrative.slice(0, 140).trimEnd()}…`
-                      : cs.narrative
-                    : null;
-                  return (
-                    <div
-                      key={`${cs.name}-${cs.createdAt}-${idx}`}
-                      className={`bg-card border ${decisionTheme ? decisionTheme.border : "border-amber-200"} rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow`}
-                      data-testid={`custom-scenario-card-${idx}`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="min-w-0">
-                          {decisionLabel && decisionTheme && (
-                            <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider mb-1.5 ${decisionTheme.bg} ${decisionTheme.text} border ${decisionTheme.border}`}
-                              data-testid={`custom-scenario-decision-badge-${idx}`}
-                            >
-                              {decisionLabel}
-                            </span>
-                          )}
-                          <h3 className="font-display font-bold text-foreground truncate">{cs.name}</h3>
-                          <p className="text-[11px] text-muted-foreground">Saved {fmtDate(cs.createdAt)}</p>
-                        </div>
-                        <button
-                          onClick={() => removeCustom({ name: cs.name, createdAt: cs.createdAt })}
-                          className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors flex-shrink-0"
-                          aria-label={`Delete ${cs.name}`}
-                          data-testid={`custom-scenario-delete-${idx}`}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      </div>
-                      {narrativeExcerpt && (
-                        <p
-                          className="text-xs text-foreground/70 italic border-l-2 border-border/60 pl-2.5 mb-3 leading-relaxed"
-                          data-testid={`custom-scenario-narrative-${idx}`}
-                        >
-                          “{narrativeExcerpt}”
-                        </p>
-                      )}
-                      <ul className="text-xs text-muted-foreground space-y-1 mb-4">
-                        {bullets.length === 0 ? (
-                          <li>(No overrides — baseline)</li>
-                        ) : (
-                          bullets.map((b, i) => <li key={i}>• {b}</li>)
-                        )}
-                      </ul>
-                      {cs.decisionType === "add_program" ? (
-                        <button
-                          onClick={() => applyAddProgramScenario(o)}
-                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium border border-amber-700 transition-colors"
-                          data-testid={`custom-scenario-open-${idx}`}
-                          title="Fold this Add-a-program scenario into your base model"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Apply to my model
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => openInPlanner(o)}
-                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-sm font-medium border border-amber-200 transition-colors"
-                          data-testid={`custom-scenario-open-${idx}`}
-                        >
-                          <Wand2 className="h-3.5 w-3.5" /> Open in planner
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                {custom.map((cs, idx) => (
+                  <CustomScenarioCard
+                    key={`${cs.name}-${cs.createdAt}-${idx}`}
+                    scenario={cs}
+                    index={idx}
+                    fmtDate={fmtDate}
+                    onRemove={removeCustom}
+                    onPatch={patchCustom}
+                    onOpenInPlanner={openInPlanner}
+                    onApplyToModel={applyScenarioToModel}
+                  />
+                ))}
               </div>
             </div>
           );
