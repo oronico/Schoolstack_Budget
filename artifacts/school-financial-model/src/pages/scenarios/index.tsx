@@ -21,6 +21,8 @@ import {
   CircleSlash,
   Pencil,
   Download,
+  Search,
+  X,
 } from "lucide-react";
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
@@ -923,6 +925,10 @@ export function ScenarioPage() {
   const sortMode: SortMode = SORT_VALUES.includes(rawSortParam as SortMode)
     ? (rawSortParam as SortMode)
     : "updated";
+  // Free-text query that matches scenario name + retrospective note +
+  // decision-type label (case-insensitive). Persisted in `?q=` so a
+  // shared / reloaded URL keeps the same view as filter+sort.
+  const searchQuery = searchParams.get("q") ?? "";
   const setOutcomeFilter = useCallback(
     (next: OutcomeFilter) => {
       setSearchParams(
@@ -944,6 +950,21 @@ export function ScenarioPage() {
           const sp = new URLSearchParams(prev);
           if (next === "updated") sp.delete("sort");
           else sp.set("sort", next);
+          return sp;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+  const setSearchQuery = useCallback(
+    (next: string) => {
+      setSearchParams(
+        (prev) => {
+          const sp = new URLSearchParams(prev);
+          const trimmed = next.trim();
+          if (trimmed === "") sp.delete("q");
+          else sp.set("q", next);
           return sp;
         },
         { replace: true },
@@ -1987,26 +2008,41 @@ export function ScenarioPage() {
               ),
             });
           };
-          // Apply outcome filter, then sort. We compute counts up-front so the
-          // filter chips can show "(N)" badges — useful when a founder is
-          // scanning to spot e.g. "what's still on hold?".
+          // Apply text search → outcome filter → sort. Search comes first so
+          // the chip counts reflect "how many Pursued match my query?" while
+          // the active outcome chip then narrows to that subset.
+          const trimmedQuery = searchQuery.trim().toLowerCase();
+          const matchesQuery = (cs: CustomScenario): boolean => {
+            if (!trimmedQuery) return true;
+            const haystack: string[] = [cs.name];
+            if (cs.retrospective) haystack.push(cs.retrospective);
+            if (cs.decisionType) haystack.push(DECISION_LABELS[cs.decisionType]);
+            return haystack.some((s) => s.toLowerCase().includes(trimmedQuery));
+          };
+          const searchMatched = trimmedQuery
+            ? custom.filter(matchesQuery)
+            : custom;
+          // Counts reflect the post-search candidate pool so the chip badges
+          // tell the founder "of what I'm searching for, how many are
+          // Pursued / Declined / etc." When there's no query this is just the
+          // full list, matching the previous behaviour.
           const counts: Record<OutcomeFilter, number> = {
-            all: custom.length,
+            all: searchMatched.length,
             pursued: 0,
             declined: 0,
             on_hold: 0,
             untracked: 0,
           };
-          for (const cs of custom) {
+          for (const cs of searchMatched) {
             const status = cs.outcomeStatus ?? "untracked";
             counts[status as OutcomeFilter] += 1;
           }
           const filtered =
             outcomeFilter === "all"
-              ? custom
+              ? searchMatched
               : outcomeFilter === "untracked"
-                ? custom.filter((cs) => !cs.outcomeStatus)
-                : custom.filter((cs) => cs.outcomeStatus === outcomeFilter);
+                ? searchMatched.filter((cs) => !cs.outcomeStatus)
+                : searchMatched.filter((cs) => cs.outcomeStatus === outcomeFilter);
           const ts = (iso: string | undefined): number => {
             if (!iso) return 0;
             const t = new Date(iso).getTime();
@@ -2041,9 +2077,10 @@ export function ScenarioPage() {
                 <h2 className="font-display text-xl font-bold text-foreground">Saved What-If scenarios</h2>
                 <span className="text-sm text-muted-foreground">({custom.length})</span>
               </div>
-              {/* Filter + sort toolbar — keeps the list scannable as the
-                  number of saved decisions grows. Selections persist to the
-                  URL (?outcome=…&sort=…) so reloads/shares keep the view. */}
+              {/* Filter + search + sort toolbar — keeps the list scannable
+                  as the number of saved decisions grows. Selections persist
+                  to the URL (?outcome=…&q=…&sort=…) so reloads/shares keep
+                  the view. */}
               <div
                 className="flex flex-wrap items-center justify-between gap-3 mb-4"
                 data-testid="custom-scenarios-toolbar"
@@ -2082,26 +2119,54 @@ export function ScenarioPage() {
                     );
                   })}
                 </div>
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="custom-scenarios-sort"
-                    className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
-                  >
-                    Sort
-                  </label>
-                  <select
-                    id="custom-scenarios-sort"
-                    value={sortMode}
-                    onChange={(e) => setSortMode(e.target.value as SortMode)}
-                    className="text-xs border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    data-testid="custom-scenarios-sort-select"
-                  >
-                    {SORT_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="relative">
+                    <Search
+                      className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none"
+                      aria-hidden="true"
+                    />
+                    <input
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search name or note…"
+                      aria-label="Search saved scenarios by name, retrospective note, or decision type"
+                      className="text-xs border border-border rounded-md pl-7 pr-7 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 w-44 sm:w-56"
+                      data-testid="custom-scenarios-search-input"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        aria-label="Clear search"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted"
+                        data-testid="custom-scenarios-search-clear"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="custom-scenarios-sort"
+                      className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+                    >
+                      Sort
+                    </label>
+                    <select
+                      id="custom-scenarios-sort"
+                      value={sortMode}
+                      onChange={(e) => setSortMode(e.target.value as SortMode)}
+                      className="text-xs border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      data-testid="custom-scenarios-sort-select"
+                    >
+                      {SORT_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
               {visible.length === 0 ? (
@@ -2110,11 +2175,16 @@ export function ScenarioPage() {
                   data-testid="custom-scenarios-empty"
                 >
                   <p className="text-sm text-muted-foreground">
-                    No saved scenarios match this filter.
+                    {trimmedQuery
+                      ? `No saved scenarios match “${searchQuery}”${outcomeFilter !== "all" ? " in this filter" : ""}.`
+                      : "No saved scenarios match this filter."}
                   </p>
                   <button
                     type="button"
-                    onClick={() => setOutcomeFilter("all")}
+                    onClick={() => {
+                      setOutcomeFilter("all");
+                      setSearchQuery("");
+                    }}
                     className="mt-2 text-xs text-primary hover:underline"
                     data-testid="custom-scenarios-empty-clear"
                   >
