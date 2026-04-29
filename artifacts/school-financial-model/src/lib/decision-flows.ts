@@ -1,10 +1,19 @@
 import type { FullModelData, DecisionType } from "@/pages/model-wizard/schema";
+import {
+  DECISION_LABELS as SHARED_DECISION_LABELS,
+  buildDecisionBullets as sharedBuildDecisionBullets,
+  type PersistedDecisionOverrides as SharedPersistedDecisionOverrides,
+} from "@workspace/finance";
 import { computeBaseFinancials, type ScenarioMetrics, type NudgeItem } from "./scenario-engine";
 import {
   applyWhatIfOverrides,
   detectFacilityRent,
   type WhatIfOverrides,
 } from "./whatif-engine";
+
+// Re-export the shared persisted-decision overrides type so existing
+// `@/lib/decision-flows` consumers keep importing it from the same module.
+export type PersistedDecisionOverrides = SharedPersistedDecisionOverrides;
 
 // --- Decision input shapes ----------------------------------------------------
 
@@ -54,11 +63,7 @@ export interface DecisionImpact {
 
 const Z5: [number, number, number, number, number] = [0, 0, 0, 0, 0];
 
-export const DECISION_LABELS: Record<DecisionType, string> = {
-  add_program: "Add a program",
-  evaluate_site: "Evaluate a site",
-  change_enrollment: "Change enrollment",
-};
+export const DECISION_LABELS = SHARED_DECISION_LABELS;
 
 export const DECISION_SHORT: Record<DecisionType, string> = {
   add_program: "New program",
@@ -486,26 +491,8 @@ export function computeDecisionImpact(
 }
 
 // --- Persisted CustomScenario shape helpers ----------------------------------
-
-export interface PersistedDecisionOverrides {
-  // Mirrors customScenarioSchema.overrides shape so we keep one storage slot
-  enrollmentDelta?: number[];
-  retentionRate?: number;
-  tuitionDeltaPerStudent?: number;
-  monthlyRent?: number;
-  rentEscalation?: number;
-  rentChangeStartYear?: number;
-  sqftDelta?: number;
-  addProgramName?: string;
-  addProgramGradeBand?: string;
-  addProgramTuition?: number;
-  addProgramEnrollment?: number[];
-  addProgramAddedFte?: number;
-  addProgramAddedFteSalary?: number;
-  addProgramAddedAnnualSpace?: number;
-  addProgramStaffingTbd?: boolean;
-  siteFitOutCost?: number;
-}
+// (PersistedDecisionOverrides is defined once in @workspace/finance and
+// re-exported at the top of this file.)
 
 export function decisionToPersistedOverrides(
   data: FullModelData,
@@ -636,39 +623,13 @@ export function computeProjectedSnapshot(
   return snap;
 }
 
-export function buildDecisionBullets(persisted: PersistedDecisionOverrides, decisionType?: DecisionType): string[] {
-  const bullets: string[] = [];
-  if (decisionType === "add_program" || persisted.addProgramName) {
-    if (persisted.addProgramName) {
-      const band = persisted.addProgramGradeBand ? ` (${persisted.addProgramGradeBand})` : "";
-      bullets.push(`Program: ${persisted.addProgramName}${band}`);
-    }
-    if (persisted.addProgramTuition) bullets.push(`Tuition $${persisted.addProgramTuition.toLocaleString()}/yr`);
-    if (persisted.addProgramEnrollment) {
-      const total = persisted.addProgramEnrollment.reduce((a, b) => a + b, 0);
-      bullets.push(`Adds ${total} cumulative students (5 yrs)`);
-    }
-    if (persisted.addProgramAddedFte) bullets.push(`+${persisted.addProgramAddedFte} FTE`);
-    if (persisted.addProgramStaffingTbd) bullets.push(`Staffing: TBD`);
-    return bullets;
-  }
-  if (persisted.enrollmentDelta && persisted.enrollmentDelta.some((v) => v !== 0)) {
-    const sum = persisted.enrollmentDelta.reduce((a, b) => a + b, 0);
-    bullets.push(`Enrollment ${sum > 0 ? "+" : ""}${sum} cumulative`);
-  }
-  if (persisted.retentionRate !== undefined) bullets.push(`Retention ${persisted.retentionRate}%`);
-  if (persisted.tuitionDeltaPerStudent !== undefined && persisted.tuitionDeltaPerStudent !== 0) {
-    bullets.push(`Tuition ${persisted.tuitionDeltaPerStudent > 0 ? "+" : ""}$${persisted.tuitionDeltaPerStudent}/student`);
-  }
-  if (persisted.monthlyRent !== undefined) bullets.push(`Rent $${persisted.monthlyRent.toLocaleString()}/mo`);
-  if (persisted.rentEscalation !== undefined) bullets.push(`Rent escalation ${persisted.rentEscalation}%`);
-  if (persisted.sqftDelta !== undefined && persisted.sqftDelta !== 0) {
-    bullets.push(`Sqft ${persisted.sqftDelta > 0 ? "+" : ""}${persisted.sqftDelta}`);
-  }
-  if (persisted.siteFitOutCost) {
-    bullets.push(`Fit-out $${persisted.siteFitOutCost.toLocaleString()} (Y1)`);
-  }
-  return bullets;
+// Bullet rendering lives in @workspace/finance so the planner UI and the
+// api-server packet builders stay in lockstep on a single implementation.
+export function buildDecisionBullets(
+  persisted: PersistedDecisionOverrides,
+  decisionType?: DecisionType,
+): string[] {
+  return sharedBuildDecisionBullets(persisted, decisionType);
 }
 
 // --- Replay a persisted custom scenario ---------------------------------------

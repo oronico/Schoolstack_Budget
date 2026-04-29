@@ -48,6 +48,18 @@ export {
   type BackendComputedValues,
 } from "./backend-compute.js";
 
+export {
+  DECISION_LABELS,
+  OUTCOME_LABELS,
+  buildDecisionBullets,
+  coercePersistedDecisionOverrides,
+  isDecisionType,
+  isDecisionOutcomeStatus,
+  type DecisionType,
+  type DecisionOutcomeStatus,
+  type PersistedDecisionOverrides,
+} from "./decision-bullets.js";
+
 export function computeStraightLineDepreciation(
   fixedAssets: number,
   usefulLifeYears: number,
