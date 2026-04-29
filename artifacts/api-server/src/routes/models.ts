@@ -26,6 +26,13 @@ import { trackEvent } from "../lib/track-event";
 import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
 import { type AssumptionFlag } from "../lib/assumption-flags";
 import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
+import {
+  computeDecisionImpactFromPersisted,
+  coercePersistedDecisionOverrides,
+  isDecisionType,
+  type DecisionImpact,
+  type DecisionType as DecisionEngineDecisionType,
+} from "@workspace/finance";
 import type { Response } from "express";
 
 function abortGuard(req: AuthRequest, res: Response): boolean {
@@ -1455,6 +1462,40 @@ router.get("/shared/:token", async (req, res) => {
       philanthropy: yf.philanthropyRevenue,
     }));
 
+    // Surface the decision-typed saved scenarios so the shared page can offer
+    // the same side-by-side comparison + Download-as-PDF experience the founder
+    // sees in their own scenarios page. We precompute each decision's impact
+    // server-side using the same engine the scenarios page uses, and embed it
+    // alongside the scenario. This way the wire payload stays scoped to the
+    // shared aggregates the rest of this response already publishes — we
+    // never expose per-line-item model inputs (revenueRows, expenseRows,
+    // staffing, etc.) or private scenario fields (status, retrospective,
+    // actuals) on the public share endpoint.
+    const allScenarios = (data as Record<string, unknown>).customScenarios as
+      | Array<Record<string, unknown>>
+      | undefined;
+    const decisionScenarios = (allScenarios ?? [])
+      .filter((s) => typeof s?.decisionType === "string" && isDecisionType(s.decisionType))
+      .map((s) => {
+        const decisionType = s.decisionType as DecisionEngineDecisionType;
+        const overrides = coercePersistedDecisionOverrides(
+          s.overrides as Record<string, unknown> | null | undefined,
+        );
+        let impact: DecisionImpact | null = null;
+        try {
+          impact = computeDecisionImpactFromPersisted(data, decisionType, overrides);
+        } catch (err) {
+          console.error("Failed to precompute decision impact for share link", { token, decisionType, error: err });
+        }
+        return {
+          name: typeof s.name === "string" ? s.name : "",
+          createdAt: typeof s.createdAt === "string" ? s.createdAt : "",
+          decisionType,
+          narrative: typeof s.narrative === "string" ? s.narrative : undefined,
+          impact,
+        };
+      });
+
     res.json({
       schoolName,
       state,
@@ -1478,10 +1519,89 @@ router.get("/shared/:token", async (req, res) => {
       executiveSummary: consultantOutput.executiveSummary || null,
       lenderReadiness: consultantOutput.lenderReadiness || null,
       createdAt: link.createdAt.toISOString(),
+      decisionScenarios,
     });
   } catch (err) {
     console.error("Get shared model error:", err);
     res.status(500).json({ error: "Something went wrong loading the shared model." });
+  }
+});
+
+// Token-authed counterpart to POST /models/:id/export/decision-comparison-pdf
+// so a recipient of a /shared/:token link (co-founder, advisor, board chair)
+// can download the same board-ready comparison PDF without an account. The
+// payload (precomputed impacts) and the PDF generator are identical — the
+// only difference is the auth surface: the share token replaces the Bearer
+// token, and the share record's modelId is used in place of the URL :id.
+router.post("/shared/:token/export/decision-comparison-pdf", async (req, res) => {
+  try {
+    const token = req.params.token;
+    if (!token || token.length !== 64 || !/^[a-f0-9]{64}$/.test(token)) {
+      res.status(400).json({ error: "Invalid share token." });
+      return;
+    }
+
+    const [link] = await db
+      .select()
+      .from(sharedLinksTable)
+      .where(eq(sharedLinksTable.token, token))
+      .limit(1);
+
+    if (!link) {
+      res.status(404).json({ error: "Shared model not found." });
+      return;
+    }
+    if (link.revokedAt) {
+      res.status(410).json({ error: "This share link has been revoked." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(eq(financialModelsTable.id, link.modelId))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model no longer exists." });
+      return;
+    }
+
+    const validated = validateDecisionComparisonRequest(req.body);
+    if (!validated) {
+      res.status(400).json({
+        error: "Invalid comparison payload. Expected primary and compare sides with computed impacts.",
+      });
+      return;
+    }
+
+    if (!validated.schoolName) {
+      const data = normalizeModelData(model.data as Record<string, unknown>);
+      const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+      const sn = typeof profile?.schoolName === "string" ? profile.schoolName : "";
+      if (sn) validated.schoolName = sn;
+    }
+
+    const buffer = await generateDecisionComparisonPDF(validated);
+
+    // Track the share-token export against the model owner so usage rolls up
+    // with the founder's other exports. We deliberately don't insert into
+    // exportsTable (no userId on a public download) but the analytics event
+    // still attributes the action so the team can see share-link engagement.
+    await trackEvent("exported_decision_comparison_pdf_via_share", model.userId, {
+      modelId: model.id,
+      sharedLinkId: link.id,
+      primary: validated.primary.label,
+      compare: validated.compare.label,
+    });
+
+    const filename = buildComparisonFileName(validated.primary.label, validated.compare.label);
+    sendBinary(res, buffer, "application/pdf", filename);
+  } catch (err) {
+    console.error("Shared decision comparison PDF error:", err);
+    res.status(500).json({
+      error: "Something went wrong generating the Decision Comparison PDF.",
+    });
   }
 });
 

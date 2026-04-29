@@ -70,7 +70,11 @@ function isExportRoute(path: string): boolean {
   return /\/models\/\d+\/export/.test(path) ||
     /\/models\/\d+\/consultant/.test(path) ||
     /\/models\/\d+\/lender-packet/.test(path) ||
-    /\/models\/\d+\/board-packet/.test(path);
+    /\/models\/\d+\/board-packet/.test(path) ||
+    // Token-authed share counterpart for the decision-comparison PDF —
+    // matches the founder-side /export/ timeout class so a slower PDF
+    // render doesn't trip the default 30s window.
+    /\/shared\/[^/]+\/export\//.test(path);
 }
 
 app.use((req: Request, res: Response, next: NextFunction) => {

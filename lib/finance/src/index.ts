@@ -55,10 +55,64 @@ export {
   coercePersistedDecisionOverrides,
   isDecisionType,
   isDecisionOutcomeStatus,
-  type DecisionType,
   type DecisionOutcomeStatus,
   type PersistedDecisionOverrides,
 } from "./decision-bullets.js";
+
+export {
+  type FullModelData as DecisionEngineModelData,
+  type DecisionType,
+} from "./decision-engine/model-shape.js";
+
+export {
+  computeBaseFinancials,
+  computeScenarios,
+  computeQuickLevers,
+  type ScenarioAdjustments,
+  type ScenarioMetrics,
+  type ScenarioResult,
+  type NudgeItem,
+  type LeverMetrics,
+  type QuickLever,
+} from "./decision-engine/scenario-engine.js";
+
+export {
+  applyWhatIfOverrides,
+  computeWhatIfImpact,
+  detectFacilityRent,
+  decodeOverridesFromHash,
+  encodeOverridesToHash,
+  isEmptyOverrides,
+  EMPTY_OVERRIDES,
+  type WhatIfOverrides,
+  type WhatIfImpact,
+} from "./decision-engine/whatif-engine.js";
+
+export {
+  applyAddProgramDecision,
+  applyDecisionToData,
+  applyPersistedScenarioToData,
+  buildBlankAddProgramInputs,
+  buildBlankEnrollmentChangeInputs,
+  buildBlankSiteInputs,
+  computeDecisionImpact,
+  computeDecisionImpactFromPersisted,
+  computeProjectedSnapshot,
+  decisionToPersistedOverrides,
+  enrollmentChangeInputsToOverrides,
+  siteInputsToOverrides,
+  DECISION_LABELS as DECISION_FLOW_LABELS,
+  DECISION_SHORT,
+  DECISION_THEME,
+  type AddProgramInputs,
+  type DecisionImpact,
+  type DecisionInputs,
+  type EnrollmentChangeInputs,
+  type ProjectedSnapshot,
+  type SiteInputs,
+} from "./decision-engine/decision-flows.js";
+
+export { buildDecisionBullets as buildDecisionFlowBullets } from "./decision-engine/decision-flows.js";
 
 export function computeStraightLineDepreciation(
   fixedAssets: number,
