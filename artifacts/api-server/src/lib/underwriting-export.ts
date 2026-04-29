@@ -3,6 +3,7 @@
 // Retained for reference only — do not add new code here.
 import ExcelJS from "exceljs";
 import { addDashboardSheet, DASHBOARD_GREEN, computeFacilityCostByYear, computeInstructionalCostByYear, resolveEsc as resolveEscShared, computeEffectiveFte, computeTotalFTE, BENCHMARK_DSCR_GREEN } from "./workbook-helpers.js";
+import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 import { computeAnnualDebt } from "@workspace/finance";
 
 function schoolYearLabel(baseYear: number | undefined, offset: number): string {
@@ -926,6 +927,13 @@ export async function generateSingleYearBudget(rawData: Record<string, unknown>,
     }
   }
   buildSYPL(wb, monthlyRev, annualPersonnel, annualOps, annualCapDebt, annualNI, opMonths, cols, headers, sp, staffRow, opsRow, revTotalRow, syMgmtFee);
+
+  // Mirror the lender / standard / formula exports so reviewers downloading the
+  // single-year budget see the same outcome track record. The decision history
+  // is model-wide (not year-scoped) — the value to reviewers is consistency
+  // across formats, and the empty state renders cleanly when no decisions have
+  // been logged.
+  addDecisionHistorySheet(wb, rawData as Parameters<typeof addDecisionHistorySheet>[1]);
 
   polishWorkbookUW(wb, sp.schoolName);
   const arrayBuf = await wb.xlsx.writeBuffer();

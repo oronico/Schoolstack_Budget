@@ -2,7 +2,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool Startup",
-    "fileSize": 47309,
+    "fileSize": 47310,
     "tabs": [
       "Instructions",
       "Cover",
@@ -167,7 +167,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool Startup",
-    "fileSize": 28449,
+    "fileSize": 28450,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -446,7 +446,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 27941,
+    "fileSize": 27942,
     "tabs": [
       "Instructions",
       "Cover",
@@ -772,22 +772,23 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool Startup",
-    "fileSize": 14056,
+    "fileSize": 15433,
     "tabs": [
       "Assumptions",
       "Revenue",
       "Personnel",
       "Operating Expenses",
-      "P&L Summary"
+      "P&L Summary",
+      "Decision History"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 13.7 KB",
+          "File size: 15.1 KB",
           "Successfully opened workbook",
-          "Worksheets: 5"
+          "Worksheets: 6"
         ],
         "errors": []
       },
@@ -795,7 +796,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+          "Found 6 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary, Decision History"
         ],
         "errors": []
       },
@@ -803,7 +804,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 396 cells across 5 sheets",
+          "Scanned 417 cells across 6 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1098,7 +1099,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 25802,
+    "fileSize": 25806,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -1560,22 +1561,23 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Homeschool Co-Op Mixed",
-    "fileSize": 14007,
+    "fileSize": 15387,
     "tabs": [
       "Assumptions",
       "Revenue",
       "Personnel",
       "Operating Expenses",
-      "P&L Summary"
+      "P&L Summary",
+      "Decision History"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 13.7 KB",
+          "File size: 15.0 KB",
           "Successfully opened workbook",
-          "Worksheets: 5"
+          "Worksheets: 6"
         ],
         "errors": []
       },
@@ -1583,7 +1585,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+          "Found 6 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary, Decision History"
         ],
         "errors": []
       },
@@ -1591,7 +1593,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 382 cells across 5 sheets",
+          "Scanned 403 cells across 6 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -1927,7 +1929,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Private School + ESA",
-    "fileSize": 29686,
+    "fileSize": 29690,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -2430,22 +2432,23 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Private School + ESA",
-    "fileSize": 14568,
+    "fileSize": 15941,
     "tabs": [
       "Assumptions",
       "Revenue",
       "Personnel",
       "Operating Expenses",
-      "P&L Summary"
+      "P&L Summary",
+      "Decision History"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 14.2 KB",
+          "File size: 15.6 KB",
           "Successfully opened workbook",
-          "Worksheets: 5"
+          "Worksheets: 6"
         ],
         "errors": []
       },
@@ -2453,7 +2456,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+          "Found 6 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary, Decision History"
         ],
         "errors": []
       },
@@ -2461,7 +2464,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 508 cells across 5 sheets",
+          "Scanned 529 cells across 6 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -2693,7 +2696,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter Public Funding",
-    "fileSize": 29299,
+    "fileSize": 29300,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -2796,7 +2799,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter Public Funding",
-    "fileSize": 28600,
+    "fileSize": 28604,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -2879,7 +2882,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter Public Funding",
-    "fileSize": 38960,
+    "fileSize": 38959,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -2972,7 +2975,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 28234,
+    "fileSize": 28235,
     "tabs": [
       "Instructions",
       "Cover",
@@ -3298,22 +3301,23 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter Public Funding",
-    "fileSize": 14905,
+    "fileSize": 16283,
     "tabs": [
       "Assumptions",
       "Revenue",
       "Personnel",
       "Operating Expenses",
-      "P&L Summary"
+      "P&L Summary",
+      "Decision History"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 14.6 KB",
+          "File size: 15.9 KB",
           "Successfully opened workbook",
-          "Worksheets: 5"
+          "Worksheets: 6"
         ],
         "errors": []
       },
@@ -3321,7 +3325,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+          "Found 6 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary, Decision History"
         ],
         "errors": []
       },
@@ -3329,7 +3333,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 564 cells across 5 sheets",
+          "Scanned 585 cells across 6 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -3356,7 +3360,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 51470,
+    "fileSize": 51471,
     "tabs": [
       "Instructions",
       "Cover",
@@ -3561,7 +3565,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 29033,
+    "fileSize": 29034,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -3664,7 +3668,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 28323,
+    "fileSize": 28327,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -3747,7 +3751,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 38698,
+    "fileSize": 38697,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -3840,7 +3844,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 28661,
+    "fileSize": 28662,
     "tabs": [
       "Instructions",
       "Cover",
@@ -4222,22 +4226,23 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Charter ADA Grade-Band",
-    "fileSize": 14666,
+    "fileSize": 16047,
     "tabs": [
       "Assumptions",
       "Revenue",
       "Personnel",
       "Operating Expenses",
-      "P&L Summary"
+      "P&L Summary",
+      "Decision History"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 14.3 KB",
+          "File size: 15.7 KB",
           "Successfully opened workbook",
-          "Worksheets: 5"
+          "Worksheets: 6"
         ],
         "errors": []
       },
@@ -4245,7 +4250,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+          "Found 6 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary, Decision History"
         ],
         "errors": []
       },
@@ -4253,7 +4258,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 508 cells across 5 sheets",
+          "Scanned 529 cells across 6 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
@@ -4280,7 +4285,7 @@
   {
     "exportType": "Underwriting V2 (21-tab)",
     "payload": "Microschool With Decisions",
-    "fileSize": 48160,
+    "fileSize": 48161,
     "tabs": [
       "Instructions",
       "Cover",
@@ -4501,7 +4506,7 @@
   {
     "exportType": "Standard Export",
     "payload": "Microschool With Decisions",
-    "fileSize": 29321,
+    "fileSize": 29322,
     "tabs": [
       "Cover",
       "Assumptions",
@@ -4660,7 +4665,7 @@
   {
     "exportType": "Formula Export",
     "payload": "Microschool With Decisions",
-    "fileSize": 27461,
+    "fileSize": 27465,
     "tabs": [
       "Instructions",
       "Assumptions",
@@ -4799,7 +4804,7 @@
   {
     "exportType": "Underwriting V1 (14-tab)",
     "payload": "Microschool With Decisions",
-    "fileSize": 38061,
+    "fileSize": 38060,
     "tabs": [
       "Assumptions",
       "Enrollment & Rev Drivers",
@@ -4892,7 +4897,7 @@
   {
     "exportType": "Lender Pro Forma",
     "payload": "Microschool With Decisions",
-    "fileSize": 28782,
+    "fileSize": 28783,
     "tabs": [
       "Instructions",
       "Cover",
@@ -5274,22 +5279,23 @@
   {
     "exportType": "Single-Year Pro Forma",
     "payload": "Microschool With Decisions",
-    "fileSize": 14056,
+    "fileSize": 16385,
     "tabs": [
       "Assumptions",
       "Revenue",
       "Personnel",
       "Operating Expenses",
-      "P&L Summary"
+      "P&L Summary",
+      "Decision History"
     ],
     "results": [
       {
         "name": "File Integrity",
         "passed": true,
         "details": [
-          "File size: 13.7 KB",
+          "File size: 16.0 KB",
           "Successfully opened workbook",
-          "Worksheets: 5"
+          "Worksheets: 6"
         ],
         "errors": []
       },
@@ -5297,7 +5303,7 @@
         "name": "Tab Presence",
         "passed": true,
         "details": [
-          "Found 5 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary"
+          "Found 6 tabs: Assumptions, Revenue, Personnel, Operating Expenses, P&L Summary, Decision History"
         ],
         "errors": []
       },
@@ -5305,7 +5311,7 @@
         "name": "Formula & Value Error Scan",
         "passed": true,
         "details": [
-          "Scanned 396 cells across 5 sheets",
+          "Scanned 459 cells across 6 sheets",
           "No formula errors, NaN, undefined, or bad values found"
         ],
         "errors": []
