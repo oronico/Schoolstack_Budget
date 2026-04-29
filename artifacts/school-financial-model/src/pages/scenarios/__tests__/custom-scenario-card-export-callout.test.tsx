@@ -3,7 +3,16 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/lib/auth-context", () => ({
-  useAuth: () => ({ user: { guidanceLevel: "advanced" } }),
+  useAuth: () => ({
+    user: { id: 1, email: "founder@test.school", name: "Founder", guidanceLevel: "advanced" },
+    isLoading: false,
+    login: () => {},
+    logout: () => {},
+    refetchUser: async () => {},
+  }),
+}));
+vi.mock("@/lib/coaching/track", () => ({
+  trackCoachingEvent: () => {},
 }));
 
 import { CustomScenarioCard } from "../index";
@@ -55,9 +64,10 @@ const exportSuggestion: ActualsSuggestion = {
 
 function renderCard(props: {
   scenario?: CustomScenario;
-  exportInfo?: { filename?: string; uploadedAt?: string };
+  exportInfo?: { filename?: string; uploadedAt?: string } | null;
   replaceExportHref?: string;
   suggestion?: ActualsSuggestion;
+  onRemoveExport?: () => Promise<void>;
 } = {}) {
   const scenario = props.scenario ?? makeScenario();
   const onPatch = vi.fn(async () => {});
@@ -66,6 +76,13 @@ function renderCard(props: {
   const onApplyToModel = vi.fn(async () => {});
   const getProjectedSnapshot = vi.fn(() => projectedSnapshot);
   const getActualsSuggestion = vi.fn(() => props.suggestion ?? exportSuggestion);
+  const onRemoveExport = props.onRemoveExport;
+  const exportInfo =
+    props.exportInfo === undefined
+      ? { filename: "quickbooks-2026Q1.csv", uploadedAt: "2026-03-14T15:30:00.000Z" }
+      : props.exportInfo === null
+        ? undefined
+        : props.exportInfo;
   render(
     <CustomScenarioCard
       scenario={scenario}
@@ -77,18 +94,14 @@ function renderCard(props: {
       onApplyToModel={onApplyToModel}
       getProjectedSnapshot={getProjectedSnapshot}
       getActualsSuggestion={getActualsSuggestion}
-      accountingExportInfo={
-        props.exportInfo ?? {
-          filename: "quickbooks-2026Q1.csv",
-          uploadedAt: "2026-03-14T15:30:00.000Z",
-        }
-      }
+      accountingExportInfo={exportInfo}
       replaceExportHref={
         props.replaceExportHref ?? "/model/42?step=2&focus=accounting-export"
       }
+      onRemoveExport={onRemoveExport}
     />,
   );
-  return { onPatch, onRemove, onOpenInPlanner, onApplyToModel };
+  return { onPatch, onRemove, onOpenInPlanner, onApplyToModel, onRemoveExport };
 }
 
 describe("CustomScenarioCard — export callout & replace-export deep-link", () => {
@@ -165,5 +178,84 @@ describe("CustomScenarioCard — export callout & replace-export deep-link", () 
     expect(
       screen.queryByTestId("custom-scenario-actuals-export-date-0"),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("CustomScenarioCard — uploaded export controls panel", () => {
+  it("shows the uploaded-export controls panel as soon as the editor opens (no suggest click required)", async () => {
+    const user = userEvent.setup();
+    renderCard({ onRemoveExport: vi.fn(async () => {}) });
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
+
+    const panel = screen.getByTestId("custom-scenario-actuals-export-controls-0");
+    expect(panel).toBeInTheDocument();
+    expect(panel).toHaveTextContent(/Uploaded export/i);
+    expect(
+      within(panel).getByTestId("custom-scenario-actuals-export-controls-filename-0"),
+    ).toHaveTextContent("quickbooks-2026Q1.csv");
+    expect(panel).toHaveTextContent(/uploaded\s+\w+\s+\d+/i);
+  });
+
+  it("hides the controls panel when no upload exists on the model", async () => {
+    const user = userEvent.setup();
+    renderCard({ exportInfo: null });
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
+
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-export-controls-0"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-remove-export-0"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("requires a confirmation step before invoking onRemoveExport", async () => {
+    const user = userEvent.setup();
+    const onRemoveExport = vi.fn(async () => {});
+    renderCard({ onRemoveExport });
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
+    await user.click(screen.getByTestId("custom-scenario-actuals-remove-export-0"));
+
+    // First click only opens the confirmation prompt — no removal yet.
+    expect(onRemoveExport).not.toHaveBeenCalled();
+    expect(
+      screen.getByTestId("custom-scenario-actuals-remove-export-confirm-prompt-0"),
+    ).toHaveTextContent(/remove this upload/i);
+
+    // Cancel returns to the default state without removing.
+    await user.click(screen.getByTestId("custom-scenario-actuals-remove-export-cancel-0"));
+    expect(onRemoveExport).not.toHaveBeenCalled();
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-remove-export-confirm-0"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("custom-scenario-actuals-remove-export-0"),
+    ).toBeInTheDocument();
+
+    // Re-arm and confirm — now onRemoveExport fires exactly once.
+    await user.click(screen.getByTestId("custom-scenario-actuals-remove-export-0"));
+    await user.click(screen.getByTestId("custom-scenario-actuals-remove-export-confirm-0"));
+    expect(onRemoveExport).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the remove button when the page didn't pass an onRemoveExport handler", async () => {
+    const user = userEvent.setup();
+    renderCard({ onRemoveExport: undefined });
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
+
+    expect(
+      screen.getByTestId("custom-scenario-actuals-export-controls-0"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-remove-export-0"),
+    ).not.toBeInTheDocument();
+    // Replace link still shown so founders can swap uploads via the wizard.
+    expect(
+      screen.getByTestId("custom-scenario-actuals-replace-export-0"),
+    ).toBeInTheDocument();
   });
 });

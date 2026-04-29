@@ -379,6 +379,12 @@ interface CustomScenarioCardProps {
   // URL the "Replace export" link should navigate to — built once at the
   // page level so the card stays decoupled from the route shape.
   replaceExportHref?: string;
+  // Clears the founder's uploaded accounting export from the persisted
+  // model. Wired to a confirmation-gated "Remove uploaded export" button in
+  // the actuals editor so a misclicked CSV doesn't keep poisoning future
+  // suggestion runs. Undefined when the page can't (or won't) expose
+  // removal — the button stays hidden in that case.
+  onRemoveExport?: () => Promise<void>;
 }
 
 // "Mar 14" formatter shared with the wizard upload card so the caption in
@@ -585,8 +591,14 @@ export function CustomScenarioCard({
   getActualsSuggestion,
   accountingExportInfo,
   replaceExportHref,
+  onRemoveExport,
 }: CustomScenarioCardProps) {
   const [editingRetro, setEditingRetro] = useState(false);
+  // Two-step confirmation for the destructive "Remove uploaded export"
+  // affordance. Resets back to false whenever the editor closes so a
+  // half-confirmed remove can't bleed across editor sessions.
+  const [confirmRemoveExport, setConfirmRemoveExport] = useState(false);
+  const [removingExport, setRemovingExport] = useState(false);
   const [retroDraft, setRetroDraft] = useState(cs.retrospective ?? "");
   // Keep the draft in sync if the persisted note changes (e.g. another tab,
   // or after a save round-trip) and we're not currently editing it.
@@ -611,6 +623,7 @@ export function CustomScenarioCard({
       setActualsDraft(cs.actuals ?? { asOfYear: 1 });
       setSuggestedFields(new Set());
       setSuggestionFeedback(null);
+      setConfirmRemoveExport(false);
     }
   }, [cs.actuals, editingActuals]);
 
@@ -1199,16 +1212,104 @@ export function CustomScenarioCard({
                         </span>
                       )}
                     </div>
-                    {replaceExportHref && (
-                      <a
-                        href={replaceExportHref}
-                        className="text-[10px] font-semibold text-emerald-800 hover:text-emerald-900 underline whitespace-nowrap shrink-0"
-                        data-testid={`custom-scenario-actuals-replace-export-${idx}`}
-                        title="Jump back to the wizard's School Profile step to upload a fresh export"
+                  </div>
+                );
+              })()}
+              {(() => {
+                // Always-visible "Uploaded export" controls panel — surfaces
+                // the founder's most-recent CSV/Excel upload alongside Replace
+                // and Remove affordances so a wrong export can be swapped or
+                // cleared without leaving the scenarios page. Renders any
+                // time we know there's an upload (filename present), even
+                // when the suggestion engine isn't currently sourcing fields
+                // from it; that way a founder who hasn't yet clicked "Suggest
+                // from latest data" can still take action on a stale upload.
+                const exportFilename = accountingExportInfo?.filename;
+                if (!exportFilename) return null;
+                const friendlyDate = formatExportUploadDate(accountingExportInfo?.uploadedAt);
+                const handleConfirmRemove = async () => {
+                  if (!onRemoveExport) return;
+                  setRemovingExport(true);
+                  try {
+                    await onRemoveExport();
+                    setConfirmRemoveExport(false);
+                  } finally {
+                    setRemovingExport(false);
+                  }
+                };
+                return (
+                  <div
+                    className="flex items-start justify-between gap-2 rounded-md border border-border bg-muted/30 px-2 py-1.5"
+                    data-testid={`custom-scenario-actuals-export-controls-${idx}`}
+                  >
+                    <div className="text-[10px] text-foreground/80 leading-snug min-w-0">
+                      <span className="font-semibold">Uploaded export:</span>{" "}
+                      <span
+                        className="font-mono break-all"
+                        data-testid={`custom-scenario-actuals-export-controls-filename-${idx}`}
                       >
-                        Replace export →
-                      </a>
-                    )}
+                        {exportFilename}
+                      </span>
+                      {friendlyDate && (
+                        <span className="text-muted-foreground">
+                          {" "}· uploaded {friendlyDate}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!confirmRemoveExport ? (
+                        <>
+                          {replaceExportHref && (
+                            <a
+                              href={replaceExportHref}
+                              className="text-[10px] font-semibold text-primary hover:underline whitespace-nowrap"
+                              data-testid={`custom-scenario-actuals-replace-export-${idx}`}
+                              title="Jump back to the wizard's School Profile step to upload a fresh export"
+                            >
+                              Replace upload →
+                            </a>
+                          )}
+                          {onRemoveExport && (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmRemoveExport(true)}
+                              className="text-[10px] font-semibold text-rose-700 hover:text-rose-800 hover:underline whitespace-nowrap"
+                              data-testid={`custom-scenario-actuals-remove-export-${idx}`}
+                              title="Clear the uploaded export so suggestions revert to your typed-in priors"
+                            >
+                              Remove uploaded export
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span
+                            className="text-[10px] text-rose-800 whitespace-nowrap"
+                            data-testid={`custom-scenario-actuals-remove-export-confirm-prompt-${idx}`}
+                          >
+                            Remove this upload?
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleConfirmRemove}
+                            disabled={removingExport}
+                            className="text-[10px] font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60 rounded px-2 py-0.5 whitespace-nowrap"
+                            data-testid={`custom-scenario-actuals-remove-export-confirm-${idx}`}
+                          >
+                            {removingExport ? "Removing…" : "Yes, remove"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmRemoveExport(false)}
+                            disabled={removingExport}
+                            className="text-[10px] text-muted-foreground hover:text-foreground whitespace-nowrap"
+                            data-testid={`custom-scenario-actuals-remove-export-cancel-${idx}`}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })()}
@@ -1658,6 +1759,57 @@ export function ScenarioPage() {
     },
     [modelId, modelData, updateMutation, queryClient]
   );
+
+  // Clears the founder's uploaded accounting export from the persisted
+  // model. Wired to the per-card "Remove uploaded export" button so a
+  // misclicked CSV no longer poisons future suggestion runs. We snapshot
+  // the prior export so the toast can offer a one-click undo — the upload
+  // itself isn't re-stored anywhere else, so undoing is the *only* way to
+  // recover from an accidental remove.
+  const handleRemoveAccountingExport = useCallback(async () => {
+    if (!modelId) return;
+    const fresh = queryClient.getQueryData<{ data?: Record<string, unknown> }>([
+      `/api/models/${modelId}`,
+    ]);
+    const freshData = (fresh?.data ?? modelData) as Record<string, unknown>;
+    const priorExport = freshData.accountingExport;
+    if (priorExport === undefined) return;
+    const { accountingExport: _omitted, ...rest } = freshData as Record<string, unknown>;
+    await updateMutation.mutateAsync({
+      id: modelId,
+      data: { data: rest as Record<string, unknown> },
+    });
+    await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+    toast({
+      title: "Uploaded export removed",
+      description:
+        "Suggestions will revert to your typed-in priors. Upload a fresh export from the wizard to start sourcing from books again.",
+      action: (
+        <ToastAction
+          altText="Undo remove"
+          onClick={async () => {
+            const latest = queryClient.getQueryData<{ data?: Record<string, unknown> }>([
+              `/api/models/${modelId}`,
+            ]);
+            const latestData = (latest?.data ?? rest) as Record<string, unknown>;
+            await updateMutation.mutateAsync({
+              id: modelId,
+              data: {
+                data: { ...latestData, accountingExport: priorExport } as Record<string, unknown>,
+              },
+            });
+            await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
+            toast({
+              title: "Upload restored",
+              description: "Your accounting export is back on the model.",
+            });
+          }}
+        >
+          Undo
+        </ToastAction>
+      ),
+    });
+  }, [modelId, modelData, updateMutation, queryClient, toast]);
 
   const resetScenario = (idx: number) => {
     const updated = scenarios.map((s, i) =>
@@ -2763,6 +2915,9 @@ export function ScenarioPage() {
                         modelId
                           ? `/model/${modelId}?step=2&focus=accounting-export`
                           : undefined
+                      }
+                      onRemoveExport={
+                        modelData.accountingExport ? handleRemoveAccountingExport : undefined
                       }
                     />
                   ))}

@@ -163,7 +163,10 @@ test("Replace export deep-link lands on wizard step 2 with the uploader focused"
     callout.getByTestId("custom-scenario-actuals-export-filename-0"),
   ).toHaveText("quickbooks-2026Q1.csv");
 
-  const replaceLink = callout.getByTestId(
+  // The "Replace upload" deep-link now lives in the dedicated upload-controls
+  // panel (alongside "Remove uploaded export") rather than inside the green
+  // "Pulled from your books" callout, so we scope the lookup to the card.
+  const replaceLink = card.getByTestId(
     "custom-scenario-actuals-replace-export-0",
   );
   await expect(replaceLink).toHaveAttribute(
