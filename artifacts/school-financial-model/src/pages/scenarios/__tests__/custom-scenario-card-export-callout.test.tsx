@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({ user: { guidanceLevel: "advanced" } }),
+}));
+
 import { CustomScenarioCard } from "../index";
 import type { CustomScenario } from "@/pages/model-wizard/schema";
 import type {

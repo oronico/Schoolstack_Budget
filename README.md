@@ -90,13 +90,19 @@ pnpm --filter @workspace/school-financial-model run dev
 
 ### Automated Checks
 
-Two validation steps run together as the project's CI gate (the same checks
+Three validation steps run together as the project's CI gate (the same checks
 Replit invokes when verifying a task):
 
 | Step | Command |
 |------|---------|
+| `typecheck` | `pnpm run typecheck` |
 | `test` | `pnpm --filter @workspace/school-financial-model run test` |
 | `e2e` | `E2E_PORT=23192 E2E_START_SERVERS=1 pnpm --filter @workspace/school-financial-model run test:e2e` |
+
+The `typecheck` step builds the shared `lib/*` project references and then runs
+`tsc --noEmit` for every artifact (`api-server`, `school-financial-model`,
+`budget-allhands`, `mockup-sandbox`) plus the `scripts` package, so type
+regressions block the gate just like a failing test.
 
 The `e2e` step boots its own Vite dev server (on the dedicated port `23192`
 to avoid colliding with the regular `school-financial-model` dev workflow on
@@ -105,11 +111,6 @@ to avoid colliding with the regular `school-financial-model` dev workflow on
 suite under `artifacts/school-financial-model/e2e/`, and a failure blocks
 validation just like a failing unit test, so deep-link regressions (e.g. the
 saved-scenario "Replace export" handoff) cannot land silently.
-
-> Note: `pnpm run typecheck` is intentionally *not* part of the validation
-> gate yet — the existing TypeScript baseline has pre-existing errors in
-> `school-financial-model`, `api-server`, and `budget-allhands` that need
-> dedicated cleanup before it can be re-enabled.
 
 ### Environment Variables
 

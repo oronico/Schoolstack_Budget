@@ -219,7 +219,7 @@ export function StaffingStep() {
 
   const hasLeaderWithNoSalary = useMemo(() => {
     return rows.some(
-      (r) => r.functionCategory === "school_leadership" && (!r.salary || r.salary === 0)
+      (r) => r.functionCategory === "school_leadership" && (!r.annualizedRate || r.annualizedRate === 0)
     );
   }, [rows]);
 

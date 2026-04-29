@@ -6,7 +6,7 @@ function enableGA() {
   if (!GA_MEASUREMENT_ID) return;
   if (import.meta.env.DEV) return;
 
-  delete (window as Record<string, unknown>)[`ga-disable-${GA_MEASUREMENT_ID}`];
+  delete (window as unknown as Record<string, unknown>)[`ga-disable-${GA_MEASUREMENT_ID}`];
 
   if (!initialized) {
     const script = document.createElement("script");
@@ -49,7 +49,7 @@ export function trackPageView(path: string, title?: string) {
 function disableGA() {
   if (!GA_MEASUREMENT_ID) return;
 
-  (window as Record<string, unknown>)[`ga-disable-${GA_MEASUREMENT_ID}`] = true;
+  (window as unknown as Record<string, unknown>)[`ga-disable-${GA_MEASUREMENT_ID}`] = true;
 
   const gaCookies = document.cookie.split(";").map(c => c.trim());
   const hostname = window.location.hostname;

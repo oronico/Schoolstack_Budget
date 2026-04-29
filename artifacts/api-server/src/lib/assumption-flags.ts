@@ -25,6 +25,7 @@ type YearFinancials = {
   totalExpenses: number;
   netIncome: number;
   netMargin: number;
+  projectedAR?: number;
 };
 
 export type FlagSeverity = "info" | "warning" | "critical";

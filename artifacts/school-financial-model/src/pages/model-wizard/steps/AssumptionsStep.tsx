@@ -844,7 +844,7 @@ export function AssumptionsStep() {
             onReset={resetStaffingParams}
           />
           <div className="space-y-5">
-            <BenefitsToggleSection schoolType={schoolType} />
+            <BenefitsToggleSection schoolType={schoolType ?? ""} />
 
             <PayrollTaxSection
               stateCode={stateCode}

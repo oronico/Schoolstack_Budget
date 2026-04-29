@@ -13,15 +13,15 @@ if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
   process.exit(1);
 }
 
-async function seedAdmin() {
-  console.log(`Seeding admin account: ${ADMIN_EMAIL}`);
+async function seedAdmin(adminEmail: string, adminPassword: string, adminName: string) {
+  console.log(`Seeding admin account: ${adminEmail}`);
 
-  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   const [existing] = await db
     .select()
     .from(usersTable)
-    .where(eq(usersTable.email, ADMIN_EMAIL.toLowerCase()))
+    .where(eq(usersTable.email, adminEmail.toLowerCase()))
     .limit(1);
 
   if (existing) {
@@ -34,8 +34,8 @@ async function seedAdmin() {
     const [user] = await db
       .insert(usersTable)
       .values({
-        email: ADMIN_EMAIL.toLowerCase(),
-        name: ADMIN_NAME,
+        email: adminEmail.toLowerCase(),
+        name: adminName,
         passwordHash,
       })
       .returning();
@@ -46,7 +46,7 @@ async function seedAdmin() {
   process.exit(0);
 }
 
-seedAdmin().catch((err) => {
+seedAdmin(ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME).catch((err) => {
   console.error("Seed failed:", err);
   process.exit(1);
 });

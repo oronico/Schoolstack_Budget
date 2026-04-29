@@ -381,7 +381,7 @@ router.get(
   adminMiddleware,
   async (req: AuthRequest, res) => {
     try {
-      const modelId = parseInt(req.params.modelId, 10);
+      const modelId = parseInt(String(req.params.modelId), 10);
       if (isNaN(modelId)) {
         res.status(400).json({ error: "Invalid model ID." });
         return;
@@ -455,7 +455,7 @@ router.get(
         topIssues: consultantOutput.topIssues.slice(0, 8).map(i => ({
           title: i.title,
           severity: i.severity,
-          explanation: i.explanation,
+          explanation: i.whyItMatters,
         })),
         yearFinancials: yearFinancials.map(yf => ({
           year: yf.year,
@@ -491,7 +491,7 @@ router.post(
   adminMiddleware,
   async (req: AuthRequest, res) => {
     try {
-      const modelId = parseInt(req.params.modelId, 10);
+      const modelId = parseInt(String(req.params.modelId), 10);
       if (isNaN(modelId)) {
         res.status(400).json({ error: "Invalid model ID." });
         return;

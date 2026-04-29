@@ -58,6 +58,7 @@ vi.mock("@/components/whatif/WhatIfTrigger", () => ({
 }));
 vi.mock("@/components/coaching/MicroLessonCard", () => ({
   MicroLessonContainer: () => null,
+  MicroLessonCardInner: () => null,
 }));
 vi.mock("@/components/coaching/WizardPrepChecklist", () => ({
   WizardPrepChecklist: () => null,

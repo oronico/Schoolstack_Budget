@@ -1955,7 +1955,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
 
   const priorSnapshot = (data as Record<string, unknown>).priorYearSnapshot as Record<string, number> | undefined;
   const y1StartingCash = priorSnapshot?.endingCash || 0;
-  const startCash = y1StartingCash || (data.openingBalances as Record<string, number> | undefined)?.cash || (data.startingCash as number | undefined) || 0;
+  const startCash = y1StartingCash || (data.openingBalances as Record<string, number> | undefined)?.cash || ((data as Record<string, unknown>).startingCash as number | undefined) || 0;
   const y1EndingCash = y1StartingCash + y1.netIncome;
   const y1Dcoh = computeDaysCashOnHand(y1EndingCash, y1.totalExpenses);
   const y1DcohRounded = Math.round(y1Dcoh);

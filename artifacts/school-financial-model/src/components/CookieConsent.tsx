@@ -22,6 +22,7 @@ export function CookieConsent() {
     if (consent === "accepted") {
       initGA();
     }
+    return undefined;
   }, [show]);
 
   useEffect(() => {

@@ -205,7 +205,7 @@ export function WhatIfDrawer({
     setIsApplying(true);
     try {
       const adjustedData = applyWhatIfOverrides(data, overrides);
-      await onApplyToModel(adjustedData);
+      await onApplyToModel(adjustedData as unknown as FullModelData);
       // Note: success toast is intentionally fired by the parent (wizard) so that
       // its undo affordance isn't displaced by a competing toast (TOAST_LIMIT=1).
       reset();
