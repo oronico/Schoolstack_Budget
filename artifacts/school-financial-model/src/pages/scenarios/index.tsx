@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, useSearchParams } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
@@ -59,6 +59,39 @@ const OUTCOME_STATUS_META: Record<OutcomeStatus, { label: string; pillClass: str
 };
 
 const OUTCOME_STATUS_OPTIONS: OutcomeStatus[] = ["pursued", "declined", "on_hold"];
+
+// Filter chips shown above the Saved What-If list. "untracked" matches saved
+// scenarios that don't yet have an outcomeStatus set.
+type OutcomeFilter = "all" | OutcomeStatus | "untracked";
+const OUTCOME_FILTER_OPTIONS: { value: OutcomeFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "pursued", label: "Pursued" },
+  { value: "declined", label: "Declined" },
+  { value: "on_hold", label: "On hold" },
+  { value: "untracked", label: "Untracked" },
+];
+const OUTCOME_FILTER_VALUES: OutcomeFilter[] = OUTCOME_FILTER_OPTIONS.map((o) => o.value);
+
+// Sort options for the Saved What-If list.
+// "updated" uses outcomeUpdatedAt (the most recent founder action) and falls
+// back to createdAt so brand-new scenarios still sort sensibly.
+type SortMode = "updated" | "oldest" | "status";
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: "updated", label: "Most recently updated" },
+  { value: "oldest", label: "Save date (oldest first)" },
+  { value: "status", label: "By status" },
+];
+const SORT_VALUES: SortMode[] = SORT_OPTIONS.map((o) => o.value);
+
+// Status grouping order when sorting by status — prioritise live decisions
+// (Pursued / On hold) over Declined and Untracked so the most actionable
+// scenarios bubble to the top.
+const STATUS_SORT_RANK: Record<OutcomeStatus | "untracked", number> = {
+  pursued: 0,
+  on_hold: 1,
+  declined: 2,
+  untracked: 3,
+};
 
 const DEFAULT_SCENARIO: ScenarioAdjustments = {
   name: "",
@@ -473,6 +506,50 @@ export function ScenarioPage() {
   // Hard cap so the comparison stays readable on a typical laptop screen.
   // Matches the column palette in ImpactSummary; raise both together.
   const MAX_DECISION_COMPARE = 4;
+
+  // Filter/sort selections for the Saved What-If list. Persist to URL query
+  // string so a chosen view (e.g. "what's still on hold?") survives reloads
+  // and is shareable. Unknown / legacy values fall back to the defaults so we
+  // never render a broken "what filter is this?" state.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawOutcomeParam = searchParams.get("outcome");
+  const outcomeFilter: OutcomeFilter = OUTCOME_FILTER_VALUES.includes(
+    rawOutcomeParam as OutcomeFilter,
+  )
+    ? (rawOutcomeParam as OutcomeFilter)
+    : "all";
+  const rawSortParam = searchParams.get("sort");
+  const sortMode: SortMode = SORT_VALUES.includes(rawSortParam as SortMode)
+    ? (rawSortParam as SortMode)
+    : "updated";
+  const setOutcomeFilter = useCallback(
+    (next: OutcomeFilter) => {
+      setSearchParams(
+        (prev) => {
+          const sp = new URLSearchParams(prev);
+          if (next === "all") sp.delete("outcome");
+          else sp.set("outcome", next);
+          return sp;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+  const setSortMode = useCallback(
+    (next: SortMode) => {
+      setSearchParams(
+        (prev) => {
+          const sp = new URLSearchParams(prev);
+          if (next === "updated") sp.delete("sort");
+          else sp.set("sort", next);
+          return sp;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   useEffect(() => {
     return () => {
@@ -1375,6 +1452,53 @@ export function ScenarioPage() {
               ),
             });
           };
+          // Apply outcome filter, then sort. We compute counts up-front so the
+          // filter chips can show "(N)" badges — useful when a founder is
+          // scanning to spot e.g. "what's still on hold?".
+          const counts: Record<OutcomeFilter, number> = {
+            all: custom.length,
+            pursued: 0,
+            declined: 0,
+            on_hold: 0,
+            untracked: 0,
+          };
+          for (const cs of custom) {
+            const status = cs.outcomeStatus ?? "untracked";
+            counts[status as OutcomeFilter] += 1;
+          }
+          const filtered =
+            outcomeFilter === "all"
+              ? custom
+              : outcomeFilter === "untracked"
+                ? custom.filter((cs) => !cs.outcomeStatus)
+                : custom.filter((cs) => cs.outcomeStatus === outcomeFilter);
+          const ts = (iso: string | undefined): number => {
+            if (!iso) return 0;
+            const t = new Date(iso).getTime();
+            return isNaN(t) ? 0 : t;
+          };
+          // Sort a shallow copy so we don't mutate the persisted order.
+          const visible = [...filtered].sort((a, b) => {
+            if (sortMode === "oldest") {
+              return ts(a.createdAt) - ts(b.createdAt);
+            }
+            if (sortMode === "status") {
+              const ra = STATUS_SORT_RANK[a.outcomeStatus ?? "untracked"];
+              const rb = STATUS_SORT_RANK[b.outcomeStatus ?? "untracked"];
+              if (ra !== rb) return ra - rb;
+              // Within a status group, fall back to most-recently-updated so
+              // the freshest activity is at the top of each group.
+              return (
+                Math.max(ts(b.outcomeUpdatedAt), ts(b.createdAt)) -
+                Math.max(ts(a.outcomeUpdatedAt), ts(a.createdAt))
+              );
+            }
+            // Default: most recently updated (outcomeUpdatedAt ?? createdAt).
+            return (
+              Math.max(ts(b.outcomeUpdatedAt), ts(b.createdAt)) -
+              Math.max(ts(a.outcomeUpdatedAt), ts(a.createdAt))
+            );
+          });
           return (
             <div className="mb-10" data-testid="custom-scenarios-section">
               <div className="flex items-center gap-2 mb-4">
@@ -1382,20 +1506,102 @@ export function ScenarioPage() {
                 <h2 className="font-display text-xl font-bold text-foreground">Saved What-If scenarios</h2>
                 <span className="text-sm text-muted-foreground">({custom.length})</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {custom.map((cs, idx) => (
-                  <CustomScenarioCard
-                    key={`${cs.name}-${cs.createdAt}-${idx}`}
-                    scenario={cs}
-                    index={idx}
-                    fmtDate={fmtDate}
-                    onRemove={removeCustom}
-                    onPatch={patchCustom}
-                    onOpenInPlanner={openInPlanner}
-                    onApplyToModel={applyScenarioToModel}
-                  />
-                ))}
+              {/* Filter + sort toolbar — keeps the list scannable as the
+                  number of saved decisions grows. Selections persist to the
+                  URL (?outcome=…&sort=…) so reloads/shares keep the view. */}
+              <div
+                className="flex flex-wrap items-center justify-between gap-3 mb-4"
+                data-testid="custom-scenarios-toolbar"
+              >
+                <div
+                  className="flex flex-wrap items-center gap-1.5"
+                  role="group"
+                  aria-label="Filter saved scenarios by outcome"
+                  data-testid="custom-scenarios-filter-chips"
+                >
+                  {OUTCOME_FILTER_OPTIONS.map((opt) => {
+                    const active = outcomeFilter === opt.value;
+                    const count = counts[opt.value];
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setOutcomeFilter(opt.value)}
+                        aria-pressed={active}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        }`}
+                        data-testid={`custom-scenarios-filter-${opt.value}`}
+                      >
+                        {opt.label}
+                        <span
+                          className={`text-[10px] tabular-nums ${
+                            active ? "opacity-90" : "opacity-70"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="custom-scenarios-sort"
+                    className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    Sort
+                  </label>
+                  <select
+                    id="custom-scenarios-sort"
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as SortMode)}
+                    className="text-xs border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    data-testid="custom-scenarios-sort-select"
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              {visible.length === 0 ? (
+                <div
+                  className="bg-muted/30 border border-dashed border-border rounded-2xl px-5 py-8 text-center"
+                  data-testid="custom-scenarios-empty"
+                >
+                  <p className="text-sm text-muted-foreground">
+                    No saved scenarios match this filter.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setOutcomeFilter("all")}
+                    className="mt-2 text-xs text-primary hover:underline"
+                    data-testid="custom-scenarios-empty-clear"
+                  >
+                    Show all saved scenarios
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {visible.map((cs, idx) => (
+                    <CustomScenarioCard
+                      key={`${cs.name}-${cs.createdAt}-${idx}`}
+                      scenario={cs}
+                      index={idx}
+                      fmtDate={fmtDate}
+                      onRemove={removeCustom}
+                      onPatch={patchCustom}
+                      onOpenInPlanner={openInPlanner}
+                      onApplyToModel={applyScenarioToModel}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })()}
