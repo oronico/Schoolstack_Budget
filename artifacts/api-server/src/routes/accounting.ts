@@ -10,6 +10,8 @@
 //   GET    /api/accounting/:provider/callback             — finalize OAuth
 //   POST   /api/models/:id/accounting/:provider/sync      — pull latest snapshot
 //   PUT    /api/models/:id/accounting/:provider/mapping   — save account mapping
+//   POST   /api/models/:id/accounting/:provider/apply-default — reuse saved default
+//   DELETE /api/models/:id/accounting/:provider/default   — forget saved default
 //   DELETE /api/models/:id/accounting/:provider           — disconnect
 import { Router, type IRouter, type Response } from "express";
 import crypto from "crypto";
@@ -749,6 +751,68 @@ router.post(
       connection: toPublicConnection(updated, availableDefault),
       appliedCount: Object.keys(reused).length,
     });
+  },
+);
+
+// --- DELETE /api/models/:id/accounting/:provider/default ------------------
+// Forgets the user's saved (provider, realm) mapping default. Used by the
+// "Forget saved mapping" link on the reuse prompt so a founder whose chart
+// of accounts has shifted can stop being prompted to reuse a stale default
+// without database access. We scope by model so we can reuse the existing
+// ownership check + look up the realm from the connection — the default
+// row itself is keyed on (userId, provider, realmId).
+router.delete(
+  "/models/:id/accounting/:provider/default",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    const modelId = Number(req.params.id);
+    const provider = req.params.provider;
+    if (!Number.isFinite(modelId) || modelId <= 0) {
+      res.status(400).json({ error: "Invalid model id." });
+      return;
+    }
+    if (!isAccountingProvider(provider)) {
+      res.status(400).json({ error: "Unsupported accounting provider." });
+      return;
+    }
+    if (!(await ownsModel(req.userId!, modelId))) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    // Look up the connection so we can resolve the realmId. We don't
+    // require the connection to be in any particular state — a founder
+    // should be able to forget the default even if the connection is
+    // mid-error or hasn't synced yet.
+    const [conn] = await db
+      .select({ realmId: accountingConnectionsTable.realmId })
+      .from(accountingConnectionsTable)
+      .where(
+        and(
+          eq(accountingConnectionsTable.modelId, modelId),
+          eq(accountingConnectionsTable.provider, provider),
+        ),
+      )
+      .limit(1);
+    if (!conn || !conn.realmId) {
+      res.status(404).json({
+        error: "No connection with a known company file for this provider.",
+      });
+      return;
+    }
+
+    const deleted = await db
+      .delete(accountingMappingDefaultsTable)
+      .where(
+        and(
+          eq(accountingMappingDefaultsTable.userId, req.userId!),
+          eq(accountingMappingDefaultsTable.provider, provider),
+          eq(accountingMappingDefaultsTable.realmId, conn.realmId),
+        ),
+      )
+      .returning({ id: accountingMappingDefaultsTable.id });
+
+    res.json({ success: true, removed: deleted.length });
   },
 );
 

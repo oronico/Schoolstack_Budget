@@ -177,6 +177,17 @@ async function applyDefault(baseUrl: string, modelId: number, token: string) {
   return { status: res.status, body: (await res.json()) as Record<string, unknown> };
 }
 
+async function forgetDefault(baseUrl: string, modelId: number, token: string) {
+  const res = await fetch(
+    `${baseUrl}/api/models/${modelId}/accounting/quickbooks/default`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+}
+
 async function run() {
   if (!process.env.DATABASE_URL) {
     console.error("DATABASE_URL is required for this integration test.");
@@ -440,6 +451,138 @@ async function run() {
       String(lonelyApply.status),
     );
     await db.delete(usersTable).where(eq(usersTable.id, lonelyUser.id));
+
+    console.log("DELETE /default forgets the saved (user, provider, realm) default");
+    // Pre-flight: confirm the default is still there from earlier in the
+    // run before we ask the route to delete it. This protects the test
+    // from silently regressing if an earlier step accidentally cleared
+    // the row.
+    const [beforeForget] = await db
+      .select({ id: accountingMappingDefaultsTable.id })
+      .from(accountingMappingDefaultsTable)
+      .where(
+        and(
+          eq(accountingMappingDefaultsTable.userId, user.id),
+          eq(accountingMappingDefaultsTable.provider, "quickbooks"),
+          eq(accountingMappingDefaultsTable.realmId, REALM),
+        ),
+      );
+    check("default exists before DELETE /default", !!beforeForget);
+
+    const forgetRes = await forgetDefault(server.baseUrl, modelB, user.token);
+    check(
+      "DELETE /default returns 200",
+      forgetRes.status === 200,
+      String(forgetRes.status),
+    );
+    check(
+      "DELETE /default reports one row removed",
+      (forgetRes.body as { removed?: number }).removed === 1,
+      String((forgetRes.body as { removed?: number }).removed),
+    );
+
+    const afterForget = await db
+      .select()
+      .from(accountingMappingDefaultsTable)
+      .where(
+        and(
+          eq(accountingMappingDefaultsTable.userId, user.id),
+          eq(accountingMappingDefaultsTable.provider, "quickbooks"),
+          eq(accountingMappingDefaultsTable.realmId, REALM),
+        ),
+      );
+    check(
+      "defaults row is gone after DELETE /default",
+      afterForget.length === 0,
+      `rows remaining: ${afterForget.length}`,
+    );
+
+    // Re-check GET /api/models/:id/accounting — the per-task acceptance
+    // criterion. Use a fresh model whose own mapping is empty so the
+    // route would otherwise have surfaced availableDefault.
+    const freshModel = await createModel(user.id, "Fresh Model");
+    await seedConnection({
+      modelId: freshModel,
+      userId: user.id,
+      realmId: REALM,
+      realmDisplayName: "Acme School - QBO",
+      discovered: SHARED_DISCOVERED,
+    });
+    const getAfterForget = await fetchAccounting(server.baseUrl, freshModel, user.token);
+    const connFresh = (getAfterForget.body as {
+      connections: Array<Record<string, unknown>>;
+    }).connections.find((c) => c.provider === "quickbooks");
+    check(
+      "GET no longer returns availableDefault after DELETE /default",
+      connFresh?.availableDefault === null,
+      JSON.stringify(connFresh?.availableDefault),
+    );
+
+    console.log("DELETE /default is a no-op when no default exists for that realm");
+    const forgetAgain = await forgetDefault(server.baseUrl, modelB, user.token);
+    check(
+      "second DELETE /default still returns 200",
+      forgetAgain.status === 200,
+      String(forgetAgain.status),
+    );
+    check(
+      "second DELETE /default reports zero rows removed",
+      (forgetAgain.body as { removed?: number }).removed === 0,
+      String((forgetAgain.body as { removed?: number }).removed),
+    );
+
+    console.log("DELETE /default 404s when the connection has no realm");
+    const forgetNoRealm = await forgetDefault(
+      server.baseUrl,
+      modelNoRealm,
+      user.token,
+    );
+    check(
+      "DELETE /default returns 404 when realm is missing",
+      forgetNoRealm.status === 404,
+      String(forgetNoRealm.status),
+    );
+
+    console.log("DELETE /default cannot reach another user's default");
+    // Re-create the default so we can prove user-scoping prevents cross
+    // tenant deletion. Save through Model B again (which still has a
+    // realm and this user owns).
+    await putMapping(server.baseUrl, modelB, user.token, {
+      "facility lease": "rent",
+    });
+    const otherUserModel = await createModel(otherUser.id, "Other User Model 2");
+    await seedConnection({
+      modelId: otherUserModel,
+      userId: otherUser.id,
+      realmId: REALM, // same realm — but a different user
+      discovered: SHARED_DISCOVERED,
+    });
+    const crossForget = await forgetDefault(
+      server.baseUrl,
+      otherUserModel,
+      otherUser.token,
+    );
+    check(
+      "cross-user DELETE /default returns 200 but removes nothing",
+      crossForget.status === 200 &&
+        (crossForget.body as { removed?: number }).removed === 0,
+      `${crossForget.status} ${JSON.stringify(crossForget.body)}`,
+    );
+    const stillThere = await db
+      .select()
+      .from(accountingMappingDefaultsTable)
+      .where(
+        and(
+          eq(accountingMappingDefaultsTable.userId, user.id),
+          eq(accountingMappingDefaultsTable.provider, "quickbooks"),
+          eq(accountingMappingDefaultsTable.realmId, REALM),
+        ),
+      );
+    check(
+      "owner's default survives a cross-user DELETE /default",
+      stillThere.length === 1,
+      `rows: ${stillThere.length}`,
+    );
   } finally {
     await db.delete(usersTable).where(eq(usersTable.id, user.id));
     await db.delete(usersTable).where(eq(usersTable.id, otherUser.id));

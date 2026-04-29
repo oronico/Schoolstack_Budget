@@ -364,6 +364,42 @@ export function AccountingConnectionCard({
     }
   }
 
+  // Forgets the user's saved (provider, realm) mapping default. A founder
+  // whose chart of accounts has shifted (or who simply doesn't want the
+  // reuse prompt anymore) can prune the stale default in one click. We
+  // confirm first since the action is silently destructive — there's no
+  // undo, and the next mapping save will re-create a new default.
+  async function handleForgetDefault(provider: AccountingSnapshotProvider) {
+    if (
+      !window.confirm(
+        `Forget your saved ${providerDisplayName(provider)} mapping for this company file? You can always re-create it by saving a mapping in any model.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(`forget-${provider}`);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/models/${modelId}/accounting/${provider}/default`,
+        {
+          method: "DELETE",
+          headers: { ...authHeader() },
+        },
+      );
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || `Forget failed (${res.status})`);
+      setBanner(
+        `Forgot the saved ${providerDisplayName(provider)} mapping. New models won't see the reuse prompt for this company file.`,
+      );
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Forget failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // Copies the user's saved default for this (provider, realm) into the
   // current model's connection. The founder can still tweak any row
   // afterwards — a subsequent Save just upserts the default again so the
@@ -592,7 +628,9 @@ export function AccountingConnectionCard({
                     provider={p.provider}
                     available={conn.availableDefault!}
                     busy={busy === `default-${p.provider}`}
+                    forgetting={busy === `forget-${p.provider}`}
                     onApply={() => handleApplyDefault(p.provider)}
+                    onForget={() => handleForgetDefault(p.provider)}
                     needsSync={conn.discoveredAccounts.length === 0}
                   />
                 )}
@@ -807,20 +845,26 @@ interface ReuseLastMappingPromptProps {
   provider: AccountingSnapshotProvider;
   available: AvailableDefault;
   busy: boolean;
+  forgetting: boolean;
   needsSync: boolean;
   onApply: () => void;
+  onForget: () => void;
 }
 
 // Inline prompt that appears on a freshly-connected model when the founder
 // has previously mapped the same QuickBooks/Xero company file in another
-// model. The button stays disabled until the founder runs a sync (we need
-// the chart of accounts before we can re-apply the saved overrides).
+// model. The "Reuse last mapping" button stays disabled until the founder
+// runs a sync (we need the chart of accounts before we can re-apply the
+// saved overrides). The "Forget" link, by contrast, is always available —
+// pruning a stale default doesn't depend on having a fresh chart.
 function ReuseLastMappingPrompt({
   provider,
   available,
   busy,
+  forgetting,
   needsSync,
   onApply,
+  onForget,
 }: ReuseLastMappingPromptProps) {
   const realmText = available.realmDisplayName
     ? ` from ${available.realmDisplayName}`
@@ -888,25 +932,40 @@ function ReuseLastMappingPrompt({
           )}
         </div>
       </div>
-      <button
-        type="button"
-        disabled={busy || needsSync}
-        onClick={onApply}
-        title={
-          needsSync
-            ? "Sync this connection first to detect the chart of accounts."
-            : "Apply your saved mapping to this model."
-        }
-        className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/60 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-        data-testid={`accounting-reuse-apply-${provider}`}
-      >
-        {busy ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
-        ) : (
-          <History className="h-3 w-3" />
-        )}
-        Reuse last mapping
-      </button>
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          disabled={busy || forgetting || needsSync}
+          onClick={onApply}
+          title={
+            needsSync
+              ? "Sync this connection first to detect the chart of accounts."
+              : "Apply your saved mapping to this model."
+          }
+          className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/60 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+          data-testid={`accounting-reuse-apply-${provider}`}
+        >
+          {busy ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <History className="h-3 w-3" />
+          )}
+          Reuse last mapping
+        </button>
+        <button
+          type="button"
+          disabled={busy || forgetting}
+          onClick={onForget}
+          title="Forget this saved mapping so the prompt stops appearing on new models."
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-900/80 underline-offset-2 hover:text-amber-900 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+          data-testid={`accounting-reuse-forget-${provider}`}
+        >
+          {forgetting ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : null}
+          Forget
+        </button>
+      </div>
     </div>
   );
 }
