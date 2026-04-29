@@ -120,6 +120,7 @@ export {
   relativeTimeAgo,
   type ActualsSuggestion,
   type ActualsSuggestionField,
+  type ActualsContributor,
 } from "./decision-engine/decision-flows.js";
 
 export {
@@ -134,6 +135,8 @@ export type {
   AccountingExportLike,
   AccountingSnapshotLike,
   AccountingSnapshotProvider,
+  AccountingDiscoveredAccountLike,
+  AccountingAccountKindLike,
 } from "./decision-engine/model-shape.js";
 
 export function computeStraightLineDepreciation(

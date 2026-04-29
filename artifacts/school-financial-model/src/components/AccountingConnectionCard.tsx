@@ -104,6 +104,13 @@ function authHeader(): Record<string, string> {
 // editor only consumes one snapshot at a time; if a founder has connected
 // both QuickBooks and Xero (rare but possible during a migration), the most
 // recent sync wins.
+//
+// We also thread the per-account `discoveredAccounts` and the founder's
+// saved `accountMappings` into the snapshot we emit upstream so the actuals
+// editor can show a "Revenue = Tuition Income + Workshop Income" breakdown
+// next to each suggestion. Bundling them with the snapshot keeps the page
+// from caring about how the breakdown is computed; the engine derives it
+// from `accountingSnapshot` like everything else.
 function pickActiveSnapshot(
   connections: AccountingConnection[],
 ): AccountingSnapshotLike | null {
@@ -125,6 +132,9 @@ function pickActiveSnapshot(
     enrollment: best.snapshot.enrollment,
     monthlyRent: best.snapshot.monthlyRent,
     realmDisplayName: best.realmDisplayName ?? best.snapshot.realmDisplayName,
+    discoveredAccounts: best.discoveredAccounts.length > 0 ? best.discoveredAccounts : undefined,
+    accountMappings:
+      Object.keys(best.accountMappings ?? {}).length > 0 ? best.accountMappings : undefined,
   };
 }
 

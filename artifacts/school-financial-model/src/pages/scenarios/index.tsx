@@ -42,6 +42,7 @@ import {
   DECISION_THEME,
   type ActualsSuggestion,
   type ActualsSuggestionField,
+  type ActualsContributor,
   type PersistedDecisionOverrides,
   type ProjectedSnapshot,
 } from "@/lib/decision-flows";
@@ -295,6 +296,7 @@ function ActualsLine({
   betterWhen,
   suggested,
   suggestionSource,
+  suggestionContributors,
 }: {
   label: string;
   projected: number | undefined;
@@ -305,6 +307,11 @@ function ActualsLine({
   betterWhen: "higher" | "lower";
   suggested?: boolean;
   suggestionSource?: string;
+  // Top accounts feeding this suggestion. Rendered as a small caption so the
+  // founder can sanity-check the mapping ("Revenue = Tuition + Workshop")
+  // before accepting the pre-filled value. Only populated when the source is
+  // a live accounting snapshot that carries per-account data.
+  suggestionContributors?: ActualsContributor[];
 }) {
   const hasActual = actual !== undefined && !Number.isNaN(actual);
   const hasProjected = projected !== undefined && !Number.isNaN(projected);
@@ -327,55 +334,90 @@ function ActualsLine({
       : deltaPill?.tone === "bad"
       ? "text-rose-700 bg-rose-50 border-rose-200"
       : "text-muted-foreground bg-muted/40 border-border/60";
+  // Render the breakdown only when the suggestion came from a live snapshot
+  // that knew its per-account composition. Skip for already-typed-in actuals
+  // (the breakdown is only useful while the founder is reviewing a fresh
+  // suggestion).
+  const showContributors =
+    !!suggestionContributors && suggestionContributors.length > 0;
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-2 items-center" data-testid={`${testId}-row`}>
-      <div className="min-w-0">
-        <div className="text-[11px] font-medium text-foreground truncate">{label}</div>
-        <div className="text-[10px] text-muted-foreground font-mono">
-          Projected {hasProjected ? fmtActualVal(projected!, kind) : "—"}
+    <div data-testid={`${testId}-row`}>
+      <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium text-foreground truncate">{label}</div>
+          <div className="text-[10px] text-muted-foreground font-mono">
+            Projected {hasProjected ? fmtActualVal(projected!, kind) : "—"}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            inputMode="decimal"
+            value={hasActual ? String(actual) : ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") {
+                onChange(undefined);
+                return;
+              }
+              const n = Number(raw);
+              onChange(Number.isNaN(n) ? undefined : n);
+            }}
+            placeholder={kind === "money" ? "$" : "#"}
+            className={`w-24 text-[11px] border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono text-right ${
+              suggested
+                ? "bg-amber-50 border-amber-300 text-amber-900"
+                : "bg-background border-border"
+            }`}
+            data-testid={testId}
+            title={suggested && suggestionSource ? `Suggested from: ${suggestionSource}` : undefined}
+          />
+          {suggested && (
+            <span
+              className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-800"
+              data-testid={`${testId}-suggested`}
+              title={suggestionSource ? `Source: ${suggestionSource}` : undefined}
+            >
+              Suggested
+            </span>
+          )}
+          {!suggested && deltaPill && (
+            <span
+              className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${toneClass}`}
+              data-testid={`${testId}-delta`}
+            >
+              {deltaPill.text}
+            </span>
+          )}
         </div>
       </div>
-      <div className="flex items-center gap-1.5">
-        <input
-          type="number"
-          inputMode="decimal"
-          value={hasActual ? String(actual) : ""}
-          onChange={(e) => {
-            const raw = e.target.value;
-            if (raw === "") {
-              onChange(undefined);
-              return;
-            }
-            const n = Number(raw);
-            onChange(Number.isNaN(n) ? undefined : n);
-          }}
-          placeholder={kind === "money" ? "$" : "#"}
-          className={`w-24 text-[11px] border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono text-right ${
-            suggested
-              ? "bg-amber-50 border-amber-300 text-amber-900"
-              : "bg-background border-border"
-          }`}
-          data-testid={testId}
-          title={suggested && suggestionSource ? `Suggested from: ${suggestionSource}` : undefined}
-        />
-        {suggested && (
-          <span
-            className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-800"
-            data-testid={`${testId}-suggested`}
-            title={suggestionSource ? `Source: ${suggestionSource}` : undefined}
-          >
-            Suggested
+      {showContributors && (
+        <div
+          className="mt-1 text-[10px] text-muted-foreground leading-snug"
+          data-testid={`${testId}-contributors`}
+        >
+          <span className="font-semibold uppercase tracking-wide text-muted-foreground/80 mr-1">
+            From
           </span>
-        )}
-        {!suggested && deltaPill && (
-          <span
-            className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${toneClass}`}
-            data-testid={`${testId}-delta`}
-          >
-            {deltaPill.text}
-          </span>
-        )}
-      </div>
+          {suggestionContributors!.map((c, i) => (
+            <span key={`${c.name}-${i}`}>
+              {i > 0 ? <span className="mx-1 text-muted-foreground/60">+</span> : null}
+              <span
+                className="font-medium text-foreground/80"
+                data-testid={`${testId}-contributor-${i}-name`}
+              >
+                {c.name}
+              </span>
+              <span
+                className="font-mono ml-1 text-muted-foreground"
+                data-testid={`${testId}-contributor-${i}-amount`}
+              >
+                {fmtActualVal(c.amount, "money")}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -898,6 +940,7 @@ function CustomScenarioCard({
                 betterWhen="higher"
                 suggested={suggestedFields.has("enrollmentActual")}
                 suggestionSource={previewSuggestion?.sources.enrollmentActual}
+                suggestionContributors={previewSuggestion?.contributors.enrollmentActual}
               />
               <ActualsLine
                 label="Revenue"
@@ -909,6 +952,7 @@ function CustomScenarioCard({
                 betterWhen="higher"
                 suggested={suggestedFields.has("revenueActual")}
                 suggestionSource={previewSuggestion?.sources.revenueActual}
+                suggestionContributors={previewSuggestion?.contributors.revenueActual}
               />
               <ActualsLine
                 label="Expenses"
@@ -920,6 +964,7 @@ function CustomScenarioCard({
                 betterWhen="lower"
                 suggested={suggestedFields.has("expenseActual")}
                 suggestionSource={previewSuggestion?.sources.expenseActual}
+                suggestionContributors={previewSuggestion?.contributors.expenseActual}
               />
               <ActualsLine
                 label="Net income"
@@ -943,6 +988,7 @@ function CustomScenarioCard({
                   betterWhen="lower"
                   suggested={suggestedFields.has("signedMonthlyRent")}
                   suggestionSource={previewSuggestion?.sources.signedMonthlyRent}
+                  suggestionContributors={previewSuggestion?.contributors.signedMonthlyRent}
                 />
               )}
               {cs.decisionType === "add_program" && (

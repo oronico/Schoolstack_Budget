@@ -1004,4 +1004,165 @@ describe("buildActualsSuggestion", () => {
     expect(suggestion.values.revenueActual).toBeUndefined();
     expect(suggestion.values.expenseActual).toBeUndefined();
   });
+
+  // ---------------------------------------------------------------------------
+  // Per-account contributors
+  //
+  // When the live snapshot carries `discoveredAccounts` (and optionally a
+  // saved override map), we surface the top accounts that compose each
+  // suggested actual so the founder can verify the mapping at a glance.
+  // The breakdown should react live to mapping overrides without requiring
+  // a fresh accounting sync — the engine derives it from the same
+  // discoveredAccounts payload that drove the totals.
+  // ---------------------------------------------------------------------------
+
+  it("derives per-account contributors for revenue and expense suggestions", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      accountingSnapshot: {
+        provider: "quickbooks" as const,
+        syncedAt: new Date().toISOString(),
+        monthsCompleted: 12,
+        // Totals are passed through verbatim by the engine; the contributors
+        // breakdown is derived from discoveredAccounts so a founder can see
+        // how each suggestion is composed.
+        revenue: 1_300_000,
+        expenses: 750_000,
+        discoveredAccounts: [
+          { key: "tuition", name: "Tuition Income", section: "income", amount: 900_000, defaultKind: "revenue" },
+          { key: "workshop", name: "Workshop Income", section: "income", amount: 300_000, defaultKind: "revenue" },
+          { key: "donation", name: "Donations", section: "income", amount: 100_000, defaultKind: "revenue" },
+          { key: "salaries", name: "Salaries & Wages", section: "expense", amount: 700_000, defaultKind: "expense" },
+          { key: "supplies", name: "Classroom Supplies", section: "expense", amount: 50_000, defaultKind: "expense" },
+        ],
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    // Revenue contributors, sorted descending by amount.
+    expect(suggestion.contributors.revenueActual?.map((c) => c.name)).toEqual([
+      "Tuition Income",
+      "Workshop Income",
+      "Donations",
+    ]);
+    expect(suggestion.contributors.revenueActual?.[0]?.amount).toBe(900_000);
+    // Expense contributors, sorted descending by amount.
+    expect(suggestion.contributors.expenseActual?.map((c) => c.name)).toEqual([
+      "Salaries & Wages",
+      "Classroom Supplies",
+    ]);
+  });
+
+  it("respects saved account-mapping overrides when listing contributors", () => {
+    const base = buildBaseModel();
+    const baseSnapshot = {
+      provider: "quickbooks" as const,
+      syncedAt: new Date().toISOString(),
+      monthsCompleted: 12,
+      // Engine needs a non-zero revenue total to attach contributors.
+      revenue: 1_150_000,
+      expenses: 0,
+      discoveredAccounts: [
+        { key: "tuition", name: "Tuition Income", section: "income", amount: 900_000, defaultKind: "revenue" },
+        // Default-kind says revenue, but the founder remapped it to "ignore"
+        // (e.g. one-time grant the model already accounts for elsewhere).
+        { key: "grant", name: "One-Time Grant", section: "income", amount: 250_000, defaultKind: "revenue" },
+      ],
+    };
+
+    // Without an override, the grant shows up in revenue.
+    const dataDefault = {
+      ...base,
+      accountingSnapshot: baseSnapshot,
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(dataDefault, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const before = buildActualsSuggestion(dataDefault, persisted, "change_enrollment", 1);
+    expect(before.contributors.revenueActual?.map((c) => c.name)).toContain("One-Time Grant");
+
+    // With an override remapping the grant to ignore, it disappears from
+    // contributors — the breakdown reacts to mapping changes without needing
+    // a fresh sync.
+    const dataOverride = {
+      ...base,
+      accountingSnapshot: {
+        ...baseSnapshot,
+        accountMappings: { grant: "ignore" },
+      },
+    } as unknown as FullModelData;
+    const after = buildActualsSuggestion(dataOverride, persisted, "change_enrollment", 1);
+    expect(after.contributors.revenueActual?.map((c) => c.name)).toEqual(["Tuition Income"]);
+  });
+
+  it("caps contributor lists at the top 5 accounts", () => {
+    const base = buildBaseModel();
+    const discoveredAccounts = Array.from({ length: 8 }, (_, i) => ({
+      key: `expense-${i}`,
+      name: `Expense Account ${i}`,
+      section: "expense" as const,
+      amount: 100_000 - i * 1000, // strictly descending so order is stable
+      defaultKind: "expense" as const,
+    }));
+    const data = {
+      ...base,
+      accountingSnapshot: {
+        provider: "quickbooks" as const,
+        syncedAt: new Date().toISOString(),
+        monthsCompleted: 12,
+        // Engine needs a non-zero expense total to attach contributors.
+        expenses: discoveredAccounts.reduce((s, a) => s + a.amount, 0),
+        discoveredAccounts,
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.contributors.expenseActual).toHaveLength(5);
+    expect(suggestion.contributors.expenseActual?.[0]?.name).toBe("Expense Account 0");
+    expect(suggestion.contributors.expenseActual?.[4]?.name).toBe("Expense Account 4");
+  });
+
+  it("normalizes rent contributors to a monthly figure", () => {
+    const base = buildBaseModel({
+      schoolProfile: {
+        isPartialFirstYear: false,
+        year1OperatingMonths: 12,
+        debtIncluded: true,
+        facilityPhases: [
+          { ownershipType: "rent", startYear: 1, endYear: 5, monthlyRent: 8000 },
+        ],
+      },
+    });
+    const data = {
+      ...base,
+      accountingSnapshot: {
+        provider: "quickbooks" as const,
+        syncedAt: new Date().toISOString(),
+        monthsCompleted: 6, // half-year of data → period total ÷ 6
+        // Snapshot needs a monthlyRent for the rent path to attach contributors;
+        // the engine's rent suggestion uses this top-line figure, while the
+        // breakdown shows which accounts compose it.
+        monthlyRent: 10_000,
+        discoveredAccounts: [
+          // Mapped explicitly to rent; period total is 60k → 10k/mo.
+          { key: "lease", name: "Building Lease", section: "expense", amount: 60_000, defaultKind: "rent" },
+        ],
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "evaluate_site",
+      inputs: { newMonthlyRent: 9000 },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "evaluate_site", 1);
+    expect(suggestion.contributors.signedMonthlyRent?.[0]?.name).toBe("Building Lease");
+    expect(suggestion.contributors.signedMonthlyRent?.[0]?.amount).toBe(10_000);
+  });
 });

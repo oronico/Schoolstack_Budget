@@ -147,6 +147,26 @@ export interface AccountingExportLike {
 // because it represents books-of-record numbers, not founder estimates.
 export type AccountingSnapshotProvider = "quickbooks" | "xero";
 
+// Founder-visible classification for a single account row from the connected
+// accounting system. Mirrors `AccountKind` in @workspace/db, duplicated here
+// so the engine package can stay free of the server's drizzle dependency.
+export type AccountingAccountKindLike = "revenue" | "expense" | "rent" | "ignore";
+
+// Per-account row discovered during the latest sync. The actuals-suggestion
+// helper uses these (combined with the founder's `accountMappings` overrides)
+// to surface a short "Revenue = Tuition + Workshops" breakdown so the founder
+// can sanity-check the mapping before accepting a suggestion. Stays optional
+// because older snapshots and non-live sources won't carry it.
+export interface AccountingDiscoveredAccountLike {
+  key: string;
+  name: string;
+  section: "income" | "expense" | "other";
+  // Period total as it appeared on the latest P&L. Same scale as the
+  // snapshot-level `revenue` / `expenses` figures (i.e. NOT annualized).
+  amount: number;
+  defaultKind: AccountingAccountKindLike;
+}
+
 export interface AccountingSnapshotLike {
   provider: AccountingSnapshotProvider;
   // ISO-8601 timestamp of when the sync that produced this snapshot ran.
@@ -164,6 +184,14 @@ export interface AccountingSnapshotLike {
   // Optional human label for the source company file ("Acme School - QBO"),
   // shown in the source caption so the founder knows which books were pulled.
   realmDisplayName?: string;
+  // Optional per-account breakdown + the founder's mapping overrides. When
+  // present, the actuals-suggestion helper can compute a top-N list of
+  // contributing accounts per field (e.g. "Revenue = Tuition Income +
+  // Workshop Income"). Threaded through from the AccountingConnectionCard so
+  // the breakdown updates as soon as the founder saves a new mapping —
+  // without re-syncing from the provider.
+  discoveredAccounts?: AccountingDiscoveredAccountLike[];
+  accountMappings?: Record<string, AccountingAccountKindLike>;
 }
 
 export interface FullModelData {

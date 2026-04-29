@@ -1,4 +1,8 @@
-import type { FullModelData, DecisionType } from "./model-shape.js";
+import type {
+  FullModelData,
+  DecisionType,
+  AccountingSnapshotLike,
+} from "./model-shape.js";
 import {
   DECISION_LABELS as SHARED_DECISION_LABELS,
   buildDecisionBullets as sharedBuildDecisionBullets,
@@ -663,6 +667,16 @@ export type ActualsSuggestionField =
   | "netIncomeActual"
   | "signedMonthlyRent";
 
+// Single account that contributes to a suggested figure. Surfaced under each
+// field so the founder can sanity-check the mapping ("Revenue = Tuition
+// Income $40,000 + Workshop Income $5,000") before accepting the suggestion.
+// Amounts are reported in the same scale the founder sees in the mapping
+// panel (period totals for revenue/expense; per-month for rent).
+export interface ActualsContributor {
+  name: string;
+  amount: number;
+}
+
 export interface ActualsSuggestion {
   values: Partial<Record<ActualsSuggestionField, number>>;
   sources: Partial<Record<ActualsSuggestionField, string>>;
@@ -670,6 +684,55 @@ export interface ActualsSuggestion {
   // these as a short list so the founder understands the basis (e.g. "Prior
   // year actuals from setup"). Order is meaningful — most-trusted first.
   sourceLabels: string[];
+  // Top contributing accounts per field. Only populated when the source for
+  // that field is a live accounting snapshot that carries `discoveredAccounts`
+  // — typed-in priors and CSV exports don't have per-account detail.
+  contributors: Partial<Record<ActualsSuggestionField, ActualsContributor[]>>;
+}
+
+// How many contributing accounts to show per field. Five keeps the caption
+// scannable at a glance while still covering the long-tail "other" buckets
+// most charts of accounts have.
+const CONTRIBUTOR_LIMIT = 5;
+
+// Build the per-field contributor lists from a live snapshot's discovered
+// accounts. Effective mapping = founder override (if any) → discovered
+// `defaultKind`. Rent rolls into both the expense breakdown (since rent is
+// folded into expenses for the snapshot total) and the rent breakdown,
+// where it's normalized to per-month so the figures tie to `monthlyRent`.
+function buildLiveContributors(snapshot: AccountingSnapshotLike): {
+  revenue: ActualsContributor[];
+  expense: ActualsContributor[];
+  rent: ActualsContributor[];
+} {
+  const empty = { revenue: [], expense: [], rent: [] };
+  const discovered = snapshot.discoveredAccounts;
+  if (!discovered || discovered.length === 0) return empty;
+  const mappings = snapshot.accountMappings ?? {};
+  const months =
+    snapshot.monthsCompleted && snapshot.monthsCompleted > 0
+      ? snapshot.monthsCompleted
+      : 12;
+  const rev: ActualsContributor[] = [];
+  const exp: ActualsContributor[] = [];
+  const rent: ActualsContributor[] = [];
+  for (const acc of discovered) {
+    if (!isFinite(acc.amount) || acc.amount <= 0) continue;
+    const kind = mappings[acc.key] ?? acc.defaultKind;
+    if (kind === "revenue") {
+      rev.push({ name: acc.name, amount: Math.round(acc.amount) });
+    } else if (kind === "expense") {
+      exp.push({ name: acc.name, amount: Math.round(acc.amount) });
+    } else if (kind === "rent") {
+      // Rent is also folded into the expense total — list it in both
+      // breakdowns so the math the founder sees ties out to each suggestion.
+      exp.push({ name: acc.name, amount: Math.round(acc.amount) });
+      rent.push({ name: acc.name, amount: Math.round(acc.amount / months) });
+    }
+  }
+  const cap = (a: ActualsContributor[]) =>
+    a.sort((x, y) => y.amount - x.amount).slice(0, CONTRIBUTOR_LIMIT);
+  return { revenue: cap(rev), expense: cap(exp), rent: cap(rent) };
 }
 
 function annualizeFromCurrent(value: number | undefined, monthsCompleted: number | undefined): number | undefined {
@@ -737,6 +800,7 @@ export function buildActualsSuggestion(
   const values: ActualsSuggestion["values"] = {};
   const sources: ActualsSuggestion["sources"] = {};
   const sourceLabels: string[] = [];
+  const contributors: ActualsSuggestion["contributors"] = {};
   const yr = Math.max(1, Math.min(5, Math.round(asOfYear || 1)));
 
   // 1) Live accounting connection — highest priority. We only surface this
@@ -761,14 +825,24 @@ export function buildActualsSuggestion(
       sources.enrollmentActual = label;
       used = true;
     }
+    // Compute per-account contributors once; we attach them to the fields
+    // the live snapshot actually populated below. Stays empty when the
+    // snapshot doesn't carry `discoveredAccounts` (e.g. older syncs).
+    const liveBreakdown = buildLiveContributors(liveSnapshot);
     if (annualizedRev !== undefined && annualizedRev > 0) {
       values.revenueActual = Math.round(annualizedRev);
       sources.revenueActual = label;
+      if (liveBreakdown.revenue.length > 0) {
+        contributors.revenueActual = liveBreakdown.revenue;
+      }
       used = true;
     }
     if (annualizedExp !== undefined && annualizedExp > 0) {
       values.expenseActual = Math.round(annualizedExp);
       sources.expenseActual = label;
+      if (liveBreakdown.expense.length > 0) {
+        contributors.expenseActual = liveBreakdown.expense;
+      }
       used = true;
     }
     if (annualizedRev !== undefined && annualizedExp !== undefined) {
@@ -785,6 +859,9 @@ export function buildActualsSuggestion(
     ) {
       values.signedMonthlyRent = Math.round(liveSnapshot.monthlyRent);
       sources.signedMonthlyRent = label;
+      if (liveBreakdown.rent.length > 0) {
+        contributors.signedMonthlyRent = liveBreakdown.rent;
+      }
       used = true;
     }
     if (used) sourceLabels.push(label);
@@ -963,7 +1040,7 @@ export function buildActualsSuggestion(
     }
   }
 
-  return { values, sources, sourceLabels };
+  return { values, sources, sourceLabels, contributors };
 }
 
 // --- Replay a persisted custom scenario ---------------------------------------
