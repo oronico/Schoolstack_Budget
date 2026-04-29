@@ -8,11 +8,11 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import {
-  SingleYearVisuals,
-  FiveYearVisuals,
-  ScenarioVisuals,
-  DebtVisuals,
-  GuidanceVisuals,
+  SingleYearScreenshots,
+  FiveYearScreenshots,
+  ScenarioScreenshots,
+  DebtScreenshots,
+  GuidanceScreenshots,
 } from "@/components/solutions/InsideTheProductVisuals";
 
 export interface SolutionStep {
@@ -59,7 +59,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     audience:
       "Founders building their opening-year budget, schools refreshing their current operating year, and operators preparing a board packet for a single fiscal year.",
     primaryCta: { label: "Start My Year 1 Budget", href: "/register" },
-    visuals: <SingleYearVisuals />,
+    visuals: <SingleYearScreenshots />,
     steps: [
       {
         title: "Tell us about your school.",
@@ -128,7 +128,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     audience:
       "Founders preparing for facility financing, charter schools heading into authorization, and existing schools planning a multi-year ramp.",
     primaryCta: { label: "Build My 5-Year Plan", href: "/register" },
-    visuals: <FiveYearVisuals />,
+    visuals: <FiveYearScreenshots />,
     steps: [
       {
         title: "Project enrollment over five years.",
@@ -197,7 +197,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     audience:
       "Founders pressure-testing a plan before signing a lease or loan, board members evaluating big decisions, and operators who need to know whether the school survives a tough year.",
     primaryCta: { label: "Try the What-If Planner", href: "/register" },
-    visuals: <ScenarioVisuals />,
+    visuals: <ScenarioScreenshots />,
     steps: [
       {
         title: "Open the What-If drawer.",
@@ -266,7 +266,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     audience:
       "Founders raising facility financing, schools refinancing existing debt, and CDFIs and lenders evaluating school borrowers.",
     primaryCta: { label: "Build a Lender-Ready Plan", href: "/register" },
-    visuals: <DebtVisuals />,
+    visuals: <DebtScreenshots />,
     steps: [
       {
         title: "Enter your loan and facility inputs.",
@@ -335,7 +335,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     audience:
       "First-time school founders, board members reviewing a budget for the first time, and operators who want a second opinion built into the tool.",
     primaryCta: { label: "Start with Coaching On", href: "/register" },
-    visuals: <GuidanceVisuals />,
+    visuals: <GuidanceScreenshots />,
     steps: [
       {
         title: "Pick your guidance level.",
