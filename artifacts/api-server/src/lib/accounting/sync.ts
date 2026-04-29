@@ -12,6 +12,7 @@ import {
 import { encryptToken, decryptToken } from "./crypto";
 import {
   applyAccountMappings,
+  deriveEnrollmentFromTag,
   getProviderClient as defaultGetProviderClient,
   isAccountingProvider,
   type ProviderClient,
@@ -108,6 +109,12 @@ export async function syncAccountingConnection(
       });
     }
 
+    // Pull P&L. The provider returns BOTH the parsed snapshot and the
+    // per-account amounts ("discovered accounts"). We persist the discovered
+    // list so the founder-facing mapping UI can re-classify accounts later
+    // without re-hitting the provider, and we re-apply any existing mapping
+    // overrides on top of the freshly fetched amounts so this sync's
+    // snapshot already reflects the founder's preferences.
     const { snapshot: rawSnapshot, discoveredAccounts } =
       await client.fetchProfitAndLoss(accessToken, conn.realmId);
 
@@ -119,7 +126,7 @@ export async function syncAccountingConnection(
     for (const [k, v] of Object.entries(conn.accountMappingsJson ?? {})) {
       if (currentKeys.has(k)) prunedMappings[k] = v;
     }
-    // Apply the founder's mapping (if any) on top of the auto-detected
+    // Apply the founder's (pruned) mapping on top of the auto-detected
     // snapshot so a school whose chart of accounts uses non-standard names
     // still gets the right revenue/expense/rent totals.
     const snapshot = applyAccountMappings(
@@ -133,11 +140,60 @@ export async function syncAccountingConnection(
       snapshot.realmDisplayName = conn.realmDisplayName;
     }
 
+    // Refresh the candidate enrollment containers every sync so the picker UI
+    // stays accurate as the school adds/removes student classes. If the
+    // founder has already selected one, fold its current count into the
+    // snapshot's `enrollment` field — that's what makes the actuals editor's
+    // "Suggest from latest data" badge prefer the live count over the
+    // prior-year typed-in number.
+    //
+    // We're intentionally lenient about provider failures here: a 4xx/5xx
+    // from the enrollment endpoints should NOT roll back a successful P&L
+    // sync. We log the failure into `lastSyncError` only when it's the
+    // primary cause (i.e. when the P&L succeeded but enrollment failed in a
+    // way the founder needs to act on, the mapping picker UI will still
+    // show the prior list).
+    let discoveredEnrollmentTags = conn.discoveredEnrollmentTagsJson ?? null;
+    try {
+      discoveredEnrollmentTags = await client.fetchEnrollmentSources(
+        accessToken,
+        conn.realmId,
+      );
+    } catch {
+      // Keep the previously-cached list rather than wiping it; the founder's
+      // selection is still meaningful even when this list call hiccups.
+    }
+    const enrollmentTag = conn.enrollmentTagJson ?? null;
+    if (enrollmentTag) {
+      let count = deriveEnrollmentFromTag(enrollmentTag, discoveredEnrollmentTags);
+      // If the founder's saved tag isn't in the freshly-fetched list (e.g.
+      // because the parent class no longer has any active children, or the
+      // list call failed), do a targeted lookup. This guarantees a single
+      // source of truth: the snapshot only carries enrollment when we can
+      // ACTIVELY confirm the count from the provider, never a stale value
+      // baked into another field.
+      if (count === undefined) {
+        try {
+          const direct = await client.fetchEnrollmentCount(
+            accessToken,
+            conn.realmId,
+            enrollmentTag,
+          );
+          if (direct !== undefined && direct > 0) count = direct;
+        } catch {
+          // Same lenient behaviour: leave snapshot.enrollment unset rather
+          // than failing the whole sync.
+        }
+      }
+      if (count !== undefined) snapshot.enrollment = count;
+    }
+
     const now = new Date();
     const updated = await dbAdapter.updateConnection(conn.id, {
       snapshotJson: snapshot,
       discoveredAccountsJson: discoveredAccounts,
       accountMappingsJson: prunedMappings,
+      discoveredEnrollmentTagsJson: discoveredEnrollmentTags,
       lastSyncedAt: now,
       lastSyncError: null,
       status: "connected",

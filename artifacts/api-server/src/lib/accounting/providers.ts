@@ -22,6 +22,8 @@ import type {
   AccountingSyncSnapshot,
   AccountKind,
   DiscoveredAccount,
+  DiscoveredEnrollmentTag,
+  EnrollmentTagRef,
 } from "@workspace/db";
 
 export interface ProviderTokens {
@@ -51,6 +53,30 @@ export interface ProviderClient {
     accessToken: string,
     realmId: string,
   ): Promise<SyncResult>;
+  // Lists candidate "students enrolled" containers the founder might pick.
+  //   QBO  — every parent Class with at least one active sub-class. The count
+  //          is the number of active sub-classes (each typically a student
+  //          or family).
+  //   Xero — every TrackingCategory. The count is the number of active
+  //          options on that category.
+  // Surface this every sync so the picker has a fresh list and the
+  // previously-selected tag's count stays accurate. Returning an empty list
+  // simply means nothing usable was found — not an error.
+  fetchEnrollmentSources(
+    accessToken: string,
+    realmId: string,
+  ): Promise<DiscoveredEnrollmentTag[]>;
+  // Re-counts a specific selected tag. Used as a fallback when the broader
+  // `fetchEnrollmentSources` list doesn't contain the saved tag (e.g. the
+  // founder picked something with zero active children). Returning
+  // `undefined` means the tag could not be found at all (the container was
+  // deleted or renamed); the caller treats that as "leave enrollment empty
+  // rather than overwrite with stale data".
+  fetchEnrollmentCount(
+    accessToken: string,
+    realmId: string,
+    tag: EnrollmentTagRef,
+  ): Promise<number | undefined>;
 }
 
 const QB_AUTH_URL = "https://appcenter.intuit.com/connect/oauth2";
@@ -242,7 +268,85 @@ const quickbooksClient: ProviderClient = {
     const json = (await res.json()) as Record<string, unknown>;
     return parseQuickBooksProfitAndLoss(json);
   },
+  async fetchEnrollmentSources(accessToken, realmId) {
+    // QuickBooks doesn't have a first-class "students" object. Schools
+    // typically use the Class hierarchy: a parent class like
+    // "Students FY26" with one active sub-class per enrolled student or
+    // family. We fetch every active class in one call and group by
+    // ParentRef so the picker can show "<parent name> — N students".
+    const query = "select Id,Name,ParentRef,Active from Class MAXRESULTS 1000";
+    const url =
+      `${QB_API_BASE}/v3/company/${encodeURIComponent(realmId)}/query` +
+      `?query=${encodeURIComponent(query)}&minorversion=70`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`QuickBooks classes fetch failed: ${res.status} ${text}`);
+    }
+    const json = (await res.json()) as Record<string, unknown>;
+    return parseQuickBooksClasses(json);
+  },
+  async fetchEnrollmentCount(accessToken, realmId, tag) {
+    if (tag.kind !== "qbo_class") return undefined;
+    // Re-derive from the same Class list rather than a separate count
+    // query: schools rarely have so many classes that this is wasteful, and
+    // sharing the parser keeps a single source of truth for "what counts as
+    // an active sub-class".
+    const sources = await quickbooksClient.fetchEnrollmentSources(accessToken, realmId);
+    const match = sources.find((s) => s.id === tag.id);
+    return match?.count;
+  },
 };
+
+// Parse the QuickBooks `query` response for `select * from Class` into the
+// founder-facing list of candidate enrollment containers. Exported for unit
+// coverage. We keep ONLY parents with at least one active child, so the
+// picker doesn't get cluttered with one-off classes that aren't being used
+// to track students.
+export function parseQuickBooksClasses(
+  payload: Record<string, unknown>,
+): DiscoveredEnrollmentTag[] {
+  const queryResponse = (payload.QueryResponse as Record<string, unknown>) || {};
+  const classes = (queryResponse.Class as Array<Record<string, unknown>> | undefined) ?? [];
+  type QboClass = { id: string; name: string; parentId: string | null; active: boolean };
+  const parsed: QboClass[] = [];
+  for (const c of classes) {
+    const id = String(c.Id ?? "").trim();
+    const name = String(c.Name ?? "").trim();
+    if (!id || !name) continue;
+    // QBO defaults `Active` to true when omitted from the response.
+    const active = c.Active === undefined ? true : Boolean(c.Active);
+    const parentRef = c.ParentRef as { value?: string } | undefined;
+    const parentId = parentRef?.value ? String(parentRef.value) : null;
+    parsed.push({ id, name, parentId, active });
+  }
+  // Group active children by parent id.
+  const childrenByParent = new Map<string, number>();
+  for (const c of parsed) {
+    if (!c.active || !c.parentId) continue;
+    childrenByParent.set(c.parentId, (childrenByParent.get(c.parentId) ?? 0) + 1);
+  }
+  const out: DiscoveredEnrollmentTag[] = [];
+  for (const c of parsed) {
+    if (!c.active) continue;
+    const childCount = childrenByParent.get(c.id) ?? 0;
+    if (childCount === 0) continue;
+    out.push({
+      kind: "qbo_class",
+      id: c.id,
+      name: c.name,
+      count: childCount,
+    });
+  }
+  // Stable, name-sorted order so the dropdown doesn't reshuffle between syncs.
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
+}
 
 // Internal: extract { snapshot, discoveredAccounts } from the QuickBooks
 // `ProfitAndLoss` JSON response. Exported for unit coverage.
@@ -463,7 +567,68 @@ const xeroClient: ProviderClient = {
     const json = (await res.json()) as Record<string, unknown>;
     return parseXeroProfitAndLoss(json);
   },
+  async fetchEnrollmentSources(accessToken, tenantId) {
+    // Xero TrackingCategories carry their `Options` inline in the list
+    // response, so a single call is enough to power the picker. We keep only
+    // ACTIVE categories — archived ones would surface tags the founder can't
+    // re-tag transactions with anyway.
+    const url = `${XERO_API_BASE}/TrackingCategories`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Xero-Tenant-Id": tenantId,
+        Accept: "application/json",
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Xero tracking categories fetch failed: ${res.status} ${text}`);
+    }
+    const json = (await res.json()) as Record<string, unknown>;
+    return parseXeroTrackingCategories(json);
+  },
+  async fetchEnrollmentCount(accessToken, tenantId, tag) {
+    if (tag.kind !== "xero_tracking") return undefined;
+    // Same single-endpoint trick: re-use the parser so "active option" means
+    // the same thing here as in the picker list.
+    const sources = await xeroClient.fetchEnrollmentSources(accessToken, tenantId);
+    const match = sources.find((s) => s.id === tag.id);
+    return match?.count;
+  },
 };
+
+// Parse the Xero `TrackingCategories` response into the founder-facing list of
+// candidate enrollment containers. Exported for unit coverage. We surface
+// every ACTIVE category whose ACTIVE option count is at least 1 — categories
+// with no options aren't usable as a headcount source.
+export function parseXeroTrackingCategories(
+  payload: Record<string, unknown>,
+): DiscoveredEnrollmentTag[] {
+  const categories = (payload.TrackingCategories as Array<Record<string, unknown>> | undefined) ?? [];
+  const out: DiscoveredEnrollmentTag[] = [];
+  for (const cat of categories) {
+    const id = String(cat.TrackingCategoryID ?? "").trim();
+    const name = String(cat.Name ?? "").trim();
+    const status = String(cat.Status ?? "ACTIVE").toUpperCase();
+    if (!id || !name) continue;
+    if (status !== "ACTIVE") continue;
+    const options = (cat.Options as Array<Record<string, unknown>> | undefined) ?? [];
+    let count = 0;
+    for (const opt of options) {
+      const optStatus = String(opt.Status ?? "ACTIVE").toUpperCase();
+      if (optStatus === "ACTIVE") count += 1;
+    }
+    if (count === 0) continue;
+    out.push({
+      kind: "xero_tracking",
+      id,
+      name,
+      count,
+    });
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
+}
 
 // Parse a Xero `ProfitAndLoss` report payload. Xero returns a `Reports` array
 // whose `Rows` mirror the QuickBooks structure but with a different field
@@ -646,4 +811,34 @@ export function isAccountKind(value: unknown): value is AccountKind {
     value === "rent" ||
     value === "ignore"
   );
+}
+
+// Type-guard for the founder-supplied enrollment-tag payload. Used by the
+// route layer to reject malformed `{ tag }` bodies before we persist them.
+// Accepts only the two provider-specific kinds we actually know how to
+// re-fetch from at sync time.
+export function isEnrollmentTagRef(value: unknown): value is EnrollmentTagRef {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  if (v.kind !== "qbo_class" && v.kind !== "xero_tracking") return false;
+  if (typeof v.id !== "string" || v.id.trim() === "") return false;
+  if (typeof v.name !== "string" || v.name.trim() === "") return false;
+  return true;
+}
+
+// Returns the enrollment count for a saved tag using the most recent
+// discovered list, or `undefined` when the tag is unset, missing from the
+// list, or has a zero count. Centralised so the sync helper and (future)
+// route handlers stay consistent on "what enrollment value should this
+// snapshot carry?".
+export function deriveEnrollmentFromTag(
+  tag: EnrollmentTagRef | null | undefined,
+  discovered: DiscoveredEnrollmentTag[] | null | undefined,
+): number | undefined {
+  if (!tag || !discovered) return undefined;
+  const match = discovered.find(
+    (d) => d.kind === tag.kind && d.id === tag.id,
+  );
+  if (!match || match.count <= 0) return undefined;
+  return match.count;
 }

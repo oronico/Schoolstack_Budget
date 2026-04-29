@@ -68,15 +68,49 @@ export type AccountingSyncSnapshot = {
   revenue?: number;
   expenses?: number;
   // QB/Xero don't natively track student counts. We surface enrollment only
-  // when the founder has tagged a class/department for it, so this stays
-  // optional and the suggestion helper falls back to the prior-year snapshot
-  // for enrollment when the live source is silent.
+  // when the founder has tagged a class/department for it (see
+  // `enrollmentTagJson` below), so this stays optional and the suggestion
+  // helper falls back to the prior-year snapshot for enrollment when the
+  // live source is silent.
   enrollment?: number;
   // Detected from a "Rent" account so the evaluate_site decision can pull a
   // realized monthly rent without the founder retyping their lease.
   monthlyRent?: number;
   // Optional human label for the source company file ("Acme School - QBO").
   realmDisplayName?: string;
+};
+
+// What kind of provider-side container the founder picked to count students.
+//   `qbo_class`     — a parent QuickBooks Class whose active sub-classes each
+//                     represent one enrolled student/family.
+//   `xero_tracking` — a Xero TrackingCategory whose active options each
+//                     represent one enrolled student/family.
+export type EnrollmentTagKind = "qbo_class" | "xero_tracking";
+
+// Founder-selected reference to the provider container used to derive the
+// "students enrolled" headcount. Stored verbatim so the next sync can call
+// the right endpoint (QBO `Class` query, Xero `TrackingCategories/{id}`).
+export type EnrollmentTagRef = {
+  kind: EnrollmentTagKind;
+  // Provider-side identifier (QuickBooks Class.Id, Xero TrackingCategoryID).
+  id: string;
+  // Display name as it appeared at selection time. We keep it cached so the
+  // UI can render the picked tag even when a sync hasn't repopulated the
+  // discovered list yet.
+  name: string;
+};
+
+// One candidate container we discovered at sync time, surfaced to the founder
+// so they can pick which one represents enrolled students. We also cache the
+// most recent count so the picker can show "(82 students)" right away.
+export type DiscoveredEnrollmentTag = {
+  kind: EnrollmentTagKind;
+  id: string;
+  name: string;
+  // Number of active children (sub-classes / tracking options) at sync time.
+  // Drives both the picker's "(N students)" preview and the snapshot
+  // enrollment value when this tag is the selected one.
+  count: number;
 };
 
 export const accountingConnectionsTable = pgTable(
@@ -112,6 +146,17 @@ export const accountingConnectionsTable = pgTable(
     // back to `defaultKind`, so an empty mapping is equivalent to the
     // pre-mapping heuristic behaviour.
     accountMappingsJson: jsonb("account_mappings_json").$type<Record<string, AccountKind>>(),
+    // The provider container the founder picked as the "students enrolled"
+    // source (a QuickBooks parent Class or a Xero TrackingCategory). Null
+    // until the founder selects one — until then sync still pulls revenue/
+    // expenses, but `snapshot_json.enrollment` stays empty and the suggestion
+    // helper falls back to the prior-year typed-in count.
+    enrollmentTagJson: jsonb("enrollment_tag_json").$type<EnrollmentTagRef>(),
+    // Cache of the candidate enrollment containers from the most recent sync,
+    // so the picker UI can render a dropdown immediately on page load. Each
+    // entry includes its current child/option count so the founder can pick
+    // the right one ("Students FY26 — 82 students").
+    discoveredEnrollmentTagsJson: jsonb("discovered_enrollment_tags_json").$type<DiscoveredEnrollmentTag[]>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

@@ -23,6 +23,7 @@
     "test:decision-history-pdf": "tsx ./tests/decision-history-pdf.ts",
     "test:decision-comparison-pdf-route": "tsx ./tests/decision-comparison-pdf-route.ts",
     "test:accounting-scheduler": "tsx ./tests/accounting-scheduler.ts",
+    "test:accounting-enrollment-tag": "tsx ./tests/accounting-enrollment-tag.ts",
     "test:accounting-sandbox-parse": "tsx ./tests/accounting-sandbox-parse.ts",
     "test:accounting-sandbox-sync": "tsx ./tests/accounting-sandbox-sync.ts",
     "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts",

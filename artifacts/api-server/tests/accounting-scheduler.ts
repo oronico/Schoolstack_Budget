@@ -4,7 +4,11 @@
 // passes an in-memory adapter and stub provider clients through the
 // dependency seams exposed by `syncAccountingConnection` and `runSyncSweep`,
 // then asserts the row updates we'd expect to see persisted in production.
-import type { AccountingConnection, AccountingSyncSnapshot } from "@workspace/db";
+import type {
+  AccountingConnection,
+  AccountingSyncSnapshot,
+  DiscoveredAccount,
+} from "@workspace/db";
 import {
   syncAccountingConnection,
   type AccountingDbAdapter,
@@ -87,6 +91,7 @@ function makeProvider(
   opts: {
     configured?: boolean;
     fetchSnapshot?: AccountingSyncSnapshot;
+    fetchDiscovered?: DiscoveredAccount[];
     fetchError?: string;
     refreshExpiresAt?: Date;
   } = {},
@@ -110,16 +115,24 @@ function makeProvider(
     fetchProfitAndLoss: async () => {
       calls.fetch++;
       if (opts.fetchError) throw new Error(opts.fetchError);
-      return (
-        opts.fetchSnapshot ?? {
-          periodEnd: "2026-04-30",
-          monthsCompleted: 4,
-          revenue: 250_000,
-          expenses: 230_000,
-          monthlyRent: 5_000,
-        }
-      );
+      return {
+        snapshot:
+          opts.fetchSnapshot ?? {
+            periodEnd: "2026-04-30",
+            monthsCompleted: 4,
+            revenue: 250_000,
+            expenses: 230_000,
+            monthlyRent: 5_000,
+          },
+        discoveredAccounts: opts.fetchDiscovered ?? [],
+      };
     },
+    // The scheduler now also calls these on every sync. Default stubs return
+    // empty so existing tests don't accidentally start asserting on the
+    // enrollment field — see accounting-enrollment-tag.ts for dedicated
+    // coverage of the tag flow.
+    fetchEnrollmentSources: async () => [],
+    fetchEnrollmentCount: async () => undefined,
   };
   return { client, calls };
 }
@@ -242,14 +255,19 @@ async function testSweepIteratesAllConnections(): Promise<void> {
       fetchCount++;
       if (fetchCount === 1) {
         return {
-          periodEnd: "2026-04-30",
-          monthsCompleted: 4,
-          revenue: 250_000,
-          expenses: 230_000,
+          snapshot: {
+            periodEnd: "2026-04-30",
+            monthsCompleted: 4,
+            revenue: 250_000,
+            expenses: 230_000,
+          },
+          discoveredAccounts: [],
         };
       }
       throw new Error("boom");
     },
+    fetchEnrollmentSources: async () => [],
+    fetchEnrollmentCount: async () => undefined,
   };
 
   const summary = await runSyncSweep({

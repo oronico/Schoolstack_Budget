@@ -25,6 +25,8 @@ import {
   type AccountingSyncSnapshot,
   type AccountKind,
   type DiscoveredAccount,
+  type DiscoveredEnrollmentTag,
+  type EnrollmentTagRef,
 } from "@workspace/db";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
 import {
@@ -32,6 +34,7 @@ import {
   getProviderClient,
   isAccountKind,
   isAccountingProvider,
+  isEnrollmentTagRef,
   providerDisplayName,
 } from "../lib/accounting/providers";
 import { encryptToken } from "../lib/accounting/crypto";
@@ -129,6 +132,13 @@ type PublicConnection = {
   snapshot: AccountingSyncSnapshot | null;
   discoveredAccounts: DiscoveredAccount[];
   accountMappings: Record<string, AccountKind>;
+  // The currently-saved enrollment tag, or null when the founder hasn't
+  // picked one. The UI uses this to show "Currently tracking: <name>" and to
+  // pre-select the dropdown.
+  enrollmentTag: EnrollmentTagRef | null;
+  // Candidate tags from the most recent sync. Drives the picker dropdown
+  // ("Students FY26 — 82 students"). Empty until the first sync runs.
+  discoveredEnrollmentTags: DiscoveredEnrollmentTag[];
   configured: boolean;
   availableDefault: AvailableDefault | null;
 };
@@ -142,6 +152,8 @@ type ConnectionRowForPublic = {
   snapshotJson: AccountingSyncSnapshot | null;
   discoveredAccountsJson: DiscoveredAccount[] | null;
   accountMappingsJson: Record<string, AccountKind> | null;
+  enrollmentTagJson: EnrollmentTagRef | null;
+  discoveredEnrollmentTagsJson: DiscoveredEnrollmentTag[] | null;
 };
 
 function toPublicConnection(
@@ -159,6 +171,8 @@ function toPublicConnection(
     snapshot: row.snapshotJson,
     discoveredAccounts: row.discoveredAccountsJson ?? [],
     accountMappings: row.accountMappingsJson ?? {},
+    enrollmentTag: row.enrollmentTagJson,
+    discoveredEnrollmentTags: row.discoveredEnrollmentTagsJson ?? [],
     configured: client.isConfigured(),
     availableDefault,
   };
@@ -259,6 +273,23 @@ async function upsertMappingDefault(
     });
 }
 
+// Column projection used by every read query that hydrates a PublicConnection.
+// Keeps the SELECT list and the `toPublicConnection` row shape in lockstep so
+// adding a new field only requires touching this object + the type above.
+const publicConnectionColumns = {
+  provider: accountingConnectionsTable.provider,
+  status: accountingConnectionsTable.status,
+  realmDisplayName: accountingConnectionsTable.realmDisplayName,
+  lastSyncedAt: accountingConnectionsTable.lastSyncedAt,
+  lastSyncError: accountingConnectionsTable.lastSyncError,
+  snapshotJson: accountingConnectionsTable.snapshotJson,
+  discoveredAccountsJson: accountingConnectionsTable.discoveredAccountsJson,
+  accountMappingsJson: accountingConnectionsTable.accountMappingsJson,
+  enrollmentTagJson: accountingConnectionsTable.enrollmentTagJson,
+  discoveredEnrollmentTagsJson:
+    accountingConnectionsTable.discoveredEnrollmentTagsJson,
+} as const;
+
 // --- GET /api/models/:id/accounting ----------------------------------------
 router.get(
   "/models/:id/accounting",
@@ -276,15 +307,10 @@ router.get(
     try {
       const rows = await db
         .select({
-          provider: accountingConnectionsTable.provider,
-          status: accountingConnectionsTable.status,
+          ...publicConnectionColumns,
+          // Needed for the per-row `loadAvailableDefault` lookup below; not
+          // exposed in the public payload directly.
           realmId: accountingConnectionsTable.realmId,
-          realmDisplayName: accountingConnectionsTable.realmDisplayName,
-          lastSyncedAt: accountingConnectionsTable.lastSyncedAt,
-          lastSyncError: accountingConnectionsTable.lastSyncError,
-          snapshotJson: accountingConnectionsTable.snapshotJson,
-          discoveredAccountsJson: accountingConnectionsTable.discoveredAccountsJson,
-          accountMappingsJson: accountingConnectionsTable.accountMappingsJson,
         })
         .from(accountingConnectionsTable)
         .where(eq(accountingConnectionsTable.modelId, modelId));
@@ -590,16 +616,7 @@ router.put(
         updatedAt: new Date(),
       })
       .where(eq(accountingConnectionsTable.id, conn.id))
-      .returning({
-        provider: accountingConnectionsTable.provider,
-        status: accountingConnectionsTable.status,
-        realmDisplayName: accountingConnectionsTable.realmDisplayName,
-        lastSyncedAt: accountingConnectionsTable.lastSyncedAt,
-        lastSyncError: accountingConnectionsTable.lastSyncError,
-        snapshotJson: accountingConnectionsTable.snapshotJson,
-        discoveredAccountsJson: accountingConnectionsTable.discoveredAccountsJson,
-        accountMappingsJson: accountingConnectionsTable.accountMappingsJson,
-      });
+      .returning(publicConnectionColumns);
 
     // Mirror the saved mapping into the user-level default so a *different*
     // model that connects the same QuickBooks/Xero realm later can offer
@@ -731,16 +748,7 @@ router.post(
         updatedAt: new Date(),
       })
       .where(eq(accountingConnectionsTable.id, conn.id))
-      .returning({
-        provider: accountingConnectionsTable.provider,
-        status: accountingConnectionsTable.status,
-        realmDisplayName: accountingConnectionsTable.realmDisplayName,
-        lastSyncedAt: accountingConnectionsTable.lastSyncedAt,
-        lastSyncError: accountingConnectionsTable.lastSyncError,
-        snapshotJson: accountingConnectionsTable.snapshotJson,
-        discoveredAccountsJson: accountingConnectionsTable.discoveredAccountsJson,
-        accountMappingsJson: accountingConnectionsTable.accountMappingsJson,
-      });
+      .returning(publicConnectionColumns);
     const availableDefault = await loadAvailableDefault(
       req.userId!,
       provider,
@@ -813,6 +821,98 @@ router.delete(
       .returning({ id: accountingMappingDefaultsTable.id });
 
     res.json({ success: true, removed: deleted.length });
+  },
+);
+
+// --- PUT /api/models/:id/accounting/:provider/enrollment-tag ---------------
+// Save (or clear) the founder-selected provider container that represents
+// "students enrolled". Body shape:
+//   { tag: { kind: "qbo_class"|"xero_tracking", id, name } }   — set
+//   { tag: null }                                               — clear
+// We don't try to refetch the count here on purpose: a sync runs immediately
+// after the founder picks (or any time they hit "Sync now"), and that's the
+// path that owns updating `snapshot.enrollment`. Keeping this endpoint a
+// pure preference write avoids surfacing partial provider failures from the
+// settings panel.
+router.put(
+  "/models/:id/accounting/:provider/enrollment-tag",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    const modelId = Number(req.params.id);
+    const provider = req.params.provider;
+    if (!Number.isFinite(modelId) || modelId <= 0) {
+      res.status(400).json({ error: "Invalid model id." });
+      return;
+    }
+    if (!isAccountingProvider(provider)) {
+      res.status(400).json({ error: "Unsupported accounting provider." });
+      return;
+    }
+    if (!(await ownsModel(req.userId!, modelId))) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+    const body = (req.body ?? {}) as { tag?: unknown };
+    let nextTag: EnrollmentTagRef | null;
+    if (body.tag === null) {
+      nextTag = null;
+    } else if (isEnrollmentTagRef(body.tag)) {
+      // Reject mismatched tag kinds — a Xero tracking category can't be
+      // saved against a QBO connection or vice versa. Catching it here keeps
+      // the next sync from chasing an id the provider doesn't recognise.
+      const expectedKind = provider === "quickbooks" ? "qbo_class" : "xero_tracking";
+      if (body.tag.kind !== expectedKind) {
+        res.status(400).json({
+          error: `Tag kind "${body.tag.kind}" does not match the ${providerDisplayName(provider)} connection.`,
+        });
+        return;
+      }
+      nextTag = body.tag;
+    } else {
+      res
+        .status(400)
+        .json({ error: "Body must include `tag: null` or `tag: { kind, id, name }`." });
+      return;
+    }
+
+    const [conn] = await db
+      .select({
+        id: accountingConnectionsTable.id,
+        realmId: accountingConnectionsTable.realmId,
+        discoveredAccountsJson: accountingConnectionsTable.discoveredAccountsJson,
+      })
+      .from(accountingConnectionsTable)
+      .where(
+        and(
+          eq(accountingConnectionsTable.modelId, modelId),
+          eq(accountingConnectionsTable.provider, provider),
+        ),
+      )
+      .limit(1);
+    if (!conn) {
+      res.status(404).json({ error: "No connection for this provider." });
+      return;
+    }
+
+    const [updated] = await db
+      .update(accountingConnectionsTable)
+      .set({
+        enrollmentTagJson: nextTag,
+        updatedAt: new Date(),
+      })
+      .where(eq(accountingConnectionsTable.id, conn.id))
+      .returning(publicConnectionColumns);
+    // Surface the user-level "Reuse last mapping" default alongside the
+    // updated connection so the UI keeps the same `availableDefault`
+    // affordance after picking an enrollment tag (response shape mirrors
+    // the other PUT/POST routes).
+    const availableDefault = await loadAvailableDefault(
+      req.userId!,
+      provider,
+      conn.realmId,
+      conn.discoveredAccountsJson ?? [],
+    );
+    res.json({ connection: toPublicConnection(updated, availableDefault) });
   },
 );
 

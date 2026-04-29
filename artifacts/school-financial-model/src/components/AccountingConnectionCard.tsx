@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
   History,
+  GraduationCap,
   Loader2,
   RefreshCw,
   SlidersHorizontal,
@@ -44,6 +45,24 @@ interface DiscoveredAccount {
   section: "income" | "expense" | "other";
   amount: number;
   defaultKind: AccountKind;
+}
+
+// Mirrors `EnrollmentTagKind`/`EnrollmentTagRef`/`DiscoveredEnrollmentTag`
+// from @workspace/db. Same reason as DiscoveredAccount: keep the bundle
+// independent of the server's drizzle dependency tree.
+type EnrollmentTagKind = "qbo_class" | "xero_tracking";
+
+interface EnrollmentTagRef {
+  kind: EnrollmentTagKind;
+  id: string;
+  name: string;
+}
+
+interface DiscoveredEnrollmentTag {
+  kind: EnrollmentTagKind;
+  id: string;
+  name: string;
+  count: number;
 }
 
 interface ProviderConfig {
@@ -77,6 +96,8 @@ interface AccountingConnection {
   snapshot: (AccountingSnapshotLike & { realmDisplayName?: string }) | null;
   discoveredAccounts: DiscoveredAccount[];
   accountMappings: Record<string, AccountKind>;
+  enrollmentTag: EnrollmentTagRef | null;
+  discoveredEnrollmentTags: DiscoveredEnrollmentTag[];
   configured: boolean;
   availableDefault: AvailableDefault | null;
 }
@@ -337,6 +358,35 @@ export function AccountingConnectionCard({
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Disconnect failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleSaveEnrollmentTag(
+    provider: AccountingSnapshotProvider,
+    tag: EnrollmentTagRef | null,
+  ) {
+    setBusy(`enrollment-${provider}`);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/models/${modelId}/accounting/${provider}/enrollment-tag`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authHeader() },
+          body: JSON.stringify({ tag }),
+        },
+      );
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || `Save failed (${res.status})`);
+      // Auto-trigger a sync so the snapshot's enrollment field reflects the
+      // new selection right away — without this the actuals editor would
+      // wait for the next daily sync to start using the live count.
+      if (tag) await handleSync(provider);
+      else await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed.");
     } finally {
       setBusy(null);
     }
@@ -641,6 +691,15 @@ export function AccountingConnectionCard({
                     saved={conn.accountMappings}
                     saving={busy === `mapping-${p.provider}`}
                     onSave={(m) => handleSaveMapping(p.provider, m)}
+                  />
+                )}
+                {conn && (
+                  <EnrollmentTagPanel
+                    provider={p.provider}
+                    tags={conn.discoveredEnrollmentTags}
+                    saved={conn.enrollmentTag}
+                    saving={busy === `enrollment-${p.provider}`}
+                    onSave={(t) => handleSaveEnrollmentTag(p.provider, t)}
                   />
                 )}
               </div>
@@ -966,6 +1025,128 @@ function ReuseLastMappingPrompt({
           Forget
         </button>
       </div>
+    </div>
+  );
+}
+
+interface EnrollmentTagPanelProps {
+  provider: AccountingSnapshotProvider;
+  // Candidate containers from the most recent sync. May be empty when the
+  // school hasn't synced yet or has no usable parent classes / tracking
+  // categories — we still render the panel and explain why.
+  tags: DiscoveredEnrollmentTag[];
+  saved: EnrollmentTagRef | null;
+  saving: boolean;
+  onSave: (tag: EnrollmentTagRef | null) => void;
+}
+
+// Founder-facing picker for the "students enrolled" source. Sits below the
+// account-mapping panel so the same connection block surfaces every override
+// the founder might want to make. The dropdown lists each candidate
+// container with its current child/option count ("Students FY26 — 82
+// students") so the founder can confidently pick the right one without
+// hopping over to QuickBooks/Xero to check.
+function EnrollmentTagPanel({
+  provider,
+  tags,
+  saved,
+  saving,
+  onSave,
+}: EnrollmentTagPanelProps) {
+  const [open, setOpen] = useState(false);
+
+  const providerLabel =
+    provider === "quickbooks" ? "QuickBooks class" : "Xero tracking category";
+
+  // The dropdown should always include the saved tag even if the most recent
+  // sync didn't surface it (e.g. zero active children right now). That keeps
+  // the founder from accidentally clearing their selection just by opening
+  // the panel.
+  const options = useMemo(() => {
+    const merged = [...tags];
+    if (saved && !tags.some((t) => t.id === saved.id && t.kind === saved.kind)) {
+      merged.push({ ...saved, count: 0 });
+    }
+    merged.sort((a, b) => a.name.localeCompare(b.name));
+    return merged;
+  }, [tags, saved]);
+
+  const summary = saved
+    ? `Currently using "${saved.name}"`
+    : "Not using a tag yet";
+
+  return (
+    <div
+      className="mt-3 border-t border-border/60 pt-3"
+      data-testid={`accounting-enrollment-panel-${provider}`}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+        data-testid={`accounting-enrollment-toggle-${provider}`}
+        aria-expanded={open}
+      >
+        {open ? (
+          <ChevronDown className="h-3.5 w-3.5" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5" />
+        )}
+        <GraduationCap className="h-3.5 w-3.5" />
+        Students enrolled source
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+          ({summary})
+        </span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Pick the {providerLabel} whose active{" "}
+            {provider === "quickbooks" ? "sub-classes" : "options"} represent
+            enrolled students or families. The next sync will read it and the
+            "Suggest from latest data" badge will use the live count instead of
+            your prior-year number.
+          </p>
+          {options.length === 0 ? (
+            <div
+              className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800"
+              data-testid={`accounting-enrollment-empty-${provider}`}
+            >
+              We haven't found any usable {providerLabel.toLowerCase()}s yet.
+              Add students under a parent {providerLabel.toLowerCase()} in
+              {provider === "quickbooks" ? " QuickBooks" : " Xero"}, then run a
+              sync.
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <select
+                className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                data-testid={`accounting-enrollment-select-${provider}`}
+                value={saved ? saved.id : ""}
+                disabled={saving}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (!id) {
+                    onSave(null);
+                    return;
+                  }
+                  const next = options.find((o) => o.id === id);
+                  if (!next) return;
+                  onSave({ kind: next.kind, id: next.id, name: next.name });
+                }}
+              >
+                <option value="">— None (use prior-year value) —</option>
+                {options.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name} — {o.count} student{o.count === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
