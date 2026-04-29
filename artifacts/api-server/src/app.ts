@@ -5,7 +5,7 @@ import compression from "compression";
 import router from "./routes";
 import { pool, db, errorLogsTable } from "@workspace/db";
 import { stripSensitive } from "./routes/errors";
-import { getMigrationStatus, getMigrationError } from "./lib/server-state";
+import { respondHealth } from "./lib/health";
 
 import { type RequestWithAbort } from "./lib/request-abort";
 export { isRequestAborted, type RequestWithAbort } from "./lib/request-abort";
@@ -105,19 +105,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   next();
 });
-
-function respondHealth(_req: Request, res: Response) {
-  const status = getMigrationStatus();
-  if (status === "failed") {
-    res.status(503).json({
-      status: "degraded",
-      migrations: "failed",
-      error: getMigrationError(),
-    });
-    return;
-  }
-  res.json({ status: "ok", migrations: status });
-}
 
 app.get("/health", respondHealth);
 app.get("/healthz", respondHealth);
