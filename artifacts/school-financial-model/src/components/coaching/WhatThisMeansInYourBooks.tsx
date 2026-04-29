@@ -32,12 +32,13 @@ export function WhatThisMeansInYourBooks({
   const level =
     (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const entry = BOOKKEEPING_TRANSLATIONS[step];
+  const defaultOpen = level !== "advanced";
   const [openByStep, setOpenByStep] = useState<Record<number, boolean>>({});
-  const open = openByStep[step] ?? true;
+  const open = openByStep[step] ?? defaultOpen;
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
-    if (!entry || level === "advanced") return;
+    if (!entry) return;
     const key = `step-${step}`;
     if (trackedRef.current === key) return;
     trackedRef.current = key;
@@ -48,7 +49,7 @@ export function WhatThisMeansInYourBooks({
     });
   }, [step, level, entry]);
 
-  if (level === "advanced" || !entry) return null;
+  if (!entry) return null;
 
   return (
     <div

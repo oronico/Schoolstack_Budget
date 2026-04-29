@@ -3,7 +3,6 @@ import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Edit2, Users, DollarSign, TrendingDown, ArrowUpRight, ArrowDownRight, Building2, AlertTriangle, Rocket, Lightbulb } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
-import { MicroLessonCardInner } from "@/components/coaching/MicroLessonCard";
 import { dismissLesson, getDismissedLessons } from "@/lib/coaching/micro-lessons";
 import { computeAnnualDebt } from "@workspace/finance";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, profitLabel } from "../schema";
@@ -14,23 +13,16 @@ import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import { computeMonthlyCashInflow } from "@/lib/revenue-defaults";
 import { useAuth } from "@/lib/auth-context";
 import { trackCoachingEvent } from "@/lib/coaching/track";
+import { BookOpen, X } from "lucide-react";
 import type { FullModelData } from "../schema";
 
-const BUDGET_TO_BOOKS_LESSON = {
-  id: "budget_to_books_review",
-  title: "From budget to books",
-  body:
-    "Your budget lives here, but it pays off inside your accounting system. Each month, ask your bookkeeper to put this plan in the Budget column of a Budget vs. Actual report - then spend ten minutes writing one sentence per material variance. That single habit turns a five-year model into a steering tool you actually use.",
-  readTimeSeconds: 30,
-  triggerStep: 8,
-  checkTrigger: () => true,
-};
+const BUDGET_TO_BOOKS_LESSON_ID = "budget_to_books_review";
 
 function BudgetToBooksLesson() {
   const { user } = useAuth();
   const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const [dismissed, setDismissed] = useState(() =>
-    getDismissedLessons().has(BUDGET_TO_BOOKS_LESSON.id),
+    getDismissedLessons().has(BUDGET_TO_BOOKS_LESSON_ID),
   );
   const trackedRef = useRef(false);
 
@@ -45,16 +37,104 @@ function BudgetToBooksLesson() {
   if (level === "advanced" || dismissed) return null;
 
   const handleDismiss = () => {
-    dismissLesson(BUDGET_TO_BOOKS_LESSON.id);
+    dismissLesson(BUDGET_TO_BOOKS_LESSON_ID);
     setDismissed(true);
   };
 
   return (
-    <div data-testid="budget-to-books-lesson" className="mt-2">
-      <MicroLessonCardInner
-        lesson={BUDGET_TO_BOOKS_LESSON}
-        onDismiss={handleDismiss}
-      />
+    <div
+      data-testid="budget-to-books-lesson"
+      className="mt-6 rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50/80 to-emerald-50/60 shadow-sm p-5 sm:p-6"
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="shrink-0 rounded-lg bg-teal-100 p-2">
+            <BookOpen className="h-4 w-4 text-teal-700" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-display font-semibold text-base text-foreground">
+              From budget to books
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              How the model you just built shows up in your accounting system.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="Dismiss lesson"
+          className="shrink-0 p-1 rounded-lg text-muted-foreground hover:bg-teal-100/70 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <p className="text-sm text-foreground/85 leading-relaxed">
+        Your budget lives here, but the school operates inside an accounting
+        system. Once a month, your bookkeeper will close the books and produce
+        three reports — the same three this model is built around. Putting your
+        plan into the Budget column of each is what turns a five-year model into
+        a tool you actually steer with.
+      </p>
+
+      <div className="grid sm:grid-cols-3 gap-3 mt-4">
+        <div className="rounded-xl border border-emerald-200/70 bg-white/80 p-3">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800">
+              P&amp;L
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-foreground">
+            <GlossaryTerm termKey="pl_statement">Profit &amp; Loss</GlossaryTerm>
+          </p>
+          <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+            Each month's revenue minus expenses. Your wizard's annual numbers
+            land here, ending in{" "}
+            <GlossaryTerm termKey="net_income">net income</GlossaryTerm>.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-sky-200/70 bg-white/80 p-3">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-sky-100 text-sky-800">
+              Balance Sheet
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-foreground">
+            <GlossaryTerm termKey="balance_sheet">Balance Sheet</GlossaryTerm>
+          </p>
+          <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+            What you own and owe on a given day —{" "}
+            <GlossaryTerm termKey="assets">assets</GlossaryTerm>,{" "}
+            <GlossaryTerm termKey="liabilities">liabilities</GlossaryTerm>, and{" "}
+            <GlossaryTerm termKey="equity">equity</GlossaryTerm>. Your opening
+            balances seed it on day one.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-800">
+              Cash Flow
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-foreground">
+            <GlossaryTerm termKey="cash_flow_statement">Cash Flow Statement</GlossaryTerm>
+          </p>
+          <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+            Why your bank balance changed over a period. The wizard's monthly
+            cash trough comes straight from this view.
+          </p>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground leading-relaxed mt-4 italic">
+        Then close the loop: every month, compare this Budget to your Actual
+        P&amp;L. That habit is called{" "}
+        <GlossaryTerm termKey="variance_analysis">variance analysis</GlossaryTerm>,
+        and it's how a budget becomes a steering tool instead of a setup task.
+      </p>
     </div>
   );
 }
