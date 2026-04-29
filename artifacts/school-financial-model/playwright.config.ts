@@ -25,7 +25,11 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    // Video recording is intentionally disabled: it requires ffmpeg, which
+    // is not bundled with the Replit-pinned Playwright Chromium build, so
+    // enabling it breaks the validation `e2e` step. Trace + screenshot are
+    // sufficient for diagnosing failures.
+    video: "off",
   },
   projects: [
     {

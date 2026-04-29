@@ -87,6 +87,16 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    // Ignore Playwright output dirs so the e2e validation workflow doesn't
+    // trigger HMR reloads in the regular dev server when it writes traces,
+    // screenshots, or HTML reports.
+    watch: {
+      ignored: [
+        "**/playwright-report/**",
+        "**/test-results/**",
+        "**/.playwright/**",
+      ],
+    },
   },
   preview: {
     port,

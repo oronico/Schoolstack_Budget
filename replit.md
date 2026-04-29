@@ -105,6 +105,9 @@ A shared packet-generation layer supports lender-ready and board-ready deliverab
 ### Decision Engine
 Identifies and surfaces critical financial issues with severity ranking, model-specific summaries, explanations, recommended actions, and navigation to relevant steps.
 
+## Quality Gates
+Two validation steps run together as the project's CI gate (Replit invokes the same set when verifying a task): `test` (`pnpm --filter @workspace/school-financial-model run test`, vitest) and `e2e` (`E2E_PORT=23192 E2E_START_SERVERS=1 pnpm --filter @workspace/school-financial-model run test:e2e`). The `e2e` step boots its own Vite dev server on the dedicated port `23192` (so it never collides with the regular `school-financial-model: web` dev workflow on 22092) and reuses the running api-server on port 8080 via Playwright's `webServer` block (gated on `E2E_START_SERVERS=1`). A failure blocks validation just like a failing unit test, so deep-link regressions (e.g. the saved-scenario "Replace export" handoff) cannot land silently. Video capture is disabled in `playwright.config.ts` because the Replit-pinned Playwright Chromium build does not bundle the matching ffmpeg; trace + screenshot remain enabled for failure diagnosis. The Vite dev server's `server.watch.ignored` excludes `playwright-report/`, `test-results/`, and `.playwright/` so the e2e step's artifacts don't trigger HMR reloads in the regular dev workflow. `typecheck` is intentionally *not* part of the validation gate yet — the existing TypeScript baseline has pre-existing errors across multiple artifacts that need dedicated cleanup first.
+
 ## Deployment Architecture
 - **Development**: Replit
 - **Source of truth**: GitHub
