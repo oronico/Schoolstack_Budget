@@ -24,6 +24,13 @@ export interface ScenarioMetrics {
   breakEvenYear: number | null;
   cashRunwayMonths: number;
   reserveMonths: number;
+  /**
+   * Year-end cash position for each of the 5 modeled years, in dollars.
+   * Computed as openingBalances.cash + cumulative net income through year Y.
+   * Lets founders see the per-year trough — the year cash is tightest — which
+   * is critical for spotting the "runway crunch year" lenders zero in on.
+   */
+  cashPosition: number[];
   loanDebtService?: number[];
 }
 
@@ -308,6 +315,13 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     if (runningCash <= 0) break;
   }
 
+  const cashPosition: number[] = [];
+  let cumCash = startingCash;
+  for (let y = 0; y < 5; y++) {
+    cumCash += netIncome[y];
+    cashPosition.push(cumCash);
+  }
+
   return {
     enrollment,
     revenue,
@@ -322,6 +336,7 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
     breakEvenYear: breakEvenIdx >= 0 ? breakEvenIdx + 1 : null,
     cashRunwayMonths: Math.round(cashRunwayMonths * 10) / 10,
     reserveMonths: Math.round(reserveMonths * 10) / 10,
+    cashPosition,
     loanDebtService: loanDS,
   };
 }
@@ -377,6 +392,13 @@ function applyAdjustments(
     if (runningCash <= 0) break;
   }
 
+  const cashPosition: number[] = [];
+  let cumCash = startingCash;
+  for (let y = 0; y < 5; y++) {
+    cumCash += netIncome[y];
+    cashPosition.push(cumCash);
+  }
+
   return {
     enrollment,
     revenue,
@@ -391,6 +413,7 @@ function applyAdjustments(
     breakEvenYear: breakEvenIdx >= 0 ? breakEvenIdx + 1 : null,
     cashRunwayMonths: Math.round(cashRunwayMonths * 10) / 10,
     reserveMonths: Math.round(reserveMonths * 10) / 10,
+    cashPosition,
     loanDebtService: baseLoanDS,
   };
 }

@@ -493,6 +493,44 @@ describe("scenario-engine: cash runway and reserves", () => {
   });
 });
 
+describe("scenario-engine: cash position", () => {
+  it("computes year-end cash as starting cash plus cumulative net income", () => {
+    const m = run({
+      openingBalances: { cash: 100000 },
+      enrollment: { year1: 0, year2: 0, year3: 0, year4: 0, year5: 0, retentionRate: 90 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [50000, 60000, 70000, 80000, 90000] },
+      ],
+      expenseRows: [
+        { id: "e1", enabled: true, category: "administrative_general", driverType: "annual_fixed", amounts: [40000, 40000, 40000, 40000, 40000] },
+      ],
+    });
+    // Net income per year: 10k, 20k, 30k, 40k, 50k.
+    // Cumulative: 110k, 130k, 160k, 200k, 250k.
+    expect(m.cashPosition).toEqual([110000, 130000, 160000, 200000, 250000]);
+  });
+
+  it("surfaces a negative trough year so founders can spot the runway crunch", () => {
+    const m = run({
+      openingBalances: { cash: 30000 },
+      enrollment: { year1: 0, year2: 0, year3: 0, year4: 0, year5: 0, retentionRate: 90 },
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [50000, 50000, 50000, 200000, 200000] },
+      ],
+      expenseRows: [
+        { id: "e1", enabled: true, category: "administrative_general", driverType: "annual_fixed", amounts: [80000, 80000, 80000, 80000, 80000] },
+      ],
+    });
+    // Net income per year: -30k, -30k, -30k, +120k, +120k.
+    // Cumulative cash: 0, -30k, -60k, +60k, +180k.
+    // Trough is Y3 at -60k. Recovery in Y4.
+    expect(m.cashPosition[2]).toBe(-60000);
+    expect(m.cashPosition[3]).toBe(60000);
+    const trough = Math.min(...m.cashPosition);
+    expect(trough).toBe(-60000);
+  });
+});
+
 describe("scenario-engine: tuition tiers", () => {
   it("applies discount tiers to tuition row", () => {
     const m = run({

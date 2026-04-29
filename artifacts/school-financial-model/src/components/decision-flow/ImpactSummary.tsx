@@ -471,6 +471,9 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
   const marginYears = [0, 1, 2, 3, 4].map((i) =>
     cols.map((c) => c.impact.adjusted.netMargin[i] as number | null),
   );
+  const cashPositionYears = [0, 1, 2, 3, 4].map((i) =>
+    cols.map((c) => c.impact.adjusted.cashPosition[i] as number | null),
+  );
 
   return (
     <div className="space-y-5" data-testid="decision-impact-comparison">
@@ -604,6 +607,38 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                         ) : (
                           "—"
                         )}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+
+              {/* Cash position after — surfaces the per-year trough so
+                  founders can spot the runway crunch year lenders zero in on. */}
+              {cols.map((c, ci) => {
+                const palette = COLUMN_PALETTE[ci] ?? COLUMN_PALETTE[0];
+                return (
+                  <tr key={`cash-${ci}`} className={cn("border-t border-border/60", ci % 2 === 1 && "bg-slate-50/40")}>
+                    {ci === 0 && (
+                      <td className="px-3 py-2 font-sans text-muted-foreground" rowSpan={n}>
+                        Cash position
+                      </td>
+                    )}
+                    <td className={cn("px-2 py-2 font-sans text-[10px] uppercase tracking-wider", palette.headerText)}>
+                      {palette.letter}
+                    </td>
+                    {c.impact.adjusted.cashPosition.map((v, yi) => (
+                      <td
+                        key={yi}
+                        className="px-2 py-2 text-right"
+                        data-testid={`cmp-cash-position-col-${ci}-y${yi + 1}`}
+                      >
+                        <YearCell
+                          values={cashPositionYears[yi]}
+                          index={ci}
+                          higherIsBetter={true}
+                          display={fmtMoney(v)}
+                        />
                       </td>
                     ))}
                   </tr>
