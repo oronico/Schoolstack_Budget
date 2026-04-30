@@ -6,8 +6,20 @@ const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_REQUESTS = 5;
 const CLEANUP_RETENTION_MS = 5 * 60_000;
 
+// When the Playwright e2e workflow boots the api-server it sets
+// E2E_START_SERVERS=1. The e2e suite registers many users sequentially
+// from a single IP (localhost), which exhausts the production rate-limit
+// (5–10 requests/min/endpoint) and produces spurious 429 failures that
+// have nothing to do with the code under test. We bypass the limiter
+// only when that env flag is set so production behavior is untouched.
+const E2E_BYPASS = process.env.E2E_START_SERVERS === "1";
+
 export function createRateLimiter(windowMs = RATE_WINDOW_MS, maxRequests = RATE_MAX_REQUESTS) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    if (E2E_BYPASS) {
+      next();
+      return;
+    }
     const ip = req.ip || req.socket.remoteAddress || "unknown";
     const endpoint = req.path;
     const now = new Date();
