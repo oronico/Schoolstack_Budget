@@ -204,6 +204,7 @@ export function ModelWizardPage() {
 
   const updateMutation = useUpdateModel();
 
+
   const methods = useForm({
     resolver: zodResolver(fullModelSchema),
     defaultValues: {
@@ -308,6 +309,7 @@ export function ModelWizardPage() {
     },
     mode: "onChange"
   });
+
 
   useEffect(() => {
     if (initialData?.data) {

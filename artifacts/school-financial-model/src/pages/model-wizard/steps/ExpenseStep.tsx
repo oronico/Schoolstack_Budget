@@ -358,7 +358,7 @@ function ForgottenCostsPrompt({
 }
 
 export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => void; modelId?: number | null }) {
-  const { watch, setValue } = useFormContext();
+  const { watch, setValue, getValues } = useFormContext();
   // Yet-to-launch founders never see the QuickBooks/Xero name-drop in the
   // Chart of Accounts callout — Task #302 keeps accounting-software framing
   // out of the pre-opening flow.
@@ -551,7 +551,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       ? getStateEntityFeeProfile(stateCode, entityType as EntityType)
       : null;
 
-    const current = (watch("expenseRows") as typeof expenseRows | undefined) ?? expenseRows;
+    const current = (getValues("expenseRows") as typeof expenseRows | undefined) ?? expenseRows;
     const existingIdx = current.findIndex(r => r.id === STATE_ENTITY_FEE_ROW_ID || r.lineItem === STATE_ENTITY_FEE_LINE_ITEM);
 
     if (!profile) {
@@ -591,11 +591,13 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         return next;
       });
     }
-  }, [stateCode, entityType, defaultsApplied, yearCount, setValue, watch]);
+  }, [stateCode, entityType, defaultsApplied, yearCount, setValue, getValues]);
 
   useEffect(() => {
-    if (!defaultsApplied || expenseRows.length === 0) return;
-    const updated = expenseRows.map((row) => {
+    if (!defaultsApplied) return;
+    const current = (getValues("expenseRows") as ExpenseRowData[] | undefined) || [];
+    if (current.length === 0) return;
+    const updated = current.map((row) => {
       if (row.lineItem !== "Authorizer / Management Fee") return row;
       const shouldEnable = hasManagementFee === true;
       const pct = managementFeePercent || 5;
@@ -605,17 +607,19 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         amounts: row.amounts.map(() => shouldEnable ? pct : row.amounts[0]),
       };
     });
-    const changed = updated.some((r, i) => r.enabled !== expenseRows[i].enabled || r.amounts[0] !== expenseRows[i].amounts[0]);
+    const changed = updated.some((r, i) => r.enabled !== current[i].enabled || r.amounts[0] !== current[i].amounts[0]);
     if (changed) {
       setExpenseRows(updated);
       setValue("expenseRows", updated, { shouldDirty: true });
     }
-  }, [hasManagementFee, managementFeePercent, defaultsApplied]);
+  }, [hasManagementFee, managementFeePercent, defaultsApplied, getValues, setValue]);
 
   useEffect(() => {
-    if (!defaultsApplied || expenseRows.length === 0) return;
+    if (!defaultsApplied) return;
+    const current = (getValues("expenseRows") as ExpenseRowData[] | undefined) || [];
+    if (current.length === 0) return;
     let changed = false;
-    const updated = expenseRows.map((row) => {
+    const updated = current.map((row) => {
       if (row.lineItem === "Bookkeeper") {
         const shouldEnable = hasBookkeeper === true;
         const cost = bookkeeperMonthlyCost || 0;
@@ -676,7 +680,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         setExpandedCategories((prev) => new Set(prev).add("administrative_general"));
       }
     }
-  }, [hasBookkeeper, bookkeeperMonthlyCost, hasLawyer, lawyerMonthlyCost, hasGeneralLiabilityInsurance, insuranceCost, hasLocalBusinessLicense, localBusinessLicenseAnnualCost, defaultsApplied, enabledCategories]);
+  }, [hasBookkeeper, bookkeeperMonthlyCost, hasLawyer, lawyerMonthlyCost, hasGeneralLiabilityInsurance, insuranceCost, hasLocalBusinessLicense, localBusinessLicenseAnnualCost, escalationRates, yearCount, defaultsApplied, enabledCategories, getValues, setValue]);
 
   useEffect(() => {
     if (!defaultsApplied || capitalRows.length === 0) return;
