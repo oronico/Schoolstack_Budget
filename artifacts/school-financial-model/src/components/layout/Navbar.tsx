@@ -112,9 +112,12 @@ export function Navbar() {
     <>
       <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-3 group">
-            <img src={`${import.meta.env.BASE_URL}logos/schoolstack-mark.svg`} alt="SchoolStack" className="h-14 w-14 sm:h-18 sm:w-18 group-hover:scale-105 transition-transform duration-300" />
-            <h1 className="font-display text-lg sm:text-2xl font-bold tracking-tight text-foreground leading-none">SchoolStack <span className="text-primary">Budget</span></h1>
+          <Link href="/" className="flex items-center group" aria-label="SchoolStack Budget — home">
+            <img
+              src={`${import.meta.env.BASE_URL}logos/schoolstack-budget.svg`}
+              alt="SchoolStack Budget"
+              className="h-10 sm:h-12 w-auto group-hover:scale-105 transition-transform duration-300"
+            />
           </Link>
 
           <div className="flex items-center gap-4">

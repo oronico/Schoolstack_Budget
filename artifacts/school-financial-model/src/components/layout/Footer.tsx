@@ -7,9 +7,12 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           <div className="sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-3 mb-4">
-              <img src={`${import.meta.env.BASE_URL}logos/schoolstack-mark.svg`} alt="SchoolStack" className="h-14 w-14" />
-              <p className="font-display text-lg font-bold text-white leading-none">SchoolStack Budget</p>
+            <div className="mb-4">
+              <img
+                src={`${import.meta.env.BASE_URL}logos/schoolstack-budget-white.svg`}
+                alt="SchoolStack Budget"
+                className="h-10 w-auto"
+              />
             </div>
             <p className="text-sm text-white/60 leading-relaxed max-w-xs">
               Build a simple 5-year financial model for your school, save your work, and export a lender-ready workbook.
