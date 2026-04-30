@@ -37,6 +37,25 @@ const ConsultantStep = lazy(() => import("./steps/ConsultantStep").then(m => ({ 
 const NarrativeStep = lazy(() => import("./steps/NarrativeStep").then(m => ({ default: m.NarrativeStep })));
 const ExportStep = lazy(() => import("./steps/ExportStep").then(m => ({ default: m.ExportStep })));
 
+// Chesterton-only steps (lazy-loaded — only needed when the founder picks the
+// Chesterton Academy school type). When not chesterton, these chunks never
+// download.
+const ChestertonEnrollmentStep = lazy(() =>
+  import("./steps/chesterton/ChestertonEnrollmentStep").then(m => ({ default: m.ChestertonEnrollmentStep })),
+);
+const ChestertonStaffingStep = lazy(() =>
+  import("./steps/chesterton/ChestertonStaffingStep").then(m => ({ default: m.ChestertonStaffingStep })),
+);
+const ChestertonFundraisingStep = lazy(() =>
+  import("./steps/chesterton/ChestertonFundraisingStep").then(m => ({ default: m.ChestertonFundraisingStep })),
+);
+const ChestertonGiftChartStep = lazy(() =>
+  import("./steps/chesterton/ChestertonGiftChartStep").then(m => ({ default: m.ChestertonGiftChartStep })),
+);
+const ChestertonRecruitingStep = lazy(() =>
+  import("./steps/chesterton/ChestertonRecruitingStep").then(m => ({ default: m.ChestertonRecruitingStep })),
+);
+
 function stripEmptyValues(obj: unknown): unknown {
   if (obj === null || obj === undefined) return undefined;
   if (typeof obj === "string") return obj === "" ? undefined : obj;
@@ -103,7 +122,9 @@ function normalizeEscalationOverrideRows(data: Record<string, unknown>): Record<
 // step). Steps that don't recognise the value simply ignore it.
 type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null; focus?: string };
 
-const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[] = [
+type StepDef = { id: number; title: string; component: ComponentType<StepProps> };
+
+const STEPS: StepDef[] = [
   { id: 1, title: "Story", component: StoryStep as ComponentType<StepProps> },
   { id: 2, title: "School Details", component: SchoolProfileStep },
   { id: 3, title: "Enrollment", component: EnrollmentStep },
@@ -118,12 +139,24 @@ const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[
   { id: 12, title: "Export", component: ExportStep as ComponentType<StepProps> },
 ];
 
-const CAPITAL_FINANCING_STEP_ID = 7;
-const ASSUMPTIONS_STEP_ID = 8;
-const REVIEW_STEP_ID = 9;
-const CONSULTANT_STEP_ID = 10;
-const NARRATIVE_STEP_ID = 11;
-const EXPORT_STEP_ID = 12;
+// Wizard layout when the founder picks Chesterton Academy: replace the generic
+// Enrollment + Staffing steps with periods-based variants, and insert
+// Fundraising / Gift Chart / Recruiting between Staffing and Expenses. We
+// renumber the IDs so they remain a contiguous 1..N — `currentStep` is always
+// an index into the visible step list, never a stable "step kind" identifier.
+function buildChestertonSteps(): StepDef[] {
+  const base = STEPS.map(s => ({ ...s }));
+  base[2] = { ...base[2], title: "Enrollment", component: ChestertonEnrollmentStep as ComponentType<StepProps> };
+  base[4] = { ...base[4], title: "Staffing", component: ChestertonStaffingStep as ComponentType<StepProps> };
+  const inserted: StepDef[] = [
+    { id: 0, title: "Fundraising Goals", component: ChestertonFundraisingStep as ComponentType<StepProps> },
+    { id: 0, title: "Gift Chart", component: ChestertonGiftChartStep as ComponentType<StepProps> },
+    { id: 0, title: "Recruiting", component: ChestertonRecruitingStep as ComponentType<StepProps> },
+  ];
+  const merged = [...base.slice(0, 5), ...inserted, ...base.slice(5)];
+  return merged.map((s, i) => ({ ...s, id: i + 1 }));
+}
+const CHESTERTON_STEPS: StepDef[] = buildChestertonSteps();
 
 // Maps a saved `currentStep` written under the pre-task-#329 11-step layout
 // (Assumptions at 3 with Capital/DSCR baked in) to the new 12-step layout
@@ -227,6 +260,14 @@ export function ModelWizardPage() {
 
   const updateMutation = useUpdateModel();
 
+  // Step list is derived from the school type so picking "Chesterton Academy"
+  // swaps in the periods-based salary schedule + fundraising flow. We watch
+  // `schoolProfile.schoolType` rather than reading it once because the founder
+  // can change school type mid-wizard and we want the sidebar to update live.
+  // Note: defined ahead of useForm by reading from RHF's value via getValues
+  // is impossible here (form not constructed yet), so we wrap the visibleSteps
+  // computation in a useMemo that tracks `schoolType` from `methods.watch`
+  // declared right after.
 
   const methods = useForm({
     resolver: zodResolver(fullModelSchema),
@@ -392,8 +433,8 @@ export function ModelWizardPage() {
       // the saved-scenarios "Replace export" affordance land directly on the
       // School Profile step instead of wherever the founder left off.
       const deepLinkStep = initialDeepLinkRef.current.step;
-      if (deepLinkStep && deepLinkStep >= 1 && deepLinkStep <= STEPS.length) {
-        setCurrentStep(Math.min(deepLinkStep, STEPS.length));
+      if (deepLinkStep && deepLinkStep >= 1 && deepLinkStep <= visibleSteps.length) {
+        setCurrentStep(Math.min(deepLinkStep, visibleSteps.length));
       } else if (initialData.currentStep) {
         // Migration A (storyMigration): an earlier wizard had 10 steps with
         // Profile at step 1. We inserted a new "Story" step at position 1,
@@ -441,7 +482,7 @@ export function ModelWizardPage() {
           }
         }
 
-        setCurrentStep(Math.min(target, STEPS.length));
+        setCurrentStep(Math.min(target, visibleSteps.length));
       }
       setStepInitialized(true);
     }
@@ -453,7 +494,7 @@ export function ModelWizardPage() {
     return () => {
       if (modelId) {
         const elapsed = (Date.now() - stepStartTime.current) / 1000;
-        const stepName = STEPS[currentStep - 1]?.title || "";
+        const stepName = visibleSteps[currentStep - 1]?.title || "";
         sendModelTiming(currentStep, stepName, elapsed, modelId);
       }
     };
@@ -464,6 +505,35 @@ export function ModelWizardPage() {
   const latestValuesRef = useRef(formValues);
   const lastSavedRef = useRef<string>("");
   latestValuesRef.current = formValues;
+
+  // Visible step list — switches to the Chesterton variant whenever the
+  // school type is set to chesterton_academy. We re-derive on every change
+  // so the sidebar updates live.
+  const watchedSchoolType = (formValues?.schoolProfile as Record<string, unknown> | undefined)?.schoolType as string | undefined;
+  const visibleSteps = useMemo(
+    () => (watchedSchoolType === "chesterton_academy" ? CHESTERTON_STEPS : STEPS),
+    [watchedSchoolType],
+  );
+  const stepIdByTitle = useCallback(
+    (title: string) => {
+      const idx = visibleSteps.findIndex(s => s.title === title);
+      return idx === -1 ? -1 : idx + 1;
+    },
+    [visibleSteps],
+  );
+  const CAPITAL_FINANCING_STEP_ID = stepIdByTitle("Capital & Financing");
+  const ASSUMPTIONS_STEP_ID = stepIdByTitle("Assumptions & Sensitivity");
+  const REVIEW_STEP_ID = stepIdByTitle("Review");
+  const NARRATIVE_STEP_ID = stepIdByTitle("Lender Narrative");
+  const EXPORT_STEP_ID = stepIdByTitle("Export");
+
+  // Keep currentStep within bounds when the visible list shrinks (founder
+  // switches off Chesterton after advancing past step 12).
+  useEffect(() => {
+    if (currentStep > visibleSteps.length) {
+      setCurrentStep(visibleSteps.length);
+    }
+  }, [visibleSteps.length, currentStep]);
 
   const performSave = useCallback(async (valuesToSave: Record<string, unknown>): Promise<boolean> => {
     if (!modelId || !initialData) return false;
@@ -696,7 +766,7 @@ export function ModelWizardPage() {
     );
   }
 
-  const ActiveStepComponent = STEPS[currentStep - 1].component;
+  const ActiveStepComponent = visibleSteps[currentStep - 1].component;
   const isExportStep = currentStep === EXPORT_STEP_ID;
 
   const checkCoreFieldsForExport = (): { ok: boolean; missing: string[] } => {
@@ -720,9 +790,14 @@ export function ModelWizardPage() {
 
   const handleNext = async () => {
     const validateStep = async (step: number): Promise<boolean> => {
-      switch (step) {
-        case 1: {
-          // Story step — require school name & type only; everything else is soft.
+      // The original switch was index-based (case 1..6). After Chesterton
+      // branching the same numeric step now points to a different screen
+      // depending on schoolType, so we dispatch by step title instead.
+      // Falls through to the original ID-based cases (CAPITAL_FINANCING/
+      // ASSUMPTIONS/NARRATIVE) which are derived from titles already.
+      const stepTitle = visibleSteps[step - 1]?.title || "";
+      switch (stepTitle) {
+        case "Story": {
           const profile = methods.getValues("schoolProfile") as Record<string, unknown> | undefined;
           const missing: string[] = [];
           if (!profile?.schoolName || !(profile.schoolName as string).trim()) missing.push("School name");
@@ -733,36 +808,52 @@ export function ModelWizardPage() {
           }
           return true;
         }
-        case 2: return methods.trigger('schoolProfile');
-        case 3: {
-          const progs = methods.getValues('programs') as unknown[];
-          if (progs && progs.length > 0) {
-            return methods.trigger('programs');
-          }
-          return methods.trigger('enrollment');
+        case "School Profile":
+          return methods.trigger("schoolProfile");
+        case "Enrollment": {
+          const progs = methods.getValues("programs") as unknown[];
+          if (progs && progs.length > 0) return methods.trigger("programs");
+          return methods.trigger("enrollment");
         }
-        case 4: {
+        case "Chesterton Enrollment":
+          // Cast: chesterton.* paths come from chestertonSchema but aren't
+          // surfaced through RHF's inferred FieldPath union (the union
+          // bottoms out before nested optional namespaces).
+          return methods.trigger("chesterton.phaseEnrollment" as never);
+        case "Revenue": {
           const [a, b] = await Promise.all([
-            methods.trigger('revenue'),
-            methods.trigger('revenueRows'),
+            methods.trigger("revenue"),
+            methods.trigger("revenueRows"),
           ]);
           return a && b;
         }
-        case 5: {
+        case "Staffing": {
           const [a, b] = await Promise.all([
-            methods.trigger('staffing'),
-            methods.trigger('staffingRows'),
+            methods.trigger("staffing"),
+            methods.trigger("staffingRows"),
           ]);
           return a && b;
         }
-        case 6: {
+        case "Chesterton Staffing":
+          return methods.trigger("chesterton.salarySchedule" as never);
+        case "Fundraising":
+          return methods.trigger("chesterton.fundraisingGoals" as never);
+        case "Gift Chart":
+          return methods.trigger("chesterton.giftChart" as never);
+        case "Recruiting":
+          return methods.trigger("chesterton.recruitingPipeline" as never);
+        case "Expenses": {
           const [a, b, d] = await Promise.all([
-            methods.trigger('facilities'),
-            methods.trigger('expenseRows'),
-            methods.trigger('capitalAndDebtRows'),
+            methods.trigger("facilities"),
+            methods.trigger("expenseRows"),
+            methods.trigger("capitalAndDebtRows"),
           ]);
           return a && b && d;
         }
+      }
+      // Fall through to ID-based dispatch for the back half of the
+      // wizard (Capital & Financing, Assumptions, Lender Narrative).
+      switch (step) {
         case CAPITAL_FINANCING_STEP_ID: {
           // Capital & Financing fields live under schoolProfile.* (loan
           // amount/rate/term) and covenantThresholds.dscrByYear.*. Both are
@@ -826,13 +917,13 @@ export function ModelWizardPage() {
           console.warn("Failed to persist wizard progress:", err);
         }
         trackCoachingEvent("wizard_section_completed", {
-          section: STEPS[currentStep - 1].title.toLowerCase(),
+          section: visibleSteps[currentStep - 1].title.toLowerCase(),
           step: currentStep,
           modelId: modelId ?? null,
           guidanceLevel: user?.guidanceLevel ?? null,
         });
       }
-      setCurrentStep(s => Math.min(s + 1, STEPS.length));
+      setCurrentStep(s => Math.min(s + 1, visibleSteps.length));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setTimeout(() => {
@@ -944,7 +1035,7 @@ export function ModelWizardPage() {
                 {initialData?.name || "Untitled Model"}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 md:hidden">
-                Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1].title}
+                Step {currentStep} of {visibleSteps.length}: {visibleSteps[currentStep - 1]?.title}
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -980,9 +1071,9 @@ export function ModelWizardPage() {
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-secondary rounded-full -z-10" />
             <div 
               className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full -z-10 transition-all duration-500"
-              style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
+              style={{ width: `${((currentStep - 1) / Math.max(visibleSteps.length - 1, 1)) * 100}%` }}
             />
-            {STEPS.map((step) => {
+            {visibleSteps.map((step) => {
               const isCompleted = completedSteps.current.has(step.id);
               const isCurrent = currentStep === step.id;
               return (
@@ -1084,7 +1175,7 @@ export function ModelWizardPage() {
               >
                 {currentStep === REVIEW_STEP_ID
                   ? "View Consultant Analysis"
-                  : currentStep === CONSULTANT_STEP_ID
+                  : currentStep === stepIdByTitle("Consultant")
                     ? "Continue to Lender Narrative"
                     : currentStep === NARRATIVE_STEP_ID
                       ? "Generate Excel Model"

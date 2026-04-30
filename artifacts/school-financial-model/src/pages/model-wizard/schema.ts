@@ -14,7 +14,7 @@ export const fundingProfileSchema = z.enum(["tuition_based", "charter_public_fun
   required_error: "Please select a funding profile",
   invalid_type_error: "Please select a valid funding profile",
 });
-export const schoolTypeSchema = z.enum(["catholic_school", "charter_school", "homeschool_coop", "learning_pod", "microschool", "private_school", "tutoring_center", "other"], {
+export const schoolTypeSchema = z.enum(["catholic_school", "charter_school", "chesterton_academy", "homeschool_coop", "learning_pod", "microschool", "private_school", "tutoring_center", "other"], {
   required_error: "Please select the type of school you're building",
   invalid_type_error: "Please select a valid school type",
 });
@@ -592,6 +592,95 @@ export const customScenarioSchema = z.object({
 });
 export type CustomScenario = z.infer<typeof customScenarioSchema>;
 
+// ── Chesterton Schools Network (CSN) Operating Manual ─────────────────────────
+// All Chesterton sub-schemas are optional so non-Chesterton models stay
+// backwards-compatible. They populate when the founder picks "Chesterton
+// Academy" on School Profile (see `applyChestertonTemplate` in
+// `src/lib/chesterton/template.ts`).
+export const chestertonSubjectRowSchema = z.object({
+  id: z.string(),
+  subject: z.string().min(1),
+  periodsPerSection: z.coerce.number().min(0).max(10).default(5),
+  notes: z.string().optional(),
+});
+
+export const chestertonFundraisingRowSchema = z.object({
+  id: z.string(),
+  category: z.string().min(1),
+  goalAmount: z.coerce.number().min(0).default(0),
+  numberOfGifts: z.coerce.number().min(0).default(0),
+  averageGift: z.coerce.number().min(0).default(0),
+  notes: z.string().optional(),
+});
+
+export const chestertonGiftRowSchema = z.object({
+  id: z.string(),
+  giftAmount: z.coerce.number().min(0).default(0),
+  numberOfGifts: z.coerce.number().min(0).default(0),
+  numberOfProspects: z.coerce.number().min(0).default(0),
+});
+
+export const chestertonRecruitingRowSchema = z.object({
+  id: z.string(),
+  source: z.string().min(1),
+  prospectiveStudents: z.coerce.number().min(0).default(0),
+  notes: z.string().optional(),
+});
+
+export const chestertonGradeRowSchema = z.object({
+  grade: z.enum(["freshman", "sophomore", "junior", "senior"]),
+  year0: z.coerce.number().min(0).default(0),
+  year1: z.coerce.number().min(0).default(0),
+  year2: z.coerce.number().min(0).default(0),
+  year3: z.coerce.number().min(0).default(0),
+  year4: z.coerce.number().min(0).default(0),
+  year5: z.coerce.number().min(0).default(0),
+});
+
+export const chestertonContactRowSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  affiliation: z.string().optional(),
+  teamMember: z.string().optional(),
+});
+
+export const chestertonFacilityRowSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  capacity: z.coerce.number().min(0).default(0),
+  location: z.string().optional(),
+});
+
+export const chestertonSchema = z.object({
+  planningYear: z.coerce.number().int().min(2024).max(2050).default(2027),
+  startingTuition: z.coerce.number().min(0).default(8500),
+  tuitionGrowthRate: z.coerce.number().min(0).max(0.5).default(0.04),
+  bookSupplyFee: z.coerce.number().min(0).default(600),
+  financialAidPct: z.coerce.number().min(0).max(1).default(0.10),
+  startingTeacherSalary: z.coerce.number().min(0).default(44000),
+  benefitsFirstYearAmount: z.coerce.number().min(0).default(0),
+  attritionRate: z.coerce.number().min(0).max(1).default(0.10),
+  totalFundraisingGoal: z.coerce.number().min(0).default(0),
+  phaseEnrollment: z.array(chestertonGradeRowSchema).optional(),
+  classesPerGrade: z.array(z.coerce.number().min(0)).optional(),
+  salarySchedule: z.array(chestertonSubjectRowSchema).optional(),
+  fundraisingGoals: z.array(chestertonFundraisingRowSchema).optional(),
+  giftChart: z.array(chestertonGiftRowSchema).optional(),
+  recruitingPipeline: z.array(chestertonRecruitingRowSchema).optional(),
+  prospectiveFacilities: z.array(chestertonFacilityRowSchema).optional(),
+  priestlyOutreach: z.array(chestertonContactRowSchema).optional(),
+  keyInfluencers: z.array(chestertonContactRowSchema).optional(),
+});
+
+export type ChestertonSubjectRow = z.infer<typeof chestertonSubjectRowSchema>;
+export type ChestertonFundraisingRow = z.infer<typeof chestertonFundraisingRowSchema>;
+export type ChestertonGiftRow = z.infer<typeof chestertonGiftRowSchema>;
+export type ChestertonRecruitingRow = z.infer<typeof chestertonRecruitingRowSchema>;
+export type ChestertonGradeRow = z.infer<typeof chestertonGradeRowSchema>;
+export type ChestertonContactRow = z.infer<typeof chestertonContactRowSchema>;
+export type ChestertonFacilityRow = z.infer<typeof chestertonFacilityRowSchema>;
+export type ChestertonData = z.infer<typeof chestertonSchema>;
+
 export const fullModelSchema = z.object({
   schoolProfile: schoolProfileSchema.optional(),
   enrollment: enrollmentSchema.optional(),
@@ -618,6 +707,7 @@ export const fullModelSchema = z.object({
   covenantThresholds: covenantThresholdsSchema.optional(),
   budgetNarrative: budgetNarrativeSchema.optional(),
   assumptionFlagResponses: z.array(assumptionFlagResponseSchema).optional(),
+  chesterton: chestertonSchema.optional(),
 });
 
 export type FullModelData = z.infer<typeof fullModelSchema>;
@@ -647,6 +737,7 @@ export const ENTITY_TYPE_LABELS: Record<string, string> = {
 export const SCHOOL_TYPE_LABELS: Record<string, string> = {
   catholic_school: "Catholic School",
   charter_school: "Charter School",
+  chesterton_academy: "Chesterton Academy (CSN)",
   homeschool_coop: "Homeschool Co-Op",
   learning_pod: "Learning Pod",
   microschool: "Microschool",
@@ -692,7 +783,11 @@ export function isPrivateSchool(schoolType?: string): boolean {
 }
 
 export function isCatholicSchool(schoolType?: string): boolean {
-  return schoolType === "catholic_school";
+  return schoolType === "catholic_school" || schoolType === "chesterton_academy";
+}
+
+export function isChestertonAcademy(schoolType?: string): boolean {
+  return schoolType === "chesterton_academy";
 }
 
 export function getDefaultTuitionTiers(yearCount: number): TuitionTier[] {

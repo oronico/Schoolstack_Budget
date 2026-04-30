@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
+import { useFormContext } from "react-hook-form";
 import { getExportModelUrl, customFetch } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3, MessageSquareMore, CheckCircle2, Send, Share2, Copy, Check, Trash2, Link2 } from "lucide-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3, MessageSquareMore, CheckCircle2, Send, Share2, Copy, Check, Trash2, Link2, BookOpen } from "lucide-react";
+import { isChestertonAcademy } from "../schema";
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
 import { BoardPacketPreview } from "../../../components/export/BoardPacketPreview";
 import { trackExport } from "@/hooks/useExportTracker";
 
-type ExportType = "formula" | "underwritingV2" | "lenderPacketPdf" | "boardPacketPdf";
+type ExportType = "formula" | "underwritingV2" | "lenderPacketPdf" | "boardPacketPdf" | "chestertonOperatingManual";
 
 interface SharedLinkItem {
   id: number;
@@ -17,6 +19,9 @@ interface SharedLinkItem {
 }
 
 export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
+  const { watch } = useFormContext();
+  const schoolType = watch("schoolProfile.schoolType") as string | undefined;
+  const isChesterton = isChestertonAcademy(schoolType);
   const [loading, setLoading] = useState<ExportType | null>(null);
   const [exported, setExported] = useState<Set<ExportType>>(new Set());
   const [showPacketPreview, setShowPacketPreview] = useState(false);
@@ -152,6 +157,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         underwritingV2: `/api/models/${modelId}/export/underwriting-v2`,
         lenderPacketPdf: `/api/models/${modelId}/export/lender-packet-pdf`,
         boardPacketPdf: `/api/models/${modelId}/export/board-packet-pdf`,
+        chestertonOperatingManual: `/api/models/${modelId}/export/chesterton-operating-manual`,
       };
 
       const token = localStorage.getItem('auth_token');
@@ -169,6 +175,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         underwritingV2: `Underwriting_Package_${modelId}.xlsx`,
         lenderPacketPdf: `Lender_Packet_${modelId}.pdf`,
         boardPacketPdf: `Board_Summary_${modelId}.pdf`,
+        chestertonOperatingManual: `Chesterton_CSN_Operating_Manual_${modelId}.xlsx`,
       };
       const filename = filenameMatch?.[1] || fallbackNames[type];
       const url = window.URL.createObjectURL(blob);
@@ -278,6 +285,18 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           disabled={loading !== null && loading !== "formula"}
           onClick={() => handleDownload("formula")}
         />
+        {isChesterton && (
+          <ExportCard
+            icon={<BookOpen className="h-7 w-7" />}
+            title="CSN Operating Manual"
+            description="Chesterton Schools Network workbook your regional director already knows: GETTING STARTED, 5-yr projection, salary schedule, fundraising goals, gift chart, recruiting pipeline."
+            isLoading={loading === "chestertonOperatingManual"}
+            isExported={exported.has("chestertonOperatingManual")}
+            disabled={loading !== null && loading !== "chestertonOperatingManual"}
+            onClick={() => handleDownload("chestertonOperatingManual")}
+            highlight
+          />
+        )}
       </div>
 
       {reviewAvailable && (reviewSubmitted || showReviewForm) && (

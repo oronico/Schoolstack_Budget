@@ -20,6 +20,7 @@ import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
 import { generateSingleYearBudget } from "../lib/underwriting-export";
 import { generateUnderwritingWorkbook as generateUnderwritingWorkbookV2 } from "../lib/underwriting-workbook";
+import { generateChestertonOperatingManual } from "../lib/packets/chesterton-operating-manual";
 import { generateFormulaWorkbook } from "../lib/formula-export";
 import { generateWorkbook } from "../lib/excel-export";
 import { trackEvent } from "../lib/track-event";
@@ -1038,6 +1039,61 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
   } catch (err) {
     console.error("Underwriting V2 export error:", err);
     res.status(500).json({ error: "Something went wrong generating the Underwriting Model workbook." });
+  }
+});
+
+// Chesterton Schools Network "Operating Manual" workbook export. Mirrors
+// the CSN-published .xlsx so a Chesterton founder can hand the file to
+// their regional director without re-keying anything. Only meaningful
+// when schoolType === "chesterton_academy"; we still let any model hit
+// the route (the workbook just falls back to defaults) so the founder
+// can preview the format even before they finish the wizard.
+router.get("/models/:id/export/chesterton-operating-manual", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    if (abortGuard(req, res)) return;
+
+    const data = normalizeModelData(model.data as Record<string, unknown>);
+    const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+    const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "Chesterton_Academy";
+    const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
+
+    const workbook = await generateChestertonOperatingManual({
+      schoolName,
+      chesterton: (data as Record<string, unknown>).chesterton as Parameters<typeof generateChestertonOperatingManual>[0]["chesterton"],
+    });
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    if (abortGuard(req, res)) return;
+
+    await db.insert(exportsTable).values({
+      userId: req.userId!,
+      modelId: model.id,
+      format: "xlsx",
+    });
+
+    await trackEvent("exported_chesterton_operating_manual", req.userId, { modelId: model.id });
+
+    sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_CSN_Operating_Manual.xlsx`);
+  } catch (err) {
+    console.error("Chesterton Operating Manual export error:", err);
+    res.status(500).json({ error: "Something went wrong generating the CSN Operating Manual workbook." });
   }
 });
 

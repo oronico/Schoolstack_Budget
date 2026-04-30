@@ -12,7 +12,8 @@ import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { cn } from "@/lib/utils";
-import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit } from "../schema";
+import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit, isChestertonAcademy } from "../schema";
+import { buildDefaultChestertonData } from "@/lib/chesterton/template";
 import {
   parseAccountingExportCsv,
   parseAccountingExportRows,
@@ -898,7 +899,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
 }
 
 export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
-  const { watch, setValue } = useFormContext();
+  const { watch, setValue, getValues } = useFormContext();
   const { user } = useAuth();
   // Task #302: persona-stage gating overrides model.schoolStage. A founder
   // who picked `yet_to_launch` should never see prior-year actuals,
@@ -995,7 +996,19 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
       setValue("schoolProfile.congregationSupport", false, { shouldDirty: true });
       setValue("schoolProfile.congregationAssessment", false, { shouldDirty: true });
     }
-  }, [schoolType, isCatholic, isPrivate, setValue]);
+    // Chesterton Academy: seed the chesterton namespace with the CSN
+    // Operating Manual defaults (planning year, $8,500 starting tuition,
+    // 4% tuition growth, $44k starting teacher salary, gift chart pyramid,
+    // recruiting pipeline scaffolding) the first time the founder picks
+    // this school type. We only seed if the chesterton block is empty so
+    // toggling away and back doesn't clobber in-progress edits.
+    if (isChestertonAcademy(schoolType)) {
+      const existing = getValues("chesterton") as Record<string, unknown> | undefined;
+      if (!existing || Object.keys(existing).length === 0) {
+        setValue("chesterton", buildDefaultChestertonData(), { shouldDirty: true });
+      }
+    }
+  }, [schoolType, isCatholic, isPrivate, setValue, getValues]);
 
   const prevEntityType = useRef(entityType);
   useEffect(() => {
