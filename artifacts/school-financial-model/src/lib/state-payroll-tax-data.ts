@@ -209,3 +209,52 @@ export function computeEffectivePayrollTaxRate(
   const dollars = computePayrollTaxForSalary(annualSalary, components);
   return (dollars / annualSalary) * 100;
 }
+
+export interface CappedComponent {
+  label: string;
+  wageBase: number;
+}
+
+export interface PayrollTaxCapInsight {
+  /** Components whose wage base the salary exceeds (i.e. would otherwise overcharge). */
+  cappedComponents: CappedComponent[];
+  /** Sum of every component's nominal rate (percent). */
+  flatRate: number;
+  /** What the founder would pay under the naive flat × salary estimate. */
+  flatTax: number;
+  /** What the wage-base-aware engine actually charges. */
+  cappedTax: number;
+  /** Dollars per year the wage-base caps save vs. the flat estimate (≥ 0). */
+  savings: number;
+}
+
+/**
+ * Inspect a salary against a payroll-tax component set and return a
+ * coaching-friendly summary of which components hit their wage-base cap and
+ * how many dollars the wage-base-aware math saves vs. a flat blended rate.
+ *
+ * Returns `null` when the salary doesn't exceed any component's wage base —
+ * the UI should hide the insight in that case (every component applies to the
+ * full salary, so there are no "savings" to coach about).
+ */
+export function computePayrollTaxCapSavings(
+  annualSalary: number,
+  components: PayrollTaxComponent[]
+): PayrollTaxCapInsight | null {
+  if (!annualSalary || annualSalary <= 0 || !components || components.length === 0) return null;
+  const cappedComponents = components.filter(
+    (c) => c.wageBase !== undefined && annualSalary > c.wageBase
+  );
+  if (cappedComponents.length === 0) return null;
+  const flatRate = components.reduce((s, c) => s + c.rate, 0);
+  const flatTax = annualSalary * (flatRate / 100);
+  const cappedTax = computePayrollTaxForSalary(annualSalary, components);
+  const savings = Math.max(0, flatTax - cappedTax);
+  return {
+    cappedComponents: cappedComponents.map((c) => ({ label: c.label, wageBase: c.wageBase! })),
+    flatRate,
+    flatTax,
+    cappedTax,
+    savings,
+  };
+}

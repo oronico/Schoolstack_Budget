@@ -10,7 +10,12 @@ import {
   getStatePayrollTaxEntry,
   getStatePayrollTaxRate,
   computePayrollTaxForSalary,
+  computePayrollTaxCapSavings,
+  type PayrollTaxCapInsight,
 } from "@/lib/state-payroll-tax-data";
+import { useAuth } from "@/lib/auth-context";
+import { getFounderPersona } from "@/lib/coaching/founder-persona";
+import type { FounderComfort } from "@/lib/coaching/founder-persona";
 import {
   type StaffingRowData,
   type StaffingFunctionCategory,
@@ -76,6 +81,8 @@ function CollapsibleCallout({
 
 export function StaffingStep() {
   const { watch, setValue, formState: { errors } } = useFormContext();
+  const { user } = useAuth();
+  const personaComfort = getFounderPersona(user).comfort;
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
@@ -479,6 +486,7 @@ export function StaffingStep() {
                     colaRate={colaRate}
                     rowErrors={thisRowErrors}
                     schoolType={schoolType}
+                    personaComfort={personaComfort}
                   />
                 );
               })}
@@ -546,6 +554,37 @@ interface StaffCardProps {
   colaRate: number;
   rowErrors?: Record<string, { message?: string }>;
   schoolType?: string;
+  personaComfort: FounderComfort | null;
+}
+
+// Surface the wage-base cap savings as a per-row coaching insight (Task #319).
+// Per the task's literal acceptance, the insight should render on any row
+// whose salary exceeds at least one component's wage base —
+// `computePayrollTaxCapSavings` already returns null otherwise. The $1 floor
+// is just a sanity guard against rendering a "saves $0/yr" line if a
+// degenerate component set (e.g. zero-rate component) ever surfaces.
+const CAP_INSIGHT_MIN_SAVINGS = 1;
+
+function buildCapInsightText(
+  insight: PayrollTaxCapInsight,
+  comfort: FounderComfort | null
+): string {
+  const labels = insight.cappedComponents.map(
+    (c) => `${c.label} ($${c.wageBase.toLocaleString()})`
+  );
+  const labelStr =
+    labels.length === 1
+      ? labels[0]
+      : labels.length === 2
+        ? `${labels[0]} and ${labels[1]}`
+        : `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+  const savings = `$${Math.round(insight.savings).toLocaleString()}/yr`;
+  if (comfort === "new_to_budgeting") {
+    return `This salary is over the wage-base cap for ${labelStr}, so we stop charging payroll tax above those limits — saves about ${savings} vs. a flat estimate.`;
+  }
+  // Default to the more technical wording for "comfortable" founders and for
+  // legacy users with no persona on record.
+  return `Wage-base caps hit on ${labelStr}. Wage-base-aware math saves ${savings} vs. a flat ${insight.flatRate.toFixed(2)}% blended rate.`;
 }
 
 function StaffCard({
@@ -558,6 +597,7 @@ function StaffCard({
   colaRate,
   rowErrors,
   schoolType,
+  personaComfort,
 }: StaffCardProps) {
   const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
   const isRatio = row.staffingMode === "ratio";
@@ -571,13 +611,21 @@ function StaffCard({
   // This keeps the per-row card total in lock-step with the personnel summary
   // and the scenario engine. Contract-not-payroll-like rows owe nothing.
   let payrollTax = 0;
+  let capInsight: PayrollTaxCapInsight | null = null;
   if (!isContractNotPayrollLike) {
     if (row.payrollTaxComponents && row.payrollTaxComponents.length > 0 && !row.payrollTaxRateOverridden) {
       payrollTax = Math.round(computePayrollTaxForSalary(salary, row.payrollTaxComponents));
+      // Only meaningful when the salary actually exceeds at least one wage
+      // base — `computePayrollTaxCapSavings` returns null otherwise. The
+      // founder shouldn't see the insight when they've manually overridden
+      // the row's blended rate (the components don't drive the math then).
+      capInsight = computePayrollTaxCapSavings(salary, row.payrollTaxComponents);
     } else {
       payrollTax = Math.round(salary * (row.payrollTaxRate / 100));
     }
   }
+  const showCapInsight =
+    capInsight !== null && Math.round(capInsight.savings) >= CAP_INSIGHT_MIN_SAVINGS;
   const totalCost = salary + benefits + payrollTax;
 
   const hasErrors = rowErrors && Object.keys(rowErrors).length > 0;
@@ -855,7 +903,7 @@ function StaffCard({
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-2 border-t border-border/30">
+          <div className="pt-2 border-t border-border/30 space-y-1">
             <div className="flex gap-4 text-xs text-muted-foreground">
               {!isContractNotPayrollLike && (
                 <>
@@ -867,6 +915,12 @@ function StaffCard({
                 <span className="text-amber-600">Contracted (not on payroll)</span>
               )}
             </div>
+            {showCapInsight && capInsight && (
+              <FinancingInsight
+                text={buildCapInsightText(capInsight, personaComfort)}
+                className="mt-0"
+              />
+            )}
           </div>
         </div>
         </div>

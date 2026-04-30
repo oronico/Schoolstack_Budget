@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   computePayrollTaxForSalary,
   computeEffectivePayrollTaxRate,
+  computePayrollTaxCapSavings,
   STATE_PAYROLL_TAX_MAP,
   getStatePayrollTaxEntry,
   type PayrollTaxComponent,
@@ -104,6 +105,88 @@ describe("F1: payroll-tax wage-base caps", () => {
     const fallback = getStatePayrollTaxEntry("ZZ");
     expect(fallback).toBeDefined();
     expect(fallback.components.length).toBeGreaterThan(0);
+  });
+
+  // Task #319 — coaching insight on the staffing step.
+  describe("computePayrollTaxCapSavings", () => {
+    it("returns null when the salary doesn't cross any wage base", () => {
+      const components: PayrollTaxComponent[] = [
+        { label: "FICA-OASDI", rate: 6.2, wageBase: 176_100 },
+        { label: "Medicare", rate: 1.45 },
+      ];
+      // $50k under both caps (Medicare uncapped, OASDI cap $176.1k).
+      expect(computePayrollTaxCapSavings(50_000, components)).toBeNull();
+    });
+
+    it("returns null for zero / negative / empty inputs", () => {
+      const components: PayrollTaxComponent[] = [
+        { label: "FICA-OASDI", rate: 6.2, wageBase: 176_100 },
+      ];
+      expect(computePayrollTaxCapSavings(0, components)).toBeNull();
+      expect(computePayrollTaxCapSavings(-1000, components)).toBeNull();
+      expect(computePayrollTaxCapSavings(200_000, [])).toBeNull();
+    });
+
+    it("names the capped components and sums savings vs. a flat blended rate", () => {
+      // WA Head of School at $200k — expect FICA-OASDI, FUTA, WA SUI, WA PFML
+      // to be the capped components (Medicare and WA Workers' Comp are
+      // uncapped).
+      const wa = getStatePayrollTaxEntry("WA");
+      const insight = computePayrollTaxCapSavings(200_000, wa.components);
+      expect(insight).not.toBeNull();
+      const labels = insight!.cappedComponents.map((c) => c.label);
+      expect(labels).toEqual([
+        "Social Security (FICA)",
+        "FUTA",
+        "WA SUI",
+        "WA Paid Family & Medical Leave",
+      ]);
+      // Wage bases the founder should see in the coaching copy.
+      const wageBases = insight!.cappedComponents.map((c) => c.wageBase);
+      expect(wageBases).toEqual([176_100, 7_000, 72_800, 176_100]);
+
+      // Flat (no caps) = $200k * (6.2 + 1.45 + 0.6 + 1.22 + 0.28 + 0.4)% = $200k * 10.15%
+      const flatRate = 6.2 + 1.45 + 0.6 + 1.22 + 0.28 + 0.4;
+      expect(insight!.flatRate).toBeCloseTo(flatRate, 6);
+      expect(insight!.flatTax).toBeCloseTo(200_000 * (flatRate / 100), 2);
+      // Capped = the audit-doc total.
+      expect(insight!.cappedTax).toBeCloseTo(16_041.44, 2);
+      // Savings = flat - capped, must be > $3,000 for this scenario.
+      expect(insight!.savings).toBeCloseTo(insight!.flatTax - insight!.cappedTax, 2);
+      expect(insight!.savings).toBeGreaterThan(3_000);
+    });
+
+    it("matches the task example: NY $200k principal saves >$1,500 vs. flat", () => {
+      const ny = getStatePayrollTaxEntry("NY");
+      const insight = computePayrollTaxCapSavings(200_000, ny.components);
+      expect(insight).not.toBeNull();
+      // FICA-OASDI ($176,100), FUTA ($7,000), NY SUI ($12,800), NY Re-employment ($12,800).
+      const labels = insight!.cappedComponents.map((c) => c.label);
+      expect(labels).toContain("Social Security (FICA)");
+      expect(insight!.savings).toBeGreaterThan(1_500);
+    });
+
+    it("flags a single capped component when only that one applies", () => {
+      // FUTA-only cap at a low salary — Medicare uncapped, no other components.
+      const components: PayrollTaxComponent[] = [
+        { label: "Medicare", rate: 1.45 },
+        { label: "FUTA", rate: 0.6, wageBase: 7_000 },
+      ];
+      const insight = computePayrollTaxCapSavings(40_000, components);
+      expect(insight).not.toBeNull();
+      expect(insight!.cappedComponents).toHaveLength(1);
+      expect(insight!.cappedComponents[0]).toEqual({ label: "FUTA", wageBase: 7_000 });
+      // Savings = (40k - 7k) * 0.6% = $198.
+      expect(insight!.savings).toBeCloseTo(198, 2);
+    });
+
+    it("never produces negative savings", () => {
+      // Pathological inputs: every component uncapped → flat == capped → 0 savings → null.
+      const components: PayrollTaxComponent[] = [
+        { label: "Flat", rate: 7.65 },
+      ];
+      expect(computePayrollTaxCapSavings(150_000, components)).toBeNull();
+    });
   });
 
   // Required hand-check spot tests for the audit doc (Task #318):
