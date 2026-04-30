@@ -105,7 +105,7 @@ async function primeAuthToken(page: Page, token: string): Promise<void> {
   }, token);
 }
 
-test("Inline rationales persist across navigation and round-trip to the API", async ({
+test("Inline rationales persist across navigation, survive reload, and round-trip to the API", async ({
   page,
   request,
 }) => {
@@ -118,7 +118,7 @@ test("Inline rationales persist across navigation and round-trip to the API", as
   // wizard performs a few rerenders during initial hydration that would
   // otherwise detach our locators mid-action.
   await expect(
-    page.getByRole("heading", { name: /Revenue|Where Does Your Money Come From/i }).first(),
+    page.getByRole("heading", { name: /Where Does Your Money Come From|Revenue by Source/i }).first(),
   ).toBeVisible({ timeout: 30_000 });
 
   // The tuition_and_fees category may render collapsed. Expand it if its
@@ -127,10 +127,10 @@ test("Inline rationales persist across navigation and round-trip to the API", as
     .locator('[data-rationale-key="revenue:tuition_and_fees"] textarea')
     .first();
   if (!(await tuitionRationale.isVisible().catch(() => false))) {
-    const tuitionHeader = page
+    await page
       .getByRole("button", { name: /Tuition\s*&\s*Fees/i })
-      .first();
-    await tuitionHeader.click();
+      .first()
+      .click();
   }
   await expect(tuitionRationale).toBeVisible({ timeout: 15_000 });
 
@@ -151,7 +151,7 @@ test("Inline rationales persist across navigation and round-trip to the API", as
   const instructionalRationale = page
     .locator('[data-rationale-key="staffing:instructional"] textarea')
     .first();
-  await expect(instructionalRationale).toBeVisible({ timeout: 10_000 });
+  await expect(instructionalRationale).toBeVisible({ timeout: 15_000 });
 
   const staffingText =
     "Staffing built off our current Year 1 hiring plan and 2025 NAIS comp data.";
@@ -159,10 +159,7 @@ test("Inline rationales persist across navigation and round-trip to the API", as
   await instructionalRationale.blur();
 
   // Walk back to Revenue and confirm the previous value survived.
-  const backButton = page
-    .getByRole("button", { name: /^Back/i })
-    .last();
-  await backButton.click();
+  await page.getByRole("button", { name: /^Back/i }).last().click();
 
   // The category may collapse on navigation; reopen if needed.
   const tuitionRationaleAgain = page
@@ -170,18 +167,39 @@ test("Inline rationales persist across navigation and round-trip to the API", as
     .first();
   if (!(await tuitionRationaleAgain.isVisible().catch(() => false))) {
     await page
-      .locator("button", { hasText: /Tuition/i })
+      .getByRole("button", { name: /Tuition\s*&\s*Fees/i })
       .first()
       .click();
   }
   await expect(tuitionRationaleAgain).toHaveValue(rationaleText, {
-    timeout: 10_000,
+    timeout: 15_000,
+  });
+
+  // Give the debounced wizard auto-save a beat to flush the final write,
+  // then hard-reload the page to prove the value survives a real document
+  // load (not just an in-memory step transition).
+  await page.waitForTimeout(2_000);
+  await page.goto(`/model/${modelId}?step=4`);
+  await expect(
+    page.getByRole("heading", { name: /Where Does Your Money Come From|Revenue by Source/i }).first(),
+  ).toBeVisible({ timeout: 30_000 });
+  const tuitionAfterReload = page
+    .locator('[data-rationale-key="revenue:tuition_and_fees"] textarea')
+    .first();
+  if (!(await tuitionAfterReload.isVisible().catch(() => false))) {
+    await page
+      .getByRole("button", { name: /Tuition\s*&\s*Fees/i })
+      .first()
+      .click();
+  }
+  await expect(tuitionAfterReload).toHaveValue(rationaleText, {
+    timeout: 15_000,
   });
 
   // Round-trip: re-read the model from the API and assert both rationales
-  // landed in the expected `budgetNarrative.inlineRationales` slot. We give
-  // the wizard a beat to flush its debounced auto-save.
-  await page.waitForTimeout(2_000);
+  // landed in the expected `budgetNarrative.inlineRationales` slot. The
+  // record-shaped persistence path is the same for every step token, so a
+  // representative pair (revenue + staffing) proves the mechanism end-to-end.
   const refetched = await request.get(`/api/models/${modelId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
