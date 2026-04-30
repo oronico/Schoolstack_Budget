@@ -43,6 +43,11 @@ export function ChestertonRecruitingStep() {
   const rows = watch("chesterton.recruitingPipeline") as Array<{ prospectiveStudents?: number }> | undefined;
   const totalProspects = useMemo(() => (rows || []).reduce((s, r) => s + (Number(r?.prospectiveStudents) || 0), 0), [rows]);
   const year1Need = useMemo(() => totalEnrollmentForYear(phaseEnrollment, "year1"), [phaseEnrollment]);
+  // CSN guideline: ~1-in-3 prospects convert, so projected enrollment ≈ prospects / 3.
+  const projectedEnrollment = Math.floor(totalProspects / 3);
+  const enrollmentPct = year1Need > 0 ? (projectedEnrollment / year1Need) * 100 : 0;
+  const enrollmentBarPct = Math.max(0, Math.min(100, enrollmentPct));
+  const enrollmentColor = enrollmentPct >= 100 ? "bg-emerald-500" : enrollmentPct >= 75 ? "bg-primary" : "bg-amber-500";
 
   return (
     <div className="space-y-10" data-testid="chesterton-recruiting-step">
@@ -63,10 +68,52 @@ export function ChestertonRecruitingStep() {
       />
 
       {year1Need > 0 && (
-        <div className={`rounded-2xl border p-4 text-sm ${totalProspects >= year1Need * 3 ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-amber-300 bg-amber-50 text-amber-900"}`}>
-          Year 1 enrollment target: <strong>{year1Need} students</strong>. Current prospect total: <strong>{totalProspects}</strong>.
+        <div
+          className="rounded-2xl border border-border bg-white p-4"
+          data-testid="chesterton-recruiting-summary"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Year 1 enrollment goal</div>
+              <div className="text-xl font-bold text-foreground mt-1" data-testid="chesterton-recruiting-year1-need">
+                {year1Need.toLocaleString()} students
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Total prospects</div>
+              <div className="text-xl font-bold text-foreground mt-1" data-testid="chesterton-recruiting-total-prospects">
+                {totalProspects.toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Projected enrollment</div>
+              <div className="text-xl font-bold text-foreground mt-1" data-testid="chesterton-recruiting-projected">
+                {projectedEnrollment.toLocaleString()} students
+              </div>
+              <div className="text-xs text-muted-foreground">~1 in 3 prospects convert</div>
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="flex items-baseline justify-between text-sm">
+              <span className="text-muted-foreground">Coverage of Year 1 goal</span>
+              <span className="text-muted-foreground">
+                <strong className="text-foreground" data-testid="chesterton-recruiting-coverage-pct">
+                  {enrollmentPct.toFixed(0)}%
+                </strong>
+              </span>
+            </div>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border" aria-hidden>
+              <div
+                className={`h-full ${enrollmentColor} transition-all`}
+                style={{ width: `${enrollmentBarPct}%` }}
+              />
+            </div>
+          </div>
           {totalProspects < year1Need * 3 && (
-            <> The CSN guideline is roughly <strong>3× more prospects than seats</strong> — you may need {year1Need * 3 - totalProspects} more.</>
+            <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              The CSN guideline is roughly <strong>3× more prospects than seats</strong> — add about{" "}
+              <strong>{(year1Need * 3 - totalProspects).toLocaleString()}</strong> more prospects to feel confident hitting Year 1.
+            </div>
           )}
         </div>
       )}

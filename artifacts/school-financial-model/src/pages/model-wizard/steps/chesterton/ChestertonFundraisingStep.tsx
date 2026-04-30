@@ -29,6 +29,10 @@ export function ChestertonFundraisingStep() {
 
   const rows = watch("chesterton.fundraisingGoals") as Array<{ goalAmount?: number }> | undefined;
   const computedTotal = useMemo(() => (rows || []).reduce((sum, r) => sum + (Number(r?.goalAmount) || 0), 0), [rows]);
+  const goalNum = Number(goal) || 0;
+  const coveragePct = goalNum > 0 ? (computedTotal / goalNum) * 100 : 0;
+  const coverageBarPct = Math.max(0, Math.min(100, coveragePct));
+  const coverageColor = coveragePct >= 100 ? "bg-emerald-500" : coveragePct >= 75 ? "bg-primary" : "bg-amber-500";
 
   return (
     <div className="space-y-8" data-testid="chesterton-fundraising-step">
@@ -62,16 +66,38 @@ export function ChestertonFundraisingStep() {
           prefix="$"
           helperText="Sum of all campaign component goals."
         />
-        <div className="rounded-2xl border border-border bg-muted/30 p-4">
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">Sum of components</div>
-          <div className="text-2xl font-bold text-foreground mt-1">{formatCurrency(computedTotal)}</div>
-          {goal && Math.abs(computedTotal - goal) > 1 && (
+        <div
+          className="rounded-2xl border border-border bg-muted/30 p-4"
+          data-testid="chesterton-fundraising-summary"
+        >
+          <div className="text-xs text-muted-foreground uppercase tracking-wide">Committed so far</div>
+          <div className="text-2xl font-bold text-foreground mt-1" data-testid="chesterton-fundraising-committed">
+            {formatCurrency(computedTotal)}
+          </div>
+          {goalNum > 0 ? (
+            <>
+              <div className="text-xs text-muted-foreground mt-1">
+                of <strong className="text-foreground">{formatCurrency(goalNum)}</strong> goal
+                {" · "}
+                <span data-testid="chesterton-fundraising-coverage-pct">{coveragePct.toFixed(0)}%</span>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border" aria-hidden>
+                <div
+                  className={`h-full ${coverageColor} transition-all`}
+                  style={{ width: `${coverageBarPct}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="text-xs text-muted-foreground mt-1">Set a Total Fundraising Goal to track coverage.</div>
+          )}
+          {goalNum > 0 && Math.abs(computedTotal - goalNum) > 1 && (
             <button
               type="button"
               className="mt-2 text-xs text-primary underline"
               onClick={() => setValue("chesterton.totalFundraisingGoal", computedTotal, { shouldDirty: true })}
             >
-              Sync total to {formatCurrency(computedTotal)}
+              Sync goal to {formatCurrency(computedTotal)}
             </button>
           )}
         </div>

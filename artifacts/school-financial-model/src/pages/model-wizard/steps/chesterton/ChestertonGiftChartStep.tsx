@@ -39,7 +39,11 @@ export function ChestertonGiftChartStep() {
     return { totalGifts, totalProspects, totalRaised };
   }, [rows]);
 
-  const goalGap = goal ? goal - totals.totalRaised : 0;
+  const goalNum = Number(goal) || 0;
+  const goalGap = goalNum ? goalNum - totals.totalRaised : 0;
+  const coveragePct = goalNum > 0 ? (totals.totalRaised / goalNum) * 100 : 0;
+  const coverageBarPct = Math.max(0, Math.min(100, coveragePct));
+  const coverageColor = coveragePct >= 100 ? "bg-emerald-500" : coveragePct >= 75 ? "bg-primary" : "bg-amber-500";
 
   return (
     <div className="space-y-8" data-testid="chesterton-gift-chart-step">
@@ -63,7 +67,7 @@ export function ChestertonGiftChartStep() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-border bg-muted/20 p-4">
           <div className="text-xs uppercase tracking-wide text-muted-foreground">Goal</div>
-          <div className="text-xl font-bold text-foreground mt-1">{formatCurrency(goal || 0)}</div>
+          <div className="text-xl font-bold text-foreground mt-1">{formatCurrency(goalNum)}</div>
         </div>
         <div className="rounded-2xl border border-border bg-muted/20 p-4">
           <div className="text-xs uppercase tracking-wide text-muted-foreground">Pyramid Total</div>
@@ -79,7 +83,31 @@ export function ChestertonGiftChartStep() {
         </div>
       </div>
 
-      {goal !== undefined && goal > 0 && Math.abs(goalGap) > 100 && (
+      {goalNum > 0 && (
+        <div
+          className="rounded-2xl border border-border bg-white p-4"
+          data-testid="chesterton-gift-chart-coverage"
+        >
+          <div className="flex items-baseline justify-between">
+            <div className="text-sm font-medium text-foreground">Goal coverage</div>
+            <div className="text-sm text-muted-foreground">
+              <strong className="text-foreground" data-testid="chesterton-gift-chart-coverage-pct">
+                {coveragePct.toFixed(0)}%
+              </strong>
+              {" of "}
+              {formatCurrency(goalNum)}
+            </div>
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border" aria-hidden>
+            <div
+              className={`h-full ${coverageColor} transition-all`}
+              style={{ width: `${coverageBarPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {goalNum > 0 && Math.abs(goalGap) > 100 && (
         <div className={`rounded-2xl border p-4 text-sm ${goalGap > 0 ? "border-amber-300 bg-amber-50 text-amber-900" : "border-emerald-300 bg-emerald-50 text-emerald-900"}`}>
           {goalGap > 0
             ? <>Your pyramid is short of goal by <strong>{formatCurrency(goalGap)}</strong>. Add larger gifts or more prospects to close the gap.</>
