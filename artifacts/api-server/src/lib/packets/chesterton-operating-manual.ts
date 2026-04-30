@@ -34,6 +34,9 @@ const TAB_ASSUMPTIONS = "3 - KEY ASSUMPTIONS";
 const TAB_FUNDRAISING = "4 - FUNDRAISING GOALS";
 const TAB_GIFT_CHART = "5 - GIFT CHART";
 const TAB_RECRUITING = "7 - RECRUITING PIPELINE";
+const TAB_CADENCE = "Cadence";
+const TAB_TRAINING = "CSN Training Schedule";
+const TAB_PARENT_HANDOUT = "Parent Handout";
 
 export const CHESTERTON_TAB_NAMES = [
   TAB_GETTING_STARTED,
@@ -43,6 +46,9 @@ export const CHESTERTON_TAB_NAMES = [
   TAB_FUNDRAISING,
   TAB_GIFT_CHART,
   TAB_RECRUITING,
+  TAB_CADENCE,
+  TAB_TRAINING,
+  TAB_PARENT_HANDOUT,
 ] as const;
 
 interface ChestertonGradeRow {
@@ -803,6 +809,196 @@ function buildRecruitingPipeline(wb: ExcelJS.Workbook, data: ChestertonModelInpu
   ws.getCell(`C${r}`).font = { bold: true };
 }
 
+// ── Static reference tabs ──
+//
+// The CSN Operating Manual workbook ships three reference tabs that don't
+// depend on per-school data: an annual Cadence, the CSN Training Schedule,
+// and a one-page Parent Handout. They live in module-level constants so a
+// single place owns the wording and the smoke test can spot-check it.
+
+interface CadenceRow { month: string; academic: string; fundraising: string; community: string }
+
+const CADENCE_ROWS: CadenceRow[] = [
+  { month: "July",      academic: "Faculty contracts finalized; summer reading published", fundraising: "Annual Fund kickoff letter to founding families", community: "Welcome BBQ for incoming freshmen families" },
+  { month: "August",    academic: "Faculty in-service week; classroom prep",                fundraising: "Major donor cultivation visits",                       community: "Mass of the Holy Spirit; convocation" },
+  { month: "September", academic: "First day of classes; placement assessments",            fundraising: "Annual Fund public launch",                            community: "Back-to-School Night; parent guild kickoff" },
+  { month: "October",   academic: "Mid-quarter progress reports",                           fundraising: "Founders' Society dinner",                             community: "All-school feast day; Rosary procession" },
+  { month: "November",  academic: "Quarter 1 grades; parent-teacher conferences",          fundraising: "Year-end appeal drafted",                              community: "Thanksgiving liturgy and food drive" },
+  { month: "December",  academic: "Christmas concert and recitations",                      fundraising: "Year-end appeal mailed; #GivingTuesday push",          community: "Christmas pageant; Advent vespers" },
+  { month: "January",   academic: "Mid-year exams; semester grades",                        fundraising: "Capital campaign progress report to board",            community: "Open house for prospective families" },
+  { month: "February",  academic: "Course registration for next year opens",                fundraising: "Scholarship benefit auction",                          community: "Catholic Schools Week; shadow days" },
+  { month: "March",     academic: "Quarter 3 grades; faculty re-hiring decisions",          fundraising: "Spring stewardship calls",                             community: "Lenten service projects" },
+  { month: "April",     academic: "Re-enrollment contracts due",                            fundraising: "Spring gala / annual benefit",                         community: "Easter liturgy; spring play" },
+  { month: "May",       academic: "AP / final exams; senior thesis defenses",               fundraising: "Year-end Annual Fund close-out",                       community: "May crowning; baccalaureate Mass" },
+  { month: "June",      academic: "Graduation; report cards mailed",                        fundraising: "Donor thank-you tour and impact report",               community: "Class trip; alumni picnic" },
+];
+
+const TRAINING_SESSIONS: Array<{ phase: string; topic: string; audience: string; format: string; weeks: string }> = [
+  { phase: "Discovery (Yr 0)",  topic: "CSN Mission, Charism, and Liberal Arts Pedagogy",       audience: "Founding board",        format: "2-day in-person retreat", weeks: "Weeks 1–2" },
+  { phase: "Discovery (Yr 0)",  topic: "Curriculum Walk-Through (9–12, four-year cycle)",       audience: "Founding board + heads", format: "Webinar series (4×90m)",  weeks: "Weeks 3–6" },
+  { phase: "Preparation (Yr 1)", topic: "Headmaster Bootcamp",                                  audience: "Headmaster",             format: "1-week residency at CSN HQ", weeks: "Summer Yr 1" },
+  { phase: "Preparation (Yr 1)", topic: "Faculty Recruiting & Hiring Playbook",                 audience: "Headmaster + board chair", format: "Workbook + 3 coaching calls", weeks: "Months 1–3" },
+  { phase: "Preparation (Yr 1)", topic: "Fundraising Fundamentals (Major Gifts, Annual Fund)",  audience: "Board + headmaster",     format: "On-site workshop",        weeks: "Month 4" },
+  { phase: "Activation (Yr 2)",  topic: "Faculty Onboarding (Theology, Latin, Math, Humanities)", audience: "All new faculty",       format: "2-week summer institute", weeks: "Late summer" },
+  { phase: "Activation (Yr 2)",  topic: "Parent Formation & Communication",                     audience: "Headmaster + lead teacher", format: "Toolkit + 2 webinars",  weeks: "Pre-launch" },
+  { phase: "Launch (Yr 3+)",     topic: "Annual CSN Heads Conference",                          audience: "Headmaster",             format: "3-day in-person",         weeks: "Each June" },
+  { phase: "Launch (Yr 3+)",     topic: "Faculty Mentor Pairing & Observation Cycle",           audience: "All faculty",            format: "Ongoing peer program",    weeks: "Year-round" },
+  { phase: "Launch (Yr 3+)",     topic: "Board Governance Refresher",                           audience: "Board",                  format: "Annual workshop",         weeks: "Each fall" },
+];
+
+const PARENT_HANDOUT_SECTIONS: Array<{ heading: string; body: string }> = [
+  {
+    heading: "Welcome to Chesterton Schools Network",
+    body: "Your child is joining a network of schools dedicated to a joyful, classical, and Catholic liberal arts education. Our schools form young men and women in faith, reason, and virtue through a shared four-year curriculum in the great books, mathematics, science, Latin, theology, and the fine arts.",
+  },
+  {
+    heading: "What to Expect Academically",
+    body: "Students follow a four-year integrated humanities cycle (Ancient, Medieval, Renaissance / Reformation, and Modern), four years of Latin, four years of mathematics, four years of laboratory science, four years of theology, and a Socratic discussion-based classroom across every subject.",
+  },
+  {
+    heading: "Daily Rhythm",
+    body: "A typical day begins with morning prayer, includes seven academic periods, a community lunch, daily Mass available, and an after-school co-curricular block (athletics, drama, sacred music, or service). Uniforms are required; phones are not permitted during the academic day.",
+  },
+  {
+    heading: "Faith Life",
+    body: "All-school Mass is celebrated at least weekly, sacramental preparation is offered, and the liturgical calendar shapes the school year (feast days, Advent, Lent, May crowning, holy days). Non-Catholic students are welcomed and respected; full participation in the academic and moral formation is expected of every family.",
+  },
+  {
+    heading: "Family Partnership",
+    body: "Parents are the primary educators. We expect families to read the assigned books alongside their students, attend parent formation evenings (3–4 per year), and contribute to the life of the school through the parent guild, fundraising, or service hours.",
+  },
+  {
+    heading: "Tuition & Financial Aid",
+    body: "Tuition is intentionally kept below the true cost of education through fundraising. Need-based financial aid is available — no qualified family is turned away for inability to pay full tuition. Apply through the financial aid portal each spring.",
+  },
+  {
+    heading: "Getting Involved",
+    body: "Join the Parent Guild, host a hospitality event for prospective families, mentor an incoming freshman family, volunteer for the spring benefit, or sponsor a faculty professional development trip. Your involvement is what makes a Chesterton school a true community.",
+  },
+  {
+    heading: "Questions?",
+    body: "Reach out to your headmaster or admissions director — and visit chestertonschoolsnetwork.org for the latest news, the academic calendar, and the full reading list.",
+  },
+];
+
+function buildCadence(wb: ExcelJS.Workbook) {
+  const ws = wb.addWorksheet(TAB_CADENCE, {
+    properties: { tabColor: { argb: CREAM } },
+    views: [{ showGridLines: false, state: "frozen", ySplit: 4 }],
+  });
+  ws.getColumn(1).width = 4;
+  ws.getColumn(2).width = 14;
+  ws.getColumn(3).width = 52;
+  ws.getColumn(4).width = 44;
+  ws.getColumn(5).width = 44;
+
+  ws.mergeCells("B2:E2");
+  applyTitleStyle(ws.getCell("B2"));
+  ws.getCell("B2").value = "Annual Cadence — Chesterton Schools Network";
+  ws.getRow(2).height = 30;
+
+  ws.mergeCells("B3:E3");
+  applySubtitleStyle(ws.getCell("B3"));
+  ws.getCell("B3").value = "The annual rhythm of academic, fundraising, and community life across the network.";
+
+  ws.getCell("B4").value = "Month";
+  ws.getCell("C4").value = "Academic";
+  ws.getCell("D4").value = "Fundraising";
+  ws.getCell("E4").value = "Community / Liturgy";
+  hdr(ws, 4, 5);
+
+  let r = 5;
+  for (const row of CADENCE_ROWS) {
+    ws.getCell(`B${r}`).value = row.month;
+    ws.getCell(`B${r}`).font = { bold: true };
+    ws.getCell(`C${r}`).value = row.academic;
+    ws.getCell(`C${r}`).alignment = { wrapText: true, vertical: "top" };
+    ws.getCell(`D${r}`).value = row.fundraising;
+    ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "top" };
+    ws.getCell(`E${r}`).value = row.community;
+    ws.getCell(`E${r}`).alignment = { wrapText: true, vertical: "top" };
+    ws.getRow(r).height = 32;
+    r += 1;
+  }
+}
+
+function buildTrainingSchedule(wb: ExcelJS.Workbook) {
+  const ws = wb.addWorksheet(TAB_TRAINING, {
+    properties: { tabColor: { argb: CREAM } },
+    views: [{ showGridLines: false, state: "frozen", ySplit: 4 }],
+  });
+  ws.getColumn(1).width = 4;
+  ws.getColumn(2).width = 22;
+  ws.getColumn(3).width = 50;
+  ws.getColumn(4).width = 28;
+  ws.getColumn(5).width = 28;
+  ws.getColumn(6).width = 18;
+
+  ws.mergeCells("B2:F2");
+  applyTitleStyle(ws.getCell("B2"));
+  ws.getCell("B2").value = "CSN Training Schedule";
+  ws.getRow(2).height = 30;
+
+  ws.mergeCells("B3:F3");
+  applySubtitleStyle(ws.getCell("B3"));
+  ws.getCell("B3").value = "Required and recommended training across Discovery, Preparation, Activation, and Launch.";
+
+  ws.getCell("B4").value = "Phase";
+  ws.getCell("C4").value = "Topic";
+  ws.getCell("D4").value = "Audience";
+  ws.getCell("E4").value = "Format";
+  ws.getCell("F4").value = "Timing";
+  hdr(ws, 4, 6);
+
+  let r = 5;
+  for (const s of TRAINING_SESSIONS) {
+    ws.getCell(`B${r}`).value = s.phase;
+    ws.getCell(`B${r}`).font = { bold: true };
+    ws.getCell(`C${r}`).value = s.topic;
+    ws.getCell(`C${r}`).alignment = { wrapText: true, vertical: "top" };
+    ws.getCell(`D${r}`).value = s.audience;
+    ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "top" };
+    ws.getCell(`E${r}`).value = s.format;
+    ws.getCell(`E${r}`).alignment = { wrapText: true, vertical: "top" };
+    ws.getCell(`F${r}`).value = s.weeks;
+    ws.getRow(r).height = 28;
+    r += 1;
+  }
+}
+
+function buildParentHandout(wb: ExcelJS.Workbook) {
+  const ws = wb.addWorksheet(TAB_PARENT_HANDOUT, {
+    properties: { tabColor: { argb: CREAM } },
+    views: [{ showGridLines: false }],
+  });
+  ws.getColumn(1).width = 4;
+  ws.getColumn(2).width = 32;
+  ws.getColumn(3).width = 90;
+
+  ws.mergeCells("B2:C2");
+  applyTitleStyle(ws.getCell("B2"));
+  ws.getCell("B2").value = "Parent Handout — Welcome to Our Chesterton Academy";
+  ws.getRow(2).height = 30;
+
+  ws.mergeCells("B3:C3");
+  applySubtitleStyle(ws.getCell("B3"));
+  ws.getCell("B3").value = "A one-page introduction every new family receives at admissions.";
+
+  let r = 5;
+  for (const sec of PARENT_HANDOUT_SECTIONS) {
+    ws.getCell(`B${r}`).value = sec.heading;
+    ws.getCell(`B${r}`).font = { bold: true, color: { argb: NAVY } };
+    ws.getCell(`B${r}`).alignment = { wrapText: true, vertical: "top" };
+    ws.getCell(`C${r}`).value = sec.body;
+    ws.getCell(`C${r}`).alignment = { wrapText: true, vertical: "top" };
+    // Estimate row height roughly from the body length so the wrapped text
+    // is fully visible without the founder having to resize anything.
+    const estLines = Math.max(2, Math.ceil(sec.body.length / 95));
+    ws.getRow(r).height = Math.min(140, 18 + 14 * estLines);
+    r += 1;
+  }
+}
+
 export async function generateChestertonOperatingManual(
   data: ChestertonModelInput,
 ): Promise<ExcelJS.Workbook> {
@@ -817,6 +1013,9 @@ export async function generateChestertonOperatingManual(
   buildFundraisingGoals(wb, data);
   buildGiftChart(wb, data);
   buildRecruitingPipeline(wb, data);
+  buildCadence(wb);
+  buildTrainingSchedule(wb);
+  buildParentHandout(wb);
 
   return wb;
 }

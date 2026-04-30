@@ -115,6 +115,86 @@ expect(
   tfgCell,
 );
 
+// 6. Static reference tabs (Cadence, CSN Training Schedule, Parent Handout)
+//    are present and populated from constants.
+for (const name of ["Cadence", "CSN Training Schedule", "Parent Handout"]) {
+  expect(`tab "${name}" exists`, !!wb.getWorksheet(name), true, !!wb.getWorksheet(name));
+}
+
+const cadence = wb.getWorksheet("Cadence")!;
+expect(
+  "Cadence tab title in B2",
+  cadence.getCell("B2").value === "Annual Cadence — Chesterton Schools Network",
+  "Annual Cadence — Chesterton Schools Network",
+  cadence.getCell("B2").value,
+);
+expect(
+  "Cadence column headers in row 4",
+  cadence.getCell("B4").value === "Month" &&
+    cadence.getCell("C4").value === "Academic" &&
+    cadence.getCell("D4").value === "Fundraising" &&
+    cadence.getCell("E4").value === "Community / Liturgy",
+  ["Month", "Academic", "Fundraising", "Community / Liturgy"],
+  [cadence.getCell("B4").value, cadence.getCell("C4").value, cadence.getCell("D4").value, cadence.getCell("E4").value],
+);
+expect(
+  "Cadence first month is July (row 5)",
+  cadence.getCell("B5").value === "July",
+  "July",
+  cadence.getCell("B5").value,
+);
+expect(
+  "Cadence has 12 month rows (B5:B16)",
+  cadence.getCell("B16").value === "June",
+  "June",
+  cadence.getCell("B16").value,
+);
+
+const training = wb.getWorksheet("CSN Training Schedule")!;
+expect(
+  "Training tab title in B2",
+  training.getCell("B2").value === "CSN Training Schedule",
+  "CSN Training Schedule",
+  training.getCell("B2").value,
+);
+expect(
+  "Training column headers in row 4",
+  training.getCell("B4").value === "Phase" &&
+    training.getCell("C4").value === "Topic" &&
+    training.getCell("D4").value === "Audience" &&
+    training.getCell("E4").value === "Format" &&
+    training.getCell("F4").value === "Timing",
+  ["Phase", "Topic", "Audience", "Format", "Timing"],
+  [training.getCell("B4").value, training.getCell("C4").value, training.getCell("D4").value, training.getCell("E4").value, training.getCell("F4").value],
+);
+expect(
+  "Training first row phase is Discovery (Yr 0)",
+  training.getCell("B5").value === "Discovery (Yr 0)",
+  "Discovery (Yr 0)",
+  training.getCell("B5").value,
+);
+
+const handout = wb.getWorksheet("Parent Handout")!;
+expect(
+  "Parent Handout tab title in B2",
+  handout.getCell("B2").value === "Parent Handout — Welcome to Our Chesterton Academy",
+  "Parent Handout — Welcome to Our Chesterton Academy",
+  handout.getCell("B2").value,
+);
+expect(
+  "Parent Handout first section heading is the welcome",
+  handout.getCell("B5").value === "Welcome to Chesterton Schools Network",
+  "Welcome to Chesterton Schools Network",
+  handout.getCell("B5").value,
+);
+expect(
+  "Parent Handout welcome body mentions classical liberal arts",
+  typeof handout.getCell("C5").value === "string" &&
+    (handout.getCell("C5").value as string).includes("classical"),
+  true,
+  handout.getCell("C5").value,
+);
+
 process.stdout.write("\n");
 if (failures.length > 0) {
   console.error("CHESTERTON OPERATING MANUAL EXPORT TEST: FAILED");
