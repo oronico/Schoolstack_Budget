@@ -72,14 +72,16 @@ test("Revenue step shows the bookkeeping-translation sidebar to basics-mode user
   request,
 }) => {
   // The wizard applies a one-time +1 step migration (a "Story" step was
-  // inserted at position 1), so seeding currentStep=4 lands the user on
-  // step 5 (Revenue) on first load.
+  // inserted at position 1), then a one-time reorderV2 remap (Capital &
+  // Financing was split out, Assumptions moved to position 8). Seeding
+  // currentStep=4 → storyMigration → 5 → reorderV2 map[5]=4 lands the
+  // user on step 4 (the new Revenue position) on first load.
   const { token, modelId } = await seedModel(request, 4);
   await primeAuthToken(page, token);
 
   await page.goto(`/model/${modelId}`);
 
-  const sidebar = page.getByTestId("bookkeeping-sidebar-step-5");
+  const sidebar = page.getByTestId("bookkeeping-sidebar-step-4");
   await expect(sidebar).toBeVisible();
   // The sidebar header should be the literal "What this means in your books"
   // surface — not the diagnostic panel or any other coaching widget.

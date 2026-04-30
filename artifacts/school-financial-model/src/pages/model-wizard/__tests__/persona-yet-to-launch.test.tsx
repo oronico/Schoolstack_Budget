@@ -196,19 +196,19 @@ describe("ModelWizardPage — yet_to_launch founder", () => {
     expectNoForbiddenTerms(container.textContent || "", "Wizard step 2");
   });
 
-  it("step 7 (Expenses) drops the QuickBooks/Xero name-drop in the Chart of Accounts callout", async () => {
-    const container = await renderWizardAtStep(7);
+  it("step 6 (Expenses) drops the QuickBooks/Xero name-drop in the Chart of Accounts callout", async () => {
+    const container = await renderWizardAtStep(6);
     // We allow "Xero" in the comfortable persona, but yet_to_launch must not
     // see either accounting-software brand. Sweep everything.
     const text = container.textContent || "";
-    expectNoForbiddenTerms(text, "Wizard step 7");
+    expectNoForbiddenTerms(text, "Wizard step 6");
     expect(text).not.toMatch(/xero/i);
   });
 
-  it("step 8 (Review) suppresses the budget-to-books / variance lesson", async () => {
-    const container = await renderWizardAtStep(8);
+  it("step 9 (Review) suppresses the budget-to-books / variance lesson", async () => {
+    const container = await renderWizardAtStep(9);
     const text = container.textContent || "";
-    expectNoForbiddenTerms(text, "Wizard step 8");
+    expectNoForbiddenTerms(text, "Wizard step 9");
     // The lesson card itself is gated — it should never render for this user.
     expect(container.querySelector('[data-testid="budget-to-books-lesson"]')).toBeNull();
   });

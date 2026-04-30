@@ -14,8 +14,8 @@ import {
 //      overlay does not block the wizard).
 //   2. Create a fully-populated model via the API so every wizard step has
 //      enough data to satisfy its react-hook-form `trigger()` validation.
-//   3. Open the wizard at step 1 and click "Continue" through all 11 steps.
-//   4. Assert each step's "Step N of 11: {Title}" header renders.
+//   3. Open the wizard at step 1 and click "Continue" through all 12 steps.
+//   4. Assert each step's "Step N of 12: {Title}" header renders.
 //   5. Capture browser console errors and any blocking alert() dialogs and
 //      surface them as test failures so engine/UI bugs do not silently pass.
 
@@ -39,20 +39,21 @@ const PATHS: PathSpec[] = [
   { label: "learning lab new",      schoolType: "learning_pod",   schoolStage: "new_school" },
 ];
 
-// Per-step desktop-visible heading text (the wizard chrome's "Step N of 11"
+// Per-step desktop-visible heading text (the wizard chrome's "Step N of 12"
 // label is mobile-only; each step component renders its own h2 we can pin to).
 const STEP_HEADINGS: Array<{ step: number; title: string; heading: RegExp }> = [
-  { step: 1,  title: "Story",          heading: /Let.?s start with your school.?s story/i },
-  { step: 2,  title: "School Details", heading: /Tell Us About Your School/i },
-  { step: 3,  title: "Assumptions",    heading: /^Assumptions$/i },
-  { step: 4,  title: "Enrollment",     heading: /Programs\s*&\s*Enrollment/i },
-  { step: 5,  title: "Revenue",        heading: /Revenue by Source|Where Does Your Money Come From/i },
-  { step: 6,  title: "Staffing",       heading: /Tell Us About Your Leadership and Staff/i },
-  { step: 7,  title: "Expenses",       heading: /Expenses\s*&\s*Operations|What Does Your School Spend On/i },
-  { step: 8,  title: "Review",         heading: /Does Everything Look Right/i },
-  { step: 9,  title: "Consultant",     heading: /What Our Analysis Found|Running Your Financial Analysis|Analysis Unavailable/i },
-  { step: 10, title: "Narrative",      heading: /Lender Narrative/i },
-  { step: 11, title: "Export",         heading: /Your reports are ready|Ready to export your model/i },
+  { step: 1,  title: "Story",                    heading: /Let.?s start with your school.?s story/i },
+  { step: 2,  title: "School Details",           heading: /Tell Us About Your School/i },
+  { step: 3,  title: "Enrollment",               heading: /Programs\s*&\s*Enrollment/i },
+  { step: 4,  title: "Revenue",                  heading: /Revenue by Source|Where Does Your Money Come From/i },
+  { step: 5,  title: "Staffing",                 heading: /Tell Us About Your Leadership and Staff/i },
+  { step: 6,  title: "Expenses",                 heading: /Expenses\s*&\s*Operations|What Does Your School Spend On/i },
+  { step: 7,  title: "Capital & Financing",      heading: /Capital\s*&\s*Financing/i },
+  { step: 8,  title: "Assumptions & Sensitivity", heading: /Assumptions\s*&\s*Sensitivity/i },
+  { step: 9,  title: "Review",                   heading: /Does Everything Look Right/i },
+  { step: 10, title: "Consultant",               heading: /What Our Analysis Found|Running Your Financial Analysis|Analysis Unavailable/i },
+  { step: 11, title: "Narrative",                heading: /Lender Narrative/i },
+  { step: 12, title: "Export",                   heading: /Your reports are ready|Ready to export your model/i },
 ];
 
 function makeId(prefix: string): string {
@@ -420,7 +421,7 @@ async function expectStepHeader(page: Page, stepNum: number): Promise<void> {
 }
 
 for (const spec of PATHS) {
-  test(`wizard smoke: ${spec.label} walks all 11 steps without crashing`, async ({
+  test(`wizard smoke: ${spec.label} walks all 12 steps without crashing`, async ({
     page,
     request,
   }) => {
@@ -466,11 +467,11 @@ for (const spec of PATHS) {
 
       if (step === STEP_HEADINGS.length) break; // nothing to click on the final step
 
-      // Step 10 (Lender Narrative) shows "Flagged Assumptions" with REQUIRED
+      // Step 11 (Lender Narrative) shows "Flagged Assumptions" with REQUIRED
       // "Explain your reasoning..." textareas for any benchmark misses. The
       // smoke seed creates flags, so we have to fill every textarea before
       // the form will submit. Use a generic plausible answer for each.
-      if (step === 10) {
+      if (step === 11) {
         const reasoningBoxes = page.getByPlaceholder(/Explain your reasoning/i);
         const count = await reasoningBoxes.count();
         for (let i = 0; i < count; i++) {
@@ -481,9 +482,9 @@ for (const spec of PATHS) {
       }
 
       const nextLabel =
-        step === 8 ? /View Consultant Analysis/i :
-        step === 9 ? /Continue to Lender Narrative/i :
-        step === 10 ? /Generate Excel Model/i :
+        step === 9  ? /View Consultant Analysis/i :
+        step === 10 ? /Continue to Lender Narrative/i :
+        step === 11 ? /Generate Excel Model/i :
         /Continue/i;
 
       const nextBtn = page.getByRole("button", { name: nextLabel }).first();
@@ -498,7 +499,7 @@ for (const spec of PATHS) {
       `[${spec.label}] browser console errors:\n${health.consoleErrors.join("\n---\n")}`,
     ).toEqual([]);
 
-    // Blocking validation alerts on Step 1 / 7 / 10 are real failures (the
+    // Blocking validation alerts on Step 1 / 8 / 11 are real failures (the
     // seed payload should satisfy every step). Surface them so we notice.
     expect(
       health.dialogs,

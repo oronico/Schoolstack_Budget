@@ -1,0 +1,213 @@
+import { useFormContext } from "react-hook-form";
+import { Building2, Shield, Lightbulb, Info } from "lucide-react";
+import { FinancingInsight } from "@/components/coaching/FinancingInsight";
+import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { cn } from "@/lib/utils";
+import type { FullModelData } from "../schema";
+import type { SchoolType } from "@/lib/state-funding-data";
+
+function AssumptionField({
+  label,
+  name,
+  suffix,
+  prefix,
+  defaultValue,
+  usageNote,
+  placeholder,
+  type = "number",
+  min,
+  max,
+  step,
+}: {
+  label: React.ReactNode;
+  name: string;
+  suffix?: string;
+  prefix?: string;
+  defaultValue?: number;
+  usageNote: React.ReactNode;
+  placeholder?: string;
+  type?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}) {
+  const { watch, setValue } = useFormContext();
+  const value = watch(name);
+  const isModified =
+    defaultValue !== undefined && value !== undefined && value !== null && value !== defaultValue;
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-sm font-semibold text-foreground">{label}</label>
+        {isModified && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
+            Modified
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        {prefix && <span className="text-sm text-muted-foreground font-medium">{prefix}</span>}
+        <input
+          type={type}
+          value={value ?? ""}
+          onChange={(e) => {
+            const raw = e.target.value;
+            const parsed = type === "number" ? parseFloat(raw) : raw;
+            setValue(
+              name,
+              raw === "" ? undefined : isNaN(parsed as number) ? undefined : parsed,
+              { shouldDirty: true },
+            );
+          }}
+          className="w-32 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+          placeholder={placeholder ?? (defaultValue !== undefined ? String(defaultValue) : undefined)}
+          min={min}
+          max={max}
+          step={step}
+        />
+        {suffix && <span className="text-sm text-muted-foreground font-medium">{suffix}</span>}
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">{usageNote}</p>
+    </div>
+  );
+}
+
+function SectionHeader({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: React.ReactNode;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="flex items-start gap-3">
+        <div className="p-2 bg-primary/10 rounded-xl mt-0.5 flex-shrink-0">{icon}</div>
+        <div>
+          <h3 className="text-lg font-bold text-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoBadge({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 p-3.5">
+      <Info className="h-4 w-4 text-slate-500 mt-0.5 flex-shrink-0" />
+      <p className="text-xs text-slate-600 leading-relaxed">{children}</p>
+    </div>
+  );
+}
+
+export function CapitalFinancingStep() {
+  const { watch } = useFormContext<FullModelData>();
+  const schoolType = watch("schoolProfile.schoolType") as SchoolType | undefined;
+  const loanAmount = watch("schoolProfile.loanAmount") as number | undefined;
+  const hasLoan = loanAmount !== undefined && loanAmount !== null && loanAmount > 0;
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Capital &amp; Financing</h2>
+        <p className="text-muted-foreground text-lg">
+          If you're financing facilities, equipment, or working capital with debt, set the loan terms and lender covenants here. Skip the details if you have no loan — your model still builds without one.
+        </p>
+      </div>
+
+      <div className="space-y-10">
+        <section>
+          <SectionHeader
+            icon={<Building2 className="h-5 w-5 text-primary" />}
+            title="Debt Terms"
+            description="Loan parameters that flow into your debt service projections and balance sheet."
+          />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <AssumptionField
+                label="Loan Amount"
+                name="schoolProfile.loanAmount"
+                prefix="$"
+                usageNote="Total principal amount. Generates annual debt service payments on the Expenses step."
+                placeholder="0"
+                min={0}
+              />
+
+              <AssumptionField
+                label="Annual Interest Rate"
+                name="schoolProfile.loanRate"
+                suffix="%"
+                usageNote="Annual rate on outstanding loan balance. Used to calculate monthly/annual debt service payments."
+                placeholder="0"
+                min={0}
+                max={100}
+              />
+
+              <AssumptionField
+                label="Loan Term"
+                name="schoolProfile.loanTermYears"
+                suffix=" years"
+                usageNote="Number of years to fully amortize the loan. Drives the annual payment schedule."
+                placeholder="0"
+                min={0}
+                max={50}
+              />
+            </div>
+
+            <InfoBadge>
+              Debt service payments are automatically computed and included in the Expenses step when a loan is configured.
+            </InfoBadge>
+          </div>
+        </section>
+
+        <section>
+          <SectionHeader
+            icon={<Shield className="h-5 w-5 text-primary" />}
+            title={<>Step-Up <GlossaryTerm termKey="dscr" schoolType={schoolType}>DSCR</GlossaryTerm> Covenants</>}
+            description={hasLoan
+              ? "If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets."
+              : "These settings become relevant if you add loan details above."}
+          />
+          {hasLoan ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-5 gap-3">
+                {[0, 1, 2, 3, 4].map(y => (
+                  <AssumptionField
+                    key={y}
+                    label={`Year ${y + 1}`}
+                    name={`covenantThresholds.dscrByYear.${y}`}
+                    suffix="x"
+                    usageNote={`Minimum DSCR for Year ${y + 1}`}
+                    placeholder={[1.10, 1.15, 1.20, 1.25, 1.25][y].toFixed(2)}
+                    min={0}
+                    max={10}
+                    step={0.05}
+                  />
+                ))}
+              </div>
+              <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900">
+                <Lightbulb className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <span>
+                  Step-up covenants start lower in early years when your school is still growing, then tighten as cash flow stabilizes.
+                  A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.
+                </span>
+              </div>
+              <FinancingInsight text="If you have loan covenants, missing your DSCR targets can trigger default provisions - plan conservatively so you have room to meet each year's target." />
+            </div>
+          ) : (
+            <div className={cn("flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 p-4")}>
+              <Info className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-slate-500 leading-relaxed">
+                No loan configured - DSCR covenants don't apply yet. If you add a loan amount in the Debt Terms section above, year-by-year covenant targets will appear here.
+              </p>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

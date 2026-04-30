@@ -21,6 +21,10 @@ export const STATEMENT_LABELS: Record<StatementKind, string> = {
   memo: "Memo only",
 };
 
+// Keys here are 1-indexed wizard step IDs. Reordered with task #329:
+// 1 Story · 2 School Details · 3 Enrollment · 4 Revenue · 5 Staffing ·
+// 6 Expenses · 7 Capital & Financing · 8 Assumptions & Sensitivity ·
+// 9 Review · 10 Consultant · 11 Lender Narrative · 12 Export.
 export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = {
   1: {
     intro:
@@ -76,32 +80,6 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
   },
   3: {
     intro:
-      "Assumptions don't post to your books directly - they're the dials your bookkeeper will use to roll the budget forward and explain next year's variances.",
-    lines: [
-      {
-        label: "Tuition escalation rate",
-        account: "Used to project next year's Tuition Revenue line",
-        glossaryKey: "escalation_rate",
-        statement: "memo",
-      },
-      {
-        label: "COLA (annual salary bump)",
-        account: "Used to project Salaries & Wages",
-        glossaryKey: "cola",
-        statement: "memo",
-      },
-      {
-        label: "Benefits rate and payroll tax rate",
-        account: "Become the Employee Benefits and Payroll Tax Expense projections",
-        glossaryKey: "payroll_expense",
-        statement: "memo",
-      },
-    ],
-    footnote:
-      "Cash vs. accrual choice (set by your bookkeeper, not here) decides whether September tuition gets booked when invoiced or when collected.",
-  },
-  4: {
-    intro:
       "Enrollment counts don't show up on the P&L themselves - but they're the multiplier behind every per-student line your books carry.",
     lines: [
       {
@@ -118,7 +96,7 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
       },
     ],
   },
-  5: {
+  4: {
     intro:
       "Every line you turn on here maps to a specific revenue account on your Profit & Loss.",
     lines: [
@@ -154,7 +132,7 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
       },
     ],
   },
-  6: {
+  5: {
     intro:
       "Staffing is usually 60-80% of total expense. The fully-loaded cost lands in three separate accounts on your P&L.",
     lines: [
@@ -184,7 +162,7 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
       },
     ],
   },
-  7: {
+  6: {
     intro:
       "Each expense category here lands in one of four buckets on your monthly P&L.",
     lines: [
@@ -218,7 +196,67 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
       },
     ],
   },
+  7: {
+    intro:
+      "Capital & Financing is where loan principal, interest, and covenant promises hit your books. The amounts you enter here drive both your P&L (interest) and your Balance Sheet (loan liability).",
+    lines: [
+      {
+        label: "Loan principal",
+        account: "Long-Term Debt on the Balance Sheet (current portion shifts to Current Liabilities each year)",
+        glossaryKey: "liabilities",
+        statement: "balance_sheet",
+        note: "Each monthly payment splits into an interest portion (P&L) and a principal portion (reduces this Liability).",
+      },
+      {
+        label: "Annual interest rate",
+        account: "Interest Expense on the P&L (the interest portion of every debt service payment)",
+        glossaryKey: "debt_service",
+        statement: "pl",
+      },
+      {
+        label: "Loan term",
+        account: "Drives the amortization schedule - how much principal vs. interest each year",
+        glossaryKey: "debt_service",
+        statement: "memo",
+      },
+      {
+        label: "DSCR covenant targets",
+        account: "Memo only - lenders compute Operating Income ÷ annual Debt Service from your books each year",
+        glossaryKey: "dscr",
+        statement: "memo",
+        note: "Missing a DSCR covenant can trigger default provisions - plan conservatively so you have room to meet each year's target.",
+      },
+    ],
+    footnote:
+      "If you have no debt, this step is empty - your books simply have no Long-Term Debt or Interest Expense lines.",
+  },
   8: {
+    intro:
+      "Assumptions & Sensitivity don't post to your books directly - they're the dials your bookkeeper will use to roll the budget forward and explain next year's variances.",
+    lines: [
+      {
+        label: "Tuition escalation rate",
+        account: "Used to project next year's Tuition Revenue line",
+        glossaryKey: "escalation_rate",
+        statement: "memo",
+      },
+      {
+        label: "COLA (annual salary bump)",
+        account: "Used to project Salaries & Wages",
+        glossaryKey: "cola",
+        statement: "memo",
+      },
+      {
+        label: "Benefits rate and payroll tax rate",
+        account: "Become the Employee Benefits and Payroll Tax Expense projections",
+        glossaryKey: "payroll_expense",
+        statement: "memo",
+      },
+    ],
+    footnote:
+      "Cash vs. accrual choice (set by your bookkeeper, not here) decides whether September tuition gets booked when invoiced or when collected.",
+  },
+  9: {
     intro:
       "Review pulls the whole picture together. Opening Balances populate the Balance Sheet on day one; everything else flows through your monthly P&L.",
     lines: [
@@ -249,7 +287,7 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
       },
     ],
   },
-  9: {
+  10: {
     intro:
       "The consultant view is analytical - it doesn't post to the GL. But the metrics it surfaces are the same ones a bookkeeper would compute from your P&L and Balance Sheet each month.",
     lines: [
@@ -273,7 +311,7 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
       },
     ],
   },
-  10: {
+  11: {
     intro:
       "Lender narrative is the story behind the numbers. Lenders also pull your last 12-24 months of actual P&L and Balance Sheet to confirm the story matches the books.",
     lines: [
@@ -297,7 +335,7 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
       },
     ],
   },
-  11: {
+  12: {
     intro:
       "The Excel export is a budget your bookkeeper can drop next to the live P&L. Most accounting systems will import it as the 'Budget' column on a Budget vs. Actual report.",
     lines: [

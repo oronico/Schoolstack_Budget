@@ -169,7 +169,7 @@ test("State Entity Filing Fees row appears, re-seeds on state change, and disapp
   await expect(stateSelect).toHaveValue("CA");
   await stateSelect.selectOption("NY");
   await expect(stateSelect).toHaveValue("NY");
-  await jumpToStep(page, 7);
+  await jumpToStep(page, 6);
   await dismissCategoryPickerIfShown(page);
 
   await expect(row).toBeVisible();
@@ -183,7 +183,7 @@ test("State Entity Filing Fees row appears, re-seeds on state change, and disapp
   await expect(entitySelect).toHaveValue("llc_single");
   await entitySelect.selectOption("sole_practitioner");
   await expect(entitySelect).toHaveValue("sole_practitioner");
-  await jumpToStep(page, 7);
+  await jumpToStep(page, 6);
   await dismissCategoryPickerIfShown(page);
 
   await expect(
@@ -237,7 +237,7 @@ test("Picking WA on the Staffing step re-seeds default rows with the WA SUI wage
   // Jump back to School Details, switch state to WA, return to Staffing.
   await jumpToStep(page, 2);
   await page.getByLabel("State").selectOption("WA");
-  await jumpToStep(page, 6);
+  await jumpToStep(page, 5);
 
   // Wage-base-aware payroll tax for $85k Head of School in WA:
   //   FICA:    85,000 × 6.2%             = $5,270.00

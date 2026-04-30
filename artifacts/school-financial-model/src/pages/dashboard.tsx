@@ -18,11 +18,12 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 const STEP_LABELS = [
   "Story",
   "School Details",
-  "Assumptions",
   "Enrollment",
   "Revenue",
   "Staffing",
   "Expenses",
+  "Capital & Financing",
+  "Assumptions & Sensitivity",
   "Review",
   "Consultant",
   "Lender Narrative",
@@ -86,11 +87,12 @@ export function DashboardPage() {
           data: seededData
         }
       });
-      // Mark this model as already past the legacy Story-step migration so
-      // the wizard's load-time bump logic never fires for brand-new models
-      // created in the new (Story-first) flow.
+      // Mark this model as already past the legacy Story-step migration AND
+      // the reorderV2 step-shuffle migration so the wizard's load-time bump
+      // logic never fires for brand-new models created in the new flow.
       try {
         window.localStorage.setItem(`wizard:storyMigration:${newModel.id}`, "1");
+        window.localStorage.setItem(`wizard:reorderV2:${newModel.id}`, "1");
       } catch {
         /* noop */
       }
@@ -114,9 +116,13 @@ export function DashboardPage() {
       // legacy model isn't double-bumped, and so a duplicated new-flow model
       // isn't legacy-bumped on first open.
       try {
-        const sourceMarked = window.localStorage.getItem(`wizard:storyMigration:${id}`) === "1";
-        if (sourceMarked) {
+        const storySrcMarked = window.localStorage.getItem(`wizard:storyMigration:${id}`) === "1";
+        if (storySrcMarked) {
           window.localStorage.setItem(`wizard:storyMigration:${newModel.id}`, "1");
+        }
+        const reorderSrcMarked = window.localStorage.getItem(`wizard:reorderV2:${id}`) === "1";
+        if (reorderSrcMarked) {
+          window.localStorage.setItem(`wizard:reorderV2:${newModel.id}`, "1");
         }
       } catch {
         /* noop */
@@ -349,9 +355,9 @@ export function DashboardPage() {
                           onClick={() => setLocation(`/model/${model.id}`)}
                           className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
                         >
-                          {(model.currentStep ?? 0) >= 8 ? "View Model" : "Continue Building"} <ArrowRight className="h-3.5 w-3.5" />
+                          {(model.currentStep ?? 0) >= 9 ? "View Model" : "Continue Building"} <ArrowRight className="h-3.5 w-3.5" />
                         </button>
-                        {(model.currentStep ?? 0) >= 8 ? (
+                        {(model.currentStep ?? 0) >= 9 ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); setLocation(`/model/${model.id}/scenarios`); }}
                             className="text-sm font-medium text-teal-700 hover:underline flex items-center gap-1"
@@ -359,7 +365,7 @@ export function DashboardPage() {
                             <GitBranch className="h-3.5 w-3.5" /> Scenarios
                           </button>
                         ) : (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1" title="Complete all 8 steps to unlock scenarios">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1" title="Reach Review (step 9) to unlock scenarios">
                             <Lock className="h-3 w-3" /> Scenarios
                           </span>
                         )}

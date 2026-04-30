@@ -44,7 +44,7 @@ async function seedScenarioFixture(
       name: "E2E Test Academy",
       // Scenarios page redirects to the wizard if currentStep < 8 — mark the
       // model as completed so the saved-scenario UI renders.
-      currentStep: 11,
+      currentStep: 12,
       data: {
         schoolProfile: {
           schoolName: "E2E Test Academy",
@@ -67,7 +67,7 @@ async function seedScenarioFixture(
     headers: authHeaders,
     data: {
       name: "E2E Test Academy",
-      currentStep: 11,
+      currentStep: 12,
       data: {
         schoolProfile: {
           schoolName: "E2E Test Academy",

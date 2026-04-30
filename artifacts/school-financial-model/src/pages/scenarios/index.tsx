@@ -1676,7 +1676,7 @@ export function ScenarioPage() {
   useEffect(() => {
     if (model && !initialized) {
       const modelData = model.data as FullModelData | undefined;
-      if ((model.currentStep ?? 0) < 8) {
+      if ((model.currentStep ?? 0) < 9) {
         setLocation(`/model/${modelId}`);
         return;
       }

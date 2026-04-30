@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Lightbulb, TrendingUp, Users, Building2, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield, Sprout, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
+import { Lightbulb, TrendingUp, Users, Calendar, DollarSign, RotateCcw, MapPin, Info, Landmark, GraduationCap, Shield, Sprout, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
@@ -412,8 +412,6 @@ export function AssumptionsStep() {
   const { user } = useAuth();
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const showReassurance = guidanceLevel === "extra" || guidanceLevel === "basics";
-  const loanAmount = watch("schoolProfile.loanAmount") as number | undefined;
-  const hasLoan = loanAmount !== undefined && loanAmount !== null && loanAmount > 0;
 
   const schoolType = watch("schoolProfile.schoolType") as SchoolType | undefined;
   const stateCode = watch("schoolProfile.state") as string || "";
@@ -506,9 +504,9 @@ export function AssumptionsStep() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Assumptions</h2>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Assumptions &amp; Sensitivity</h2>
         <p className="text-muted-foreground text-lg">
-          The formula dashboard - every rate and driver that powers your 5-year model, in one place.
+          The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates, escalators, and structural settings that stress-test your 5-year model.
         </p>
       </div>
 
@@ -859,94 +857,6 @@ export function AssumptionsStep() {
               COLA (salary escalation) is set above under Cost Escalation.
             </InfoBadge>
           </div>
-        </section>
-
-        <section>
-          <SectionHeader
-            icon={<Building2 className="h-5 w-5 text-primary" />}
-            title="Debt Terms"
-            description="Loan parameters that flow into your debt service projections and balance sheet."
-          />
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <AssumptionField
-                label="Loan Amount"
-                name="schoolProfile.loanAmount"
-                prefix="$"
-                usageNote="Total principal amount. Generates annual debt service payments on the Expenses step."
-                placeholder="0"
-                min={0}
-              />
-
-              <AssumptionField
-                label="Annual Interest Rate"
-                name="schoolProfile.loanRate"
-                suffix="%"
-                usageNote="Annual rate on outstanding loan balance. Used to calculate monthly/annual debt service payments."
-                placeholder="0"
-                min={0}
-                max={100}
-              />
-
-              <AssumptionField
-                label="Loan Term"
-                name="schoolProfile.loanTermYears"
-                suffix=" years"
-                usageNote="Number of years to fully amortize the loan. Drives the annual payment schedule."
-                placeholder="0"
-                min={0}
-                max={50}
-              />
-            </div>
-
-            <InfoBadge>
-              Debt service payments are automatically computed and included in the Expenses step when a loan is configured.
-            </InfoBadge>
-          </div>
-        </section>
-
-        <section>
-          <SectionHeader
-            icon={<Shield className="h-5 w-5 text-primary" />}
-            title={<>Step-Up <GlossaryTerm termKey="dscr" schoolType={schoolType}>DSCR</GlossaryTerm> Covenants</>}
-            description={hasLoan
-              ? "If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets."
-              : "These settings become relevant if you add loan details above."}
-          />
-          {hasLoan ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-5 gap-3">
-                {[0, 1, 2, 3, 4].map(y => (
-                  <AssumptionField
-                    key={y}
-                    label={`Year ${y + 1}`}
-                    name={`covenantThresholds.dscrByYear.${y}`}
-                    suffix="x"
-                    usageNote={`Minimum DSCR for Year ${y + 1}`}
-                    placeholder={[1.10, 1.15, 1.20, 1.25, 1.25][y].toFixed(2)}
-                    min={0}
-                    max={10}
-                    step={0.05}
-                  />
-                ))}
-              </div>
-              <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900">
-                <Lightbulb className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                <span>
-                  Step-up covenants start lower in early years when your school is still growing, then tighten as cash flow stabilizes.
-                  A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.
-                </span>
-              </div>
-              <FinancingInsight text="If you have loan covenants, missing your DSCR targets can trigger default provisions - plan conservatively so you have room to meet each year's target." />
-            </div>
-          ) : (
-            <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 p-4">
-              <Info className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-slate-500 leading-relaxed">
-                No loan configured - DSCR covenants don't apply yet. If you add a loan amount in the Debt Terms section above, year-by-year covenant targets will appear here.
-              </p>
-            </div>
-          )}
         </section>
 
         <section>

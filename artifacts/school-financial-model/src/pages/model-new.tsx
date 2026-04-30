@@ -145,6 +145,12 @@ export function NewModelPage() {
           const newModel = await createMutation.mutateAsync({
             data: { name: "Untitled Model", currentStep: 1, data: {} },
           });
+          try {
+            window.localStorage.setItem(`wizard:storyMigration:${newModel.id}`, "1");
+            window.localStorage.setItem(`wizard:reorderV2:${newModel.id}`, "1");
+          } catch {
+            /* noop */
+          }
           setLocation(`/model/${newModel.id}`);
         } catch {
           setLocation("/dashboard");
@@ -169,6 +175,12 @@ export function NewModelPage() {
           },
         });
 
+        try {
+          window.localStorage.setItem(`wizard:storyMigration:${newModel.id}`, "1");
+          window.localStorage.setItem(`wizard:reorderV2:${newModel.id}`, "1");
+        } catch {
+          /* noop */
+        }
         sessionStorage.setItem(`space_import_${newModel.id}`, "true");
         setLocation(`/model/${newModel.id}`);
       } catch {

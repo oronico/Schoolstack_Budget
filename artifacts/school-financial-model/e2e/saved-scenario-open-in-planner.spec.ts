@@ -45,7 +45,7 @@ async function seedScenarioFixture(
     headers: authHeaders,
     data: {
       name: "E2E Planner Academy",
-      currentStep: 11,
+      currentStep: 12,
       data: {
         schoolProfile: {
           schoolName: "E2E Planner Academy",
@@ -70,7 +70,7 @@ async function seedScenarioFixture(
     headers: authHeaders,
     data: {
       name: "E2E Planner Academy",
-      currentStep: 11,
+      currentStep: 12,
       data: {
         schoolProfile: {
           schoolName: "E2E Planner Academy",

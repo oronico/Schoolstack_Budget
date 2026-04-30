@@ -31,6 +31,7 @@ const AssumptionsStep = lazy(() => import("./steps/AssumptionsStep").then(m => (
 const RevenueStep = lazy(() => import("./steps/RevenueStep").then(m => ({ default: m.RevenueStep })));
 const StaffingStep = lazy(() => import("./steps/StaffingStep").then(m => ({ default: m.StaffingStep })));
 const ExpenseStep = lazy(() => import("./steps/ExpenseStep").then(m => ({ default: m.ExpenseStep })));
+const CapitalFinancingStep = lazy(() => import("./steps/CapitalFinancingStep").then(m => ({ default: m.CapitalFinancingStep })));
 const ReviewStep = lazy(() => import("./steps/ReviewStep").then(m => ({ default: m.ReviewStep })));
 const ConsultantStep = lazy(() => import("./steps/ConsultantStep").then(m => ({ default: m.ConsultantStep })));
 const NarrativeStep = lazy(() => import("./steps/NarrativeStep").then(m => ({ default: m.NarrativeStep })));
@@ -105,21 +106,43 @@ type StepProps = { jumpToStep?: (s: number) => void; modelId: number | null; foc
 const STEPS: { id: number; title: string; component: ComponentType<StepProps> }[] = [
   { id: 1, title: "Story", component: StoryStep as ComponentType<StepProps> },
   { id: 2, title: "School Details", component: SchoolProfileStep },
-  { id: 3, title: "Assumptions", component: AssumptionsStep as ComponentType<StepProps> },
-  { id: 4, title: "Enrollment", component: EnrollmentStep },
-  { id: 5, title: "Revenue", component: RevenueStep as ComponentType<StepProps> },
-  { id: 6, title: "Staffing", component: StaffingStep as ComponentType<StepProps> },
-  { id: 7, title: "Expenses", component: ExpenseStep as ComponentType<StepProps> },
-  { id: 8, title: "Review", component: ReviewStep as ComponentType<StepProps> },
-  { id: 9, title: "Consultant", component: ConsultantStep as ComponentType<StepProps> },
-  { id: 10, title: "Lender Narrative", component: NarrativeStep as ComponentType<StepProps> },
-  { id: 11, title: "Export", component: ExportStep as ComponentType<StepProps> },
+  { id: 3, title: "Enrollment", component: EnrollmentStep },
+  { id: 4, title: "Revenue", component: RevenueStep as ComponentType<StepProps> },
+  { id: 5, title: "Staffing", component: StaffingStep as ComponentType<StepProps> },
+  { id: 6, title: "Expenses", component: ExpenseStep as ComponentType<StepProps> },
+  { id: 7, title: "Capital & Financing", component: CapitalFinancingStep as ComponentType<StepProps> },
+  { id: 8, title: "Assumptions & Sensitivity", component: AssumptionsStep as ComponentType<StepProps> },
+  { id: 9, title: "Review", component: ReviewStep as ComponentType<StepProps> },
+  { id: 10, title: "Consultant", component: ConsultantStep as ComponentType<StepProps> },
+  { id: 11, title: "Lender Narrative", component: NarrativeStep as ComponentType<StepProps> },
+  { id: 12, title: "Export", component: ExportStep as ComponentType<StepProps> },
 ];
 
-const REVIEW_STEP_ID = 8;
-const CONSULTANT_STEP_ID = 9;
-const NARRATIVE_STEP_ID = 10;
-const EXPORT_STEP_ID = 11;
+const CAPITAL_FINANCING_STEP_ID = 7;
+const ASSUMPTIONS_STEP_ID = 8;
+const REVIEW_STEP_ID = 9;
+const CONSULTANT_STEP_ID = 10;
+const NARRATIVE_STEP_ID = 11;
+const EXPORT_STEP_ID = 12;
+
+// Maps a saved `currentStep` written under the pre-task-#329 11-step layout
+// (Assumptions at 3 with Capital/DSCR baked in) to the new 12-step layout
+// (Capital & Financing at 7, Assumptions & Sensitivity at 8). Applied
+// exactly once per model on first wizard load via the
+// `wizard:reorderV2:<id>` localStorage flag.
+const REORDER_V2_STEP_MAP: Record<number, number> = {
+  1: 1,   // Story → Story
+  2: 2,   // School Details → School Details
+  3: 8,   // Assumptions → Assumptions & Sensitivity
+  4: 3,   // Enrollment → Enrollment
+  5: 4,   // Revenue → Revenue
+  6: 5,   // Staffing → Staffing
+  7: 6,   // Expenses → Expenses
+  8: 9,   // Review → Review
+  9: 10,  // Consultant → Consultant
+  10: 11, // Lender Narrative → Lender Narrative
+  11: 12, // Export → Export
+};
 
 function sendModelTiming(step: number, stepName: string, durationSeconds: number, modelId: number) {
   if (durationSeconds < 2) return;
@@ -371,27 +394,53 @@ export function ModelWizardPage() {
       if (deepLinkStep && deepLinkStep >= 1 && deepLinkStep <= STEPS.length) {
         setCurrentStep(Math.min(deepLinkStep, STEPS.length));
       } else if (initialData.currentStep) {
-        // Migration: an earlier wizard had 10 steps with Profile at step 1.
-        // We inserted a new "Story" step at position 1, so any model that has
-        // already advanced past the old Profile step needs to shift forward
-        // by one. Use a per-model localStorage marker so the bump is applied
-        // exactly once — `openingStory` is optional and may legitimately stay
-        // empty after migration, so we cannot rely on its presence as a flag.
-        const migrationKey = initialData.id != null ? `wizard:storyMigration:${initialData.id}` : null;
-        let alreadyMigrated = false;
+        // Migration A (storyMigration): an earlier wizard had 10 steps with
+        // Profile at step 1. We inserted a new "Story" step at position 1,
+        // so any model that has already advanced past the old Profile step
+        // needs to shift forward by one. Use a per-model localStorage marker
+        // so the bump is applied exactly once — `openingStory` is optional
+        // and may legitimately stay empty after migration, so we cannot rely
+        // on its presence as a flag.
+        const storyMigrationKey = initialData.id != null ? `wizard:storyMigration:${initialData.id}` : null;
+        let storyAlreadyMigrated = false;
         try {
-          alreadyMigrated = migrationKey ? window.localStorage.getItem(migrationKey) === "1" : false;
+          storyAlreadyMigrated = storyMigrationKey ? window.localStorage.getItem(storyMigrationKey) === "1" : false;
         } catch {
-          alreadyMigrated = false;
+          storyAlreadyMigrated = false;
         }
-        const needsMigration = !alreadyMigrated && initialData.currentStep >= 2;
-        const target = needsMigration
-          ? Math.min(initialData.currentStep + 1, STEPS.length)
-          : Math.min(initialData.currentStep, STEPS.length);
-        if (needsMigration && migrationKey) {
-          try { window.localStorage.setItem(migrationKey, "1"); } catch { /* noop */ }
+        const needsStoryMigration = !storyAlreadyMigrated && initialData.currentStep >= 2;
+        let target = needsStoryMigration
+          ? initialData.currentStep + 1
+          : initialData.currentStep;
+        if (needsStoryMigration && storyMigrationKey) {
+          try { window.localStorage.setItem(storyMigrationKey, "1"); } catch { /* noop */ }
         }
-        setCurrentStep(target);
+
+        // Migration B (reorderV2 — task #329): we reshuffled the wizard so
+        // the natural budget flow drives the order (Enrollment → Revenue →
+        // Staffing → Expenses → Capital & Financing → Assumptions &
+        // Sensitivity → Review …) and split Capital & Financing out of the
+        // catch-all Assumptions step. Models saved under the old layout
+        // need their step number remapped exactly once so a founder who
+        // left mid-wizard lands on the equivalent screen.
+        const reorderMigrationKey = initialData.id != null ? `wizard:reorderV2:${initialData.id}` : null;
+        let reorderAlreadyMigrated = false;
+        try {
+          reorderAlreadyMigrated = reorderMigrationKey
+            ? window.localStorage.getItem(reorderMigrationKey) === "1"
+            : false;
+        } catch {
+          reorderAlreadyMigrated = false;
+        }
+        if (!reorderAlreadyMigrated) {
+          const mapped = REORDER_V2_STEP_MAP[target];
+          if (mapped !== undefined) target = mapped;
+          if (reorderMigrationKey) {
+            try { window.localStorage.setItem(reorderMigrationKey, "1"); } catch { /* noop */ }
+          }
+        }
+
+        setCurrentStep(Math.min(target, STEPS.length));
       }
       setStepInitialized(true);
     }
@@ -684,42 +733,54 @@ export function ModelWizardPage() {
           return true;
         }
         case 2: return methods.trigger('schoolProfile');
-        case 3: return true;
-        case 4: {
+        case 3: {
           const progs = methods.getValues('programs') as unknown[];
           if (progs && progs.length > 0) {
             return methods.trigger('programs');
           }
           return methods.trigger('enrollment');
         }
-        case 5: {
+        case 4: {
           const [a, b] = await Promise.all([
             methods.trigger('revenue'),
             methods.trigger('revenueRows'),
           ]);
           return a && b;
         }
-        case 6: {
+        case 5: {
           const [a, b] = await Promise.all([
             methods.trigger('staffing'),
             methods.trigger('staffingRows'),
           ]);
           return a && b;
         }
-        case 7: {
+        case 6: {
           const [a, b, d] = await Promise.all([
             methods.trigger('facilities'),
             methods.trigger('expenseRows'),
             methods.trigger('capitalAndDebtRows'),
           ]);
-          if (a && b && d) {
-            const { ok, missing } = checkCoreFieldsForExport();
-            if (!ok) {
-              alert(`Before you can continue to Review, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order - just make sure they're done before generating your outputs.`);
-              return false;
-            }
-          }
           return a && b && d;
+        }
+        case CAPITAL_FINANCING_STEP_ID: {
+          // Capital & Financing fields live under schoolProfile.* (loan
+          // amount/rate/term) and covenantThresholds.dscrByYear.*. Both are
+          // optional in the schema (a founder with no debt can step through
+          // with no input). Trigger schoolProfile so any user-entered loan
+          // values get validated; covenant thresholds are validated at
+          // submit time via the resolver.
+          return methods.trigger('schoolProfile');
+        }
+        case ASSUMPTIONS_STEP_ID: {
+          // Assumptions & Sensitivity is the last step before Review — gate
+          // the core-fields-for-export check here so missing inputs surface
+          // before the founder lands on Consultant Analysis.
+          const { ok, missing } = checkCoreFieldsForExport();
+          if (!ok) {
+            alert(`Before you can continue to Review, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order - just make sure they're done before generating your outputs.`);
+            return false;
+          }
+          return true;
         }
         case NARRATIVE_STEP_ID: {
           const flagResponses = methods.getValues("assumptionFlagResponses") as Array<{ field: string; flagType: string; reason: string }> | undefined;
@@ -820,7 +881,7 @@ export function ModelWizardPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const showEncouragement = (currentStep === 6 || currentStep === 7) && !encouragementDismissed;
+  const showEncouragement = (currentStep === 5 || currentStep === 6) && !encouragementDismissed;
   const handleDismissEncouragement = () => {
     setEncouragementDismissed(true);
     if (modelId) {
