@@ -146,9 +146,13 @@ defaults-row emission/omission paths.
 ## 3. Items intentionally out of scope
 
 - **Local & city business licenses** (e.g. Seattle B&O tax, NYC commercial
-  rent tax). These are too address-specific to seed sensibly without the
-  founder's exact municipality. Surface as a free-text note on the entity-fee
-  row instead.
+  rent tax, San Francisco gross receipts). ~~Too address-specific to seed
+  sensibly without the founder's exact municipality.~~ **Closed by Task #321
+  (F4)** — surfaced as a founder-driven opt-in row in Business Operations
+  with a curated list of common municipal charges and a free-text annual
+  amount. The row is canonical (`Local / City Business License`,
+  account code `8616`, `administrative_general`), so it inherits the same
+  general-cost-inflation escalation as other annual-fixed admin items.
 - **Federal income / unrelated business income tax**. Already covered (or
   intentionally excluded) by the existing tax block — out of Task #318's
   scope.
@@ -156,6 +160,38 @@ defaults-row emission/omission paths.
   rate; class-code refinement is tracked separately.
 - **Repo-wide typecheck failure in `artifacts/budget-allhands`**. Pre-existing
   on `main`, not introduced by Task #318.
+
+### F4 — Local / city business license opt-in row (Task #321)
+
+**Symptom.** F3 closed state-level entity fees but explicitly punted on
+city/county licensing. Founders in Seattle (B&O), NYC (commercial rent tax),
+San Francisco (gross receipts), and many smaller jurisdictions had no place
+to model a recurring municipal cost that can run anywhere from $50/yr to
+several thousand a year.
+
+**Fix.**
+1. `expense-defaults.ts` — added a canonical `Local / City Business License`
+   line item (id `local_business_license`, account code `8616`) under
+   `administrative_general` with `defaultAmount: 0` and `enabledFor: []`. It
+   uses the `annual_fixed` driver so it inherits `generalCostInflation` like
+   the rest of the admin block. Exported `LOCAL_BUSINESS_LICENSE_LINE_ITEM`
+   for downstream consumers.
+2. `schema.ts` — added optional `hasLocalBusinessLicense: boolean` and
+   `localBusinessLicenseAnnualCost: number` to `schoolProfileSchema`,
+   defaulting to `false` / `0` so existing models migrate cleanly.
+3. `ExpenseStep.tsx` — added a `BusinessOperationsToggle` in the Business
+   Operations card with a curated help blurb (Seattle B&O, NYC commercial
+   rent tax, SF gross receipts, plus the typical $50–$500/yr flat-license
+   range). The reactive `useEffect` mirrors the bookkeeper / lawyer /
+   liability-insurance pattern: when the toggle flips or the amount changes,
+   the canonical row's `enabled` and `amounts` are re-derived via
+   `computeEscalatedAmounts` so the escalation behavior stays consistent.
+
+**Why this is opt-in.** Unlike state filing fees (deterministic from
+`state` + `entityType`), municipal rates are address-specific — even
+neighboring zip codes can land in different tax jurisdictions. A founder
+toggle plus a free-text amount is the lowest-friction way to keep the
+expense visible without seeding misleading numbers from `state` alone.
 
 ---
 

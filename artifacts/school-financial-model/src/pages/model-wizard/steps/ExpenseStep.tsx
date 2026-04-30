@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion, TrendingUp, RotateCcw } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, Monitor, BookOpen, Briefcase, Landmark, Lightbulb, AlertTriangle, CheckCircle2, Shield, Calculator, CreditCard, PiggyBank, Scale, Banknote, FolderPlus, Pencil, X, Tag, Hash, FileDown, BookOpenCheck, HelpCircle, MessageCircleQuestion, TrendingUp, RotateCcw, MapPin } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
@@ -32,6 +32,7 @@ import {
   getExpenseRationale,
   STATE_ENTITY_FEE_LINE_ITEM,
   STATE_ENTITY_FEE_ROW_ID,
+  LOCAL_BUSINESS_LICENSE_LINE_ITEM,
 } from "@/lib/expense-defaults";
 import { getStateEntityFeeProfile, buildEntityFeeAmounts } from "@/lib/state-entity-fees";
 import type { EntityType } from "@/pages/model-wizard/schema";
@@ -390,6 +391,8 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const lawyerMonthlyCost = watch("schoolProfile.lawyerMonthlyCost") as number | undefined;
   const hasGeneralLiabilityInsurance = watch("schoolProfile.hasGeneralLiabilityInsurance") as boolean | undefined;
   const insuranceCost = watch("schoolProfile.insuranceCost") as number | undefined;
+  const hasLocalBusinessLicense = watch("schoolProfile.hasLocalBusinessLicense") as boolean | undefined;
+  const localBusinessLicenseAnnualCost = watch("schoolProfile.localBusinessLicenseAnnualCost") as number | undefined;
   const hasSavingsAccount = watch("schoolProfile.hasSavingsAccount") as boolean | undefined;
   const hasBusinessAccount = watch("schoolProfile.hasBusinessAccount") as boolean | undefined;
   const hasCreditCard = watch("schoolProfile.hasCreditCard") as boolean | undefined;
@@ -640,6 +643,15 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           return { ...row, enabled: shouldEnable, amounts: computeEscalatedAmounts(cost, yearCount, rule.rate) };
         }
       }
+      if (row.lineItem === LOCAL_BUSINESS_LICENSE_LINE_ITEM) {
+        const shouldEnable = hasLocalBusinessLicense === true;
+        const cost = localBusinessLicenseAnnualCost || 0;
+        if (row.enabled !== shouldEnable || row.amounts[0] !== cost) {
+          changed = true;
+          const rule = getEscalationRule(row, escalationRates);
+          return { ...row, enabled: shouldEnable, amounts: computeEscalatedAmounts(cost, yearCount, rule.rate) };
+        }
+      }
       return row;
     });
     if (changed) {
@@ -658,7 +670,13 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         setExpandedCategories((prev) => new Set(prev).add("occupancy_facility"));
       }
     }
-  }, [hasBookkeeper, bookkeeperMonthlyCost, hasLawyer, lawyerMonthlyCost, hasGeneralLiabilityInsurance, insuranceCost, defaultsApplied, enabledCategories]);
+    if (hasLocalBusinessLicense === true) {
+      if (!enabledCategories.has("administrative_general")) {
+        setEnabledCategories((prev) => new Set(prev).add("administrative_general"));
+        setExpandedCategories((prev) => new Set(prev).add("administrative_general"));
+      }
+    }
+  }, [hasBookkeeper, bookkeeperMonthlyCost, hasLawyer, lawyerMonthlyCost, hasGeneralLiabilityInsurance, insuranceCost, hasLocalBusinessLicense, localBusinessLicenseAnnualCost, defaultsApplied, enabledCategories]);
 
   useEffect(() => {
     if (!defaultsApplied || capitalRows.length === 0) return;
@@ -1219,6 +1237,33 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
               <span className="font-semibold">Reminder:</span> Liability insurance typically $1,500–$4,000/yr. Payroll taxes (8–10% of wages) are already in the Staffing step.
             </span>
           </div>
+
+          <BusinessOperationsToggle
+            checked={hasLocalBusinessLicense === true}
+            onChange={(v) => setValue("schoolProfile.hasLocalBusinessLicense", v, { shouldDirty: true })}
+            icon={MapPin}
+            label="Local / City Business License"
+            description="City or county license, B&O tax, commercial rent tax, gross receipts"
+          >
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground whitespace-nowrap">Annual cost</label>
+                <div className="relative max-w-[140px]">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                  <input
+                    type="number"
+                    value={localBusinessLicenseAnnualCost || ""}
+                    onChange={(e) => setValue("schoolProfile.localBusinessLicenseAnnualCost", parseFloat(e.target.value) || 0, { shouldDirty: true })}
+                    className="w-full text-sm border border-border rounded-lg pl-6 pr-3 py-1.5 bg-background"
+                    placeholder="500"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Common municipal charges: <span className="font-medium">Seattle B&amp;O tax</span> (~0.18% of gross receipts), <span className="font-medium">NYC commercial rent tax</span> (6% of rent over $250k/yr), <span className="font-medium">San Francisco gross receipts tax</span> (graduated by sector). Many cities also charge a flat $50–$500/yr business license. Confirm rates with your city or county clerk.
+              </p>
+            </div>
+          </BusinessOperationsToggle>
 
           <BusinessOperationsToggle
             checked={hasSavingsAccount === true}

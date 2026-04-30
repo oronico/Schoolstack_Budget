@@ -172,6 +172,8 @@ export const schoolProfileSchema = z.object({
   lawyerMonthlyCost: z.coerce.number(numMsg("lawyer cost")).min(0, "Please enter a positive dollar amount").optional().default(0),
   hasGeneralLiabilityInsurance: z.boolean().optional().default(false),
   insuranceCost: z.coerce.number(numMsg("insurance cost")).min(0, "Please enter a positive dollar amount").optional().default(0),
+  hasLocalBusinessLicense: z.boolean().optional().default(false),
+  localBusinessLicenseAnnualCost: z.coerce.number(numMsg("local business license cost")).min(0, "Please enter a positive dollar amount").optional().default(0),
   hasSavingsAccount: z.boolean().optional().default(false),
   hasBusinessAccount: z.boolean().optional().default(false),
   hasCreditCard: z.boolean().optional().default(false),

@@ -224,6 +224,7 @@ const EXPENSE_LINE_ITEMS: ExpenseLineItemDef[] = [
   { id: "printing_copying", category: "administrative_general", lineItem: "Printing & Copying", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "8608", rationale: "Copier lease or printing service, typically $100–$300/month." },
   { id: "dues_memberships", category: "administrative_general", lineItem: "Dues & Memberships", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "8610", rationale: "Professional associations and school network memberships." },
   { id: "accreditation_licensing", category: "administrative_general", lineItem: "Accreditation & Licensing Fees", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "8615", rationale: "Annual accreditation or state licensing fees for your school." },
+  { id: "local_business_license", category: "administrative_general", lineItem: "Local / City Business License", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "8616", rationale: "Many cities and counties charge an annual business license, B&O tax, gross receipts tax, or commercial rent tax. Common examples: Seattle B&O, NYC commercial rent tax, San Francisco gross receipts. Confirm rates with your city/county clerk." },
   { id: "contracted_services", category: "administrative_general", lineItem: "Contracted Services (Speech, OT, Nursing)", driverType: "annual_fixed", defaultAmount: 0, enabledFor: [], accountCode: "8700", rationale: "Contracted specialists cost $50–$150/hour; schools often share providers." },
   { id: "authorizer_fee", category: "administrative_general", lineItem: "Authorizer / Management Fee", driverType: "percent_of_revenue", defaultAmount: 3, enabledFor: [], accountCode: "8800", rationale: "Charter authorizer fees are typically 1–5% of per-pupil revenue." },
   { id: "audit_compliance", category: "administrative_general", lineItem: "Audit & Compliance", driverType: "annual_fixed", defaultAmount: 5000, enabledFor: ["charter_public_funded"], accountCode: "8810", rationale: "Charter schools often require an annual independent audit ($4,000–$10,000)." },
@@ -283,6 +284,8 @@ export interface StateEntityFeeContext {
 
 export const STATE_ENTITY_FEE_LINE_ITEM = "State Entity Filing Fees";
 export const STATE_ENTITY_FEE_ROW_ID = "state_entity_filing_fees";
+
+export const LOCAL_BUSINESS_LICENSE_LINE_ITEM = "Local / City Business License";
 
 export function generateDefaultExpenseRows(
   fundingProfile: FundingProfile,
