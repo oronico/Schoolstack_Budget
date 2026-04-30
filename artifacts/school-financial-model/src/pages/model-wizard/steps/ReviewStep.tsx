@@ -541,7 +541,17 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
         </dl>
       </Section>
 
-      <Section title="Assumptions" step={2} icon={<DollarSign className="h-5 w-5" />}>
+      {(data.schoolProfile?.loanAmount ?? 0) > 0 && (
+        <Section title="Capital & Financing" step={7} icon={<DollarSign className="h-5 w-5" />}>
+          <div className="space-y-1.5">
+            <Item label="Loan Amount" value={formatCurrency(data.schoolProfile?.loanAmount)} />
+            <Item label="Interest Rate" value={formatPercent(data.schoolProfile?.loanRate)} />
+            <Item label="Loan Term" value={`${data.schoolProfile?.loanTermYears || 0} years`} />
+          </div>
+        </Section>
+      )}
+
+      <Section title="Assumptions & Sensitivity" step={8} icon={<DollarSign className="h-5 w-5" />}>
         <div className="space-y-1.5">
           <Item label={<><GlossaryTerm termKey="cola">COLA</GlossaryTerm> (Cost of Living Adjustment)</>} value={formatPercent(data.facilities?.annualSalaryIncrease)} />
           <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
@@ -559,13 +569,6 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
             <>
               <Item label="Charter Methodology" value={data.schoolProfile?.enrollmentRevenueMethod === "ada" ? "ADA" : data.schoolProfile?.enrollmentRevenueMethod === "count_days" ? "Count Days" : "ADM"} />
               <Item label="Deposit Timing" value={(data.schoolProfile?.charterDepositTiming || "quarterly").replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())} />
-            </>
-          )}
-          {(data.schoolProfile?.loanAmount ?? 0) > 0 && (
-            <>
-              <Item label="Loan Amount" value={formatCurrency(data.schoolProfile?.loanAmount)} />
-              <Item label="Interest Rate" value={formatPercent(data.schoolProfile?.loanRate)} />
-              <Item label="Loan Term" value={`${data.schoolProfile?.loanTermYears || 0} years`} />
             </>
           )}
           {data.revenueDefaults && (
