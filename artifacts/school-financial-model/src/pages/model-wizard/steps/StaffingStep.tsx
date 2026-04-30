@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
@@ -6,6 +6,11 @@ import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, computeEffectiveFte } from "@workspace/finance";
+import {
+  getStatePayrollTaxEntry,
+  getStatePayrollTaxRate,
+  computePayrollTaxForSalary,
+} from "@/lib/state-payroll-tax-data";
 import {
   type StaffingRowData,
   type StaffingFunctionCategory,
@@ -74,6 +79,7 @@ export function StaffingStep() {
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
+  const stateCode = (watch("schoolProfile.state") || "") as string;
 
   const enrollment = watch("enrollment") as { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number } | undefined;
   const maxCapacity = watch("schoolProfile.maxCapacity") as number | undefined;
@@ -106,7 +112,7 @@ export function StaffingStep() {
     } else if (formRows !== undefined && Array.isArray(formRows) && formRows.length === 0 && defaultsApplied) {
       setRows([]);
     } else if (!defaultsApplied) {
-      const defaults = generateDefaultStaffingRows(schoolStage, fundingProfile);
+      const defaults = generateDefaultStaffingRows(schoolStage, fundingProfile, stateCode);
       setRows(defaults);
       setExpandedRows(new Set(defaults.map((r) => r.id)));
       setValue("staffingRows", defaults, { shouldDirty: true });
@@ -146,6 +152,38 @@ export function StaffingStep() {
     }
   }, [modelPayrollTaxRate, defaultsApplied, rows]);
 
+  // F1 reactive sync: when the founder picks a new state after the wizard is
+  // already initialized, re-seed `payrollTaxComponents` (and the displayed
+  // blended rate) for every row the user has *not* manually overridden. Rows
+  // with `payrollTaxRateOverridden = true` are left alone — the user has
+  // taken control of that row's tax rate. Tracked via a ref so we only run
+  // on actual state changes, not on every `rows` mutation.
+  const prevStateCodeRef = useRef<string>("");
+  useEffect(() => {
+    if (!defaultsApplied) return;
+    if (prevStateCodeRef.current === stateCode) return;
+    prevStateCodeRef.current = stateCode;
+    if (rows.length === 0) return;
+
+    const stateEntry = stateCode ? getStatePayrollTaxEntry(stateCode) : undefined;
+    const blendedRate = stateCode ? getStatePayrollTaxRate(stateCode) : DEFAULT_PAYROLL_TAX_RATE;
+
+    let changed = false;
+    const updated = rows.map((r) => {
+      if (r.payrollTaxRateOverridden) return r;
+      changed = true;
+      return {
+        ...r,
+        payrollTaxRate: blendedRate,
+        payrollTaxComponents: stateEntry ? stateEntry.components.map(c => ({ ...c })) : undefined,
+      };
+    });
+    if (changed) {
+      setRows(updated);
+      setValue("staffingRows", updated, { shouldDirty: true });
+    }
+  }, [stateCode, defaultsApplied, rows, setValue]);
+
   const syncToForm = useCallback(
     (updatedRows: StaffingRowData[]) => {
       setRows(updatedRows);
@@ -181,10 +219,10 @@ export function StaffingStep() {
   );
 
   const addRow = useCallback(() => {
-    const newRow = createBlankStaffRow();
+    const newRow = createBlankStaffRow(stateCode);
     syncToForm([...rows, newRow]);
     setExpandedRows((prev) => new Set(prev).add(newRow.id));
-  }, [rows, syncToForm]);
+  }, [rows, syncToForm, stateCode]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedRows((prev) => {
@@ -528,9 +566,18 @@ function StaffCard({
   const benefits = row.benefitsEligible && !isContractNotPayrollLike
     ? Math.round(salary * (row.benefitsRate / 100))
     : 0;
-  const payrollTax = !isContractNotPayrollLike
-    ? Math.round(salary * (row.payrollTaxRate / 100))
-    : 0;
+  // Use the same wage-base-aware math as the engine when components are
+  // available and the user hasn't manually overridden the row's blended rate.
+  // This keeps the per-row card total in lock-step with the personnel summary
+  // and the scenario engine. Contract-not-payroll-like rows owe nothing.
+  let payrollTax = 0;
+  if (!isContractNotPayrollLike) {
+    if (row.payrollTaxComponents && row.payrollTaxComponents.length > 0 && !row.payrollTaxRateOverridden) {
+      payrollTax = Math.round(computePayrollTaxForSalary(salary, row.payrollTaxComponents));
+    } else {
+      payrollTax = Math.round(salary * (row.payrollTaxRate / 100));
+    }
+  }
   const totalCost = salary + benefits + payrollTax;
 
   const hasErrors = rowErrors && Object.keys(rowErrors).length > 0;

@@ -39,7 +39,7 @@ import {
   generateSchoolChoiceRows,
 } from "@/lib/revenue-defaults";
 import { type TuitionTier, getDefaultTuitionTiers } from "@/pages/model-wizard/schema";
-import { getStateFundingConfig, type StateFundingConfig, type SchoolType, type CharterPerPupilRange } from "@/lib/state-funding-data";
+import { getStateFundingConfig, type StateFundingConfig, type SchoolType, type CharterPerPupilRange, type ProgramInfo } from "@/lib/state-funding-data";
 
 const CATEGORY_ICONS: Record<RevenueCategory, React.ComponentType<{ className?: string }>> = {
   tuition_and_fees: GraduationCap,
@@ -539,23 +539,44 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const addLineItem = (category: RevenueCategory, itemId: string) => {
     const available = getAvailableLineItems(category, rows.map((r) => r.id));
     let item = available.find((a) => a.id === itemId);
-    if (!item && category === "school_choice" && stateFundingConfig) {
+    // F2: when adding a state school-choice program (ESA / voucher / etc.),
+    // resolve the program metadata so we can both label the row correctly AND
+    // pre-fill the per-student amount with the state-program midpoint. Without
+    // this, the user got a row with $0/student and had to look up the number
+    // from the side panel — easy to miss, and wrong-by-default math.
+    let matchedProgram: ProgramInfo | null = null;
+    if (category === "school_choice" && stateFundingConfig) {
       const prog = stateFundingConfig.availablePrograms.find(p => {
         const mappedId = PROGRAM_TYPE_TO_ROW_ID[p.type] || `sc_${p.type}`;
         return mappedId === itemId;
       });
       if (prog) {
-        item = { id: itemId, category: "school_choice", lineItem: prog.label, driverType: "per_student" };
+        matchedProgram = prog;
+        if (!item) {
+          item = { id: itemId, category: "school_choice", lineItem: prog.label, driverType: "per_student" };
+        }
       }
     }
     if (!item) return;
+    let initialAmounts = new Array(yearCount).fill(0);
+    let note: string | undefined;
+    if (matchedProgram) {
+      const min = matchedProgram.minPerStudent ?? 0;
+      const max = matchedProgram.maxPerStudent ?? 0;
+      if (min > 0 || max > 0) {
+        const midpoint = Math.round((min + max) / 2);
+        initialAmounts = new Array(yearCount).fill(midpoint);
+        note = `From ${stateCode || "your state"} program data — typical $${min.toLocaleString()}–$${max.toLocaleString()}/student${matchedProgram.notes ? `. ${matchedProgram.notes}` : ""}`;
+      }
+    }
     const newRow: RevenueRowData = {
       id: item.id,
       category: item.category,
       lineItem: item.lineItem,
       enabled: true,
       driverType: item.driverType,
-      amounts: new Array(yearCount).fill(0),
+      amounts: initialAmounts,
+      ...(note ? { note } : {}),
       ...getTimingDefaults(item.category, fundingProfile, item.id),
     };
     const updated = [...rows, newRow];

@@ -1,4 +1,6 @@
 import { computeAnnualDebt, YEAR_COUNT } from "@workspace/finance";
+import { getStateEntityFeeProfile, buildEntityFeeAmounts } from "./state-entity-fees";
+import type { EntityType } from "@/pages/model-wizard/schema";
 
 export type BuiltInExpenseCategory =
   | "personnel"
@@ -270,6 +272,18 @@ export interface FaithFundraisingExpenseProfile {
   hasFiscalSponsor?: boolean;
 }
 
+/** Optional state-business-entity fee context. When provided, an extra
+ *  "State Entity Filing Fees" row is appended to the defaults reflecting the
+ *  state's annual report / franchise tax for the chosen entity type. See
+ *  `state-entity-fees.ts` and the audit doc for sources. */
+export interface StateEntityFeeContext {
+  stateCode?: string;
+  entityType?: string;
+}
+
+export const STATE_ENTITY_FEE_LINE_ITEM = "State Entity Filing Fees";
+export const STATE_ENTITY_FEE_ROW_ID = "state_entity_filing_fees";
+
 export function generateDefaultExpenseRows(
   fundingProfile: FundingProfile,
   yearCount: number,
@@ -277,9 +291,10 @@ export function generateDefaultExpenseRows(
   managementFee?: { enabled: boolean; percent: number },
   rates?: EscalationRates,
   faithProfile?: FaithFundraisingExpenseProfile,
+  entityFeeContext?: StateEntityFeeContext,
 ): ExpenseRowData[] {
   const defaultRates: EscalationRates = rates || { generalCostInflation: 3, annualRentIncrease: 3 };
-  return EXPENSE_LINE_ITEMS.map((def) => {
+  const rows: ExpenseRowData[] = EXPENSE_LINE_ITEMS.map((def) => {
     const baseAmount = stageAdjust(def.defaultAmount, schoolStage);
     let enabled = def.enabledFor.includes(fundingProfile);
     let amount = baseAmount;
@@ -322,6 +337,29 @@ export function generateDefaultExpenseRows(
       accountCode: def.accountCode || "",
     };
   });
+
+  // F3: append a state entity-fee row when state + entity type are known.
+  // We deliberately leave it out for `sole_practitioner` and `undetermined` so
+  // founders aren't shown a misleading $0 line item before they've even chosen
+  // a structure.
+  if (entityFeeContext?.stateCode && entityFeeContext?.entityType) {
+    const profile = getStateEntityFeeProfile(entityFeeContext.stateCode, entityFeeContext.entityType as EntityType);
+    if (profile) {
+      const amounts = buildEntityFeeAmounts(profile, yearCount);
+      rows.push({
+        id: STATE_ENTITY_FEE_ROW_ID,
+        category: "administrative_general",
+        lineItem: STATE_ENTITY_FEE_LINE_ITEM,
+        canonicalKey: STATE_ENTITY_FEE_LINE_ITEM,
+        enabled: true,
+        driverType: "annual_fixed",
+        amounts,
+        note: profile.notes,
+        accountCode: "",
+      });
+    }
+  }
+  return rows;
 }
 
 export function generateDefaultCapitalDebtRows(

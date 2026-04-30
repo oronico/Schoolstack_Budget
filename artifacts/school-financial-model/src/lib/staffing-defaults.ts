@@ -1,4 +1,10 @@
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
+import {
+  getStatePayrollTaxEntry,
+  getStatePayrollTaxRate,
+  computePayrollTaxForSalary,
+  type PayrollTaxComponent,
+} from "./state-payroll-tax-data";
 
 export type StaffingFunctionCategory =
   | "instructional"
@@ -25,6 +31,10 @@ export interface StaffingRowData {
   benefitsEligible: boolean;
   benefitsRate: number;
   payrollTaxRate: number;
+  /** Per-component breakdown (FICA, Medicare, FUTA, state SUI, etc) with wage-base
+   *  caps. When present and `payrollTaxRateOverridden` is false, payroll tax is
+   *  computed per component, capped at each component's wage base. */
+  payrollTaxComponents?: PayrollTaxComponent[];
   payrollLike: boolean;
   benefitsRateOverridden?: boolean;
   payrollTaxRateOverridden?: boolean;
@@ -190,8 +200,16 @@ const STAFF_PRESETS: StaffPreset[] = [
 
 export function generateDefaultStaffingRows(
   schoolStage: SchoolStage,
-  fundingProfile: FundingProfile
+  fundingProfile: FundingProfile,
+  stateCode?: string
 ): StaffingRowData[] {
+  // When the school's state is known, seed each row with the per-component
+  // payroll tax breakdown (FICA, Medicare, FUTA, state SUI, state PFML, etc.)
+  // along with the state's blended display rate. The engine uses the components
+  // for the actual math (with wage-base caps), and `payrollTaxRate` is just the
+  // headline number we display in the UI.
+  const stateEntry = stateCode ? getStatePayrollTaxEntry(stateCode) : undefined;
+  const blendedRate = stateCode ? getStatePayrollTaxRate(stateCode) : DEFAULT_PAYROLL_TAX_RATE;
   return STAFF_PRESETS
     .filter(
       (p) =>
@@ -207,14 +225,17 @@ export function generateDefaultStaffingRows(
       annualizedRate: p.annualizedRate,
       benefitsEligible: p.benefitsEligible,
       benefitsRate: DEFAULT_BENEFITS_RATE,
-      payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
+      payrollTaxRate: blendedRate,
+      payrollTaxComponents: stateEntry ? stateEntry.components.map(c => ({ ...c })) : undefined,
       payrollLike: false,
       notes: "",
       staffingMode: "fixed" as StaffingMode,
     }));
 }
 
-export function createBlankStaffRow(): StaffingRowData {
+export function createBlankStaffRow(stateCode?: string): StaffingRowData {
+  const stateEntry = stateCode ? getStatePayrollTaxEntry(stateCode) : undefined;
+  const blendedRate = stateCode ? getStatePayrollTaxRate(stateCode) : DEFAULT_PAYROLL_TAX_RATE;
   return {
     id: `staff_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     roleName: "",
@@ -224,7 +245,8 @@ export function createBlankStaffRow(): StaffingRowData {
     annualizedRate: 0,
     benefitsEligible: true,
     benefitsRate: DEFAULT_BENEFITS_RATE,
-    payrollTaxRate: DEFAULT_PAYROLL_TAX_RATE,
+    payrollTaxRate: blendedRate,
+    payrollTaxComponents: stateEntry ? stateEntry.components.map(c => ({ ...c })) : undefined,
     payrollLike: false,
     notes: "",
     staffingMode: "fixed",
@@ -272,7 +294,14 @@ export function calculatePersonnelCosts(rows: StaffingRowData[], y1Enrollment?: 
       if (row.benefitsEligible) {
         totalBenefits += annualCost * (row.benefitsRate / 100);
       }
-      totalPayrollTaxes += annualCost * (row.payrollTaxRate / 100);
+      // Wage-base-aware payroll tax (mirrors lib/finance scenario-engine):
+      const components = row.payrollTaxComponents;
+      if (components && components.length > 0 && !row.payrollTaxRateOverridden) {
+        const perEmployeeTax = computePayrollTaxForSalary(row.annualizedRate, components);
+        totalPayrollTaxes += perEmployeeTax * fte;
+      } else {
+        totalPayrollTaxes += annualCost * (row.payrollTaxRate / 100);
+      }
     }
   }
 

@@ -87,3 +87,11 @@ VITE_GA_MEASUREMENT_ID = "G-BYCDHVP29R"
 
 [nix]
 channel = "stable-25_05"
+
+[[ports]]
+localPort = 8081
+externalPort = 80
+
+[[ports]]
+localPort = 22092
+externalPort = 3000

@@ -360,6 +360,15 @@ export const staffingRowSchema = z.object({
   benefitsEligible: z.boolean(),
   benefitsRate: z.number().min(0, "Please enter a rate of 0% or higher").max(100, "Benefits rate can't exceed 100%"),
   payrollTaxRate: z.number().min(0, "Please enter a rate of 0% or higher").max(100, "Payroll tax rate can't exceed 100%"),
+  // Per-component breakdown (FICA, Medicare, FUTA, state SUI, etc) with per-component
+  // wage-base caps. When present and `payrollTaxRateOverridden` is false, the engine
+  // computes payroll tax per-component capped at each component's wage base — this is
+  // the correct accounting (FICA caps at $176.1k, FUTA at $7k, state SUI per state).
+  payrollTaxComponents: z.array(z.object({
+    label: z.string().optional(),
+    rate: z.number(),
+    wageBase: z.number().optional(),
+  })).optional(),
   payrollLike: z.boolean(),
   benefitsRateOverridden: z.boolean().optional(),
   payrollTaxRateOverridden: z.boolean().optional(),

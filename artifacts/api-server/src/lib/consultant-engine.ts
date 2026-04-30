@@ -175,6 +175,12 @@ interface RevenueRow {
   escalationRate?: number;
 }
 
+interface PayrollTaxComponent {
+  label?: string;
+  rate: number;
+  wageBase?: number;
+}
+
 interface StaffingRow {
   id: string;
   roleName: string;
@@ -185,6 +191,8 @@ interface StaffingRow {
   benefitsEligible: boolean;
   benefitsRate: number;
   payrollTaxRate: number;
+  payrollTaxComponents?: PayrollTaxComponent[];
+  payrollTaxRateOverridden?: boolean;
   payrollLike: boolean;
   notes: string;
   staffingMode?: "fixed" | "ratio";
@@ -559,7 +567,25 @@ function computeStaffingBaseCost(rows: StaffingRow[], y?: number, enrollment?: n
     } else {
       total += annualCost;
       if (row.benefitsEligible) total += annualCost * (row.benefitsRate / 100);
-      total += annualCost * (row.payrollTaxRate / 100);
+      // Wage-base-aware payroll tax (mirrors lib/finance scenario-engine):
+      // when components are present and the user hasn't overridden the flat
+      // rate, sum each component's tax capped at its wage base. Otherwise fall
+      // back to flat `salary * payrollTaxRate / 100`.
+      const components = row.payrollTaxComponents;
+      if (components && components.length > 0 && !row.payrollTaxRateOverridden) {
+        const fteCount = effectiveFte > 0 ? effectiveFte : 0;
+        const perEmployeeSalary = row.annualizedRate;
+        let perEmployeeTax = 0;
+        for (const c of components) {
+          const cappedWage = c.wageBase !== undefined
+            ? Math.min(perEmployeeSalary, c.wageBase)
+            : perEmployeeSalary;
+          perEmployeeTax += cappedWage * ((c.rate || 0) / 100);
+        }
+        total += perEmployeeTax * fteCount;
+      } else {
+        total += annualCost * (row.payrollTaxRate / 100);
+      }
     }
   }
   return total;

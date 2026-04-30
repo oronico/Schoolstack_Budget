@@ -30,7 +30,11 @@ import {
   getEscalationRule,
   computeEscalatedAmounts,
   getExpenseRationale,
+  STATE_ENTITY_FEE_LINE_ITEM,
+  STATE_ENTITY_FEE_ROW_ID,
 } from "@/lib/expense-defaults";
+import { getStateEntityFeeProfile, buildEntityFeeAmounts } from "@/lib/state-entity-fees";
+import type { EntityType } from "@/pages/model-wizard/schema";
 import {
   type StaffingRowData,
   calculatePersonnelCosts,
@@ -362,6 +366,8 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
+  const stateCode = (watch("schoolProfile.state") || "") as string;
+  const entityType = (watch("schoolProfile.entityType") || "") as string;
   const yearCount = getYearCount(schoolStage);
 
   const generalCostInflation = (watch("facilities.generalCostInflation") as number) ?? 3;
@@ -512,7 +518,8 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     } else if (!defaultsApplied) {
       const mgmtFee = hasManagementFee ? { enabled: true, percent: managementFeePercent || 5 } : undefined;
       const faithProfile = { isDiocesan, congregationAssessment, hasFiscalSponsor };
-      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount, schoolStage, mgmtFee, escalationRates, faithProfile);
+      const entityFeeContext = stateCode && entityType ? { stateCode, entityType } : undefined;
+      const defaults = generateDefaultExpenseRows(fundingProfile, yearCount, schoolStage, mgmtFee, escalationRates, faithProfile, entityFeeContext);
       setExpenseRows(defaults);
       const enabledCats = new Set<string>();
       defaults.forEach((r) => { if (r.enabled) enabledCats.add(r.category); });
@@ -521,7 +528,67 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       setValue("expenseRows", defaults, { shouldDirty: true });
       setDefaultsApplied(true);
     }
-  }, [formExpenseRows, fundingProfile, schoolStage, yearCount, defaultsApplied, setValue, hasManagementFee, managementFeePercent, isDiocesan, congregationAssessment, hasFiscalSponsor]);
+  }, [formExpenseRows, fundingProfile, schoolStage, yearCount, defaultsApplied, setValue, hasManagementFee, managementFeePercent, isDiocesan, congregationAssessment, hasFiscalSponsor, stateCode, entityType]);
+
+  // F3 reactive sync: when the founder's *state OR entity type* changes after
+  // the wizard has been initialized, re-sync the State Entity Filing Fees row.
+  // We track the previous (state, entityType) key in a ref so this effect
+  // fires *only* on those changes — never on unrelated `expenseRows` mutations.
+  // That preserves any user edits to the row (amounts, notes) until they
+  // actually pick a different state or entity type, at which point the
+  // previous numbers would be misleading and we re-seed.
+  const prevEntityFeeKeyRef = useRef<string>("");
+  useEffect(() => {
+    if (!defaultsApplied) return;
+    const key = `${stateCode}|${entityType}`;
+    if (prevEntityFeeKeyRef.current === key) return;
+    prevEntityFeeKeyRef.current = key;
+
+    const profile = stateCode && entityType
+      ? getStateEntityFeeProfile(stateCode, entityType as EntityType)
+      : null;
+
+    const current = (watch("expenseRows") as typeof expenseRows | undefined) ?? expenseRows;
+    const existingIdx = current.findIndex(r => r.id === STATE_ENTITY_FEE_ROW_ID || r.lineItem === STATE_ENTITY_FEE_LINE_ITEM);
+
+    if (!profile) {
+      if (existingIdx >= 0) {
+        const updated = current.filter((_, i) => i !== existingIdx);
+        setExpenseRows(updated);
+        setValue("expenseRows", updated, { shouldDirty: true });
+      }
+      return;
+    }
+
+    const newAmounts = buildEntityFeeAmounts(profile, yearCount);
+    if (existingIdx >= 0) {
+      const updated = current.map((r, i) =>
+        i === existingIdx ? { ...r, amounts: newAmounts, note: profile.notes, enabled: true } : r
+      );
+      setExpenseRows(updated);
+      setValue("expenseRows", updated, { shouldDirty: true });
+    } else {
+      const newRow = {
+        id: STATE_ENTITY_FEE_ROW_ID,
+        category: "administrative_general",
+        lineItem: STATE_ENTITY_FEE_LINE_ITEM,
+        canonicalKey: STATE_ENTITY_FEE_LINE_ITEM,
+        enabled: true,
+        driverType: "annual_fixed" as const,
+        amounts: newAmounts,
+        note: profile.notes,
+        accountCode: "",
+      };
+      const updated = [...current, newRow];
+      setExpenseRows(updated);
+      setValue("expenseRows", updated, { shouldDirty: true });
+      setEnabledCategories(prev => {
+        const next = new Set(prev);
+        next.add("administrative_general");
+        return next;
+      });
+    }
+  }, [stateCode, entityType, defaultsApplied, yearCount, setValue, watch]);
 
   useEffect(() => {
     if (!defaultsApplied || expenseRows.length === 0) return;

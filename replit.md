@@ -33,6 +33,13 @@ Includes logic for Catholic and faith-affiliated schools and fundraising intelli
 ### Underwriter-Ready Evidence & Financial Intelligence
 Supports prior-year actuals and opening balance sheets for operating schools. Features coaching banners, facility phase tracking, and Key Financial Indicators. Balance sheet intelligence includes depreciation, dynamic accounts receivable, and current ratio covenant checks.
 
+### Math-trigger integrity (Task #318)
+A 51-jurisdiction audit hardened the wizard's "logic-tree triggers" — founder selections that drive the model math:
+- **Wage-base caps** (`src/lib/state-payroll-tax-data.ts`): every payroll component (FICA, FUTA, state SUI/PFML/comp) carries an optional `wageBase` for 2025; engines now apply caps per-FTE via `computePayrollTaxForSalary`. Falls back to legacy flat-rate when components are absent (preserves frozen golden snapshots).
+- **ESA / voucher per-student auto-fill** (`RevenueStep.tsx`): manually-added program rows pre-populate the per-student amount with the matched `ProgramInfo` midpoint plus a citation note.
+- **State entity filing fees** (`src/lib/state-entity-fees.ts` + `ExpenseStep.tsx`): a 51-state × 5-entity-type table seeds an "administrative_general → State Entity Filing Fees" row when both `state` and `entityType` are set; row reactively re-syncs when either changes.
+- See `artifacts/school-financial-model/docs/math-trigger-audit.md` for the full inventory and citations.
+
 ### Coaching System
 In-app guidance uses a warm, school-leader-friendly coaching voice. Key elements include:
 - **FinancingInsight**: 10 curated instances providing practical financing context.

@@ -211,7 +211,28 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
       let benefits = 0, tax = 0;
       if (!isContractNoPL) {
         if (r.benefitsEligible) benefits = annual * ((r.benefitsRate || 0) / 100);
-        tax = annual * ((r.payrollTaxRate || 0) / 100);
+        // Wage-base-aware payroll tax: when components are present and the user
+        // hasn't explicitly overridden the flat rate, sum each component's tax
+        // capped at its wage base (FICA $176.1k, FUTA $7k, state SUI per state).
+        // Otherwise fall back to flat `salary * payrollTaxRate / 100` so legacy
+        // models and explicit user overrides keep their existing behavior.
+        const components = r.payrollTaxComponents;
+        if (components && components.length > 0 && !r.payrollTaxRateOverridden) {
+          // Per-employee caps apply per-FTE — multiply by effectiveFte (not raw salary)
+          // so a 2-FTE "Teachers" line uses 2 separate FICA caps, not one shared cap.
+          const fteCount = effectiveFte > 0 ? effectiveFte : 0;
+          const perEmployeeSalary = (r.annualizedRate || 0);
+          let perEmployeeTax = 0;
+          for (const c of components) {
+            const cappedWage = c.wageBase !== undefined
+              ? Math.min(perEmployeeSalary, c.wageBase)
+              : perEmployeeSalary;
+            perEmployeeTax += cappedWage * ((c.rate || 0) / 100);
+          }
+          tax = perEmployeeTax * fteCount;
+        } else {
+          tax = annual * ((r.payrollTaxRate || 0) / 100);
+        }
       }
       persTotal += annual + benefits + tax;
     }

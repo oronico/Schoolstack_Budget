@@ -20,6 +20,13 @@ export interface RevenueRowLike {
   note?: string;
 }
 
+export interface PayrollTaxComponentLike {
+  label?: string;
+  rate: number;
+  /** Annual wage base in dollars; undefined = applies to all wages (no cap). */
+  wageBase?: number;
+}
+
 export interface StaffingRowLike {
   id?: string;
   fte?: number;
@@ -35,6 +42,14 @@ export interface StaffingRowLike {
   benefitsEligible?: boolean;
   benefitsRate?: number;
   payrollTaxRate?: number;
+  /** When provided AND the user has not manually overridden `payrollTaxRate`,
+   *  the engine computes payroll tax per component with wage-base caps:
+   *  `sum(min(salary, c.wageBase ?? salary) * c.rate / 100)`.
+   *  This is the correct accounting (FICA caps at $176.1k, FUTA at $7k, state SUI
+   *  at the state's wage base) — using a flat blended rate over-accrues taxes
+   *  for any salary above the lowest cap. */
+  payrollTaxComponents?: PayrollTaxComponentLike[];
+  payrollTaxRateOverridden?: boolean;
   roleName?: string;
   functionCategory?: string;
   notes?: string;
