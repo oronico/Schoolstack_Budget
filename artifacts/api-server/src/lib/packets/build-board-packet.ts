@@ -13,6 +13,12 @@ import {
 } from "../workbook-helpers";
 import { buildPacketData } from "./build-packet-data";
 import { buildDecisionHistory, type DecisionHistoryItem } from "./build-decision-history";
+import {
+  buildAllRollups,
+  withFounderReasoning,
+  type SectionRationaleRollup,
+  type RationaleSectionKey,
+} from "./inline-rationale-rollup";
 import type { PacketData, PacketSection, PacketTable, PacketTableRow, LinkedMetric, SectionId } from "./packet-types";
 
 export interface BoardFocusArea {
@@ -129,17 +135,24 @@ export function buildBoardPacket(
     filteredSections.splice(filteredSections.length - 1, 0, { ...cashFlowSection, order: filteredSections.length - 1 });
   }
 
+  // Build per-section roll-ups of the inline rationales captured during the
+  // wizard so we can append a "Founder's reasoning:" footer to each matching
+  // packet section (Task #331). When no rationale exists for a section, the
+  // narrative is unchanged.
+  const rollups = buildAllRollups(modelData);
+
   const enrichedSections = filteredSections.map((section) => {
-    if (section.id === "executive_summary") {
-      return simplifyExecutiveSummary(section, consultantOutput);
+    let next = section;
+    if (next.id === "executive_summary") {
+      next = simplifyExecutiveSummary(next, consultantOutput);
     }
-    if (section.id === "key_risks") {
-      return simplifyRisksForBoard(section, consultantOutput);
+    if (next.id === "key_risks") {
+      next = simplifyRisksForBoard(next, consultantOutput);
     }
-    if (section.id === "board_action_items") {
-      return enrichBoardActions(section, consultantOutput);
+    if (next.id === "board_action_items") {
+      next = enrichBoardActions(next, consultantOutput);
     }
-    return section;
+    return appendFounderReasoningBoard(next, rollups);
   });
 
   const topRisks = buildTopRisks(consultantOutput);
@@ -401,6 +414,35 @@ function enrichBoardActions(section: PacketSection, co: ConsultantOutput): Packe
   return {
     ...section,
     title: "Recommended Next Steps",
+  };
+}
+
+/**
+ * Mapping of board packet section IDs to the rationale roll-up they should
+ * pull their "Founder's reasoning:" footer from. Sections not in this map
+ * are untouched. Task #331.
+ */
+const BOARD_SECTION_RATIONALE_KEY: Partial<Record<SectionId, RationaleSectionKey>> = {
+  enrollment_plan: "enrollmentStrategy",
+  revenue_model: "revenueAssumptions",
+  staffing_plan: "staffingPhilosophy",
+  expense_summary: "expenseAssumptions",
+  capital_debt: "riskMitigation",
+  debt_service: "riskMitigation",
+  key_risks: "riskMitigation",
+};
+
+function appendFounderReasoningBoard(
+  section: PacketSection,
+  rollups: Record<RationaleSectionKey, SectionRationaleRollup>,
+): PacketSection {
+  const rkey = BOARD_SECTION_RATIONALE_KEY[section.id];
+  if (!rkey) return section;
+  const rollup = rollups[rkey];
+  if (!rollup || !rollup.text) return section;
+  return {
+    ...section,
+    narrative: withFounderReasoning(section.narrative, rollup.text),
   };
 }
 

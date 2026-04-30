@@ -20,6 +20,10 @@ import {
 } from "./workbook-helpers.js";
 import { BENCHMARK_CURRENT_RATIO } from "./benchmark-thresholds.js";
 import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
+import {
+  buildAllRollups,
+  type RationaleSectionKey,
+} from "./packets/inline-rationale-rollup.js";
 
 const TAB_NAMES = [
   "Instructions", "Cover", "Assumptions", "Program Profile",
@@ -2843,9 +2847,93 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   });
 
   buildNarrativeTab(wb, data, computedFlags);
+  buildAssumptionsMemoTab(wb, data);
   addDecisionHistorySheet(wb, data);
 
   return wb;
+}
+
+/**
+ * Builds the "Assumptions Memo" sheet — a verbatim audit trail of the
+ * inline rationales captured during the wizard, grouped by the same five
+ * sections used in the lender narrative roll-up. Lenders and the founder's
+ * advisors can use this to trace a number back to the founder's reasoning.
+ * (Task #331.)
+ */
+function buildAssumptionsMemoTab(wb: ExcelJS.Workbook, data: ModelData) {
+  const rollups = buildAllRollups(data);
+  const SECTION_TITLES: Array<[RationaleSectionKey, string]> = [
+    ["enrollmentStrategy", "Enrollment Strategy"],
+    ["revenueAssumptions", "Revenue Assumptions"],
+    ["staffingPhilosophy", "Staffing Philosophy"],
+    ["expenseAssumptions", "Expense Assumptions"],
+    ["riskMitigation", "Risk Mitigation & Capital"],
+  ];
+
+  const totalEntries = SECTION_TITLES.reduce(
+    (sum, [k]) => sum + rollups[k].entries.length,
+    0,
+  );
+
+  const ws = wb.addWorksheet("Assumptions Memo");
+  printSetup(ws);
+  ws.columns = [{ width: 32 }, { width: 38 }, { width: 70 }];
+
+  let row = 1;
+  ws.getRow(row).values = ["Assumptions Memo", "", ""];
+  hdr(ws, row, 3);
+  ws.mergeCells(row, 1, row, 3);
+  row++;
+  ws.getCell(row, 1).value =
+    "Founder-supplied reasoning for each assumption captured during the wizard. Empty when no rationale was entered for that area.";
+  ws.getCell(row, 1).font = { ...NF, italic: true };
+  ws.getCell(row, 1).alignment = { wrapText: true, vertical: "top" };
+  ws.mergeCells(row, 1, row, 3);
+  row += 2;
+
+  if (totalEntries === 0) {
+    sec(ws, row, 3);
+    ws.getCell(row, 1).value = "No founder rationale captured.";
+    ws.getCell(row, 1).font = { ...NF, italic: true };
+    ws.mergeCells(row, 1, row, 3);
+    return;
+  }
+
+  for (const [key, title] of SECTION_TITLES) {
+    const rollup = rollups[key];
+    sec(ws, row, 3);
+    ws.getCell(row, 1).value = title;
+    ws.getCell(row, 1).font = { ...BF, color: { argb: NAVY } };
+    ws.mergeCells(row, 1, row, 3);
+    row++;
+
+    if (rollup.entries.length === 0) {
+      ws.getCell(row, 1).value = "(No rationale captured)";
+      ws.getCell(row, 1).font = { ...NF, italic: true };
+      ws.mergeCells(row, 1, row, 3);
+      row += 2;
+      continue;
+    }
+
+    ws.getRow(row).values = ["Source Step", "Category", "Founder's Reasoning"];
+    hdr(ws, row, 3);
+    row++;
+
+    for (const entry of rollup.entries) {
+      const sourceStep = entry.key.split(":")[0] || "";
+      ws.getCell(row, 1).value = sourceStep;
+      ws.getCell(row, 1).font = NF;
+      ws.getCell(row, 1).alignment = { vertical: "top" };
+      ws.getCell(row, 2).value = entry.label;
+      ws.getCell(row, 2).font = NF;
+      ws.getCell(row, 2).alignment = { vertical: "top", wrapText: true };
+      ws.getCell(row, 3).value = entry.text;
+      ws.getCell(row, 3).font = NF;
+      ws.getCell(row, 3).alignment = { wrapText: true, vertical: "top" };
+      row++;
+    }
+    row++;
+  }
 }
 
 function buildNarrativeTab(wb: ExcelJS.Workbook, data: ModelData, computedFlags?: ComputedFlag[]) {

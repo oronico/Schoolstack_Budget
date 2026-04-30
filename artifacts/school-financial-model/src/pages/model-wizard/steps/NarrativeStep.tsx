@@ -1,9 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { useGetConsultantAnalysis } from "@workspace/api-client-react";
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Loader2, BookOpen, Shield, Users, TrendingUp, FileText } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Loader2, BookOpen, Shield, Users, TrendingUp, FileText, Pencil } from "lucide-react";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import {
+  buildSectionRollup,
+  ROLLUP_SECTION_KEYS,
+  type NarrativeSectionKey,
+} from "@/lib/lender-narrative-rollup";
 
 interface NarrativeStepProps {
   jumpToStep?: (step: number) => void;
@@ -173,7 +178,7 @@ function buildPrefill(key: NarrativeKey, formValues: Record<string, unknown>, en
   return "";
 }
 
-export function NarrativeStep({ modelId }: NarrativeStepProps) {
+export function NarrativeStep({ modelId, jumpToStep }: NarrativeStepProps) {
   const { watch, setValue, getValues, register } = useFormContext();
   const schoolType = watch("schoolProfile.schoolType");
   const NARRATIVE_SECTIONS = useMemo(() => getNarrativeSections(schoolType), [schoolType]);
@@ -204,6 +209,58 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
 
   const formValues = watch();
   const narrative = (formValues.budgetNarrative || {}) as Record<string, string>;
+  const inlineRationales = (narrative.inlineRationales || {}) as unknown as Record<string, string>;
+  const customExpenseLabels = (formValues.customCategoryLabels || {}) as Record<string, string>;
+
+  // Roll-up the inline rationales captured during earlier wizard steps (Task #331).
+  // The result is a map of sectionKey → { text, sources }. We pre-populate any
+  // section that's still empty with the concatenated rationale text, and remember
+  // which sections came from inline notes so we can render the "Pulled from your
+  // earlier notes" badge + back-link.
+  const sectionRollups = useMemo(() => {
+    const out: Partial<Record<NarrativeSectionKey, ReturnType<typeof buildSectionRollup>>> = {};
+    for (const k of ROLLUP_SECTION_KEYS) {
+      out[k] = buildSectionRollup(k, inlineRationales, customExpenseLabels);
+    }
+    return out;
+  }, [inlineRationales, customExpenseLabels]);
+
+  // Track which sections were originally populated by the rollup vs. edited
+  // by the founder. We snapshot each section's rollup text the FIRST TIME it
+  // becomes non-empty (vs. on first render) so async hydration of the form
+  // — common because the wizard `reset()`'s the form from API data after
+  // mount — doesn't leave us with a permanently-empty snapshot.
+  // The snapshot is per-key and write-once: once captured, edits to the
+  // textarea will not match it and the badge correctly disappears.
+  const initialRollupRef = useRef<Partial<Record<NarrativeSectionKey, string>>>({});
+  for (const k of ROLLUP_SECTION_KEYS) {
+    if (initialRollupRef.current[k] === undefined) {
+      const text = sectionRollups[k]?.text || "";
+      if (text.length > 0) {
+        initialRollupRef.current[k] = text;
+      }
+    }
+  }
+
+  // Backfill empty narrative sections from the rollup so the founder sees the
+  // pulled-in text in the textarea. Re-runs whenever the rollup text changes,
+  // so async hydration of the model data (the wizard `reset()`'s the form
+  // after mount) still reaches us. Once a section has any user-entered text,
+  // we leave it alone so we don't clobber edits.
+  useEffect(() => {
+    for (const k of ROLLUP_SECTION_KEYS) {
+      const rollup = sectionRollups[k];
+      if (!rollup || !rollup.text) continue;
+      const current = (narrative[k] || "").trim();
+      if (current.length === 0) {
+        setValue(`budgetNarrative.${k}`, rollup.text, { shouldDirty: true });
+      }
+    }
+    // We deliberately depend on the rollup text values (joined into a stable
+    // string for hash-equality) rather than the entire `sectionRollups`
+    // object, since the latter is recreated on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ROLLUP_SECTION_KEYS.map((k) => sectionRollups[k]?.text || "").join("|"), setValue]);
 
   // Pre-fill missionAndVision from the Story step's openingStory when it's still empty,
   // so founders don't have to rewrite their answer.
@@ -248,14 +305,45 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
     return !flagResponses[key] || flagResponses[key].trim().length === 0;
   });
 
+  // A section needs an explanation only when there's a flagged assumption tied
+  // to it AND the user hasn't written enough yet. Sections with no flagged
+  // items are considered complete by default — Task #331 relaxes the gating
+  // so unflagged sections don't block the founder's progress.
+  const sectionHasFlag = (sectionKey: string): boolean => {
+    if (assumptionFlags.length === 0) return false;
+    // Map narrative section keys → assumption flag prefixes/types they cover.
+    // We use loose matching against `flagType` (engine taxonomy) and `field`
+    // since the consultant engine's flag namespace doesn't yet have a
+    // 1:1 alignment with the narrative sections.
+    const matchers: Record<string, (f: AssumptionFlag) => boolean> = {
+      enrollmentStrategy: (f) => /enrollment|growth/i.test(f.flagType) || /enrollment|growth/i.test(f.field),
+      retentionPlan: (f) => /retention/i.test(f.flagType) || /retention/i.test(f.field),
+      revenueAssumptions: (f) => /revenue|tuition|funding|philanthropy|collection/i.test(f.flagType) || /revenue|tuition|funding|philanthropy/i.test(f.field),
+      staffingPhilosophy: (f) => /staff|payroll|fte/i.test(f.flagType) || /staff|payroll|fte/i.test(f.field),
+      expenseAssumptions: (f) => /expense|cost|facility|occupancy|operating/i.test(f.flagType) || /expense|cost|facility|occupancy|operating/i.test(f.field),
+      riskMitigation: (f) => /debt|dscr|reserve|liquidity|risk|covenant/i.test(f.flagType) || /debt|dscr|reserve|covenant/i.test(f.field),
+      missionAndVision: () => false,
+      growthStrategy: (f) => /growth/i.test(f.flagType) || /growth/i.test(f.field),
+      additionalContext: () => false,
+    };
+    const matcher = matchers[sectionKey];
+    if (!matcher) return false;
+    return assumptionFlags.some(matcher);
+  };
+
   const completenessStats = useMemo(() => {
     const MIN_SUBSTANTIVE_LENGTH = 20;
-    const completed = NARRATIVE_SECTIONS.filter(s => {
+    // A section counts as "complete" when EITHER it has substantive narrative
+    // OR it has no flagged assumption tied to it. This is the core relaxation
+    // requested by Task #331 — unflagged sections are no longer required.
+    const isComplete = (s: { key: string }): boolean => {
       const val = (narrative[s.key] || "").trim();
-      return val.length >= MIN_SUBSTANTIVE_LENGTH;
-    });
+      if (val.length >= MIN_SUBSTANTIVE_LENGTH) return true;
+      return !sectionHasFlag(s.key);
+    };
+    const completed = NARRATIVE_SECTIONS.filter(isComplete);
     const priorityTotal = NARRATIVE_SECTIONS.filter(s => s.primary).length;
-    const priorityDone = NARRATIVE_SECTIONS.filter(s => s.primary && (narrative[s.key] || "").trim().length >= MIN_SUBSTANTIVE_LENGTH).length;
+    const priorityDone = NARRATIVE_SECTIONS.filter(s => s.primary && isComplete(s)).length;
     return {
       total: NARRATIVE_SECTIONS.length,
       done: completed.length,
@@ -263,7 +351,8 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
       priorityDone,
       pct: Math.round((completed.length / NARRATIVE_SECTIONS.length) * 100),
     };
-  }, [narrative]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [narrative, assumptionFlags]);
 
   return (
     <div className="space-y-8">
@@ -334,6 +423,13 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
             keyMetrics: (consultantData as unknown as Record<string, unknown>)?.keyMetrics as KeyMetricData[] | undefined,
           };
           const prefill = buildPrefill(section.key, formValues, engineDataForPrefill);
+          const rollup = sectionRollups[section.key as NarrativeSectionKey];
+          const rollupSnapshot = initialRollupRef.current[section.key as NarrativeSectionKey] || "";
+          // Show the "Pulled from your earlier notes" badge when (a) the
+          // rollup actually contributed text and (b) the founder hasn't
+          // edited it since (current value matches the snapshot we used to
+          // populate the textarea on mount).
+          const showRollupBadge = !!(rollup && rollup.sources.length > 0 && rollupSnapshot && currentVal.trim() === rollupSnapshot.trim());
 
           return (
             <div
@@ -375,7 +471,29 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
               {isExpanded && (
                 <div className="px-4 pb-4 space-y-2">
                   <p className="text-sm text-muted-foreground">{section.helpText}</p>
-                  {prefill && !currentVal && (
+                  {showRollupBadge && rollup && (
+                    <div className="flex flex-wrap items-center gap-2 text-xs bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                      <span className="font-semibold text-emerald-800">
+                        Pulled from your earlier notes
+                      </span>
+                      <span className="text-emerald-700">·</span>
+                      <span className="text-emerald-700">
+                        {rollup.sources.map((src) => src.categoryLabel).join(", ")}
+                      </span>
+                      {jumpToStep && rollup.sources[0] && (
+                        <button
+                          type="button"
+                          onClick={() => jumpToStep(rollup.sources[0].sourceStep)}
+                          className="ml-auto inline-flex items-center gap-1 font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-900 transition-colors"
+                          data-testid={`narrative-rollup-edit-${section.key}`}
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Edit at source
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {prefill && !currentVal && !rollup?.text && (
                     <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded">
                       Suggested start: <em>{prefill}</em>
                     </p>
@@ -383,6 +501,7 @@ export function NarrativeStep({ modelId }: NarrativeStepProps) {
                   <textarea
                     className="w-full min-h-[120px] p-3 text-sm border rounded-lg bg-background resize-y focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-amber-400"
                     placeholder={prefill || `${section.conversationalPrompt} Write in your own words...`}
+                    data-testid={`narrative-textarea-${section.key}`}
                     {...register(`budgetNarrative.${section.key}`)}
                   />
                 </div>

@@ -4,7 +4,13 @@ import type { AssumptionFlag } from "../assumption-flags";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
 import { buildPacketData } from "./build-packet-data";
 import { buildDecisionHistory, type DecisionHistoryItem } from "./build-decision-history";
-import type { PacketData, PacketSection, PacketTable, PacketTableRow, LinkedMetric } from "./packet-types";
+import {
+  buildAllRollups,
+  withFounderReasoning,
+  type SectionRationaleRollup,
+  type RationaleSectionKey,
+} from "./inline-rationale-rollup";
+import type { PacketData, PacketSection, PacketTable, PacketTableRow, LinkedMetric, SectionId } from "./packet-types";
 
 export interface RiskMitigant {
   risk: string;
@@ -66,14 +72,21 @@ export function buildLenderPacket(
 
   const riskMitigants = buildRiskMitigants(consultantOutput);
 
+  // Roll up the inline rationales captured during the wizard so we can append
+  // a "Founder's reasoning:" footer to each matching section's narrative
+  // (Task #331). When no rationale exists for a section, the narrative is
+  // unchanged.
+  const rollups = buildAllRollups(modelData);
+
   const enrichedSections = basePacket.sections.map((section) => {
-    if (section.id === "key_risks") {
-      return enrichKeyRisksSection(section, riskMitigants);
+    let next = section;
+    if (next.id === "key_risks") {
+      next = enrichKeyRisksSection(next, riskMitigants);
     }
-    if (section.id === "debt_service") {
-      return enrichDebtServiceSection(section, consultantOutput);
+    if (next.id === "debt_service") {
+      next = enrichDebtServiceSection(next, consultantOutput);
     }
-    return section;
+    return appendFounderReasoning(next, rollups);
   });
 
   const dscrSummary = extractDSCRSummary(consultantOutput, modelData);
@@ -229,6 +242,35 @@ function enrichDebtServiceSection(
     ...section,
     linkedMetrics: [...section.linkedMetrics, ...reserveMetrics],
     tables: [...(section.tables || []), reserveTable],
+  };
+}
+
+/**
+ * Mapping of packet section IDs to the rationale roll-up they should pull
+ * their "Founder's reasoning:" footer from. Sections not in this map are
+ * untouched. Task #331.
+ */
+const SECTION_RATIONALE_KEY: Partial<Record<SectionId, RationaleSectionKey>> = {
+  enrollment_plan: "enrollmentStrategy",
+  revenue_model: "revenueAssumptions",
+  staffing_plan: "staffingPhilosophy",
+  expense_summary: "expenseAssumptions",
+  capital_debt: "riskMitigation",
+  debt_service: "riskMitigation",
+  key_risks: "riskMitigation",
+};
+
+function appendFounderReasoning(
+  section: PacketSection,
+  rollups: Record<RationaleSectionKey, SectionRationaleRollup>,
+): PacketSection {
+  const rkey = SECTION_RATIONALE_KEY[section.id];
+  if (!rkey) return section;
+  const rollup = rollups[rkey];
+  if (!rollup || !rollup.text) return section;
+  return {
+    ...section,
+    narrative: withFounderReasoning(section.narrative, rollup.text),
   };
 }
 

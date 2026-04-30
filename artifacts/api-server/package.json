@@ -22,6 +22,7 @@
     "test:decision-comparison-pdf-route": "tsx ./tests/decision-comparison-pdf-route.ts",
     "test:health": "tsx ./tests/health-endpoints.ts",
     "test:board-packet-cap-insight": "tsx ./tests/board-packet-cap-insight.ts",
+    "test:inline-rationale-rollup": "tsx ./tests/inline-rationale-rollup.ts",
     "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts",
     "generate:ceo-demos": "tsx ./src/scripts/generate-ceo-demos.ts"
   },
