@@ -305,27 +305,23 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     if (!defaultsApplied) return;
     const isCharter = schoolType === "charter_school";
     if (!isCharter) return;
-    setRows((currentRows) => {
-      if (currentRows.length === 0) return currentRows;
-      const updated = currentRows.map((row) => {
-        if (CHARTER_HIDDEN_CATEGORIES.includes(row.category) && row.enabled) {
-          return { ...row, enabled: false };
-        }
-        return row;
-      });
-      const changed = updated.some((r, i) => r.enabled !== currentRows[i].enabled);
-      if (changed) {
-        setValue("revenueRows", updated, { shouldDirty: true });
-        setEnabledCategories((prev) => {
-          const next = new Set(prev);
-          CHARTER_HIDDEN_CATEGORIES.forEach((c) => next.delete(c as RevenueCategory));
-          return next;
-        });
-        return updated;
+    if (rows.length === 0) return;
+    const updated = rows.map((row) => {
+      if (CHARTER_HIDDEN_CATEGORIES.includes(row.category) && row.enabled) {
+        return { ...row, enabled: false };
       }
-      return currentRows;
+      return row;
     });
-  }, [schoolType, defaultsApplied, setValue]);
+    const changed = updated.some((r, i) => r.enabled !== rows[i].enabled);
+    if (!changed) return;
+    setRows(updated);
+    setValue("revenueRows", updated, { shouldDirty: true });
+    setEnabledCategories((prev) => {
+      const next = new Set(prev);
+      CHARTER_HIDDEN_CATEGORIES.forEach((c) => next.delete(c as RevenueCategory));
+      return next;
+    });
+  }, [schoolType, defaultsApplied, setValue, rows]);
 
   const revDefaultBillingMonths = watch("revenueDefaults.billingMonths") as 9 | 10 | 12 | undefined;
   const revDefaultCollectionMethod = watch("revenueDefaults.collectionMethod") as CollectionMethod | undefined;
@@ -334,41 +330,37 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
 
   useEffect(() => {
     if (!defaultsApplied) return;
-    setRows((currentRows) => {
-      if (currentRows.length === 0) return currentRows;
-      let changed = false;
-      const updated = currentRows.map((row) => {
-        if ((row.category === "tuition_and_fees" || row.category === "tuition_offsets") && !row.timingOverridden) {
-          const newRow = { ...row };
-          if (revDefaultBillingMonths !== undefined && newRow.billingMonths !== revDefaultBillingMonths) {
-            newRow.billingMonths = revDefaultBillingMonths;
+    if (rows.length === 0) return;
+    let changed = false;
+    const updated = rows.map((row) => {
+      if ((row.category === "tuition_and_fees" || row.category === "tuition_offsets") && !row.timingOverridden) {
+        const newRow = { ...row };
+        if (revDefaultBillingMonths !== undefined && newRow.billingMonths !== revDefaultBillingMonths) {
+          newRow.billingMonths = revDefaultBillingMonths;
+          changed = true;
+        }
+        if (row.category === "tuition_and_fees") {
+          if (revDefaultCollectionMethod !== undefined && newRow.collectionMethod !== revDefaultCollectionMethod) {
+            newRow.collectionMethod = revDefaultCollectionMethod;
             changed = true;
           }
-          if (row.category === "tuition_and_fees") {
-            if (revDefaultCollectionMethod !== undefined && newRow.collectionMethod !== revDefaultCollectionMethod) {
-              newRow.collectionMethod = revDefaultCollectionMethod;
-              changed = true;
-            }
-            if (revDefaultCollectionRate !== undefined && newRow.collectionRate !== revDefaultCollectionRate) {
-              newRow.collectionRate = revDefaultCollectionRate;
-              changed = true;
-            }
-            if (revDefaultCollectionDelay !== undefined && newRow.collectionDelayDays !== revDefaultCollectionDelay) {
-              newRow.collectionDelayDays = revDefaultCollectionDelay;
-              changed = true;
-            }
+          if (revDefaultCollectionRate !== undefined && newRow.collectionRate !== revDefaultCollectionRate) {
+            newRow.collectionRate = revDefaultCollectionRate;
+            changed = true;
           }
-          return newRow;
+          if (revDefaultCollectionDelay !== undefined && newRow.collectionDelayDays !== revDefaultCollectionDelay) {
+            newRow.collectionDelayDays = revDefaultCollectionDelay;
+            changed = true;
+          }
         }
-        return row;
-      });
-      if (changed) {
-        setValue("revenueRows", updated, { shouldDirty: true });
-        return updated;
+        return newRow;
       }
-      return currentRows;
+      return row;
     });
-  }, [revDefaultBillingMonths, revDefaultCollectionMethod, revDefaultCollectionRate, revDefaultCollectionDelay, defaultsApplied, setValue]);
+    if (!changed) return;
+    setRows(updated);
+    setValue("revenueRows", updated, { shouldDirty: true });
+  }, [revDefaultBillingMonths, revDefaultCollectionMethod, revDefaultCollectionRate, revDefaultCollectionDelay, defaultsApplied, setValue, rows]);
 
   const PROGRAM_TYPE_TO_ROW_ID: Record<string, string> = useMemo(() => ({
     esa: "esa_revenue", voucher: "voucher_revenue", tax_credit_scholarship: "scholarship_org",
@@ -398,19 +390,19 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
 
       if (stateFundingConfig.charterBasePerPupil) {
         const midpoint = Math.round((stateFundingConfig.charterBasePerPupil.min + stateFundingConfig.charterBasePerPupil.max) / 2);
-        setRows(currentRows => {
-          const perPupilRow = currentRows.find(r => r.id === "state_local_perpupil");
-          if (!perPupilRow) return currentRows;
+        const perPupilRow = rows.find(r => r.id === "state_local_perpupil");
+        if (perPupilRow) {
           const userHasEdited = perPupilRow.amounts.some(a => a !== 0 && a !== midpoint);
-          if (userHasEdited) return currentRows;
-          const updated = currentRows.map(r =>
-            r.id === "state_local_perpupil"
-              ? { ...r, amounts: new Array(yearCount).fill(midpoint) }
-              : r
-          );
-          setValue("revenueRows", updated, { shouldDirty: true });
-          return updated;
-        });
+          if (!userHasEdited) {
+            const updated = rows.map(r =>
+              r.id === "state_local_perpupil"
+                ? { ...r, amounts: new Array(yearCount).fill(midpoint) }
+                : r
+            );
+            setRows(updated);
+            setValue("revenueRows", updated, { shouldDirty: true });
+          }
+        }
       }
     }
 
@@ -428,48 +420,44 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         .map(p => PROGRAM_TYPE_TO_ROW_ID[p.type] || `sc_${p.type}`)
     );
 
-    setRows(currentRows => {
-      let changed = false;
-
-      const reconciled = currentRows.filter(r => {
-        if (!AUTO_GENERATED_IDS.has(r.id)) return true;
-        if (eligibleIds.has(r.id)) return true;
-        changed = true;
-        return false;
-      });
-
-      const existingIds = new Set(reconciled.map(r => r.id));
-      const newRows = stateFundingConfig
-        ? generateSchoolChoiceRows(
-            stateFundingConfig.availablePrograms,
-            yearCount,
-            fundingProfile,
-          ).filter(r => !existingIds.has(r.id))
-        : [];
-
-      if (!changed && newRows.length === 0) return currentRows;
-
-      const updated = [...reconciled, ...newRows];
-      setValue("revenueRows", updated, { shouldDirty: true });
-
-      if (newRows.some(r => r.enabled)) {
-        if (!revenueSources?.schoolChoice) {
-          handleRevenueSourceChange("schoolChoice", true);
-        }
-        setEnabledCategories(prev => {
-          const next = new Set(prev);
-          next.add("school_choice");
-          return next;
-        });
-        setExpandedCategories(prev => {
-          const next = new Set(prev);
-          next.add("school_choice");
-          return next;
-        });
-      }
-
-      return updated;
+    let changed = false;
+    const reconciled = rows.filter(r => {
+      if (!AUTO_GENERATED_IDS.has(r.id)) return true;
+      if (eligibleIds.has(r.id)) return true;
+      changed = true;
+      return false;
     });
+
+    const existingIds = new Set(reconciled.map(r => r.id));
+    const newRows = stateFundingConfig
+      ? generateSchoolChoiceRows(
+          stateFundingConfig.availablePrograms,
+          yearCount,
+          fundingProfile,
+        ).filter(r => !existingIds.has(r.id))
+      : [];
+
+    if (!changed && newRows.length === 0) return;
+
+    const updated = [...reconciled, ...newRows];
+    setRows(updated);
+    setValue("revenueRows", updated, { shouldDirty: true });
+
+    if (newRows.some(r => r.enabled)) {
+      if (!revenueSources?.schoolChoice) {
+        handleRevenueSourceChange("schoolChoice", true);
+      }
+      setEnabledCategories(prev => {
+        const next = new Set(prev);
+        next.add("school_choice");
+        return next;
+      });
+      setExpandedCategories(prev => {
+        const next = new Set(prev);
+        next.add("school_choice");
+        return next;
+      });
+    }
   }, [stateFundingConfig, defaultsApplied, isCharterType, schoolType, stateCode, openingYear, yearCount, fundingProfile, revenueSources, handleRevenueSourceChange]);
 
   const syncToForm = useCallback((updatedRows: RevenueRowData[]) => {

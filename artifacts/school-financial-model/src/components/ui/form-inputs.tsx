@@ -121,7 +121,18 @@ export function FormSelect({ name, label, options, helperText, className, valueA
           error && "border-destructive focus:border-destructive focus:ring-destructive/10"
         )}
         defaultValue=""
-        {...register(name, { valueAsNumber })}
+        {...register(
+          name,
+          valueAsNumber
+            ? {
+                setValueAs: (v: unknown) => {
+                  if (v === "" || v === null || v === undefined) return undefined;
+                  const n = Number(v);
+                  return Number.isNaN(n) ? undefined : n;
+                },
+              }
+            : {},
+        )}
         {...props}
       >
         <option value="" disabled hidden>Select an option...</option>
