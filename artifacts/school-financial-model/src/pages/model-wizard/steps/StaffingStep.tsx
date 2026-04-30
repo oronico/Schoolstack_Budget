@@ -566,7 +566,9 @@ interface StaffCardProps {
 // Per-row wage-base cap savings copy + the $1 sanity floor live in
 // `@workspace/finance` (`buildCapInsightText`, `CAP_INSIGHT_MIN_SAVINGS`) so
 // the wizard, the saved-scenario summary cards, and the lender / board PDFs
-// all share a single source of truth (Task #322).
+// all share a single source of truth (Task #322). Persona-tone snapshot
+// coverage for `buildCapInsightText` lives in this artifact's vitest suite
+// (Task #323) and now imports directly from `@workspace/finance`.
 
 function StaffCard({
   row,
