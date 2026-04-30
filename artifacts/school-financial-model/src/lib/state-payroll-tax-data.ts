@@ -19,12 +19,27 @@
  * the corrected vs. previous numbers.
  */
 
-export interface PayrollTaxComponent {
-  label: string;
-  rate: number;
-  /** Annual wage base in dollars; undefined = applies to all wages (no cap). */
-  wageBase?: number;
-}
+// The pure math + persona-aware copy for wage-base cap savings now lives in
+// `@workspace/finance` so the wizard, the saved-scenario summary cards, and
+// the lender / board PDF builders can share a single source of truth (Task
+// #322). This module continues to own the *data table* (per-state component
+// breakdowns + state-level helpers) — re-exporting the shared types and
+// compute functions keeps every existing import path working.
+import {
+  computePayrollTaxCapSavings as sharedComputePayrollTaxCapSavings,
+  computePayrollTaxForSalary as sharedComputePayrollTaxForSalary,
+  type PayrollTaxComponent as SharedPayrollTaxComponent,
+  type PayrollTaxCapInsight as SharedPayrollTaxCapInsight,
+  type CappedComponent as SharedCappedComponent,
+} from "@workspace/finance";
+
+// `label` stays optional here to match the persisted zod schema (pre-Task
+// #319 saved models may carry components without a label). Every entry the
+// data table below produces does set a human-readable label, so UI surfaces
+// can fall back to a generic "wage-base cap" string only when needed.
+export type PayrollTaxComponent = SharedPayrollTaxComponent;
+export type PayrollTaxCapInsight = SharedPayrollTaxCapInsight;
+export type CappedComponent = SharedCappedComponent;
 
 export interface StatePayrollTaxEntry {
   components: PayrollTaxComponent[];
@@ -173,7 +188,8 @@ export function getQuickPickOptions(stateCode: string): { label: string; value: 
 
 /**
  * Compute the dollar payroll tax owed on a single employee's annual salary,
- * applying each component's wage-base cap.
+ * applying each component's wage-base cap. Thin re-export of the shared
+ * helper in `@workspace/finance` so existing callers keep their imports.
  *
  * Example: a $200k Head of School in WA (FICA + WA SUI + WA PFML + WA Comp):
  *   - FICA SS:   min($200k, $176.1k) * 6.2%  = $10,918.20
@@ -186,15 +202,9 @@ export function getQuickPickOptions(stateCode: string): { label: string; value: 
  */
 export function computePayrollTaxForSalary(
   annualSalary: number,
-  components: PayrollTaxComponent[]
+  components: PayrollTaxComponent[],
 ): number {
-  if (!annualSalary || annualSalary <= 0 || !components || components.length === 0) return 0;
-  let total = 0;
-  for (const c of components) {
-    const cappedWage = c.wageBase !== undefined ? Math.min(annualSalary, c.wageBase) : annualSalary;
-    total += cappedWage * (c.rate / 100);
-  }
-  return total;
+  return sharedComputePayrollTaxForSalary(annualSalary, components);
 }
 
 /**
@@ -203,58 +213,22 @@ export function computePayrollTaxForSalary(
  */
 export function computeEffectivePayrollTaxRate(
   annualSalary: number,
-  components: PayrollTaxComponent[]
+  components: PayrollTaxComponent[],
 ): number {
   if (!annualSalary || annualSalary <= 0) return 0;
-  const dollars = computePayrollTaxForSalary(annualSalary, components);
+  const dollars = sharedComputePayrollTaxForSalary(annualSalary, components);
   return (dollars / annualSalary) * 100;
-}
-
-export interface CappedComponent {
-  label: string;
-  wageBase: number;
-}
-
-export interface PayrollTaxCapInsight {
-  /** Components whose wage base the salary exceeds (i.e. would otherwise overcharge). */
-  cappedComponents: CappedComponent[];
-  /** Sum of every component's nominal rate (percent). */
-  flatRate: number;
-  /** What the founder would pay under the naive flat × salary estimate. */
-  flatTax: number;
-  /** What the wage-base-aware engine actually charges. */
-  cappedTax: number;
-  /** Dollars per year the wage-base caps save vs. the flat estimate (≥ 0). */
-  savings: number;
 }
 
 /**
  * Inspect a salary against a payroll-tax component set and return a
  * coaching-friendly summary of which components hit their wage-base cap and
  * how many dollars the wage-base-aware math saves vs. a flat blended rate.
- *
- * Returns `null` when the salary doesn't exceed any component's wage base —
- * the UI should hide the insight in that case (every component applies to the
- * full salary, so there are no "savings" to coach about).
+ * Re-export of the shared helper in `@workspace/finance`.
  */
 export function computePayrollTaxCapSavings(
   annualSalary: number,
-  components: PayrollTaxComponent[]
+  components: PayrollTaxComponent[],
 ): PayrollTaxCapInsight | null {
-  if (!annualSalary || annualSalary <= 0 || !components || components.length === 0) return null;
-  const cappedComponents = components.filter(
-    (c) => c.wageBase !== undefined && annualSalary > c.wageBase
-  );
-  if (cappedComponents.length === 0) return null;
-  const flatRate = components.reduce((s, c) => s + c.rate, 0);
-  const flatTax = annualSalary * (flatRate / 100);
-  const cappedTax = computePayrollTaxForSalary(annualSalary, components);
-  const savings = Math.max(0, flatTax - cappedTax);
-  return {
-    cappedComponents: cappedComponents.map((c) => ({ label: c.label, wageBase: c.wageBase! })),
-    flatRate,
-    flatTax,
-    cappedTax,
-    savings,
-  };
+  return sharedComputePayrollTaxCapSavings(annualSalary, components);
 }

@@ -28,6 +28,21 @@ export {
 } from "./staffing.js";
 
 export {
+  CAP_INSIGHT_MIN_SAVINGS,
+  computePayrollTaxForSalary,
+  computePayrollTaxCapSavings,
+  buildCapInsightText,
+  aggregateRosterCapSavings,
+  buildRosterCapInsightText,
+  type PayrollTaxComponent,
+  type CappedComponent,
+  type PayrollTaxCapInsight,
+  type ComfortVariant,
+  type RosterStaffingRowLike,
+  type RosterCapSavingsAggregate,
+} from "./payroll-tax-cap.js";
+
+export {
   microschoolFixture,
   privateSchoolFixture,
   charterFixture,

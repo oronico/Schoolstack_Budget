@@ -5,7 +5,13 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { cn } from "@/lib/utils";
-import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, computeEffectiveFte } from "@workspace/finance";
+import {
+  DEFAULT_BENEFITS_RATE,
+  DEFAULT_PAYROLL_TAX_RATE,
+  computeEffectiveFte,
+  buildCapInsightText,
+  CAP_INSIGHT_MIN_SAVINGS,
+} from "@workspace/finance";
 import {
   getStatePayrollTaxEntry,
   getStatePayrollTaxRate,
@@ -557,35 +563,10 @@ interface StaffCardProps {
   personaComfort: FounderComfort | null;
 }
 
-// Surface the wage-base cap savings as a per-row coaching insight (Task #319).
-// Per the task's literal acceptance, the insight should render on any row
-// whose salary exceeds at least one component's wage base —
-// `computePayrollTaxCapSavings` already returns null otherwise. The $1 floor
-// is just a sanity guard against rendering a "saves $0/yr" line if a
-// degenerate component set (e.g. zero-rate component) ever surfaces.
-const CAP_INSIGHT_MIN_SAVINGS = 1;
-
-function buildCapInsightText(
-  insight: PayrollTaxCapInsight,
-  comfort: FounderComfort | null
-): string {
-  const labels = insight.cappedComponents.map(
-    (c) => `${c.label} ($${c.wageBase.toLocaleString()})`
-  );
-  const labelStr =
-    labels.length === 1
-      ? labels[0]
-      : labels.length === 2
-        ? `${labels[0]} and ${labels[1]}`
-        : `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
-  const savings = `$${Math.round(insight.savings).toLocaleString()}/yr`;
-  if (comfort === "new_to_budgeting") {
-    return `This salary is over the wage-base cap for ${labelStr}, so we stop charging payroll tax above those limits — saves about ${savings} vs. a flat estimate.`;
-  }
-  // Default to the more technical wording for "comfortable" founders and for
-  // legacy users with no persona on record.
-  return `Wage-base caps hit on ${labelStr}. Wage-base-aware math saves ${savings} vs. a flat ${insight.flatRate.toFixed(2)}% blended rate.`;
-}
+// Per-row wage-base cap savings copy + the $1 sanity floor live in
+// `@workspace/finance` (`buildCapInsightText`, `CAP_INSIGHT_MIN_SAVINGS`) so
+// the wizard, the saved-scenario summary cards, and the lender / board PDFs
+// all share a single source of truth (Task #322).
 
 function StaffCard({
   row,

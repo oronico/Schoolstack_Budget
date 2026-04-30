@@ -32,11 +32,19 @@ import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
 import { parseExportSourceLabel } from "@/lib/actuals-source";
 import { useAuth } from "@/lib/auth-context";
+import { getFounderPersona, type FounderComfort } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhatIfLink } from "@/components/coaching/WhatIfLink";
+import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { Lightbulb } from "lucide-react";
+import {
+  aggregateRosterCapSavings,
+  buildRosterCapInsightText,
+  CAP_INSIGHT_MIN_SAVINGS,
+} from "@workspace/finance";
+import type { StaffingRowData } from "@/lib/staffing-defaults";
 import {
   applyPersistedScenarioToData,
   buildActualsSuggestion,
@@ -404,6 +412,13 @@ interface CustomScenarioCardProps {
   // actuals/variance/QuickBooks surface on this card. The scenario card
   // still renders projections and decision rationale.
   hideActualsSurfaces?: boolean;
+  // Staffing roster from the parent model, used to roll up the wage-base
+  // cap savings insight on this card (Task #322). Optional + defaults to
+  // an empty list so legacy / pre-staffing models render unaffected.
+  staffingRows?: StaffingRowData[];
+  // Founder persona "comfort" axis ("new_to_budgeting" | "comfortable").
+  // Drives the cap-savings copy variant; null = legacy/technical wording.
+  personaComfort?: FounderComfort | null;
 }
 
 // "Mar 14" formatter shared with the wizard upload card so the caption in
@@ -612,6 +627,8 @@ export function CustomScenarioCard({
   replaceExportHref,
   onRemoveExport,
   hideActualsSurfaces,
+  staffingRows,
+  personaComfort,
 }: CustomScenarioCardProps) {
   const [editingRetro, setEditingRetro] = useState(false);
   // Two-step confirmation for the destructive "Remove uploaded export"
@@ -903,6 +920,41 @@ export function CustomScenarioCard({
           bullets.map((b, i) => <li key={i}>• {b}</li>)
         )}
       </ul>
+
+      {/*
+        Wage-base cap savings insight (Task #322): if any staffing row's
+        salary exceeds at least one component's wage base, surface a
+        persona-aware sentence here so the saved scenario summary speaks in
+        the same voice the StaffingStep wizard does. We render via the
+        shared `aggregateRosterCapSavings` + `buildRosterCapInsightText`
+        helpers so the wizard, this card, and the lender / board PDFs all
+        agree on the math + tone. Hidden when there's no roster, when the
+        rolled-up savings round below our $1 sanity floor, or when the
+        roster doesn't carry per-component breakdowns yet.
+      */}
+      {(() => {
+        const agg = aggregateRosterCapSavings(
+          (staffingRows || []).map((r) => ({
+            annualizedRate: r.annualizedRate,
+            fte: r.fte,
+            payrollTaxComponents: r.payrollTaxComponents,
+            // Forward the exclusion-relevant fields so the shared aggregator
+            // can skip rows that should not contribute (manual blended-rate
+            // overrides + contract-not-payroll-like rows). Dropping these
+            // would make the saved-scenario card overstate savings vs. the
+            // wizard.
+            payrollTaxRateOverridden: r.payrollTaxRateOverridden,
+            employmentType: r.employmentType,
+            payrollLike: r.payrollLike,
+          })),
+        );
+        if (!agg || agg.totalSavings < CAP_INSIGHT_MIN_SAVINGS) return null;
+        return (
+          <div className="mb-3" data-testid={`custom-scenario-cap-insight-${idx}`}>
+            <FinancingInsight text={buildRosterCapInsightText(agg, personaComfort ?? null)} />
+          </div>
+        );
+      })()}
 
       {/* Outcome status controls — what actually happened with this decision? */}
       <div className="mb-3">
@@ -2949,6 +3001,8 @@ export function ScenarioPage() {
                       onRemoveExport={
                         modelData.accountingExport ? handleRemoveAccountingExport : undefined
                       }
+                      staffingRows={modelData.staffingRows ?? []}
+                      personaComfort={getFounderPersona(authUser).comfort}
                     />
                   ))}
                 </div>

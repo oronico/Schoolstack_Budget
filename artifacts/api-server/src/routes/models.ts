@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import { db } from "@workspace/db";
-import { financialModelsTable, exportsTable, sharedLinksTable } from "@workspace/db/schema";
+import { financialModelsTable, exportsTable, sharedLinksTable, usersTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import {
   CreateModelBody,
@@ -112,6 +112,29 @@ function normalizeModelData(data: Record<string, unknown>): Record<string, unkno
     }));
   }
   return normalized;
+}
+
+/**
+ * Look up the requesting user's `personaComfort` so packet builders can
+ * pick the right tone for the wage-base cap savings copy (Task #322).
+ * Returns null if the column is missing/blank or anything goes wrong —
+ * the packet builders treat null as the legacy/technical wording.
+ */
+async function fetchPersonaComfort(
+  userId: number,
+): Promise<"new_to_budgeting" | "comfortable" | null> {
+  try {
+    const [user] = await db
+      .select({ personaComfort: usersTable.personaComfort })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    const v = user?.personaComfort;
+    if (v === "new_to_budgeting" || v === "comfortable") return v;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 const router: IRouter = Router();
@@ -640,7 +663,8 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
       return;
     }
 
-    const packet = buildLenderPacket(data as any, consultantOutput, model.id);
+    const personaComfort = await fetchPersonaComfort(req.userId!);
+    const packet = buildLenderPacket(data as any, consultantOutput, model.id, personaComfort);
 
     res.json(packet);
   } catch (err) {
@@ -687,7 +711,8 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const packet = buildLenderPacket(data as any, consultantOutput, model.id);
+    const personaComfort = await fetchPersonaComfort(req.userId!);
+    const packet = buildLenderPacket(data as any, consultantOutput, model.id, personaComfort);
     const buffer = await generateLenderPacketPDF(packet);
 
     if (abortGuard(req, res)) return;
@@ -741,7 +766,8 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
       return;
     }
 
-    const packet = buildBoardPacket(data as any, consultantOutput, model.id);
+    const personaComfort = await fetchPersonaComfort(req.userId!);
+    const packet = buildBoardPacket(data as any, consultantOutput, model.id, personaComfort);
 
     res.json(packet);
   } catch (err) {
@@ -788,7 +814,8 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const packet = buildBoardPacket(data as any, consultantOutput, model.id);
+    const personaComfort = await fetchPersonaComfort(req.userId!);
+    const packet = buildBoardPacket(data as any, consultantOutput, model.id, personaComfort);
     const buffer = await generateBoardPacketPDF(packet);
 
     if (abortGuard(req, res)) return;

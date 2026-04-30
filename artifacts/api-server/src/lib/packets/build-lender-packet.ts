@@ -54,12 +54,14 @@ export function buildLenderPacket(
   modelData: ModelData,
   consultantOutput: ConsultantOutput,
   modelId: number,
+  personaComfort?: "new_to_budgeting" | "comfortable" | null,
 ): LenderPacket {
   const basePacket = buildPacketData({
     modelData,
     consultantOutput,
     modelId,
     packetType: "lender",
+    personaComfort: personaComfort ?? null,
   });
 
   const riskMitigants = buildRiskMitigants(consultantOutput);

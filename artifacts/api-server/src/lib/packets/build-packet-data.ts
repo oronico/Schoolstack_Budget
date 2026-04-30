@@ -25,6 +25,11 @@ import {
 import { buildNarrative } from "./build-narrative";
 import { buildDecisionHistory, buildDecisionHistoryNarrative } from "./build-decision-history";
 import {
+  aggregateRosterCapSavings,
+  buildRosterCapInsightText,
+  CAP_INSIGHT_MIN_SAVINGS,
+} from "@workspace/finance";
+import {
   type PacketData,
   type PacketInput,
   type PacketSection,
@@ -54,7 +59,7 @@ function yearLabel(y: number): string {
 }
 
 export function buildPacketData(input: PacketInput): PacketData {
-  const { modelData, consultantOutput, modelId, packetType } = input;
+  const { modelData, consultantOutput, modelId, packetType, personaComfort } = input;
   const sp = modelData.schoolProfile || ({} as SchoolProfile);
   const schoolName = sp.schoolName || "Untitled School";
   const narrative = buildNarrative(consultantOutput);
@@ -67,7 +72,7 @@ export function buildPacketData(input: PacketInput): PacketData {
   const yearlyData = computeYearlyData(modelData, enrollment, yearCount);
 
   const sections = sectionIds.map((id, idx) =>
-    buildSection(id, idx, modelData, consultantOutput, yearlyData, enrollment, niLabel),
+    buildSection(id, idx, modelData, consultantOutput, yearlyData, enrollment, niLabel, personaComfort ?? null),
   );
 
   const formatRules: FormatRules = {
@@ -158,6 +163,7 @@ function buildSection(
   yearlyData: YearData[],
   enrollment: number[],
   niLabel: string,
+  personaComfort: "new_to_budgeting" | "comfortable" | null,
 ): PacketSection {
   const meta = SECTION_META[id];
   const base: PacketSection = {
@@ -182,7 +188,7 @@ function buildSection(
     case "revenue_model":
       return buildRevenueModel(base, md, co, yearlyData);
     case "staffing_plan":
-      return buildStaffingPlan(base, md, co, yearlyData);
+      return buildStaffingPlan(base, md, co, yearlyData, personaComfort);
     case "expense_summary":
       return buildExpenseSummary(base, co, yearlyData);
     case "capital_debt":
@@ -358,13 +364,39 @@ function buildStaffingPlan(
   md: ModelData,
   co: ConsultantOutput,
   yearlyData: YearData[],
+  personaComfort: "new_to_budgeting" | "comfortable" | null,
 ): PacketSection {
   const y1Staff = yearlyData[0]?.totalStaffing || 0;
   const y1Rev = yearlyData[0]?.totalRevenue || 0;
   const staffPct = y1Rev > 0 ? y1Staff / y1Rev : 0;
 
   const costComp = co.costComposition[0];
-  const narrative = `Staffing costs are ${fmt(y1Staff)} in Year 1, representing ${pct(staffPct)} of revenue. ${staffPct > 0.6 ? "This is above the typical 50-60% benchmark and may need monitoring." : staffPct > 0.5 ? "This is within the typical 50-60% range." : "This leaves healthy room for other operating costs."}`;
+  let narrative = `Staffing costs are ${fmt(y1Staff)} in Year 1, representing ${pct(staffPct)} of revenue. ${staffPct > 0.6 ? "This is above the typical 50-60% benchmark and may need monitoring." : staffPct > 0.5 ? "This is within the typical 50-60% range." : "This leaves healthy room for other operating costs."}`;
+
+  // Surface the wage-base cap savings insight (Task #322): aggregate every
+  // staffing row that has a per-component breakdown + an annualized salary
+  // and append a persona-aware sentence to the narrative when the rolled-up
+  // savings clear our $1 sanity floor. Rows missing `payrollTaxComponents`
+  // (e.g. legacy models saved before Task #319 / contractors that opt out
+  // of payroll-like math) are skipped inside `aggregateRosterCapSavings`.
+  const normalized = normalizeStaffingRows(md);
+  const capAggregate = aggregateRosterCapSavings(
+    normalized.map((r) => ({
+      annualizedRate: r.annualizedRate,
+      fte: r.fte,
+      payrollTaxComponents: r.payrollTaxComponents,
+      // Forward the exclusion-relevant fields so the shared aggregator can
+      // skip rows that should not contribute (manual blended-rate overrides
+      // and contract-not-payroll-like rows). Dropping these would cause the
+      // PDF narrative to overstate savings vs. the wizard.
+      payrollTaxRateOverridden: r.payrollTaxRateOverridden,
+      employmentType: r.employmentType,
+      payrollLike: r.payrollLike,
+    })),
+  );
+  if (capAggregate && capAggregate.totalSavings >= CAP_INSIGHT_MIN_SAVINGS) {
+    narrative = `${narrative} ${buildRosterCapInsightText(capAggregate, personaComfort)}`;
+  }
 
   const linkedMetrics: LinkedMetric[] = costComp
     ? [{ label: "Staffing % of Revenue", value: pct(costComp.staffingPctOfRevenue), status: costComp.staffingPctOfRevenue > 0.6 ? "warning" as const : "good" as const, sourceEngine: "consultant" as const }]
@@ -374,7 +406,7 @@ function buildStaffingPlan(
     ...s,
     narrative,
     linkedMetrics,
-    linkedAssumptions: normalizeStaffingRows(md).map((nr) => ({
+    linkedAssumptions: normalized.map((nr) => ({
       label: nr.roleName || "Staff Position",
       value: `$${nr.annualizedRate.toLocaleString()}, ${nr.fte} FTE`,
       sourceField: `staffingRows[${nr.id}]`,

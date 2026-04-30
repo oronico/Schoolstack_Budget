@@ -90,6 +90,12 @@ const BOARD_PACKET_SECTIONS: SectionId[] = [
   "executive_summary",
   "school_overview",
   "five_year_projection",
+  // Personnel/Staffing Plan section follows the financial projection so the
+  // board sees the team that will deliver the model. Task #322 also surfaces
+  // the wage-base cap savings sentence here (appended inside
+  // `buildStaffingPlan`), so excluding `staffing_plan` would suppress that
+  // insight from the board PDF.
+  "staffing_plan",
   "health_assessment",
   "key_strengths",
   "key_risks",
@@ -102,12 +108,14 @@ export function buildBoardPacket(
   modelData: ModelData,
   consultantOutput: ConsultantOutput,
   modelId: number,
+  personaComfort?: "new_to_budgeting" | "comfortable" | null,
 ): BoardPacket {
   const basePacket = buildPacketData({
     modelData,
     consultantOutput,
     modelId,
     packetType: "board",
+    personaComfort: personaComfort ?? null,
   });
 
   const boardSectionIds = new Set(BOARD_PACKET_SECTIONS);

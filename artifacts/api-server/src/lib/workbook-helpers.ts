@@ -410,6 +410,13 @@ export interface RevenueRow {
   reimbursementLagMonths?: number; grantStatus?: string; receiptQuarter?: number;
 }
 
+export interface PayrollTaxComponent {
+  label?: string;
+  rate: number;
+  /** Per-employee annual wage cap; undefined = applies to all wages (no cap). */
+  wageBase?: number;
+}
+
 export interface StaffingRow {
   id: string; roleName: string; functionCategory: string; employmentType: string;
   fte: number; annualizedRate: number; benefitsEligible: boolean;
@@ -422,6 +429,30 @@ export interface StaffingRow {
   endYear?: number;
   benefitsRateOverridden?: boolean;
   payrollTaxRateOverridden?: boolean;
+  /** Per-component breakdown (FICA, Medicare, FUTA, state SUI, etc.) with
+   *  wage-base caps. Persisted by the wizard so the api-server can recompute
+   *  the wage-base-aware payroll tax + surface the cap-savings insight in
+   *  packet PDFs (Task #322). */
+  payrollTaxComponents?: PayrollTaxComponent[];
+}
+
+function normalizePayrollTaxComponents(raw: unknown): PayrollTaxComponent[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: PayrollTaxComponent[] = [];
+  for (const entry of raw) {
+    if (entry == null || typeof entry !== "object") continue;
+    const obj = entry as Record<string, unknown>;
+    const rate = Number(obj.rate);
+    if (!Number.isFinite(rate)) continue;
+    const labelRaw = obj.label;
+    const wageBaseRaw = obj.wageBase;
+    out.push({
+      rate,
+      label: typeof labelRaw === "string" ? labelRaw : undefined,
+      wageBase: typeof wageBaseRaw === "number" && Number.isFinite(wageBaseRaw) ? wageBaseRaw : undefined,
+    });
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 export function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow {
@@ -445,6 +476,7 @@ export function normalizeStaffingRow(raw: Record<string, unknown>): StaffingRow 
     endYear: raw.endYear != null ? Number(raw.endYear) : undefined,
     benefitsRateOverridden: raw.benefitsRateOverridden === true ? true : undefined,
     payrollTaxRateOverridden: raw.payrollTaxRateOverridden === true ? true : undefined,
+    payrollTaxComponents: normalizePayrollTaxComponents(raw.payrollTaxComponents),
   };
 }
 

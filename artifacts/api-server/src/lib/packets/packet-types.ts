@@ -97,6 +97,13 @@ export interface PacketInput {
   consultantOutput: ConsultantOutput;
   modelId: number;
   packetType: PacketType;
+  /**
+   * Founder persona "comfort" axis ("new_to_budgeting" | "comfortable").
+   * Drives the wage-base cap savings copy in the Staffing Plan section so
+   * the PDF speaks in the same persona-aware tone the wizard uses (Task
+   * #322). Null / undefined falls back to the technical wording.
+   */
+  personaComfort?: "new_to_budgeting" | "comfortable" | null;
 }
 
 export const LENDER_SECTIONS: SectionId[] = [
