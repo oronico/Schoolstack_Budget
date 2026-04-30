@@ -327,6 +327,7 @@ export function ModelWizardPage() {
         expenseAssumptions: "",
         growthStrategy: "",
         additionalContext: "",
+        inlineRationales: {},
       },
       assumptionFlagResponses: [] as Array<{ field: string; flagType: string; reason: string }>,
     },

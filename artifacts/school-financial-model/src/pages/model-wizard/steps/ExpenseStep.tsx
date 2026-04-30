@@ -4,7 +4,9 @@ import { Plus, Trash2, ChevronDown, ChevronRight, DollarSign, Users, Building2, 
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { RationaleField } from "@/components/coaching/RationaleField";
 import { cn, formatCurrency } from "@/lib/utils";
+import { formatPerStudent } from "@/lib/per-student-lens";
 import {
   type ExpenseRowData,
   type CapitalDebtRowData,
@@ -919,6 +921,24 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     return sums;
   }, [expenseRows, capitalRows, allOperatingCategories, yearCount, totalFTE]);
 
+  const y1CategorySums = useMemo(() => {
+    const sums: Record<string, number> = {};
+    for (const cat of allOperatingCategories) {
+      const catRows = expenseRows.filter((r) => r.category === cat && r.enabled);
+      sums[cat] = catRows.reduce(
+        (acc, r) => acc + annualize(r.amounts[0] || 0, r.driverType, totalFTE),
+        0,
+      );
+    }
+    sums["capital_financing"] = capitalRows
+      .filter((r) => r.enabled)
+      .reduce(
+        (acc, r) => acc + annualize(r.amounts[0] || 0, r.driverType, totalFTE),
+        0,
+      );
+    return sums;
+  }, [expenseRows, capitalRows, allOperatingCategories, totalFTE]);
+
   const personnel5yrTotal = useMemo(() => {
     const y1 = personnelCosts?.grandTotal || 0;
     if (y1 === 0 || yearCount <= 1) return y1;
@@ -1494,7 +1514,14 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                   <span className="text-[10px] font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">Custom</span>
                 )}
                 <span className="text-xs text-muted-foreground ml-2">({enabledCount} active)</span>
-                <span className="ml-auto text-sm font-semibold text-primary">{formatCurrency(categorySummaries[cat] || 0)} <span className="text-[10px] font-normal text-muted-foreground">5yr</span></span>
+                <div className="ml-auto text-right">
+                  <span className="text-sm font-semibold text-primary">{formatCurrency(categorySummaries[cat] || 0)} <span className="text-[10px] font-normal text-muted-foreground">5yr</span></span>
+                  {y1Students > 0 && y1CategorySums[cat] > 0 && (
+                    <div className="text-[10px] font-normal text-muted-foreground">
+                      Y1 {formatPerStudent(y1CategorySums[cat], y1Students)}
+                    </div>
+                  )}
+                </div>
               </button>
               {isCustom && (
                 <div className="flex items-center gap-1 ml-2">
@@ -1575,6 +1602,16 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                 <button type="button" onClick={() => addExpenseRow(cat)} className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors mt-2">
                   <Plus className="h-4 w-4" /> Add expense line
                 </button>
+                <RationaleField
+                  rationaleKey={`expenses:${cat}`}
+                  label={`Why these ${label.toLowerCase()} numbers?`}
+                  placeholder={
+                    y1CategorySums[cat] > 0 && y1Students > 0
+                      ? `${formatCurrency(y1CategorySums[cat])} in Y1 (${formatPerStudent(y1CategorySums[cat], y1Students)}). What anchors that — quotes, signed contracts, vendor bids, or comparable schools?`
+                      : "Where did these numbers come from — quotes, signed contracts, vendor bids, or comparable school benchmarks?"
+                  }
+                  helperText="A reviewer should see your evidence — a recent quote, a vendor bid, or a defensible benchmark."
+                />
               </div>
             )}
           </div>
@@ -1654,6 +1691,16 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
               <button type="button" onClick={() => addCapitalRow()} className="flex items-center gap-2 text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors mt-2">
                 <Plus className="h-4 w-4" /> Add capital / debt item
               </button>
+              <RationaleField
+                rationaleKey="expenses:capital_financing"
+                label="Why these capital items?"
+                placeholder={
+                  y1CategorySums["capital_financing"] > 0
+                    ? `${formatCurrency(y1CategorySums["capital_financing"])} in Y1 capital. What's behind those numbers — vendor quotes for furniture/equipment, a contractor estimate for buildout, or a financing plan?`
+                    : "Capital purchases (furniture, equipment, buildout). What's the source of the estimates — vendor quotes, contractor bids, or comparable buildouts?"
+                }
+                helperText="Lenders look closely at startup capital. Cite the quotes or bids that back each line."
+              />
             </div>
           )}
         </div>
@@ -1905,6 +1952,11 @@ function ExpenseLineCard({
           </span>
           {driverHint && (
             <span className="text-[11px] text-muted-foreground">{driverHint}</span>
+          )}
+          {y1Students > 0 && y1Amount > 0 && row.driverType !== "per_student" && row.driverType !== "per_new_student" && row.driverType !== "per_returning_student" && row.driverType !== "percent_of_revenue" && (
+            <span className="text-[11px] text-muted-foreground">
+              ≈ {formatPerStudent(y1Amount, y1Students)}
+            </span>
           )}
         </div>
 

@@ -500,6 +500,11 @@ export const budgetNarrativeSchema = z.object({
   growthStrategy: z.string().default(""),
   riskMitigation: z.string().default(""),
   additionalContext: z.string().default(""),
+  // Inline rationales captured per category card across the wizard. Keys are
+  // semantic `step:categoryId` strings (e.g. `revenue:tuition_and_fees`,
+  // `staffing:instructional`) so they survive wizard-step reorders. The
+  // Lender Narrative roll-up task will read from this map.
+  inlineRationales: z.record(z.string(), z.string()).default({}),
 });
 
 export const assumptionFlagResponseSchema = z.object({

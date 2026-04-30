@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { Building2, Shield, Lightbulb, Info } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { RationaleField } from "@/components/coaching/RationaleField";
 import { cn } from "@/lib/utils";
 import type { FullModelData } from "../schema";
 import type { SchoolType } from "@/lib/state-funding-data";
@@ -108,7 +109,12 @@ export function CapitalFinancingStep() {
   const { watch } = useFormContext<FullModelData>();
   const schoolType = watch("schoolProfile.schoolType") as SchoolType | undefined;
   const loanAmount = watch("schoolProfile.loanAmount") as number | undefined;
+  const loanRate = watch("schoolProfile.loanRate") as number | undefined;
+  const loanTermYears = watch("schoolProfile.loanTermYears") as number | undefined;
   const hasLoan = loanAmount !== undefined && loanAmount !== null && loanAmount > 0;
+  const dscrByYear = watch("covenantThresholds.dscrByYear") as
+    | (number | undefined)[]
+    | undefined;
 
   return (
     <div className="space-y-8">
@@ -161,6 +167,19 @@ export function CapitalFinancingStep() {
             <InfoBadge>
               Debt service payments are automatically computed and included in the Expenses step when a loan is configured.
             </InfoBadge>
+
+            <RationaleField
+              rationaleKey="capitalFinancing:debtTerms"
+              label="Why these debt terms?"
+              placeholder={
+                hasLoan
+                  ? `You're modeling a $${(loanAmount ?? 0).toLocaleString()} loan${
+                      loanRate ? ` at ${loanRate}%` : ""
+                    }${loanTermYears ? ` over ${loanTermYears} years` : ""}. Which lender (or lender type) gave you those terms — a term sheet, an LOI, a comparable deal, or a market rate quote?`
+                  : "If you plan to add debt later, capture the lender type, expected rate, and source of those expectations here. Reviewers will look for an anchor."
+              }
+              helperText="Lenders read this first. A clear source — term sheet, banker conversation, comparable deal — moves the conversation faster."
+            />
           </div>
         </section>
 
@@ -206,6 +225,20 @@ export function CapitalFinancingStep() {
               </p>
             </div>
           )}
+
+          <RationaleField
+            rationaleKey="capitalFinancing:dscrCovenants"
+            label="Why these covenant thresholds?"
+            placeholder={
+              hasLoan && Array.isArray(dscrByYear) && dscrByYear.some((v) => (v ?? 0) > 0)
+                ? `Your DSCR ramp is ${dscrByYear
+                    .slice(0, 5)
+                    .map((v, i) => `Y${i + 1} ${(v ?? [1.10, 1.15, 1.20, 1.25, 1.25][i]).toFixed(2)}x`)
+                    .join(" → ")}. What's the source — a draft term sheet, your lender's standard package, or a conservative self-imposed target?`
+                : "If your lender has shared draft covenants, capture them here with the source (term sheet, RFP, banker conversation). Otherwise note the basis for your self-imposed targets."
+            }
+            helperText="A self-imposed DSCR ramp tells lenders you've already stress-tested your model — call out where the targets came from."
+          />
         </section>
       </div>
     </div>

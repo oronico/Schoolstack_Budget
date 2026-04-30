@@ -4,7 +4,9 @@ import { ChevronDown, ChevronRight, Plus, Trash2, Clock, BarChart3, Lightbulb, G
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { RationaleField } from "@/components/coaching/RationaleField";
 import { cn, formatCurrency } from "@/lib/utils";
+import { formatPerStudent } from "@/lib/per-student-lens";
 import { YEAR_COUNT } from "@workspace/finance";
 import {
   type RevenueRowData,
@@ -944,18 +946,20 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {categoryOrder.filter((cat) => enabledCategories.has(cat)).map((cat) => (
-          <div key={cat} className="rounded-2xl border border-border/60 bg-white p-4 text-center shadow-sm">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{CATEGORY_LABELS[cat]}</div>
-            <div className="font-display text-xl font-bold text-foreground">{formatCurrency(getCategoryY1Total(cat))}</div>
-          </div>
-        ))}
+        {categoryOrder.filter((cat) => enabledCategories.has(cat)).map((cat) => {
+          const catTotal = getCategoryY1Total(cat);
+          return (
+            <div key={cat} className="rounded-2xl border border-border/60 bg-white p-4 text-center shadow-sm">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{CATEGORY_LABELS[cat]}</div>
+              <div className="font-display text-xl font-bold text-foreground">{formatCurrency(catTotal)}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{formatPerStudent(catTotal, y1Students)}</div>
+            </div>
+          );
+        })}
         <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center shadow-sm">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Total Y1 Revenue</div>
           <div className="font-display text-xl font-bold text-foreground">{formatCurrency(totalY1Revenue)}</div>
-          {revenuePerStudent > 0 && (
-            <div className="text-[10px] text-muted-foreground mt-0.5">{formatCurrency(revenuePerStudent)} / student</div>
-          )}
+          <div className="text-[10px] text-muted-foreground mt-0.5">{formatPerStudent(totalY1Revenue, y1Students)}</div>
         </div>
       </div>
 
@@ -1023,9 +1027,16 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                 )}
               </div>
               {total > 0 && (
-                <span className="text-sm font-semibold text-primary">
-                  {formatCurrency(total)} Y1
-                </span>
+                <div className="text-right">
+                  <span className="text-sm font-semibold text-primary">
+                    {formatCurrency(total)} Y1
+                  </span>
+                  {y1Students > 0 && (
+                    <div className="text-[10px] font-normal text-muted-foreground">
+                      {formatPerStudent(total, y1Students)}
+                    </div>
+                  )}
+                </div>
               )}
             </button>
 
@@ -1133,6 +1144,19 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                     onAdd={(itemId) => addLineItem(cat, itemId)}
                   />
                 )}
+
+                <RationaleField
+                  rationaleKey={`revenue:${cat}`}
+                  label={`Why these ${CATEGORY_LABELS[cat].toLowerCase()} numbers?`}
+                  placeholder={
+                    total > 0 && y1Students > 0
+                      ? `You're projecting ${formatCurrency(total)} in Year 1 (${formatPerStudent(total, y1Students)}). What anchors that — pricing comps, signed pledges, awarded grants, prior school benchmarks?`
+                      : total > 0
+                        ? `You're projecting ${formatCurrency(total)} in Year 1. Where does that number come from — pricing comps, signed pledges, awarded grants, or another anchor?`
+                        : "Once you enter amounts, capture how you arrived at them — pricing comps, signed pledges, awarded grants, or prior school benchmarks."
+                  }
+                  helperText="Two sentences max. Lenders and board members will read this side-by-side with your numbers."
+                />
               </div>
               </div>
             </div>
@@ -1528,6 +1552,12 @@ function RevenueLineItem({
               </div>
             ))}
           </div>
+
+          {y1Students > 0 && row.driverType !== "per_student" && row.driverType !== "percent_of_base" && row.amounts[0] > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              ≈ {formatPerStudent(row.driverType === "monthly" ? row.amounts[0] * 12 : row.amounts[0], y1Students)}
+            </p>
+          )}
 
           {y1Students > 0 && row.driverType === "per_student" && row.amounts[0] > 0 && (
             <>

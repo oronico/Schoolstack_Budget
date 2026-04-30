@@ -4,7 +4,9 @@ import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, User
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
-import { cn } from "@/lib/utils";
+import { RationaleField } from "@/components/coaching/RationaleField";
+import { cn, formatCurrency } from "@/lib/utils";
+import { formatPerStudent, formatPerFte } from "@/lib/per-student-lens";
 import {
   DEFAULT_BENEFITS_RATE,
   DEFAULT_PAYROLL_TAX_RATE,
@@ -470,11 +472,36 @@ export function StaffingStep() {
         const catRows = groupedRows[cat];
         if (catRows.length === 0) return null;
 
+        const catCost = calculatePersonnelCosts(catRows, y1Students);
+        const catFte = catRows.reduce(
+          (sum, r) =>
+            sum +
+            (r.staffingMode === "ratio"
+              ? computeEffectiveFte(r, 0, enrollmentArr[0])
+              : r.fte),
+          0,
+        );
+
         return (
           <div key={cat}>
-            <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">
-              {FUNCTION_CATEGORY_LABELS[cat]}
-            </h3>
+            <div className="flex items-baseline justify-between mb-2 gap-3">
+              <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                {FUNCTION_CATEGORY_LABELS[cat]}
+              </h3>
+              {catCost.grandTotal > 0 && (
+                <div className="text-right text-[11px] text-muted-foreground">
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(catCost.grandTotal)} Y1
+                  </span>
+                  {y1Students > 0 && (
+                    <span> · {formatPerStudent(catCost.grandTotal, y1Students)}</span>
+                  )}
+                  {catFte > 0 && (
+                    <span> · {formatPerFte(catCost.grandTotal, catFte)}</span>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="space-y-3">
               {catRows.map((row) => {
                 const rowIndex = rows.indexOf(row);
@@ -497,6 +524,16 @@ export function StaffingStep() {
                 );
               })}
             </div>
+            <RationaleField
+              rationaleKey={`staffing:${cat}`}
+              label={`Why this ${FUNCTION_CATEGORY_LABELS[cat].toLowerCase()} plan?`}
+              placeholder={
+                catCost.grandTotal > 0 && y1Students > 0
+                  ? `${catCost.headcount} role${catCost.headcount === 1 ? "" : "s"} totaling ${formatCurrency(catCost.grandTotal)} Y1 (${formatPerStudent(catCost.grandTotal, y1Students)}). What anchors that — comp benchmarks, prior school experience, a hiring plan, or an org chart?`
+                  : "How did you size this group — comp benchmarks, prior school experience, a hiring plan, or an org chart?"
+              }
+              helperText="Lenders look for a hiring plan that matches the ramp. Two sentences on the source of these roles and rates."
+            />
           </div>
         );
       })}
@@ -641,13 +678,20 @@ function StaffCard({
               <span className="text-xs text-destructive font-medium flex-shrink-0">Fix errors</span>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-            <span className="text-sm font-semibold text-foreground">
-              ${totalCost.toLocaleString()}
-            </span>
-            {colaRate > 0 && row.annualizedRate > 0 && (
-              <span className="text-[9px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                Y1: ${row.annualizedRate.toLocaleString()} → Y5: ${Math.round(row.annualizedRate * Math.pow(1 + colaRate / 100, 4)).toLocaleString()} ({colaRate}% COLA)
+          <div className="flex flex-col items-end gap-0.5 flex-shrink-0 ml-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">
+                ${totalCost.toLocaleString()}
+              </span>
+              {colaRate > 0 && row.annualizedRate > 0 && (
+                <span className="text-[9px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                  Y1: ${row.annualizedRate.toLocaleString()} → Y5: ${Math.round(row.annualizedRate * Math.pow(1 + colaRate / 100, 4)).toLocaleString()} ({colaRate}% COLA)
+                </span>
+              )}
+            </div>
+            {enrollmentArr[0] > 0 && totalCost > 0 && (
+              <span className="text-[10px] text-muted-foreground">
+                {formatPerStudent(totalCost, enrollmentArr[0])}
               </span>
             )}
           </div>

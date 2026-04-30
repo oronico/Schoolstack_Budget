@@ -5,6 +5,7 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { IDontKnowYet } from "@/components/coaching/IDontKnowYet";
+import { RationaleField } from "@/components/coaching/RationaleField";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import type { Program } from "../schema";
@@ -999,6 +1000,23 @@ export function EnrollmentStep() {
           </div>
         </div>
       )}
+
+      <RationaleField
+        rationaleKey="enrollment:programs"
+        label="Why these enrollment numbers?"
+        placeholder={
+          year1Total > 0
+            ? `You're projecting ${year1Total} students in Year 1${
+                applicationsReceived > 0
+                  ? ` against ${applicationsReceived} applications`
+                  : ""
+              }${
+                waitlistCount > 0 ? ` and a waitlist of ${waitlistCount}` : ""
+              }. What anchors that — letters of intent, family interest list, current waitlist conversion, or comparable schools?`
+            : "What gives you confidence in your Year 1 enrollment number — letters of intent, current waitlist, comparable launches, or community demand?"
+        }
+        helperText="A lender or board reviewer will read this next to your enrollment ramp. Be specific about your demand evidence."
+      />
     </div>
   );
 }
