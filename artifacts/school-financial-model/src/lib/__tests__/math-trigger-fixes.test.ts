@@ -105,6 +105,50 @@ describe("F1: payroll-tax wage-base caps", () => {
     expect(fallback).toBeDefined();
     expect(fallback.components.length).toBeGreaterThan(0);
   });
+
+  // Required hand-check spot tests for the audit doc (Task #318):
+  //   AZ Year-1 $70k Head of School and WA Year-1 $120k senior salary.
+  it("AZ $70k 2025 → $5,557 (FICA + Medicare + FUTA cap + AZ SUI cap)", () => {
+    const az = getStatePayrollTaxEntry("AZ");
+    const dollars = computePayrollTaxForSalary(70_000, az.components);
+    // FICA: 70k * 6.2% = 4340; Medicare: 70k * 1.45% = 1015;
+    // FUTA: min(70k, 7k) * 0.6% = 42; AZ SUI: min(70k, 8k) * 2.0% = 160.
+    expect(dollars).toBeCloseTo(4340 + 1015 + 42 + 160, 2);
+    expect(dollars).toBeCloseTo(5557, 2);
+  });
+
+  it("WA $120k 2025 → $10,926.16 (all six WA components capped where applicable)", () => {
+    const wa = getStatePayrollTaxEntry("WA");
+    const dollars = computePayrollTaxForSalary(120_000, wa.components);
+    // FICA: 120k * 6.2% = 7440; Medicare: 120k * 1.45% = 1740;
+    // FUTA: 7k * 0.6% = 42; WA SUI: min(120k, 72.8k) * 1.22% = 888.16;
+    // WA PFML: 120k * 0.28% = 336; WA Comp: 120k * 0.4% = 480.
+    expect(dollars).toBeCloseTo(7440 + 1740 + 42 + 888.16 + 336 + 480, 2);
+    expect(dollars).toBeCloseTo(10_926.16, 2);
+  });
+
+  it("year-over-year salary escalation re-applies caps each year (capped tax does NOT inflate linearly)", () => {
+    // FICA-OASDI cap is the easiest demonstrator: at $176,100 base, salary
+    // already at the cap. After a 3% raise, the OASDI tax should NOT grow 3%
+    // — it stays at cap * 6.2%. (Medicare & uncapped components do scale.)
+    const components: PayrollTaxComponent[] = [
+      { label: "FICA-OASDI", rate: 6.2, wageBase: 176100 },
+      { label: "Medicare", rate: 1.45 },
+    ];
+    const base = 176_100;
+    const escalated = base * 1.03;
+    const baseTax = computePayrollTaxForSalary(base, components);
+    const escTax = computePayrollTaxForSalary(escalated, components);
+    // OASDI portion stays flat ($176,100 * 6.2% = $10,918.20).
+    // Medicare grows 3% (uncapped): $176,100 * 1.45% * 1.03.
+    const expectedBase = 176_100 * 0.062 + 176_100 * 0.0145;
+    const expectedEsc = 176_100 * 0.062 + escalated * 0.0145;
+    expect(baseTax).toBeCloseTo(expectedBase, 2);
+    expect(escTax).toBeCloseTo(expectedEsc, 2);
+    // The escalated tax must be less than a naive flat × salaryEsc would
+    // produce — that's the bug the wage-base path closes.
+    expect(escTax).toBeLessThan(baseTax * 1.03);
+  });
 });
 
 // =============================================================================
@@ -208,5 +252,44 @@ describe("F3: state business-entity filing fees", () => {
   it("generateDefaultExpenseRows omits the entity-fee row when context is absent", () => {
     const rows = generateDefaultExpenseRows("tuition_based", 5);
     expect(rows.find((r) => r.id === STATE_ENTITY_FEE_ROW_ID)).toBeUndefined();
+  });
+
+  // Spot tests for the published audit doc reference table.
+  it.each([
+    ["CA", "llc_single", 800],
+    ["CA", "llc_partnership", 800],
+    ["DE", "llc_single", 300],
+    ["TX", "llc_single", 0],
+    ["TX", "c_corp", 0],
+    ["NC", "c_corp", 225],
+    ["NC", "s_corp", 225],
+    ["WA", "llc_single", 160],
+    ["WA", "c_corp", 160],
+  ] as const)("STATE_ENTITY_FEES[%s][%s].annual === %d", (state, et, expected) => {
+    const profile = STATE_ENTITY_FEES[state][et as "llc_single" | "c_corp" | "s_corp" | "llc_partnership"];
+    expect(profile.annual).toBe(expected);
+  });
+
+  it("FL nonprofit_501c3 stays at 61.25 (audit-doc reference)", () => {
+    expect(STATE_ENTITY_FEES.FL.nonprofit_501c3.annual).toBeCloseTo(61.25, 2);
+  });
+
+  // Consistency guard: when a note ends with "= $X", the annual amount must
+  // match. This is exactly the failure mode that produced the rejection on
+  // NC corp ($25 vs $225) and WA LLC ($70 vs $160).
+  it("annual amount matches any '= $X' total stated in the note", () => {
+    const violations: string[] = [];
+    for (const [state, profile] of Object.entries(STATE_ENTITY_FEES)) {
+      for (const [et, fee] of Object.entries(profile)) {
+        const f = fee as EntityFeeProfile;
+        const m = f.notes.match(/=\s*\$([\d,]+(?:\.\d+)?)/);
+        if (!m) continue;
+        const stated = parseFloat(m[1].replace(/,/g, ""));
+        if (Math.abs(stated - f.annual) > 0.01) {
+          violations.push(`${state}.${et}: notes say "= $${stated}" but annual=${f.annual}`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
   });
 });

@@ -161,13 +161,39 @@ defaults-row emission/omission paths.
 
 ## 4. Validation summary
 
-- Unit: `pnpm --filter @workspace/school-financial-model run test` — passing,
-  including the 18 new cases in `math-trigger-fixes.test.ts`.
-- Type: `pnpm --filter @workspace/school-financial-model exec tsc --noEmit` —
-  clean.
-- E2E: `pnpm --filter @workspace/school-financial-model run test:e2e` —
+- Unit: `pnpm --filter @workspace/school-financial-model run test` — 599
+  passing, including:
+  - 32 cases in `math-trigger-fixes.test.ts` (F1/F2/F3 unit coverage,
+    AZ-$70k & WA-$120k hand-checks, CA/DE/FL/TX/NC/WA spot tests, and a
+    regex-based notes-vs-amount consistency guard for `STATE_ENTITY_FEES`).
+  - 3 cases in `payroll-tax-cap-escalation.test.ts` — engine-level
+    integration test that drives `computeBaseFinancials` end-to-end with a
+    capped FICA-OASDI scenario at 3% salary escalation and asserts
+    Y2/Y1 < 1.03 (regression guard for the F1 outer-multiplier bug).
+- Type: `pnpm --filter @workspace/school-financial-model run typecheck` and
+  `pnpm --filter @workspace/api-server run typecheck` — both clean.
+- E2E: `pnpm --filter @workspace/school-financial-model run test:e2e` — 19
   passing.
 - Engine parity: `scenario-engine-parity.test.ts` continues to pass against
-  frozen goldens; no regen needed because fixtures don't supply
-  `payrollTaxComponents`, so the engine falls back to the legacy flat-rate
-  path on those inputs.
+  frozen goldens; no regen needed because the legacy flat-rate path is
+  algebraically unchanged: `(annual * rate) * salaryEsc ==
+  (annual * salaryEsc) * rate`. Fixtures don't supply
+  `payrollTaxComponents`, so they exercise the legacy path.
+
+### F1 hand-check reference
+
+| Salary  | State | Expected payroll tax | Components                                                          |
+|---------|-------|----------------------|---------------------------------------------------------------------|
+| $70,000 | AZ    | **$5,557.00**        | OASDI $4,340 + Medicare $1,015 + FUTA $42 + AZ SUI $160              |
+| $120,000| WA    | **$10,926.16**       | OASDI $7,440 + Medicare $1,740 + FUTA $42 + WA SUI $888.16 + PFML $336 + Comp $480 |
+
+### F3 reference fees (post-fix)
+
+| State | Entity            | Annual ($) |
+|-------|-------------------|------------|
+| CA    | LLC (single/ptr)  | 800        |
+| DE    | LLC (single/ptr)  | 300        |
+| TX    | LLC / C-corp      | 0          |
+| NC    | C-corp / S-corp   | **225** (was 25 — fixed)  |
+| WA    | LLC / C-corp      | **160** (was 70 — fixed)  |
+| FL    | Nonprofit 501(c)3 | 61.25      |

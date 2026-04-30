@@ -190,6 +190,11 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
       else revTotal += v;
     }
 
+    // Apply salary escalation INSIDE the row loop so wage-base caps are
+    // re-applied against the escalated salary each year. The flat-rate path is
+    // mathematically unchanged: (annual * rate) * persEsc == (annual * persEsc)
+    // * rate, so legacy models / golden snapshots are preserved.
+    const persEsc = Math.pow(1 + salaryEscRate, y);
     let persTotal = 0;
     for (const r of staffingRows) {
       let effectiveFte = r.fte || 0;
@@ -206,27 +211,29 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
           effectiveFte = Math.ceil(computed * 2) / 2;
         }
       }
-      const annual = effectiveFte * (r.annualizedRate || 0);
+      const escalatedRate = (r.annualizedRate || 0) * persEsc;
+      const annual = effectiveFte * escalatedRate;
       const isContractNoPL = r.employmentType === "contract" && !r.payrollLike;
       let benefits = 0, tax = 0;
       if (!isContractNoPL) {
         if (r.benefitsEligible) benefits = annual * ((r.benefitsRate || 0) / 100);
         // Wage-base-aware payroll tax: when components are present and the user
         // hasn't explicitly overridden the flat rate, sum each component's tax
-        // capped at its wage base (FICA $176.1k, FUTA $7k, state SUI per state).
-        // Otherwise fall back to flat `salary * payrollTaxRate / 100` so legacy
-        // models and explicit user overrides keep their existing behavior.
+        // capped at its wage base against the *escalated* per-employee salary.
+        // Caps don't scale with salary inflation, so the cap must be applied
+        // each year against the actual taxable wage. Otherwise fall back to
+        // flat `salary * payrollTaxRate / 100` for legacy models and explicit
+        // user overrides.
         const components = r.payrollTaxComponents;
         if (components && components.length > 0 && !r.payrollTaxRateOverridden) {
           // Per-employee caps apply per-FTE — multiply by effectiveFte (not raw salary)
           // so a 2-FTE "Teachers" line uses 2 separate FICA caps, not one shared cap.
           const fteCount = effectiveFte > 0 ? effectiveFte : 0;
-          const perEmployeeSalary = (r.annualizedRate || 0);
           let perEmployeeTax = 0;
           for (const c of components) {
             const cappedWage = c.wageBase !== undefined
-              ? Math.min(perEmployeeSalary, c.wageBase)
-              : perEmployeeSalary;
+              ? Math.min(escalatedRate, c.wageBase)
+              : escalatedRate;
             perEmployeeTax += cappedWage * ((c.rate || 0) / 100);
           }
           tax = perEmployeeTax * fteCount;
@@ -236,8 +243,7 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
       }
       persTotal += annual + benefits + tax;
     }
-    const persEsc = Math.pow(1 + salaryEscRate, y);
-    persTotal = persTotal * persEsc * pf;
+    persTotal = persTotal * pf;
 
     const yearFTE = computeTotalFTE(staffingRows, y, students);
 

@@ -218,7 +218,7 @@ export const STATE_ENTITY_FEES: Record<string, Record<FeeEntityType, EntityFeePr
   },
   NC: {
     ...llcSame(202, "$200 LLC annual report (online) + $2 fee = $202."),
-    ...corpSame(25, "$25 corp annual report + $200 minimum franchise tax = $225."),
+    ...corpSame(225, "$25 corp annual report + $200 minimum franchise tax = $225."),
     nonprofit_501c3: { annual: 0, notes: "North Carolina nonprofits do not file an annual report." },
   },
   ND: {
@@ -287,8 +287,8 @@ export const STATE_ENTITY_FEES: Record<string, Record<FeeEntityType, EntityFeePr
     nonprofit_501c3: { annual: 25, notes: "$25 nonprofit annual report." },
   },
   WA: {
-    ...llcSame(70, "$70 LLC annual report + $90 BLS renewal = $160 total."),
-    ...corpSame(70, "$70 corp annual report + $90 BLS renewal = $160 total."),
+    ...llcSame(160, "$70 LLC annual report + $90 BLS renewal = $160 total."),
+    ...corpSame(160, "$70 corp annual report + $90 BLS renewal = $160 total."),
     nonprofit_501c3: { annual: 60, notes: "$60 nonprofit annual report ($10 + $50 charity registration if soliciting donations)." },
   },
   WV: {

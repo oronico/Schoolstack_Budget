@@ -554,13 +554,18 @@ function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: nu
 
 const computeEffectiveFte = computeEffectiveFteShared;
 
-function computeStaffingBaseCost(rows: StaffingRow[], y?: number, enrollment?: number): number {
+function computeStaffingBaseCost(rows: StaffingRow[], y?: number, enrollment?: number, salaryEsc: number = 1): number {
+  // Salary escalation is applied INSIDE the loop so wage-base caps are
+  // re-applied against the escalated salary each year. The flat-rate path is
+  // mathematically unchanged: (annual * rate) * salaryEsc == (annual *
+  // salaryEsc) * rate, so legacy goldens stay frozen.
   let total = 0;
   for (const row of rows) {
     const effectiveFte = (y !== undefined && enrollment !== undefined)
       ? computeEffectiveFte(row, y, enrollment)
       : row.fte;
-    const annualCost = effectiveFte * row.annualizedRate;
+    const escalatedRate = row.annualizedRate * salaryEsc;
+    const annualCost = effectiveFte * escalatedRate;
     const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
     if (isContractNotPayrollLike) {
       total += annualCost;
@@ -569,17 +574,17 @@ function computeStaffingBaseCost(rows: StaffingRow[], y?: number, enrollment?: n
       if (row.benefitsEligible) total += annualCost * (row.benefitsRate / 100);
       // Wage-base-aware payroll tax (mirrors lib/finance scenario-engine):
       // when components are present and the user hasn't overridden the flat
-      // rate, sum each component's tax capped at its wage base. Otherwise fall
-      // back to flat `salary * payrollTaxRate / 100`.
+      // rate, sum each component's tax capped at its wage base against the
+      // *escalated* per-employee salary. Caps don't scale with salary
+      // inflation, so they must be re-applied each year.
       const components = row.payrollTaxComponents;
       if (components && components.length > 0 && !row.payrollTaxRateOverridden) {
         const fteCount = effectiveFte > 0 ? effectiveFte : 0;
-        const perEmployeeSalary = row.annualizedRate;
         let perEmployeeTax = 0;
         for (const c of components) {
           const cappedWage = c.wageBase !== undefined
-            ? Math.min(perEmployeeSalary, c.wageBase)
-            : perEmployeeSalary;
+            ? Math.min(escalatedRate, c.wageBase)
+            : escalatedRate;
           perEmployeeTax += cappedWage * ((c.rate || 0) / 100);
         }
         total += perEmployeeTax * fteCount;
@@ -802,8 +807,12 @@ export function computeAllYearsFromRows(
   return enrollmentByYear.map((students, yearIdx) => {
     const pf = yearIdx === 0 ? prorationFactor : 1;
     const salaryEsc = Math.pow(1 + salaryEscRate, yearIdx);
-    const baseCost = computeStaffingBaseCost(staffingRows, yearIdx, students);
-    const totalStaffingCost = baseCost * salaryEsc * pf;
+    // Pass salaryEsc into the cost helper so wage-base caps are applied to
+    // the escalated per-employee salary each year. Outer multiplier is now
+    // pf only (capped tax can't be re-multiplied by salaryEsc — it's
+    // non-linear over the cap).
+    const baseCost = computeStaffingBaseCost(staffingRows, yearIdx, students, salaryEsc);
+    const totalStaffingCost = baseCost * pf;
 
     const revRaw = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers, schoolProfile);
     const revTotal = revRaw.total * pf;
