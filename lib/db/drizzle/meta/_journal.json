@@ -15,6 +15,13 @@
       "when": 1777495563489,
       "tag": "0001_skinny_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777668061946,
+      "tag": "0002_serious_slayback",
+      "breakpoints": true
     }
   ]
 }

@@ -1667,10 +1667,22 @@ router.post("/shared/:token/export/decision-comparison-pdf", async (req, res) =>
 
     const buffer = await generateDecisionComparisonPDF(validated);
 
-    // Track the share-token export against the model owner so usage rolls up
-    // with the founder's other exports. We deliberately don't insert into
-    // exportsTable (no userId on a public download) but the analytics event
-    // still attributes the action so the team can see share-link engagement.
+    // Record the share-token export against the model owner so it appears in
+    // the founder's exports history alongside their own downloads. The
+    // exports row is tagged with `sharedLinkId` (and the link's
+    // `viewerLabel`, when set) so consumers of the exports table can tell
+    // "the founder downloaded this" from "a co-founder/advisor/board chair
+    // downloaded this via the share link" — see exports schema in
+    // lib/db/src/schema/exports.ts. The analytics event continues to fire
+    // for engagement tracking.
+    await db.insert(exportsTable).values({
+      userId: model.userId,
+      modelId: model.id,
+      format: "pdf",
+      sharedLinkId: link.id,
+      viewerLabel: link.viewerLabel,
+    });
+
     await trackEvent("exported_decision_comparison_pdf_via_share", model.userId, {
       modelId: model.id,
       sharedLinkId: link.id,

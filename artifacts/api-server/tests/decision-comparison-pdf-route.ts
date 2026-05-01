@@ -18,8 +18,9 @@
 import type { AddressInfo } from "node:net";
 import zlib from "node:zlib";
 import bcrypt from "bcryptjs";
-import { db, usersTable, financialModelsTable, exportsTable, eventsTable } from "@workspace/db";
+import { db, usersTable, financialModelsTable, exportsTable, eventsTable, sharedLinksTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
+import crypto from "node:crypto";
 import app from "../src/app.js";
 import { generateToken } from "../src/middlewares/auth.js";
 
@@ -240,6 +241,15 @@ async function getLatestExport(modelId: number) {
   return rows[0];
 }
 
+async function createSharedLink(modelId: number, viewerLabel: string | null) {
+  const token = crypto.randomBytes(32).toString("hex");
+  const [row] = await db
+    .insert(sharedLinksTable)
+    .values({ modelId, token, viewerLabel })
+    .returning({ id: sharedLinksTable.id, token: sharedLinksTable.token });
+  return row;
+}
+
 async function getLatestEvent(userId: number, eventName: string) {
   const rows = await db
     .select()
@@ -289,6 +299,18 @@ async function postPdf(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
+    body: JSON.stringify(body),
+  });
+}
+
+async function postSharedPdf(
+  baseUrl: string,
+  shareToken: string,
+  body: unknown,
+) {
+  return fetch(`${baseUrl}/api/shared/${shareToken}/export/decision-comparison-pdf`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 }
@@ -511,6 +533,98 @@ async function testNoSchoolNameAnywhere(server: BootedServer) {
   }
 }
 
+// Task #223: a recipient downloading via /shared/:token must result in an
+// exports row attributed to the model owner with provenance fields populated
+// (sharedLinkId + viewerLabel). Without this, share-link downloads stay
+// invisible in the founder's exports history — the regression we're guarding
+// against. The owner-driven path is unchanged: those rows still have
+// sharedLinkId == null.
+async function testSharedLinkRecordsExportRow(server: BootedServer) {
+  console.log("\n— share-link path: exports row attributed to owner with provenance —");
+
+  const stamp = Date.now();
+  const owner = await createUser(`share-owner-${stamp}@example.com`);
+  const modelId = await createModel(owner.id, "Shared Academy");
+  const link = await createSharedLink(modelId, "Board Chair");
+
+  try {
+    const res = await postSharedPdf(server.baseUrl, link.token, validBody());
+    eq2("status is 200", res.status, 200);
+    eq2("content-type is application/pdf", res.headers.get("content-type"), "application/pdf");
+
+    const buf = Buffer.from(await res.arrayBuffer());
+    check("response body is a PDF", buf.subarray(0, 5).toString() === "%PDF-");
+
+    const exportRow = await getLatestExport(modelId);
+    check("exports row inserted for share-link download", !!exportRow);
+    eq2("exports row attributed to model owner", exportRow?.userId, owner.id);
+    eq2("exports row format is 'pdf'", exportRow?.format, "pdf");
+    eq2("exports row carries sharedLinkId provenance", exportRow?.sharedLinkId, link.id);
+    eq2("exports row carries viewerLabel from the link", exportRow?.viewerLabel, "Board Chair");
+
+    const eventRow = await getLatestEvent(owner.id, "exported_decision_comparison_pdf_via_share");
+    check("analytics event still inserted", !!eventRow);
+    const meta = (eventRow?.metadata as Record<string, unknown> | null) || {};
+    eq2("event metadata.modelId matches", meta.modelId, modelId);
+    eq2("event metadata.sharedLinkId matches", meta.sharedLinkId, link.id);
+  } finally {
+    // user delete cascades through model → exports → shared_links.
+    await deleteUserCascade(owner.id);
+  }
+}
+
+// Counterpart guard: when the founder runs the *authenticated* comparison
+// PDF route, the inserted exports row must NOT carry share-link provenance.
+// This anchors the "owner-driven vs share-link" distinction the admin UI
+// renders and prevents a future refactor from accidentally tagging owner
+// exports as share-link downloads.
+async function testOwnerExportHasNoShareProvenance(server: BootedServer) {
+  console.log("\n— owner-driven path: exports row has no share-link provenance —");
+
+  const stamp = Date.now();
+  const user = await createUser(`owner-noshare-${stamp}@example.com`);
+  const modelId = await createModel(user.id, "Owner Academy");
+
+  try {
+    const res = await postPdf(server.baseUrl, modelId, user.token, validBody());
+    eq2("status is 200", res.status, 200);
+
+    const exportRow = await getLatestExport(modelId);
+    check("exports row inserted", !!exportRow);
+    eq2("exports row attributed to the owner", exportRow?.userId, user.id);
+    eq2("exports row has null sharedLinkId", exportRow?.sharedLinkId ?? null, null);
+    eq2("exports row has null viewerLabel", exportRow?.viewerLabel ?? null, null);
+  } finally {
+    await deleteUserCascade(user.id);
+  }
+}
+
+// And the share-link path must work even when the founder didn't label the
+// link — viewerLabel just stays NULL, the row still appears with
+// sharedLinkId set so the admin UI can render the generic "via shared link"
+// pill (without a named viewer).
+async function testSharedLinkWithoutViewerLabel(server: BootedServer) {
+  console.log("\n— share-link path: unlabeled link → null viewerLabel, still tagged —");
+
+  const stamp = Date.now();
+  const owner = await createUser(`share-nolabel-${stamp}@example.com`);
+  const modelId = await createModel(owner.id, "Unlabeled Academy");
+  const link = await createSharedLink(modelId, null);
+
+  try {
+    const res = await postSharedPdf(server.baseUrl, link.token, validBody());
+    eq2("status is 200", res.status, 200);
+
+    const exportRow = await getLatestExport(modelId);
+    check("exports row inserted", !!exportRow);
+    eq2("exports row attributed to owner", exportRow?.userId, owner.id);
+    eq2("exports row sharedLinkId set", exportRow?.sharedLinkId, link.id);
+    eq2("exports row viewerLabel is null", exportRow?.viewerLabel ?? null, null);
+  } finally {
+    await deleteUserCascade(owner.id);
+  }
+}
+
 // --- Entrypoint ----------------------------------------------------------
 
 async function main() {
@@ -532,6 +646,9 @@ async function main() {
     await testOtherUsersModel(server);
     await testSchoolNameFallback(server);
     await testNoSchoolNameAnywhere(server);
+    await testSharedLinkRecordsExportRow(server);
+    await testOwnerExportHasNoShareProvenance(server);
+    await testSharedLinkWithoutViewerLabel(server);
   } finally {
     await server.close();
   }

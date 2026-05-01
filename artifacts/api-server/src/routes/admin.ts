@@ -65,6 +65,13 @@ router.get(
           createdAt: exportsTable.createdAt,
           modelName: financialModelsTable.name,
           userName: usersTable.name,
+          // Provenance for share-link-driven downloads (see exports schema
+          // in lib/db/src/schema/exports.ts). When `sharedLinkId` is set the
+          // row was recorded against the model owner because a recipient
+          // downloaded via /shared/:token; the optional `viewerLabel`
+          // captures who the founder said the link was for.
+          sharedLinkId: exportsTable.sharedLinkId,
+          viewerLabel: exportsTable.viewerLabel,
         })
         .from(exportsTable)
         .leftJoin(
@@ -191,6 +198,12 @@ router.get(
           modelName: e.modelName || "Unknown Model",
           userName: e.userName || "Unknown User",
           createdAt: e.createdAt.toISOString(),
+          // Frontend renders a "via shared link" provenance pill when this
+          // is true; the optional viewerLabel further specifies who the
+          // founder named the link for ("Board Chair", "First National
+          // Bank", etc).
+          viaSharedLink: e.sharedLinkId != null,
+          viewerLabel: e.viewerLabel,
         })),
         schoolTypeDistribution: schoolTypes.map((s) => ({
           type: s.schoolType || "unknown",

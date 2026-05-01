@@ -50,6 +50,12 @@ interface AnalyticsData {
     modelName: string;
     userName: string;
     createdAt: string;
+    // Set when this export was triggered by a recipient downloading via a
+    // /shared/:token link (recorded against the model owner). The optional
+    // viewerLabel is whatever the founder named the link for, e.g. "Board
+    // Chair" or "First National Bank".
+    viaSharedLink?: boolean;
+    viewerLabel?: string | null;
   }[];
   schoolTypeDistribution: { type: string; count: number }[];
   schoolStageDistribution: { stage: string; count: number }[];
@@ -1594,11 +1600,25 @@ export function AdminPage() {
                     className="flex items-center justify-between py-2 border-b border-border/40 last:border-0"
                   >
                     <div>
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-sm font-medium text-foreground flex items-center gap-2 flex-wrap">
                         {e.modelName}
+                        {e.viaSharedLink && (
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800"
+                            title={
+                              e.viewerLabel
+                                ? `Downloaded via shared link (${e.viewerLabel})`
+                                : "Downloaded via shared link"
+                            }
+                          >
+                            via shared link
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        by {e.userName} &middot; {e.format.toUpperCase()}
+                        {e.viaSharedLink
+                          ? `via ${e.viewerLabel || "shared link"} (owner: ${e.userName}) · ${e.format.toUpperCase()}`
+                          : `by ${e.userName} · ${e.format.toUpperCase()}`}
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground whitespace-nowrap">
