@@ -812,158 +812,658 @@ function buildRecruitingPipeline(wb: ExcelJS.Workbook, data: ChestertonModelInpu
 // ── Static reference tabs ──
 //
 // The CSN Operating Manual workbook ships three reference tabs that don't
-// depend on per-school data: an annual Cadence, the CSN Training Schedule,
-// and a one-page Parent Handout. They live in module-level constants so a
-// single place owns the wording and the smoke test can spot-check it.
+// depend on per-school data: the Chesterton Cadence, the CSN Training
+// Support Framework, and a one-page Parent Handout (Fundraising Action
+// Plan). The wording and structure below mirror tabs 6, 8, and 9 of the
+// published `3_Operating_Manual_2026_FV.xlsx` workbook so a founder placing
+// the export side-by-side with the source manual sees the same headlines
+// and bullets verbatim. The smoke test in
+// `tests/chesterton-operating-manual.ts` spot-checks one verbatim
+// sentence from each tab to lock the wording in.
 
-interface CadenceRow { month: string; academic: string; fundraising: string; community: string }
+// ── Cadence (source tab "8 - CHESTERTON CADENCE") ──
+//
+// The published Cadence presents six categories of school activity along
+// the rows and the four academic-year quarters along the columns. Each
+// cell contains a quarterly headline; the "DETAIL" section below repeats
+// the grid with a one-sentence mission per category and a bullet list per
+// quarter.
 
-const CADENCE_ROWS: CadenceRow[] = [
-  { month: "July",      academic: "Faculty contracts finalized; summer reading published", fundraising: "Annual Fund kickoff letter to founding families", community: "Welcome BBQ for incoming freshmen families" },
-  { month: "August",    academic: "Faculty in-service week; classroom prep",                fundraising: "Major donor cultivation visits",                       community: "Mass of the Holy Spirit; convocation" },
-  { month: "September", academic: "First day of classes; placement assessments",            fundraising: "Annual Fund public launch",                            community: "Back-to-School Night; parent guild kickoff" },
-  { month: "October",   academic: "Mid-quarter progress reports",                           fundraising: "Founders' Society dinner",                             community: "All-school feast day; Rosary procession" },
-  { month: "November",  academic: "Quarter 1 grades; parent-teacher conferences",          fundraising: "Year-end appeal drafted",                              community: "Thanksgiving liturgy and food drive" },
-  { month: "December",  academic: "Christmas concert and recitations",                      fundraising: "Year-end appeal mailed; #GivingTuesday push",          community: "Christmas pageant; Advent vespers" },
-  { month: "January",   academic: "Mid-year exams; semester grades",                        fundraising: "Capital campaign progress report to board",            community: "Open house for prospective families" },
-  { month: "February",  academic: "Course registration for next year opens",                fundraising: "Scholarship benefit auction",                          community: "Catholic Schools Week; shadow days" },
-  { month: "March",     academic: "Quarter 3 grades; faculty re-hiring decisions",          fundraising: "Spring stewardship calls",                             community: "Lenten service projects" },
-  { month: "April",     academic: "Re-enrollment contracts due",                            fundraising: "Spring gala / annual benefit",                         community: "Easter liturgy; spring play" },
-  { month: "May",       academic: "AP / final exams; senior thesis defenses",               fundraising: "Year-end Annual Fund close-out",                       community: "May crowning; baccalaureate Mass" },
-  { month: "June",      academic: "Graduation; report cards mailed",                        fundraising: "Donor thank-you tour and impact report",               community: "Class trip; alumni picnic" },
+interface CadenceCategory {
+  /** "(N) CATEGORY NAME" exactly as it appears in the source workbook. */
+  label: string;
+  /** Single-sentence mission, joined verbatim from the source workbook's
+   *  multi-row description (e.g. "Meet enrollment goals and tuition
+   *  revenue."). */
+  mission: string;
+  /** Quarterly headlines: [Q1 Jul–Sep, Q2 Oct–Dec, Q3 Jan–Mar, Q4 Apr–Jun]. */
+  headlines: [string, string, string, string];
+  /** Quarterly bullet lists; each bullet keeps the leading "- " from the
+   *  source workbook so the export reads the same as the manual. */
+  bullets: [string[], string[], string[], string[]];
+}
+
+const CADENCE_QUARTERS: [string, string, string, string] = [
+  "FIRST QUARTER",
+  "SECOND QUARTER",
+  "THIRD QUARTER",
+  "FOURTH QUARTER",
 ];
 
-const TRAINING_SESSIONS: Array<{ phase: string; topic: string; audience: string; format: string; weeks: string }> = [
-  { phase: "Discovery (Yr 0)",  topic: "CSN Mission, Charism, and Liberal Arts Pedagogy",       audience: "Founding board",        format: "2-day in-person retreat", weeks: "Weeks 1–2" },
-  { phase: "Discovery (Yr 0)",  topic: "Curriculum Walk-Through (9–12, four-year cycle)",       audience: "Founding board + heads", format: "Webinar series (4×90m)",  weeks: "Weeks 3–6" },
-  { phase: "Preparation (Yr 1)", topic: "Headmaster Bootcamp",                                  audience: "Headmaster",             format: "1-week residency at CSN HQ", weeks: "Summer Yr 1" },
-  { phase: "Preparation (Yr 1)", topic: "Faculty Recruiting & Hiring Playbook",                 audience: "Headmaster + board chair", format: "Workbook + 3 coaching calls", weeks: "Months 1–3" },
-  { phase: "Preparation (Yr 1)", topic: "Fundraising Fundamentals (Major Gifts, Annual Fund)",  audience: "Board + headmaster",     format: "On-site workshop",        weeks: "Month 4" },
-  { phase: "Activation (Yr 2)",  topic: "Faculty Onboarding (Theology, Latin, Math, Humanities)", audience: "All new faculty",       format: "2-week summer institute", weeks: "Late summer" },
-  { phase: "Activation (Yr 2)",  topic: "Parent Formation & Communication",                     audience: "Headmaster + lead teacher", format: "Toolkit + 2 webinars",  weeks: "Pre-launch" },
-  { phase: "Launch (Yr 3+)",     topic: "Annual CSN Heads Conference",                          audience: "Headmaster",             format: "3-day in-person",         weeks: "Each June" },
-  { phase: "Launch (Yr 3+)",     topic: "Faculty Mentor Pairing & Observation Cycle",           audience: "All faculty",            format: "Ongoing peer program",    weeks: "Year-round" },
-  { phase: "Launch (Yr 3+)",     topic: "Board Governance Refresher",                           audience: "Board",                  format: "Annual workshop",         weeks: "Each fall" },
+const CADENCE_QUARTER_MONTHS: [string, string, string, string] = [
+  "JULY · AUGUST · SEPTEMBER",
+  "OCTOBER · NOVEMBER · DECEMBER",
+  "JANUARY · FEBRUARY · MARCH",
+  "APRIL · MAY · JUNE",
 ];
 
-const PARENT_HANDOUT_SECTIONS: Array<{ heading: string; body: string }> = [
+const CADENCE_QUARTER_CYCLES: [string, string, string, string] = [
+  "CYCLE 1",
+  "CYCLE 2",
+  "CYCLE 3",
+  "CYCLE 4",
+];
+
+const CADENCE_CATEGORIES: CadenceCategory[] = [
   {
-    heading: "Welcome to Chesterton Schools Network",
-    body: "Your child is joining a network of schools dedicated to a joyful, classical, and Catholic liberal arts education. Our schools form young men and women in faith, reason, and virtue through a shared four-year curriculum in the great books, mathematics, science, Latin, theology, and the fine arts.",
+    label: "(1) RECRUITING / ADMISSIONS",
+    mission: "Meet enrollment goals and tuition revenue.",
+    headlines: ["STILL TIME TO APPLY", "JOIN US NEXT YEAR I", "JOIN US NEXT YEAR II", "HEAD START ON HIGH SCHOOL"],
+    bullets: [
+      [
+        "- Summer event / info session",
+        "- Still Accepting Applications campaign",
+      ],
+      [
+        "- Execute against Open House Schedule",
+        "- Fall event invitation (school play, concert, shadow)",
+      ],
+      [
+        "- Open House Schedule",
+        "- Gala invitation (BOGO)",
+      ],
+      [
+        "- Summer events targeting rising 8th graders",
+        "- Still Accepting Applications campaign",
+      ],
+    ],
   },
   {
-    heading: "What to Expect Academically",
-    body: "Students follow a four-year integrated humanities cycle (Ancient, Medieval, Renaissance / Reformation, and Modern), four years of Latin, four years of mathematics, four years of laboratory science, four years of theology, and a Socratic discussion-based classroom across every subject.",
+    label: "(2) FUNDRAISING / FRIENDRAISING",
+    mission: "Meet fundraising goals ($ and #) throughout year.",
+    headlines: ["BACK TO SCHOOL / CULTIVATION", "GALA MOMENTUM / END OF YEAR", "GALA", "SPRING APPEAL"],
+    bullets: [
+      [
+        "- School by the Numbers / Thank-a-Thon",
+        "- Calendar Save the Dates (Gala + Concerts + Plays)",
+      ],
+      [
+        "- Gala invite + sponsorship",
+        "- Year end card and solicitation",
+      ],
+      [
+        "- School by the Numbers / Thank-a-Thon",
+        "- Calendar Save the Dates (Gala + Concerts + Plays)",
+      ],
+      [
+        "- State of the School email / direct mail",
+        "- Spring gift / renewal",
+      ],
+    ],
   },
   {
-    heading: "Daily Rhythm",
-    body: "A typical day begins with morning prayer, includes seven academic periods, a community lunch, daily Mass available, and an after-school co-curricular block (athletics, drama, sacred music, or service). Uniforms are required; phones are not permitted during the academic day.",
+    label: "(3) EVENTS / ENGAGEMENT",
+    mission: "Keep your parents engaged and at the heart of your school.",
+    headlines: ["BACK TO SCHOOL", "MOMENTUM BUILDS", "KEEP IT FUN", "SHOWCASE OUR STRENGTHS"],
+    bullets: [
+      [
+        "- All School Picnic",
+        "- Orientation (parents / students / freshmen)",
+        "- House event (service / spiritual / social)",
+        "- Mass of the Holy Spirit (September)",
+      ],
+      [
+        "- Sophomore Play",
+        "- Advent Concert",
+      ],
+      [
+        "- Junior Play (January)",
+        "- Gala (January)",
+        "- March for Life (January)",
+        "- House event (service / spiritual / social)",
+      ],
+      [
+        "- Senior Play (May)",
+        "- Choir Concert (May)",
+        "- Commencement (May)",
+        "- House event (service / spiritual / social)",
+      ],
+    ],
   },
   {
-    heading: "Faith Life",
-    body: "All-school Mass is celebrated at least weekly, sacramental preparation is offered, and the liturgical calendar shapes the school year (feast days, Advent, Lent, May crowning, holy days). Non-Catholic students are welcomed and respected; full participation in the academic and moral formation is expected of every family.",
+    label: "(4) ACADEMICS / STUDENT LIFE",
+    mission: "Build a culture of life, fostering student outcomes and a joyful, high performing faculty and staff.",
+    headlines: ["START OFF STRONG", "FOSTER THE CULTURE", "MAINTAIN MOMENTUM", "FINISH STRONG"],
+    bullets: [
+      [
+        "- Summer reading",
+        "- Faculty retreat",
+        "- First day of school",
+      ],
+      [
+        "- Parent / Teacher Conferences (October)",
+        "- Semester I academic adherence",
+        "- Classroom observations and feedback",
+        "- Retreats / House activities / Extracurricular",
+      ],
+      [
+        "- Parent / Teacher Conferences (March)",
+        "- Semester II academic adherence",
+        "- Contract renewals, recuriting, hiring",
+        "- CSN confernce trainig",
+      ],
+      [
+        "- Field Day and All-School Picnic",
+        "- Gradebooks",
+        "- Recruiting and hiring",
+      ],
+    ],
   },
   {
-    heading: "Family Partnership",
-    body: "Parents are the primary educators. We expect families to read the assigned books alongside their students, attend parent formation evenings (3–4 per year), and contribute to the life of the school through the parent guild, fundraising, or service hours.",
+    label: "(5) SCHOOL OPERATIONS",
+    mission: "Coordination of day-to-day, non-instructional activities that support an orderly, effective school enterprise.",
+    headlines: ["SOLID SYSTEMS", "MAINTAIN MOMENTUM", "MAINTAIN MOMENTUM", "PLANNING AND PREP"],
+    bullets: [
+      [
+        "- Facilities preparation",
+        "- Student files and SIS",
+        "- State, district requirements",
+      ],
+      [
+        "- Parent directory",
+        "- Parent-Student conferences coordination",
+        "- Safety and emergency procedures",
+      ],
+      [
+        "- Gala coordination",
+        "- Rome pilgrimage support",
+        "- Ongoing database maintenance",
+      ],
+      [
+        "- Re-enrollment processes",
+        "- Academic planning for next year",
+        "- Summer preparatio",
+      ],
+    ],
   },
   {
-    heading: "Tuition & Financial Aid",
-    body: "Tuition is intentionally kept below the true cost of education through fundraising. Need-based financial aid is available — no qualified family is turned away for inability to pay full tuition. Apply through the financial aid portal each spring.",
+    label: "(6) BOARD GOVERNANCE",
+    mission: "Sustain the mission of the school and provide leadership, direction, and support.",
+    headlines: ["PLANNING AND PREP", "TRACK PROGRESS", "INCREASE ENGAGEMENT", "PLANNING AND PREP"],
+    bullets: [
+      [
+        "- Quarterly Board meeting (strategy focus)",
+        "- Review plans for academic year",
+        "- Committee meetings",
+      ],
+      [
+        "- Quarterly Board Meeting (admissions focus)",
+        "- Committee meetings; financial aid",
+      ],
+      [
+        "- Quarterly Board Meeting (fundraising focus)",
+        "- Review admissions / fundraising / effectiveness",
+        "- Committee meetings",
+      ],
+      [
+        "- Quarterly Board Meeting (budgeting, HR focus)",
+      ],
+    ],
+  },
+];
+
+const CSN_COPYRIGHT_LONG = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2025. All rights reserved.";
+const CSN_COPYRIGHT_SHORT = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network. All rights reserved.";
+
+// ── CSN Training Support Framework (source tab "9 - CSN TRAINING") ──
+//
+// The Training tab repeats the Cadence summary grid at the top (so the
+// quarterly seminar topics line up with the rest of the school's annual
+// rhythm) and then lists three quarterly seminars by stakeholder group,
+// followed by monthly office hours and a school-success-manager check-in
+// row.
+
+interface TrainingSeminar {
+  /** Stakeholder group label, e.g. "HEADMASTER SEMINAR". */
+  title: string;
+  /** Verbatim mission line from the source workbook. */
+  mission: string;
+  /** Bullet lists for the four quarterly seminars
+   *  (July, October, January, April). */
+  bullets: [string[], string[], string[], string[]];
+}
+
+const TRAINING_QUARTERLY_SEMINAR_LABELS: [string, string, string, string] = [
+  "JULY SEMINAR",
+  "OCTOBER SEMINAR",
+  "JANUARY SEMINAR",
+  "APRIL SEMINAR",
+];
+
+const TRAINING_SEMINARS: TrainingSeminar[] = [
+  {
+    title: "HEADMASTER SEMINAR",
+    mission: "School leadership, faculty oversight and development, school culture, student academic and character formation",
+    bullets: [
+      [
+        "- Key objectives for academic year",
+        "- Roles and responsibilities",
+        "- Faculty fomation",
+        "- Locker day / student, parent orientation",
+      ],
+      [
+        "- Student check-ins and student support",
+        "- Faculty observations",
+        "- Parent-teacher conferences",
+        "- Spirit Week and dances",
+      ],
+      [
+        "- Gala preparations - all are involved",
+        "- Hiring projections for coming year",
+        "- Creating the calendar for the coming year",
+        "- Checking in on House momentum",
+      ],
+      [
+        "- Planning for year-end events",
+        "- Selecting Prefects",
+        "- Graduation prep and student awards",
+        "- Summer reading / expectations",
+      ],
+    ],
   },
   {
-    heading: "Getting Involved",
-    body: "Join the Parent Guild, host a hospitality event for prospective families, mentor an incoming freshman family, volunteer for the spring benefit, or sponsor a faculty professional development trip. Your involvement is what makes a Chesterton school a true community.",
+    title: "MARKETING / FUNDRAISING / ADMISSIONS",
+    mission: "Marketing, promotion, and core activity to support, admissions, enrollment, and fundraising",
+    bullets: [
+      [
+        "- Key objectives for academic year",
+        "- Roles and responsibilities",
+        "- Integrated marketing calendar",
+        "- Materials / website refesh for the year",
+      ],
+      [
+        "- Track progress against annual objectives",
+        "- Fundraising- Gala, Giving Tuesday, year-end",
+        "- Open houses and shadows - best practices",
+        "- Re-recruting your families",
+      ],
+      [
+        "- Track progress against annual objectives",
+        "- Student involvement for Gala success",
+        "- Creative recruiting approaches",
+        "- Showcasing your school",
+      ],
+      [
+        "- Creative strategies for recruiting future families",
+        "- Welcome new families to your school",
+        "- Strong year-end appeals",
+        "- Highlighting your gaduating seniors",
+      ],
+    ],
   },
   {
-    heading: "Questions?",
-    body: "Reach out to your headmaster or admissions director — and visit chestertonschoolsnetwork.org for the latest news, the academic calendar, and the full reading list.",
+    title: "SCHOOL OPERATIONS SEMINAR",
+    mission: "Coordination of day-to-day, non-instructional activites, including databases, financial management, facilities management",
+    bullets: [
+      [
+        "- Key objectives for academic year",
+        "- Roles and responsibilities",
+        "- Academic calendar and planning",
+        "- Update rosters, student info systems",
+      ],
+      [
+        "- Track progress against annual objectives",
+        "- Organizing student events - check-list",
+        "- Preparing report cards",
+        "- Student files checklist",
+      ],
+      [
+        "- Track progress against annual objectives",
+        "- Tracking against district, state requirements",
+        "- Safety and emergency procedures",
+        "- Database management",
+      ],
+      [
+        "- Track progress against annual objectives",
+        "- Graduation and other year-end events",
+        "- Facilities plans for the summer",
+        "- Planning your summer schedule",
+      ],
+    ],
+  },
+];
+
+// ── Parent Handout (source tab "6 - PARENT HANDOUT") ──
+//
+// The published Parent Handout is a single-page Fundraising Action Plan
+// (NOT a generic welcome letter). It introduces the funding gap, names
+// the year's fundraising goal, lays out the six campaign streams the
+// school runs, and tells families how they can help with the Gala and the
+// year-end / annual appeals.
+
+interface ParentHandoutCampaign {
+  code: string;        // e.g. "A - SPECIAL"
+  timing: string;      // e.g. "Ongoing", "November 20xx"
+  donors: string;      // e.g. "Scrip, Amazon, or other", "20 Major Gifts"
+  description: string; // e.g. "designated campaign", "Describe campaign"
+}
+
+interface ParentHandoutFamilyAsk {
+  /** Section label in column A, e.g. "CHESTERTON GALA". */
+  label: string;
+  /** Bullet list shown in column B. */
+  bullets: string[];
+}
+
+const PARENT_HANDOUT_BANNER = "CHESTERTON ACADEMY FAMILIES — FUNDRAISING ACTION PLAN";
+const PARENT_HANDOUT_EXAMPLE_BANNER = "EXAMPLE HANDOUT FOR PARENTS - FOR EXAMPLE ONLY";
+const PARENT_HANDOUT_PLANNING_FOR = "PLANNING FOR";
+
+const PARENT_HANDOUT_NEED_HEADING = "I. THE NEED";
+const PARENT_HANDOUT_NEED_BULLETS: string[] = [
+  "- The actual cost to educate each student exceeds tuition revenue per student",
+  "- Chesterton parents raise funds each year to cover the gap between tuition revenue and operating costs",
+  "- We work to raise the projected fundraising goal by June 30 of the prior academic year",
+  "- This year our goal is to raise $300,000 - the projected fundraising gap for the 2025-26 academic year",
+  "- The fundraising total includes about $50,000 in cash reserves to enhance sustainability and financial health",
+];
+
+const PARENT_HANDOUT_PROJECTIONS_TITLE = "2025-26 Projections - At a Glance";
+const PARENT_HANDOUT_PROJECTIONS_ROWS: Array<{ label: string; placeholder: number }> = [
+  { label: "Net tuition and fees", placeholder: 245700 },
+  { label: "Projected operating expense", placeholder: 431102 },
+  { label: "Mininum fundraising need", placeholder: 185402 },
+  { label: "Cash reserves", placeholder: 37080 },
+  { label: "TOTAL MINIMUM FUNDRAISING", placeholder: 222482 },
+  { label: "TOTAL SET GOAL", placeholder: 426526 },
+];
+
+const PARENT_HANDOUT_GOAL_HEADING = "II. FUNDRAISING GOAL";
+const PARENT_HANDOUT_GOAL_ROWS: Array<{ label: string; share?: number }> = [
+  { label: "Board, school leadership will raise 50% of the goal", share: 0.5 },
+  { label: "Chesterton parents will help raise the remaining 50%", share: 0.5 },
+  { label: "TOTAL FUNDRAISING GOAL" },
+];
+
+const PARENT_HANDOUT_HOW_HEADING = "III. HERE'S HOW WE CAN DO IT!";
+
+const PARENT_HANDOUT_CAMPAIGNS: ParentHandoutCampaign[] = [
+  { code: "A - SPECIAL",        timing: "Ongoing",             donors: "Scrip, Amazon, or other", description: "designated campaign" },
+  { code: "B - GIVING TUESDAY", timing: "November 20xx",       donors: "xx Donors",                description: "Describe campaign" },
+  { code: "C - YEAR END APPEAL", timing: "December 20xx",      donors: "xx Donors",                description: "Describe campaign" },
+  { code: "D - ANNUAL GALA",    timing: "Month xx, 20xx",      donors: "Various $ Sources",        description: "Describe event" },
+  { code: "E - ANNUAL APPEAL",  timing: "February - June 20xx", donors: "xx Donors",               description: "Describe campaign" },
+  { code: "F - MAJOR GIFTS",    timing: "Throughout Year",     donors: "20 Major Gifts",           description: "Describe campaign" },
+];
+
+const PARENT_HANDOUT_FAMILY_INTRO = "We ask each family to contribute in the following way:";
+
+const PARENT_HANDOUT_FAMILY_ASKS: ParentHandoutFamilyAsk[] = [
+  {
+    label: "CHESTERTON GALA",
+    bullets: [
+      "- Fill a table of 10 @ $125 per seat (you may purchase a table or invite guests who purchase their own tickets)",
+      "- Help us identify and approach prospective sponsors for our ThinkLocal Gala sponsorship campaign",
+      "- Help us in other important ways: find sponsors, advertisers, gift-in-kind donations (wine, printing, decorations)",
+    ],
+  },
+  {
+    label: "YEAR-END AND ANNUAL APPEALS",
+    bullets: [
+      "- Participate in thank-a-thons and phone solicitations",
+      "- Identify prospects and contact them to help meet our year end and annual appeal goals",
+    ],
   },
 ];
 
 function buildCadence(wb: ExcelJS.Workbook) {
   const ws = wb.addWorksheet(TAB_CADENCE, {
     properties: { tabColor: { argb: CREAM } },
-    views: [{ showGridLines: false, state: "frozen", ySplit: 4 }],
+    views: [{ showGridLines: false, state: "frozen", ySplit: 7 }],
   });
-  ws.getColumn(1).width = 4;
-  ws.getColumn(2).width = 14;
-  ws.getColumn(3).width = 52;
-  ws.getColumn(4).width = 44;
-  ws.getColumn(5).width = 44;
+  // Column layout: A = category label, B-E = the four academic-year quarters.
+  ws.getColumn(1).width = 38;
+  for (let c = 2; c <= 5; c++) ws.getColumn(c).width = 38;
 
-  ws.mergeCells("B2:E2");
-  applyTitleStyle(ws.getCell("B2"));
-  ws.getCell("B2").value = "Annual Cadence — Chesterton Schools Network";
+  ws.mergeCells("A2:E2");
+  applyTitleStyle(ws.getCell("A2"));
+  ws.getCell("A2").value = "The Chesterton Cadence";
   ws.getRow(2).height = 30;
 
-  ws.mergeCells("B3:E3");
-  applySubtitleStyle(ws.getCell("B3"));
-  ws.getCell("B3").value = "The annual rhythm of academic, fundraising, and community life across the network.";
+  ws.mergeCells("A3:E3");
+  applySubtitleStyle(ws.getCell("A3"));
+  ws.getCell("A3").value = { formula: `=School_Name`, result: "Your Chesterton Academy" };
 
-  ws.getCell("B4").value = "Month";
-  ws.getCell("C4").value = "Academic";
-  ws.getCell("D4").value = "Fundraising";
-  ws.getCell("E4").value = "Community / Liturgy";
-  hdr(ws, 4, 5);
+  // Quarter banner rows ─ FIRST/SECOND/THIRD/FOURTH QUARTER, then the
+  // months that make up each quarter, then the cycle label.
+  ws.getCell("A5").value = "Academic Year";
+  ws.getCell("A5").font = { bold: true };
+  for (let i = 0; i < 4; i++) ws.getCell(5, 2 + i).value = CADENCE_QUARTERS[i];
+  hdr(ws, 5, 5);
 
-  let r = 5;
-  for (const row of CADENCE_ROWS) {
-    ws.getCell(`B${r}`).value = row.month;
-    ws.getCell(`B${r}`).font = { bold: true };
-    ws.getCell(`C${r}`).value = row.academic;
-    ws.getCell(`C${r}`).alignment = { wrapText: true, vertical: "top" };
-    ws.getCell(`D${r}`).value = row.fundraising;
-    ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "top" };
-    ws.getCell(`E${r}`).value = row.community;
-    ws.getCell(`E${r}`).alignment = { wrapText: true, vertical: "top" };
-    ws.getRow(r).height = 32;
+  ws.getCell("A6").value = { formula: `=Plan_Year`, result: 2027 };
+  ws.getCell("A6").font = { bold: true };
+  for (let i = 0; i < 4; i++) {
+    const c = ws.getCell(6, 2 + i);
+    c.value = CADENCE_QUARTER_MONTHS[i];
+    c.alignment = { horizontal: "center" };
+    c.font = { italic: true };
+  }
+
+  ws.getCell("A7").value = "";
+  for (let i = 0; i < 4; i++) {
+    const c = ws.getCell(7, 2 + i);
+    c.value = CADENCE_QUARTER_CYCLES[i];
+    c.alignment = { horizontal: "center" };
+    c.font = { bold: true, color: { argb: NAVY } };
+  }
+
+  // Summary grid ─ one row per category × four quarter columns.
+  let r = 9;
+  for (const cat of CADENCE_CATEGORIES) {
+    ws.getCell(`A${r}`).value = cat.label;
+    ws.getCell(`A${r}`).font = { bold: true, color: { argb: NAVY } };
+    ws.getCell(`A${r}`).alignment = { vertical: "middle", wrapText: true };
+    for (let i = 0; i < 4; i++) {
+      const c = ws.getCell(r, 2 + i);
+      c.value = cat.headlines[i];
+      c.font = { bold: true };
+      c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    }
+    ws.getRow(r).height = 24;
     r += 1;
   }
+
+  // DETAIL section header
+  r += 1;
+  ws.mergeCells(`A${r}:E${r}`);
+  sec(ws, r, 5);
+  ws.getCell(`A${r}`).value = "DETAIL";
+  r += 1;
+
+  // Detail blocks ─ for each category, repeat the headline row, then a
+  // mission line in column A and the bullet list per quarter in B-E.
+  for (const cat of CADENCE_CATEGORIES) {
+    // Quarter headline row (same as summary grid).
+    ws.getCell(`A${r}`).value = cat.label;
+    ws.getCell(`A${r}`).font = { bold: true, color: { argb: NAVY } };
+    ws.getCell(`A${r}`).alignment = { vertical: "middle", wrapText: true };
+    for (let i = 0; i < 4; i++) {
+      const c = ws.getCell(r, 2 + i);
+      c.value = cat.headlines[i];
+      c.font = { bold: true };
+      c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    }
+    ws.getRow(r).height = 22;
+    r += 1;
+
+    // Mission + per-quarter bullets row.
+    ws.getCell(`A${r}`).value = cat.mission;
+    ws.getCell(`A${r}`).font = { italic: true };
+    ws.getCell(`A${r}`).alignment = { wrapText: true, vertical: "top" };
+    let maxBullets = 1;
+    for (let i = 0; i < 4; i++) {
+      const c = ws.getCell(r, 2 + i);
+      const bullets = cat.bullets[i];
+      c.value = bullets.join("\n");
+      c.alignment = { wrapText: true, vertical: "top" };
+      if (bullets.length > maxBullets) maxBullets = bullets.length;
+    }
+    ws.getRow(r).height = Math.max(38, 16 * maxBullets);
+    r += 1;
+  }
+
+  // Copyright line.
+  r += 1;
+  ws.mergeCells(`A${r}:E${r}`);
+  ws.getCell(`A${r}`).value = CSN_COPYRIGHT_LONG;
+  ws.getCell(`A${r}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`A${r}`).alignment = { horizontal: "center" };
 }
 
 function buildTrainingSchedule(wb: ExcelJS.Workbook) {
   const ws = wb.addWorksheet(TAB_TRAINING, {
     properties: { tabColor: { argb: CREAM } },
-    views: [{ showGridLines: false, state: "frozen", ySplit: 4 }],
+    views: [{ showGridLines: false, state: "frozen", ySplit: 7 }],
   });
-  ws.getColumn(1).width = 4;
-  ws.getColumn(2).width = 22;
-  ws.getColumn(3).width = 50;
-  ws.getColumn(4).width = 28;
-  ws.getColumn(5).width = 28;
-  ws.getColumn(6).width = 18;
+  // Same A + B-E layout as Cadence so the two tabs read together.
+  ws.getColumn(1).width = 38;
+  for (let c = 2; c <= 5; c++) ws.getColumn(c).width = 38;
 
-  ws.mergeCells("B2:F2");
-  applyTitleStyle(ws.getCell("B2"));
-  ws.getCell("B2").value = "CSN Training Schedule";
+  ws.mergeCells("A2:E2");
+  applyTitleStyle(ws.getCell("A2"));
+  ws.getCell("A2").value = "The Chesterton Schools Network — Training Support Framework";
   ws.getRow(2).height = 30;
 
-  ws.mergeCells("B3:F3");
-  applySubtitleStyle(ws.getCell("B3"));
-  ws.getCell("B3").value = "Required and recommended training across Discovery, Preparation, Activation, and Launch.";
+  ws.mergeCells("A3:E3");
+  applySubtitleStyle(ws.getCell("A3"));
+  ws.getCell("A3").value = "Quarterly seminars, monthly office hours, and School Success Manager check-ins for every CSN school.";
 
-  ws.getCell("B4").value = "Phase";
-  ws.getCell("C4").value = "Topic";
-  ws.getCell("D4").value = "Audience";
-  ws.getCell("E4").value = "Format";
-  ws.getCell("F4").value = "Timing";
-  hdr(ws, 4, 6);
+  // Cadence reference grid (identical to Cadence summary table).
+  ws.getCell("A5").value = "CHESTERTON CADENCE";
+  ws.getCell("A5").font = { bold: true };
+  for (let i = 0; i < 4; i++) ws.getCell(5, 2 + i).value = CADENCE_QUARTERS[i];
+  hdr(ws, 5, 5);
 
-  let r = 5;
-  for (const s of TRAINING_SESSIONS) {
-    ws.getCell(`B${r}`).value = s.phase;
-    ws.getCell(`B${r}`).font = { bold: true };
-    ws.getCell(`C${r}`).value = s.topic;
-    ws.getCell(`C${r}`).alignment = { wrapText: true, vertical: "top" };
-    ws.getCell(`D${r}`).value = s.audience;
-    ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "top" };
-    ws.getCell(`E${r}`).value = s.format;
-    ws.getCell(`E${r}`).alignment = { wrapText: true, vertical: "top" };
-    ws.getCell(`F${r}`).value = s.weeks;
-    ws.getRow(r).height = 28;
+  ws.getCell("A6").value = "CHESTERTON CADENCE";
+  ws.getCell("A6").font = { bold: true };
+  for (let i = 0; i < 4; i++) {
+    const c = ws.getCell(6, 2 + i);
+    c.value = CADENCE_QUARTER_MONTHS[i];
+    c.alignment = { horizontal: "center" };
+    c.font = { italic: true };
+  }
+
+  ws.getCell("A7").value = "CHESTERTON CADENCE";
+  ws.getCell("A7").font = { bold: true };
+  for (let i = 0; i < 4; i++) {
+    const c = ws.getCell(7, 2 + i);
+    c.value = CADENCE_QUARTER_CYCLES[i];
+    c.alignment = { horizontal: "center" };
+    c.font = { bold: true, color: { argb: NAVY } };
+  }
+
+  let r = 9;
+  for (const cat of CADENCE_CATEGORIES) {
+    ws.getCell(`A${r}`).value = cat.label;
+    ws.getCell(`A${r}`).font = { bold: true, color: { argb: NAVY } };
+    ws.getCell(`A${r}`).alignment = { vertical: "middle", wrapText: true };
+    for (let i = 0; i < 4; i++) {
+      const c = ws.getCell(r, 2 + i);
+      c.value = cat.headlines[i];
+      c.font = { bold: true };
+      c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    }
+    ws.getRow(r).height = 22;
     r += 1;
   }
+
+  // (1) CSN QUARTERLY TRAINING section header
+  r += 1;
+  ws.mergeCells(`A${r}:E${r}`);
+  sec(ws, r, 5);
+  ws.getCell(`A${r}`).value = "(1) CSN QUARTERLY TRAINING — Topics by Stakeholder Group";
+  r += 1;
+
+  // Quarterly seminar header row (JULY/OCTOBER/JANUARY/APRIL SEMINAR).
+  ws.getCell(`A${r}`).value = "";
+  for (let i = 0; i < 4; i++) {
+    const c = ws.getCell(r, 2 + i);
+    c.value = TRAINING_QUARTERLY_SEMINAR_LABELS[i];
+    c.font = { bold: true };
+    c.alignment = { horizontal: "center" };
+  }
+  hdr(ws, r, 5);
+  r += 1;
+
+  // Each seminar: title row + mission/bullets row.
+  for (const sem of TRAINING_SEMINARS) {
+    ws.getCell(`A${r}`).value = sem.title;
+    ws.getCell(`A${r}`).font = { bold: true, color: { argb: NAVY } };
+    ws.getCell(`A${r}`).alignment = { vertical: "middle", wrapText: true };
+    for (let i = 0; i < 4; i++) {
+      const c = ws.getCell(r, 2 + i);
+      c.value = "OVERVIEW";
+      c.font = { bold: true };
+      c.alignment = { horizontal: "center" };
+    }
+    r += 1;
+
+    ws.getCell(`A${r}`).value = sem.mission;
+    ws.getCell(`A${r}`).font = { italic: true };
+    ws.getCell(`A${r}`).alignment = { wrapText: true, vertical: "top" };
+    let maxBullets = 1;
+    for (let i = 0; i < 4; i++) {
+      const c = ws.getCell(r, 2 + i);
+      const bullets = sem.bullets[i];
+      c.value = bullets.join("\n");
+      c.alignment = { wrapText: true, vertical: "top" };
+      if (bullets.length > maxBullets) maxBullets = bullets.length;
+    }
+    ws.getRow(r).height = Math.max(48, 16 * maxBullets);
+    r += 1;
+  }
+
+  // (2) CSN MONTHLY OFFICE HOURS section header.
+  r += 1;
+  ws.mergeCells(`A${r}:E${r}`);
+  sec(ws, r, 5);
+  ws.getCell(`A${r}`).value = "(2) CSN MONTHLY OFFICE HOURS — by Stakeholder Group";
+  r += 1;
+  ws.getCell(`A${r}`).value = "MONTHLY OFFICE HOURS / MEET-UPS";
+  ws.getCell(`A${r}`).font = { italic: true, color: { argb: NAVY } };
+  ws.mergeCells(`A${r}:E${r}`);
+  ws.getCell(`A${r}`).alignment = { horizontal: "center" };
+  r += 1;
+
+  // (3) SCHOOL SUCCESS MANAGER section header.
+  r += 1;
+  ws.mergeCells(`A${r}:E${r}`);
+  sec(ws, r, 5);
+  ws.getCell(`A${r}`).value = "(3) SCHOOL SUCCESS MANAGER — Monthly Check-Ins";
+  r += 1;
+  ws.getCell(`A${r}`).value = "SCHOOL SUCCESS MANAGER CHECK-IN";
+  ws.getCell(`A${r}`).font = { italic: true, color: { argb: NAVY } };
+  ws.mergeCells(`A${r}:E${r}`);
+  ws.getCell(`A${r}`).alignment = { horizontal: "center" };
+  r += 1;
+
+  // Copyright line.
+  r += 1;
+  ws.mergeCells(`A${r}:E${r}`);
+  ws.getCell(`A${r}`).value = CSN_COPYRIGHT_SHORT;
+  ws.getCell(`A${r}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`A${r}`).alignment = { horizontal: "center" };
 }
 
 function buildParentHandout(wb: ExcelJS.Workbook) {
@@ -971,32 +1471,181 @@ function buildParentHandout(wb: ExcelJS.Workbook) {
     properties: { tabColor: { argb: CREAM } },
     views: [{ showGridLines: false }],
   });
-  ws.getColumn(1).width = 4;
-  ws.getColumn(2).width = 32;
-  ws.getColumn(3).width = 90;
+  // Six-column layout (A-F) matches the source workbook's campaign grid.
+  ws.getColumn(1).width = 28;
+  ws.getColumn(2).width = 22;
+  ws.getColumn(3).width = 22;
+  ws.getColumn(4).width = 22;
+  ws.getColumn(5).width = 22;
+  ws.getColumn(6).width = 22;
 
-  ws.mergeCells("B2:C2");
-  applyTitleStyle(ws.getCell("B2"));
-  ws.getCell("B2").value = "Parent Handout — Welcome to Our Chesterton Academy";
+  // Title: school name in A2 (pulled from the GETTING STARTED named range)
+  // with the example/planning labels matching the source workbook exactly.
+  ws.mergeCells("A2:E2");
+  applyTitleStyle(ws.getCell("A2"));
+  ws.getCell("A2").value = { formula: `=School_Name`, result: "Your Chesterton Academy" };
   ws.getRow(2).height = 30;
+  ws.getCell("F2").value = { formula: `=Plan_Year`, result: 2027 };
+  ws.getCell("F2").alignment = { horizontal: "right", vertical: "middle" };
+  ws.getCell("F2").font = { bold: true, color: { argb: NAVY } };
 
-  ws.mergeCells("B3:C3");
-  applySubtitleStyle(ws.getCell("B3"));
-  ws.getCell("B3").value = "A one-page introduction every new family receives at admissions.";
+  ws.mergeCells("A3:E3");
+  applySubtitleStyle(ws.getCell("A3"));
+  ws.getCell("A3").value = PARENT_HANDOUT_EXAMPLE_BANNER;
+  ws.getCell("F3").value = PARENT_HANDOUT_PLANNING_FOR;
+  ws.getCell("F3").alignment = { horizontal: "right" };
+  ws.getCell("F3").font = { italic: true, color: { argb: NAVY } };
 
-  let r = 5;
-  for (const sec of PARENT_HANDOUT_SECTIONS) {
-    ws.getCell(`B${r}`).value = sec.heading;
-    ws.getCell(`B${r}`).font = { bold: true, color: { argb: NAVY } };
+  // Banner row.
+  ws.mergeCells("A5:F5");
+  ws.getCell("A5").value = PARENT_HANDOUT_BANNER;
+  ws.getCell("A5").font = { bold: true, size: 14, color: { argb: WHITE } };
+  ws.getCell("A5").fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
+  ws.getCell("A5").alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(5).height = 26;
+
+  // I. THE NEED — left column bullets, right two columns "At a Glance".
+  ws.mergeCells("A7:D7");
+  ws.getCell("A7").value = PARENT_HANDOUT_NEED_HEADING;
+  ws.getCell("A7").font = { bold: true, size: 12, color: { argb: NAVY } };
+
+  ws.mergeCells("E7:F7");
+  ws.getCell("E7").value = PARENT_HANDOUT_PROJECTIONS_TITLE;
+  ws.getCell("E7").font = { bold: true, color: { argb: NAVY } };
+  ws.getCell("E7").alignment = { horizontal: "center" };
+
+  for (let i = 0; i < PARENT_HANDOUT_NEED_BULLETS.length; i++) {
+    const r = 8 + i;
+    ws.mergeCells(`A${r}:D${r}`);
+    ws.getCell(`A${r}`).value = PARENT_HANDOUT_NEED_BULLETS[i];
+    ws.getCell(`A${r}`).alignment = { wrapText: true, vertical: "top" };
+    ws.getRow(r).height = 22;
+    if (i < PARENT_HANDOUT_PROJECTIONS_ROWS.length) {
+      const proj = PARENT_HANDOUT_PROJECTIONS_ROWS[i];
+      ws.getCell(`E${r}`).value = proj.label;
+      ws.getCell(`E${r}`).alignment = { wrapText: true, vertical: "middle" };
+      ws.getCell(`F${r}`).value = proj.placeholder;
+      ws.getCell(`F${r}`).numFmt = CUR;
+      ws.getCell(`F${r}`).alignment = { horizontal: "right", vertical: "middle" };
+      if (proj.label.startsWith("TOTAL")) {
+        ws.getCell(`E${r}`).font = { bold: true };
+        ws.getCell(`F${r}`).font = { bold: true };
+      }
+    }
+  }
+  // Final TOTAL SET GOAL row sits one below the bullets.
+  {
+    const r = 8 + PARENT_HANDOUT_NEED_BULLETS.length;
+    const proj = PARENT_HANDOUT_PROJECTIONS_ROWS[PARENT_HANDOUT_NEED_BULLETS.length];
+    if (proj) {
+      ws.getCell(`E${r}`).value = proj.label;
+      ws.getCell(`E${r}`).font = { bold: true };
+      ws.getCell(`E${r}`).alignment = { vertical: "middle" };
+      ws.getCell(`F${r}`).value = { formula: `=TFG`, result: proj.placeholder };
+      ws.getCell(`F${r}`).numFmt = CUR;
+      ws.getCell(`F${r}`).font = { bold: true };
+      ws.getCell(`F${r}`).alignment = { horizontal: "right", vertical: "middle" };
+    }
+  }
+
+  // II. FUNDRAISING GOAL — TFG split 50/50 between board and parents.
+  let r = 14;
+  ws.mergeCells(`A${r}:F${r}`);
+  ws.getCell(`A${r}`).value = PARENT_HANDOUT_GOAL_HEADING;
+  ws.getCell(`A${r}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  r += 2; // blank row between heading and detail (matches source row 16)
+
+  // Goal block: A=TFG amount, D=label, F=share amount
+  ws.getCell(`A${r}`).value = { formula: `=TFG`, result: 0 };
+  ws.getCell(`A${r}`).numFmt = CUR;
+  ws.getCell(`A${r}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  ws.getCell(`B${r}`).value = "Fundraising goal";
+  ws.getCell(`B${r}`).font = { italic: true };
+  ws.mergeCells(`D${r}:E${r}`);
+  ws.getCell(`D${r}`).value = PARENT_HANDOUT_GOAL_ROWS[0].label;
+  ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "middle" };
+  ws.getCell(`F${r}`).value = { formula: `=TFG*0.5`, result: 0 };
+  ws.getCell(`F${r}`).numFmt = CUR;
+  ws.getCell(`F${r}`).alignment = { horizontal: "right" };
+  r += 1;
+
+  ws.mergeCells(`D${r}:E${r}`);
+  ws.getCell(`D${r}`).value = PARENT_HANDOUT_GOAL_ROWS[1].label;
+  ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "middle" };
+  ws.getCell(`F${r}`).value = { formula: `=TFG*0.5`, result: 0 };
+  ws.getCell(`F${r}`).numFmt = CUR;
+  ws.getCell(`F${r}`).alignment = { horizontal: "right" };
+  r += 1;
+
+  ws.mergeCells(`D${r}:E${r}`);
+  ws.getCell(`D${r}`).value = PARENT_HANDOUT_GOAL_ROWS[2].label;
+  ws.getCell(`D${r}`).font = { bold: true };
+  ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "middle" };
+  ws.getCell(`F${r}`).value = { formula: `=TFG`, result: 0 };
+  ws.getCell(`F${r}`).numFmt = CUR;
+  ws.getCell(`F${r}`).font = { bold: true };
+  ws.getCell(`F${r}`).alignment = { horizontal: "right" };
+  r += 2;
+
+  // III. HERE'S HOW WE CAN DO IT! — six-column campaign grid.
+  ws.mergeCells(`A${r}:F${r}`);
+  ws.getCell(`A${r}`).value = PARENT_HANDOUT_HOW_HEADING;
+  ws.getCell(`A${r}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  r += 2;
+
+  // Campaign grid: code row, timing row, donors row, description row.
+  for (let i = 0; i < PARENT_HANDOUT_CAMPAIGNS.length; i++) {
+    const c = ws.getCell(r, 1 + i);
+    c.value = PARENT_HANDOUT_CAMPAIGNS[i].code;
+    c.font = { bold: true, color: { argb: WHITE } };
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
+    c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+  }
+  ws.getRow(r).height = 24;
+  r += 1;
+  for (let i = 0; i < PARENT_HANDOUT_CAMPAIGNS.length; i++) {
+    const c = ws.getCell(r, 1 + i);
+    c.value = PARENT_HANDOUT_CAMPAIGNS[i].timing;
+    c.alignment = { horizontal: "center", wrapText: true };
+    c.font = { italic: true };
+  }
+  r += 1;
+  for (let i = 0; i < PARENT_HANDOUT_CAMPAIGNS.length; i++) {
+    const c = ws.getCell(r, 1 + i);
+    c.value = PARENT_HANDOUT_CAMPAIGNS[i].donors;
+    c.alignment = { horizontal: "center", wrapText: true };
+  }
+  r += 1;
+  for (let i = 0; i < PARENT_HANDOUT_CAMPAIGNS.length; i++) {
+    const c = ws.getCell(r, 1 + i);
+    c.value = PARENT_HANDOUT_CAMPAIGNS[i].description;
+    c.alignment = { horizontal: "center", wrapText: true };
+  }
+  r += 2;
+
+  // Family-ask intro line.
+  ws.mergeCells(`A${r}:F${r}`);
+  ws.getCell(`A${r}`).value = PARENT_HANDOUT_FAMILY_INTRO;
+  ws.getCell(`A${r}`).font = { bold: true, italic: true, color: { argb: NAVY } };
+  r += 2;
+
+  for (const ask of PARENT_HANDOUT_FAMILY_ASKS) {
+    ws.getCell(`A${r}`).value = ask.label;
+    ws.getCell(`A${r}`).font = { bold: true, color: { argb: NAVY } };
+    ws.getCell(`A${r}`).alignment = { vertical: "top", wrapText: true };
+    ws.mergeCells(`B${r}:F${r}`);
+    ws.getCell(`B${r}`).value = ask.bullets.join("\n");
     ws.getCell(`B${r}`).alignment = { wrapText: true, vertical: "top" };
-    ws.getCell(`C${r}`).value = sec.body;
-    ws.getCell(`C${r}`).alignment = { wrapText: true, vertical: "top" };
-    // Estimate row height roughly from the body length so the wrapped text
-    // is fully visible without the founder having to resize anything.
-    const estLines = Math.max(2, Math.ceil(sec.body.length / 95));
-    ws.getRow(r).height = Math.min(140, 18 + 14 * estLines);
+    ws.getRow(r).height = Math.max(48, 18 * ask.bullets.length);
     r += 1;
   }
+
+  // Copyright line.
+  r += 1;
+  ws.mergeCells(`A${r}:F${r}`);
+  ws.getCell(`A${r}`).value = CSN_COPYRIGHT_LONG;
+  ws.getCell(`A${r}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`A${r}`).alignment = { horizontal: "center" };
 }
 
 export async function generateChestertonOperatingManual(
