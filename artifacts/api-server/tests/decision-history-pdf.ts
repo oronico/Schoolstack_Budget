@@ -261,7 +261,7 @@ async function testLenderPopulated() {
   contains("lender: rent bullet", text, "Rent $8,500/mo");
   contains("lender: fit-out bullet", text, "Fit-out $75,000 (Y1)");
   contains("lender: retention bullet", text, "Retention 92%");
-  contains("lender: negative tuition delta bullet", text, "Tuition $-250/student");
+  contains("lender: negative tuition delta bullet", text, "Tuition -$250/student");
 
   // Retrospective copy
   contains("lender: 'What happened' label", text, "What happened:");

@@ -158,9 +158,12 @@ export function buildDecisionBullets(
     bullets.push(`Retention ${persisted.retentionRate}%`);
   }
   if (persisted.tuitionDeltaPerStudent !== undefined && persisted.tuitionDeltaPerStudent !== 0) {
-    bullets.push(
-      `Tuition ${persisted.tuitionDeltaPerStudent > 0 ? "+" : ""}$${persisted.tuitionDeltaPerStudent}/student`,
-    );
+    // Place the sign *outside* the "$" so a negative delta reads as
+    // "Tuition -$250/student" instead of the typo-looking "Tuition $-250/student".
+    // Symmetric with the positive case ("Tuition +$500/student").
+    const delta = persisted.tuitionDeltaPerStudent;
+    const sign = delta > 0 ? "+" : "-";
+    bullets.push(`Tuition ${sign}$${Math.abs(delta)}/student`);
   }
   if (persisted.monthlyRent !== undefined) {
     bullets.push(`Rent $${persisted.monthlyRent.toLocaleString()}/mo`);

@@ -572,10 +572,12 @@ describe("decisionToPersistedOverrides → buildDecisionBullets round-trip", () 
     const persisted = decisionToPersistedOverrides(data, decision);
     const bullets = buildDecisionBullets(persisted, "change_enrollment");
     expect(bullets).toContain("Enrollment -25 cumulative");
-    // Current behavior: negative deltas drop the "+" prefix and let the number
-    // carry its own sign, so a -$250 delta renders as "Tuition $-250/student".
-    // Locked in so any future formatting change is intentional.
-    expect(bullets).toContain("Tuition $-250/student");
+    // Negative tuition deltas place the sign *outside* the dollar symbol so
+    // founders don't see the typo-looking "$-250" sequence on a page they may
+    // share with lenders. Symmetric with the positive case ("+$500").
+    expect(bullets).toContain("Tuition -$250/student");
+    // Defensive: the old broken "$-" sequence should never reappear.
+    expect(bullets.some((b) => b.includes("$-"))).toBe(false);
   });
 });
 

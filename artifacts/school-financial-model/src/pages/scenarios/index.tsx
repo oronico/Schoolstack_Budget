@@ -239,7 +239,10 @@ function describeScenario(cs: CustomScenario): string[] {
   }
   if (o.retentionRate !== undefined) arr.push(`Retention ${o.retentionRate}%`);
   if (o.tuitionDeltaPerStudent !== undefined && o.tuitionDeltaPerStudent !== 0) {
-    arr.push(`Tuition ${o.tuitionDeltaPerStudent > 0 ? "+" : ""}$${o.tuitionDeltaPerStudent}/student`);
+    // Mirrors the formatting in buildDecisionBullets so the sign sits
+    // outside the "$" — "Tuition -$250/student" rather than "$-250".
+    const sign = o.tuitionDeltaPerStudent > 0 ? "+" : "-";
+    arr.push(`Tuition ${sign}$${Math.abs(o.tuitionDeltaPerStudent)}/student`);
   }
   if (o.monthlyRent !== undefined) arr.push(`Rent $${o.monthlyRent.toLocaleString()}/mo`);
   if (o.rentEscalation !== undefined) arr.push(`Rent escalation ${o.rentEscalation}%`);

@@ -216,7 +216,7 @@ function testBullets() {
   eq("change_enrollment: decisionTypeLabel", enroll.decisionTypeLabel, "Change enrollment");
   check("change_enrollment: enrollment cumulative bullet", enroll.bullets.includes("Enrollment +4 cumulative"));
   check("change_enrollment: retention bullet", enroll.bullets.includes("Retention 88%"));
-  check("change_enrollment: negative tuition delta bullet", enroll.bullets.includes("Tuition $-250/student"));
+  check("change_enrollment: negative tuition delta bullet", enroll.bullets.includes("Tuition -$250/student"));
 
   // No decisionType — falls into the generic branch and yields []
   const empty = buildDecisionHistory(
