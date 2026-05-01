@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import authRouter from "./auth";
+import accountRouter from "./account";
 import modelsRouter from "./models";
 import adminRouter from "./admin";
 import publicRouter from "./public";
@@ -12,6 +13,7 @@ router.use(publicRouter);
 router.use(feedbackRouter);
 router.use(errorsRouter);
 router.use(authRouter);
+router.use(accountRouter);
 router.use(modelsRouter);
 router.use(adminRouter);
 

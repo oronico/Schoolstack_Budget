@@ -24,6 +24,7 @@
     "test:shared-decision-comparison-pdf-route": "tsx ./tests/shared-decision-comparison-pdf-route.ts",
     "test:lender-packet-pdf-route": "tsx ./tests/lender-packet-pdf-route.ts",
     "test:board-packet-pdf-route": "tsx ./tests/board-packet-pdf-route.ts",
+    "test:account-accounting-uploads-route": "tsx ./tests/account-accounting-uploads-route.ts",
     "test:health": "tsx ./tests/health-endpoints.ts",
     "test:board-packet-cap-insight": "tsx ./tests/board-packet-cap-insight.ts",
     "qa:packet-cash": "tsx ./tests/board-packet-cash-runway.ts",

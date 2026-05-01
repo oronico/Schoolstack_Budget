@@ -416,6 +416,34 @@ export interface PriorYearSnapshot {
   [key: string]: unknown;
 }
 
+/**
+ * Parsed P&L totals (same shape as AccountingExport.totals).
+ */
+export type AccountingUploadEntryTotals = { [key: string]: unknown } | null;
+
+/**
+ * One saved accounting export attached to a model the user owns. Powers the profile-page "Saved uploads" panel where founders can review and forget stale uploads.
+
+ */
+export interface AccountingUploadEntry {
+  /** Owning financial model ID. Path key for the delete route. */
+  modelId: number;
+  /** Display name of the model the upload is attached to. */
+  modelName: string;
+  /** Current model status (draft, complete, archived). */
+  modelStatus?: string;
+  /** Original filename of the uploaded export. */
+  filename: string;
+  /** ISO-8601 timestamp the founder uploaded the export. */
+  uploadedAt?: string | null;
+  /** ISO-8601 timestamp the model row was last updated. */
+  modelUpdatedAt: string;
+  /** Number of warnings the parser emitted on this upload. */
+  parseWarningCount: number;
+  /** Parsed P&L totals (same shape as AccountingExport.totals). */
+  totals?: AccountingUploadEntryTotals;
+}
+
 export type AccountingExportTotals = {
   totalRevenue?: number | null;
   totalExpenses?: number | null;

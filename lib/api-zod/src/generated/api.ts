@@ -71,6 +71,61 @@ export const GetMeResponse = zod.object({
 });
 
 /**
+ * Returns one entry per financial model owned by the user that has a saved accounting export (uploaded P&L). Sorted most-recently uploaded first. Lets founders prune stale uploads from a single profile-page panel without having to open each model.
+
+ * @summary List every saved P&L upload across the user's models
+ */
+export const ListAccountingUploadsResponseItem = zod
+  .object({
+    modelId: zod
+      .number()
+      .describe("Owning financial model ID. Path key for the delete route."),
+    modelName: zod
+      .string()
+      .describe("Display name of the model the upload is attached to."),
+    modelStatus: zod
+      .string()
+      .optional()
+      .describe("Current model status (draft, complete, archived)."),
+    filename: zod
+      .string()
+      .describe("Original filename of the uploaded export."),
+    uploadedAt: zod
+      .string()
+      .nullish()
+      .describe("ISO-8601 timestamp the founder uploaded the export."),
+    modelUpdatedAt: zod
+      .string()
+      .describe("ISO-8601 timestamp the model row was last updated."),
+    parseWarningCount: zod
+      .number()
+      .describe("Number of warnings the parser emitted on this upload."),
+    totals: zod
+      .record(zod.string(), zod.unknown())
+      .nullish()
+      .describe("Parsed P&L totals (same shape as AccountingExport.totals)."),
+  })
+  .describe(
+    'One saved accounting export attached to a model the user owns. Powers the profile-page \"Saved uploads\" panel where founders can review and forget stale uploads.\n',
+  );
+export const ListAccountingUploadsResponse = zod.array(
+  ListAccountingUploadsResponseItem,
+);
+
+/**
+ * Strips the `accountingExport` field from the named model's data without touching any other field. Returns 404 if the model isn't owned by the user or doesn't have a saved upload.
+
+ * @summary Forget the saved P&L upload on a specific model
+ */
+export const DeleteAccountingUploadParams = zod.object({
+  modelId: zod.coerce.number(),
+});
+
+export const DeleteAccountingUploadResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Update lender-language preference
  */
 export const UpdateLenderLanguageBody = zod.object({

@@ -8,6 +8,8 @@
 
 export * from "./accountingExport";
 export * from "./accountingExportTotals";
+export * from "./accountingUploadEntry";
+export * from "./accountingUploadEntryTotals";
 export * from "./authResponse";
 export * from "./capitalDebtRow";
 export * from "./capitalDebtRowPurpose";

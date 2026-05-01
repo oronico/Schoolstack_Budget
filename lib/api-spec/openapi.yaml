@@ -114,6 +114,65 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /account/accounting-uploads:
+    get:
+      operationId: listAccountingUploads
+      tags: [auth]
+      summary: List every saved P&L upload across the user's models
+      description: >
+        Returns one entry per financial model owned by the user that has
+        a saved accounting export (uploaded P&L). Sorted most-recently
+        uploaded first. Lets founders prune stale uploads from a single
+        profile-page panel without having to open each model.
+      responses:
+        "200":
+          description: Saved uploads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountingUploadEntry"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /account/accounting-uploads/{modelId}:
+    delete:
+      operationId: deleteAccountingUpload
+      tags: [auth]
+      summary: Forget the saved P&L upload on a specific model
+      description: >
+        Strips the `accountingExport` field from the named model's data
+        without touching any other field. Returns 404 if the model isn't
+        owned by the user or doesn't have a saved upload.
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Upload forgotten
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Model or upload not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /auth/lender-language:
     patch:
       operationId: updateLenderLanguage
@@ -1073,6 +1132,46 @@ components:
           type: number
         endingCash:
           type: number
+    AccountingUploadEntry:
+      type: object
+      description: >
+        One saved accounting export attached to a model the user owns.
+        Powers the profile-page "Saved uploads" panel where founders can
+        review and forget stale uploads.
+      properties:
+        modelId:
+          type: integer
+          description: Owning financial model ID. Path key for the delete route.
+        modelName:
+          type: string
+          description: Display name of the model the upload is attached to.
+        modelStatus:
+          type: string
+          description: Current model status (draft, complete, archived).
+        filename:
+          type: string
+          description: Original filename of the uploaded export.
+        uploadedAt:
+          type: string
+          nullable: true
+          description: ISO-8601 timestamp the founder uploaded the export.
+        modelUpdatedAt:
+          type: string
+          description: ISO-8601 timestamp the model row was last updated.
+        parseWarningCount:
+          type: integer
+          description: Number of warnings the parser emitted on this upload.
+        totals:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Parsed P&L totals (same shape as AccountingExport.totals).
+      required:
+        - modelId
+        - modelName
+        - filename
+        - parseWarningCount
+        - modelUpdatedAt
     AccountingExport:
       type: object
       additionalProperties: true

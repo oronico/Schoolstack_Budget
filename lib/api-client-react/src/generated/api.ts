@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AccountingUploadEntry,
   AuthResponse,
   ConsultantOutput,
   CreateFinancialModelData,
@@ -435,6 +436,169 @@ export function useGetMe<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Returns one entry per financial model owned by the user that has a saved accounting export (uploaded P&L). Sorted most-recently uploaded first. Lets founders prune stale uploads from a single profile-page panel without having to open each model.
+
+ * @summary List every saved P&L upload across the user's models
+ */
+export const getListAccountingUploadsUrl = () => {
+  return `/api/account/accounting-uploads`;
+};
+
+export const listAccountingUploads = async (
+  options?: RequestInit,
+): Promise<AccountingUploadEntry[]> => {
+  return customFetch<AccountingUploadEntry[]>(getListAccountingUploadsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAccountingUploadsQueryKey = () => {
+  return [`/api/account/accounting-uploads`] as const;
+};
+
+export const getListAccountingUploadsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAccountingUploads>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAccountingUploads>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAccountingUploadsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAccountingUploads>>
+  > = ({ signal }) => listAccountingUploads({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAccountingUploads>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAccountingUploadsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAccountingUploads>>
+>;
+export type ListAccountingUploadsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List every saved P&L upload across the user's models
+ */
+
+export function useListAccountingUploads<
+  TData = Awaited<ReturnType<typeof listAccountingUploads>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAccountingUploads>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAccountingUploadsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Strips the `accountingExport` field from the named model's data without touching any other field. Returns 404 if the model isn't owned by the user or doesn't have a saved upload.
+
+ * @summary Forget the saved P&L upload on a specific model
+ */
+export const getDeleteAccountingUploadUrl = (modelId: number) => {
+  return `/api/account/accounting-uploads/${modelId}`;
+};
+
+export const deleteAccountingUpload = async (
+  modelId: number,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getDeleteAccountingUploadUrl(modelId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAccountingUploadMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAccountingUpload>>,
+    TError,
+    { modelId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAccountingUpload>>,
+  TError,
+  { modelId: number },
+  TContext
+> => {
+  const mutationKey = ["deleteAccountingUpload"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAccountingUpload>>,
+    { modelId: number }
+  > = (props) => {
+    const { modelId } = props ?? {};
+
+    return deleteAccountingUpload(modelId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAccountingUploadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAccountingUpload>>
+>;
+
+export type DeleteAccountingUploadMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Forget the saved P&L upload on a specific model
+ */
+export const useDeleteAccountingUpload = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAccountingUpload>>,
+    TError,
+    { modelId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAccountingUpload>>,
+  TError,
+  { modelId: number },
+  TContext
+> => {
+  return useMutation(getDeleteAccountingUploadMutationOptions(options));
+};
 
 /**
  * @summary Update lender-language preference
