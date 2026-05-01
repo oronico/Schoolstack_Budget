@@ -3,6 +3,8 @@
 // and that one derived cell per tab carries a formula whose cached
 // result tracks an upstream input across two builds.
 
+import { HyperFormula } from "hyperformula";
+import type ExcelJS from "exceljs";
 import {
   generateChestertonOperatingManual,
   CHESTERTON_TAB_NAMES,
@@ -13,6 +15,187 @@ const failures: Failure[] = [];
 function expect(check: string, ok: boolean, expected: unknown, actual: unknown) {
   if (!ok) failures.push({ check, expected, actual });
   process.stdout.write(ok ? "." : "F");
+}
+
+// ── Excel-engine round-trip helpers ────────────────────────────────────
+// Convert an ExcelJS cell value into a HyperFormula input scalar:
+// formulas pass through with a leading "=", richText collapses to plain
+// text, and shared-formula refs (which we never emit) resolve to their
+// cached result so HF still has a value to recalc against.
+type HfInput = string | number | boolean | null;
+function toHfInput(v: unknown): HfInput {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number" || typeof v === "boolean") return v;
+  if (typeof v === "string") return v;
+  if (typeof v === "object") {
+    const obj = v as {
+      formula?: unknown;
+      sharedFormula?: unknown;
+      result?: unknown;
+      richText?: Array<{ text?: string }>;
+      text?: unknown;
+    };
+    if (typeof obj.formula === "string") {
+      return obj.formula.startsWith("=") ? obj.formula : `=${obj.formula}`;
+    }
+    if (typeof obj.sharedFormula === "string") {
+      return obj.sharedFormula.startsWith("=") ? obj.sharedFormula : `=${obj.sharedFormula}`;
+    }
+    if (Array.isArray(obj.richText)) {
+      return obj.richText.map(t => t.text ?? "").join("");
+    }
+    if (typeof obj.text === "string") return obj.text;
+    if (obj.result !== undefined) return toHfInput(obj.result);
+    return null;
+  }
+  return null;
+}
+
+// safeFormulaValue stores numeric 0 and empty results as the string "0",
+// so anchor that to numeric 0 before the tolerance check.
+function cachedAsNumber(cached: unknown): number | null {
+  if (cached === "0" || cached === "" || cached === null || cached === undefined) return 0;
+  if (typeof cached === "number") return cached;
+  return null;
+}
+function recomputedAsNumber(recomputed: unknown): number | null {
+  if (recomputed === null || recomputed === undefined || recomputed === "" || recomputed === "0") return 0;
+  if (typeof recomputed === "number") return recomputed;
+  if (typeof recomputed === "boolean") return recomputed ? 1 : 0;
+  return null;
+}
+function isDetailedCellError(v: unknown): v is { type: string; message?: string; value?: string } {
+  return !!v && typeof v === "object" && "type" in (v as object) && "value" in (v as object);
+}
+
+function colLetter(col: number): string {
+  let s = "";
+  let n = col;
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+interface NamedExpr { name: string; expression: string }
+function buildNamedExpressions(wb: ExcelJS.Workbook): NamedExpr[] {
+  const out: NamedExpr[] = [];
+  const matrixMap = (wb.definedNames as unknown as { matrixMap?: Record<string, unknown> }).matrixMap;
+  if (!matrixMap) return out;
+  for (const [name, matrix] of Object.entries(matrixMap)) {
+    const cells: Array<{ sheetName: string; row: number; col: number }> = [];
+    const m = matrix as { forEach?: (cb: (cell: { sheetName: string; row: number; col: number }) => void) => void };
+    if (typeof m.forEach !== "function") continue;
+    m.forEach(c => cells.push({ sheetName: c.sheetName, row: c.row, col: c.col }));
+    if (cells.length === 0) continue;
+    if (cells.length === 1) {
+      const c = cells[0];
+      out.push({ name, expression: `='${c.sheetName}'!$${colLetter(c.col)}$${c.row}` });
+    } else {
+      const sheetName = cells[0].sheetName;
+      const minR = Math.min(...cells.map(c => c.row));
+      const maxR = Math.max(...cells.map(c => c.row));
+      const minC = Math.min(...cells.map(c => c.col));
+      const maxC = Math.max(...cells.map(c => c.col));
+      out.push({
+        name,
+        expression: `='${sheetName}'!$${colLetter(minC)}$${minR}:$${colLetter(maxC)}$${maxR}`,
+      });
+    }
+  }
+  return out;
+}
+
+function recomputeWorkbookAndAssert(wb: ExcelJS.Workbook, label: string): void {
+  const sheets: Record<string, HfInput[][]> = {};
+  for (const ws of wb.worksheets) {
+    const maxRow = ws.rowCount;
+    const maxCol = ws.columnCount;
+    const grid: HfInput[][] = [];
+    for (let r = 1; r <= maxRow; r++) {
+      const rowArr: HfInput[] = [];
+      const row = ws.findRow(r);
+      for (let c = 1; c <= maxCol; c++) {
+        const cell = row ? row.findCell(c) : undefined;
+        rowArr.push(cell ? toHfInput(cell.value) : null);
+      }
+      grid.push(rowArr);
+    }
+    sheets[ws.name] = grid;
+  }
+  const namedExpressions = buildNamedExpressions(wb);
+  const hf = HyperFormula.buildFromSheets(sheets, { licenseKey: "gpl-v3" }, namedExpressions);
+
+  let formulaCellsChecked = 0;
+  let firstMismatch: { addr: string; sheet: string; formula: string; cached: unknown; recomputed: unknown } | null = null;
+  for (const ws of wb.worksheets) {
+    const sheetId = hf.getSheetId(ws.name);
+    if (sheetId === undefined) continue;
+    const maxRow = ws.rowCount;
+    const maxCol = ws.columnCount;
+    for (let r = 1; r <= maxRow; r++) {
+      const row = ws.findRow(r);
+      if (!row) continue;
+      for (let c = 1; c <= maxCol; c++) {
+        const cell = row.findCell(c);
+        if (!cell) continue;
+        const v = cell.value;
+        if (!v || typeof v !== "object" || !("formula" in (v as object))) continue;
+        const formula = (v as { formula?: unknown }).formula;
+        if (typeof formula !== "string") continue;
+        // HyperFormula's TEXT() does not implement Excel's comma-grouping
+        // format string (it emits "$750000,##0" instead of "$750,000").
+        // The cached result is what Excel actually renders, so we skip
+        // these cosmetic-only cells from the recalc round-trip.
+        if (/\bTEXT\(/i.test(formula)) continue;
+        const cached = (v as { result?: unknown }).result;
+        const recomputed = hf.getCellValue({ sheet: sheetId, col: c - 1, row: r - 1 });
+        formulaCellsChecked += 1;
+
+        if (isDetailedCellError(recomputed)) {
+          if (!firstMismatch) {
+            firstMismatch = {
+              addr: `${colLetter(c)}${r}`,
+              sheet: ws.name,
+              formula,
+              cached,
+              recomputed: `#${recomputed.value ?? recomputed.type} (${recomputed.message ?? "engine error"})`,
+            };
+          }
+          continue;
+        }
+
+        const cn = cachedAsNumber(cached);
+        const rn = recomputedAsNumber(recomputed);
+        let ok: boolean;
+        if (cn !== null && rn !== null) {
+          ok = Math.abs(cn - rn) < 1e-6;
+        } else {
+          // Fall back to string comparison (TEXT/RIGHT formulas, status flags).
+          ok = String(cached ?? "") === String(recomputed ?? "");
+        }
+        if (!ok && !firstMismatch) {
+          firstMismatch = {
+            addr: `${colLetter(c)}${r}`,
+            sheet: ws.name,
+            formula,
+            cached,
+            recomputed,
+          };
+        }
+      }
+    }
+  }
+  hf.destroy();
+
+  expect(
+    `${label}: HyperFormula recompute matches every cached formula result within 1e-6 (checked ${formulaCellsChecked} cells)`,
+    firstMismatch === null,
+    null,
+    firstMismatch,
+  );
 }
 
 const sample = {
@@ -465,6 +648,12 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
   }
 }
 
+// HyperFormula recompute — load both workbook variants into an Excel-
+// evaluation engine, recalculate every formula from scratch, and assert
+// the recomputed value matches each cached `result` to within 1e-6.
+recomputeWorkbookAndAssert(wb, "baseline workbook");
+recomputeWorkbookAndAssert(wbPerturbed, "perturbed workbook");
+
 process.stdout.write("\n");
 if (failures.length > 0) {
   console.error("CHESTERTON OPERATING MANUAL EXPORT TEST: FAILED");
@@ -473,4 +662,4 @@ if (failures.length > 0) {
   }
   process.exit(1);
 }
-console.log(`CHESTERTON OPERATING MANUAL EXPORT TEST: PASSED (${tabs.length} tabs verified, formula round-trip OK)`);
+console.log(`CHESTERTON OPERATING MANUAL EXPORT TEST: PASSED (${tabs.length} tabs verified, formula round-trip OK, HyperFormula recalc OK)`);

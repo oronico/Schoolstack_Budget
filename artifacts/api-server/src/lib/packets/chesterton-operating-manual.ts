@@ -456,15 +456,22 @@ function buildProjections(
   const bookRow = row;
   row += 1;
 
-  // Net revenue total
+  // Net revenue total — cached result mirrors the upstream rows so an
+  // Excel-engine recalc returns the same number we stored.
   ws.getCell(`A${row}`).value = "Net Tuition + Fees";
   ws.getCell(`A${row}`).font = { bold: true };
   for (let col = 2; col <= 8; col++) {
     const c = ws.getCell(row, col);
+    const grossVal = ws.getCell(grossRow, col).value;
+    const aidVal = ws.getCell(aidRow, col).value;
+    const bookVal = ws.getCell(bookRow, col).value;
+    const grossNum = typeof grossVal === "object" && grossVal && "result" in grossVal && typeof grossVal.result === "number" ? grossVal.result : 0;
+    const aidNum = typeof aidVal === "object" && aidVal && "result" in aidVal && typeof aidVal.result === "number" ? aidVal.result : 0;
+    const bookNum = typeof bookVal === "object" && bookVal && "result" in bookVal && typeof bookVal.result === "number" ? bookVal.result : 0;
     setFormula(
       c,
       `=${cellName(grossRow, col)}+${cellName(aidRow, col)}+${cellName(bookRow, col)}`,
-      0,
+      grossNum + aidNum + bookNum,
     );
     c.numFmt = CUR;
     c.font = { bold: true };
@@ -500,9 +507,13 @@ function buildProjections(
       const enrollNum = typeof enrollVal === "object" && enrollVal && "result" in enrollVal && typeof enrollVal.result === "number" ? enrollVal.result : 0;
       const sectionsNeeded = enrollNum > 0 ? Math.max(1, Math.ceil(enrollNum / 25)) : 0;
       const cost = (data.chesterton?.startingTeacherSalary ?? 44000) / 5 * periods * sectionsNeeded;
+      // IF guards against the MAX(1,…) clamp adding a phantom faculty cost
+      // in years with zero enrollment, keeping the cached and recomputed
+      // values aligned for an Excel-engine round-trip.
+      const enrollAddr = cellName(totalEnrollmentRow, col);
       setFormula(
         c,
-        `=AvgSalaryperPeriod*$I${row}*MAX(1,CEILING(${cellName(totalEnrollmentRow, col)}/25,1))`,
+        `=IF(${enrollAddr}>0,AvgSalaryperPeriod*$I${row}*MAX(1,CEILING(${enrollAddr}/25,1)),0)`,
         cost,
       );
       c.numFmt = CUR;
@@ -539,7 +550,15 @@ function buildProjections(
   for (let col = 2; col <= 8; col++) {
     const c = ws.getCell(row, col);
     if (facultyEnd >= facultyStart) {
-      setFormula(c, `=SUM(${cellName(facultyStart, col)}:${cellName(facultyEnd, col)})`, 0);
+      // Sum the per-subject cached results so the recomputed SUM matches.
+      let subjSum = 0;
+      for (let r = facultyStart; r <= facultyEnd; r++) {
+        const v = ws.getCell(r, col).value;
+        if (v && typeof v === "object" && "result" in v && typeof (v as { result?: unknown }).result === "number") {
+          subjSum += (v as { result: number }).result;
+        }
+      }
+      setFormula(c, `=SUM(${cellName(facultyStart, col)}:${cellName(facultyEnd, col)})`, subjSum);
     } else {
       c.value = 0;
     }
@@ -579,38 +598,52 @@ function buildSalarySchedule(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
   for (let i = 0; i < degreeLabels.length; i++) ws.getCell(4, 1 + i).value = degreeLabels[i];
 
   // Year 1 row uses GETTING STARTED start salary; subsequent rows compound.
+  // Cached results are computed by mirroring the workbook's per-step ROUND
+  // so an Excel-engine recalc matches every cell to the byte.
   const startingSalary = data.chesterton?.startingTeacherSalary ?? 44000;
+  let bachPrev = 0;
+  let mastPrev = 0;
+  let docPrev = 0;
   for (let yearOffset = 0; yearOffset < 25; yearOffset++) {
     const r = 5 + yearOffset;
     ws.getCell(r, 1).value = yearOffset + 1;
     // Bachelors FT (col B)
     const bachFt = ws.getCell(r, 2);
+    let bachVal: number;
     if (yearOffset === 0) {
       // Year-1 Bachelors FT = AvgSalaryperPeriod × 5 periods/FTE.
-      setFormula(bachFt, `=AvgSalaryperPeriod*5`, startingSalary);
+      bachVal = startingSalary;
+      setFormula(bachFt, `=AvgSalaryperPeriod*5`, bachVal);
     } else {
-      const prev = startingSalary * Math.pow(1.0275, yearOffset);
-      setFormula(bachFt, `=ROUND(${cellName(r - 1, 2)}*(1+$B$2),0)`, Math.round(prev));
+      bachVal = Math.round(bachPrev * 1.0275);
+      setFormula(bachFt, `=ROUND(${cellName(r - 1, 2)}*(1+$B$2),0)`, bachVal);
     }
     bachFt.numFmt = CUR;
+    bachPrev = bachVal;
 
     // Masters FT (col C) = +$2000 over Bachelors at year 1, then compound
+    let mastVal: number;
     if (yearOffset === 0) {
-      setFormula(ws.getCell(r, 3), `=B${r}+2000`, startingSalary + 2000);
+      mastVal = startingSalary + 2000;
+      setFormula(ws.getCell(r, 3), `=B${r}+2000`, mastVal);
     } else {
-      const prev = (startingSalary + 2000) * Math.pow(1.0275, yearOffset);
-      setFormula(ws.getCell(r, 3), `=ROUND(${cellName(r - 1, 3)}*(1+$B$2),0)`, Math.round(prev));
+      mastVal = Math.round(mastPrev * 1.0275);
+      setFormula(ws.getCell(r, 3), `=ROUND(${cellName(r - 1, 3)}*(1+$B$2),0)`, mastVal);
     }
     ws.getCell(r, 3).numFmt = CUR;
+    mastPrev = mastVal;
 
     // Doctorate FT (col D) = +$2000 over Masters at year 1, then compound
+    let docVal: number;
     if (yearOffset === 0) {
-      setFormula(ws.getCell(r, 4), `=C${r}+2000`, startingSalary + 4000);
+      docVal = startingSalary + 4000;
+      setFormula(ws.getCell(r, 4), `=C${r}+2000`, docVal);
     } else {
-      const prev = (startingSalary + 4000) * Math.pow(1.0275, yearOffset);
-      setFormula(ws.getCell(r, 4), `=ROUND(${cellName(r - 1, 4)}*(1+$B$2),0)`, Math.round(prev));
+      docVal = Math.round(docPrev * 1.0275);
+      setFormula(ws.getCell(r, 4), `=ROUND(${cellName(r - 1, 4)}*(1+$B$2),0)`, docVal);
     }
     ws.getCell(r, 4).numFmt = CUR;
+    docPrev = docVal;
 
     // Quarter / Half / Three-quarter time blocks (cols F-H, J-L, N-P)
     const fteFractions: Array<{ block: number; mult: number }> = [
@@ -618,14 +651,14 @@ function buildSalarySchedule(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
       { block: 10, mult: 0.5 },
       { block: 14, mult: 0.75 },
     ];
+    const ftVals = [bachVal, mastVal, docVal];
     for (const { block, mult } of fteFractions) {
       for (let degIdx = 0; degIdx < 3; degIdx++) {
         const sourceCol = 2 + degIdx; // B/C/D
         const targetCol = block + degIdx;
         const c = ws.getCell(r, targetCol);
         const sourceLetter = String.fromCharCode(64 + sourceCol);
-        const baseVal = (startingSalary + degIdx * 2000) * Math.pow(1.0275, yearOffset);
-        setFormula(c, `=ROUND(${sourceLetter}${r}*${mult},0)`, Math.round(baseVal * mult));
+        setFormula(c, `=ROUND(${sourceLetter}${r}*${mult},0)`, Math.round(ftVals[degIdx] * mult));
         c.numFmt = CUR;
       }
     }
@@ -816,7 +849,13 @@ function buildGiftChart(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
   // Goal vs pyramid comparison row
   r += 1;
   ws.getCell(`B${r}`).value = "Total Fundraising Goal (TFG)";
-  ws.getCell(`E${r}`).value = { formula: `=TFG`, result: data.chesterton?.totalFundraisingGoal ?? 0 };
+  // Mirror the GETTING STARTED resolution: TFG is the SUM of the
+  // fundraising rows when present, otherwise the static override.
+  const tfgRows = data.chesterton?.fundraisingGoals ?? [];
+  const tfgCached = tfgRows.length > 0
+    ? tfgRows.reduce((s, x) => s + (x.goalAmount ?? 0), 0)
+    : (data.chesterton?.totalFundraisingGoal ?? 0);
+  ws.getCell(`E${r}`).value = { formula: `=TFG`, result: tfgCached };
   ws.getCell(`E${r}`).numFmt = CUR;
 }
 
@@ -1251,7 +1290,7 @@ const PARENT_HANDOUT_FAMILY_ASKS: ParentHandoutFamilyAsk[] = [
   },
 ];
 
-function buildCadence(wb: ExcelJS.Workbook) {
+function buildCadence(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
   const ws = wb.addWorksheet(TAB_CADENCE, {
     properties: { tabColor: { argb: CREAM } },
     views: [{ showGridLines: false, state: "frozen", ySplit: 7 }],
@@ -1267,7 +1306,10 @@ function buildCadence(wb: ExcelJS.Workbook) {
 
   ws.mergeCells("A3:E3");
   applySubtitleStyle(ws.getCell("A3"));
-  ws.getCell("A3").value = { formula: `=School_Name`, result: "Your Chesterton Academy" };
+  ws.getCell("A3").value = {
+    formula: `=School_Name`,
+    result: data.schoolName || "Your Chesterton Academy",
+  };
 
   // Quarter banner rows ─ FIRST/SECOND/THIRD/FOURTH QUARTER, then the
   // months that make up each quarter, then the cycle label.
@@ -1276,7 +1318,10 @@ function buildCadence(wb: ExcelJS.Workbook) {
   for (let i = 0; i < 4; i++) ws.getCell(5, 2 + i).value = CADENCE_QUARTERS[i];
   hdr(ws, 5, 5);
 
-  ws.getCell("A6").value = { formula: `=Plan_Year`, result: 2027 };
+  ws.getCell("A6").value = {
+    formula: `=Plan_Year`,
+    result: data.chesterton?.planningYear || new Date().getFullYear() + 1,
+  };
   ws.getCell("A6").font = { bold: true };
   for (let i = 0; i < 4; i++) {
     const c = ws.getCell(6, 2 + i);
@@ -1491,7 +1536,7 @@ function buildTrainingSchedule(wb: ExcelJS.Workbook) {
   ws.getCell(`A${r}`).alignment = { horizontal: "center" };
 }
 
-function buildParentHandout(wb: ExcelJS.Workbook) {
+function buildParentHandout(wb: ExcelJS.Workbook, data: ChestertonModelInput, tfgValue: number) {
   const ws = wb.addWorksheet(TAB_PARENT_HANDOUT, {
     properties: { tabColor: { argb: CREAM } },
     views: [{ showGridLines: false }],
@@ -1508,9 +1553,15 @@ function buildParentHandout(wb: ExcelJS.Workbook) {
   // with the example/planning labels matching the source workbook exactly.
   ws.mergeCells("A2:E2");
   applyTitleStyle(ws.getCell("A2"));
-  ws.getCell("A2").value = { formula: `=School_Name`, result: "Your Chesterton Academy" };
+  ws.getCell("A2").value = {
+    formula: `=School_Name`,
+    result: data.schoolName || "Your Chesterton Academy",
+  };
   ws.getRow(2).height = 30;
-  ws.getCell("F2").value = { formula: `=Plan_Year`, result: 2027 };
+  ws.getCell("F2").value = {
+    formula: `=Plan_Year`,
+    result: data.chesterton?.planningYear || new Date().getFullYear() + 1,
+  };
   ws.getCell("F2").alignment = { horizontal: "right", vertical: "middle" };
   ws.getCell("F2").font = { bold: true, color: { argb: NAVY } };
 
@@ -1566,7 +1617,7 @@ function buildParentHandout(wb: ExcelJS.Workbook) {
       ws.getCell(`E${r}`).value = proj.label;
       ws.getCell(`E${r}`).font = { bold: true };
       ws.getCell(`E${r}`).alignment = { vertical: "middle" };
-      ws.getCell(`F${r}`).value = { formula: `=TFG`, result: proj.placeholder };
+      ws.getCell(`F${r}`).value = { formula: `=TFG`, result: tfgValue };
       ws.getCell(`F${r}`).numFmt = CUR;
       ws.getCell(`F${r}`).font = { bold: true };
       ws.getCell(`F${r}`).alignment = { horizontal: "right", vertical: "middle" };
@@ -1581,7 +1632,7 @@ function buildParentHandout(wb: ExcelJS.Workbook) {
   r += 2; // blank row between heading and detail (matches source row 16)
 
   // Goal block: A=TFG amount, D=label, F=share amount
-  ws.getCell(`A${r}`).value = { formula: `=TFG`, result: 0 };
+  ws.getCell(`A${r}`).value = { formula: `=TFG`, result: tfgValue };
   ws.getCell(`A${r}`).numFmt = CUR;
   ws.getCell(`A${r}`).font = { bold: true, size: 12, color: { argb: NAVY } };
   ws.getCell(`B${r}`).value = "Fundraising goal";
@@ -1589,7 +1640,7 @@ function buildParentHandout(wb: ExcelJS.Workbook) {
   ws.mergeCells(`D${r}:E${r}`);
   ws.getCell(`D${r}`).value = PARENT_HANDOUT_GOAL_ROWS[0].label;
   ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "middle" };
-  ws.getCell(`F${r}`).value = { formula: `=TFG*0.5`, result: 0 };
+  ws.getCell(`F${r}`).value = { formula: `=TFG*0.5`, result: tfgValue * 0.5 };
   ws.getCell(`F${r}`).numFmt = CUR;
   ws.getCell(`F${r}`).alignment = { horizontal: "right" };
   r += 1;
@@ -1597,7 +1648,7 @@ function buildParentHandout(wb: ExcelJS.Workbook) {
   ws.mergeCells(`D${r}:E${r}`);
   ws.getCell(`D${r}`).value = PARENT_HANDOUT_GOAL_ROWS[1].label;
   ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "middle" };
-  ws.getCell(`F${r}`).value = { formula: `=TFG*0.5`, result: 0 };
+  ws.getCell(`F${r}`).value = { formula: `=TFG*0.5`, result: tfgValue * 0.5 };
   ws.getCell(`F${r}`).numFmt = CUR;
   ws.getCell(`F${r}`).alignment = { horizontal: "right" };
   r += 1;
@@ -1606,7 +1657,7 @@ function buildParentHandout(wb: ExcelJS.Workbook) {
   ws.getCell(`D${r}`).value = PARENT_HANDOUT_GOAL_ROWS[2].label;
   ws.getCell(`D${r}`).font = { bold: true };
   ws.getCell(`D${r}`).alignment = { wrapText: true, vertical: "middle" };
-  ws.getCell(`F${r}`).value = { formula: `=TFG`, result: 0 };
+  ws.getCell(`F${r}`).value = { formula: `=TFG`, result: tfgValue };
   ws.getCell(`F${r}`).numFmt = CUR;
   ws.getCell(`F${r}`).font = { bold: true };
   ws.getCell(`F${r}`).alignment = { horizontal: "right" };
@@ -1681,6 +1732,11 @@ export async function generateChestertonOperatingManual(
   wb.created = new Date();
 
   const fundraisingRowCount = (data.chesterton?.fundraisingGoals ?? []).length;
+  // Resolve TFG once so cached `=TFG` placeholders match the value an
+  // Excel-engine recalc would produce from the GETTING STARTED named range.
+  const tfgValue = fundraisingRowCount > 0
+    ? (data.chesterton?.fundraisingGoals ?? []).reduce((s, x) => s + (x.goalAmount ?? 0), 0)
+    : (data.chesterton?.totalFundraisingGoal ?? 0);
   const refs = buildGettingStarted(wb, data, fundraisingRowCount);
   buildProjections(wb, data, refs);
   buildSalarySchedule(wb, data);
@@ -1688,9 +1744,9 @@ export async function generateChestertonOperatingManual(
   buildFundraisingGoals(wb, data);
   buildGiftChart(wb, data);
   buildRecruitingPipeline(wb, data);
-  buildCadence(wb);
+  buildCadence(wb, data);
   buildTrainingSchedule(wb);
-  buildParentHandout(wb);
+  buildParentHandout(wb, data, tfgValue);
 
   return wb;
 }

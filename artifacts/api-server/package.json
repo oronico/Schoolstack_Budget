@@ -15,6 +15,7 @@
     "qa:formula-results": "tsx ./tests/export-formula-results.ts",
     "qa:flags": "tsx ./tests/assumption-flags.ts",
     "qa:smoke-arithmetic": "tsx ./tests/e2e-arithmetic-smoke.ts",
+    "qa:chesterton-operating-manual": "tsx ./tests/chesterton-operating-manual.ts",
     "test:parity": "tsx ./tests/parity-frontend-backend.ts",
     "test:cross-engine": "tsx ./tests/cross-engine-test.ts",
     "test:decision-history": "tsx ./tests/decision-history.ts",
@@ -54,6 +55,7 @@
     "@types/node": "catalog:",
     "@types/pdfkit": "^0.17.5",
     "esbuild": "^0.27.3",
+    "hyperformula": "^3.2.0",
     "tsx": "catalog:"
   }
 }
