@@ -159,4 +159,98 @@ describe("program × group enrollment matrix", () => {
       expect(programs.find((p) => p.id === "p1")!.priorYear).toBe(9);
     });
   });
+
+  // Persistence regression: the "Didn't offer" checkbox must reflect the
+  // programNotOffered mask (the user's stated intent) — never the cell
+  // contents. If a cell ends up with a stray number while the row is
+  // marked N/A, the toggle must stay checked and the cell must keep
+  // rendering as the "—" placeholder so the user's choice survives reload.
+  it("'Didn't offer' stays checked when an underlying cell becomes non-null", async () => {
+    render(<Harness initial={baseInitial} />);
+    const naBox = screen.getByTestId("matrix-na-p1-priorYear") as HTMLInputElement;
+    fireEvent.click(naBox);
+    expect(naBox.checked).toBe(true);
+
+    // Simulate a stray cell value landing in the matrix (e.g. via the —
+    // placeholder click that resets the cell to 0, or via a re-hydrated
+    // form value that pre-dated the N/A toggle).
+    formRef!.setValue("programEnrollmentMatrix.p1.priorYear.k5", 7, { shouldDirty: true });
+
+    await waitFor(() => {
+      const refreshedBox = screen.getByTestId("matrix-na-p1-priorYear") as HTMLInputElement;
+      expect(refreshedBox.checked).toBe(true);
+      const cell = screen.getByTestId("matrix-cell-p1-priorYear-k5");
+      // Still the placeholder button — cell content is masked by the flag.
+      expect(cell.tagName).toBe("BUTTON");
+    });
+
+    // The mask in the form value also persists.
+    const notOffered = formRef!.getValues("programNotOffered") as Record<
+      string,
+      Record<string, boolean>
+    >;
+    expect(notOffered.p1.priorYear).toBe(true);
+  });
+
+  it("'Didn't offer' rehydrates from programNotOffered on mount", () => {
+    const initial = {
+      ...baseInitial,
+      programEnrollmentMatrix: {
+        p1: { priorYear: { k5: 0 } },
+      },
+      programNotOffered: {
+        p1: { priorYear: true },
+      },
+    };
+    render(<Harness initial={initial} />);
+    const naBox = screen.getByTestId("matrix-na-p1-priorYear") as HTMLInputElement;
+    // Even though the cell holds the number 0 (not null), the saved mask
+    // wins and the checkbox is checked on reload.
+    expect(naBox.checked).toBe(true);
+    const cell = screen.getByTestId("matrix-cell-p1-priorYear-k5");
+    expect(cell.tagName).toBe("BUTTON");
+  });
+
+  it("untoggling 'Didn't offer' clears the flag and lets cells be edited again", async () => {
+    render(<Harness initial={baseInitial} />);
+    const naBox = screen.getByTestId("matrix-na-p1-priorYear") as HTMLInputElement;
+
+    // Toggle on — cells get nulled, mask records the choice.
+    fireEvent.click(naBox);
+    expect(naBox.checked).toBe(true);
+
+    // Toggle off — mask clears, but cells remain null so the placeholder
+    // is still showing (just no longer forced by the row mask).
+    fireEvent.click(naBox);
+    await waitFor(() => {
+      const refreshedBox = screen.getByTestId("matrix-na-p1-priorYear") as HTMLInputElement;
+      expect(refreshedBox.checked).toBe(false);
+    });
+    const notOffered = formRef!.getValues("programNotOffered") as Record<
+      string,
+      Record<string, boolean>
+    >;
+    expect(notOffered.p1.priorYear).toBe(false);
+
+    // Clicking the placeholder converts the cell to an editable input.
+    const placeholder = screen.getByTestId("matrix-cell-p1-priorYear-k5");
+    expect(placeholder.tagName).toBe("BUTTON");
+    fireEvent.click(placeholder);
+    await waitFor(() => {
+      const cell = screen.getByTestId("matrix-cell-p1-priorYear-k5");
+      expect(cell.tagName).toBe("INPUT");
+    });
+
+    // And the input accepts a typed value.
+    fireEvent.change(screen.getByTestId("matrix-cell-p1-priorYear-k5") as HTMLInputElement, {
+      target: { value: "4" },
+    });
+    await waitFor(() => {
+      const matrix = formRef!.getValues("programEnrollmentMatrix") as Record<
+        string,
+        Record<string, Record<string, number | null>>
+      >;
+      expect(matrix.p1.priorYear.k5).toBe(4);
+    });
+  });
 });
