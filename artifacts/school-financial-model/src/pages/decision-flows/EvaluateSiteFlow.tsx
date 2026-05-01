@@ -7,13 +7,16 @@ import { ModelMiniSummary } from "@/components/decision-flow/ModelMiniSummary";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
 import { WhyStep } from "@/components/decision-flow/WhyStep";
 import { SaveActions, type SaveAction } from "@/components/decision-flow/SaveActions";
+import { ApplyConfirmation } from "@/components/decision-flow/ApplyConfirmation";
 import {
   applyDecisionToData,
   buildBlankSiteInputs,
   computeDecisionImpact,
   decisionToPersistedOverrides,
   siteInputsToOverrides,
+  summarizeDecisionChanges,
   type SiteInputs,
+  type DecisionFieldChange,
 } from "@/lib/decision-flows";
 import { detectFacilityRent, encodeOverridesToHash } from "@/lib/whatif-engine";
 import type { FullModelData, CustomScenario } from "@/pages/model-wizard/schema";
@@ -33,6 +36,14 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
   const [narrative, setNarrative] = useState("");
   const [done, setDone] = useState(false);
   const [doneAction, setDoneAction] = useState<SaveAction | null>(null);
+  // After "Apply to my model" succeeds, show a before/after diff modal that
+  // lists which model fields changed and offers a one-click Undo.
+  const [applyResult, setApplyResult] = useState<{
+    changes: DecisionFieldChange[];
+    snapshot: Record<string, unknown>;
+    appliedScenarioName: string;
+  } | null>(null);
+  const [isUndoing, setIsUndoing] = useState(false);
 
   const data = (model?.data ?? {}) as FullModelData;
 
@@ -67,13 +78,19 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
   const handleSave = async (action: SaveAction) => {
     const persistedOverrides = decisionToPersistedOverrides(data, { type: "evaluate_site", inputs });
     const existing = ((data as Record<string, unknown>).customScenarios as CustomScenario[] | undefined) ?? [];
+    const finalScenarioName = scenarioName.trim() || "Evaluate site";
     const entry: CustomScenario = {
-      name: scenarioName.trim() || "Evaluate site",
+      name: finalScenarioName,
       createdAt: new Date().toISOString(),
       overrides: persistedOverrides,
       decisionType: "evaluate_site",
       narrative: narrative.trim(),
     };
+
+    // Snapshot data before any mutation so the Undo button on the apply
+    // confirmation modal can restore it (including the customScenarios array
+    // as it was before this flow appended its entry).
+    const snapshotBeforeApply = data as Record<string, unknown>;
 
     let nextData: Record<string, unknown> = {
       ...(data as Record<string, unknown>),
@@ -96,7 +113,8 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
     setDone(true);
 
     if (action === "apply") {
-      setTimeout(() => setLocation(`/model/${modelId}`), 800);
+      const changes = summarizeDecisionChanges(data, { type: "evaluate_site", inputs });
+      setApplyResult({ changes, snapshot: snapshotBeforeApply, appliedScenarioName: finalScenarioName });
     } else if (action === "later") {
       setTimeout(() => setLocation(`/model/${modelId}/scenarios`), 800);
     } else if (action === "planner") {
@@ -104,6 +122,27 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
       const hash = encodeOverridesToHash(ov);
       setTimeout(() => setLocation(`/model/${modelId}/scenarios${hash ? `#${hash}` : ""}`), 600);
     }
+  };
+
+  const handleUndoApply = async () => {
+    if (!applyResult || isUndoing) return;
+    setIsUndoing(true);
+    try {
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: applyResult.snapshot },
+      });
+      setApplyResult(null);
+      setDone(false);
+      setDoneAction(null);
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
+  const handleContinueAfterApply = () => {
+    setApplyResult(null);
+    setLocation(`/model/${modelId}`);
   };
 
   return (
@@ -251,6 +290,17 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
           onSave={handleSave}
           plannerAvailable={!inputs.oneTimeFitOut || inputs.oneTimeFitOut <= 0}
           plannerUnavailableReason="Your scenario includes a one-time fit-out cost, which the live planner can't replay yet. Pick Apply to my model to fold the full picture in, or save & review later to keep the fit-out for the lender packet."
+        />
+      )}
+
+      {applyResult && (
+        <ApplyConfirmation
+          decisionType="evaluate_site"
+          scenarioName={applyResult.appliedScenarioName}
+          changes={applyResult.changes}
+          isUndoing={isUndoing}
+          onUndo={handleUndoApply}
+          onContinue={handleContinueAfterApply}
         />
       )}
     </DecisionFlowShell>

@@ -7,13 +7,16 @@ import { ModelMiniSummary } from "@/components/decision-flow/ModelMiniSummary";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
 import { WhyStep } from "@/components/decision-flow/WhyStep";
 import { SaveActions, type SaveAction } from "@/components/decision-flow/SaveActions";
+import { ApplyConfirmation } from "@/components/decision-flow/ApplyConfirmation";
 import { cn } from "@/lib/utils";
 import {
   applyDecisionToData,
   buildBlankAddProgramInputs,
   computeDecisionImpact,
   decisionToPersistedOverrides,
+  summarizeDecisionChanges,
   type AddProgramInputs,
+  type DecisionFieldChange,
 } from "@/lib/decision-flows";
 import type { FullModelData, CustomScenario } from "@/pages/model-wizard/schema";
 
@@ -34,6 +37,16 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
   const [narrative, setNarrative] = useState("");
   const [done, setDone] = useState(false);
   const [doneAction, setDoneAction] = useState<SaveAction | null>(null);
+  // After "Apply to my model" succeeds we surface a confirmation modal that
+  // lists the field-level diff and offers Undo. We stash the pre-apply data
+  // here so Undo can restore it (including the customScenarios entry that
+  // was appended by handleSave).
+  const [applyResult, setApplyResult] = useState<{
+    changes: DecisionFieldChange[];
+    snapshot: Record<string, unknown>;
+    appliedScenarioName: string;
+  } | null>(null);
+  const [isUndoing, setIsUndoing] = useState(false);
 
   const data = (model?.data ?? {}) as FullModelData;
 
@@ -60,13 +73,18 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
   const handleSave = async (action: SaveAction) => {
     const persistedOverrides = decisionToPersistedOverrides(data, { type: "add_program", inputs });
     const existing = ((data as Record<string, unknown>).customScenarios as CustomScenario[] | undefined) ?? [];
+    const finalScenarioName = scenarioName.trim() || `Add ${inputs.name || "program"}`;
     const entry: CustomScenario = {
-      name: scenarioName.trim() || `Add ${inputs.name || "program"}`,
+      name: finalScenarioName,
       createdAt: new Date().toISOString(),
       overrides: persistedOverrides,
       decisionType: "add_program",
       narrative: narrative.trim(),
     };
+
+    // Snapshot the pre-mutation data so Undo can restore it intact (including
+    // the customScenarios array as it was before this flow ran).
+    const snapshotBeforeApply = data as Record<string, unknown>;
 
     let nextData: Record<string, unknown> = {
       ...(data as Record<string, unknown>),
@@ -89,11 +107,36 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
     setDone(true);
 
     if (action === "apply") {
-      setTimeout(() => setLocation(`/model/${modelId}`), 800);
+      // Surface a before/after confirmation modal instead of auto-redirecting.
+      // The user navigates explicitly via "View updated model" or undoes the
+      // change via "Undo apply", which restores `snapshotBeforeApply`.
+      const changes = summarizeDecisionChanges(data, { type: "add_program", inputs });
+      setApplyResult({ changes, snapshot: snapshotBeforeApply, appliedScenarioName: finalScenarioName });
     } else if (action === "later") {
       setTimeout(() => setLocation(`/model/${modelId}/scenarios`), 800);
     }
     // "planner" disabled for add_program (handled below)
+  };
+
+  const handleUndoApply = async () => {
+    if (!applyResult || isUndoing) return;
+    setIsUndoing(true);
+    try {
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: applyResult.snapshot },
+      });
+      setApplyResult(null);
+      setDone(false);
+      setDoneAction(null);
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
+  const handleContinueAfterApply = () => {
+    setApplyResult(null);
+    setLocation(`/model/${modelId}`);
   };
 
   return (
@@ -309,6 +352,17 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
           onSave={handleSave}
           plannerAvailable={false}
           plannerUnavailableReason="Add-a-program scenarios use a synthesized revenue row that the live planner can't replay — pick Apply to my model to fold it in instead."
+        />
+      )}
+
+      {applyResult && (
+        <ApplyConfirmation
+          decisionType="add_program"
+          scenarioName={applyResult.appliedScenarioName}
+          changes={applyResult.changes}
+          isUndoing={isUndoing}
+          onUndo={handleUndoApply}
+          onContinue={handleContinueAfterApply}
         />
       )}
     </DecisionFlowShell>

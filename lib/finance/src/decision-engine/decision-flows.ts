@@ -283,6 +283,205 @@ export function applyDecisionToData(
   }
 }
 
+// --- Field-level diff for "Apply to my model" confirmation ------------------
+//
+// Founders need to see exactly which model fields a decision changed before
+// they trust the apply step. This builds a small list of human-readable
+// before/after pairs that the UI renders in a confirmation modal next to an
+// Undo button. We deliberately mirror the *actual* mutations performed by
+// `applyDecisionToData` for each decision type rather than diffing the data
+// object, so the labels stay tied to the founder's mental model (rows,
+// monthly rent, retention) instead of internal row IDs.
+
+export interface DecisionFieldChange {
+  label: string;
+  before: string;
+  after: string;
+  kind: "added" | "modified";
+}
+
+function fmtCurrency(n: number): string {
+  return `$${Math.round(n).toLocaleString()}`;
+}
+
+function describeAddProgramChanges(
+  data: FullModelData,
+  inputs: AddProgramInputs,
+): DecisionFieldChange[] {
+  const out: DecisionFieldChange[] = [];
+  const programName = inputs.name.trim() || "New program";
+  const tuition = Math.max(0, Math.round(inputs.annualTuition || 0));
+  const enrollment = inputs.enrollment.map((n) => Math.max(0, Math.round(n || 0)));
+  const enrollmentSummary = enrollment.map((n, i) => `Y${i + 1}:${n}`).join(" / ");
+  const yr5Revenue = enrollment[4] * tuition;
+  out.push({
+    label: `Revenue row "${programName}"`,
+    before: "Not in model",
+    after: `${enrollmentSummary} students × ${fmtCurrency(tuition)}/yr tuition (Y5 ≈ ${fmtCurrency(yr5Revenue)})`,
+    kind: "added",
+  });
+
+  const fte = inputs.staffingTbd ? 0 : Math.max(0, inputs.addedFte ?? 0);
+  const sal = inputs.staffingTbd ? 0 : Math.max(0, inputs.addedFteSalary ?? 0);
+  if (fte > 0 && sal > 0) {
+    out.push({
+      label: `Staffing row "${programName} staff"`,
+      before: "Not in model",
+      after: `${fte} FTE × ${fmtCurrency(sal)}/yr (instructional, full-time)`,
+      kind: "added",
+    });
+  }
+
+  const space = Math.max(0, inputs.addedAnnualSpace ?? 0);
+  if (space > 0) {
+    out.push({
+      label: `Expense row "${programName} space"`,
+      before: "Not in model",
+      after: `${fmtCurrency(space)}/yr occupancy`,
+      kind: "added",
+    });
+  }
+
+  return out;
+}
+
+function describeEvaluateSiteChanges(
+  data: FullModelData,
+  inputs: SiteInputs,
+): DecisionFieldChange[] {
+  const out: DecisionFieldChange[] = [];
+  const detected = detectFacilityRent(data);
+  const newRent = Math.max(0, inputs.newMonthlyRent ?? 0);
+  const oldRent = detected.monthlyRent;
+  if (oldRent !== null || newRent > 0) {
+    out.push({
+      label: "Facility rent (monthly)",
+      before: oldRent !== null ? `${fmtCurrency(oldRent)}/mo` : "Not modeled",
+      after: `${fmtCurrency(newRent)}/mo`,
+      kind: oldRent !== null ? "modified" : "added",
+    });
+  }
+
+  if (inputs.newRentEscalation !== undefined) {
+    out.push({
+      label: "Annual rent escalation",
+      before: oldRent !== null ? "Existing escalation" : "—",
+      after: `${inputs.newRentEscalation}%/yr`,
+      kind: "modified",
+    });
+  }
+
+  if (inputs.startYear !== undefined && inputs.startYear > 1) {
+    out.push({
+      label: "Effective from",
+      before: "Year 1",
+      after: `Year ${inputs.startYear}`,
+      kind: "modified",
+    });
+  }
+
+  const sqft = inputs.newSqft ?? 0;
+  if (sqft > 0) {
+    let baseSqft = 0;
+    const sp = data.schoolProfile as Record<string, unknown> | undefined;
+    if (sp) {
+      const phases = sp.facilityPhases as Array<Record<string, unknown>> | undefined;
+      if (phases) {
+        for (const p of phases) {
+          const sq = (p.squareFootage as number | undefined) ?? 0;
+          if (sq > baseSqft) baseSqft = sq;
+        }
+      }
+    }
+    out.push({
+      label: "Facility square footage",
+      before: baseSqft > 0 ? `${baseSqft.toLocaleString()} sqft` : "Not set",
+      after: `${sqft.toLocaleString()} sqft`,
+      kind: baseSqft > 0 ? "modified" : "added",
+    });
+  }
+
+  const fitOut = Math.max(0, inputs.oneTimeFitOut ?? 0);
+  if (fitOut > 0) {
+    out.push({
+      label: 'Expense row "Site fit-out (one-time)"',
+      before: "Not in model",
+      after: `${fmtCurrency(fitOut)} in Year 1 (occupancy)`,
+      kind: "added",
+    });
+  }
+
+  return out;
+}
+
+function describeChangeEnrollmentChanges(
+  data: FullModelData,
+  inputs: EnrollmentChangeInputs,
+): DecisionFieldChange[] {
+  const out: DecisionFieldChange[] = [];
+  const en = data.enrollment;
+  const baseEnrollment = [
+    en?.year1 ?? 0,
+    en?.year2 ?? 0,
+    en?.year3 ?? 0,
+    en?.year4 ?? 0,
+    en?.year5 ?? 0,
+  ];
+  for (let y = 0; y < 5; y++) {
+    const delta = inputs.enrollmentDelta[y] ?? 0;
+    if (delta === 0) continue;
+    const before = baseEnrollment[y];
+    const after = before + delta;
+    const sign = delta > 0 ? "+" : "";
+    out.push({
+      label: `Enrollment Year ${y + 1}`,
+      before: `${before} students`,
+      after: `${after} students (${sign}${delta})`,
+      kind: "modified",
+    });
+  }
+
+  const baseRetention = en?.retentionRate ?? 85;
+  if (
+    inputs.retentionRate !== undefined &&
+    Math.abs(inputs.retentionRate - baseRetention) > 0.0001
+  ) {
+    out.push({
+      label: "Retention rate",
+      before: `${baseRetention}%`,
+      after: `${inputs.retentionRate}%`,
+      kind: "modified",
+    });
+  }
+
+  const tDelta = inputs.tuitionDeltaPerStudent ?? 0;
+  if (tDelta !== 0) {
+    const sign = tDelta > 0 ? "+" : "−";
+    out.push({
+      label: "Tuition per student adjustment",
+      before: "Base tuition (no shift)",
+      after: `${sign}${fmtCurrency(Math.abs(tDelta))}/yr per student`,
+      kind: "modified",
+    });
+  }
+
+  return out;
+}
+
+export function summarizeDecisionChanges(
+  data: FullModelData,
+  decision: DecisionInputs,
+): DecisionFieldChange[] {
+  switch (decision.type) {
+    case "add_program":
+      return describeAddProgramChanges(data, decision.inputs);
+    case "evaluate_site":
+      return describeEvaluateSiteChanges(data, decision.inputs);
+    case "change_enrollment":
+      return describeChangeEnrollmentChanges(data, decision.inputs);
+  }
+}
+
 // --- Compute decision impact ------------------------------------------------
 
 function genDecisionNudges(

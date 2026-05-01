@@ -8,13 +8,16 @@ import { ModelMiniSummary } from "@/components/decision-flow/ModelMiniSummary";
 import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
 import { WhyStep } from "@/components/decision-flow/WhyStep";
 import { SaveActions, type SaveAction } from "@/components/decision-flow/SaveActions";
+import { ApplyConfirmation } from "@/components/decision-flow/ApplyConfirmation";
 import {
   applyDecisionToData,
   buildBlankEnrollmentChangeInputs,
   computeDecisionImpact,
   decisionToPersistedOverrides,
   enrollmentChangeInputsToOverrides,
+  summarizeDecisionChanges,
   type EnrollmentChangeInputs,
+  type DecisionFieldChange,
 } from "@/lib/decision-flows";
 import { encodeOverridesToHash } from "@/lib/whatif-engine";
 import type { FullModelData, CustomScenario } from "@/pages/model-wizard/schema";
@@ -34,6 +37,14 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
   const [narrative, setNarrative] = useState("");
   const [done, setDone] = useState(false);
   const [doneAction, setDoneAction] = useState<SaveAction | null>(null);
+  // After "Apply to my model" succeeds, we surface a before/after diff modal
+  // listing the model fields that changed and offering one-click Undo.
+  const [applyResult, setApplyResult] = useState<{
+    changes: DecisionFieldChange[];
+    snapshot: Record<string, unknown>;
+    appliedScenarioName: string;
+  } | null>(null);
+  const [isUndoing, setIsUndoing] = useState(false);
 
   const data = (model?.data ?? {}) as FullModelData;
   const en = data.enrollment;
@@ -64,13 +75,18 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
   const handleSave = async (action: SaveAction) => {
     const persistedOverrides = decisionToPersistedOverrides(data, { type: "change_enrollment", inputs });
     const existing = ((data as Record<string, unknown>).customScenarios as CustomScenario[] | undefined) ?? [];
+    const finalScenarioName = scenarioName.trim() || "Enrollment change";
     const entry: CustomScenario = {
-      name: scenarioName.trim() || "Enrollment change",
+      name: finalScenarioName,
       createdAt: new Date().toISOString(),
       overrides: persistedOverrides,
       decisionType: "change_enrollment",
       narrative: narrative.trim(),
     };
+
+    // Snapshot the pre-mutation data so the apply confirmation modal's Undo
+    // button can restore the model exactly as it was before this flow ran.
+    const snapshotBeforeApply = data as Record<string, unknown>;
 
     let nextData: Record<string, unknown> = {
       ...(data as Record<string, unknown>),
@@ -93,7 +109,8 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
     setDone(true);
 
     if (action === "apply") {
-      setTimeout(() => setLocation(`/model/${modelId}`), 800);
+      const changes = summarizeDecisionChanges(data, { type: "change_enrollment", inputs });
+      setApplyResult({ changes, snapshot: snapshotBeforeApply, appliedScenarioName: finalScenarioName });
     } else if (action === "later") {
       setTimeout(() => setLocation(`/model/${modelId}/scenarios`), 800);
     } else if (action === "planner") {
@@ -101,6 +118,27 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
       const hash = encodeOverridesToHash(ov);
       setTimeout(() => setLocation(`/model/${modelId}/scenarios${hash ? `#${hash}` : ""}`), 600);
     }
+  };
+
+  const handleUndoApply = async () => {
+    if (!applyResult || isUndoing) return;
+    setIsUndoing(true);
+    try {
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: applyResult.snapshot },
+      });
+      setApplyResult(null);
+      setDone(false);
+      setDoneAction(null);
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
+  const handleContinueAfterApply = () => {
+    setApplyResult(null);
+    setLocation(`/model/${modelId}`);
   };
 
   return (
@@ -295,6 +333,17 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
           doneAction={doneAction}
           onSave={handleSave}
           plannerAvailable={true}
+        />
+      )}
+
+      {applyResult && (
+        <ApplyConfirmation
+          decisionType="change_enrollment"
+          scenarioName={applyResult.appliedScenarioName}
+          changes={applyResult.changes}
+          isUndoing={isUndoing}
+          onUndo={handleUndoApply}
+          onContinue={handleContinueAfterApply}
         />
       )}
     </DecisionFlowShell>

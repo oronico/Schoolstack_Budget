@@ -7,6 +7,7 @@ import {
   computeDecisionImpact,
   computeProjectedSnapshot,
   decisionToPersistedOverrides,
+  summarizeDecisionChanges,
   type AddProgramInputs,
   type DecisionInputs,
   type EnrollmentChangeInputs,
@@ -814,4 +815,123 @@ describe("buildActualsSuggestion", () => {
     expect(suggestion.sourceLabels).toEqual([]);
   });
 
+});
+
+// --- summarizeDecisionChanges (apply-confirmation diff) --------------------
+
+describe("summarizeDecisionChanges: add_program", () => {
+  it("describes the synthesized revenue row with enrollment × tuition for Y5", () => {
+    const data = buildBaseModel();
+    const changes = summarizeDecisionChanges(data, {
+      type: "add_program",
+      inputs: blankAddProgram({ name: "STEM Lab", annualTuition: 12000, enrollment: [10, 20, 30, 40, 50] }),
+    });
+    expect(changes.length).toBeGreaterThan(0);
+    const first = changes[0];
+    expect(first.label).toContain("STEM Lab");
+    expect(first.kind).toBe("added");
+    expect(first.before).toBe("Not in model");
+    expect(first.after).toContain("$12,000");
+    // Y5 = 50 * 12000 = 600,000
+    expect(first.after).toContain("$600,000");
+  });
+
+  it("includes optional staffing and space rows when provided", () => {
+    const data = buildBaseModel();
+    const changes = summarizeDecisionChanges(data, {
+      type: "add_program",
+      inputs: blankAddProgram({ addedFte: 2, addedFteSalary: 50000, addedAnnualSpace: 24000 }),
+    });
+    expect(changes.find((c) => c.label.includes("staff"))).toBeDefined();
+    expect(changes.find((c) => c.label.includes("space"))).toBeDefined();
+  });
+
+  it("omits staffing row when staffingTbd is set", () => {
+    const data = buildBaseModel();
+    const changes = summarizeDecisionChanges(data, {
+      type: "add_program",
+      inputs: blankAddProgram({ addedFte: 2, addedFteSalary: 50000, staffingTbd: true }),
+    });
+    expect(changes.find((c) => c.label.includes("staff"))).toBeUndefined();
+  });
+});
+
+describe("summarizeDecisionChanges: evaluate_site", () => {
+  it("compares new monthly rent against detected baseline rent", () => {
+    const data = buildBaseModel({
+      schoolProfile: {
+        monthlyRent: 8000,
+        isPartialFirstYear: false,
+        year1OperatingMonths: 12,
+        debtIncluded: true,
+      },
+    });
+    const inputs: SiteInputs = { newMonthlyRent: 11500 };
+    const changes = summarizeDecisionChanges(data, { type: "evaluate_site", inputs });
+    const rent = changes.find((c) => c.label.toLowerCase().includes("rent (monthly"));
+    expect(rent).toBeDefined();
+    expect(rent!.before).toContain("$8,000");
+    expect(rent!.after).toContain("$11,500");
+    expect(rent!.kind).toBe("modified");
+  });
+
+  it("flags one-time fit-out as a new added expense row", () => {
+    const data = buildBaseModel();
+    const inputs: SiteInputs = { newMonthlyRent: 12000, oneTimeFitOut: 75000 };
+    const changes = summarizeDecisionChanges(data, { type: "evaluate_site", inputs });
+    const fitout = changes.find((c) => c.label.includes("fit-out"));
+    expect(fitout).toBeDefined();
+    expect(fitout!.kind).toBe("added");
+    expect(fitout!.after).toContain("$75,000");
+  });
+
+  it("includes effective-from year only when not Year 1", () => {
+    const data = buildBaseModel();
+    const inputs: SiteInputs = { newMonthlyRent: 10000, startYear: 3 };
+    const changes = summarizeDecisionChanges(data, { type: "evaluate_site", inputs });
+    expect(changes.find((c) => c.label === "Effective from")).toBeDefined();
+
+    const inputs1: SiteInputs = { newMonthlyRent: 10000, startYear: 1 };
+    const changes1 = summarizeDecisionChanges(data, { type: "evaluate_site", inputs: inputs1 });
+    expect(changes1.find((c) => c.label === "Effective from")).toBeUndefined();
+  });
+});
+
+describe("summarizeDecisionChanges: change_enrollment", () => {
+  it("lists per-year enrollment shifts with before/after counts", () => {
+    const data = buildBaseModel();
+    const inputs: EnrollmentChangeInputs = { enrollmentDelta: [0, 10, 0, -5, 0] };
+    const changes = summarizeDecisionChanges(data, { type: "change_enrollment", inputs });
+    const y2 = changes.find((c) => c.label === "Enrollment Year 2");
+    const y4 = changes.find((c) => c.label === "Enrollment Year 4");
+    expect(y2).toBeDefined();
+    expect(y2!.before).toBe("120 students");
+    expect(y2!.after).toContain("130 students");
+    expect(y2!.after).toContain("(+10)");
+    expect(y4).toBeDefined();
+    expect(y4!.before).toBe("160 students");
+    expect(y4!.after).toContain("155 students");
+    expect(y4!.after).toContain("(-5)");
+  });
+
+  it("omits years with zero delta", () => {
+    const data = buildBaseModel();
+    const changes = summarizeDecisionChanges(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0], retentionRate: 90 },
+    });
+    expect(changes.find((c) => c.label.startsWith("Enrollment Year"))).toBeUndefined();
+    expect(changes.find((c) => c.label === "Retention rate")).toBeDefined();
+  });
+
+  it("includes tuition delta when nonzero", () => {
+    const data = buildBaseModel();
+    const changes = summarizeDecisionChanges(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0], tuitionDeltaPerStudent: 500 },
+    });
+    const t = changes.find((c) => c.label.includes("Tuition per student"));
+    expect(t).toBeDefined();
+    expect(t!.after).toContain("$500");
+  });
 });
