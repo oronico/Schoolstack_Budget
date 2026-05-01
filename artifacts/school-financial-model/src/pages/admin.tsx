@@ -1428,17 +1428,34 @@ function sortCoachingSurfaces(
   });
 }
 
+// Resolve an admin-clickable URL for a repo-relative source path.
+//
+// When VITE_SOURCE_REPO_URL is set (e.g. "https://github.com/acme/repo/blob/main"
+// or "vscode://file/Users/me/checkouts/repo"), the link points at the
+// remote/editor target. When unset, we fall back to the same repo path
+// prefixed with "/" so the resulting <a href> is still a real, valid URL
+// that admins can right-click → "Copy link" — preserving the "links to
+// source file" contract even without configuration.
+function resolveSourceUrl(sourcePath: string): string {
+  const base = (
+    typeof import.meta !== "undefined" && import.meta.env?.VITE_SOURCE_REPO_URL
+  ) as string | undefined;
+  if (base && typeof base === "string" && base.length > 0) {
+    return `${base.replace(/\/+$/, "")}/${sourcePath.replace(/^\/+/, "")}`;
+  }
+  return `/${sourcePath.replace(/^\/+/, "")}`;
+}
+
 // Amber "looks dead" badge with a tooltip that quotes the exact threshold
-// numbers and points at the source file emitting the *_shown event so an
-// admin can jump straight to it when pruning copy (Task #410).
+// numbers and links to the file emitting the surface's *_shown event so
+// an admin can jump straight to it when pruning copy (Task #410).
 //
 // The trigger is a real <button> (not a styled <span>) so keyboard users
 // can focus the badge to read the tooltip via aria-describedby. The
-// source path is rendered as a focusable button inside the tooltip that
-// copies the repo-relative path to the clipboard — the most reliable
-// "deep link" we can offer without baking in a VCS host URL (works
-// whether the admin is in a local checkout, a Replit shell, or a remote
-// editor).
+// source path is rendered as a real <a href> anchor (primary affordance)
+// with a small copy-to-clipboard control beside it as a secondary
+// affordance for environments where the resolved URL doesn't open
+// directly (e.g. a Replit shell needs to paste the path locally).
 function LowEngagementBadge({
   surface,
   threshold,
@@ -1448,6 +1465,7 @@ function LowEngagementBadge({
 }) {
   const ratePct = (threshold.maxEngagementRate * 100).toFixed(0);
   const [copied, setCopied] = useState(false);
+  const sourceUrl = resolveSourceUrl(surface.sourcePath);
   const handleCopy = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.clipboard) return;
     navigator.clipboard.writeText(surface.sourcePath).then(
@@ -1486,18 +1504,27 @@ function LowEngagementBadge({
           retiring the copy.
         </p>
         <p className="mt-2">Source:</p>
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          data-testid={`low-engagement-source-${surface.key}`}
+          aria-label={`Open source file ${surface.sourcePath}`}
+          className="mt-1 inline-flex items-center gap-1 font-mono text-[11px] underline decoration-dotted underline-offset-2 hover:decoration-solid focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 rounded break-all"
+        >
+          {surface.sourcePath}
+          <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+        </a>
         <button
           type="button"
           onClick={handleCopy}
-          data-testid={`low-engagement-source-${surface.key}`}
+          data-testid={`low-engagement-copy-${surface.key}`}
           aria-label={`Copy source path ${surface.sourcePath}`}
-          className="mt-1 block w-full text-left font-mono text-[11px] underline decoration-dotted underline-offset-2 hover:decoration-solid focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 rounded break-all"
+          className="mt-1 block text-[10px] text-amber-200/80 underline decoration-dotted underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 rounded"
+          aria-live="polite"
         >
-          {surface.sourcePath}
+          {copied ? "Path copied" : "Copy path"}
         </button>
-        <p className="mt-1 text-[10px] text-amber-200/80" aria-live="polite">
-          {copied ? "Path copied to clipboard" : "Click path to copy"}
-        </p>
       </TooltipContent>
     </Tooltip>
   );
