@@ -2309,6 +2309,75 @@ const TRAINING_QUARTERLY_SEMINAR_LABELS: [string, string, string, string] = [
   "APRIL SEMINAR",
 ];
 
+// (2) CSN MONTHLY OFFICE HOURS — by Stakeholder Group.
+// The source workbook left this section as a banner-only summary, so the
+// stakeholder groups mirror the quarterly seminar grouping and each agenda
+// is explicitly marked "TBD by CSN" until CSN publishes monthly topics.
+const TRAINING_OFFICE_HOURS_INTRO =
+  "Monthly virtual office hours hosted by CSN for each stakeholder cohort. Specific monthly topics are published by CSN on a rolling basis — TBD by CSN.";
+
+interface TrainingOfficeHourGroup {
+  /** Stakeholder cohort label, e.g. "HEADMASTER OFFICE HOURS". */
+  stakeholder: string;
+  /** Cadence label, e.g. "Monthly". */
+  cadence: string;
+  /** Single-line bullet describing the cohort's standing call. */
+  bullet: string;
+}
+
+const TRAINING_OFFICE_HOUR_GROUPS: TrainingOfficeHourGroup[] = [
+  {
+    stakeholder: "HEADMASTER OFFICE HOURS",
+    cadence: "Monthly",
+    bullet:
+      "- Standing monthly call between CSN and the headmaster cohort to share leadership challenges, faculty development practices, and student formation strategies — specific monthly topics TBD by CSN",
+  },
+  {
+    stakeholder: "MARKETING / FUNDRAISING / ADMISSIONS OFFICE HOURS",
+    cadence: "Monthly",
+    bullet:
+      "- Standing monthly call between CSN and the marketing, fundraising, and admissions leads to share campaign tactics, gala planning, and recruiting funnel updates — specific monthly topics TBD by CSN",
+  },
+  {
+    stakeholder: "SCHOOL OPERATIONS OFFICE HOURS",
+    cadence: "Monthly",
+    bullet:
+      "- Standing monthly call between CSN and the operations leads to share calendar management, facilities, compliance, and database operations practice — specific monthly topics TBD by CSN",
+  },
+];
+
+// (3) SCHOOL SUCCESS MANAGER — Monthly Check-Ins.
+// Each CSN school is paired with a School Success Manager (SSM). The source
+// workbook listed only the section banner, so the agenda is documented here
+// as a recurring 1:1 with the cadence published by CSN.
+const TRAINING_SUCCESS_MANAGER_INTRO =
+  "Each CSN school is paired with a dedicated School Success Manager (SSM) who hosts a recurring 1:1 check-in with the headmaster. Specific monthly agenda topics are set by CSN — TBD by CSN.";
+
+interface TrainingSuccessManagerCheckIn {
+  /** Cadence label, e.g. "Monthly Standing 1:1". */
+  cadence: string;
+  /** Single-line bullet describing the check-in. */
+  bullet: string;
+}
+
+const TRAINING_SUCCESS_MANAGER_CHECK_INS: TrainingSuccessManagerCheckIn[] = [
+  {
+    cadence: "Monthly Standing 1:1",
+    bullet:
+      "- Standing 1:1 between the School Success Manager and the headmaster covering enrollment, faculty, fundraising, and operations health — specific monthly agenda topics TBD by CSN",
+  },
+  {
+    cadence: "Quarterly Goal Review",
+    bullet:
+      "- Quarterly review of progress against the school's annual objectives and CSN cadence milestones — specific quarterly agenda topics TBD by CSN",
+  },
+  {
+    cadence: "Annual Health Check",
+    bullet:
+      "- End-of-year review covering enrollment, faculty retention, fundraising totals, and operations posture before next year's planning cycle — specific agenda topics TBD by CSN",
+  },
+];
+
 const TRAINING_SEMINARS: TrainingSeminar[] = [
   {
     title: "HEADMASTER SEMINAR",
@@ -2705,6 +2774,37 @@ function buildTrainingSchedule(wb: ExcelJS.Workbook) {
   ws.getCell(`A${r}`).alignment = { horizontal: "center" };
   r += 1;
 
+  // Intro line explaining the office-hours cadence.
+  ws.getCell(`A${r}`).value = TRAINING_OFFICE_HOURS_INTRO;
+  ws.getCell(`A${r}`).font = { italic: true };
+  ws.getCell(`A${r}`).alignment = { wrapText: true, vertical: "top" };
+  ws.mergeCells(`A${r}:E${r}`);
+  ws.getRow(r).height = 30;
+  r += 1;
+
+  // Stakeholder-group header row: STAKEHOLDER GROUP | CADENCE | TOPICS.
+  ws.getCell(`A${r}`).value = "STAKEHOLDER GROUP";
+  ws.getCell(`B${r}`).value = "CADENCE";
+  ws.getCell(`C${r}`).value = "TOPICS";
+  ws.mergeCells(`C${r}:E${r}`);
+  hdr(ws, r, 5);
+  r += 1;
+
+  // One row per stakeholder cohort.
+  for (const group of TRAINING_OFFICE_HOUR_GROUPS) {
+    ws.getCell(`A${r}`).value = group.stakeholder;
+    ws.getCell(`A${r}`).font = { bold: true, color: { argb: NAVY } };
+    ws.getCell(`A${r}`).alignment = { vertical: "top", wrapText: true };
+    ws.getCell(`B${r}`).value = group.cadence;
+    ws.getCell(`B${r}`).alignment = { vertical: "top", horizontal: "center" };
+    const bulletCell = ws.getCell(`C${r}`);
+    bulletCell.value = group.bullet;
+    bulletCell.alignment = { wrapText: true, vertical: "top" };
+    ws.mergeCells(`C${r}:E${r}`);
+    ws.getRow(r).height = 48;
+    r += 1;
+  }
+
   // (3) SCHOOL SUCCESS MANAGER section header.
   r += 1;
   ws.mergeCells(`A${r}:E${r}`);
@@ -2716,6 +2816,34 @@ function buildTrainingSchedule(wb: ExcelJS.Workbook) {
   ws.mergeCells(`A${r}:E${r}`);
   ws.getCell(`A${r}`).alignment = { horizontal: "center" };
   r += 1;
+
+  // Intro line describing the SSM partnership.
+  ws.getCell(`A${r}`).value = TRAINING_SUCCESS_MANAGER_INTRO;
+  ws.getCell(`A${r}`).font = { italic: true };
+  ws.getCell(`A${r}`).alignment = { wrapText: true, vertical: "top" };
+  ws.mergeCells(`A${r}:E${r}`);
+  ws.getRow(r).height = 30;
+  r += 1;
+
+  // Cadence header row: CADENCE | AGENDA.
+  ws.getCell(`A${r}`).value = "CADENCE";
+  ws.getCell(`B${r}`).value = "AGENDA";
+  ws.mergeCells(`B${r}:E${r}`);
+  hdr(ws, r, 5);
+  r += 1;
+
+  // One row per check-in cadence.
+  for (const checkIn of TRAINING_SUCCESS_MANAGER_CHECK_INS) {
+    ws.getCell(`A${r}`).value = checkIn.cadence;
+    ws.getCell(`A${r}`).font = { bold: true, color: { argb: NAVY } };
+    ws.getCell(`A${r}`).alignment = { vertical: "top", wrapText: true };
+    const bulletCell = ws.getCell(`B${r}`);
+    bulletCell.value = checkIn.bullet;
+    bulletCell.alignment = { wrapText: true, vertical: "top" };
+    ws.mergeCells(`B${r}:E${r}`);
+    ws.getRow(r).height = 48;
+    r += 1;
+  }
 
   // Copyright line.
   r += 1;

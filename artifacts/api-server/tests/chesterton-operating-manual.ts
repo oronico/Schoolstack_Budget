@@ -472,6 +472,48 @@ expect(
   true,
   null,
 );
+expect(
+  "Training Office Hours section lists Headmaster cohort row verbatim",
+  containsVerbatim(training, "HEADMASTER OFFICE HOURS"),
+  true,
+  null,
+);
+expect(
+  "Training Office Hours section has verbatim Headmaster bullet marked TBD by CSN",
+  containsVerbatim(
+    training,
+    "- Standing monthly call between CSN and the headmaster cohort to share leadership challenges, faculty development practices, and student formation strategies — specific monthly topics TBD by CSN",
+  ),
+  true,
+  null,
+);
+expect(
+  "Training Office Hours section lists Marketing/Fundraising/Admissions cohort row verbatim",
+  containsVerbatim(training, "MARKETING / FUNDRAISING / ADMISSIONS OFFICE HOURS"),
+  true,
+  null,
+);
+expect(
+  "Training Office Hours section lists School Operations cohort row verbatim",
+  containsVerbatim(training, "SCHOOL OPERATIONS OFFICE HOURS"),
+  true,
+  null,
+);
+expect(
+  "Training School Success Manager section has verbatim Monthly Standing 1:1 cadence row",
+  containsVerbatim(training, "Monthly Standing 1:1"),
+  true,
+  null,
+);
+expect(
+  "Training School Success Manager section has verbatim monthly check-in bullet marked TBD by CSN",
+  containsVerbatim(
+    training,
+    "- Standing 1:1 between the School Success Manager and the headmaster covering enrollment, faculty, fundraising, and operations health — specific monthly agenda topics TBD by CSN",
+  ),
+  true,
+  null,
+);
 
 // Parent Handout tab — verbatim source: "6 - PARENT HANDOUT".
 const handout = wb.getWorksheet("Parent Handout")!;
