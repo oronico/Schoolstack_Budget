@@ -116,6 +116,7 @@ export function buildDefaultChestertonData(overrides: Partial<ChestertonData> = 
     benefitsFirstYearAmount: 0,
     attritionRate: 0.10,
     totalFundraisingGoal,
+    prospectConversionDivisor: 3,
     phaseEnrollment: DEFAULT_CHESTERTON_PHASE_ENROLLMENT.map(r => ({ ...r })),
     classesPerGrade: [...DEFAULT_CHESTERTON_CLASSES_PER_GRADE],
     salarySchedule: DEFAULT_CHESTERTON_SUBJECTS.map(r => ({ ...r })),

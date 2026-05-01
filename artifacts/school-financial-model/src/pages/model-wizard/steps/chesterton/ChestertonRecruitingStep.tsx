@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, Users, GraduationCap, Church } from "lucide-react";
-import { FormInput } from "@/components/ui/form-inputs";
+import { FormInput, FormSelect } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { buildDefaultChestertonData, totalEnrollmentForYear } from "@/lib/chesterton/template";
 import type { ChestertonGradeRow } from "../../schema";
@@ -50,8 +50,19 @@ export function ChestertonRecruitingStep() {
     | undefined;
   const totalProspects = useMemo(() => (rows || []).reduce((s, r) => s + (Number(r?.prospectiveStudents) || 0), 0), [rows]);
   const year1Need = useMemo(() => totalEnrollmentForYear(phaseEnrollment, "year1"), [phaseEnrollment]);
-  // CSN guideline: ~1-in-3 prospects convert, so projected enrollment ≈ prospects / 3.
-  const projectedEnrollment = Math.floor(totalProspects / 3);
+  // Founders pick the prospect-to-enrollment conversion rate as 1-in-N. The CSN
+  // rule of thumb is 1-in-3; stronger feeders may use 1-in-2 and lender stress
+  // tests may use 1-in-4 or 1-in-5. Fall back to 3 if the form value is missing
+  // or out-of-range so the math never divides by zero.
+  const conversionDivisorRaw = useWatch({ control, name: "chesterton.prospectConversionDivisor" }) as
+    | number
+    | string
+    | undefined;
+  const conversionDivisor = useMemo(() => {
+    const n = Number(conversionDivisorRaw);
+    return Number.isFinite(n) && n >= 2 ? Math.floor(n) : 3;
+  }, [conversionDivisorRaw]);
+  const projectedEnrollment = Math.floor(totalProspects / conversionDivisor);
   const enrollmentPct = year1Need > 0 ? (projectedEnrollment / year1Need) * 100 : 0;
   const enrollmentBarPct = Math.max(0, Math.min(100, enrollmentPct));
   const enrollmentColor = enrollmentPct >= 100 ? "bg-emerald-500" : enrollmentPct >= 75 ? "bg-primary" : "bg-amber-500";
@@ -97,7 +108,9 @@ export function ChestertonRecruitingStep() {
               <div className="text-xl font-bold text-foreground mt-1" data-testid="chesterton-recruiting-projected">
                 {projectedEnrollment.toLocaleString()} students
               </div>
-              <div className="text-xs text-muted-foreground">~1 in 3 prospects convert</div>
+              <div className="text-xs text-muted-foreground" data-testid="chesterton-recruiting-conversion-label">
+                ~1 in {conversionDivisor} prospects convert
+              </div>
             </div>
           </div>
           <div className="mt-3">
@@ -116,14 +129,39 @@ export function ChestertonRecruitingStep() {
               />
             </div>
           </div>
-          {totalProspects < year1Need * 3 && (
-            <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              The CSN guideline is roughly <strong>3× more prospects than seats</strong> — add about{" "}
-              <strong>{(year1Need * 3 - totalProspects).toLocaleString()}</strong> more prospects to feel confident hitting Year 1.
+          {totalProspects < year1Need * conversionDivisor && (
+            <div
+              className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+              data-testid="chesterton-recruiting-need-more-callout"
+            >
+              At a 1-in-{conversionDivisor} conversion rate you need roughly{" "}
+              <strong>{conversionDivisor}× more prospects than seats</strong> — add about{" "}
+              <strong>{(year1Need * conversionDivisor - totalProspects).toLocaleString()}</strong> more prospects to feel confident hitting Year 1.
             </div>
           )}
         </div>
       )}
+
+      <section data-testid="chesterton-recruiting-conversion-section">
+        <h3 className="text-lg font-bold mb-2">Prospect-to-Enrollment Conversion Rate</h3>
+        <p className="text-sm text-muted-foreground mb-3">
+          The CSN rule of thumb is roughly 1-in-3 prospects convert. Schools with strong feeder relationships often
+          do better; lenders sometimes ask you to stress-test a worse rate.
+        </p>
+        <div className="max-w-xs">
+          <FormSelect
+            name="chesterton.prospectConversionDivisor"
+            label="Conversion rate"
+            valueAsNumber
+            options={[
+              { label: "1-in-2 (strong feeder pipeline)", value: "2" },
+              { label: "1-in-3 (CSN rule of thumb)", value: "3" },
+              { label: "1-in-4 (cautious)", value: "4" },
+              { label: "1-in-5 (lender stress test)", value: "5" },
+            ]}
+          />
+        </div>
+      </section>
 
       <section>
         <div className="flex items-center justify-between mb-3">

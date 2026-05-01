@@ -686,6 +686,9 @@ export const chestertonSchema = z.object({
   benefitsFirstYearAmount: z.coerce.number().min(0).default(0),
   attritionRate: z.coerce.number().min(0).max(1).default(0.10),
   totalFundraisingGoal: z.coerce.number().min(0).default(0),
+  // Divisor for the recruiting "projected enrollment" math: 1-in-N prospects
+  // convert. Defaults to the CSN rule of thumb (1-in-3).
+  prospectConversionDivisor: z.coerce.number().int().min(2).max(10).default(3),
   phaseEnrollment: z.array(chestertonGradeRowSchema).optional(),
   classesPerGrade: z.array(z.coerce.number().min(0)).optional(),
   salarySchedule: z.array(chestertonSubjectRowSchema).optional(),

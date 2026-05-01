@@ -247,6 +247,68 @@ describe("Chesterton wizard step summaries", () => {
     expect(screen.getByTestId("chesterton-staffing-annual-payroll")).toHaveTextContent("$50,000");
   });
 
+  // Task #338: the prospect-to-enrollment conversion rate is configurable.
+  // Picking a different rate must rewire the projected enrollment, the
+  // coverage % and the "you need N× more prospects" callout in lockstep.
+  it("recruiting step recomputes projected/coverage/need-more callout when the conversion rate changes", async () => {
+    const user = userEvent.setup();
+    const seed = buildDefaultChestertonData();
+    const phase = (seed.phaseEnrollment ?? []).map((row, i) => ({
+      ...row,
+      year1: i === 0 ? 30 : 0,
+      year2: 0,
+      year3: 0,
+      year4: 0,
+      year5: 0,
+      year6: 0,
+    }));
+
+    render(
+      <HostForm
+        defaults={{
+          chesterton: {
+            ...seed,
+            phaseEnrollment: phase,
+            prospectConversionDivisor: 3,
+            recruitingPipeline: [
+              { id: "r1", source: "Feeder", prospectiveStudents: 60, notes: "" },
+              { id: "r2", source: "Homeschool", prospectiveStudents: 30, notes: "" },
+            ],
+          },
+        }}
+      >
+        <ChestertonRecruitingStep />
+      </HostForm>,
+    );
+
+    // Default 1-in-3: 90 prospects → projected 30, coverage 100%, no callout.
+    expect(screen.getByTestId("chesterton-recruiting-projected")).toHaveTextContent("30");
+    expect(screen.getByTestId("chesterton-recruiting-coverage-pct")).toHaveTextContent("100%");
+    expect(screen.getByTestId("chesterton-recruiting-conversion-label")).toHaveTextContent("1 in 3");
+    expect(screen.queryByTestId("chesterton-recruiting-need-more-callout")).toBeNull();
+
+    // Switch to a worse 1-in-5 conversion rate (lender stress test).
+    const select = screen.getByLabelText("Conversion rate", { selector: "select" }) as HTMLSelectElement;
+    await user.selectOptions(select, "5");
+
+    // 90 prospects / 5 = 18 projected, coverage = 60%, callout asks for
+    // (30 * 5) - 90 = 60 more prospects, label updates to "1 in 5".
+    expect(screen.getByTestId("chesterton-recruiting-projected")).toHaveTextContent("18");
+    expect(screen.getByTestId("chesterton-recruiting-coverage-pct")).toHaveTextContent("60%");
+    expect(screen.getByTestId("chesterton-recruiting-conversion-label")).toHaveTextContent("1 in 5");
+    const callout = screen.getByTestId("chesterton-recruiting-need-more-callout");
+    expect(callout).toHaveTextContent("5× more prospects");
+    expect(callout).toHaveTextContent("60");
+
+    // Switch to a better 1-in-2 conversion rate (strong feeder pipeline);
+    // projected jumps to 45, coverage clips at 100%, callout disappears.
+    await user.selectOptions(select, "2");
+    expect(screen.getByTestId("chesterton-recruiting-projected")).toHaveTextContent("45");
+    expect(screen.getByTestId("chesterton-recruiting-coverage-pct")).toHaveTextContent("150%");
+    expect(screen.getByTestId("chesterton-recruiting-conversion-label")).toHaveTextContent("1 in 2");
+    expect(screen.queryByTestId("chesterton-recruiting-need-more-callout")).toBeNull();
+  });
+
   it("recruiting step hides the summary panel when Year-1 enrollment is unset", () => {
     const seed = buildDefaultChestertonData();
     const phase = (seed.phaseEnrollment ?? []).map((row) => ({
