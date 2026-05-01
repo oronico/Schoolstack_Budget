@@ -194,3 +194,85 @@ test("Side-by-side decision comparison auto-fills, gates the PDF button on 2 col
   // Still 2 columns and no duplicates, so the PDF action stays available.
   await expect(section.getByTestId("decision-compare-download-pdf")).toBeVisible();
 });
+
+// Verifies the decision-comparison picker selection survives a page
+// refresh — Task #199. The founder picks a 3-column lineup (A + C + B in
+// that order), reloads, and we expect the same lineup to come back rather
+// than the default first-two-saved auto-seed.
+test("Decision comparison picker persists the lineup across reloads", async ({
+  page,
+  request,
+}) => {
+  const { token, modelId } = await seedScenarioFixture(request);
+  await primeAuthToken(page, token);
+
+  await page.goto(`/model/${modelId}/scenarios`);
+  const section = page.getByTestId("decision-comparison-section");
+  await expect(section).toBeVisible();
+
+  const pickerA = section.getByTestId("decision-compare-select-0");
+  const pickerB = section.getByTestId("decision-compare-select-1");
+  await expect(pickerA).toContainText(SCENARIO_A_NAME);
+  await expect(pickerB).toContainText(SCENARIO_B_NAME);
+
+  // Resolve the composite key for scenario C off the picker option list so
+  // the test doesn't have to reconstruct the `${name}|${createdAt}` shape.
+  const optionValueByName = async (
+    locator: ReturnType<typeof section.getByTestId>,
+    name: string,
+  ): Promise<string> => {
+    const opts = await locator.locator("option").all();
+    for (const opt of opts) {
+      const label = (await opt.textContent()) ?? "";
+      if (label.includes(name)) {
+        return (await opt.getAttribute("value")) ?? "";
+      }
+    }
+    return "";
+  };
+  const scenarioCValue = await optionValueByName(pickerB, SCENARIO_C_NAME);
+  expect(scenarioCValue, "scenario C should appear in the picker").toBeTruthy();
+
+  // Swap picker B to C, then add a third column and select B. Resulting
+  // lineup is [A, C, B] — distinct from the natural [A, B, C] auto-seed
+  // order so a reload that just re-runs the auto-seed would visibly fail.
+  await pickerB.selectOption(scenarioCValue);
+  await expect(pickerB).toContainText(SCENARIO_C_NAME);
+
+  await section.getByTestId("decision-compare-add").click();
+  const pickerC = section.getByTestId("decision-compare-select-2");
+  await expect(pickerC).toBeVisible();
+  const scenarioBValue = await optionValueByName(pickerC, SCENARIO_B_NAME);
+  expect(scenarioBValue, "scenario B should appear in the third picker").toBeTruthy();
+  await pickerC.selectOption(scenarioBValue);
+  await expect(pickerC).toContainText(SCENARIO_B_NAME);
+
+  // Wait for the debounced persist to land. The model PUT runs ~800ms
+  // after the last picker change; poll the model JSON until the persisted
+  // selection matches what we just picked so the reload reads the new
+  // value, not a stale cache.
+  const expectedSelectionLength = 3;
+  await expect
+    .poll(
+      async () => {
+        const res = await request.get(`/api/models/${modelId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok()) return -1;
+        const body = (await res.json()) as { data?: { decisionComparisonSelection?: string[] } };
+        return body.data?.decisionComparisonSelection?.length ?? 0;
+      },
+      { timeout: 5000, intervals: [200, 400, 800] },
+    )
+    .toBe(expectedSelectionLength);
+
+  // Reload — without persistence, the picker would snap back to [A, B] and
+  // drop the third column. With persistence, the [A, C, B] lineup we set
+  // before the reload should restore exactly.
+  await page.reload();
+  const reloadedSection = page.getByTestId("decision-comparison-section");
+  await expect(reloadedSection).toBeVisible();
+  await expect(reloadedSection.getByTestId("decision-compare-select-0")).toContainText(SCENARIO_A_NAME);
+  await expect(reloadedSection.getByTestId("decision-compare-select-1")).toContainText(SCENARIO_C_NAME);
+  await expect(reloadedSection.getByTestId("decision-compare-select-2")).toContainText(SCENARIO_B_NAME);
+});

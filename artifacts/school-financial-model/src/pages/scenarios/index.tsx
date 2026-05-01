@@ -1702,7 +1702,11 @@ export function ScenarioPage() {
   // `${name}|${createdAt}` composite key, so a deleted scenario simply
   // drops out of the selection without triggering a stale lookup.
   // Supports 2-4 columns; the user can add or remove columns within that range.
+  // Hydrated from `modelData.decisionComparisonSelection` on first load and
+  // persisted (debounced) whenever the founder edits the picker so the
+  // lineup survives a refresh / new session.
   const [decisionCompareKeys, setDecisionCompareKeys] = useState<string[]>([]);
+  const decisionCompareSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Hard cap so the comparison stays readable on a typical laptop screen.
   // Matches the column palette in ImpactSummary; raise both together.
   const MAX_DECISION_COMPARE = 4;
@@ -1783,6 +1787,16 @@ export function ScenarioPage() {
     };
   }, [saveTimeout]);
 
+  // Mirror the saveTimeout cleanup pattern for the decision-comparison
+  // picker so an in-flight debounced write doesn't fire after unmount.
+  useEffect(() => {
+    return () => {
+      if (decisionCompareSaveTimeoutRef.current) {
+        clearTimeout(decisionCompareSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (model && !initialized) {
       const modelData = model.data as FullModelData | undefined;
@@ -1791,6 +1805,20 @@ export function ScenarioPage() {
         return;
       }
       const existing = modelData?.scenarios;
+      // Restore the founder's last "Compare decisions side-by-side" picker
+      // lineup so refreshing or revisiting the page doesn't reset to the
+      // first two saved decisions. Stale keys (from scenarios deleted in a
+      // prior session) get filtered out at render time by `validKeys`, and
+      // a follow-up effect re-persists the cleaned list.
+      const persistedSelection = (modelData as Record<string, unknown> | undefined)
+        ?.decisionComparisonSelection as string[] | undefined;
+      if (Array.isArray(persistedSelection) && persistedSelection.length > 0) {
+        setDecisionCompareKeys(
+          persistedSelection
+            .filter((k): k is string => typeof k === "string")
+            .slice(0, 4),
+        );
+      }
       if (existing && existing.length > 0) {
         setScenarios(
           existing.map((s) => ({
@@ -1861,6 +1889,68 @@ export function ScenarioPage() {
     },
     [modelId, modelData, updateMutation, saveTimeout]
   );
+
+  // Debounced persist for the "Compare decisions" picker selection. Reads
+  // the freshest cached server state before merging so concurrent saves
+  // (e.g. a customScenario rename) don't get clobbered. An empty array is
+  // stored as `undefined` so the field doesn't accumulate noise on models
+  // that have never used the picker.
+  const persistDecisionCompareKeys = useCallback(
+    (updated: string[]) => {
+      if (!modelId) return;
+      if (decisionCompareSaveTimeoutRef.current) {
+        clearTimeout(decisionCompareSaveTimeoutRef.current);
+      }
+      decisionCompareSaveTimeoutRef.current = setTimeout(() => {
+        const fresh = queryClient.getQueryData<{ data?: Record<string, unknown> }>([
+          `/api/models/${modelId}`,
+        ]);
+        const freshData = (fresh?.data ?? modelData) as Record<string, unknown>;
+        updateMutation.mutate({
+          id: modelId,
+          data: {
+            data: {
+              ...freshData,
+              decisionComparisonSelection: updated.length > 0 ? updated : undefined,
+            } as Record<string, unknown>,
+          },
+        });
+      }, 800);
+    },
+    [modelId, modelData, updateMutation, queryClient]
+  );
+
+  // Single helper used by every picker mutation so state and persistence
+  // stay in lock-step. Wrapped (rather than calling both at the call site)
+  // to keep the picker handlers below simple.
+  const updateDecisionCompareKeys = useCallback(
+    (next: string[]) => {
+      setDecisionCompareKeys(next);
+      persistDecisionCompareKeys(next);
+    },
+    [persistDecisionCompareKeys]
+  );
+
+  // Reconcile the persisted selection against the live customScenarios
+  // list. When a saved scenario is deleted (or its decisionType cleared)
+  // the matching key disappears here too, and the cleaned list is
+  // re-persisted so the next session doesn't reload the stale entry.
+  useEffect(() => {
+    if (!initialized) return;
+    const customList = ((modelData as Record<string, unknown>).customScenarios as
+      | Array<{ name: string; createdAt: string; decisionType?: DecisionType }>
+      | undefined) || [];
+    const validKeys = new Set(
+      customList
+        .filter((c) => !!c.decisionType)
+        .map((c) => `${c.name}|${c.createdAt}`),
+    );
+    const filtered = decisionCompareKeys.filter((k) => validKeys.has(k));
+    if (filtered.length !== decisionCompareKeys.length) {
+      setDecisionCompareKeys(filtered);
+      persistDecisionCompareKeys(filtered);
+    }
+  }, [modelData, initialized, decisionCompareKeys, persistDecisionCompareKeys]);
 
   const addScenario = () => {
     if (scenarios.length >= 3) return;
@@ -2473,16 +2563,16 @@ export function ScenarioPage() {
           const setKeyAt = (idx: number, value: string) => {
             const next = [...effectiveKeys];
             next[idx] = value;
-            setDecisionCompareKeys(next);
+            updateDecisionCompareKeys(next);
           };
           const removeAt = (idx: number) => {
             if (effectiveKeys.length <= 2) return;
-            setDecisionCompareKeys(effectiveKeys.filter((_, i) => i !== idx));
+            updateDecisionCompareKeys(effectiveKeys.filter((_, i) => i !== idx));
           };
           const addColumn = () => {
             if (!canAddMore) return;
             const next = [...effectiveKeys, keyOf(remainingScenarios[0])];
-            setDecisionCompareKeys(next);
+            updateDecisionCompareKeys(next);
           };
 
           // Detect any duplicate selection so we can surface a clear warning

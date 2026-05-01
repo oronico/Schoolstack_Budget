@@ -732,6 +732,12 @@ export const fullModelSchema = z.object({
   sourcesAndUses: sourcesAndUsesSchema.optional(),
   scenarios: z.array(scenarioDefSchema).optional(),
   customScenarios: z.array(customScenarioSchema).optional(),
+  // Persisted "Compare decisions side-by-side" picker selection. Each entry
+  // is a `${name}|${createdAt}` composite key referencing a saved
+  // customScenario. Reconciled at render time against the current scenario
+  // list so deletions naturally drop out. Capped at 4 to mirror the
+  // MAX_DECISION_COMPARE limit on the picker UI.
+  decisionComparisonSelection: z.array(z.string()).max(4).optional(),
   covenantThresholds: covenantThresholdsSchema.optional(),
   budgetNarrative: budgetNarrativeSchema.optional(),
   assumptionFlagResponses: z.array(assumptionFlagResponseSchema).optional(),
