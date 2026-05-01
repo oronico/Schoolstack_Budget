@@ -2,10 +2,10 @@ import {
   createDoc, drawHeader, sectionTitle, subSection, bodyText,
   drawTable, drawFooter, docToBuffer, statusBadge, labelValue,
   fmtCurrency, ensureSpace, drawInsightCallout,
+  renderDecisionHistorySection,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
 import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport } from "./build-lender-packet";
-import type { DecisionHistoryItem } from "./build-decision-history";
 import type { PacketSection, PacketTable, LinkedMetric, PacketInsight } from "./packet-types";
 
 export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buffer> {
@@ -159,7 +159,10 @@ function renderBudgetNarrativeSection(doc: PDFDoc, narrative: BudgetNarrativeDat
 
 function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket) {
   if (section.id === "decision_history") {
-    renderDecisionHistory(doc, section, packet.decisionHistory);
+    renderDecisionHistorySection(doc, section, packet.decisionHistory, {
+      emptyStateHint:
+        "Once decisions are saved with a Pursued / Declined / On hold outcome inside the planner, they will be summarized here.",
+    });
     return;
   }
 
@@ -287,91 +290,6 @@ function drawFooterNote(doc: PDFDoc, text: string) {
   doc.font("Helvetica").fontSize(7).fillColor(BRAND.gray);
   doc.text(text, doc.page.margins.left, doc.y, { align: "left" });
   doc.moveDown(0.3);
-}
-
-function renderDecisionHistory(doc: PDFDoc, section: PacketSection, items: DecisionHistoryItem[]) {
-  sectionTitle(doc, section.title);
-
-  if (section.narrative) {
-    bodyText(doc, section.narrative);
-  }
-
-  if (items.length === 0) {
-    // Empty-state copy is already in the narrative; add a small hint and stop.
-    doc.moveDown(0.3);
-    doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.gray);
-    doc.text(
-      "Once decisions are saved with a Pursued / Declined / On hold outcome inside the planner, they will be summarized here.",
-      doc.page.margins.left,
-      doc.y,
-      { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
-    );
-    doc.moveDown(0.5);
-    return;
-  }
-
-  doc.moveDown(0.2);
-
-  for (const item of items) {
-    renderDecisionHistoryItem(doc, item);
-  }
-}
-
-function renderDecisionHistoryItem(doc: PDFDoc, item: DecisionHistoryItem) {
-  ensureSpace(doc, 70);
-
-  const accent = item.outcomeStatus === "pursued"
-    ? BRAND.teal
-    : item.outcomeStatus === "declined"
-      ? BRAND.darkGray
-      : BRAND.amber;
-  const indent = doc.page.margins.left + 12;
-  const w = doc.page.width - doc.page.margins.right - indent;
-
-  doc.save();
-  doc.roundedRect(doc.page.margins.left, doc.y, 4, 50, 1).fill(accent);
-  doc.restore();
-
-  doc.font("Helvetica-Bold").fontSize(10).fillColor(BRAND.navy);
-  doc.text(item.name, indent, doc.y, { width: w });
-
-  doc.font("Helvetica").fontSize(8).fillColor(accent);
-  doc.text(`${item.outcomeLabel.toUpperCase()}  ·  ${item.decisionTypeLabel}`, indent, doc.y, { width: w });
-
-  if (item.outcomeStatus === "pursued" && item.appliedNote) {
-    const noteColor = item.isPendingApply ? BRAND.amber : BRAND.green;
-    const prefix = item.isPendingApply ? "[ PENDING ] " : "[ APPLIED ] ";
-    doc.font("Helvetica-Bold").fontSize(8).fillColor(noteColor);
-    doc.text(prefix, indent, doc.y, { continued: true, width: w });
-    doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray);
-    doc.text(item.appliedNote);
-  }
-
-  if (item.bullets.length > 0) {
-    doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray);
-    doc.text(item.bullets.map((b) => `• ${b}`).join("    "), indent, doc.y, { width: w });
-  }
-
-  if (item.retrospective) {
-    doc.font("Helvetica-Bold").fontSize(8).fillColor(BRAND.navy);
-    doc.text("What happened: ", indent, doc.y, { continued: true, width: w });
-    doc.font("Helvetica").fontSize(8).fillColor(BRAND.black);
-    doc.text(item.retrospective, { width: w - 70 });
-  }
-
-  const stamps: string[] = [];
-  if (item.outcomeUpdatedAt) {
-    const d = new Date(item.outcomeUpdatedAt);
-    if (!Number.isNaN(d.getTime())) {
-      stamps.push(`Outcome logged ${d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`);
-    }
-  }
-  if (stamps.length > 0) {
-    doc.font("Helvetica").fontSize(7).fillColor(BRAND.gray);
-    doc.text(stamps.join("  ·  "), indent, doc.y, { width: w });
-  }
-
-  doc.moveDown(0.5);
 }
 
 function renderTable(doc: PDFDoc, table: PacketTable) {
