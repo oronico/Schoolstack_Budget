@@ -7,6 +7,7 @@ import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent, formatPerFte } from "@/lib/per-student-lens";
+import { highlightMatch } from "@/lib/text-highlight";
 import {
   DEFAULT_BENEFITS_RATE,
   DEFAULT_PAYROLL_TAX_RATE,
@@ -647,6 +648,15 @@ export function StaffingStep() {
                 const rowIndex = rows.indexOf(row);
                 const rowErrors = (errors as Record<string, unknown>)?.staffingRows as Record<string, Record<string, { message?: string }>> | undefined;
                 const thisRowErrors = rowErrors?.[rowIndex] as Record<string, { message?: string }> | undefined;
+                // Only pass a highlight query when the *role name* actually
+                // contains the filter text. If the row only matched because
+                // the category label matched (e.g., typing "Operations" with
+                // a row literally named "Janitor"), there's nothing to bold
+                // inside the role name and we degrade to a plain header.
+                const roleNameMatchesFilter =
+                  isFiltering &&
+                  (row.roleName || "").toLowerCase().includes(filterText);
+                const highlightQuery = roleNameMatchesFilter ? filter.trim() : "";
                 return (
                   <StaffCard
                     key={row.id}
@@ -660,6 +670,7 @@ export function StaffingStep() {
                     rowErrors={thisRowErrors}
                     schoolType={schoolType}
                     personaComfort={personaComfort}
+                    highlightQuery={highlightQuery}
                   />
                 );
               })}
@@ -738,6 +749,14 @@ interface StaffCardProps {
   rowErrors?: Record<string, { message?: string }>;
   schoolType?: string;
   personaComfort: FounderComfort | null;
+  /**
+   * When the staffing quick-finder is active and the founder's query text
+   * appears inside this row's `roleName`, the parent passes the trimmed
+   * query down so the card header can visually emphasize the match. Empty
+   * string (the default) means "no highlight" — either the finder is idle
+   * or this row only matched on its category label.
+   */
+  highlightQuery?: string;
 }
 
 // Per-row wage-base cap savings copy + the $1 sanity floor live in
@@ -758,6 +777,7 @@ function StaffCard({
   rowErrors,
   schoolType,
   personaComfort,
+  highlightQuery = "",
 }: StaffCardProps) {
   const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
   const isRatio = row.staffingMode === "ratio";
@@ -809,7 +829,9 @@ function StaffCard({
               <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             )}
             <span className="font-medium text-sm text-foreground truncate">
-              {row.roleName || "Untitled Role"}
+              {highlightQuery && row.roleName
+                ? highlightMatch(row.roleName, highlightQuery)
+                : row.roleName || "Untitled Role"}
             </span>
             <span className="text-xs text-muted-foreground flex-shrink-0">
               {EMPLOYMENT_TYPE_LABELS[row.employmentType]} · {isRatio ? `${displayFte} FTE (ratio)` : `${row.fte} FTE`}

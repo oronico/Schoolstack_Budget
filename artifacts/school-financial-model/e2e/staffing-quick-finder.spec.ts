@@ -291,24 +291,61 @@ test("Quick-finder appears for large rosters and narrows the visible list", asyn
   await expect(finder).toContainText(/1 of 50/);
 
   // The matching row card is rendered; non-matching rows are not.
-  await expect(
-    page.getByRole("button", { name: /Lead Math Teacher/ }),
-  ).toBeVisible();
+  const mathCard = page.getByRole("button", { name: /Lead Math Teacher/ });
+  await expect(mathCard).toBeVisible();
   await expect(
     page.getByRole("button", { name: /Counselor 1/ }),
   ).toHaveCount(0);
+
+  // Task #346: the matched substring inside the role name is visually
+  // emphasized via a <mark data-testid="match-highlight"> wrapper. The
+  // highlight should only render inside the role-name span, the highlighted
+  // text should preserve the source casing ("Math", not "math"), and the
+  // surrounding role-name text ("Lead " / " Teacher") should remain
+  // un-marked so the rest of the header still reads normally.
+  const highlight = mathCard.getByTestId("match-highlight");
+  await expect(highlight).toHaveCount(1);
+  await expect(highlight).toHaveText("Math");
 
   // Filtering by a category label keyword shows the whole category.
   await input.fill("Operations");
   // Operations has 4 rows; "Operations Manager" also matches each role
   // name, so the visible count is the full operations group (4).
   await expect(finder).toContainText(/4 of 50/);
-  await expect(
-    page.getByRole("button", { name: /Operations Manager 1/ }),
-  ).toBeVisible();
+  const opsCard = page.getByRole("button", { name: /Operations Manager 1/ });
+  await expect(opsCard).toBeVisible();
   await expect(
     page.getByRole("button", { name: /Lead Math Teacher/ }),
   ).toHaveCount(0);
+  // Each Operations row's name *also* contains "Operations", so every
+  // visible card in this filter result should carry the highlight wrapper.
+  await expect(
+    page.getByTestId("match-highlight").filter({ hasText: "Operations" }),
+  ).toHaveCount(4);
+
+  // Counselor rows match the filter "Counselor" purely on role name
+  // (their category label is "Student Support"). Confirm the highlight
+  // still renders for that case so we know the helper is wired up to the
+  // role name and not just to the category-driven match path.
+  await input.fill("Counselor");
+  await expect(finder).toContainText(/6 of 50/);
+  await expect(
+    page.getByTestId("match-highlight").filter({ hasText: "Counselor" }),
+  ).toHaveCount(6);
+
+  // When the founder's query matches *only* on the category label and not
+  // on any role name, no highlight wrapper should render — the role-name
+  // header degrades cleanly to plain text. "Student Support" is a category
+  // label; none of the seeded role names contain that substring (the
+  // counselors are literally just "Counselor 1".."Counselor 6"), so we
+  // should see the 6 support rows without any highlight wrappers inside
+  // those cards.
+  await input.fill("Student Support");
+  await expect(finder).toContainText(/6 of 50/);
+  await expect(
+    page.getByRole("button", { name: /Counselor 1/ }),
+  ).toBeVisible();
+  await expect(page.getByTestId("match-highlight")).toHaveCount(0);
 
   // Clearing the filter restores all rows.
   await page.getByRole("button", { name: /clear filter/i }).first().click();
