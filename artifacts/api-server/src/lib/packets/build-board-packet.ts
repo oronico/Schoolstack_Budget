@@ -11,6 +11,11 @@ import {
   computeReturningStudents,
   computeTotalFTE,
 } from "../workbook-helpers";
+import {
+  computeForecastAccuracy,
+  type ForecastAccuracyRollup,
+  type DecisionEngineModelData,
+} from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
 import { buildCashRunway, type CashRunwayView } from "./build-cash-runway";
 import { buildDecisionHistory, type DecisionHistoryItem } from "./build-decision-history";
@@ -72,6 +77,10 @@ export interface BoardPacket extends PacketData {
   boardNarrative: BoardNarrativeData;
   boardFlaggedAssumptions: BoardFlaggedAssumption[];
   decisionHistory: DecisionHistoryItem[];
+  // Projected-vs-actual roll-up across every Pursued saved scenario that has
+  // realized actuals captured. Empty arrays when no eligible scenarios exist
+  // — the PDF renderer skips the section gracefully in that case (Task #216).
+  forecastAccuracy: ForecastAccuracyRollup;
 }
 
 const BOARD_PACKET_SECTIONS: SectionId[] = [
@@ -167,6 +176,13 @@ export function buildBoardPacket(
     });
 
   const decisionHistory = buildDecisionHistory(modelData);
+  // Forecast accuracy roll-up — same shared engine the planner UI uses, so
+  // the founder, lender, and board see identical projected-vs-actual numbers.
+  // Cast: api-server's strict zod-typed `ModelData` is a structural subset
+  // of finance's permissive `FullModelData` (which uses index signatures on
+  // its sub-shapes); routing through `unknown` matches the convention used
+  // by every other api-server → finance call site in this folder.
+  const forecastAccuracy = computeForecastAccuracy(modelData as unknown as DecisionEngineModelData);
 
   return {
     ...basePacket,
@@ -179,6 +195,7 @@ export function buildBoardPacket(
     boardNarrative,
     boardFlaggedAssumptions,
     decisionHistory,
+    forecastAccuracy,
   };
 }
 

@@ -8,6 +8,7 @@ import {
 import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport } from "./build-lender-packet";
 import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, PacketTable, LinkedMetric, PacketInsight } from "./packet-types";
+import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 
 export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buffer> {
   const doc = createDoc();
@@ -30,6 +31,14 @@ export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buf
 
     renderSection(doc, section, packet);
   }
+
+  // Forecast accuracy lives after the listed sections — it summarizes the
+  // founder's track record across decisions and complements the decision
+  // history block. Per Task #216 the section is omitted gracefully (no
+  // title, no placeholder copy) when no Pursued saved scenarios with
+  // realized actuals exist — first-time founders without a track record
+  // shouldn't get a half-empty section in their lender packet.
+  renderForecastAccuracySection(doc, packet.forecastAccuracy, "lender", true);
 
   drawFooter(doc);
   return docToBuffer(doc);

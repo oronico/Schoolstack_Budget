@@ -20,6 +20,7 @@
     "test:cross-engine": "tsx ./tests/cross-engine-test.ts",
     "test:decision-history": "tsx ./tests/decision-history.ts",
     "test:decision-history-pdf": "tsx ./tests/decision-history-pdf.ts",
+    "test:forecast-accuracy-pdf": "tsx ./tests/forecast-accuracy-pdf.ts",
     "test:decision-comparison-pdf-route": "tsx ./tests/decision-comparison-pdf-route.ts",
     "test:shared-decision-comparison-pdf-route": "tsx ./tests/shared-decision-comparison-pdf-route.ts",
     "test:lender-packet-pdf-route": "tsx ./tests/lender-packet-pdf-route.ts",

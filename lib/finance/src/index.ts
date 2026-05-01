@@ -128,6 +128,22 @@ export {
 export { buildDecisionBullets as buildDecisionFlowBullets } from "./decision-engine/decision-flows.js";
 
 export {
+  ACCURACY_METRICS,
+  computeForecastAccuracy,
+  describeTendency,
+  hasComparableActuals,
+  selectAccuracyScenarios,
+  type AccuracyMetricKey,
+  type AccuracyMetricMeta,
+  type ForecastAccuracyAggregate,
+  type ForecastAccuracyEntry,
+  type ForecastAccuracyRollup,
+  type MetricDelta,
+  type ScenarioActualsLike,
+  type ScenarioLike,
+} from "./decision-engine/forecast-accuracy.js";
+
+export {
   buildActualsSuggestion,
   type ActualsSuggestion,
   type ActualsSuggestionField,

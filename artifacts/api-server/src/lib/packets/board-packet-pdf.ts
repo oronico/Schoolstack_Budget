@@ -7,6 +7,7 @@ import {
 } from "../pdf-utils.js";
 import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView, BoardNarrativeData, BoardFlaggedAssumption } from "./build-board-packet";
 import type { PacketSection, PacketTable, LinkedMetric, PacketInsight } from "./packet-types";
+import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 
 export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffer> {
   const doc = createDoc();
@@ -47,6 +48,13 @@ export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffe
   if (packet.scenarioSnapshots.length > 0) {
     renderScenarioComparison(doc, packet.scenarioSnapshots);
   }
+
+  // Forecast accuracy roll-up for the board: shows projected vs. actual on
+  // the decisions we pursued so trustees can calibrate confidence in the
+  // current forecast. Omitted entirely when there are no comparable
+  // scenarios — boards don't need a "no data" placeholder cluttering the
+  // packet.
+  renderForecastAccuracySection(doc, packet.forecastAccuracy, "board", true);
 
   drawFooter(doc);
   return docToBuffer(doc);
