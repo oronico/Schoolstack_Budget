@@ -375,6 +375,145 @@ router.get(
   },
 );
 
+// Coaching funnel — paired *_shown / *_engaged / *_dismissed counts for
+// each major coach surface over the last 30 days. The internal coaching
+// dashboard renders this as a horizontal funnel bar per surface so we
+// can see, at a glance, which coach lines are reaching founders and
+// which are being skipped or shown but ignored. Only basics/extra
+// founders ever emit these events; advanced-mode users are silent.
+const COACHING_FUNNEL_SURFACES: Array<{
+  key: string;
+  label: string;
+  shown: string;
+  engaged: string;
+  dismissed?: string;
+}> = [
+  {
+    key: "dashboard_launcher_coach",
+    label: "Dashboard launcher coach",
+    shown: "dashboard_launcher_coach_shown",
+    engaged: "dashboard_launcher_coach_engaged",
+  },
+  {
+    key: "things_changed_coach",
+    label: "Things-have-changed banner",
+    shown: "things_changed_coach_shown",
+    engaged: "things_changed_coach_engaged",
+  },
+  {
+    key: "decision_why_explainer",
+    label: "Decision flow Why callout",
+    shown: "decision_why_explainer_shown",
+    engaged: "decision_why_explainer_engaged",
+  },
+  {
+    key: "impact_kpi_nudge",
+    label: "Impact summary KPI nudge",
+    shown: "impact_kpi_nudge_shown",
+    engaged: "impact_kpi_nudge_engaged",
+  },
+  {
+    key: "save_action_apply_reminder",
+    label: "Save-action Apply reminder",
+    shown: "save_action_apply_reminder_shown",
+    engaged: "save_action_apply_reminder_engaged",
+    dismissed: "save_action_apply_reminder_dismissed",
+  },
+  {
+    key: "accounting_export_lesson",
+    label: "Accounting export lesson",
+    shown: "accounting_export_lesson_shown",
+    engaged: "accounting_export_lesson_engaged",
+    dismissed: "accounting_export_lesson_dismissed",
+  },
+  {
+    key: "accounting_export_post_upload_coach",
+    label: "Post-upload coach line",
+    shown: "accounting_export_post_upload_coach_shown",
+    engaged: "accounting_export_post_upload_coach_engaged",
+    dismissed: "accounting_export_post_upload_coach_dismissed",
+  },
+  {
+    key: "actuals_coach_intro",
+    label: "Actuals coach intro",
+    shown: "actuals_coach_intro_shown",
+    engaged: "actuals_coach_intro_engaged",
+  },
+  {
+    key: "actuals_variance_nudge",
+    label: "Actuals variance nudge",
+    shown: "actuals_variance_nudge_shown",
+    engaged: "actuals_variance_nudge_engaged",
+  },
+];
+
+router.get(
+  "/admin/coaching-funnel",
+  authMiddleware,
+  adminMiddleware,
+  async (_req: AuthRequest, res) => {
+    try {
+      // 30-day rolling window. We deliberately do NOT persist per-day
+      // rollups — the route just reads raw events each time so the
+      // funnel stays "ephemeral" (Task #285) and disappears as old
+      // events age out.
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      const allEventNames = COACHING_FUNNEL_SURFACES.flatMap((s) =>
+        s.dismissed ? [s.shown, s.engaged, s.dismissed] : [s.shown, s.engaged],
+      );
+
+      // Defensive server-side guard: even though every coach surface
+      // gates emission on `guidanceLevel !== "advanced"` client-side, we
+      // also exclude any rows whose metadata reports advanced here so a
+      // future client regression can't silently pollute the funnel
+      // (Task #285 acceptance: advanced-mode founders emit nothing).
+      const rows = await db
+        .select({
+          eventName: eventsTable.eventName,
+          count: count(),
+        })
+        .from(eventsTable)
+        .where(
+          and(
+            inArray(eventsTable.eventName, allEventNames),
+            gte(eventsTable.createdAt, since),
+            sql`(${eventsTable.metadata}->>'guidanceLevel') is distinct from 'advanced'`,
+          ),
+        )
+        .groupBy(eventsTable.eventName);
+
+      const counts = new Map<string, number>();
+      for (const r of rows) counts.set(r.eventName, r.count);
+
+      const surfaces = COACHING_FUNNEL_SURFACES.map((s) => {
+        const shown = counts.get(s.shown) || 0;
+        const engaged = counts.get(s.engaged) || 0;
+        const dismissed = s.dismissed ? counts.get(s.dismissed) || 0 : null;
+        return {
+          key: s.key,
+          label: s.label,
+          shown,
+          engaged,
+          dismissed,
+          engagementRate: shown > 0 ? engaged / shown : 0,
+          dismissalRate:
+            s.dismissed && shown > 0 ? (dismissed ?? 0) / shown : null,
+        };
+      });
+
+      res.json({
+        windowDays: 30,
+        since: since.toISOString(),
+        surfaces,
+      });
+    } catch (err) {
+      console.error("Coaching funnel analytics error:", err);
+      res.status(500).json({ error: "Failed to fetch coaching funnel data." });
+    }
+  },
+);
+
 router.get(
   "/admin/reviews",
   authMiddleware,

@@ -44,7 +44,20 @@ export function WhyStep({ decisionType, intro, prepareList, narrative, setNarrat
       guidanceLevel,
     });
   }, [showCoach, coachExplainer, decisionType, guidanceLevel]);
+  // Engagement signal: tapping any of the "common reasons" chips counts as
+  // the founder acting on the WhyThisMatters callout (the chips are sourced
+  // from the same explainer body). Fired once per mount.
+  const engagedRef = useRef(false);
   const toggleChip = (chip: string) => {
+    if (showCoach && coachExplainer && !engagedRef.current) {
+      engagedRef.current = true;
+      trackCoachingEvent("decision_why_explainer_engaged", {
+        decisionType,
+        explainerId: coachExplainer.id,
+        guidanceLevel,
+        chip,
+      });
+    }
     const lines = narrative.split("\n").map((l) => l.trim()).filter(Boolean);
     const tag = `• ${chip}`;
     if (lines.includes(tag)) {

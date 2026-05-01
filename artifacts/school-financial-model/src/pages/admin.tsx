@@ -31,6 +31,7 @@ import {
   ArrowLeft,
   Eye,
   MousePointerClick,
+  Compass,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -1263,13 +1264,129 @@ function ReviewsSection() {
   );
 }
 
+interface CoachingFunnelSurface {
+  key: string;
+  label: string;
+  shown: number;
+  engaged: number;
+  // null when this surface has no dismissable affordance (e.g. dashboard
+  // launcher coach is just a subtitle — the "click the card" action is the
+  // engagement signal and there's nothing explicit to dismiss).
+  dismissed: number | null;
+  engagementRate: number;
+  dismissalRate: number | null;
+}
+
+interface CoachingFunnelResponse {
+  windowDays: number;
+  since: string;
+  surfaces: CoachingFunnelSurface[];
+}
+
+// Coaching funnel — paired shown / engaged / dismissed counts per coach
+// surface over the last 30 days. Lets us scan, at a glance, which coach
+// lines actually land for basics/extra founders and which we could rip
+// out without anyone noticing. Powered by GET /api/admin/coaching-funnel
+// which reads raw events on each request (no rollups stored), so the
+// chart is intentionally ephemeral and ages out as old events fall out
+// of the 30-day window.
+function CoachingFunnelSection() {
+  const [data, setData] = useState<CoachingFunnelResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/admin/coaching-funnel");
+        if (!res.ok) throw new Error("Failed to fetch coaching funnel");
+        const json = (await res.json()) as CoachingFunnelResponse;
+        if (!cancelled) setData(json);
+      } catch {
+        if (!cancelled) setError("Failed to load coaching funnel data.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+        <p className="text-destructive">{error || "No data."}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-start justify-between mb-2 gap-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2">
+              <Compass className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">
+                Coach surface funnel
+              </h2>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Last {data.windowDays} days &middot; basics &amp; extra founders only.
+              Advanced-mode users emit nothing for these surfaces.
+            </p>
+          </div>
+        </div>
+
+        {data.surfaces.length === 0 ? (
+          <p className="text-sm text-muted-foreground mt-4">No coaching events yet.</p>
+        ) : (
+          <div className="space-y-6 mt-6">
+            {data.surfaces.map((s) => (
+              <div key={s.key} className="space-y-2 border-b border-border/40 last:border-0 pb-5 last:pb-0">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <span className="font-semibold text-foreground">{s.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Engaged {(s.engagementRate * 100).toFixed(0)}%
+                    {s.dismissalRate !== null && (
+                      <> &middot; Dismissed {(s.dismissalRate * 100).toFixed(0)}%</>
+                    )}
+                  </span>
+                </div>
+                <FunnelBar label="Shown" value={s.shown} maxValue={s.shown} />
+                <FunnelBar label="Engaged" value={s.engaged} maxValue={s.shown} />
+                {s.dismissed !== null && (
+                  <FunnelBar label="Dismissed" value={s.dismissed} maxValue={s.shown} />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function AdminPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"analytics" | "feedback" | "errors" | "reviews">("analytics");
+  const [activeTab, setActiveTab] = useState<
+    "analytics" | "feedback" | "errors" | "reviews" | "coaching"
+  >("analytics");
 
   useEffect(() => {
     async function fetchAnalytics() {
@@ -1382,6 +1499,17 @@ export function AdminPage() {
               Reviews
             </button>
             <button
+              onClick={() => setActiveTab("coaching")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "coaching"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Compass className="h-4 w-4" />
+              Coaching
+            </button>
+            <button
               onClick={() => setActiveTab("errors")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === "errors"
@@ -1399,6 +1527,8 @@ export function AdminPage() {
           <ErrorsSection />
         ) : activeTab === "reviews" ? (
           <ReviewsSection />
+        ) : activeTab === "coaching" ? (
+          <CoachingFunnelSection />
         ) : activeTab === "feedback" ? (
           <FeedbackSection />
         ) : (

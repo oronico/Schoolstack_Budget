@@ -340,6 +340,32 @@ const ALLOWED_EVENTS = new Set([
   "founder_persona_prompt_shown",
   "founder_persona_changed",
   "cta_attributed_signup",
+  // Coach surface *_shown events. The /admin/coaching-funnel route
+  // pairs each of these with its *_engaged / *_dismissed counterpart
+  // (Task #285) to render shown vs engaged vs dismissed totals over a
+  // 30-day window. Advanced-mode founders never emit these.
+  "dashboard_launcher_coach_shown",
+  "dashboard_launcher_coach_engaged",
+  "things_changed_coach_shown",
+  "things_changed_coach_engaged",
+  "decision_why_explainer_shown",
+  "decision_why_explainer_engaged",
+  "impact_kpi_nudge_shown",
+  "impact_kpi_nudge_engaged",
+  "save_action_apply_reminder_shown",
+  "save_action_apply_reminder_engaged",
+  "save_action_apply_reminder_dismissed",
+  "accounting_export_lesson_shown",
+  "accounting_export_lesson_engaged",
+  "accounting_export_lesson_dismissed",
+  "accounting_export_post_upload_coach_shown",
+  "accounting_export_post_upload_coach_engaged",
+  "accounting_export_post_upload_coach_dismissed",
+  "actuals_coach_intro_shown",
+  "actuals_coach_intro_engaged",
+  "actuals_variance_nudge_shown",
+  "actuals_variance_nudge_engaged",
+  "whatif_link_clicked",
 ]);
 
 router.post("/auth/track", authMiddleware, async (req: AuthRequest, res) => {

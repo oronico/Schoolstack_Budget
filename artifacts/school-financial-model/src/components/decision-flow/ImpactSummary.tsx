@@ -156,6 +156,11 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
+    // Advanced-mode founders never see the WhatIfLink coach nudge below
+    // (the link is hidden for advanced), so we silence the *_shown event
+    // for them too — keeps the /admin/coaching-funnel impressions
+    // matched to actual rendered surfaces (Task #285).
+    if (guidanceLevel === "advanced") return;
     if (kpiNudges.length === 0) return;
     const key = kpiNudges.map((n) => n.key).join(",");
     if (trackedRef.current === key) return;

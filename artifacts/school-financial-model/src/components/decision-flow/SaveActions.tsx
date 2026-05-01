@@ -57,6 +57,49 @@ export function SaveActions({
     });
   }, [showApplyReminder, decisionType, guidanceLevel]);
 
+  // Engagement / dismissal pairing for the apply reminder. Engagement = the
+  // founder clicked "Apply to my model" while the reminder was visible
+  // (they read it and proceeded anyway). Dismissal = they hovered away or
+  // moved focus elsewhere after the reminder appeared without ever clicking
+  // Apply (treated as "shown but not converted"). Both are fired once per
+  // mount so the funnel measures unique reminders, not repeated hovers.
+  const reminderShownRef = useRef(false);
+  const engagedRef = useRef(false);
+  const dismissedRef = useRef(false);
+  useEffect(() => {
+    if (showApplyReminder) reminderShownRef.current = true;
+  }, [showApplyReminder]);
+  const handleSave = (action: SaveAction) => {
+    if (
+      action === "apply" &&
+      showCoach &&
+      reminderShownRef.current &&
+      !engagedRef.current
+    ) {
+      engagedRef.current = true;
+      trackCoachingEvent("save_action_apply_reminder_engaged", {
+        decisionType,
+        guidanceLevel,
+      });
+    } else if (
+      action !== "apply" &&
+      showCoach &&
+      reminderShownRef.current &&
+      !dismissedRef.current &&
+      !engagedRef.current
+    ) {
+      // The founder saw the apply reminder but ultimately picked a
+      // non-apply action (planner / save-later) — treat as dismissed.
+      dismissedRef.current = true;
+      trackCoachingEvent("save_action_apply_reminder_dismissed", {
+        decisionType,
+        guidanceLevel,
+        chosenAction: action,
+      });
+    }
+    void onSave(action);
+  };
+
   // Auto-populate the scenario name with the suggested default the first time
   // the user lands on the save step, so the action tiles are immediately
   // usable. The user can still edit or clear the name; we only fill it once.
@@ -122,7 +165,7 @@ export function SaveActions({
           onPointerLeave={() => setHover((h) => (h === "apply" ? null : h))}
           onFocus={() => setHover("apply")}
           onBlur={() => setHover((h) => (h === "apply" ? null : h))}
-          onClick={() => { setHover("apply"); onSave("apply"); }}
+          onClick={() => { setHover("apply"); handleSave("apply"); }}
         />
         <ActionTile
           testid="save-action-planner"
@@ -141,7 +184,7 @@ export function SaveActions({
           onPointerLeave={() => setHover((h) => (h === "planner" ? null : h))}
           onFocus={() => setHover("planner")}
           onBlur={() => setHover((h) => (h === "planner" ? null : h))}
-          onClick={() => { setHover("planner"); onSave("planner"); }}
+          onClick={() => { setHover("planner"); handleSave("planner"); }}
         />
         <ActionTile
           testid="save-action-later"
@@ -156,7 +199,7 @@ export function SaveActions({
           onPointerLeave={() => setHover((h) => (h === "later" ? null : h))}
           onFocus={() => setHover("later")}
           onBlur={() => setHover((h) => (h === "later" ? null : h))}
-          onClick={() => { setHover("later"); onSave("later"); }}
+          onClick={() => { setHover("later"); handleSave("later"); }}
         />
       </div>
 

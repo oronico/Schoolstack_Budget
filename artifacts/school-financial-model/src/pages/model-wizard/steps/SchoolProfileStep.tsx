@@ -578,6 +578,18 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
       guidanceLevel,
     });
   }, [showCoach, exportData, guidanceLevel]);
+
+  // Engagement / dismissal pairing for the lesson + post-upload coach
+  // line. Each surface fires its *_engaged or *_dismissed event at most
+  // once per mount so the funnel measures unique founders, not raw
+  // clicks (replace + remove can both fire repeatedly during the same
+  // session). Advanced founders never see these surfaces, so we gate on
+  // `showCoach` to keep the analytics signal aligned with what's
+  // actually rendered.
+  const lessonEngagedRef = useRef(false);
+  const lessonDismissedRef = useRef(false);
+  const postUploadEngagedRef = useRef(false);
+  const postUploadDismissedRef = useRef(false);
   // Brief amber ring shown when the founder lands here from the saved-scenario
   // "Replace export" deep-link, so the upload section is visually called out
   // after the scroll-into-view. Cleared after a few seconds so it doesn't
@@ -639,6 +651,36 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
   const triggerPicker = () => {
     setError(null);
     fileInputRef.current?.click();
+  };
+
+  // Engagement signal for the upload-button click while the inline
+  // micro-lesson card is on screen — the founder read the lesson and
+  // proceeded to upload. Fires only when the lesson is currently visible
+  // (no exportData yet means the lesson is rendered) so we don't
+  // double-count Replace clicks as fresh lesson engagements.
+  const triggerPickerFromLesson = () => {
+    if (showCoach && !lessonEngagedRef.current) {
+      lessonEngagedRef.current = true;
+      trackCoachingEvent("accounting_export_lesson_engaged", {
+        guidanceLevel,
+      });
+    }
+    triggerPicker();
+  };
+
+  // Engagement signal for the post-upload coach line: clicking "Replace"
+  // means the founder read the coach line ("we recognized X — map them in
+  // the next step") and decided to fix the export instead. Fires once per
+  // mount so retries don't spam the funnel.
+  const triggerPickerFromPostUpload = () => {
+    if (showCoach && !postUploadEngagedRef.current) {
+      postUploadEngagedRef.current = true;
+      trackCoachingEvent("accounting_export_post_upload_coach_engaged", {
+        guidanceLevel,
+        action: "replace",
+      });
+    }
+    triggerPicker();
   };
 
   const handleFile = async (file: File) => {
@@ -728,6 +770,21 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
   // an accidental remove). The wizard's autosave picks the cleared value
   // up on the next render, so we don't need to call any mutation here.
   const removeUpload = () => {
+    // Removing the upload while the post-upload coach line is on screen is
+    // the clearest dismissal signal we have for that surface — the founder
+    // saw the coach hint and chose to clear the export rather than map it.
+    if (
+      showCoach &&
+      exportData &&
+      postUploadTrackedRef.current &&
+      !postUploadDismissedRef.current
+    ) {
+      postUploadDismissedRef.current = true;
+      trackCoachingEvent("accounting_export_post_upload_coach_dismissed", {
+        guidanceLevel,
+        action: "remove",
+      });
+    }
     setError(null);
     const priorExport = exportData;
     setValue("accountingExport", undefined, { shouldDirty: true });
@@ -792,10 +849,18 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
               checkTrigger: () => true,
             }}
             onDismiss={() => {
-              // No-op: the lesson is contextual to this uploader and is
-              // re-shown each time the founder revisits the step. We rely
-              // on the parent's containerRef + highlight to hint that the
-              // section is here when needed.
+              // The lesson is contextual to this uploader and is re-shown
+              // each time the founder revisits the step (the parent's
+              // containerRef + highlight hint that the section is here
+              // when needed), so we don't persist anything locally —
+              // but we do record the dismissal once per mount so the
+              // coaching funnel can compare shown vs dismissed.
+              if (showCoach && !lessonDismissedRef.current) {
+                lessonDismissedRef.current = true;
+                trackCoachingEvent("accounting_export_lesson_dismissed", {
+                  guidanceLevel,
+                });
+              }
             }}
           />
         </div>
@@ -811,7 +876,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
       {!exportData ? (
         <button
           type="button"
-          onClick={triggerPicker}
+          onClick={triggerPickerFromLesson}
           disabled={isParsing}
           className="w-full rounded-xl border-2 border-dashed border-border bg-muted/20 hover:border-primary/40 hover:bg-primary/5 transition-colors px-4 py-6 flex flex-col items-center gap-2 text-center"
           data-testid="accounting-export-upload-button"
@@ -850,7 +915,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
                 <>
                   <button
                     type="button"
-                    onClick={triggerPicker}
+                    onClick={triggerPickerFromPostUpload}
                     disabled={isParsing}
                     className="text-xs font-medium px-2 py-1 rounded-md border border-border hover:bg-muted transition-colors"
                     data-testid="accounting-export-replace-button"

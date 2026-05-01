@@ -271,6 +271,19 @@ function ActualsCoachIntro({ idx }: { idx: number }) {
       guidanceLevel,
     });
   }, [idx, guidanceLevel]);
+  // Engagement signal: opening either glossary popover (Actuals or
+  // Variance) inside the coach copy counts as the founder digging into
+  // the explanation. Fires once per mount per scenario index.
+  const engagedRef = useRef(false);
+  const handleGlossaryOpen = (termKey: string) => {
+    if (guidanceLevel === "advanced" || engagedRef.current) return;
+    engagedRef.current = true;
+    trackCoachingEvent("actuals_coach_intro_engaged", {
+      scenarioIndex: idx,
+      guidanceLevel,
+      termKey,
+    });
+  };
   if (guidanceLevel === "advanced") return null;
   return (
     <div data-testid={`custom-scenario-actuals-coach-intro-${idx}`}>
@@ -278,11 +291,11 @@ function ActualsCoachIntro({ idx }: { idx: number }) {
         title="Why fill in actuals?"
         why={
           <>
-            <GlossaryTerm termKey="actuals">Actuals</GlossaryTerm> are what really
+            <GlossaryTerm termKey="actuals" onOpen={handleGlossaryOpen}>Actuals</GlossaryTerm> are what really
             happened — the enrollment, revenue, and expenses you can read off
             your bank statement and bookkeeping. Comparing them to your
             projections gives you{" "}
-            <GlossaryTerm termKey="variance">variance</GlossaryTerm>: where you
+            <GlossaryTerm termKey="variance" onOpen={handleGlossaryOpen}>variance</GlossaryTerm>: where you
             beat the plan, where you missed, and by how much. That's the loop
             that turns a model into a tool you actually steer with.
           </>
@@ -334,6 +347,12 @@ function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachPro
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
+    // Advanced-mode founders see the variance one-liner but never the
+    // WhatIfLink coach nudge that the funnel measures engagement for, so
+    // we silence the *_shown event for them — keeps the
+    // /admin/coaching-funnel impressions matched to surfaces that
+    // actually have an engagement affordance (Task #285).
+    if (guidanceLevel === "advanced") return;
     if (items.length === 0) return;
     const k = items.map((i) => `${i.key}:${i.direction}`).join(",");
     if (trackedRef.current === k) return;

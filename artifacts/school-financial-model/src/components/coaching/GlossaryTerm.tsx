@@ -8,11 +8,27 @@ interface GlossaryTermProps {
   children?: React.ReactNode;
   className?: string;
   schoolType?: string;
+  // Optional callback fired the first time the popover opens for this
+  // mount. Used by parent coach surfaces to record an engagement signal
+  // ("the founder cracked open the glossary while reading my coach
+  // line") without each glossary term needing to know the surface name.
+  onOpen?: (termKey: string) => void;
 }
 
-export function GlossaryTerm({ termKey, children, className, schoolType }: GlossaryTermProps) {
+export function GlossaryTerm({ termKey, children, className, schoolType, onOpen }: GlossaryTermProps) {
   const entry: GlossaryEntry | undefined = GLOSSARY[termKey];
   const [open, setOpen] = useState(false);
+  const openFiredRef = useRef(false);
+  // Centralize the open-state setter so the onOpen callback fires once
+  // per mount regardless of which trigger (hover, focus, click, keyboard)
+  // flipped the popover open.
+  const openPopover = useCallback(() => {
+    setOpen(true);
+    if (!openFiredRef.current) {
+      openFiredRef.current = true;
+      onOpen?.(termKey);
+    }
+  }, [onOpen, termKey]);
   const [position, setPosition] = useState<"above" | "below">("below");
   const triggerRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -80,14 +96,16 @@ export function GlossaryTerm({ termKey, children, className, schoolType }: Gloss
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setOpen((v) => !v);
+    if (open) setOpen(false);
+    else openPopover();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       e.stopPropagation();
-      setOpen((v) => !v);
+      if (open) setOpen(false);
+      else openPopover();
     }
   };
 
@@ -99,9 +117,9 @@ export function GlossaryTerm({ termKey, children, className, schoolType }: Gloss
         tabIndex={0}
         aria-expanded={open}
         aria-describedby={open ? tooltipId : undefined}
-        onMouseEnter={() => { cancelClose(); setOpen(true); }}
+        onMouseEnter={() => { cancelClose(); openPopover(); }}
         onMouseLeave={scheduleClose}
-        onFocus={() => { cancelClose(); setOpen(true); }}
+        onFocus={() => { cancelClose(); openPopover(); }}
         onBlur={scheduleClose}
         onClick={handleClick}
         onKeyDown={handleKeyDown}

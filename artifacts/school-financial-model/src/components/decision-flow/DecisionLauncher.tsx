@@ -137,7 +137,21 @@ export function DecisionLauncher({ models, onStartNew, startNewPending }: Decisi
     [models],
   );
 
+  // Engagement signal: any decision card click while the coach subtitles are
+  // visible counts as the founder taking action on the coach line. Fired once
+  // per mount so the funnel measures unique launchers, not per-click totals.
+  const engagedRef = useRef(false);
+  const trackEngaged = (cardType: LaunchableType) => {
+    if (!showCoach || engagedRef.current) return;
+    engagedRef.current = true;
+    trackCoachingEvent("dashboard_launcher_coach_engaged", {
+      guidanceLevel,
+      cardType,
+    });
+  };
+
   const launch = (type: LaunchableType) => {
+    trackEngaged(type);
     if (eligibleModels.length === 0) {
       // Friendly nudge + redirect straight into the wizard. Decision flows need
       // a base model to run against, so we send the founder there directly
@@ -359,9 +373,22 @@ export function ThingsHaveChangedBanner({ models, staleDays = 30 }: ThingsHaveCh
     });
   }, [showCoach, guidanceLevel, oldestDays, stale.length]);
 
+  // Engagement signal: stale chip click while the banner is on screen for a
+  // coach-mode user. Fired once per mount so the funnel measures unique
+  // banners that drove a follow-through, not raw chip clicks.
+  const engagedRef = useRef(false);
+
   if (stale.length === 0 || !target) return null;
 
   const launch = (type: LaunchableType) => {
+    if (showCoach && !engagedRef.current) {
+      engagedRef.current = true;
+      trackCoachingEvent("things_changed_coach_engaged", {
+        guidanceLevel,
+        oldestDays,
+        cardType: type,
+      });
+    }
     setLocation(`/decisions/${URL_FOR_TYPE[type]}/${target.id}`);
   };
 
