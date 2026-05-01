@@ -281,7 +281,7 @@ export function StaffingStep() {
   }, [rows]);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">
           Tell Us About Your Leadership and Staff

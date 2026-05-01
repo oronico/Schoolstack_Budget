@@ -34,7 +34,7 @@ export function ChestertonStaffingStep() {
   const annualPayroll = perPeriod * periodsTotal;
 
   return (
-    <div className="space-y-8" data-testid="chesterton-staffing-step">
+    <div className="mx-auto w-full max-w-3xl space-y-8" data-testid="chesterton-staffing-step">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3 flex items-center gap-3">
           <BookOpen className="h-8 w-8 text-primary" />
