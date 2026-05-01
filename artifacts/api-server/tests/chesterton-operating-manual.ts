@@ -1,10 +1,7 @@
-// Smoke test for the CSN Operating Manual workbook export.
-// Builds the workbook in-memory, asserts the sheet list matches the
-// CSN Operating Manual tabs, and spot-checks a handful of named ranges
-// + key cells (Plan_Year, School_Name, AvgSalaryperPeriod, TFG, the
-// tuition CEILING formula, the periods-based faculty AvgSalaryperPeriod
-// reference). Failures throw so the script exits non-zero — same pattern
-// as the other tsx-based qa:* scripts in this folder.
+// Smoke + formula round-trip test for the CSN Operating Manual workbook.
+// Verifies tab list, named ranges, verbatim wording on reference tabs,
+// and that one derived cell per tab carries a formula whose cached
+// result tracks an upstream input across two builds.
 
 import {
   generateChestertonOperatingManual,
@@ -69,17 +66,27 @@ expect(
   tabs,
 );
 
-// 2. Named ranges Plan_Year / School_Name / AvgSalaryperPeriod / TFG exist.
+// 2. Named ranges exist.
 const definedNamesRaw = (wb.definedNames as unknown as { matrixMap?: Record<string, unknown> }).matrixMap;
 const definedNamesList = wb.definedNames.model || [];
 const namedRangeNames = new Set<string>();
 for (const dn of definedNamesList as Array<{ name?: string }>) if (dn?.name) namedRangeNames.add(dn.name);
-// Some ExcelJS versions store definedNames as a flat Map under matrixMap;
-// also walk those keys defensively.
 if (definedNamesRaw && typeof definedNamesRaw === "object") {
   for (const k of Object.keys(definedNamesRaw)) namedRangeNames.add(k);
 }
-for (const required of ["Plan_Year", "School_Name", "AvgSalaryperPeriod", "TFG"]) {
+for (const required of [
+  "Plan_Year",
+  "School_Name",
+  "AvgSalaryperPeriod",
+  "TFG",
+  "Starting_Tuition",
+  "Tuition_Growth_Rate",
+  "Book_Supply_Fee",
+  "Financial_Aid_Pct",
+  "Attrition_Rate",
+  "Starting_Teacher_Salary",
+  "Benefits_Stipend",
+]) {
   expect(`named range ${required} exists`, namedRangeNames.has(required), true, namedRangeNames.has(required));
 }
 
@@ -89,21 +96,27 @@ expect("School_Name cell C5 has the school name", gs.getCell("C5").value === "Sa
 expect("Plan_Year cell C6 has the planning year", gs.getCell("C6").value === 2027, 2027, gs.getCell("C6").value);
 expect("Starting tuition cell C9 = 8500", gs.getCell("C9").value === 8500, 8500, gs.getCell("C9").value);
 
-// 4. PROJECTIONS sheet has the tuition CEILING formula and periods-based faculty formula.
+// 4. PROJECTIONS sheet — tuition CEILING + periods-based faculty formulas.
 const proj = wb.getWorksheet("1 - 5 YR FINANCIAL PROJECTIONS")!;
 let foundCeiling = false;
 let foundAvgSalaryRef = false;
+let foundFinancialAidNamed = false;
+let foundBookSupplyNamed = false;
 proj.eachRow(row => {
   row.eachCell(cell => {
     const v = cell.value as { formula?: string } | string | number | null;
     if (v && typeof v === "object" && "formula" in v && typeof v.formula === "string") {
-      if (v.formula.includes("CEILING(") && v.formula.includes("'GETTING STARTED'!$C$10")) foundCeiling = true;
-      if (v.formula.includes("AvgSalaryperPeriod*")) foundAvgSalaryRef = true;
+      if (v.formula.includes("CEILING(") && v.formula.includes("Tuition_Growth_Rate")) foundCeiling = true;
+      if (/AvgSalaryperPeriod\*\$I\d+/.test(v.formula)) foundAvgSalaryRef = true;
+      if (v.formula.includes("Financial_Aid_Pct")) foundFinancialAidNamed = true;
+      if (v.formula.includes("Book_Supply_Fee")) foundBookSupplyNamed = true;
     }
   });
 });
-expect("projections sheet has tuition CEILING(.., 50) escalation formula", foundCeiling, true, foundCeiling);
-expect("projections sheet has AvgSalaryperPeriod periods-based faculty formula", foundAvgSalaryRef, true, foundAvgSalaryRef);
+expect("projections sheet has tuition CEILING(.., 50) escalation formula via Tuition_Growth_Rate named range", foundCeiling, true, foundCeiling);
+expect("projections sheet has AvgSalaryperPeriod*$I{row} periods-based faculty formula", foundAvgSalaryRef, true, foundAvgSalaryRef);
+expect("projections sheet financial-aid formula references Financial_Aid_Pct named range", foundFinancialAidNamed, true, foundFinancialAidNamed);
+expect("projections sheet book/supply revenue formula references Book_Supply_Fee named range", foundBookSupplyNamed, true, foundBookSupplyNamed);
 
 // 5. Fundraising sheet shows the TFG formula in the subtitle.
 const fund = wb.getWorksheet("4 - FUNDRAISING GOALS")!;
@@ -115,18 +128,11 @@ expect(
   tfgCell,
 );
 
-// 6. Static reference tabs (Cadence, CSN Training Schedule, Parent Handout)
-//    are present and mirror the published CSN Operating Manual workbook
-//    word-for-word. Each tab is spot-checked against at least one verbatim
-//    sentence/headline from the source workbook
-//    (`3_Operating_Manual_2026_FV.xlsx`) so future edits cannot silently
-//    drift from the published wording.
+// 6. Static reference tabs spot-checked verbatim against the source workbook.
 for (const name of ["Cadence", "CSN Training Schedule", "Parent Handout"]) {
   expect(`tab "${name}" exists`, !!wb.getWorksheet(name), true, !!wb.getWorksheet(name));
 }
 
-// Helper: walk every cell of a worksheet and return true if any cell value
-// (string or formula result) contains the given verbatim substring.
 function containsVerbatim(ws: import("exceljs").Worksheet, needle: string): boolean {
   let found = false;
   ws.eachRow({ includeEmpty: false }, row => {
@@ -146,7 +152,7 @@ function containsVerbatim(ws: import("exceljs").Worksheet, needle: string): bool
   return found;
 }
 
-// ── Cadence tab — verbatim from source tab "8 - CHESTERTON CADENCE" ──
+// Cadence tab — verbatim source: "8 - CHESTERTON CADENCE".
 const cadence = wb.getWorksheet("Cadence")!;
 expect(
   "Cadence tab title is verbatim 'The Chesterton Cadence'",
@@ -194,7 +200,7 @@ expect(
   containsVerbatim(cadence, "Mass of the Holy Spirit (September)"),
 );
 
-// ── Training tab — verbatim from source tab "9 - CSN TRAINING" ──
+// Training tab — verbatim source: "9 - CSN TRAINING".
 const training = wb.getWorksheet("CSN Training Schedule")!;
 expect(
   "Training tab title verbatim 'The Chesterton Schools Network — Training Support Framework'",
@@ -248,7 +254,7 @@ expect(
   null,
 );
 
-// ── Parent Handout tab — verbatim from source tab "6 - PARENT HANDOUT" ──
+// Parent Handout tab — verbatim source: "6 - PARENT HANDOUT".
 const handout = wb.getWorksheet("Parent Handout")!;
 expect(
   "Parent Handout fundraising banner verbatim",
@@ -298,6 +304,167 @@ expect(
   null,
 );
 
+// Formula round-trip — perturb inputs, assert formula text is identical
+// across builds and the cached result tracks the new input.
+
+interface FormulaCell { formula?: string; result?: unknown }
+function readFormula(ws: import("exceljs").Worksheet, addr: string): FormulaCell {
+  const v = ws.getCell(addr).value as unknown;
+  if (v && typeof v === "object" && "formula" in (v as object)) return v as FormulaCell;
+  return { formula: undefined, result: v };
+}
+function expectFormula(check: string, cell: FormulaCell, formula: string, result: unknown) {
+  const okFormula = cell.formula === formula;
+  const okResult = typeof result === "number" && typeof cell.result === "number"
+    ? Math.abs((cell.result as number) - result) < 1e-6
+    : cell.result === result;
+  expect(`${check} — formula text`, okFormula, formula, cell.formula);
+  expect(`${check} — cached result`, okResult, result, cell.result);
+}
+
+const perturbed = JSON.parse(JSON.stringify(sample)) as typeof sample;
+perturbed.chesterton.startingTuition = 9000;
+perturbed.chesterton.tuitionGrowthRate = 0.05;
+perturbed.chesterton.bookSupplyFee = 750;
+perturbed.chesterton.financialAidPct = 0.15;
+perturbed.chesterton.startingTeacherSalary = 50000;
+perturbed.chesterton.salarySchedule = [
+  { subject: "Theology", periodsPerSection: 2 },
+  { subject: "Latin", periodsPerSection: 1 },
+  { subject: "Mathematics", periodsPerSection: 3 },
+];
+perturbed.chesterton.fundraisingGoals = [
+  { category: "Major Gifts", goalAmount: 600000, numberOfGifts: 6, averageGift: 100000 },
+  { category: "Mid-Level Gifts", goalAmount: 300000, numberOfGifts: 30, averageGift: 10000 },
+  { category: "Annual Fund", goalAmount: 200000, numberOfGifts: 200, averageGift: 1000 },
+];
+const wbPerturbed = await generateChestertonOperatingManual(perturbed);
+
+// GETTING STARTED.
+{
+  const gs2 = wbPerturbed.getWorksheet("GETTING STARTED")!;
+  const avg = readFormula(gs2, "C17");
+  expectFormula(
+    "GETTING STARTED: AvgSalaryperPeriod recomputes when Starting_Teacher_Salary changes",
+    avg,
+    "=Starting_Teacher_Salary/5",
+    50000 / 5,
+  );
+  const avgOrig = readFormula(wb.getWorksheet("GETTING STARTED")!, "C17");
+  expect(
+    "GETTING STARTED: AvgSalaryperPeriod cached result tracks original 44000 → 8800",
+    typeof avgOrig.result === "number" && Math.abs((avgOrig.result as number) - 8800) < 1e-6,
+    8800,
+    avgOrig.result,
+  );
+
+  const tfg = readFormula(gs2, "C21");
+  expectFormula(
+    "GETTING STARTED: TFG rolls up SUM of fundraising goal column",
+    tfg,
+    "=SUM('4 - FUNDRAISING GOALS'!$C$6:$C$8)",
+    600000 + 300000 + 200000,
+  );
+}
+
+// PROJECTIONS — col D (Year 2) is the first CEILING growth cell (offset=1).
+{
+  const proj2 = wbPerturbed.getWorksheet("1 - 5 YR FINANCIAL PROJECTIONS")!;
+  let tuitionRowIdx = -1;
+  proj2.eachRow((r, idx) => {
+    if (r.getCell(1).value === "Tuition per Student") tuitionRowIdx = idx;
+  });
+  expect("PROJECTIONS: located 'Tuition per Student' row", tuitionRowIdx > 0, true, tuitionRowIdx);
+  const yr2Cell = readFormula(proj2, `D${tuitionRowIdx}`);
+  expectFormula(
+    "PROJECTIONS: Year 2 tuition uses CEILING(Starting_Tuition*(1+Tuition_Growth_Rate)^1, 50)",
+    yr2Cell,
+    "=CEILING(Starting_Tuition*(1+Tuition_Growth_Rate)^1,50)",
+    Math.ceil((9000 * 1.05) / 50) * 50, // = 9450
+  );
+}
+
+// SALARY SCHEDULE — Bachelors/FT Year-1 cascades from Starting_Teacher_Salary.
+{
+  const sal2 = wbPerturbed.getWorksheet("2 - SALARY SCHEDULE")!;
+  const ft1 = readFormula(sal2, "B5");
+  expect(
+    "SALARY SCHEDULE: Bachelors/FT Year-1 cell carries a formula (not a baked number)",
+    typeof ft1.formula === "string" && ft1.formula.length > 0,
+    true,
+    ft1.formula,
+  );
+  expect(
+    "SALARY SCHEDULE: Bachelors/FT Year-1 cached result reflects new Starting_Teacher_Salary (=50000)",
+    typeof ft1.result === "number" && Math.abs((ft1.result as number) - 50000) < 1e-6,
+    50000,
+    ft1.result,
+  );
+}
+
+// FUNDRAISING GOALS — per-row avg + subtotal SUM/avg.
+{
+  const fund2 = wbPerturbed.getWorksheet("4 - FUNDRAISING GOALS")!;
+  const avg6 = readFormula(fund2, "E6");
+  expectFormula(
+    "FUNDRAISING GOALS row 6: avg gift = IFERROR(C6/D6, 0)",
+    avg6,
+    "=IFERROR(C6/D6,0)",
+    600000 / 6,
+  );
+  const totalGoal = readFormula(fund2, "C9");
+  expectFormula(
+    "FUNDRAISING GOALS subtotal: SUM of component goals",
+    totalGoal,
+    "=SUM(C6:C8)",
+    600000 + 300000 + 200000,
+  );
+  const totalAvg = readFormula(fund2, "E9");
+  expectFormula(
+    "FUNDRAISING GOALS subtotal: rolled-up avg gift = IFERROR(C9/D9, 0)",
+    totalAvg,
+    "=IFERROR(C9/D9,0)",
+    (600000 + 300000 + 200000) / (6 + 30 + 200),
+  );
+}
+
+// GIFT CHART — tier total = giftAmount * #gifts in col E.
+{
+  const gc2 = wbPerturbed.getWorksheet("5 - GIFT CHART")!;
+  const tier1 = readFormula(gc2, "E5");
+  expect(
+    "GIFT CHART tier 1: tier-total cell carries a formula",
+    typeof tier1.formula === "string" && tier1.formula.includes("B5") && tier1.formula.includes("C5"),
+    true,
+    tier1.formula,
+  );
+  expect(
+    "GIFT CHART tier 1: tier-total cached result = giftAmount * #gifts",
+    typeof tier1.result === "number" && (tier1.result as number) === 100000 * 1,
+    100000,
+    tier1.result,
+  );
+}
+
+// RECRUITING PIPELINE — Total = SUM of prospects column.
+{
+  const rec2 = wbPerturbed.getWorksheet("7 - RECRUITING PIPELINE")!;
+  let totalRowIdx = -1;
+  rec2.eachRow((r, idx) => {
+    if (r.getCell(2).value === "Total") totalRowIdx = idx;
+  });
+  expect("RECRUITING PIPELINE: located Total row", totalRowIdx > 0, true, totalRowIdx);
+  if (totalRowIdx > 0) {
+    const totalCell = readFormula(rec2, `C${totalRowIdx}`);
+    expect(
+      "RECRUITING PIPELINE Total: cell carries SUM formula",
+      typeof totalCell.formula === "string" && totalCell.formula.toUpperCase().startsWith("=SUM("),
+      true,
+      totalCell.formula,
+    );
+  }
+}
+
 process.stdout.write("\n");
 if (failures.length > 0) {
   console.error("CHESTERTON OPERATING MANUAL EXPORT TEST: FAILED");
@@ -306,4 +473,4 @@ if (failures.length > 0) {
   }
   process.exit(1);
 }
-console.log(`CHESTERTON OPERATING MANUAL EXPORT TEST: PASSED (${tabs.length} tabs verified)`);
+console.log(`CHESTERTON OPERATING MANUAL EXPORT TEST: PASSED (${tabs.length} tabs verified, formula round-trip OK)`);

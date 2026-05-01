@@ -1,15 +1,6 @@
 // Chesterton Schools Network (CSN) Operating Manual export.
-//
-// Builds an ExcelJS workbook whose tabs mirror the CSN Operating Manual
-// workbook (`3_Operating_Manual_2026_FV.xlsx`) so a Chesterton founder can
-// hand it to their CSN regional director, board, or lender without having
-// to re-keyboard the same numbers into another file. Sheet names match the
-// source workbook exactly (including the leading numeric prefix) so existing
-// CSN review checklists keep pointing to the same place.
-//
-// Cross-sheet formulas use named ranges defined on the GETTING STARTED tab
-// so opening the workbook in Excel and editing e.g. Plan_Year cascades
-// through every dependent sheet.
+// Tabs mirror `3_Operating_Manual_2026_FV.xlsx`. Cross-sheet formulas use
+// named ranges defined on GETTING STARTED so editing inputs cascades.
 
 import ExcelJS from "exceljs";
 import {
@@ -138,6 +129,7 @@ function applySubtitleStyle(cell: ExcelJS.Cell) {
 function buildGettingStarted(
   wb: ExcelJS.Workbook,
   data: ChestertonModelInput,
+  fundraisingRowCount: number,
 ): {
   schoolNameAddress: string;
   planYearAddress: string;
@@ -188,20 +180,23 @@ function buildGettingStarted(
   ws.getCell("B8").font = { bold: true, size: 12, color: { argb: NAVY } };
   ws.mergeCells("B8:E8");
 
-  const tuitionRows: Array<[string, unknown, string]> = [
-    ["Starting Tuition (Year 1)", data.chesterton?.startingTuition ?? 8500, CUR],
-    ["Annual Tuition Growth Rate", data.chesterton?.tuitionGrowthRate ?? 0.04, PCT],
-    ["Book / Supply Fee", data.chesterton?.bookSupplyFee ?? 600, CUR],
-    ["Financial Aid (% of Gross Tuition)", data.chesterton?.financialAidPct ?? 0.10, PCT],
-    ["Year-over-Year Attrition", data.chesterton?.attritionRate ?? 0.10, PCT],
+  // Each input gets a named range so PROJECTIONS formulas can reference
+  // it by name and survive row-layout changes.
+  const tuitionRows: Array<[string, unknown, string, string]> = [
+    ["Starting Tuition (Year 1)", data.chesterton?.startingTuition ?? 8500, CUR, "Starting_Tuition"],
+    ["Annual Tuition Growth Rate", data.chesterton?.tuitionGrowthRate ?? 0.04, PCT, "Tuition_Growth_Rate"],
+    ["Book / Supply Fee", data.chesterton?.bookSupplyFee ?? 600, CUR, "Book_Supply_Fee"],
+    ["Financial Aid (% of Gross Tuition)", data.chesterton?.financialAidPct ?? 0.10, PCT, "Financial_Aid_Pct"],
+    ["Year-over-Year Attrition", data.chesterton?.attritionRate ?? 0.10, PCT, "Attrition_Rate"],
   ];
   let r = 9;
-  for (const [label, value, fmt] of tuitionRows) {
+  for (const [label, value, fmt, name] of tuitionRows) {
     ws.getCell(`B${r}`).value = label;
     const c = ws.getCell(`C${r}`);
     c.value = value as number;
     c.numFmt = fmt;
     inputCell(c);
+    wb.definedNames.add(`'${TAB_GETTING_STARTED}'!$C$${r}`, name);
     r += 1;
   }
 
@@ -219,12 +214,12 @@ function buildGettingStarted(
   startSalaryCell.value = data.chesterton?.startingTeacherSalary ?? 44000;
   startSalaryCell.numFmt = CUR;
   inputCell(startSalaryCell);
+  wb.definedNames.add(`'${TAB_GETTING_STARTED}'!$C$${r}`, "Starting_Teacher_Salary");
   r += 1;
 
   ws.getCell(`B${r}`).value = "Avg Salary per Period (5 periods = 1 FTE)";
   const avgSalaryCell = ws.getCell(`C${r}`);
-  // Periods per FTE is fixed at 5 in the CSN manual.
-  setFormula(avgSalaryCell, `=C${startingSalaryRow}/5`, (data.chesterton?.startingTeacherSalary ?? 44000) / 5);
+  setFormula(avgSalaryCell, `=Starting_Teacher_Salary/5`, (data.chesterton?.startingTeacherSalary ?? 44000) / 5);
   avgSalaryCell.numFmt = CUR;
   avgSalaryCell.font = { italic: true };
   const avgSalaryAddress = `'${TAB_GETTING_STARTED}'!$C$${r}`;
@@ -236,6 +231,7 @@ function buildGettingStarted(
   benCell.value = data.chesterton?.benefitsFirstYearAmount ?? 0;
   benCell.numFmt = CUR;
   inputCell(benCell);
+  wb.definedNames.add(`'${TAB_GETTING_STARTED}'!$C$${r}`, "Benefits_Stipend");
   r += 2;
 
   // ── Total Fundraising Goal ──
@@ -245,9 +241,24 @@ function buildGettingStarted(
   r += 1;
   ws.getCell(`B${r}`).value = "Target raise for first freshman class";
   const tfgCell = ws.getCell(`C${r}`);
-  tfgCell.value = data.chesterton?.totalFundraisingGoal ?? 0;
+  // TFG = SUM of fundraising components, falling back to the static
+  // input when the founder has no fundraising rows yet.
+  if (fundraisingRowCount > 0) {
+    const lastFundRow = 5 + fundraisingRowCount;
+    // Cached result must match the SUM (not the input override) so it
+    // stays in sync with the formula on first recalc.
+    const componentSum = (data.chesterton?.fundraisingGoals ?? []).reduce((s, x) => s + (x.goalAmount ?? 0), 0);
+    setFormula(
+      tfgCell,
+      `=SUM('${TAB_FUNDRAISING}'!$C$6:$C$${lastFundRow})`,
+      componentSum,
+    );
+    tfgCell.font = { italic: true };
+  } else {
+    tfgCell.value = data.chesterton?.totalFundraisingGoal ?? 0;
+    inputCell(tfgCell);
+  }
   tfgCell.numFmt = CUR;
-  inputCell(tfgCell);
   const tfgAddress = `'${TAB_GETTING_STARTED}'!$C$${r}`;
   wb.definedNames.add(tfgAddress, "TFG");
 
@@ -269,6 +280,8 @@ function buildProjections(
 
   ws.getColumn(1).width = 38;
   for (let c = 2; c <= 8; c++) ws.getColumn(c).width = 14;
+  // Col I holds the per-subject Periods/Section input on FACULTY.
+  ws.getColumn(9).width = 14;
 
   ws.mergeCells("A1:H1");
   applyTitleStyle(ws.getCell("A1"));
@@ -386,12 +399,12 @@ function buildProjections(
     const c = ws.getCell(row, 2 + i);
     if (offset <= 0) {
       const v = startingTuition;
-      setFormula(c, `='${TAB_GETTING_STARTED}'!$C$9`, v);
+      setFormula(c, `=Starting_Tuition`, v);
     } else {
       const v = Math.ceil((startingTuition * Math.pow(1 + growth, offset)) / 50) * 50;
       setFormula(
         c,
-        `=CEILING('${TAB_GETTING_STARTED}'!$C$9*(1+'${TAB_GETTING_STARTED}'!$C$10)^${offset},50)`,
+        `=CEILING(Starting_Tuition*(1+Tuition_Growth_Rate)^${offset},50)`,
         v,
       );
     }
@@ -422,7 +435,7 @@ function buildProjections(
     const grossVal = ws.getCell(grossRow, col).value;
     const grossNum = typeof grossVal === "object" && grossVal && "result" in grossVal && typeof grossVal.result === "number" ? grossVal.result : 0;
     const aidPct = data.chesterton?.financialAidPct ?? 0.10;
-    setFormula(c, `=-${cellName(grossRow, col)}*'${TAB_GETTING_STARTED}'!$C$12`, -grossNum * aidPct);
+    setFormula(c, `=-${cellName(grossRow, col)}*Financial_Aid_Pct`, -grossNum * aidPct);
     c.numFmt = CUR;
     c.font = { color: { argb: "FFB91C1C" } };
   }
@@ -437,7 +450,7 @@ function buildProjections(
     const enrollVal = ws.getCell(totalEnrollmentRow, col).value;
     const enrollNum = typeof enrollVal === "object" && enrollVal && "result" in enrollVal && typeof enrollVal.result === "number" ? enrollVal.result : 0;
     const fee = data.chesterton?.bookSupplyFee ?? 600;
-    setFormula(c, `='${TAB_GETTING_STARTED}'!$C$11*${cellName(totalEnrollmentRow, col)}`, fee * enrollNum);
+    setFormula(c, `=Book_Supply_Fee*${cellName(totalEnrollmentRow, col)}`, fee * enrollNum);
     c.numFmt = CUR;
   }
   const bookRow = row;
@@ -459,31 +472,37 @@ function buildProjections(
   row += 2;
 
   // ── FACULTY SALARY (periods-based) ──
-  sec(ws, row, 8);
+  // Per-year cost = AvgSalaryperPeriod * periods/section * sections-needed,
+  // with the periods/section editable per row in col I.
+  sec(ws, row, 9);
   ws.getCell(`A${row}`).value = "III. FACULTY SALARY (PERIODS-BASED)";
   row += 1;
 
   ws.getCell(`A${row}`).value = "Subject";
-  for (let i = 0; i < 7; i++) hdr(ws, row, 8);
-  ws.getCell(`A${row}`).value = "Subject (periods/section)";
   for (let i = 0; i < 7; i++) ws.getCell(row, 2 + i).value = `Year ${i}`;
+  ws.getCell(row, 9).value = "Periods/Sec";
+  hdr(ws, row, 9);
   row += 1;
 
   const subjects = data.chesterton?.salarySchedule ?? [];
   const facultyStart = row;
   for (const subj of subjects) {
-    ws.getCell(`A${row}`).value = `${subj.subject} (${subj.periodsPerSection ?? 0})`;
+    ws.getCell(`A${row}`).value = subj.subject;
+    const periods = subj.periodsPerSection ?? 0;
+    const periodsCell = ws.getCell(row, 9);
+    periodsCell.value = periods;
+    periodsCell.numFmt = NUM;
+    inputCell(periodsCell);
     for (let i = 0; i < 7; i++) {
       const col = 2 + i;
       const c = ws.getCell(row, col);
       const enrollVal = ws.getCell(totalEnrollmentRow, col).value;
       const enrollNum = typeof enrollVal === "object" && enrollVal && "result" in enrollVal && typeof enrollVal.result === "number" ? enrollVal.result : 0;
-      const periods = subj.periodsPerSection ?? 0;
       const sectionsNeeded = enrollNum > 0 ? Math.max(1, Math.ceil(enrollNum / 25)) : 0;
       const cost = (data.chesterton?.startingTeacherSalary ?? 44000) / 5 * periods * sectionsNeeded;
       setFormula(
         c,
-        `=AvgSalaryperPeriod*${periods}*MAX(1,CEILING(${cellName(totalEnrollmentRow, col)}/25,1))`,
+        `=AvgSalaryperPeriod*$I${row}*MAX(1,CEILING(${cellName(totalEnrollmentRow, col)}/25,1))`,
         cost,
       );
       c.numFmt = CUR;
@@ -491,6 +510,29 @@ function buildProjections(
     row += 1;
   }
   const facultyEnd = row - 1;
+
+  // Total Periods / FTE Equivalent / Total Faculty Cost summary.
+  ws.getCell(`A${row}`).value = "Total Periods";
+  ws.getCell(`A${row}`).font = { bold: true };
+  const totalPeriods = subjects.reduce((s, x) => s + (x.periodsPerSection ?? 0), 0);
+  const totalPeriodsCell = ws.getCell(row, 9);
+  if (facultyEnd >= facultyStart) {
+    setFormula(totalPeriodsCell, `=SUM(I${facultyStart}:I${facultyEnd})`, totalPeriods);
+  } else {
+    totalPeriodsCell.value = 0;
+  }
+  totalPeriodsCell.numFmt = NUM;
+  totalPeriodsCell.font = { bold: true };
+  const totalPeriodsRow = row;
+  row += 1;
+
+  ws.getCell(`A${row}`).value = "FTE Equivalent (5 periods = 1 FTE)";
+  ws.getCell(`A${row}`).font = { italic: true };
+  const fteCell = ws.getCell(row, 9);
+  setFormula(fteCell, `=I${totalPeriodsRow}/5`, totalPeriods / 5);
+  fteCell.numFmt = "0.00";
+  fteCell.font = { italic: true };
+  row += 1;
 
   ws.getCell(`A${row}`).value = "Total Faculty Cost";
   ws.getCell(`A${row}`).font = { bold: true };
@@ -544,11 +586,7 @@ function buildSalarySchedule(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
     // Bachelors FT (col B)
     const bachFt = ws.getCell(r, 2);
     if (yearOffset === 0) {
-      // Year-1 Bachelors FT salary = AvgSalaryperPeriod (named range
-      // defined on GETTING STARTED) × 5 periods/FTE. We deliberately
-      // route through the named range instead of a hard-coded cell
-      // address so that re-flowing rows on GETTING STARTED never
-      // breaks this formula chain.
+      // Year-1 Bachelors FT = AvgSalaryperPeriod × 5 periods/FTE.
       setFormula(bachFt, `=AvgSalaryperPeriod*5`, startingSalary);
     } else {
       const prev = startingSalary * Math.pow(1.0275, yearOffset);
@@ -664,7 +702,14 @@ function buildFundraisingGoals(wb: ExcelJS.Workbook, data: ChestertonModelInput)
 
   ws.mergeCells("B3:F3");
   applySubtitleStyle(ws.getCell("B3"));
-  ws.getCell("B3").value = { formula: `="Total Goal: " & TEXT(TFG, "$#,##0")`, result: `Total Goal: $${(data.chesterton?.totalFundraisingGoal ?? 0).toLocaleString()}` };
+  // Cached result mirrors the computed TFG SUM (when fundraising rows
+  // exist) rather than the static input override, so the displayed value
+  // matches what the formula evaluates to before Excel's first recalc.
+  const fundraisingRows = data.chesterton?.fundraisingGoals ?? [];
+  const cachedTFG = fundraisingRows.length > 0
+    ? fundraisingRows.reduce((s, x) => s + (x.goalAmount ?? 0), 0)
+    : (data.chesterton?.totalFundraisingGoal ?? 0);
+  ws.getCell("B3").value = { formula: `="Total Goal: " & TEXT(TFG, "$#,##0")`, result: `Total Goal: $${cachedTFG.toLocaleString()}` };
 
   hdr(ws, 5, 6);
   ws.getCell("B5").value = "Component";
@@ -686,19 +731,26 @@ function buildFundraisingGoals(wb: ExcelJS.Workbook, data: ChestertonModelInput)
     gifts.value = row.numberOfGifts ?? 0;
     gifts.numFmt = NUM;
     inputCell(gifts);
+    // Avg gift = goal / # gifts (IFERROR guards against /0).
     const avg = ws.getCell(`E${r}`);
-    avg.value = row.averageGift ?? 0;
+    const giftCount = row.numberOfGifts ?? 0;
+    const avgComputed = giftCount > 0 ? (row.goalAmount ?? 0) / giftCount : 0;
+    setFormula(avg, `=IFERROR(C${r}/D${r},0)`, avgComputed);
     avg.numFmt = CUR;
-    inputCell(avg);
+    avg.font = { italic: true };
     ws.getCell(`F${r}`).value = row.notes || "";
     r += 1;
   }
-  // Subtotal
   ws.getCell(`B${r}`).value = "Total";
   ws.getCell(`B${r}`).font = { bold: true };
   if (rows.length > 0) {
-    setFormula(ws.getCell(`C${r}`), `=SUM(C${start}:C${r - 1})`, rows.reduce((s, x) => s + (x.goalAmount ?? 0), 0));
-    setFormula(ws.getCell(`D${r}`), `=SUM(D${start}:D${r - 1})`, rows.reduce((s, x) => s + (x.numberOfGifts ?? 0), 0));
+    const totalGoal = rows.reduce((s, x) => s + (x.goalAmount ?? 0), 0);
+    const totalGifts = rows.reduce((s, x) => s + (x.numberOfGifts ?? 0), 0);
+    setFormula(ws.getCell(`C${r}`), `=SUM(C${start}:C${r - 1})`, totalGoal);
+    setFormula(ws.getCell(`D${r}`), `=SUM(D${start}:D${r - 1})`, totalGifts);
+    setFormula(ws.getCell(`E${r}`), `=IFERROR(C${r}/D${r},0)`, totalGifts > 0 ? totalGoal / totalGifts : 0);
+    ws.getCell(`E${r}`).numFmt = CUR;
+    ws.getCell(`E${r}`).font = { bold: true };
   }
   ws.getCell(`C${r}`).numFmt = CUR;
   ws.getCell(`C${r}`).font = { bold: true };
@@ -809,25 +861,10 @@ function buildRecruitingPipeline(wb: ExcelJS.Workbook, data: ChestertonModelInpu
   ws.getCell(`C${r}`).font = { bold: true };
 }
 
-// ── Static reference tabs ──
-//
-// The CSN Operating Manual workbook ships three reference tabs that don't
-// depend on per-school data: the Chesterton Cadence, the CSN Training
-// Support Framework, and a one-page Parent Handout (Fundraising Action
-// Plan). The wording and structure below mirror tabs 6, 8, and 9 of the
-// published `3_Operating_Manual_2026_FV.xlsx` workbook so a founder placing
-// the export side-by-side with the source manual sees the same headlines
-// and bullets verbatim. The smoke test in
-// `tests/chesterton-operating-manual.ts` spot-checks one verbatim
-// sentence from each tab to lock the wording in.
+// Static reference tabs (Cadence, Training, Parent Handout) mirror tabs
+// 6, 8, 9 of the published manual verbatim.
 
-// ── Cadence (source tab "8 - CHESTERTON CADENCE") ──
-//
-// The published Cadence presents six categories of school activity along
-// the rows and the four academic-year quarters along the columns. Each
-// cell contains a quarterly headline; the "DETAIL" section below repeats
-// the grid with a one-sentence mission per category and a bullet list per
-// quarter.
+// Cadence — source tab "8 - CHESTERTON CADENCE".
 
 interface CadenceCategory {
   /** "(N) CATEGORY NAME" exactly as it appears in the source workbook. */
@@ -1025,13 +1062,7 @@ const CADENCE_CATEGORIES: CadenceCategory[] = [
 const CSN_COPYRIGHT_LONG = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2025. All rights reserved.";
 const CSN_COPYRIGHT_SHORT = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network. All rights reserved.";
 
-// ── CSN Training Support Framework (source tab "9 - CSN TRAINING") ──
-//
-// The Training tab repeats the Cadence summary grid at the top (so the
-// quarterly seminar topics line up with the rest of the school's annual
-// rhythm) and then lists three quarterly seminars by stakeholder group,
-// followed by monthly office hours and a school-success-manager check-in
-// row.
+// CSN Training Support Framework — source tab "9 - CSN TRAINING".
 
 interface TrainingSeminar {
   /** Stakeholder group label, e.g. "HEADMASTER SEMINAR". */
@@ -1143,13 +1174,7 @@ const TRAINING_SEMINARS: TrainingSeminar[] = [
   },
 ];
 
-// ── Parent Handout (source tab "6 - PARENT HANDOUT") ──
-//
-// The published Parent Handout is a single-page Fundraising Action Plan
-// (NOT a generic welcome letter). It introduces the funding gap, names
-// the year's fundraising goal, lays out the six campaign streams the
-// school runs, and tells families how they can help with the Gala and the
-// year-end / annual appeals.
+// Parent Handout — source tab "6 - PARENT HANDOUT" (Fundraising Action Plan).
 
 interface ParentHandoutCampaign {
   code: string;        // e.g. "A - SPECIAL"
@@ -1655,7 +1680,8 @@ export async function generateChestertonOperatingManual(
   wb.creator = "SchoolStack Budget";
   wb.created = new Date();
 
-  const refs = buildGettingStarted(wb, data);
+  const fundraisingRowCount = (data.chesterton?.fundraisingGoals ?? []).length;
+  const refs = buildGettingStarted(wb, data, fundraisingRowCount);
   buildProjections(wb, data, refs);
   buildSalarySchedule(wb, data);
   buildKeyAssumptions(wb, data);

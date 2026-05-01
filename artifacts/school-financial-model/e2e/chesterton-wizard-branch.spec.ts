@@ -35,6 +35,10 @@ const TEST_PASSWORD = "PlaywrightTest12345!";
 // Duplicated here intentionally — the e2e spec is the contract that locks
 // the workbook surface area visible to a CSN founder; if either side
 // changes, this assertion is the safety net that catches it.
+//
+// The exporter emits 10 tabs: 7 numbered/derived tabs (above) plus three
+// reference tabs (Cadence, CSN Training Schedule, Parent Handout) that
+// mirror the published CSN Operating Manual word-for-word.
 const EXPECTED_TABS = [
   "GETTING STARTED",
   "1 - 5 YR FINANCIAL PROJECTIONS",
@@ -43,6 +47,9 @@ const EXPECTED_TABS = [
   "4 - FUNDRAISING GOALS",
   "5 - GIFT CHART",
   "7 - RECRUITING PIPELINE",
+  "Cadence",
+  "CSN Training Schedule",
+  "Parent Handout",
 ];
 
 // Chesterton template defaults (kept in sync with
