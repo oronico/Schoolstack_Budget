@@ -423,16 +423,26 @@ const COLUMN_PALETTE = [
 
 // Tailwind doesn't support dynamic class names, so we look up grid classes
 // based on the actual column count (clamped to 2-4).
+//
+// Phone (<480px) layout intent: each headline tile shows its inner cells
+// stacked into a single column (n=2 and n=3) or a 2x2 grid (n=4). This
+// keeps money values and "→ $X" subtext from wrapping in a way that
+// breaks the visual scan. Above 480px we restore the wider grids.
 const HEADLINE_INNER_GRID: Record<number, string> = {
-  2: "grid grid-cols-2 gap-2",
-  3: "grid grid-cols-3 gap-2",
+  2: "grid grid-cols-1 min-[480px]:grid-cols-2 gap-2",
+  3: "grid grid-cols-1 min-[480px]:grid-cols-3 gap-2",
   4: "grid grid-cols-2 lg:grid-cols-4 gap-2",
 };
 
+// On phones the per-column header strip stays a tidy stacked list of cards
+// (one per decision) so the A/B/C/D color cue is preserved. Each card uses
+// an inline letter + label layout below `sm` (see the strip render below)
+// so a 4-up comparison doesn't take 200px of vertical space before the
+// founder reaches the headline tiles.
 const HEADER_STRIP_GRID: Record<number, string> = {
-  2: "grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm",
-  3: "grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm",
-  4: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm",
+  2: "grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm",
+  3: "grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 text-sm",
+  4: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 text-sm",
 };
 
 const NARRATIVE_GRID: Record<number, string> = {
@@ -650,22 +660,37 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
 
   return (
     <div className="space-y-5" data-testid="decision-impact-comparison">
-      {/* Header strip identifying each column */}
-      <div className={headerStripGrid}>
+      {/* Header strip identifying each column. On phones (<sm) each card
+          uses a horizontal letter-pill + label layout so the strip stays
+          compact even when 4 decisions stack vertically; on sm+ the letter
+          sits above the label like a column header. The letter pill keeps
+          its color cue at every breakpoint so A/B/C/D remain identifiable. */}
+      <div className={headerStripGrid} data-testid="comparison-header-strip">
         {cols.map((c, i) => {
           const palette = COLUMN_PALETTE[i] ?? COLUMN_PALETTE[0];
           return (
             <div
               key={i}
-              className={cn("rounded-lg px-3 py-2 border", palette.headerBg, palette.headerBorder)}
+              className={cn(
+                "rounded-lg px-3 py-1.5 sm:py-2 border flex items-center gap-2 sm:block sm:gap-0",
+                palette.headerBg,
+                palette.headerBorder,
+              )}
               data-testid={`comparison-label-col-${i}`}
             >
               <span
-                className={cn("text-[10px] font-semibold uppercase tracking-wider", palette.headerText)}
+                className={cn(
+                  "text-[10px] font-semibold uppercase tracking-wider shrink-0",
+                  "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 sm:px-0 sm:py-0 sm:rounded-none",
+                  "ring-1 ring-current/20 sm:ring-0",
+                  palette.headerText,
+                )}
               >
                 {palette.letter}
               </span>
-              <p className="font-display font-semibold text-foreground truncate">{c.label}</p>
+              <p className="font-display font-semibold text-foreground truncate min-w-0">
+                {c.label}
+              </p>
             </div>
           );
         })}
@@ -681,19 +706,41 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
 
       {/* Per-year table — interleaves all decision rows for each metric.
           The "Side" column shows A/B/C/D so founders can see at a glance
-          which decision a row belongs to. */}
+          which decision a row belongs to.
+
+          Phone responsive: the seven-column table (Metric, Side, Y1-Y5)
+          is wider than a phone viewport (min-w-[560px]) and lives inside
+          an `overflow-x-auto` scroller. The Metric column is `sticky
+          left-0` so the row label stays pinned while the founder swipes
+          through the year columns. A subtle "Swipe →" hint surfaces only
+          on phones (sm:hidden) so the scroll affordance is obvious — the
+          built-in scrollbar alone is too easy to miss on touch devices. */}
       <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-border/60 flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          <h3 className="font-display font-semibold text-sm">
-            5-year impact, side-by-side
-          </h3>
+        <div className="px-4 py-3 border-b border-border/60 flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <TrendingUp className="h-4 w-4 text-primary shrink-0" />
+            <h3 className="font-display font-semibold text-sm truncate">
+              5-year impact, side-by-side
+            </h3>
+          </div>
+          <p
+            className="sm:hidden text-[10px] font-medium text-muted-foreground italic shrink-0"
+            data-testid="comparison-year-table-scroll-hint"
+            aria-hidden="true"
+          >
+            Swipe →
+          </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs min-w-[480px]" data-testid="comparison-year-table">
+        <div className="overflow-x-auto" data-testid="comparison-year-table-scroller">
+          <table
+            className="w-full text-xs min-w-[560px]"
+            data-testid="comparison-year-table"
+          >
             <thead className="bg-slate-50">
               <tr className="text-left text-muted-foreground">
-                <th className="px-3 py-2 font-medium">Metric</th>
+                <th className="px-3 py-2 font-medium sticky left-0 bg-slate-50 z-10 shadow-[1px_0_0_0_var(--color-border)]">
+                  Metric
+                </th>
                 <th className="px-2 py-2 font-medium">Side</th>
                 {[1, 2, 3, 4, 5].map((y) => (
                   <th key={y} className="px-2 py-2 font-medium text-right">Year {y}</th>
@@ -707,7 +754,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                 return (
                   <tr key={`net-${ci}`} className={cn("border-t border-border/60", ci % 2 === 1 && "bg-slate-50/40")}>
                     {ci === 0 && (
-                      <td className="px-3 py-2 font-sans text-muted-foreground" rowSpan={n}>
+                      <td className="px-3 py-2 font-sans text-muted-foreground sticky left-0 bg-card z-[5] shadow-[1px_0_0_0_var(--color-border)]" rowSpan={n}>
                         Net income Δ
                       </td>
                     )}
@@ -734,7 +781,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                 return (
                   <tr key={`rev-${ci}`} className={cn("border-t border-border/60", ci % 2 === 1 && "bg-slate-50/40")}>
                     {ci === 0 && (
-                      <td className="px-3 py-2 font-sans text-muted-foreground" rowSpan={n}>
+                      <td className="px-3 py-2 font-sans text-muted-foreground sticky left-0 bg-card z-[5] shadow-[1px_0_0_0_var(--color-border)]" rowSpan={n}>
                         Revenue Δ
                       </td>
                     )}
@@ -761,7 +808,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                 return (
                   <tr key={`dscr-${ci}`} className={cn("border-t border-border/60", ci % 2 === 1 && "bg-slate-50/40")}>
                     {ci === 0 && (
-                      <td className="px-3 py-2 font-sans text-muted-foreground" rowSpan={n}>
+                      <td className="px-3 py-2 font-sans text-muted-foreground sticky left-0 bg-card z-[5] shadow-[1px_0_0_0_var(--color-border)]" rowSpan={n}>
                         DSCR after
                       </td>
                     )}
@@ -797,7 +844,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                 return (
                   <tr key={`cash-${ci}`} className={cn("border-t border-border/60", ci % 2 === 1 && "bg-slate-50/40")}>
                     {ci === 0 && (
-                      <td className="px-3 py-2 font-sans text-muted-foreground" rowSpan={n}>
+                      <td className="px-3 py-2 font-sans text-muted-foreground sticky left-0 bg-card z-[5] shadow-[1px_0_0_0_var(--color-border)]" rowSpan={n}>
                         Cash position
                       </td>
                     )}
@@ -854,7 +901,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                 return (
                   <tr key={`margin-${ci}`} className={cn("border-t border-border/60", ci % 2 === 1 && "bg-slate-50/40")}>
                     {ci === 0 && (
-                      <td className="px-3 py-2 font-sans text-muted-foreground" rowSpan={n}>
+                      <td className="px-3 py-2 font-sans text-muted-foreground sticky left-0 bg-card z-[5] shadow-[1px_0_0_0_var(--color-border)]" rowSpan={n}>
                         Net margin after
                       </td>
                     )}

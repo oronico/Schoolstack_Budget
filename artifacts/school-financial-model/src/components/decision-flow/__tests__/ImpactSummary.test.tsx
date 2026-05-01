@@ -110,6 +110,120 @@ describe("ImpactSummary — single view trough callout", () => {
   });
 });
 
+describe("ImpactSummary — comparison view phone responsive layout", () => {
+  // These tests pin the mobile-friendly class hooks on the comparison view
+  // so a regression that drops the sticky-first-column or the phone scroll
+  // hint surfaces in unit tests rather than in a manual phone-width pass.
+  // We assert on the class strings the renderer emits because Tailwind
+  // utility classes are how the responsive contract is expressed in this
+  // codebase (no plain CSS counterpart to query against jsdom).
+  function renderTwoColComparison() {
+    const impactA = makeImpact({ cashPosition: [80000, 40000, -50000, 30000, 120000] });
+    const impactB = makeImpact({ cashPosition: [120000, 90000, 60000, 20000, 100000] });
+    render(
+      <ImpactSummary
+        impact={impactA}
+        columns={[
+          { impact: impactA, label: "Site A — long descriptive name that may overflow" },
+          { impact: impactB, label: "Site B" },
+        ]}
+      />,
+    );
+  }
+
+  it("pins the metric column with sticky positioning so it stays visible while scrolling years", () => {
+    renderTwoColComparison();
+    const table = screen.getByTestId("comparison-year-table");
+    // The Metric header cell + every per-metric rowSpan cell must carry the
+    // sticky/left-0/bg classes; otherwise horizontal scroll on phones
+    // detaches the row label from its values.
+    const stickyCells = table.querySelectorAll<HTMLElement>("th.sticky, td.sticky");
+    expect(stickyCells.length).toBeGreaterThanOrEqual(6); // 1 thead + 5 metric rows
+    stickyCells.forEach((cell) => {
+      expect(cell.className).toMatch(/\bsticky\b/);
+      expect(cell.className).toMatch(/\bleft-0\b/);
+      // An opaque background is required so the year cells don't bleed
+      // through the sticky cell as they scroll under it.
+      expect(cell.className).toMatch(/\bbg-(card|slate-50)\b/);
+    });
+  });
+
+  it("renders a phone-only swipe hint as a visual scroll affordance", () => {
+    renderTwoColComparison();
+    const hint = screen.getByTestId("comparison-year-table-scroll-hint");
+    // Hidden on sm+ so desktop founders don't see a redundant "swipe"
+    // instruction; on phones it surfaces because the seven-column table
+    // overflows the viewport.
+    expect(hint.className).toMatch(/\bsm:hidden\b/);
+    expect(hint.textContent).toMatch(/Swipe/i);
+  });
+
+  it("keeps the table wider than the smallest phone viewport so overflow scroll engages", () => {
+    renderTwoColComparison();
+    const table = screen.getByTestId("comparison-year-table");
+    // Scoped guard so a future "make the table fluid" change has to
+    // intentionally touch this — the sticky-first-column UX only makes
+    // sense when the table actually overflows on phones.
+    expect(table.className).toMatch(/min-w-\[\d{3,}px\]/);
+    const scroller = screen.getByTestId("comparison-year-table-scroller");
+    expect(scroller.className).toMatch(/\boverflow-x-auto\b/);
+  });
+
+  it("keeps the column header strip color-coded with letter pills on phones", () => {
+    renderTwoColComparison();
+    const strip = screen.getByTestId("comparison-header-strip");
+    const cardA = within(strip).getByTestId("comparison-label-col-0");
+    const cardB = within(strip).getByTestId("comparison-label-col-1");
+    // Inline (flex) layout below sm so the strip stays compact when 4
+    // columns stack vertically on phones; switches to a stacked block on
+    // sm+ so the letter sits above the label like a column header.
+    expect(cardA.className).toMatch(/\bflex\b/);
+    expect(cardA.className).toMatch(/\bsm:block\b/);
+    // The A/B color cue must survive the inline layout — the letter still
+    // gets the palette text color so founders can match the strip back to
+    // the headline tiles and the per-side trough chips.
+    const letterA = within(cardA).getByText("A");
+    expect(letterA.className).toMatch(/text-primary/);
+    const letterB = within(cardB).getByText("B");
+    expect(letterB.className).toMatch(/text-teal-700/);
+  });
+
+  it("stacks headline tile inner cells into a single column at <480px for n=2 and n=3", () => {
+    // n=2 case
+    const { unmount } = render(
+      <ImpactSummary
+        impact={makeImpact()}
+        columns={[
+          { impact: makeImpact(), label: "Site A" },
+          { impact: makeImpact(), label: "Site B" },
+        ]}
+      />,
+    );
+    // Each headline tile contains an inner grid; at the smallest phone
+    // size these need to be a single column so money values + "→ $X"
+    // subtext don't get crushed into 90px-wide cells.
+    const tile2 = screen.getByTestId("cmp-y5-net-col-0").parentElement;
+    expect(tile2?.className).toMatch(/grid-cols-1/);
+    expect(tile2?.className).toMatch(/min-\[480px\]:grid-cols-2/);
+    unmount();
+
+    // n=3 case
+    render(
+      <ImpactSummary
+        impact={makeImpact()}
+        columns={[
+          { impact: makeImpact(), label: "Site A" },
+          { impact: makeImpact(), label: "Site B" },
+          { impact: makeImpact(), label: "Site C" },
+        ]}
+      />,
+    );
+    const tile3 = screen.getByTestId("cmp-y5-net-col-0").parentElement;
+    expect(tile3?.className).toMatch(/grid-cols-1/);
+    expect(tile3?.className).toMatch(/min-\[480px\]:grid-cols-3/);
+  });
+});
+
 describe("ImpactSummary — comparison view trough highlights", () => {
   it("marks each side's lowest cash year independently and lists them in the summary", () => {
     // A's trough is Y3 (-$50k); B's trough is Y4 ($20k).
