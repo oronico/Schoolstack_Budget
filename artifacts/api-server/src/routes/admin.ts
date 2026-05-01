@@ -381,36 +381,51 @@ router.get(
 // can see, at a glance, which coach lines are reaching founders and
 // which are being skipped or shown but ignored. Only basics/extra
 // founders ever emit these events; advanced-mode users are silent.
+//
+// `sourcePath` points at the file that emits the *_shown event for the
+// surface, so the admin UI can deep-link to it from the low-engagement
+// tooltip (Task #410). When more than one file emits a given event,
+// list the primary owner — i.e. the component whose render mounts the
+// surface, not a shared track helper.
 const COACHING_FUNNEL_SURFACES: Array<{
   key: string;
   label: string;
   shown: string;
   engaged: string;
   dismissed?: string;
+  sourcePath: string;
 }> = [
   {
     key: "dashboard_launcher_coach",
     label: "Dashboard launcher coach",
     shown: "dashboard_launcher_coach_shown",
     engaged: "dashboard_launcher_coach_engaged",
+    sourcePath:
+      "artifacts/school-financial-model/src/components/decision-flow/DecisionLauncher.tsx",
   },
   {
     key: "things_changed_coach",
     label: "Things-have-changed banner",
     shown: "things_changed_coach_shown",
     engaged: "things_changed_coach_engaged",
+    sourcePath:
+      "artifacts/school-financial-model/src/components/decision-flow/DecisionLauncher.tsx",
   },
   {
     key: "decision_why_explainer",
     label: "Decision flow Why callout",
     shown: "decision_why_explainer_shown",
     engaged: "decision_why_explainer_engaged",
+    sourcePath:
+      "artifacts/school-financial-model/src/components/decision-flow/WhyStep.tsx",
   },
   {
     key: "impact_kpi_nudge",
     label: "Impact summary KPI nudge",
     shown: "impact_kpi_nudge_shown",
     engaged: "impact_kpi_nudge_engaged",
+    sourcePath:
+      "artifacts/school-financial-model/src/components/decision-flow/ImpactSummary.tsx",
   },
   {
     key: "save_action_apply_reminder",
@@ -418,6 +433,8 @@ const COACHING_FUNNEL_SURFACES: Array<{
     shown: "save_action_apply_reminder_shown",
     engaged: "save_action_apply_reminder_engaged",
     dismissed: "save_action_apply_reminder_dismissed",
+    sourcePath:
+      "artifacts/school-financial-model/src/components/decision-flow/SaveActions.tsx",
   },
   {
     key: "accounting_export_lesson",
@@ -425,6 +442,8 @@ const COACHING_FUNNEL_SURFACES: Array<{
     shown: "accounting_export_lesson_shown",
     engaged: "accounting_export_lesson_engaged",
     dismissed: "accounting_export_lesson_dismissed",
+    sourcePath:
+      "artifacts/school-financial-model/src/pages/model-wizard/steps/SchoolProfileStep.tsx",
   },
   {
     key: "accounting_export_post_upload_coach",
@@ -432,20 +451,35 @@ const COACHING_FUNNEL_SURFACES: Array<{
     shown: "accounting_export_post_upload_coach_shown",
     engaged: "accounting_export_post_upload_coach_engaged",
     dismissed: "accounting_export_post_upload_coach_dismissed",
+    sourcePath:
+      "artifacts/school-financial-model/src/pages/model-wizard/steps/SchoolProfileStep.tsx",
   },
   {
     key: "actuals_coach_intro",
     label: "Actuals coach intro",
     shown: "actuals_coach_intro_shown",
     engaged: "actuals_coach_intro_engaged",
+    sourcePath:
+      "artifacts/school-financial-model/src/pages/scenarios/index.tsx",
   },
   {
     key: "actuals_variance_nudge",
     label: "Actuals variance nudge",
     shown: "actuals_variance_nudge_shown",
     engaged: "actuals_variance_nudge_engaged",
+    sourcePath:
+      "artifacts/school-financial-model/src/pages/scenarios/index.tsx",
   },
 ];
+
+// Low-engagement threshold for the Coaching tab "this surface looks dead"
+// callout (Task #410). A surface is flagged when it cleared the impression
+// floor (so we're not flagging brand-new surfaces or noise) AND its
+// engagement rate is under the floor. Mirrored verbatim into the API
+// response so the admin UI can surface the exact numbers in the tooltip
+// without hardcoding them in two places.
+const LOW_ENGAGEMENT_MIN_IMPRESSIONS = 100;
+const LOW_ENGAGEMENT_MAX_RATE = 0.05;
 
 router.get(
   "/admin/coaching-funnel",
@@ -490,21 +524,33 @@ router.get(
         const shown = counts.get(s.shown) || 0;
         const engaged = counts.get(s.engaged) || 0;
         const dismissed = s.dismissed ? counts.get(s.dismissed) || 0 : null;
+        const engagementRate = shown > 0 ? engaged / shown : 0;
         return {
           key: s.key,
           label: s.label,
           shown,
           engaged,
           dismissed,
-          engagementRate: shown > 0 ? engaged / shown : 0,
+          engagementRate,
           dismissalRate:
             s.dismissed && shown > 0 ? (dismissed ?? 0) / shown : null,
+          sourcePath: s.sourcePath,
+          // Statistically meaningful low engagement: enough impressions
+          // to trust the rate, and rate below the floor. The admin UI
+          // sorts these to the top and shows an amber "looks dead" badge.
+          lowEngagement:
+            shown > LOW_ENGAGEMENT_MIN_IMPRESSIONS &&
+            engagementRate < LOW_ENGAGEMENT_MAX_RATE,
         };
       });
 
       res.json({
         windowDays: 30,
         since: since.toISOString(),
+        lowEngagementThreshold: {
+          minImpressions: LOW_ENGAGEMENT_MIN_IMPRESSIONS,
+          maxEngagementRate: LOW_ENGAGEMENT_MAX_RATE,
+        },
         surfaces,
       });
     } catch (err) {

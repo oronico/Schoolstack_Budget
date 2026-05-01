@@ -34,6 +34,12 @@ import {
   Compass,
 } from "lucide-react";
 import { format } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface AnalyticsData {
   totalUsers: number;
@@ -1275,11 +1281,24 @@ interface CoachingFunnelSurface {
   dismissed: number | null;
   engagementRate: number;
   dismissalRate: number | null;
+  // Repo-relative path to the file that emits this surface's *_shown
+  // event. Surfaced in the low-engagement tooltip so admins can jump
+  // straight to the source when pruning dead coach copy (Task #410).
+  sourcePath: string;
+  // True when impressions cleared the floor (proves it's not noise) and
+  // engagement is below the floor — i.e. the surface looks dead.
+  lowEngagement: boolean;
 }
 
 interface CoachingFunnelResponse {
   windowDays: number;
   since: string;
+  // Mirrored from the server so the tooltip can quote the exact numbers
+  // that triggered the flag without hardcoding them on the client.
+  lowEngagementThreshold: {
+    minImpressions: number;
+    maxEngagementRate: number;
+  };
   surfaces: CoachingFunnelSurface[];
 }
 
@@ -1352,29 +1371,135 @@ function CoachingFunnelSection() {
         {data.surfaces.length === 0 ? (
           <p className="text-sm text-muted-foreground mt-4">No coaching events yet.</p>
         ) : (
-          <div className="space-y-6 mt-6">
-            {data.surfaces.map((s) => (
-              <div key={s.key} className="space-y-2 border-b border-border/40 last:border-0 pb-5 last:pb-0">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <span className="font-semibold text-foreground">{s.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    Engaged {(s.engagementRate * 100).toFixed(0)}%
-                    {s.dismissalRate !== null && (
-                      <> &middot; Dismissed {(s.dismissalRate * 100).toFixed(0)}%</>
-                    )}
-                  </span>
+          <TooltipProvider delayDuration={200}>
+            <div className="space-y-6 mt-6">
+              {sortCoachingSurfaces(data.surfaces).map((s) => (
+                <div
+                  key={s.key}
+                  data-testid={`coaching-surface-${s.key}`}
+                  data-low-engagement={s.lowEngagement ? "true" : "false"}
+                  className="space-y-2 border-b border-border/40 last:border-0 pb-5 last:pb-0"
+                >
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-foreground">
+                        {s.label}
+                      </span>
+                      {s.lowEngagement && (
+                        <LowEngagementBadge
+                          surface={s}
+                          threshold={data.lowEngagementThreshold}
+                        />
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      Engaged {(s.engagementRate * 100).toFixed(0)}%
+                      {s.dismissalRate !== null && (
+                        <> &middot; Dismissed {(s.dismissalRate * 100).toFixed(0)}%</>
+                      )}
+                    </span>
+                  </div>
+                  <FunnelBar label="Shown" value={s.shown} maxValue={s.shown} />
+                  <FunnelBar label="Engaged" value={s.engaged} maxValue={s.shown} />
+                  {s.dismissed !== null && (
+                    <FunnelBar label="Dismissed" value={s.dismissed} maxValue={s.shown} />
+                  )}
                 </div>
-                <FunnelBar label="Shown" value={s.shown} maxValue={s.shown} />
-                <FunnelBar label="Engaged" value={s.engaged} maxValue={s.shown} />
-                {s.dismissed !== null && (
-                  <FunnelBar label="Dismissed" value={s.dismissed} maxValue={s.shown} />
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </TooltipProvider>
         )}
       </div>
     </div>
+  );
+}
+
+// Sort low-engagement surfaces to the top so admins see "this looks dead"
+// candidates first, then sort the remainder by impression count desc so
+// the highest-traffic healthy surfaces sit above quiet ones (Task #410).
+function sortCoachingSurfaces(
+  surfaces: CoachingFunnelSurface[],
+): CoachingFunnelSurface[] {
+  return [...surfaces].sort((a, b) => {
+    if (a.lowEngagement !== b.lowEngagement) {
+      return a.lowEngagement ? -1 : 1;
+    }
+    return b.shown - a.shown;
+  });
+}
+
+// Amber "looks dead" badge with a tooltip that quotes the exact threshold
+// numbers and points at the source file emitting the *_shown event so an
+// admin can jump straight to it when pruning copy (Task #410).
+//
+// The trigger is a real <button> (not a styled <span>) so keyboard users
+// can focus the badge to read the tooltip via aria-describedby. The
+// source path is rendered as a focusable button inside the tooltip that
+// copies the repo-relative path to the clipboard — the most reliable
+// "deep link" we can offer without baking in a VCS host URL (works
+// whether the admin is in a local checkout, a Replit shell, or a remote
+// editor).
+function LowEngagementBadge({
+  surface,
+  threshold,
+}: {
+  surface: CoachingFunnelSurface;
+  threshold: CoachingFunnelResponse["lowEngagementThreshold"];
+}) {
+  const ratePct = (threshold.maxEngagementRate * 100).toFixed(0);
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.clipboard) return;
+    navigator.clipboard.writeText(surface.sourcePath).then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      },
+      () => {},
+    );
+  }, [surface.sourcePath]);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          data-testid={`low-engagement-badge-${surface.key}`}
+          aria-label={`Low engagement: ${surface.label}`}
+          className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1"
+        >
+          <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+          Looks dead
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="start"
+        className="max-w-xs bg-amber-900 text-amber-50 text-xs leading-snug px-3 py-2"
+      >
+        <p className="font-semibold mb-1">Low engagement</p>
+        <p>
+          Engaged {(surface.engagementRate * 100).toFixed(1)}% of{" "}
+          {surface.shown.toLocaleString()} impressions over the last 30 days —
+          below the {ratePct}% floor we apply once a surface clears{" "}
+          {threshold.minImpressions} impressions. Consider rewriting or
+          retiring the copy.
+        </p>
+        <p className="mt-2">Source:</p>
+        <button
+          type="button"
+          onClick={handleCopy}
+          data-testid={`low-engagement-source-${surface.key}`}
+          aria-label={`Copy source path ${surface.sourcePath}`}
+          className="mt-1 block w-full text-left font-mono text-[11px] underline decoration-dotted underline-offset-2 hover:decoration-solid focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 rounded break-all"
+        >
+          {surface.sourcePath}
+        </button>
+        <p className="mt-1 text-[10px] text-amber-200/80" aria-live="polite">
+          {copied ? "Path copied to clipboard" : "Click path to copy"}
+        </p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
