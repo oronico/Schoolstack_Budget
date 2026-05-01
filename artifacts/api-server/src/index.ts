@@ -97,7 +97,7 @@ process.on("unhandledRejection", (reason) => {
 
 validateEnv();
 
-const port = Number(process.env["PORT"] || "3000");
+const port = Number(process.env["PORT"] || "8080");
 const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 15_000;
 let server: Server | undefined;
 let cleanupTimer: ReturnType<typeof setInterval>;

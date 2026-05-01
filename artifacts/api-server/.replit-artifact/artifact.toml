@@ -9,6 +9,9 @@ localPort = 8080
 name = "API Server"
 paths = ["/api"]
 
+[services.env]
+PORT = "8080"
+
 [services.development]
 run = "pnpm --filter @workspace/api-server run dev"
 
@@ -17,9 +20,6 @@ build = "pnpm --filter @workspace/api-server run build"
 
 [services.production.run]
 args = ["node", "artifacts/api-server/dist/index.cjs"]
-
-[services.production.run.env]
-PORT = "8080"
 
 [services.production.health.startup]
 path = "/api/healthz"
