@@ -69,9 +69,10 @@ export {
   type PersistedDecisionOverrides,
 } from "./decision-bullets.js";
 
+export { DECISION_TYPES, type DecisionType } from "./decision-types.js";
+
 export {
   type FullModelData as DecisionEngineModelData,
-  type DecisionType,
 } from "./decision-engine/model-shape.js";
 
 export {

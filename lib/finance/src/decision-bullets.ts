@@ -5,7 +5,8 @@
 // scenario's overrides. Keeping the implementation here ensures the two
 // surfaces never silently disagree about what the same scenario means.
 
-export type DecisionType = "add_program" | "evaluate_site" | "change_enrollment";
+export { DECISION_TYPES, type DecisionType } from "./decision-types.js";
+import { DECISION_TYPES, type DecisionType } from "./decision-types.js";
 
 export type DecisionOutcomeStatus = "pursued" | "declined" | "on_hold";
 
@@ -43,7 +44,7 @@ export interface PersistedDecisionOverrides {
 }
 
 export function isDecisionType(v: unknown): v is DecisionType {
-  return v === "add_program" || v === "evaluate_site" || v === "change_enrollment";
+  return typeof v === "string" && (DECISION_TYPES as readonly string[]).includes(v);
 }
 
 export function isDecisionOutcomeStatus(v: unknown): v is DecisionOutcomeStatus {

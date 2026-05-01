@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BENCHMARK_DSCR_GREEN } from "@workspace/finance";
+import { BENCHMARK_DSCR_GREEN, DECISION_TYPES } from "@workspace/finance";
 
 const numMsg = (field: string) => ({
   invalid_type_error: `Please enter a valid number for ${field}`,
@@ -538,7 +538,11 @@ export const assumptionFlagResponseSchema = z.object({
   reason: z.string().default(""),
 });
 
-export const decisionTypeSchema = z.enum(["add_program", "evaluate_site", "change_enrollment"]);
+// The list of valid decision types lives in `@workspace/finance`
+// (`DECISION_TYPES`) so the Zod schema here, the `DecisionType` union exported
+// from the shared package, and the bullet/label maps can never silently fall
+// out of sync. Adding a fourth decision type means editing exactly one tuple.
+export const decisionTypeSchema = z.enum(DECISION_TYPES);
 export type DecisionType = z.infer<typeof decisionTypeSchema>;
 
 export const outcomeStatusSchema = z.enum(["pursued", "declined", "on_hold"]);

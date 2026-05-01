@@ -178,4 +178,4 @@ export interface FullModelData {
   accountingExport?: AccountingExportLike;
 }
 
-export type DecisionType = "add_program" | "evaluate_site" | "change_enrollment";
+export { type DecisionType } from "../decision-types.js";
