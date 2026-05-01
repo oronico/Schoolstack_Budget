@@ -295,6 +295,8 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
             disabled={loading !== null && loading !== "chestertonOperatingManual"}
             onClick={() => handleDownload("chestertonOperatingManual")}
             highlight
+            badge="✓ Live formulas"
+            caption="Tuition, financial aid, faculty payroll, and fundraising totals are live Excel formulas — edit any input on GETTING STARTED and the workbook recalculates."
           />
         )}
       </div>
@@ -540,7 +542,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
 }
 
 function ExportCard({
-  icon, title, description, isLoading, isExported, disabled, onClick, highlight
+  icon, title, description, isLoading, isExported, disabled, onClick, highlight, badge, caption
 }: {
   icon: React.ReactNode;
   title: string;
@@ -550,6 +552,8 @@ function ExportCard({
   disabled: boolean;
   onClick: () => void;
   highlight?: boolean;
+  badge?: string;
+  caption?: string;
 }) {
   return (
     <button
@@ -561,7 +565,17 @@ function ExportCard({
         {isLoading ? <Loader2 className="h-7 w-7 animate-spin" /> : icon}
       </div>
       <span className="font-display font-bold text-sm text-foreground">{isExported ? `${title} ✓` : title}</span>
+      {badge && (
+        <span className="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2.5 py-0.5 text-[11px] font-semibold">
+          {badge}
+        </span>
+      )}
       <span className="text-xs text-muted-foreground leading-snug">{description}</span>
+      {caption && (
+        <span className="text-[11px] text-muted-foreground/90 leading-snug italic">
+          {caption}
+        </span>
+      )}
       <span className="mt-auto text-xs font-semibold text-primary group-hover:text-primary/80 transition-colors">
         {isLoading ? "Generating..." : isExported ? "Download Again" : highlight ? "Preview & Download" : "Download"}
       </span>
