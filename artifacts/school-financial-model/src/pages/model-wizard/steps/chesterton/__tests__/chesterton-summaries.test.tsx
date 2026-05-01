@@ -7,6 +7,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import { ChestertonFundraisingStep } from "../ChestertonFundraisingStep";
 import { ChestertonGiftChartStep } from "../ChestertonGiftChartStep";
 import { ChestertonRecruitingStep } from "../ChestertonRecruitingStep";
+import { ChestertonStaffingStep } from "../ChestertonStaffingStep";
 import { buildDefaultChestertonData } from "@/lib/chesterton/template";
 
 // Lightweight FormProvider wrapper so each step can be rendered in isolation
@@ -206,6 +207,44 @@ describe("Chesterton wizard step summaries", () => {
 
     expect(screen.getByTestId("chesterton-fundraising-committed")).toHaveTextContent("$40,000");
     expect(screen.getByTestId("chesterton-fundraising-coverage-pct")).toHaveTextContent("40%");
+  });
+
+  // Task #351: the staffing step's payroll widgets must update live as the
+  // founder edits a row's # Periods input — same anti-pattern as #350.
+  it("staffing step updates periods total / FTE / annual payroll live as the user types", async () => {
+    const user = userEvent.setup();
+    const seed = buildDefaultChestertonData();
+
+    render(
+      <HostForm
+        defaults={{
+          chesterton: {
+            ...seed,
+            startingTeacherSalary: 50_000,
+            salarySchedule: [
+              { id: "s1", subject: "Latin", periodsPerSection: 0, notes: "" },
+              { id: "s2", subject: "Math", periodsPerSection: 0, notes: "" },
+            ],
+          },
+        }}
+      >
+        <ChestertonStaffingStep />
+      </HostForm>,
+    );
+
+    expect(screen.getByTestId("chesterton-staffing-periods-total")).toHaveTextContent("0");
+    expect(screen.getByTestId("chesterton-staffing-fte-equivalent")).toHaveTextContent("0.0");
+    expect(screen.getByTestId("chesterton-staffing-annual-payroll")).toHaveTextContent("$0");
+
+    // Two salary-schedule rows render two "Periods" inputs; edit the first.
+    const periodsInput = screen.getAllByLabelText("Periods", { selector: "input" })[0] as HTMLInputElement;
+    await user.clear(periodsInput);
+    await user.type(periodsInput, "5");
+
+    // 5 periods total, FTE = 5/5 = 1.0, payroll = (50_000/5) * 5 = $50,000.
+    expect(screen.getByTestId("chesterton-staffing-periods-total")).toHaveTextContent("5");
+    expect(screen.getByTestId("chesterton-staffing-fte-equivalent")).toHaveTextContent("1.0");
+    expect(screen.getByTestId("chesterton-staffing-annual-payroll")).toHaveTextContent("$50,000");
   });
 
   it("recruiting step hides the summary panel when Year-1 enrollment is unset", () => {

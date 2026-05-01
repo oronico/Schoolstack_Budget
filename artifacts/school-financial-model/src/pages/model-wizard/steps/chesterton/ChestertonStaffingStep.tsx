@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useFormContext, useFieldArray } from "react-hook-form";
+import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, BookOpen, Calculator } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
@@ -9,8 +9,11 @@ import { buildDefaultChestertonData, avgSalaryPerPeriod } from "@/lib/chesterton
 const FTE_PERIODS = 5; // one Chesterton FTE = 5 periods/day per the CSN manual
 
 export function ChestertonStaffingStep() {
-  const { control, watch, setValue } = useFormContext();
-  const startingSalary = watch("chesterton.startingTeacherSalary") as number | undefined;
+  const { control, setValue } = useFormContext();
+  // useWatch subscribes via `control` so per-row edits inside useFieldArray
+  // inputs (registered with valueAsNumber) trigger a re-render of the totals.
+  // Using formContext.watch() here misses those updates — see task #350/#351.
+  const startingSalary = useWatch({ control, name: "chesterton.startingTeacherSalary" }) as number | undefined;
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -24,7 +27,9 @@ export function ChestertonStaffingStep() {
     }
   }, [fields.length, setValue]);
 
-  const subjects = watch("chesterton.salarySchedule") as Array<{ periodsPerSection?: number }> | undefined;
+  const subjects = useWatch({ control, name: "chesterton.salarySchedule" }) as
+    | Array<{ periodsPerSection?: number }>
+    | undefined;
   const periodsTotal = useMemo(
     () => (subjects || []).reduce((s, r) => s + (Number(r?.periodsPerSection) || 0), 0),
     [subjects],
@@ -125,15 +130,30 @@ export function ChestertonStaffingStep() {
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-xl border border-border bg-muted/20 p-3 text-center">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Total Periods / Day</div>
-            <div className="text-xl font-bold text-foreground">{periodsTotal}</div>
+            <div
+              className="text-xl font-bold text-foreground"
+              data-testid="chesterton-staffing-periods-total"
+            >
+              {periodsTotal}
+            </div>
           </div>
           <div className="rounded-xl border border-border bg-muted/20 p-3 text-center">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">FTE Equivalent</div>
-            <div className="text-xl font-bold text-foreground">{fteEquivalent.toFixed(1)}</div>
+            <div
+              className="text-xl font-bold text-foreground"
+              data-testid="chesterton-staffing-fte-equivalent"
+            >
+              {fteEquivalent.toFixed(1)}
+            </div>
           </div>
           <div className="rounded-xl border border-border bg-muted/20 p-3 text-center">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Annual Faculty Payroll</div>
-            <div className="text-xl font-bold text-foreground">{formatCurrency(annualPayroll)}</div>
+            <div
+              className="text-xl font-bold text-foreground"
+              data-testid="chesterton-staffing-annual-payroll"
+            >
+              {formatCurrency(annualPayroll)}
+            </div>
           </div>
         </div>
       </div>
