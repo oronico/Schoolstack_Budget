@@ -598,6 +598,32 @@ export function WhatIfDrawer({
                     Scales facility expenses proportionally (requires sqft set in profile)
                   </p>
                 </div>
+
+                <div className="space-y-2 mt-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      One-time fit-out (Year 1)
+                    </label>
+                    <span className="text-sm font-mono font-semibold text-foreground">
+                      {fmtMoney(overrides.oneTimeFitOut ?? 0)}
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    value={overrides.oneTimeFitOut ?? 0}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      if (Number.isNaN(v)) return;
+                      setOverrides((o) => ({ ...o, oneTimeFitOut: Math.max(0, v) }));
+                    }}
+                    data-testid="whatif-fitout"
+                    className="w-full px-3 py-2 text-sm font-mono border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Modeled as a single Year-1 occupancy expense (carry-in cost for the new site)
+                  </p>
+                </div>
               </section>
 
               {/* Impact panel */}

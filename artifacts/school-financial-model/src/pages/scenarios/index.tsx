@@ -1654,7 +1654,18 @@ export function CustomScenarioCard({
         </button>
       ) : (
         <button
-          onClick={() => onOpenInPlanner(cs.overrides as WhatIfOverrides)}
+          onClick={() => {
+            // The persisted shape stores fit-out under `siteFitOutCost`; the
+            // planner's WhatIfOverrides expects it under `oneTimeFitOut`.
+            // Translate so re-opening an Evaluate-Site scenario in the planner
+            // doesn't silently drop the fit-out value.
+            const persisted = cs.overrides as PersistedDecisionOverrides & WhatIfOverrides;
+            const planner: WhatIfOverrides = { ...(persisted as WhatIfOverrides) };
+            if (persisted.siteFitOutCost !== undefined && persisted.siteFitOutCost > 0) {
+              planner.oneTimeFitOut = persisted.siteFitOutCost;
+            }
+            onOpenInPlanner(planner);
+          }}
           className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-sm font-medium border border-amber-200 transition-colors"
           data-testid={`custom-scenario-open-${idx}`}
         >

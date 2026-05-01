@@ -9,6 +9,11 @@ export interface WhatIfOverrides {
   rentEscalation?: number;
   rentChangeStartYear?: number;
   sqftDelta?: number;
+  // One-time Year-1 capital outlay (e.g. site fit-out). Modeled as a single
+  // expense row that hits Year 1 only — see applyWhatIfOverrides below. We
+  // expose this on the planner so the Evaluate-a-Site flow can hand its
+  // fit-out estimate off to the live What-If hash without losing it.
+  oneTimeFitOut?: number;
 }
 
 export interface WhatIfImpact {
@@ -36,6 +41,7 @@ export function isEmptyOverrides(o: WhatIfOverrides | undefined | null): boolean
   if (o.monthlyRent !== undefined) return false;
   if (o.rentEscalation !== undefined) return false;
   if (o.sqftDelta !== undefined && o.sqftDelta !== 0) return false;
+  if (o.oneTimeFitOut !== undefined && o.oneTimeFitOut !== 0) return false;
   return true;
 }
 
@@ -251,6 +257,29 @@ export function applyWhatIfOverrides(data: FullModelData, overrides: WhatIfOverr
     }
   }
 
+  // One-time Year-1 capital outlay (fit-out / site capex). We model it the
+  // same way the Evaluate-a-Site decision flow does — a single annual_fixed
+  // occupancy row with the cost in Year 1 only — so the planner replays the
+  // same numbers the founder saw in the impact step. Uses a stable id so
+  // re-applying the same overrides (e.g. via the URL hash) doesn't proliferate
+  // duplicate fit-out rows.
+  if (overrides.oneTimeFitOut !== undefined && overrides.oneTimeFitOut > 0) {
+    const fitOutAmount = Math.max(0, overrides.oneTimeFitOut);
+    const fitOutRow = {
+      id: "__whatif_fitout__",
+      category: "occupancy_facility",
+      lineItem: "Site fit-out (one-time)",
+      enabled: true,
+      driverType: "annual_fixed" as const,
+      amounts: [fitOutAmount, 0, 0, 0, 0],
+      note: "What-If: one-time Year-1 fit-out",
+    };
+    cloned.expenseRows = ([
+      ...(cloned.expenseRows || []),
+      fitOutRow,
+    ] as unknown) as FullModelData["expenseRows"];
+  }
+
   // Square footage delta — proportionally scale all occupancy_facility expense rows
   if (overrides.sqftDelta !== undefined && overrides.sqftDelta !== 0) {
     const sp = data.schoolProfile as Record<string, unknown> | undefined;
@@ -272,6 +301,8 @@ export function applyWhatIfOverrides(data: FullModelData, overrides: WhatIfOverr
         if (!r.amounts) continue;
         // Skip the row we already overrode to avoid double-scaling
         if (r.id === "__whatif_rent__") continue;
+        // Fit-out is a one-time capex that doesn't scale with sqft.
+        if (r.id === "__whatif_fitout__") continue;
         const det = detectFacilityRent(data);
         const skipId = det.rowId;
         if (overrides.monthlyRent !== undefined && r.id === skipId) continue;
@@ -355,6 +386,9 @@ export function encodeOverridesToHash(overrides: WhatIfOverrides): string {
     parts.push(`sy:${overrides.rentChangeStartYear}`);
   }
   if (overrides.sqftDelta !== undefined && overrides.sqftDelta !== 0) parts.push(`sq:${overrides.sqftDelta}`);
+  if (overrides.oneTimeFitOut !== undefined && overrides.oneTimeFitOut !== 0) {
+    parts.push(`f:${overrides.oneTimeFitOut}`);
+  }
   if (parts.length === 0) return "";
   return `${HASH_KEY}=${parts.join("|")}`;
 }
@@ -412,6 +446,11 @@ export function decodeOverridesFromHash(hash: string): WhatIfOverrides {
       case "sq": {
         const n = parseFloat(v);
         if (!Number.isNaN(n)) out.sqftDelta = n;
+        break;
+      }
+      case "f": {
+        const n = parseFloat(v);
+        if (!Number.isNaN(n)) out.oneTimeFitOut = Math.max(0, n);
         break;
       }
     }

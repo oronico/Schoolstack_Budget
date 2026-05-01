@@ -7,12 +7,18 @@ import {
   computeDecisionImpact,
   computeProjectedSnapshot,
   decisionToPersistedOverrides,
+  siteInputsToOverrides,
   summarizeDecisionChanges,
   type AddProgramInputs,
   type DecisionInputs,
   type EnrollmentChangeInputs,
   type SiteInputs,
 } from "../decision-flows";
+import {
+  applyWhatIfOverrides,
+  decodeOverridesFromHash,
+  encodeOverridesToHash,
+} from "../whatif-engine";
 import type { FullModelData } from "@/pages/model-wizard/schema";
 
 // --- Test model builder ----------------------------------------------------
@@ -481,6 +487,43 @@ describe("decisionToPersistedOverrides → buildDecisionBullets round-trip", () 
     expect(bullets).toContain("Rent $10,000/mo");
     expect(bullets).toContain("Rent escalation 3%");
     expect(bullets).toContain("Fit-out $50,000 (Y1)");
+  });
+
+  it("evaluate_site: persisted fit-out round-trips through the planner hash codec", () => {
+    // Regression for #192: previously the `Open in planner` action was disabled
+    // for evaluate_site decisions with a fit-out cost because WhatIfOverrides
+    // could not represent a Year-1 capex line. Now the planner reads the same
+    // overrides used by computeDecisionImpact, including `oneTimeFitOut`.
+    const decision: DecisionInputs = {
+      type: "evaluate_site",
+      inputs: {
+        newMonthlyRent: 9000,
+        newRentEscalation: 3,
+        startYear: 2,
+        oneTimeFitOut: 60000,
+      } as SiteInputs,
+    };
+    // 1) The planner overrides include the fit-out value alongside the rent fields.
+    const plannerOv = siteInputsToOverrides(data, decision.inputs as SiteInputs);
+    expect(plannerOv.oneTimeFitOut).toBe(60000);
+    expect(plannerOv.monthlyRent).toBe(9000);
+
+    // 2) Hash encode → decode preserves every override (so a sharable URL works).
+    const hash = encodeOverridesToHash(plannerOv);
+    expect(hash).toContain("f:60000");
+    const decoded = decodeOverridesFromHash(`#${hash}`);
+    expect(decoded).toEqual(plannerOv);
+
+    // 3) Replaying the decoded planner overrides on the base model produces the
+    //    same Year-1 fit-out row as applyDecisionToData (the impact path).
+    const viaPlanner = applyWhatIfOverrides(data, decoded);
+    const viaDecision = applyDecisionToData(data, decision);
+    const findFitOut = (rows: unknown[] | undefined) =>
+      (rows as Array<{ lineItem?: string; amounts?: number[] }> | undefined)?.find(
+        (r) => r.lineItem === "Site fit-out (one-time)",
+      );
+    expect(findFitOut(viaPlanner.expenseRows)?.amounts).toEqual([60000, 0, 0, 0, 0]);
+    expect(findFitOut(viaDecision.expenseRows)?.amounts).toEqual([60000, 0, 0, 0, 0]);
   });
 
   it("evaluate_site: missing optional fit-out is dropped and bullets omit it", () => {

@@ -288,8 +288,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
           done={done}
           doneAction={doneAction}
           onSave={handleSave}
-          plannerAvailable={!inputs.oneTimeFitOut || inputs.oneTimeFitOut <= 0}
-          plannerUnavailableReason="Your scenario includes a one-time fit-out cost, which the live planner can't replay yet. Pick Apply to my model to fold the full picture in, or save & review later to keep the fit-out for the lender packet."
+          plannerAvailable={true}
         />
       )}
 

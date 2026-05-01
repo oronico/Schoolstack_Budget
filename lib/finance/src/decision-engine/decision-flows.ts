@@ -209,6 +209,9 @@ export function siteInputsToOverrides(data: FullModelData, inputs: SiteInputs): 
   if (inputs.newMonthlyRent != null) ov.monthlyRent = Math.max(0, inputs.newMonthlyRent);
   if (inputs.newRentEscalation != null) ov.rentEscalation = inputs.newRentEscalation;
   if (inputs.startYear != null) ov.rentChangeStartYear = inputs.startYear;
+  if (inputs.oneTimeFitOut != null && inputs.oneTimeFitOut > 0) {
+    ov.oneTimeFitOut = Math.max(0, inputs.oneTimeFitOut);
+  }
   if (inputs.newSqft != null) {
     // Compute current sqft baseline from facilityPhases (max)
     const sp = data.schoolProfile as Record<string, unknown> | undefined;
@@ -272,9 +275,12 @@ export function applyDecisionToData(
     case "add_program":
       return applyAddProgramDecision(data, decision.inputs);
     case "evaluate_site": {
+      // siteInputsToOverrides now folds `oneTimeFitOut` into the WhatIfOverrides
+      // so the planner replays the same numbers as this impact step. The
+      // what-if engine inserts the fit-out row directly — calling
+      // applyOneTimeFitOut here would double-count.
       const overrides = siteInputsToOverrides(data, decision.inputs);
-      const withOverrides = applyWhatIfOverrides(data, overrides);
-      return applyOneTimeFitOut(withOverrides, decision.inputs.oneTimeFitOut ?? 0);
+      return applyWhatIfOverrides(data, overrides);
     }
     case "change_enrollment": {
       const overrides = enrollmentChangeInputsToOverrides(decision.inputs);
@@ -715,7 +721,14 @@ export function decisionToPersistedOverrides(
       };
     }
     case "evaluate_site": {
-      const ov = siteInputsToOverrides(data, decision.inputs);
+      // The persisted shape uses `siteFitOutCost`; the planner's WhatIfOverrides
+      // shape uses `oneTimeFitOut`. We strip the planner field so the persisted
+      // blob has a single canonical name for the fit-out value.
+      const { oneTimeFitOut: _planner, ...ov } = siteInputsToOverrides(
+        data,
+        decision.inputs,
+      );
+      void _planner;
       return {
         ...ov,
         siteFitOutCost: decision.inputs.oneTimeFitOut ?? undefined,

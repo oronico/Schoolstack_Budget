@@ -63,6 +63,11 @@ describe("whatif-engine: isEmptyOverrides", () => {
     expect(isEmptyOverrides({ retentionRate: 85 })).toBe(false);
     expect(isEmptyOverrides({ enrollmentDelta: [0, 0, 5, 0, 0] })).toBe(false);
     expect(isEmptyOverrides({ monthlyRent: 5000 })).toBe(false);
+    expect(isEmptyOverrides({ oneTimeFitOut: 75000 })).toBe(false);
+  });
+
+  it("treats zero fit-out as empty", () => {
+    expect(isEmptyOverrides({ oneTimeFitOut: 0 })).toBe(true);
   });
 });
 
@@ -378,6 +383,65 @@ describe("whatif-engine: applyWhatIfOverrides — lease overrides", () => {
   });
 });
 
+describe("whatif-engine: applyWhatIfOverrides — one-time fit-out", () => {
+  it("adds a Year-1-only occupancy_facility expense row when oneTimeFitOut > 0", () => {
+    const data = buildBaseModel();
+    const adjusted = applyWhatIfOverrides(data, { oneTimeFitOut: 75000 });
+    const rows = (adjusted.expenseRows || []) as Array<Record<string, unknown>>;
+    const fitOut = rows.find((r) => r.id === "__whatif_fitout__");
+    expect(fitOut).toBeDefined();
+    expect(fitOut?.category).toBe("occupancy_facility");
+    expect(fitOut?.driverType).toBe("annual_fixed");
+    expect(fitOut?.amounts).toEqual([75000, 0, 0, 0, 0]);
+  });
+
+  it("does not add a fit-out row when oneTimeFitOut is 0 or undefined", () => {
+    const data = buildBaseModel();
+    const zero = applyWhatIfOverrides(data, { oneTimeFitOut: 0 });
+    const blank = applyWhatIfOverrides(data, {});
+    expect(((zero.expenseRows || []) as Array<Record<string, unknown>>).find(
+      (r) => r.id === "__whatif_fitout__",
+    )).toBeUndefined();
+    expect(((blank.expenseRows || []) as Array<Record<string, unknown>>).find(
+      (r) => r.id === "__whatif_fitout__",
+    )).toBeUndefined();
+  });
+
+  it("clamps a negative fit-out value to zero (no row added)", () => {
+    const data = buildBaseModel();
+    const adjusted = applyWhatIfOverrides(data, { oneTimeFitOut: -100 });
+    const rows = (adjusted.expenseRows || []) as Array<Record<string, unknown>>;
+    expect(rows.find((r) => r.id === "__whatif_fitout__")).toBeUndefined();
+  });
+
+  it("layers fit-out alongside a rent override on the same site decision", () => {
+    const data = buildBaseModel({
+      expenseRows: [
+        { id: "rent", enabled: true, category: "occupancy_facility", driverType: "monthly", amounts: [5000, 5000, 5000, 5000, 5000], escalationRate: 0 },
+      ],
+    });
+    const adjusted = applyWhatIfOverrides(data, { monthlyRent: 8000, oneTimeFitOut: 50000 });
+    const rows = (adjusted.expenseRows || []) as Array<Record<string, unknown>>;
+    const rent = rows.find((r) => r.id === "rent");
+    const fitOut = rows.find((r) => r.id === "__whatif_fitout__");
+    expect((rent?.amounts as number[])[0]).toBe(8000);
+    expect(fitOut?.amounts).toEqual([50000, 0, 0, 0, 0]);
+  });
+
+  it("does not double-count when applied through computeWhatIfImpact", () => {
+    const data = buildBaseModel({
+      revenueRows: [
+        { id: "r1", enabled: true, category: "other_revenue", driverType: "annual_fixed", amounts: [200000, 200000, 200000, 200000, 200000] },
+      ],
+    });
+    const impact = computeWhatIfImpact(data, { oneTimeFitOut: 60000 });
+    // Net income should drop by exactly the fit-out amount in Year 1, and be unchanged in later years.
+    expect(impact.deltas.netIncome[0]).toBeCloseTo(-60000, 0);
+    expect(impact.deltas.netIncome[1]).toBeCloseTo(0, 0);
+    expect(impact.deltas.netIncome[4]).toBeCloseTo(0, 0);
+  });
+});
+
 describe("whatif-engine: applyWhatIfOverrides — sqft delta", () => {
   it("scales facility rows proportionally based on phase sqft", () => {
     const data = buildBaseModel({
@@ -489,6 +553,7 @@ describe("whatif-engine: hash codec round-trip", () => {
       rentEscalation: 4,
       rentChangeStartYear: 3,
       sqftDelta: 250,
+      oneTimeFitOut: 75000,
     };
     const encoded = encodeOverridesToHash(overrides);
     const decoded = decodeOverridesFromHash(`#${encoded}`);
@@ -499,6 +564,18 @@ describe("whatif-engine: hash codec round-trip", () => {
     expect(decoded.rentEscalation).toBe(4);
     expect(decoded.rentChangeStartYear).toBe(3);
     expect(decoded.sqftDelta).toBe(250);
+    expect(decoded.oneTimeFitOut).toBe(75000);
+  });
+
+  it("preserves fit-out alone through the hash codec", () => {
+    const encoded = encodeOverridesToHash({ oneTimeFitOut: 42000 });
+    expect(encoded).toContain("f:42000");
+    const decoded = decodeOverridesFromHash(`#${encoded}`);
+    expect(decoded.oneTimeFitOut).toBe(42000);
+  });
+
+  it("omits zero fit-out from encoded payload", () => {
+    expect(encodeOverridesToHash({ oneTimeFitOut: 0 })).toBe("");
   });
 
   it("returns empty for missing or malformed hash", () => {
