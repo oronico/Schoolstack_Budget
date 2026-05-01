@@ -726,6 +726,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
   const programs = data.programs || [];
   const yLabels = yearLabels(sp.openingYear);
   const costInflPct = (data.tuitionEscalation?.rate ?? 3);
+  const tfRR = data.enrollment?.retentionRate ?? 85;
   const hasProgramBreakdown = programs.length > 0;
   ws.columns = [{ width: 36 }, ...Array(6).fill({ width: 16 })];
   printSetup(ws);
@@ -839,7 +840,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
           const col = y + 2;
           const cell = ws.getCell(r, col);
           const students = enrollment[y];
-          const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp);
+          const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y));
           setFormula(cell, `SUM(${cn(progDetailFirstRow, col)}:${cn(progDetailLastRow, col)})`, Math.round(val * sign));
           cell.numFmt = CUR; gc(cell);
         }
@@ -849,7 +850,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         lineSubtotalRows.push(r);
         for (let y = 0; y < 5; y++) {
           const students = enrollment[y];
-          const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp);
+          const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y));
           const cell = ws.getCell(r, y + 2);
           cell.value = Math.round(val * sign); cell.numFmt = CUR; dc(cell);
           if (rv.driverType === "annual_fixed" && y === 0) inputCell(cell);
@@ -866,7 +867,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
       let catTotal = 0;
       for (const rv of rows) {
         const s = cat === "tuition_offsets" ? -1 : 1;
-        catTotal += computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp) * s;
+        catTotal += computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y)) * s;
       }
       const sumParts = lineSubtotalRows.map(sr => cn(sr, col)).join(",");
       setFormula(cell, `SUM(${sumParts})`, Math.round(catTotal));
@@ -880,7 +881,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
   for (let y = 0; y < 5; y++) {
     const col = y + 2;
     const cell = ws.getCell(r, col);
-    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
+    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y));
     const sumParts = categorySubtotalRows.map(sr => cn(sr, col)).join(",");
     setFormula(cell, `SUM(${sumParts})`, Math.round(val));
     cell.numFmt = CUR; gc(cell); outputCell(cell);
@@ -902,6 +903,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
 function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, prorationFactor: number) {
   const ws = wb.addWorksheet("Staffing Drivers");
   const sp = data.schoolProfile || {};
+  const sdRR = data.enrollment?.retentionRate ?? 85;
   const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
   const yLabels = yearLabels(sp.openingYear);
   ws.columns = [{ width: 28 }, { width: 16 }, { width: 10 }, { width: 14 }, { width: 12 }, { width: 12 }, { width: 14 }, { width: 12 }];
@@ -951,7 +953,7 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
   const tiers = data.tuitionTiers || [];
   const costInflPct = (data.tuitionEscalation?.rate ?? 3);
   for (let y = 0; y < 5; y++) {
-    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
+    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, sdRR, y), computeReturningStudents(enrollment, sdRR, y));
     const pf = y === 0 ? prorationFactor : 1;
     const pers = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
     const cell = ws.getCell(r, y + 2);
@@ -1006,7 +1008,7 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
       r++;
       ws.getCell(r, 1).value = `  ${ex.lineItem}`; dc(ws.getCell(r, 1));
       for (let y = 0; y < 5; y++) {
-        const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
+        const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y));
         let val: number;
         if (ex.driverType === "percent_of_revenue") {
           const esc = resolveRowEscalation(ex.escalationRate, costInflPct, ex.escalationRateOverridden);
@@ -1024,7 +1026,7 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     catTotalRows.push(r);
     ws.getCell(r, 1).value = `Total ${expCatLabel(cat, uwCcLabels)}`; bc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
+      const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y));
       let catTotal = 0;
       for (const ex of catRows) {
         if (ex.driverType === "percent_of_revenue") {
@@ -1049,7 +1051,7 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   r += 2;
   sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL OPERATING EXPENSES";
   for (let y = 0; y < 5; y++) {
-    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
+    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y));
     const oeFTE = computeTotalFTE(staffingRows, y, enrollment[y]);
     const val = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y), oeFTE);
     const col = y + 2;
@@ -1117,6 +1119,7 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
   const costInflPct = (data.tuitionEscalation?.rate ?? 3);
+  const etfRR = data.enrollment?.retentionRate ?? 85;
   const yLabels = yearLabels(sp.openingYear);
   ws.columns = [{ width: 36 }, ...Array(5).fill({ width: 16 })];
   printSetup(ws);
@@ -1143,7 +1146,7 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
     r++;
     ws.getCell(r, 1).value = rv.lineItem; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp);
+      const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, etfRR, y), computeReturningStudents(enrollment, etfRR, y));
       const sign = rv.category === "tuition_offsets" ? -1 : 1;
       ws.getCell(r, y + 2).value = Math.round(val * sign); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
     }
@@ -1153,7 +1156,7 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
   r++;
   sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL REVENUE";
   for (let y = 0; y < 5; y++) {
-    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
+    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, etfRR, y), computeReturningStudents(enrollment, etfRR, y));
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(etfFirstRow, col)}:${cn(etfLastRow, col)})`, Math.round(val));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
@@ -1162,7 +1165,7 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
   r += 2;
   ws.getCell(r, 1).value = "Revenue per Student"; dc(ws.getCell(r, 1));
   for (let y = 0; y < 5; y++) {
-    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp);
+    const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, etfRR, y), computeReturningStudents(enrollment, etfRR, y));
     ws.getCell(r, y + 2).value = enrollment[y] > 0 ? Math.round(rev / enrollment[y]) : 0;
     ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
@@ -1267,7 +1270,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
     r++;
     ws.getCell(r, 1).value = `  ${rv.lineItem}`; dc(ws.getCell(r, 1));
     for (let y = 0; y < 5; y++) {
-      const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp);
+      const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y));
       const sign = rv.category === "tuition_offsets" ? -1 : 1;
       const pf = y === 0 ? prorationFactor : 1;
       ws.getCell(r, y + 2).value = Math.round(val * sign * pf); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
@@ -1280,7 +1283,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   const revByYear: number[] = [];
   for (let y = 0; y < 5; y++) {
     const pf = y === 0 ? prorationFactor : 1;
-    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp) * pf;
+    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y)) * pf;
     revByYear.push(val);
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(revFirstRow, col)}:${cn(revLastRow, col)})`, Math.round(val));
@@ -1561,9 +1564,9 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   //   - OpEx: spread evenly over opMonths.
   //   - Debt service: spread over 12 months (lenders require year-round payments).
   //   - Cumulative cash starts from startingCash and compounds monthly.
-  const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp);
-  const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, students);
   const mcfRR = data.enrollment?.retentionRate ?? 85;
+  const rev0 = computeRevenueForYear(revenueRows, 0, students, tiers, costInflPct, sp, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0));
+  const pers0 = computePersonnelForYear(staffingRows, salaryEsc, prorationFactor, 0, students);
   const mcfFTE = computeTotalFTE(staffingRows, 0, students);
   const opex0 = computeExpenseForYear(expenseRows, 0, students, rev0, costInflPct, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0), mcfFTE) * prorationFactor;
   const cd0 = computeCapDebtForYear(capDebtRows, 0, students);
@@ -1579,7 +1582,7 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
       if (rv.id === "gross_tuition" && rv.driverType === "per_student" && tiers.length > 0) {
         rowValues.set(rv.id, tuitionWithTiers(rv.amounts?.[0] ?? 0, 0, students, tiers));
       } else {
-        rowValues.set(rv.id, driverVal(rv.amounts, 0, rv.driverType, students));
+        rowValues.set(rv.id, driverVal(rv.amounts, 0, rv.driverType, students, undefined, undefined, computeNewStudents(enrollment, mcfRR, 0), computeReturningStudents(enrollment, mcfRR, 0)));
       }
     }
     for (const rv of revenueRows) {
@@ -2813,18 +2816,18 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
 
   const hasDebt = debtIncluded && (data.capitalAndDebtRows || []).some(r => r.isLoan && r.enabled !== false);
 
+  const dashRR = effectiveData.enrollment?.retentionRate ?? 85;
   const revCatsUW: Record<string, number[]> = {};
   for (const rv of (effectiveData.revenueRows || []).filter(r => r.enabled)) {
     const cat = rv.category || "other";
     if (!revCatsUW[cat]) revCatsUW[cat] = new Array(5).fill(0);
     for (let y = 0; y < 5; y++) {
       const students = enrollment[y];
-      const val = computeRevLineItem(rv, y, students, effectiveData.tuitionTiers || [], costInflPct, sp);
+      const val = computeRevLineItem(rv, y, students, effectiveData.tuitionTiers || [], costInflPct, sp, computeNewStudents(enrollment, dashRR, y), computeReturningStudents(enrollment, dashRR, y));
       revCatsUW[cat][y] += rv.category === "tuition_offsets" ? -Math.abs(val) : val;
     }
   }
 
-  const dashRR = effectiveData.enrollment?.retentionRate ?? 85;
   const facCostByYearUW = computeFacilityCostByYear(effectiveData.expenseRows || [], enrollment, revByYear, 5, costInflPct, dashRR);
   const instrCostByYearUW = computeInstructionalCostByYear(effectiveData.expenseRows || [], enrollment, revByYear, 5, costInflPct);
 

@@ -137,6 +137,13 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   for (let y = 0; y < 5; y++) {
     const students = enrollment[y];
     const pf = y === 0 ? prorationFactor : 1;
+    // Compute these once per year and reuse them for both revenue and expense
+    // driver dispatch. Without this, revenue rows using `per_new_student` /
+    // `per_returning_student` silently fall back to per-student / zero, which
+    // overstates per-new-student revenue and zeroes out per-returning-student
+    // revenue (e.g. a per-pupil grant that only applies to returning kids).
+    const newStudentsY = seNewStudents(enrollment, seRR, y);
+    const returningStudentsY = seReturningStudents(enrollment, seRR, y);
 
     let revTotal = 0;
     const revVals = new Map<string, number>();
@@ -170,7 +177,7 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
         }
         val = tierRev;
       } else {
-        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate);
+        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, undefined, newStudentsY, returningStudentsY);
       }
       val *= pf;
       revVals.set(r.id, val);
@@ -264,7 +271,7 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
         val = driverVal(r.amounts, y, "annual_fixed", students, r.escalationRate, costInflation, undefined, undefined, r.escalationRateOverridden);
         val = val * yearFTE * pf;
       } else {
-        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, seNewStudents(enrollment, seRR, y), seReturningStudents(enrollment, seRR, y), r.escalationRateOverridden);
+        val = driverVal(r.amounts, y, r.driverType, students, r.escalationRate, costInflation, newStudentsY, returningStudentsY, r.escalationRateOverridden);
         val *= pf;
       }
       if (r.category === "occupancy_facility") {

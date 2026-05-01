@@ -636,7 +636,8 @@ export function normalizeRevenueRows(rows: RevenueRow[]): RevenueRow[] {
 }
 
 export function computeRevLineItem(
-  r: RevenueRow, y: number, students: number, tiers?: TuitionTier[], costInflPct?: number, sp?: SchoolProfile
+  r: RevenueRow, y: number, students: number, tiers?: TuitionTier[], costInflPct?: number, sp?: SchoolProfile,
+  newStudents?: number, returningStudents?: number,
 ): number {
   if (!r.enabled) return 0;
   if (r.id === "state_local_perpupil" && sp && hasGradeBandData(sp)) {
@@ -656,20 +657,21 @@ export function computeRevLineItem(
     students,
     r.escalationRate,
     costInflPct,
-    undefined,
-    undefined,
+    newStudents,
+    returningStudents,
     r.escalationRateOverridden === true,
   );
 }
 
 export function computeRevenueForYear(
-  rows: RevenueRow[], y: number, students: number, tiers?: TuitionTier[], costInflPct?: number, sp?: SchoolProfile
+  rows: RevenueRow[], y: number, students: number, tiers?: TuitionTier[], costInflPct?: number, sp?: SchoolProfile,
+  newStudents?: number, returningStudents?: number,
 ): number {
   const fallback = costInflPct ?? 0;
   const vals = new Map<string, number>();
   for (const r of rows) {
     if (!r.enabled || r.driverType === "percent_of_base") continue;
-    vals.set(r.id, computeRevLineItem(r, y, students, tiers, costInflPct, sp));
+    vals.set(r.id, computeRevLineItem(r, y, students, tiers, costInflPct, sp, newStudents, returningStudents));
   }
   for (const r of rows) {
     if (!r.enabled || r.driverType !== "percent_of_base") continue;

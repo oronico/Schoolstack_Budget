@@ -80,26 +80,30 @@ describe("scenario-engine: driverVal — all driver types", () => {
     expect(m.revenue[4]).toBe(90000);
   });
 
-  it("per_new_student in revenue context uses total enrollment (newStudents not passed)", () => {
+  it("per_new_student in revenue context multiplies by new students", () => {
     const m = run({
       enrollment: { year1: 100, year2: 120, year3: 140, year4: 160, year5: 180, retentionRate: 100 },
       revenueRows: [
         { id: "r1", enabled: true, category: "other_revenue", driverType: "per_new_student", amounts: [500, 500, 500, 500, 500] },
       ],
     });
+    // Y1: returning=0, new=100 → 100 × $500 = $50000
     expect(m.revenue[0]).toBe(100 * 500);
-    expect(m.revenue[1]).toBe(120 * 500);
+    // Y2: returning=round(100×1.0)=100, new=120-100=20 → 20 × $500 = $10000
+    expect(m.revenue[1]).toBe(20 * 500);
   });
 
-  it("per_returning_student in revenue context returns 0 (returningStudents not passed)", () => {
+  it("per_returning_student in revenue context multiplies by returning students", () => {
     const m = run({
       enrollment: { year1: 100, year2: 120, year3: 140, year4: 160, year5: 180, retentionRate: 100 },
       revenueRows: [
         { id: "r1", enabled: true, category: "other_revenue", driverType: "per_returning_student", amounts: [500, 500, 500, 500, 500] },
       ],
     });
+    // Y1: 0 returning → $0
     expect(m.revenue[0]).toBe(0);
-    expect(m.revenue[1]).toBe(0);
+    // Y2: returning=round(100×1.0)=100 → 100 × $500 = $50000
+    expect(m.revenue[1]).toBe(100 * 500);
   });
 
   it("per_new_student and per_returning_student in expense context use new/returning students", () => {

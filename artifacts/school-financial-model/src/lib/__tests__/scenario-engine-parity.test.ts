@@ -299,6 +299,46 @@ describe("driver guard: revenue drivers are not silently dropped", () => {
     // 10000 - 10 = 9990 (off by ~990).
     expect(fe.revenue[0]).not.toBe(9990);
   });
+
+  it("per_new_student: engine multiplies by new students (not raw, not all students)", () => {
+    // Mirrors the expense-side guard. Before this fix the FE revenue loop
+    // silently fell back to per-student (multiplied by full enrollment), so a
+    // grant or fee that only applies to new-this-year kids would overstate.
+    const raw = 200;
+    const fixture = withRevenueRow({
+      id: "r1", category: "philanthropy", lineItem: "New-Student Grant",
+      enabled: true, driverType: "per_new_student", amounts: [raw, raw, raw, raw, raw],
+    });
+    const fe = feOnly(fixture);
+    // Y1: all 10 students are new → 10 × $200 = $2000
+    expect(fe.revenue[0]).toBe(2000);
+    expect(fe.revenue[0]).not.toBe(raw);
+    // Y2: enrollment=15, returning=round(10×0.8)=8, new=15-8=7 → 7×$200 = $1400.
+    // If the engine silently fell back to per_student it would compute 15×$200 = $3000.
+    expect(fe.revenue[1]).toBe(1400);
+    expect(fe.revenue[1]).not.toBe(3000);
+  });
+
+  it("per_returning_student: engine multiplies by returning students (not zero, not all students)", () => {
+    // Mirrors the expense-side guard. Before this fix the FE revenue loop
+    // passed `undefined` for returning students, which `driverVal` defaulted to
+    // 0 — so a per-pupil grant that only applied to returning kids contributed
+    // *nothing* to revenue.
+    const raw = 100;
+    const fixture = withRevenueRow({
+      id: "r1", category: "philanthropy", lineItem: "Returning-Student Grant",
+      enabled: true, driverType: "per_returning_student", amounts: [raw, raw, raw, raw, raw],
+    });
+    const fe = feOnly(fixture);
+    // Y1: 0 returning → $0 (must NOT silently use enrollment=10 → $1000)
+    expect(fe.revenue[0]).toBe(0);
+    expect(fe.revenue[0]).not.toBe(1000);
+    // Y2: returning = min(15, round(10×0.8)) = 8 → 8 × $100 = $800.
+    // Before the fix the engine produced $0 here, which would silently zero
+    // out the entire revenue line.
+    expect(fe.revenue[1]).toBe(800);
+    expect(fe.revenue[1]).not.toBe(0);
+  });
 });
 
 describe("driver guard: expense drivers are not silently dropped", () => {
