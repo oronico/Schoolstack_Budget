@@ -807,46 +807,53 @@ export function CustomScenarioCard({
   const suggestFromLatestData = () => {
     const yr = actualsDraft.asOfYear ?? 1;
     const suggestion = getActualsSuggestion(yr);
+    // Compute the next draft synchronously from the current state so the
+    // `filled` / `skipped` counters reflect what actually changed before we
+    // pick which feedback message to render. Mutating these counters inside
+    // a `setActualsDraft((d) => ...)` updater used to leave them at 0 when we
+    // read them right after the setter call — React 18 defers the updater to
+    // render time and (in StrictMode) invokes it twice — so the feedback
+    // would falsely read "Nothing to suggest" even after the inputs filled.
     let filled = 0;
     let skipped = 0;
     const nextSuggested = new Set(suggestedFields);
-    setActualsDraft((d) => {
-      const next: CustomScenarioActuals = { ...d };
-      // Per-field source labels are persisted on the saved actuals so the
-      // read-only summary can render the same "Pulled from your books"
-      // caption that this editor shows. We layer onto whatever sources
-      // were already saved (so previously-pulled fields the founder hasn't
-      // touched keep their provenance) and overwrite for fields we're
-      // about to fill from this fresh suggestion.
-      const nextSources: Record<string, string> = { ...(d.sourceByField ?? {}) };
-      const fields: ActualsSuggestionField[] = [
-        "enrollmentActual",
-        "revenueActual",
-        "expenseActual",
-        "netIncomeActual",
-        "signedMonthlyRent",
-      ];
-      // Hide signedMonthlyRent for non-site decisions — the suggestion helper
-      // already won't return it, but this is belt-and-braces.
-      for (const f of fields) {
-        const suggested = suggestion.values[f];
-        if (suggested === undefined) continue;
-        const existing = next[f];
-        if (existing !== undefined && !nextSuggested.has(f)) {
-          // Manual entry already there — never overwrite.
-          skipped += 1;
-          continue;
-        }
-        next[f] = suggested;
-        nextSuggested.add(f);
-        const src = suggestion.sources[f];
-        if (src) nextSources[f] = src;
-        filled += 1;
+    const nextDraft: CustomScenarioActuals = { ...actualsDraft };
+    // Per-field source labels are persisted on the saved actuals so the
+    // read-only summary can render the same "Pulled from your books"
+    // caption that this editor shows. We layer onto whatever sources
+    // were already saved (so previously-pulled fields the founder hasn't
+    // touched keep their provenance) and overwrite for fields we're
+    // about to fill from this fresh suggestion.
+    const nextSources: Record<string, string> = {
+      ...(actualsDraft.sourceByField ?? {}),
+    };
+    const fields: ActualsSuggestionField[] = [
+      "enrollmentActual",
+      "revenueActual",
+      "expenseActual",
+      "netIncomeActual",
+      "signedMonthlyRent",
+    ];
+    // Hide signedMonthlyRent for non-site decisions — the suggestion helper
+    // already won't return it, but this is belt-and-braces.
+    for (const f of fields) {
+      const suggested = suggestion.values[f];
+      if (suggested === undefined) continue;
+      const existing = nextDraft[f];
+      if (existing !== undefined && !nextSuggested.has(f)) {
+        // Manual entry already there — never overwrite.
+        skipped += 1;
+        continue;
       }
-      next.sourceByField =
-        Object.keys(nextSources).length > 0 ? nextSources : undefined;
-      return next;
-    });
+      nextDraft[f] = suggested;
+      nextSuggested.add(f);
+      const src = suggestion.sources[f];
+      if (src) nextSources[f] = src;
+      filled += 1;
+    }
+    nextDraft.sourceByField =
+      Object.keys(nextSources).length > 0 ? nextSources : undefined;
+    setActualsDraft(nextDraft);
     setSuggestedFields(nextSuggested);
     if (filled === 0) {
       setSuggestionFeedback(

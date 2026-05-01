@@ -138,9 +138,7 @@ test("Suggest from latest data fills the editor without a books callout when no 
 
   // The editor's enrollment / revenue / expense inputs get populated with
   // the prior-year values and tagged "Suggested" so the founder can see
-  // they came from setup data. We assert on the input values + the
-  // Suggested pill rather than the feedback toast, since the toast wording
-  // changes depending on which fields the suggestion engine fills.
+  // they came from setup data.
   await expect(card.getByTestId("custom-scenario-actuals-enrollment-0")).toHaveValue(
     String(PRIOR_ENROLLMENT),
   );
@@ -153,6 +151,18 @@ test("Suggest from latest data fills the editor without a books callout when no 
   await expect(
     card.getByTestId("custom-scenario-actuals-enrollment-0-suggested"),
   ).toBeVisible();
+  // The feedback note under the Suggest button must reflect that fields
+  // were filled — never the misleading "Nothing to suggest" message that
+  // used to fire when the `filled` counter was mutated inside a deferred
+  // React state-updater callback. We anchor on the "Filled N field(s)
+  // from …" wording so any future regression that swaps it back to the
+  // empty-state copy fails loudly.
+  const feedback = card.getByTestId(
+    "custom-scenario-actuals-suggestion-feedback-0",
+  );
+  await expect(feedback).toBeVisible();
+  await expect(feedback).toHaveText(/Filled \d+ fields? from /i);
+  await expect(feedback).not.toHaveText(/Nothing to suggest/i);
   // Source-label tooltip on the input pins the provenance to the typed-in
   // setup snapshot — this is the bit the books-callout would override if
   // an export were present, so it's the right anchor for the fallback.
