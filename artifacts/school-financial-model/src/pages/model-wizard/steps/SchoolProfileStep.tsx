@@ -590,6 +590,41 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
     (totals.totalRevenue !== undefined ||
       totals.totalExpenses !== undefined ||
       totals.netIncome !== undefined);
+  // Curated category subtotals (tuition / philanthropy / payroll /
+  // facility) — surfaced as a secondary breakdown chip row under the
+  // headline figures so the founder can see exactly which sub-rows we
+  // recognized before they head into mapping. Each chip is omitted when
+  // the parser couldn't find a matching row, so a sparse export only
+  // shows the chips we actually picked up.
+  const categoryChips: Array<{ label: string; value: number; testid: string }> = [];
+  if (totals?.tuitionRevenue !== undefined) {
+    categoryChips.push({
+      label: "Tuition",
+      value: totals.tuitionRevenue,
+      testid: "accounting-export-tuition",
+    });
+  }
+  if (totals?.philanthropyRevenue !== undefined) {
+    categoryChips.push({
+      label: "Philanthropy",
+      value: totals.philanthropyRevenue,
+      testid: "accounting-export-philanthropy",
+    });
+  }
+  if (totals?.payrollExpense !== undefined) {
+    categoryChips.push({
+      label: "Payroll",
+      value: totals.payrollExpense,
+      testid: "accounting-export-payroll",
+    });
+  }
+  if (totals?.facilityExpense !== undefined) {
+    categoryChips.push({
+      label: "Facility / Rent",
+      value: totals.facilityExpense,
+      testid: "accounting-export-facility",
+    });
+  }
 
   const triggerPicker = () => {
     setError(null);
@@ -815,6 +850,36 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
             >
               We couldn't read any totals from that file — try re-exporting as a Profit &amp; Loss summary.
             </p>
+          )}
+
+          {categoryChips.length > 0 && (
+            // Curated category subtotals row — sits beneath the headline
+            // revenue / expenses / net income block so the founder can see
+            // exactly which sub-rows we recognized (Tuition $480k,
+            // Donations $95k, Payroll $320k, Rent $55k). These chips are
+            // also what the actuals editor surfaces as contributing
+            // accounts, so the wizard view doubles as a preview of the
+            // breakdown the founder will see on the saved-scenario page.
+            <div
+              className="mt-2 pt-2 border-t border-border/60"
+              data-testid="accounting-export-categories"
+            >
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                Category breakdown
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {categoryChips.map((chip) => (
+                  <span
+                    key={chip.testid}
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-foreground"
+                    data-testid={chip.testid}
+                  >
+                    <span className="text-muted-foreground">{chip.label}</span>
+                    <span className="font-semibold">{fmtMoney(chip.value)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
 
           {exportData.parseWarnings && exportData.parseWarnings.length > 0 && (

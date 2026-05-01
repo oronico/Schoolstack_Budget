@@ -144,11 +144,19 @@ export interface AccountingExportLike {
   uploadedAt?: string;
   // Top-level totals extracted from the export. Optional fields stay
   // undefined when the parser couldn't confidently identify a row, so the
-  // wizard's other suggestion sources can still fill the gap.
+  // wizard's other suggestion sources can still fill the gap. The
+  // category-level fields (tuition / philanthropy / payroll / facility)
+  // are pulled from a curated list of subtotal labels and feed both the
+  // upload summary card's breakdown chips and the actuals editor's
+  // contributing-account list.
   totals?: {
     totalRevenue?: number;
     totalExpenses?: number;
     netIncome?: number;
+    tuitionRevenue?: number;
+    philanthropyRevenue?: number;
+    payrollExpense?: number;
+    facilityExpense?: number;
   };
   // Number of recognized rows the parser matched (revenue / expenses /
   // net income lines). Used by the post-upload coach to tell the founder

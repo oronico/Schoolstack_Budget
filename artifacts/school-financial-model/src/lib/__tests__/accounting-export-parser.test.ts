@@ -43,7 +43,9 @@ describe("parseAccountingExportCsv", () => {
 
   it("extracts headline totals from a QuickBooks-style P&L CSV", () => {
     // Mirrors the shape of a real QuickBooks P&L export — section headers,
-    // indented sub-rows, and grand totals with currency formatting.
+    // indented sub-rows, and grand totals with currency formatting. The
+    // four indented sub-rows (Tuition, Donations, Salaries, Rent) feed
+    // the curated category breakdown alongside the headline totals.
     const csv = [
       "Acme School,,Profit & Loss",
       "January - December 2026,,",
@@ -65,8 +67,15 @@ describe("parseAccountingExportCsv", () => {
     expect(result.totals.totalRevenue).toBe(620_000);
     expect(result.totals.totalExpenses).toBe(400_000);
     expect(result.totals.netIncome).toBe(220_000);
+    // Category breakdown is also pulled from the indented sub-rows so the
+    // founder can sanity-check the headline figures against the books.
+    expect(result.totals.tuitionRevenue).toBe(500_000);
+    expect(result.totals.philanthropyRevenue).toBe(120_000);
+    expect(result.totals.payrollExpense).toBe(300_000);
+    expect(result.totals.facilityExpense).toBe(60_000);
     expect(result.parseWarnings).toEqual([]);
-    expect(result.recognizedRowCount).toBe(3);
+    // 3 headline totals + 4 category subtotals = 7 recognized rows.
+    expect(result.recognizedRowCount).toBe(7);
   });
 
   it("derives net income when explicit row is missing but both totals are present", () => {
@@ -139,7 +148,8 @@ describe("parseAccountingExportCsv", () => {
   it("parses a Xero for-profit Profit & Loss export", () => {
     // Mirrors a default Xero P&L: "Operating Income" / "Less Operating
     // Expenses" sections with "Total Operating Income / Expenses" subtotal
-    // rows and an "Operating Profit" or "Net Profit" summary row.
+    // rows and an "Operating Profit" or "Net Profit" summary row. The
+    // sub-rows under each section feed the curated category breakdown.
     const csv = [
       "Profit and Loss,,",
       "Acme Microschool,,",
@@ -163,6 +173,10 @@ describe("parseAccountingExportCsv", () => {
     expect(result.totals.totalRevenue).toBe(575_000);
     expect(result.totals.totalExpenses).toBe(387_000);
     expect(result.totals.netIncome).toBe(188_000);
+    expect(result.totals.tuitionRevenue).toBe(480_000);
+    expect(result.totals.philanthropyRevenue).toBe(95_000);
+    expect(result.totals.payrollExpense).toBe(320_000);
+    expect(result.totals.facilityExpense).toBe(55_000);
     expect(result.parseWarnings).toEqual([]);
   });
 
@@ -185,15 +199,17 @@ describe("parseAccountingExportCsv", () => {
   it("parses a Wave Income Statement export", () => {
     // Mirrors Wave's CSV export: "Income" / "Expenses" sections with
     // "Total Income" / "Total Expenses" subtotal rows and a
-    // "Net Profit/Loss" summary row.
+    // "Net Profit/Loss" summary row. Wave templates often label payroll
+    // simply as "Payroll" and rent as "Rent" — both feed the curated
+    // category breakdown.
     const csv = [
       "Wave - Income Statement,,",
       "Tutoring Pod LLC,,",
       "Jan 1 2026 - Dec 31 2026,,",
       ",,",
       "Income,,",
-      "  Sales,,\"$210,000.00\"",
-      "  Other Income,,\"$8,500.00\"",
+      "  Tuition Fees,,\"$210,000.00\"",
+      "  Donations,,\"$8,500.00\"",
       "Total Income,,\"$218,500.00\"",
       ",,",
       "Expenses,,",
@@ -208,6 +224,10 @@ describe("parseAccountingExportCsv", () => {
     expect(result.totals.totalRevenue).toBe(218_500);
     expect(result.totals.totalExpenses).toBe(170_200);
     expect(result.totals.netIncome).toBe(48_300);
+    expect(result.totals.tuitionRevenue).toBe(210_000);
+    expect(result.totals.philanthropyRevenue).toBe(8_500);
+    expect(result.totals.payrollExpense).toBe(140_000);
+    expect(result.totals.facilityExpense).toBe(24_000);
     expect(result.parseWarnings).toEqual([]);
   });
 
@@ -220,6 +240,149 @@ describe("parseAccountingExportCsv", () => {
     ].join("\n");
     const result = parseAccountingExportCsv(csv);
     expect(result.totals.netIncome).toBe(-15_000);
+  });
+});
+
+// --- Category subtotal extraction -------------------------------------------
+//
+// The parser pulls a small curated list of category subtotals (tuition,
+// philanthropy, payroll, facility/rent) so the wizard summary card and the
+// actuals editor can show a sanity-check breakdown alongside the headline
+// totals. These tests exercise each label dialect across QuickBooks, Xero,
+// and Wave so a label phrasing change in any one tool can't silently
+// regress.
+describe("category subtotal extraction", () => {
+  it("extracts QuickBooks 'Total Tuition Income' / 'Total Donations' parent rows", () => {
+    // Real-world QB charts of accounts often roll multiple tuition tiers
+    // into a parent "Tuition Income" account and surface a "Total Tuition
+    // Income" subtotal — the parser should land on the parent subtotal
+    // instead of grabbing the first tier row by accident.
+    const csv = [
+      "Income,,",
+      "  Tuition Income,,",
+      "    K-2 Tuition,,\"180,000.00\"",
+      "    3-5 Tuition,,\"220,000.00\"",
+      "  Total Tuition Income,,\"400,000.00\"",
+      "  Total Donations,,\"75,000.00\"",
+      "Total Income,,\"475,000.00\"",
+      "Expenses,,",
+      "  Total Payroll,,\"260,000.00\"",
+      "  Total Rent,,\"42,000.00\"",
+      "Total Expenses,,\"310,000.00\"",
+      "Net Income,,\"165,000.00\"",
+    ].join("\n");
+    const result = parseAccountingExportCsv(csv);
+    expect(result.totals.tuitionRevenue).toBe(400_000);
+    expect(result.totals.philanthropyRevenue).toBe(75_000);
+    expect(result.totals.payrollExpense).toBe(260_000);
+    expect(result.totals.facilityExpense).toBe(42_000);
+  });
+
+  it("extracts Xero nonprofit-template categories (Contributions / Personnel / Occupancy)", () => {
+    // Xero's nonprofit template uses "Contributions Received" instead of
+    // "Donations" and tends to roll up payroll into "Personnel Costs"
+    // and rent into "Occupancy Costs".
+    const csv = [
+      "Statement of Activities,,",
+      "Operating Revenue,,",
+      "  Tuition Income,,\"$612,000\"",
+      "  Contributions Received,,\"$140,000\"",
+      "Total Operating Revenue,,\"$752,000\"",
+      "Less Operating Expenses,,",
+      "  Personnel Costs,,\"$420,000\"",
+      "  Occupancy Costs,,\"$78,000\"",
+      "Total Operating Expenses,,\"$498,000\"",
+      "Surplus/(Deficit),,\"$254,000\"",
+    ].join("\n");
+    const result = parseAccountingExportCsv(csv);
+    expect(result.totals.tuitionRevenue).toBe(612_000);
+    expect(result.totals.philanthropyRevenue).toBe(140_000);
+    expect(result.totals.payrollExpense).toBe(420_000);
+    expect(result.totals.facilityExpense).toBe(78_000);
+  });
+
+  it("extracts Wave-style 'Tuition & Fees' / 'Payroll Expenses' / 'Rent Expense' phrasings", () => {
+    // Wave templates often expand the label slightly compared to QB —
+    // "Payroll Expenses" instead of bare "Payroll", "Rent Expense"
+    // instead of bare "Rent", and "Tuition & Fees" with an ampersand.
+    const csv = [
+      "Income,,",
+      "  Tuition & Fees,,\"$340,000\"",
+      "  Fundraising Income,,\"$22,000\"",
+      "Total Income,,\"$362,000\"",
+      "Expenses,,",
+      "  Payroll Expenses,,\"$215,000\"",
+      "  Rent Expense,,\"$48,000\"",
+      "Total Expenses,,\"$263,000\"",
+      "Net Profit/Loss,,\"$99,000\"",
+    ].join("\n");
+    const result = parseAccountingExportCsv(csv);
+    expect(result.totals.tuitionRevenue).toBe(340_000);
+    expect(result.totals.philanthropyRevenue).toBe(22_000);
+    expect(result.totals.payrollExpense).toBe(215_000);
+    expect(result.totals.facilityExpense).toBe(48_000);
+  });
+
+  it("normalizes parens-wrapped negative expenses to a positive magnitude", () => {
+    // Some Xero templates render expense rows in parens (the accounting
+    // convention for negatives). The breakdown chip and the actuals
+    // editor's contributing-account list both want a positive figure so
+    // the founder sees "Payroll $45,000" rather than "Payroll -$45,000".
+    const csv = [
+      "Total Operating Income,\"$120,000\"",
+      "  Wages and Salaries,\"(45,000)\"",
+      "  Rent,\"(12,000)\"",
+      "Total Operating Expenses,\"(57,000)\"",
+    ].join("\n");
+    const result = parseAccountingExportCsv(csv);
+    expect(result.totals.payrollExpense).toBe(45_000);
+    expect(result.totals.facilityExpense).toBe(12_000);
+  });
+
+  it("leaves category fields undefined when no recognized sub-row is present", () => {
+    // A bare "Total Income / Total Expenses" export with no matching
+    // sub-rows — we should still extract the headline totals but leave
+    // every category field undefined rather than guessing.
+    const csv = [
+      "Total Income,\"$300,000\"",
+      "Total Expenses,\"$250,000\"",
+      "Net Income,\"$50,000\"",
+    ].join("\n");
+    const result = parseAccountingExportCsv(csv);
+    expect(result.totals.totalRevenue).toBe(300_000);
+    expect(result.totals.tuitionRevenue).toBeUndefined();
+    expect(result.totals.philanthropyRevenue).toBeUndefined();
+    expect(result.totals.payrollExpense).toBeUndefined();
+    expect(result.totals.facilityExpense).toBeUndefined();
+  });
+
+  it("does not match per-tier tuition rows like 'Tuition - Grades K-2'", () => {
+    // Catching this guards against the most common false positive: a
+    // school with multiple tuition tiers shouldn't end up with the first
+    // tier wrongly recorded as "the" tuition figure. The parser leaves
+    // tuitionRevenue undefined here so the headline revenue still
+    // surfaces but the founder isn't misled.
+    const csv = [
+      "Income,,",
+      "  Tuition - Grades K-2,,\"$120,000\"",
+      "  Tuition - Grades 3-5,,\"$180,000\"",
+      "Total Income,,\"$300,000\"",
+    ].join("\n");
+    const result = parseAccountingExportCsv(csv);
+    expect(result.totals.totalRevenue).toBe(300_000);
+    expect(result.totals.tuitionRevenue).toBeUndefined();
+  });
+
+  it("first matching sub-row wins so a parent total beats a tier when listed first", () => {
+    // When the export presents "Total Tuition" before any tier rows, the
+    // parser should land on the parent subtotal — first-match-wins
+    // semantics match the headline-totals path.
+    const csv = [
+      "  Total Tuition,\"$500,000\"",
+      "  Tuition,\"$200,000\"",
+    ].join("\n");
+    const result = parseAccountingExportCsv(csv);
+    expect(result.totals.tuitionRevenue).toBe(500_000);
   });
 });
 

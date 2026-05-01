@@ -294,6 +294,14 @@ export const accountingExportTotalsSchema = z.object({
   totalRevenue: z.number().optional(),
   totalExpenses: z.number().optional(),
   netIncome: z.number().optional(),
+  // Curated category subtotals — surfaced as breakdown chips on the upload
+  // summary card and as contributing accounts under revenue / expense in
+  // the saved-scenario actuals editor. Each is optional so a sparse export
+  // (e.g. one with no facility line) still validates and round-trips.
+  tuitionRevenue: z.number().optional(),
+  philanthropyRevenue: z.number().optional(),
+  payrollExpense: z.number().optional(),
+  facilityExpense: z.number().optional(),
 });
 
 export const accountingExportSchema = z.object({

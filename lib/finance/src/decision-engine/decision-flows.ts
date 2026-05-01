@@ -892,9 +892,12 @@ export interface ActualsSuggestion {
   // these as a short list so the founder understands the basis (e.g. "Prior
   // year actuals from setup"). Order is meaningful — most-trusted first.
   sourceLabels: string[];
-  // Top contributing accounts per field. Reserved for future sources that
-  // carry per-account breakdowns; current sources (typed-in priors and CSV
-  // exports) don't have per-account detail, so this is typically empty.
+  // Top contributing accounts per field. Populated from the uploaded
+  // accounting export's curated category subtotals (tuition / philanthropy
+  // under revenue; payroll / facility under expense) so the actuals editor
+  // can show "Revenue = Tuition $480k + Donations $95k" under the
+  // headline figure. Empty for typed-in prior-year and current-year
+  // sources, which don't carry per-account detail.
   contributors: Partial<Record<ActualsSuggestionField, ActualsContributor[]>>;
 }
 
@@ -991,6 +994,46 @@ export function buildActualsSuggestion(
           exportTotals!.totalRevenue - exportTotals!.totalExpenses,
         );
         sources.netIncomeActual = label;
+      }
+      // Per-account contributors from the curated category subtotals. These
+      // ride alongside the headline revenue / expense values so the founder
+      // can sanity-check the breakdown ("Revenue = Tuition $480k + Donations
+      // $95k") in the actuals editor before accepting the suggestion. We
+      // only attach contributors when at least one category was extracted
+      // for that bucket — an export with no recognized tuition / donations
+      // row leaves `contributors.revenueActual` undefined rather than
+      // claiming a misleading single-line breakdown.
+      const revenueContribs: ActualsContributor[] = [];
+      if (exportTotals!.tuitionRevenue !== undefined) {
+        revenueContribs.push({
+          name: "Tuition",
+          amount: Math.round(exportTotals!.tuitionRevenue),
+        });
+      }
+      if (exportTotals!.philanthropyRevenue !== undefined) {
+        revenueContribs.push({
+          name: "Philanthropy",
+          amount: Math.round(exportTotals!.philanthropyRevenue),
+        });
+      }
+      if (revenueContribs.length > 0) {
+        contributors.revenueActual = revenueContribs;
+      }
+      const expenseContribs: ActualsContributor[] = [];
+      if (exportTotals!.payrollExpense !== undefined) {
+        expenseContribs.push({
+          name: "Payroll",
+          amount: Math.round(exportTotals!.payrollExpense),
+        });
+      }
+      if (exportTotals!.facilityExpense !== undefined) {
+        expenseContribs.push({
+          name: "Facility / Rent",
+          amount: Math.round(exportTotals!.facilityExpense),
+        });
+      }
+      if (expenseContribs.length > 0) {
+        contributors.expenseActual = expenseContribs;
       }
       if (usedFromExport) sourceLabels.push(label);
     }

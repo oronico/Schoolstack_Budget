@@ -1100,6 +1100,34 @@ components:
             netIncome:
               type: number
               nullable: true
+            tuitionRevenue:
+              type: number
+              nullable: true
+              description: >
+                Tuition income subtotal pulled from the export (e.g. a
+                "Tuition" or "Total Tuition Income" row). Optional — left
+                unset when the parser couldn't confidently identify a row.
+            philanthropyRevenue:
+              type: number
+              nullable: true
+              description: >
+                Philanthropy / donations / contributions subtotal pulled
+                from the export. Optional — left unset when no recognized
+                row was found.
+            payrollExpense:
+              type: number
+              nullable: true
+              description: >
+                Payroll / salaries / personnel subtotal pulled from the
+                export. Stored as a positive magnitude. Optional — left
+                unset when no recognized row was found.
+            facilityExpense:
+              type: number
+              nullable: true
+              description: >
+                Facility / rent / occupancy subtotal pulled from the
+                export. Stored as a positive magnitude. Optional — left
+                unset when no recognized row was found.
         parseWarnings:
           type: array
           items:

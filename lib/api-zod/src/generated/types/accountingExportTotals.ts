@@ -10,5 +10,17 @@ export type AccountingExportTotals = {
   totalRevenue?: number | null;
   totalExpenses?: number | null;
   netIncome?: number | null;
+  /** Tuition income subtotal pulled from the export (e.g. a "Tuition" or "Total Tuition Income" row). Optional — left unset when the parser couldn't confidently identify a row.
+   */
+  tuitionRevenue?: number | null;
+  /** Philanthropy / donations / contributions subtotal pulled from the export. Optional — left unset when no recognized row was found.
+   */
+  philanthropyRevenue?: number | null;
+  /** Payroll / salaries / personnel subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.
+   */
+  payrollExpense?: number | null;
+  /** Facility / rent / occupancy subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.
+   */
+  facilityExpense?: number | null;
   [key: string]: unknown;
 };

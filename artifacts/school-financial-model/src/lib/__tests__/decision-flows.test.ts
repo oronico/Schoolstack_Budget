@@ -841,6 +841,72 @@ describe("buildActualsSuggestion", () => {
     expect(suggestion.sources.revenueActual).toBe("Prior-year actuals from setup");
   });
 
+  it("surfaces curated category subtotals as per-field contributors under revenue and expense", () => {
+    // When the upload included recognized tuition / philanthropy / payroll
+    // / facility rows, the suggestion engine should expose them as
+    // contributors on revenueActual / expenseActual so the actuals editor
+    // can render the breakdown ("Revenue = Tuition $480k + Donations
+    // $95k") under the headline figure. Categories the parser couldn't
+    // identify are simply omitted from the contributor list.
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      accountingExport: {
+        filename: "quickbooks-2026Q1.csv",
+        uploadedAt: "2026-03-14T12:00:00.000Z",
+        totals: {
+          totalRevenue: 575_000,
+          totalExpenses: 387_000,
+          netIncome: 188_000,
+          tuitionRevenue: 480_000,
+          philanthropyRevenue: 95_000,
+          payrollExpense: 320_000,
+          facilityExpense: 55_000,
+        },
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.contributors.revenueActual).toEqual([
+      { name: "Tuition", amount: 480_000 },
+      { name: "Philanthropy", amount: 95_000 },
+    ]);
+    expect(suggestion.contributors.expenseActual).toEqual([
+      { name: "Payroll", amount: 320_000 },
+      { name: "Facility / Rent", amount: 55_000 },
+    ]);
+  });
+
+  it("omits the contributor list entirely when the export had no category subtotals", () => {
+    // A bare "Total Income / Total Expenses" export should still feed the
+    // headline values but leave the contributor map empty so the editor
+    // doesn't render a half-empty breakdown line.
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      accountingExport: {
+        filename: "bare.csv",
+        uploadedAt: "2026-03-14T12:00:00.000Z",
+        totals: {
+          totalRevenue: 300_000,
+          totalExpenses: 250_000,
+          netIncome: 50_000,
+        },
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(data, persisted, "change_enrollment", 1);
+    expect(suggestion.values.revenueActual).toBe(300_000);
+    expect(suggestion.contributors.revenueActual).toBeUndefined();
+    expect(suggestion.contributors.expenseActual).toBeUndefined();
+  });
+
   it("does not surface the accounting export beyond year 1", () => {
     const base = buildBaseModel();
     const data = {

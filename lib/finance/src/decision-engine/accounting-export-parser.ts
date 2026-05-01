@@ -4,19 +4,32 @@
 // suggestion engine all share a single source of truth for what we can
 // pull out of the file.
 //
-// Scope is intentionally narrow: we extract the headline P&L totals
-// (revenue, expenses, net income) since those are the figures the saved
-// scenario actuals editor actually uses. Sub-category extraction (tuition
-// vs. philanthropy, payroll vs. facility, etc.) is deferred until we have
-// enough real-world fixtures to do it without false positives.
+// Two layers of extraction:
+//   1. Headline P&L totals — Total Revenue, Total Expenses, Net Income.
+//      These drive the saved-scenario actuals editor's revenue / expense /
+//      net-income fields directly.
+//   2. Curated category subtotals — Tuition Income, Philanthropy /
+//      Donations, Payroll, Facility / Rent. These give the founder a
+//      sanity-check breakdown ("Revenue = Tuition $480k + Donations $95k")
+//      and seed the upcoming "Suggest from latest data" detail panel
+//      without asking them to retype headline subtotals from their books.
+//      We deliberately keep the list short and the patterns tight so we
+//      don't wrongly grab (e.g.) a per-tier tuition line as "the" tuition
+//      total — when in doubt, the parser leaves the field undefined and
+//      the UI falls back to the founder's typed-in numbers.
 //
 // Supported tools (by label dialect):
-//   - QuickBooks: "Total Income", "Total Expenses", "Net Income"
-//   - Xero:       "Total Operating Revenue/Income", "Total Operating
-//                 Expenses", "Surplus/(Deficit)", "Net Profit", "Operating
-//                 Profit"
-//   - Wave:       "Total Income", "Total Expenses", "Net Profit/Loss",
-//                 "Net Earnings"
+//   - QuickBooks: headline totals "Total Income", "Total Expenses", "Net
+//                 Income"; sub-rows like "Tuition", "Donations", "Total
+//                 Payroll", "Rent", "Total Rent / Lease".
+//   - Xero:       headline totals "Total Operating Revenue/Income",
+//                 "Total Operating Expenses", "Surplus/(Deficit)", "Net
+//                 Profit", "Operating Profit"; sub-rows "Tuition Income",
+//                 "Donations Received", "Wages and Salaries", "Rent",
+//                 "Occupancy Costs".
+//   - Wave:       headline totals "Total Income", "Total Expenses", "Net
+//                 Profit/Loss", "Net Earnings"; sub-rows "Tuition Fees",
+//                 "Donations", "Payroll Expenses", "Rent Expense".
 // XLSX uploads are handled in the UI layer (SheetJS converts the workbook
 // to row arrays and feeds them to `parseAccountingExportRows`).
 
@@ -24,6 +37,14 @@ export interface AccountingExportTotals {
   totalRevenue?: number;
   totalExpenses?: number;
   netIncome?: number;
+  // Curated category subtotals. Each is optional — left undefined when the
+  // parser couldn't confidently identify the row. Founders see these as a
+  // breakdown chip row on the upload summary card and the actuals editor
+  // shows them as contributing accounts under revenue / expense.
+  tuitionRevenue?: number;
+  philanthropyRevenue?: number;
+  payrollExpense?: number;
+  facilityExpense?: number;
 }
 
 export interface ParsedAccountingExport {
@@ -78,6 +99,87 @@ const NET_INCOME_LABEL_PATTERNS: RegExp[] = [
   /^surplus\s*\/?\s*\(?\s*deficit\)?$/i,
 ];
 
+// Curated category sub-row patterns. We only match labels that are
+// unambiguous category subtotals — single keywords like "Tuition" / "Rent"
+// or explicit "Total <Category>" forms. We deliberately don't match
+// per-tier rows like "Tuition - Grades K-2" so a school with multiple
+// tuition tiers doesn't end up with the first tier wrongly recorded as
+// "the" tuition figure. When a chart of accounts only has tier rows, the
+// founder still gets the headline revenue figure and we leave tuition
+// undefined.
+const TUITION_LABEL_PATTERNS: RegExp[] = [
+  // QuickBooks: "Tuition", "Tuition Income"
+  /^tuition$/i,
+  /^tuition\s+(income|revenue|fees)$/i,
+  // Wave / common: "Tuition Fees"
+  /^tuition\s+&\s+fees$/i,
+  /^tuition\s+and\s+fees$/i,
+  // Subtotal rows when the founder has tuition tiers grouped under a
+  // parent account.
+  /^total\s+tuition$/i,
+  /^total\s+tuition\s+(income|revenue|fees)$/i,
+];
+
+const PHILANTHROPY_LABEL_PATTERNS: RegExp[] = [
+  // QuickBooks / common: "Donations", "Donations Income", "Total Donations"
+  /^donations?$/i,
+  /^donations?\s+(income|revenue|received)$/i,
+  /^total\s+donations?$/i,
+  // Xero nonprofit template: "Donations Received", "Contributions Received"
+  /^contributions?$/i,
+  /^contributions?\s+(income|revenue|received)$/i,
+  /^total\s+contributions?$/i,
+  // Generic philanthropy / fundraising / grants buckets that founders use
+  // interchangeably for non-tuition revenue.
+  /^philanthropy$/i,
+  /^philanthropic\s+(income|revenue|gifts?|contributions?)$/i,
+  /^fundraising(\s+(income|revenue))?$/i,
+  /^total\s+fundraising(\s+(income|revenue))?$/i,
+  /^grants?(\s+(income|revenue|received))?$/i,
+  /^total\s+grants?(\s+(income|revenue|received))?$/i,
+];
+
+const PAYROLL_LABEL_PATTERNS: RegExp[] = [
+  // QuickBooks: "Payroll", "Payroll Expenses", "Total Payroll"
+  /^payroll$/i,
+  /^payroll\s+expenses?$/i,
+  /^total\s+payroll$/i,
+  /^total\s+payroll\s+expenses?$/i,
+  // QuickBooks: "Salaries", "Salaries and Wages", "Wages and Salaries"
+  /^salaries$/i,
+  /^salaries\s+(and|&)\s+wages$/i,
+  /^wages\s+(and|&)\s+salaries$/i,
+  /^total\s+salaries(\s+(and|&)\s+wages)?$/i,
+  /^total\s+wages(\s+(and|&)\s+salaries)?$/i,
+  // Xero: "Wages and Salaries" already covered; nonprofit template often
+  // uses "Personnel" or "Compensation".
+  /^personnel(\s+(costs?|expenses?))?$/i,
+  /^total\s+personnel(\s+(costs?|expenses?))?$/i,
+  /^compensation(\s+(and|&)\s+benefits)?$/i,
+  /^total\s+compensation(\s+(and|&)\s+benefits)?$/i,
+];
+
+const FACILITY_LABEL_PATTERNS: RegExp[] = [
+  // QuickBooks / Wave: "Rent", "Rent Expense", "Total Rent"
+  /^rent$/i,
+  /^rent\s+(expense|expenses)$/i,
+  /^total\s+rent(\s+(expense|expenses))?$/i,
+  // Xero: "Rent and Rates", "Rent / Lease"
+  /^rent\s*\/\s*lease$/i,
+  /^rent\s+(and|&)\s+(rates|lease|utilities|occupancy)$/i,
+  /^total\s+rent\s*\/\s*lease$/i,
+  // Generic facility / occupancy buckets.
+  /^facility$/i,
+  /^facilities$/i,
+  /^facility\s+(expenses?|costs?)$/i,
+  /^facilities\s+(expenses?|costs?)$/i,
+  /^total\s+facility(\s+(expenses?|costs?))?$/i,
+  /^total\s+facilities(\s+(expenses?|costs?))?$/i,
+  /^occupancy$/i,
+  /^occupancy\s+(expenses?|costs?)$/i,
+  /^total\s+occupancy(\s+(expenses?|costs?))?$/i,
+];
+
 export function parseAccountingExportCsv(text: string): ParsedAccountingExport {
   if (!text || text.trim().length === 0) {
     return {
@@ -125,6 +227,37 @@ export function parseAccountingExportRows(rows: string[][]): ParsedAccountingExp
     }
     if (totals.netIncome === undefined && NET_INCOME_LABEL_PATTERNS.some((p) => p.test(label))) {
       totals.netIncome = Math.round(value);
+      recognizedRowCount += 1;
+      continue;
+    }
+    // Curated category subtotals — first match wins. Expenses are typically
+    // recorded as positive numbers in P&L exports, so for the payroll /
+    // facility patterns we accept either sign and store the magnitude;
+    // that way a Xero-style "(45,000)" expense and a QB-style "45,000"
+    // expense both surface as 45000 on the breakdown chip row.
+    if (totals.tuitionRevenue === undefined && TUITION_LABEL_PATTERNS.some((p) => p.test(label))) {
+      totals.tuitionRevenue = Math.round(value);
+      recognizedRowCount += 1;
+      continue;
+    }
+    if (
+      totals.philanthropyRevenue === undefined &&
+      PHILANTHROPY_LABEL_PATTERNS.some((p) => p.test(label))
+    ) {
+      totals.philanthropyRevenue = Math.round(value);
+      recognizedRowCount += 1;
+      continue;
+    }
+    if (totals.payrollExpense === undefined && PAYROLL_LABEL_PATTERNS.some((p) => p.test(label))) {
+      totals.payrollExpense = Math.round(Math.abs(value));
+      recognizedRowCount += 1;
+      continue;
+    }
+    if (
+      totals.facilityExpense === undefined &&
+      FACILITY_LABEL_PATTERNS.some((p) => p.test(label))
+    ) {
+      totals.facilityExpense = Math.round(Math.abs(value));
       recognizedRowCount += 1;
       continue;
     }

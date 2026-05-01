@@ -503,6 +503,30 @@ export const CreateModelBody = zod.object({
             totalRevenue: zod.number().nullish(),
             totalExpenses: zod.number().nullish(),
             netIncome: zod.number().nullish(),
+            tuitionRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                'Tuition income subtotal pulled from the export (e.g. a \"Tuition\" or \"Total Tuition Income\" row). Optional — left unset when the parser couldn\'t confidently identify a row.\n',
+              ),
+            philanthropyRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                "Philanthropy \/ donations \/ contributions subtotal pulled from the export. Optional — left unset when no recognized row was found.\n",
+              ),
+            payrollExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Payroll \/ salaries \/ personnel subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
+            facilityExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Facility \/ rent \/ occupancy subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
           })
           .optional(),
         parseWarnings: zod.array(zod.string()).optional(),
@@ -974,6 +998,30 @@ export const GetModelResponse = zod.object({
             totalRevenue: zod.number().nullish(),
             totalExpenses: zod.number().nullish(),
             netIncome: zod.number().nullish(),
+            tuitionRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                'Tuition income subtotal pulled from the export (e.g. a \"Tuition\" or \"Total Tuition Income\" row). Optional — left unset when the parser couldn\'t confidently identify a row.\n',
+              ),
+            philanthropyRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                "Philanthropy \/ donations \/ contributions subtotal pulled from the export. Optional — left unset when no recognized row was found.\n",
+              ),
+            payrollExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Payroll \/ salaries \/ personnel subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
+            facilityExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Facility \/ rent \/ occupancy subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
           })
           .optional(),
         parseWarnings: zod.array(zod.string()).optional(),
@@ -1446,6 +1494,30 @@ export const UpdateModelBody = zod.object({
             totalRevenue: zod.number().nullish(),
             totalExpenses: zod.number().nullish(),
             netIncome: zod.number().nullish(),
+            tuitionRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                'Tuition income subtotal pulled from the export (e.g. a \"Tuition\" or \"Total Tuition Income\" row). Optional — left unset when the parser couldn\'t confidently identify a row.\n',
+              ),
+            philanthropyRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                "Philanthropy \/ donations \/ contributions subtotal pulled from the export. Optional — left unset when no recognized row was found.\n",
+              ),
+            payrollExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Payroll \/ salaries \/ personnel subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
+            facilityExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Facility \/ rent \/ occupancy subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
           })
           .optional(),
         parseWarnings: zod.array(zod.string()).optional(),
@@ -1912,6 +1984,30 @@ export const UpdateModelResponse = zod.object({
             totalRevenue: zod.number().nullish(),
             totalExpenses: zod.number().nullish(),
             netIncome: zod.number().nullish(),
+            tuitionRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                'Tuition income subtotal pulled from the export (e.g. a \"Tuition\" or \"Total Tuition Income\" row). Optional — left unset when the parser couldn\'t confidently identify a row.\n',
+              ),
+            philanthropyRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                "Philanthropy \/ donations \/ contributions subtotal pulled from the export. Optional — left unset when no recognized row was found.\n",
+              ),
+            payrollExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Payroll \/ salaries \/ personnel subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
+            facilityExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Facility \/ rent \/ occupancy subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
           })
           .optional(),
         parseWarnings: zod.array(zod.string()).optional(),
@@ -2405,6 +2501,30 @@ export const ArchiveModelResponse = zod.object({
             totalRevenue: zod.number().nullish(),
             totalExpenses: zod.number().nullish(),
             netIncome: zod.number().nullish(),
+            tuitionRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                'Tuition income subtotal pulled from the export (e.g. a \"Tuition\" or \"Total Tuition Income\" row). Optional — left unset when the parser couldn\'t confidently identify a row.\n',
+              ),
+            philanthropyRevenue: zod
+              .number()
+              .nullish()
+              .describe(
+                "Philanthropy \/ donations \/ contributions subtotal pulled from the export. Optional — left unset when no recognized row was found.\n",
+              ),
+            payrollExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Payroll \/ salaries \/ personnel subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
+            facilityExpense: zod
+              .number()
+              .nullish()
+              .describe(
+                "Facility \/ rent \/ occupancy subtotal pulled from the export. Stored as a positive magnitude. Optional — left unset when no recognized row was found.\n",
+              ),
           })
           .optional(),
         parseWarnings: zod.array(zod.string()).optional(),
