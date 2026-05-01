@@ -18,10 +18,50 @@ export type AudienceSlug =
 
 export type CtaPosition = "primary" | "closing";
 
+export type CapabilitySection =
+  | "hero"
+  | "inside_product"
+  | "how_it_works"
+  | "faq"
+  | "closing_cta";
+
+export const CAPABILITY_SECTIONS: readonly CapabilitySection[] = [
+  "hero",
+  "inside_product",
+  "how_it_works",
+  "faq",
+  "closing_cta",
+] as const;
+
+export type ScrollDepthMilestone = 25 | 50 | 75 | 100;
+
+export const SCROLL_DEPTH_MILESTONES: readonly ScrollDepthMilestone[] = [
+  25, 50, 75, 100,
+] as const;
+
 export type CtaAttribution =
-  | { channel: "capability"; source: CapabilitySlug; position: CtaPosition; ts: number }
+  | {
+      channel: "capability";
+      source: CapabilitySlug;
+      position: CtaPosition;
+      section?: CapabilitySection;
+      ts: number;
+    }
   | { channel: "audience"; audience: AudienceSlug; ts: number }
   | { channel: "cross_link"; audience: AudienceSlug; source: CapabilitySlug; ts: number };
+
+const lastViewedSectionByCapability = new Map<CapabilitySlug, CapabilitySection>();
+
+export function noteCapabilitySectionView(
+  source: CapabilitySlug,
+  section: CapabilitySection,
+): void {
+  lastViewedSectionByCapability.set(source, section);
+}
+
+export function getLastViewedSection(source: CapabilitySlug): CapabilitySection | null {
+  return lastViewedSectionByCapability.get(source) ?? null;
+}
 
 function safeGetSession(): string {
   try {
@@ -86,11 +126,44 @@ export function clearCtaAttribution(): void {
 }
 
 export function trackCapabilityCta(source: CapabilitySlug, position: CtaPosition): void {
-  setCtaAttribution({ channel: "capability", source, position, ts: Date.now() });
+  const lastSection = getLastViewedSection(source) ?? undefined;
+  setCtaAttribution({
+    channel: "capability",
+    source,
+    position,
+    section: lastSection,
+    ts: Date.now(),
+  });
   postJson("/api/public/track-cta", {
     event: "capability_cta_click",
     source,
     position,
+    section: lastSection,
+    sessionId: safeGetSession(),
+  });
+}
+
+export function trackCapabilitySectionImpression(
+  source: CapabilitySlug,
+  section: CapabilitySection,
+): void {
+  noteCapabilitySectionView(source, section);
+  postJson("/api/public/track-cta", {
+    event: "capability_section_impression",
+    source,
+    section,
+    sessionId: safeGetSession(),
+  });
+}
+
+export function trackCapabilityScrollDepth(
+  source: CapabilitySlug,
+  depth: ScrollDepthMilestone,
+): void {
+  postJson("/api/public/track-cta", {
+    event: "capability_scroll_depth",
+    source,
+    depth,
     sessionId: safeGetSession(),
   });
 }
@@ -125,6 +198,9 @@ export function reportAttributedSignup(token: string): void {
   if (attribution.channel === "capability") {
     metadata.source = attribution.source;
     metadata.position = attribution.position;
+    if (attribution.section) {
+      metadata.section = attribution.section;
+    }
   } else if (attribution.channel === "audience") {
     metadata.audience = attribution.audience;
   } else if (attribution.channel === "cross_link") {

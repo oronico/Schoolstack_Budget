@@ -274,6 +274,8 @@ const CTA_EVENT_NAMES = new Set([
   "capability_cta_click",
   "audience_card_click",
   "capability_cross_link_click",
+  "capability_section_impression",
+  "capability_scroll_depth",
 ]);
 
 const CAPABILITY_SLUGS = new Set([
@@ -294,6 +296,16 @@ const AUDIENCE_SLUGS = new Set([
 
 const CTA_POSITIONS = new Set(["primary", "closing"]);
 
+const CAPABILITY_SECTION_IDS = new Set([
+  "hero",
+  "inside_product",
+  "how_it_works",
+  "faq",
+  "closing_cta",
+]);
+
+const SCROLL_DEPTH_VALUES = new Set([25, 50, 75, 100]);
+
 function sanitizeSlug(value: unknown, allowed: Set<string>): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim().slice(0, 64);
@@ -302,7 +314,8 @@ function sanitizeSlug(value: unknown, allowed: Set<string>): string | null {
 
 router.post("/public/track-cta", rateLimiter, async (req: Request, res: Response) => {
   try {
-    const { event, source, audience, position, sessionId } = req.body || {};
+    const { event, source, audience, position, sessionId, section, depth } =
+      req.body || {};
     if (typeof event !== "string" || !CTA_EVENT_NAMES.has(event)) {
       res.status(400).json({ error: "Invalid event name." });
       return;
@@ -319,6 +332,10 @@ router.post("/public/track-cta", rateLimiter, async (req: Request, res: Response
       metadata.source = sourceSlug;
       const pos = typeof position === "string" && CTA_POSITIONS.has(position) ? position : "primary";
       metadata.position = pos;
+      const sectionId = sanitizeSlug(section, CAPABILITY_SECTION_IDS);
+      if (sectionId) {
+        metadata.section = sectionId;
+      }
     } else if (event === "audience_card_click") {
       const audienceSlug = sanitizeSlug(audience, AUDIENCE_SLUGS);
       if (!audienceSlug) {
@@ -335,6 +352,24 @@ router.post("/public/track-cta", rateLimiter, async (req: Request, res: Response
       }
       metadata.audience = audienceSlug;
       metadata.source = sourceSlug;
+    } else if (event === "capability_section_impression") {
+      const sourceSlug = sanitizeSlug(source, CAPABILITY_SLUGS);
+      const sectionId = sanitizeSlug(section, CAPABILITY_SECTION_IDS);
+      if (!sourceSlug || !sectionId) {
+        res.status(400).json({ error: "Invalid capability or section." });
+        return;
+      }
+      metadata.source = sourceSlug;
+      metadata.section = sectionId;
+    } else if (event === "capability_scroll_depth") {
+      const sourceSlug = sanitizeSlug(source, CAPABILITY_SLUGS);
+      const numericDepth = typeof depth === "number" ? depth : Number.NaN;
+      if (!sourceSlug || !SCROLL_DEPTH_VALUES.has(numericDepth)) {
+        res.status(400).json({ error: "Invalid capability or depth." });
+        return;
+      }
+      metadata.source = sourceSlug;
+      metadata.depth = numericDepth;
     }
 
     if (typeof sessionId === "string" && sessionId.length > 0 && sessionId.length <= 64) {

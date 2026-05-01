@@ -155,7 +155,26 @@ interface CtaConversionData {
     summary: { audience: string; clicks: number; signups: number; conversionRate: number }[];
   };
   crossLinks: { audience: string; source: string; clicks: number; signups: number; conversionRate: number }[];
+  sectionEngagement?: {
+    source: string;
+    sections: {
+      section: string;
+      impressions: number;
+      clicks: number;
+      signups: number;
+      clickRate: number;
+    }[];
+    scrollDepth: { d25: number; d50: number; d75: number; d100: number };
+  }[];
 }
+
+const SECTION_LABELS: Record<string, string> = {
+  hero: "Hero",
+  inside_product: "Inside the product",
+  how_it_works: "How it works",
+  faq: "FAQ",
+  closing_cta: "Closing CTA",
+};
 
 const CAPABILITY_LABELS: Record<string, string> = {
   "single-year-pro-forma": "Single-Year Pro Forma",
@@ -348,7 +367,10 @@ function CtaConversionSection() {
           )}
         </div>
 
-        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
+        <div
+          className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm"
+          data-testid="capability-cross-links-card"
+        >
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="h-5 w-5 text-primary" />
             <h2 className="font-display text-lg font-bold">Audience to Capability Cross-Links</h2>
@@ -391,6 +413,146 @@ function CtaConversionSection() {
           )}
         </div>
       </div>
+
+      {data.sectionEngagement && data.sectionEngagement.length > 0 && (
+        <div
+          className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm"
+          data-testid="capability-section-engagement-card"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-lg font-bold">
+              Capability Page Section Engagement
+            </h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-5">
+            Per capability page, how often each section is viewed, how many CTA
+            clicks happened from that section last (proxy for which content
+            persuades visitors), and how many of those rolled up to sign-ups.
+            Scroll-depth milestones show how far visitors actually read.
+          </p>
+          <div className="space-y-6">
+            {data.sectionEngagement.map((page) => {
+              const totalImpressions = page.sections.reduce(
+                (s, x) => s + x.impressions,
+                0,
+              );
+              const totalClicks = page.sections.reduce(
+                (s, x) => s + x.clicks,
+                0,
+              );
+              const totalSignups = page.sections.reduce(
+                (s, x) => s + x.signups,
+                0,
+              );
+              return (
+                <div
+                  key={page.source}
+                  className="border border-border/40 rounded-xl p-4"
+                  data-testid={`section-engagement-${page.source}`}
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+                    <h3 className="font-display font-bold text-base text-foreground">
+                      {CAPABILITY_LABELS[page.source] || page.source}
+                    </h3>
+                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                      <span>
+                        Scroll 25%:{" "}
+                        <span className="font-semibold text-foreground">
+                          {page.scrollDepth.d25}
+                        </span>
+                      </span>
+                      <span>
+                        50%:{" "}
+                        <span className="font-semibold text-foreground">
+                          {page.scrollDepth.d50}
+                        </span>
+                      </span>
+                      <span>
+                        75%:{" "}
+                        <span className="font-semibold text-foreground">
+                          {page.scrollDepth.d75}
+                        </span>
+                      </span>
+                      <span>
+                        100%:{" "}
+                        <span className="font-semibold text-foreground">
+                          {page.scrollDepth.d100}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                  {page.sections.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No section engagement yet.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-xs font-semibold uppercase text-muted-foreground border-b border-border/40">
+                            <th className="py-2 pr-3">Section</th>
+                            <th className="py-2 px-3 text-right">Impressions</th>
+                            <th className="py-2 px-3 text-right">
+                              Clicks from section
+                            </th>
+                            <th className="py-2 px-3 text-right">Sign-ups</th>
+                            <th className="py-2 pl-3 text-right">Click rate</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {page.sections.map((s) => (
+                            <tr
+                              key={s.section}
+                              className="border-b border-border/30 last:border-0"
+                            >
+                              <td className="py-2 pr-3 font-medium text-foreground">
+                                {SECTION_LABELS[s.section] || s.section}
+                              </td>
+                              <td className="py-2 px-3 text-right text-muted-foreground">
+                                {s.impressions}
+                              </td>
+                              <td className="py-2 px-3 text-right font-semibold text-foreground">
+                                {s.clicks}
+                              </td>
+                              <td className="py-2 px-3 text-right text-muted-foreground">
+                                {s.signups}
+                              </td>
+                              <td className="py-2 pl-3 text-right font-bold text-primary">
+                                {(s.clickRate * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          ))}
+                          <tr className="text-xs uppercase text-muted-foreground font-semibold">
+                            <td className="py-2 pr-3">Total</td>
+                            <td className="py-2 px-3 text-right">
+                              {totalImpressions}
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              {totalClicks}
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              {totalSignups}
+                            </td>
+                            <td className="py-2 pl-3 text-right">
+                              {totalImpressions > 0
+                                ? ((totalClicks / totalImpressions) * 100).toFixed(
+                                    1,
+                                  )
+                                : "0.0"}
+                              %
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -290,6 +290,7 @@ router.get(
           channel: sql<string>`metadata->>'channel'`.as("channel"),
           source: sql<string>`metadata->>'source'`.as("source"),
           audience: sql<string>`metadata->>'audience'`.as("audience"),
+          section: sql<string>`metadata->>'section'`.as("section"),
           count: count(),
         })
         .from(eventsTable)
@@ -298,7 +299,43 @@ router.get(
           sql`metadata->>'channel'`,
           sql`metadata->>'source'`,
           sql`metadata->>'audience'`,
+          sql`metadata->>'section'`,
         );
+
+      const sectionImpressions = await db
+        .select({
+          source: sql<string>`metadata->>'source'`.as("source"),
+          section: sql<string>`metadata->>'section'`.as("section"),
+          count: count(),
+        })
+        .from(eventsTable)
+        .where(eq(eventsTable.eventName, "capability_section_impression"))
+        .groupBy(sql`metadata->>'source'`, sql`metadata->>'section'`);
+
+      const scrollDepths = await db
+        .select({
+          source: sql<string>`metadata->>'source'`.as("source"),
+          depth: sql<string>`metadata->>'depth'`.as("depth"),
+          count: count(),
+        })
+        .from(eventsTable)
+        .where(eq(eventsTable.eventName, "capability_scroll_depth"))
+        .groupBy(sql`metadata->>'source'`, sql`metadata->>'depth'`);
+
+      const clicksBySection = await db
+        .select({
+          source: sql<string>`metadata->>'source'`.as("source"),
+          section: sql<string>`metadata->>'section'`.as("section"),
+          count: count(),
+        })
+        .from(eventsTable)
+        .where(
+          and(
+            eq(eventsTable.eventName, "capability_cta_click"),
+            sql`metadata->>'section' IS NOT NULL`,
+          ),
+        )
+        .groupBy(sql`metadata->>'source'`, sql`metadata->>'section'`);
 
       const capabilityClickTotals = new Map<string, number>();
       const capabilityRows = capabilityClicks.map((r) => {
@@ -310,9 +347,14 @@ router.get(
       const capabilitySignups = new Map<string, number>();
       const audienceSignups = new Map<string, number>();
       const crossLinkSignups = new Map<string, number>();
+      const sectionSignups = new Map<string, number>();
       for (const s of attributedSignups) {
         if (s.channel === "capability" && s.source) {
           capabilitySignups.set(s.source, (capabilitySignups.get(s.source) || 0) + s.count);
+          if (s.section) {
+            const key = `${s.source}|${s.section}`;
+            sectionSignups.set(key, (sectionSignups.get(key) || 0) + s.count);
+          }
         } else if (s.channel === "audience" && s.audience) {
           audienceSignups.set(s.audience, (audienceSignups.get(s.audience) || 0) + s.count);
         } else if (s.channel === "cross_link" && s.audience && s.source) {
@@ -320,6 +362,77 @@ router.get(
           crossLinkSignups.set(key, (crossLinkSignups.get(key) || 0) + s.count);
         }
       }
+
+      const sectionImpressionsBySource = new Map<string, Map<string, number>>();
+      for (const r of sectionImpressions) {
+        if (!r.source || !r.section) continue;
+        const map = sectionImpressionsBySource.get(r.source) || new Map<string, number>();
+        map.set(r.section, (map.get(r.section) || 0) + r.count);
+        sectionImpressionsBySource.set(r.source, map);
+      }
+
+      const sectionClicksBySource = new Map<string, Map<string, number>>();
+      for (const r of clicksBySection) {
+        if (!r.source || !r.section) continue;
+        const map = sectionClicksBySource.get(r.source) || new Map<string, number>();
+        map.set(r.section, (map.get(r.section) || 0) + r.count);
+        sectionClicksBySource.set(r.source, map);
+      }
+
+      const scrollDepthBySource = new Map<string, Record<string, number>>();
+      for (const r of scrollDepths) {
+        if (!r.source || !r.depth) continue;
+        const bucket = scrollDepthBySource.get(r.source) || {};
+        bucket[r.depth] = (bucket[r.depth] || 0) + r.count;
+        scrollDepthBySource.set(r.source, bucket);
+      }
+
+      const KNOWN_SECTIONS = [
+        "hero",
+        "inside_product",
+        "how_it_works",
+        "faq",
+        "closing_cta",
+      ];
+      const sectionSources = new Set<string>([
+        ...sectionImpressionsBySource.keys(),
+        ...sectionClicksBySource.keys(),
+        ...scrollDepthBySource.keys(),
+      ]);
+      const sectionEngagement = Array.from(sectionSources).map((source) => {
+        const imps = sectionImpressionsBySource.get(source) || new Map();
+        const clicks = sectionClicksBySource.get(source) || new Map();
+        const sections = KNOWN_SECTIONS.map((section) => {
+          const impressions = imps.get(section) || 0;
+          const sectionClicks = clicks.get(section) || 0;
+          const signups = sectionSignups.get(`${source}|${section}`) || 0;
+          return {
+            section,
+            impressions,
+            clicks: sectionClicks,
+            signups,
+            clickRate: impressions > 0 ? sectionClicks / impressions : 0,
+          };
+        }).filter(
+          (s) => s.impressions > 0 || s.clicks > 0 || s.signups > 0,
+        );
+        const scroll = scrollDepthBySource.get(source) || {};
+        return {
+          source,
+          sections,
+          scrollDepth: {
+            d25: Number(scroll["25"] || 0),
+            d50: Number(scroll["50"] || 0),
+            d75: Number(scroll["75"] || 0),
+            d100: Number(scroll["100"] || 0),
+          },
+        };
+      });
+      sectionEngagement.sort((a, b) => {
+        const aTotal = a.sections.reduce((s, x) => s + x.impressions, 0);
+        const bTotal = b.sections.reduce((s, x) => s + x.impressions, 0);
+        return bTotal - aTotal;
+      });
 
       const capabilitySummary = Array.from(capabilityClickTotals.entries()).map(
         ([source, clicks]) => {
@@ -367,6 +480,7 @@ router.get(
             conversionRate: r.count > 0 ? signups / r.count : 0,
           };
         }).sort((a, b) => b.clicks - a.clicks),
+        sectionEngagement,
       });
     } catch (err) {
       console.error("CTA conversion analytics error:", err);

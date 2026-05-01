@@ -1,10 +1,21 @@
+import { useCallback, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { ArrowRight, ChevronRight, HelpCircle } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { SEOHead } from "@/components/SEOHead";
 import { motion } from "framer-motion";
 import type { SolutionPageData } from "@/data/solution-pages";
-import { trackCapabilityCta, type CapabilitySlug } from "@/lib/cta-tracking";
+import {
+  trackCapabilityCta,
+  trackCapabilitySectionImpression,
+  trackCapabilityScrollDepth,
+  noteCapabilitySectionView,
+  CAPABILITY_SECTIONS,
+  SCROLL_DEPTH_MILESTONES,
+  type CapabilitySection,
+  type CapabilitySlug,
+  type ScrollDepthMilestone,
+} from "@/lib/cta-tracking";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -16,8 +27,70 @@ interface SolutionPageLayoutProps {
   page: SolutionPageData;
 }
 
+function useCapabilityEngagementTracking(slug: CapabilitySlug) {
+  const sectionRefs = useRef<Partial<Record<CapabilitySection, HTMLElement | null>>>({});
+  const sentImpressions = useRef<Set<CapabilitySection>>(new Set());
+  const sentDepths = useRef<Set<ScrollDepthMilestone>>(new Set());
+
+  useEffect(() => {
+    sentImpressions.current = new Set();
+    sentDepths.current = new Set();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const id = entry.target.getAttribute(
+            "data-capability-section",
+          ) as CapabilitySection | null;
+          if (!id || !CAPABILITY_SECTIONS.includes(id)) continue;
+          noteCapabilitySectionView(slug, id);
+          if (sentImpressions.current.has(id)) continue;
+          sentImpressions.current.add(id);
+          trackCapabilitySectionImpression(slug, id);
+        }
+      },
+      { threshold: 0.35 },
+    );
+
+    for (const id of CAPABILITY_SECTIONS) {
+      const el = sectionRefs.current[id];
+      if (el) observer.observe(el);
+    }
+
+    function handleScroll() {
+      const doc = document.documentElement;
+      const scrollable = Math.max(1, doc.scrollHeight - window.innerHeight);
+      const pct = Math.min(100, Math.max(0, (window.scrollY / scrollable) * 100));
+      for (const milestone of SCROLL_DEPTH_MILESTONES) {
+        if (pct >= milestone && !sentDepths.current.has(milestone)) {
+          sentDepths.current.add(milestone);
+          trackCapabilityScrollDepth(slug, milestone);
+        }
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [slug]);
+
+  return useCallback(
+    (id: CapabilitySection) => (el: HTMLElement | null) => {
+      sectionRefs.current[id] = el;
+    },
+    [],
+  );
+}
+
 export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
   const { Icon } = page;
+  const slug = page.slug as CapabilitySlug;
+  const setSectionRef = useCapabilityEngagementTracking(slug);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -42,7 +115,12 @@ export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
       />
 
       {/* Hero */}
-      <section className="relative pt-20 pb-20 overflow-hidden">
+      <section
+        ref={setSectionRef("hero")}
+        data-capability-section="hero"
+        data-testid="capability-section-hero"
+        className="relative pt-20 pb-20 overflow-hidden"
+      >
         <div className="absolute top-0 right-0 -mr-40 -mt-40 w-96 h-96 bg-[#328555]/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 -ml-40 -mb-40 w-[500px] h-[500px] bg-[#328555]/10 rounded-full blur-3xl" />
 
@@ -69,7 +147,7 @@ export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
 
             <Link
               href={page.primaryCta.href}
-              onClick={() => trackCapabilityCta(page.slug as CapabilitySlug, "primary")}
+              onClick={() => trackCapabilityCta(slug, "primary")}
               data-testid={`capability-cta-primary-${page.slug}`}
               className="inline-flex items-center gap-2 bg-[#328555] hover:bg-[#276844] text-white px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg shadow-[#328555]/20"
             >
@@ -81,7 +159,12 @@ export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
       </section>
 
       {/* Inside the product */}
-      <section className="py-20 bg-white border-y border-[#1E293B]/5">
+      <section
+        ref={setSectionRef("inside_product")}
+        data-capability-section="inside_product"
+        data-testid="capability-section-inside-product"
+        className="py-20 bg-white border-y border-[#1E293B]/5"
+      >
         <div className="max-w-6xl mx-auto px-6">
           <motion.div
             {...fadeUp}
@@ -104,7 +187,12 @@ export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
       </section>
 
       {/* How it works */}
-      <section className="py-20 bg-[#FAF9F7]">
+      <section
+        ref={setSectionRef("how_it_works")}
+        data-capability-section="how_it_works"
+        data-testid="capability-section-how-it-works"
+        className="py-20 bg-[#FAF9F7]"
+      >
         <div className="max-w-4xl mx-auto px-6">
           <motion.div
             {...fadeUp}
@@ -146,7 +234,12 @@ export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
       </section>
 
       {/* FAQ */}
-      <section className="py-20 bg-white border-t border-[#1E293B]/5">
+      <section
+        ref={setSectionRef("faq")}
+        data-capability-section="faq"
+        data-testid="capability-section-faq"
+        className="py-20 bg-white border-t border-[#1E293B]/5"
+      >
         <div className="max-w-3xl mx-auto px-6">
           <motion.div
             {...fadeUp}
@@ -185,7 +278,12 @@ export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
       </section>
 
       {/* Closing CTA */}
-      <section className="py-24 bg-[#328555] relative overflow-hidden">
+      <section
+        ref={setSectionRef("closing_cta")}
+        data-capability-section="closing_cta"
+        data-testid="capability-section-closing-cta"
+        className="py-24 bg-[#328555] relative overflow-hidden"
+      >
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#1E293B]/20 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
 
@@ -199,7 +297,7 @@ export function SolutionPageLayout({ page }: SolutionPageLayoutProps) {
             </p>
             <Link
               href={page.closingCta.href}
-              onClick={() => trackCapabilityCta(page.slug as CapabilitySlug, "closing")}
+              onClick={() => trackCapabilityCta(slug, "closing")}
               data-testid={`capability-cta-closing-${page.slug}`}
               className="inline-flex items-center gap-2 bg-white text-[#328555] hover:bg-gray-50 px-8 py-4 rounded-xl font-bold text-lg transition shadow-lg"
             >
