@@ -6,10 +6,13 @@
 // over-project enrollment by 5%") so founders can spot consistent biases
 // across all their past decisions, not just one card at a time.
 
-import { TrendingDown, TrendingUp, Target, CheckCircle2 } from "lucide-react";
+import { useCallback, useMemo } from "react";
+import { useSearchParams } from "wouter";
+import { TrendingDown, TrendingUp, Target, CheckCircle2, X } from "lucide-react";
 import {
   ACCURACY_METRICS,
   describeTendency,
+  filterForecastAccuracy,
   type AccuracyMetricKey,
   type AccuracyMetricMeta,
   type ForecastAccuracyAggregate,
@@ -17,6 +20,16 @@ import {
   type ForecastAccuracyRollup,
 } from "@/lib/forecast-accuracy";
 import { DECISION_LABELS, DECISION_THEME } from "@/lib/decision-flows";
+
+// Stable list of metric keys for URL parsing — kept in sync with the
+// AccuracyMetricKey union so an unknown / legacy `?metric=` value falls
+// back to "no filter" rather than rendering an empty surface.
+const METRIC_KEYS: AccuracyMetricKey[] = ACCURACY_METRICS.map((m) => m.key);
+
+// Year filter chips. Model years run 1-5 in the rest of the app; we still
+// only render chips for years present in the rollup so a fresh founder
+// doesn't see five empty buttons.
+const YEAR_OPTIONS: number[] = [1, 2, 3, 4, 5];
 
 function fmtMoney(v: number): string {
   const sign = v < 0 ? "-" : "";
@@ -103,16 +116,29 @@ function AggregateCard({ agg }: { agg: ForecastAccuracyAggregate }) {
   );
 }
 
-function EntryRow({ entry, idx }: { entry: ForecastAccuracyEntry; idx: number }) {
+function EntryRow({
+  entry,
+  idx,
+  metricFilter,
+}: {
+  entry: ForecastAccuracyEntry;
+  idx: number;
+  metricFilter: AccuracyMetricKey | null;
+}) {
   const cs = entry.scenario;
   const decisionTheme = cs.decisionType ? DECISION_THEME[cs.decisionType] : null;
   const decisionLabel = cs.decisionType ? DECISION_LABELS[cs.decisionType] : null;
   // Render metrics in the canonical ACCURACY_METRICS order so columns line
-  // up across rows even when one scenario captured fewer metrics.
+  // up across rows even when one scenario captured fewer metrics. When a
+  // metric filter is active, collapse the table to just that metric so the
+  // card answers the question the founder asked ("show me only enrollment
+  // accuracy") rather than burying it among other rows.
   const orderedMetricEntries = ACCURACY_METRICS.map((meta) => ({
     meta,
     delta: entry.metrics[meta.key],
-  })).filter((p) => !!p.delta);
+  }))
+    .filter((p) => !!p.delta)
+    .filter((p) => !metricFilter || p.meta.key === metricFilter);
   return (
     <div
       className="bg-card border border-border/60 rounded-xl p-4 shadow-sm"
@@ -211,18 +237,247 @@ function EntryRow({ entry, idx }: { entry: ForecastAccuracyEntry; idx: number })
 }
 
 export function ForecastAccuracyView({ rollup }: { rollup: ForecastAccuracyRollup }) {
-  const { entries, aggregates } = rollup;
+  // URL-driven filter state. We mirror the saved-scenarios toolbar's pattern
+  // (page-level `?outcome=…&sort=…&q=…`) so a founder can paste a "show me
+  // only Year 1 enrollment accuracy" link to a co-founder and land on the
+  // same view. Unknown / legacy values quietly fall back to "no filter" so
+  // a stale link never renders an empty surface.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawMetric = searchParams.get("metric");
+  const metricFilter: AccuracyMetricKey | null = METRIC_KEYS.includes(
+    rawMetric as AccuracyMetricKey,
+  )
+    ? (rawMetric as AccuracyMetricKey)
+    : null;
+  const rawYear = searchParams.get("asOfYear");
+  const yearFilter: number | null = (() => {
+    if (!rawYear) return null;
+    const n = Number(rawYear);
+    return Number.isInteger(n) && YEAR_OPTIONS.includes(n) ? n : null;
+  })();
+
+  const setMetric = useCallback(
+    (next: AccuracyMetricKey | null) => {
+      setSearchParams(
+        (prev) => {
+          const sp = new URLSearchParams(prev);
+          if (!next) sp.delete("metric");
+          else sp.set("metric", next);
+          return sp;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+  const setYear = useCallback(
+    (next: number | null) => {
+      setSearchParams(
+        (prev) => {
+          const sp = new URLSearchParams(prev);
+          if (next === null) sp.delete("asOfYear");
+          else sp.set("asOfYear", String(next));
+          return sp;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  // Years that actually have data — drives which year chips render so we
+  // don't show "Year 4" when nobody has captured Year 4 actuals yet.
+  const availableYears = useMemo(() => {
+    const seen = new Set<number>();
+    for (const e of rollup.entries) seen.add(e.asOfYear);
+    return YEAR_OPTIONS.filter((y) => seen.has(y));
+  }, [rollup.entries]);
+
+  // Metrics that any entry captured — used to dim chips for metrics that
+  // wouldn't return a single entry, matching the visual pattern of the
+  // saved-scenarios outcome chips (count badge + active state).
+  const metricCounts = useMemo(() => {
+    const counts: Partial<Record<AccuracyMetricKey, number>> = {};
+    for (const e of rollup.entries) {
+      for (const key of METRIC_KEYS) {
+        if (e.metrics[key]) counts[key] = (counts[key] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [rollup.entries]);
+
+  const filtered = useMemo(
+    () => filterForecastAccuracy(rollup, { metric: metricFilter, asOfYear: yearFilter }),
+    [rollup, metricFilter, yearFilter],
+  );
+
+  const hasFilter = metricFilter !== null || yearFilter !== null;
+  const clearFilters = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const sp = new URLSearchParams(prev);
+        sp.delete("metric");
+        sp.delete("asOfYear");
+        return sp;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+
+  const { entries, aggregates } = filtered;
+
   return (
     <div className="mb-10" data-testid="forecast-accuracy-section">
       <div className="flex items-center gap-2 mb-2">
         <Target className="h-5 w-5 text-primary" />
         <h2 className="font-display text-xl font-bold text-foreground">Forecast accuracy</h2>
-        <span className="text-sm text-muted-foreground">({entries.length})</span>
+        <span
+          className="text-sm text-muted-foreground"
+          data-testid="forecast-accuracy-count"
+        >
+          ({entries.length}
+          {hasFilter ? ` of ${rollup.entries.length}` : ""})
+        </span>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
         See how each pursued decision actually landed against your projection,
         and spot patterns across all your past forecasts.
       </p>
+
+      {/* Filter toolbar — metric and year chips persist to ?metric=…&asOfYear=…
+          so a chosen slice survives reloads and is shareable. The aggregate
+          band below recomputes against the filtered set. */}
+      <div
+        className="flex flex-col gap-2 mb-4 p-3 rounded-xl border border-border/60 bg-muted/20"
+        data-testid="forecast-accuracy-filters"
+      >
+        <div className="flex items-center flex-wrap gap-2">
+          <span
+            className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+            id="forecast-accuracy-metric-label"
+          >
+            Metric
+          </span>
+          <div
+            className="flex flex-wrap items-center gap-1.5"
+            role="group"
+            aria-labelledby="forecast-accuracy-metric-label"
+            data-testid="forecast-accuracy-metric-chips"
+          >
+            <button
+              type="button"
+              onClick={() => setMetric(null)}
+              aria-pressed={metricFilter === null}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                metricFilter === null
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              }`}
+              data-testid="forecast-accuracy-metric-all"
+            >
+              All
+            </button>
+            {ACCURACY_METRICS.map((meta) => {
+              const count = metricCounts[meta.key] ?? 0;
+              const active = metricFilter === meta.key;
+              const disabled = count === 0;
+              return (
+                <button
+                  key={meta.key}
+                  type="button"
+                  onClick={() => setMetric(active ? null : meta.key)}
+                  aria-pressed={active}
+                  disabled={disabled}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                    active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  } ${disabled ? "opacity-40 cursor-not-allowed hover:bg-background" : ""}`}
+                  data-testid={`forecast-accuracy-metric-${meta.key}`}
+                >
+                  {meta.label}
+                  <span
+                    className={`text-[10px] tabular-nums ${
+                      active ? "opacity-90" : "opacity-70"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {availableYears.length > 0 && (
+          <div className="flex items-center flex-wrap gap-2">
+            <span
+              className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+              id="forecast-accuracy-year-label"
+            >
+              Year
+            </span>
+            <div
+              className="flex flex-wrap items-center gap-1.5"
+              role="group"
+              aria-labelledby="forecast-accuracy-year-label"
+              data-testid="forecast-accuracy-year-chips"
+            >
+              <button
+                type="button"
+                onClick={() => setYear(null)}
+                aria-pressed={yearFilter === null}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                  yearFilter === null
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                }`}
+                data-testid="forecast-accuracy-year-all"
+              >
+                All
+              </button>
+              {availableYears.map((y) => {
+                const active = yearFilter === y;
+                return (
+                  <button
+                    key={y}
+                    type="button"
+                    onClick={() => setYear(active ? null : y)}
+                    aria-pressed={active}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-muted-foreground border-border hover:bg-muted"
+                    }`}
+                    data-testid={`forecast-accuracy-year-${y}`}
+                  >
+                    Year {y}
+                  </button>
+                );
+              })}
+            </div>
+            {hasFilter && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+                data-testid="forecast-accuracy-clear-filters"
+              >
+                <X className="h-3 w-3" /> Clear filters
+              </button>
+            )}
+          </div>
+        )}
+        {availableYears.length === 0 && hasFilter && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="self-end inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+            data-testid="forecast-accuracy-clear-filters"
+          >
+            <X className="h-3 w-3" /> Clear filters
+          </button>
+        )}
+      </div>
 
       {aggregates.length > 0 && (
         <div
@@ -235,15 +490,37 @@ export function ForecastAccuracyView({ rollup }: { rollup: ForecastAccuracyRollu
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="forecast-accuracy-entries">
-        {entries.map((entry, idx) => (
-          <EntryRow
-            key={`${entry.scenario.name}-${entry.scenario.createdAt}`}
-            entry={entry}
-            idx={idx}
-          />
-        ))}
-      </div>
+      {entries.length === 0 ? (
+        <div
+          className="bg-muted/30 border border-dashed border-border rounded-2xl px-5 py-8 text-center"
+          data-testid="forecast-accuracy-empty"
+        >
+          <p className="text-sm text-muted-foreground">
+            No pursued decisions match this filter yet.
+          </p>
+          {hasFilter && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border bg-background text-foreground border-border hover:bg-muted"
+              data-testid="forecast-accuracy-empty-clear"
+            >
+              <X className="h-3 w-3" /> Clear filters
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="forecast-accuracy-entries">
+          {entries.map((entry, idx) => (
+            <EntryRow
+              key={`${entry.scenario.name}-${entry.scenario.createdAt}`}
+              entry={entry}
+              idx={idx}
+              metricFilter={metricFilter}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

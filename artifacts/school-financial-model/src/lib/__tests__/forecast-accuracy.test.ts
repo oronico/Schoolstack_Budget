@@ -3,6 +3,7 @@ import {
   ACCURACY_METRICS,
   computeForecastAccuracy,
   describeTendency,
+  filterForecastAccuracy,
   hasComparableActuals,
   selectAccuracyScenarios,
 } from "../forecast-accuracy";
@@ -224,6 +225,102 @@ describe("computeForecastAccuracy", () => {
     const rollup = computeForecastAccuracy(data);
     const metrics = rollup.aggregates.map((a) => a.metric);
     expect(metrics).toEqual(["monthlyRent"]);
+  });
+});
+
+// --- filterForecastAccuracy -------------------------------------------------
+//
+// Builds a fixture rollup with a few entries spread across metrics + asOfYear
+// so the metric / year / combined cases each have something to assert on.
+
+describe("filterForecastAccuracy", () => {
+  // Fixture: three pursued entries — two enrollment in Year 1, one rent in
+  // Year 2 — produced via computeForecastAccuracy so we exercise the real
+  // shape of MetricDelta / aggregates rather than a hand-rolled stub.
+  function buildFixtureRollup() {
+    const scenarios: CustomScenario[] = [
+      buildScenario({
+        name: "Enroll Y1 over",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        outcomeStatus: "pursued",
+        decisionType: "change_enrollment",
+        overrides: { enrollmentDelta: [0, 0, 0, 0, 0] },
+        actuals: { asOfYear: 1, enrollmentActual: 110 },
+      }),
+      buildScenario({
+        name: "Enroll Y1 under",
+        createdAt: "2026-02-01T00:00:00.000Z",
+        outcomeStatus: "pursued",
+        decisionType: "change_enrollment",
+        overrides: { enrollmentDelta: [0, 0, 0, 0, 0] },
+        actuals: { asOfYear: 1, enrollmentActual: 80 },
+      }),
+      buildScenario({
+        name: "Rent Y2",
+        createdAt: "2026-03-01T00:00:00.000Z",
+        outcomeStatus: "pursued",
+        decisionType: "evaluate_site",
+        overrides: { monthlyRent: 10000 },
+        actuals: { asOfYear: 2, signedMonthlyRent: 11000 },
+      }),
+    ];
+    const data = buildBaseModel({ customScenarios: scenarios });
+    return computeForecastAccuracy(data);
+  }
+
+  it("returns the same rollup reference when no filter is applied", () => {
+    const rollup = buildFixtureRollup();
+    const filtered = filterForecastAccuracy(rollup, {});
+    expect(filtered).toBe(rollup);
+  });
+
+  it("filters entries by metric and keeps only the matching aggregate", () => {
+    const rollup = buildFixtureRollup();
+    const filtered = filterForecastAccuracy(rollup, { metric: "monthlyRent" });
+    expect(filtered.entries.map((e) => e.scenario.name)).toEqual(["Rent Y2"]);
+    const metrics = filtered.aggregates.map((a) => a.metric);
+    expect(metrics).toEqual(["monthlyRent"]);
+  });
+
+  it("filters entries by asOfYear and recomputes aggregates from just that slice", () => {
+    const rollup = buildFixtureRollup();
+    const filtered = filterForecastAccuracy(rollup, { asOfYear: 1 });
+    expect(filtered.entries.map((e) => e.scenario.name)).toEqual([
+      "Enroll Y1 over",
+      "Enroll Y1 under",
+    ]);
+    const enrollAgg = filtered.aggregates.find((a) => a.metric === "enrollment");
+    expect(enrollAgg).toBeDefined();
+    expect(enrollAgg!.count).toBe(2);
+    // (10 + -20) / 2 = -5
+    expect(enrollAgg!.meanDeltaPct).toBeCloseTo(-5, 5);
+    // Rent only existed on the Year 2 entry, so it falls out entirely.
+    expect(filtered.aggregates.find((a) => a.metric === "monthlyRent")).toBeUndefined();
+  });
+
+  it("combines metric + asOfYear filters with AND semantics", () => {
+    const rollup = buildFixtureRollup();
+    const filtered = filterForecastAccuracy(rollup, {
+      metric: "enrollment",
+      asOfYear: 2,
+    });
+    // No Year 2 enrollment entry in the fixture → both lists empty.
+    expect(filtered.entries).toEqual([]);
+    expect(filtered.aggregates).toEqual([]);
+  });
+
+  it("recomputes the metric aggregate against just the surviving entries", () => {
+    const rollup = buildFixtureRollup();
+    // Filter to enrollment + Year 1 — both enrollment entries survive, so
+    // the aggregate should match the unfiltered enrollment aggregate.
+    const filtered = filterForecastAccuracy(rollup, {
+      metric: "enrollment",
+      asOfYear: 1,
+    });
+    const agg = filtered.aggregates.find((a) => a.metric === "enrollment");
+    expect(agg).toBeDefined();
+    expect(agg!.count).toBe(2);
+    expect(agg!.meanDeltaPct).toBeCloseTo(-5, 5);
   });
 });
 
