@@ -391,4 +391,110 @@ test("Quick-finder is hidden for small rosters", async ({ page, request }) => {
   await expect(page.getByRole("button", { name: /Head of School/ })).toBeVisible();
   // …but the quick-finder must not appear for ≤10-row rosters.
   await expect(page.getByTestId("staffing-quick-finder")).toHaveCount(0);
+
+  // Task #347: small rosters must not read or write the persisted-filter
+  // sessionStorage slot. After landing on the staffing step there should be
+  // no key for this model id, even though the page has fully rendered.
+  const persistedKey = await page.evaluate((id) => {
+    return window.sessionStorage.getItem(
+      `staffing-quick-finder-filter:${id}`,
+    );
+  }, modelId);
+  expect(persistedKey).toBeNull();
+});
+
+// Task #347: the quick-finder filter is the founder's "view" of a 50+ row
+// roster. We persist it per-model in sessionStorage so navigating to a
+// different wizard step and back, or hard-refreshing the page, doesn't wipe
+// the search the founder just typed. Clearing the input must also wipe the
+// persisted slot so a stale filter doesn't silently re-engage on the next
+// visit.
+test("Quick-finder filter survives navigation and hard reload", async ({
+  page,
+  request,
+}) => {
+  const { token, modelId } = await seedModel(
+    request,
+    buildBigRoster(),
+    "Persist",
+  );
+  await primeAuthToken(page, token);
+
+  await page.goto(`/model/${modelId}?step=5`);
+  await expect(
+    page.getByRole("heading", { name: /Tell Us About Your Leadership and Staff/i }),
+  ).toBeVisible({ timeout: 30_000 });
+
+  const finder = page.getByTestId("staffing-quick-finder");
+  const input = page.getByTestId("staffing-quick-finder-input");
+  await expect(finder).toBeVisible({ timeout: 15_000 });
+
+  // Type a unique fragment so we can prove the filter is in effect after
+  // re-mounting the step.
+  await input.fill("Math");
+  await expect(finder).toContainText(/1 of 50/);
+
+  // The persisted slot is keyed by model id and now holds "Math".
+  await expect
+    .poll(
+      () =>
+        page.evaluate((id) => {
+          return window.sessionStorage.getItem(
+            `staffing-quick-finder-filter:${id}`,
+          );
+        }, modelId),
+      { timeout: 5_000 },
+    )
+    .toBe("Math");
+
+  // Navigate to another wizard step and back. The staffing step component
+  // unmounts, so the local `useState` filter is lost — only the persisted
+  // slot can bring it back.
+  await page.goto(`/model/${modelId}?step=4`);
+  await page.waitForLoadState("networkidle");
+  await page.goto(`/model/${modelId}?step=5`);
+  await expect(
+    page.getByRole("heading", { name: /Tell Us About Your Leadership and Staff/i }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(finder).toBeVisible({ timeout: 15_000 });
+  await expect(input).toHaveValue("Math");
+  await expect(finder).toContainText(/1 of 50/);
+  await expect(
+    page.getByRole("button", { name: /Lead Math Teacher/ }),
+  ).toBeVisible();
+
+  // Hard reload — sessionStorage must persist across this and re-hydrate
+  // the input.
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: /Tell Us About Your Leadership and Staff/i }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(finder).toBeVisible({ timeout: 15_000 });
+  await expect(input).toHaveValue("Math");
+  await expect(finder).toContainText(/1 of 50/);
+
+  // Clearing the input clears the persisted slot too — no zombie filter on
+  // the next visit.
+  await input.fill("");
+  await expect(input).toHaveValue("");
+  await expect
+    .poll(
+      () =>
+        page.evaluate((id) => {
+          return window.sessionStorage.getItem(
+            `staffing-quick-finder-filter:${id}`,
+          );
+        }, modelId),
+      { timeout: 5_000 },
+    )
+    .toBeNull();
+
+  // Reload one more time to confirm: with the slot cleared, the input
+  // comes back empty and all 50 rows are visible.
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: /Tell Us About Your Leadership and Staff/i }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(input).toHaveValue("");
+  await expect(input).toHaveAttribute("placeholder", /50 total/);
 });

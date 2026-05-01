@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
+import { useRoute } from "wouter";
 import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign, Search, X } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
@@ -88,8 +89,12 @@ function CollapsibleCallout({
   );
 }
 
+const QUICK_FINDER_STORAGE_PREFIX = "staffing-quick-finder-filter:";
+
 export function StaffingStep() {
   const { watch, setValue, formState: { errors } } = useFormContext();
+  const [, routeParams] = useRoute("/model/:id");
+  const modelIdParam = routeParams?.id ?? null;
   const { user } = useAuth();
   const personaComfort = getFounderPersona(user).comfort;
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
@@ -285,6 +290,47 @@ export function StaffingStep() {
       setFilter("");
     }
   }, [showQuickFinder, filter]);
+
+  // Task #347: persist the quick-finder text per model across step
+  // navigation and hard reloads. We use sessionStorage (not localStorage)
+  // because the search is a within-session view, not a long-lived
+  // preference. The key includes the model id so two models open in
+  // different tabs don't share filters. Hydration is gated on the finder
+  // actually being visible so small rosters never read or write storage —
+  // matching the task's explicit "≤ ~10 rows are unaffected" requirement.
+  const finderHydratedRef = useRef(false);
+  useEffect(() => {
+    if (finderHydratedRef.current) return;
+    if (!defaultsApplied || !showQuickFinder || !modelIdParam) return;
+    if (typeof window === "undefined") return;
+    finderHydratedRef.current = true;
+    try {
+      const stored = window.sessionStorage.getItem(
+        `${QUICK_FINDER_STORAGE_PREFIX}${modelIdParam}`,
+      );
+      if (stored && stored.length > 0) {
+        setFilter(stored);
+      }
+    } catch {
+      // sessionStorage can throw in private browsing; treat as no-op.
+    }
+  }, [defaultsApplied, showQuickFinder, modelIdParam]);
+
+  useEffect(() => {
+    if (!finderHydratedRef.current) return;
+    if (!modelIdParam) return;
+    if (typeof window === "undefined") return;
+    const key = `${QUICK_FINDER_STORAGE_PREFIX}${modelIdParam}`;
+    try {
+      if (filter.length > 0) {
+        window.sessionStorage.setItem(key, filter);
+      } else {
+        window.sessionStorage.removeItem(key);
+      }
+    } catch {
+      // sessionStorage can throw in private browsing; treat as no-op.
+    }
+  }, [filter, modelIdParam]);
 
   const filteredGroups = useMemo(() => {
     if (!isFiltering) return groupedRows;
