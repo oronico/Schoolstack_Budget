@@ -25,6 +25,7 @@ const ScenarioPage = lazy(() => import("@/pages/scenarios").then(m => ({ default
 const DecisionFlowDispatcher = lazy(() => import("@/pages/decision-flows").then(m => ({ default: m.DecisionFlowDispatcher })));
 const AdminPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPage })));
 const AccountPage = lazy(() => import("@/pages/account").then(m => ({ default: m.AccountPage })));
+const SettingsPage = lazy(() => import("@/pages/settings").then(m => ({ default: m.SettingsPage })));
 const TermsPage = lazy(() => import("@/pages/legal/terms").then(m => ({ default: m.TermsPage })));
 const PrivacyPolicyPage = lazy(() => import("@/pages/legal/privacy").then(m => ({ default: m.PrivacyPolicyPage })));
 const SharedModelPage = lazy(() => import("@/pages/shared/SharedModelPage").then(m => ({ default: m.SharedModelPage })));
@@ -171,6 +172,9 @@ function AppRouter() {
         </Route>
         <Route path="/account">
           {() => <ProtectedRoute component={AccountPage} />}
+        </Route>
+        <Route path="/settings">
+          {() => <ProtectedRoute component={SettingsPage} />}
         </Route>
 
         <Route component={NotFound} />
