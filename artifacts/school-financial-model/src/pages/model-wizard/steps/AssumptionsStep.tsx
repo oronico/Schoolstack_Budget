@@ -501,12 +501,16 @@ export function AssumptionsStep() {
     setValue("revenueDefaults.collectionDelayDays", 0, { shouldDirty: true });
   };
 
+  const yetToLaunch = isYetToLaunch(user);
+
   return (
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Assumptions &amp; Sensitivity</h2>
         <p className="text-muted-foreground text-lg">
-          The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates, escalators, and structural settings that stress-test your 5-year model.
+          {yetToLaunch
+            ? "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital plans are in. Use this screen to set the rates, escalators, and structural settings that shape your opening 5-year projection."
+            : "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates, escalators, and structural settings that stress-test your 5-year model."}
         </p>
       </div>
 
@@ -519,7 +523,9 @@ export function AssumptionsStep() {
           summary={<><span className="font-semibold">The defaults are a great starting point</span><span className="text-muted-foreground"> — pre-filled with typical rates for schools like yours.</span></>}
         >
           <p className="text-sm text-emerald-800">
-            Most founders leave them as-is on their first pass - you can always come back and fine-tune later. If a field shows a default badge, it means you've customized it.
+            {yetToLaunch
+              ? "Most founders leave them as-is on their first pass — you can always come back and fine-tune later as your plan firms up. If a field shows a default badge, it means you've customized it."
+              : "Most founders leave them as-is on their first pass - you can always come back and fine-tune later. If a field shows a default badge, it means you've customized it."}
           </p>
         </AssumptionsCallout>
       )}

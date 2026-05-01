@@ -42,6 +42,8 @@ import {
 } from "@/lib/revenue-defaults";
 import { type TuitionTier, getDefaultTuitionTiers } from "@/pages/model-wizard/schema";
 import { getStateFundingConfig, type StateFundingConfig, type SchoolType, type CharterPerPupilRange, type ProgramInfo } from "@/lib/state-funding-data";
+import { useAuth } from "@/lib/auth-context";
+import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 
 const CATEGORY_ICONS: Record<RevenueCategory, React.ComponentType<{ className?: string }>> = {
   tuition_and_fees: GraduationCap,
@@ -181,6 +183,8 @@ const MONTH_LABELS = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "M
 
 export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => void; modelId?: number | null }) {
   const { watch, setValue, getValues, formState: { errors } } = useFormContext();
+  const { user } = useAuth();
+  const yetToLaunch = isYetToLaunch(user);
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolStage = watch("schoolProfile.schoolStage") as string | undefined;
   const schoolType = watch("schoolProfile.schoolType") as string | undefined;
@@ -607,7 +611,12 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     const method = enrollmentRevenueMethod || "adm";
     const adm = priorYearADM || 0;
     const ada = priorYearADA || 0;
-    const ratio = method === "ada"
+    // For yet_to_launch founders we never collect prior-year attendance data —
+    // the ADA inputs live behind a persona-gated block in AssumptionsStep — so
+    // fall back to a clean 1.0 ratio (no haircut) instead of using the 0.95
+    // sentinel default. This keeps the per-pupil math believable when the
+    // founder hasn't (and can't) supply attendance history.
+    const ratio = method === "ada" && !yetToLaunch
       ? (adm > 0 && ada > 0 ? Math.min(ada / adm, 1) : 0.95)
       : 1;
 
@@ -684,16 +693,26 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       <div className="space-y-8">
         <div>
           <h2 className="font-display text-3xl font-bold text-foreground mb-3">
-            Where Does Your Money Come From?
+            {yetToLaunch ? "Where will your opening-year money come from?" : "Where Does Your Money Come From?"}
           </h2>
           <p className="text-muted-foreground text-lg">
-            Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget. Most founders start with just one or two sources - you can always add more as your school grows.
+            {yetToLaunch
+              ? "Check every revenue source you expect in your opening year. We'll set up the right line items and starting points for your plan. Most founders begin with just one or two sources — you can always add more as you firm up commitments."
+              : "Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget. Most founders start with just one or two sources - you can always add more as your school grows."}
           </p>
         </div>
 
         <WhyThisMatters
-          why="Naming every source up front — even the small ones — keeps your model honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
-          revisit="Add new sources as you confirm grants, sponsors, or new program lines."
+          why={
+            yetToLaunch
+              ? "Naming every source up front — even the small ones — keeps your opening plan honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
+              : "Naming every source up front — even the small ones — keeps your model honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
+          }
+          revisit={
+            yetToLaunch
+              ? "Add new sources as you confirm grants, sponsors, or signed family commitments."
+              : "Add new sources as you confirm grants, sponsors, or new program lines."
+          }
         />
 
         {isCharterType && (
@@ -774,9 +793,13 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-3xl font-bold text-foreground mb-3">Revenue by Source</h2>
+        <h2 className="font-display text-3xl font-bold text-foreground mb-3">
+          {yetToLaunch ? "Revenue by Source — Opening 5 Years" : "Revenue by Source"}
+        </h2>
         <p className="text-muted-foreground text-lg">
-          Enter your expected amounts for each year. We've filled in smart defaults - adjust them to match your school.
+          {yetToLaunch
+            ? "Enter the amounts you expect for each year of your opening plan. We've pre-filled typical starting points for a school like yours — adjust them to match your concept."
+            : "Enter your expected amounts for each year. We've filled in smart defaults - adjust them to match your school."}
         </p>
       </div>
 
@@ -833,7 +856,16 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 px-4 py-3">
         <Info className="h-4 w-4 text-slate-500 flex-shrink-0" />
         <p className="text-sm text-slate-700">
-          Enrollment growth rate{isCharter ? ", charter methodology, deposit timing, and ADA inputs are" : " and tuition escalation are"} configured on the{" "}
+          {/* Yet_to_launch founders never see the prior-year ADA inputs (they're
+              persona-gated out of AssumptionsStep), so we drop the "ADA inputs"
+              clause for them and only mention the dials they'll actually find. */}
+          Enrollment growth rate
+          {isCharter
+            ? yetToLaunch
+              ? ", charter methodology, and deposit timing are"
+              : ", charter methodology, deposit timing, and ADA inputs are"
+            : " and tuition escalation are"}
+          {" "}configured on the{" "}
           {jumpToStep ? (
             <button type="button" onClick={() => jumpToStep(2)} className="font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">
               Assumptions step
@@ -927,7 +959,15 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
               const method = watch("schoolProfile.enrollmentRevenueMethod") || "adm";
               const adm = watch("schoolProfile.priorYearADM") || 0;
               const ada = watch("schoolProfile.priorYearADA") || 0;
-              const ratio = method === "ada" ? (adm > 0 ? ada / adm : 0.95) : 1;
+              // Mirror the grade-band sync effect above: yet_to_launch
+              // founders never supply prior-year attendance data (the inputs
+              // are persona-gated out of AssumptionsStep), so we keep the
+              // estimate at the un-haircut value rather than applying the
+              // 0.95 sentinel and rendering a confusing attendance-ratio
+              // annotation they can't act on.
+              const ratio = method === "ada" && !yetToLaunch
+                ? (adm > 0 ? ada / adm : 0.95)
+                : 1;
               const y1Total = GRADE_BAND_KEYS.reduce((sum, k) => sum + (gbe[k]?.[0] ?? 0) * (gbp[k] ?? 0), 0) * ratio;
               return (
                 <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl">

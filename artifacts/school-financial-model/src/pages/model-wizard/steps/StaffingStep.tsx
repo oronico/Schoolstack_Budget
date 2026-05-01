@@ -24,7 +24,7 @@ import {
   type PayrollTaxCapInsight,
 } from "@/lib/state-payroll-tax-data";
 import { useAuth } from "@/lib/auth-context";
-import { getFounderPersona } from "@/lib/coaching/founder-persona";
+import { getFounderPersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
 import type { FounderComfort } from "@/lib/coaching/founder-persona";
 import {
   type StaffingRowData,
@@ -97,6 +97,7 @@ export function StaffingStep() {
   const modelIdParam = routeParams?.id ?? null;
   const { user } = useAuth();
   const personaComfort = getFounderPersona(user).comfort;
+  const yetToLaunch = isYetToLaunch(user);
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
@@ -411,12 +412,15 @@ export function StaffingStep() {
         </>}
       >
         <p className="text-sm text-foreground">
-          This is your Year 1 team, but your enrollment grows to <span className="font-semibold">{y5Students || "?"} students</span> by Year 5.
+          {yetToLaunch
+            ? "This is the team you plan to open with, but your enrollment is projected to grow to "
+            : "This is your Year 1 team, but your enrollment grows to "}
+          <span className="font-semibold">{y5Students || "?"} students</span> by Year 5.
           {y5Students > y1Students && " You'll likely need to hire more staff as you grow."}{" "}
           The COLA rate you set in Assumptions will increase these salaries automatically each year.
         </p>
         <p className="text-sm text-muted-foreground">
-          Current staffing benchmark for {schoolType.replace(/_/g, " ")}: {benchmark.staff}.
+          {yetToLaunch ? "Typical" : "Current"} staffing benchmark for {schoolType.replace(/_/g, " ")}: {benchmark.staff}.
         </p>
       </CollapsibleCallout>
 

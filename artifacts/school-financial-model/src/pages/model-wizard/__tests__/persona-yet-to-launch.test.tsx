@@ -196,6 +196,29 @@ describe("ModelWizardPage — yet_to_launch founder", () => {
     expectNoForbiddenTerms(container.textContent || "", "Wizard step 2");
   });
 
+  it("step 4 (Revenue) reframes the source picker for opening-year founders", async () => {
+    const container = await renderWizardAtStep(4);
+    const text = container.textContent || "";
+    // No actuals/prior-year/variance/QuickBooks language anywhere in the
+    // Revenue step copy, including the per-pupil ADA ratio annotations.
+    expectNoForbiddenTerms(text, "Wizard step 4");
+    // Defensive: the "(adjusted for X% attendance ratio)" annotation on the
+    // Y1 per-pupil estimate card depends on prior-year ADA data the founder
+    // can never enter. It must never render for this persona, even if a
+    // future code path tries to surface a non-1.0 default ratio.
+    expect(text).not.toMatch(/attendance ratio/i);
+    // The "ADA inputs are configured…" clause in the Assumptions-step
+    // pointer also references inputs hidden from this persona — it should
+    // be dropped from the copy.
+    expect(text).not.toMatch(/ADA inputs/);
+  });
+
+  it("step 5 (Staffing) softens the roster + benchmark callouts to opening-year framing", async () => {
+    const container = await renderWizardAtStep(5);
+    const text = container.textContent || "";
+    expectNoForbiddenTerms(text, "Wizard step 5");
+  });
+
   it("step 6 (Expenses) drops the QuickBooks/Xero name-drop in the Chart of Accounts callout", async () => {
     const container = await renderWizardAtStep(6);
     // We allow "Xero" in the comfortable persona, but yet_to_launch must not
@@ -203,6 +226,16 @@ describe("ModelWizardPage — yet_to_launch founder", () => {
     const text = container.textContent || "";
     expectNoForbiddenTerms(text, "Wizard step 6");
     expect(text).not.toMatch(/xero/i);
+  });
+
+  it("step 8 (Assumptions & Sensitivity) hides the prior-year ADA inputs and softens the dial-tuning copy", async () => {
+    const container = await renderWizardAtStep(8);
+    const text = container.textContent || "";
+    expectNoForbiddenTerms(text, "Wizard step 8");
+    // Defensive: the prior-year ADM/ADA inputs should never render for this
+    // persona. Their input ids would only mount when the gate opens.
+    expect(text).not.toMatch(/Prior-Year ADM/i);
+    expect(text).not.toMatch(/Prior-Year ADA/i);
   });
 
   it("step 9 (Review) suppresses the budget-to-books / variance lesson", async () => {

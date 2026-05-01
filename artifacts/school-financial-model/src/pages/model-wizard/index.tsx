@@ -14,7 +14,7 @@ import { WhatThisMeansInYourBooks } from "@/components/coaching/WhatThisMeansInY
 import { WizardPrepChecklist } from "@/components/coaching/WizardPrepChecklist";
 import { useAuth } from "@/lib/auth-context";
 import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
-import { hasCompletePersona } from "@/lib/coaching/founder-persona";
+import { hasCompletePersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
 
 import { fullModelSchema, type FullModelData } from "./schema";
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
@@ -1118,12 +1118,14 @@ export function ModelWizardPage() {
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <MicroLessonContainer data={methods.getValues() as FullModelData} currentStep={currentStep} className="mb-4" />
-            <WhatThisMeansInYourBooks
-              step={currentStep}
-              schoolType={(methods.getValues() as FullModelData).schoolProfile?.schoolType}
-              entityType={(methods.getValues() as FullModelData).schoolProfile?.entityType}
-              className="mb-4"
-            />
+            {!isYetToLaunch(user) && (
+              <WhatThisMeansInYourBooks
+                step={currentStep}
+                schoolType={(methods.getValues() as FullModelData).schoolProfile?.schoolType}
+                entityType={(methods.getValues() as FullModelData).schoolProfile?.entityType}
+                className="mb-4"
+              />
+            )}
             {showEncouragement && (
               <div className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
                 <div className="shrink-0 mt-0.5 w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
