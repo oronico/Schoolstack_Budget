@@ -631,6 +631,12 @@ export function CustomScenarioCard({
   personaComfort,
 }: CustomScenarioCardProps) {
   const [editingRetro, setEditingRetro] = useState(false);
+  // Inline rename state. We keep the saved scenario's `(name, createdAt)`
+  // as a stable id, so renaming only patches `name` — `patchCustom` matches
+  // on the prior tuple before writing the update. (Task #175)
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(cs.name);
+  const [renaming, setRenaming] = useState(false);
   // Two-step confirmation for the destructive "Remove uploaded export"
   // affordance. Resets back to false whenever the editor closes so a
   // half-confirmed remove can't bleed across editor sessions.
@@ -642,6 +648,11 @@ export function CustomScenarioCard({
   useEffect(() => {
     if (!editingRetro) setRetroDraft(cs.retrospective ?? "");
   }, [cs.retrospective, editingRetro]);
+  // Same idempotent sync for the rename draft so it tracks the persisted
+  // name when not actively being edited.
+  useEffect(() => {
+    if (!editingName) setNameDraft(cs.name);
+  }, [cs.name, editingName]);
 
   // Actuals editor state — opens automatically when the scenario already has
   // actuals saved (so the founder lands on their previous entries) and stays
@@ -792,6 +803,24 @@ export function CustomScenarioCard({
     setEditingRetro(false);
   };
 
+  const saveName = async () => {
+    const trimmed = nameDraft.trim();
+    // Empty rename is a no-op — falls back to the existing name so a
+    // founder can't accidentally render a card without a title.
+    if (trimmed.length === 0 || trimmed === cs.name) {
+      setNameDraft(cs.name);
+      setEditingName(false);
+      return;
+    }
+    setRenaming(true);
+    try {
+      await onPatch(target, { name: trimmed });
+      setEditingName(false);
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   const showApplyNudge = cs.outcomeStatus === "pursued" && !cs.appliedToModelAt;
   // Actuals are most useful for Pursued scenarios but we also keep them
   // visible if the user already saved some so they're never accidentally
@@ -888,7 +917,77 @@ export function CustomScenarioCard({
               </span>
             )}
           </div>
-          <h3 className="font-display font-bold text-foreground truncate">{cs.name}</h3>
+          {editingName ? (
+            <div
+              className="flex items-center gap-1.5"
+              data-testid={`custom-scenario-rename-editor-${idx}`}
+            >
+              <input
+                type="text"
+                value={nameDraft}
+                autoFocus
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void saveName();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setNameDraft(cs.name);
+                    setEditingName(false);
+                  }
+                }}
+                maxLength={120}
+                disabled={renaming}
+                className="font-display font-bold text-foreground bg-background border border-border rounded px-1.5 py-0.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary/30"
+                aria-label="Rename scenario"
+                data-testid={`custom-scenario-rename-input-${idx}`}
+              />
+              <button
+                type="button"
+                onClick={() => void saveName()}
+                disabled={renaming}
+                className="text-[11px] px-2 py-0.5 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-60"
+                data-testid={`custom-scenario-rename-save-${idx}`}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNameDraft(cs.name);
+                  setEditingName(false);
+                }}
+                disabled={renaming}
+                className="text-[11px] px-1.5 py-0.5 rounded text-muted-foreground hover:text-foreground"
+                data-testid={`custom-scenario-rename-cancel-${idx}`}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 group/title">
+              <h3
+                className="font-display font-bold text-foreground truncate"
+                data-testid={`custom-scenario-name-${idx}`}
+              >
+                {cs.name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setNameDraft(cs.name);
+                  setEditingName(true);
+                }}
+                aria-label={`Rename ${cs.name}`}
+                title="Rename scenario"
+                className="p-0.5 rounded text-muted-foreground hover:text-primary opacity-0 group-hover/title:opacity-100 focus:opacity-100 transition-opacity"
+                data-testid={`custom-scenario-rename-${idx}`}
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            </div>
+          )}
           <p className="text-[11px] text-muted-foreground">
             Saved {fmtDate(cs.createdAt)}
             {cs.outcomeUpdatedAt && (
@@ -2720,9 +2819,16 @@ export function ScenarioPage() {
           };
           const openInPlanner = (overrides: WhatIfOverrides) => {
             const hash = encodeOverridesToHash(overrides);
-            if (hash) {
-              window.location.hash = hash;
-            }
+            if (!hash) return;
+            // Always force the planner open via a custom event — `hashchange`
+            // alone wouldn't fire if the encoded hash happens to match the
+            // current one (e.g. re-clicking the same scenario after closing
+            // the drawer). The trigger listens for this and remounts the
+            // drawer so it re-hydrates from the freshly written hash.
+            window.location.hash = hash;
+            window.dispatchEvent(
+              new CustomEvent("whatif:open", { detail: { hash } }),
+            );
           };
           const applyScenarioToModel = async (cs: CustomScenario) => {
             if (!modelId) return;

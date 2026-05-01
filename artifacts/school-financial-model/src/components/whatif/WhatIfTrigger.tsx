@@ -48,15 +48,40 @@ export function WhatIfTrigger({ data, modelId, onApplyToModel, onSaveAsScenario 
   // Same `whatif=open` handshake, but for the case where the trigger is
   // already mounted when the hash changes (e.g. the founder is on the
   // scenarios page, taps the coach nudge, and the hash flips without a
-  // full route navigation).
+  // full route navigation). Also opens when an *encoded* whatif hash
+  // appears — that's how a saved scenario's "Open in planner" button
+  // re-hydrates its overrides into the drawer (Task #175).
   useEffect(() => {
     const onHash = () => {
       if (/(?:^|[#&?])whatif=open(?:&|$)/.test(window.location.hash)) {
+        setOpen(true);
+        return;
+      }
+      const ov = decodeOverridesFromHash(window.location.hash);
+      if (!isEmptyOverrides(ov)) {
         setOpen(true);
       }
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  // Saved scenario "Open in planner" buttons dispatch this event after
+  // writing the encoded overrides to the URL hash. We close-and-reopen the
+  // drawer so the lazily-mounted `WhatIfDrawer` re-runs its on-mount
+  // hydration from the freshly written hash — necessary even when the new
+  // hash happens to equal the current one (in which case `hashchange`
+  // wouldn't fire). (Task #175)
+  useEffect(() => {
+    const onOpen = () => {
+      setOpen(false);
+      // Defer one frame so React unmounts the drawer before we re-open
+      // it; otherwise the existing instance would keep its hydrated
+      // state and skip the new overrides.
+      requestAnimationFrame(() => setOpen(true));
+    };
+    window.addEventListener("whatif:open", onOpen as EventListener);
+    return () => window.removeEventListener("whatif:open", onOpen as EventListener);
   }, []);
 
   // Re-check overrides whenever drawer closes (so the badge stays accurate)
