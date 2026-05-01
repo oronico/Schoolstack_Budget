@@ -692,6 +692,12 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
         filename: file.name,
         uploadedAt: new Date().toISOString(),
         totals: parsed.totals,
+        // Persist the parser's row-recognition count so the post-upload
+        // coach line can tell the founder *how many* account categories we
+        // picked up. Without this the coach falls through to its
+        // "couldn't recognize anything" branch even on a clean QuickBooks
+        // export — see budget-coach-surfaces.spec.ts.
+        recognizedRowCount: parsed.recognizedRowCount,
         parseWarnings: parsed.parseWarnings.length > 0 ? parsed.parseWarnings : undefined,
       };
       // setValue marks the form dirty so the wizard's autosave picks it up
