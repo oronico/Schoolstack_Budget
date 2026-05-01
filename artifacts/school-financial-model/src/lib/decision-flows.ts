@@ -41,5 +41,6 @@ export {
   MAX_ACCOUNTING_EXPORT_BYTES,
   type AccountingExportLike,
   type AccountingExportTotals,
+  type LiveSnapshotLike,
   type ParsedAccountingExport,
 } from "@workspace/finance";

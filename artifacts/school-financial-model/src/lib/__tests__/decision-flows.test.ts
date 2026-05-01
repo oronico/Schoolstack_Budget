@@ -928,6 +928,111 @@ describe("buildActualsSuggestion", () => {
     expect(suggestion.sourceLabels).toEqual([]);
   });
 
+  // --- liveSnapshot.enrollment branch -------------------------------------
+  //
+  // When a connected accounting tool (QuickBooks/Xero) has synced a tagged
+  // "students enrolled" count into `liveSnapshot.enrollment`, the engine
+  // should prefer it over a typed-in prior-year value and emit a source
+  // label the actuals editor can render as a "From <provider> tag <name>"
+  // subtitle. Other fields fall through to their existing branches.
+  it("prefers liveSnapshot.enrollment over typed-in prior-year enrollment", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      priorYearSnapshot: {
+        endingEnrollment: 95,
+        totalRevenue: 1_000_000,
+        totalExpenses: 950_000,
+      },
+      liveSnapshot: {
+        provider: "QuickBooks",
+        tagName: "Students FY26",
+        enrollment: 82,
+        syncedAt: "2026-04-15T09:30:00.000Z",
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(
+      data,
+      persisted,
+      "change_enrollment",
+      1,
+    );
+    expect(suggestion.values.enrollmentActual).toBe(82);
+    expect(suggestion.sources.enrollmentActual).toBe(
+      "From QuickBooks tag 'Students FY26'",
+    );
+    expect(suggestion.sourceLabels).toContain(
+      "From QuickBooks tag 'Students FY26'",
+    );
+    // Revenue/expenses still come from the prior-year snapshot since
+    // the live snapshot only carries enrollment today.
+    expect(suggestion.values.revenueActual).toBe(1_000_000);
+    expect(suggestion.sources.revenueActual).toBe(
+      "Prior-year actuals from setup",
+    );
+  });
+
+  it("ignores liveSnapshot.enrollment beyond year 1", () => {
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      liveSnapshot: {
+        provider: "Xero",
+        tagName: "Active Students",
+        enrollment: 120,
+        syncedAt: "2026-04-15T09:30:00.000Z",
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(
+      data,
+      persisted,
+      "change_enrollment",
+      2,
+    );
+    expect(suggestion.values.enrollmentActual).toBeUndefined();
+    expect(suggestion.sourceLabels).not.toContain(
+      "From Xero tag 'Active Students'",
+    );
+  });
+
+  it("skips liveSnapshot.enrollment when provider or tagName is missing", () => {
+    // Defensive: a partially-synced snapshot (no tagName) shouldn't
+    // produce a misleading "From QuickBooks tag ''" label.
+    const base = buildBaseModel();
+    const data = {
+      ...base,
+      priorYearSnapshot: { endingEnrollment: 70 },
+      liveSnapshot: {
+        provider: "QuickBooks",
+        enrollment: 82,
+        syncedAt: "2026-04-15T09:30:00.000Z",
+      },
+    } as unknown as FullModelData;
+    const persisted = decisionToPersistedOverrides(data, {
+      type: "change_enrollment",
+      inputs: { enrollmentDelta: [0, 0, 0, 0, 0] },
+    });
+    const suggestion = buildActualsSuggestion(
+      data,
+      persisted,
+      "change_enrollment",
+      1,
+    );
+    // Falls through to the prior-year snapshot.
+    expect(suggestion.values.enrollmentActual).toBe(70);
+    expect(suggestion.sources.enrollmentActual).toBe(
+      "Prior-year actuals from setup",
+    );
+  });
+
 });
 
 // --- summarizeDecisionChanges (apply-confirmation diff) --------------------

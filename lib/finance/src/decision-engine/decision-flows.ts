@@ -1038,6 +1038,33 @@ export function buildActualsSuggestion(
       if (usedFromExport) sourceLabels.push(label);
     }
 
+    // Live-sync snapshot from a connected accounting tool (QuickBooks /
+    // Xero). Only feeds enrollment today — the founder maps a tag (e.g.
+    // a QuickBooks "Class") to "students enrolled" in the
+    // AccountingConnectionCard and the most recent count is persisted on
+    // each sync. We treat it as higher-trust than the typed-in
+    // prior-year value so a stale wizard entry can't shadow a fresh
+    // sync. The label format
+    // ("From <provider> tag '<tagName>'") is what the actuals editor's
+    // ActualsLine matches on to render its "From <provider> tag <name>"
+    // subtitle + tooltip.
+    const liveSnapshot = data.liveSnapshot;
+    const liveEnrollment = liveSnapshot?.enrollment;
+    if (
+      liveEnrollment !== undefined &&
+      liveEnrollment !== null &&
+      isFinite(liveEnrollment) &&
+      liveEnrollment > 0 &&
+      liveSnapshot?.provider &&
+      liveSnapshot?.tagName &&
+      values.enrollmentActual === undefined
+    ) {
+      const label = `From ${liveSnapshot.provider} tag '${liveSnapshot.tagName}'`;
+      values.enrollmentActual = Math.round(liveEnrollment);
+      sources.enrollmentActual = label;
+      sourceLabels.push(label);
+    }
+
     // Prior-year typed-in snapshot (gap-fill).
     if (hasPrior) {
       const label = "Prior-year actuals from setup";

@@ -36,7 +36,7 @@ import {
   decodeCompareKeysFromHash,
   MAX_COMPARE_KEYS,
 } from "@/lib/share-comparison";
-import { parseExportSourceLabel } from "@/lib/actuals-source";
+import { parseExportSourceLabel, parseLiveSnapshotSourceLabel } from "@/lib/actuals-source";
 import { highlightMatch } from "@/lib/text-highlight";
 import { useAuth } from "@/lib/auth-context";
 import { getFounderPersona, type FounderComfort } from "@/lib/coaching/founder-persona";
@@ -550,6 +550,24 @@ function ActualsLine({
   // useful while the founder is reviewing a fresh suggestion).
   const showContributors =
     !!suggestionContributors && suggestionContributors.length > 0;
+  // Live-sync subtitle: when the suggestion came from a connected
+  // accounting tool (QuickBooks/Xero) via `liveSnapshot.enrollment`,
+  // the engine emits a label like "From QuickBooks tag 'Students FY26'".
+  // We surface it as a small caption below the row so founders can tell
+  // at a glance the number is a fresh sync — not a typed-in prior-year
+  // value or a stale CSV upload — and a tooltip walks them back to the
+  // AccountingConnectionCard if they want to disconnect the tag.
+  // Mirrors the saved-actuals view too: when the saved snapshot was
+  // pulled live, `savedSourceLabel` carries the same string.
+  const liveSnapshotFromSuggestion =
+    suggested && suggestionSource
+      ? parseLiveSnapshotSourceLabel(suggestionSource)
+      : null;
+  const liveSnapshotFromSaved =
+    typeof savedSourceLabel === "string" && savedSourceLabel.length > 0
+      ? parseLiveSnapshotSourceLabel(savedSourceLabel)
+      : null;
+  const liveSnapshotInfo = liveSnapshotFromSuggestion ?? liveSnapshotFromSaved;
   return (
     <div data-testid={`${testId}-row`}>
       <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
@@ -646,6 +664,28 @@ function ActualsLine({
             </span>
           ))}
         </div>
+      )}
+      {liveSnapshotInfo && (
+        <p
+          className="mt-1 text-[10px] text-emerald-800 leading-snug cursor-help"
+          data-testid={`${testId}-live-snapshot`}
+          title={`This number was pulled live from ${liveSnapshotInfo.provider}. Disconnecting the tag in the Accounting Connection card will stop using it.`}
+        >
+          From{" "}
+          <span
+            className="font-semibold"
+            data-testid={`${testId}-live-snapshot-provider`}
+          >
+            {liveSnapshotInfo.provider}
+          </span>{" "}
+          tag{" "}
+          <span
+            className="font-mono"
+            data-testid={`${testId}-live-snapshot-tag`}
+          >
+            {liveSnapshotInfo.tagName}
+          </span>
+        </p>
       )}
     </div>
   );

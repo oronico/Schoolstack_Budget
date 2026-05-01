@@ -133,6 +133,39 @@ export interface CurrentYearProjectionLike {
   [key: string]: unknown;
 }
 
+// Persisted live-sync snapshot from a connected accounting tool
+// (QuickBooks Online / Xero). Unlike an uploaded CSV — which is a
+// point-in-time file the founder dropped in — a live snapshot is the
+// most recent value pulled directly from the connected provider via
+// the AccountingConnectionCard. Today we only persist a tagged
+// "students enrolled" count (e.g. a QuickBooks "Class" or Xero
+// "Tracking Category" the founder mapped to enrollment); future
+// expansion can add tagged revenue / expense buckets here too.
+//
+// The actuals-suggestion engine treats `liveSnapshot.enrollment` as
+// higher-trust than a typed-in prior-year number for year 1, since it
+// was just synced from the books. A label like
+// "From QuickBooks tag 'Students FY26'" tells the founder exactly
+// where the number came from so they can audit (or disconnect) it
+// from the AccountingConnectionCard.
+export interface LiveSnapshotLike {
+  // Display name of the source (e.g. "QuickBooks", "Xero"). Used in
+  // the UI subtitle and source label. Required so the badge always
+  // names a provider — anything else would be a misleading "From  tag …".
+  provider?: string;
+  // Founder-facing name of the tag whose count was pulled (e.g. a
+  // QuickBooks "Class" called "Students FY26" or a Xero "Tracking
+  // Category"). Required so the founder can identify *which* tag is
+  // feeding the number when multiple are configured.
+  tagName?: string;
+  // Most recent count of students recorded against the tag. Treated as
+  // an integer headcount; the engine rounds defensively.
+  enrollment?: number;
+  // ISO-8601 timestamp of the last successful sync. Surfaced in the
+  // tooltip so the founder can tell if the live count is stale.
+  syncedAt?: string;
+}
+
 // Persisted accounting-export upload (e.g. a QuickBooks Profit & Loss
 // CSV). Kept on the model so the actuals-suggestion engine can pull
 // directly from real books, with a clear source label like
@@ -184,6 +217,7 @@ export interface FullModelData {
   priorYearSnapshot?: PriorYearSnapshotLike;
   currentYearProjection?: CurrentYearProjectionLike;
   accountingExport?: AccountingExportLike;
+  liveSnapshot?: LiveSnapshotLike;
 }
 
 export { type DecisionType } from "../decision-types.js";

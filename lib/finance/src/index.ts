@@ -143,7 +143,7 @@ export {
   type ParsedAccountingExport,
 } from "./decision-engine/accounting-export-parser.js";
 
-export type { AccountingExportLike } from "./decision-engine/model-shape.js";
+export type { AccountingExportLike, LiveSnapshotLike } from "./decision-engine/model-shape.js";
 
 export function computeStraightLineDepreciation(
   fixedAssets: number,

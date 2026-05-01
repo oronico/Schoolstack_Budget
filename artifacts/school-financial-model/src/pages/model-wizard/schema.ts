@@ -311,6 +311,25 @@ export const accountingExportSchema = z.object({
   parseWarnings: z.array(z.string()).optional(),
 });
 
+// Persisted live-sync snapshot from a connected accounting tool
+// (QuickBooks Online / Xero). Today we only persist a single tagged
+// "students enrolled" count — the founder picks the tag in
+// `AccountingConnectionCard` and each successful sync overwrites this
+// object. The actuals-suggestion engine reads `enrollment` straight
+// from here for year 1 (with priority over the typed-in prior-year
+// number) so a stale wizard entry can't shadow a fresh sync.
+export const liveSnapshotSchema = z.object({
+  // "QuickBooks", "Xero", etc. Required so the suggestion source label
+  // can name the provider ("From QuickBooks tag 'Students FY26'").
+  provider: z.string().min(1),
+  // Founder-facing name of the tag whose count was pulled (a
+  // QuickBooks "Class" or Xero "Tracking Category"). Required so the
+  // editor's subtitle can identify which tag is feeding the number.
+  tagName: z.string().min(1),
+  enrollment: z.coerce.number().min(0),
+  syncedAt: z.string(),
+});
+
 export const currentYearProjectionSchema = z.object({
   currentEnrollment: z.coerce.number(numMsg("current enrollment")).min(0, "Please enter a positive number for enrollment").optional(),
   projectedRevenue: z.coerce.number(numMsg("projected revenue")).min(0, "Please enter a positive revenue amount").optional(),
@@ -743,6 +762,7 @@ export const fullModelSchema = z.object({
   priorYearSnapshot: priorYearSnapshotSchema.optional(),
   currentYearProjection: currentYearProjectionSchema.optional(),
   accountingExport: accountingExportSchema.optional(),
+  liveSnapshot: liveSnapshotSchema.optional(),
   openingBalances: openingBalancesSchema.optional(),
   sourcesAndUses: sourcesAndUsesSchema.optional(),
   scenarios: z.array(scenarioDefSchema).optional(),
