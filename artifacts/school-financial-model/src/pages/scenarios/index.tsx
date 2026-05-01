@@ -499,6 +499,7 @@ function ActualsLine({
   suggested,
   suggestionSource,
   suggestionContributors,
+  savedSourceLabel,
 }: {
   label: string;
   projected: number | undefined;
@@ -515,6 +516,13 @@ function ActualsLine({
   // source carries per-account data (no current source does, kept for
   // forward-compat).
   suggestionContributors?: ActualsContributor[];
+  // Per-field provenance pill for the read-only saved-actuals summary.
+  // Pass a non-empty string (the persisted `sourceByField` label) to render
+  // a "Books" pill, `null` to render an explicit "Typed" pill, or omit
+  // entirely (the editor case) to render no provenance pill at all. The
+  // raw label is surfaced as the pill's `title` so hovering reveals the
+  // exact source ("From quickbooks-2025-q1.csv uploaded May 1", etc.).
+  savedSourceLabel?: string | null;
 }) {
   const hasActual = actual !== undefined && !Number.isNaN(actual);
   const hasProjected = projected !== undefined && !Number.isNaN(projected);
@@ -582,6 +590,25 @@ function ActualsLine({
             >
               Suggested
             </span>
+          )}
+          {savedSourceLabel !== undefined && (
+            savedSourceLabel ? (
+              <span
+                className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-800"
+                data-testid={`${testId}-source-books`}
+                title={savedSourceLabel}
+              >
+                Books
+              </span>
+            ) : (
+              <span
+                className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border border-border bg-muted/40 text-muted-foreground"
+                data-testid={`${testId}-source-typed`}
+                title="Manually entered"
+              >
+                Typed
+              </span>
+            )
           )}
           {!suggested && deltaPill && (
             <span
@@ -1230,72 +1257,97 @@ export function CustomScenarioCard({
                 }
                 return null;
               })()}
-              {cs.actuals.enrollmentActual !== undefined && (
-                <ActualsLine
-                  label="Total enrollment"
-                  projected={projectedSnapshot.enrollment}
-                  actual={cs.actuals.enrollmentActual}
-                  onChange={() => {}}
-                  testId={`custom-scenario-actuals-enrollment-display-${idx}`}
-                  kind="count"
-                  betterWhen="higher"
-                />
-              )}
-              {cs.actuals.revenueActual !== undefined && (
-                <ActualsLine
-                  label="Revenue"
-                  projected={projectedSnapshot.revenue}
-                  actual={cs.actuals.revenueActual}
-                  onChange={() => {}}
-                  testId={`custom-scenario-actuals-revenue-display-${idx}`}
-                  kind="money"
-                  betterWhen="higher"
-                />
-              )}
-              {cs.actuals.expenseActual !== undefined && (
-                <ActualsLine
-                  label="Expenses"
-                  projected={projectedSnapshot.expense}
-                  actual={cs.actuals.expenseActual}
-                  onChange={() => {}}
-                  testId={`custom-scenario-actuals-expense-display-${idx}`}
-                  kind="money"
-                  betterWhen="lower"
-                />
-              )}
-              {cs.actuals.netIncomeActual !== undefined && (
-                <ActualsLine
-                  label="Net income"
-                  projected={projectedSnapshot.netIncome}
-                  actual={cs.actuals.netIncomeActual}
-                  onChange={() => {}}
-                  testId={`custom-scenario-actuals-netincome-display-${idx}`}
-                  kind="money"
-                  betterWhen="higher"
-                />
-              )}
-              {cs.decisionType === "evaluate_site" && cs.actuals.signedMonthlyRent !== undefined && (
-                <ActualsLine
-                  label="Signed rent (mo)"
-                  projected={projectedSnapshot.monthlyRent}
-                  actual={cs.actuals.signedMonthlyRent}
-                  onChange={() => {}}
-                  testId={`custom-scenario-actuals-rent-display-${idx}`}
-                  kind="money"
-                  betterWhen="lower"
-                />
-              )}
-              {cs.decisionType === "add_program" && cs.actuals.programEnrollmentActual !== undefined && (
-                <ActualsLine
-                  label="Program enrollment"
-                  projected={projectedSnapshot.programEnrollment}
-                  actual={cs.actuals.programEnrollmentActual}
-                  onChange={() => {}}
-                  testId={`custom-scenario-actuals-progenroll-display-${idx}`}
-                  kind="count"
-                  betterWhen="higher"
-                />
-              )}
+              {(() => {
+                // Per-field provenance pills only render when the saved
+                // snapshot recorded *any* source — that's the only case
+                // where the books-vs-typed distinction is meaningful.
+                // When everything was typed (no `sourceByField` at all)
+                // the badges would be redundant noise on every row, so
+                // we suppress them by passing `undefined` to ActualsLine.
+                const sources = cs.actuals.sourceByField;
+                const showPills = !!sources;
+                const labelFor = (field: string): string | null | undefined => {
+                  if (!showPills) return undefined;
+                  const v = sources?.[field];
+                  return typeof v === "string" && v.length > 0 ? v : null;
+                };
+                return (
+                  <>
+                    {cs.actuals.enrollmentActual !== undefined && (
+                      <ActualsLine
+                        label="Total enrollment"
+                        projected={projectedSnapshot.enrollment}
+                        actual={cs.actuals.enrollmentActual}
+                        onChange={() => {}}
+                        testId={`custom-scenario-actuals-enrollment-display-${idx}`}
+                        kind="count"
+                        betterWhen="higher"
+                        savedSourceLabel={labelFor("enrollmentActual")}
+                      />
+                    )}
+                    {cs.actuals.revenueActual !== undefined && (
+                      <ActualsLine
+                        label="Revenue"
+                        projected={projectedSnapshot.revenue}
+                        actual={cs.actuals.revenueActual}
+                        onChange={() => {}}
+                        testId={`custom-scenario-actuals-revenue-display-${idx}`}
+                        kind="money"
+                        betterWhen="higher"
+                        savedSourceLabel={labelFor("revenueActual")}
+                      />
+                    )}
+                    {cs.actuals.expenseActual !== undefined && (
+                      <ActualsLine
+                        label="Expenses"
+                        projected={projectedSnapshot.expense}
+                        actual={cs.actuals.expenseActual}
+                        onChange={() => {}}
+                        testId={`custom-scenario-actuals-expense-display-${idx}`}
+                        kind="money"
+                        betterWhen="lower"
+                        savedSourceLabel={labelFor("expenseActual")}
+                      />
+                    )}
+                    {cs.actuals.netIncomeActual !== undefined && (
+                      <ActualsLine
+                        label="Net income"
+                        projected={projectedSnapshot.netIncome}
+                        actual={cs.actuals.netIncomeActual}
+                        onChange={() => {}}
+                        testId={`custom-scenario-actuals-netincome-display-${idx}`}
+                        kind="money"
+                        betterWhen="higher"
+                        savedSourceLabel={labelFor("netIncomeActual")}
+                      />
+                    )}
+                    {cs.decisionType === "evaluate_site" && cs.actuals.signedMonthlyRent !== undefined && (
+                      <ActualsLine
+                        label="Signed rent (mo)"
+                        projected={projectedSnapshot.monthlyRent}
+                        actual={cs.actuals.signedMonthlyRent}
+                        onChange={() => {}}
+                        testId={`custom-scenario-actuals-rent-display-${idx}`}
+                        kind="money"
+                        betterWhen="lower"
+                        savedSourceLabel={labelFor("signedMonthlyRent")}
+                      />
+                    )}
+                    {cs.decisionType === "add_program" && cs.actuals.programEnrollmentActual !== undefined && (
+                      <ActualsLine
+                        label="Program enrollment"
+                        projected={projectedSnapshot.programEnrollment}
+                        actual={cs.actuals.programEnrollmentActual}
+                        onChange={() => {}}
+                        testId={`custom-scenario-actuals-progenroll-display-${idx}`}
+                        kind="count"
+                        betterWhen="higher"
+                        savedSourceLabel={labelFor("programEnrollmentActual")}
+                      />
+                    )}
+                  </>
+                );
+              })()}
               {cs.actuals.notes && (
                 <p className="text-[10px] italic text-foreground/70 pt-1 border-t border-border/40">
                   {cs.actuals.notes}
