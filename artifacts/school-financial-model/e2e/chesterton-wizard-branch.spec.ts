@@ -46,6 +46,7 @@ const EXPECTED_TABS = [
   "3 - KEY ASSUMPTIONS",
   "4 - FUNDRAISING GOALS",
   "5 - GIFT CHART",
+  "5 - GIFT CHART AUTOMATIC",
   "7 - RECRUITING PIPELINE",
   "Cadence",
   "CSN Training Schedule",

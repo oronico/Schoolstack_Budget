@@ -1,7 +1,7 @@
 import { generateTopIssues } from "./decision-rules";
 import { generateHealthSignals, type HealthSignal } from "./financial-health";
 import { computeDaysCashOnHand, computeEffectiveFte as computeEffectiveFteShared, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER, BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./workbook-helpers.js";
-import { computeAnnualDebt, computeStraightLineDepreciation, computeProjectedAR } from "@workspace/finance";
+import { computeAnnualDebt, computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials } from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
 
 interface SchoolProfile {
@@ -554,91 +554,6 @@ function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: nu
 
 const computeEffectiveFte = computeEffectiveFteShared;
 
-function computeStaffingBaseCost(rows: StaffingRow[], y?: number, enrollment?: number, salaryEsc: number = 1): number {
-  // Salary escalation is applied INSIDE the loop so wage-base caps are
-  // re-applied against the escalated salary each year. The flat-rate path is
-  // mathematically unchanged: (annual * rate) * salaryEsc == (annual *
-  // salaryEsc) * rate, so legacy goldens stay frozen.
-  let total = 0;
-  for (const row of rows) {
-    const effectiveFte = (y !== undefined && enrollment !== undefined)
-      ? computeEffectiveFte(row, y, enrollment)
-      : row.fte;
-    const escalatedRate = row.annualizedRate * salaryEsc;
-    const annualCost = effectiveFte * escalatedRate;
-    const isContractNotPayrollLike = row.employmentType === "contract" && !row.payrollLike;
-    if (isContractNotPayrollLike) {
-      total += annualCost;
-    } else {
-      total += annualCost;
-      if (row.benefitsEligible) total += annualCost * (row.benefitsRate / 100);
-      // Wage-base-aware payroll tax (mirrors lib/finance scenario-engine):
-      // when components are present and the user hasn't overridden the flat
-      // rate, sum each component's tax capped at its wage base against the
-      // *escalated* per-employee salary. Caps don't scale with salary
-      // inflation, so they must be re-applied each year.
-      const components = row.payrollTaxComponents;
-      if (components && components.length > 0 && !row.payrollTaxRateOverridden) {
-        const fteCount = effectiveFte > 0 ? effectiveFte : 0;
-        let perEmployeeTax = 0;
-        for (const c of components) {
-          const cappedWage = c.wageBase !== undefined
-            ? Math.min(escalatedRate, c.wageBase)
-            : escalatedRate;
-          perEmployeeTax += cappedWage * ((c.rate || 0) / 100);
-        }
-        total += perEmployeeTax * fteCount;
-      } else {
-        total += annualCost * (row.payrollTaxRate / 100);
-      }
-    }
-  }
-  return total;
-}
-
-function computeExpensesForYear(rows: ExpenseRow[], yearIdx: number, students: number, totalRevenue: number, costInflationPct?: number, newStudents?: number, returningStudents?: number, totalFTE?: number): { total: number; facilityCost: number } {
-  let total = 0, facilityCost = 0;
-  const fallback = costInflationPct ?? 0;
-  for (const row of rows) {
-    if (!row.enabled) continue;
-    let val: number;
-    if (row.driverType === "percent_of_revenue") {
-      const esc = (row.escalationRate !== undefined && row.escalationRate !== 0) ? row.escalationRate : fallback;
-      let pct: number;
-      if (esc !== 0 && yearIdx > 0) {
-        pct = (row.amounts?.[0] ?? 0) * Math.pow(1 + esc / 100, yearIdx);
-      } else {
-        pct = row.amounts?.[yearIdx] ?? 0;
-      }
-      val = (pct / 100) * totalRevenue;
-    } else {
-      val = computeDriverValue(row.amounts, yearIdx, row.driverType, students, row.escalationRate, fallback, newStudents, returningStudents, totalFTE);
-    }
-    total += val;
-    if (row.category === "occupancy_facility") facilityCost += val;
-  }
-  return { total, facilityCost };
-}
-
-function computeCapDebtForYear(rows: CapitalDebtRow[], yearIdx: number, students: number): { total: number; loanOnly: number } {
-  let total = 0;
-  let loanOnly = 0;
-  for (const row of rows) {
-    if (!row.enabled) continue;
-    if (row.isLoan && row.loanPrincipal && row.loanPrincipal > 0) {
-      const term = row.loanTermYears || 0;
-      if (term > 0 && yearIdx < term) {
-        const ds = computeAnnualDebtService(row.loanPrincipal, (row.loanRate || 0) / 100, term);
-        total += ds;
-        loanOnly += ds;
-      }
-    } else {
-      total += computeDriverValue(row.amounts, yearIdx, row.driverType, students);
-    }
-  }
-  return { total, loanOnly };
-}
-
 export interface FacilityOverlayResult {
   rent: number;
   nnnCam: number;
@@ -795,10 +710,49 @@ export function computeAllYearsFromRows(
   skipFacilityOverlay?: boolean,
   openingBalances?: { fixedAssets?: number; fixedAssetUsefulLife?: number; accountsReceivable?: number },
 ): YearFinancials[] {
+  // Y1-Y5 totals (revenue, staffing, facility, opex, capDebt, netIncome, DSCR)
+  // are computed by the canonical scenario engine in @workspace/finance, so
+  // consultant analysis stays in lock-step with the wizard and Excel exports.
+  // Consultant-engine layers on three CE-only concerns:
+  //   1. tuition/public/philanthropy revenue split (BE engine returns total only)
+  //   2. straight-line depreciation + projected AR (balance-sheet derived)
+  //   3. SchoolProfile facility overlay (when SP is the facility authority,
+  //      occupancy_facility expense rows are zeroed and the SP overlay supplies
+  //      facility cost instead).
   const spIsFacilityAuthority = !skipFacilityOverlay && hasSchoolProfileFacilityData(schoolProfile);
   const effectiveExpenseRows = spIsFacilityAuthority
     ? expenseRows.map(r => r.category === "occupancy_facility" ? { ...r, enabled: false } : r)
     : expenseRows;
+
+  const isPartial = prorationFactor < 1;
+  const yr1Months = Math.round(prorationFactor * 12);
+  const beData = {
+    schoolProfile: {
+      ...(schoolProfile as Record<string, unknown> | undefined ?? {}),
+      isPartialFirstYear: isPartial,
+      year1OperatingMonths: isPartial ? yr1Months : 12,
+    },
+    enrollment: {
+      year1: enrollmentByYear[0] ?? 0,
+      year2: enrollmentByYear[1] ?? 0,
+      year3: enrollmentByYear[2] ?? 0,
+      year4: enrollmentByYear[3] ?? 0,
+      year5: enrollmentByYear[4] ?? 0,
+      retentionRate: retentionRate ?? 85,
+    },
+    facilities: {
+      annualSalaryIncrease: salaryEscRate * 100,
+      generalCostInflation: costInflationPct ?? 0,
+    },
+    revenueRows,
+    staffingRows,
+    expenseRows: effectiveExpenseRows,
+    capitalAndDebtRows: capDebtRows,
+    tuitionTiers,
+    openingBalances,
+  } as Parameters<typeof computeBaseFinancials>[0];
+
+  const beMetrics = computeBaseFinancials(beData);
 
   const openFA = openingBalances?.fixedAssets ?? 0;
   const usefulLife = openingBalances?.fixedAssetUsefulLife ?? 7;
@@ -806,54 +760,55 @@ export function computeAllYearsFromRows(
 
   return enrollmentByYear.map((students, yearIdx) => {
     const pf = yearIdx === 0 ? prorationFactor : 1;
-    const salaryEsc = Math.pow(1 + salaryEscRate, yearIdx);
-    // Pass salaryEsc into the cost helper so wage-base caps are applied to
-    // the escalated per-employee salary each year. Outer multiplier is now
-    // pf only (capped tax can't be re-multiplied by salaryEsc — it's
-    // non-linear over the cap).
-    const baseCost = computeStaffingBaseCost(staffingRows, yearIdx, students, salaryEsc);
-    const totalStaffingCost = baseCost * pf;
 
+    // Local revenue split (scenario engine returns total only).
     const revRaw = computeRevenueForYear(revenueRows, yearIdx, students, tuitionTiers, schoolProfile);
-    const revTotal = revRaw.total * pf;
-    const rr = retentionRate ?? 85;
-    let yearFTE = 0;
-    for (const sr of staffingRows) {
-      yearFTE += computeEffectiveFteShared(sr, yearIdx, students);
-    }
-    const exp = computeExpensesForYear(effectiveExpenseRows, yearIdx, students, revRaw.total, costInflationPct, localNewStudents(enrollmentByYear, rr, yearIdx), localReturningStudents(enrollmentByYear, rr, yearIdx), yearFTE);
-    const expTotal = exp.total * pf;
-    const capDebt = computeCapDebtForYear(capDebtRows, yearIdx, students);
+    const tuitionRev = revRaw.tuition * pf;
+    const publicRev = revRaw.publicFunding * pf;
+    const philRev = revRaw.philanthropy * pf;
 
+    // Canonical totals from the scenario engine.
+    const revTotal = beMetrics.revenue[yearIdx] ?? 0;
+    const totalStaffingCost = beMetrics.staffingCost[yearIdx] ?? 0;
+    const beFacilityCost = beMetrics.facilityCost[yearIdx] ?? 0;
+    const beOpex = beMetrics.opex[yearIdx] ?? 0;
+    const beTotalExpenses = beMetrics.totalExpenses[yearIdx] ?? 0;
+    const beNetIncome = beMetrics.netIncome[yearIdx] ?? 0;
+    const loanDS = beMetrics.loanDebtService?.[yearIdx] ?? 0;
+    // Capital & debt subtotal = total expenses minus the three named buckets.
+    const capDebtTotal = beTotalExpenses - totalStaffingCost - beFacilityCost - beOpex;
+
+    // SchoolProfile facility overlay (only when SP is the facility authority;
+    // expense-row facility costs were zeroed above so this doesn't double-count).
     let facilityOverlay = 0;
     if (schoolProfile && spIsFacilityAuthority) {
       const overlay = computeSchoolProfileFacilityOverlay(schoolProfile, yearIdx, prorationFactor);
       facilityOverlay = overlay.total;
     }
 
+    // CE-only line items.
     const depr = computeStraightLineDepreciation(openFA, usefulLife, yearIdx);
     const depreciation = depr.annualDepreciation;
-
-    const tuitionRev = revRaw.tuition * pf;
     const projectedAR = computeProjectedAR(tuitionRev, defaultCollectionDelay);
 
-    const totalOpex = expTotal + capDebt.total + facilityOverlay;
-    const facilityCost = exp.facilityCost * pf + facilityOverlay;
-    const totalExpenses = totalStaffingCost + totalOpex + depreciation;
-    const netIncome = revTotal - totalExpenses;
+    // CE-shape totals: BE values + facility overlay + depreciation deduction.
+    const facilityCost = beFacilityCost + facilityOverlay;
+    const totalOpex = beFacilityCost + beOpex + capDebtTotal + facilityOverlay;
+    const totalExpenses = beTotalExpenses + facilityOverlay + depreciation;
+    const netIncome = beNetIncome - facilityOverlay - depreciation;
 
     return {
       year: yearIdx + 1,
       students,
       totalRevenue: revTotal,
       tuitionRevenue: tuitionRev,
-      publicRevenue: revRaw.publicFunding * pf,
-      philanthropyRevenue: revRaw.philanthropy * pf,
+      publicRevenue: publicRev,
+      philanthropyRevenue: philRev,
       totalStaffingCost,
       facilityCost,
       totalOpex,
-      debtService: capDebt.total,
-      loanDebtService: capDebt.loanOnly,
+      debtService: capDebtTotal,
+      loanDebtService: loanDS,
       totalExpenses,
       netIncome,
       netMargin: revTotal > 0 ? netIncome / revTotal : 0,

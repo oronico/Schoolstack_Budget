@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { computeStraightLineDepreciation, computeProjectedAR } from "@workspace/finance";
+import { computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials } from "@workspace/finance";
 import {
   NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM, INPUT_CELL_FILL, DASHBOARD_GREEN,
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT, NF, BF,
@@ -1241,7 +1241,14 @@ function buildStaffingCostsForecast(wb: ExcelJS.Workbook, data: ModelData, enrol
   }
 }
 
-function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, costInflPct: number, prorationFactor: number) {
+interface CanonicalTotals {
+  revByYear: number[];
+  persByYear: number[];
+  opexByYear: number[];
+  cdByYear: number[];
+}
+
+function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, costInflPct: number, prorationFactor: number, canonical: CanonicalTotals) {
   const bdRR = data.enrollment?.retentionRate ?? 85;
   const ws = wb.addWorksheet("Budget Detail");
   const sp = data.schoolProfile || {};
@@ -1280,11 +1287,12 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   r++;
   const revTotalRow = r;
   ws.getCell(r, 1).value = "Total Revenue"; bc(ws.getCell(r, 1));
-  const revByYear: number[] = [];
+  // Total-row cached values come from the canonical scenario engine
+  // (computeBaseFinancials). The Excel SUM(...) formula recalculates from the
+  // per-row breakdowns above, which are mathematically equivalent.
+  const revByYear: number[] = canonical.revByYear;
   for (let y = 0; y < 5; y++) {
-    const pf = y === 0 ? prorationFactor : 1;
-    const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y)) * pf;
-    revByYear.push(val);
+    const val = revByYear[y];
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(revFirstRow, col)}:${cn(revLastRow, col)})`, Math.round(val));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
@@ -1307,11 +1315,9 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   r++;
   const persTotalRow = r;
   ws.getCell(r, 1).value = "Total Personnel"; bc(ws.getCell(r, 1));
-  const persByYear: number[] = [];
+  const persByYear: number[] = canonical.persByYear;
   for (let y = 0; y < 5; y++) {
-    const pf = y === 0 ? prorationFactor : 1;
-    const val = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
-    persByYear.push(val);
+    const val = persByYear[y];
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(persFirstRow, col)}:${cn(persLastRow, col)})`, Math.round(val));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
@@ -1374,13 +1380,9 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   r++;
   const opexTotalRow = r;
   ws.getCell(r, 1).value = "Total Operating Expenses"; bc(ws.getCell(r, 1));
-  const opexByYear: number[] = [];
-  const unproRev = revByYear.map((r, y) => y === 0 && prorationFactor !== 1 ? r / prorationFactor : r);
+  const opexByYear: number[] = canonical.opexByYear;
   for (let y = 0; y < 5; y++) {
-    const pf = y === 0 ? prorationFactor : 1;
-    const bdFTE = computeTotalFTE(staffingRows, y, enrollment[y]);
-    const val = computeExpenseForYear(expenseRows, y, enrollment[y], unproRev[y], costInflPct, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y), bdFTE) * pf;
-    opexByYear.push(val);
+    const val = opexByYear[y];
     const col = y + 2;
     if (bdCatSumRows.length > 0) {
       const sumParts = bdCatSumRows.map(tr => cn(tr, col)).join("+");
@@ -1408,10 +1410,9 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   r++;
   const cdTotalRow = r;
   ws.getCell(r, 1).value = "Total Capital & Debt"; bc(ws.getCell(r, 1));
-  const cdByYear: number[] = [];
+  const cdByYear: number[] = canonical.cdByYear;
   for (let y = 0; y < 5; y++) {
-    const val = computeCapDebtForYear(capDebtRows, y, enrollment[y]);
-    cdByYear.push(val);
+    const val = cdByYear[y];
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(cdFirstRow, col)}:${cn(cdLastRow, col)})`, Math.round(val));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
@@ -2776,7 +2777,33 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   buildEnrollmentTuitionForecast(wb, data, enrollment);
   buildStaffingCostsForecast(wb, data, enrollment, salaryEsc, prorationFactor);
 
-  const { revByYear, persByYear, opexByYear, cdByYear, revTotalRow, persTotalRow, opexTotalRow, cdTotalRow } = buildBudgetDetail(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor);
+  // Y1-Y5 totals come from the canonical scenario engine in @workspace/finance.
+  // The workbook used to maintain its own per-year calc helpers in
+  // workbook-helpers.ts; those are now layout/breakdown utilities only — every
+  // total cell, dashboard, DSCR, scenario, and snapshot derives from the
+  // arrays computed here.
+  const beModelData = {
+    ...effectiveData,
+    facilities: {
+      ...(effectiveData.facilities || {}),
+      annualSalaryIncrease: salaryEscPct,
+      generalCostInflation: costInflPct,
+    },
+  };
+  const beMetrics = computeBaseFinancials(beModelData as Parameters<typeof computeBaseFinancials>[0]);
+  const canonical: CanonicalTotals = {
+    revByYear: [...beMetrics.revenue],
+    persByYear: [...beMetrics.staffingCost],
+    // Workbook's "operating expenses" bucket includes facility rows; canonical
+    // splits them. Recombine to preserve the Excel sheet structure.
+    opexByYear: beMetrics.facilityCost.map((f, y) => f + (beMetrics.opex[y] ?? 0)),
+    // Capital & debt subtotal is total-expenses minus the three named buckets.
+    cdByYear: beMetrics.totalExpenses.map((te, y) =>
+      te - (beMetrics.staffingCost[y] ?? 0) - (beMetrics.facilityCost[y] ?? 0) - (beMetrics.opex[y] ?? 0)
+    ),
+  };
+
+  const { revByYear, persByYear, opexByYear, cdByYear, revTotalRow, persTotalRow, opexTotalRow, cdTotalRow } = buildBudgetDetail(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, canonical);
   const bdRefs: BudgetDetailRefs = { revTotalRow, persTotalRow, opexTotalRow, cdTotalRow };
   const { niByYear } = buildBudgetSummary(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, bdRefs);
 

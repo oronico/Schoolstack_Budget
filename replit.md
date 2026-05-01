@@ -82,10 +82,14 @@ Wizard step 9 allows founders to write lender-facing narratives for 9 sections. 
 Provides deterministic financial analysis, including lender readiness scores, stress tests, sensitivity analysis, cash runway, industry benchmarks, and prior-year variance analysis.
 
 ### Scenario Engine of Record
-`lib/finance/src/decision-engine/scenario-engine.ts` is the single source of truth for Y1–Y5 scenario math, used by both frontend and API server. Parity is enforced by frozen golden-value snapshots.
+`lib/finance/src/decision-engine/scenario-engine.ts` (`computeBaseFinancials`) is the single source of truth for Y1–Y5 scenario math (revenue, staffing, facility, opex, capital & debt, net income, DSCR). The wizard, consultant analysis, and Excel exports all derive their year-totals from this engine. Frozen golden-value snapshots in `artifacts/api-server/tests/parity-frontend-backend.ts` lock in the canonical numbers themselves so any engine change requires an explicit sign-off.
 
 ### Api-Server Calculation Helpers
-`artifacts/api-server/src/lib/workbook-helpers.ts` (Excel underwriting workbook) and `artifacts/api-server/src/lib/consultant-engine.ts` (consultant analysis, lender packets, advisor briefs) provide parallel calculation paths, maintained within 1% tolerance of the canonical engine via parity checks.
+Both api-server calculation paths now source Y1–Y5 totals from the canonical `computeBaseFinancials`:
+- `artifacts/api-server/src/lib/consultant-engine.ts` (`computeAllYearsFromRows`) delegates revenue, staffing, facility, opex, capital & debt, net income, and DSCR to the canonical engine, then layers on three CE-only concerns: the tuition/public/philanthropy revenue split, straight-line depreciation + projected AR, and the SchoolProfile facility overlay (when the SP is the facility authority).
+- `artifacts/api-server/src/lib/underwriting-workbook.ts` (`generateUnderwritingWorkbook`) computes canonical totals once via `computeBaseFinancials` and threads `revByYear`/`persByYear`/`opexByYear`/`cdByYear` into every downstream sheet (Budget Detail, Budget Summary, Operating Statement, DSCR & Covenants, Scenarios, Underwriting Snapshot, Dashboard). The per-row helpers in `workbook-helpers.ts` are now layout/breakdown utilities only — they render individual line-item cells inside the Excel workbook, while the SUM(...) formulas recalculate to the same totals the canonical engine produces.
+
+Frozen golden-value snapshots live in `artifacts/api-server/tests/cross-engine-test.ts` (consultant engine) and `artifacts/api-server/tests/parity-frontend-backend.ts` (canonical engine + workbook generation smoke).
 
 ### Packet Architecture
 A shared layer supports lender-ready and board-ready deliverables, including narrative generation and enrichment.

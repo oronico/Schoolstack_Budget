@@ -1,295 +1,172 @@
-import { computeBaseFinancials } from "../../school-financial-model/src/lib/scenario-engine.js";
-import {
-  computeRevenueForYear,
-  computePersonnelForYear,
-  computeExpenseForYear,
-  computeCapDebtForYear,
-  computeTotalFTE,
-  getEnrollmentArray,
-  normalizeStaffingRow,
-  type RevenueRow,
-  type ExpenseRow,
-  type CapitalDebtRow,
-} from "../src/lib/workbook-helpers.js";
+// Golden-value snapshot test for the consultant engine
+// (computeYearFinancialsFromData in src/lib/consultant-engine.ts).
+//
+// As of Task #274, the consultant engine no longer maintains a parallel
+// calculation path: it delegates Y1-Y5 totals (revenue, staffing, facility,
+// opex, capital & debt, net income, DSCR) to the canonical scenario engine
+// in @workspace/finance. The CE adds three layered concerns on top of the
+// canonical numbers:
+//   1. tuition / public funding / philanthropy revenue split
+//   2. straight-line depreciation + projected accounts receivable
+//   3. SchoolProfile facility overlay (when the SP is the facility authority)
+//
+// This file freezes the consultant engine's Y1-Y5 outputs for the three
+// shared fixtures so that any drift — either in the canonical engine or in
+// the CE's overlay layer — surfaces as a snapshot diff that has to be
+// signed off explicitly.
 import { computeYearFinancialsFromData } from "../src/lib/consultant-engine.js";
 import {
   microschoolFixture,
   privateSchoolFixture,
   charterFixture,
   type TestModelPayload,
-  type TestRevenueRow,
-  type TestStaffingRow,
-  type TestExpenseRow,
-  type TestCapDebtRow,
 } from "@workspace/finance";
 
 let passed = 0;
 let failed = 0;
 const failures: string[] = [];
 
-function check(label: string, actual: number, expected: number, tolerancePct = 1) {
-  const absTol = Math.max(Math.abs(expected) * (tolerancePct / 100), 5);
+function check(label: string, actual: number, expected: number, tolerancePct = 0.01) {
+  const absTol = Math.max(Math.abs(expected) * (tolerancePct / 100), 1);
   const diff = Math.abs(actual - expected);
   if (diff <= absTol) {
     passed++;
   } else {
     failed++;
-    failures.push(`  FAIL: ${label} — got ${Math.round(actual)}, expected ${Math.round(expected)}, diff=${Math.round(diff)}, tol=${Math.round(absTol)}`);
+    failures.push(`  FAIL: ${label} — expected ${Math.round(expected)}, got ${Math.round(actual)} (diff ${Math.round(diff)}, tol ${Math.round(absTol)})`);
   }
 }
 
-function bool(label: string, ok: boolean, detail?: string) {
-  if (ok) { passed++; }
-  else {
+function checkArr(label: string, actual: number[], expected: number[]) {
+  if (actual.length !== expected.length) {
     failed++;
-    failures.push(`  FAIL: ${label}${detail ? ` — ${detail}` : ""}`);
+    failures.push(`  FAIL: ${label} — length ${actual.length} != ${expected.length}`);
+    return;
+  }
+  for (let i = 0; i < expected.length; i++) {
+    check(`${label}[${i}]`, actual[i], expected[i]);
   }
 }
 
-function adaptRevenueRows(rows: TestRevenueRow[]): RevenueRow[] {
-  return rows.map(r => ({
-    id: r.id, category: r.category, lineItem: r.lineItem,
-    enabled: r.enabled, driverType: r.driverType, amounts: r.amounts,
-    billingMonths: r.billingMonths, escalationRate: r.escalationRate,
-    escalationRateOverridden: r.escalationRateOverridden, percentBase: r.percentBase,
-  }));
+interface CEGolden {
+  totalRevenue: number[];
+  tuitionRevenue: number[];
+  publicRevenue: number[];
+  philanthropyRevenue: number[];
+  totalStaffingCost: number[];
+  facilityCost: number[];
+  totalOpex: number[];
+  debtService: number[];
+  loanDebtService: number[];
+  totalExpenses: number[];
+  netIncome: number[];
+  depreciation: number[];
+  projectedAR: number[];
 }
 
-function adaptExpenseRows(rows: TestExpenseRow[]): ExpenseRow[] {
-  return rows.map(r => ({
-    id: r.id, category: r.category, lineItem: r.lineItem,
-    enabled: r.enabled, driverType: r.driverType, amounts: r.amounts,
-    escalationRate: r.escalationRate, escalationRateOverridden: r.escalationRateOverridden,
-  }));
+// Goldens captured 2026-05-01 from computeYearFinancialsFromData with
+// `skipFacilityOverlay: true` (matches production wiring — runConsultantEngine
+// passes skipFacilityOverlay=true so the facility overlay is computed once
+// downstream and not double-counted).
+
+const microschoolGolden: CEGolden = {
+  totalRevenue:    [184667, 340512, 427946, 500518, 516085],
+  tuitionRevenue:  [110500, 204732, 257574, 301293, 310135],
+  publicRevenue:   [70000, 129780, 163372, 191225, 196950],
+  philanthropyRevenue:[4167, 6000, 7000, 8000, 9000],
+  totalStaffingCost:[118934, 147003, 151413, 155955, 160634],
+  facilityCost:    [30000, 37050, 38131, 39243, 40388],
+  totalOpex:       [40500, 54885, 59774, 64012, 65776],
+  debtService:     [0, 0, 0, 0, 0],
+  loanDebtService: [0, 0, 0, 0, 0],
+  totalExpenses:   [160148, 202602, 211901, 220681, 227124],
+  netIncome:       [24518, 137910, 216045, 279836, 288961],
+  depreciation:    [714, 714, 714, 714, 714],
+  projectedAR:     [9082, 16827, 21170, 24764, 25491],
+};
+
+const privateGolden: CEGolden = {
+  totalRevenue:    [1975000, 2612670, 3286760, 3895050, 4323000],
+  tuitionRevenue:  [1030000, 1377740, 1744960, 2076255, 2309600],
+  publicRevenue:   [870000, 1164930, 1476800, 1758795, 1958400],
+  philanthropyRevenue:[75000, 70000, 65000, 60000, 55000],
+  totalStaffingCost:[854772, 854772, 854772, 854772, 854772],
+  facilityCost:    [136400, 140492, 144706, 149045, 153512],
+  totalOpex:       [341964, 365766, 406675, 439319, 467465],
+  debtService:     [59064, 44064, 44064, 39064, 39064],
+  loanDebtService: [34064, 34064, 34064, 34064, 34064],
+  totalExpenses:   [1222451, 1246253, 1287161, 1319805, 1347952],
+  netIncome:       [752549, 1366417, 1999599, 2575245, 2975048],
+  depreciation:    [25714, 25714, 25714, 25714, 25714],
+  projectedAR:     [84658, 113239, 143421, 170651, 189830],
+};
+
+const charterGolden: CEGolden = {
+  totalRevenue:    [1288333, 2522800, 3784600, 4759125, 5184400],
+  tuitionRevenue:  [30000, 61800, 95400, 123000, 135200],
+  publicRevenue:   [1150000, 2346000, 3589200, 4576125, 4979200],
+  philanthropyRevenue:[108333, 115000, 100000, 60000, 70000],
+  totalStaffingCost:[997040, 1478601, 1796022, 2042905, 2113443],
+  facilityCost:    [235000, 290460, 299166, 308150, 317393],
+  totalOpex:       [709825, 977685, 1280346, 1513914, 1624749],
+  debtService:     [164825, 89825, 89825, 74825, 69825],
+  loanDebtService: [49825, 49825, 49825, 49825, 49825],
+  totalExpenses:   [1706865, 2456285, 3076368, 3556818, 3738191],
+  netIncome:       [-418532, 66515, 708232, 1202307, 1446209],
+  depreciation:    [0, 0, 0, 0, 0],
+  projectedAR:     [2466, 5079, 7841, 10110, 11112],
+};
+
+function runCE(fixture: TestModelPayload) {
+  return computeYearFinancialsFromData({ ...fixture, skipFacilityOverlay: true } as unknown as Record<string, unknown>);
 }
 
-function adaptCapDebtRows(rows: TestCapDebtRow[]): CapitalDebtRow[] {
-  return rows.map(r => ({
-    id: r.id, lineItem: r.lineItem, enabled: r.enabled,
-    driverType: r.driverType, amounts: r.amounts, isLoan: r.isLoan,
-    loanPrincipal: r.loanPrincipal, loanRate: r.loanRate,
-    loanTermYears: r.loanTermYears, purpose: r.purpose,
-  }));
-}
+function checkCEGolden(label: string, fixture: TestModelPayload, g: CEGolden) {
+  console.log(`\n— ${label} —`);
+  const years = runCE(fixture);
+  checkArr(`${label} totalRevenue`, years.map(y => y.totalRevenue), g.totalRevenue);
+  checkArr(`${label} tuitionRevenue`, years.map(y => y.tuitionRevenue), g.tuitionRevenue);
+  checkArr(`${label} publicRevenue`, years.map(y => y.publicRevenue), g.publicRevenue);
+  checkArr(`${label} philanthropyRevenue`, years.map(y => y.philanthropyRevenue), g.philanthropyRevenue);
+  checkArr(`${label} totalStaffingCost`, years.map(y => y.totalStaffingCost), g.totalStaffingCost);
+  checkArr(`${label} facilityCost`, years.map(y => y.facilityCost), g.facilityCost);
+  checkArr(`${label} totalOpex`, years.map(y => y.totalOpex), g.totalOpex);
+  checkArr(`${label} debtService`, years.map(y => y.debtService), g.debtService);
+  checkArr(`${label} loanDebtService`, years.map(y => y.loanDebtService ?? 0), g.loanDebtService);
+  checkArr(`${label} totalExpenses`, years.map(y => y.totalExpenses), g.totalExpenses);
+  checkArr(`${label} netIncome`, years.map(y => y.netIncome), g.netIncome);
+  checkArr(`${label} depreciation`, years.map(y => y.depreciation), g.depreciation);
+  checkArr(`${label} projectedAR`, years.map(y => y.projectedAR), g.projectedAR);
 
-function adaptStaffingRows(rows: TestStaffingRow[]) {
-  return rows.map(r => normalizeStaffingRow(r));
-}
-
-interface EngineYearResult {
-  revenue: number;
-  staffing: number;
-  nonStaffExpenses: number;
-  netIncome: number;
-}
-
-interface TriEngineResults {
-  fe: EngineYearResult[];
-  be: EngineYearResult[];
-  ce: EngineYearResult[];
-}
-
-function runTriEngine(fixture: TestModelPayload): TriEngineResults {
-  const sp = fixture.schoolProfile;
-  const debtIncluded = sp.debtIncluded !== false;
-  const effectiveFixture = debtIncluded ? fixture : {
-    ...fixture,
-    capitalAndDebtRows: fixture.capitalAndDebtRows.filter(r => !r.isLoan),
-  };
-
-  const feMetrics = computeBaseFinancials(effectiveFixture as Parameters<typeof computeBaseFinancials>[0]);
-
-  const enrollment = getEnrollmentArray(fixture.enrollment);
-  const revRows = adaptRevenueRows(fixture.revenueRows);
-  const staffRows = adaptStaffingRows(fixture.staffingRows);
-  const expRows = adaptExpenseRows(fixture.expenseRows);
-  const cdRows = adaptCapDebtRows(effectiveFixture.capitalAndDebtRows);
-  const pf = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
-  const salaryEsc = (fixture.facilities.annualSalaryIncrease || 0) / 100;
-  const costInfl = fixture.facilities.generalCostInflation || 0;
-
-  const ceYears = computeYearFinancialsFromData({
-    ...fixture,
-    skipFacilityOverlay: true,
-  } as unknown as Record<string, unknown>);
-
-  const fe: EngineYearResult[] = [];
-  const be: EngineYearResult[] = [];
-  const ce: EngineYearResult[] = [];
-
+  // Identity: tuition + public + philanthropy ≈ totalRevenue
   for (let y = 0; y < 5; y++) {
-    const yPf = y === 0 ? pf : 1;
-    const students = enrollment[y];
-    const fte = computeTotalFTE(staffRows, y, students);
-    const rev = computeRevenueForYear(revRows, y, students, undefined, undefined, sp);
-
-    const beRev = Math.round(rev * yPf);
-    const beStaff = Math.round(computePersonnelForYear(staffRows, salaryEsc, pf, y, students));
-    const beExp = Math.round(computeExpenseForYear(expRows, y, students, rev, costInfl, undefined, undefined, fte) * yPf);
-    const beCapDebt = Math.round(computeCapDebtForYear(cdRows, y, students));
-    const beNonStaff = beExp + beCapDebt;
-    const beNet = beRev - beStaff - beNonStaff;
-
-    const feRev = Math.round(feMetrics.revenue[y]);
-    const feStaff = Math.round(feMetrics.staffingCost[y]);
-    const feNonStaff = Math.round(feMetrics.facilityCost[y]) + Math.round(feMetrics.opex[y]) +
-      Math.round(computeCapDebtForYear(cdRows, y, students));
-    const feNet = Math.round(feMetrics.netIncome[y]);
-
-    const ceYear = ceYears[y];
-    const ceRev = Math.round(ceYear.totalRevenue);
-    const ceStaff = Math.round(ceYear.totalStaffingCost);
-    const ceNonStaff = Math.round(ceYear.totalExpenses - ceYear.totalStaffingCost - ceYear.depreciation);
-    const ceNet = Math.round(ceYear.netIncome + ceYear.depreciation);
-
-    fe.push({ revenue: feRev, staffing: feStaff, nonStaffExpenses: feNonStaff, netIncome: feNet });
-    be.push({ revenue: beRev, staffing: beStaff, nonStaffExpenses: beNonStaff, netIncome: beNet });
-    ce.push({ revenue: ceRev, staffing: ceStaff, nonStaffExpenses: ceNonStaff, netIncome: ceNet });
+    const split = g.tuitionRevenue[y] + g.publicRevenue[y] + g.philanthropyRevenue[y];
+    check(`${label} Y${y + 1} revenue split sums to total`, split, g.totalRevenue[y], 1);
   }
 
-  return { fe, be, ce };
-}
-
-function testTriEngineParity(label: string, fixture: TestModelPayload) {
-  console.log(`\n— Three-engine parity: ${label} —`);
-  const d = runTriEngine(fixture);
-
+  // Identity: totalExpenses == staffing + totalOpex + depreciation
   for (let y = 0; y < 5; y++) {
-    const yr = `Y${y + 1}`;
-    check(`${label} ${yr} FE↔BE revenue`, d.fe[y].revenue, d.be[y].revenue);
-    check(`${label} ${yr} FE↔CE revenue`, d.fe[y].revenue, d.ce[y].revenue);
-    check(`${label} ${yr} FE↔BE staffing`, d.fe[y].staffing, d.be[y].staffing);
-    check(`${label} ${yr} FE↔CE staffing`, d.fe[y].staffing, d.ce[y].staffing);
-    check(`${label} ${yr} FE↔BE non-staff expenses`, d.fe[y].nonStaffExpenses, d.be[y].nonStaffExpenses);
-    check(`${label} ${yr} FE↔CE non-staff expenses`, d.fe[y].nonStaffExpenses, d.ce[y].nonStaffExpenses);
-    check(`${label} ${yr} FE↔BE net income`, d.fe[y].netIncome, d.be[y].netIncome);
-    check(`${label} ${yr} FE↔CE net income`, d.fe[y].netIncome, d.ce[y].netIncome);
+    const sum = g.totalStaffingCost[y] + g.totalOpex[y] + g.depreciation[y];
+    check(`${label} Y${y + 1} totalExpenses identity`, sum, g.totalExpenses[y], 0.5);
   }
 }
 
-function testPerFteConsistency() {
-  console.log("\n— per_fte driver consistency (Private School fixture) —");
-  const fixture = privateSchoolFixture;
-  const hasPerFte = fixture.expenseRows.some(r => r.driverType === "per_fte");
-  bool("Fixture has per_fte expense row", hasPerFte);
+function main() {
+  console.log("=== Consultant engine: Y1-Y5 golden snapshots ===");
+  console.log("Engine: artifacts/api-server/src/lib/consultant-engine.ts → computeYearFinancialsFromData");
+  console.log("Delegates totals to: lib/finance/src/decision-engine/scenario-engine.ts → computeBaseFinancials");
+  console.log("Tolerance: 0.01% or $1 absolute minimum");
 
-  if (!hasPerFte) return;
-
-  const enrollment = getEnrollmentArray(fixture.enrollment);
-  const staffRows = adaptStaffingRows(fixture.staffingRows);
-  const expRows = adaptExpenseRows(fixture.expenseRows);
-  const revRows = adaptRevenueRows(fixture.revenueRows);
-  const sp = fixture.schoolProfile;
-  const pf = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
-  const costInfl = fixture.facilities.generalCostInflation || 0;
-
-  for (let y = 0; y < 5; y++) {
-    const yPf = y === 0 ? pf : 1;
-    const students = enrollment[y];
-    const fte = computeTotalFTE(staffRows, y, students);
-    const rev = computeRevenueForYear(revRows, y, students, undefined, undefined, sp);
-    const beExpense = computeExpenseForYear(expRows, y, students, rev, costInfl, undefined, undefined, fte) * yPf;
-
-    const perFteRow = fixture.expenseRows.find(r => r.driverType === "per_fte")!;
-    const expectedPerFteContribution = perFteRow.amounts[y] * fte * yPf;
-    bool(`Y${y + 1} per_fte contributes non-zero (FTE=${fte.toFixed(1)})`, expectedPerFteContribution > 0,
-      `expected=${Math.round(expectedPerFteContribution)}`);
-    bool(`Y${y + 1} BE expense includes per_fte contribution`, beExpense >= expectedPerFteContribution * 0.99,
-      `expense=${Math.round(beExpense)}, perFte=${Math.round(expectedPerFteContribution)}`);
-  }
-
-  console.log("  Running FE↔BE↔CE comparison with per_fte row...");
-  testTriEngineParity("Private+per_fte", fixture);
-}
-
-function testSalaryEscalationMapping() {
-  console.log("\n— Salary escalation field mapping (Microschool, salaryIncrease=3%) —");
-  const fixture = microschoolFixture;
-  bool("Fixture has non-zero salary escalation", fixture.facilities.annualSalaryIncrease > 0,
-    `value=${fixture.facilities.annualSalaryIncrease}`);
-
-  const feMetrics = computeBaseFinancials(fixture as Parameters<typeof computeBaseFinancials>[0]);
-
-  const ceYears = computeYearFinancialsFromData({
-    ...fixture,
-    skipFacilityOverlay: true,
-  } as unknown as Record<string, unknown>);
-
-  for (let y = 0; y < 5; y++) {
-    check(`Y${y + 1} FE↔CE staffing (salary esc=${fixture.facilities.annualSalaryIncrease}%)`,
-      Math.round(feMetrics.staffingCost[y]),
-      Math.round(ceYears[y].totalStaffingCost));
-  }
-
-  if (fixture.facilities.annualSalaryIncrease > 0) {
-    const feY1 = Math.round(feMetrics.staffingCost[0]);
-    const feY5 = Math.round(feMetrics.staffingCost[4]);
-    const ceY1 = Math.round(ceYears[0].totalStaffingCost);
-    const ceY5 = Math.round(ceYears[4].totalStaffingCost);
-    bool("FE staffing increases over 5 years", feY5 > feY1,
-      `Y1=${feY1}, Y5=${feY5}`);
-    bool("CE staffing increases over 5 years", ceY5 > ceY1,
-      `Y1=${ceY1}, Y5=${ceY5}`);
-  }
-}
-
-function testBreakevenIncludesFacility() {
-  console.log("\n— Breakeven enrollment includes facility costs —");
-  const fixture = microschoolFixture;
-  const feMetrics = computeBaseFinancials(fixture as Parameters<typeof computeBaseFinancials>[0]);
-
-  const facilityCost = feMetrics.facilityCost[0];
-  const staffingCost = feMetrics.staffingCost[0];
-  const enrollment = feMetrics.enrollment[0];
-  const revenue = feMetrics.revenue[0];
-  const loanDS = feMetrics.loanDebtService?.[0] ?? 0;
-
-  bool("Facility cost Y1 is non-zero", facilityCost > 0, `facilityCost=${Math.round(facilityCost)}`);
-  bool("Staffing cost Y1 is non-zero", staffingCost > 0, `staffingCost=${Math.round(staffingCost)}`);
-
-  const revenuePerStudent = revenue / enrollment;
-  const opex = feMetrics.opex[0];
-  const variableCostPerStudent = enrollment > 0 ? opex / enrollment : 0;
-  const contributionMargin = revenuePerStudent - variableCostPerStudent;
-
-  const fixedWithFacility = staffingCost + facilityCost + loanDS;
-  const fixedWithoutFacility = staffingCost + loanDS;
-  const breakevenWith = Math.ceil(fixedWithFacility / contributionMargin);
-  const breakevenWithout = Math.ceil(fixedWithoutFacility / contributionMargin);
-
-  bool("Breakeven with facility > breakeven without",
-    breakevenWith > breakevenWithout,
-    `withFacility=${breakevenWith}, without=${breakevenWithout}`);
-  bool("Breakeven with facility is reasonable (< maxCapacity)",
-    breakevenWith < fixture.schoolProfile.maxCapacity * 2,
-    `breakeven=${breakevenWith}, maxCap=${fixture.schoolProfile.maxCapacity}`);
-}
-
-async function main() {
-  console.log("=== Three-Engine Financial Consistency Test ===");
-  console.log("FE: computeBaseFinancials (scenario-engine.ts)");
-  console.log("BE: workbook-helpers.ts (Excel/PDF exports)");
-  console.log("CE: consultant-engine.ts (consultant analysis)");
-  console.log("Tolerance: 1% or $5 absolute minimum");
-  console.log("Note: CE includes depreciation — comparisons exclude it for parity");
-
-  testTriEngineParity("Microschool", microschoolFixture);
-  testTriEngineParity("Private School", privateSchoolFixture);
-  testTriEngineParity("Charter School", charterFixture);
-  testPerFteConsistency();
-  testSalaryEscalationMapping();
-  testBreakevenIncludesFacility();
+  checkCEGolden("Microschool", microschoolFixture, microschoolGolden);
+  checkCEGolden("Private", privateSchoolFixture, privateGolden);
+  checkCEGolden("Charter", charterFixture, charterGolden);
 
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
   if (failures.length > 0) {
     console.log("\nFailures:");
     for (const f of failures) console.log(f);
   }
-
   if (failed > 0) process.exit(1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(2);
-});
+main();
