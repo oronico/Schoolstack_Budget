@@ -67,7 +67,7 @@ const DIMENSIONS: {
           status: "healthy",
           label: "Healthy",
           explanation: `The model reaches ${pt} early and sustains strong margins through Year ${yearCount}.`,
-          watchItem: "Monitor enrollment actuals vs. projections in Year 1.",
+          watchItem: "Compare your real Year 1 enrollment against this projection as students enroll.",
         };
       }
       if (lastYearNetMargin >= 0 && breakEvenYear >= 0) {

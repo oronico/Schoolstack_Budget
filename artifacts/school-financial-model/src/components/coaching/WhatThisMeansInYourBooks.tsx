@@ -7,6 +7,7 @@ import {
   STATEMENT_LABELS,
   type StatementKind,
 } from "@/lib/coaching/bookkeeping-translations";
+import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { GlossaryTerm } from "./GlossaryTerm";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,13 @@ export function WhatThisMeansInYourBooks({
   // has answered the entity question (asked on School Details, step 2). The
   // generic "program vs. admin / restricted vs. unrestricted" framing on
   // step 1 is misleading for for-profit schools, so we wait.
-  const gated = !!rawEntry?.requiresEntityType && !entityKnown;
+  // Yet-to-launch founders also never see this sidebar at all: it's framed
+  // around what each wizard input does inside an existing chart of accounts,
+  // and it leans on QuickBooks/Xero, variance, and prior-year language that
+  // is explicitly off-limits for the pre-opening persona (Tasks #302, #304).
+  const yetToLaunch = isYetToLaunch(user);
+  const gated =
+    yetToLaunch || (!!rawEntry?.requiresEntityType && !entityKnown);
 
   // Filter out nonprofit-only lines for for-profit schools, and pick the
   // for-profit intro variant when one is provided.
