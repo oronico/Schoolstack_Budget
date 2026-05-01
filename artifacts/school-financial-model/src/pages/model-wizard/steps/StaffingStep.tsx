@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
-import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Lightbulb, AlertTriangle, Users, TrendingUp, ShieldCheck, DollarSign, Search, X } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
@@ -116,6 +116,7 @@ export function StaffingStep() {
   const [rows, setRows] = useState<StaffingRowData[]>([]);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [defaultsApplied, setDefaultsApplied] = useState(false);
+  const [filter, setFilter] = useState("");
 
   useEffect(() => {
     if (formRows !== undefined && formRows.length > 0) {
@@ -264,6 +265,62 @@ export function StaffingStep() {
     });
     return groups;
   }, [rows]);
+
+  // Quick-finder for large rosters (charter networks, multi-campus operators).
+  // Hidden until the roster grows past ~10 rows so small models stay
+  // unchanged. The filter narrows by role name OR category label so founders
+  // can search for "Math Teacher" or "Operations" interchangeably; the jump
+  // chips are an anchor index that scrolls to a category section.
+  const QUICK_FINDER_THRESHOLD = 10;
+  const showQuickFinder = rows.length > QUICK_FINDER_THRESHOLD;
+  const filterText = filter.trim().toLowerCase();
+  const isFiltering = showQuickFinder && filterText.length > 0;
+
+  // If the founder shrinks the roster back under the threshold (e.g., bulk
+  // delete), the finder hides — make sure a previously-typed filter doesn't
+  // silently linger and re-engage if rows grow past 10 again later.
+  useEffect(() => {
+    if (!showQuickFinder && filter !== "") {
+      setFilter("");
+    }
+  }, [showQuickFinder, filter]);
+
+  const filteredGroups = useMemo(() => {
+    if (!isFiltering) return groupedRows;
+    const result: Record<StaffingFunctionCategory, StaffingRowData[]> = {
+      instructional: [],
+      school_leadership: [],
+      student_support: [],
+      operations: [],
+      administrative: [],
+      other: [],
+    };
+    for (const cat of FUNCTION_CATEGORY_ORDER) {
+      const catLabel = FUNCTION_CATEGORY_LABELS[cat].toLowerCase();
+      const catMatches = catLabel.includes(filterText);
+      result[cat] = groupedRows[cat].filter((r) =>
+        catMatches || (r.roleName || "").toLowerCase().includes(filterText)
+      );
+    }
+    return result;
+  }, [groupedRows, isFiltering, filterText]);
+
+  const filteredCount = useMemo(
+    () =>
+      FUNCTION_CATEGORY_ORDER.reduce(
+        (sum, cat) => sum + filteredGroups[cat].length,
+        0,
+      ),
+    [filteredGroups],
+  );
+
+  const scrollToCategory = useCallback((cat: StaffingFunctionCategory) => {
+    if (typeof document === "undefined") return;
+    const el = document.getElementById(`staffing-cat-${cat}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   const totalFTE = costs.totalFTE;
   const studentStaffRatio = y1Students > 0 && totalFTE > 0 ? Math.round(y1Students / totalFTE * 10) / 10 : 0;
@@ -468,12 +525,90 @@ export function StaffingStep() {
         </div>
       )}
 
+      {showQuickFinder && (
+        <div
+          className="rounded-xl border border-border/60 bg-muted/20 px-3 py-3 space-y-2.5"
+          data-testid="staffing-quick-finder"
+        >
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                type="search"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder={`Find a staff role… (${rows.length} total)`}
+                aria-label="Filter staff roles by name or category"
+                data-testid="staffing-quick-finder-input"
+                className="w-full rounded-lg border border-border bg-card pl-8 pr-8 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+              />
+              {filter.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("")}
+                  aria-label="Clear filter"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {isFiltering && (
+              <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                {filteredCount} of {rows.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mr-1">
+              Jump to:
+            </span>
+            {FUNCTION_CATEGORY_ORDER.map((cat) => {
+              const fullCount = groupedRows[cat].length;
+              const visibleCount = isFiltering ? filteredGroups[cat].length : fullCount;
+              if (fullCount === 0) return null;
+              if (isFiltering && visibleCount === 0) return null;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => scrollToCategory(cat)}
+                  data-testid={`staffing-jump-${cat}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                >
+                  <span>{FUNCTION_CATEGORY_LABELS[cat]}</span>
+                  <span className="text-muted-foreground">({visibleCount})</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {isFiltering && filteredCount === 0 && (
+        <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+          No staff roles match <span className="font-semibold text-foreground">"{filter.trim()}"</span>.
+          {" "}
+          <button
+            type="button"
+            onClick={() => setFilter("")}
+            className="text-primary font-medium hover:underline"
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
+
       {FUNCTION_CATEGORY_ORDER.map((cat) => {
-        const catRows = groupedRows[cat];
+        const catRows = isFiltering ? filteredGroups[cat] : groupedRows[cat];
         if (catRows.length === 0) return null;
 
-        const catCost = calculatePersonnelCosts(catRows, y1Students);
-        const catFte = catRows.reduce(
+        // Per-category cost summary always reflects the full category, not
+        // the filtered subset, so the founder sees the true category total
+        // even while narrowing the visible row list.
+        const fullCatRows = groupedRows[cat];
+        const catCost = calculatePersonnelCosts(fullCatRows, y1Students);
+        const catFte = fullCatRows.reduce(
           (sum, r) =>
             sum +
             (r.staffingMode === "ratio"
@@ -483,10 +618,15 @@ export function StaffingStep() {
         );
 
         return (
-          <div key={cat}>
+          <div key={cat} id={`staffing-cat-${cat}`} className="scroll-mt-4">
             <div className="flex items-baseline justify-between mb-2 gap-3">
               <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 {FUNCTION_CATEGORY_LABELS[cat]}
+                {isFiltering && (
+                  <span className="ml-2 normal-case tracking-normal text-[10px] text-muted-foreground/80">
+                    {catRows.length} of {groupedRows[cat].length} match
+                  </span>
+                )}
               </h3>
               {catCost.grandTotal > 0 && (
                 <div className="text-right text-[11px] text-muted-foreground">
