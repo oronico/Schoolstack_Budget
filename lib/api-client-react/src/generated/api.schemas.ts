@@ -443,6 +443,7 @@ export type SchoolProfileSchoolType =
 export const SchoolProfileSchoolType = {
   catholic_school: "catholic_school",
   charter_school: "charter_school",
+  chesterton_academy: "chesterton_academy",
   homeschool_coop: "homeschool_coop",
   learning_pod: "learning_pod",
   microschool: "microschool",

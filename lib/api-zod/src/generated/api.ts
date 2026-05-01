@@ -159,6 +159,7 @@ export const CreateModelBody = zod.object({
           .enum([
             "catholic_school",
             "charter_school",
+            "chesterton_academy",
             "homeschool_coop",
             "learning_pod",
             "microschool",
@@ -629,6 +630,7 @@ export const GetModelResponse = zod.object({
           .enum([
             "catholic_school",
             "charter_school",
+            "chesterton_academy",
             "homeschool_coop",
             "learning_pod",
             "microschool",
@@ -1100,6 +1102,7 @@ export const UpdateModelBody = zod.object({
           .enum([
             "catholic_school",
             "charter_school",
+            "chesterton_academy",
             "homeschool_coop",
             "learning_pod",
             "microschool",
@@ -1563,6 +1566,7 @@ export const UpdateModelResponse = zod.object({
           .enum([
             "catholic_school",
             "charter_school",
+            "chesterton_academy",
             "homeschool_coop",
             "learning_pod",
             "microschool",
@@ -2055,6 +2059,7 @@ export const ArchiveModelResponse = zod.object({
           .enum([
             "catholic_school",
             "charter_school",
+            "chesterton_academy",
             "homeschool_coop",
             "learning_pod",
             "microschool",
