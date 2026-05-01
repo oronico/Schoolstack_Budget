@@ -160,6 +160,60 @@ export function drawTable(doc: PDFDoc, columns: TableColumn[], rows: string[][],
   doc.y = y + 4;
 }
 
+/**
+ * Render a structured "coaching" insight as a callout block: a left accent
+ * stripe, a soft cream background, a colored bold label, and a body sentence.
+ *
+ * Mirrors the wizard's `FinancingInsight` styling so the same insight surfaced
+ * in-product also reads as a distinct coaching note inside the lender / board
+ * PDFs (Task #326). The PDFKit standard fonts (WinAnsi) don't carry the bank
+ * glyph the wizard uses, so we lean on the accent color + bullet marker for
+ * visual identity instead of trying to embed an icon font.
+ */
+export function drawInsightCallout(
+  doc: PDFDoc,
+  label: string,
+  body: string,
+  tone: "info" | "success" | "warning" = "info",
+) {
+  const accentColor = tone === "warning" ? BRAND.amber : tone === "success" ? BRAND.green : BRAND.teal;
+  const margin = doc.page.margins.left;
+  const pageW = doc.page.width;
+  const contentW = pageW - margin * 2;
+  const padding = 8;
+  const stripeW = 4;
+  const innerW = contentW - stripeW - padding * 2;
+
+  // Pre-measure to size the callout box and trigger a page break if needed.
+  doc.font("Helvetica-Bold").fontSize(9);
+  const labelText = `\u2022 ${label}`;
+  const labelH = doc.heightOfString(labelText, { width: innerW });
+  doc.font("Helvetica").fontSize(9);
+  const bodyH = doc.heightOfString(body, { width: innerW });
+  const totalH = padding * 2 + labelH + 3 + bodyH;
+
+  ensureSpace(doc, totalH + 6);
+  const startY = doc.y;
+
+  doc.save();
+  doc.roundedRect(margin, startY, contentW, totalH, 3).fill(BRAND.cream);
+  doc.restore();
+
+  doc.save();
+  doc.rect(margin, startY, stripeW, totalH).fill(accentColor);
+  doc.restore();
+
+  const textX = margin + stripeW + padding;
+
+  doc.font("Helvetica-Bold").fontSize(9).fillColor(accentColor);
+  doc.text(labelText, textX, startY + padding, { width: innerW });
+
+  doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+  doc.text(body, textX, startY + padding + labelH + 3, { width: innerW });
+
+  doc.y = startY + totalH + 6;
+}
+
 export function statusBadge(doc: PDFDoc, label: string, status: "good" | "warning" | "danger" | "Strong" | "Needs Work" | "Not Yet Ready") {
   const colors: Record<string, string> = {
     good: BRAND.green,

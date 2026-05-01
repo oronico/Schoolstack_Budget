@@ -1,12 +1,12 @@
 import {
   createDoc, drawHeader, sectionTitle, subSection, bodyText,
   drawTable, drawFooter, docToBuffer, statusBadge, labelValue,
-  fmtCurrency, ensureSpace,
+  fmtCurrency, ensureSpace, drawInsightCallout,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
 import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport } from "./build-lender-packet";
 import type { DecisionHistoryItem } from "./build-decision-history";
-import type { PacketSection, PacketTable, LinkedMetric } from "./packet-types";
+import type { PacketSection, PacketTable, LinkedMetric, PacketInsight } from "./packet-types";
 
 export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buffer> {
   const doc = createDoc();
@@ -169,6 +169,10 @@ function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket
     bodyText(doc, section.narrative);
   }
 
+  if (section.insights && section.insights.length > 0) {
+    renderInsights(doc, section.insights);
+  }
+
   if (section.linkedMetrics.length > 0) {
     renderMetrics(doc, section.linkedMetrics);
   }
@@ -213,6 +217,13 @@ function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket
 
 function shouldShowAssumptions(sectionId: string): boolean {
   return ["school_overview", "enrollment_plan", "revenue_model", "staffing_plan", "capital_debt", "appendix_assumptions"].includes(sectionId);
+}
+
+function renderInsights(doc: PDFDoc, insights: PacketInsight[]) {
+  doc.moveDown(0.2);
+  for (const insight of insights) {
+    drawInsightCallout(doc, insight.label, insight.body, insight.tone ?? "info");
+  }
 }
 
 function renderMetrics(doc: PDFDoc, metrics: LinkedMetric[]) {

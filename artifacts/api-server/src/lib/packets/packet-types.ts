@@ -49,6 +49,32 @@ export interface NarrativeSummary {
   recommendedFocus: string;
 }
 
+/**
+ * Tone of a {@link PacketInsight}, used by renderers to pick the accent color
+ * on the callout block. "info" is the neutral / coaching tone (teal accent),
+ * "success" celebrates a positive financial outcome (green accent), and
+ * "warning" is reserved for cautionary callouts (amber accent).
+ */
+export type InsightTone = "info" | "success" | "warning";
+
+/**
+ * A structured "coaching" callout that lives inside a {@link PacketSection}.
+ *
+ * Insights are quantitative or interpretive sentences (e.g. "Wage-base-aware
+ * math saves $X/yr") that previously had to be appended to the section's
+ * `narrative` paragraph. Surfacing them as their own slot lets PDF and HTML
+ * renderers style them as visually distinct callouts (icon + bordered card),
+ * mirroring the wizard's `FinancingInsight` component.
+ */
+export interface PacketInsight {
+  /** Short, bolded heading shown above the body (e.g. "Wage-base savings"). */
+  label: string;
+  /** Plain-language sentence(s) explaining the insight. */
+  body: string;
+  /** Visual tone for the accent color. Defaults to "info" when omitted. */
+  tone?: InsightTone;
+}
+
 export interface PacketSection {
   id: SectionId;
   title: string;
@@ -58,6 +84,12 @@ export interface PacketSection {
   linkedAssumptions: LinkedAssumption[];
   linkedMetrics: LinkedMetric[];
   tables?: PacketTable[];
+  /**
+   * Optional structured callouts (icon + bordered card in the PDF). Section
+   * builders populate this for coaching-style insights that deserve more
+   * prominence than an inline sentence inside `narrative`.
+   */
+  insights?: PacketInsight[];
 }
 
 export interface PacketTable {

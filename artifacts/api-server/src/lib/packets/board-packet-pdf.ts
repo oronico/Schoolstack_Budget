@@ -1,12 +1,12 @@
 import {
   createDoc, drawHeader, sectionTitle, subSection, bodyText,
   drawTable, drawFooter, docToBuffer, statusBadge, labelValue,
-  ensureSpace,
+  ensureSpace, drawInsightCallout,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
 import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView, BoardNarrativeData, BoardFlaggedAssumption } from "./build-board-packet";
 import type { DecisionHistoryItem } from "./build-decision-history";
-import type { PacketSection, PacketTable, LinkedMetric } from "./packet-types";
+import type { PacketSection, PacketTable, LinkedMetric, PacketInsight } from "./packet-types";
 
 export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffer> {
   const doc = createDoc();
@@ -373,6 +373,10 @@ function renderSection(doc: PDFDoc, section: PacketSection) {
     bodyText(doc, section.narrative);
   }
 
+  if (section.insights && section.insights.length > 0) {
+    renderInsights(doc, section.insights);
+  }
+
   if (section.linkedMetrics.length > 0) {
     renderMetrics(doc, section.linkedMetrics);
   }
@@ -381,6 +385,13 @@ function renderSection(doc: PDFDoc, section: PacketSection) {
     for (const table of section.tables) {
       renderTable(doc, table);
     }
+  }
+}
+
+function renderInsights(doc: PDFDoc, insights: PacketInsight[]) {
+  doc.moveDown(0.2);
+  for (const insight of insights) {
+    drawInsightCallout(doc, insight.label, insight.body, insight.tone ?? "info");
   }
 }
 

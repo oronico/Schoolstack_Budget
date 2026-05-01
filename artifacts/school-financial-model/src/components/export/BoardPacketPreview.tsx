@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Download, Loader2, TrendingUp, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Lightbulb, BarChart3 } from "lucide-react";
+import { X, Download, Loader2, TrendingUp, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Lightbulb, BarChart3, Landmark } from "lucide-react";
 import { trackExport } from "@/hooks/useExportTracker";
 
 interface LinkedMetric {
@@ -20,6 +20,12 @@ interface PacketTable {
   rows: PacketTableRow[];
 }
 
+interface PacketInsight {
+  label: string;
+  body: string;
+  tone?: "info" | "success" | "warning";
+}
+
 interface PacketSection {
   id: string;
   title: string;
@@ -28,6 +34,7 @@ interface PacketSection {
   narrative: string;
   linkedMetrics: LinkedMetric[];
   tables?: PacketTable[];
+  insights?: PacketInsight[];
 }
 
 interface BoardRiskItem {
@@ -466,7 +473,11 @@ function SectionCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const hasContent = section.narrative || section.linkedMetrics.length > 0 || (section.tables && section.tables.length > 0);
+  const hasContent =
+    section.narrative ||
+    section.linkedMetrics.length > 0 ||
+    (section.tables && section.tables.length > 0) ||
+    (section.insights && section.insights.length > 0);
 
   return (
     <div className="border rounded-xl overflow-hidden">
@@ -481,6 +492,14 @@ function SectionCard({
       {expanded && hasContent && (
         <div className="px-4 py-3 space-y-3">
           {section.narrative && <p className="text-sm text-muted-foreground leading-relaxed">{section.narrative}</p>}
+
+          {section.insights && section.insights.length > 0 && (
+            <div className="space-y-2">
+              {section.insights.map((insight, i) => (
+                <InsightCallout key={i} insight={insight} />
+              ))}
+            </div>
+          )}
 
           {section.linkedMetrics.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -533,6 +552,30 @@ function SectionCard({
             ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function InsightCallout({ insight }: { insight: PacketInsight }) {
+  const tone = insight.tone ?? "info";
+  const accent =
+    tone === "warning"
+      ? "border-amber-300 bg-amber-50"
+      : tone === "success"
+        ? "border-green-300 bg-green-50"
+        : "border-teal-300 bg-teal-50";
+  const iconColor =
+    tone === "warning" ? "text-amber-600" : tone === "success" ? "text-green-600" : "text-teal-600";
+  const labelColor =
+    tone === "warning" ? "text-amber-800" : tone === "success" ? "text-green-800" : "text-teal-800";
+
+  return (
+    <div className={`flex items-start gap-2 rounded-md border-l-4 px-3 py-2 ${accent}`}>
+      <Landmark className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${iconColor}`} aria-hidden="true" />
+      <div className="space-y-0.5">
+        <p className={`text-xs font-semibold ${labelColor}`}>{insight.label}</p>
+        <p className="text-xs text-slate-600 leading-relaxed">{insight.body}</p>
+      </div>
     </div>
   );
 }

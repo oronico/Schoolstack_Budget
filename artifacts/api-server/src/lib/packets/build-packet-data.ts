@@ -33,6 +33,7 @@ import {
   type PacketData,
   type PacketInput,
   type PacketSection,
+  type PacketInsight,
   type PacketTable,
   type PacketTableRow,
   type LinkedAssumption,
@@ -371,14 +372,16 @@ function buildStaffingPlan(
   const staffPct = y1Rev > 0 ? y1Staff / y1Rev : 0;
 
   const costComp = co.costComposition[0];
-  let narrative = `Staffing costs are ${fmt(y1Staff)} in Year 1, representing ${pct(staffPct)} of revenue. ${staffPct > 0.6 ? "This is above the typical 50-60% benchmark and may need monitoring." : staffPct > 0.5 ? "This is within the typical 50-60% range." : "This leaves healthy room for other operating costs."}`;
+  const narrative = `Staffing costs are ${fmt(y1Staff)} in Year 1, representing ${pct(staffPct)} of revenue. ${staffPct > 0.6 ? "This is above the typical 50-60% benchmark and may need monitoring." : staffPct > 0.5 ? "This is within the typical 50-60% range." : "This leaves healthy room for other operating costs."}`;
 
-  // Surface the wage-base cap savings insight (Task #322): aggregate every
-  // staffing row that has a per-component breakdown + an annualized salary
-  // and append a persona-aware sentence to the narrative when the rolled-up
-  // savings clear our $1 sanity floor. Rows missing `payrollTaxComponents`
-  // (e.g. legacy models saved before Task #319 / contractors that opt out
-  // of payroll-like math) are skipped inside `aggregateRosterCapSavings`.
+  // Surface the wage-base cap savings insight (Task #322 → promoted to a
+  // dedicated callout in #326): aggregate every staffing row that has a
+  // per-component breakdown + an annualized salary, then push a structured
+  // insight onto the section so renderers can style it as a callout (icon +
+  // bordered card) instead of appending a sentence to the staffing paragraph.
+  // Rows missing `payrollTaxComponents` (e.g. legacy models saved before
+  // Task #319 / contractors that opt out of payroll-like math) are skipped
+  // inside `aggregateRosterCapSavings`.
   const normalized = normalizeStaffingRows(md);
   const capAggregate = aggregateRosterCapSavings(
     normalized.map((r) => ({
@@ -388,14 +391,19 @@ function buildStaffingPlan(
       // Forward the exclusion-relevant fields so the shared aggregator can
       // skip rows that should not contribute (manual blended-rate overrides
       // and contract-not-payroll-like rows). Dropping these would cause the
-      // PDF narrative to overstate savings vs. the wizard.
+      // PDF callout to overstate savings vs. the wizard.
       payrollTaxRateOverridden: r.payrollTaxRateOverridden,
       employmentType: r.employmentType,
       payrollLike: r.payrollLike,
     })),
   );
+  const insights: PacketInsight[] = [];
   if (capAggregate && capAggregate.totalSavings >= CAP_INSIGHT_MIN_SAVINGS) {
-    narrative = `${narrative} ${buildRosterCapInsightText(capAggregate, personaComfort)}`;
+    insights.push({
+      label: "Wage-base savings",
+      body: buildRosterCapInsightText(capAggregate, personaComfort),
+      tone: "info",
+    });
   }
 
   const linkedMetrics: LinkedMetric[] = costComp
@@ -411,6 +419,7 @@ function buildStaffingPlan(
       value: `$${nr.annualizedRate.toLocaleString()}, ${nr.fte} FTE`,
       sourceField: `staffingRows[${nr.id}]`,
     })),
+    ...(insights.length > 0 ? { insights } : {}),
   };
 }
 

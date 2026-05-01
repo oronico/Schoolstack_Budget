@@ -1,19 +1,24 @@
 /**
- * Task #322 regression test — board packet wage-base cap savings insight.
+ * Task #322 + #326 regression test — board packet wage-base cap savings insight.
  *
  * Verifies that:
  *   1. The `staffing_plan` section is included in the board packet (regression
  *      guard against `BOARD_PACKET_SECTIONS` losing the entry).
  *   2. When the roster carries `payrollTaxComponents` and at least one row
- *      clears a wage-base cap, the persona-aware sentence is appended to the
- *      Personnel narrative — for both `comfortable` and `new_to_budgeting`.
- *   3. The sentence is NOT emitted for rosters that don't qualify (no
- *      components, or all rows below every cap), so we never leak a stub.
+ *      clears a wage-base cap, the persona-aware sentence is exposed as a
+ *      structured `PacketInsight` on the Personnel section — for both
+ *      `comfortable` and `new_to_budgeting`. (Task #326 promoted this from a
+ *      sentence appended to the staffing narrative to a dedicated callout.)
+ *   3. No insight is emitted for rosters that don't qualify (no components,
+ *      or all rows below every cap), so we never leak a stub callout.
  *   4. Manual blended-rate overrides + contract-not-payroll-like rows are
  *      excluded from the displayed savings (they would otherwise inflate the
  *      board's headline number vs. the wizard).
- *   5. The sentence reaches the rendered PDF (i.e. the staffing_plan section
- *      actually flows through `generateBoardPacketPDF`).
+ *   5. The insight body reaches the rendered PDF (i.e. the staffing_plan
+ *      section + its insights actually flow through `generateBoardPacketPDF`
+ *      and `drawInsightCallout`).
+ *   6. The base staffing-cost paragraph in `narrative` is no longer carrying
+ *      the wage-base sentence, so we don't double-render it.
  */
 import zlib from "node:zlib";
 import { runConsultantEngine } from "../src/lib/consultant-engine.js";
@@ -214,17 +219,38 @@ async function run() {
     "BOARD_PACKET_SECTIONS dropped 'staffing_plan' — the cap-savings sentence cannot reach the board PDF without it",
   );
 
-  // ---- 2a. comfortable persona narrative carries the technical sentence --
+  // ---- 2a. comfortable persona surfaces the technical sentence as an insight
   if (staffingPlan) {
+    const insights = staffingPlan.insights ?? [];
+    const wageInsight = insights.find((i) => i.label === "Wage-base savings");
     check(
-      "comfortable narrative contains 'Wage-base caps hit on'",
-      staffingPlan.narrative.includes("Wage-base caps hit on"),
+      "comfortable section exposes a 'Wage-base savings' insight callout",
+      !!wageInsight,
+      `insights were: ${JSON.stringify(insights)}`,
+    );
+    check(
+      "comfortable insight body contains 'Wage-base caps hit on'",
+      !!wageInsight && wageInsight.body.includes("Wage-base caps hit on"),
+      `insight body was: ${wageInsight?.body ?? "(missing)"}`,
+    );
+    check(
+      "comfortable insight body contains the savings dollar phrase",
+      !!wageInsight && /saves \$[\d,]+\/yr vs\. a flat blended rate/.test(wageInsight.body),
+      `insight body was: ${wageInsight?.body ?? "(missing)"}`,
+    );
+    // Task #326: the wage-base sentence must NOT also live in narrative
+    // (otherwise the PDF would render it twice — once in the paragraph, once
+    // in the callout).
+    check(
+      "comfortable narrative no longer carries the wage-base sentence",
+      !staffingPlan.narrative.includes("Wage-base caps hit on") &&
+        !staffingPlan.narrative.includes("saves $"),
       `narrative was: ${staffingPlan.narrative}`,
     );
     check(
-      "comfortable narrative contains the savings dollar phrase",
-      /saves \$[\d,]+\/yr vs\. a flat blended rate/.test(staffingPlan.narrative),
-      `narrative was: ${staffingPlan.narrative}`,
+      "comfortable insight defaults to tone='info' (teal accent in PDF)",
+      !!wageInsight && (wageInsight.tone ?? "info") === "info",
+      `tone was: ${wageInsight?.tone ?? "(none)"}`,
     );
   }
 
@@ -236,15 +262,18 @@ async function run() {
   const newToBudgetingPlan = newToBudgetingPacket.sections.find(
     (s) => s.id === "staffing_plan",
   );
-  check(
-    "new_to_budgeting narrative uses 'earn above the wage-base cap'",
-    !!newToBudgetingPlan && newToBudgetingPlan.narrative.includes("earn above the wage-base cap"),
-    `narrative was: ${newToBudgetingPlan?.narrative ?? "(missing section)"}`,
+  const newToBudgetingInsight = newToBudgetingPlan?.insights?.find(
+    (i) => i.label === "Wage-base savings",
   );
   check(
-    "new_to_budgeting narrative uses the 'saves about $X/yr' phrasing",
-    !!newToBudgetingPlan && /saves about \$[\d,]+\/yr/.test(newToBudgetingPlan.narrative),
-    `narrative was: ${newToBudgetingPlan?.narrative ?? "(missing section)"}`,
+    "new_to_budgeting insight uses 'earn above the wage-base cap'",
+    !!newToBudgetingInsight && newToBudgetingInsight.body.includes("earn above the wage-base cap"),
+    `insight body was: ${newToBudgetingInsight?.body ?? "(missing section/insight)"}`,
+  );
+  check(
+    "new_to_budgeting insight uses the 'saves about $X/yr' phrasing",
+    !!newToBudgetingInsight && /saves about \$[\d,]+\/yr/.test(newToBudgetingInsight.body),
+    `insight body was: ${newToBudgetingInsight?.body ?? "(missing section/insight)"}`,
   );
 
   // ---- 3. no insight when no row clears a cap ----------------------------
@@ -255,8 +284,14 @@ async function run() {
   const noQualifyingPlan = noQualifyingPacket.sections.find(
     (s) => s.id === "staffing_plan",
   );
+  const noQualifyingInsights = noQualifyingPlan?.insights ?? [];
   check(
-    "no cap-insight sentence when nothing crosses a wage-base cap",
+    "no wage-base insight emitted when nothing crosses a wage-base cap",
+    !noQualifyingInsights.some((i) => i.label === "Wage-base savings"),
+    `insights were: ${JSON.stringify(noQualifyingInsights)}`,
+  );
+  check(
+    "no cap-insight sentence leaked into narrative either",
     !!noQualifyingPlan && !noQualifyingPlan.narrative.includes("Wage-base caps hit on"),
     `narrative was: ${noQualifyingPlan?.narrative ?? "(missing section)"}`,
   );
@@ -268,9 +303,10 @@ async function run() {
     [highSalaryRow("real", "Head of School")],
     "comfortable",
   );
-  const realOnlyMatch = (onlyRealRolePacket.sections
+  const realOnlyInsight = onlyRealRolePacket.sections
     .find((s) => s.id === "staffing_plan")
-    ?.narrative.match(/saves \$([\d,]+)\/yr/) ?? [])[1];
+    ?.insights?.find((i) => i.label === "Wage-base savings");
+  const realOnlyMatch = realOnlyInsight?.body.match(/saves \$([\d,]+)\/yr/)?.[1];
   const realOnlyDollars = realOnlyMatch ? Number(realOnlyMatch.replace(/,/g, "")) : NaN;
 
   const mixedRosterPacket = await buildBoardWith(
@@ -288,9 +324,11 @@ async function run() {
     ],
     "comfortable",
   );
-  const mixedNarrative =
-    mixedRosterPacket.sections.find((s) => s.id === "staffing_plan")?.narrative ?? "";
-  const mixedMatch = mixedNarrative.match(/saves \$([\d,]+)\/yr/);
+  const mixedInsight = mixedRosterPacket.sections
+    .find((s) => s.id === "staffing_plan")
+    ?.insights?.find((i) => i.label === "Wage-base savings");
+  const mixedBody = mixedInsight?.body ?? "";
+  const mixedMatch = mixedBody.match(/saves \$([\d,]+)\/yr/);
   const mixedDollars = mixedMatch ? Number(mixedMatch[1].replace(/,/g, "")) : NaN;
 
   check(
@@ -298,22 +336,27 @@ async function run() {
     Number.isFinite(realOnlyDollars) &&
       Number.isFinite(mixedDollars) &&
       realOnlyDollars === mixedDollars,
-    `expected ${realOnlyDollars}, got ${mixedDollars} (mixed narrative: ${mixedNarrative})`,
+    `expected ${realOnlyDollars}, got ${mixedDollars} (mixed insight body: ${mixedBody})`,
   );
   check(
-    "mixed-roster narrative reports 'across 1 role' (the only payroll-like row)",
-    mixedNarrative.includes("across 1 role"),
-    `narrative was: ${mixedNarrative}`,
+    "mixed-roster insight reports 'across 1 role' (the only payroll-like row)",
+    mixedBody.includes("across 1 role"),
+    `insight body was: ${mixedBody}`,
   );
 
-  // ---- 5. the sentence reaches the rendered board PDF --------------------
+  // ---- 5. the insight body reaches the rendered board PDF ----------------
   const pdfBuffer = await generateBoardPacketPDF(includedPacket);
   check("board PDF builds without error", pdfBuffer.length > 0);
   const pdfText = extractPDFText(pdfBuffer);
   check(
-    "rendered board PDF contains the cap-savings sentence",
+    "rendered board PDF contains the cap-savings insight body",
     pdfText.includes("Wage-base caps hit on"),
-    "sentence missing from PDF text — staffing_plan likely isn't being rendered by board-packet-pdf",
+    "insight missing from PDF text — staffing_plan insights likely aren't being rendered by board-packet-pdf",
+  );
+  check(
+    "rendered board PDF contains the 'Wage-base savings' callout label",
+    pdfText.includes("Wage-base savings"),
+    "callout label missing from PDF — drawInsightCallout may not be wired up in board-packet-pdf",
   );
 
   // ---- summary -----------------------------------------------------------
