@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormInput, FormSelect, FormCheckbox, getNestedError } from "@/components/ui/form-inputs";
-import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb, Heart, Upload, FileSpreadsheet, X as XIcon } from "lucide-react";
+import { Building2, Rocket, AlertCircle, MapPin, Home, Key, HelpCircle, Landmark, Info, ChevronDown, ChevronUp, ExternalLink, Gift, Sprout, AlertTriangle, Lightbulb, Heart, Upload, FileSpreadsheet } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
@@ -542,6 +544,14 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
+  // Two-step confirmation for the destructive "Remove uploaded export"
+  // affordance — mirrors the saved-scenario actuals editor on the
+  // scenarios page so a misclick can't silently nuke the founder's books.
+  // Resets back to false whenever the upload itself goes away (either via
+  // confirm-remove or a fresh upload that replaces it) so a half-confirmed
+  // remove can't bleed into a different file.
+  const [confirmRemoveExport, setConfirmRemoveExport] = useState(false);
+  const { toast } = useToast();
   const { user } = useAuth();
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const showCoach = guidanceLevel !== "advanced";
@@ -705,10 +715,45 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
     if (file) void handleFile(file);
   };
 
+  // Clears the founder's uploaded accounting export from the wizard form.
+  // Mirrors the scenarios-page implementation: snapshot the prior export
+  // first so the toast can offer a one-click Undo (the upload itself isn't
+  // re-stored anywhere else, so undoing is the *only* way to recover from
+  // an accidental remove). The wizard's autosave picks the cleared value
+  // up on the next render, so we don't need to call any mutation here.
   const removeUpload = () => {
     setError(null);
+    const priorExport = exportData;
     setValue("accountingExport", undefined, { shouldDirty: true });
+    setConfirmRemoveExport(false);
+    if (!priorExport) return;
+    toast({
+      title: "Uploaded export removed",
+      description:
+        "Suggestions will revert to your typed-in priors. Upload a fresh export to start sourcing from books again.",
+      action: (
+        <ToastAction
+          altText="Undo remove"
+          onClick={() => {
+            setValue("accountingExport", priorExport, { shouldDirty: true });
+            toast({
+              title: "Upload restored",
+              description: "Your accounting export is back on the model.",
+            });
+          }}
+        >
+          Undo
+        </ToastAction>
+      ),
+    });
   };
+
+  // If the upload disappears for any reason (replace flow that briefly
+  // clears + re-sets, autosave round-trip, etc.) clear any half-confirmed
+  // remove state so the prompt doesn't reappear over a fresh upload.
+  useEffect(() => {
+    if (!exportData) setConfirmRemoveExport(false);
+  }, [exportData]);
 
   return (
     <div
@@ -795,24 +840,54 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                type="button"
-                onClick={triggerPicker}
-                disabled={isParsing}
-                className="text-xs font-medium px-2 py-1 rounded-md border border-border hover:bg-muted transition-colors"
-                data-testid="accounting-export-replace-button"
-              >
-                {isParsing ? "Reading…" : "Replace"}
-              </button>
-              <button
-                type="button"
-                onClick={removeUpload}
-                className="text-muted-foreground hover:text-rose-600 transition-colors"
-                aria-label={`Remove ${exportData.filename}`}
-                data-testid="accounting-export-remove-button"
-              >
-                <XIcon className="h-4 w-4" />
-              </button>
+              {!confirmRemoveExport ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={triggerPicker}
+                    disabled={isParsing}
+                    className="text-xs font-medium px-2 py-1 rounded-md border border-border hover:bg-muted transition-colors"
+                    data-testid="accounting-export-replace-button"
+                  >
+                    {isParsing ? "Reading…" : "Replace"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRemoveExport(true)}
+                    className="text-xs font-semibold text-rose-700 hover:text-rose-800 hover:underline whitespace-nowrap"
+                    aria-label={`Remove ${exportData.filename}`}
+                    data-testid="accounting-export-remove-button"
+                    title="Clear the uploaded export so suggestions revert to your typed-in priors"
+                  >
+                    Remove uploaded export
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="text-xs text-rose-800 whitespace-nowrap"
+                    data-testid="accounting-export-remove-confirm-prompt"
+                  >
+                    Remove this upload?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={removeUpload}
+                    className="text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded px-2 py-1 whitespace-nowrap"
+                    data-testid="accounting-export-remove-confirm"
+                  >
+                    Yes, remove
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRemoveExport(false)}
+                    className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
+                    data-testid="accounting-export-remove-cancel"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
