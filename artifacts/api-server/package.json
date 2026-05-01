@@ -21,6 +21,7 @@
     "test:decision-history": "tsx ./tests/decision-history.ts",
     "test:decision-history-pdf": "tsx ./tests/decision-history-pdf.ts",
     "test:decision-comparison-pdf-route": "tsx ./tests/decision-comparison-pdf-route.ts",
+    "test:shared-decision-comparison-pdf-route": "tsx ./tests/shared-decision-comparison-pdf-route.ts",
     "test:health": "tsx ./tests/health-endpoints.ts",
     "test:board-packet-cap-insight": "tsx ./tests/board-packet-cap-insight.ts",
     "test:inline-rationale-rollup": "tsx ./tests/inline-rationale-rollup.ts",
