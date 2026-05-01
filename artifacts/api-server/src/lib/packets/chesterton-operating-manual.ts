@@ -3,6 +3,7 @@
 // named ranges defined on GETTING STARTED so editing inputs cascades.
 
 import ExcelJS from "exceljs";
+import { HyperFormula } from "hyperformula";
 import {
   hdr,
   sec,
@@ -24,6 +25,7 @@ const TAB_SALARY = "2 - SALARY SCHEDULE";
 const TAB_ASSUMPTIONS = "3 - KEY ASSUMPTIONS";
 const TAB_FUNDRAISING = "4 - FUNDRAISING GOALS";
 const TAB_GIFT_CHART = "5 - GIFT CHART";
+const TAB_GIFT_CHART_AUTO = "5 - GIFT CHART AUTOMATIC";
 const TAB_RECRUITING = "7 - RECRUITING PIPELINE";
 const TAB_CADENCE = "Cadence";
 const TAB_TRAINING = "CSN Training Schedule";
@@ -36,6 +38,7 @@ export const CHESTERTON_TAB_NAMES = [
   TAB_ASSUMPTIONS,
   TAB_FUNDRAISING,
   TAB_GIFT_CHART,
+  TAB_GIFT_CHART_AUTO,
   TAB_RECRUITING,
   TAB_CADENCE,
   TAB_TRAINING,
@@ -264,6 +267,204 @@ function buildGettingStarted(
 
   ws.getCell("E5").value = "Tip: every cell on a numbered tab pulls from the values you enter here. Update once and the whole workbook re-calculates.";
   ws.getCell("E5").alignment = { wrapText: true, vertical: "top" };
+
+  // ── Verbatim content from the source workbook's GETTING STARTED tab. ──
+  // We append BELOW the active inputs so the named-range positions used
+  // by other tabs (and asserted by the test suite) stay fixed.
+  let v = r + 2;
+
+  // "About this workbook" intro and tutorial pointer.
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "About this workbook";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  for (const line of [
+    "Successful Chesterton Academy member schools operate against a carefully-planned set of annual objectives and milestones.",
+    "The CSN Operating Manual will help your team plan your year, set clear objectives, and track progress.",
+    "This collaborative process of planning and shared accountability is designed to help your team meet CSN standards of excellence.",
+  ]) {
+    ws.mergeCells(`B${v}:E${v}`);
+    ws.getCell(`B${v}`).value = line;
+    ws.getCell(`B${v}`).alignment = { wrapText: true, vertical: "top" };
+    v += 1;
+  }
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "BEFORE YOU BEGIN: VIEW THE OPERATING MANUAL TUTORIAL PLAYLIST (SHORT VIDEOS)";
+  ws.getCell(`B${v}`).font = { italic: true, color: { argb: NAVY } };
+  v += 2;
+
+  // Section I — Establish Objectives and Create Annual Plan.
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "I. ESTABLISH OBJECTIVES AND CREATE ANNUAL PLAN";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  const planSteps: Array<[string, string, string]> = [
+    [
+      "STEP I - ESTABLISH YOUR ANNUAL OBJECTIVES AND PRIORITIES [BOARD AND LEADERSHIP]",
+      "Objective: Calculate fundraising goals based on projected tuition revenue, operating expenses, and other assumptions",
+      "See Worksheets: 1 - Financial Projections Template; 2 - Salary Schedule; 3 - Key Assumptions",
+    ],
+    [
+      "STEP II - ESTABLISH FUNDRAISING GOALS BY CAMPAIGN COMPONENT [LEADERSHIP, FUNDRAISING TEAM]",
+      "Objective: Map out fundraising results required to meet goal by June 30; establish parent  participation in fundraising",
+      "See Worksheets: 4 - Fundraising Goals, 5 - Gift Chart, 6 - Parent Handout",
+    ],
+    [
+      "STEP III - ESTABLISH RECRUITING GOALS TO MEET ENROLLMENT TARGETS [LEADERSHIP, RECRUITING TEAM]",
+      "Objective: Map out prospects and process required to meet enrollment goals.",
+      "See Worksheet: 7 - Recruiting Pipeline",
+    ],
+    [
+      "STEP IV - CREATE YOUR ANNUAL PLAN [ALL TEAMS]",
+      "Objective: Map out annual plan to meet your objectives; review CSN training and resources for further support",
+      "See Worksheet: 8 - Chesterton Cadence; 9 - CSN Seminars",
+    ],
+  ];
+  for (const [step, objective, refs] of planSteps) {
+    ws.mergeCells(`B${v}:E${v}`);
+    ws.getCell(`B${v}`).value = step;
+    ws.getCell(`B${v}`).font = { bold: true };
+    ws.getCell(`B${v}`).alignment = { wrapText: true, vertical: "top" };
+    v += 1;
+    ws.mergeCells(`B${v}:E${v}`);
+    ws.getCell(`B${v}`).value = objective;
+    ws.getCell(`B${v}`).alignment = { wrapText: true, vertical: "top" };
+    v += 1;
+    ws.mergeCells(`B${v}:E${v}`);
+    ws.getCell(`B${v}`).value = refs;
+    ws.getCell(`B${v}`).font = { italic: true };
+    ws.getCell(`B${v}`).alignment = { wrapText: true, vertical: "top" };
+    v += 2;
+  }
+
+  // Section II — Customize This Template (verbatim labels from source rows
+  // 30-36 of "GETTING STARTED"). The actual editable inputs live at the
+  // top of this tab; we echo the source labels here for completeness.
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "II. CUSTOMIZE THIS TEMPLATE";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  for (const label of [
+    "Enter school name >>",
+    "Enter planning year >>",
+    "Enter Starting Tuition>>",
+    "Enter % Increase tuition Yr over Yr.>>",
+    "Enter Starting Salary for Teacher>>",
+    "Enter Student Fee (Book)>>",
+    "Benefits first Year whole dollar",
+    "Enter expected student enrollment>>",
+  ]) {
+    ws.mergeCells(`B${v}:E${v}`);
+    ws.getCell(`B${v}`).value = label;
+    ws.getCell(`B${v}`).alignment = { wrapText: true, vertical: "top" };
+    v += 1;
+  }
+  v += 1;
+
+  // Section III — Sustainability Drivers and Owners (table mirrors source).
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "III. SUSTAINABILITY DRIVERS AND OWNERS";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 2;
+  ws.getCell(`B${v}`).value = "Drivers";
+  ws.getCell(`C${v}`).value = "Primary Owner";
+  ws.getCell(`D${v}`).value = "Secondary Owners";
+  hdr(ws, v, 4);
+  v += 1;
+  const sustainability: Array<[string, string, string]> = [
+    ["GOVERNANCE", "Board Chair", "Board/Committees"],
+    ["TUITION REVENUE", "Executive Director", "Headmaster"],
+    ["FUNDRAISING", "Executive Director", "Board"],
+    ["SCHOOL OPERATIONS", "Executive Director", "Board"],
+  ];
+  for (const [driver, primary, secondary] of sustainability) {
+    ws.getCell(`B${v}`).value = driver;
+    ws.getCell(`B${v}`).font = { bold: true };
+    ws.getCell(`C${v}`).value = primary;
+    ws.getCell(`D${v}`).value = secondary;
+    v += 1;
+  }
+  v += 1;
+
+  // Section IV — Document Formatting (fonts + brand colors verbatim).
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "IV. DOCUMENT FORMATTING – FONTS AND COLORS";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 2;
+  ws.getCell(`B${v}`).value = "Playfair Display";
+  ws.getCell(`C${v}`).value = "Download font";
+  ws.getCell(`C${v}`).font = { italic: true };
+  v += 1;
+  ws.getCell(`B${v}`).value = "Montserrat";
+  ws.getCell(`C${v}`).value = "Download font";
+  ws.getCell(`C${v}`).font = { italic: true };
+  v += 2;
+  const palette: Array<[string, string]> = [
+    ["Spirit Blue", "#19435D"],
+    ["Character Gold", "#A29061"],
+    ["Intellect Blue", "#071F30"],
+    ["Truth Red", "#933030"],
+    ["Faith Ivory", "#EBE5D8"],
+  ];
+  for (const [name, hex] of palette) {
+    ws.getCell(`B${v}`).value = name;
+    ws.getCell(`C${v}`).value = hex;
+    ws.getCell(`C${v}`).font = { name: "Consolas" };
+    // Apply the brand color as a small swatch to the right of the hex.
+    const swatch = ws.getCell(`D${v}`);
+    swatch.value = "";
+    const argb = `FF${hex.replace("#", "").toUpperCase()}`;
+    swatch.fill = { type: "pattern", pattern: "solid", fgColor: { argb } };
+    v += 1;
+  }
+  v += 1;
+
+  // Section V — Yearly Assumed Costs (freshman through senior).
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "V. Yearly Assumed Costs";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  const yearlyCosts: Array<[string, number]> = [
+    ["Freshman", 937],
+    ["Sophomore", 836.5],
+    ["Junior", 530.95],
+    ["Senior", 392],
+  ];
+  for (const [grade, cost] of yearlyCosts) {
+    ws.getCell(`B${v}`).value = grade;
+    ws.getCell(`C${v}`).value = cost;
+    ws.getCell(`C${v}`).numFmt = CUR;
+    v += 1;
+  }
+  v += 1;
+
+  // Section VI — Admission Pipeline Conversion Percentages
+  // (SHADOW / APPLY / ENROLL — matches the rates the Recruiting tab pulls in).
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "VI. Admission Pipeline Conversion Percentages";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 2;
+  ws.getCell(`C${v}`).value = "Conversion %";
+  ws.getCell(`C${v}`).font = { bold: true };
+  v += 1;
+  const conversionRates: Array<[string, number]> = [
+    ["SHADOW CONVERSION RATE", 0.40],
+    ["APPLY CONVERSION RATE", 0.80],
+    ["ENROLL CONVERSION RATE", 0.90],
+  ];
+  for (const [label, rate] of conversionRates) {
+    ws.getCell(`B${v}`).value = label;
+    ws.getCell(`C${v}`).value = rate;
+    ws.getCell(`C${v}`).numFmt = PCT;
+    v += 1;
+  }
+  v += 1;
+
+  // CSN copyright (verbatim).
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2026. All rights reserved.";
+  ws.getCell(`B${v}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`B${v}`).alignment = { horizontal: "center" };
 
   return { schoolNameAddress, planYearAddress, avgSalaryAddress, tfgAddress };
 }
@@ -565,6 +766,132 @@ function buildProjections(
     c.numFmt = CUR;
     c.font = { bold: true };
   }
+  row += 2;
+
+  // ── ADMINISTRATIVE SALARIES — verbatim role labels from source workbook
+  // (rows 49-56 of "1 - 5 YR  FINANCIAL PROJECTIONS"). Cost cells are left
+  // empty for the founder to fill in based on hiring phase.
+  sec(ws, row, 8);
+  ws.getCell(`A${row}`).value = "Administrative Salaries";
+  row += 1;
+  for (const role of [
+    "Headmaster Admin Salary",
+    "Executive Director",
+    "Advancement Director",
+    "School Administrator",
+    "Marketing/Communications",
+    "Business Manager / Accountant",
+    "Admissions",
+  ]) {
+    ws.getCell(`A${row}`).value = role;
+    for (let col = 2; col <= 8; col++) {
+      const c = ws.getCell(row, col);
+      c.value = 0;
+      c.numFmt = CUR;
+      inputCell(c);
+    }
+    row += 1;
+  }
+  row += 1;
+
+  // ── IV. OPERATING EXPENSE — General & Admin line items (verbatim
+  // from "GENERAL & ADMIN" section of source projections tab).
+  sec(ws, row, 8);
+  ws.getCell(`A${row}`).value = "IV. OPERATING EXPENSE — GENERAL & ADMIN";
+  row += 1;
+  ws.getCell(`A${row}`).value = "Line Item";
+  ws.getCell(`B${row}`).value = "Cost Per Student Factor";
+  // Year columns (C-H) for the G&A block; col B is the per-student input.
+  for (let i = 1; i < 7; i++) ws.getCell(row, 2 + i).value = `Year ${i}`;
+  hdr(ws, row, 8);
+  row += 1;
+  const gaItems: Array<[string, number | null]> = [
+    ["Facility Rental", 1700],
+    ["Insurance", null],
+    ["Administrative Expense", 400],
+    ["Tech Expense Hardware/Software", 175],
+    ["Marketing (Promo/Printing)", 125],
+    ["Website", null],
+    ["Curriculum Expense", null],
+    ["Educational Materials", 125],
+    ["Special Events, Retreats, House Shirts", 225],
+    ["Facilities and Improvements", null],
+    ["CSN Fees inclusive Y/Y Inflation", 675],
+    ["CSN Accreditation", null],
+    ["CSN Conferences", null],
+  ];
+  for (const [label, factor] of gaItems) {
+    ws.getCell(`A${row}`).value = label;
+    if (factor != null) {
+      const f = ws.getCell(`B${row}`);
+      f.value = factor;
+      f.numFmt = CUR;
+      inputCell(f);
+    }
+    row += 1;
+  }
+  row += 1;
+
+  // ── V. FUNDRAISING GAP (verbatim header + footnote from source).
+  sec(ws, row, 8);
+  ws.getCell(`A${row}`).value = "V. FUNDRAISING GAP";
+  row += 1;
+  ws.mergeCells(`A${row}:H${row}`);
+  ws.getCell(`A${row}`).value = "*This is the minimum amount to be raised in full by June 30 of the prior phase or academic year.";
+  ws.getCell(`A${row}`).font = { italic: true };
+  ws.getCell(`A${row}`).alignment = { wrapText: true };
+  row += 2;
+
+  // ── VI. KEY INDICATORS — verbatim labels from "V. KEY INDICATORS" in source.
+  sec(ws, row, 8);
+  ws.getCell(`A${row}`).value = "VI. KEY INDICATORS";
+  row += 1;
+  for (const label of [
+    "Avg Cost per Student",
+    "Avg Tuition per Student",
+    "Fundraising Gap per Student",
+    "Fundraising donations as % of budget",
+    "Tuition revenue as % of budget",
+    "Y/Y Enrollment % +/- (# students)",
+    "Y/Y Net Revenue $ +/-",
+    "Y/Y Operating Cost $ +/-",
+  ]) {
+    ws.getCell(`A${row}`).value = label;
+    row += 1;
+  }
+  row += 1;
+
+  // Verbatim Phase headers from source row 5-6 of the projections tab.
+  // Source labels every column with the operating phase: Phase I "DISCOVERY",
+  // Phase II "PREPARATION", Phase III "ACTIVATION", Phase IV "LAUNCH AND
+  // ONGOING OPERATIONS" (used for years 1-6).
+  sec(ws, row, 8);
+  ws.getCell(`A${row}`).value = "Source Phase Headers (verbatim)";
+  row += 1;
+  for (const phase of [
+    "Phase I — DISCOVERY",
+    "Phase II — PREPARATION",
+    "Phase III — ACTIVATION",
+    "Phase IV — LAUNCH AND ONGOING OPERATIONS",
+  ]) {
+    ws.mergeCells(`A${row}:H${row}`);
+    ws.getCell(`A${row}`).value = phase;
+    row += 1;
+  }
+  row += 1;
+  ws.mergeCells(`A${row}:H${row}`);
+  ws.getCell(`A${row}`).value = "NOTE: This template is provided for guidance only.";
+  ws.getCell(`A${row}`).font = { italic: true };
+  row += 1;
+  ws.mergeCells(`A${row}:H${row}`);
+  ws.getCell(`A${row}`).value = "Last Updated: 11/23/2022";
+  ws.getCell(`A${row}`).font = { italic: true, size: 9 };
+  ws.getCell(`A${row}`).alignment = { horizontal: "right" };
+  row += 1;
+  ws.mergeCells(`A${row}:H${row}`);
+  ws.getCell(`A${row}`).value = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2026. All rights reserved.";
+  ws.getCell(`A${row}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`A${row}`).alignment = { horizontal: "center" };
 }
 
 function buildSalarySchedule(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
@@ -663,6 +990,34 @@ function buildSalarySchedule(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
       }
     }
   }
+
+  // ── Verbatim Hours table (source rows 30-33 of "2 - SALARY SCHEDULE")
+  // and the "Average Salary per Period Rate" label (source row 31, col 7).
+  const hoursRow = 31;
+  ws.getCell(`A${hoursRow}`).value = "Full Time";
+  ws.getCell(`B${hoursRow}`).value = 24;
+  ws.getCell(`C${hoursRow}`).value = "Hours";
+  ws.getCell(`A${hoursRow + 1}`).value = "1/4 Time";
+  ws.getCell(`B${hoursRow + 1}`).value = 6;
+  ws.getCell(`C${hoursRow + 1}`).value = "Hours";
+  ws.getCell(`A${hoursRow + 2}`).value = "1/2 Time";
+  ws.getCell(`B${hoursRow + 2}`).value = 12;
+  ws.getCell(`C${hoursRow + 2}`).value = "Hours";
+  ws.getCell(`A${hoursRow + 3}`).value = "3/4 Time";
+  ws.getCell(`B${hoursRow + 3}`).value = 18;
+  ws.getCell(`C${hoursRow + 3}`).value = "Hours";
+  for (let r = hoursRow; r < hoursRow + 4; r++) {
+    ws.getCell(`A${r}`).font = { bold: true };
+    ws.getCell(`B${r}`).numFmt = NUM;
+  }
+  ws.getCell(`G${hoursRow}`).value = "Average Salary per Period Rate";
+  ws.getCell(`G${hoursRow}`).font = { italic: true };
+
+  // Verbatim copyright (source row 35).
+  ws.mergeCells(`A${hoursRow + 5}:Q${hoursRow + 5}`);
+  ws.getCell(`A${hoursRow + 5}`).value = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2025. All rights reserved.";
+  ws.getCell(`A${hoursRow + 5}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`A${hoursRow + 5}`).alignment = { horizontal: "center" };
 }
 
 function buildKeyAssumptions(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
@@ -714,6 +1069,161 @@ function buildKeyAssumptions(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
     ws.getCell(`D${row}`).value = f.location || "";
     row += 1;
   }
+  row += 2;
+
+  // ── Verbatim text reproduction of "3 - KEY ASSUMPTIONS" source tab.
+  // Six numbered sections; every heading, table row, and bullet matches
+  // the source workbook word-for-word so a side-by-side reader sees the
+  // same content.
+  ws.mergeCells(`B${row}:D${row}`);
+  ws.getCell(`B${row}`).value = "(1) COMPOSITION OF FRESHMAN CLASS";
+  ws.getCell(`B${row}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  row += 2;
+  ws.getCell(`B${row}`).value = "Recruiting Source";
+  ws.getCell(`C${row}`).value = "# Students";
+  ws.getCell(`D${row}`).value = "Notes";
+  hdr(ws, row, 4);
+  row += 1;
+  const compositionRows: Array<[string, string, string]> = [
+    ["Siblings of current students", "XX", "If applicable"],
+    ["[Feeder school] graduates", "XX", "This is xx% of current [feeder school] 8th grade class"],
+    ["Homeschool students", "XX", "Homeschool co-op name(s)"],
+    ["Other source", "XX", "Describe here"],
+    ["TOTAL", "XX", ""],
+  ];
+  for (const [src, count, note] of compositionRows) {
+    ws.getCell(`B${row}`).value = src;
+    ws.getCell(`C${row}`).value = count;
+    ws.getCell(`D${row}`).value = note;
+    ws.getCell(`D${row}`).alignment = { wrapText: true };
+    if (src === "TOTAL") ws.getCell(`B${row}`).font = { bold: true };
+    row += 1;
+  }
+  row += 1;
+
+  ws.mergeCells(`B${row}:D${row}`);
+  ws.getCell(`B${row}`).value = "(2) RECRUITING STRATEGY AND PROSPECTS";
+  ws.getCell(`B${row}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  row += 1;
+  for (const bullet of [
+    "- Recruiting team members will focus on specific geographic areas, including parochial and private K-8 schools, homeschool co-ops",
+    "- The following data will be gathered for prospects: parent name - parish - student name - gender - current school - current grade",
+  ]) {
+    ws.mergeCells(`B${row}:D${row}`);
+    ws.getCell(`B${row}`).value = bullet;
+    ws.getCell(`B${row}`).alignment = { wrapText: true, vertical: "top" };
+    row += 1;
+  }
+  row += 1;
+  ws.getCell(`B${row}`).value = "School Recruiting Targets";
+  ws.getCell(`B${row}`).font = { bold: true };
+  ws.getCell(`D${row}`).value = "Current Student Enrolled";
+  ws.getCell(`D${row}`).font = { bold: true };
+  row += 1;
+  ws.getCell(`B${row}`).value = "School";
+  ws.getCell(`C${row}`).value = "Location";
+  ws.getCell(`D${row}`).value = "7th";
+  hdr(ws, row, 4);
+  row += 1;
+  for (const target of [
+    "School Name (K-8 parochial)",
+    "School Name (K-8 parochial)",
+    "School Name (K-8 parochial)",
+    "School Name (K-8 parochial)",
+    "Homeschool Co-op",
+    "Homeschool Co-op",
+    "Homeschool Co-op",
+    "Homeschool Co-op",
+    "School Name (charter)",
+    "School Name (charter)",
+    "School Name (charter)",
+  ]) {
+    ws.getCell(`B${row}`).value = target;
+    ws.getCell(`C${row}`).value = "TBD";
+    row += 1;
+  }
+  row += 1;
+
+  ws.mergeCells(`B${row}:D${row}`);
+  ws.getCell(`B${row}`).value = "(3) OTHER FINANCIAL ASSUMPTIONS";
+  ws.getCell(`B${row}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  row += 1;
+  for (const bullet of [
+    "In order to limit costs associated with excess capacity, we will fill only one section per grade for a maximum of 23 students per grade",
+    "Assume annual attrition of ~10% will be offset by incoming transfer students.",
+    "Assume each student / parent will be trained in peer to peer fundraising to help cover fundraising gap per student",
+    `Fundraising goal for ${(data.chesterton?.planningYear ?? 2027)}-${((data.chesterton?.planningYear ?? 2027) + 1)} is $${(data.chesterton?.totalFundraisingGoal ?? 356526).toLocaleString()}; fundraising plan to be built around Gala, annual appeals, ongoing major gift fundraising`,
+    "Our current facility will accommodate projected enrollment growth through 20xx.",
+  ]) {
+    ws.mergeCells(`B${row}:D${row}`);
+    ws.getCell(`B${row}`).value = bullet;
+    ws.getCell(`B${row}`).alignment = { wrapText: true, vertical: "top" };
+    row += 1;
+  }
+  row += 1;
+
+  ws.mergeCells(`B${row}:D${row}`);
+  ws.getCell(`B${row}`).value = "(4)  PROSPECTIVE FUTURE FACILITIES";
+  ws.getCell(`B${row}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  row += 2;
+  ws.getCell(`B${row}`).value = "Facility";
+  ws.getCell(`C${row}`).value = "Capacity";
+  ws.getCell(`D${row}`).value = "Location";
+  hdr(ws, row, 4);
+  row += 1;
+  const facilityFallback: Array<[string, number, string]> = [
+    ["Location 1", 70, "TBD"],
+    ["Location 2", 100, "TBD"],
+    ["Location 3", 250, "TBD"],
+  ];
+  for (const [name, cap, loc] of facilityFallback) {
+    ws.getCell(`B${row}`).value = name;
+    ws.getCell(`C${row}`).value = cap;
+    ws.getCell(`C${row}`).numFmt = NUM;
+    ws.getCell(`D${row}`).value = loc;
+    row += 1;
+  }
+  row += 1;
+
+  ws.mergeCells(`B${row}:D${row}`);
+  ws.getCell(`B${row}`).value = "(5) PRIESTLY OUTREACH";
+  ws.getCell(`B${row}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  row += 2;
+  ws.getCell(`B${row}`).value = "Father TBD";
+  ws.getCell(`B${row}`).font = { bold: true };
+  ws.getCell(`C${row}`).value = "Parish Name";
+  ws.getCell(`D${row}`).value = "Team Member(s) Assigned";
+  hdr(ws, row, 4);
+  row += 1;
+  for (let i = 0; i < 7; i++) {
+    ws.getCell(`B${row}`).value = "Father TBD";
+    ws.getCell(`C${row}`).value = "Parish Name";
+    ws.getCell(`D${row}`).value = "Team Member(s) Assigned";
+    row += 1;
+  }
+  row += 1;
+
+  ws.mergeCells(`B${row}:D${row}`);
+  ws.getCell(`B${row}`).value = "(6) OTHER KEY INFLUENCERS / KEY STAKEHOLDERS";
+  ws.getCell(`B${row}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  row += 1;
+  ws.getCell(`B${row}`).value = "Name";
+  ws.getCell(`C${row}`).value = "Affiliation";
+  ws.getCell(`D${row}`).value = "Team Member Assigned";
+  hdr(ws, row, 4);
+  row += 1;
+  for (const k of data.chesterton?.keyInfluencers ?? []) {
+    ws.getCell(`B${row}`).value = k.name;
+    ws.getCell(`C${row}`).value = k.affiliation || "";
+    ws.getCell(`D${row}`).value = k.teamMember || "";
+    row += 1;
+  }
+  row += 1;
+
+  ws.mergeCells(`B${row}:D${row}`);
+  ws.getCell(`B${row}`).value = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2026. All rights reserved.";
+  ws.getCell(`B${row}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`B${row}`).alignment = { horizontal: "center" };
 }
 
 function buildFundraisingGoals(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
@@ -789,6 +1299,145 @@ function buildFundraisingGoals(wb: ExcelJS.Workbook, data: ChestertonModelInput)
   ws.getCell(`C${r}`).font = { bold: true };
   ws.getCell(`D${r}`).numFmt = NUM;
   ws.getCell(`D${r}`).font = { bold: true };
+
+  // ── Verbatim section headers + campaign descriptions from
+  // "4 - FUNDRAISNG GOALS" source tab (note: source tab name has a typo
+  // — preserved when noting the source, not in our cleaned tab name).
+  let v = r + 2;
+  ws.mergeCells(`B${v}:F${v}`);
+  ws.getCell(`B${v}`).value = "I. FUNDRAISING GOAL";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  ws.mergeCells(`B${v}:F${v}`);
+  ws.getCell(`B${v}`).value = { formula: `="Total fundraising goal: " & TEXT(TFG, "$#,##0")`, result: `Total fundraising goal: $${cachedTFG.toLocaleString()}` };
+  ws.getCell(`B${v}`).alignment = { wrapText: true };
+  v += 2;
+
+  ws.mergeCells(`B${v}:F${v}`);
+  ws.getCell(`B${v}`).value = "II. FUNDRAISING GOAL - DETAIL";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  // Verbatim row labels from source rows 7-15, col 7 (SUMMARY) and the
+  // adjoining "NOTES" label at col 10.
+  for (const summaryLabel of [
+    "SUMMARY",
+    "A - Booster / Special Campaign",
+    "B - Giving Tuesday",
+    "C - Year-End Appeal",
+    "D - Annual Gala",
+    "E - Annual Appeal",
+    "F - Major Gifts",
+    "TOTAL, GROSS",
+    "Less Gala expense",
+    "TOTAL, NET",
+  ]) {
+    ws.mergeCells(`B${v}:F${v}`);
+    ws.getCell(`B${v}`).value = summaryLabel;
+    ws.getCell(`B${v}`).alignment = { wrapText: true };
+    if (summaryLabel === "SUMMARY" || summaryLabel.startsWith("TOTAL")) {
+      ws.getCell(`B${v}`).font = { bold: true };
+    }
+    v += 1;
+  }
+  v += 1;
+
+  ws.mergeCells(`B${v}:F${v}`);
+  ws.getCell(`B${v}`).value = "III. FUNDRAISING COMPONENTS";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  ws.getCell(`B${v}`).value = "Campaign";
+  ws.getCell(`C${v}`).value = "Date";
+  ws.getCell(`D${v}`).value = "Donors";
+  ws.mergeCells(`E${v}:F${v}`);
+  ws.getCell(`E${v}`).value = "Description / Event";
+  hdr(ws, v, 6);
+  v += 1;
+  // Verbatim from source rows 19-22 (date) and 23-43 (event):
+  //   A: "Launch: Ongoing (e.g., Scrip, special opp)"
+  //   B: "Date: November xx, 20xx (Giving Tuesday)" / "Event: One Day, Online Fundraiser"
+  //   C: "Date: November / December 20xx" / "Event: Direct Mail and Eblast"
+  //   D: "Date:" (blank in source) / Annual Gala (assume table)
+  //   E: "Date: February through June" / "Description: Coordinated fundraising appeal"
+  //   F: "Date: October - June" / "Description: Gala challenge; private foundations; other major gifts"
+  const campaigns: Array<[string, string, string, string]> = [
+    ["A - BOOSTER OR SPECIAL CAMPAIGN", "Launch: Ongoing (e.g., Scrip, special opp)", "Assume:", ""],
+    ["B - ONE-DAY CAMPAIGN", "Date: November xx, 20xx (Giving Tuesday)", "", "Event: One Day, Online Fundraiser"],
+    ["C - YEAR-END CAMPAIGN", "Date: November / December 20xx", "", "Event: Direct Mail and Eblast"],
+    ["D - ANNUAL GALA", "Date: ", "Assume:", "Price per Ticket / Cost per Ticket / Average Gift Per Guest / Average Sponsorship / Program Ads / Raffle Tickets / The Big Ask / Grand Raffle / Silent Auction"],
+    ["E - ANNUAL APPEAL", "Date: February through June", "", "Description: Coordinated fundraising appeal"],
+    ["F - MAJOR GIFTS", "Date: October - June", "", "Description: Gala challenge; private foundations; other major gifts"],
+  ];
+  for (const [code, date, donors, desc] of campaigns) {
+    ws.getCell(`B${v}`).value = code;
+    ws.getCell(`B${v}`).font = { bold: true };
+    ws.getCell(`C${v}`).value = date;
+    ws.getCell(`D${v}`).value = donors;
+    ws.mergeCells(`E${v}:F${v}`);
+    ws.getCell(`E${v}`).value = desc;
+    ws.getCell(`E${v}`).alignment = { wrapText: true };
+    v += 1;
+  }
+  v += 1;
+
+  // Verbatim Annual Gala detail block (source rows 22-37, columns J-K
+  // of "4 - FUNDRAISING GOALS"). Reproduces the price/cost assumptions
+  // and the revenue line items the source tab uses to build the gala
+  // budget.
+  ws.mergeCells(`B${v}:F${v}`);
+  ws.getCell(`B${v}`).value = "D - ANNUAL GALA — DETAIL";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  const galaAssumptions: Array<[string, number]> = [
+    ["Price per Ticket", 125],
+    ["Cost per Ticket", 92],
+    ["Average Gift Per Guest", 200],
+    ["Average Price Silent Auction Item", 150],
+    ["Average Sponsorship Cost", 2500],
+    ["Program Ads Page Goal", 400],
+    ["Raffle Ticket Price", 50],
+    ["Average Pre Event Gift", 3000],
+  ];
+  for (const [label, amt] of galaAssumptions) {
+    ws.getCell(`B${v}`).value = label;
+    ws.getCell(`E${v}`).value = amt;
+    ws.getCell(`E${v}`).numFmt = CUR;
+    v += 1;
+  }
+  v += 1;
+  ws.getCell(`B${v}`).value = "Revenue Element";
+  ws.getCell(`C${v}`).value = "#";
+  ws.getCell(`D${v}`).value = "Notes";
+  hdr(ws, v, 6);
+  v += 1;
+  const galaRevenue: Array<[string, string, string]> = [
+    ["Paying Guests", "500", "Tickets x Price per Ticket"],
+    ["Sponsorships", "22", "Sponsorships x Average Sponsorship Cost"],
+    ["Program Ads", "42", "88 x Program Ads Page Goal"],
+    ["Pre-Event Gifts", "4", "Pre-Event Gifts x Average Pre Event Gift"],
+    ["The Big Ask", "Paying Guests x 30%", "Big Ask count x Average Gift Per Guest"],
+    ["Grand Raffle", "1000", "Raffle tickets x Raffle Ticket Price"],
+    ["Silent Auction", "40", "Silent Auction items x Average Price Silent Auction Item"],
+  ];
+  for (const [el, count, note] of galaRevenue) {
+    ws.getCell(`B${v}`).value = el;
+    ws.getCell(`C${v}`).value = count;
+    ws.getCell(`D${v}`).value = note;
+    ws.getCell(`D${v}`).alignment = { wrapText: true };
+    v += 1;
+  }
+  v += 1;
+
+  // Source workbook places "FUNDRAISNG PLAN FOR" (sic — missing 'I')
+  // at row 3, column K of "4 - FUNDRAISING GOALS". Reproduce verbatim
+  // in the same cell-position semantics: bold header label.
+  ws.getCell(`B${v}`).value = "FUNDRAISNG PLAN FOR";
+  ws.getCell(`B${v}`).font = { bold: true };
+  v += 2;
+
+  ws.mergeCells(`B${v}:F${v}`);
+  ws.getCell(`B${v}`).value = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2026. All rights reserved.";
+  ws.getCell(`B${v}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`B${v}`).alignment = { horizontal: "center" };
 }
 
 function buildGiftChart(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
@@ -857,6 +1506,358 @@ function buildGiftChart(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
     : (data.chesterton?.totalFundraisingGoal ?? 0);
   ws.getCell(`E${r}`).value = { formula: `=TFG`, result: tfgCached };
   ws.getCell(`E${r}`).numFmt = CUR;
+
+  // ── Verbatim source rows from "5 - GIFT CHART".
+  // The source tab carries a single instruction line on row 2 / col B
+  // ("ENTER GIFT AMOUNTS AND # OF GIFTS") plus the standard 12-tier
+  // donor pyramid. Reproduce both verbatim below the dynamic table so
+  // the export round-trips every cell in the source.
+  let v = r + 2;
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "ENTER GIFT AMOUNTS AND # OF GIFTS";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 2;
+  hdr(ws, v, 5);
+  ws.getCell(`B${v}`).value = "Gift Amount";
+  ws.getCell(`C${v}`).value = "# Gifts";
+  ws.getCell(`D${v}`).value = "# Prospects";
+  ws.getCell(`E${v}`).value = "Total";
+  v += 1;
+  // Standard 12-tier donor pyramid (source rows 5-16).
+  const pyramidStart = v;
+  const sourcePyramid: Array<[number, number, number]> = [
+    [50000, 1, 4],
+    [25000, 2, 8],
+    [20000, 2, 8],
+    [10000, 4, 16],
+    [7500, 6, 24],
+    [5000, 8, 32],
+    [2500, 10, 40],
+    [1000, 15, 60],
+    [500, 20, 80],
+    [250, 30, 120],
+    [100, 40, 160],
+    [25, 60, 240],
+  ];
+  for (const [gift, gifts, prospects] of sourcePyramid) {
+    ws.getCell(`B${v}`).value = gift;
+    ws.getCell(`B${v}`).numFmt = CUR;
+    ws.getCell(`C${v}`).value = gifts;
+    ws.getCell(`C${v}`).numFmt = NUM;
+    ws.getCell(`D${v}`).value = prospects;
+    ws.getCell(`D${v}`).numFmt = NUM;
+    setFormula(ws.getCell(`E${v}`), `=B${v}*C${v}`, gift * gifts);
+    ws.getCell(`E${v}`).numFmt = CUR;
+    v += 1;
+  }
+  ws.getCell(`B${v}`).value = "Total";
+  ws.getCell(`B${v}`).font = { bold: true };
+  setFormula(
+    ws.getCell(`E${v}`),
+    `=SUM(E${pyramidStart}:E${v - 1})`,
+    sourcePyramid.reduce((s, [g, n]) => s + g * n, 0),
+  );
+  ws.getCell(`E${v}`).numFmt = CUR;
+  ws.getCell(`E${v}`).font = { bold: true };
+  v += 2;
+
+  ws.mergeCells(`B${v}:E${v}`);
+  ws.getCell(`B${v}`).value = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2026. All rights reserved.";
+  ws.getCell(`B${v}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`B${v}`).alignment = { horizontal: "center" };
+}
+
+// Source tab "5 - GIFT CHART AUTOMATIC" — formula-driven gift pyramid
+// derived from TFG, Top Gift %, Number of Gifts, and Growth Factor.
+// Reproduced verbatim from the source workbook (rows 2-28).
+function buildGiftChartAutomatic(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
+  const ws = wb.addWorksheet(TAB_GIFT_CHART_AUTO, {
+    properties: { tabColor: { argb: EVERGREEN } },
+    views: [{ showGridLines: false }],
+  });
+  ws.getColumn(1).width = 8;
+  ws.getColumn(2).width = 14;
+  ws.getColumn(3).width = 10;
+  ws.getColumn(4).width = 14;
+  ws.getColumn(5).width = 12;
+  ws.getColumn(6).width = 14;
+  ws.getColumn(7).width = 14;
+  ws.getColumn(8).width = 14;
+  ws.getColumn(9).width = 14;
+
+  // Row 2 — verbatim School_Name + Plan_Year banner from source.
+  setFormula(
+    ws.getCell("B2"),
+    `=School_Name`,
+    data.schoolName ?? "Chesterton Academy of [enter school name]",
+  );
+  setFormula(ws.getCell("H2"), `=Plan_Year`, data.chesterton?.planningYear ?? 2027);
+
+  // Row 3 — verbatim "SAMPLE GIFT CHART" / "PLANNING FOR" headers.
+  ws.getCell("B3").value = "SAMPLE GIFT CHART";
+  ws.getCell("B3").font = { bold: true, size: 14, color: { argb: NAVY } };
+  ws.getCell("H3").value = "PLANNING FOR";
+  ws.getCell("H3").font = { italic: true };
+
+  // Row 7 — verbatim header row (with newlines preserved).
+  const headerRow = 7;
+  ws.getCell(`A${headerRow}`).value = "Level";
+  ws.getCell(`B${headerRow}`).value = "Gift Amount ";
+  ws.getCell(`C${headerRow}`).value = "# Gifts";
+  ws.getCell(`D${headerRow}`).value = "# Prospects";
+  ws.getCell(`E${headerRow}`).value = "Total\nGifts";
+  ws.getCell(`F${headerRow}`).value = "Cumulative\n Total $";
+  ws.getCell(`G${headerRow}`).value = "Cumulative\n Total %";
+  ws.getCell(`H${headerRow}`).value = "Weight";
+  hdr(ws, headerRow, 8);
+  for (let c = 1; c <= 8; c++) {
+    ws.getCell(headerRow, c).alignment = { wrapText: true, horizontal: "center" };
+  }
+
+  // Rows 9-20 — twelve gift levels exactly as in source.
+  // E23/E24/E25/E26 = TFG / Top Gift % / Number of Gifts / Growth Factor.
+  //
+  // Source structure (verbatim):
+  //   A: Level — A9=1 literal; A10..A20 = =A(N-1)+1
+  //   B: Gift Amount —
+  //     B9  = =(ROUND(TFG,-5)/1*$E$24)   (level-1 derived from TFG)
+  //     B10 = =B9/2
+  //     B11..B20 are LITERAL caps from the published manual:
+  //       [15000, 12500, 10000, 7500, 5000, 2500, 1000, 500, 250, 100]
+  //   C: # Gifts — distribution computed from column I (NOT from B):
+  //     C9  = =IF(ROUND(I9/$E$26,0)*$E$26>0,ROUND(I9/$E$26,0)*$E$26,1)
+  //     C10..C20 = =ROUND(I_N/$E$26,0)*$E$26
+  //   D: # Prospects — D9=5 literal; D10..D20 = =C_N*3
+  //   E: Total Gifts — =B_N*C_N
+  //   F: Cumulative $ — F9=E9; F10..F20 = =F(N-1)+E_N
+  //   G: Cumulative % — G9=F9/E23; G10..G20 = =F_N/$E$23
+  //   H: Weight — =1/B_N
+  //   I: Distribution — =($E$25*($H_N/SUM($H$9:$H$20)))
+  const lvl1Row = 9;
+  const lastLvlRow = 20;
+  // TFG is the Fundraising tab's SUM(C6:C8); compute from per-row
+  // goalAmount inputs (NOT data.chesterton.totalFundraisingGoal — the
+  // source workbook's gift chart depends on the fundraising column sum).
+  const goals = data.chesterton?.fundraisingGoals ?? [];
+  const tfg = goals.reduce((s, g) => s + (Number(g.goalAmount) || 0), 0);
+  // E25 (Number of Gifts) is the source-published default of 650 gifts.
+  const numGiftsTotal = 650;
+  // E26 (Growth Factor) is the source-published default of 1.
+  const growthFactor = 1;
+  // E24 (Top Gift %) is the source-published default of 12.5%.
+  const topGiftPct = 0.125;
+  // B11..B20 hardcoded gift-amount caps from the source manual.
+  const bLiterals = [15000, 12500, 10000, 7500, 5000, 2500, 1000, 500, 250, 100];
+
+  // Pre-compute cached values via HyperFormula on the exact same formula
+  // chain we'll write to the cells. The probe uses columns A..I (0..8)
+  // and rows 1..12 to mirror the workbook's column letters exactly.
+  // Row 13 col E (column index 4) is set to TFG so G formulas can use
+  // "=F_N/E13" as a stand-in for the workbook's "=F_N/$E$23".
+  const probe: Array<Array<string | number | null>> = [];
+  for (let i = 0; i < 12; i++) {
+    const r = i + 1; // 1-indexed in formulas
+    let bCell: string | number;
+    if (i === 0) bCell = `=(ROUND(${tfg},-5)/1*${topGiftPct})`;
+    else if (i === 1) bCell = `=B1/2`;
+    else bCell = bLiterals[i - 2];
+    const aCell: string | number = i === 0 ? 1 : `=A${r - 1}+1`;
+    const cCell = i === 0
+      ? `=IF(ROUND(I${r}/${growthFactor},0)*${growthFactor}>0,ROUND(I${r}/${growthFactor},0)*${growthFactor},1)`
+      : `=ROUND(I${r}/${growthFactor},0)*${growthFactor}`;
+    const dCell: string | number = i === 0 ? 5 : `=C${r}*3`;
+    const eCell = `=B${r}*C${r}`;
+    const fCell = i === 0 ? `=E${r}` : `=F${r - 1}+E${r}`;
+    const gCell = `=F${r}/E13`;
+    const hCell = `=1/B${r}`;
+    const iCell = `=(${numGiftsTotal}*(H${r}/SUM(H1:H12)))`;
+    probe.push([aCell, bCell, cCell, dCell, eCell, fCell, gCell, hCell, iCell]);
+  }
+  // Row 13 col E (index 4) = TFG (stand-in for the workbook's $E$23).
+  probe.push([null, null, null, null, tfg]);
+  const hf = HyperFormula.buildFromArray(probe, { licenseKey: "gpl-v3" });
+  const num = (rIdx: number, cIdx: number): number => {
+    const v = hf.getCellValue({ sheet: 0, col: cIdx, row: rIdx });
+    return typeof v === "number" ? v : 0;
+  };
+  type Row = { b: number; c: number; d: number; e: number; f: number; g: number; h: number; i: number };
+  const computed: Row[] = [];
+  for (let i = 0; i < 12; i++) {
+    // Probe columns: 0=A, 1=B, 2=C, 3=D, 4=E, 5=F, 6=G, 7=H, 8=I.
+    computed.push({
+      b: num(i, 1), c: num(i, 2), d: num(i, 3), e: num(i, 4),
+      f: num(i, 5), g: num(i, 6), h: num(i, 7), i: num(i, 8),
+    });
+  }
+  hf.destroy();
+
+  // setFormula's safeFormulaValue quantizes results via
+  // Math.round(result * 1e8) / 1e8, which corrupts numbers > ~9e7 (since
+  // 1e8 * value exceeds 2^53). E and F can grow large for high TFG runs,
+  // so write {formula, result} directly to skip that quantization.
+  const setExactFormula = (cell: ExcelJS.Cell, formula: string, result: number) => {
+    cell.value = { formula, result };
+  };
+
+  // ── Write column A (Level) ─────────────────────────────────────────
+  ws.getCell(`A${lvl1Row}`).value = 1;
+  for (let i = 1; i < 12; i++) {
+    const r = lvl1Row + i;
+    setFormula(ws.getCell(`A${r}`), `=A${r - 1}+1`, i + 1);
+  }
+
+  // ── Write column B (Gift Amount) ───────────────────────────────────
+  setFormula(
+    ws.getCell(`B${lvl1Row}`),
+    `=(ROUND(TFG,-5)/1*$E$24)`,
+    computed[0].b,
+  );
+  setFormula(
+    ws.getCell(`B${lvl1Row + 1}`),
+    `=B${lvl1Row}/2`,
+    computed[1].b,
+  );
+  for (let i = 2; i < 12; i++) {
+    ws.getCell(`B${lvl1Row + i}`).value = bLiterals[i - 2];
+  }
+
+  // ── Write column C (# Gifts) — depends on column I ────────────────
+  setFormula(
+    ws.getCell(`C${lvl1Row}`),
+    `=IF(ROUND(I${lvl1Row}/$E$26,0)*$E$26>0,ROUND(I${lvl1Row}/$E$26,0)*$E$26,1)`,
+    computed[0].c,
+  );
+  for (let i = 1; i < 12; i++) {
+    const r = lvl1Row + i;
+    setFormula(
+      ws.getCell(`C${r}`),
+      `=ROUND(I${r}/$E$26,0)*$E$26`,
+      computed[i].c,
+    );
+  }
+
+  // ── Write column D (# Prospects) ───────────────────────────────────
+  ws.getCell(`D${lvl1Row}`).value = 5;
+  for (let i = 1; i < 12; i++) {
+    const r = lvl1Row + i;
+    setFormula(ws.getCell(`D${r}`), `=C${r}*3`, computed[i].d);
+  }
+
+  // ── Write column E (Total Gifts = B*C) ─────────────────────────────
+  for (let i = 0; i < 12; i++) {
+    const r = lvl1Row + i;
+    setExactFormula(ws.getCell(`E${r}`), `=B${r}*C${r}`, computed[i].e);
+  }
+
+  // ── Write column F (Cumulative $) ──────────────────────────────────
+  setExactFormula(ws.getCell(`F${lvl1Row}`), `=E${lvl1Row}`, computed[0].f);
+  for (let i = 1; i < 12; i++) {
+    const r = lvl1Row + i;
+    setExactFormula(
+      ws.getCell(`F${r}`),
+      `=F${r - 1}+E${r}`,
+      computed[i].f,
+    );
+  }
+
+  // ── Write column G (Cumulative %) ──────────────────────────────────
+  // Source has G9 verbatim "=F9/E23" (no $ row anchor); G10..G20 use $E$23.
+  setFormula(ws.getCell(`G${lvl1Row}`), `=F${lvl1Row}/E23`, computed[0].g);
+  for (let i = 1; i < 12; i++) {
+    const r = lvl1Row + i;
+    setFormula(ws.getCell(`G${r}`), `=F${r}/$E$23`, computed[i].g);
+  }
+
+  // ── Write column H (Weight = 1/B) ──────────────────────────────────
+  for (let i = 0; i < 12; i++) {
+    const r = lvl1Row + i;
+    setFormula(ws.getCell(`H${r}`), `=1/B${r}`, computed[i].h);
+  }
+
+  // ── Write column I (Distribution = E25*(H/SUM(H9:H20))) ────────────
+  for (let i = 0; i < 12; i++) {
+    const r = lvl1Row + i;
+    setFormula(
+      ws.getCell(`I${r}`),
+      `=($E$25*($H${r}/SUM($H$${lvl1Row}:$H$${lastLvlRow})))`,
+      computed[i].i,
+    );
+  }
+
+  // Format columns
+  for (let r = lvl1Row; r <= lastLvlRow; r++) {
+    ws.getCell(`B${r}`).numFmt = CUR;
+    ws.getCell(`C${r}`).numFmt = NUM;
+    ws.getCell(`D${r}`).numFmt = NUM;
+    ws.getCell(`E${r}`).numFmt = CUR;
+    ws.getCell(`F${r}`).numFmt = CUR;
+    ws.getCell(`G${r}`).numFmt = PCT;
+    ws.getCell(`H${r}`).numFmt = "0.00000";
+    ws.getCell(`I${r}`).numFmt = "0.00";
+  }
+
+  // Row 21 — verbatim subtotal row (SUMs of C, D, E).
+  // Use HF on a dedicated probe so the SUM cached values match HF's
+  // recompute exactly across both small and large totals.
+  const subtotalRow = lastLvlRow + 1;
+  const sumProbe: Array<Array<string | number | null>> = [];
+  for (let i = 0; i < 12; i++) {
+    sumProbe.push([computed[i].c, computed[i].d, computed[i].e]);
+  }
+  sumProbe.push(["=SUM(A1:A12)", "=SUM(B1:B12)", "=SUM(C1:C12)"]);
+  const hfSum = HyperFormula.buildFromArray(sumProbe, { licenseKey: "gpl-v3" });
+  const sumC = hfSum.getCellValue({ sheet: 0, col: 0, row: 12 });
+  const sumD = hfSum.getCellValue({ sheet: 0, col: 1, row: 12 });
+  const sumE = hfSum.getCellValue({ sheet: 0, col: 2, row: 12 });
+  hfSum.destroy();
+  setExactFormula(
+    ws.getCell(`C${subtotalRow}`),
+    `=SUM(C${lvl1Row}:C${lastLvlRow})`,
+    typeof sumC === "number" ? sumC : 0,
+  );
+  setExactFormula(
+    ws.getCell(`D${subtotalRow}`),
+    `=SUM(D${lvl1Row}:D${lastLvlRow})`,
+    typeof sumD === "number" ? sumD : 0,
+  );
+  setExactFormula(
+    ws.getCell(`E${subtotalRow}`),
+    `=SUM(E${lvl1Row}:E${lastLvlRow})`,
+    typeof sumE === "number" ? sumE : 0,
+  );
+  ws.getCell(`C${subtotalRow}`).numFmt = NUM;
+  ws.getCell(`D${subtotalRow}`).numFmt = NUM;
+  ws.getCell(`E${subtotalRow}`).numFmt = CUR;
+  ws.getCell(`C${subtotalRow}`).font = { bold: true };
+  ws.getCell(`D${subtotalRow}`).font = { bold: true };
+  ws.getCell(`E${subtotalRow}`).font = { bold: true };
+
+  // Rows 23-26 — verbatim parameter block.
+  ws.getCell("D23").value = "GOAL:";
+  ws.getCell("D23").font = { bold: true };
+  setFormula(ws.getCell("E23"), `=TFG`, tfg);
+  ws.getCell("E23").numFmt = CUR;
+
+  ws.getCell("D24").value = "Top Gift%";
+  ws.getCell("E24").value = 0.125;
+  ws.getCell("E24").numFmt = PCT;
+  inputCell(ws.getCell("E24"));
+
+  ws.getCell("D25").value = "Number of Gifts";
+  ws.getCell("E25").value = 650;
+  ws.getCell("E25").numFmt = NUM;
+  inputCell(ws.getCell("E25"));
+
+  ws.getCell("D26").value = "Growth Factor";
+  ws.getCell("E26").value = 1;
+  ws.getCell("E26").numFmt = NUM;
+  inputCell(ws.getCell("E26"));
+
+  // Row 28 — verbatim copyright text. (The source workbook references
+  // 'GETTING STARTED'!A81; we inline the literal so the cached value is
+  // self-contained and the recompute test stays clean.)
+  ws.getCell("B28").value = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2026. All rights reserved.";
+  ws.getCell("B28").font = { italic: true, size: 9, color: { argb: NAVY } };
 }
 
 function buildRecruitingPipeline(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
@@ -898,6 +1899,194 @@ function buildRecruitingPipeline(wb: ExcelJS.Workbook, data: ChestertonModelInpu
   }
   ws.getCell(`C${r}`).numFmt = NUM;
   ws.getCell(`C${r}`).font = { bold: true };
+
+  // ── Verbatim sections from "7 - RECRUITING PIPELINE" source tab.
+  // The source workbook frames recruiting as a tracking worksheet with
+  // four numbered sections: enrollment goals, prospect math, shadow-day
+  // math, and live results tracking. We mirror those headers + key
+  // labels (PIPELINE / SHADOW / APPLY / ENROLL) verbatim.
+  let v = r + 2;
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "RECRUITING PIPELINE | TRACKING WORKSHEET";
+  ws.getCell(`B${v}`).font = { bold: true, size: 14, color: { argb: WHITE } };
+  ws.getCell(`B${v}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
+  ws.getCell(`B${v}`).alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(v).height = 26;
+  v += 2;
+
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "I. ENTER ENROLLMENT GOALS";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  // Verbatim PIPELINE PROCESS column headers from source row 7.
+  for (const label of [
+    "PIPELINE PROCESS",
+    "Goal",
+    "Current Students",
+  ]) {
+    ws.mergeCells(`B${v}:D${v}`);
+    ws.getCell(`B${v}`).value = label;
+    if (label === "PIPELINE PROCESS") ws.getCell(`B${v}`).font = { bold: true };
+    v += 1;
+  }
+  v += 1;
+
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "II. CALCULATE NUMBER OF PROSPECTS NEEDED TO MEET ENROLLMENT GOALS";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  ws.getCell(`B${v}`).value = "Stage";
+  ws.getCell(`C${v}`).value = "Conversion %";
+  ws.getCell(`D${v}`).value = "Notes";
+  hdr(ws, v, 4);
+  v += 1;
+  // Source rows 16-19 (col 3 = "Conversion %"); the four stages and
+  // their default rates are taken verbatim from the source.
+  const recuritingStages: Array<[string, number | string, string]> = [
+    ["PIPELINE QUALIFIED PROSPECTS", 1.00, ""],
+    ["SHADOW CONVERSION RATE", 0.40, ""],
+    ["APPLY CONVERSION RATE", 0.80, ""],
+    ["ENROLL CONVERSION RATE", 0.90, ""],
+  ];
+  for (const [stage, rate, note] of recuritingStages) {
+    ws.getCell(`B${v}`).value = stage;
+    ws.getCell(`B${v}`).font = { bold: true };
+    const rc = ws.getCell(`C${v}`);
+    rc.value = rate;
+    rc.numFmt = PCT;
+    ws.getCell(`D${v}`).value = note;
+    ws.getCell(`D${v}`).alignment = { wrapText: true };
+    v += 1;
+  }
+  v += 1;
+
+  // Verbatim "Freshman Class - Assumptions" block (source rows 21-26).
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "Freshman Class - Assumptions";
+  ws.getCell(`B${v}`).font = { bold: true };
+  v += 1;
+  const freshAssumptions: Array<[string, string]> = [
+    ["PIPELINE QUALIFIED PROSPECTS", "Qualified, known contacts + open house attendees + siblings"],
+    ["SHADOW CONVERSION RATE", "Shadows begin mid-September"],
+    ["APPLY CONVERSION RATE", "Encourage early applications October 1 - December 8 "],
+    ["ENROLL CONVERSION RATE", "Acceptance Day - January 27 - enrollment within 2 weeks"],
+    ["", "(students who apply get free Gala ticket!)"],
+  ];
+  for (const [stage, note] of freshAssumptions) {
+    ws.getCell(`B${v}`).value = stage;
+    if (stage) ws.getCell(`B${v}`).font = { bold: true };
+    ws.mergeCells(`C${v}:D${v}`);
+    ws.getCell(`C${v}`).value = note;
+    ws.getCell(`C${v}`).alignment = { wrapText: true };
+    v += 1;
+  }
+  v += 1;
+
+  // Verbatim "Prospective Student Information" headers (source row 28-31).
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "Prospective Student Information";
+  ws.getCell(`B${v}`).font = { bold: true };
+  v += 1;
+  ws.getCell(`B${v}`).value = "Student First / Student Last / Current Grade / Current School / Other Note";
+  ws.mergeCells(`B${v}:D${v}`);
+  v += 1;
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "Enter prospective students and families into student information system / CRM";
+  ws.getCell(`B${v}`).alignment = { wrapText: true };
+  v += 2;
+
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "III. CALCULATE NUMBER OF SHADOW DATES REQUIRED";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  ws.getCell(`B${v}`).value = "SHADOW SLOTS";
+  ws.getCell(`B${v}`).font = { bold: true };
+  ws.getCell(`C${v}`).value = "# Weeks";
+  ws.getCell(`D${v}`).value = "ACTUAL";
+  hdr(ws, v, 4);
+  v += 1;
+  // Verbatim month rows from source rows 36-42, including the typo on
+  // "March (2 days per week; 2 per day))" (extra closing paren).
+  const shadowMonths: Array<[string, number]> = [
+    ["September (2 days per week; 2 per day)", 3],
+    ["October (2 days per week; 2 per day)", 3],
+    ["November (2 days per week; 2 per day)", 3],
+    ["December (2 days per week; 2 per day)", 2],
+    ["January (2 days per week; 2 per day)", 3],
+    ["February (2 days per week; 2 per day)", 3],
+    ["March (2 days per week; 2 per day))", 3],
+  ];
+  for (const [month, weeks] of shadowMonths) {
+    ws.getCell(`B${v}`).value = month;
+    ws.getCell(`C${v}`).value = weeks;
+    ws.getCell(`C${v}`).numFmt = NUM;
+    inputCell(ws.getCell(`C${v}`));
+    v += 1;
+  }
+  v += 1;
+
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "IV. TRACK RESULTS";
+  ws.getCell(`B${v}`).font = { bold: true, size: 12, color: { argb: NAVY } };
+  v += 1;
+  ws.getCell(`B${v}`).value = "ACTUAL RESULTS TO DATE";
+  ws.getCell(`B${v}`).font = { bold: true };
+  ws.getCell(`C${v}`).value = "# Students";
+  ws.getCell(`D${v}`).value = "Notes";
+  hdr(ws, v, 4);
+  v += 1;
+  // Verbatim stage labels from source rows 48-51 (with trailing spaces
+  // preserved as in source: "PIPELINE (qualified prospects)", "SHADOW ",
+  // "APPLY ", "ENROLL ").
+  const trackStages: Array<[string]> = [
+    ["PIPELINE (qualified prospects)"],
+    ["SHADOW "],
+    ["APPLY "],
+    ["ENROLL "],
+  ];
+  for (const [stage] of trackStages) {
+    ws.getCell(`B${v}`).value = stage;
+    ws.getCell(`B${v}`).font = { bold: true };
+    ws.getCell(`C${v}`).value = 0;
+    ws.getCell(`C${v}`).numFmt = NUM;
+    inputCell(ws.getCell(`C${v}`));
+    v += 1;
+  }
+  v += 1;
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "As of [Month/Date/Year]";
+  ws.getCell(`B${v}`).font = { italic: true };
+  v += 2;
+
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = { formula: `="FINANCIAL PROJECTIONS - " & Plan_Year & " - " & RIGHT(Plan_Year+1, 2)`, result: "FINANCIAL PROJECTIONS - 2027 - 28" };
+  ws.getCell(`B${v}`).font = { italic: true, color: { argb: NAVY } };
+  ws.getCell(`B${v}`).alignment = { horizontal: "center" };
+  v += 2;
+  // Verbatim row labels from source rows 57-64 of the recruiting tab.
+  for (const label of [
+    "Academic Year",
+    "Number of Students",
+    "Operating Budget ** Projected **",
+    "Tuition Revenue, Net",
+    "Minimum Fundraising Need",
+    "TARGET FUNDRAISING GOAL",
+  ]) {
+    ws.mergeCells(`B${v}:D${v}`);
+    ws.getCell(`B${v}`).value = label;
+    if (label === "TARGET FUNDRAISING GOAL") ws.getCell(`B${v}`).font = { bold: true };
+    v += 1;
+  }
+  v += 1;
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "NOTE: This template is provided for guidance only.";
+  ws.getCell(`B${v}`).font = { italic: true };
+  v += 1;
+
+  ws.mergeCells(`B${v}:D${v}`);
+  ws.getCell(`B${v}`).value = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2026. All rights reserved.";
+  ws.getCell(`B${v}`).font = { italic: true, size: 9, color: { argb: NAVY } };
+  ws.getCell(`B${v}`).alignment = { horizontal: "center" };
 }
 
 // Static reference tabs (Cadence, Training, Parent Handout) mirror tabs
@@ -1743,6 +2932,7 @@ export async function generateChestertonOperatingManual(
   buildKeyAssumptions(wb, data);
   buildFundraisingGoals(wb, data);
   buildGiftChart(wb, data);
+  buildGiftChartAutomatic(wb, data);
   buildRecruitingPipeline(wb, data);
   buildCadence(wb, data);
   buildTrainingSchedule(wb);

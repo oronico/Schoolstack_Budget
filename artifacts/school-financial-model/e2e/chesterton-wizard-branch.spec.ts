@@ -36,7 +36,7 @@ const TEST_PASSWORD = "PlaywrightTest12345!";
 // the workbook surface area visible to a CSN founder; if either side
 // changes, this assertion is the safety net that catches it.
 //
-// The exporter emits 10 tabs: 7 numbered/derived tabs (above) plus three
+// The exporter emits 11 tabs: 8 numbered/derived tabs (above) plus three
 // reference tabs (Cadence, CSN Training Schedule, Parent Handout) that
 // mirror the published CSN Operating Manual word-for-word.
 const EXPECTED_TABS = [
@@ -46,6 +46,7 @@ const EXPECTED_TABS = [
   "3 - KEY ASSUMPTIONS",
   "4 - FUNDRAISING GOALS",
   "5 - GIFT CHART",
+  "5 - GIFT CHART AUTOMATIC",
   "7 - RECRUITING PIPELINE",
   "Cadence",
   "CSN Training Schedule",

@@ -249,6 +249,42 @@ expect(
   tabs,
 );
 
+// 1b. Tab-parity check against source workbook visible tabs.
+//     Each visible source tab maps to one exported tab. The source
+//     workbook's collapsed-whitespace names are matched against the
+//     export's friendly names (Cadence/CSN Training Schedule/Parent
+//     Handout retain the friendlier names from Task #335 because the
+//     "8 - CHESTERTON CADENCE" / "9 - CSN TRAINING" / "6 - PARENT
+//     HANDOUT" prefixes do not affect the verbatim content).
+const SOURCE_TO_EXPORT: Array<[string, string]> = [
+  ["GETTING STARTED", "GETTING STARTED"],
+  ["1 - 5 YR  FINANCIAL PROJECTIONS", "1 - 5 YR FINANCIAL PROJECTIONS"],
+  ["2 - SALARY SCHEDULE", "2 - SALARY SCHEDULE"],
+  ["3 - KEY ASSUMPTIONS ", "3 - KEY ASSUMPTIONS"],
+  ["4 - FUNDRAISING GOALS", "4 - FUNDRAISING GOALS"],
+  ["5 - GIFT CHART", "5 - GIFT CHART"],
+  ["5 - GIFT CHART AUTOMATIC", "5 - GIFT CHART AUTOMATIC"],
+  ["6 - PARENT HANDOUT", "Parent Handout"],
+  ["7 - RECRUITING PIPELINE", "7 - RECRUITING PIPELINE"],
+  ["8 - CHESTERTON CADENCE", "Cadence"],
+  ["9 - CSN TRAINING", "CSN Training Schedule"],
+];
+const exportSet = new Set(tabs);
+for (const [src, target] of SOURCE_TO_EXPORT) {
+  expect(
+    `source tab "${src}" maps to export tab "${target}"`,
+    exportSet.has(target),
+    true,
+    [...exportSet].join(", "),
+  );
+}
+expect(
+  "export covers all 11 visible source tabs",
+  SOURCE_TO_EXPORT.every(([, t]) => exportSet.has(t)),
+  true,
+  tabs.length,
+);
+
 // 2. Named ranges exist.
 const definedNamesRaw = (wb.definedNames as unknown as { matrixMap?: Record<string, unknown> }).matrixMap;
 const definedNamesList = wb.definedNames.model || [];
@@ -483,6 +519,424 @@ expect(
     handout,
     "- Help us identify and approach prospective sponsors for our ThinkLocal Gala sponsorship campaign",
   ),
+  true,
+  null,
+);
+
+// 7. Verbatim spot-checks for the seven additional source-workbook tabs
+//    that Task #341 round-tripped (GETTING STARTED steps + sustainability
+//    drivers + brand colors; PROJECTIONS G&A + fundraising gap; KEY
+//    ASSUMPTIONS sections 1-6; FUNDRAISING goal sections + campaign A-F;
+//    GIFT CHART freshman-class header; RECRUITING tracking-worksheet
+//    sections + verbatim "recuriting" typo; SALARY SCHEDULE step rate).
+
+// GETTING STARTED — intro narrative + sustainability drivers + colors.
+expect(
+  "GETTING STARTED has verbatim 'BEFORE YOU BEGIN: VIEW THE OPERATING MANUAL TUTORIAL PLAYLIST' line",
+  containsVerbatim(gs, "BEFORE YOU BEGIN: VIEW THE OPERATING MANUAL TUTORIAL PLAYLIST (SHORT VIDEOS)"),
+  true,
+  null,
+);
+expect(
+  "GETTING STARTED has verbatim 'III. SUSTAINABILITY DRIVERS AND OWNERS' section header",
+  containsVerbatim(gs, "III. SUSTAINABILITY DRIVERS AND OWNERS"),
+  true,
+  null,
+);
+expect(
+  "GETTING STARTED has verbatim 'Spirit Blue' brand color label with hex #19435D",
+  containsVerbatim(gs, "Spirit Blue") && containsVerbatim(gs, "#19435D"),
+  true,
+  null,
+);
+expect(
+  "GETTING STARTED has verbatim 'VI. Admission Pipeline Conversion Percentages' section header",
+  containsVerbatim(gs, "VI. Admission Pipeline Conversion Percentages"),
+  true,
+  null,
+);
+
+// PROJECTIONS — Administrative Salaries roles + G&A line items + fundraising-gap footnote + Key Indicators.
+expect(
+  "PROJECTIONS has verbatim 'Headmaster Admin Salary' admin-role label",
+  containsVerbatim(proj, "Headmaster Admin Salary"),
+  true,
+  null,
+);
+expect(
+  "PROJECTIONS has verbatim 'Special Events, Retreats, House Shirts' G&A line item",
+  containsVerbatim(proj, "Special Events, Retreats, House Shirts"),
+  true,
+  null,
+);
+expect(
+  "PROJECTIONS has verbatim Fundraising Gap footnote about June 30",
+  containsVerbatim(
+    proj,
+    "*This is the minimum amount to be raised in full by June 30 of the prior phase or academic year.",
+  ),
+  true,
+  null,
+);
+expect(
+  "PROJECTIONS has verbatim 'VI. KEY INDICATORS' section header",
+  containsVerbatim(proj, "VI. KEY INDICATORS"),
+  true,
+  null,
+);
+
+// SALARY SCHEDULE — verbatim 'Step Increase Y/Y' label.
+const sal = wb.getWorksheet("2 - SALARY SCHEDULE")!;
+expect(
+  "SALARY SCHEDULE has verbatim 'Step Increase Y/Y' label",
+  containsVerbatim(sal, "Step Increase Y/Y"),
+  true,
+  null,
+);
+
+// KEY ASSUMPTIONS — six numbered sections.
+const ka = wb.getWorksheet("3 - KEY ASSUMPTIONS")!;
+expect(
+  "KEY ASSUMPTIONS has verbatim '(1) COMPOSITION OF FRESHMAN CLASS' section header",
+  containsVerbatim(ka, "(1) COMPOSITION OF FRESHMAN CLASS"),
+  true,
+  null,
+);
+expect(
+  "KEY ASSUMPTIONS has verbatim '(2) RECRUITING STRATEGY AND PROSPECTS' section header",
+  containsVerbatim(ka, "(2) RECRUITING STRATEGY AND PROSPECTS"),
+  true,
+  null,
+);
+expect(
+  "KEY ASSUMPTIONS has verbatim '(3) OTHER FINANCIAL ASSUMPTIONS' section header",
+  containsVerbatim(ka, "(3) OTHER FINANCIAL ASSUMPTIONS"),
+  true,
+  null,
+);
+expect(
+  "KEY ASSUMPTIONS has verbatim '(6) OTHER KEY INFLUENCERS / KEY STAKEHOLDERS' section header",
+  containsVerbatim(ka, "(6) OTHER KEY INFLUENCERS / KEY STAKEHOLDERS"),
+  true,
+  null,
+);
+
+// FUNDRAISING GOALS — verbatim section headers I/II/III + campaign timing.
+expect(
+  "FUNDRAISING GOALS has verbatim 'I. FUNDRAISING GOAL' section header",
+  containsVerbatim(fund, "I. FUNDRAISING GOAL"),
+  true,
+  null,
+);
+expect(
+  "FUNDRAISING GOALS has verbatim 'III. FUNDRAISING COMPONENTS' section header",
+  containsVerbatim(fund, "III. FUNDRAISING COMPONENTS"),
+  true,
+  null,
+);
+expect(
+  "FUNDRAISING GOALS has verbatim Campaign B 'Date: November xx, 20xx (Giving Tuesday)' timing",
+  containsVerbatim(fund, "Date: November xx, 20xx (Giving Tuesday)"),
+  true,
+  null,
+);
+expect(
+  "FUNDRAISING GOALS has verbatim Campaign F 'Gala challenge; private foundations; other major gifts' description",
+  containsVerbatim(fund, "Gala challenge; private foundations; other major gifts"),
+  true,
+  null,
+);
+
+// GIFT CHART — verbatim 'ENTER GIFT AMOUNTS AND # OF GIFTS' header
+// from row 2 of the source tab.
+const giftChart = wb.getWorksheet("5 - GIFT CHART")!;
+expect(
+  "GIFT CHART has verbatim 'ENTER GIFT AMOUNTS AND # OF GIFTS' instruction",
+  containsVerbatim(giftChart, "ENTER GIFT AMOUNTS AND # OF GIFTS"),
+  true,
+  null,
+);
+
+// RECRUITING PIPELINE — verbatim banner + sections I-IV + 'recuriting' typo.
+const rec = wb.getWorksheet("7 - RECRUITING PIPELINE")!;
+expect(
+  "RECRUITING PIPELINE has verbatim 'RECRUITING PIPELINE | TRACKING WORKSHEET' banner",
+  containsVerbatim(rec, "RECRUITING PIPELINE | TRACKING WORKSHEET"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim 'I. ENTER ENROLLMENT GOALS' section header",
+  containsVerbatim(rec, "I. ENTER ENROLLMENT GOALS"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim 'II. CALCULATE NUMBER OF PROSPECTS NEEDED TO MEET ENROLLMENT GOALS' section header",
+  containsVerbatim(rec, "II. CALCULATE NUMBER OF PROSPECTS NEEDED TO MEET ENROLLMENT GOALS"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim 'III. CALCULATE NUMBER OF SHADOW DATES REQUIRED' section header",
+  containsVerbatim(rec, "III. CALCULATE NUMBER OF SHADOW DATES REQUIRED"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim 'IV. TRACK RESULTS' section header",
+  containsVerbatim(rec, "IV. TRACK RESULTS"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim 'PIPELINE PROCESS' label from source row 7",
+  containsVerbatim(rec, "PIPELINE PROCESS"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim PIPELINE/SHADOW/APPLY/ENROLL stage labels",
+  containsVerbatim(rec, "PIPELINE QUALIFIED PROSPECTS") &&
+    containsVerbatim(rec, "SHADOW CONVERSION RATE") &&
+    containsVerbatim(rec, "APPLY CONVERSION RATE") &&
+    containsVerbatim(rec, "ENROLL CONVERSION RATE"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim Freshman Class - Assumptions header (source row 21)",
+  containsVerbatim(rec, "Freshman Class - Assumptions"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim 'Acceptance Day - January 27 - enrollment within 2 weeks' (source row 24)",
+  containsVerbatim(rec, "Acceptance Day - January 27 - enrollment within 2 weeks"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim '(students who apply get free Gala ticket!)' (source row 25)",
+  containsVerbatim(rec, "(students who apply get free Gala ticket!)"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim 'Prospective Student Information' header (source row 28)",
+  containsVerbatim(rec, "Prospective Student Information"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE preserves source-workbook 'March (2 days per week; 2 per day))' typo verbatim",
+  containsVerbatim(rec, "March (2 days per week; 2 per day))"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim 'Operating Budget ** Projected **' financial-projection label (source row 59)",
+  containsVerbatim(rec, "Operating Budget ** Projected **"),
+  true,
+  null,
+);
+expect(
+  "RECRUITING PIPELINE has verbatim 'TARGET FUNDRAISING GOAL' label (source row 62)",
+  containsVerbatim(rec, "TARGET FUNDRAISING GOAL"),
+  true,
+  null,
+);
+
+// FUNDRAISING — verbatim Annual Gala detail block (source J22-K37).
+expect(
+  "FUNDRAISING GOALS has verbatim 'Average Gift Per Guest' Gala assumption label",
+  containsVerbatim(fund, "Average Gift Per Guest"),
+  true,
+  null,
+);
+expect(
+  "FUNDRAISING GOALS has verbatim 'Average Sponsorship Cost' Gala assumption label",
+  containsVerbatim(fund, "Average Sponsorship Cost"),
+  true,
+  null,
+);
+expect(
+  "FUNDRAISING GOALS has verbatim 'Average Pre Event Gift' Gala assumption label",
+  containsVerbatim(fund, "Average Pre Event Gift"),
+  true,
+  null,
+);
+expect(
+  "FUNDRAISING GOALS preserves source-workbook 'FUNDRAISNG' typo annotation",
+  containsVerbatim(fund, "FUNDRAISNG"),
+  true,
+  null,
+);
+
+// GIFT CHART — verbatim 12-tier source pyramid (rows 5-16).
+expect(
+  "GIFT CHART includes the verbatim source 12-tier donor pyramid (Total row)",
+  containsVerbatim(giftChart, "Total"),
+  true,
+  null,
+);
+
+// GIFT CHART AUTOMATIC — verbatim source headers + parameters.
+const giftAuto = wb.getWorksheet("5 - GIFT CHART AUTOMATIC")!;
+expect(
+  "GIFT CHART AUTOMATIC has verbatim 'SAMPLE GIFT CHART' header (source row 3)",
+  containsVerbatim(giftAuto, "SAMPLE GIFT CHART"),
+  true,
+  null,
+);
+expect(
+  "GIFT CHART AUTOMATIC has verbatim 'PLANNING FOR' header (source row 3)",
+  containsVerbatim(giftAuto, "PLANNING FOR"),
+  true,
+  null,
+);
+expect(
+  "GIFT CHART AUTOMATIC has verbatim '# Prospects' header (source row 7)",
+  containsVerbatim(giftAuto, "# Prospects"),
+  true,
+  null,
+);
+expect(
+  "GIFT CHART AUTOMATIC has verbatim 'GOAL:' parameter label (source row 23)",
+  containsVerbatim(giftAuto, "GOAL:"),
+  true,
+  null,
+);
+expect(
+  "GIFT CHART AUTOMATIC has verbatim 'Top Gift%' parameter label (source row 24)",
+  containsVerbatim(giftAuto, "Top Gift%"),
+  true,
+  null,
+);
+expect(
+  "GIFT CHART AUTOMATIC has verbatim 'Number of Gifts' parameter label (source row 25)",
+  containsVerbatim(giftAuto, "Number of Gifts"),
+  true,
+  null,
+);
+expect(
+  "GIFT CHART AUTOMATIC has verbatim 'Growth Factor' parameter label (source row 26)",
+  containsVerbatim(giftAuto, "Growth Factor"),
+  true,
+  null,
+);
+// Spot-check verbatim source formulas across the gift-chart auto rows.
+{
+  // B9: source verbatim "(ROUND(TFG,-5)/1*$E$24)" with parens.
+  const b9 = giftAuto.getCell("B9").value as { formula?: string } | null;
+  const fB9 = typeof b9 === "object" && b9 !== null ? b9.formula : null;
+  expect(
+    "GIFT CHART AUTOMATIC B9 carries verbatim source formula '=(ROUND(TFG,-5)/1*$E$24)'",
+    fB9 === "=(ROUND(TFG,-5)/1*$E$24)",
+    "=(ROUND(TFG,-5)/1*$E$24)",
+    fB9,
+  );
+  // C9: source verbatim "IF(ROUND(I9/$E$26,0)*$E$26>0,...,1)" — referencing
+  // column I, NOT B. This is the key parity check the source insists on.
+  const c9 = giftAuto.getCell("C9").value as { formula?: string } | null;
+  const fC9 = typeof c9 === "object" && c9 !== null ? c9.formula : null;
+  expect(
+    "GIFT CHART AUTOMATIC C9 references column I (verbatim source formula)",
+    fC9 === "=IF(ROUND(I9/$E$26,0)*$E$26>0,ROUND(I9/$E$26,0)*$E$26,1)",
+    "=IF(ROUND(I9/$E$26,0)*$E$26>0,ROUND(I9/$E$26,0)*$E$26,1)",
+    fC9,
+  );
+  // C10: source verbatim "ROUND(I10/$E$26,0)*$E$26".
+  const c10 = giftAuto.getCell("C10").value as { formula?: string } | null;
+  const fC10 = typeof c10 === "object" && c10 !== null ? c10.formula : null;
+  expect(
+    "GIFT CHART AUTOMATIC C10 references column I (verbatim source formula)",
+    fC10 === "=ROUND(I10/$E$26,0)*$E$26",
+    "=ROUND(I10/$E$26,0)*$E$26",
+    fC10,
+  );
+  // I9: source verbatim "($E$25*($H9/SUM($H$9:$H$20)))".
+  const i9 = giftAuto.getCell("I9").value as { formula?: string } | null;
+  const fI9 = typeof i9 === "object" && i9 !== null ? i9.formula : null;
+  expect(
+    "GIFT CHART AUTOMATIC I9 carries verbatim source distribution formula",
+    fI9 === "=($E$25*($H9/SUM($H$9:$H$20)))",
+    "=($E$25*($H9/SUM($H$9:$H$20)))",
+    fI9,
+  );
+  // B11..B20 are LITERAL caps in the source (15000, 12500, ..., 100).
+  // Spot-check B11 = 15000 and B20 = 100 to lock the published cap list.
+  const b11 = giftAuto.getCell("B11").value;
+  expect(
+    "GIFT CHART AUTOMATIC B11 is the verbatim literal cap 15000 from source",
+    b11 === 15000,
+    15000,
+    b11,
+  );
+  const b20 = giftAuto.getCell("B20").value;
+  expect(
+    "GIFT CHART AUTOMATIC B20 is the verbatim literal cap 100 from source",
+    b20 === 100,
+    100,
+    b20,
+  );
+  // E25 (Number of Gifts parameter) is verbatim 650 in the source manual.
+  const e25 = giftAuto.getCell("E25").value;
+  expect(
+    "GIFT CHART AUTOMATIC E25 is the verbatim source parameter 650",
+    e25 === 650,
+    650,
+    e25,
+  );
+  // Subtotal C21 = SUM(C9:C20) cached value = sum of computed C column.
+  const c21 = giftAuto.getCell("C21").value as { formula?: string; result?: unknown } | null;
+  const fC21 = typeof c21 === "object" && c21 !== null ? c21.formula : null;
+  expect(
+    "GIFT CHART AUTOMATIC C21 carries verbatim subtotal formula =SUM(C9:C20)",
+    fC21 === "=SUM(C9:C20)",
+    "=SUM(C9:C20)",
+    fC21,
+  );
+}
+
+// PROJECTIONS — verbatim Phase headers from source rows 5-6.
+const projVerbatim = wb.getWorksheet("1 - 5 YR FINANCIAL PROJECTIONS")!;
+expect(
+  "PROJECTIONS has verbatim Phase I — DISCOVERY header from source row 5",
+  containsVerbatim(projVerbatim, "Phase I — DISCOVERY"),
+  true,
+  null,
+);
+expect(
+  "PROJECTIONS has verbatim Phase IV — LAUNCH AND ONGOING OPERATIONS header from source row 5",
+  containsVerbatim(projVerbatim, "Phase IV — LAUNCH AND ONGOING OPERATIONS"),
+  true,
+  null,
+);
+expect(
+  "PROJECTIONS has verbatim 'Last Updated: 11/23/2022' source-workbook footer",
+  containsVerbatim(projVerbatim, "Last Updated: 11/23/2022"),
+  true,
+  null,
+);
+
+// SALARY SCHEDULE — verbatim Hours table (rows 30-33) + label.
+const salVerbatim = wb.getWorksheet("2 - SALARY SCHEDULE")!;
+expect(
+  "SALARY SCHEDULE has verbatim 'Full Time' / 24 hours row from source row 30",
+  containsVerbatim(salVerbatim, "Full Time"),
+  true,
+  null,
+);
+expect(
+  "SALARY SCHEDULE has verbatim '1/4 Time' row label from source row 31",
+  containsVerbatim(salVerbatim, "1/4 Time"),
+  true,
+  null,
+);
+expect(
+  "SALARY SCHEDULE has verbatim 'Average Salary per Period Rate' label from source",
+  containsVerbatim(salVerbatim, "Average Salary per Period Rate"),
   true,
   null,
 );

@@ -40,6 +40,7 @@
     "exceljs": "^4.4.0",
     "express": "^5",
     "helmet": "^8.1.0",
+    "hyperformula": "^3.2.0",
     "jsonwebtoken": "^9.0.3",
     "pdfkit": "^0.17.2",
     "resend": "^6.9.3"
@@ -55,7 +56,6 @@
     "@types/node": "catalog:",
     "@types/pdfkit": "^0.17.5",
     "esbuild": "^0.27.3",
-    "hyperformula": "^3.2.0",
     "tsx": "catalog:"
   }
 }
