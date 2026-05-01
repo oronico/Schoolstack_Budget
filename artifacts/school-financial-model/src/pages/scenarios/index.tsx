@@ -37,6 +37,7 @@ import {
   MAX_COMPARE_KEYS,
 } from "@/lib/share-comparison";
 import { parseExportSourceLabel } from "@/lib/actuals-source";
+import { highlightMatch } from "@/lib/text-highlight";
 import { useAuth } from "@/lib/auth-context";
 import { getFounderPersona, type FounderComfort } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
@@ -428,6 +429,13 @@ interface CustomScenarioCardProps {
   // Founder persona "comfort" axis ("new_to_budgeting" | "comfortable").
   // Drives the cap-savings copy variant; null = legacy/technical wording.
   personaComfort?: FounderComfort | null;
+  // Active free-text search from the toolbar above the cards. When non-empty,
+  // the card highlights (`<mark>`s) the matched substring inside the
+  // scenario name, retrospective note, and decision-type badge so founders
+  // can see *why* a card showed up at a glance. Optional + defaults to ""
+  // so callers/tests that don't need search behave exactly as before.
+  // (Task #215)
+  searchQuery?: string;
 }
 
 // "Mar 14" formatter shared with the wizard upload card so the caption in
@@ -638,6 +646,7 @@ export function CustomScenarioCard({
   hideActualsSurfaces,
   staffingRows,
   personaComfort,
+  searchQuery = "",
 }: CustomScenarioCardProps) {
   const [editingRetro, setEditingRetro] = useState(false);
   // Inline rename state. We keep the saved scenario's `(name, createdAt)`
@@ -913,7 +922,7 @@ export function CustomScenarioCard({
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${decisionTheme.bg} ${decisionTheme.text} border ${decisionTheme.border}`}
                 data-testid={`custom-scenario-decision-badge-${idx}`}
               >
-                {decisionLabel}
+                {highlightMatch(decisionLabel, searchQuery)}
               </span>
             )}
             {statusMeta && (
@@ -980,7 +989,7 @@ export function CustomScenarioCard({
                 className="font-display font-bold text-foreground truncate"
                 data-testid={`custom-scenario-name-${idx}`}
               >
-                {cs.name}
+                {highlightMatch(cs.name, searchQuery)}
               </h3>
               <button
                 type="button"
@@ -1138,7 +1147,7 @@ export function CustomScenarioCard({
               Retrospective
               <Pencil className="inline-block h-2.5 w-2.5 ml-1 opacity-0 group-hover:opacity-60 transition-opacity" />
             </span>
-            {cs.retrospective}
+            {highlightMatch(cs.retrospective, searchQuery)}
           </button>
         ) : (
           <button
@@ -3297,6 +3306,7 @@ export function ScenarioPage() {
                       onOpenInPlanner={openInPlanner}
                       onApplyToModel={applyScenarioToModel}
                       hideActualsSurfaces={hideActualsForPersona}
+                      searchQuery={searchQuery}
                       getProjectedSnapshot={(asOfYear) =>
                         computeProjectedSnapshot(
                           modelData,
