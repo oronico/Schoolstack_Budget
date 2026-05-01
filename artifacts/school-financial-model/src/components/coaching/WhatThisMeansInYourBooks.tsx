@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 interface WhatThisMeansInYourBooksProps {
   step: number;
   schoolType?: string;
+  entityType?: string;
   className?: string;
 }
 
@@ -26,19 +27,44 @@ const STATEMENT_BADGE_CLASSES: Record<StatementKind, string> = {
 export function WhatThisMeansInYourBooks({
   step,
   schoolType,
+  entityType,
   className,
 }: WhatThisMeansInYourBooksProps) {
   const { user } = useAuth();
   const level =
     (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const entry = BOOKKEEPING_TRANSLATIONS[step];
+  const rawEntry = BOOKKEEPING_TRANSLATIONS[step];
+  const entityKnown = !!entityType && entityType !== "undetermined";
+  const isNonprofit = entityType === "nonprofit_501c3";
+
+  // Hide steps that explicitly require a known entity type until the founder
+  // has answered the entity question (asked on School Details, step 2). The
+  // generic "program vs. admin / restricted vs. unrestricted" framing on
+  // step 1 is misleading for for-profit schools, so we wait.
+  const gated = !!rawEntry?.requiresEntityType && !entityKnown;
+
+  // Filter out nonprofit-only lines for for-profit schools, and pick the
+  // for-profit intro variant when one is provided.
+  const entry = rawEntry
+    ? {
+        ...rawEntry,
+        intro:
+          !isNonprofit && rawEntry.forProfitIntro
+            ? rawEntry.forProfitIntro
+            : rawEntry.intro,
+        lines: isNonprofit
+          ? rawEntry.lines
+          : rawEntry.lines.filter((l) => !l.nonprofitOnly),
+      }
+    : undefined;
+
   const defaultOpen = level !== "advanced";
   const [openByStep, setOpenByStep] = useState<Record<number, boolean>>({});
   const open = openByStep[step] ?? defaultOpen;
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
-    if (!entry) return;
+    if (!entry || gated) return;
     const key = `step-${step}`;
     if (trackedRef.current === key) return;
     trackedRef.current = key;
@@ -47,9 +73,9 @@ export function WhatThisMeansInYourBooks({
       guidanceLevel: level,
       lineCount: entry.lines.length,
     });
-  }, [step, level, entry]);
+  }, [step, level, entry, gated]);
 
-  if (!entry) return null;
+  if (!entry || gated || entry.lines.length === 0) return null;
 
   return (
     <div

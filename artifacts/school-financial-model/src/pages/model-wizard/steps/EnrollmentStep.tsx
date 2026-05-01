@@ -9,7 +9,19 @@ import { RationaleField } from "@/components/coaching/RationaleField";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import type { Program } from "../schema";
-import { GRADE_BAND_LABELS, GRADE_BAND_KEYS, type GradeBandKey } from "@/lib/revenue-defaults";
+import {
+  GRADE_BAND_LABELS,
+  GRADE_BAND_KEYS,
+  GRADE_KEYS,
+  GRADE_LABELS,
+  GRADE_TO_BAND,
+  defaultGroupingModeForSchoolType,
+  type GradeBandKey,
+  type GradeKey,
+  type StudentGroupingMode,
+} from "@/lib/revenue-defaults";
+import { useAuth } from "@/lib/auth-context";
+import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona";
 import {
   BarChart,
   Bar,
@@ -22,19 +34,22 @@ import {
   ReferenceLine,
 } from "recharts";
 
+// Programs are now framed as SCHEDULES (how/when families show
+// up) — not as grade bands. Grade-band cohort sizes live in the grade/band
+// matrix below. The new chip list intentionally drops Pre-K / Elementary /
+// Middle / High School entries because those duplicate the grade-band UI
+// and used to confuse founders into entering the same students twice.
 const SUGGESTED_PROGRAMS = [
   "Full Day",
   "Half Day",
-  "Four-Day Program",
-  "After School",
+  "2-Day Program",
+  "3-Day Program",
+  "4-Day Program",
   "Drop-In",
-  "Pre-K",
-  "Elementary (K-5)",
-  "Middle School (6-8)",
-  "High School (9-12)",
-  "Summer Program",
-  "Tutoring",
+  "After-School",
+  "Summer Camp",
   "Enrichment",
+  "Tutoring",
 ];
 
 function EnrollmentChart({ enrollments, maxCapacity, yearLabels }: { enrollments: number[]; maxCapacity: number; yearLabels: string[] }) {
@@ -377,6 +392,10 @@ function RetentionDemandSection({ isOperatingSchool, isSecondYearPlus }: { isOpe
 
 export function EnrollmentStep() {
   const { watch, setValue } = useFormContext();
+  const { user } = useAuth();
+  const persona = getFounderPersona(user);
+  const yetToLaunch = isYetToLaunch(user);
+  const newComfort = persona.comfort === "new_to_budgeting";
   const schoolType = watch("schoolProfile.schoolType") || "other";
   const schoolStage = watch("schoolProfile.schoolStage");
   const operatingYear = watch("schoolProfile.operatingYear");
@@ -392,8 +411,50 @@ export function EnrollmentStep() {
   const isSecondYearPlus = schoolStage === "operating_school" && operatingYear === "second_year_plus";
   const [prefillDismissed, setPrefillDismissed] = useState(false);
 
-  const showPriorYear = isSecondYearPlus;
-  const showCurrentYear = isFirstYear || isSecondYearPlus;
+  // Hide actuals columns when the founder has not yet launched.
+  const showPriorYear = isSecondYearPlus && !yetToLaunch;
+  const showCurrentYear = (isFirstYear || isSecondYearPlus) && !yetToLaunch;
+
+  // Resolve grouping mode from the form, falling back to the school-type default.
+  const storedGrouping = watch("schoolProfile.studentGroupingMode") as StudentGroupingMode | undefined;
+  const groupingMode: StudentGroupingMode = storedGrouping ?? defaultGroupingModeForSchoolType(schoolType);
+  const gradeBandActive = (watch("schoolProfile.gradeBandActive") as string[] | undefined) ?? [];
+  const gradeActive = (watch("schoolProfile.gradeActive") as string[] | undefined) ?? [];
+  const gradeBandEnrollment = (watch("schoolProfile.gradeBandEnrollment") as
+    | Partial<Record<GradeBandKey, (number | null)[]>>
+    | undefined) ?? {};
+  const otherBandLabel = (watch("schoolProfile.gradeBandOtherLabel") as string | undefined) || "Other";
+
+  // For legacy models without explicit `gradeBandActive`, infer from existing enrollment.
+  const activeBandKeys: GradeBandKey[] = useMemo(() => {
+    if (Array.isArray(watch("schoolProfile.gradeBandActive"))) {
+      return GRADE_BAND_KEYS.filter((k) => gradeBandActive.includes(k));
+    }
+    return GRADE_BAND_KEYS.filter((k) => {
+      const arr = gradeBandEnrollment[k];
+      return Array.isArray(arr) && arr.some((v) => typeof v === "number" && v > 0);
+    });
+  }, [watch, gradeBandActive, gradeBandEnrollment]);
+  const activeGradeKeys: GradeKey[] = useMemo(() => {
+    if (Array.isArray(watch("schoolProfile.gradeActive"))) {
+      return GRADE_KEYS.filter((k) => gradeActive.includes(k));
+    }
+    return [];
+  }, [watch, gradeActive]);
+
+  const showBands = groupingMode === "age_bands" || groupingMode === "both";
+  const showGrades = groupingMode === "grades" || groupingMode === "both";
+  const matrixGroupKeys: string[] = [
+    ...(showGrades ? activeGradeKeys : []),
+    ...(showBands ? activeBandKeys : []),
+  ];
+  const matrixGroupLabels: Record<string, string> = useMemo(() => {
+    const out: Record<string, string> = {};
+    activeGradeKeys.forEach((k) => { out[k] = GRADE_LABELS[k]; });
+    activeBandKeys.forEach((k) => { out[k] = k === "other" ? otherBandLabel : GRADE_BAND_LABELS[k]; });
+    return out;
+  }, [activeGradeKeys, activeBandKeys, otherBandLabel]);
+  const hasMatrix = matrixGroupKeys.length > 0;
 
   const openingYearLabel = plannedOpeningYear || "2026-27";
   const openingYearNum = parseInt(openingYearLabel.split("-")[0]) || 2026;
@@ -452,13 +513,98 @@ export function EnrollmentStep() {
     return Math.round(baseTuition * Math.pow(1 + (escalationRate / 100), yearIndex));
   }, [escalationRate]);
 
+  // matrix state. Keys are programId → yearKey → groupKey → number|null.
+  // Null means "didn't offer" / N/A (only meaningful for actuals).
+  type MatrixCell = number | null;
+  type ProgramMatrix = Record<string, Record<string, Record<string, MatrixCell>>>;
+  type NotOfferedMap = Record<string, Record<string, boolean>>;
+  const matrix = (watch("programEnrollmentMatrix") as ProgramMatrix | undefined) ?? {};
+  const notOffered = (watch("programNotOffered") as NotOfferedMap | undefined) ?? {};
+
+  const getCell = useCallback((programId: string, yearKey: string, groupKey: string): MatrixCell => {
+    const v = matrix[programId]?.[yearKey]?.[groupKey];
+    return v === undefined ? 0 : v;
+  }, [matrix]);
+
+  const setCell = useCallback((programId: string, yearKey: string, groupKey: string, value: MatrixCell) => {
+    const next: ProgramMatrix = JSON.parse(JSON.stringify(matrix));
+    if (!next[programId]) next[programId] = {};
+    if (!next[programId][yearKey]) next[programId][yearKey] = {};
+    next[programId][yearKey][groupKey] = value;
+    setValue("programEnrollmentMatrix", next, { shouldDirty: true });
+  }, [matrix, setValue]);
+
+  const isRowNotOffered = useCallback((programId: string, yearKey: string): boolean => {
+    return Boolean(notOffered[programId]?.[yearKey]);
+  }, [notOffered]);
+
+  const setRowNotOffered = useCallback((programId: string, yearKey: string, flag: boolean) => {
+    const nextNO: NotOfferedMap = JSON.parse(JSON.stringify(notOffered));
+    if (!nextNO[programId]) nextNO[programId] = {};
+    nextNO[programId][yearKey] = flag;
+    setValue("programNotOffered", nextNO, { shouldDirty: true });
+    if (flag) {
+      const next: ProgramMatrix = JSON.parse(JSON.stringify(matrix));
+      if (!next[programId]) next[programId] = {};
+      if (!next[programId][yearKey]) next[programId][yearKey] = {};
+      for (const gk of matrixGroupKeys) {
+        next[programId][yearKey][gk] = null;
+      }
+      setValue("programEnrollmentMatrix", next, { shouldDirty: true });
+    }
+  }, [notOffered, matrix, matrixGroupKeys, setValue]);
+
+  // Column-level "didn't offer this <grade/band> in <year>" — null every
+  // program's cell for (yearKey, groupKey).
+  const setColumnNotOffered = useCallback((yearKey: string, groupKey: string) => {
+    const next: ProgramMatrix = JSON.parse(JSON.stringify(matrix));
+    for (const p of programs) {
+      if (!next[p.id]) next[p.id] = {};
+      if (!next[p.id][yearKey]) next[p.id][yearKey] = {};
+      next[p.id][yearKey][groupKey] = null;
+    }
+    setValue("programEnrollmentMatrix", next, { shouldDirty: true });
+  }, [matrix, programs, setValue]);
+
+  const isColumnAllNull = useCallback((yearKey: string, groupKey: string): boolean => {
+    if (programs.length === 0) return false;
+    return programs.every((p) => matrix[p.id]?.[yearKey]?.[groupKey] === null);
+  }, [matrix, programs]);
+
+  const restoreColumn = useCallback((yearKey: string, groupKey: string) => {
+    const next: ProgramMatrix = JSON.parse(JSON.stringify(matrix));
+    for (const p of programs) {
+      if (next[p.id]?.[yearKey]?.[groupKey] === null) {
+        next[p.id][yearKey][groupKey] = 0;
+      }
+    }
+    setValue("programEnrollmentMatrix", next, { shouldDirty: true });
+  }, [matrix, programs, setValue]);
+
+  // Sum matrix row → program-year total, treating null as 0 (skipped).
+  const sumProgramYear = useCallback((programId: string, yearKey: string): number => {
+    if (!hasMatrix) return 0;
+    let sum = 0;
+    for (const gk of matrixGroupKeys) {
+      const v = matrix[programId]?.[yearKey]?.[gk];
+      if (typeof v === "number" && Number.isFinite(v)) sum += v;
+    }
+    return sum;
+  }, [hasMatrix, matrix, matrixGroupKeys]);
+
   const totalsByYear = useMemo(() => {
     const totals: Record<string, number> = {};
     for (const key of allColumnKeys) {
-      totals[key] = programs.reduce((sum, p) => sum + ((p as Record<string, unknown>)[key] as number || 0), 0);
+      if (hasMatrix) {
+        // Sum across all programs from the matrix; the matrix is the source
+        // of truth when grouping is active.
+        totals[key] = programs.reduce((sum, p) => sum + sumProgramYear(p.id, key), 0);
+      } else {
+        totals[key] = programs.reduce((sum, p) => sum + ((p as Record<string, unknown>)[key] as number || 0), 0);
+      }
     }
     return totals;
-  }, [programs, allColumnKeys]);
+  }, [programs, allColumnKeys, hasMatrix, sumProgramYear]);
 
   const revenueByYear = useMemo(() => {
     const rev: Record<string, number> = {};
@@ -487,18 +633,80 @@ export function EnrollmentStep() {
   const existingProgramNames = new Set(programs.map(p => p.name));
   const availableSuggestions = SUGGESTED_PROGRAMS.filter(s => !existingProgramNames.has(s));
 
+  // Keep enrollment.yearN in sync with the sum of program.yearN. Primitive
+  // sums in deps avoid reference churn from RHF's watch().
+  const py1 = programs.reduce((s, p) => s + (p.year1 || 0), 0);
+  const py2 = programs.reduce((s, p) => s + (p.year2 || 0), 0);
+  const py3 = programs.reduce((s, p) => s + (p.year3 || 0), 0);
+  const py4 = programs.reduce((s, p) => s + (p.year4 || 0), 0);
+  const py5 = programs.reduce((s, p) => s + (p.year5 || 0), 0);
   useEffect(() => {
-    const y1 = programs.reduce((s, p) => s + (p.year1 || 0), 0);
-    const y2 = programs.reduce((s, p) => s + (p.year2 || 0), 0);
-    const y3 = programs.reduce((s, p) => s + (p.year3 || 0), 0);
-    const y4 = programs.reduce((s, p) => s + (p.year4 || 0), 0);
-    const y5 = programs.reduce((s, p) => s + (p.year5 || 0), 0);
-    setValue("enrollment.year1", y1, { shouldDirty: true });
-    setValue("enrollment.year2", y2, { shouldDirty: true });
-    setValue("enrollment.year3", y3, { shouldDirty: true });
-    setValue("enrollment.year4", y4, { shouldDirty: true });
-    setValue("enrollment.year5", y5, { shouldDirty: true });
-  }, [programs, setValue]);
+    setValue("enrollment.year1", py1, { shouldDirty: true });
+    setValue("enrollment.year2", py2, { shouldDirty: true });
+    setValue("enrollment.year3", py3, { shouldDirty: true });
+    setValue("enrollment.year4", py4, { shouldDirty: true });
+    setValue("enrollment.year5", py5, { shouldDirty: true });
+  }, [py1, py2, py3, py4, py5, setValue]);
+
+  // When the matrix is active, fan its sums into program.priorYear /
+  // currentYear / yearN AND into gradeBandEnrollment so downstream revenue
+  // and charter math keep working unchanged. String-hash deps protect
+  // against reference churn from RHF watch().
+  const matrixHash = hasMatrix ? JSON.stringify(matrix) : "";
+  const activeGradesHash = activeGradeKeys.join(",");
+  const matrixGroupHash = matrixGroupKeys.join(",");
+  const allColumnKeysHash = allColumnKeys.join(",");
+  useEffect(() => {
+    if (!hasMatrix || programs.length === 0) return;
+
+    let programDirty = false;
+    const updated = programs.map((p) => {
+      const next: Program = { ...p };
+      for (const yk of allColumnKeys) {
+        const summed = sumProgramYear(p.id, yk);
+        const prev = ((next as Record<string, unknown>)[yk] as number | undefined) ?? 0;
+        if (prev !== summed) {
+          (next as Record<string, unknown>)[yk] = summed;
+          programDirty = true;
+        }
+      }
+      return next;
+    });
+    if (programDirty) {
+      setValue("programs", updated, { shouldDirty: true });
+    }
+
+    const fan: Partial<Record<GradeBandKey, (number | null)[]>> = {};
+    for (const band of GRADE_BAND_KEYS) {
+      const arr: (number | null)[] = [0, 0, 0, 0, 0];
+      for (let i = 0; i < 5; i++) {
+        const yk = `year${i + 1}`;
+        let total = 0;
+        let anyVal = false;
+        for (const p of programs) {
+          const direct = matrix[p.id]?.[yk]?.[band];
+          if (typeof direct === "number") { total += direct; anyVal = true; }
+          for (const gk of activeGradeKeys) {
+            if (GRADE_TO_BAND[gk] !== band) continue;
+            const v = matrix[p.id]?.[yk]?.[gk];
+            if (typeof v === "number") { total += v; anyVal = true; }
+          }
+        }
+        arr[i] = anyVal ? total : 0;
+      }
+      fan[band] = arr;
+    }
+    const current = gradeBandEnrollment;
+    const same = GRADE_BAND_KEYS.every((b) => {
+      const a = current[b] ?? [];
+      const next = fan[b] ?? [];
+      return a.length === next.length && a.every((v, idx) => (v ?? 0) === (next[idx] ?? 0));
+    });
+    if (!same) {
+      setValue("schoolProfile.gradeBandEnrollment", fan, { shouldDirty: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMatrix, matrixHash, activeGradesHash, matrixGroupHash, allColumnKeysHash, programs.length, setValue]);
 
   const warnings: string[] = [];
   for (let i = 1; i < 5; i++) {
@@ -525,12 +733,16 @@ export function EnrollmentStep() {
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Programs & Enrollment</h2>
         <p className="text-muted-foreground text-lg">
-          Define every program you offer - each with its own tuition and enrollment. Full day, half day, drop-in, after school, four-day week - whatever you run. Don't worry about getting this perfect - your budget is a living document you'll refine over time.
+          {newComfort
+            ? "List the schedules families can sign up for — Full Day, Half Day, 2-Day, after-school, and so on. Each one gets its own tuition. The matrix below lets you say how many students are in each grade or age band for that schedule. Don't sweat perfection — you can always come back and adjust."
+            : "Add each schedule you offer with its own tuition. Use the matrix below to assign students per grade/band per program."}
         </p>
       </div>
 
       <WhyThisMatters
-        why="Enrollment is the engine of your model. Every other number — revenue, staffing, even rent per student — moves with it. We'd rather have your honest best guess today than a perfect number you don't have yet."
+        why={newComfort
+          ? "Enrollment is the engine of your model. Every other number — revenue, staffing, even rent per student — moves with it. We'd rather have your honest best guess today than a perfect number you don't have yet."
+          : "Enrollment drives revenue, staffing ratios, and per-student costs. Best-guess numbers are fine; refine as data comes in."}
         revisit="Update this whenever you finish an enrollment cycle, sign a new lead family, or get a clearer sense of demand."
       />
 
@@ -684,7 +896,7 @@ export function EnrollmentStep() {
         </>
       )}
 
-      {programs.length > 0 && (
+      {programs.length > 0 && !hasMatrix && (
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Enrollment by Program</h3>
           <p className="text-sm text-muted-foreground mb-4">
@@ -753,7 +965,190 @@ export function EnrollmentStep() {
         </div>
       )}
 
-      {schoolType === "charter_school" && hasYear1Data && (
+      {/* Per-year matrix: rows = programs, cols = active grades/bands. */}
+      {programs.length > 0 && hasMatrix && (
+        <div>
+          <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Enrollment Matrix</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {newComfort
+              ? `For each year, fill in how many students you expect in each ${showGrades ? "grade" : "band"}, broken out by program (Full Day, Half Day, etc.). It's okay to leave cells blank — we'll only count what's there. If a program didn't run in an actuals year, hit "Didn't offer" instead of typing zeros.`
+              : `Programs (rows) × ${showGrades && showBands ? "grades + bands" : showGrades ? "grades" : "age bands"} (cols), per year. Use "Didn't offer" for N/A in actuals.`}
+          </p>
+
+          <EnrollmentBenchmark schoolType={schoolType} maxCapacity={maxCapacity} isNewSchool={isNewSchool} />
+
+          <div className="space-y-4">
+            {allColumnKeys.map((yearKey, yearIdx) => {
+              const isActuals = yearKey === "priorYear" || yearKey === "currentYear";
+              const yearLabel = allColumnLabels[yearIdx];
+              return (
+                <div
+                  key={yearKey}
+                  className={cn(
+                    "bg-white rounded-2xl p-4 border border-border/60 shadow-sm",
+                    isActuals && "bg-secondary/10 border-secondary/40"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-display font-bold text-sm text-foreground">{yearLabel}</h4>
+                    <span className="text-xs text-muted-foreground">
+                      Total: <span className="font-semibold text-foreground">{totalsByYear[yearKey] || 0}</span>
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border min-w-[140px]">
+                            Program
+                          </th>
+                          {matrixGroupKeys.map((gk) => {
+                            const colNa = isActuals && isColumnAllNull(yearKey, gk);
+                            return (
+                              <th
+                                key={gk}
+                                className="text-center py-2 px-2 text-xs font-semibold text-foreground uppercase tracking-wider border-b border-border min-w-[72px]"
+                              >
+                                <div className="flex flex-col items-center gap-1">
+                                  <span>{matrixGroupLabels[gk]}</span>
+                                  {isActuals && (
+                                    <button
+                                      type="button"
+                                      data-testid={`matrix-col-na-${yearKey}-${gk}`}
+                                      onClick={() => (colNa ? restoreColumn(yearKey, gk) : setColumnNotOffered(yearKey, gk))}
+                                      title={colNa ? "Restore this column" : "Didn't offer this in this year"}
+                                      className={cn(
+                                        "text-[10px] font-medium normal-case rounded px-1.5 py-0.5 border transition",
+                                        colNa
+                                          ? "border-primary/40 bg-primary/10 text-primary"
+                                          : "border-border bg-background text-muted-foreground hover:border-primary hover:text-primary"
+                                      )}
+                                    >
+                                      {colNa ? "Restore" : "N/A"}
+                                    </button>
+                                  )}
+                                </div>
+                              </th>
+                            );
+                          })}
+                          <th className="text-center py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border min-w-[64px]">
+                            Row total
+                          </th>
+                          {isActuals && (
+                            <th className="text-center py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border min-w-[120px]">
+                              N/A
+                            </th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {programs.map((prog) => {
+                          const rowNotOffered = isRowNotOffered(prog.id, yearKey);
+                          return (
+                            <tr key={prog.id} className="border-b border-border/50 hover:bg-secondary/20">
+                              <td className="py-2 px-3 font-medium text-foreground text-sm">
+                                {prog.name || "Unnamed Program"}
+                              </td>
+                              {matrixGroupKeys.map((gk) => {
+                                const cell = getCell(prog.id, yearKey, gk);
+                                const isNull = cell === null;
+                                return (
+                                  <td key={gk} className="py-1.5 px-1.5">
+                                    {rowNotOffered || isNull ? (
+                                      <button
+                                        type="button"
+                                        data-testid={`matrix-cell-${prog.id}-${yearKey}-${gk}`}
+                                        onClick={() => setCell(prog.id, yearKey, gk, 0)}
+                                        title="Click to enter a number"
+                                        className="w-full rounded-lg border border-dashed border-border bg-background px-2 py-1.5 text-sm text-center text-muted-foreground hover:border-primary hover:text-foreground"
+                                      >
+                                        —
+                                      </button>
+                                    ) : (
+                                      <div className="flex items-stretch gap-1">
+                                        <input
+                                          type="number"
+                                          data-testid={`matrix-cell-${prog.id}-${yearKey}-${gk}`}
+                                          value={typeof cell === "number" ? (cell || "") : ""}
+                                          onChange={(e) => {
+                                            const raw = e.target.value;
+                                            if (raw === "") {
+                                              setCell(prog.id, yearKey, gk, 0);
+                                            } else {
+                                              setCell(prog.id, yearKey, gk, parseInt(raw) || 0);
+                                            }
+                                          }}
+                                          className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-center text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                                          placeholder="0"
+                                          min={0}
+                                        />
+                                        {isActuals && (
+                                          <button
+                                            type="button"
+                                            data-testid={`matrix-cell-na-${prog.id}-${yearKey}-${gk}`}
+                                            onClick={() => setCell(prog.id, yearKey, gk, null)}
+                                            title="Mark as N/A (didn't offer)"
+                                            className="rounded-lg border border-border bg-background px-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary"
+                                          >
+                                            N/A
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                              <td className="py-2 px-3 text-center text-sm font-semibold text-foreground bg-secondary/20">
+                                {sumProgramYear(prog.id, yearKey)}
+                              </td>
+                              {isActuals && (
+                                <td className="py-2 px-3 text-center">
+                                  <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      data-testid={`matrix-na-${prog.id}-${yearKey}`}
+                                      checked={rowNotOffered}
+                                      onChange={(e) => setRowNotOffered(prog.id, yearKey, e.target.checked)}
+                                      className="rounded border-border"
+                                    />
+                                    <span>Didn't offer</span>
+                                  </label>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                        <tr className="bg-secondary/40 font-semibold">
+                          <td className="py-2 px-3 text-sm text-foreground">Column total</td>
+                          {matrixGroupKeys.map((gk) => {
+                            const colTotal = programs.reduce((s, p) => {
+                              const v = matrix[p.id]?.[yearKey]?.[gk];
+                              return s + (typeof v === "number" ? v : 0);
+                            }, 0);
+                            return (
+                              <td key={gk} className="py-2 px-2 text-center text-sm text-foreground">
+                                {colTotal}
+                              </td>
+                            );
+                          })}
+                          <td className="py-2 px-3 text-center text-sm text-foreground bg-secondary/30">
+                            {totalsByYear[yearKey] || 0}
+                          </td>
+                          {isActuals && <td />}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Hide the legacy band-breakdown table when the matrix is
+          already broken out by group — the matrix is the canonical view. */}
+      {schoolType === "charter_school" && hasYear1Data && !hasMatrix && (
         <div>
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">
             <span className="flex items-center gap-2">

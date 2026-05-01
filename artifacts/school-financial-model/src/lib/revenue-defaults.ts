@@ -63,6 +63,75 @@ export const GRADE_BAND_DEFAULT_RATIO: Record<GradeBandKey, number> = {
   other: 12,
 };
 
+// Individual grade levels (K through 12). Founders who run a
+// traditional K-12 model can choose to enter enrollment per grade instead of
+// per band. Bands and grades are independent — the founder picks one, the
+// other, or both via `schoolProfile.studentGroupingMode`. We keep grades
+// flat (no "9th-grade Honors" sub-tracks) because the matrix already
+// handles program × grade combinations.
+export type GradeKey = "k" | "g1" | "g2" | "g3" | "g4" | "g5" | "g6" | "g7" | "g8" | "g9" | "g10" | "g11" | "g12";
+
+export const GRADE_KEYS: readonly GradeKey[] = [
+  "k", "g1", "g2", "g3", "g4", "g5", "g6", "g7", "g8", "g9", "g10", "g11", "g12",
+] as const;
+
+export const GRADE_LABELS: Record<GradeKey, string> = {
+  k: "K",
+  g1: "1st",
+  g2: "2nd",
+  g3: "3rd",
+  g4: "4th",
+  g5: "5th",
+  g6: "6th",
+  g7: "7th",
+  g8: "8th",
+  g9: "9th",
+  g10: "10th",
+  g11: "11th",
+  g12: "12th",
+};
+
+// Default students-per-teacher per grade. Lower for K (typical state cap is
+// ~15-18); steady around 14-18 for elementary/middle; ~18-22 for high. Used
+// only as placeholder text — founders override per grade in Story / Staffing.
+export const GRADE_DEFAULT_RATIO: Record<GradeKey, number> = {
+  k: 14, g1: 14, g2: 14, g3: 16, g4: 16, g5: 16,
+  g6: 18, g7: 18, g8: 18,
+  g9: 20, g10: 20, g11: 20, g12: 20,
+};
+
+// Map a grade to its parent band so downstream charter per-pupil math (which
+// runs off bands) keeps working when the founder enters per-grade enrollment
+// only.
+export const GRADE_TO_BAND: Record<GradeKey, GradeBandKey> = {
+  k: "k5", g1: "k5", g2: "k5", g3: "k5", g4: "k5", g5: "k5",
+  g6: "m68", g7: "m68", g8: "m68",
+  g9: "h912", g10: "h912", g11: "h912", g12: "h912",
+};
+
+export type StudentGroupingMode = "grades" | "age_bands" | "both";
+
+// Suggested default grouping mode by school type. Microschools, learning
+// pods, homeschool co-ops, and tutoring centers usually think in age bands
+// (mixed-age studios). Charter / private K-12 schools typically run grade
+// cohorts. We default rather than force so founders always retain control.
+export function defaultGroupingModeForSchoolType(schoolType: string | undefined): StudentGroupingMode {
+  switch (schoolType) {
+    case "microschool":
+    case "learning_pod":
+    case "homeschool_coop":
+    case "tutoring_center":
+      return "age_bands";
+    case "charter_school":
+    case "chesterton_academy":
+    case "catholic_school":
+    case "private_school":
+      return "grades";
+    default:
+      return "both";
+  }
+}
+
 export type CollectionMethod = "autopay" | "invoiced" | "mixed";
 export type PaymentFrequency = "monthly" | "quarterly" | "semi_annual" | "annual";
 export type PaymentTiming = "upfront" | "arrears";

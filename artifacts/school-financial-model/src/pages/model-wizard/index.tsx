@@ -1121,6 +1121,7 @@ export function ModelWizardPage() {
             <WhatThisMeansInYourBooks
               step={currentStep}
               schoolType={(methods.getValues() as FullModelData).schoolProfile?.schoolType}
+              entityType={(methods.getValues() as FullModelData).schoolProfile?.entityType}
               className="mb-4"
             />
             {showEncouragement && (

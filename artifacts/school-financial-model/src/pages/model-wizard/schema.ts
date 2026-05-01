@@ -49,6 +49,21 @@ export const programSchema = z.object({
   year5: z.coerce.number(numMsg("Year 5 enrollment")).min(0, "Please enter a positive number for enrollment").default(0),
 });
 
+// Per-program × per-year × per-group enrollment cells. `null` = N/A
+// (excluded from totals/warnings); `undefined` = empty (treated as 0).
+export const programEnrollmentMatrixSchema = z.record(
+  z.string(),
+  z.record(
+    z.string(),
+    z.record(z.string(), z.coerce.number().min(0).nullable().optional()),
+  ),
+).optional();
+
+export const programNotOfferedMaskSchema = z.record(
+  z.string(),
+  z.record(z.string(), z.boolean().optional()),
+).optional();
+
 export const tuitionEscalationSchema = z.object({
   rate: z.coerce.number(numMsg("escalation rate")).min(0, "Please enter a rate of 0% or higher").max(20, "Escalation rate can't exceed 20%").default(3),
 });
@@ -188,14 +203,24 @@ export const schoolProfileSchema = z.object({
   // and custom-named programs. RevenueStep + EnrollmentStep iterate via the
   // shared GRADE_BAND_KEYS constant so adding a band only requires touching
   // the schema + the constant below.
+  // Grouping mode + explicit on/off sets — see StoryStep / EnrollmentStep.
+  studentGroupingMode: z.enum(["grades", "age_bands", "both"]).optional(),
+  gradeBandActive: z.array(z.string()).optional(),
+  gradeActive: z.array(z.string()).optional(),
+  // Cells are nullable so null = "didn't offer" (N/A), distinct from 0.
   gradeBandEnrollment: z.object({
-    toddlers: z.array(z.coerce.number().min(0)).optional(),
-    preK: z.array(z.coerce.number().min(0)).optional(),
-    k5: z.array(z.coerce.number().min(0)).default([0, 0, 0, 0, 0]),
-    m68: z.array(z.coerce.number().min(0)).default([0, 0, 0, 0, 0]),
-    h912: z.array(z.coerce.number().min(0)).default([0, 0, 0, 0, 0]),
-    other: z.array(z.coerce.number().min(0)).optional(),
+    toddlers: z.array(z.coerce.number().min(0).nullable()).optional(),
+    preK: z.array(z.coerce.number().min(0).nullable()).optional(),
+    k5: z.array(z.coerce.number().min(0).nullable()).optional(),
+    m68: z.array(z.coerce.number().min(0).nullable()).optional(),
+    h912: z.array(z.coerce.number().min(0).nullable()).optional(),
+    other: z.array(z.coerce.number().min(0).nullable()).optional(),
   }).optional(),
+  // Per-grade enrollment vectors keyed by GRADE_KEYS (k, g1..g12).
+  gradeEnrollment: z.record(z.string(), z.array(z.coerce.number().min(0).nullable())).optional(),
+  gradePerPupil: z.record(z.string(), z.coerce.number().min(0)).optional(),
+  gradeLongTermGoal: z.record(z.string(), z.coerce.number().min(0)).optional(),
+  gradeRatio: z.record(z.string(), z.coerce.number().min(1)).optional(),
   gradeBandPerPupil: z.object({
     toddlers: z.coerce.number().min(0).optional(),
     preK: z.coerce.number().min(0).optional(),
@@ -685,6 +710,9 @@ export const fullModelSchema = z.object({
   schoolProfile: schoolProfileSchema.optional(),
   enrollment: enrollmentSchema.optional(),
   programs: z.array(programSchema).optional(),
+  // Per-program × per-year × per-group enrollment matrix + N/A mask.
+  programEnrollmentMatrix: programEnrollmentMatrixSchema,
+  programNotOffered: programNotOfferedMaskSchema,
   tuitionEscalation: tuitionEscalationSchema.optional(),
   revenueSources: revenueSourcesSchema.optional(),
   tuitionTiers: z.array(tuitionTierSchema).optional(),

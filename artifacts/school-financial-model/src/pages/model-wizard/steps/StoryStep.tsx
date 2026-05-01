@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { Sparkles, BookOpen, CheckCircle2, Lightbulb, GraduationCap } from "lucide-react";
 import { FormInput, FormSelect } from "@/components/ui/form-inputs";
@@ -5,7 +6,17 @@ import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona";
-import { GRADE_BAND_KEYS, GRADE_BAND_DEFAULT_RATIO, type GradeBandKey } from "@/lib/revenue-defaults";
+import {
+  GRADE_BAND_KEYS,
+  GRADE_BAND_DEFAULT_RATIO,
+  GRADE_KEYS,
+  GRADE_LABELS,
+  GRADE_DEFAULT_RATIO,
+  defaultGroupingModeForSchoolType,
+  type GradeBandKey,
+  type GradeKey,
+  type StudentGroupingMode,
+} from "@/lib/revenue-defaults";
 
 // "Your program" — the gentle, plain-English program-design sequence we
 // surface in the Story step for founders who have just signed up. Bands
@@ -73,6 +84,40 @@ export function StoryStep() {
     | { tuition?: boolean; publicFunding?: boolean; schoolChoice?: boolean; philanthropy?: boolean }
     | undefined) ?? {};
   const studentsPerTeacher = watch("staffing.studentsPerTeacher") as number | undefined;
+  const schoolType = watch("schoolProfile.schoolType") as string | undefined;
+  const gradeBandActive = (watch("schoolProfile.gradeBandActive") as string[] | undefined) ?? [];
+  const gradeActive = (watch("schoolProfile.gradeActive") as string[] | undefined) ?? [];
+  const gradeEnrollment = (watch("schoolProfile.gradeEnrollment") as
+    | Partial<Record<GradeKey, (number | null)[]>>
+    | undefined) ?? {};
+  const gradePerPupil = (watch("schoolProfile.gradePerPupil") as
+    | Partial<Record<GradeKey, number>>
+    | undefined) ?? {};
+  const gradeLongTermGoal = (watch("schoolProfile.gradeLongTermGoal") as
+    | Partial<Record<GradeKey, number>>
+    | undefined) ?? {};
+  const gradeRatio = (watch("schoolProfile.gradeRatio") as
+    | Partial<Record<GradeKey, number>>
+    | undefined) ?? {};
+
+  // studentGroupingMode auto-defaults from school type if not yet set.
+  const storedGroupingMode = watch("schoolProfile.studentGroupingMode") as StudentGroupingMode | undefined;
+  const groupingMode: StudentGroupingMode = useMemo(
+    () => storedGroupingMode ?? defaultGroupingModeForSchoolType(schoolType),
+    [storedGroupingMode, schoolType],
+  );
+  useEffect(() => {
+    if (!storedGroupingMode && schoolType) {
+      setValue(
+        "schoolProfile.studentGroupingMode",
+        defaultGroupingModeForSchoolType(schoolType),
+        { shouldDirty: false },
+      );
+    }
+  }, [storedGroupingMode, schoolType, setValue]);
+
+  const showBands = groupingMode === "age_bands" || groupingMode === "both";
+  const showGrades = groupingMode === "grades" || groupingMode === "both";
 
   const toggleQuestion = (value: string) => {
     const current = new Set(foundingQuestions);
@@ -83,28 +128,32 @@ export function StoryStep() {
     });
   };
 
-  // Toggle a grade band on or off. Turning a band on initializes its
-  // 5-year enrollment vector + per-pupil tuition to zero so downstream
-  // revenue/enrollment calcs pick up the band immediately. Turning it off
-  // resets the vector + per-pupil to undefined so the model behaves as if
-  // the band was never selected.
+  // A band is "on" iff it appears in `gradeBandActive`. Falls back to
+  // checking the enrollment array for legacy models without an explicit set.
+  const hasExplicitActiveSet = Array.isArray(watch("schoolProfile.gradeBandActive"));
   const isBandOn = (key: GradeBandKey) => {
+    if (hasExplicitActiveSet) {
+      return gradeBandActive.includes(key);
+    }
     const arr = gradeBandEnrollment[key];
     return Array.isArray(arr) && arr.length > 0;
   };
   const toggleGradeBand = (key: GradeBandKey) => {
     const wasOn = isBandOn(key);
-    const nextEnrollment = { ...gradeBandEnrollment } as Partial<Record<GradeBandKey, number[]>>;
-    const nextPerPupil = { ...gradeBandPerPupil } as Partial<Record<GradeBandKey, number>>;
-    if (wasOn) {
-      nextEnrollment[key] = [];
-      nextPerPupil[key] = undefined;
-    } else {
-      nextEnrollment[key] = [0, 0, 0, 0, 0];
-      nextPerPupil[key] = nextPerPupil[key] ?? 0;
+    const nextActive = wasOn
+      ? gradeBandActive.filter((k) => k !== key)
+      : Array.from(new Set([...gradeBandActive, key]));
+    setValue("schoolProfile.gradeBandActive", nextActive, { shouldDirty: true });
+    // Initialize on first activation; toggling off never clears data.
+    if (!wasOn) {
+      const existing = gradeBandEnrollment[key];
+      if (!Array.isArray(existing) || existing.length === 0) {
+        setValue(`schoolProfile.gradeBandEnrollment.${key}`, [0, 0, 0, 0, 0], { shouldDirty: true });
+      }
+      if (gradeBandPerPupil[key] === undefined) {
+        setValue(`schoolProfile.gradeBandPerPupil.${key}`, 0, { shouldDirty: true });
+      }
     }
-    setValue("schoolProfile.gradeBandEnrollment", nextEnrollment, { shouldDirty: true });
-    setValue("schoolProfile.gradeBandPerPupil", nextPerPupil, { shouldDirty: true });
   };
 
   // Year-1 enrollment per band is the first slot of the 5-year vector.
@@ -116,12 +165,59 @@ export function StoryStep() {
     setValue(`schoolProfile.gradeBandEnrollment.${key}`, next, { shouldDirty: true });
   };
 
-  const totalYear1 = GRADE_BAND_KEYS.reduce((sum, key) => {
-    const arr = gradeBandEnrollment[key] as number[] | undefined;
-    return sum + (arr?.[0] ?? 0);
+  // Same pattern for individual grades.
+  const hasExplicitGradeSet = Array.isArray(watch("schoolProfile.gradeActive"));
+  const isGradeOn = (key: GradeKey) => {
+    if (hasExplicitGradeSet) return gradeActive.includes(key);
+    const arr = gradeEnrollment[key];
+    return Array.isArray(arr) && arr.length > 0;
+  };
+  const toggleGrade = (key: GradeKey) => {
+    const wasOn = isGradeOn(key);
+    const nextActive = wasOn
+      ? gradeActive.filter((k) => k !== key)
+      : Array.from(new Set([...gradeActive, key]));
+    setValue("schoolProfile.gradeActive", nextActive, { shouldDirty: true });
+    if (!wasOn) {
+      const existing = gradeEnrollment[key];
+      if (!Array.isArray(existing) || existing.length === 0) {
+        setValue(`schoolProfile.gradeEnrollment.${key}`, [0, 0, 0, 0, 0], { shouldDirty: true });
+      }
+      if (gradePerPupil[key] === undefined) {
+        setValue(`schoolProfile.gradePerPupil.${key}`, 0, { shouldDirty: true });
+      }
+    }
+  };
+  const setGradeYear1 = (key: GradeKey, value: number) => {
+    const current = (gradeEnrollment[key] as (number | null)[] | undefined) ?? [0, 0, 0, 0, 0];
+    const next = [...current];
+    next[0] = Number.isFinite(value) ? value : 0;
+    while (next.length < 5) next.push(next[next.length - 1] ?? 0);
+    setValue(`schoolProfile.gradeEnrollment.${key}`, next, { shouldDirty: true });
+  };
+  const setGradePerPupil = (key: GradeKey, value: number) => {
+    setValue(`schoolProfile.gradePerPupil.${key}`, value, { shouldDirty: true });
+  };
+  const setGradeRatio = (key: GradeKey, value: number | undefined) => {
+    setValue(`schoolProfile.gradeRatio.${key}`, value, { shouldDirty: true });
+  };
+
+  const totalBandYear1 = GRADE_BAND_KEYS.reduce((sum, key) => {
+    if (!isBandOn(key)) return sum;
+    const arr = gradeBandEnrollment[key] as (number | null)[] | undefined;
+    const v = arr?.[0];
+    return sum + (typeof v === "number" ? v : 0);
   }, 0);
+  const totalGradeYear1 = GRADE_KEYS.reduce((sum, key) => {
+    if (!isGradeOn(key)) return sum;
+    const arr = gradeEnrollment[key] as (number | null)[] | undefined;
+    const v = arr?.[0];
+    return sum + (typeof v === "number" ? v : 0);
+  }, 0);
+  const totalYear1 = (showBands ? totalBandYear1 : 0) + (showGrades ? totalGradeYear1 : 0);
 
   const activeBands = GRADE_BAND_OPTIONS.filter((opt) => isBandOn(opt.key));
+  const activeGrades = GRADE_KEYS.filter((key) => isGradeOn(key));
 
   // "Same tuition for every band" shortcut. When toggled on, copies the
   // first non-empty band's per-pupil tuition to every active band so the
@@ -167,9 +263,10 @@ export function StoryStep() {
   const computeLongTermShare = (key: GradeBandKey) => {
     const explicit = gradeBandLongTermGoal[key];
     if (explicit !== undefined && explicit !== null) return explicit;
-    if (longTermTotal > 0 && totalYear1 > 0) {
-      const arr = gradeBandEnrollment[key] as number[] | undefined;
-      const share = (arr?.[0] ?? 0) / totalYear1;
+    if (longTermTotal > 0 && totalBandYear1 > 0) {
+      const arr = gradeBandEnrollment[key] as (number | null)[] | undefined;
+      const v = arr?.[0];
+      const share = (typeof v === "number" ? v : 0) / totalBandYear1;
       return Math.round(longTermTotal * share);
     }
     return 0;
@@ -304,21 +401,31 @@ export function StoryStep() {
           </div>
         </div>
 
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-foreground">Which age or grade bands will you serve?</p>
-          {newComfort && (
-            <p className="text-xs text-muted-foreground">Pick every band you plan to enroll. You can add more later, or use "Other" if you have a unique program.</p>
+        {/* How does the founder think about students? */}
+        <div className="space-y-3" data-testid="story-grouping-mode-section">
+          <p className="text-sm font-semibold text-foreground">How do you think about your students?</p>
+          {newComfort ? (
+            <p className="text-xs text-muted-foreground">
+              Pick whichever feels natural — most microschools and learning pods think in
+              age bands; charter and private schools usually think in grade levels. You can
+              switch modes at any time without losing what you've already entered.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Choose grades, age bands, or both. Affects which selectors appear below.</p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {GRADE_BAND_OPTIONS.map((opt) => {
-              const isOn = isBandOn(opt.key);
-              const displayLabel = opt.key === "other" && otherLabel ? otherLabel : opt.label;
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {([
+              { value: "grades" as const, label: "Grade levels", helper: "K, 1st, 2nd … 12th" },
+              { value: "age_bands" as const, label: "Age bands", helper: "Toddlers, Pre-K, K-5, 6-8, 9-12" },
+              { value: "both" as const, label: "Both", helper: "Mixed-age studios with grade-aligned cohorts" },
+            ]).map((opt) => {
+              const isOn = groupingMode === opt.value;
               return (
                 <button
-                  key={opt.key}
+                  key={opt.value}
                   type="button"
-                  onClick={() => toggleGradeBand(opt.key)}
-                  data-testid={`story-grade-band-${opt.key}`}
+                  onClick={() => setValue("schoolProfile.studentGroupingMode", opt.value, { shouldDirty: true })}
+                  data-testid={`story-grouping-mode-${opt.value}`}
                   aria-pressed={isOn}
                   className={cn(
                     "rounded-xl border-2 px-3 py-3 text-left transition-all",
@@ -328,7 +435,7 @@ export function StoryStep() {
                   )}
                 >
                   <p className="text-sm font-semibold flex items-center gap-1.5">
-                    {displayLabel}
+                    {opt.label}
                     {isOn && <CheckCircle2 className="h-3.5 w-3.5" />}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{opt.helper}</p>
@@ -336,24 +443,98 @@ export function StoryStep() {
               );
             })}
           </div>
-          {isBandOn("other") && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 space-y-1.5">
-              <label className="text-xs font-semibold text-amber-900" htmlFor="story-other-band-label">
-                What do you call this program?
-              </label>
-              <input
-                id="story-other-band-label"
-                type="text"
-                value={otherLabel}
-                onChange={(e) => setValue("schoolProfile.gradeBandOtherLabel", e.target.value, { shouldDirty: true })}
-                placeholder="e.g. Mixed-age studio, Bridge year, Workforce track"
-                maxLength={40}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                data-testid="story-other-band-label"
-              />
-            </div>
-          )}
         </div>
+
+        {showBands && (
+          <div className="space-y-3" data-testid="story-bands-section">
+            <p className="text-sm font-semibold text-foreground">Which age bands will you serve?</p>
+            {newComfort && (
+              <p className="text-xs text-muted-foreground">Pick every band you plan to enroll. You can add more later, or use "Other" if you have a unique program.</p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {GRADE_BAND_OPTIONS.map((opt) => {
+                const isOn = isBandOn(opt.key);
+                const displayLabel = opt.key === "other" && otherLabel ? otherLabel : opt.label;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => toggleGradeBand(opt.key)}
+                    data-testid={`story-grade-band-${opt.key}`}
+                    aria-pressed={isOn}
+                    className={cn(
+                      "rounded-xl border-2 px-3 py-3 text-left transition-all",
+                      isOn
+                        ? "bg-amber-100 border-amber-400 text-amber-900 shadow-sm"
+                        : "bg-card border-border text-foreground/80 hover:border-amber-300"
+                    )}
+                  >
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      {displayLabel}
+                      {isOn && <CheckCircle2 className="h-3.5 w-3.5" />}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{opt.helper}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {isBandOn("other") && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 space-y-1.5">
+                <label className="text-xs font-semibold text-amber-900" htmlFor="story-other-band-label">
+                  What do you call this program?
+                </label>
+                <input
+                  id="story-other-band-label"
+                  type="text"
+                  value={otherLabel}
+                  onChange={(e) => setValue("schoolProfile.gradeBandOtherLabel", e.target.value, { shouldDirty: true })}
+                  placeholder="e.g. Mixed-age studio, Bridge year, Workforce track"
+                  maxLength={40}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  data-testid="story-other-band-label"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {showGrades && (
+          <div className="space-y-3" data-testid="story-grades-section">
+            <p className="text-sm font-semibold text-foreground">Which grade levels will you serve?</p>
+            {newComfort && (
+              <p className="text-xs text-muted-foreground">
+                Pick every grade you plan to enroll. We use the same default class size per
+                grade (~14 K-2, ~16 3-5, ~18 middle, ~20 high) — you can override any of
+                them once you've picked them.
+              </p>
+            )}
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-2">
+              {GRADE_KEYS.map((key) => {
+                const isOn = isGradeOn(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleGrade(key)}
+                    data-testid={`story-grade-${key}`}
+                    aria-pressed={isOn}
+                    className={cn(
+                      "rounded-xl border-2 px-3 py-2.5 text-center transition-all",
+                      isOn
+                        ? "bg-amber-100 border-amber-400 text-amber-900 shadow-sm"
+                        : "bg-card border-border text-foreground/80 hover:border-amber-300"
+                    )}
+                  >
+                    <p className="text-sm font-semibold flex items-center justify-center gap-1">
+                      {GRADE_LABELS[key]}
+                      {isOn && <CheckCircle2 className="h-3 w-3" />}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-3">
           <p className="text-sm font-semibold text-foreground">How will the program be paid for?</p>
@@ -388,7 +569,7 @@ export function StoryStep() {
           </div>
         </div>
 
-        {activeBands.length > 0 && (
+        {showBands && activeBands.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <p className="text-sm font-semibold text-foreground">
@@ -411,8 +592,9 @@ export function StoryStep() {
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {activeBands.map((opt) => {
-                const arr = (gradeBandEnrollment[opt.key] as number[] | undefined) ?? [0, 0, 0, 0, 0];
-                const year1 = arr[0] ?? 0;
+                const arr = (gradeBandEnrollment[opt.key] as (number | null)[] | undefined) ?? [0, 0, 0, 0, 0];
+                const year1Raw = arr[0];
+                const year1 = typeof year1Raw === "number" ? year1Raw : 0;
                 const perPupil = gradeBandPerPupil[opt.key] ?? 0;
                 const ratioOverride = gradeBandRatio[opt.key];
                 const ratioDefault = GRADE_BAND_DEFAULT_RATIO[opt.key];
@@ -505,14 +687,116 @@ export function StoryStep() {
                 );
               })}
             </div>
-            {totalYear1 > 0 && (
-              <p className="text-xs text-muted-foreground" data-testid="story-year1-total">
-                {yetToLaunch ? "That's " : "Total: "}
-                <span className="font-semibold text-foreground">{totalYear1}</span>{" "}
-                {yetToLaunch ? "students in your opening year." : "students currently enrolled."}
+          </div>
+        )}
+
+        {/* parallel detail card for individual grades. */}
+        {showGrades && activeGrades.length > 0 && (
+          <div className="space-y-3" data-testid="story-grades-detail-section">
+            <p className="text-sm font-semibold text-foreground">
+              {yetToLaunch ? "Year-1 enrollment by grade" : "Current enrollment by grade"}
+            </p>
+            {newComfort && (
+              <p className="text-xs text-muted-foreground">
+                Enter the number of students you expect in each grade. Tuition + ratio
+                pre-fill from typical defaults — edit any of them as needed.
               </p>
             )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {activeGrades.map((key) => {
+                const arr = (gradeEnrollment[key] as (number | null)[] | undefined) ?? [0, 0, 0, 0, 0];
+                const y1Raw = arr[0];
+                const y1 = typeof y1Raw === "number" ? y1Raw : 0;
+                const perPupil = gradePerPupil[key] ?? 0;
+                const ratioOverride = gradeRatio[key];
+                const ratioDefault = GRADE_DEFAULT_RATIO[key];
+                const longTermVal = gradeLongTermGoal[key];
+                return (
+                  <div
+                    key={key}
+                    className="rounded-xl border border-border bg-card px-3 py-3 space-y-3"
+                    data-testid={`story-grade-detail-${key}`}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{GRADE_LABELS[key]}</p>
+                    <div>
+                      <label className="text-xs text-muted-foreground">{yetToLaunch ? "Year-1 students" : "Students this year"}</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={y1}
+                        onChange={(e) => setGradeYear1(key, Number(e.target.value || 0))}
+                        className="w-full rounded-lg border border-border px-3 py-2 text-sm mt-1"
+                        data-testid={`story-grade-year1-${key}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Tuition per student / year</label>
+                      <div className="relative mt-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={perPupil}
+                          onChange={(e) => setGradePerPupil(key, Number(e.target.value || 0))}
+                          className="w-full rounded-lg border border-border pl-6 pr-3 py-2 text-sm"
+                          data-testid={`story-grade-per-pupil-${key}`}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Year-5 students</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={longTermVal ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setValue(
+                            `schoolProfile.gradeLongTermGoal.${key}`,
+                            v === "" ? undefined : Number(v) || 0,
+                            { shouldDirty: true },
+                          );
+                        }}
+                        className="w-full rounded-lg border border-border px-3 py-2 text-sm mt-1"
+                        data-testid={`story-grade-longterm-${key}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Students per teacher</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={ratioOverride ?? ""}
+                        placeholder={String(ratioDefault)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "") {
+                            setGradeRatio(key, undefined);
+                          } else {
+                            const parsed = Number(v);
+                            setGradeRatio(key, Number.isFinite(parsed) && parsed > 0 ? parsed : undefined);
+                          }
+                        }}
+                        className="w-full rounded-lg border border-border px-3 py-2 text-sm mt-1"
+                        data-testid={`story-grade-ratio-${key}`}
+                      />
+                      {ratioOverride === undefined && (
+                        <p className="text-[10px] text-muted-foreground mt-1">Default for this grade: {ratioDefault} students per teacher</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        )}
+
+        {totalYear1 > 0 && (
+          <p className="text-xs text-muted-foreground" data-testid="story-year1-total">
+            {yetToLaunch ? "That's " : "Total: "}
+            <span className="font-semibold text-foreground">{totalYear1}</span>{" "}
+            {yetToLaunch ? "students in your opening year." : "students currently enrolled."}
+          </p>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

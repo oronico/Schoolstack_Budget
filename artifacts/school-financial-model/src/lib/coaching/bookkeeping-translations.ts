@@ -6,12 +6,24 @@ export interface BookkeepingLine {
   account: string;
   statement: StatementKind;
   note?: string;
+  // When true, only render this line when the school is a 501(c)(3) nonprofit.
+  // For-profit schools do not track restricted vs. unrestricted net assets or
+  // split program vs. admin in the same way, so nonprofit-specific guidance
+  // is misleading for them.
+  nonprofitOnly?: boolean;
 }
 
 export interface BookkeepingTranslation {
   intro: string;
   lines: BookkeepingLine[];
   footnote?: string;
+  // When true, hide this whole step's sidebar until entityType is known
+  // (i.e., the founder has reached the School Details step). Use this on
+  // step 1 (Story) where the framing of the guidance depends on whether
+  // the school is a nonprofit or not.
+  requiresEntityType?: boolean;
+  // Optional alternative intro for non-nonprofit schools.
+  forProfitIntro?: string;
 }
 
 export const STATEMENT_LABELS: Record<StatementKind, string> = {
@@ -27,8 +39,11 @@ export const STATEMENT_LABELS: Record<StatementKind, string> = {
 // 9 Review · 10 Consultant · 11 Lender Narrative · 12 Export.
 export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = {
   1: {
+    requiresEntityType: true,
     intro:
-      "Your story doesn't post to a ledger, but it sets the lens your bookkeeper will use - what counts as program vs. admin, what's restricted vs. unrestricted, and what board memo each variance ends up in.",
+      "Your story doesn't post to a ledger, but it shapes how your books get organized - what counts as program vs. admin overhead, how donor gifts get classified, and what board memo each variance ends up in.",
+    forProfitIntro:
+      "Your story doesn't post to a ledger, but it shapes how your books get organized - which programs become their own revenue sub-class, how you split direct vs. overhead expenses, and what each variance ends up explaining to your owners or partners.",
     lines: [
       {
         label: "Mission and program scope",
@@ -43,6 +58,7 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
         account: "Net Assets - Restricted vs Unrestricted (nonprofits) on the Balance Sheet",
         statement: "balance_sheet",
         note: "Your story shapes which donor gifts get tagged restricted in the books and which fund general operations.",
+        nonprofitOnly: true,
       },
     ],
   },
@@ -129,6 +145,7 @@ export const BOOKKEEPING_TRANSLATIONS: Record<number, BookkeepingTranslation> = 
         account: "Contributions Revenue (501(c)(3)) - split unrestricted vs. restricted",
         statement: "pl",
         note: "Restricted gifts must be released into unrestricted only when their purpose is met.",
+        nonprofitOnly: true,
       },
     ],
   },
