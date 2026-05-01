@@ -119,6 +119,30 @@ async function primeAuthToken(page: Page, token: string): Promise<void> {
   }, token);
 }
 
+// Stub navigator.clipboard.writeText so the share-link test works in
+// headless Chromium without granting OS-level clipboard permissions, and
+// so we can read back exactly what the share button tried to copy.
+async function captureClipboardWrites(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const captured: string[] = [];
+    (window as unknown as { __clipboardWrites: string[] }).__clipboardWrites = captured;
+    const stub = {
+      writeText: async (value: string) => {
+        captured.push(value);
+      },
+      readText: async () => captured[captured.length - 1] ?? "",
+    };
+    try {
+      Object.defineProperty(navigator, "clipboard", {
+        value: stub,
+        configurable: true,
+      });
+    } catch {
+      (navigator as unknown as { clipboard: typeof stub }).clipboard = stub;
+    }
+  });
+}
+
 test("Side-by-side decision comparison auto-fills, gates the PDF button on 2 columns, and switches columns on user pick", async ({
   page,
   request,
@@ -275,4 +299,110 @@ test("Decision comparison picker persists the lineup across reloads", async ({
   await expect(reloadedSection.getByTestId("decision-compare-select-0")).toContainText(SCENARIO_A_NAME);
   await expect(reloadedSection.getByTestId("decision-compare-select-1")).toContainText(SCENARIO_C_NAME);
   await expect(reloadedSection.getByTestId("decision-compare-select-2")).toContainText(SCENARIO_B_NAME);
+});
+
+test("Share link round-trip: copying writes a #compare URL that re-selects the same decisions", async ({
+  page,
+  request,
+}) => {
+  const { token, modelId } = await seedScenarioFixture(request);
+  await primeAuthToken(page, token);
+  await captureClipboardWrites(page);
+
+  await page.goto(`/model/${modelId}/scenarios`);
+
+  const section = page.getByTestId("decision-comparison-section");
+  await expect(section).toBeVisible();
+
+  // Build a non-default selection (A + C) so the share URL has to encode
+  // distinct keys rather than echoing the auto-seeded first-two ordering.
+  const pickerB = section.getByTestId("decision-compare-select-1");
+  const pickerBOptions = await pickerB.locator("option").all();
+  let scenarioCValue = "";
+  for (const opt of pickerBOptions) {
+    const label = (await opt.textContent()) ?? "";
+    if (label.includes(SCENARIO_C_NAME)) {
+      scenarioCValue = (await opt.getAttribute("value")) ?? "";
+      break;
+    }
+  }
+  expect(scenarioCValue, "scenario C should appear in the picker").toBeTruthy();
+  await pickerB.selectOption(scenarioCValue);
+
+  // The share button only renders inside the result block (which itself
+  // requires 2+ valid columns and no duplicates).
+  const result = section.getByTestId("decision-compare-result");
+  await expect(result).toBeVisible();
+  await result.getByTestId("decision-compare-share-link").click();
+
+  await expect(
+    page.getByRole("status").filter({ hasText: /Link copied/i }).first(),
+  ).toBeVisible({ timeout: 5_000 });
+
+  const sharedUrl = await page.evaluate(
+    () =>
+      (window as unknown as { __clipboardWrites?: string[] }).__clipboardWrites?.at(-1) ?? "",
+  );
+  expect(sharedUrl, "clipboard should contain the shareable URL").toBeTruthy();
+  expect(sharedUrl).toContain("#compare=");
+  expect(sharedUrl).toContain(`/model/${modelId}/scenarios`);
+  // The encoded payload should carry both selected scenario names so a
+  // recipient lands on the same A + C comparison the founder was looking
+  // at, not the default A + B auto-seed.
+  const decodedHash = decodeURIComponent(sharedUrl.split("#compare=")[1] ?? "");
+  expect(decodedHash).toContain(SCENARIO_A_NAME);
+  expect(decodedHash).toContain(SCENARIO_C_NAME);
+
+  // Pull the path + hash and reopen as a fresh navigation. The hydration
+  // effect should re-select the same A + C comparison with no manual picker
+  // interaction — that's the recipient's experience.
+  const parsed = new URL(sharedUrl);
+  const relative = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  await page.goto(relative);
+
+  const rehydratedSection = page.getByTestId("decision-comparison-section");
+  await expect(rehydratedSection).toBeVisible();
+  await expect(
+    rehydratedSection.getByTestId("decision-compare-select-0"),
+  ).toContainText(SCENARIO_A_NAME);
+  await expect(
+    rehydratedSection.getByTestId("decision-compare-select-1"),
+  ).toContainText(SCENARIO_C_NAME);
+  await expect(rehydratedSection.getByTestId("decision-compare-result")).toBeVisible();
+});
+
+test("Share-link hash gracefully ignores keys for deleted scenarios", async ({
+  page,
+  request,
+}) => {
+  const { token, modelId } = await seedScenarioFixture(request);
+  await primeAuthToken(page, token);
+
+  // Visit with a hash that pins one real scenario (A) and one bogus key
+  // ("phantom|2099-…") that doesn't exist on the model. The picker should
+  // honour the real key and silently top up the second column from the
+  // remaining saved scenarios rather than rendering an empty / broken state.
+  const realKey = `${SCENARIO_A_NAME}|${SCENARIO_A_CREATED_AT}`;
+  const bogusKey = "phantom-deleted-scenario|2099-12-31T00:00:00.000Z";
+  const hashPayload = [realKey, bogusKey]
+    .map((k) => encodeURIComponent(k))
+    .join(",");
+  await page.goto(
+    `/model/${modelId}/scenarios#compare=${hashPayload}`,
+  );
+
+  const section = page.getByTestId("decision-comparison-section");
+  await expect(section).toBeVisible();
+
+  // Real key survives, bogus key drops, and the IIFE tops up to a
+  // 2-column minimum from the saved list (which gives us scenario B since
+  // it's the next un-used decision).
+  await expect(section.getByTestId("decision-compare-select-0")).toContainText(
+    SCENARIO_A_NAME,
+  );
+  await expect(section.getByTestId("decision-compare-select-1")).toContainText(
+    SCENARIO_B_NAME,
+  );
+  await expect(section.getByTestId("decision-compare-result")).toBeVisible();
+  await expect(section.getByTestId("decision-compare-error")).toHaveCount(0);
 });

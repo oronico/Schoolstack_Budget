@@ -23,6 +23,7 @@ import {
   Download,
   Search,
   X,
+  Share2,
 } from "lucide-react";
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
@@ -30,6 +31,11 @@ import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparis
 import type { FullModelData, OutcomeStatus, CustomScenario, CustomScenarioActuals } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
+import {
+  buildCompareShareUrl,
+  decodeCompareKeysFromHash,
+  MAX_COMPARE_KEYS,
+} from "@/lib/share-comparison";
 import { parseExportSourceLabel } from "@/lib/actuals-source";
 import { useAuth } from "@/lib/auth-context";
 import { getFounderPersona, type FounderComfort } from "@/lib/coaching/founder-persona";
@@ -1702,14 +1708,29 @@ export function ScenarioPage() {
   // `${name}|${createdAt}` composite key, so a deleted scenario simply
   // drops out of the selection without triggering a stale lookup.
   // Supports 2-4 columns; the user can add or remove columns within that range.
-  // Hydrated from `modelData.decisionComparisonSelection` on first load and
-  // persisted (debounced) whenever the founder edits the picker so the
-  // lineup survives a refresh / new session.
-  const [decisionCompareKeys, setDecisionCompareKeys] = useState<string[]>([]);
+  // Init priority:
+  //   1. `#compare=…` URL hash (Task #200) — an explicit "show me this
+  //      lineup" share-link intent wins over any persisted selection.
+  //   2. Empty — the model-load effect below hydrates from
+  //      `modelData.decisionComparisonSelection` (Task #199) so a refresh
+  //      restores the founder's previous picker without a hash.
+  // The picker also persists (debounced) on every edit, so changes made
+  // after a hash-seeded load still survive subsequent reloads.
+  const [decisionCompareKeys, setDecisionCompareKeys] = useState<string[]>(
+    () => {
+      if (typeof window === "undefined") return [];
+      return decodeCompareKeysFromHash(window.location.hash);
+    },
+  );
   const decisionCompareSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Hard cap so the comparison stays readable on a typical laptop screen.
-  // Matches the column palette in ImpactSummary; raise both together.
-  const MAX_DECISION_COMPARE = 4;
+  // Matches the column palette in ImpactSummary and the codec's own cap;
+  // re-exported via MAX_COMPARE_KEYS so the helper and UI agree.
+  const MAX_DECISION_COMPARE = MAX_COMPARE_KEYS;
+  // Tracks the most recent "share link copied" toast so we can give the
+  // founder immediate feedback without standing up a separate dialog.
+  const [shareCopied, setShareCopied] = useState<boolean>(false);
+  const shareCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Tracks the in-flight Download-as-PDF request for the comparison block so
   // the button can show a spinner and we can disable it during generation.
   // The PDF endpoint is currently scoped to a binary A vs B comparison, so
@@ -1797,6 +1818,32 @@ export function ScenarioPage() {
     };
   }, []);
 
+  // Re-hydrate the comparison picker whenever the URL hash changes so a
+  // founder pasting a `#compare=…` link into the address bar (or hitting
+  // back/forward through saved comparisons) lands on the encoded
+  // selection. Empty / unrelated hashes leave the existing selection
+  // alone — the IIFE below already tops up to a 2-column minimum from
+  // the saved scenario list, so a wiped hash doesn't blank the picker.
+  useEffect(() => {
+    const sync = () => {
+      const next = decodeCompareKeysFromHash(window.location.hash);
+      if (next.length === 0) return;
+      setDecisionCompareKeys(next);
+    };
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+
+  // Cleanup the "Link copied" indicator timer on unmount so we don't
+  // call setState on an unmounted scenarios page.
+  useEffect(() => {
+    return () => {
+      if (shareCopiedTimerRef.current) {
+        clearTimeout(shareCopiedTimerRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (model && !initialized) {
       const modelData = model.data as FullModelData | undefined;
@@ -1812,11 +1859,21 @@ export function ScenarioPage() {
       // a follow-up effect re-persists the cleaned list.
       const persistedSelection = (modelData as Record<string, unknown> | undefined)
         ?.decisionComparisonSelection as string[] | undefined;
-      if (Array.isArray(persistedSelection) && persistedSelection.length > 0) {
+      // Defer to the hash-seeded selection (Task #200) when a `#compare=…`
+      // share link is present — the recipient's intent to land on the
+      // shared lineup wins over the sender's last-saved picker.
+      const hashSeeded =
+        typeof window !== "undefined" &&
+        decodeCompareKeysFromHash(window.location.hash).length > 0;
+      if (
+        !hashSeeded &&
+        Array.isArray(persistedSelection) &&
+        persistedSelection.length > 0
+      ) {
         setDecisionCompareKeys(
           persistedSelection
             .filter((k): k is string => typeof k === "string")
-            .slice(0, 4),
+            .slice(0, MAX_COMPARE_KEYS),
         );
       }
       if (existing && existing.length > 0) {
@@ -2718,6 +2775,67 @@ export function ScenarioPage() {
 
               {columns.length >= 2 && !hasDup && (
                 <div className="mt-6 space-y-4" data-testid="decision-compare-result">
+                  {/* Share link — copies a `#compare=…` URL that pre-selects
+                      the same 2-4 saved decisions on the recipient's load.
+                      Distinct from the live planner's What-If quick-share:
+                      this one is for saved decision scenarios on the
+                      Scenarios page. Visible for any 2-4 column selection
+                      (the PDF download below is gated to the binary case). */}
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-xs text-muted-foreground">
+                      Send a co-founder or board member straight to this exact
+                      comparison — they'll land on the same {effectiveKeys.length} columns.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const url = buildCompareShareUrl(effectiveKeys);
+                        // Update the address bar so a manual copy from the
+                        // browser URL also captures the comparison hash.
+                        try {
+                          window.history.replaceState(null, "", url);
+                        } catch {
+                          // Ignore — replaceState can throw in some sandboxed
+                          // iframes; clipboard copy below is the primary path.
+                        }
+                        try {
+                          await navigator.clipboard.writeText(url);
+                          setShareCopied(true);
+                          if (shareCopiedTimerRef.current) {
+                            clearTimeout(shareCopiedTimerRef.current);
+                          }
+                          shareCopiedTimerRef.current = setTimeout(
+                            () => setShareCopied(false),
+                            2500,
+                          );
+                          toast({
+                            title: "Link copied",
+                            description:
+                              "Paste it in Slack or email — the recipient lands on this exact comparison.",
+                          });
+                        } catch {
+                          toast({
+                            title: "Couldn't copy link",
+                            description: url,
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm font-medium hover:bg-muted transition-colors"
+                      data-testid="decision-compare-share-link"
+                      aria-label="Copy a shareable link to this comparison"
+                    >
+                      {shareCopied ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Link copied
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="h-4 w-4" /> Share link
+                        </>
+                      )}
+                    </button>
+                  </div>
                   {/* Download-as-PDF action — only shown for the binary
                       A vs B case because the backend PDF generator renders
                       a side-by-side comparison of exactly two scenarios.
