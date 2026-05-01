@@ -170,3 +170,60 @@ test("Copy shareable link writes a #whatif deep-link that re-hydrates the planne
   await expect(rehydratedDrawer).toHaveCount(0);
   await expect(page.getByTestId("whatif-active-badge")).toBeVisible({ timeout: 5_000 });
 });
+
+test("Share-as-QR modal renders a QR for the current overrides URL", async ({
+  page,
+  request,
+}) => {
+  const { token, modelId } = await seedScenarioFixture(request);
+  await primeAuthToken(page, token);
+  await captureClipboardWrites(page);
+
+  await page.goto(`/model/${modelId}/scenarios`);
+
+  await page.getByTestId("whatif-trigger").click();
+  const drawer = page.getByTestId("whatif-drawer");
+  await expect(drawer).toBeVisible({ timeout: 15_000 });
+
+  // Drive a non-empty override so the encoded URL has a `#whatif=` segment;
+  // this is the in-meeting case the QR is for.
+  const rentInput = drawer.getByTestId("whatif-monthly-rent");
+  await rentInput.fill(String(SHARE_RENT));
+  await expect(rentInput).toHaveValue(String(SHARE_RENT));
+
+  await drawer.getByTestId("whatif-share-qr").click();
+
+  const qrDialog = drawer.getByTestId("whatif-qr-dialog");
+  await expect(qrDialog).toBeVisible({ timeout: 5_000 });
+
+  // The QR is rendered as inline SVG via `qrcode.toString({ type: 'svg' })`.
+  // Once it resolves, the wrapper `<div data-testid="whatif-qr-svg">` should
+  // contain an `<svg>` element — assert on the descendant svg so we catch a
+  // regression where the html injection fails silently.
+  await expect(qrDialog.getByTestId("whatif-qr-svg").locator("svg")).toBeVisible({
+    timeout: 5_000,
+  });
+
+  // The URL caption mirrors what the QR encodes; pin on the same encoded
+  // monthly-rent segment as the copy-link path so any drift between the two
+  // share affordances surfaces here.
+  const urlCaption = qrDialog.getByTestId("whatif-qr-url");
+  await expect(urlCaption).toContainText(`/model/${modelId}/scenarios`);
+  await expect(urlCaption).toContainText(`m:${SHARE_RENT}`);
+
+  // The "Copy link" button inside the QR modal should write the same URL
+  // to the clipboard as the header copy-link button — proving they share
+  // a single source of truth.
+  await qrDialog.getByTestId("whatif-qr-copy-link").click();
+  await expect(
+    page.getByRole("status").filter({ hasText: /Link copied/i }).first(),
+  ).toBeVisible({ timeout: 5_000 });
+  const copiedFromQr = await page.evaluate(
+    () =>
+      (window as unknown as { __clipboardWrites?: string[] }).__clipboardWrites?.at(-1) ?? "",
+  );
+  expect(copiedFromQr).toContain(`m:${SHARE_RENT}`);
+
+  await qrDialog.getByTestId("whatif-qr-close").click();
+  await expect(qrDialog).toHaveCount(0);
+});

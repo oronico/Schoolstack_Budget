@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useDebounce } from "use-debounce";
+import QRCode from "qrcode";
 import {
   X,
   Users,
@@ -11,6 +12,7 @@ import {
   TrendingUp,
   TrendingDown,
   Link as LinkIcon,
+  QrCode,
   AlertCircle,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -98,21 +100,37 @@ function readOverridesFromHash(): WhatIfOverrides {
   return decodeOverridesFromHash(window.location.hash);
 }
 
-function writeOverridesToHash(overrides: WhatIfOverrides) {
-  if (typeof window === "undefined") return;
+// Returns the location path+search+hash with the `whatif=` segment swapped
+// in (or removed when overrides are empty), preserving any other hash
+// params. Pure with respect to `window.location` — used by both the URL
+// hash writer and the share-link copier so they cannot drift apart.
+function buildWhatIfHashTarget(overrides: WhatIfOverrides): {
+  pathWithHash: string;
+  newHash: string;
+} {
   const encoded = encodeOverridesToHash(overrides);
   const url = new URL(window.location.href);
-  // Preserve other hash params, swap out 'whatif=' segment
   const existingHash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
   const segments = existingHash.split("&").filter((s) => s && !s.startsWith("whatif="));
   if (encoded) segments.push(encoded);
   const newHash = segments.length ? `#${segments.join("&")}` : "";
-  if (newHash === url.hash) return;
-  if (newHash) {
-    history.replaceState(null, "", `${url.pathname}${url.search}${newHash}`);
-  } else {
-    history.replaceState(null, "", `${url.pathname}${url.search}`);
-  }
+  return {
+    pathWithHash: `${url.pathname}${url.search}${newHash}`,
+    newHash,
+  };
+}
+
+function writeOverridesToHash(overrides: WhatIfOverrides) {
+  if (typeof window === "undefined") return;
+  const { pathWithHash, newHash } = buildWhatIfHashTarget(overrides);
+  if (newHash === window.location.hash) return;
+  history.replaceState(null, "", pathWithHash);
+}
+
+function buildShareUrl(overrides: WhatIfOverrides): string {
+  if (typeof window === "undefined") return "";
+  const { pathWithHash } = buildWhatIfHashTarget(overrides);
+  return `${window.location.origin}${pathWithHash}`;
 }
 
 export function WhatIfDrawer({
@@ -128,6 +146,9 @@ export function WhatIfDrawer({
   const [hydrated, setHydrated] = useState(false);
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showQrDialog, setShowQrDialog] = useState(false);
+  const [qrSvg, setQrSvg] = useState<string>("");
+  const [qrUrl, setQrUrl] = useState<string>("");
   const [scenarioName, setScenarioName] = useState("");
   const [isApplying, setIsApplying] = useState(false);
   const { toast } = useToast();
@@ -185,13 +206,7 @@ export function WhatIfDrawer({
   }, []);
 
   const copyShareLink = useCallback(async () => {
-    const encoded = encodeOverridesToHash(overrides);
-    const url = new URL(window.location.href);
-    const existingHash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-    const segments = existingHash.split("&").filter((s) => s && !s.startsWith("whatif="));
-    if (encoded) segments.push(encoded);
-    const newHash = segments.length ? `#${segments.join("&")}` : "";
-    const fullUrl = `${window.location.origin}${url.pathname}${url.search}${newHash}`;
+    const fullUrl = buildShareUrl(overrides);
     try {
       await navigator.clipboard.writeText(fullUrl);
       toast({ title: "Link copied", description: "Share this link to show your what-if scenario." });
@@ -199,6 +214,45 @@ export function WhatIfDrawer({
       toast({ title: "Couldn't copy link", description: fullUrl, variant: "destructive" });
     }
   }, [overrides, toast]);
+
+  const openQrDialog = useCallback(async () => {
+    const fullUrl = buildShareUrl(overrides);
+    setQrUrl(fullUrl);
+    // Clear any prior render so reopening after override changes shows
+    // the "Generating…" placeholder instead of a stale QR for ~1 frame.
+    setQrSvg("");
+    setShowQrDialog(true);
+    try {
+      // Render the QR as inline SVG so we don't need a canvas in the DOM
+      // and the modal stays crisp at any size. Margin/width tuned for the
+      // 220×220 frame in the modal.
+      const svg = await QRCode.toString(fullUrl, {
+        type: "svg",
+        errorCorrectionLevel: "M",
+        margin: 1,
+        width: 220,
+        color: { dark: "#0f172a", light: "#ffffff" },
+      });
+      setQrSvg(svg);
+    } catch (err) {
+      toast({
+        title: "Couldn't render QR code",
+        description: (err as Error).message || "Try copying the link instead.",
+        variant: "destructive",
+      });
+      setShowQrDialog(false);
+    }
+  }, [overrides, toast]);
+
+  const copyQrUrl = useCallback(async () => {
+    if (!qrUrl) return;
+    try {
+      await navigator.clipboard.writeText(qrUrl);
+      toast({ title: "Link copied", description: "Share this link to show your what-if scenario." });
+    } catch {
+      toast({ title: "Couldn't copy link", description: qrUrl, variant: "destructive" });
+    }
+  }, [qrUrl, toast]);
 
   const handleApply = useCallback(async () => {
     if (!onApplyToModel) return;
@@ -284,6 +338,18 @@ export function WhatIfDrawer({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Copy shareable link</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={openQrDialog}
+                      data-testid="whatif-share-qr"
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <QrCode className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Show QR code for in-meeting sharing</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -734,6 +800,65 @@ export function WhatIfDrawer({
                     className="px-3 py-1.5 text-sm font-medium rounded-md bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-60"
                   >
                     {isApplying ? "Applying…" : "Apply changes"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showQrDialog && (
+            <div
+              className="absolute inset-0 z-10 bg-slate-900/40 flex items-center justify-center p-5 animate-in fade-in-0"
+              data-testid="whatif-qr-dialog"
+              onClick={(e) => {
+                // Click on backdrop closes; clicks inside the panel are
+                // stopped below.
+                if (e.target === e.currentTarget) setShowQrDialog(false);
+              }}
+            >
+              <div className="bg-background border border-border rounded-xl p-5 shadow-xl max-w-sm w-full">
+                <h4 className="font-display font-bold text-base text-foreground mb-1">
+                  Share via QR code
+                </h4>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Anyone who scans this code will land on this what-if scenario.
+                </p>
+                <div className="flex items-center justify-center bg-white border border-border rounded-lg p-3 mb-3">
+                  {qrSvg ? (
+                    <div
+                      data-testid="whatif-qr-svg"
+                      aria-label="QR code for share link"
+                      // QRCode.toString returns a self-contained <svg>; render
+                      // it directly so it scales as a true vector.
+                      dangerouslySetInnerHTML={{ __html: qrSvg }}
+                    />
+                  ) : (
+                    <div className="w-[220px] h-[220px] flex items-center justify-center text-xs text-muted-foreground">
+                      Generating…
+                    </div>
+                  )}
+                </div>
+                <p
+                  data-testid="whatif-qr-url"
+                  className="text-[11px] font-mono text-muted-foreground break-all bg-muted/40 rounded-md px-2 py-1.5 mb-4"
+                >
+                  {qrUrl}
+                </p>
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    onClick={() => setShowQrDialog(false)}
+                    data-testid="whatif-qr-close"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md border border-border bg-background text-foreground hover:bg-muted"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={copyQrUrl}
+                    data-testid="whatif-qr-copy-link"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md bg-amber-600 text-white hover:bg-amber-700 inline-flex items-center gap-1.5"
+                  >
+                    <LinkIcon className="h-3.5 w-3.5" />
+                    Copy link
                   </button>
                 </div>
               </div>
