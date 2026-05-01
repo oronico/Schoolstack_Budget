@@ -181,6 +181,175 @@ describe("CustomScenarioCard — export callout & replace-export deep-link", () 
   });
 });
 
+describe("CustomScenarioCard — upload-removed inline notice (Task #288)", () => {
+  // Helper: render a card via React Testing Library's `rerender` so we can
+  // simulate the parent dropping `accountingExportInfo` after the founder
+  // confirms the remove (which is what the real scenarios page does once
+  // the export is cleared from server state).
+  function renderRemovableCard(props: {
+    suggestion?: ActualsSuggestion;
+    initialExport?: { filename?: string; uploadedAt?: string };
+  } = {}) {
+    const onPatch = vi.fn(async () => {});
+    const onRemove = vi.fn(async () => {});
+    const onOpenInPlanner = vi.fn();
+    const onApplyToModel = vi.fn(async () => {});
+    const getProjectedSnapshot = vi.fn(() => projectedSnapshot);
+    const getActualsSuggestion = vi.fn(() => props.suggestion ?? exportSuggestion);
+    const onRemoveExport = vi.fn(async () => {});
+    const initialExport = props.initialExport ?? {
+      filename: "quickbooks-2026Q1.csv",
+      uploadedAt: "2026-03-14T15:30:00.000Z",
+    };
+    const renderWith = (
+      exportInfo: { filename?: string; uploadedAt?: string } | undefined,
+    ) => (
+      <CustomScenarioCard
+        scenario={makeScenario()}
+        index={0}
+        fmtDate={(iso) => new Date(iso).toLocaleDateString("en-US")}
+        onRemove={onRemove}
+        onPatch={onPatch}
+        onOpenInPlanner={onOpenInPlanner}
+        onApplyToModel={onApplyToModel}
+        getProjectedSnapshot={getProjectedSnapshot}
+        getActualsSuggestion={getActualsSuggestion}
+        accountingExportInfo={exportInfo}
+        replaceExportHref="/model/42?step=2&focus=accounting-export"
+        onRemoveExport={onRemoveExport}
+      />
+    );
+    const utils = render(renderWith(initialExport));
+    return {
+      ...utils,
+      rerenderWithoutExport: () => utils.rerender(renderWith(undefined)),
+      onPatch,
+      onRemoveExport,
+    };
+  }
+
+  it("surfaces a dismissable inline notice when the upload is removed mid-edit", async () => {
+    const user = userEvent.setup();
+    const { rerenderWithoutExport } = renderRemovableCard();
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
+    await user.click(screen.getByTestId("custom-scenario-actuals-suggest-0"));
+
+    // No notice yet — the upload is still attached.
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-upload-removed-notice-0"),
+    ).not.toBeInTheDocument();
+
+    // Parent drops the export (mirrors the real onRemoveExport handler
+    // clearing the server-side accounting export).
+    rerenderWithoutExport();
+
+    const notice = screen.getByTestId(
+      "custom-scenario-actuals-upload-removed-notice-0",
+    );
+    expect(notice).toHaveTextContent(
+      /upload removed.*editable as plain entries/i,
+    );
+
+    // Dismiss button hides the notice without reopening anything.
+    await user.click(
+      screen.getByTestId("custom-scenario-actuals-upload-removed-dismiss-0"),
+    );
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-upload-removed-notice-0"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears the 'Suggested' pill on previously book-sourced fields after removal", async () => {
+    const user = userEvent.setup();
+    const { rerenderWithoutExport } = renderRemovableCard();
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
+    await user.click(screen.getByTestId("custom-scenario-actuals-suggest-0"));
+
+    // Sanity-check: book-sourced fields render with a "Suggested" pill
+    // before removal (one pill per book-sourced field — three in our
+    // suggestion fixture: revenue, expense, net income).
+    expect(
+      screen.getByTestId("custom-scenario-actuals-revenue-0-suggested"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("custom-scenario-actuals-expense-0-suggested"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("custom-scenario-actuals-netincome-0-suggested"),
+    ).toBeInTheDocument();
+
+    rerenderWithoutExport();
+
+    // After the upload is dropped the pills should be gone — the UI no
+    // longer claims a books-sourced provenance the export can't back.
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-revenue-0-suggested"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-expense-0-suggested"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-netincome-0-suggested"),
+    ).not.toBeInTheDocument();
+
+    // The "Pulled from your books" callout should have disappeared too
+    // (this is the existing behaviour we're complementing, not changing).
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-export-source-0"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("auto-clears the notice on save", async () => {
+    const user = userEvent.setup();
+    const { rerenderWithoutExport, onPatch } = renderRemovableCard();
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
+    await user.click(screen.getByTestId("custom-scenario-actuals-suggest-0"));
+    rerenderWithoutExport();
+
+    expect(
+      screen.getByTestId("custom-scenario-actuals-upload-removed-notice-0"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-save-0"));
+    expect(onPatch).toHaveBeenCalled();
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-upload-removed-notice-0"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("auto-clears the notice on cancel", async () => {
+    const user = userEvent.setup();
+    const { rerenderWithoutExport } = renderRemovableCard();
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
+    await user.click(screen.getByTestId("custom-scenario-actuals-suggest-0"));
+    rerenderWithoutExport();
+
+    expect(
+      screen.getByTestId("custom-scenario-actuals-upload-removed-notice-0"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-cancel-0"));
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-upload-removed-notice-0"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not surface the notice on initial mount when no upload was ever attached", async () => {
+    const user = userEvent.setup();
+    renderCard({ exportInfo: null });
+
+    await user.click(screen.getByTestId("custom-scenario-actuals-edit-0"));
+
+    expect(
+      screen.queryByTestId("custom-scenario-actuals-upload-removed-notice-0"),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("CustomScenarioCard — uploaded export controls panel", () => {
   it("shows the uploaded-export controls panel as soon as the editor opens (no suggest click required)", async () => {
     const user = userEvent.setup();

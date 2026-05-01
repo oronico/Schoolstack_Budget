@@ -687,6 +687,18 @@ export function CustomScenarioCard({
   // half-confirmed remove can't bleed across editor sessions.
   const [confirmRemoveExport, setConfirmRemoveExport] = useState(false);
   const [removingExport, setRemovingExport] = useState(false);
+  // One-line notice that surfaces when the founder removes the uploaded
+  // export while the actuals editor is open. The "Pulled from your books"
+  // callout disappears as soon as the upload is gone (correct), but any
+  // values the suggestion engine had previously filled remain in the
+  // inputs as plain entries — without this notice the transition can look
+  // like the values lost their provenance for no reason. Dismissable, and
+  // auto-clears on save / cancel / editor close. (Task #288)
+  const [uploadRemovedNotice, setUploadRemovedNotice] = useState(false);
+  // Tracks the previous upload filename so we can detect the truthy →
+  // falsy transition that means "the founder just removed it" without
+  // firing the notice on first mount or on unrelated re-renders.
+  const prevExportFilenameRef = useRef<string | undefined>(accountingExportInfo?.filename);
   const [retroDraft, setRetroDraft] = useState(cs.retrospective ?? "");
   // Keep the draft in sync if the persisted note changes (e.g. another tab,
   // or after a save round-trip) and we're not currently editing it.
@@ -717,8 +729,51 @@ export function CustomScenarioCard({
       setSuggestedFields(new Set());
       setSuggestionFeedback(null);
       setConfirmRemoveExport(false);
+      setUploadRemovedNotice(false);
     }
   }, [cs.actuals, editingActuals]);
+
+  // Watch the upload filename for a truthy → falsy transition while the
+  // editor is open. When that happens we surface the inline "Upload
+  // removed" notice and strip the "Suggested" pill from any draft fields
+  // whose source label points at the now-gone export, so the UI stops
+  // claiming a provenance the export no longer backs. We also strip those
+  // fields' entries from `actualsDraft.sourceByField` for the same reason
+  // — without it, a subsequent Save would re-persist the stale source.
+  useEffect(() => {
+    const prev = prevExportFilenameRef.current;
+    const current = accountingExportInfo?.filename;
+    if (editingActuals && prev && !current) {
+      const exportPrefix = `From ${prev}`;
+      const sources = actualsDraft.sourceByField ?? {};
+      const bookSourcedFields = new Set<string>();
+      for (const [field, src] of Object.entries(sources)) {
+        if (typeof src === "string" && src.startsWith(exportPrefix)) {
+          bookSourcedFields.add(field);
+        }
+      }
+      if (bookSourcedFields.size > 0) {
+        setSuggestedFields((prevSet) => {
+          let changed = false;
+          const next = new Set(prevSet);
+          for (const f of bookSourcedFields) {
+            if (next.delete(f as ActualsSuggestionField)) changed = true;
+          }
+          return changed ? next : prevSet;
+        });
+        setActualsDraft((d) => {
+          if (!d.sourceByField) return d;
+          const rest: Record<string, string> = {};
+          for (const [field, src] of Object.entries(d.sourceByField)) {
+            if (!bookSourcedFields.has(field)) rest[field] = src;
+          }
+          return { ...d, sourceByField: Object.keys(rest).length > 0 ? rest : undefined };
+        });
+      }
+      setUploadRemovedNotice(true);
+    }
+    prevExportFilenameRef.current = current;
+  }, [accountingExportInfo?.filename, editingActuals, actualsDraft.sourceByField]);
 
   // Helper: write a field into the draft and clear its "suggested" marker so
   // any direct edit by the user immediately overrides the suggestion. Also
@@ -926,6 +981,7 @@ export function CustomScenarioCard({
     await onPatch(target, { actuals: hasAny ? a : undefined });
     setSuggestedFields(new Set());
     setSuggestionFeedback(null);
+    setUploadRemovedNotice(false);
     setEditingActuals(false);
   };
 
@@ -933,6 +989,7 @@ export function CustomScenarioCard({
     await onPatch(target, { actuals: undefined });
     setSuggestedFields(new Set());
     setSuggestionFeedback(null);
+    setUploadRemovedNotice(false);
     setEditingActuals(false);
   };
 
@@ -1557,6 +1614,26 @@ export function CustomScenarioCard({
                   </div>
                 );
               })()}
+              {uploadRemovedNotice && (
+                <div
+                  className="flex items-start justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5"
+                  data-testid={`custom-scenario-actuals-upload-removed-notice-${idx}`}
+                >
+                  <p className="text-[10px] text-amber-900 leading-snug min-w-0">
+                    Upload removed — book-sourced values are now editable as plain entries.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setUploadRemovedNotice(false)}
+                    className="text-[10px] text-amber-900/70 hover:text-amber-900 shrink-0"
+                    data-testid={`custom-scenario-actuals-upload-removed-dismiss-${idx}`}
+                    title="Dismiss"
+                    aria-label="Dismiss upload-removed notice"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
               {suggestionFeedback && (
                 <p
                   className="text-[10px] text-amber-900 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-snug"
@@ -1661,6 +1738,7 @@ export function CustomScenarioCard({
                       setActualsDraft(cs.actuals ?? { asOfYear: 1 });
                       setSuggestedFields(new Set());
                       setSuggestionFeedback(null);
+                      setUploadRemovedNotice(false);
                       setEditingActuals(false);
                     }}
                     className="text-[10px] px-2 py-1 rounded text-muted-foreground hover:text-foreground"
