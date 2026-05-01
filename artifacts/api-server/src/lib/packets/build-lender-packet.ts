@@ -3,6 +3,7 @@ import type { ModelData } from "../workbook-helpers";
 import type { AssumptionFlag } from "../assumption-flags";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
 import { buildPacketData } from "./build-packet-data";
+import { buildCashRunway, type CashRunwayView } from "./build-cash-runway";
 import { buildDecisionHistory, type DecisionHistoryItem } from "./build-decision-history";
 import {
   buildAllRollups,
@@ -47,6 +48,12 @@ export interface LenderPacket extends PacketData {
   budgetNarrative: BudgetNarrativeData;
   flaggedAssumptions: FlaggedAssumptionExport[];
   decisionHistory: DecisionHistoryItem[];
+  /**
+   * Year-by-year ending cash position with the trough year called out.
+   * Sourced from the same helper as the board packet so both deliverables
+   * show identical numbers (Task #213).
+   */
+  cashRunway: CashRunwayView;
 }
 
 export interface DSCRSummary {
@@ -72,6 +79,11 @@ export function buildLenderPacket(
 
   const riskMitigants = buildRiskMitigants(consultantOutput);
 
+  // Build the year-by-year ending cash + trough view first so the debt-service
+  // section enrichment can fold the per-year ending cash into its reserve
+  // table (Task #213).
+  const cashRunway = buildCashRunway(consultantOutput, modelData);
+
   // Roll up the inline rationales captured during the wizard so we can append
   // a "Founder's reasoning:" footer to each matching section's narrative
   // (Task #331). When no rationale exists for a section, the narrative is
@@ -84,7 +96,7 @@ export function buildLenderPacket(
       next = enrichKeyRisksSection(next, riskMitigants);
     }
     if (next.id === "debt_service") {
-      next = enrichDebtServiceSection(next, consultantOutput);
+      next = enrichDebtServiceSection(next, consultantOutput, cashRunway);
     }
     return appendFounderReasoning(next, rollups);
   });
@@ -118,6 +130,7 @@ export function buildLenderPacket(
     budgetNarrative,
     flaggedAssumptions,
     decisionHistory,
+    cashRunway,
   };
 }
 
@@ -213,6 +226,7 @@ function enrichKeyRisksSection(
 function enrichDebtServiceSection(
   section: PacketSection,
   co: ConsultantOutput,
+  cashRunway: CashRunwayView,
 ): PacketSection {
   const reserveMetrics: LinkedMetric[] = [];
 
@@ -226,16 +240,28 @@ function enrichDebtServiceSection(
     });
   }
 
+  // Pair each reserve year with its ending cash position (Task #213). Ending
+  // cash is what lenders ask for directly — reserve months alone hides whether
+  // the school is dipping toward zero in any given year. The trough year is
+  // labeled inline so it stands out in both the preview and the PDF.
+  const cashByYear = new Map(cashRunway.yearByYearCash.map((c) => [c.year, c]));
+
   const reserveTable: PacketTable = {
-    title: "Operating Reserve Analysis",
-    headers: ["Year", "Reserve Months", "Status"],
-    rows: co.cumulativeFinancials.map((cf) => ({
-      label: `Year ${cf.year}`,
-      values: [
-        `${cf.reserveMonths.toFixed(1)} months`,
-        cf.reserveMonths >= 3 ? "Adequate" : cf.reserveMonths >= 1.5 ? "Below Target" : "Insufficient",
-      ],
-    })),
+    title: "Operating Reserve & Ending Cash",
+    headers: ["Year", "Ending Cash", "Reserve Months", "Status"],
+    rows: co.cumulativeFinancials.map((cf) => {
+      const cash = cashByYear.get(cf.year);
+      const yearLabel = cash?.isTrough ? `Year ${cf.year} (trough)` : `Year ${cf.year}`;
+      return {
+        label: yearLabel,
+        values: [
+          cash?.endingCash ?? "—",
+          `${cf.reserveMonths.toFixed(1)} months`,
+          cf.reserveMonths >= 3 ? "Adequate" : cf.reserveMonths >= 1.5 ? "Below Target" : "Insufficient",
+        ],
+        isBold: cash?.isTrough ?? false,
+      };
+    }),
   };
 
   return {
