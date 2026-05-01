@@ -26,6 +26,7 @@
     "test:board-packet-pdf-route": "tsx ./tests/board-packet-pdf-route.ts",
     "test:health": "tsx ./tests/health-endpoints.ts",
     "test:board-packet-cap-insight": "tsx ./tests/board-packet-cap-insight.ts",
+    "qa:packet-cash": "tsx ./tests/board-packet-cash-runway.ts",
     "test:inline-rationale-rollup": "tsx ./tests/inline-rationale-rollup.ts",
     "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts",
     "generate:ceo-demos": "tsx ./src/scripts/generate-ceo-demos.ts"
