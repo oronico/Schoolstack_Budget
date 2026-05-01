@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useFormContext, useFieldArray } from "react-hook-form";
+import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, Trophy, Users } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
@@ -7,8 +7,11 @@ import { formatCurrency } from "@/lib/utils";
 import { buildDefaultChestertonData } from "@/lib/chesterton/template";
 
 export function ChestertonGiftChartStep() {
-  const { control, watch, setValue } = useFormContext();
-  const goal = watch("chesterton.totalFundraisingGoal") as number | undefined;
+  const { control, setValue } = useFormContext();
+  // useWatch (not formContext.watch) so per-row gift edits inside the
+  // useFieldArray rows trigger a live re-render of the pyramid totals —
+  // same root cause as task #350.
+  const goal = useWatch({ control, name: "chesterton.totalFundraisingGoal" }) as number | undefined;
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -22,7 +25,9 @@ export function ChestertonGiftChartStep() {
     }
   }, [fields.length, setValue]);
 
-  const rows = watch("chesterton.giftChart") as Array<{ giftAmount?: number; numberOfGifts?: number; numberOfProspects?: number }> | undefined;
+  const rows = useWatch({ control, name: "chesterton.giftChart" }) as
+    | Array<{ giftAmount?: number; numberOfGifts?: number; numberOfProspects?: number }>
+    | undefined;
   const totals = useMemo(() => {
     const safe = rows || [];
     let totalGifts = 0;

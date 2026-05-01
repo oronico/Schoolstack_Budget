@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useFormContext, useFieldArray } from "react-hook-form";
+import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, Users, GraduationCap, Church } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
@@ -7,8 +7,13 @@ import { buildDefaultChestertonData, totalEnrollmentForYear } from "@/lib/cheste
 import type { ChestertonGradeRow } from "../../schema";
 
 export function ChestertonRecruitingStep() {
-  const { control, watch, setValue } = useFormContext();
-  const phaseEnrollment = watch("chesterton.phaseEnrollment") as ChestertonGradeRow[] | undefined;
+  const { control, setValue } = useFormContext();
+  // useWatch subscribes via `control` so per-row edits inside useFieldArray
+  // inputs (registered with valueAsNumber) trigger a re-render of the summary.
+  // Using formContext.watch() here misses those updates — see task #350.
+  const phaseEnrollment = useWatch({ control, name: "chesterton.phaseEnrollment" }) as
+    | ChestertonGradeRow[]
+    | undefined;
 
   const { fields: pipelineFields, append: appendPipeline, remove: removePipeline } = useFieldArray({
     control,
@@ -40,7 +45,9 @@ export function ChestertonRecruitingStep() {
     }
   }, [pipelineFields.length, priestFields.length, facilityFields.length, setValue]);
 
-  const rows = watch("chesterton.recruitingPipeline") as Array<{ prospectiveStudents?: number }> | undefined;
+  const rows = useWatch({ control, name: "chesterton.recruitingPipeline" }) as
+    | Array<{ prospectiveStudents?: number }>
+    | undefined;
   const totalProspects = useMemo(() => (rows || []).reduce((s, r) => s + (Number(r?.prospectiveStudents) || 0), 0), [rows]);
   const year1Need = useMemo(() => totalEnrollmentForYear(phaseEnrollment, "year1"), [phaseEnrollment]);
   // CSN guideline: ~1-in-3 prospects convert, so projected enrollment ≈ prospects / 3.

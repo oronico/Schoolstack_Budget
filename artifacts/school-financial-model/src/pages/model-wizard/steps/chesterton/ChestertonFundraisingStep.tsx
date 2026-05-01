@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useFormContext, useFieldArray } from "react-hook-form";
+import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, Target, HandHeart } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
@@ -7,9 +7,12 @@ import { formatCurrency } from "@/lib/utils";
 import { DEFAULT_CHESTERTON_FUNDRAISING, buildDefaultChestertonData } from "@/lib/chesterton/template";
 
 export function ChestertonFundraisingStep() {
-  const { control, watch, setValue } = useFormContext();
-  const planningYear = watch("chesterton.planningYear") as number | undefined;
-  const goal = watch("chesterton.totalFundraisingGoal") as number | undefined;
+  const { control, setValue } = useFormContext();
+  // useWatch (not formContext.watch) so per-row goalAmount edits inside the
+  // useFieldArray rows trigger a live re-render of the "Committed so far"
+  // summary — see task #350.
+  const planningYear = useWatch({ control, name: "chesterton.planningYear" }) as number | undefined;
+  const goal = useWatch({ control, name: "chesterton.totalFundraisingGoal" }) as number | undefined;
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -27,7 +30,9 @@ export function ChestertonFundraisingStep() {
     }
   }, [fields.length, goal, setValue]);
 
-  const rows = watch("chesterton.fundraisingGoals") as Array<{ goalAmount?: number }> | undefined;
+  const rows = useWatch({ control, name: "chesterton.fundraisingGoals" }) as
+    | Array<{ goalAmount?: number }>
+    | undefined;
   const computedTotal = useMemo(() => (rows || []).reduce((sum, r) => sum + (Number(r?.goalAmount) || 0), 0), [rows]);
   const goalNum = Number(goal) || 0;
   const coveragePct = goalNum > 0 ? (computedTotal / goalNum) * 100 : 0;

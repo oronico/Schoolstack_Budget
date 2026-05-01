@@ -1,6 +1,7 @@
 import React from "react";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 
 import { ChestertonFundraisingStep } from "../ChestertonFundraisingStep";
@@ -130,6 +131,81 @@ describe("Chesterton wizard step summaries", () => {
     expect(screen.getByTestId("chesterton-recruiting-total-prospects")).toHaveTextContent("90");
     expect(screen.getByTestId("chesterton-recruiting-projected")).toHaveTextContent("30");
     expect(screen.getByTestId("chesterton-recruiting-coverage-pct")).toHaveTextContent("100%");
+  });
+
+  // Task #350: the summary widgets must update live as the user edits a row's
+  // # Students input — no navigate-away-and-back required.
+  it("recruiting step updates Total prospects + coverage live as the user types", async () => {
+    const user = userEvent.setup();
+    const seed = buildDefaultChestertonData();
+    const phase = (seed.phaseEnrollment ?? []).map((row, i) => ({
+      ...row,
+      year1: i === 0 ? 30 : 0,
+      year2: 0,
+      year3: 0,
+      year4: 0,
+      year5: 0,
+      year6: 0,
+    }));
+
+    render(
+      <HostForm
+        defaults={{
+          chesterton: {
+            ...seed,
+            phaseEnrollment: phase,
+            recruitingPipeline: [
+              { id: "r1", source: "Feeder", prospectiveStudents: 0, notes: "" },
+              { id: "r2", source: "Homeschool", prospectiveStudents: 0, notes: "" },
+            ],
+          },
+        }}
+      >
+        <ChestertonRecruitingStep />
+      </HostForm>,
+    );
+
+    expect(screen.getByTestId("chesterton-recruiting-total-prospects")).toHaveTextContent("0");
+
+    // Two recruiting rows render two "# Students" inputs; edit the first.
+    const input = screen.getAllByLabelText("# Students", { selector: "input" })[0] as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, "60");
+
+    // 60 prospects, year-1 need = 30, projected = floor(60/3) = 20, coverage = 67%.
+    expect(screen.getByTestId("chesterton-recruiting-total-prospects")).toHaveTextContent("60");
+    expect(screen.getByTestId("chesterton-recruiting-projected")).toHaveTextContent("20");
+    expect(screen.getByTestId("chesterton-recruiting-coverage-pct")).toHaveTextContent("67%");
+  });
+
+  it("fundraising step updates Committed so far + coverage live as the user types", async () => {
+    const user = userEvent.setup();
+    const seed = buildDefaultChestertonData();
+
+    render(
+      <HostForm
+        defaults={{
+          chesterton: {
+            ...seed,
+            totalFundraisingGoal: 100_000,
+            fundraisingGoals: [
+              { id: "f1", category: "Major", goalAmount: 0, numberOfGifts: 0, averageGift: 0, notes: "" },
+            ],
+          },
+        }}
+      >
+        <ChestertonFundraisingStep />
+      </HostForm>,
+    );
+
+    expect(screen.getByTestId("chesterton-fundraising-committed")).toHaveTextContent("$0");
+
+    const goalAmountInput = screen.getByLabelText("Goal Amount", { selector: "input" }) as HTMLInputElement;
+    await user.clear(goalAmountInput);
+    await user.type(goalAmountInput, "40000");
+
+    expect(screen.getByTestId("chesterton-fundraising-committed")).toHaveTextContent("$40,000");
+    expect(screen.getByTestId("chesterton-fundraising-coverage-pct")).toHaveTextContent("40%");
   });
 
   it("recruiting step hides the summary panel when Year-1 enrollment is unset", () => {

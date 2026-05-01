@@ -351,6 +351,19 @@ test("Chesterton wizard data entry persists through reload and into the workbook
   await prospectsInput.blur();
   await expect(prospectsInput).toHaveValue("35");
 
+  // Task #350: the "Total prospects" / "Projected enrollment" / "Coverage of
+  // Year 1 goal" widgets must update live as the founder types — without
+  // requiring a navigate-away-and-back. The seeded phaseEnrollment puts
+  // Year 1 enrollment at 30 (freshman 15 + sophomore 15), so editing row 0
+  // to 35 prospects gives totals = 35 prospects, projected = floor(35/3)
+  // = 11, coverage = 11/30 ≈ 37%.
+  await expect(page.getByTestId("chesterton-recruiting-total-prospects")).toHaveText(
+    "35",
+    { timeout: 5_000 },
+  );
+  await expect(page.getByTestId("chesterton-recruiting-projected")).toContainText("11");
+  await expect(page.getByTestId("chesterton-recruiting-coverage-pct")).toHaveText("37%");
+
   // ----- 4. Wait for autosave to flush, then reload. -----
   // The wizard debounces saves at 1s and also flushes on unmount via
   // beforeunload (keepalive: true). 3s gives the debounce timer ample
