@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { TrendingUp, AlertTriangle, CircleCheckBig, Trophy, Lightbulb } from "lucide-react";
+import { TrendingUp, AlertTriangle, CircleCheckBig, Trophy, Lightbulb, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DecisionImpact } from "@/lib/decision-flows";
 import { useAuth } from "@/lib/auth-context";
@@ -59,6 +59,24 @@ function fmtRunway(months: number): string {
   if (months === 0) return "0 mo";
   const sign = months > 0 ? "+" : "";
   return `${sign}${months.toFixed(1)} mo`;
+}
+
+// Returns the index of the lowest finite cash-position year. Ties resolve to
+// the *earliest* year so the founder sees the first crunch — that's the year
+// a lender will ask about first ("when do you nearly run out?"). Returns null
+// when the input has no finite values (e.g. an empty or all-NaN forecast).
+function findTroughIndex(values: readonly (number | null | undefined)[]): number | null {
+  let bestIdx: number | null = null;
+  let bestVal = Infinity;
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i];
+    if (v == null || !isFinite(v)) continue;
+    if (v < bestVal) {
+      bestVal = v;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
 }
 
 function SignalIcon({ signal }: { signal: "green" | "amber" | "red" }) {
@@ -147,6 +165,15 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
       guidanceLevel,
     });
   }, [kpiNudges, guidanceLevel]);
+
+  // Surface the worst cash year for the adjusted scenario so founders see
+  // the runway crunch without having to scan year by year. We compute on
+  // the adjusted side because that's the post-decision forecast — the
+  // number a lender will press on first.
+  const troughIdx = useMemo(
+    () => findTroughIndex(adjusted.cashPosition),
+    [adjusted.cashPosition],
+  );
 
   return (
     <div className="space-y-5" data-testid="decision-impact-summary">
@@ -252,8 +279,58 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
                 );
               })}
             </tr>
+            <tr className="border-t border-border/60 bg-slate-50/40">
+              <td className="px-3 py-2 font-sans text-muted-foreground">Cash position</td>
+              {adjusted.cashPosition.map((v, i) => {
+                const isTrough = troughIdx === i;
+                return (
+                  <td
+                    key={i}
+                    className="px-2 py-2 text-right"
+                    data-testid={`impact-cash-position-y${i + 1}`}
+                  >
+                    {isTrough ? (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ring-1",
+                          v < 0
+                            ? "bg-rose-50 ring-rose-300 text-rose-700"
+                            : "bg-amber-50 ring-amber-300 text-amber-800",
+                        )}
+                        data-testid={`impact-cash-position-y${i + 1}-trough`}
+                      >
+                        <TrendingDown className="h-3 w-3" aria-label="Trough" />
+                        <span className="font-semibold">{fmtMoney(v)}</span>
+                      </span>
+                    ) : (
+                      <span className={cn(v < 0 && "text-rose-700")}>{fmtMoney(v)}</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
           </tbody>
         </table>
+        {troughIdx !== null && (
+          <div
+            className={cn(
+              "px-4 py-2.5 border-t border-border/60 flex items-center gap-2 text-xs",
+              adjusted.cashPosition[troughIdx] < 0
+                ? "bg-rose-50/70 text-rose-800"
+                : "bg-amber-50/70 text-amber-900",
+            )}
+            data-testid="impact-cash-trough-callout"
+          >
+            <TrendingDown className="h-3.5 w-3.5 shrink-0" />
+            <p>
+              <span className="font-semibold">Trough:</span>{" "}
+              <span data-testid="impact-cash-trough-label">
+                Year {troughIdx + 1} at {fmtMoney(adjusted.cashPosition[troughIdx])}
+              </span>{" "}
+              <span className="text-foreground/70">— lowest projected cash year after this decision.</span>
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Nudges */}
@@ -566,6 +643,11 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
     cols.map((c) => c.impact.adjusted.cashPosition[i] as number | null),
   );
 
+  // Per-side trough year index — the lowest cash year for *this* column
+  // alone, independent of the cross-column winner/loser highlighting. Lets
+  // founders spot each side's worst year without scanning all five columns.
+  const troughIdxByCol = cols.map((c) => findTroughIndex(c.impact.adjusted.cashPosition));
+
   return (
     <div className="space-y-5" data-testid="decision-impact-comparison">
       {/* Header strip identifying each column */}
@@ -705,9 +787,13 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
               })}
 
               {/* Cash position after — surfaces the per-year trough so
-                  founders can spot the runway crunch year lenders zero in on. */}
+                  founders can spot the runway crunch year lenders zero in on.
+                  Each side's lowest cash year gets a ring + down-arrow icon so
+                  founders see the crunch year at a glance, on top of the
+                  cross-column winner/loser tinting from YearCell. */}
               {cols.map((c, ci) => {
                 const palette = COLUMN_PALETTE[ci] ?? COLUMN_PALETTE[0];
+                const sideTrough = troughIdxByCol[ci];
                 return (
                   <tr key={`cash-${ci}`} className={cn("border-t border-border/60", ci % 2 === 1 && "bg-slate-50/40")}>
                     {ci === 0 && (
@@ -718,20 +804,46 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                     <td className={cn("px-2 py-2 font-sans text-[10px] uppercase tracking-wider", palette.headerText)}>
                       {palette.letter}
                     </td>
-                    {c.impact.adjusted.cashPosition.map((v, yi) => (
-                      <td
-                        key={yi}
-                        className="px-2 py-2 text-right"
-                        data-testid={`cmp-cash-position-col-${ci}-y${yi + 1}`}
-                      >
-                        <YearCell
-                          values={cashPositionYears[yi]}
-                          index={ci}
-                          higherIsBetter={true}
-                          display={fmtMoney(v)}
-                        />
-                      </td>
-                    ))}
+                    {c.impact.adjusted.cashPosition.map((v, yi) => {
+                      const isTrough = sideTrough === yi;
+                      return (
+                        <td
+                          key={yi}
+                          className="px-2 py-2 text-right"
+                          data-testid={`cmp-cash-position-col-${ci}-y${yi + 1}`}
+                        >
+                          {isTrough ? (
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ring-1",
+                                v < 0
+                                  ? "bg-rose-50 ring-rose-300"
+                                  : "bg-amber-50 ring-amber-300",
+                              )}
+                              data-testid={`cmp-cash-position-col-${ci}-y${yi + 1}-trough`}
+                              aria-label={`Trough for ${palette.letter}`}
+                            >
+                              <TrendingDown
+                                className={cn("h-3 w-3", v < 0 ? "text-rose-600" : "text-amber-700")}
+                              />
+                              <YearCell
+                                values={cashPositionYears[yi]}
+                                index={ci}
+                                higherIsBetter={true}
+                                display={fmtMoney(v)}
+                              />
+                            </span>
+                          ) : (
+                            <YearCell
+                              values={cashPositionYears[yi]}
+                              index={ci}
+                              higherIsBetter={true}
+                              display={fmtMoney(v)}
+                            />
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
               })}
@@ -765,6 +877,44 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
             </tbody>
           </table>
         </div>
+        {/* Per-side trough summary — restates each column's worst cash year as
+            a one-line callout so founders don't have to scan the table to find
+            the runway crunch year. Mirrors the column palette so the labels
+            line up visually with the A/B/C/D columns above. */}
+        {troughIdxByCol.some((t) => t !== null) && (
+          <div
+            className="px-4 py-3 border-t border-border/60 bg-slate-50/50 flex flex-wrap gap-x-4 gap-y-1.5 text-xs"
+            data-testid="comparison-cash-trough-summary"
+          >
+            <span className="inline-flex items-center gap-1 font-semibold text-muted-foreground">
+              <TrendingDown className="h-3.5 w-3.5" />
+              Trough year per side:
+            </span>
+            {cols.map((c, ci) => {
+              const palette = COLUMN_PALETTE[ci] ?? COLUMN_PALETTE[0];
+              const ti = troughIdxByCol[ci];
+              if (ti === null) return null;
+              const v = c.impact.adjusted.cashPosition[ti];
+              return (
+                <span
+                  key={ci}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 ring-1",
+                    v < 0 ? "bg-rose-50 ring-rose-200" : "bg-amber-50 ring-amber-200",
+                  )}
+                  data-testid={`comparison-cash-trough-col-${ci}`}
+                >
+                  <span className={cn("text-[10px] font-semibold uppercase tracking-wider", palette.headerText)}>
+                    {palette.letter}
+                  </span>
+                  <span className={cn("font-mono", v < 0 ? "text-rose-700" : "text-amber-900")}>
+                    Y{ti + 1} at {fmtMoney(v)}
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Narratives side-by-side. We always render a card per column when any
