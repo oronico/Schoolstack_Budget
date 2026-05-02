@@ -143,6 +143,13 @@ const homeschoolCoopGolden: CEGolden = {
 // teacher salary). 20 → 120 student phased rollout (freshman class fills
 // first), heavy philanthropy tail front-loaded by the gift chart. See
 // `chestertonAcademyFixture` in @workspace/finance.
+//
+// Note on debtService/loanDebtService split: the engine's `debtService`
+// field totals ALL cap-debt-row outflows (loan PMT + non-loan capex),
+// while `loanDebtService` is the loan-PMT-only subset. Chesterton has
+// `debtIncluded: false` and zero loan rows, so loanDebtService is zero,
+// but `debtService` correctly reflects the classroom-furniture capex
+// row [15000, 8000, 8000, 6000, 6000].
 const chestertonAcademyGolden: CEGolden = {
   totalRevenue:    [551875, 712240, 921849, 1199466, 1460952],
   tuitionRevenue:  [165000, 342240, 576849, 874466, 1145952],
@@ -151,8 +158,8 @@ const chestertonAcademyGolden: CEGolden = {
   totalStaffingCost:[277359, 342624, 470208, 605140, 747744],
   facilityCost:    [69600, 71610, 73678, 75807, 77997],
   totalOpex:       [128100, 138565, 161514, 187035, 212254],
-  debtService:     [15000, 8000, 8000, 6000, 6000],
-  loanDebtService: [0, 0, 0, 0, 0],
+  debtService:     [15000, 8000, 8000, 6000, 6000], // = non-loan capex (FF&E)
+  loanDebtService: [0, 0, 0, 0, 0],                  // no loan; debtIncluded:false
   totalExpenses:   [407601, 483332, 633865, 794317, 962141],
   netIncome:       [144274, 228908, 287984, 405148, 498811],
   depreciation:    [2143, 2143, 2143, 2143, 2143],
