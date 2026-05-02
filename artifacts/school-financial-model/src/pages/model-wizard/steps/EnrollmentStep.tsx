@@ -22,6 +22,7 @@ import {
 } from "@/lib/revenue-defaults";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona";
+import { enrollmentBenchmarkFor } from "@/lib/school-type-benchmarks";
 import {
   BarChart,
   Bar,
@@ -140,21 +141,12 @@ function EnrollmentBenchmark({ schoolType, maxCapacity, isNewSchool }: { schoolT
     });
   }
 
-  if (schoolType === "charter_school") {
-    benchmarks.push({
-      label: "Charter benchmark: 100+ students by Year 2 for financial viability",
-      detail: "Per-pupil funding models typically need 100+ students to cover fixed costs. Plan your enrollment ramp accordingly.",
-    });
-  } else if (schoolType === "private_school") {
-    benchmarks.push({
-      label: "Private school: Tuition revenue is your primary driver",
-      detail: "Aim for tuition to cover at least 60% of operating costs. Enrollment directly determines your financial health.",
-    });
-  } else if (schoolType === "microschool" || schoolType === "learning_pod") {
-    benchmarks.push({
-      label: "Microschool/pod: Small cohorts mean each student matters more",
-      detail: "With fewer students, per-student revenue needs to be higher. Make sure your tuition rates account for the smaller scale.",
-    });
+  // Source of truth: lib/school-type-benchmarks.ts. Each school type has
+  // its own entry; learning_pod and tutoring_center are first-class
+  // (Task #454) rather than folded into microschool.
+  const typeBenchmark = enrollmentBenchmarkFor(schoolType);
+  if (typeBenchmark) {
+    benchmarks.push(typeBenchmark);
   }
 
   if (maxCapacity > 0) {

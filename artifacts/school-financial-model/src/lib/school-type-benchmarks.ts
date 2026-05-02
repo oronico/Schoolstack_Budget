@@ -67,3 +67,61 @@ export function staffingBenchmarkFor(schoolType?: string): StaffingBenchmark | n
   if (!schoolType) return null;
   return STAFFING_BENCHMARKS[schoolType] ?? null;
 }
+
+export interface EnrollmentBenchmark {
+  /** Short, scannable headline shown as the bullet label. */
+  label: string;
+  /** Sentence-length detail under the label. */
+  detail: string;
+}
+
+// Per-school-type enrollment guidance shown on the Enrollment step.
+// Tutoring centers and learning pods are *first-class* — they each have
+// distinct copy that does not piggyback on microschool. (Pre-#454 the
+// EnrollmentStep grouped microschool + learning_pod under one branch and
+// tutoring_center had no entry at all, so any future numerical change had
+// to be made in 3+ files.)
+export const ENROLLMENT_BENCHMARKS: Record<string, EnrollmentBenchmark> = {
+  charter_school: {
+    label: "Charter benchmark: 100+ students by Year 2 for financial viability",
+    detail: "Per-pupil funding models typically need 100+ students to cover fixed costs. Plan your enrollment ramp accordingly.",
+  },
+  private_school: {
+    label: "Private school: Tuition revenue is your primary driver",
+    detail: "Aim for tuition to cover at least 60% of operating costs. Enrollment directly determines your financial health.",
+  },
+  catholic_school: {
+    label: "Catholic / parish school: Parish + diocesan ties drive your enrollment funnel",
+    detail: "Plan for tuition + parish subsidy + scholarship aid. Aim for tuition to cover 50–70% of operating costs once enrolled families' aid is layered in.",
+  },
+  chesterton_academy: {
+    label: "Chesterton Academy: Cohort sizing is fixed by classical-program design",
+    detail: "Aim for 12–16 students per grade per cohort. Enrollment growth comes from adding grades or sections, not over-loading existing cohorts.",
+  },
+  microschool: {
+    label: "Microschool: Small cohorts mean each student matters more",
+    detail: "With fewer students, per-student revenue needs to be higher. Make sure your tuition rates account for the smaller scale.",
+  },
+  learning_pod: {
+    label: "Learning pod: Premium small cohorts (≤15) need premium per-student revenue",
+    detail: "Pods cap enrollment by design — usually 8–15 students with one facilitator. With a small base, tuition (and any ESA / micro-grant pass-through) needs to fully fund staffing and shared space.",
+  },
+  homeschool_coop: {
+    label: "Homeschool co-op: Member families share cost, so per-family fees stay low",
+    detail: "Plan for 10–30 families paying modest membership/class fees. Enrollment grows through word-of-mouth and parent-led recruiting rather than marketing spend.",
+  },
+  tutoring_center: {
+    label: "Tutoring center: Sessions-per-week, not seats, drives revenue",
+    detail: "Storefront tutoring scales by booked session-hours across 20–60 active students. Track session utilization (1:1 to 1:6) instead of seat count to size enrollment realistically.",
+  },
+  other: {
+    label: "Custom model: Anchor enrollment to a specific funding mechanism",
+    detail: "If your model doesn't match a standard category, write down what each enrolled student is worth in dollars, and use that to back into a viable enrollment target.",
+  },
+};
+
+/** Convenience lookup that returns the enrollment benchmark or null. */
+export function enrollmentBenchmarkFor(schoolType?: string): EnrollmentBenchmark | null {
+  if (!schoolType) return null;
+  return ENROLLMENT_BENCHMARKS[schoolType] ?? null;
+}
