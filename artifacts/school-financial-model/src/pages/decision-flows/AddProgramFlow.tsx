@@ -18,7 +18,7 @@ import {
   type AddProgramInputs,
   type DecisionFieldChange,
 } from "@/lib/decision-flows";
-import type { FullModelData, CustomScenario } from "@/pages/model-wizard/schema";
+import type { FullModelData, CustomScenario, AppliedDecisionUndo } from "@/pages/model-wizard/schema";
 
 interface AddProgramFlowProps {
   modelId: number;
@@ -94,7 +94,10 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
     };
 
     // Snapshot the pre-mutation data so Undo can restore it intact (including
-    // the customScenarios array as it was before this flow ran).
+    // the customScenarios array as it was before this flow ran). We also
+    // persist this snapshot on the model itself for the apply branch so the
+    // founder can undo from the model dashboard after navigating away — see
+    // `appliedDecisionUndo` below.
     const snapshotBeforeApply = data as Record<string, unknown>;
 
     let nextData: Record<string, unknown> = {
@@ -104,9 +107,20 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
 
     if (action === "apply") {
       const applied = applyDecisionToData(data, { type: "add_program", inputs });
+      const undoRecord: AppliedDecisionUndo = {
+        decisionType: "add_program",
+        scenarioName: finalScenarioName,
+        appliedAt: new Date().toISOString(),
+        snapshot: snapshotBeforeApply,
+        // Reuse the same diff we already computed once for the persisted
+        // CustomScenario (Task #375) so the dashboard banner and the PDF
+        // decision-history both narrate the same field-level changes.
+        changes: appliedFieldChanges ?? [],
+      };
       nextData = {
         ...(applied as Record<string, unknown>),
         customScenarios: [...existing, entry],
+        appliedDecisionUndo: undoRecord,
       };
     }
 
@@ -136,6 +150,11 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
     if (!applyResult || isUndoing) return;
     setIsUndoing(true);
     try {
+      // The snapshot is the data exactly as it was before this apply, which
+      // does NOT include the appliedDecisionUndo record we just persisted.
+      // Restoring it therefore implicitly clears that record so the model
+      // dashboard banner won't keep advertising an undo for a decision that
+      // was already rolled back.
       await updateMutation.mutateAsync({
         id: modelId,
         data: { data: applyResult.snapshot },

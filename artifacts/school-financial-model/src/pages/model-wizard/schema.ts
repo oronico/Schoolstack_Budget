@@ -616,6 +616,37 @@ export const customScenarioActualsSchema = z.object({
 });
 export type CustomScenarioActuals = z.infer<typeof customScenarioActualsSchema>;
 
+// Compact diff record returned by `summarizeDecisionChanges` and rendered in
+// the apply confirmation modal. Persisted on `appliedDecisionUndo` so the
+// model dashboard's "Undo last applied decision" banner can show the same
+// label list even after the founder has navigated away.
+export const decisionFieldChangeSchema = z.object({
+  label: z.string(),
+  before: z.string(),
+  after: z.string(),
+  kind: z.enum(["added", "modified"]),
+});
+export type DecisionFieldChangeRecord = z.infer<typeof decisionFieldChangeSchema>;
+
+// Persisted snapshot of the model exactly as it was *before* the most recent
+// "Apply to my model" succeeded. Lets the founder undo a decision after the
+// confirmation modal closes — including from a fresh page load. We keep at
+// most one record (the latest apply); a subsequent apply replaces the older
+// snapshot. The model dashboard surfaces the undo control while this record
+// exists and is within the rolling 24-hour window.
+export const appliedDecisionUndoSchema = z.object({
+  decisionType: decisionTypeSchema,
+  scenarioName: z.string(),
+  appliedAt: z.string(),
+  // The full pre-apply `data` blob. Restored verbatim by the undo control,
+  // which also clears this record so the banner doesn't linger.
+  snapshot: z.record(z.string(), z.unknown()),
+  // Optional rendered before/after diff so the banner can echo "Restoring will
+  // remove: <name>" in the confirm prompt without re-running the engine.
+  changes: z.array(decisionFieldChangeSchema).optional(),
+});
+export type AppliedDecisionUndo = z.infer<typeof appliedDecisionUndoSchema>;
+
 export const customScenarioSchema = z.object({
   name: z.string(),
   createdAt: z.string(),
@@ -797,6 +828,12 @@ export const fullModelSchema = z.object({
   sourcesAndUses: sourcesAndUsesSchema.optional(),
   scenarios: z.array(scenarioDefSchema).optional(),
   customScenarios: z.array(customScenarioSchema).optional(),
+  // Persisted "undo record" for the most recent Apply-to-my-model. Lets the
+  // founder roll back from the model dashboard even after they've dismissed
+  // the apply confirmation modal or navigated away. See
+  // `appliedDecisionUndoSchema` for shape and `UndoLastAppliedDecisionBanner`
+  // for the surfacing logic (24h rolling window).
+  appliedDecisionUndo: appliedDecisionUndoSchema.optional(),
   // Persisted "Compare decisions side-by-side" picker selection. Each entry
   // is a `${name}|${createdAt}` composite key referencing a saved
   // customScenario. Reconciled at render time against the current scenario

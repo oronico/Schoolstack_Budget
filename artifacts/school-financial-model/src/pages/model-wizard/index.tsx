@@ -19,6 +19,7 @@ import { hasCompletePersona, isYetToLaunch } from "@/lib/coaching/founder-person
 import { fullModelSchema, type FullModelData } from "./schema";
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
+import { UndoLastAppliedDecisionBanner } from "@/components/decision-flow/UndoLastAppliedDecisionBanner";
 import type { WhatIfOverrides } from "@/lib/whatif-engine";
 import type { CustomScenario } from "./schema";
 import { useToast } from "@/hooks/use-toast";
@@ -254,7 +255,7 @@ export function ModelWizardPage() {
   }, [modelId]);
   const { user } = useAuth();
 
-  const { data: initialData, isLoading: isLoadingModel } = useGetModel(modelId || 0, {
+  const { data: initialData, isLoading: isLoadingModel, refetch: refetchModel } = useGetModel(modelId || 0, {
     query: { queryKey: [`/api/models/${modelId || 0}`], enabled: !!modelId }
   });
 
@@ -999,6 +1000,28 @@ export function ModelWizardPage() {
             setShowPrepChecklist(false);
             if (modelId) {
               localStorage.setItem(`wizard_prep_seen_${modelId}`, "1");
+            }
+          }}
+        />
+      )}
+      {modelId && (
+        // Surface a persistent "Undo last applied decision" control whenever
+        // the model carries a fresh `appliedDecisionUndo` record (last 24h).
+        // This makes Apply truly safe — founders can roll back even after
+        // dismissing the post-apply confirmation modal or navigating away.
+        // Reads from `formValues` (which is `methods.watch()`) so the banner
+        // re-renders after a refetch repopulates the form.
+        <UndoLastAppliedDecisionBanner
+          modelId={modelId}
+          data={formValues as unknown as Record<string, unknown>}
+          onUndone={async () => {
+            // Reload the model so the wizard's form state reflects the
+            // restored snapshot (the mutation already wrote to the server,
+            // but the in-memory form is still showing the post-apply data).
+            const res = await refetchModel();
+            const restored = (res?.data?.data ?? null) as FullModelData | null;
+            if (restored) {
+              methods.reset(restored);
             }
           }}
         />

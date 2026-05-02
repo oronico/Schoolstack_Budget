@@ -19,7 +19,7 @@ import {
   type DecisionFieldChange,
 } from "@/lib/decision-flows";
 import { detectFacilityRent, encodeOverridesToHash } from "@/lib/whatif-engine";
-import type { FullModelData, CustomScenario } from "@/pages/model-wizard/schema";
+import type { FullModelData, CustomScenario, AppliedDecisionUndo } from "@/pages/model-wizard/schema";
 
 interface EvaluateSiteFlowProps {
   modelId: number;
@@ -100,7 +100,10 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
 
     // Snapshot data before any mutation so the Undo button on the apply
     // confirmation modal can restore it (including the customScenarios array
-    // as it was before this flow appended its entry).
+    // as it was before this flow appended its entry). For the apply branch
+    // we also persist this snapshot on the model itself (as
+    // `appliedDecisionUndo`) so the founder can undo from the model dashboard
+    // even after the modal is dismissed or they navigate away.
     const snapshotBeforeApply = data as Record<string, unknown>;
 
     let nextData: Record<string, unknown> = {
@@ -110,9 +113,20 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
 
     if (action === "apply") {
       const applied = applyDecisionToData(data, { type: "evaluate_site", inputs });
+      const undoRecord: AppliedDecisionUndo = {
+        decisionType: "evaluate_site",
+        scenarioName: finalScenarioName,
+        appliedAt: new Date().toISOString(),
+        snapshot: snapshotBeforeApply,
+        // Reuse the same diff we already computed once for the persisted
+        // CustomScenario (Task #375) so the dashboard banner and the PDF
+        // decision-history both narrate the same field-level changes.
+        changes: appliedFieldChanges ?? [],
+      };
       nextData = {
         ...(applied as Record<string, unknown>),
         customScenarios: [...existing, entry],
+        appliedDecisionUndo: undoRecord,
       };
     }
 
@@ -142,6 +156,10 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
     if (!applyResult || isUndoing) return;
     setIsUndoing(true);
     try {
+      // Restoring the snapshot also implicitly clears the persisted
+      // `appliedDecisionUndo` (the snapshot pre-dates that field), so the
+      // model dashboard banner won't keep advertising an undo for a decision
+      // we've just rolled back.
       await updateMutation.mutateAsync({
         id: modelId,
         data: { data: applyResult.snapshot },
