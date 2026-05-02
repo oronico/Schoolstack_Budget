@@ -5,7 +5,7 @@ import {
   type APIRequestContext,
   type Page,
   type ConsoleMessage,
-} from "@playwright/test";
+} from "./utils/test";
 
 // Task #354: companion smoke spec for the grouping/matrix surface that the
 // six-paths smoke does not touch. The six-paths smoke proves each

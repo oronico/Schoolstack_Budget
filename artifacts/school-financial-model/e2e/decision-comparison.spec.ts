@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Verifies the saved-scenario "Compare decisions side-by-side" surface
 // renders end-to-end: with two decision scenarios persisted, the section

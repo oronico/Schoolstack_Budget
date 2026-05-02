@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Task #286: regression coverage for the budget-coach surfaces shown to
 // basics-mode founders.
@@ -120,11 +120,10 @@ async function seedFixture(
 }
 
 async function primeAuthToken(page: Page, token: string): Promise<void> {
+  // Cookie-consent banner is pre-dismissed by the shared fixture in
+  // ./utils/test (see Task #381) — no per-spec boilerplate needed.
   await page.addInitScript((value) => {
     window.localStorage.setItem("auth_token", value);
-    // Pre-decline the cookie banner so its bottom-of-viewport sheet does
-    // not intercept clicks on decision-flow Continue buttons.
-    window.localStorage.setItem("cookie_consent", "declined");
   }, token);
 }
 

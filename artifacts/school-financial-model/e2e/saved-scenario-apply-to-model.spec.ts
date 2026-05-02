@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Verifies the saved-scenario "Apply to my model" handoff for a Pursued
 // decision: clicking the green Apply button folds the scenario's overrides

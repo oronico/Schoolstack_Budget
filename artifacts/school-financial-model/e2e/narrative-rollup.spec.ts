@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Task #331 — Lender Narrative roll-up surfacing.
 // Verifies that when a model already carries inline rationales captured at

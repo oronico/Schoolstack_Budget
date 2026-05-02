@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./utils/test";
 
 // Task #314: the 5 /solutions/:slug capability pages embed real product
 // screenshots from /images/solutions/*.png. There is no automated check

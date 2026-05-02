@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./utils/test";
 
 // Verifies the public /solutions hub page (Task #310):
 // - The page renders all 5 expected capability cards via the

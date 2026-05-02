@@ -4,7 +4,7 @@ import {
   expect,
   type APIRequestContext,
   type Page,
-} from "@playwright/test";
+} from "./utils/test";
 
 // Task #337: end-to-end coverage for the three running summaries the
 // Chesterton wizard renders on steps 6 (Fundraising), 7 (Gift Chart),

@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Verifies the "Suggest from latest data" fallback path: when the founder
 // has prior-year actuals captured in setup but has NOT uploaded an

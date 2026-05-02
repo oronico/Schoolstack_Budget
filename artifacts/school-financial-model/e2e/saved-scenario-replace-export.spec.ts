@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Verifies the saved-scenario "Replace export" deep-link round-trips to the
 // wizard's School Profile step with the AccountingExportUploader focused and

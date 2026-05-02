@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Verifies the Live What-If Planner's "Copy shareable link" affordance:
 // editing an override and clicking the link icon writes a `#whatif=…`

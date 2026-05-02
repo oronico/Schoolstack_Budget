@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Task #345: when the staffing roster grows past ~10 rows, the founder needs
 // a fast way to find a single role without scrolling the whole list. We add

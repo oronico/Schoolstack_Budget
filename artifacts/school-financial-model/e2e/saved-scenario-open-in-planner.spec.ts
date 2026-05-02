@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Verifies the saved-scenario "Open in planner" handoff: clicking the button
 // encodes the scenario's overrides into the URL hash, the floating WhatIf

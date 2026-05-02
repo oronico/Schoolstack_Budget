@@ -5,7 +5,7 @@ import {
   type APIRequestContext,
   type Page,
   type ConsoleMessage,
-} from "@playwright/test";
+} from "./utils/test";
 
 // User-requested smoke test: six wizard paths must work end-to-end.
 // 3 school types (charter, private, learning lab) × 2 stages (operating, new) = 6 paths.

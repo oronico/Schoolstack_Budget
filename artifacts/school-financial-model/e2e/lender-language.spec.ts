@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Verifies the Lender Language toggle (Task #299):
 // 1. The dashboard surfaces the toggle on the Year-1 financial snapshot.

@@ -5,7 +5,7 @@ import {
   type APIRequestContext,
   type Locator,
   type Page,
-} from "@playwright/test";
+} from "./utils/test";
 
 // Task #320: end-to-end coverage of the state + entity-type wiring on the
 // Expenses step and the state-driven payroll-tax re-seed on the Staffing step.
@@ -69,12 +69,10 @@ async function seedModel(
 }
 
 async function primeAuthToken(page: Page, token: string): Promise<void> {
+  // Cookie-consent banner is pre-dismissed by the shared fixture in
+  // ./utils/test (see Task #381) — no per-spec boilerplate needed.
   await page.addInitScript((value) => {
     window.localStorage.setItem("auth_token", value);
-    // Pre-dismiss the cookie consent banner so its bottom-of-viewport
-    // dialog does not intercept clicks on the wizard's full-width primary
-    // CTA buttons (e.g. "Continue with N categories" on the Expenses step).
-    window.localStorage.setItem("cookie_consent", "declined");
   }, token);
 }
 

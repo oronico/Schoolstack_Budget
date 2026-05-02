@@ -1,5 +1,5 @@
 import { seedPersona } from "./utils/seed-persona";
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Page } from "./utils/test";
 
 // Walks the Add-a-program mini-flow from "Why" through "Save" so a regression
 // in any of the four steps (Why → Inputs → Impact → Save) surfaces as a real
@@ -79,12 +79,10 @@ async function seedFixture(request: APIRequestContext): Promise<SeededFixture> {
 }
 
 async function primeAuthToken(page: Page, token: string): Promise<void> {
+  // Cookie-consent banner is pre-dismissed by the shared fixture in
+  // ./utils/test (see Task #381) — no per-spec boilerplate needed.
   await page.addInitScript((value) => {
     window.localStorage.setItem("auth_token", value);
-    // Pre-decline the cookie banner so its bottom-of-viewport sheet does not
-    // intercept clicks on the decision-flow Continue button (mirrors the
-    // pattern in state-triggers.spec.ts).
-    window.localStorage.setItem("cookie_consent", "declined");
   }, token);
 }
 
