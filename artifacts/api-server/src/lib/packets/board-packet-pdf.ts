@@ -6,7 +6,7 @@ import {
   renderPacketTable, renderPacketInsights, renderLinkedMetrics,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
-import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView, BoardNarrativeData, BoardFlaggedAssumption } from "./build-board-packet";
+import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView, BoardNarrativeData, BoardFlaggedAssumption, BoardRecruitingProjections } from "./build-board-packet";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 
@@ -44,6 +44,10 @@ export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffe
     }
 
     renderSection(doc, section);
+  }
+
+  if (packet.recruitingProjections) {
+    renderRecruitingProjections(doc, packet.recruitingProjections);
   }
 
   if (packet.scenarioSnapshots.length > 0) {
@@ -239,6 +243,47 @@ function renderCashRunway(doc: PDFDoc, cash: CashRunwayView, section: PacketSect
       );
     }
   }
+}
+
+/**
+ * Render the best/expected/worst recruiting projection range so the board PDF
+ * mirrors the same three-bucket picture trustees see on the wizard's
+ * Chesterton recruiting step (Task #436). The "Expected" row is explicitly
+ * labeled as the founder's chosen rate so trustees can tell at a glance which
+ * scenario the rest of the budget assumes.
+ */
+function renderRecruitingProjections(
+  doc: PDFDoc,
+  projections: BoardRecruitingProjections,
+) {
+  sectionTitle(doc, "Recruiting Projection Range");
+
+  bodyText(
+    doc,
+    `Year 1 enrollment goal of ${projections.year1Goal} student${projections.year1Goal === 1 ? "" : "s"} drawn from a prospect pool of ${projections.totalProspects}. Three conversion scenarios below show the implied enrolled student count and how much of the goal it covers.`,
+  );
+
+  const cols: TableColumn[] = [
+    { header: "Scenario", width: 170 },
+    { header: "Conversion Rate", width: 110, align: "center" },
+    { header: "Projected Students", width: 110, align: "right" },
+    { header: "Coverage of Goal", width: 110, align: "right" },
+  ];
+
+  const labelFor = (kind: "best" | "expected" | "worst", divisor: number): string => {
+    if (kind === "best") return "Best (1 in 2)";
+    if (kind === "worst") return "Worst (1 in 5)";
+    return `Expected (founder's chosen rate, 1 in ${divisor})`;
+  };
+
+  const rows = projections.projections.map((p) => [
+    labelFor(p.kind, p.divisor),
+    `1 in ${p.divisor}`,
+    String(p.projectedStudents),
+    `${Math.round(p.coveragePct)}%`,
+  ]);
+
+  drawTable(doc, cols, rows, { zebra: true });
 }
 
 function renderScenarioComparison(doc: PDFDoc, snapshots: ScenarioSnapshot[]) {

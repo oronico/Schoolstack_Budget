@@ -66,6 +66,33 @@ export interface BoardFlaggedAssumption {
   explanation: string;
 }
 
+/**
+ * One row of the recruiting projection range — what enrollment is implied if
+ * `1-in-divisor` of the total prospects pool actually converts. The wizard's
+ * Chesterton recruiting step (Task #436) shows three of these side-by-side
+ * (best 1-in-2 / founder's expected / lender stress test 1-in-5) and the
+ * board PDF must mirror the same range so trustees can discuss recruiting
+ * risk without flipping back to the app.
+ */
+export interface BoardRecruitingProjection {
+  kind: "best" | "expected" | "worst";
+  divisor: number;
+  projectedStudents: number;
+  /** Coverage of the Year 1 enrollment goal as a 0–100 percentage. */
+  coveragePct: number;
+}
+
+export interface BoardRecruitingProjections {
+  /** Sum of `year1` across `chesterton.phaseEnrollment` rows. */
+  year1Goal: number;
+  /** Sum of `prospectiveStudents` across `chesterton.recruitingPipeline`. */
+  totalProspects: number;
+  /** Founder's chosen `prospectConversionDivisor` (clamped to >= 2). */
+  expectedDivisor: number;
+  /** Always three rows: best (1-in-2), expected, worst (1-in-5). */
+  projections: BoardRecruitingProjection[];
+}
+
 export interface BoardPacket extends PacketData {
   topRisks: BoardRiskItem[];
   focusAreas: BoardFocusArea[];
@@ -95,6 +122,13 @@ export interface BoardPacket extends PacketData {
   // the renderer to print "(N of M scenarios)" so the reader can tell at a
   // glance how aggressive the slice was.
   forecastAccuracyUnfilteredCount: number;
+  /**
+   * Recruiting projection range for Chesterton-style schools. `null` when
+   * the model has no `chesterton.recruitingPipeline` data (e.g. non-CSN
+   * school types) so the PDF renderer skips the section gracefully.
+   * Task #436.
+   */
+  recruitingProjections: BoardRecruitingProjections | null;
 }
 
 const BOARD_PACKET_SECTIONS: SectionId[] = [
@@ -213,6 +247,8 @@ export function buildBoardPacket(
     ? filterForecastAccuracy(fullForecastAccuracy, normalizedFilter)
     : fullForecastAccuracy;
 
+  const recruitingProjections = buildRecruitingProjections(modelData);
+
   return {
     ...basePacket,
     sections: enrichedSections,
@@ -227,7 +263,80 @@ export function buildBoardPacket(
     forecastAccuracy,
     forecastAccuracyFilter: normalizedFilter,
     forecastAccuracyUnfilteredCount: fullForecastAccuracy.entries.length,
+    recruitingProjections,
   };
+}
+
+/**
+ * Build the best/expected/worst recruiting projection range that the wizard
+ * shows on `ChestertonRecruitingStep` so the board PDF mirrors the same
+ * three-bucket risk picture (Task #436).
+ *
+ * Returns `null` when the model has no `chesterton.recruitingPipeline`
+ * entries — non-CSN school types don't carry this data and the PDF renderer
+ * skips the section in that case rather than printing an empty placeholder.
+ *
+ * Math intentionally mirrors `ChestertonRecruitingStep.tsx`:
+ *   - `totalProspects` = sum of `prospectiveStudents`
+ *   - `year1Goal` = sum of `year1` across `phaseEnrollment`
+ *   - `expectedDivisor` = `prospectConversionDivisor` (clamped >= 2,
+ *     fallback to CSN's 1-in-3 rule of thumb when missing/invalid)
+ *   - For each bucket: `projected = floor(totalProspects / divisor)` and
+ *     `coveragePct = year1Goal > 0 ? projected / year1Goal * 100 : 0`
+ */
+export function buildRecruitingProjections(
+  md: ModelData,
+): BoardRecruitingProjections | null {
+  const raw = md as unknown as Record<string, unknown>;
+  const chesterton = raw.chesterton as
+    | {
+        prospectConversionDivisor?: unknown;
+        recruitingPipeline?: Array<{ prospectiveStudents?: unknown }>;
+        phaseEnrollment?: Array<{ year1?: unknown }>;
+      }
+    | undefined;
+  if (!chesterton) return null;
+
+  const pipeline = Array.isArray(chesterton.recruitingPipeline)
+    ? chesterton.recruitingPipeline
+    : [];
+  if (pipeline.length === 0) return null;
+
+  const totalProspects = pipeline.reduce(
+    (sum, row) => sum + (Number(row?.prospectiveStudents) || 0),
+    0,
+  );
+
+  const phase = Array.isArray(chesterton.phaseEnrollment)
+    ? chesterton.phaseEnrollment
+    : [];
+  const year1Goal = phase.reduce(
+    (sum, row) => sum + (Number(row?.year1) || 0),
+    0,
+  );
+
+  const divisorRaw = Number(chesterton.prospectConversionDivisor);
+  const expectedDivisor =
+    Number.isFinite(divisorRaw) && divisorRaw >= 2 ? Math.floor(divisorRaw) : 3;
+
+  const buckets: Array<{ kind: BoardRecruitingProjection["kind"]; divisor: number }> = [
+    { kind: "best", divisor: 2 },
+    { kind: "expected", divisor: expectedDivisor },
+    { kind: "worst", divisor: 5 },
+  ];
+
+  const projections: BoardRecruitingProjection[] = buckets.map((b) => {
+    const projectedStudents = Math.floor(totalProspects / b.divisor);
+    const coveragePct = year1Goal > 0 ? (projectedStudents / year1Goal) * 100 : 0;
+    return {
+      kind: b.kind,
+      divisor: b.divisor,
+      projectedStudents,
+      coveragePct,
+    };
+  });
+
+  return { year1Goal, totalProspects, expectedDivisor, projections };
 }
 
 // Mirrors `normalizeForecastAccuracyFilter` in the lender builder — kept as a
