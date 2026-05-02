@@ -8,7 +8,7 @@
     "build": "tsx ./build.ts",
     "start": "node dist/index.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "pnpm run test:parity && pnpm run test:cross-engine && pnpm run test:decision-history && pnpm run test:decision-history-pdf && pnpm run test:decision-comparison-pdf-route && pnpm run test:lender-packet-pdf-route && pnpm run test:board-packet-pdf-route && pnpm run test:health && pnpm run test:board-packet-cap-insight && pnpm run test:inline-rationale-rollup && pnpm run test:forecast-accuracy-pdf && pnpm run test:account-accounting-uploads-route",
+    "test": "pnpm run test:parity && pnpm run test:cross-engine && pnpm run test:decision-history && pnpm run test:decision-history-pdf && pnpm run test:decision-comparison-pdf-route && pnpm run test:lender-packet-pdf-route && pnpm run test:board-packet-pdf-route && pnpm run test:health && pnpm run test:board-packet-cap-insight && pnpm run test:inline-rationale-rollup && pnpm run test:forecast-accuracy-pdf && pnpm run test:account-accounting-uploads-route && pnpm run test:workbook-helpers-school-model",
     "qa:excel": "tsx ./tests/excel-qa.ts",
     "qa:golden": "tsx ./tests/golden-model.ts",
     "qa:parity": "tsx ./tests/lender-parity-check.ts",
@@ -33,6 +33,7 @@
     "test:lender-five-year-callouts": "tsx ./tests/lender-five-year-callouts.ts",
     "qa:packet-cash": "tsx ./tests/board-packet-cash-runway.ts",
     "test:inline-rationale-rollup": "tsx ./tests/inline-rationale-rollup.ts",
+    "test:workbook-helpers-school-model": "tsx ./tests/workbook-helpers-school-model.ts",
     "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts",
     "generate:ceo-demos": "tsx ./src/scripts/generate-ceo-demos.ts"
   },

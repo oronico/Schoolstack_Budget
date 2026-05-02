@@ -259,11 +259,11 @@ export function accountingBasisLabel(ab?: string): string {
 }
 
 // Task #454: differentiate tutoring_center + learning_pod + homeschool_coop
-// instead of folding all three into the "microschool" bucket. The label is
-// printed in the underwriting workbook header ("School Model" cell), so a
-// distinct value here means lender-facing exports stop calling a tutoring
-// center "microschool". `microschool` / `charter` / `private` are kept as the
-// existing bucket strings so prior workbooks render unchanged.
+// instead of folding all three into the "microschool" bucket. The string
+// returned here is printed verbatim in the underwriting workbook header
+// ("School Model" cell), so we use human-readable display labels rather
+// than raw snake_case enum ids. `microschool` / `charter` / `private` keep
+// their pre-#454 single-word strings so existing workbooks render unchanged.
 export function schoolModelFromType(schoolType?: string): string {
   if (!schoolType) return "private";
   switch (schoolType) {
@@ -272,11 +272,11 @@ export function schoolModelFromType(schoolType?: string): string {
     case "microschool":
       return "microschool";
     case "learning_pod":
-      return "learning_pod";
+      return "learning pod";
     case "homeschool_coop":
-      return "homeschool_coop";
+      return "homeschool co-op";
     case "tutoring_center":
-      return "tutoring_center";
+      return "tutoring center";
     default:
       return "private";
   }
