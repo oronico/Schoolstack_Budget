@@ -262,7 +262,10 @@ function noPursuedScenarios() {
   ];
 }
 
-async function makeLenderPDF(scenarios: unknown[] | null): Promise<string> {
+async function makeLenderPDF(
+  scenarios: unknown[] | null,
+  forecastFilter?: import("@workspace/finance").ForecastAccuracyFilter | null,
+): Promise<string> {
   const input = { ...(microschoolStartup as Record<string, unknown>) };
   if (scenarios === null) {
     delete (input as Record<string, unknown>).customScenarios;
@@ -270,13 +273,22 @@ async function makeLenderPDF(scenarios: unknown[] | null): Promise<string> {
     (input as Record<string, unknown>).customScenarios = scenarios;
   }
   const consultant = await runConsultantEngine(input);
-  const packet = buildLenderPacket(input as unknown as ModelData, consultant, 1);
+  const packet = buildLenderPacket(
+    input as unknown as ModelData,
+    consultant,
+    1,
+    null,
+    forecastFilter ?? null,
+  );
   const pdf = await generateLenderPacketPDF(packet);
   check(`lender PDF (${scenarios ? "scenarios" : "none"}): non-zero buffer`, pdf.length > 0);
   return extractPDFText(pdf);
 }
 
-async function makeBoardPDF(scenarios: unknown[] | null): Promise<string> {
+async function makeBoardPDF(
+  scenarios: unknown[] | null,
+  forecastFilter?: import("@workspace/finance").ForecastAccuracyFilter | null,
+): Promise<string> {
   const input = { ...(microschoolStartup as Record<string, unknown>) };
   if (scenarios === null) {
     delete (input as Record<string, unknown>).customScenarios;
@@ -284,7 +296,13 @@ async function makeBoardPDF(scenarios: unknown[] | null): Promise<string> {
     (input as Record<string, unknown>).customScenarios = scenarios;
   }
   const consultant = await runConsultantEngine(input);
-  const packet = buildBoardPacket(input as unknown as ModelData, consultant, 1);
+  const packet = buildBoardPacket(
+    input as unknown as ModelData,
+    consultant,
+    1,
+    null,
+    forecastFilter ?? null,
+  );
   const pdf = await generateBoardPacketPDF(packet);
   check(`board PDF (${scenarios ? "scenarios" : "none"}): non-zero buffer`, pdf.length > 0);
   return extractPDFText(pdf);
@@ -430,6 +448,93 @@ async function testBoardMissingOmitted() {
   notContains("board (missing): section title omitted", text, "Forecast Accuracy");
 }
 
+// ---------------------------------------------------------------------------
+// Lender PDF — filter applied (Task #391)
+//
+// When the founder triggered the export with a metric/asOfYear slice active
+// on the on-screen Forecast Accuracy view, the printable packet must mirror
+// that view: only matching scenarios survive, and an italic "Filtered to ..."
+// caption beneath the section title tells the lender exactly what slice
+// they're looking at.
+// ---------------------------------------------------------------------------
+async function testLenderMetricFilter() {
+  console.log("\n— Lender PDF: filter by metric (Signed rent) —");
+  // `signedMonthlyRent` only exists on the "Lease downtown facility" scenario,
+  // so a `monthlyRent` filter must keep that scenario and drop the
+  // "Add Middle School wing" one.
+  const text = await makeLenderPDF(pursuedWithActuals(), {
+    metric: "monthlyRent",
+    asOfYear: null,
+  });
+  const section = sliceForecastSection(text);
+
+  contains("lender (metric filter): kept matching scenario", section, "Lease downtown facility");
+  notContains("lender (metric filter): dropped non-matching scenario", section, "Add Middle School wing");
+  contains("lender (metric filter): caption present", section, "Filtered to");
+  contains("lender (metric filter): caption metric label", section, "Signed rent (mo)");
+  // Both fixtures had matching `pursued + actuals`; one survives the filter.
+  contains("lender (metric filter): caption count", section, "1 of 2 scenarios");
+}
+
+async function testLenderYearFilter() {
+  console.log("\n— Lender PDF: filter by asOfYear (Year 1) —");
+  // Both eligible fixtures use `asOfYear: 1`, so an `asOfYear: 1` filter
+  // keeps both and the count reads "2 of 2".
+  const text = await makeLenderPDF(pursuedWithActuals(), {
+    metric: null,
+    asOfYear: 1,
+  });
+  const section = sliceForecastSection(text);
+
+  contains("lender (year filter): kept scenario A", section, "Add Middle School wing");
+  contains("lender (year filter): kept scenario B", section, "Lease downtown facility");
+  contains("lender (year filter): caption present", section, "Filtered to");
+  contains("lender (year filter): caption year label", section, "Year 1 actuals");
+  // When the filter happens to keep every scenario, the renderer
+  // intentionally omits the "(N of M scenarios)" suffix — the count would
+  // be redundant noise. Verify the suppression rather than asserting "2 of 2".
+  notContains("lender (year filter): no count suffix when all kept", section, "2 of 2 scenarios");
+}
+
+async function testLenderYearFilterNoMatch() {
+  console.log("\n— Lender PDF: filter by asOfYear (Year 3) drops everything —");
+  // Neither fixture used `asOfYear: 3`, so the filter empties the section
+  // and we fall through to the lender empty-state path (section omitted).
+  const text = await makeLenderPDF(pursuedWithActuals(), {
+    metric: null,
+    asOfYear: 3,
+  });
+  // Section is omitted entirely when filter empties the roll-up — same
+  // behavior as having zero pursued scenarios with actuals.
+  notContains("lender (year filter empty): section omitted", text, "Forecast Accuracy");
+}
+
+async function testBoardMetricFilter() {
+  console.log("\n— Board PDF: filter by metric (Signed rent) —");
+  const text = await makeBoardPDF(pursuedWithActuals(), {
+    metric: "monthlyRent",
+    asOfYear: null,
+  });
+  const section = sliceForecastSection(text);
+
+  contains("board (metric filter): kept matching scenario", section, "Lease downtown facility");
+  notContains("board (metric filter): dropped non-matching scenario", section, "Add Middle School wing");
+  contains("board (metric filter): caption present", section, "Filtered to");
+  contains("board (metric filter): caption metric label", section, "Signed rent (mo)");
+  contains("board (metric filter): caption count", section, "1 of 2 scenarios");
+}
+
+async function testBoardNoFilterNoCaption() {
+  console.log("\n— Board PDF: no filter → no caption —");
+  // Sanity check: when no filter is forwarded the "Filtered to" caption
+  // must NOT appear (boards shouldn't see a confusing caption when they're
+  // looking at the unfiltered roll-up).
+  const text = await makeBoardPDF(pursuedWithActuals());
+  const section = sliceForecastSection(text);
+  contains("board (no filter): section title still present", section, "Forecast Accuracy");
+  notContains("board (no filter): no caption", section, "Filtered to");
+}
+
 async function main() {
   console.log("=== Forecast Accuracy PDF Render Tests ===");
   await testLenderPopulated();
@@ -438,6 +543,11 @@ async function main() {
   await testBoardPopulated();
   await testBoardEmptyOmitted();
   await testBoardMissingOmitted();
+  await testLenderMetricFilter();
+  await testLenderYearFilter();
+  await testLenderYearFilterNoMatch();
+  await testBoardMetricFilter();
+  await testBoardNoFilterNoCaption();
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
   if (failed > 0) {

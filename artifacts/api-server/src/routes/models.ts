@@ -82,6 +82,11 @@ import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
 import { generateBoardPacketPDF } from "../lib/packets/board-packet-pdf";
 import {
+  ACCURACY_METRICS,
+  type AccuracyMetricKey,
+  type ForecastAccuracyFilter,
+} from "@workspace/finance";
+import {
   generateDecisionComparisonPDF,
   validateDecisionComparisonRequest,
   buildComparisonFileName,
@@ -89,6 +94,33 @@ import {
 import { normalizeRevenueRows } from "../lib/workbook-helpers";
 import { isEmailConfigured, sendReviewRequestToTeam, sendReviewConfirmation } from "../lib/mailer";
 import { schoolTypeDisplay, entityTypeDisplay } from "../lib/pdf-utils";
+
+// Pull the founder's on-screen Forecast Accuracy filter off an export request
+// (`?metric=enrollment|revenue|...&asOfYear=1..5`). Used by the lender / board
+// packet routes so the printable PDFs (and the JSON preview) mirror the slice
+// the founder was looking at when they clicked Download (Task #391).
+//
+// Unknown / out-of-range / NaN values fall back to `null` for that axis
+// rather than throwing — a stale or hand-typed link should never block an
+// otherwise-valid export. Returns `null` when no filter applies.
+const ACCURACY_METRIC_KEYS = ACCURACY_METRICS.map((m) => m.key);
+function parseForecastAccuracyFilter(
+  query: Record<string, unknown>,
+): ForecastAccuracyFilter | null {
+  const rawMetric = typeof query.metric === "string" ? query.metric : null;
+  const metric: AccuracyMetricKey | null =
+    rawMetric && (ACCURACY_METRIC_KEYS as string[]).includes(rawMetric)
+      ? (rawMetric as AccuracyMetricKey)
+      : null;
+
+  const rawYear = typeof query.asOfYear === "string" ? query.asOfYear : null;
+  const yearNum = rawYear !== null ? Number(rawYear) : NaN;
+  const asOfYear =
+    Number.isInteger(yearNum) && yearNum >= 1 && yearNum <= 5 ? yearNum : null;
+
+  if (!metric && asOfYear === null) return null;
+  return { metric, asOfYear };
+}
 
 function sendBinary(res: Response, buffer: Buffer | ArrayBuffer | Uint8Array, contentType: string, filename: string) {
   const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer as unknown as ArrayLike<number>);
@@ -665,7 +697,18 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
     }
 
     const personaComfort = await fetchPersonaComfort(req.userId!);
-    const packet = buildLenderPacket(data as any, consultantOutput, model.id, personaComfort);
+    // Forward the on-screen Forecast Accuracy filter from the founder's
+    // current view (`?metric=…&asOfYear=…`) into the JSON preview so the
+    // packet preview modal mirrors the slice they were looking at — the same
+    // forwarding the PDF route does (Task #391).
+    const forecastAccuracyFilter = parseForecastAccuracyFilter(req.query);
+    const packet = buildLenderPacket(
+      data as any,
+      consultantOutput,
+      model.id,
+      personaComfort,
+      forecastAccuracyFilter,
+    );
 
     res.json(packet);
   } catch (err) {
@@ -713,7 +756,20 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
     const personaComfort = await fetchPersonaComfort(req.userId!);
-    const packet = buildLenderPacket(data as any, consultantOutput, model.id, personaComfort);
+    // Forward the on-screen Forecast Accuracy filter so the PDF mirrors what
+    // the founder was looking at when they hit "Download" (Task #391). The
+    // filter shape matches the URL the planner page exposes
+    // (`?metric=enrollment|revenue|...&asOfYear=1..5`); unknown / out-of-range
+    // values are silently coerced to "no filter" so a stale link never blocks
+    // an export.
+    const forecastAccuracyFilter = parseForecastAccuracyFilter(req.query);
+    const packet = buildLenderPacket(
+      data as any,
+      consultantOutput,
+      model.id,
+      personaComfort,
+      forecastAccuracyFilter,
+    );
     const buffer = await generateLenderPacketPDF(packet);
 
     if (abortGuard(req, res)) return;
@@ -768,7 +824,16 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
     }
 
     const personaComfort = await fetchPersonaComfort(req.userId!);
-    const packet = buildBoardPacket(data as any, consultantOutput, model.id, personaComfort);
+    // Mirror the lender JSON route — forward the founder's on-screen Forecast
+    // Accuracy filter so the preview modal matches the sliced view (Task #391).
+    const forecastAccuracyFilter = parseForecastAccuracyFilter(req.query);
+    const packet = buildBoardPacket(
+      data as any,
+      consultantOutput,
+      model.id,
+      personaComfort,
+      forecastAccuracyFilter,
+    );
 
     res.json(packet);
   } catch (err) {
@@ -816,7 +881,16 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
     const personaComfort = await fetchPersonaComfort(req.userId!);
-    const packet = buildBoardPacket(data as any, consultantOutput, model.id, personaComfort);
+    // Forward the on-screen Forecast Accuracy filter so the board PDF mirrors
+    // the founder's filtered view at the moment of export (Task #391).
+    const forecastAccuracyFilter = parseForecastAccuracyFilter(req.query);
+    const packet = buildBoardPacket(
+      data as any,
+      consultantOutput,
+      model.id,
+      personaComfort,
+      forecastAccuracyFilter,
+    );
     const buffer = await generateBoardPacketPDF(packet);
 
     if (abortGuard(req, res)) return;

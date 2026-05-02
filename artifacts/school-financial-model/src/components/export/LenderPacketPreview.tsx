@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText, TrendingUp } from "lucide-react";
 import { trackExport } from "@/hooks/useExportTracker";
 import { InsightCallout } from "@/components/coaching/InsightCallout";
+import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
 
 interface LinkedMetric {
   label: string;
@@ -114,9 +115,12 @@ export function LenderPacketPreview({
     const fetchPacket = async () => {
       try {
         const token = localStorage.getItem("auth_token");
-        const res = await fetch(`/api/models/${modelId}/export/lender-packet`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const res = await fetch(
+          `/api/models/${modelId}/export/lender-packet${buildForecastFilterQuery()}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        );
         if (!res.ok) throw new Error("Failed to load packet");
         const data = await res.json();
         setPacket(data);
@@ -133,9 +137,12 @@ export function LenderPacketPreview({
     setDownloadingPdf(true);
     try {
       const token = localStorage.getItem("auth_token");
-      const res = await fetch(`/api/models/${modelId}/export/lender-packet-pdf`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(
+        `/api/models/${modelId}/export/lender-packet-pdf${buildForecastFilterQuery()}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
       if (!res.ok) throw new Error("PDF generation failed");
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition") || "";

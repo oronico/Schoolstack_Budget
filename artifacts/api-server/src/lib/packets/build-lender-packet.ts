@@ -4,6 +4,8 @@ import type { AssumptionFlag } from "../assumption-flags";
 import { BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "../benchmark-thresholds";
 import {
   computeForecastAccuracy,
+  filterForecastAccuracy,
+  type ForecastAccuracyFilter,
   type ForecastAccuracyRollup,
   type DecisionEngineModelData,
 } from "@workspace/finance";
@@ -62,7 +64,19 @@ export interface LenderPacket extends PacketData {
   // Projected-vs-actual roll-up across every Pursued saved scenario that has
   // realized actuals captured. Empty arrays when no eligible scenarios exist
   // — the PDF renderer skips the section gracefully in that case (Task #216).
+  // When the founder triggered the export with a filter active on the
+  // on-screen Forecast Accuracy view (`?metric=…&asOfYear=…`), this carries
+  // the *filtered* slice and `forecastAccuracyFilter` records which slice was
+  // applied so the renderer can call it out (Task #391).
   forecastAccuracy: ForecastAccuracyRollup;
+  // The metric / year filter that was active when the founder downloaded the
+  // packet. `null` when no filter was forwarded — the PDF then renders the
+  // full population with no caption, identical to pre-Task-#391 behavior.
+  forecastAccuracyFilter: ForecastAccuracyFilter | null;
+  // Population size *before* `forecastAccuracyFilter` was applied. Used by
+  // the renderer to print "(N of M scenarios)" so the reader can tell at a
+  // glance how aggressive the slice was.
+  forecastAccuracyUnfilteredCount: number;
 }
 
 export interface DSCRSummary {
@@ -77,6 +91,12 @@ export function buildLenderPacket(
   consultantOutput: ConsultantOutput,
   modelId: number,
   personaComfort?: "new_to_budgeting" | "comfortable" | null,
+  // Optional metric / year slice the founder had active on the on-screen
+  // Forecast Accuracy view when they triggered the export. We apply it to the
+  // computed roll-up so the lender sees the same slice the founder did, and
+  // record it on the returned packet so the PDF renderer can print a
+  // "Filtered to ..." caption identifying which view was exported (Task #391).
+  forecastAccuracyFilter?: ForecastAccuracyFilter | null,
 ): LenderPacket {
   const basePacket = buildPacketData({
     modelData,
@@ -132,7 +152,16 @@ export function buildLenderPacket(
   // of finance's permissive `FullModelData` (which uses index signatures on
   // its sub-shapes); routing through `unknown` matches the convention used
   // by every other api-server → finance call site in this folder.
-  const forecastAccuracy = computeForecastAccuracy(modelData as unknown as DecisionEngineModelData);
+  const fullForecastAccuracy = computeForecastAccuracy(modelData as unknown as DecisionEngineModelData);
+  // When the founder triggered the export with a filter active on the
+  // on-screen Forecast Accuracy view, slice the roll-up so the printable
+  // packet mirrors what they were looking at (Task #391). When no filter is
+  // forwarded, `filterForecastAccuracy` short-circuits and returns the full
+  // roll-up unchanged.
+  const normalizedFilter = normalizeForecastAccuracyFilter(forecastAccuracyFilter);
+  const forecastAccuracy = normalizedFilter
+    ? filterForecastAccuracy(fullForecastAccuracy, normalizedFilter)
+    : fullForecastAccuracy;
 
   return {
     ...basePacket,
@@ -148,7 +177,23 @@ export function buildLenderPacket(
     decisionHistory,
     cashRunway,
     forecastAccuracy,
+    forecastAccuracyFilter: normalizedFilter,
+    forecastAccuracyUnfilteredCount: fullForecastAccuracy.entries.length,
   };
+}
+
+// Collapse `{ metric: null, asOfYear: null }` (or an all-undefined object)
+// down to `null` so downstream code only has to check one condition. Both
+// the lender and board builders share the same normalization, hence a
+// helper rather than two inline ternaries.
+function normalizeForecastAccuracyFilter(
+  filter: ForecastAccuracyFilter | null | undefined,
+): ForecastAccuracyFilter | null {
+  if (!filter) return null;
+  const metric = filter.metric ?? null;
+  const asOfYear = filter.asOfYear ?? null;
+  if (!metric && asOfYear === null) return null;
+  return { metric, asOfYear };
 }
 
 function buildRiskMitigants(co: ConsultantOutput): RiskMitigant[] {

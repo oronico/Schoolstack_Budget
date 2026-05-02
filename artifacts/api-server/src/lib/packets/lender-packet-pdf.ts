@@ -38,7 +38,14 @@ export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buf
   // title, no placeholder copy) when no Pursued saved scenarios with
   // realized actuals exist — first-time founders without a track record
   // shouldn't get a half-empty section in their lender packet.
-  renderForecastAccuracySection(doc, packet.forecastAccuracy, "lender", true);
+  renderForecastAccuracySection(
+    doc,
+    packet.forecastAccuracy,
+    "lender",
+    true,
+    packet.forecastAccuracyFilter,
+    packet.forecastAccuracyUnfilteredCount,
+  );
 
   drawFooter(doc);
   return docToBuffer(doc);

@@ -54,7 +54,14 @@ export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffe
   // current forecast. Omitted entirely when there are no comparable
   // scenarios — boards don't need a "no data" placeholder cluttering the
   // packet.
-  renderForecastAccuracySection(doc, packet.forecastAccuracy, "board", true);
+  renderForecastAccuracySection(
+    doc,
+    packet.forecastAccuracy,
+    "board",
+    true,
+    packet.forecastAccuracyFilter,
+    packet.forecastAccuracyUnfilteredCount,
+  );
 
   drawFooter(doc);
   return docToBuffer(doc);

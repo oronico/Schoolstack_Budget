@@ -25,6 +25,7 @@ import {
   describeTendency,
   type AccuracyMetricMeta,
   type ForecastAccuracyEntry,
+  type ForecastAccuracyFilter,
   type ForecastAccuracyRollup,
   type MetricDelta,
 } from "@workspace/finance";
@@ -59,21 +60,36 @@ const EMPTY_COPY: Record<Audience, string> = {
  * forecast-accuracy-only export) where a placeholder is preferable to a
  * silently missing section. The text used in that branch lives in
  * `EMPTY_COPY` above.
+ *
+ * `appliedFilter` is the `{ metric?, asOfYear? }` slice the founder had
+ * active on the on-screen Forecast Accuracy view when they triggered the
+ * export (Task #391). The caller is responsible for actually applying the
+ * filter to the rollup *before* passing it in — this helper only renders the
+ * caption that calls out which slice the reader is looking at, and uses
+ * `unfilteredCount` to render an "N of M" denominator so a sliced packet
+ * isn't mistaken for the full population.
  */
 export function renderForecastAccuracySection(
   doc: PDFDoc,
   rollup: ForecastAccuracyRollup,
   audience: Audience,
   omitWhenEmpty = true,
+  appliedFilter?: ForecastAccuracyFilter | null,
+  unfilteredCount?: number,
 ): void {
   if (rollup.entries.length === 0) {
     if (omitWhenEmpty) return;
     sectionTitle(doc, "Forecast Accuracy");
+    // Caption sits *directly* beneath the section title (per Task #391) so
+    // the reader sees the active slice before the prose explanation, not
+    // tucked beneath a paragraph of body copy.
+    renderFilterCaption(doc, appliedFilter, rollup.entries.length, unfilteredCount);
     bodyText(doc, EMPTY_COPY[audience]);
     return;
   }
 
   sectionTitle(doc, "Forecast Accuracy");
+  renderFilterCaption(doc, appliedFilter, rollup.entries.length, unfilteredCount);
   bodyText(doc, INTRO_COPY[audience]);
 
   // Aggregate tendency callouts — the plain-English insights the founder
@@ -176,6 +192,51 @@ function renderEntry(doc: PDFDoc, entry: ForecastAccuracyEntry): void {
   }
 
   doc.moveDown(0.5);
+}
+
+// Render the "filtered to ..." caption beneath the section title when an
+// `appliedFilter` is non-empty. Skipped silently when no filter is active so
+// the unfiltered packet looks identical to pre-Task-#391 PDFs.
+//
+// `filteredCount` is the number of entries surviving the filter (i.e.
+// `rollup.entries.length` after `filterForecastAccuracy` was applied);
+// `unfilteredCount`, when provided, is the population size before filtering.
+// We render a "(N of M scenarios)" suffix when both numbers are known so the
+// reader can tell at a glance how aggressive the slice was — and the suffix
+// is suppressed when M is unknown or equal to N (i.e. the filter happened to
+// keep everyone).
+function renderFilterCaption(
+  doc: PDFDoc,
+  filter: ForecastAccuracyFilter | null | undefined,
+  filteredCount: number,
+  unfilteredCount: number | undefined,
+): void {
+  if (!filter) return;
+  const metric = filter.metric ?? null;
+  const year = filter.asOfYear ?? null;
+  if (!metric && year === null) return;
+
+  const parts: string[] = [];
+  if (metric) {
+    const meta = ACCURACY_METRICS.find((m) => m.key === metric);
+    parts.push(`metric: ${meta?.label ?? metric}`);
+  }
+  if (year !== null) parts.push(`Year ${year} actuals`);
+
+  let caption = `Filtered to ${parts.join(" · ")}`;
+  if (
+    typeof unfilteredCount === "number" &&
+    unfilteredCount > 0 &&
+    unfilteredCount !== filteredCount
+  ) {
+    caption += ` (${filteredCount} of ${unfilteredCount} scenarios)`;
+  }
+
+  const margin = doc.page.margins.left;
+  const w = doc.page.width - margin - doc.page.margins.right;
+  doc.font("Helvetica-Oblique").fontSize(9).fillColor(BRAND.gray);
+  doc.text(caption, margin, doc.y, { width: w });
+  doc.moveDown(0.2);
 }
 
 function formatValue(meta: AccuracyMetricMeta, value: number): string {

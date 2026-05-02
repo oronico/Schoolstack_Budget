@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X, Download, Loader2, TrendingUp, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Lightbulb, BarChart3 } from "lucide-react";
 import { trackExport } from "@/hooks/useExportTracker";
 import { InsightCallout } from "@/components/coaching/InsightCallout";
+import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
 
 interface LinkedMetric {
   label: string;
@@ -117,9 +118,12 @@ export function BoardPacketPreview({
     const fetchPacket = async () => {
       try {
         const token = localStorage.getItem("auth_token");
-        const res = await fetch(`/api/models/${modelId}/export/board-packet`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const res = await fetch(
+          `/api/models/${modelId}/export/board-packet${buildForecastFilterQuery()}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        );
         if (!res.ok) throw new Error("Failed to load packet");
         const data = await res.json();
         setPacket(data);
@@ -136,9 +140,12 @@ export function BoardPacketPreview({
     setDownloadingPdf(true);
     try {
       const token = localStorage.getItem("auth_token");
-      const res = await fetch(`/api/models/${modelId}/export/board-packet-pdf`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(
+        `/api/models/${modelId}/export/board-packet-pdf${buildForecastFilterQuery()}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
       if (!res.ok) throw new Error("PDF generation failed");
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition") || "";
