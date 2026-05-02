@@ -834,7 +834,7 @@ export function WhatIfDrawer({
 
           {showQrDialog && (
             <div
-              className="absolute inset-0 z-10 bg-slate-900/40 flex items-center justify-center p-5 animate-in fade-in-0"
+              className="absolute inset-0 z-10 bg-slate-900/40 flex items-center justify-center p-2 sm:p-5 animate-in fade-in-0"
               data-testid="whatif-qr-dialog"
               onClick={(e) => {
                 // Click on backdrop closes; clicks inside the panel are
@@ -842,11 +842,11 @@ export function WhatIfDrawer({
                 if (e.target === e.currentTarget) setShowQrDialog(false);
               }}
             >
-              <div className="bg-background border border-border rounded-xl p-5 shadow-xl max-w-sm w-full">
-                <h4 className="font-display font-bold text-base text-foreground mb-1">
+              <div className="bg-background border border-border rounded-xl p-4 sm:p-5 shadow-xl w-full max-w-sm">
+                <h4 className="font-display font-bold text-lg sm:text-base text-foreground mb-1">
                   Share via QR code
                 </h4>
-                <p className="text-xs text-muted-foreground mb-3">
+                <p className="text-sm sm:text-xs text-muted-foreground mb-3">
                   Anyone who scans this code will land on this what-if scenario.
                 </p>
                 <div className="flex items-center justify-center bg-white border border-border rounded-lg p-3 mb-3">
@@ -854,36 +854,38 @@ export function WhatIfDrawer({
                     <div
                       data-testid="whatif-qr-svg"
                       aria-label="QR code for share link"
-                      // QRCode.toString returns a self-contained <svg>; render
-                      // it directly so it scales as a true vector.
+                      // QRCode.toString returns a self-contained <svg> with a
+                      // viewBox, so we override its hard-coded width/height to
+                      // let it grow with the modal on phones (up to 320px).
+                      className="w-full max-w-[320px] [&>svg]:w-full [&>svg]:h-auto [&>svg]:block"
                       dangerouslySetInnerHTML={{ __html: qrSvg }}
                     />
                   ) : (
-                    <div className="w-[220px] h-[220px] flex items-center justify-center text-xs text-muted-foreground">
+                    <div className="w-full max-w-[320px] aspect-square flex items-center justify-center text-xs text-muted-foreground">
                       Generating…
                     </div>
                   )}
                 </div>
                 <p
                   data-testid="whatif-qr-url"
-                  className="text-[11px] font-mono text-muted-foreground break-all bg-muted/40 rounded-md px-2 py-1.5 mb-4"
+                  className="text-xs sm:text-[11px] font-mono text-muted-foreground break-all bg-muted/40 rounded-md px-2 py-2 sm:py-1.5 mb-4"
                 >
                   {qrUrl}
                 </p>
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 sm:justify-end">
                   <button
                     onClick={() => setShowQrDialog(false)}
                     data-testid="whatif-qr-close"
-                    className="px-3 py-1.5 text-sm font-medium rounded-md border border-border bg-background text-foreground hover:bg-muted"
+                    className="w-full sm:w-auto px-3 py-2.5 sm:py-1.5 text-sm font-medium rounded-md border border-border bg-background text-foreground hover:bg-muted"
                   >
                     Close
                   </button>
                   <button
                     onClick={copyQrUrl}
                     data-testid="whatif-qr-copy-link"
-                    className="px-3 py-1.5 text-sm font-medium rounded-md bg-amber-600 text-white hover:bg-amber-700 inline-flex items-center gap-1.5"
+                    className="w-full sm:w-auto px-3 py-3 sm:py-1.5 text-sm font-medium rounded-md bg-amber-600 text-white hover:bg-amber-700 inline-flex items-center justify-center gap-1.5"
                   >
-                    <LinkIcon className="h-3.5 w-3.5" />
+                    <LinkIcon className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                     Copy link
                   </button>
                 </div>
