@@ -147,6 +147,76 @@ describe("program × group enrollment matrix", () => {
     >;
     expect(matrix.p1.priorYear.k5).toBeNull();
     expect(matrix.p2.priorYear.k5).toBeNull();
+    // The user's choice is also recorded in the columnNotOffered mask so
+    // it survives reload (mirrors the row-level programNotOffered mask).
+    const columnNotOffered = formRef!.getValues("columnNotOffered") as Record<
+      string,
+      Record<string, boolean>
+    >;
+    expect(columnNotOffered.priorYear.k5).toBe(true);
+  });
+
+  // Persistence regression: the column N/A button must reflect the
+  // columnNotOffered mask, not the cell contents. If a single cell ends up
+  // with a stray non-null value (e.g. via the — placeholder click that
+  // resets a cell to 0), the column must still show as N/A and every cell
+  // must keep rendering as the "—" placeholder. Otherwise the user's
+  // stated intent silently disappears on reload.
+  it("column N/A stays on when an underlying cell becomes non-null, and Restore clears the mask", async () => {
+    render(<Harness initial={baseInitial} />);
+    const colNa = screen.getByTestId("matrix-col-na-priorYear-k5");
+    fireEvent.click(colNa);
+    expect(colNa.textContent).toBe("Restore");
+
+    // Stray cell value lands in the matrix (e.g. via the — placeholder
+    // click, or via a re-hydrated form value pre-dating the column N/A).
+    formRef!.setValue("programEnrollmentMatrix.p1.priorYear.k5", 7, { shouldDirty: true });
+
+    await waitFor(() => {
+      const refreshed = screen.getByTestId("matrix-col-na-priorYear-k5");
+      expect(refreshed.textContent).toBe("Restore");
+      const cell = screen.getByTestId("matrix-cell-p1-priorYear-k5");
+      // Still the placeholder button — cell content is masked by the flag.
+      expect(cell.tagName).toBe("BUTTON");
+    });
+
+    // Mask in the form value persists despite the stray cell value.
+    let columnNotOffered = formRef!.getValues("columnNotOffered") as Record<
+      string,
+      Record<string, boolean>
+    >;
+    expect(columnNotOffered.priorYear.k5).toBe(true);
+
+    // "Restore" clears the mask so cells become editable again.
+    fireEvent.click(screen.getByTestId("matrix-col-na-priorYear-k5"));
+    await waitFor(() => {
+      const refreshed = screen.getByTestId("matrix-col-na-priorYear-k5");
+      expect(refreshed.textContent).toBe("N/A");
+    });
+    columnNotOffered = formRef!.getValues("columnNotOffered") as Record<
+      string,
+      Record<string, boolean>
+    >;
+    expect(columnNotOffered.priorYear.k5).toBe(false);
+  });
+
+  it("column N/A rehydrates from columnNotOffered on mount", () => {
+    const initial = {
+      ...baseInitial,
+      programEnrollmentMatrix: {
+        // Cells hold stray non-null values; the mask still wins.
+        p1: { priorYear: { k5: 5 } },
+        p2: { priorYear: { k5: 3 } },
+      },
+      columnNotOffered: {
+        priorYear: { k5: true },
+      },
+    };
+    render(<Harness initial={initial} />);
+    const colNa = screen.getByTestId("matrix-col-na-priorYear-k5");
+    expect(colNa.textContent).toBe("Restore");
+    const cell = screen.getByTestId("matrix-cell-p1-priorYear-k5");
+    expect(cell.tagName).toBe("BUTTON");
   });
 
   it("matrix actuals cells fan into program.priorYear", async () => {

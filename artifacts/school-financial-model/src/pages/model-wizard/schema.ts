@@ -64,6 +64,17 @@ export const programNotOfferedMaskSchema = z.record(
   z.record(z.string(), z.boolean().optional()),
 ).optional();
 
+// Per-column "didn't offer" mask keyed by yearKey → groupKey. Mirrors the
+// row-level `programNotOffered` mask so a founder's "we didn't offer this
+// grade/band in this actuals year" choice survives reload even if a single
+// cell in the column ends up with a stray non-null value (e.g. via the —
+// placeholder click that resets a cell to 0). The cell-content-only check
+// would silently lose the user's intent in that case.
+export const columnNotOfferedMaskSchema = z.record(
+  z.string(),
+  z.record(z.string(), z.boolean().optional()),
+).optional();
+
 export const tuitionEscalationSchema = z.object({
   rate: z.coerce.number(numMsg("escalation rate")).min(0, "Please enter a rate of 0% or higher").max(20, "Escalation rate can't exceed 20%").default(3),
 });
@@ -747,6 +758,7 @@ export const fullModelSchema = z.object({
   // Per-program × per-year × per-group enrollment matrix + N/A mask.
   programEnrollmentMatrix: programEnrollmentMatrixSchema,
   programNotOffered: programNotOfferedMaskSchema,
+  columnNotOffered: columnNotOfferedMaskSchema,
   tuitionEscalation: tuitionEscalationSchema.optional(),
   revenueSources: revenueSourcesSchema.optional(),
   tuitionTiers: z.array(tuitionTierSchema).optional(),

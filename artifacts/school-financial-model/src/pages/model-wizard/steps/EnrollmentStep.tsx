@@ -520,6 +520,11 @@ export function EnrollmentStep() {
   type NotOfferedMap = Record<string, Record<string, boolean>>;
   const matrix = (watch("programEnrollmentMatrix") as ProgramMatrix | undefined) ?? {};
   const notOffered = (watch("programNotOffered") as NotOfferedMap | undefined) ?? {};
+  // Column-level "didn't offer" mask keyed by yearKey → groupKey. See
+  // schema.ts:columnNotOfferedMaskSchema for why this lives in form state
+  // separate from the cell values.
+  type ColumnNotOfferedMap = Record<string, Record<string, boolean>>;
+  const columnNotOffered = (watch("columnNotOffered") as ColumnNotOfferedMap | undefined) ?? {};
 
   const getCell = useCallback((programId: string, yearKey: string, groupKey: string): MatrixCell => {
     const v = matrix[programId]?.[yearKey]?.[groupKey];
@@ -554,9 +559,17 @@ export function EnrollmentStep() {
     }
   }, [notOffered, matrix, matrixGroupKeys, setValue]);
 
-  // Column-level "didn't offer this <grade/band> in <year>" — null every
-  // program's cell for (yearKey, groupKey).
+  // Column-level "didn't offer this <grade/band> in <year>" — record the
+  // intent in the columnNotOffered mask AND null every program's cell for
+  // (yearKey, groupKey). The mask is the source of truth for whether the
+  // column shows as N/A; we cannot rely on cell content alone because a
+  // single stray non-null value (e.g. via the — placeholder click) would
+  // otherwise quietly clear the user's choice on reload.
   const setColumnNotOffered = useCallback((yearKey: string, groupKey: string) => {
+    const nextMask: ColumnNotOfferedMap = JSON.parse(JSON.stringify(columnNotOffered));
+    if (!nextMask[yearKey]) nextMask[yearKey] = {};
+    nextMask[yearKey][groupKey] = true;
+    setValue("columnNotOffered", nextMask, { shouldDirty: true });
     const next: ProgramMatrix = JSON.parse(JSON.stringify(matrix));
     for (const p of programs) {
       if (!next[p.id]) next[p.id] = {};
@@ -564,22 +577,21 @@ export function EnrollmentStep() {
       next[p.id][yearKey][groupKey] = null;
     }
     setValue("programEnrollmentMatrix", next, { shouldDirty: true });
-  }, [matrix, programs, setValue]);
+  }, [columnNotOffered, matrix, programs, setValue]);
 
-  const isColumnAllNull = useCallback((yearKey: string, groupKey: string): boolean => {
-    if (programs.length === 0) return false;
-    return programs.every((p) => matrix[p.id]?.[yearKey]?.[groupKey] === null);
-  }, [matrix, programs]);
+  const isColumnNotOffered = useCallback((yearKey: string, groupKey: string): boolean => {
+    return Boolean(columnNotOffered[yearKey]?.[groupKey]);
+  }, [columnNotOffered]);
 
+  // "Restore" clears the mask so cells in the column are editable again.
+  // Cells stay null (rendered as the — placeholder) so the founder can
+  // click any one to enter a number, mirroring the row-level untoggle.
   const restoreColumn = useCallback((yearKey: string, groupKey: string) => {
-    const next: ProgramMatrix = JSON.parse(JSON.stringify(matrix));
-    for (const p of programs) {
-      if (next[p.id]?.[yearKey]?.[groupKey] === null) {
-        next[p.id][yearKey][groupKey] = 0;
-      }
-    }
-    setValue("programEnrollmentMatrix", next, { shouldDirty: true });
-  }, [matrix, programs, setValue]);
+    const nextMask: ColumnNotOfferedMap = JSON.parse(JSON.stringify(columnNotOffered));
+    if (!nextMask[yearKey]) nextMask[yearKey] = {};
+    nextMask[yearKey][groupKey] = false;
+    setValue("columnNotOffered", nextMask, { shouldDirty: true });
+  }, [columnNotOffered, setValue]);
 
   // Sum matrix row → program-year total, treating null as 0 (skipped).
   const sumProgramYear = useCallback((programId: string, yearKey: string): number => {
@@ -1003,7 +1015,7 @@ export function EnrollmentStep() {
                             Program
                           </th>
                           {matrixGroupKeys.map((gk) => {
-                            const colNa = isActuals && isColumnAllNull(yearKey, gk);
+                            const colNa = isActuals && isColumnNotOffered(yearKey, gk);
                             return (
                               <th
                                 key={gk}
@@ -1052,9 +1064,10 @@ export function EnrollmentStep() {
                               {matrixGroupKeys.map((gk) => {
                                 const cell = getCell(prog.id, yearKey, gk);
                                 const isNull = cell === null;
+                                const colMasked = isActuals && isColumnNotOffered(yearKey, gk);
                                 return (
                                   <td key={gk} className="py-1.5 px-1.5">
-                                    {rowNotOffered || isNull ? (
+                                    {rowNotOffered || colMasked || isNull ? (
                                       <button
                                         type="button"
                                         data-testid={`matrix-cell-${prog.id}-${yearKey}-${gk}`}
