@@ -46,6 +46,8 @@ export {
   microschoolFixture,
   privateSchoolFixture,
   charterFixture,
+  homeschoolCoopFixture,
+  chestertonAcademyFixture,
   driverCoverageFixture,
   type TestModelPayload,
   type TestRevenueRow,

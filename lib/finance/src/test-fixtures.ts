@@ -252,6 +252,118 @@ export const charterFixture: TestModelPayload = {
   openingBalances: { cash: 50000, accountsReceivable: 0, fixedAssets: 0, otherAssets: 0, accountsPayable: 0, currentDebtPortion: 0, longTermDebt: 0 },
 };
 
+// Note: the fixtures below (homeschoolCoopFixture, chestertonAcademyFixture)
+// are *regression goldens* — they freeze the current consultant-engine
+// output for representative shapes so unintended math drift fails loudly.
+// They are deliberately structurally non-trivial but are not calibrated as
+// normative operating budgets; both run a higher net margin than a typical
+// real-world plan would. If you need plausible-ops fixtures for narrative
+// or benchmarking, build a separate set rather than re-tuning these.
+
+/**
+ * Homeschool co-op (Arizona, mixed-ESA + tuition + small fundraiser).
+ * Realistic 5-yr ramp from a 25-student start to an 80-student steady state
+ * (4-day-per-week co-op, K-8). Year 1 is a 10-month partial year. Director
+ * + lead teacher + part-time facilitators that scale with enrollment;
+ * facility is a leased classroom suite (not church-shared). This is the
+ * shape used in the marketing collateral for "Liberty Learning Co-Op".
+ */
+export const homeschoolCoopFixture: TestModelPayload = {
+  schoolProfile: {
+    schoolName: "Liberty Learning Co-Op",
+    state: "AZ",
+    schoolType: "homeschool_coop",
+    isPartialFirstYear: true,
+    year1OperatingMonths: 10,
+    debtIncluded: false,
+    maxCapacity: 80,
+    fiscalYearStartMonth: 7,
+  },
+  enrollment: { year1: 25, year2: 45, year3: 60, year4: 72, year5: 80 },
+  facilities: { annualSalaryIncrease: 3, generalCostInflation: 2.5 },
+  revenueRows: [
+    { id: "r1", category: "tuition_and_fees", lineItem: "Co-Op Tuition", enabled: true, driverType: "per_student", amounts: [5500, 5665, 5835, 6010, 6190], billingMonths: 10 },
+    { id: "r2", category: "tuition_and_fees", lineItem: "Materials Fee", enabled: true, driverType: "per_student", amounts: [250, 250, 250, 250, 250], billingMonths: 12, escalationRate: 0, escalationRateOverridden: true },
+    { id: "r3", category: "school_choice", lineItem: "AZ ESA Funds", enabled: true, driverType: "per_student", amounts: [7000, 7210, 7426, 7649, 7878], billingMonths: 12 },
+    { id: "r4", category: "philanthropy", lineItem: "Annual Fundraiser", enabled: true, driverType: "annual_fixed", amounts: [5000, 6500, 8000, 9000, 10000] },
+    { id: "r5", category: "tuition_offsets", lineItem: "Sibling Discount", enabled: true, driverType: "percent_of_base", amounts: [8, 8, 8, 8, 8], percentBase: "r1" },
+  ],
+  staffingRows: [
+    { id: "s1", roleName: "Director / Lead Educator", functionCategory: "school_leadership", employmentType: "full_time", fte: 1, annualizedRate: 52000, benefitsEligible: true, benefitsRate: 18, payrollTaxRate: 7.65, payrollLike: false },
+    { id: "s2", roleName: "Lead Teacher", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 42000, benefitsEligible: true, benefitsRate: 18, payrollTaxRate: 7.65, payrollLike: false },
+    { id: "s3", roleName: "Co-Op Facilitators", functionCategory: "instructional", employmentType: "part_time", fte: 1.5, annualizedRate: 28000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false, staffingMode: "ratio", studentRatio: 18, minFte: 1 },
+    { id: "s4", roleName: "Admin Assistant", functionCategory: "administrative", employmentType: "part_time", fte: 0.5, annualizedRate: 30000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false },
+  ],
+  expenseRows: [
+    { id: "e1", category: "occupancy_facility", lineItem: "Rent", enabled: true, driverType: "monthly", amounts: [2000, 2060, 2122, 2185, 2251], escalationRate: 3 },
+    { id: "e2", category: "occupancy_facility", lineItem: "Utilities", enabled: true, driverType: "monthly", amounts: [250, 256, 263, 269, 276] },
+    { id: "e3", category: "occupancy_facility", lineItem: "Insurance", enabled: true, driverType: "annual_fixed", amounts: [2400, 2460, 2522, 2585, 2650] },
+    { id: "e4", category: "instructional_program", lineItem: "Curriculum & Materials", enabled: true, driverType: "per_student", amounts: [400, 412, 424, 437, 450] },
+    { id: "e5", category: "technology", lineItem: "Technology", enabled: true, driverType: "per_student", amounts: [225, 232, 239, 246, 253] },
+    { id: "e6", category: "administrative_general", lineItem: "Marketing", enabled: true, driverType: "annual_fixed", amounts: [3000, 3075, 3152, 3231, 3312] },
+    { id: "e7", category: "administrative_general", lineItem: "Compliance & Bookkeeping", enabled: true, driverType: "annual_fixed", amounts: [4500, 4613, 4728, 4846, 4967] },
+  ],
+  capitalAndDebtRows: [],
+  openingBalances: { cash: 18000, accountsReceivable: 0, fixedAssets: 4000, otherAssets: 0, accountsPayable: 0, currentDebtPortion: 0, longTermDebt: 0 },
+};
+
+/**
+ * Chesterton Academy classical-Catholic high school startup.
+ * Anchored on the canonical CSN template defaults (`buildDefaultChestertonData`):
+ * starting tuition $8500 with 4% annual escalation, financial aid 10%,
+ * starting teacher salary $44k, $600 book/supply fee. 5-yr enrollment is the
+ * standard CSN phased rollout (freshman class fills first, then sophomore,
+ * etc.) scaled to a ~120-student steady state by Y5 — a representative size
+ * for an established Chesterton academy in a mid-size diocese. Includes the
+ * gift-chart-driven philanthropy tail (TFG ~ $387k Y1, tapering as tuition
+ * carries more of the budget).
+ */
+export const chestertonAcademyFixture: TestModelPayload = {
+  schoolProfile: {
+    schoolName: "St. Augustine Chesterton Academy",
+    state: "MN",
+    schoolType: "chesterton_academy",
+    isPartialFirstYear: false,
+    year1OperatingMonths: 12,
+    debtIncluded: false,
+    maxCapacity: 150,
+    fiscalYearStartMonth: 7,
+  },
+  enrollment: { year1: 20, year2: 40, year3: 65, year4: 95, year5: 120 },
+  facilities: { annualSalaryIncrease: 3, generalCostInflation: 2.5 },
+  revenueRows: [
+    { id: "r1", category: "tuition_and_fees", lineItem: "Tuition", enabled: true, driverType: "per_student", amounts: [8500, 8840, 9194, 9561, 9944], billingMonths: 10 },
+    { id: "r2", category: "tuition_and_fees", lineItem: "Book / Supply Fee", enabled: true, driverType: "per_student", amounts: [600, 600, 600, 600, 600], billingMonths: 12, escalationRate: 0, escalationRateOverridden: true },
+    { id: "r3", category: "tuition_offsets", lineItem: "Financial Aid (10%)", enabled: true, driverType: "percent_of_base", amounts: [10, 10, 10, 10, 10], percentBase: "r1" },
+    { id: "r4", category: "philanthropy", lineItem: "Major Gifts ($25k+)", enabled: true, driverType: "annual_fixed", amounts: [100000, 90000, 75000, 60000, 50000] },
+    { id: "r5", category: "philanthropy", lineItem: "Mid-Major Gifts ($5k-$25k)", enabled: true, driverType: "annual_fixed", amounts: [132500, 120000, 100000, 85000, 75000] },
+    { id: "r6", category: "philanthropy", lineItem: "Annual Fund ($500-$5k)", enabled: true, driverType: "annual_fixed", amounts: [91250, 95000, 100000, 105000, 110000] },
+    { id: "r7", category: "philanthropy", lineItem: "Grassroots & Events", enabled: true, driverType: "annual_fixed", amounts: [63125, 65000, 70000, 75000, 80000] },
+  ],
+  staffingRows: [
+    { id: "s1", roleName: "Headmaster", functionCategory: "school_leadership", employmentType: "full_time", fte: 1, annualizedRate: 75000, benefitsEligible: true, benefitsRate: 20, payrollTaxRate: 7.65, payrollLike: false },
+    { id: "s2", roleName: "Faculty (Classical Curriculum)", functionCategory: "instructional", employmentType: "full_time", fte: 2, annualizedRate: 44000, benefitsEligible: true, benefitsRate: 18, payrollTaxRate: 7.65, payrollLike: false, staffingMode: "ratio", studentRatio: 14, minFte: 2 },
+    { id: "s3", roleName: "Adjunct Instructors", functionCategory: "instructional", employmentType: "part_time", fte: 1, annualizedRate: 22000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false },
+    { id: "s4", roleName: "Office Manager", functionCategory: "administrative", employmentType: "part_time", fte: 0.5, annualizedRate: 38000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false },
+    { id: "s5", roleName: "Development Director", functionCategory: "administrative", employmentType: "part_time", fte: 0.5, annualizedRate: 50000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false },
+  ],
+  expenseRows: [
+    { id: "e1", category: "occupancy_facility", lineItem: "Building Lease (Parish-shared)", enabled: true, driverType: "monthly", amounts: [4500, 4635, 4774, 4917, 5065], escalationRate: 3 },
+    { id: "e2", category: "occupancy_facility", lineItem: "Utilities", enabled: true, driverType: "monthly", amounts: [800, 824, 849, 874, 900] },
+    { id: "e3", category: "occupancy_facility", lineItem: "Insurance", enabled: true, driverType: "annual_fixed", amounts: [6000, 6180, 6365, 6556, 6753] },
+    { id: "e4", category: "instructional_program", lineItem: "Curriculum (Great Books)", enabled: true, driverType: "per_student", amounts: [450, 464, 478, 492, 507] },
+    { id: "e5", category: "technology", lineItem: "Technology", enabled: true, driverType: "per_student", amounts: [200, 206, 212, 218, 225] },
+    { id: "e6", category: "administrative_general", lineItem: "Marketing & Recruiting", enabled: true, driverType: "annual_fixed", amounts: [12000, 12360, 12731, 13113, 13506] },
+    { id: "e7", category: "administrative_general", lineItem: "Professional Development", enabled: true, driverType: "per_fte", amounts: [1200, 1200, 1200, 1200, 1200] },
+    { id: "e8", category: "administrative_general", lineItem: "Accreditation & Compliance", enabled: true, driverType: "annual_fixed", amounts: [5000, 5125, 5253, 5384, 5519] },
+    { id: "e9", category: "administrative_general", lineItem: "CSN Network Dues", enabled: true, driverType: "annual_fixed", amounts: [7500, 7500, 7500, 7500, 7500], escalationRate: 0, escalationRateOverridden: true },
+  ],
+  capitalAndDebtRows: [
+    { id: "cd1", lineItem: "Classroom Furniture & Equipment", enabled: true, driverType: "annual_fixed", amounts: [15000, 8000, 8000, 6000, 6000], isLoan: false },
+  ],
+  openingBalances: { cash: 50000, accountsReceivable: 0, fixedAssets: 15000, otherAssets: 0, accountsPayable: 0, currentDebtPortion: 0, longTermDebt: 0 },
+};
+
 /**
  * Synthetic fixture that exercises every supported driver type at least once,
  * so that the cross-engine parity suite catches drift in any driver — not just

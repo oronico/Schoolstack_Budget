@@ -19,6 +19,8 @@ import {
   microschoolFixture,
   privateSchoolFixture,
   charterFixture,
+  homeschoolCoopFixture,
+  chestertonAcademyFixture,
   type TestModelPayload,
 } from "@workspace/finance";
 
@@ -117,6 +119,46 @@ const charterGolden: CEGolden = {
   projectedAR:     [2466, 5079, 7841, 10110, 11112],
 };
 
+// Homeschool co-op: AZ mixed-ESA + tuition + small fundraiser. 25 → 80
+// students over 5 years, partial Y1 (10 months), no debt. See
+// `homeschoolCoopFixture` in @workspace/finance for the underlying shape.
+const homeschoolCoopGolden: CEGolden = {
+  totalRevenue:    [260625, 576731, 790652, 975830, 1115824],
+  tuitionRevenue:  [110625, 245781, 337092, 416102, 475584],
+  publicRevenue:   [145833, 324450, 445560, 550728, 630240],
+  philanthropyRevenue:[4167, 6500, 8000, 9000, 10000],
+  totalStaffingCost:[149560, 215902, 254357, 278456, 303772],
+  facilityCost:    [24500, 30255, 31135, 32041, 32973],
+  totalOpex:       [43771, 66771, 78413, 88577, 96442],
+  debtService:     [0, 0, 0, 0, 0],
+  loanDebtService: [0, 0, 0, 0, 0],
+  totalExpenses:   [193902, 283244, 333341, 367605, 400785],
+  netIncome:       [66723, 293487, 457311, 608226, 715039],
+  depreciation:    [571, 571, 571, 571, 571],
+  projectedAR:     [9092, 20201, 27706, 34200, 39089],
+};
+
+// Chesterton Academy classical-Catholic high school. CSN template defaults
+// (start tuition $8500 + 4% growth, financial aid 10%, $44k starting
+// teacher salary). 20 → 120 student phased rollout (freshman class fills
+// first), heavy philanthropy tail front-loaded by the gift chart. See
+// `chestertonAcademyFixture` in @workspace/finance.
+const chestertonAcademyGolden: CEGolden = {
+  totalRevenue:    [551875, 712240, 921849, 1199466, 1460952],
+  tuitionRevenue:  [165000, 342240, 576849, 874466, 1145952],
+  publicRevenue:   [0, 0, 0, 0, 0],
+  philanthropyRevenue:[386875, 370000, 345000, 325000, 315000],
+  totalStaffingCost:[277359, 342624, 470208, 605140, 747744],
+  facilityCost:    [69600, 71610, 73678, 75807, 77997],
+  totalOpex:       [128100, 138565, 161514, 187035, 212254],
+  debtService:     [15000, 8000, 8000, 6000, 6000],
+  loanDebtService: [0, 0, 0, 0, 0],
+  totalExpenses:   [407601, 483332, 633865, 794317, 962141],
+  netIncome:       [144274, 228908, 287984, 405148, 498811],
+  depreciation:    [2143, 2143, 2143, 2143, 2143],
+  projectedAR:     [13562, 28129, 47412, 71874, 94188],
+};
+
 function runCE(fixture: TestModelPayload) {
   return computeYearFinancialsFromData({ ...fixture, skipFacilityOverlay: true } as unknown as Record<string, unknown>);
 }
@@ -160,6 +202,8 @@ function main() {
   checkCEGolden("Microschool", microschoolFixture, microschoolGolden);
   checkCEGolden("Private", privateSchoolFixture, privateGolden);
   checkCEGolden("Charter", charterFixture, charterGolden);
+  checkCEGolden("HomeschoolCoop", homeschoolCoopFixture, homeschoolCoopGolden);
+  checkCEGolden("ChestertonAcademy", chestertonAcademyFixture, chestertonAcademyGolden);
 
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
   if (failures.length > 0) {

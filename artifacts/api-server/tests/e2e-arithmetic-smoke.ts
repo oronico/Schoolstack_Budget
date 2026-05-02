@@ -1,6 +1,6 @@
 import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
 import { computeRevenueForYear, computeExpenseForYear, type RevenueRow, type ExpenseRow } from "../src/lib/workbook-helpers.js";
-import { privateSchoolWithESA, charterPublicFunding } from "./sample-payloads.js";
+import { privateSchoolWithESA, charterPublicFunding, homeschoolCoopMixed } from "./sample-payloads.js";
 
 let passed = 0;
 let failed = 0;
@@ -33,7 +33,8 @@ function findRow(ws: import("exceljs").Worksheet, label: string, start = 1, end 
   return -1;
 }
 
-async function testWorkbookArithmetic(payload: Record<string, unknown>, label: string) {
+async function testWorkbookArithmetic(payload: Record<string, unknown>, label: string, opts: { expectDebt?: boolean } = {}) {
+  const expectDebt = opts.expectDebt !== false;
   console.log(`\n— Workbook arithmetic smoke: ${label} —`);
   const wb = await generateUnderwritingWorkbook(payload);
   const summary = wb.getWorksheet("Budget Summary");
@@ -76,7 +77,11 @@ async function testWorkbookArithmetic(payload: Record<string, unknown>, label: s
 
   const y2Debt = num(dscr, dsRow, 3);
   const y2Dscr = num(dscr, dscrRow, 3);
-  check(`${label}: Year 2 debt service non-trivial`, y2Debt > 10000, `debt=${y2Debt}`);
+  if (expectDebt) {
+    check(`${label}: Year 2 debt service non-trivial`, y2Debt > 10000, `debt=${y2Debt}`);
+  } else {
+    check(`${label}: Year 2 debt service zero (no-debt fixture)`, y2Debt === 0, `debt=${y2Debt}`);
+  }
   check(`${label}: Year 2 DSCR numeric`, Number.isFinite(y2Dscr), `dscr=${y2Dscr}`);
 }
 
@@ -109,6 +114,7 @@ async function main() {
   console.log("=== E2E Arithmetic Smoke (non-trivial values) ===");
   await testWorkbookArithmetic(privateSchoolWithESA as unknown as Record<string, unknown>, "Private+ESA");
   await testWorkbookArithmetic(charterPublicFunding as unknown as Record<string, unknown>, "Charter");
+  await testWorkbookArithmetic(homeschoolCoopMixed as unknown as Record<string, unknown>, "HomeschoolCoop", { expectDebt: false });
   testNonTrivialRowMath();
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);
