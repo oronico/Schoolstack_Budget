@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText, Landmark, TrendingUp } from "lucide-react";
+import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText, TrendingUp } from "lucide-react";
 import { trackExport } from "@/hooks/useExportTracker";
+import { InsightCallout } from "@/components/coaching/InsightCallout";
 
 interface LinkedMetric {
   label: string;
@@ -456,7 +457,12 @@ function SectionCard({
           {section.insights && section.insights.length > 0 && (
             <div className="space-y-2">
               {section.insights.map((insight, i) => (
-                <InsightCallout key={i} insight={insight} />
+                <InsightCallout
+                  key={i}
+                  label={insight.label}
+                  body={insight.body}
+                  tone={insight.tone}
+                />
               ))}
             </div>
           )}
@@ -527,26 +533,3 @@ function PreviewTable({ table }: { table: PacketTable }) {
   );
 }
 
-function InsightCallout({ insight }: { insight: PacketInsight }) {
-  const tone = insight.tone ?? "info";
-  const accent =
-    tone === "warning"
-      ? "border-amber-300 bg-amber-50"
-      : tone === "success"
-        ? "border-green-300 bg-green-50"
-        : "border-teal-300 bg-teal-50";
-  const iconColor =
-    tone === "warning" ? "text-amber-600" : tone === "success" ? "text-green-600" : "text-teal-600";
-  const labelColor =
-    tone === "warning" ? "text-amber-800" : tone === "success" ? "text-green-800" : "text-teal-800";
-
-  return (
-    <div className={`flex items-start gap-2 rounded-md border-l-4 px-3 py-2 ${accent}`}>
-      <Landmark className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${iconColor}`} aria-hidden="true" />
-      <div className="space-y-0.5">
-        <p className={`text-xs font-semibold ${labelColor}`}>{insight.label}</p>
-        <p className="text-xs text-slate-600 leading-relaxed">{insight.body}</p>
-      </div>
-    </div>
-  );
-}
