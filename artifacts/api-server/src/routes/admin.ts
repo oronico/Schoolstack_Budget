@@ -250,40 +250,170 @@ router.get(
   },
 );
 
+type CtaRange = "7d" | "30d" | "90d" | "all";
+
+interface RangeConfig {
+  range: CtaRange;
+  windowed: boolean;
+  bucketUnit: "day" | "week";
+  bucketCount: number;
+  bucketMs: number;
+  currentStart: Date;
+  priorStart: Date;
+  now: Date;
+}
+
+function getCtaRangeConfig(rangeParam: unknown): RangeConfig {
+  const now = new Date();
+  const parsed: CtaRange =
+    rangeParam === "7d" || rangeParam === "30d" || rangeParam === "90d"
+      ? rangeParam
+      : "all";
+  if (parsed === "all") {
+    return {
+      range: "all",
+      windowed: false,
+      bucketUnit: "day",
+      bucketCount: 0,
+      bucketMs: 0,
+      currentStart: new Date(0),
+      priorStart: new Date(0),
+      now,
+    };
+  }
+  const dayMs = 24 * 60 * 60 * 1000;
+  const days = parsed === "7d" ? 7 : parsed === "30d" ? 30 : 90;
+  const bucketUnit: "day" | "week" = parsed === "90d" ? "week" : "day";
+  const bucketMs = bucketUnit === "week" ? 7 * dayMs : dayMs;
+  const bucketCount = parsed === "90d" ? 13 : days;
+  const currentStart = new Date(now.getTime() - bucketCount * bucketMs);
+  const priorStart = new Date(now.getTime() - 2 * bucketCount * bucketMs);
+  return {
+    range: parsed,
+    windowed: true,
+    bucketUnit,
+    bucketCount,
+    bucketMs,
+    currentStart,
+    priorStart,
+    now,
+  };
+}
+
+// Walk a list of bucketed event rows (each tagged by a string key) and:
+//   * accumulate "current period" and "prior period" totals per key, and
+//   * build a fixed-length sparkline array for the current period only.
+// Buckets that fall before `priorStart` are ignored (defensive: the SQL
+// already filters by priorStart, but if the caller asks for "all" we
+// short-circuit earlier and never enter this function).
+function bucketize<T extends { bucket: Date | string; key: string; count: number }>(
+  rows: T[],
+  cfg: RangeConfig,
+): { current: Map<string, number>; prior: Map<string, number>; sparklines: Map<string, number[]> } {
+  const current = new Map<string, number>();
+  const prior = new Map<string, number>();
+  const sparklines = new Map<string, number[]>();
+  if (!cfg.windowed) {
+    // "All time" path — every row counts toward the current period and
+    // there is no prior period or sparkline.
+    for (const row of rows) {
+      current.set(row.key, (current.get(row.key) || 0) + row.count);
+    }
+    return { current, prior, sparklines };
+  }
+  const startMs = cfg.currentStart.getTime();
+  const priorMs = cfg.priorStart.getTime();
+  const bucketMs = cfg.bucketMs;
+  const bucketCount = cfg.bucketCount;
+  for (const row of rows) {
+    const ts = (row.bucket instanceof Date ? row.bucket : new Date(row.bucket)).getTime();
+    if (ts < priorMs) continue;
+    if (ts < startMs) {
+      prior.set(row.key, (prior.get(row.key) || 0) + row.count);
+    } else {
+      current.set(row.key, (current.get(row.key) || 0) + row.count);
+      const idx = Math.min(
+        bucketCount - 1,
+        Math.max(0, Math.floor((ts - startMs) / bucketMs)),
+      );
+      let arr = sparklines.get(row.key);
+      if (!arr) {
+        arr = new Array(bucketCount).fill(0) as number[];
+        sparklines.set(row.key, arr);
+      }
+      arr[idx] += row.count;
+    }
+  }
+  return { current, prior, sparklines };
+}
+
 router.get(
   "/admin/cta-conversion",
   authMiddleware,
   adminMiddleware,
-  async (_req: AuthRequest, res) => {
+  async (req: AuthRequest, res) => {
     try {
+      const cfg = getCtaRangeConfig(req.query.range);
+
+      // SQL helpers: when windowed, filter to [priorStart, now] and bucket by
+      // day/week; when "all", aggregate everything to a single sentinel bucket
+      // so the rest of the pipeline can stay uniform.
+      const bucketExpr = cfg.windowed
+        ? cfg.bucketUnit === "week"
+          ? sql<Date>`date_trunc('week', created_at)`
+          : sql<Date>`date_trunc('day', created_at)`
+        : sql<Date>`to_timestamp(0)`;
+      const windowFilter = cfg.windowed
+        ? gte(eventsTable.createdAt, cfg.priorStart)
+        : undefined;
+
       const capabilityClicks = await db
         .select({
           source: sql<string>`metadata->>'source'`.as("source"),
           position: sql<string>`metadata->>'position'`.as("position"),
+          bucket: bucketExpr.as("bucket"),
           count: count(),
         })
         .from(eventsTable)
-        .where(eq(eventsTable.eventName, "capability_cta_click"))
-        .groupBy(sql`metadata->>'source'`, sql`metadata->>'position'`);
+        .where(
+          windowFilter
+            ? and(eq(eventsTable.eventName, "capability_cta_click"), windowFilter)
+            : eq(eventsTable.eventName, "capability_cta_click"),
+        )
+        .groupBy(
+          sql`metadata->>'source'`,
+          sql`metadata->>'position'`,
+          bucketExpr,
+        );
 
       const audienceClicks = await db
         .select({
           audience: sql<string>`metadata->>'audience'`.as("audience"),
+          bucket: bucketExpr.as("bucket"),
           count: count(),
         })
         .from(eventsTable)
-        .where(eq(eventsTable.eventName, "audience_card_click"))
-        .groupBy(sql`metadata->>'audience'`);
+        .where(
+          windowFilter
+            ? and(eq(eventsTable.eventName, "audience_card_click"), windowFilter)
+            : eq(eventsTable.eventName, "audience_card_click"),
+        )
+        .groupBy(sql`metadata->>'audience'`, bucketExpr);
 
       const crossLinkClicks = await db
         .select({
           audience: sql<string>`metadata->>'audience'`.as("audience"),
           source: sql<string>`metadata->>'source'`.as("source"),
+          bucket: bucketExpr.as("bucket"),
           count: count(),
         })
         .from(eventsTable)
-        .where(eq(eventsTable.eventName, "capability_cross_link_click"))
-        .groupBy(sql`metadata->>'audience'`, sql`metadata->>'source'`);
+        .where(
+          windowFilter
+            ? and(eq(eventsTable.eventName, "capability_cross_link_click"), windowFilter)
+            : eq(eventsTable.eventName, "capability_cross_link_click"),
+        )
+        .groupBy(sql`metadata->>'audience'`, sql`metadata->>'source'`, bucketExpr);
 
       const attributedSignups = await db
         .select({
@@ -291,17 +421,26 @@ router.get(
           source: sql<string>`metadata->>'source'`.as("source"),
           audience: sql<string>`metadata->>'audience'`.as("audience"),
           section: sql<string>`metadata->>'section'`.as("section"),
+          bucket: bucketExpr.as("bucket"),
           count: count(),
         })
         .from(eventsTable)
-        .where(eq(eventsTable.eventName, "cta_attributed_signup"))
+        .where(
+          windowFilter
+            ? and(eq(eventsTable.eventName, "cta_attributed_signup"), windowFilter)
+            : eq(eventsTable.eventName, "cta_attributed_signup"),
+        )
         .groupBy(
           sql`metadata->>'channel'`,
           sql`metadata->>'source'`,
           sql`metadata->>'audience'`,
           sql`metadata->>'section'`,
+          bucketExpr,
         );
 
+      // Section-level engagement queries (impressions, scroll depth,
+      // clicks-by-section). Respect the same window filter as everything else
+      // so the section breakdown reflects the selected date range.
       const sectionImpressions = await db
         .select({
           source: sql<string>`metadata->>'source'`.as("source"),
@@ -309,7 +448,11 @@ router.get(
           count: count(),
         })
         .from(eventsTable)
-        .where(eq(eventsTable.eventName, "capability_section_impression"))
+        .where(
+          windowFilter
+            ? and(eq(eventsTable.eventName, "capability_section_impression"), windowFilter)
+            : eq(eventsTable.eventName, "capability_section_impression"),
+        )
         .groupBy(sql`metadata->>'source'`, sql`metadata->>'section'`);
 
       const scrollDepths = await db
@@ -319,7 +462,11 @@ router.get(
           count: count(),
         })
         .from(eventsTable)
-        .where(eq(eventsTable.eventName, "capability_scroll_depth"))
+        .where(
+          windowFilter
+            ? and(eq(eventsTable.eventName, "capability_scroll_depth"), windowFilter)
+            : eq(eventsTable.eventName, "capability_scroll_depth"),
+        )
         .groupBy(sql`metadata->>'source'`, sql`metadata->>'depth'`);
 
       const clicksBySection = await db
@@ -330,39 +477,96 @@ router.get(
         })
         .from(eventsTable)
         .where(
-          and(
-            eq(eventsTable.eventName, "capability_cta_click"),
-            sql`metadata->>'section' IS NOT NULL`,
-          ),
+          windowFilter
+            ? and(
+                eq(eventsTable.eventName, "capability_cta_click"),
+                sql`metadata->>'section' IS NOT NULL`,
+                windowFilter,
+              )
+            : and(
+                eq(eventsTable.eventName, "capability_cta_click"),
+                sql`metadata->>'section' IS NOT NULL`,
+              ),
         )
         .groupBy(sql`metadata->>'source'`, sql`metadata->>'section'`);
 
-      const capabilityClickTotals = new Map<string, number>();
-      const capabilityRows = capabilityClicks.map((r) => {
+      // Track per-position click totals (collapsed across the whole current
+      // period) for the "Primary CTA" / "Closing CTA" columns.
+      const capabilityRows: { source: string; position: string; clicks: number }[] = [];
+      const positionTotals = new Map<string, number>();
+      for (const r of capabilityClicks) {
         const source = r.source || "unknown";
-        capabilityClickTotals.set(source, (capabilityClickTotals.get(source) || 0) + r.count);
-        return { source, position: r.position || "primary", clicks: r.count };
-      });
+        const position = r.position || "primary";
+        const ts = (r.bucket instanceof Date ? r.bucket : new Date(r.bucket)).getTime();
+        // For "all" the bucket is the unix-0 sentinel (always >= currentStart=0).
+        if (cfg.windowed && ts < cfg.currentStart.getTime()) continue;
+        const key = `${source}|${position}`;
+        positionTotals.set(key, (positionTotals.get(key) || 0) + r.count);
+      }
+      for (const [key, clicks] of positionTotals.entries()) {
+        const [source, position] = key.split("|");
+        capabilityRows.push({ source, position, clicks });
+      }
 
-      const capabilitySignups = new Map<string, number>();
-      const audienceSignups = new Map<string, number>();
-      const crossLinkSignups = new Map<string, number>();
+      const capBuckets = bucketize(
+        capabilityClicks.map((r) => ({
+          bucket: r.bucket,
+          key: r.source || "unknown",
+          count: r.count,
+        })),
+        cfg,
+      );
+
+      const audBuckets = bucketize(
+        audienceClicks.map((r) => ({
+          bucket: r.bucket,
+          key: r.audience || "unknown",
+          count: r.count,
+        })),
+        cfg,
+      );
+
+      const crossBuckets = bucketize(
+        crossLinkClicks.map((r) => ({
+          bucket: r.bucket,
+          key: `${r.audience || "unknown"}|${r.source || "unknown"}`,
+          count: r.count,
+        })),
+        cfg,
+      );
+
+      // Signup attribution split by channel.
+      const capSignupCurrent = new Map<string, number>();
+      const capSignupPrior = new Map<string, number>();
+      const audSignupCurrent = new Map<string, number>();
+      const audSignupPrior = new Map<string, number>();
+      const crossSignupCurrent = new Map<string, number>();
+      const crossSignupPrior = new Map<string, number>();
+      // Section-level signups respect the same window — only count current
+      // period so they line up with the section impression/click queries.
       const sectionSignups = new Map<string, number>();
       for (const s of attributedSignups) {
+        const ts = (s.bucket instanceof Date ? s.bucket : new Date(s.bucket)).getTime();
+        const isPrior = cfg.windowed && ts < cfg.currentStart.getTime();
         if (s.channel === "capability" && s.source) {
-          capabilitySignups.set(s.source, (capabilitySignups.get(s.source) || 0) + s.count);
-          if (s.section) {
+          const m = isPrior ? capSignupPrior : capSignupCurrent;
+          m.set(s.source, (m.get(s.source) || 0) + s.count);
+          if (!isPrior && s.section) {
             const key = `${s.source}|${s.section}`;
             sectionSignups.set(key, (sectionSignups.get(key) || 0) + s.count);
           }
         } else if (s.channel === "audience" && s.audience) {
-          audienceSignups.set(s.audience, (audienceSignups.get(s.audience) || 0) + s.count);
+          const m = isPrior ? audSignupPrior : audSignupCurrent;
+          m.set(s.audience, (m.get(s.audience) || 0) + s.count);
         } else if (s.channel === "cross_link" && s.audience && s.source) {
           const key = `${s.audience}|${s.source}`;
-          crossLinkSignups.set(key, (crossLinkSignups.get(key) || 0) + s.count);
+          const m = isPrior ? crossSignupPrior : crossSignupCurrent;
+          m.set(key, (m.get(key) || 0) + s.count);
         }
       }
 
+      // Section-level engagement aggregation. All inputs already respect
+      // the active windowFilter, so this reflects the selected date range.
       const sectionImpressionsBySource = new Map<string, Map<string, number>>();
       for (const r of sectionImpressions) {
         if (!r.source || !r.section) continue;
@@ -434,52 +638,99 @@ router.get(
         return bTotal - aTotal;
       });
 
-      const capabilitySummary = Array.from(capabilityClickTotals.entries()).map(
-        ([source, clicks]) => {
-          const signups = capabilitySignups.get(source) || 0;
-          return {
-            source,
-            clicks,
-            signups,
-            conversionRate: clicks > 0 ? signups / clicks : 0,
-          };
-        },
-      );
-
-      const audienceSummary = audienceClicks.map((r) => {
-        const audience = r.audience || "unknown";
-        const signups = audienceSignups.get(audience) || 0;
+      function buildRow(
+        key: string,
+        clicks: number,
+        priorClicks: number,
+        signups: number,
+        priorSignups: number,
+        sparkline: number[] | undefined,
+      ) {
+        const conversionRate = clicks > 0 ? signups / clicks : 0;
+        const previousConversionRate = priorClicks > 0 ? priorSignups / priorClicks : 0;
         return {
-          audience,
-          clicks: r.count,
+          clicks,
           signups,
-          conversionRate: r.count > 0 ? signups / r.count : 0,
+          conversionRate,
+          previousClicks: priorClicks,
+          previousSignups: priorSignups,
+          previousConversionRate,
+          sparkline: cfg.windowed
+            ? sparkline ?? new Array(cfg.bucketCount).fill(0)
+            : [],
+          key,
         };
+      }
+
+      // Union of all keys seen in either current or prior so a row that
+      // disappeared this period still surfaces (with clicks=0, prior>0).
+      const capKeys = new Set<string>([
+        ...capBuckets.current.keys(),
+        ...capBuckets.prior.keys(),
+      ]);
+      const capabilitySummary = Array.from(capKeys).map((source) => {
+        const row = buildRow(
+          source,
+          capBuckets.current.get(source) || 0,
+          capBuckets.prior.get(source) || 0,
+          capSignupCurrent.get(source) || 0,
+          capSignupPrior.get(source) || 0,
+          capBuckets.sparklines.get(source),
+        );
+        return { source, ...row };
+      });
+
+      const audKeys = new Set<string>([
+        ...audBuckets.current.keys(),
+        ...audBuckets.prior.keys(),
+      ]);
+      const audienceSummary = Array.from(audKeys).map((audience) => {
+        const row = buildRow(
+          audience,
+          audBuckets.current.get(audience) || 0,
+          audBuckets.prior.get(audience) || 0,
+          audSignupCurrent.get(audience) || 0,
+          audSignupPrior.get(audience) || 0,
+          audBuckets.sparklines.get(audience),
+        );
+        return { audience, ...row };
+      });
+
+      const crossKeys = new Set<string>([
+        ...crossBuckets.current.keys(),
+        ...crossBuckets.prior.keys(),
+      ]);
+      const crossLinks = Array.from(crossKeys).map((key) => {
+        const [audience, source] = key.split("|");
+        const row = buildRow(
+          key,
+          crossBuckets.current.get(key) || 0,
+          crossBuckets.prior.get(key) || 0,
+          crossSignupCurrent.get(key) || 0,
+          crossSignupPrior.get(key) || 0,
+          crossBuckets.sparklines.get(key),
+        );
+        return { audience, source, ...row };
       });
 
       capabilitySummary.sort((a, b) => b.clicks - a.clicks);
       audienceSummary.sort((a, b) => b.clicks - a.clicks);
+      crossLinks.sort((a, b) => b.clicks - a.clicks);
 
       res.json({
+        range: cfg.range,
+        bucketUnit: cfg.windowed ? cfg.bucketUnit : null,
+        bucketCount: cfg.windowed ? cfg.bucketCount : 0,
+        rangeStart: cfg.windowed ? cfg.currentStart.toISOString() : null,
+        rangeEnd: cfg.windowed ? cfg.now.toISOString() : null,
         capability: {
-          summary: capabilitySummary,
+          summary: capabilitySummary.map(({ key: _key, ...rest }) => rest),
           byPosition: capabilityRows,
         },
         audience: {
-          summary: audienceSummary,
+          summary: audienceSummary.map(({ key: _key, ...rest }) => rest),
         },
-        crossLinks: crossLinkClicks.map((r) => {
-          const audience = r.audience || "unknown";
-          const source = r.source || "unknown";
-          const signups = crossLinkSignups.get(`${audience}|${source}`) || 0;
-          return {
-            audience,
-            source,
-            clicks: r.count,
-            signups,
-            conversionRate: r.count > 0 ? signups / r.count : 0,
-          };
-        }).sort((a, b) => b.clicks - a.clicks),
+        crossLinks: crossLinks.map(({ key: _key, ...rest }) => rest),
         sectionEngagement,
       });
     } catch (err) {

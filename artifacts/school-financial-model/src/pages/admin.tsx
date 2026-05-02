@@ -146,15 +146,32 @@ const EXPENSE_CAT_LABELS: Record<string, string> = {
   administrative_general: "Admin & Operations",
 };
 
+type CtaRange = "7d" | "30d" | "90d" | "all";
+
+interface CtaSummaryRow {
+  clicks: number;
+  signups: number;
+  conversionRate: number;
+  previousClicks: number;
+  previousSignups: number;
+  previousConversionRate: number;
+  sparkline: number[];
+}
+
 interface CtaConversionData {
+  range: CtaRange;
+  bucketUnit: "day" | "week" | null;
+  bucketCount: number;
+  rangeStart: string | null;
+  rangeEnd: string | null;
   capability: {
-    summary: { source: string; clicks: number; signups: number; conversionRate: number }[];
+    summary: (CtaSummaryRow & { source: string })[];
     byPosition: { source: string; position: string; clicks: number }[];
   };
   audience: {
-    summary: { audience: string; clicks: number; signups: number; conversionRate: number }[];
+    summary: (CtaSummaryRow & { audience: string })[];
   };
-  crossLinks: { audience: string; source: string; clicks: number; signups: number; conversionRate: number }[];
+  crossLinks: (CtaSummaryRow & { audience: string; source: string })[];
   sectionEngagement?: {
     source: string;
     sections: {
@@ -166,6 +183,71 @@ interface CtaConversionData {
     }[];
     scrollDepth: { d25: number; d50: number; d75: number; d100: number };
   }[];
+}
+
+const RANGE_OPTIONS: { value: CtaRange; label: string }[] = [
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
+  { value: "all", label: "All time" },
+];
+
+// Tiny inline SVG sparkline for the trend cells. Returns a placeholder
+// dash when there are no data points yet (e.g. brand new capability page).
+function MiniSparkline({ values, color = "#0f766e" }: { values: number[]; color?: string }) {
+  if (!values || values.length === 0) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  const max = Math.max(...values, 1);
+  const min = 0;
+  const range = max - min || 1;
+  const width = 80;
+  const height = 22;
+  const stepX = values.length > 1 ? width / (values.length - 1) : width;
+  const path = values
+    .map((v, i) => {
+      const x = i * stepX;
+      const y = height - ((v - min) / range) * height;
+      return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      className="overflow-visible"
+      aria-label="Trend"
+    >
+      <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Render a delta vs the prior period. If the prior was 0 we skip the
+// percentage to avoid showing infinite/NaN; "new" keeps it human readable.
+function DeltaBadge({ current, previous, invertColor = false }: { current: number; previous: number; invertColor?: boolean }) {
+  if (previous === 0 && current === 0) {
+    return <span className="text-[11px] text-muted-foreground">—</span>;
+  }
+  if (previous === 0) {
+    return (
+      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">new</span>
+    );
+  }
+  const delta = (current - previous) / previous;
+  const pct = (delta * 100).toFixed(0);
+  const sign = delta > 0 ? "+" : "";
+  const isPositive = delta > 0;
+  const goodColor = invertColor ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400";
+  const badColor = invertColor ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
+  const color = delta === 0 ? "text-muted-foreground" : isPositive ? goodColor : badColor;
+  return (
+    <span className={`text-[11px] font-medium ${color}`}>
+      {sign}
+      {pct}%
+    </span>
+  );
 }
 
 const SECTION_LABELS: Record<string, string> = {
@@ -196,67 +278,115 @@ function CtaConversionSection() {
   const [data, setData] = useState<CtaConversionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [range, setRange] = useState<CtaRange>("30d");
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchCta() {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await fetch("/api/admin/cta-conversion");
+        const res = await fetch(`/api/admin/cta-conversion?range=${range}`);
         if (!res.ok) throw new Error("Failed to fetch CTA conversion");
         const json = await res.json();
-        setData(json);
+        if (!cancelled) setData(json);
       } catch {
-        setError("Failed to load CTA conversion data.");
+        if (!cancelled) setError("Failed to load CTA conversion data.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     fetchCta();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm flex items-center justify-center py-10">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
-        <p className="text-sm text-destructive">{error || "No CTA data available."}</p>
-      </div>
-    );
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
 
   const positionByCapability = new Map<string, Record<string, number>>();
-  for (const row of data.capability.byPosition) {
-    const map = positionByCapability.get(row.source) || {};
-    map[row.position] = row.clicks;
-    positionByCapability.set(row.source, map);
+  if (data) {
+    for (const row of data.capability.byPosition) {
+      const map = positionByCapability.get(row.source) || {};
+      map[row.position] = row.clicks;
+      positionByCapability.set(row.source, map);
+    }
   }
 
-  const totalCapClicks = data.capability.summary.reduce((s, r) => s + r.clicks, 0);
-  const totalCapSignups = data.capability.summary.reduce((s, r) => s + r.signups, 0);
-  const totalAudClicks = data.audience.summary.reduce((s, r) => s + r.clicks, 0);
-  const totalAudSignups = data.audience.summary.reduce((s, r) => s + r.signups, 0);
+  const totalCapClicks = data?.capability.summary.reduce((s, r) => s + r.clicks, 0) ?? 0;
+  const totalCapSignups = data?.capability.summary.reduce((s, r) => s + r.signups, 0) ?? 0;
+  const totalCapPriorClicks = data?.capability.summary.reduce((s, r) => s + r.previousClicks, 0) ?? 0;
+  const totalCapPriorSignups = data?.capability.summary.reduce((s, r) => s + r.previousSignups, 0) ?? 0;
+  const totalAudClicks = data?.audience.summary.reduce((s, r) => s + r.clicks, 0) ?? 0;
+  const totalAudSignups = data?.audience.summary.reduce((s, r) => s + r.signups, 0) ?? 0;
+  const totalAudPriorClicks = data?.audience.summary.reduce((s, r) => s + r.previousClicks, 0) ?? 0;
+  const totalAudPriorSignups = data?.audience.summary.reduce((s, r) => s + r.previousSignups, 0) ?? 0;
+
+  const showTrend = data?.range !== "all";
+  const priorWindowLabel =
+    range === "7d"
+      ? "vs prior 7 days"
+      : range === "30d"
+        ? "vs prior 30 days"
+        : range === "90d"
+          ? "vs prior 90 days"
+          : "";
+
+  const RangePicker = (
+    <div
+      className="inline-flex rounded-lg border border-border/60 bg-secondary/40 p-0.5"
+      role="group"
+      aria-label="CTA date range"
+      data-testid="cta-range-picker"
+    >
+      {RANGE_OPTIONS.map((opt) => {
+        const active = range === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setRange(opt.value)}
+            data-testid={`cta-range-${opt.value}`}
+            aria-pressed={active}
+            className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${
+              active
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="space-y-6 mb-10">
       <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-2">
-          <MousePointerClick className="h-5 w-5 text-primary" />
-          <h2 className="font-display text-lg font-bold">Capability Page CTA Conversion</h2>
+        <div className="flex items-start justify-between gap-4 mb-2 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <MousePointerClick className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">Capability Page CTA Conversion</h2>
+            </div>
+            <p className="text-xs text-muted-foreground max-w-xl">
+              Clicks on capability page CTAs (primary hero + closing) and the share of those
+              clicks that completed sign-up in the same browser session.
+              {showTrend && priorWindowLabel ? ` Deltas compare ${priorWindowLabel}.` : ""}
+            </p>
+          </div>
+          {RangePicker}
         </div>
-        <p className="text-xs text-muted-foreground mb-5">
-          Clicks on capability page CTAs (primary hero + closing) and the share of those
-          clicks that completed sign-up in the same browser session.
-        </p>
-        {data.capability.summary.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No capability CTA clicks yet.</p>
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : error || !data ? (
+          <p className="text-sm text-destructive">{error || "No CTA data available."}</p>
+        ) : data.capability.summary.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No capability CTA clicks in this range.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" data-testid="cta-capability-table">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase text-muted-foreground border-b border-border/60">
                   <th className="py-2 pr-3">Capability page</th>
@@ -264,7 +394,8 @@ function CtaConversionSection() {
                   <th className="py-2 px-3 text-right">Closing CTA</th>
                   <th className="py-2 px-3 text-right">Total clicks</th>
                   <th className="py-2 px-3 text-right">Sign-ups</th>
-                  <th className="py-2 pl-3 text-right">Conversion</th>
+                  <th className="py-2 px-3 text-right">Conversion</th>
+                  {showTrend && <th className="py-2 pl-3 text-right">Trend</th>}
                 </tr>
               </thead>
               <tbody>
@@ -281,15 +412,36 @@ function CtaConversionSection() {
                       <td className="py-2 px-3 text-right text-muted-foreground">
                         {positions.closing || 0}
                       </td>
-                      <td className="py-2 px-3 text-right font-semibold text-foreground">
-                        {row.clicks}
+                      <td className="py-2 px-3 text-right">
+                        <div className="font-semibold text-foreground">{row.clicks}</div>
+                        {showTrend && (
+                          <DeltaBadge current={row.clicks} previous={row.previousClicks} />
+                        )}
                       </td>
-                      <td className="py-2 px-3 text-right text-muted-foreground">
-                        {row.signups}
+                      <td className="py-2 px-3 text-right">
+                        <div className="text-muted-foreground">{row.signups}</div>
+                        {showTrend && (
+                          <DeltaBadge current={row.signups} previous={row.previousSignups} />
+                        )}
                       </td>
-                      <td className="py-2 pl-3 text-right font-bold text-primary">
-                        {(row.conversionRate * 100).toFixed(1)}%
+                      <td className="py-2 px-3 text-right">
+                        <div className="font-bold text-primary">
+                          {(row.conversionRate * 100).toFixed(1)}%
+                        </div>
+                        {showTrend && (
+                          <DeltaBadge
+                            current={row.conversionRate}
+                            previous={row.previousConversionRate}
+                          />
+                        )}
                       </td>
+                      {showTrend && (
+                        <td className="py-2 pl-3 text-right">
+                          <div className="inline-block" data-testid={`cta-spark-${row.source}`}>
+                            <MiniSparkline values={row.sparkline} />
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -297,14 +449,25 @@ function CtaConversionSection() {
                   <td className="py-2 pr-3">Total</td>
                   <td></td>
                   <td></td>
-                  <td className="py-2 px-3 text-right">{totalCapClicks}</td>
-                  <td className="py-2 px-3 text-right">{totalCapSignups}</td>
-                  <td className="py-2 pl-3 text-right">
+                  <td className="py-2 px-3 text-right">
+                    <div>{totalCapClicks}</div>
+                    {showTrend && (
+                      <DeltaBadge current={totalCapClicks} previous={totalCapPriorClicks} />
+                    )}
+                  </td>
+                  <td className="py-2 px-3 text-right">
+                    <div>{totalCapSignups}</div>
+                    {showTrend && (
+                      <DeltaBadge current={totalCapSignups} previous={totalCapPriorSignups} />
+                    )}
+                  </td>
+                  <td className="py-2 px-3 text-right">
                     {totalCapClicks > 0
                       ? ((totalCapSignups / totalCapClicks) * 100).toFixed(1)
                       : "0.0"}
                     %
                   </td>
+                  {showTrend && <td></td>}
                 </tr>
               </tbody>
             </table>
@@ -322,16 +485,21 @@ function CtaConversionSection() {
             Which audience card on the landing page draws clicks - and how many of those
             visitors finish sign-up.
           </p>
-          {data.audience.summary.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No audience card clicks yet.</p>
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !data || data.audience.summary.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No audience card clicks in this range.</p>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" data-testid="cta-audience-table">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase text-muted-foreground border-b border-border/60">
                   <th className="py-2 pr-3">Audience</th>
                   <th className="py-2 px-3 text-right">Clicks</th>
                   <th className="py-2 px-3 text-right">Sign-ups</th>
-                  <th className="py-2 pl-3 text-right">Conversion</th>
+                  <th className="py-2 px-3 text-right">Conversion</th>
+                  {showTrend && <th className="py-2 pl-3 text-right">Trend</th>}
                 </tr>
               </thead>
               <tbody>
@@ -340,27 +508,59 @@ function CtaConversionSection() {
                     <td className="py-2 pr-3 font-medium text-foreground">
                       {AUDIENCE_LABELS[row.audience] || row.audience}
                     </td>
-                    <td className="py-2 px-3 text-right font-semibold text-foreground">
-                      {row.clicks}
+                    <td className="py-2 px-3 text-right">
+                      <div className="font-semibold text-foreground">{row.clicks}</div>
+                      {showTrend && (
+                        <DeltaBadge current={row.clicks} previous={row.previousClicks} />
+                      )}
                     </td>
-                    <td className="py-2 px-3 text-right text-muted-foreground">
-                      {row.signups}
+                    <td className="py-2 px-3 text-right">
+                      <div className="text-muted-foreground">{row.signups}</div>
+                      {showTrend && (
+                        <DeltaBadge current={row.signups} previous={row.previousSignups} />
+                      )}
                     </td>
-                    <td className="py-2 pl-3 text-right font-bold text-primary">
-                      {(row.conversionRate * 100).toFixed(1)}%
+                    <td className="py-2 px-3 text-right">
+                      <div className="font-bold text-primary">
+                        {(row.conversionRate * 100).toFixed(1)}%
+                      </div>
+                      {showTrend && (
+                        <DeltaBadge
+                          current={row.conversionRate}
+                          previous={row.previousConversionRate}
+                        />
+                      )}
                     </td>
+                    {showTrend && (
+                      <td className="py-2 pl-3 text-right">
+                        <div className="inline-block">
+                          <MiniSparkline values={row.sparkline} />
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 <tr className="text-xs uppercase text-muted-foreground font-semibold">
                   <td className="py-2 pr-3">Total</td>
-                  <td className="py-2 px-3 text-right">{totalAudClicks}</td>
-                  <td className="py-2 px-3 text-right">{totalAudSignups}</td>
-                  <td className="py-2 pl-3 text-right">
+                  <td className="py-2 px-3 text-right">
+                    <div>{totalAudClicks}</div>
+                    {showTrend && (
+                      <DeltaBadge current={totalAudClicks} previous={totalAudPriorClicks} />
+                    )}
+                  </td>
+                  <td className="py-2 px-3 text-right">
+                    <div>{totalAudSignups}</div>
+                    {showTrend && (
+                      <DeltaBadge current={totalAudSignups} previous={totalAudPriorSignups} />
+                    )}
+                  </td>
+                  <td className="py-2 px-3 text-right">
                     {totalAudClicks > 0
                       ? ((totalAudSignups / totalAudClicks) * 100).toFixed(1)
                       : "0.0"}
                     %
                   </td>
+                  {showTrend && <td></td>}
                 </tr>
               </tbody>
             </table>
@@ -379,8 +579,12 @@ function CtaConversionSection() {
             Which capability tile gets clicked from each audience page, and how many of
             those visitors completed sign-up.
           </p>
-          {data.crossLinks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No cross-link clicks yet.</p>
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !data || data.crossLinks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No cross-link clicks in this range.</p>
           ) : (
             <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
               {data.crossLinks.map((row, i) => (
@@ -397,12 +601,19 @@ function CtaConversionSection() {
                     </p>
                   </div>
                   <div className="flex items-center gap-4 flex-shrink-0 text-right">
-                    <span className="text-xs text-muted-foreground">
-                      {row.clicks} clicks
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {row.signups} signups
-                    </span>
+                    {showTrend && (
+                      <div className="hidden sm:block">
+                        <MiniSparkline values={row.sparkline} />
+                      </div>
+                    )}
+                    <div className="text-right">
+                      <span className="text-xs text-muted-foreground block">
+                        {row.clicks} clicks · {row.signups} signups
+                      </span>
+                      {showTrend && (
+                        <DeltaBadge current={row.clicks} previous={row.previousClicks} />
+                      )}
+                    </div>
                     <span className="text-sm font-bold text-primary w-12">
                       {(row.conversionRate * 100).toFixed(1)}%
                     </span>
@@ -414,7 +625,7 @@ function CtaConversionSection() {
         </div>
       </div>
 
-      {data.sectionEngagement && data.sectionEngagement.length > 0 && (
+      {data && data.sectionEngagement && data.sectionEngagement.length > 0 && (
         <div
           className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm"
           data-testid="capability-section-engagement-card"
