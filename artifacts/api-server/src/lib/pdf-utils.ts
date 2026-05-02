@@ -1,6 +1,6 @@
 import PDFDocument from "pdfkit";
 import type { DecisionHistoryItem } from "./packets/build-decision-history.js";
-import type { PacketSection } from "./packets/packet-types.js";
+import type { LinkedMetric, PacketInsight, PacketSection, PacketTable } from "./packets/packet-types.js";
 
 export const BRAND = {
   green: "#16A34A",
@@ -459,6 +459,114 @@ export function renderDecisionHistorySection(
   for (const item of items) {
     renderDecisionHistoryItem(doc, item);
   }
+}
+
+/**
+ * Render a {@link PacketTable} as a packet section table: section sub-heading,
+ * a 30%-wide left "label" column, evenly-divided right-aligned value columns,
+ * zebra striping. Shared by the lender and board packet renderers so any
+ * visual change to packet tables happens in one place (Task #387).
+ */
+export function renderPacketTable(doc: PDFDoc, table: PacketTable) {
+  if (table.rows.length === 0) return;
+
+  ensureSpace(doc, 50);
+  doc.moveDown(0.3);
+  subSection(doc, table.title);
+
+  const availW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const colCount = table.headers.length;
+  const firstColWidth = Math.min(150, availW * 0.3);
+  const remainingW = availW - firstColWidth;
+  const otherColWidth = Math.floor(remainingW / Math.max(colCount - 1, 1));
+
+  const columns: TableColumn[] = table.headers.map((h, i) => ({
+    header: h,
+    width: i === 0 ? firstColWidth : otherColWidth,
+    align: (i === 0 ? "left" : "right") as "left" | "right",
+  }));
+
+  const rows = table.rows.map((row) => [row.label, ...row.values]);
+  drawTable(doc, columns, rows, { zebra: true });
+}
+
+/**
+ * Render the coaching-insight callout loop for a packet section. Shared by
+ * the lender and board packet renderers (Task #387).
+ */
+export function renderPacketInsights(doc: PDFDoc, insights: PacketInsight[]) {
+  doc.moveDown(0.2);
+  for (const insight of insights) {
+    drawInsightCallout(doc, insight.label, insight.body, insight.tone ?? "info");
+  }
+}
+
+export interface RenderLinkedMetricsOptions {
+  /** Maximum number of metrics to render (lender uses 8, board uses 6). */
+  limit: number;
+  /**
+   * When true, append `(benchmark: …)` to the metric line whenever the metric
+   * carries a `benchmark` value. Lender packets show benchmarks; board packets
+   * intentionally omit them for a more digestible board-room read.
+   */
+  showBenchmark?: boolean;
+  /**
+   * Icon used when a metric has no `status` set. Lender packets use a single
+   * space (visually blank), board packets use `"~"` so neutral metrics still
+   * carry a status glyph alongside their warning siblings.
+   */
+  neutralIcon?: string;
+  /**
+   * When true, reserve ~30pt of vertical space before drawing the first
+   * metric line so the metrics block stays attached to its parent section
+   * heading. Lender packets opt in; the board packet relies on its tighter
+   * surrounding layout instead.
+   */
+  reserveInitialSpace?: boolean;
+}
+
+/**
+ * Render the linked-metrics list for a packet section. The lender and board
+ * packets share the same per-row layout (status glyph + label + value); the
+ * options here cover the small differences between them so callers don't keep
+ * their own copy (Task #387).
+ */
+export function renderLinkedMetrics(
+  doc: PDFDoc,
+  metrics: LinkedMetric[],
+  options: RenderLinkedMetricsOptions,
+) {
+  const neutralIcon = options.neutralIcon ?? "~";
+  const showBenchmark = options.showBenchmark ?? false;
+
+  if (options.reserveInitialSpace) {
+    ensureSpace(doc, 30);
+  }
+
+  for (const m of metrics.slice(0, options.limit)) {
+    const statusIcon = m.status === "good"
+      ? "+"
+      : m.status === "danger"
+        ? "!"
+        : m.status === "warning"
+          ? "~"
+          : neutralIcon;
+    const statusColor = m.status === "good"
+      ? BRAND.green
+      : m.status === "danger"
+        ? BRAND.red
+        : m.status === "warning"
+          ? BRAND.amber
+          : BRAND.darkGray;
+
+    ensureSpace(doc, 16);
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(statusColor);
+    doc.text(`[${statusIcon}] `, doc.page.margins.left, doc.y, { continued: true });
+    doc.font("Helvetica").fontSize(9).fillColor(BRAND.black);
+    const benchmarkSuffix = showBenchmark && m.benchmark ? ` (benchmark: ${m.benchmark})` : "";
+    doc.text(`${m.label}: ${m.value}${benchmarkSuffix}`);
+  }
+  doc.moveDown(0.3);
 }
 
 export function docToBuffer(doc: PDFDoc): Promise<Buffer> {

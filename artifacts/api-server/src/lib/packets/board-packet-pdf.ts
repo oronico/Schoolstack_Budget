@@ -1,12 +1,13 @@
 import {
   createDoc, drawHeader, sectionTitle, subSection, bodyText,
   drawTable, drawFooter, docToBuffer, statusBadge, labelValue,
-  ensureSpace, drawInsightCallout,
+  ensureSpace,
   renderDecisionHistorySection,
+  renderPacketTable, renderPacketInsights, renderLinkedMetrics,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
 import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView, BoardNarrativeData, BoardFlaggedAssumption } from "./build-board-packet";
-import type { PacketSection, PacketTable, LinkedMetric, PacketInsight } from "./packet-types";
+import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 
 export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffer> {
@@ -307,7 +308,7 @@ function renderSection(doc: PDFDoc, section: PacketSection) {
   }
 
   if (section.insights && section.insights.length > 0) {
-    renderInsights(doc, section.insights);
+    renderPacketInsights(doc, section.insights);
   }
 
   if (section.linkedMetrics.length > 0) {
@@ -316,51 +317,11 @@ function renderSection(doc: PDFDoc, section: PacketSection) {
 
   if (section.tables && section.tables.length > 0) {
     for (const table of section.tables) {
-      renderTable(doc, table);
+      renderPacketTable(doc, table);
     }
   }
 }
 
-function renderInsights(doc: PDFDoc, insights: PacketInsight[]) {
-  doc.moveDown(0.2);
-  for (const insight of insights) {
-    drawInsightCallout(doc, insight.label, insight.body, insight.tone ?? "info");
-  }
-}
-
 function renderMetrics(doc: PDFDoc, metrics: LinkedMetric[]) {
-  for (const m of metrics.slice(0, 6)) {
-    ensureSpace(doc, 16);
-    const statusColor = m.status === "good" ? BRAND.green : m.status === "danger" ? BRAND.red : m.status === "warning" ? BRAND.amber : BRAND.darkGray;
-    const icon = m.status === "good" ? "+" : m.status === "danger" ? "!" : "~";
-
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(statusColor);
-    doc.text(`[${icon}] `, doc.page.margins.left, doc.y, { continued: true });
-    doc.font("Helvetica").fontSize(9).fillColor(BRAND.black);
-    doc.text(`${m.label}: ${m.value}`);
-  }
-  doc.moveDown(0.3);
-}
-
-function renderTable(doc: PDFDoc, table: PacketTable) {
-  if (table.rows.length === 0) return;
-
-  ensureSpace(doc, 50);
-  doc.moveDown(0.3);
-  subSection(doc, table.title);
-
-  const availW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const colCount = table.headers.length;
-  const firstColWidth = Math.min(150, availW * 0.3);
-  const remainingW = availW - firstColWidth;
-  const otherColWidth = Math.floor(remainingW / Math.max(colCount - 1, 1));
-
-  const columns: TableColumn[] = table.headers.map((h, i) => ({
-    header: h,
-    width: i === 0 ? firstColWidth : otherColWidth,
-    align: (i === 0 ? "left" : "right") as "left" | "right",
-  }));
-
-  const rows = table.rows.map((row) => [row.label, ...row.values]);
-  drawTable(doc, columns, rows, { zebra: true });
+  renderLinkedMetrics(doc, metrics, { limit: 6 });
 }
