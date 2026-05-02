@@ -3624,6 +3624,7 @@ export function ScenarioPage() {
           modelId={modelId}
           onApplyToModel={handleApplyWhatIfFromScenarios}
           onSaveAsScenario={handleSaveAsScenarioFromWhatIf}
+          customScenarios={(modelData.customScenarios as CustomScenario[]) || []}
         />
       )}
     </Layout>

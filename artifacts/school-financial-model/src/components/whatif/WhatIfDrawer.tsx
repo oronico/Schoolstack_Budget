@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useDebounce } from "use-debounce";
 import QRCode from "qrcode";
@@ -16,6 +16,8 @@ import {
   Mail,
   MessageSquare,
   AlertCircle,
+  Bookmark,
+  ChevronDown,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +35,7 @@ import {
   isEmptyOverrides,
   type WhatIfOverrides,
 } from "@/lib/whatif-engine";
-import type { FullModelData } from "@/pages/model-wizard/schema";
+import type { CustomScenario, FullModelData } from "@/pages/model-wizard/schema";
 import { cn } from "@/lib/utils";
 
 interface WhatIfDrawerProps {
@@ -43,6 +45,25 @@ interface WhatIfDrawerProps {
   modelId: number | null;
   onApplyToModel?: (adjustedData: FullModelData) => Promise<void>;
   onSaveAsScenario?: (overrides: WhatIfOverrides, name: string) => Promise<void>;
+  // Saved What-If scenarios from the parent model. When non-empty, the
+  // drawer header surfaces a "Saved scenarios" popover that re-hydrates
+  // any of them into the live overrides without leaving the drawer.
+  customScenarios?: CustomScenario[];
+}
+
+function fmtSavedDate(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return d.toDateString();
+  }
 }
 
 function fmtMoney(val: number): string {
@@ -142,6 +163,7 @@ export function WhatIfDrawer({
   modelId,
   onApplyToModel,
   onSaveAsScenario,
+  customScenarios,
 }: WhatIfDrawerProps) {
   const [overrides, setOverrides] = useState<WhatIfOverrides>(EMPTY);
   const [debouncedOverrides] = useDebounce(overrides, 80);
@@ -153,7 +175,48 @@ export function WhatIfDrawer({
   const [qrUrl, setQrUrl] = useState<string>("");
   const [scenarioName, setScenarioName] = useState("");
   const [isApplying, setIsApplying] = useState(false);
+  const [savedMenuOpen, setSavedMenuOpen] = useState(false);
+  const savedMenuRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
+
+  const savedScenarios = customScenarios ?? [];
+
+  // Close the "Saved scenarios" popover on outside click and on Escape so
+  // it behaves like a normal menu inside the drawer dialog.
+  useEffect(() => {
+    if (!savedMenuOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      if (!savedMenuRef.current) return;
+      if (!savedMenuRef.current.contains(e.target as Node)) {
+        setSavedMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSavedMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [savedMenuOpen]);
+
+  // Hydrate the drawer's local overrides from a saved scenario without
+  // leaving the drawer. Mirrors the page-level "Open in planner" path
+  // (which writes the hash + remounts the drawer) — but here we already
+  // *are* the drawer, so we just patch state directly. The debounced
+  // hash-writer effect below will then push it into the URL so the
+  // share-link / badge / undo paths stay in sync with the page-level
+  // entry point.
+  const hydrateFromSavedScenario = useCallback((cs: CustomScenario) => {
+    setOverrides({ ...(cs.overrides as WhatIfOverrides) });
+    setSavedMenuOpen(false);
+    toast({
+      title: "Loaded saved scenario",
+      description: `Hydrated overrides from “${cs.name}”.`,
+    });
+  }, [toast]);
 
   // Hydrate from URL hash once on mount
   useEffect(() => {
@@ -430,6 +493,94 @@ export function WhatIfDrawer({
                   </button>
                 </Dialog.Close>
               </div>
+            </div>
+
+            {/* Saved scenarios picker — lets the founder swap into a saved
+                What-If without leaving the drawer. Sits in its own row so the
+                main header icon cluster stays uncluttered on the 480px-wide
+                drawer. */}
+            <div
+              ref={savedMenuRef}
+              className="relative px-5 py-2 border-b border-border/60 bg-card/60 flex items-center gap-2"
+            >
+              <button
+                type="button"
+                onClick={() => setSavedMenuOpen((v) => !v)}
+                aria-haspopup="listbox"
+                aria-expanded={savedMenuOpen}
+                data-testid="whatif-saved-scenarios-trigger"
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-border bg-background text-foreground transition-colors",
+                  "hover:bg-muted",
+                )}
+              >
+                <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Saved scenarios</span>
+                {savedScenarios.length > 0 && (
+                  <span
+                    data-testid="whatif-saved-scenarios-count"
+                    className="ml-0.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold"
+                  >
+                    {savedScenarios.length}
+                  </span>
+                )}
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 text-muted-foreground transition-transform",
+                    savedMenuOpen && "rotate-180",
+                  )}
+                />
+              </button>
+              <p className="text-[10px] text-muted-foreground">
+                Re-hydrate overrides from any saved What-If
+              </p>
+              {savedMenuOpen && (
+                <div
+                  role="listbox"
+                  data-testid="whatif-saved-scenarios-menu"
+                  className="absolute left-5 top-full mt-1 z-20 w-[360px] max-w-[calc(100%-2.5rem)] rounded-lg border border-border bg-background shadow-xl animate-in fade-in slide-in-from-top-1 duration-150 overflow-hidden"
+                >
+                  {savedScenarios.length === 0 ? (
+                    <div
+                      className="px-3 py-3 text-xs text-muted-foreground"
+                      data-testid="whatif-saved-scenarios-empty"
+                    >
+                      <p className="font-medium text-foreground">
+                        No saved scenarios yet
+                      </p>
+                      <p className="mt-1 leading-snug">
+                        Tweak the sliders below, then use{" "}
+                        <span className="font-semibold text-foreground">
+                          Save as scenario
+                        </span>{" "}
+                        in the footer to capture this what-if for later.
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="max-h-[260px] overflow-y-auto py-1">
+                      {savedScenarios.map((cs, i) => (
+                        <li key={`${cs.name}-${cs.createdAt}`}>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={false}
+                            onClick={() => hydrateFromSavedScenario(cs)}
+                            data-testid={`whatif-saved-scenario-${i}`}
+                            className="w-full flex items-start justify-between gap-3 px-3 py-2 text-left hover:bg-muted transition-colors"
+                          >
+                            <span className="font-medium text-sm text-foreground truncate">
+                              {cs.name}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground shrink-0 mt-0.5 font-mono">
+                              {fmtSavedDate(cs.createdAt)}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto">

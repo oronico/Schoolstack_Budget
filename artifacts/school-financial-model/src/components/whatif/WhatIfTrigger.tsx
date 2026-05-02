@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { decodeOverridesFromHash, isEmptyOverrides, type WhatIfOverrides } from "@/lib/whatif-engine";
-import type { FullModelData } from "@/pages/model-wizard/schema";
+import type { CustomScenario, FullModelData } from "@/pages/model-wizard/schema";
 
 const WhatIfDrawer = lazy(() =>
   import("./WhatIfDrawer").then((m) => ({ default: m.WhatIfDrawer }))
@@ -13,9 +13,19 @@ interface WhatIfTriggerProps {
   modelId: number | null;
   onApplyToModel?: (adjustedData: FullModelData) => Promise<void>;
   onSaveAsScenario?: (overrides: WhatIfOverrides, name: string) => Promise<void>;
+  // Saved What-If scenarios from the parent model — forwarded to the drawer
+  // so the in-drawer "Saved scenarios" picker can re-hydrate any of them
+  // without forcing the founder back to the Scenarios page.
+  customScenarios?: CustomScenario[];
 }
 
-export function WhatIfTrigger({ data, modelId, onApplyToModel, onSaveAsScenario }: WhatIfTriggerProps) {
+export function WhatIfTrigger({
+  data,
+  modelId,
+  onApplyToModel,
+  onSaveAsScenario,
+  customScenarios,
+}: WhatIfTriggerProps) {
   const [open, setOpen] = useState(false);
   const [hasOverrides, setHasOverrides] = useState(false);
 
@@ -123,6 +133,7 @@ export function WhatIfTrigger({ data, modelId, onApplyToModel, onSaveAsScenario 
             modelId={modelId}
             onApplyToModel={onApplyToModel}
             onSaveAsScenario={onSaveAsScenario}
+            customScenarios={customScenarios}
           />
         )}
       </Suspense>

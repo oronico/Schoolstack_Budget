@@ -1199,6 +1199,11 @@ export function ModelWizardPage() {
           modelId={modelId}
           onApplyToModel={handleApplyWhatIfToModel}
           onSaveAsScenario={handleSaveAsScenarioFromWhatIf}
+          customScenarios={
+            ((methods.getValues() as FullModelData).customScenarios as
+              | CustomScenario[]
+              | undefined) || []
+          }
         />
       )}
     </Layout>
