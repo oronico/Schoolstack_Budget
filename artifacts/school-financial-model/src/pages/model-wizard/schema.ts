@@ -142,6 +142,12 @@ export const facilityPhasesArraySchema = z.array(facilityPhaseSchema).optional()
 export const schoolProfileSchema = z.object({
   schoolName: z.string().min(1, "We'll need your school's name to continue"),
   state: z.string().min(1, "Please select the state where your school is located"),
+  // Optional city/municipality. Used by the Local / City Business License
+  // toggle on the Expense step to pre-fill a starter annual amount when the
+  // (state, city) pair matches a curated jurisdiction in
+  // `local-business-license-data.ts`. Free-text so any city is allowed; only
+  // the curated set drives a suggestion.
+  city: z.string().optional(),
   schoolType: schoolTypeSchema,
   schoolTypeOther: z.string().optional(),
   entityType: entityTypeSchema,

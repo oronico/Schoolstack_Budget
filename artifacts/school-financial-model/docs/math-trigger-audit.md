@@ -193,6 +193,83 @@ neighboring zip codes can land in different tax jurisdictions. A founder
 toggle plus a free-text amount is the lowest-friction way to keep the
 expense visible without seeding misleading numbers from `state` alone.
 
+### F4a — Curated city starter for Local / City Business License (Task #325)
+
+**Symptom.** F4 made the toggle visible but every founder still started
+from $0. Founders in cities where a license really IS required for
+schools had no easy way to see "the typical small-school number for *my*
+city is around $X" — they had to research the rate themselves before
+they could even sanity-check the budget.
+
+**Accuracy guardrail.** Most US cities and states do NOT require a
+general business license for a small private school. Many municipal
+business taxes (B&O, gross receipts, business income) statutorily exempt
+educational institutions and/or 501(c)(3) nonprofits, and many flat
+license fees either don't apply to schools or are $0 for them. Seeding
+a non-zero amount in those cities would plant a recurring expense the
+founder doesn't actually owe. The table is therefore deliberately tiny
+and we under-suggest rather than over-suggest.
+
+**Fix.**
+1. `schema.ts` — added an optional `city` (string) on `schoolProfileSchema`
+   right next to `state`. Free text so any city is allowed.
+2. `SchoolProfileStep.tsx` — added a `FormInput` for "City / Municipality
+   (optional)" beside the State picker, with a helperText that's honest
+   that most cities don't need a license and only names the few that do.
+3. `src/lib/local-business-license-data.ts` — new curated table covering
+   only the jurisdictions where a license/registration fee genuinely
+   applies to a small operating school (for-profit or nonprofit) and the
+   rate is publicly documented:
+   - **Washington DC** ($300/yr equivalent) — DC Basic Business License
+     is mandatory for private schools.
+   - **Seattle WA** ($110/yr) — Business License Tax Certificate is
+     required for everyone operating in Seattle.
+   - **San Francisco CA** ($100/yr) — Business Registration Certificate
+     is required for all businesses including nonprofits.
+   - **Los Angeles CA** ($153/yr) — Business Tax Registration
+     Certificate; nonprofits can apply for an exemption but must still
+     register.
+
+   Each profile carries `suggestedAnnual` (conservative for a small
+   school) and `basisNote` (a citation pointing to the city's own
+   licensing program). Cities like NYC, Chicago, Philadelphia, Portland,
+   Denver, Tacoma — which appeared on an earlier draft — were dropped
+   because either (a) they don't require a general business license for
+   schools, (b) educational nonprofits are statutorily exempt, or (c)
+   the charge is actually a per-employee tax that lives in payroll, not
+   a flat license fee. Lookup helper
+   `getLocalBusinessLicenseProfile(state, city)` is case-insensitive and
+   trim-tolerant.
+4. `ExpenseStep.tsx` — when the founder toggles **Local / City Business
+   License** ON and `(state, city)` matches a curated profile, the
+   Annual cost field is pre-filled with `suggestedAnnual` (instead of
+   $0), the row's `note` is stamped with `From {city} business-tax rate
+   — {basisNote}`, and the toggle's help-text panel switches to the
+   matched citation. A `useRef` tracks the last applied suggestion so
+   any manual override the founder types in is preserved across
+   re-renders; only an unset value or a value that still equals the
+   prior suggestion gets re-seeded when the city changes. A parallel
+   `lastLocalLicenseNoteRef` clears any previously-stamped citation when
+   the curated match is lost so the row never carries stale provenance.
+
+**Founder experience.**
+- A DC founder who toggles the row on sees "$300" pre-filled with "From
+  Washington business-tax rate" instead of "$0".
+- A founder in Boise, Houston, NYC, Chicago, Atlanta, Boston (uncurated
+  for this purpose) sees the existing free-text path with help copy that
+  is upfront: "Most US cities don't require a general business license
+  for a small school — leave this at $0 unless yours does." No
+  misleading seed.
+- A founder who types "$425" then changes their city in the Profile step
+  keeps "$425"; we never overwrite a manual value.
+
+**Why such a small curated table.** Adding more cities was tempting but
+risked over-claiming. Each additional entry needs a documentable rate
+that genuinely applies to a small school — not a state-wide statute
+that happens to mention business licensing in passing. Future additions
+should be verified against the city's own published license/fee
+schedule and reviewed for school-specific exemptions before being added.
+
 ---
 
 ## 4. Validation summary

@@ -37,6 +37,7 @@ import {
   LOCAL_BUSINESS_LICENSE_LINE_ITEM,
 } from "@/lib/expense-defaults";
 import { getStateEntityFeeProfile, buildEntityFeeAmounts } from "@/lib/state-entity-fees";
+import { getLocalBusinessLicenseProfile } from "@/lib/local-business-license-data";
 import type { EntityType } from "@/pages/model-wizard/schema";
 import {
   type StaffingRowData,
@@ -371,6 +372,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
   const stateCode = (watch("schoolProfile.state") || "") as string;
   const entityType = (watch("schoolProfile.entityType") || "") as string;
+  const cityName = (watch("schoolProfile.city") || "") as string;
   const yearCount = getYearCount(schoolStage);
 
   const generalCostInflation = (watch("facilities.generalCostInflation") as number) ?? 3;
@@ -595,6 +597,54 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     }
   }, [stateCode, entityType, defaultsApplied, yearCount, setValue, getValues]);
 
+  // Task #325 — local/city business-license starter pre-fill.
+  // When the founder toggles "Local / City Business License" ON and their
+  // (state, city) pair matches a curated jurisdiction in
+  // `local-business-license-data.ts`, seed the Annual cost with the
+  // suggested starter (instead of $0). We track the last applied suggestion
+  // in a ref so we *only* re-suggest when the value still matches the prior
+  // suggestion or is unset — any manual edit wins and is preserved.
+  const lastLocalLicenseSuggestionRef = useRef<number | null>(null);
+  // Mirrors the override-protection logic for the row's `note` citation:
+  // we only clear/replace the stamped citation if it still matches the last
+  // value we wrote. Any user-edited note is preserved.
+  const lastLocalLicenseNoteRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (hasLocalBusinessLicense !== true) {
+      lastLocalLicenseSuggestionRef.current = null;
+      return;
+    }
+    const profile = getLocalBusinessLicenseProfile(stateCode, cityName);
+    const current = localBusinessLicenseAnnualCost ?? 0;
+    const lastSuggested = lastLocalLicenseSuggestionRef.current;
+    const isUnsetOrMatchesPrior =
+      current === 0 || (lastSuggested !== null && current === lastSuggested);
+    if (profile && isUnsetOrMatchesPrior && current !== profile.suggestedAnnual) {
+      setValue(
+        "schoolProfile.localBusinessLicenseAnnualCost",
+        profile.suggestedAnnual,
+        { shouldDirty: true },
+      );
+      lastLocalLicenseSuggestionRef.current = profile.suggestedAnnual;
+    } else if (!profile && lastSuggested !== null && current === lastSuggested) {
+      // City changed away from a curated jurisdiction — clear the seed so
+      // it doesn't carry over a misleading number.
+      setValue(
+        "schoolProfile.localBusinessLicenseAnnualCost",
+        0,
+        { shouldDirty: true },
+      );
+      lastLocalLicenseSuggestionRef.current = null;
+    }
+  }, [hasLocalBusinessLicense, stateCode, cityName, localBusinessLicenseAnnualCost, setValue]);
+
+  // Memoized matched profile so the row-note effect and the help blurb
+  // both render the same citation.
+  const localBusinessLicenseProfile = useMemo(
+    () => getLocalBusinessLicenseProfile(stateCode, cityName),
+    [stateCode, cityName],
+  );
+
   useEffect(() => {
     if (!defaultsApplied) return;
     const current = (getValues("expenseRows") as ExpenseRowData[] | undefined) || [];
@@ -652,10 +702,45 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       if (row.lineItem === LOCAL_BUSINESS_LICENSE_LINE_ITEM) {
         const shouldEnable = hasLocalBusinessLicense === true;
         const cost = localBusinessLicenseAnnualCost || 0;
-        if (row.enabled !== shouldEnable || row.amounts[0] !== cost) {
+        // Task #325 — when a curated (state, city) match exists, stamp the
+        // row note with a "From {city} business-tax rate" citation so the
+        // source is visible alongside the dollar amount in the table. When
+        // the match is lost (city changed away, toggle flipped off, etc.)
+        // clear the previously stamped citation so we don't leave stale
+        // provenance behind. Any user-edited note is preserved by checking
+        // against `lastLocalLicenseNoteRef`.
+        const stampedCitation =
+          shouldEnable && localBusinessLicenseProfile
+            ? `From ${localBusinessLicenseProfile.city} business-tax rate — ${localBusinessLicenseProfile.basisNote}`
+            : null;
+        const noteIsStaleStamp =
+          lastLocalLicenseNoteRef.current !== null &&
+          row.note === lastLocalLicenseNoteRef.current;
+        let desiredNote = row.note;
+        if (stampedCitation !== null) {
+          if (row.note === "" || noteIsStaleStamp) {
+            desiredNote = stampedCitation;
+          }
+        } else if (noteIsStaleStamp) {
+          desiredNote = "";
+        }
+        if (
+          row.enabled !== shouldEnable ||
+          row.amounts[0] !== cost ||
+          row.note !== desiredNote
+        ) {
           changed = true;
           const rule = getEscalationRule(row, escalationRates);
-          return { ...row, enabled: shouldEnable, amounts: computeEscalatedAmounts(cost, yearCount, rule.rate) };
+          if (desiredNote !== row.note) {
+            lastLocalLicenseNoteRef.current =
+              stampedCitation !== null ? stampedCitation : null;
+          }
+          return {
+            ...row,
+            enabled: shouldEnable,
+            amounts: computeEscalatedAmounts(cost, yearCount, rule.rate),
+            note: desiredNote,
+          };
         }
       }
       return row;
@@ -682,7 +767,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         setExpandedCategories((prev) => new Set(prev).add("administrative_general"));
       }
     }
-  }, [hasBookkeeper, bookkeeperMonthlyCost, hasLawyer, lawyerMonthlyCost, hasGeneralLiabilityInsurance, insuranceCost, hasLocalBusinessLicense, localBusinessLicenseAnnualCost, escalationRates, yearCount, defaultsApplied, enabledCategories, getValues, setValue]);
+  }, [hasBookkeeper, bookkeeperMonthlyCost, hasLawyer, lawyerMonthlyCost, hasGeneralLiabilityInsurance, insuranceCost, hasLocalBusinessLicense, localBusinessLicenseAnnualCost, localBusinessLicenseProfile, escalationRates, yearCount, defaultsApplied, enabledCategories, getValues, setValue]);
 
   useEffect(() => {
     if (!defaultsApplied || capitalRows.length === 0) return;
@@ -1282,10 +1367,21 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                     placeholder="500"
                   />
                 </div>
+                {localBusinessLicenseProfile && (
+                  <span className="text-[11px] text-emerald-700 font-medium">
+                    From {localBusinessLicenseProfile.city} business-tax rate
+                  </span>
+                )}
               </div>
-              <p className="text-[11px] text-muted-foreground leading-snug">
-                Common municipal charges: <span className="font-medium">Seattle B&amp;O tax</span> (~0.18% of gross receipts), <span className="font-medium">NYC commercial rent tax</span> (6% of rent over $250k/yr), <span className="font-medium">San Francisco gross receipts tax</span> (graduated by sector). Many cities also charge a flat $50–$500/yr business license. Confirm rates with your city or county clerk.
-              </p>
+              {localBusinessLicenseProfile ? (
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  <span className="font-medium">{localBusinessLicenseProfile.city}, {localBusinessLicenseProfile.state}:</span> {localBusinessLicenseProfile.basisNote} You can override the amount above at any time.
+                </p>
+              ) : (
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  <span className="font-medium">Most US cities don't require a general business license for a small school</span> — leave this at $0 unless yours does. The handful that do require one for schools include <span className="font-medium">Washington DC</span> (Basic Business License), <span className="font-medium">Seattle</span> (Business License Tax Certificate), <span className="font-medium">San Francisco</span> (Business Registration Certificate), and <span className="font-medium">Los Angeles</span> (Business Tax Registration). Confirm with your city or county clerk if you're unsure.
+                </p>
+              )}
             </div>
           </BusinessOperationsToggle>
 

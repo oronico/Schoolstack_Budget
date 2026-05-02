@@ -1346,6 +1346,13 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
           label="State"
           options={STATES}
         />
+
+        <FormInput
+          name="schoolProfile.city"
+          label="City / Municipality (optional)"
+          placeholder="e.g., Seattle"
+          helperText="Most US cities don't require a general business license for a small school. A few — DC, Seattle, San Francisco, Los Angeles — do. If you're in one of those, we'll seed a starter amount on the Expense step; otherwise leave this blank."
+        />
       </div>
 
       {yetToLaunch ? (
