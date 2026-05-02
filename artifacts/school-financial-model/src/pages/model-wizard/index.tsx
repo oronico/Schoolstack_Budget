@@ -226,6 +226,8 @@ export function ModelWizardPage() {
   const [showImportBanner, setShowImportBanner] = useState(false);
   const [showPrepChecklist, setShowPrepChecklist] = useState(false);
   const [encouragementDismissed, setEncouragementDismissed] = useState(false);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const advancingRef = useRef(false);
   const stepStartTime = useRef(Date.now());
   const completedSteps = useRef<Set<number>>(new Set());
 
@@ -790,6 +792,10 @@ export function ModelWizardPage() {
   };
 
   const handleNext = async () => {
+    if (advancingRef.current) return;
+    advancingRef.current = true;
+    setIsAdvancing(true);
+    try {
     const validateStep = async (step: number): Promise<boolean> => {
       // The original switch was index-based (case 1..6). After Chesterton
       // branching the same numeric step now points to a different screen
@@ -933,6 +939,10 @@ export function ModelWizardPage() {
           firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 100);
+    }
+    } finally {
+      advancingRef.current = false;
+      setIsAdvancing(false);
     }
   };
 
@@ -1197,7 +1207,9 @@ export function ModelWizardPage() {
               
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                disabled={isAdvancing}
+                aria-busy={isAdvancing}
+                className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
               >
                 {currentStep === REVIEW_STEP_ID
                   ? "View Consultant Analysis"
