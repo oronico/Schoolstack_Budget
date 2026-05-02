@@ -2839,6 +2839,18 @@ export function ScenarioPage() {
                         ? "Base Model"
                         : scenarios[parseInt(compareRight)]?.name || `Scenario ${parseInt(compareRight) + 1}`
                     }
+                    staffingRows={modelData.staffingRows ?? []}
+                    personaComfort={getFounderPersona(authUser).comfort}
+                    baseStaffingAdjustment={
+                      compareLeft === "base"
+                        ? 0
+                        : scenarios[parseInt(compareLeft)]?.staffingAdjustment ?? 0
+                    }
+                    compareStaffingAdjustment={
+                      compareRight === "base"
+                        ? 0
+                        : scenarios[parseInt(compareRight)]?.staffingAdjustment ?? 0
+                    }
                   />
                 </div>
               )}

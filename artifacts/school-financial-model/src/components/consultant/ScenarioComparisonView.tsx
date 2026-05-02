@@ -10,7 +10,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScenarioDeltaCard } from "./ScenarioDeltaCard";
+import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import type { ComparisonResult } from "@/lib/scenario-compare";
+import type { StaffingRowData } from "@/lib/staffing-defaults";
+import type { FounderComfort } from "@/lib/coaching/founder-persona";
+import {
+  aggregateRosterCapSavings,
+  buildRosterCapInsightText,
+  CAP_INSIGHT_MIN_SAVINGS,
+} from "@workspace/finance";
 
 const VERDICT_CONFIG = {
   stronger: {
@@ -40,18 +48,75 @@ interface ScenarioComparisonViewProps {
   comparison: ComparisonResult;
   baseName: string;
   compareName: string;
+  /**
+   * Roster used to compute the wage-base cap savings insight (Task #327). The
+   * what-if engine doesn't carry per-scenario staffing rosters — it scales the
+   * base roster's payroll cost by `staffingAdjustment` — so we reuse this one
+   * roster and apply each side's adjustment factor when aggregating savings.
+   * Optional so legacy / pre-staffing models still render the comparison.
+   */
+  staffingRows?: StaffingRowData[];
+  personaComfort?: FounderComfort | null;
+  /** Staffing % adjustment applied on the left (base) side, e.g. -10 for -10%. */
+  baseStaffingAdjustment?: number;
+  /** Staffing % adjustment applied on the right (compare) side. */
+  compareStaffingAdjustment?: number;
+}
+
+/**
+ * Aggregate wage-base cap savings for one side of the comparison. We mirror
+ * the wizard / saved-scenario card field-forwarding (employmentType,
+ * payrollLike, payrollTaxRateOverridden) so the aggregator's exclusion rules
+ * fire identically. The `staffFactor` scales each row's annualized salary so
+ * the savings reflect the modified payroll the scenario implies — a +10%
+ * staffing scenario would surface ~10% larger wage-base savings, matching how
+ * `applyAdjustments` scales `staffingCost` by the same factor.
+ */
+function aggregateForSide(
+  staffingRows: StaffingRowData[] | undefined,
+  staffingAdjustmentPct: number,
+) {
+  if (!staffingRows || staffingRows.length === 0) return null;
+  const staffFactor = 1 + (staffingAdjustmentPct || 0) / 100;
+  return aggregateRosterCapSavings(
+    staffingRows.map((r) => ({
+      annualizedRate: (r.annualizedRate || 0) * staffFactor,
+      fte: r.fte,
+      payrollTaxComponents: r.payrollTaxComponents,
+      payrollTaxRateOverridden: r.payrollTaxRateOverridden,
+      employmentType: r.employmentType,
+      payrollLike: r.payrollLike,
+    } as Parameters<typeof aggregateRosterCapSavings>[0][number])),
+  );
 }
 
 export function ScenarioComparisonView({
   comparison,
   baseName,
   compareName,
+  staffingRows,
+  personaComfort,
+  baseStaffingAdjustment = 0,
+  compareStaffingAdjustment = 0,
 }: ScenarioComparisonViewProps) {
   const verdictCfg = VERDICT_CONFIG[comparison.verdict];
   const VerdictIcon = verdictCfg.icon;
 
   const changed = comparison.metricDeltas.filter((d) => d.direction !== "unchanged");
   const unchanged = comparison.metricDeltas.filter((d) => d.direction === "unchanged");
+
+  // Wage-base cap savings (Task #327): surface the same persona-aware sentence
+  // the wizard / scenario card / lender PDFs use, but for both sides of the
+  // comparison so a founder shifting headcount or salaries can see how much
+  // wage-base-aware math saves under each plan. Hidden when the roster has no
+  // per-component breakdowns (legacy models) or when neither aggregate clears
+  // the $1 floor.
+  const baseAgg = aggregateForSide(staffingRows, baseStaffingAdjustment);
+  const compareAgg = aggregateForSide(staffingRows, compareStaffingAdjustment);
+  const showBaseInsight =
+    baseAgg !== null && baseAgg.totalSavings >= CAP_INSIGHT_MIN_SAVINGS;
+  const showCompareInsight =
+    compareAgg !== null && compareAgg.totalSavings >= CAP_INSIGHT_MIN_SAVINGS;
 
   return (
     <div className="space-y-6">
@@ -100,6 +165,47 @@ export function ScenarioComparisonView({
           </div>
         </div>
       </div>
+
+      {(showBaseInsight || showCompareInsight) && (
+        <div
+          className="bg-white rounded-xl border border-border/60 p-5"
+          data-testid="scenario-comparison-cap-insight"
+        >
+          <h3 className="font-display font-semibold text-foreground mb-3">
+            Wage-Base Savings
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div data-testid="scenario-comparison-cap-insight-base">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {baseName}
+              </p>
+              {showBaseInsight && baseAgg ? (
+                <FinancingInsight
+                  text={buildRosterCapInsightText(baseAgg, personaComfort ?? null)}
+                />
+              ) : (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  No roles clear a wage-base cap under this plan.
+                </p>
+              )}
+            </div>
+            <div data-testid="scenario-comparison-cap-insight-compare">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {compareName}
+              </p>
+              {showCompareInsight && compareAgg ? (
+                <FinancingInsight
+                  text={buildRosterCapInsightText(compareAgg, personaComfort ?? null)}
+                />
+              ) : (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  No roles clear a wage-base cap under this plan.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {(comparison.biggestImprovement || comparison.biggestRisk) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
