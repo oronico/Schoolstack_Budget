@@ -10,6 +10,9 @@ import { SOLUTION_LINK_SUMMARIES } from "@/data/solution-pages";
 function SolutionsMenu() {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLAnchorElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const focusFirstOnOpenRef = useRef(false);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -21,16 +24,98 @@ function SolutionsMenu() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
+  useEffect(() => {
+    if (open && focusFirstOnOpenRef.current) {
+      focusFirstOnOpenRef.current = false;
+      const items = getMenuItems();
+      items[0]?.focus();
+    }
+  }, [open]);
+
+  function getMenuItems(): HTMLAnchorElement[] {
+    if (!menuRef.current) return [];
+    return Array.from(menuRef.current.querySelectorAll<HTMLAnchorElement>('[role="menuitem"]'));
+  }
+
+  function openMenuWithKeyboard() {
+    focusFirstOnOpenRef.current = true;
+    setOpen(true);
+  }
+
+  function closeAndReturnFocus() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
+  function handleTriggerKeyDown(e: React.KeyboardEvent<HTMLAnchorElement>) {
+    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+      e.preventDefault();
+      openMenuWithKeyboard();
+    } else if (e.key === "Escape" && open) {
+      e.preventDefault();
+      setOpen(false);
+    }
+  }
+
+  function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeAndReturnFocus();
+      return;
+    }
+    const items = getMenuItems();
+    if (items.length === 0) return;
+    const currentIndex = items.indexOf(document.activeElement as HTMLAnchorElement);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const next = items[Math.min(currentIndex + 1, items.length - 1)] ?? items[0];
+      next?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (currentIndex <= 0) {
+        triggerRef.current?.focus();
+      } else {
+        items[currentIndex - 1]?.focus();
+      }
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      items[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      items[items.length - 1]?.focus();
+    } else if (e.key === "Tab") {
+      const isLast = currentIndex === items.length - 1;
+      const isFirst = currentIndex === 0;
+      if (!e.shiftKey && isLast) {
+        e.preventDefault();
+        closeAndReturnFocus();
+      } else if (e.shiftKey && isFirst) {
+        e.preventDefault();
+        closeAndReturnFocus();
+      }
+    }
+  }
+
+  function handleBlur(e: React.FocusEvent<HTMLDivElement>) {
+    const next = e.relatedTarget as Node | null;
+    if (!next || !wrapRef.current?.contains(next)) {
+      setOpen(false);
+    }
+  }
+
   return (
     <div
       ref={wrapRef}
       className="relative"
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
+      onBlur={handleBlur}
     >
       <Link
+        ref={triggerRef}
         href="/solutions"
         onClick={() => setOpen(false)}
+        onKeyDown={handleTriggerKeyDown}
         className="hidden sm:inline-flex items-center gap-1 px-4 py-2 text-sm font-semibold text-foreground hover:text-primary transition-colors"
         data-testid="navbar-solutions-link"
         aria-haspopup="menu"
@@ -48,8 +133,10 @@ function SolutionsMenu() {
       </Link>
       {open && (
         <div
+          ref={menuRef}
           className="hidden sm:block absolute left-0 top-full pt-2 w-72 z-50"
           role="menu"
+          onKeyDown={handleMenuKeyDown}
         >
           <div className="rounded-xl border border-border bg-background shadow-xl animate-in fade-in slide-in-from-top-1 duration-150 overflow-hidden">
             {SOLUTION_LINK_SUMMARIES.map(({ slug, title, tagline, Icon }) => (
