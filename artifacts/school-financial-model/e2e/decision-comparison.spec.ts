@@ -406,3 +406,138 @@ test("Share-link hash gracefully ignores keys for deleted scenarios", async ({
   await expect(section.getByTestId("decision-compare-result")).toBeVisible();
   await expect(section.getByTestId("decision-compare-error")).toHaveCount(0);
 });
+
+// Verifies the comparison view's responsive phone layout in a real browser
+// — Task #385. Component tests in jsdom pin the responsive class hooks
+// (sticky first column, swipe hint, single-column headline tiles) but
+// can't tell us whether the resulting layout actually behaves at a
+// 375px viewport: jsdom doesn't model `position: sticky`, viewport
+// breakpoints, or font metrics, so a missing `bg-card` on a sticky cell
+// or a broken `min-[480px]` hook only shows up here.
+test("Decision comparison: phone (375x812) pins the metric column, stacks headline tile cells, and shows the swipe hint", async ({
+  page,
+  request,
+}) => {
+  const { token, modelId } = await seedScenarioFixture(request);
+  await primeAuthToken(page, token);
+
+  // Set the viewport before navigating so the responsive Tailwind classes
+  // (`sm:hidden`, `min-[480px]:grid-cols-2`, sticky `left-0`) all resolve
+  // at the size a real iPhone-class device would report.
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(`/model/${modelId}/scenarios`);
+
+  const section = page.getByTestId("decision-comparison-section");
+  await expect(section).toBeVisible();
+  await expect(page.getByTestId("decision-impact-comparison")).toBeVisible();
+
+  // Phone-only swipe affordance: the seven-column year table overflows on
+  // phones, so the "Swipe →" hint must surface as a visual scroll cue.
+  // The unit test asserts on `sm:hidden` in the class string; here we
+  // assert on the actual computed visibility at 375px.
+  const swipeHint = page.getByTestId("comparison-year-table-scroll-hint");
+  await expect(swipeHint).toBeVisible();
+
+  // Headline tiles must stack their inner cells into one column at <480px
+  // (HEADLINE_INNER_GRID uses `grid-cols-1 min-[480px]:grid-cols-2`). At
+  // 375px col-1 should sit *below* col-0, not next to it — the only way
+  // to prove the responsive grid actually engaged in a real layout pass.
+  const tileCol0 = page.getByTestId("cmp-y5-net-col-0");
+  const tileCol1 = page.getByTestId("cmp-y5-net-col-1");
+  await expect(tileCol0).toBeVisible();
+  await expect(tileCol1).toBeVisible();
+  const tileBox0 = await tileCol0.boundingBox();
+  const tileBox1 = await tileCol1.boundingBox();
+  expect(tileBox0, "headline tile col-0 should have a layout box").not.toBeNull();
+  expect(tileBox1, "headline tile col-1 should have a layout box").not.toBeNull();
+  // Stacked vertically: col-1's top is below col-0's bottom (allowing for
+  // the grid `gap-2` spacing). If the grid ever regresses to two columns
+  // at 375px, col-1 lands to the right of col-0 with the same y.
+  expect(tileBox1!.y).toBeGreaterThanOrEqual(tileBox0!.y + tileBox0!.height - 1);
+
+  // Sticky first column: scroll the year-table scroller all the way to
+  // its right edge and verify the Metric header cell hasn't moved with
+  // the scroll. If `position: sticky left-0` ever regresses, the cell
+  // scrolls along with the year columns and `afterBox.x` shifts left.
+  const scroller = page.getByTestId("comparison-year-table-scroller");
+  await expect(scroller).toBeVisible();
+  // Sanity-check the table actually overflows; otherwise the sticky
+  // assertion below would silently pass for the wrong reason.
+  const scrollMetrics = await scroller.evaluate((el) => ({
+    scrollWidth: el.scrollWidth,
+    clientWidth: el.clientWidth,
+  }));
+  expect(
+    scrollMetrics.scrollWidth,
+    "the year table should overflow horizontally on a 375px viewport",
+  ).toBeGreaterThan(scrollMetrics.clientWidth);
+
+  const metricHeader = page
+    .getByTestId("comparison-year-table")
+    .locator("th.sticky")
+    .first();
+  await expect(metricHeader).toBeVisible();
+  const beforeBox = await metricHeader.boundingBox();
+  expect(beforeBox).not.toBeNull();
+
+  await scroller.evaluate((el) => {
+    el.scrollLeft = el.scrollWidth - el.clientWidth;
+  });
+  // Give the browser a frame to settle the scroll + sticky layout pass
+  // before we re-measure.
+  await page.waitForTimeout(100);
+
+  const afterBox = await metricHeader.boundingBox();
+  expect(afterBox).not.toBeNull();
+  expect(
+    Math.abs(afterBox!.x - beforeBox!.x),
+    "metric header should remain pinned at the same x after horizontal scroll",
+  ).toBeLessThanOrEqual(1);
+
+  // The sticky cell must also keep an opaque background so year cells
+  // scrolling under it don't bleed through. Both the header (`bg-slate-50`)
+  // and the body label cells (`bg-card`) have to be opaque for the
+  // scroll affordance to look right on iOS Safari.
+  const headerBg = await metricHeader.evaluate(
+    (el) => window.getComputedStyle(el).backgroundColor,
+  );
+  expect(headerBg).not.toBe("rgba(0, 0, 0, 0)");
+  expect(headerBg).not.toBe("transparent");
+
+  const metricBodyCell = page
+    .getByTestId("comparison-year-table")
+    .locator("td.sticky")
+    .first();
+  const bodyBg = await metricBodyCell.evaluate(
+    (el) => window.getComputedStyle(el).backgroundColor,
+  );
+  expect(bodyBg).not.toBe("rgba(0, 0, 0, 0)");
+  expect(bodyBg).not.toBe("transparent");
+});
+
+// Companion to the phone layout test — guards the desktop affordance so
+// a future "always show the swipe hint" change doesn't sneak through.
+// At 1280px the hint must be hidden because there's no horizontal
+// overflow, and a redundant "Swipe →" cue would be visual noise.
+test("Decision comparison: desktop (1280x720) hides the phone-only swipe hint", async ({
+  page,
+  request,
+}) => {
+  const { token, modelId } = await seedScenarioFixture(request);
+  await primeAuthToken(page, token);
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`/model/${modelId}/scenarios`);
+
+  const section = page.getByTestId("decision-comparison-section");
+  await expect(section).toBeVisible();
+  await expect(page.getByTestId("decision-impact-comparison")).toBeVisible();
+
+  // The hint carries `sm:hidden`, so at desktop widths it's still in the
+  // DOM but `display: none`. `toBeHidden` matches both DOM-removal and
+  // display:none, so it correctly fails if either the responsive class
+  // is dropped or the hint is rendered unconditionally.
+  await expect(
+    page.getByTestId("comparison-year-table-scroll-hint"),
+  ).toBeHidden();
+});
