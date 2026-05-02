@@ -492,7 +492,13 @@ function buildFiveYearProjection(
     : "The model does not reach break-even within the 5-year projection.";
 
   const y1 = yearlyData[0];
-  let breakevenNote = "";
+
+  // Task #362: surface the breakeven enrollment + cushion sentence as its own
+  // structured callout instead of gluing it onto the narrative paragraph.
+  // Lenders and board members scan for this number, so it deserves its own
+  // bordered card via `drawInsightCallout` rather than being buried mid-
+  // sentence after the break-even-year line.
+  const insights: PacketInsight[] = [];
   if (y1 && y1.students > 0 && y1.totalRevenue > 0) {
     const revPerStudent = y1.totalRevenue / y1.students;
     let y1VarCostPerStudent = 0;
@@ -511,15 +517,27 @@ function buildFiveYearProjection(
     const breakevenEnroll = contribMargin > 0 ? Math.ceil(y1FixedCosts / contribMargin) : 0;
     if (breakevenEnroll > 0 && breakevenEnroll !== Infinity) {
       const cushionPct = ((y1.students - breakevenEnroll) / breakevenEnroll * 100).toFixed(0);
-      breakevenNote = ` Breakeven enrollment is ${breakevenEnroll} students (${y1.students >= breakevenEnroll ? `${cushionPct}% above` : `${Math.abs(Number(cushionPct))}% below`} Year 1 enrollment).`;
+      insights.push({
+        label: "Breakeven enrollment",
+        body: `Breakeven enrollment is ${breakevenEnroll} students (${y1.students >= breakevenEnroll ? `${cushionPct}% above` : `${Math.abs(Number(cushionPct))}% below`} Year 1 enrollment).`,
+        tone: "info",
+      });
     }
   }
 
+  // Task #362: prior-year revenue variance graduates from the narrative to
+  // its own callout. A large swing (>=20% in either direction) flips the
+  // tone to "warning" so the amber accent flags an unusual jump or drop for
+  // the reader.
   const priorYear = md.priorYearSnapshot;
-  let priorYearNote = "";
   if (priorYear?.totalRevenue && y1) {
-    const revVariance = ((y1.totalRevenue - priorYear.totalRevenue) / priorYear.totalRevenue * 100).toFixed(1);
-    priorYearNote = ` Prior-year revenue was ${fmt(priorYear.totalRevenue)}; Year 1 projections represent a ${revVariance}% change.`;
+    const revVarianceNum = (y1.totalRevenue - priorYear.totalRevenue) / priorYear.totalRevenue * 100;
+    const revVariance = revVarianceNum.toFixed(1);
+    insights.push({
+      label: "Prior-year comparison",
+      body: `Prior-year revenue was ${fmt(priorYear.totalRevenue)}; Year 1 projections represent a ${revVariance}% change.`,
+      tone: Math.abs(revVarianceNum) >= 20 ? "warning" : "info",
+    });
   }
 
   const metrics: LinkedMetric[] = co.keyMetrics.map((m) => ({
@@ -536,13 +554,14 @@ function buildFiveYearProjection(
 
   return {
     ...s,
-    narrative: `${breakEvenText}${breakevenNote}${priorYearNote} Year 5 ${niLabel.toLowerCase()} is projected at ${fmt(yearlyData[4]?.netIncome || 0)} (${pct(yearlyData[4]?.netMargin || 0)} margin).${basisNote}`,
+    narrative: `${breakEvenText} Year 5 ${niLabel.toLowerCase()} is projected at ${fmt(yearlyData[4]?.netIncome || 0)} (${pct(yearlyData[4]?.netMargin || 0)} margin).${basisNote}`,
     tables: [{
       title: `5-Year ${niLabel} Projection`,
       headers: ["Year", "Students", "Revenue", "Expenses", niLabel, "Margin"],
       rows,
     }],
     linkedMetrics: metrics,
+    ...(insights.length > 0 ? { insights } : {}),
   };
 }
 
