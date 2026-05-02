@@ -1106,6 +1106,79 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "=IFERROR(C9/D9,0)",
     (600000 + 300000 + 200000) / (6 + 30 + 200),
   );
+
+  // Goal vs Gap comparison: the new section pulls Year-1 Fundraising_Gap
+  // and TFG so founders can see whether the fundraising plan covers the
+  // operating gap. Rows are located by their B-column label so the
+  // assertions stay stable against future row-layout changes.
+  const findFundRow = (label: string): number => {
+    let idx = -1;
+    fund2.eachRow((row, i) => { if (row.getCell(2).value === label) idx = i; });
+    return idx;
+  };
+  const gapRow = findFundRow("Year-1 Operating Gap");
+  const tfgRow = findFundRow("Total Fundraising Goal");
+  const surplusRow = findFundRow("Surplus / (Shortfall)");
+  const statusRow = findFundRow("Status");
+
+  expect("FUNDRAISING GOALS: located 'Year-1 Operating Gap' row", gapRow > 0, true, gapRow);
+  expect("FUNDRAISING GOALS: located 'Total Fundraising Goal' row", tfgRow > 0, true, tfgRow);
+  expect("FUNDRAISING GOALS: located 'Surplus / (Shortfall)' row", surplusRow > 0, true, surplusRow);
+  expect("FUNDRAISING GOALS: located 'Status' row", statusRow > 0, true, statusRow);
+
+  const gapCell = readFormula(fund2, `C${gapRow}`);
+  expect(
+    "FUNDRAISING GOALS: Year-1 Operating Gap formula references Fundraising_Gap named range",
+    typeof gapCell.formula === "string" && gapCell.formula.includes("Fundraising_Gap"),
+    true,
+    gapCell.formula,
+  );
+  expectFormula(
+    "FUNDRAISING GOALS: Year-1 Operating Gap pulls INDEX(Fundraising_Gap,1,2)",
+    gapCell,
+    "=INDEX(Fundraising_Gap,1,2)",
+    300, // perturbed sample Y1 gap = OpEx 101100 − Net Tuition+Fees 100800
+  );
+
+  const tfgCell2 = readFormula(fund2, `C${tfgRow}`);
+  expectFormula(
+    "FUNDRAISING GOALS: Total Fundraising Goal cell references TFG",
+    tfgCell2,
+    "=TFG",
+    600000 + 300000 + 200000,
+  );
+
+  const surplusCell = readFormula(fund2, `C${surplusRow}`);
+  expect(
+    "FUNDRAISING GOALS: Surplus formula references both TFG and Fundraising_Gap",
+    typeof surplusCell.formula === "string"
+      && surplusCell.formula.includes("TFG")
+      && surplusCell.formula.includes("Fundraising_Gap"),
+    true,
+    surplusCell.formula,
+  );
+  expectFormula(
+    "FUNDRAISING GOALS: Surplus / (Shortfall) = TFG − INDEX(Fundraising_Gap,1,2)",
+    surplusCell,
+    "=TFG-INDEX(Fundraising_Gap,1,2)",
+    (600000 + 300000 + 200000) - 300,
+  );
+
+  const statusCellVal = readFormula(fund2, `C${statusRow}`);
+  expect(
+    "FUNDRAISING GOALS: Status formula references both TFG and Fundraising_Gap",
+    typeof statusCellVal.formula === "string"
+      && statusCellVal.formula.includes("TFG")
+      && statusCellVal.formula.includes("Fundraising_Gap"),
+    true,
+    statusCellVal.formula,
+  );
+  expect(
+    "FUNDRAISING GOALS: Status cached result reflects surplus (TFG > gap)",
+    statusCellVal.result === "Surplus — TFG covers the operating gap",
+    "Surplus — TFG covers the operating gap",
+    statusCellVal.result,
+  );
 }
 
 // GIFT CHART — tier total = giftAmount * #gifts in col E.

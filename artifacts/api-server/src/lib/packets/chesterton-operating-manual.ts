@@ -17,6 +17,8 @@ import {
   WHITE,
   CREAM,
   EVERGREEN,
+  GREEN_BG,
+  RED_BG,
 } from "../workbook-helpers.js";
 
 const TAB_GETTING_STARTED = "GETTING STARTED";
@@ -1548,6 +1550,71 @@ function buildFundraisingGoals(wb: ExcelJS.Workbook, data: ChestertonModelInput)
   ws.mergeCells(`B${v}:F${v}`);
   ws.getCell(`B${v}`).value = { formula: `="Total fundraising goal: " & TEXT(TFG, "$#,##0")`, result: `Total fundraising goal: $${cachedTFG.toLocaleString()}` };
   ws.getCell(`B${v}`).alignment = { wrapText: true };
+  v += 2;
+
+  // ── Goal vs Gap comparison ──
+  // Pull the Year-1 Fundraising_Gap (a single-row B:H named range on
+  // PROJECTIONS where B=Year 0, C=Year 1) and compare it against the
+  // Total Fundraising Goal so founders see at a glance whether their
+  // fundraising plan covers the operating gap.
+  const projWs = wb.getWorksheet(TAB_PROJECTIONS);
+  let y1GapCached = 0;
+  if (projWs) {
+    let gapRow = -1;
+    projWs.eachRow((row, idx) => {
+      if (row.getCell(1).value === "Fundraising Gap") gapRow = idx;
+    });
+    if (gapRow > 0) {
+      y1GapCached = readCachedNumber(projWs, gapRow, 3); // col C = Year 1
+    }
+  }
+  const surplusCached = cachedTFG - y1GapCached;
+  const statusCached = surplusCached >= 0
+    ? "Surplus — TFG covers the operating gap"
+    : "Shortfall — raise more to cover the operating gap";
+  const statusFill = {
+    type: "pattern" as const,
+    pattern: "solid" as const,
+    fgColor: { argb: surplusCached >= 0 ? GREEN_BG : RED_BG },
+  };
+
+  ws.mergeCells(`B${v}:F${v}`);
+  ws.getCell(`B${v}`).value = "Goal vs Operating Gap (Year 1)";
+  ws.getCell(`B${v}`).font = { bold: true, color: { argb: NAVY } };
+  v += 1;
+
+  ws.getCell(`B${v}`).value = "Year-1 Operating Gap";
+  const gapValueCell = ws.getCell(`C${v}`);
+  setFormula(gapValueCell, `=INDEX(Fundraising_Gap,1,2)`, y1GapCached);
+  gapValueCell.numFmt = CUR;
+  v += 1;
+
+  ws.getCell(`B${v}`).value = "Total Fundraising Goal";
+  const tfgValueCell = ws.getCell(`C${v}`);
+  setFormula(tfgValueCell, `=TFG`, cachedTFG);
+  tfgValueCell.numFmt = CUR;
+  v += 1;
+
+  ws.getCell(`B${v}`).value = "Surplus / (Shortfall)";
+  ws.getCell(`B${v}`).font = { bold: true };
+  const surplusCell = ws.getCell(`C${v}`);
+  setFormula(surplusCell, `=TFG-INDEX(Fundraising_Gap,1,2)`, surplusCached);
+  surplusCell.numFmt = CUR;
+  surplusCell.font = { bold: true };
+  surplusCell.fill = statusFill;
+  v += 1;
+
+  ws.getCell(`B${v}`).value = "Status";
+  ws.getCell(`B${v}`).font = { bold: true };
+  ws.mergeCells(`C${v}:F${v}`);
+  const statusCell = ws.getCell(`C${v}`);
+  setFormula(
+    statusCell,
+    `=IF(TFG>=INDEX(Fundraising_Gap,1,2),"Surplus — TFG covers the operating gap","Shortfall — raise more to cover the operating gap")`,
+    statusCached,
+  );
+  statusCell.font = { bold: true };
+  statusCell.fill = statusFill;
   v += 2;
 
   ws.mergeCells(`B${v}:F${v}`);
