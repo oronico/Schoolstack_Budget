@@ -15,6 +15,9 @@ import {
 } from "../state-entity-fees";
 import {
   generateDefaultExpenseRows,
+  getEscalationRule,
+  computeEscalatedAmounts,
+  LOCAL_BUSINESS_LICENSE_LINE_ITEM,
   STATE_ENTITY_FEE_LINE_ITEM,
   STATE_ENTITY_FEE_ROW_ID,
 } from "../expense-defaults";
@@ -374,5 +377,60 @@ describe("F3: state business-entity filing fees", () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+});
+
+// =============================================================================
+// Local / City Business License opt-in row (Task #321 → guarded by Task #324)
+// =============================================================================
+
+describe("Local / City Business License opt-in row", () => {
+  it("generateDefaultExpenseRows includes the canonical opt-in row with the right defaults", () => {
+    const rows = generateDefaultExpenseRows("tuition_based", 5);
+    const row = rows.find((r) => r.lineItem === LOCAL_BUSINESS_LICENSE_LINE_ITEM);
+    expect(row).toBeDefined();
+    expect(row!.category).toBe("administrative_general");
+    expect(row!.accountCode).toBe("8616");
+    expect(row!.enabled).toBe(false);
+    expect(row!.driverType).toBe("annual_fixed");
+    expect(row!.amounts[0]).toBe(0);
+  });
+
+  it("stays opt-in across every funding profile and the operating-school stage", () => {
+    const profiles = ["tuition_based", "charter_public_funded", "hybrid_mixed"] as const;
+    for (const profile of profiles) {
+      for (const stage of ["new_school", "operating_school"] as const) {
+        const rows = generateDefaultExpenseRows(profile, 5, stage);
+        const row = rows.find((r) => r.lineItem === LOCAL_BUSINESS_LICENSE_LINE_ITEM);
+        expect(row).toBeDefined();
+        expect(row!.enabled).toBe(false);
+        expect(row!.amounts[0]).toBe(0);
+      }
+    }
+  });
+
+  it("inherits generalCostInflation via the annual_fixed escalation rule (3% on $1,000 → $1,030 in y2)", () => {
+    const rule = getEscalationRule(
+      { driverType: "annual_fixed", canonicalKey: LOCAL_BUSINESS_LICENSE_LINE_ITEM },
+      { generalCostInflation: 3, annualRentIncrease: 5 },
+    );
+    expect(rule.type).toBe("inflation");
+    expect(rule.rate).toBe(3);
+
+    const amounts = computeEscalatedAmounts(1000, 5, rule.rate);
+    expect(amounts[0]).toBe(1000);
+    expect(amounts[1]).toBe(1030);
+    expect(amounts[2]).toBe(1061);
+    expect(amounts[3]).toBe(1093);
+    expect(amounts[4]).toBe(1126);
+  });
+
+  it("does NOT inherit the rent escalation rate even though it is admin-adjacent", () => {
+    const rule = getEscalationRule(
+      { driverType: "annual_fixed", canonicalKey: LOCAL_BUSINESS_LICENSE_LINE_ITEM },
+      { generalCostInflation: 2, annualRentIncrease: 7 },
+    );
+    expect(rule.type).toBe("inflation");
+    expect(rule.rate).toBe(2);
   });
 });
