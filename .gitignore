@@ -70,3 +70,4 @@ netlify-rebuild.txt
 # Local nohup logs from test runs
 nohup.out
 
+artifacts/school-financial-model/public/opengraph.jpg
