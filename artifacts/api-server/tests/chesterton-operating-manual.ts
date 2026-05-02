@@ -305,6 +305,7 @@ for (const required of [
   "Attrition_Rate",
   "Starting_Teacher_Salary",
   "Benefits_Stipend",
+  "Fundraising_Gap",
 ]) {
   expect(`named range ${required} exists`, namedRangeNames.has(required), true, namedRangeNames.has(required));
 }
@@ -1142,6 +1143,178 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
       totalCell.formula,
     );
   }
+}
+
+// PROJECTIONS — Operating Expense + Fundraising Gap + Key Indicators
+// round-trip. Locate each new computed row by its label so the
+// assertions stay stable against future row-layout changes, then
+// assert the Year-1 (col C) cell carries the expected formula and
+// cached result for the perturbed workbook.
+{
+  const proj2 = wbPerturbed.getWorksheet("1 - 5 YR FINANCIAL PROJECTIONS")!;
+  const findRow = (label: string): number => {
+    let idx = -1;
+    proj2.eachRow((r, i) => { if (r.getCell(1).value === label) idx = i; });
+    return idx;
+  };
+
+  // Anchors used by the formula text below.
+  const totalEnrollmentRow = findRow("Total Enrollment");
+  const netRevRow = findRow("Net Tuition + Fees");
+  const totalFacultyRow = findRow("Total Faculty Cost");
+  const totalAdminRow = findRow("Total Admin Salaries");
+  const totalGaRow = findRow("Total G&A");
+  const operatingExpenseRow = findRow("Total Operating Expense");
+  const fundraisingGapRow = findRow("Fundraising Gap");
+
+  for (const [label, idx] of [
+    ["Total Enrollment", totalEnrollmentRow],
+    ["Net Tuition + Fees", netRevRow],
+    ["Total Faculty Cost", totalFacultyRow],
+    ["Total Admin Salaries", totalAdminRow],
+    ["Total G&A", totalGaRow],
+    ["Total Operating Expense", operatingExpenseRow],
+    ["Fundraising Gap", fundraisingGapRow],
+  ] as Array<[string, number]>) {
+    expect(`PROJECTIONS: located '${label}' row`, idx > 0, true, idx);
+  }
+
+  // Sample-driven year-1 (col C) expectations:
+  //   Total Enrollment Y1 = 12 (freshman only)
+  //   Tuition Y1 = $9000 starting; gross = 9000*12 = 108000;
+  //   aid (15%) = -16200; book = 750*12 = 9000; net = 100800.
+  //   Faculty Y1 = AvgSalary 10000 × periods (2+1+3=6) × 1 section = 60000.
+  //   G&A Y1 = sum(factors)=3425 × 12 students = 41100.
+  //   OpEx Y1 = 0 admin + 60000 faculty + 41100 G&A = 101100.
+  //   Gap Y1 = 101100 − 100800 = 300.
+
+  // Total Admin Salaries Y1 — SUM of admin column, all founder inputs default 0.
+  // setFormula() caches a zero result as the string "0" so the workbook
+  // round-trips cleanly; that's what readFormula will return here.
+  const adminY1 = readFormula(proj2, `C${totalAdminRow}`);
+  expectFormula(
+    "PROJECTIONS: Total Admin Salaries Y1 sums the admin column",
+    adminY1,
+    `=SUM(C${totalAdminRow - 7}:C${totalAdminRow - 1})`,
+    "0",
+  );
+
+  // Total G&A Y1 — SUM of G&A column.
+  const gaY1 = readFormula(proj2, `C${totalGaRow}`);
+  expectFormula(
+    "PROJECTIONS: Total G&A Y1 sums the G&A column",
+    gaY1,
+    `=SUM(C${totalGaRow - 13}:C${totalGaRow - 1})`,
+    41100,
+  );
+
+  // Each G&A line item Y1 = factor × Total Enrollment.
+  const facilityRentalRow = findRow("Facility Rental");
+  const facilityY1 = readFormula(proj2, `C${facilityRentalRow}`);
+  expectFormula(
+    "PROJECTIONS: G&A Facility Rental Y1 = factor × Total Enrollment",
+    facilityY1,
+    `=$B$${facilityRentalRow}*C${totalEnrollmentRow}`,
+    1700 * 12,
+  );
+
+  // Total Operating Expense Y1 = admin + faculty + G&A.
+  const opExY1 = readFormula(proj2, `C${operatingExpenseRow}`);
+  expectFormula(
+    "PROJECTIONS: Total Operating Expense Y1 = admin + faculty + G&A",
+    opExY1,
+    `=C${totalAdminRow}+C${totalFacultyRow}+C${totalGaRow}`,
+    101100,
+  );
+
+  // Fundraising Gap Y1 = OpEx − Net Tuition + Fees.
+  const gapY1 = readFormula(proj2, `C${fundraisingGapRow}`);
+  expectFormula(
+    "PROJECTIONS: Fundraising Gap Y1 = Operating Expense − Net Revenue",
+    gapY1,
+    `=C${operatingExpenseRow}-C${netRevRow}`,
+    101100 - 100800,
+  );
+
+  // Avg Cost per Student Y1 = OpEx / Enrollment.
+  const avgCostRow = findRow("Avg Cost per Student");
+  const avgCostY1 = readFormula(proj2, `C${avgCostRow}`);
+  expectFormula(
+    "PROJECTIONS: Avg Cost per Student Y1 = OpEx / Enrollment",
+    avgCostY1,
+    `=IFERROR(C${operatingExpenseRow}/C${totalEnrollmentRow},0)`,
+    101100 / 12,
+  );
+
+  // Avg Tuition per Student Y1 = Net Revenue / Enrollment.
+  const avgTuitionRow = findRow("Avg Tuition per Student");
+  const avgTuitionY1 = readFormula(proj2, `C${avgTuitionRow}`);
+  expectFormula(
+    "PROJECTIONS: Avg Tuition per Student Y1 = Net Revenue / Enrollment",
+    avgTuitionY1,
+    `=IFERROR(C${netRevRow}/C${totalEnrollmentRow},0)`,
+    100800 / 12,
+  );
+
+  // Fundraising Gap per Student Y1 = Gap / Enrollment.
+  const gapPerStuRow = findRow("Fundraising Gap per Student");
+  const gapPerStuY1 = readFormula(proj2, `C${gapPerStuRow}`);
+  expectFormula(
+    "PROJECTIONS: Fundraising Gap per Student Y1 = Gap / Enrollment",
+    gapPerStuY1,
+    `=IFERROR(C${fundraisingGapRow}/C${totalEnrollmentRow},0)`,
+    300 / 12,
+  );
+
+  // Fundraising donations as % of budget Y1 = Gap / OpEx.
+  const fundPctRow = findRow("Fundraising donations as % of budget");
+  const fundPctY1 = readFormula(proj2, `C${fundPctRow}`);
+  expectFormula(
+    "PROJECTIONS: Fundraising donations as % of budget Y1 = Gap / OpEx",
+    fundPctY1,
+    `=IFERROR(C${fundraisingGapRow}/C${operatingExpenseRow},0)`,
+    300 / 101100,
+  );
+
+  // Tuition revenue as % of budget Y1 = Net Revenue / OpEx.
+  const tuitionPctRow = findRow("Tuition revenue as % of budget");
+  const tuitionPctY1 = readFormula(proj2, `C${tuitionPctRow}`);
+  expectFormula(
+    "PROJECTIONS: Tuition revenue as % of budget Y1 = Net Revenue / OpEx",
+    tuitionPctY1,
+    `=IFERROR(C${netRevRow}/C${operatingExpenseRow},0)`,
+    100800 / 101100,
+  );
+
+  // Y/Y Enrollment Y1 = enrollment(Y1) − enrollment(Y0).
+  const yyEnrollRow = findRow("Y/Y Enrollment % +/- (# students)");
+  const yyEnrollY1 = readFormula(proj2, `C${yyEnrollRow}`);
+  expectFormula(
+    "PROJECTIONS: Y/Y Enrollment Y1 = curr − prior",
+    yyEnrollY1,
+    `=C${totalEnrollmentRow}-B${totalEnrollmentRow}`,
+    12 - 0,
+  );
+
+  // Y/Y Net Revenue Y1 = net(Y1) − net(Y0).
+  const yyNetRevRow = findRow("Y/Y Net Revenue $ +/-");
+  const yyNetRevY1 = readFormula(proj2, `C${yyNetRevRow}`);
+  expectFormula(
+    "PROJECTIONS: Y/Y Net Revenue Y1 = curr − prior",
+    yyNetRevY1,
+    `=C${netRevRow}-B${netRevRow}`,
+    100800 - 0,
+  );
+
+  // Y/Y Operating Cost Y1 = OpEx(Y1) − OpEx(Y0).
+  const yyOpExRow = findRow("Y/Y Operating Cost $ +/-");
+  const yyOpExY1 = readFormula(proj2, `C${yyOpExRow}`);
+  expectFormula(
+    "PROJECTIONS: Y/Y Operating Cost Y1 = curr − prior",
+    yyOpExY1,
+    `=C${operatingExpenseRow}-B${operatingExpenseRow}`,
+    101100 - 0,
+  );
 }
 
 // HyperFormula recompute — load both workbook variants into an Excel-

@@ -117,6 +117,20 @@ const GRADE_LABELS: Record<string, string> = {
 
 const PHASES = ["Discovery", "Preparation", "Activation", "Launch"] as const;
 
+// Read a cell's cached numeric value. setFormula() coerces zero to the
+// string "0" via safeFormulaValue so downstream subtotals can still
+// roll up clean numbers; treat that case as numeric 0.
+function readCachedNumber(ws: ExcelJS.Worksheet, r: number, c: number): number {
+  const v = ws.getCell(r, c).value;
+  if (typeof v === "number") return v;
+  if (v && typeof v === "object") {
+    const obj = v as { result?: unknown };
+    if (typeof obj.result === "number") return obj.result;
+    if (obj.result === "0" || obj.result === 0) return 0;
+  }
+  return 0;
+}
+
 function applyTitleStyle(cell: ExcelJS.Cell) {
   cell.font = { name: "Calibri", size: 16, bold: true, color: { argb: WHITE } };
   cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
@@ -677,6 +691,7 @@ function buildProjections(
     c.numFmt = CUR;
     c.font = { bold: true };
   }
+  const netRevenueRow = row;
   row += 2;
 
   // ── FACULTY SALARY (periods-based) ──
@@ -766,14 +781,17 @@ function buildProjections(
     c.numFmt = CUR;
     c.font = { bold: true };
   }
+  const totalFacultyCostRow = row;
   row += 2;
 
   // ── ADMINISTRATIVE SALARIES — verbatim role labels from source workbook
-  // (rows 49-56 of "1 - 5 YR  FINANCIAL PROJECTIONS"). Cost cells are left
-  // empty for the founder to fill in based on hiring phase.
+  // (rows 49-56 of "1 - 5 YR  FINANCIAL PROJECTIONS"). Cost cells are
+  // founder-editable inputs (default 0) so a hiring plan rolls up into
+  // the Total Admin Salaries subtotal that feeds Operating Expense.
   sec(ws, row, 8);
   ws.getCell(`A${row}`).value = "Administrative Salaries";
   row += 1;
+  const adminStart = row;
   for (const role of [
     "Headmaster Admin Salary",
     "Executive Director",
@@ -792,10 +810,26 @@ function buildProjections(
     }
     row += 1;
   }
-  row += 1;
+  const adminEnd = row - 1;
+
+  // Total Admin Salaries subtotal (cols B-H = Year 0 - Year 6).
+  ws.getCell(`A${row}`).value = "Total Admin Salaries";
+  ws.getCell(`A${row}`).font = { bold: true };
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    let sum = 0;
+    for (let r = adminStart; r <= adminEnd; r++) sum += readCachedNumber(ws, r, col);
+    setFormula(c, `=SUM(${cellName(adminStart, col)}:${cellName(adminEnd, col)})`, sum);
+    c.numFmt = CUR;
+    c.font = { bold: true };
+  }
+  const totalAdminRow = row;
+  row += 2;
 
   // ── IV. OPERATING EXPENSE — General & Admin line items (verbatim
-  // from "GENERAL & ADMIN" section of source projections tab).
+  // from "GENERAL & ADMIN" section of source projections tab). Each
+  // line item's cost-per-student factor (col B) multiplies Total
+  // Enrollment to fill cols C-H (Year 1-6).
   sec(ws, row, 8);
   ws.getCell(`A${row}`).value = "IV. OPERATING EXPENSE — GENERAL & ADMIN";
   row += 1;
@@ -820,19 +854,72 @@ function buildProjections(
     ["CSN Accreditation", null],
     ["CSN Conferences", null],
   ];
+  const gaStart = row;
   for (const [label, factor] of gaItems) {
     ws.getCell(`A${row}`).value = label;
-    if (factor != null) {
-      const f = ws.getCell(`B${row}`);
-      f.value = factor;
-      f.numFmt = CUR;
-      inputCell(f);
+    const f = ws.getCell(`B${row}`);
+    // Items without a CSN-suggested factor still default to 0 so the
+    // founder can fill in their local quote and the per-year formulas
+    // below recompute automatically.
+    f.value = factor ?? 0;
+    f.numFmt = CUR;
+    inputCell(f);
+    for (let i = 1; i < 7; i++) {
+      const col = 2 + i;
+      const c = ws.getCell(row, col);
+      const enrollAddr = cellName(totalEnrollmentRow, col);
+      const enrollNum = readCachedNumber(ws, totalEnrollmentRow, col);
+      const cost = (factor ?? 0) * enrollNum;
+      setFormula(c, `=$B$${row}*${enrollAddr}`, cost);
+      c.numFmt = CUR;
     }
     row += 1;
   }
-  row += 1;
+  const gaEnd = row - 1;
+
+  // Total G&A subtotal — col B left at 0 (the factor column has no
+  // meaningful subtotal); cols C-H sum each year's line items.
+  ws.getCell(`A${row}`).value = "Total G&A";
+  ws.getCell(`A${row}`).font = { bold: true };
+  ws.getCell(`B${row}`).value = 0;
+  ws.getCell(`B${row}`).numFmt = CUR;
+  ws.getCell(`B${row}`).font = { bold: true };
+  for (let i = 1; i < 7; i++) {
+    const col = 2 + i;
+    const c = ws.getCell(row, col);
+    let sum = 0;
+    for (let r = gaStart; r <= gaEnd; r++) sum += readCachedNumber(ws, r, col);
+    setFormula(c, `=SUM(${cellName(gaStart, col)}:${cellName(gaEnd, col)})`, sum);
+    c.numFmt = CUR;
+    c.font = { bold: true };
+  }
+  const totalGaRow = row;
+  row += 2;
+
+  // Total Operating Expense — Admin + Faculty + G&A per year. Col B
+  // (Year 0) Total G&A is structurally 0, so the same formula works
+  // across all year columns.
+  ws.getCell(`A${row}`).value = "Total Operating Expense";
+  ws.getCell(`A${row}`).font = { bold: true };
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    const adm = readCachedNumber(ws, totalAdminRow, col);
+    const fac = readCachedNumber(ws, totalFacultyCostRow, col);
+    const ga = readCachedNumber(ws, totalGaRow, col);
+    setFormula(
+      c,
+      `=${cellName(totalAdminRow, col)}+${cellName(totalFacultyCostRow, col)}+${cellName(totalGaRow, col)}`,
+      adm + fac + ga,
+    );
+    c.numFmt = CUR;
+    c.font = { bold: true };
+  }
+  const operatingExpenseRow = row;
+  row += 2;
 
   // ── V. FUNDRAISING GAP (verbatim header + footnote from source).
+  // Computed gap = Total Operating Expense − Net Tuition + Fees per
+  // year, exposed as the Fundraising_Gap named range (B:H, Year 0-6).
   sec(ws, row, 8);
   ws.getCell(`A${row}`).value = "V. FUNDRAISING GAP";
   row += 1;
@@ -840,26 +927,176 @@ function buildProjections(
   ws.getCell(`A${row}`).value = "*This is the minimum amount to be raised in full by June 30 of the prior phase or academic year.";
   ws.getCell(`A${row}`).font = { italic: true };
   ws.getCell(`A${row}`).alignment = { wrapText: true };
+  row += 1;
+
+  ws.getCell(`A${row}`).value = "Fundraising Gap";
+  ws.getCell(`A${row}`).font = { bold: true };
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    const opEx = readCachedNumber(ws, operatingExpenseRow, col);
+    const netRev = readCachedNumber(ws, netRevenueRow, col);
+    setFormula(
+      c,
+      `=${cellName(operatingExpenseRow, col)}-${cellName(netRevenueRow, col)}`,
+      opEx - netRev,
+    );
+    c.numFmt = CUR;
+    c.font = { bold: true };
+  }
+  const fundraisingGapRow = row;
+  wb.definedNames.add(
+    `'${TAB_PROJECTIONS}'!$B$${row}:$H$${row}`,
+    "Fundraising_Gap",
+  );
   row += 2;
 
-  // ── VI. KEY INDICATORS — verbatim labels from "V. KEY INDICATORS" in source.
+  // ── VI. KEY INDICATORS — verbatim labels from "V. KEY INDICATORS" in
+  // source, each backed by a per-year formula that pulls from the new
+  // totals so a recalc updates the dashboard automatically.
   sec(ws, row, 8);
   ws.getCell(`A${row}`).value = "VI. KEY INDICATORS";
   row += 1;
-  for (const label of [
-    "Avg Cost per Student",
-    "Avg Tuition per Student",
-    "Fundraising Gap per Student",
-    "Fundraising donations as % of budget",
-    "Tuition revenue as % of budget",
-    "Y/Y Enrollment % +/- (# students)",
-    "Y/Y Net Revenue $ +/-",
-    "Y/Y Operating Cost $ +/-",
-  ]) {
-    ws.getCell(`A${row}`).value = label;
-    row += 1;
+
+  // Avg Cost per Student = Operating Expense / Total Enrollment
+  ws.getCell(`A${row}`).value = "Avg Cost per Student";
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    const opEx = readCachedNumber(ws, operatingExpenseRow, col);
+    const enr = readCachedNumber(ws, totalEnrollmentRow, col);
+    const v = enr > 0 ? opEx / enr : 0;
+    setFormula(
+      c,
+      `=IFERROR(${cellName(operatingExpenseRow, col)}/${cellName(totalEnrollmentRow, col)},0)`,
+      v,
+    );
+    c.numFmt = CUR;
   }
   row += 1;
+
+  // Avg Tuition per Student = Net Tuition + Fees / Total Enrollment
+  ws.getCell(`A${row}`).value = "Avg Tuition per Student";
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    const net = readCachedNumber(ws, netRevenueRow, col);
+    const enr = readCachedNumber(ws, totalEnrollmentRow, col);
+    const v = enr > 0 ? net / enr : 0;
+    setFormula(
+      c,
+      `=IFERROR(${cellName(netRevenueRow, col)}/${cellName(totalEnrollmentRow, col)},0)`,
+      v,
+    );
+    c.numFmt = CUR;
+  }
+  row += 1;
+
+  // Fundraising Gap per Student = Fundraising Gap / Total Enrollment
+  ws.getCell(`A${row}`).value = "Fundraising Gap per Student";
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    const gap = readCachedNumber(ws, fundraisingGapRow, col);
+    const enr = readCachedNumber(ws, totalEnrollmentRow, col);
+    const v = enr > 0 ? gap / enr : 0;
+    setFormula(
+      c,
+      `=IFERROR(${cellName(fundraisingGapRow, col)}/${cellName(totalEnrollmentRow, col)},0)`,
+      v,
+    );
+    c.numFmt = CUR;
+  }
+  row += 1;
+
+  // Fundraising donations as % of budget = Fundraising Gap / Operating Expense
+  ws.getCell(`A${row}`).value = "Fundraising donations as % of budget";
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    const gap = readCachedNumber(ws, fundraisingGapRow, col);
+    const opEx = readCachedNumber(ws, operatingExpenseRow, col);
+    const v = opEx > 0 ? gap / opEx : 0;
+    setFormula(
+      c,
+      `=IFERROR(${cellName(fundraisingGapRow, col)}/${cellName(operatingExpenseRow, col)},0)`,
+      v,
+    );
+    c.numFmt = PCT;
+  }
+  row += 1;
+
+  // Tuition revenue as % of budget = Net Tuition + Fees / Operating Expense
+  ws.getCell(`A${row}`).value = "Tuition revenue as % of budget";
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    const net = readCachedNumber(ws, netRevenueRow, col);
+    const opEx = readCachedNumber(ws, operatingExpenseRow, col);
+    const v = opEx > 0 ? net / opEx : 0;
+    setFormula(
+      c,
+      `=IFERROR(${cellName(netRevenueRow, col)}/${cellName(operatingExpenseRow, col)},0)`,
+      v,
+    );
+    c.numFmt = PCT;
+  }
+  row += 1;
+
+  // Y/Y Enrollment +/- (# students) — col B is Year 0 with no prior
+  // year, so it stays a flat 0; cols C-H emit the curr-prev formula.
+  ws.getCell(`A${row}`).value = "Y/Y Enrollment % +/- (# students)";
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    if (col === 2) {
+      c.value = 0;
+      c.numFmt = NUM;
+      continue;
+    }
+    const curr = readCachedNumber(ws, totalEnrollmentRow, col);
+    const prev = readCachedNumber(ws, totalEnrollmentRow, col - 1);
+    setFormula(
+      c,
+      `=${cellName(totalEnrollmentRow, col)}-${cellName(totalEnrollmentRow, col - 1)}`,
+      curr - prev,
+    );
+    c.numFmt = NUM;
+  }
+  row += 1;
+
+  // Y/Y Net Revenue $ +/-
+  ws.getCell(`A${row}`).value = "Y/Y Net Revenue $ +/-";
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    if (col === 2) {
+      c.value = 0;
+      c.numFmt = CUR;
+      continue;
+    }
+    const curr = readCachedNumber(ws, netRevenueRow, col);
+    const prev = readCachedNumber(ws, netRevenueRow, col - 1);
+    setFormula(
+      c,
+      `=${cellName(netRevenueRow, col)}-${cellName(netRevenueRow, col - 1)}`,
+      curr - prev,
+    );
+    c.numFmt = CUR;
+  }
+  row += 1;
+
+  // Y/Y Operating Cost $ +/-
+  ws.getCell(`A${row}`).value = "Y/Y Operating Cost $ +/-";
+  for (let col = 2; col <= 8; col++) {
+    const c = ws.getCell(row, col);
+    if (col === 2) {
+      c.value = 0;
+      c.numFmt = CUR;
+      continue;
+    }
+    const curr = readCachedNumber(ws, operatingExpenseRow, col);
+    const prev = readCachedNumber(ws, operatingExpenseRow, col - 1);
+    setFormula(
+      c,
+      `=${cellName(operatingExpenseRow, col)}-${cellName(operatingExpenseRow, col - 1)}`,
+      curr - prev,
+    );
+    c.numFmt = CUR;
+  }
+  row += 2;
 
   // Verbatim Phase headers from source row 5-6 of the projections tab.
   // Source labels every column with the operating phase: Phase I "DISCOVERY",
