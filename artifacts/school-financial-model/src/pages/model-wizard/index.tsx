@@ -226,10 +226,48 @@ export function ModelWizardPage() {
   const [showImportBanner, setShowImportBanner] = useState(false);
   const [showPrepChecklist, setShowPrepChecklist] = useState(false);
   const [encouragementDismissed, setEncouragementDismissed] = useState(false);
+  // Wizard "Continue" guard. Three layers of defense against the
+  // double-advance race the e2e flake on charter-operating uncovered:
+  //
+  //   1. `advancingRef` is set synchronously at the top of handleNext, so
+  //      a second click that lands while the first is still awaiting
+  //      validateStep is dropped immediately.
+  //   2. The Continue button is `disabled={isAdvancing}` so the UI also
+  //      blocks the click.
+  //   3. `advanceTargetRef` + the commit-watching useEffect below release
+  //      the guard only AFTER React has actually committed the new step.
+  //      The previous implementation cleared the ref in `finally`, which
+  //      runs synchronously after `setCurrentStep` is queued but BEFORE
+  //      React commits — a fast second click landing in that window
+  //      (HMR re-render of the same handler, ultra-fast double click,
+  //      pointer + click both firing) would slip past.
+  //
+  // Even if all three layers somehow fail, the `startedFromStep` snapshot
+  // inside handleNext gates the functional updater on identity equality,
+  // so the *worst* a stale re-fire can do is be a no-op — it can never
+  // skip a step.
   const [isAdvancing, setIsAdvancing] = useState(false);
   const advancingRef = useRef(false);
+  const advanceTargetRef = useRef<number | null>(null);
   const stepStartTime = useRef(Date.now());
   const completedSteps = useRef<Set<number>>(new Set());
+
+  // Commit-watching guard release (Layer 3 above). Runs AFTER React has
+  // committed `currentStep`, so any synchronous re-fire of handleNext
+  // that was queued during the await window inside the previous call
+  // still sees `advancingRef.current === true` and bails. Without this
+  // effect the guard cleared one microtask too early (before React's
+  // commit phase), which is exactly the window the architect flagged.
+  useEffect(() => {
+    if (
+      advanceTargetRef.current !== null &&
+      currentStep === advanceTargetRef.current
+    ) {
+      advanceTargetRef.current = null;
+      advancingRef.current = false;
+      setIsAdvancing(false);
+    }
+  }, [currentStep]);
 
   useEffect(() => {
     if (!modelId) return;
@@ -795,6 +833,13 @@ export function ModelWizardPage() {
     if (advancingRef.current) return;
     advancingRef.current = true;
     setIsAdvancing(true);
+    // Snapshot the step at handler entry. Even if a stale closure of
+    // handleNext is somehow re-fired (HMR remount, React 18 strict-mode
+    // double invoke, lost guard ref), the functional updater below only
+    // advances when `s === startedFromStep`, so a re-fire is at worst a
+    // no-op — never a step skip. This is Layer 4 / belt-and-suspenders.
+    const startedFromStep = currentStep;
+    let didAdvance = false;
     try {
     const validateStep = async (step: number): Promise<boolean> => {
       // The original switch was index-based (case 1..6). After Chesterton
@@ -930,8 +975,17 @@ export function ModelWizardPage() {
           guidanceLevel: user?.guidanceLevel ?? null,
         });
       }
-      setCurrentStep(s => Math.min(s + 1, visibleSteps.length));
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const target = Math.min(startedFromStep + 1, visibleSteps.length);
+      if (target !== startedFromStep) {
+        advanceTargetRef.current = target;
+        // Identity-gated functional updater: only advance if React's
+        // committed step still matches the step this handler started
+        // from. A stale re-fire (closure captured an older step) is a
+        // no-op, so the guard cannot be defeated into skipping a step.
+        setCurrentStep(s => (s === startedFromStep ? target : s));
+        didAdvance = true;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } else {
       setTimeout(() => {
         const firstError = document.querySelector('[data-error="true"], .text-destructive, .text-red-500, [aria-invalid="true"]');
@@ -941,8 +995,18 @@ export function ModelWizardPage() {
       }, 100);
     }
     } finally {
-      advancingRef.current = false;
-      setIsAdvancing(false);
+      // If the step did NOT change (validation failed, already on the
+      // last step, or an exception bubbled up), the commit-watching
+      // effect above will never fire — release the guard here so the
+      // user can click Continue again. If the step DID change, leave
+      // the guard set so the effect releases it after React's commit
+      // phase, closing the window where a queued second click would
+      // otherwise re-enter handleNext with a stale ref.
+      if (!didAdvance) {
+        advanceTargetRef.current = null;
+        advancingRef.current = false;
+        setIsAdvancing(false);
+      }
     }
   };
 
