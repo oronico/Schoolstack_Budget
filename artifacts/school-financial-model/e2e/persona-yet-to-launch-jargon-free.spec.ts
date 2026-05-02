@@ -5,6 +5,10 @@ import {
   type Page,
   type ConsoleMessage,
 } from "./utils/test";
+import {
+  expectNoForbiddenTerms,
+  sweepPage,
+} from "./utils/jargon-free";
 
 // Task #304: a yet_to_launch + new_to_budgeting founder must NEVER see
 // actuals / prior-year / QuickBooks / Xero / variance / forecast-accuracy
@@ -16,6 +20,12 @@ import {
 // only mount once a saved scenario exists on the page (e.g. the actuals
 // editor on a CustomScenarioCard).
 //
+// Task #426 extends the same contract to the dashboard — a returning
+// founder lands there most often, and a new coach card or "what's new"
+// banner could quietly reintroduce forbidden language. The forbidden-term
+// list itself lives in `./utils/jargon-free.ts` so the dashboard sweep
+// and the wizard sweep can't drift apart.
+//
 // This spec also covers the persona modal contract: a brand-new user with
 // no persona seeded must see the FounderPersonaPrompt overlay on the
 // dashboard, the modal must NOT dismiss on a backdrop click in first-time
@@ -23,34 +33,6 @@ import {
 // comfort are picked.
 
 const TEST_PASSWORD = "PlaywrightTest12345!";
-
-// Forbidden terms — kept in sync with persona-yet-to-launch.test.tsx so the
-// browser sweep enforces the same product rule the unit test does. We
-// match "actuals" as a plural noun only (with word boundaries) — the
-// adjective "actual" (e.g. "actual lease numbers", "actual costs") is
-// plain English and is intentionally allowed. The forbidden form is the
-// accounting-noun "actuals" as imported from QuickBooks/Xero, which is
-// what the persona modal is shielding new founders from.
-const FORBIDDEN_PATTERNS: { re: RegExp; label: string }[] = [
-  { re: /\bactuals\b/i, label: "actuals" },
-  { re: /prior[\s-]?year/i, label: "prior year" },
-  { re: /quickbooks/i, label: "QuickBooks" },
-  { re: /\bxero\b/i, label: "Xero" },
-  { re: /\bvariance\b/i, label: "variance" },
-  { re: /forecast accuracy/i, label: "forecast accuracy" },
-];
-
-function expectNoForbiddenTerms(text: string, where: string): void {
-  for (const { re, label } of FORBIDDEN_PATTERNS) {
-    if (re.test(text)) {
-      const idx = text.search(re);
-      const window = text.slice(Math.max(0, idx - 60), idx + 80);
-      throw new Error(
-        `${where}: yet_to_launch founder unexpectedly saw "${label}". Context: …${window}…`,
-      );
-    }
-  }
-}
 
 function makeId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
@@ -428,15 +410,6 @@ function trackPageHealth(page: Page): { consoleErrors: string[]; dialogs: string
   return { consoleErrors, dialogs };
 }
 
-// Sweep the visible body text for forbidden terms. We use innerText (not
-// textContent) so we only catch *rendered* copy — hidden helper nodes that
-// happen to contain literal "actuals" strings (e.g. CSS-collapsed sections)
-// won't trigger false positives.
-async function sweepPage(page: Page, where: string): Promise<void> {
-  const text = await page.locator("body").innerText();
-  expectNoForbiddenTerms(text, where);
-}
-
 test("first-time founders see the persona modal and cannot bypass it without picking", async ({
   page,
   request,
@@ -618,4 +591,98 @@ test("yet_to_launch founder never sees actuals/QuickBooks/variance copy across t
     health.dialogs,
     `unexpected blocking dialogs:\n${health.dialogs.join("\n---\n")}`,
   ).toEqual([]);
+});
+
+// Task #426: the dashboard is the surface a returning yet_to_launch
+// founder lands on most often. The wizard sweep above proves the wizard,
+// scenarios page, and What-If drawer never reintroduce forbidden copy,
+// but the dashboard had no equivalent guarantee. A coach card, KPI
+// tile (FinancialSnapshot), DecisionLauncher card, ThingsHaveChangedBanner,
+// or "recommended next steps" block could quietly bring back actuals /
+// QuickBooks / variance / forecast-accuracy language and we wouldn't
+// notice. This spec seeds a yet_to_launch founder with at least one
+// model, opens /dashboard, waits for every async-loaded surface to
+// render, and sweeps the rendered text against the SAME forbidden-term
+// list the wizard sweep uses (imported from `./utils/jargon-free.ts`).
+test("yet_to_launch founder never sees actuals/QuickBooks/variance copy on the dashboard", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60_000);
+
+  const { token } = await registerUser(request, "dashboard-sweep");
+  await seedYetToLaunchPersona(request, token);
+  // Seed at least one model so the dashboard renders its "has models"
+  // branch — that's where DecisionLauncher, ThingsHaveChangedBanner,
+  // FinancialSnapshot, and the model card grid all mount. The empty
+  // state would skip most of those surfaces entirely and leave the
+  // sweep with very little to actually check.
+  const modelId = await createModel(request, token, buildYetToLaunchModel());
+
+  const health = trackPageHealth(page);
+  await primeAuthToken(page, token);
+
+  await page.goto("/dashboard");
+
+  // Persona is already seeded, so the FounderPersonaPrompt overlay must
+  // NOT render — if it did, the page-level innerText sweep would only
+  // see the modal's copy and false-pass on the dashboard underneath.
+  await expect(page.getByTestId("founder-persona-prompt")).toHaveCount(0);
+
+  // Wait for the dashboard's main heading and the model card grid to
+  // render so we know the list query has resolved before sweeping.
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(
+    page.getByRole("heading", { name: /Your Models/i }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByRole("heading", { name: /E2E Future Academy/i }),
+  ).toBeVisible({ timeout: 15_000 });
+
+  // Wait for FinancialSnapshot to finish loading — its KPI tiles only
+  // mount once `useGetModel` resolves. Without this wait, the sweep
+  // would race the "Loading your latest numbers..." spinner and miss
+  // any forbidden copy in the lender-language KPI labels.
+  await expect(
+    page.getByTestId("dashboard-financial-snapshot"),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByTestId("dashboard-kpi-operating-surplus"),
+  ).toBeVisible({ timeout: 15_000 });
+
+  // Now sweep the entire rendered dashboard. The util uses innerText so
+  // hidden helper nodes (e.g. CSS-collapsed sections) won't false-trigger.
+  await sweepPage(page, "Dashboard (lender language off)");
+
+  // Flip the lender-language toggle on. The KPI labels swap to their
+  // lender-style names (sourced from `LENDER_LABELS`) and that's a
+  // common place for jargon to slip in unnoticed — sweep again with
+  // lender labels active so the contract holds in both modes.
+  const lenderToggle = page.getByTestId("lender-language-toggle");
+  if ((await lenderToggle.count()) > 0) {
+    await lenderToggle.click();
+    // Give the swapped labels a tick to render before re-reading text.
+    await expect(
+      page.getByTestId("dashboard-kpi-operating-surplus"),
+    ).toBeVisible();
+    await sweepPage(page, "Dashboard (lender language on)");
+  }
+
+  // No browser console errors or blocking dialogs — same reasoning as
+  // the wizard sweep: a crash mid-render could let the sweep false-pass
+  // on a surface that never actually mounted.
+  expect(
+    health.consoleErrors,
+    `browser console errors:\n${health.consoleErrors.join("\n---\n")}`,
+  ).toEqual([]);
+  expect(
+    health.dialogs,
+    `unexpected blocking dialogs:\n${health.dialogs.join("\n---\n")}`,
+  ).toEqual([]);
+
+  // Silence "modelId created but unused beyond seeding" lint by
+  // referencing it in a no-op assertion.
+  expect(modelId).toBeGreaterThan(0);
 });
