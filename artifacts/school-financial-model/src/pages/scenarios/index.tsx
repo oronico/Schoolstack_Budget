@@ -746,6 +746,16 @@ export function CustomScenarioCard({
   // half-confirmed remove can't bleed across editor sessions.
   const [confirmRemoveExport, setConfirmRemoveExport] = useState(false);
   const [removingExport, setRemovingExport] = useState(false);
+  // Two-step confirmation for the destructive "Delete this saved scenario"
+  // affordance. A saved scenario can carry outcome status, retrospective
+  // notes, and a snapshot of actuals — none of which the existing toast
+  // flows know how to restore — so a single misclick on the close icon
+  // would silently destroy real founder work. Gating the delete behind an
+  // inline "Delete this saved scenario? · Yes, delete / Cancel" prompt
+  // matches the pattern used for "Remove uploaded export" elsewhere on
+  // this card. (Task #369)
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [removing, setRemoving] = useState(false);
   // One-line notice that surfaces when the founder removes the uploaded
   // export while the actuals editor is open. The "Pulled from your books"
   // callout disappears as soon as the upload is gone (correct), but any
@@ -1163,14 +1173,58 @@ export function CustomScenarioCard({
             )}
           </p>
         </div>
-        <button
-          onClick={() => onRemove(target)}
-          className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors flex-shrink-0"
-          aria-label={`Delete ${cs.name}`}
-          data-testid={`custom-scenario-delete-${idx}`}
-        >
-          <XCircle className="h-4 w-4" />
-        </button>
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="p-1 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors flex-shrink-0"
+            aria-label={`Delete ${cs.name}`}
+            data-testid={`custom-scenario-delete-${idx}`}
+          >
+            <XCircle className="h-4 w-4" />
+          </button>
+        ) : (
+          <div
+            className="flex items-center gap-1.5 flex-shrink-0"
+            data-testid={`custom-scenario-delete-confirm-${idx}`}
+          >
+            <span
+              className="text-[10px] text-rose-800 whitespace-nowrap"
+              data-testid={`custom-scenario-delete-confirm-prompt-${idx}`}
+            >
+              Delete this saved scenario?
+            </span>
+            <button
+              type="button"
+              onClick={async () => {
+                setRemoving(true);
+                try {
+                  await onRemove(target);
+                  // No need to reset confirmDelete — this card unmounts on
+                  // success. Only reset on failure so the prompt can be
+                  // dismissed cleanly.
+                } catch {
+                  setConfirmDelete(false);
+                } finally {
+                  setRemoving(false);
+                }
+              }}
+              disabled={removing}
+              className="text-[10px] font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60 rounded px-2 py-0.5 whitespace-nowrap"
+              data-testid={`custom-scenario-delete-confirm-yes-${idx}`}
+            >
+              {removing ? "Deleting…" : "Yes, delete"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              disabled={removing}
+              className="text-[10px] text-muted-foreground hover:text-foreground whitespace-nowrap"
+              data-testid={`custom-scenario-delete-cancel-${idx}`}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
       {narrativeExcerpt && (
         <p
