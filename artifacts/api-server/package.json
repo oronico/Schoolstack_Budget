@@ -28,6 +28,7 @@
     "test:account-accounting-uploads-route": "tsx ./tests/account-accounting-uploads-route.ts",
     "test:health": "tsx ./tests/health-endpoints.ts",
     "test:board-packet-cap-insight": "tsx ./tests/board-packet-cap-insight.ts",
+    "test:build-packet-data": "tsx ./src/lib/packets/__tests__/build-packet-data.test.ts",
     "qa:packet-cash": "tsx ./tests/board-packet-cash-runway.ts",
     "test:inline-rationale-rollup": "tsx ./tests/inline-rationale-rollup.ts",
     "generate:legislator-samples": "tsx ./src/scripts/generate-legislator-samples.ts",
