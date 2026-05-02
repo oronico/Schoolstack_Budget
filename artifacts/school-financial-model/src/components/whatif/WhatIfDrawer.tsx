@@ -908,6 +908,29 @@ export function WhatIfDrawer({
                           </td>
                         ))}
                       </tr>
+                      {impact.deltas.fitOutYear1 > 0 && (
+                        <tr className="border-t border-border/60 bg-slate-50/40" data-testid="whatif-fitout-row">
+                          <td className="px-2 py-1.5 font-sans text-muted-foreground">
+                            Site fit-out (one-time)
+                          </td>
+                          <td
+                            className="px-1.5 py-1.5 text-right"
+                            data-testid="whatif-fitout-Y1"
+                          >
+                            <span className="text-rose-700">
+                              {fmtMoneyDelta(-impact.deltas.fitOutYear1)}
+                            </span>
+                          </td>
+                          {[2, 3, 4, 5].map((y) => (
+                            <td
+                              key={y}
+                              className="px-1.5 py-1.5 text-right text-muted-foreground"
+                            >
+                              —
+                            </td>
+                          ))}
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

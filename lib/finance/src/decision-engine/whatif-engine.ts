@@ -26,6 +26,11 @@ export interface WhatIfImpact {
     dscr: number[];
     breakEvenYearShift: number | null;
     cashRunwayDeltaMonths: number;
+    // The one-time Year-1 fit-out outlay surfaced as a separate contributor
+    // so the planner's Impact panel can show it as its own line item rather
+    // than folding it into the Net Income delta. Always non-negative; 0 when
+    // no fit-out override is in play.
+    fitOutYear1: number;
   };
   detectedRentRowId: string | null;
   detectedBaseMonthlyRent: number | null;
@@ -328,6 +333,7 @@ export function computeWhatIfImpact(data: FullModelData, overrides: WhatIfOverri
         dscr: [0, 0, 0, 0, 0],
         breakEvenYearShift: 0,
         cashRunwayDeltaMonths: 0,
+        fitOutYear1: 0,
       },
       detectedRentRowId: detected.rowId,
       detectedBaseMonthlyRent: detected.monthlyRent,
@@ -351,6 +357,7 @@ export function computeWhatIfImpact(data: FullModelData, overrides: WhatIfOverri
       ? adjusted.breakEvenYear - base.breakEvenYear
       : null;
   const cashRunwayDeltaMonths = adjusted.cashRunwayMonths - base.cashRunwayMonths;
+  const fitOutYear1 = Math.max(0, overrides.oneTimeFitOut ?? 0);
   return {
     base,
     adjusted,
@@ -361,6 +368,7 @@ export function computeWhatIfImpact(data: FullModelData, overrides: WhatIfOverri
       dscr: dscrDelta,
       breakEvenYearShift,
       cashRunwayDeltaMonths,
+      fitOutYear1,
     },
     detectedRentRowId: detected.rowId,
     detectedBaseMonthlyRent: detected.monthlyRent,
