@@ -83,6 +83,51 @@ export function ChestertonRecruitingStep() {
     });
   }, [conversionDivisor, totalProspects, year1Need]);
 
+  // Live counts for the Priestly Outreach card: total contacts entered and the
+  // number of distinct (non-empty) team members covering them, so founders can
+  // see at a glance whether outreach is concentrated on one person or spread.
+  const priestRows = useWatch({ control, name: "chesterton.priestlyOutreach" }) as
+    | Array<{ name?: string; affiliation?: string; teamMember?: string }>
+    | undefined;
+  const priestContactCount = (priestRows || []).filter(
+    (r) => (r?.name || "").trim() !== "" || (r?.affiliation || "").trim() !== "",
+  ).length;
+  const priestTeamMemberCount = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of priestRows || []) {
+      const tm = (r?.teamMember || "").trim();
+      if (tm !== "") set.add(tm.toLowerCase());
+    }
+    return set.size;
+  }, [priestRows]);
+
+  // Live coverage for the Prospective Facilities card: total seats across all
+  // future facilities vs the final-year (Year 5) enrollment in the phase plan,
+  // which is the school's long-term enrollment target.
+  const facilityRows = useWatch({ control, name: "chesterton.prospectiveFacilities" }) as
+    | Array<{ name?: string; capacity?: number }>
+    | undefined;
+  const totalFacilityCapacity = useMemo(
+    () => (facilityRows || []).reduce((s, r) => s + (Number(r?.capacity) || 0), 0),
+    [facilityRows],
+  );
+  const facilityCount = (facilityRows || []).filter(
+    (r) => (r?.name || "").trim() !== "" || (Number(r?.capacity) || 0) > 0,
+  ).length;
+  const longTermEnrollment = useMemo(
+    () => totalEnrollmentForYear(phaseEnrollment, "year5"),
+    [phaseEnrollment],
+  );
+  const facilityCoveragePct = longTermEnrollment > 0
+    ? (totalFacilityCapacity / longTermEnrollment) * 100
+    : 0;
+  const facilityBarPct = Math.max(0, Math.min(100, facilityCoveragePct));
+  const facilityColor = facilityCoveragePct >= 100
+    ? "bg-emerald-500"
+    : facilityCoveragePct >= 75
+      ? "bg-primary"
+      : "bg-amber-500";
+
   return (
     <div className="space-y-10" data-testid="chesterton-recruiting-step">
       <div>
@@ -278,6 +323,32 @@ export function ChestertonRecruitingStep() {
             Add contact
           </button>
         </div>
+        {priestContactCount > 0 && (
+          <div
+            className="mb-3 rounded-2xl border border-border bg-white p-4"
+            data-testid="chesterton-priestly-summary"
+          >
+            <div className="text-sm text-muted-foreground">
+              <strong
+                className="text-foreground text-base"
+                data-testid="chesterton-priestly-contact-count"
+              >
+                {priestContactCount.toLocaleString()}
+              </strong>{" "}
+              {priestContactCount === 1 ? "parish contacted" : "parishes contacted"} across{" "}
+              <strong
+                className="text-foreground text-base"
+                data-testid="chesterton-priestly-team-count"
+              >
+                {priestTeamMemberCount.toLocaleString()}
+              </strong>{" "}
+              {priestTeamMemberCount === 1 ? "team member" : "team members"}
+              {priestTeamMemberCount === 0 && (
+                <span className="text-amber-700"> — assign a team member to each contact</span>
+              )}
+            </div>
+          </div>
+        )}
         <div className="space-y-2">
           {priestFields.map((field, index) => (
             <div key={field.id} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center rounded-xl border border-border bg-white p-3">
@@ -306,6 +377,77 @@ export function ChestertonRecruitingStep() {
             Add facility
           </button>
         </div>
+        {(facilityCount > 0 || totalFacilityCapacity > 0) && (
+          <div
+            className="mb-3 rounded-2xl border border-border bg-white p-4"
+            data-testid="chesterton-facilities-summary"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Total capacity
+                </div>
+                <div
+                  className="text-xl font-bold text-foreground mt-1"
+                  data-testid="chesterton-facilities-total-capacity"
+                >
+                  {totalFacilityCapacity.toLocaleString()} seats
+                </div>
+                <div
+                  className="text-xs text-muted-foreground"
+                  data-testid="chesterton-facilities-count-label"
+                >
+                  across {facilityCount.toLocaleString()}{" "}
+                  {facilityCount === 1 ? "future facility" : "future facilities"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Long-term enrollment (Year 5)
+                </div>
+                <div
+                  className="text-xl font-bold text-foreground mt-1"
+                  data-testid="chesterton-facilities-long-term-enrollment"
+                >
+                  {longTermEnrollment.toLocaleString()} students
+                </div>
+              </div>
+            </div>
+            {longTermEnrollment > 0 && (
+              <div className="mt-3">
+                <div className="flex items-baseline justify-between text-sm">
+                  <span className="text-muted-foreground">Capacity vs long-term enrollment</span>
+                  <span className="text-muted-foreground">
+                    <strong
+                      className="text-foreground"
+                      data-testid="chesterton-facilities-coverage-pct"
+                    >
+                      {facilityCoveragePct.toFixed(0)}%
+                    </strong>
+                  </span>
+                </div>
+                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border" aria-hidden>
+                  <div
+                    className={`h-full ${facilityColor} transition-all`}
+                    style={{ width: `${facilityBarPct}%` }}
+                  />
+                </div>
+                {totalFacilityCapacity < longTermEnrollment && (
+                  <div
+                    className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+                    data-testid="chesterton-facilities-need-more-callout"
+                  >
+                    Long-term enrollment exceeds total facility capacity by{" "}
+                    <strong>
+                      {(longTermEnrollment - totalFacilityCapacity).toLocaleString()}
+                    </strong>{" "}
+                    students — add or expand a future facility to seat the full Year 5 plan.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         <div className="space-y-2">
           {facilityFields.map((field, index) => (
             <div key={field.id} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center rounded-xl border border-border bg-white p-3">

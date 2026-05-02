@@ -385,6 +385,171 @@ describe("Chesterton wizard step summaries", () => {
     expect(screen.getByTestId("chesterton-recruiting-projected-worst")).toHaveTextContent("18");
   });
 
+  // Task #336: priestly-outreach card surfaces a running count of contacts
+  // and the number of distinct team members covering them.
+  it("recruiting step shows priestly-outreach contact count and distinct team members", () => {
+    const seed = buildDefaultChestertonData();
+    render(
+      <HostForm
+        defaults={{
+          chesterton: {
+            ...seed,
+            priestlyOutreach: [
+              { id: "p1", name: "Fr. Smith", affiliation: "St. Mary", teamMember: "Alice" },
+              { id: "p2", name: "Fr. Jones", affiliation: "St. Joseph", teamMember: "alice" },
+              { id: "p3", name: "Fr. Brown", affiliation: "Holy Family", teamMember: "Bob" },
+              { id: "p4", name: "Fr. Green", affiliation: "St. Anne", teamMember: "" },
+            ],
+          },
+        }}
+      >
+        <ChestertonRecruitingStep />
+      </HostForm>,
+    );
+
+    // 4 contacts entered; team members = {alice, bob} (case-insensitive distinct) = 2.
+    expect(screen.getByTestId("chesterton-priestly-contact-count")).toHaveTextContent("4");
+    expect(screen.getByTestId("chesterton-priestly-team-count")).toHaveTextContent("2");
+    const summary = screen.getByTestId("chesterton-priestly-summary");
+    expect(summary).toHaveTextContent(/parishes contacted/i);
+    expect(summary).toHaveTextContent(/team members/i);
+  });
+
+  it("recruiting step priestly card updates live as the founder fills in a contact", async () => {
+    const user = userEvent.setup();
+    const seed = buildDefaultChestertonData();
+    render(
+      <HostForm
+        defaults={{
+          chesterton: {
+            ...seed,
+            priestlyOutreach: [
+              { id: "p1", name: "Fr. Smith", affiliation: "St. Mary", teamMember: "" },
+            ],
+          },
+        }}
+      >
+        <ChestertonRecruitingStep />
+      </HostForm>,
+    );
+
+    expect(screen.getByTestId("chesterton-priestly-contact-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("chesterton-priestly-team-count")).toHaveTextContent("0");
+    expect(screen.getByTestId("chesterton-priestly-summary")).toHaveTextContent(
+      /assign a team member/i,
+    );
+
+    const teamInput = screen.getAllByLabelText("Team member assigned", {
+      selector: "input",
+    })[0] as HTMLInputElement;
+    await user.clear(teamInput);
+    await user.type(teamInput, "Alice");
+
+    expect(screen.getByTestId("chesterton-priestly-team-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("chesterton-priestly-summary")).not.toHaveTextContent(
+      /assign a team member/i,
+    );
+  });
+
+  // Task #336: prospective-facilities card surfaces total capacity vs the
+  // long-term (Year 5) enrollment goal so founders can see if the planned
+  // facility footprint matches the long-term plan.
+  it("recruiting step shows facilities total capacity vs long-term Year-5 enrollment", () => {
+    const seed = buildDefaultChestertonData();
+    const phase = (seed.phaseEnrollment ?? []).map((row, i) => ({
+      ...row,
+      year0: 0,
+      year1: 0,
+      year2: 0,
+      year3: 0,
+      year4: 0,
+      year5: i === 0 ? 200 : 0,
+    }));
+
+    render(
+      <HostForm
+        defaults={{
+          chesterton: {
+            ...seed,
+            phaseEnrollment: phase,
+            prospectiveFacilities: [
+              { id: "f1", name: "Phase 1 building", capacity: 80, location: "Main" },
+              { id: "f2", name: "Phase 2 wing", capacity: 60, location: "Annex" },
+            ],
+          },
+        }}
+      >
+        <ChestertonRecruitingStep />
+      </HostForm>,
+    );
+
+    expect(screen.getByTestId("chesterton-facilities-total-capacity")).toHaveTextContent(
+      "140",
+    );
+    expect(screen.getByTestId("chesterton-facilities-count-label")).toHaveTextContent(
+      "across 2 future facilities",
+    );
+    expect(
+      screen.getByTestId("chesterton-facilities-long-term-enrollment"),
+    ).toHaveTextContent("200");
+    // 140 / 200 = 70%; capacity falls short, so the callout appears asking for 60 more.
+    expect(screen.getByTestId("chesterton-facilities-coverage-pct")).toHaveTextContent(
+      "70%",
+    );
+    expect(screen.getByTestId("chesterton-facilities-need-more-callout")).toHaveTextContent(
+      "60",
+    );
+  });
+
+  it("recruiting step facilities card updates live as the founder edits capacity", async () => {
+    const user = userEvent.setup();
+    const seed = buildDefaultChestertonData();
+    const phase = (seed.phaseEnrollment ?? []).map((row, i) => ({
+      ...row,
+      year0: 0,
+      year1: 0,
+      year2: 0,
+      year3: 0,
+      year4: 0,
+      year5: i === 0 ? 100 : 0,
+    }));
+
+    render(
+      <HostForm
+        defaults={{
+          chesterton: {
+            ...seed,
+            phaseEnrollment: phase,
+            prospectiveFacilities: [
+              { id: "f1", name: "Phase 1 building", capacity: 0, location: "Main" },
+            ],
+          },
+        }}
+      >
+        <ChestertonRecruitingStep />
+      </HostForm>,
+    );
+
+    expect(screen.getByTestId("chesterton-facilities-total-capacity")).toHaveTextContent(
+      "0 seats",
+    );
+
+    const capacityInput = screen.getAllByLabelText("Capacity", {
+      selector: "input",
+    })[0] as HTMLInputElement;
+    await user.clear(capacityInput);
+    await user.type(capacityInput, "120");
+
+    // 120 capacity vs 100 long-term enrollment → 120%, callout disappears.
+    expect(screen.getByTestId("chesterton-facilities-total-capacity")).toHaveTextContent(
+      "120",
+    );
+    expect(screen.getByTestId("chesterton-facilities-coverage-pct")).toHaveTextContent(
+      "120%",
+    );
+    expect(screen.queryByTestId("chesterton-facilities-need-more-callout")).toBeNull();
+  });
+
   it("recruiting step hides the summary panel when Year-1 enrollment is unset", () => {
     const seed = buildDefaultChestertonData();
     const phase = (seed.phaseEnrollment ?? []).map((row) => ({
