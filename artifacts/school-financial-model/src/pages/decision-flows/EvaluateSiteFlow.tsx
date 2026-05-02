@@ -79,12 +79,23 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
     const persistedOverrides = decisionToPersistedOverrides(data, { type: "evaluate_site", inputs });
     const existing = ((data as Record<string, unknown>).customScenarios as CustomScenario[] | undefined) ?? [];
     const finalScenarioName = scenarioName.trim() || "Evaluate site";
+
+    // Capture the apply-time field-level diff BEFORE we mutate `data` so the
+    // "before" values still reflect the pre-apply model. Persisted on the
+    // entry below so the lender / board PDF "Decision history" section can
+    // show reviewers exactly which fields the decision moved (Task #375).
+    const appliedFieldChanges =
+      action === "apply"
+        ? summarizeDecisionChanges(data, { type: "evaluate_site", inputs })
+        : undefined;
+
     const entry: CustomScenario = {
       name: finalScenarioName,
       createdAt: new Date().toISOString(),
       overrides: persistedOverrides,
       decisionType: "evaluate_site",
       narrative: narrative.trim(),
+      ...(appliedFieldChanges ? { appliedFieldChanges } : {}),
     };
 
     // Snapshot data before any mutation so the Undo button on the apply
@@ -113,8 +124,11 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
     setDone(true);
 
     if (action === "apply") {
-      const changes = summarizeDecisionChanges(data, { type: "evaluate_site", inputs });
-      setApplyResult({ changes, snapshot: snapshotBeforeApply, appliedScenarioName: finalScenarioName });
+      setApplyResult({
+        changes: appliedFieldChanges ?? [],
+        snapshot: snapshotBeforeApply,
+        appliedScenarioName: finalScenarioName,
+      });
     } else if (action === "later") {
       setTimeout(() => setLocation(`/model/${modelId}/scenarios`), 800);
     } else if (action === "planner") {

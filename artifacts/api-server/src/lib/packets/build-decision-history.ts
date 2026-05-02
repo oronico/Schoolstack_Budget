@@ -6,6 +6,7 @@ import {
   coercePersistedDecisionOverrides,
   isDecisionOutcomeStatus,
   isDecisionType,
+  type DecisionFieldChange,
   type DecisionOutcomeStatus,
   type DecisionType as DecisionHistoryType,
 } from "@workspace/finance";
@@ -44,6 +45,13 @@ export interface DecisionHistoryItem {
   // it) or is still pending apply.
   appliedNote?: string;
   isPendingApply?: boolean;
+  // Snapshot of the field-level before/after diff captured at apply time by
+  // `summarizeDecisionChanges` and persisted on the scenario (Task #375). The
+  // lender / board PDF "Decision history" section renders 3–6 of these so
+  // reviewers can see exactly which fields the decision moved. Older saved
+  // scenarios pre-this feature simply have an empty array and the renderer
+  // degrades gracefully (skips the diff block).
+  appliedFieldChanges: DecisionFieldChange[];
 }
 
 interface RawScenario {
@@ -54,7 +62,27 @@ interface RawScenario {
   retrospective?: unknown;
   outcomeUpdatedAt?: unknown;
   appliedToModelAt?: unknown;
+  appliedFieldChanges?: unknown;
   overrides?: Record<string, unknown> | null;
+}
+
+// Defensively coerce a persisted `appliedFieldChanges` value into the typed
+// shape. We only accept entries that look exactly like a DecisionFieldChange
+// (label/before/after strings + a known `kind`); anything malformed is
+// dropped silently so a hand-edited scenario can never crash the PDF renderer.
+function coerceAppliedFieldChanges(raw: unknown): DecisionFieldChange[] {
+  if (!Array.isArray(raw)) return [];
+  const out: DecisionFieldChange[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const e = entry as Record<string, unknown>;
+    if (typeof e.label !== "string" || !e.label.trim()) continue;
+    if (typeof e.before !== "string") continue;
+    if (typeof e.after !== "string") continue;
+    if (e.kind !== "added" && e.kind !== "modified") continue;
+    out.push({ label: e.label, before: e.before, after: e.after, kind: e.kind });
+  }
+  return out;
 }
 
 function asString(v: unknown): string | undefined {
@@ -113,6 +141,7 @@ export function buildDecisionHistory(modelData: ModelData): DecisionHistoryItem[
       createdAt: asString(entry.createdAt),
       appliedNote,
       isPendingApply,
+      appliedFieldChanges: coerceAppliedFieldChanges(entry.appliedFieldChanges),
     });
   }
 

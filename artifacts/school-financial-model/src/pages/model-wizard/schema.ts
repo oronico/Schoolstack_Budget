@@ -651,6 +651,24 @@ export const customScenarioSchema = z.object({
   // Set once the founder folds a Pursued scenario back into their base model so
   // we can hide the "Apply to model" nudge and avoid re-applying it twice.
   appliedToModelAt: z.string().optional(),
+  // Snapshot of the field-level before/after diff captured AT APPLY TIME (the
+  // same list `summarizeDecisionChanges` returns and the ApplyConfirmation
+  // modal renders). Persisted here because once a decision is applied to the
+  // base model, re-running `summarizeDecisionChanges` server-side compares
+  // the post-apply state against itself and yields an empty diff. The lender
+  // / board PDF "Decision history" section reads this back to show reviewers
+  // exactly which fields the decision moved. Older scenarios saved before
+  // this field existed simply omit it and the PDF degrades gracefully.
+  appliedFieldChanges: z
+    .array(
+      z.object({
+        label: z.string(),
+        before: z.string(),
+        after: z.string(),
+        kind: z.enum(["added", "modified"]),
+      }),
+    )
+    .optional(),
   // Optional realized-numbers snapshot — see customScenarioActualsSchema.
   // Surfaced in the saved scenario card once a decision is marked Pursued so
   // founders can record what actually happened (signed rent, realized

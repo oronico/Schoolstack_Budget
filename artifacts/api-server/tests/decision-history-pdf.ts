@@ -161,6 +161,23 @@ function mixedScenarios() {
         addProgramEnrollment: [10, 20, 30, 30, 30],
         addProgramAddedFte: 2.5,
       },
+      // Snapshot of the apply-time diff captured by `summarizeDecisionChanges`
+      // and persisted on the scenario (Task #375). The PDF should render these
+      // lines under the "Modeled change:" subhead.
+      appliedFieldChanges: [
+        {
+          label: 'Revenue row "Middle School"',
+          before: "Not in model",
+          after: "Y1:10 / Y2:20 / Y3:30 / Y4:30 / Y5:30 students × $14,000/yr tuition",
+          kind: "added",
+        },
+        {
+          label: 'Staffing row "Middle School staff"',
+          before: "Not in model",
+          after: "2.5 FTE × $55,000/yr (instructional, full-time)",
+          kind: "added",
+        },
+      ],
     },
     {
       name: "Hire Spanish immersion lead",
@@ -194,6 +211,30 @@ function mixedScenarios() {
         enrollmentDelta: [-5, -5, 0, 0, 0],
         tuitionDeltaPerStudent: -250,
       },
+    },
+  ];
+}
+
+// Eight changes — exercises the 6-line cap + "+N more changes" overflow tail.
+function manyDiffScenarios() {
+  return [
+    {
+      name: "Big enrollment refactor",
+      outcomeStatus: "pursued",
+      decisionType: "change_enrollment",
+      appliedToModelAt: "2025-05-01T12:00:00Z",
+      outcomeUpdatedAt: "2025-05-01T12:00:00Z",
+      overrides: {},
+      appliedFieldChanges: [
+        { label: "Enrollment Year 1", before: "40 students", after: "45 students (+5)", kind: "modified" },
+        { label: "Enrollment Year 2", before: "55 students", after: "60 students (+5)", kind: "modified" },
+        { label: "Enrollment Year 3", before: "70 students", after: "78 students (+8)", kind: "modified" },
+        { label: "Enrollment Year 4", before: "80 students", after: "90 students (+10)", kind: "modified" },
+        { label: "Enrollment Year 5", before: "90 students", after: "100 students (+10)", kind: "modified" },
+        { label: "Retention rate", before: "85%", after: "92%", kind: "modified" },
+        { label: "Tuition per student adjustment", before: "Base tuition (no shift)", after: "+$250/yr per student", kind: "modified" },
+        { label: "Eighth change (overflow)", before: "x", after: "y", kind: "modified" },
+      ],
     },
   ];
 }
@@ -278,6 +319,20 @@ async function testLenderPopulated() {
   // applied item legitimately uses APPLIED, but we can confirm no spurious applied
   // label appears for the declined or on-hold rows by checking their note text:
   notContains("lender: declined doesn't get applied note", text, "Folded into the base model on Jan");
+
+  // Field-level diff (Task #375): the persisted appliedFieldChanges from the
+  // applied "Add Middle School wing" decision should render under a "Modeled
+  // change:" subhead with each change as a "Label: before \u2192 after" line.
+  contains("lender: modeled change subhead", text, "Modeled change:");
+  contains("lender: diff revenue label", text, 'Revenue row "Middle School"');
+  contains("lender: diff before token", text, "Not in model");
+  contains(
+    "lender: diff after token (revenue)",
+    text,
+    "Y1:10 / Y2:20 / Y3:30 / Y4:30 / Y5:30 students",
+  );
+  contains("lender: diff staffing label", text, 'Staffing row "Middle School staff"');
+  contains("lender: diff arrow separator", text, " -> ");
 }
 
 // ---------------------------------------------------------------------------
@@ -339,6 +394,54 @@ async function testBoardPopulated() {
 
   // Narrative count
   contains("board: narrative count phrase", text, "4 tracked decisions");
+
+  // Field-level diff (Task #375)
+  contains("board: modeled change subhead", text, "Modeled change:");
+  contains("board: diff revenue label", text, 'Revenue row "Middle School"');
+  contains("board: diff staffing label", text, 'Staffing row "Middle School staff"');
+  contains("board: diff arrow separator", text, " -> ");
+}
+
+// ---------------------------------------------------------------------------
+// Diff overflow / graceful degradation (Task #375)
+// ---------------------------------------------------------------------------
+async function testDiffOverflowAndGracefulDegradation() {
+  console.log("\n— Lender + Board PDF: diff overflow + graceful degradation —");
+
+  // 8 changes → first 6 render, "+2 more changes" tail follows.
+  const lenderText = await makeLenderPDF(manyDiffScenarios());
+  contains("lender (overflow): 1st change renders", lenderText, "Enrollment Year 1");
+  contains("lender (overflow): 6th change renders", lenderText, "Retention rate");
+  notContains("lender (overflow): 7th change suppressed", lenderText, "Tuition per student adjustment");
+  notContains("lender (overflow): 8th change suppressed", lenderText, "Eighth change");
+  contains("lender (overflow): overflow tail", lenderText, "+2 more changes");
+
+  const boardText = await makeBoardPDF(manyDiffScenarios());
+  contains("board (overflow): 1st change renders", boardText, "Enrollment Year 1");
+  contains("board (overflow): 6th change renders", boardText, "Retention rate");
+  notContains("board (overflow): 7th change suppressed", boardText, "Tuition per student adjustment");
+  contains("board (overflow): overflow tail", boardText, "+2 more changes");
+
+  // Graceful degradation: a scenario without appliedFieldChanges (older saved
+  // scenarios pre-this feature) must NOT render the "Modeled change:" subhead
+  // and the rest of the card should still render correctly.
+  const legacyOnly = [
+    {
+      name: "Legacy applied decision",
+      outcomeStatus: "pursued",
+      decisionType: "add_program",
+      appliedToModelAt: "2025-01-15T12:00:00Z",
+      outcomeUpdatedAt: "2025-01-15T12:00:00Z",
+      overrides: { addProgramName: "Pre-K", addProgramTuition: 9000 },
+      // no appliedFieldChanges
+    },
+  ];
+  const legacyLender = await makeLenderPDF(legacyOnly);
+  contains("legacy: name still renders", legacyLender, "Legacy applied decision");
+  contains("legacy: APPLIED stamp still renders", legacyLender, "[ APPLIED ]");
+  contains("legacy: bullet still renders", legacyLender, "Program: Pre-K");
+  notContains("legacy: NO modeled change subhead", legacyLender, "Modeled change:");
+  notContains("legacy: NO diff arrow separator", legacyLender, " -> ");
 }
 
 // ---------------------------------------------------------------------------
@@ -398,6 +501,7 @@ async function main() {
   await testLenderEmpty();
   await testBoardPopulated();
   await testBoardEmpty();
+  await testDiffOverflowAndGracefulDegradation();
   await testManyDecisionsPageBreak();
 
   console.log(`\nResults: ${passed} passed, ${failed} failed`);

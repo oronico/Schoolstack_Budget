@@ -334,7 +334,10 @@ export function schoolTypeDisplay(type?: string, otherLabel?: string): string {
  * in one place (Task #210).
  */
 export function renderDecisionHistoryItem(doc: PDFDoc, item: DecisionHistoryItem) {
-  ensureSpace(doc, 70);
+  // Reserve enough room for the card header + accent bar + (potential) diff
+  // block. Without this hint, pdfkit can split the accent bar from the body
+  // when the diff has 4+ lines. ~110pt fits header + 6 diff lines + retrospective.
+  ensureSpace(doc, 110);
 
   const accent = item.outcomeStatus === "pursued"
     ? BRAND.teal
@@ -366,6 +369,36 @@ export function renderDecisionHistoryItem(doc: PDFDoc, item: DecisionHistoryItem
   if (item.bullets.length > 0) {
     doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray);
     doc.text(item.bullets.map((b) => `\u2022 ${b}`).join("    "), indent, doc.y, { width: w });
+  }
+
+  // Field-level before/after diff (Task #375). Captured at apply time and
+  // persisted on the scenario, so reviewers see exactly which model fields
+  // each decision moved (e.g. "Facility rent (monthly): $9,500/mo →
+  // $8,500/mo"). Cap at 6 lines and surface a "+N more" tail when there are
+  // additional changes; older saved scenarios with no captured diff fall
+  // through this block silently and the rest of the card renders unchanged.
+  if (item.appliedFieldChanges.length > 0) {
+    const MAX_LINES = 6;
+    const visible = item.appliedFieldChanges.slice(0, MAX_LINES);
+    const overflow = item.appliedFieldChanges.length - visible.length;
+
+    doc.moveDown(0.2);
+    doc.font("Helvetica-Bold").fontSize(8).fillColor(BRAND.navy);
+    doc.text("Modeled change:", indent, doc.y, { width: w });
+
+    doc.font("Helvetica").fontSize(8).fillColor(BRAND.darkGray);
+    for (const change of visible) {
+      // ASCII "->" instead of U+2192 — pdfkit's standard Helvetica font ships
+      // with WinAnsi encoding, which doesn't include the right-arrow glyph
+      // (it would silently drop). "->" is unambiguous in a "before -> after"
+      // context and renders identically across all PDF viewers.
+      const line = `\u2022 ${change.label}: ${change.before} -> ${change.after}`;
+      doc.text(line, indent, doc.y, { width: w });
+    }
+    if (overflow > 0) {
+      doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.gray);
+      doc.text(`+${overflow} more change${overflow === 1 ? "" : "s"}`, indent, doc.y, { width: w });
+    }
   }
 
   if (item.retrospective) {

@@ -76,12 +76,23 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
     const persistedOverrides = decisionToPersistedOverrides(data, { type: "change_enrollment", inputs });
     const existing = ((data as Record<string, unknown>).customScenarios as CustomScenario[] | undefined) ?? [];
     const finalScenarioName = scenarioName.trim() || "Enrollment change";
+
+    // Capture the apply-time field-level diff BEFORE we mutate `data` so the
+    // "before" values still reflect the pre-apply model. Persisted on the
+    // entry below so the lender / board PDF "Decision history" section can
+    // show reviewers exactly which fields the decision moved (Task #375).
+    const appliedFieldChanges =
+      action === "apply"
+        ? summarizeDecisionChanges(data, { type: "change_enrollment", inputs })
+        : undefined;
+
     const entry: CustomScenario = {
       name: finalScenarioName,
       createdAt: new Date().toISOString(),
       overrides: persistedOverrides,
       decisionType: "change_enrollment",
       narrative: narrative.trim(),
+      ...(appliedFieldChanges ? { appliedFieldChanges } : {}),
     };
 
     // Snapshot the pre-mutation data so the apply confirmation modal's Undo
@@ -109,8 +120,11 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
     setDone(true);
 
     if (action === "apply") {
-      const changes = summarizeDecisionChanges(data, { type: "change_enrollment", inputs });
-      setApplyResult({ changes, snapshot: snapshotBeforeApply, appliedScenarioName: finalScenarioName });
+      setApplyResult({
+        changes: appliedFieldChanges ?? [],
+        snapshot: snapshotBeforeApply,
+        appliedScenarioName: finalScenarioName,
+      });
     } else if (action === "later") {
       setTimeout(() => setLocation(`/model/${modelId}/scenarios`), 800);
     } else if (action === "planner") {

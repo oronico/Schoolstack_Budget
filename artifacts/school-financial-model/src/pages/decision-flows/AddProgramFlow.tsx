@@ -74,12 +74,23 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
     const persistedOverrides = decisionToPersistedOverrides(data, { type: "add_program", inputs });
     const existing = ((data as Record<string, unknown>).customScenarios as CustomScenario[] | undefined) ?? [];
     const finalScenarioName = scenarioName.trim() || `Add ${inputs.name || "program"}`;
+
+    // Capture the apply-time field-level diff BEFORE we mutate `data` so the
+    // "before" values still reflect the pre-apply model. Persisted on the
+    // entry below so the lender / board PDF "Decision history" section can
+    // show reviewers exactly which fields the decision moved (Task #375).
+    const appliedFieldChanges =
+      action === "apply"
+        ? summarizeDecisionChanges(data, { type: "add_program", inputs })
+        : undefined;
+
     const entry: CustomScenario = {
       name: finalScenarioName,
       createdAt: new Date().toISOString(),
       overrides: persistedOverrides,
       decisionType: "add_program",
       narrative: narrative.trim(),
+      ...(appliedFieldChanges ? { appliedFieldChanges } : {}),
     };
 
     // Snapshot the pre-mutation data so Undo can restore it intact (including
@@ -110,8 +121,11 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
       // Surface a before/after confirmation modal instead of auto-redirecting.
       // The user navigates explicitly via "View updated model" or undoes the
       // change via "Undo apply", which restores `snapshotBeforeApply`.
-      const changes = summarizeDecisionChanges(data, { type: "add_program", inputs });
-      setApplyResult({ changes, snapshot: snapshotBeforeApply, appliedScenarioName: finalScenarioName });
+      setApplyResult({
+        changes: appliedFieldChanges ?? [],
+        snapshot: snapshotBeforeApply,
+        appliedScenarioName: finalScenarioName,
+      });
     } else if (action === "later") {
       setTimeout(() => setLocation(`/model/${modelId}/scenarios`), 800);
     }

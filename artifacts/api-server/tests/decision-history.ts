@@ -348,12 +348,93 @@ async function testPacketIntegration() {
   check("board (empty): empty-state copy", !!boardEmptySec && boardEmptySec.narrative.includes("No decisions have been tracked"));
 }
 
+// ---------------------------------------------------------------------------
+// buildDecisionHistory: appliedFieldChanges (Task #375)
+// ---------------------------------------------------------------------------
+function testAppliedFieldChanges() {
+  console.log("\n— buildDecisionHistory: appliedFieldChanges —");
+
+  const md = makeModel([
+    {
+      // Captured at apply time and persisted on the entry. Should be surfaced
+      // verbatim on the DecisionHistoryItem so the PDF renderer can show it.
+      name: "Site with diff",
+      outcomeStatus: "pursued",
+      decisionType: "evaluate_site",
+      appliedToModelAt: "2025-03-15T12:00:00Z",
+      overrides: { monthlyRent: 8500 },
+      appliedFieldChanges: [
+        { label: "Facility rent (monthly)", before: "$9,500/mo", after: "$8,500/mo", kind: "modified" },
+        { label: 'Expense row "Site fit-out (one-time)"', before: "Not in model", after: "$75,000 in Year 1", kind: "added" },
+      ],
+    },
+    {
+      // Older saved scenario — no appliedFieldChanges field at all. Should
+      // degrade gracefully to an empty array.
+      name: "Legacy scenario",
+      outcomeStatus: "pursued",
+      decisionType: "add_program",
+      appliedToModelAt: "2025-02-15T12:00:00Z",
+      overrides: { addProgramName: "Pre-K" },
+    },
+    {
+      // Hand-edited / corrupt entries should be filtered out individually
+      // rather than crashing the whole list.
+      name: "Mixed valid/invalid",
+      outcomeStatus: "on_hold",
+      decisionType: "change_enrollment",
+      overrides: {},
+      appliedFieldChanges: [
+        { label: "Retention rate", before: "85%", after: "92%", kind: "modified" },
+        { label: "", before: "x", after: "y", kind: "modified" }, // empty label → dropped
+        { label: "Bad kind", before: "x", after: "y", kind: "deleted" }, // unknown kind → dropped
+        "not an object", // non-object → dropped
+        { label: "Tuition", before: 100, after: "$120", kind: "modified" }, // non-string before → dropped
+      ],
+    },
+    {
+      // Wrong shape entirely (string instead of array) — coerce to [].
+      name: "Garbage shape",
+      outcomeStatus: "declined",
+      decisionType: "change_enrollment",
+      overrides: {},
+      appliedFieldChanges: "oops not an array",
+    },
+  ]);
+
+  const items = buildDecisionHistory(md);
+  const byName = (n: string): DecisionHistoryItem => items.find((i) => i.name === n)!;
+
+  const withDiff = byName("Site with diff");
+  eq("with-diff: count", withDiff.appliedFieldChanges.length, 2);
+  eq("with-diff: first label", withDiff.appliedFieldChanges[0].label, "Facility rent (monthly)");
+  eq("with-diff: first before", withDiff.appliedFieldChanges[0].before, "$9,500/mo");
+  eq("with-diff: first after", withDiff.appliedFieldChanges[0].after, "$8,500/mo");
+  eq("with-diff: first kind", withDiff.appliedFieldChanges[0].kind, "modified");
+  eq("with-diff: second kind (added)", withDiff.appliedFieldChanges[1].kind, "added");
+
+  const legacy = byName("Legacy scenario");
+  check(
+    "legacy: appliedFieldChanges is array",
+    Array.isArray(legacy.appliedFieldChanges),
+  );
+  eq("legacy: appliedFieldChanges empty", legacy.appliedFieldChanges.length, 0);
+
+  const mixed = byName("Mixed valid/invalid");
+  eq("mixed: only the valid entry survives coercion", mixed.appliedFieldChanges.length, 1);
+  eq("mixed: surviving label", mixed.appliedFieldChanges[0].label, "Retention rate");
+
+  const garbage = byName("Garbage shape");
+  eq("garbage: non-array → empty", garbage.appliedFieldChanges.length, 0);
+}
+
 async function main() {
   console.log("=== Decision History Tests ===");
   testOutcomeFiltering();
   testSorting();
   testAppliedNote();
   testBullets();
+  testAppliedFieldChanges();
   testNarrative();
   testSectionLists();
   await testPacketIntegration();
