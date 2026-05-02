@@ -5,7 +5,7 @@ import compression from "compression";
 import router from "./routes";
 import { pool, db, errorLogsTable } from "@workspace/db";
 import { stripSensitive } from "./routes/errors";
-import { respondHealth } from "./lib/health";
+import { respondHealth, respondHealthWithDb } from "./lib/health";
 
 import { type RequestWithAbort } from "./lib/request-abort";
 export { isRequestAborted, type RequestWithAbort } from "./lib/request-abort";
@@ -106,10 +106,16 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Platform probe paths: lightweight migration-only check. Hot path for
+// load balancers / uptime monitors, so we skip the live DB ping here.
 app.get("/health", respondHealth);
 app.get("/healthz", respondHealth);
-app.get("/api/health", respondHealth);
-app.get("/api/healthz", respondHealth);
+// Operator-facing paths: include a live `SELECT 1` so a DB outage shows up
+// even when startup migrations completed cleanly. Mounted directly on `app`
+// (above `app.use("/api", router)`) so they take precedence over any
+// catch-all 404 in the API router.
+app.get("/api/health", respondHealthWithDb);
+app.get("/api/healthz", respondHealthWithDb);
 
 app.get("/api/ready", async (_req, res) => {
   try {
