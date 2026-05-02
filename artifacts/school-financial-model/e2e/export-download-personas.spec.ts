@@ -8,22 +8,19 @@ import { extractPdfText } from "./utils/extract-pdf-text";
 import { test, expect, type Page } from "./utils/test";
 
 // Task #449: end-to-end coverage that the lender-ready and board-summary
-// PDF downloads round-trip cleanly for the three reference personas we
-// already ship as fixtures in the api-server test suite. Component tests
-// cover the modal layout and PDF route handlers cover the bytes; what
-// only a real browser proves is the wiring from `/model/{id}` (Export
-// step) → ExportCard click → preview modal load → "Download PDF" button
-// → blob handed back to the browser. Earlier reviews of the lender +
-// board pipelines (Task #391) showed the failure mode is silent — the
-// modal renders fine but the PDF fetch 500s for a persona-shape that
-// isn't covered by unit tests, so the founder gets a "Failed to
-// download PDF" alert with no telemetry. This spec exercises the three
-// flagship founder shapes we always quote in marketing copy:
-//
-//   * charter / public-funded   → `charterPublicFunding`     (OH, ~120-400)
-//   * private high school        → `privateSchoolWithESA`     (FL, ~100-200)
-//   * homeschool co-op (mixed)   → `homeschoolCoopMixed`      (AZ, ~15-40)
-//
+// PDF downloads round-trip cleanly for every reference persona we ship
+// as fixtures in the api-server test suite. Component tests cover the
+// modal layout and PDF route handlers cover the bytes; what only a real
+// browser proves is the wiring from `/model/{id}` (Export step) →
+// ExportCard click → preview modal load → "Download PDF" button → blob
+// handed back to the browser. Earlier reviews of the lender + board
+// pipelines (Task #391) showed the failure mode is silent — the modal
+// renders fine but the PDF fetch 500s for a persona-shape that isn't
+// covered by unit tests, so the founder gets a "Failed to download
+// PDF" alert with no telemetry. This spec exercises the founder shapes
+// shared across the suite (see `e2e/utils/export-personas.ts` →
+// `PERSONAS`), which after Task #454 includes tutoring center and
+// learning pod alongside charter, private, homeschool co-op, etc.,
 // so any persona-shape regression fails the e2e suite before it ships.
 //
 // One additional spec exercises the forecast-accuracy filter passthrough

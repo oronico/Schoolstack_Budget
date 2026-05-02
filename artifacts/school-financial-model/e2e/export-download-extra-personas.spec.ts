@@ -2,8 +2,9 @@ import { PERSONAS, primeAuthToken, seedPersonaModel } from "./utils/export-perso
 import { test, expect, type Page } from "./utils/test";
 
 // Task #450: end-to-end coverage for the two remaining PDF export
-// endpoints across the three reference personas (Task #449 covered
-// Lender-Ready Packet + Board Summary):
+// endpoints across every reference persona (Task #449 covered
+// Lender-Ready Packet + Board Summary; Task #454 expanded the persona
+// list to include tutoring center and learning pod):
 //
 //   - GET /api/models/:id/export/pro-forma-pdf
 //   - GET /api/models/:id/export/loan-readiness-pdf

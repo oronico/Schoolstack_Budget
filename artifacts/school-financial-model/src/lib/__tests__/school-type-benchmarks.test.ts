@@ -61,4 +61,39 @@ describe("school-type-benchmarks (Task #454 first-class personas)", () => {
     expect(staffingBenchmarkFor("not_a_real_type")).toBeNull();
     expect(enrollmentBenchmarkFor("not_a_real_type")).toBeNull();
   });
+
+  // Frozen exact-string assertions for the two new first-class personas so
+  // any benchmark drift fails CI loudly. If someone deliberately re-tunes
+  // the numbers, they update this test in the same diff and the change is
+  // visible in code review — exactly the regression-proofing the reviewer
+  // asked for.
+  it("freezes learning_pod benchmark copy", () => {
+    expect(FACILITY_BENCHMARKS.learning_pod).toEqual({
+      monthly: "$0–$1,500/mo (often shared / donated)",
+    });
+    expect(STAFFING_BENCHMARKS.learning_pod).toEqual({
+      ratio: "1:5–1:8",
+      staff: "1 facilitator + 1 part-time enrichment for 8–15 students",
+    });
+    expect(ENROLLMENT_BENCHMARKS.learning_pod).toEqual({
+      label: "Learning pod: Premium small cohorts (≤15) need premium per-student revenue",
+      detail:
+        "Pods cap enrollment by design — usually 8–15 students with one facilitator. With a small base, tuition (and any ESA / micro-grant pass-through) needs to fully fund staffing and shared space.",
+    });
+  });
+
+  it("freezes tutoring_center benchmark copy", () => {
+    expect(FACILITY_BENCHMARKS.tutoring_center).toEqual({
+      monthly: "$1,800–$5,000/mo (storefront)",
+    });
+    expect(STAFFING_BENCHMARKS.tutoring_center).toEqual({
+      ratio: "1:1–1:6",
+      staff: "1 director + 2–6 contract tutors for 20–60 students",
+    });
+    expect(ENROLLMENT_BENCHMARKS.tutoring_center).toEqual({
+      label: "Tutoring center: Sessions-per-week, not seats, drives revenue",
+      detail:
+        "Storefront tutoring scales by booked session-hours across 20–60 active students. Track session utilization (1:1 to 1:6) instead of seat count to size enrollment realistically.",
+    });
+  });
 });
