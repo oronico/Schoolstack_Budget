@@ -48,6 +48,11 @@ In-app guidance uses a warm, school-leader-friendly coaching voice. Key elements
 - **GlossaryTerm tooltips**: Provides definitions for financial jargon.
 - **Story-first wizard (11 steps)**: Guides users through Story, School Details, Assumptions, Enrollment, Revenue, Staffing, Expenses, Review, Consultant, Lender Narrative, and Export.
 
+### Coach-copy pruning signals (Tasks #285, #410, #411)
+Two complementary signals power the admin Coaching tab when deciding which coach lines to rewrite or retire:
+- **Coach surface funnel** (`GET /api/admin/coaching-funnel`, Tasks #285 + #410): per-surface paired `*_shown` / `*_engaged` / `*_dismissed` totals over a rolling 30-day window for basics/extra founders only (advanced-mode users emit nothing). Surfaces that clear an impression floor but stay below the engagement floor get an amber "looks dead" badge with a deep link to the file emitting the `*_shown` event.
+- **Coach lines dismissed before downgrade** (`GET /api/admin/coach-downgrade-precursors`, Task #411): top 5 coach surfaces a founder dismissed in the 24 hours before they switched guidance mode to `advanced` (i.e. silenced the coach). The endpoint joins `guidance_mode_changed` events (where `metadata.guidanceLevel === "advanced"`) over a 90-day lookback against `*_dismissed` events from the same user. The funnel surface registry (`COACHING_FUNNEL_SURFACES` in `artifacts/api-server/src/routes/admin.ts`) is the single source of truth — only surfaces with a configured `dismissed` event can show up. This is the highest-signal feedback we have for cutting coach copy: lines that repeatedly precede a downgrade are the ones pushing founders to mute the coach.
+
 ### Founder personas (Task #302)
 Every authenticated user is asked for a `personaStage` (`yet_to_launch` | `existing`) and `personaComfort` (`new_to_budgeting` | `comfortable`) at sign-in via `FounderPersonaPrompt`. The prompt is required for all users without a persona — including legacy users who only have a `guidanceLevel` — and can be re-opened from the navbar's settings dropdown ("Founder profile"). The wizard also guards entry: opening a model without a persona surfaces the prompt as an overlay.
 

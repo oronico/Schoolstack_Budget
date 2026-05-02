@@ -1675,6 +1675,166 @@ interface CoachingFunnelResponse {
   surfaces: CoachingFunnelSurface[];
 }
 
+interface DowngradePrecursorSurface {
+  // Mirrors COACHING_FUNNEL_SURFACES.key on the server. When the server
+  // doesn't have a registered surface for a dismissal event (e.g. an
+  // event was renamed) the key falls back to the raw event name so the
+  // UI still has something stable to render.
+  key: string;
+  label: string;
+  sourcePath: string;
+  dismissedEvent: string;
+  // Number of dismissal events emitted by users in the 24h before they
+  // downgraded to advanced. A single user with two downgrades can
+  // contribute up to one dismissal per (downgrade, dismissal) pair.
+  dismissals: number;
+}
+
+interface DowngradePrecursorsResponse {
+  windowDays: number;
+  precursorWindowHours: number;
+  totalDowngrades: number;
+  surfaces: DowngradePrecursorSurface[];
+}
+
+// Coach downgrade precursors (Task #411) — the top 5 coach surfaces a
+// founder dismissed in the 24 hours before they switched guidance mode
+// to "advanced" (i.e. silenced the coach). Highest-signal feedback we
+// have for cutting the right coach copy: surfaces here are the ones
+// pushing founders to mute the coach. Powered by
+// GET /api/admin/coach-downgrade-precursors which joins
+// guidance_mode_changed against the *_dismissed events from Task #285.
+function CoachDowngradePrecursorsSection() {
+  const [data, setData] = useState<DowngradePrecursorsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/admin/coach-downgrade-precursors");
+        if (!res.ok) throw new Error("Failed to fetch downgrade precursors");
+        const json = (await res.json()) as DowngradePrecursorsResponse;
+        if (!cancelled) setData(json);
+      } catch {
+        if (!cancelled) setError("Failed to load downgrade precursors.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div
+      className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm"
+      data-testid="coach-downgrade-precursors"
+    >
+      <div className="flex items-start justify-between mb-2 gap-4 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <h2 className="font-display text-lg font-bold">
+              Coach lines dismissed before downgrade
+            </h2>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+            Top 5 coach surfaces a founder dismissed in the{" "}
+            {data?.precursorWindowHours ?? 24} hours before switching guidance
+            mode to advanced. The highest-signal feedback we have for cutting
+            the right coach copy &mdash; these are the lines pushing founders
+            to silence the coach.
+          </p>
+        </div>
+        {data && (
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {data.totalDowngrades} downgrade
+            {data.totalDowngrades === 1 ? "" : "s"} &middot; last{" "}
+            {data.windowDays} days
+          </span>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : error || !data ? (
+        <p className="text-sm text-destructive mt-4">
+          {error || "No data available."}
+        </p>
+      ) : data.totalDowngrades === 0 ? (
+        <p className="text-sm text-muted-foreground mt-4">
+          No basics/extra &rarr; advanced downgrades in the last{" "}
+          {data.windowDays} days yet.
+        </p>
+      ) : data.surfaces.length === 0 ? (
+        <p className="text-sm text-muted-foreground mt-4">
+          {data.totalDowngrades} downgrade
+          {data.totalDowngrades === 1 ? "" : "s"} recorded, but no dismissable
+          coach surfaces fired in the {data.precursorWindowHours}h before any
+          of them.
+        </p>
+      ) : (
+        <table
+          className="w-full text-sm mt-4"
+          data-testid="coach-downgrade-precursors-table"
+        >
+          <thead>
+            <tr className="text-left text-xs font-semibold uppercase text-muted-foreground border-b border-border/60">
+              <th className="py-2 pr-3">Rank</th>
+              <th className="py-2 pr-3">Coach surface</th>
+              <th className="py-2 px-3 text-right">Dismissals before downgrade</th>
+              <th className="py-2 pl-3">Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.surfaces.map((s, i) => (
+              <tr
+                key={s.key}
+                data-testid={`coach-downgrade-precursor-${s.key}`}
+                className="border-b border-border/40 last:border-0"
+              >
+                <td className="py-2 pr-3 font-mono text-muted-foreground">
+                  #{i + 1}
+                </td>
+                <td className="py-2 pr-3 font-medium text-foreground">
+                  {s.label}
+                </td>
+                <td className="py-2 px-3 text-right font-semibold text-amber-700 dark:text-amber-400">
+                  {s.dismissals}
+                </td>
+                <td className="py-2 pl-3">
+                  {s.sourcePath ? (
+                    <a
+                      href={resolveSourceUrl(s.sourcePath)}
+                      target="_blank"
+                      rel="noreferrer"
+                      data-testid={`coach-downgrade-source-${s.key}`}
+                      className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground underline decoration-dotted underline-offset-2 hover:decoration-solid break-all"
+                    >
+                      {s.sourcePath}
+                      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    </a>
+                  ) : (
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {s.dismissedEvent}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 // Coaching funnel — paired shown / engaged / dismissed counts per coach
 // surface over the last 30 days. Lets us scan, at a glance, which coach
 // lines actually land for basics/extra founders and which we could rip
@@ -2053,7 +2213,10 @@ export function AdminPage() {
         ) : activeTab === "reviews" ? (
           <ReviewsSection />
         ) : activeTab === "coaching" ? (
-          <CoachingFunnelSection />
+          <div className="space-y-6">
+            <CoachDowngradePrecursorsSection />
+            <CoachingFunnelSection />
+          </div>
         ) : activeTab === "feedback" ? (
           <FeedbackSection />
         ) : (

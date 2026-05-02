@@ -925,6 +925,158 @@ router.get(
   },
 );
 
+// Coach downgrade precursors (Task #411).
+//
+// Joins guidance_mode_changed -> "advanced" downgrades against the
+// per-surface *_dismissed events from Task #285 to surface the top 5
+// coach lines a founder dismissed in the 24 hours before silencing the
+// coach. The hypothesis: surfaces that frequently appear right before a
+// downgrade are the ones pushing founders to mute the coach, so they're
+// the highest-value copy to rewrite or retire.
+//
+// We look back 90 days for downgrade events to keep enough signal on
+// low-volume installs while excluding stale data, and only consider
+// surfaces that have a `dismissed` event configured in
+// COACHING_FUNNEL_SURFACES — surfaces without an explicit dismissal
+// affordance can't show up here. Each dismissal contributes at most
+// once to the count (a single dismissal that falls inside multiple
+// overlapping precursor windows is still only counted once); we treat
+// the metric as "distinct dismissals that preceded any downgrade",
+// which keeps the number stable when a user downgrades, comes back to
+// basics, and downgrades again within 24h.
+const COACH_DOWNGRADE_LOOKBACK_DAYS = 90;
+const COACH_DOWNGRADE_PRECURSOR_HOURS = 24;
+const COACH_DOWNGRADE_TOP_N = 5;
+
+router.get(
+  "/admin/coach-downgrade-precursors",
+  authMiddleware,
+  adminMiddleware,
+  async (_req: AuthRequest, res) => {
+    try {
+      const dismissibleSurfaces = COACHING_FUNNEL_SURFACES.filter(
+        (s): s is typeof s & { dismissed: string } => Boolean(s.dismissed),
+      );
+      const dismissedEventNames = dismissibleSurfaces.map((s) => s.dismissed);
+      const surfaceMeta = new Map(
+        dismissibleSurfaces.map((s) => [
+          s.dismissed,
+          { key: s.key, label: s.label, sourcePath: s.sourcePath },
+        ]),
+      );
+
+      const since = new Date(
+        Date.now() - COACH_DOWNGRADE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+      );
+      const precursorWindowMs =
+        COACH_DOWNGRADE_PRECURSOR_HOURS * 60 * 60 * 1000;
+
+      // basics/extra -> advanced downgrades within the lookback window.
+      const downgrades = await db
+        .select({
+          userId: eventsTable.userId,
+          downgradeAt: eventsTable.createdAt,
+        })
+        .from(eventsTable)
+        .where(
+          and(
+            eq(eventsTable.eventName, "guidance_mode_changed"),
+            sql`${eventsTable.metadata}->>'guidanceLevel' = 'advanced'`,
+            sql`${eventsTable.userId} IS NOT NULL`,
+            gte(eventsTable.createdAt, since),
+          ),
+        );
+
+      if (downgrades.length === 0 || dismissedEventNames.length === 0) {
+        res.json({
+          windowDays: COACH_DOWNGRADE_LOOKBACK_DAYS,
+          precursorWindowHours: COACH_DOWNGRADE_PRECURSOR_HOURS,
+          totalDowngrades: downgrades.length,
+          surfaces: [],
+        });
+        return;
+      }
+
+      const userIds = Array.from(
+        new Set(
+          downgrades
+            .map((d) => d.userId)
+            .filter((id): id is number => id != null),
+        ),
+      );
+
+      // Pull every candidate dismissal by an affected user from the
+      // earliest possible precursor moment onward, then filter to those
+      // that fall inside any user's [downgrade-24h, downgrade) window.
+      const earliestDismissalSince = new Date(
+        since.getTime() - precursorWindowMs,
+      );
+      const dismissals = await db
+        .select({
+          userId: eventsTable.userId,
+          eventName: eventsTable.eventName,
+          createdAt: eventsTable.createdAt,
+        })
+        .from(eventsTable)
+        .where(
+          and(
+            inArray(eventsTable.eventName, dismissedEventNames),
+            inArray(eventsTable.userId, userIds),
+            gte(eventsTable.createdAt, earliestDismissalSince),
+          ),
+        );
+
+      const downgradesByUser = new Map<number, number[]>();
+      for (const d of downgrades) {
+        if (d.userId == null) continue;
+        const arr = downgradesByUser.get(d.userId) ?? [];
+        arr.push(d.downgradeAt.getTime());
+        downgradesByUser.set(d.userId, arr);
+      }
+
+      const counts = new Map<string, number>();
+      for (const dis of dismissals) {
+        if (dis.userId == null) continue;
+        const userDowngrades = downgradesByUser.get(dis.userId);
+        if (!userDowngrades) continue;
+        const dismissalMs = dis.createdAt.getTime();
+        const matched = userDowngrades.some(
+          (t) => dismissalMs >= t - precursorWindowMs && dismissalMs < t,
+        );
+        if (matched) {
+          counts.set(dis.eventName, (counts.get(dis.eventName) || 0) + 1);
+        }
+      }
+
+      const surfaces = Array.from(counts.entries())
+        .map(([eventName, dismissals]) => {
+          const meta = surfaceMeta.get(eventName);
+          return {
+            key: meta?.key ?? eventName,
+            label: meta?.label ?? eventName,
+            sourcePath: meta?.sourcePath ?? "",
+            dismissedEvent: eventName,
+            dismissals,
+          };
+        })
+        .sort((a, b) => b.dismissals - a.dismissals)
+        .slice(0, COACH_DOWNGRADE_TOP_N);
+
+      res.json({
+        windowDays: COACH_DOWNGRADE_LOOKBACK_DAYS,
+        precursorWindowHours: COACH_DOWNGRADE_PRECURSOR_HOURS,
+        totalDowngrades: downgrades.length,
+        surfaces,
+      });
+    } catch (err) {
+      console.error("Coach downgrade precursors error:", err);
+      res
+        .status(500)
+        .json({ error: "Failed to fetch coach downgrade precursors." });
+    }
+  },
+);
+
 router.get(
   "/admin/reviews",
   authMiddleware,
