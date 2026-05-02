@@ -40,16 +40,12 @@ import {
   calculatePersonnelCosts,
 } from "@/lib/staffing-defaults";
 
-const STAFFING_BENCHMARKS = {
-  catholic_school: { ratio: "1:12–1:18", staff: "6–12 staff for 80–150 students" },
-  microschool: { ratio: "1:8–1:12", staff: "2–4 staff for 15–25 students" },
-  private_school: { ratio: "1:10–1:15", staff: "5–10 staff for 50–100 students" },
-  charter_school: { ratio: "1:15–1:20", staff: "8–15 staff for 100–200 students" },
-  learning_pod: { ratio: "1:5–1:8", staff: "1–2 staff for 5–12 students" },
-  homeschool_coop: { ratio: "1:8–1:15", staff: "1–3 staff for 10–30 students" },
-  tutoring_center: { ratio: "1:5–1:10", staff: "2–5 staff for 15–40 students" },
-  other: { ratio: "1:10–1:15", staff: "varies by model" },
-};
+// Task #454: STAFFING_BENCHMARKS now lives in school-type-benchmarks.ts so
+// SchoolProfileStep + StaffingStep share a single source of truth and
+// tutoring center / learning pod no longer silently piggy-back on the
+// microschool defaults. Re-exported here under the same identifier so
+// downstream call sites in this file stay readable.
+import { STAFFING_BENCHMARKS } from "@/lib/school-type-benchmarks";
 
 function CollapsibleCallout({
   icon: Icon,

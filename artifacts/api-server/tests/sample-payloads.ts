@@ -528,3 +528,176 @@ export const microschoolWithDecisions = {
     },
   ],
 };
+
+// Task #454 — Tutoring center (AZ, fee-per-session storefront with a small
+// ESA mix). Promoted from a microschool piggyback to a first-class persona
+// so the consultant + export pipelines have a representative shape that
+// actually reflects the contract-staff + per-student-fee + small-storefront
+// economics rather than inheriting microschool defaults. Mirrors
+// `tutoringCenterFixture` in lib/finance/src/test-fixtures.ts (the latter
+// is the cross-engine golden-snapshot fixture; this is the full-shape
+// payload the wizard / preflight / export pipeline sees).
+export const tutoringCenterFee = {
+  schoolProfile: {
+    schoolName: "Saguaro Tutoring Center",
+    state: "AZ",
+    schoolType: "tutoring_center",
+    entityType: "llc_single",
+    ein: "86-7770001",
+    schoolStage: "new_school",
+    fundingProfile: "hybrid_mixed",
+    openingYear: 2026,
+    currentStudents: 0,
+    maxCapacity: 60,
+    fiscalYearStartMonth: 7,
+    isPartialFirstYear: true,
+    year1OperatingMonths: 10,
+    locationSecured: true,
+    facilityStreet: "1500 W Indian School Rd",
+    facilityCity: "Phoenix",
+    facilityState: "AZ",
+    facilityZip: "85015",
+    ownershipType: "rent",
+    monthlyRent: 2200,
+    annualRentEscalation: 3,
+    debtIncluded: false,
+    enrollmentGrowthRate: 20,
+    stateFundingMethodology: "other",
+  },
+  enrollment: { year1: 20, year2: 35, year3: 45, year4: 55, year5: 60 },
+  revenue: {
+    tuitionPerStudent: 3500,
+    annualTuitionIncrease: 3,
+    annualFundraising: 3000,
+    annualDonations: 0,
+  },
+  revenueRows: [
+    { id: "r1", category: "tuition_and_fees", lineItem: "Annual Tutoring Fee", enabled: true, driverType: "per_student", amounts: [3500, 3605, 3713, 3825, 3939], billingMonths: 10 },
+    { id: "r2", category: "tuition_and_fees", lineItem: "Materials & Assessment Fee", enabled: true, driverType: "per_student", amounts: [200, 200, 200, 200, 200], billingMonths: 12, escalationRate: 0, escalationRateOverridden: true },
+    { id: "esa_revenue", category: "school_choice", lineItem: "AZ ESA Funds (partial mix)", enabled: true, driverType: "per_student", amounts: [2500, 2575, 2652, 2732, 2814], billingMonths: 12 },
+    { id: "refundable_tax_credit", category: "school_choice", lineItem: "Refundable Tax Credit", enabled: false, driverType: "per_student", amounts: [0, 0, 0, 0, 0], billingMonths: 12 },
+    { id: "r4", category: "philanthropy", lineItem: "Community Sponsorships", enabled: true, driverType: "annual_fixed", amounts: [3000, 4000, 5000, 6000, 7000] },
+  ],
+  staffingRows: [
+    { id: "s1", roleName: "Center Director", functionCategory: "school_leadership", employmentType: "full_time", fte: 1, annualizedRate: 58000, benefitsEligible: true, benefitsRate: 18, payrollTaxRate: 7.65, payrollLike: false },
+    { id: "s2", roleName: "Lead Tutor", functionCategory: "instructional", employmentType: "full_time", fte: 1, annualizedRate: 42000, benefitsEligible: true, benefitsRate: 18, payrollTaxRate: 7.65, payrollLike: false },
+    { id: "s3", roleName: "Contract Tutors", functionCategory: "instructional", employmentType: "contract", fte: 2, annualizedRate: 30000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 0, payrollLike: false, staffingMode: "ratio", studentRatio: 10, minFte: 2, maxFte: 6 },
+    { id: "s4", roleName: "Front Desk / Scheduler", functionCategory: "administrative", employmentType: "part_time", fte: 0.5, annualizedRate: 28000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false },
+  ],
+  facilities: {
+    monthlyRent: 2200,
+    annualRentIncrease: 3,
+    annualUtilities: 2640,
+    annualInsurance: 1800,
+    curriculumCostPerStudent: 180,
+    techCostPerStudent: 120,
+    annualMarketing: 6000,
+    annualSalaryIncrease: 3,
+    generalCostInflation: 2.5,
+  },
+  expenseRows: [
+    { id: "e1", category: "occupancy_facility", lineItem: "Storefront Lease", enabled: true, driverType: "monthly", amounts: [2200, 2266, 2334, 2404, 2476], escalationRate: 3 },
+    { id: "e2", category: "occupancy_facility", lineItem: "Utilities", enabled: true, driverType: "monthly", amounts: [220, 226, 232, 238, 245] },
+    { id: "e3", category: "occupancy_facility", lineItem: "Insurance", enabled: true, driverType: "annual_fixed", amounts: [1800, 1845, 1891, 1938, 1987] },
+    { id: "e4", category: "instructional_program", lineItem: "Curriculum & Assessments", enabled: true, driverType: "per_student", amounts: [180, 185, 190, 196, 202] },
+    { id: "e5", category: "technology", lineItem: "Scheduling & Tutoring Software", enabled: true, driverType: "per_student", amounts: [120, 124, 128, 132, 136] },
+    { id: "e6", category: "administrative_general", lineItem: "Marketing & Local Ads", enabled: true, driverType: "annual_fixed", amounts: [6000, 6150, 6304, 6461, 6623] },
+    { id: "e7", category: "administrative_general", lineItem: "Bookkeeping & Compliance", enabled: true, driverType: "annual_fixed", amounts: [3600, 3690, 3782, 3877, 3974] },
+  ],
+  capitalAndDebtRows: [],
+  openingBalances: { cash: 12000, accountsReceivable: 0, fixedAssets: 3000, otherAssets: 0, accountsPayable: 0, currentDebtPortion: 0, longTermDebt: 0 },
+  sourcesAndUses: {
+    sources: [{ lineItem: "Owner Savings", amount: 15000, category: "equity" }],
+    uses: [{ lineItem: "Startup Costs", amount: 12000, category: "startup" }, { lineItem: "Working Capital Reserve", amount: 3000, category: "reserves" }],
+  },
+  scenarios: [
+    { name: "Base Case", enrollmentAdjustment: 0, tuitionAdjustment: 0, expenseAdjustment: 0 },
+    { name: "Slow Ramp", enrollmentAdjustment: -25, tuitionAdjustment: 0, expenseAdjustment: 0 },
+  ],
+  covenantThresholds: { minDSCR: 1.0, minDaysCashOnHand: 30, minMonthsRunway: 2 },
+};
+
+// Task #454 — Learning pod (AZ, ESA-eligible premium small cohort).
+// Promoted from a microschool piggyback to a first-class persona so the
+// pod's distinctive economics (small capacity, single-facilitator staffing,
+// ESA + premium tuition) are exercised by the consultant + export pipelines
+// rather than inheriting microschool defaults. Mirrors `learningPodFixture`
+// in lib/finance/src/test-fixtures.ts.
+export const learningPodHybrid = {
+  schoolProfile: {
+    schoolName: "Sonoran Learning Pod",
+    state: "AZ",
+    schoolType: "learning_pod",
+    entityType: "llc_single",
+    ein: "86-7770002",
+    schoolStage: "new_school",
+    fundingProfile: "hybrid_mixed",
+    openingYear: 2026,
+    currentStudents: 0,
+    maxCapacity: 15,
+    fiscalYearStartMonth: 7,
+    isPartialFirstYear: true,
+    year1OperatingMonths: 10,
+    locationSecured: true,
+    facilityStreet: "4520 N 7th Ave",
+    facilityCity: "Phoenix",
+    facilityState: "AZ",
+    facilityZip: "85013",
+    ownershipType: "rent",
+    monthlyRent: 1200,
+    annualRentEscalation: 3,
+    debtIncluded: false,
+    enrollmentGrowthRate: 15,
+    stateFundingMethodology: "other",
+  },
+  enrollment: { year1: 8, year2: 10, year3: 12, year4: 14, year5: 15 },
+  revenue: {
+    tuitionPerStudent: 10000,
+    annualTuitionIncrease: 3,
+    annualFundraising: 2000,
+    annualDonations: 0,
+  },
+  revenueRows: [
+    { id: "r1", category: "tuition_and_fees", lineItem: "Pod Tuition", enabled: true, driverType: "per_student", amounts: [10000, 10300, 10609, 10927, 11255], billingMonths: 10 },
+    { id: "r2", category: "tuition_and_fees", lineItem: "Enrichment Fee", enabled: true, driverType: "per_student", amounts: [400, 400, 400, 400, 400], billingMonths: 12, escalationRate: 0, escalationRateOverridden: true },
+    { id: "esa_revenue", category: "school_choice", lineItem: "AZ ESA Funds", enabled: true, driverType: "per_student", amounts: [7000, 7210, 7426, 7649, 7878], billingMonths: 12 },
+    { id: "refundable_tax_credit", category: "school_choice", lineItem: "Refundable Tax Credit", enabled: false, driverType: "per_student", amounts: [0, 0, 0, 0, 0], billingMonths: 12 },
+    { id: "r4", category: "philanthropy", lineItem: "Family Fundraising", enabled: true, driverType: "annual_fixed", amounts: [2000, 2500, 3000, 3500, 4000] },
+    { id: "r5", category: "tuition_offsets", lineItem: "Sibling Discount", enabled: true, driverType: "percent_of_base", amounts: [10, 10, 10, 10, 10], percentBase: "r1" },
+  ],
+  staffingRows: [
+    { id: "s1", roleName: "Lead Facilitator", functionCategory: "school_leadership", employmentType: "full_time", fte: 1, annualizedRate: 50000, benefitsEligible: true, benefitsRate: 18, payrollTaxRate: 7.65, payrollLike: false },
+    { id: "s2", roleName: "Enrichment Specialist", functionCategory: "instructional", employmentType: "part_time", fte: 0.4, annualizedRate: 35000, benefitsEligible: false, benefitsRate: 0, payrollTaxRate: 7.65, payrollLike: false },
+  ],
+  facilities: {
+    monthlyRent: 1200,
+    annualRentIncrease: 3,
+    annualUtilities: 2160,
+    annualInsurance: 1500,
+    curriculumCostPerStudent: 600,
+    techCostPerStudent: 350,
+    annualMarketing: 1500,
+    annualSalaryIncrease: 3,
+    generalCostInflation: 2.5,
+  },
+  expenseRows: [
+    { id: "e1", category: "occupancy_facility", lineItem: "Shared Space Rent", enabled: true, driverType: "monthly", amounts: [1200, 1236, 1273, 1311, 1351], escalationRate: 3 },
+    { id: "e2", category: "occupancy_facility", lineItem: "Utilities & Internet", enabled: true, driverType: "monthly", amounts: [180, 185, 190, 196, 202] },
+    { id: "e3", category: "occupancy_facility", lineItem: "Insurance", enabled: true, driverType: "annual_fixed", amounts: [1500, 1538, 1576, 1615, 1656] },
+    { id: "e4", category: "instructional_program", lineItem: "Curriculum & Materials", enabled: true, driverType: "per_student", amounts: [600, 618, 637, 656, 675] },
+    { id: "e5", category: "technology", lineItem: "Devices & Software", enabled: true, driverType: "per_student", amounts: [350, 361, 372, 383, 394] },
+    { id: "e6", category: "administrative_general", lineItem: "Marketing", enabled: true, driverType: "annual_fixed", amounts: [1500, 1545, 1591, 1639, 1688] },
+    { id: "e7", category: "administrative_general", lineItem: "Bookkeeping & Compliance", enabled: true, driverType: "annual_fixed", amounts: [2400, 2460, 2522, 2585, 2650] },
+  ],
+  capitalAndDebtRows: [],
+  openingBalances: { cash: 8000, accountsReceivable: 0, fixedAssets: 1500, otherAssets: 0, accountsPayable: 0, currentDebtPortion: 0, longTermDebt: 0 },
+  sourcesAndUses: {
+    sources: [{ lineItem: "Founder Savings", amount: 10000, category: "equity" }],
+    uses: [{ lineItem: "Startup Costs", amount: 8000, category: "startup" }, { lineItem: "Working Capital Reserve", amount: 2000, category: "reserves" }],
+  },
+  scenarios: [
+    { name: "Base Case", enrollmentAdjustment: 0, tuitionAdjustment: 0, expenseAdjustment: 0 },
+    { name: "Low ESA Utilization", enrollmentAdjustment: 0, tuitionAdjustment: -10, expenseAdjustment: 0 },
+  ],
+  covenantThresholds: { minDSCR: 1.0, minDaysCashOnHand: 30, minMonthsRunway: 2 },
+};

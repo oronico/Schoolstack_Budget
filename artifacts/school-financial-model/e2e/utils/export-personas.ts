@@ -1,7 +1,9 @@
 import {
   charterPublicFunding,
   homeschoolCoopMixed,
+  learningPodHybrid,
   privateSchoolWithESA,
+  tutoringCenterFee,
 } from "../../../api-server/tests/sample-payloads";
 import { autoResolveBlockingFlags } from "./auto-resolve-flags";
 import { seedPersona } from "./seed-persona";
@@ -45,6 +47,22 @@ export const PERSONAS: PersonaCase[] = [
     label: "homeschool-coop",
     modelName: "Liberty Learning Co-Op (E2E)",
     data: homeschoolCoopMixed as unknown as Record<string, unknown>,
+  },
+  // Task #454 — first-class tutoring-center + learning-pod personas. These
+  // are no longer microschool piggybacks: they have distinct facility +
+  // staffing benchmarks and carry their own cross-engine goldens (see
+  // `tutoringCenterGolden` / `learningPodGolden` in cross-engine-test.ts).
+  // Adding them here exercises the export pipeline against the new
+  // school-type defaults end-to-end.
+  {
+    label: "tutoring-center",
+    modelName: "Saguaro Tutoring Center (E2E)",
+    data: tutoringCenterFee as unknown as Record<string, unknown>,
+  },
+  {
+    label: "learning-pod",
+    modelName: "Sonoran Learning Pod (E2E)",
+    data: learningPodHybrid as unknown as Record<string, unknown>,
   },
 ];
 

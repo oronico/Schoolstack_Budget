@@ -21,6 +21,8 @@ import {
   charterFixture,
   homeschoolCoopFixture,
   chestertonAcademyFixture,
+  tutoringCenterFixture,
+  learningPodFixture,
   type TestModelPayload,
 } from "@workspace/finance";
 
@@ -166,6 +168,51 @@ const chestertonAcademyGolden: CEGolden = {
   projectedAR:     [13562, 28129, 47412, 71874, 94188],
 };
 
+// Task #454 — Tutoring center (AZ, fee-per-session storefront, partial Y1).
+// 20 → 60 students; revenue from per-student annual tutoring fee + AZ ESA
+// partial mix; staffing leans on a director + lead tutor + ratio-staffed
+// contract tutors (1:10, capped at 6 FTE per the tutoring_center staffing
+// benchmark "1 director + 2–6 contract tutors for 20–60 students"). The
+// startup ramps from a ~$100k Y1 loss into break-even by Y5 — typical for
+// a fee-per-session storefront in scale-up. Promoted from a microschool
+// piggyback to a first-class persona. See `tutoringCenterFixture` in
+// @workspace/finance.
+const tutoringCenterGolden: CEGolden = {
+  totalRevenue:    [105833, 227300, 300425, 377635, 424180],
+  tuitionRevenue:  [61667, 133175, 176085, 221375, 248340],
+  publicRevenue:   [41667, 90125, 119340, 150260, 168840],
+  philanthropyRevenue:[2500, 4000, 5000, 6000, 7000],
+  totalStaffingCost:[167268, 253093, 292512, 334070, 360974],
+  facilityCost:    [25700, 31743, 32673, 33629, 34614],
+  totalOpex:       [38700, 52346, 56942, 61736, 65080],
+  debtService:     [0, 0, 0, 0, 0],
+  loanDebtService: [0, 0, 0, 0, 0],
+  totalExpenses:   [206396, 305867, 349883, 396234, 426482],
+  netIncome:       [-100563, -78567, -49458, -18599, -2302],
+  depreciation:    [429, 429, 429, 429, 429],
+  projectedAR:     [5068, 10946, 14473, 18195, 20412],
+};
+
+// Task #454 — Learning pod (AZ, ESA-eligible premium small cohort, partial
+// Y1). 8 → 15 students; per-student tuition (~$10k) + AZ ESA + small
+// fundraiser; single full-time facilitator + part-time enrichment
+// specialist. See `learningPodFixture` in @workspace/finance.
+const learningPodGolden: CEGolden = {
+  totalRevenue:    [111000, 171300, 211489, 253866, 280113],
+  tuitionRevenue:  [62667, 96700, 119377, 143280, 157943],
+  publicRevenue:   [46667, 72100, 89112, 107086, 118170],
+  philanthropyRevenue:[1667, 2500, 3000, 3500, 4000],
+  totalStaffingCost:[64913, 80233, 82640, 85119, 87673],
+  facilityCost:    [15050, 18584, 19122, 19677, 20247],
+  totalOpex:       [24633, 32319, 35197, 38199, 40281],
+  debtService:     [0, 0, 0, 0, 0],
+  loanDebtService: [0, 0, 0, 0, 0],
+  totalExpenses:   [89761, 112766, 118051, 123533, 128168],
+  netIncome:       [21239, 58534, 93438, 130334, 151944],
+  depreciation:    [214, 214, 214, 214, 214],
+  projectedAR:     [5151, 7948, 9812, 11776, 12982],
+};
+
 function runCE(fixture: TestModelPayload) {
   return computeYearFinancialsFromData({ ...fixture, skipFacilityOverlay: true } as unknown as Record<string, unknown>);
 }
@@ -211,6 +258,8 @@ function main() {
   checkCEGolden("Charter", charterFixture, charterGolden);
   checkCEGolden("HomeschoolCoop", homeschoolCoopFixture, homeschoolCoopGolden);
   checkCEGolden("ChestertonAcademy", chestertonAcademyFixture, chestertonAcademyGolden);
+  checkCEGolden("TutoringCenter", tutoringCenterFixture, tutoringCenterGolden);
+  checkCEGolden("LearningPod", learningPodFixture, learningPodGolden);
 
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
   if (failures.length > 0) {

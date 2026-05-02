@@ -48,6 +48,8 @@ export {
   charterFixture,
   homeschoolCoopFixture,
   chestertonAcademyFixture,
+  tutoringCenterFixture,
+  learningPodFixture,
   driverCoverageFixture,
   type TestModelPayload,
   type TestRevenueRow,

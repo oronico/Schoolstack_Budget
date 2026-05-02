@@ -16,6 +16,11 @@ import { trackCoachingEvent } from "@/lib/coaching/track";
 import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit, isChestertonAcademy } from "../schema";
 import { buildDefaultChestertonData } from "@/lib/chesterton/template";
+// Task #454: facility benchmark strings live in school-type-benchmarks.ts
+// so SchoolProfileStep + StaffingStep share one source of truth and new
+// school types (tutoring center, learning pod) get type-specific values
+// instead of silently inheriting microschool defaults.
+import { facilityBenchmarkFor } from "@/lib/school-type-benchmarks";
 import {
   parseAccountingExportCsv,
   parseAccountingExportRows,
@@ -267,17 +272,6 @@ function EntityTypeSection({ allowedEntityTypes, entityType, lendingLabIntent }:
   );
 }
 
-const FACILITY_BENCHMARKS: Record<string, string> = {
-  catholic_school: "$5,000–$15,000/mo",
-  microschool: "$1,500–$4,000/mo",
-  learning_pod: "$800–$2,500/mo",
-  private_school: "$5,000–$15,000/mo",
-  charter_school: "$8,000–$25,000/mo",
-  homeschool_coop: "$500–$2,000/mo",
-  tutoring_center: "$1,500–$4,000/mo",
-  other: "$2,000–$8,000/mo",
-};
-
 const CURRENT_YEAR = new Date().getFullYear();
 const LEASE_EXPIRATION_YEARS = Array.from({ length: 15 }, (_, i) => ({
   value: String(CURRENT_YEAR + i),
@@ -310,7 +304,7 @@ function FacilityPhaseCard({ index, phase, onRemove, onUpdate, schoolType, entit
   const forProfit = entityType ? !["nonprofit_501c3"].includes(entityType) : false;
   const isNNN = phase.isNNNLease as boolean;
   const hasMort = phase.hasMortgage as boolean;
-  const benchmarkText = schoolType && FACILITY_BENCHMARKS[schoolType] ? FACILITY_BENCHMARKS[schoolType] : null;
+  const benchmarkText = facilityBenchmarkFor(schoolType);
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 space-y-4 relative">
@@ -1736,8 +1730,8 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
                 <HelpCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-foreground">
                   <span className="font-semibold">No worries - an estimate is fine.</span>{" "}
-                  {schoolType && FACILITY_BENCHMARKS[schoolType]
-                    ? `Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${FACILITY_BENCHMARKS[schoolType]} for facility costs.`
+                  {facilityBenchmarkFor(schoolType)
+                    ? `Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${facilityBenchmarkFor(schoolType)} for facility costs.`
                     : "Most small schools budget $2,000–$8,000/month for facility costs."}
                 </div>
               </div>
@@ -1973,8 +1967,8 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
                       type="number"
                       prefix="$"
                       placeholder="3000"
-                      helperText={schoolType && FACILITY_BENCHMARKS[schoolType]
-                        ? `Look up similar spaces in your area. Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s pay around ${FACILITY_BENCHMARKS[schoolType]}.`
+                      helperText={facilityBenchmarkFor(schoolType)
+                        ? `Look up similar spaces in your area. Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s pay around ${facilityBenchmarkFor(schoolType)}.`
                         : "Look up similar spaces in your area. This helps your model show what it would take to sustain the school independently."}
                     />
                     {(!comparableMarketRent || comparableMarketRent === 0) && (
@@ -2005,8 +1999,8 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
                       type="number"
                       prefix="$"
                       placeholder="500"
-                      helperText={schoolType && FACILITY_BENCHMARKS[schoolType]
-                        ? `Think about your share of mortgage/rent, utilities, insurance, internet, and wear-and-tear. Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${FACILITY_BENCHMARKS[schoolType]}, even when home-based.`
+                      helperText={facilityBenchmarkFor(schoolType)
+                        ? `Think about your share of mortgage/rent, utilities, insurance, internet, and wear-and-tear. Most ${SCHOOL_TYPE_LABELS[schoolType]?.toLowerCase() || "school"}s budget around ${facilityBenchmarkFor(schoolType)}, even when home-based.`
                         : "Think about your share of mortgage/rent, utilities, insurance, internet, and wear-and-tear on the space. Even a modest allocation makes your budget more realistic."}
                     />
                     {(!monthlyFacilityAllocation || monthlyFacilityAllocation === 0) && (
