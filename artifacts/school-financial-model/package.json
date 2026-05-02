@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:parity": "vitest run src/lib/__tests__/scenario-engine-parity.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "capture:screenshots": "tsx scripts/refresh-screenshots.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

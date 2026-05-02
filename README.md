@@ -112,6 +112,27 @@ suite under `artifacts/school-financial-model/e2e/`, and a failure blocks
 validation just like a failing unit test, so deep-link regressions (e.g. the
 saved-scenario "Replace export" handoff) cannot land silently.
 
+### Marketing Screenshots
+
+Real product screenshots for the `/solutions/:slug` marketing pages live in
+`artifacts/school-financial-model/public/images/solutions/` and are captured
+by Playwright against the running app. Refresh them in one command:
+
+```bash
+pnpm --filter @workspace/school-financial-model run capture:screenshots
+```
+
+This boots its own ephemeral api-server (port 8080) and Vite dev server
+(default port 22094), seeds a founder + microschool fixture, captures all 8
+PNGs, and tears the servers back down. Servers that are already running on
+those ports are reused. Re-run after any change to:
+
+- the wizard Review (step 8), 5-year/Lender (step 11), Loan/Debt (step 3),
+  or Staffing (step 6) screens,
+- the dashboard financial snapshot,
+- the budgeting-primer modal, or
+- the Scenarios page (custom scenarios + What-If drawer).
+
 ### Environment Variables
 
 | Variable | Required | Description |
