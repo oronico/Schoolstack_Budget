@@ -309,6 +309,82 @@ describe("Chesterton wizard step summaries", () => {
     expect(screen.queryByTestId("chesterton-recruiting-need-more-callout")).toBeNull();
   });
 
+  // Task #360: lenders want to see the projected enrollment range — best,
+  // expected, and worst — without the founder having to flip the conversion
+  // dropdown back and forth. The recruiting summary should render all three
+  // projections at once and highlight the founder's chosen rate as Expected.
+  it("recruiting step shows projections at best/expected/worst conversion rates side-by-side", async () => {
+    const user = userEvent.setup();
+    const seed = buildDefaultChestertonData();
+    const phase = (seed.phaseEnrollment ?? []).map((row, i) => ({
+      ...row,
+      year1: i === 0 ? 30 : 0,
+      year2: 0,
+      year3: 0,
+      year4: 0,
+      year5: 0,
+      year6: 0,
+    }));
+
+    render(
+      <HostForm
+        defaults={{
+          chesterton: {
+            ...seed,
+            phaseEnrollment: phase,
+            prospectConversionDivisor: 3,
+            recruitingPipeline: [
+              { id: "r1", source: "Feeder", prospectiveStudents: 60, notes: "" },
+              { id: "r2", source: "Homeschool", prospectiveStudents: 30, notes: "" },
+            ],
+          },
+        }}
+      >
+        <ChestertonRecruitingStep />
+      </HostForm>,
+    );
+
+    // Year-1 need = 30, total prospects = 90. We should see all three columns
+    // with the right divisors and projections:
+    //   best  : 1-in-2 -> 45 students, 150% coverage
+    //   expected (founder picked 3): 1-in-3 -> 30 students, 100% coverage
+    //   worst : 1-in-5 -> 18 students, 60% coverage
+    const grid = screen.getByTestId("chesterton-recruiting-projection-grid");
+    expect(grid).toBeInTheDocument();
+
+    const best = screen.getByTestId("chesterton-recruiting-projection-best");
+    expect(best).toHaveTextContent("Best");
+    expect(best).toHaveTextContent("1 in 2");
+    expect(screen.getByTestId("chesterton-recruiting-projected-best")).toHaveTextContent("45");
+    expect(screen.getByTestId("chesterton-recruiting-coverage-pct-best")).toHaveTextContent("150%");
+
+    const expected = screen.getByTestId("chesterton-recruiting-projection-expected");
+    expect(expected).toHaveTextContent("Expected");
+    expect(expected).toHaveTextContent("1 in 3");
+    // The expected column reuses the historical test ids so the single-rate
+    // flow keeps working.
+    expect(screen.getByTestId("chesterton-recruiting-projected")).toHaveTextContent("30");
+    expect(screen.getByTestId("chesterton-recruiting-coverage-pct")).toHaveTextContent("100%");
+
+    const worst = screen.getByTestId("chesterton-recruiting-projection-worst");
+    expect(worst).toHaveTextContent("Worst");
+    expect(worst).toHaveTextContent("1 in 5");
+    expect(screen.getByTestId("chesterton-recruiting-projected-worst")).toHaveTextContent("18");
+    expect(screen.getByTestId("chesterton-recruiting-coverage-pct-worst")).toHaveTextContent("60%");
+
+    // Switching the founder's pick re-anchors the Expected column without
+    // touching the Best (1-in-2) or Worst (1-in-5) columns.
+    const select = screen.getByLabelText("Conversion rate", { selector: "select" }) as HTMLSelectElement;
+    await user.selectOptions(select, "4");
+
+    expect(screen.getByTestId("chesterton-recruiting-projection-expected")).toHaveTextContent("1 in 4");
+    expect(screen.getByTestId("chesterton-recruiting-projected")).toHaveTextContent("22"); // floor(90/4)
+    expect(screen.getByTestId("chesterton-recruiting-coverage-pct")).toHaveTextContent("73%");
+    // Best and Worst stay anchored at 1-in-2 and 1-in-5.
+    expect(screen.getByTestId("chesterton-recruiting-projected-best")).toHaveTextContent("45");
+    expect(screen.getByTestId("chesterton-recruiting-projected-worst")).toHaveTextContent("18");
+  });
+
   it("recruiting step hides the summary panel when Year-1 enrollment is unset", () => {
     const seed = buildDefaultChestertonData();
     const phase = (seed.phaseEnrollment ?? []).map((row) => ({

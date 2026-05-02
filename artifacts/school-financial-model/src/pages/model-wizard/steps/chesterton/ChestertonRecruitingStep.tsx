@@ -62,10 +62,26 @@ export function ChestertonRecruitingStep() {
     const n = Number(conversionDivisorRaw);
     return Number.isFinite(n) && n >= 2 ? Math.floor(n) : 3;
   }, [conversionDivisorRaw]);
-  const projectedEnrollment = Math.floor(totalProspects / conversionDivisor);
-  const enrollmentPct = year1Need > 0 ? (projectedEnrollment / year1Need) * 100 : 0;
-  const enrollmentBarPct = Math.max(0, Math.min(100, enrollmentPct));
-  const enrollmentColor = enrollmentPct >= 100 ? "bg-emerald-500" : enrollmentPct >= 75 ? "bg-primary" : "bg-amber-500";
+  // Lenders typically want to see the projected enrollment range, not just
+  // the founder's chosen rate: an optimistic 1-in-2 ("strong feeder pipeline"),
+  // the founder's expected rate, and a 1-in-5 stress test. We always render
+  // the same three buckets even if the founder's pick coincides with the
+  // best (2) or worst (5) divisor — the "Expected" badge marks their choice.
+  const projections = useMemo(() => {
+    const buckets: Array<{ kind: "best" | "expected" | "worst"; divisor: number }> = [
+      { kind: "best", divisor: 2 },
+      { kind: "expected", divisor: conversionDivisor },
+      { kind: "worst", divisor: 5 },
+    ];
+    return buckets.map((b) => {
+      const projected = Math.floor(totalProspects / b.divisor);
+      const pct = year1Need > 0 ? (projected / year1Need) * 100 : 0;
+      const barPct = Math.max(0, Math.min(100, pct));
+      const color =
+        pct >= 100 ? "bg-emerald-500" : pct >= 75 ? "bg-primary" : "bg-amber-500";
+      return { ...b, projected, pct, barPct, color };
+    });
+  }, [conversionDivisor, totalProspects, year1Need]);
 
   return (
     <div className="space-y-10" data-testid="chesterton-recruiting-step">
@@ -90,7 +106,7 @@ export function ChestertonRecruitingStep() {
           className="rounded-2xl border border-border bg-white p-4"
           data-testid="chesterton-recruiting-summary"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Year 1 enrollment goal</div>
               <div className="text-xl font-bold text-foreground mt-1" data-testid="chesterton-recruiting-year1-need">
@@ -103,32 +119,84 @@ export function ChestertonRecruitingStep() {
                 {totalProspects.toLocaleString()}
               </div>
             </div>
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Projected enrollment</div>
-              <div className="text-xl font-bold text-foreground mt-1" data-testid="chesterton-recruiting-projected">
-                {projectedEnrollment.toLocaleString()} students
-              </div>
-              <div className="text-xs text-muted-foreground" data-testid="chesterton-recruiting-conversion-label">
-                ~1 in {conversionDivisor} prospects convert
-              </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+              Projected enrollment at three conversion rates
+            </div>
+            <div
+              className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+              data-testid="chesterton-recruiting-projection-grid"
+            >
+              {projections.map((p) => {
+                const isExpected = p.kind === "expected";
+                const tagLabel = p.kind === "best" ? "Best" : isExpected ? "Expected" : "Worst";
+                // The "expected" column keeps the historical test ids so the
+                // single-rate flow tests (and any downstream consumers) keep
+                // working unchanged.
+                const projectedTestId = isExpected
+                  ? "chesterton-recruiting-projected"
+                  : `chesterton-recruiting-projected-${p.kind}`;
+                const coverageTestId = isExpected
+                  ? "chesterton-recruiting-coverage-pct"
+                  : `chesterton-recruiting-coverage-pct-${p.kind}`;
+                return (
+                  <div
+                    key={p.kind}
+                    className={
+                      isExpected
+                        ? "rounded-xl border-2 border-primary bg-primary/5 p-3"
+                        : "rounded-xl border border-border bg-white p-3"
+                    }
+                    data-testid={`chesterton-recruiting-projection-${p.kind}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={
+                          isExpected
+                            ? "inline-block rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground"
+                            : "inline-block rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary-foreground"
+                        }
+                      >
+                        {tagLabel}
+                      </span>
+                      <span className="text-xs text-muted-foreground">1 in {p.divisor}</span>
+                    </div>
+                    <div
+                      className="text-2xl font-bold text-foreground mt-2"
+                      data-testid={projectedTestId}
+                    >
+                      {p.projected.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-muted-foreground">students</div>
+                    <div className="mt-2 flex items-baseline justify-between text-xs">
+                      <span className="text-muted-foreground">Coverage</span>
+                      <strong className="text-foreground" data-testid={coverageTestId}>
+                        {p.pct.toFixed(0)}%
+                      </strong>
+                    </div>
+                    <div
+                      className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-border"
+                      aria-hidden
+                    >
+                      <div
+                        className={`h-full ${p.color} transition-all`}
+                        style={{ width: `${p.barPct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div
+              className="mt-2 text-xs text-muted-foreground"
+              data-testid="chesterton-recruiting-conversion-label"
+            >
+              Your expected rate: ~1 in {conversionDivisor} prospects convert
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline justify-between text-sm">
-              <span className="text-muted-foreground">Coverage of Year 1 goal</span>
-              <span className="text-muted-foreground">
-                <strong className="text-foreground" data-testid="chesterton-recruiting-coverage-pct">
-                  {enrollmentPct.toFixed(0)}%
-                </strong>
-              </span>
-            </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-border" aria-hidden>
-              <div
-                className={`h-full ${enrollmentColor} transition-all`}
-                style={{ width: `${enrollmentBarPct}%` }}
-              />
-            </div>
-          </div>
+
           {totalProspects < year1Need * conversionDivisor && (
             <div
               className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
