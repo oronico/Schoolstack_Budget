@@ -3,7 +3,17 @@ import { defineConfig, devices } from "@playwright/test";
 // The school-financial-model dev server proxies `/api` to the api-server, so a
 // single base URL is enough for both UI navigation and seed-data API calls.
 const PORT = Number(process.env.E2E_PORT ?? process.env.PORT ?? 22092);
-const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
+// Use the IPv4 loopback address explicitly. `localhost` resolves to `::1`
+// first on this container (verbatim DNS in Node 17+), but Vite binds to
+// `0.0.0.0` (IPv4 only). When Playwright's `request` fixture or the Vite
+// proxy used `localhost`, intermittent runs would surface
+// `connect ECONNREFUSED ::1:<port>` even though the dev server was healthy
+// — every test after the first IPv6 lookup would bail (Task #380). Pinning
+// to `127.0.0.1` removes the dual-stack ambiguity entirely.
+const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
+const API_PORT = Number(process.env.E2E_API_PORT ?? 8080);
+const API_HEALTH_URL =
+  process.env.E2E_API_HEALTH_URL ?? `http://127.0.0.1:${API_PORT}/api/healthz`;
 
 // Allow CI to opt into having Playwright start the dev servers on its own.
 // Locally we expect the workspace's existing artifact workflows to already be
@@ -57,18 +67,18 @@ export default defineConfig({
         {
           command:
             "pnpm --filter @workspace/api-server run dev",
-          url: "http://localhost:8080/api/healthz",
+          url: API_HEALTH_URL,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
           stdout: "pipe",
           stderr: "pipe",
           // The api-server defaults to PORT=3000 when unset, but the
           // school-financial-model Vite dev server proxies /api to
-          // http://localhost:8080. Pin the API to 8080 here so the
+          // http://127.0.0.1:8080. Pin the API to 8080 here so the
           // proxy + the Playwright health check both resolve (otherwise
           // the wait URL polls :8080 forever while the server listens
           // on :3000).
-          env: { PORT: "8080" },
+          env: { PORT: String(API_PORT) },
         },
         {
           command:
@@ -78,7 +88,21 @@ export default defineConfig({
           timeout: 120_000,
           stdout: "pipe",
           stderr: "pipe",
-          env: { PORT: String(PORT) },
+          // E2E_MODE=1 tells vite.config.ts to skip the Replit dev plugins
+          // (cartographer/runtime-error-modal/dev-banner). Those plugins
+          // watch the entire workspace from `..` and inject overlays we
+          // don't need under headless Chromium — and they were the most
+          // plausible cause of the long-run "Vite dev server appears to
+          // die mid-run" flake (Task #380).
+          //
+          // VITE_API_PROXY_TARGET pins the /api proxy to the IPv4
+          // loopback so requests can never get caught on `::1` even if
+          // some future change re-introduces `localhost` defaults.
+          env: {
+            PORT: String(PORT),
+            E2E_MODE: "1",
+            VITE_API_PROXY_TARGET: `http://127.0.0.1:${API_PORT}`,
+          },
         },
       ]
     : undefined,
