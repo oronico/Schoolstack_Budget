@@ -227,3 +227,72 @@ test("Share-as-QR modal renders a QR for the current overrides URL", async ({
   await qrDialog.getByTestId("whatif-qr-close").click();
   await expect(qrDialog).toHaveCount(0);
 });
+
+test("Email and SMS share buttons expose mailto: / sms: hrefs with the same #whatif payload", async ({
+  page,
+  request,
+}) => {
+  const { token, modelId } = await seedScenarioFixture(request);
+  await primeAuthToken(page, token);
+  await captureClipboardWrites(page);
+
+  await page.goto(`/model/${modelId}/scenarios`);
+
+  await page.getByTestId("whatif-trigger").click();
+  const drawer = page.getByTestId("whatif-drawer");
+  await expect(drawer).toBeVisible({ timeout: 15_000 });
+
+  // Same override as the copy/QR tests so all three share affordances
+  // can be cross-checked against an identical encoded payload.
+  const rentInput = drawer.getByTestId("whatif-monthly-rent");
+  await rentInput.fill(String(SHARE_RENT));
+  await expect(rentInput).toHaveValue(String(SHARE_RENT));
+
+  const emailLink = drawer.getByTestId("whatif-share-email");
+  const smsLink = drawer.getByTestId("whatif-share-sms");
+
+  // Both share affordances are real `<a>` elements so the browser hands
+  // off to the OS's mail/SMS handler natively (no popup blocker, works
+  // on desktop and mobile). Wait for the href to reflect the latest
+  // override — `useMemo` recomputes from the debounced overrides, so
+  // the first render after typing will still show the empty payload.
+  // The hash payload is URI-encoded inside the body= param, so `:` shows
+  // up as `%3A`; pin on the encoded form so the regex matches.
+  const encodedRentMarker = new RegExp(`m%3A${SHARE_RENT}`);
+  await expect(emailLink).toHaveAttribute("href", encodedRentMarker, {
+    timeout: 5_000,
+  });
+  await expect(smsLink).toHaveAttribute("href", encodedRentMarker, {
+    timeout: 5_000,
+  });
+
+  // Email href: mailto: with the pinned subject and the share URL in
+  // the body, both URI-encoded. The subject string is part of the user
+  // contract — a copy change should fail this test, not slip through.
+  const emailHref = (await emailLink.getAttribute("href")) ?? "";
+  expect(emailHref).toMatch(/^mailto:/);
+  expect(emailHref).toContain(
+    `subject=${encodeURIComponent("Take a look at this what-if scenario")}`,
+  );
+  const emailParams = new URLSearchParams(emailHref.replace(/^mailto:\??/, ""));
+  const emailBody = emailParams.get("body") ?? "";
+  expect(emailBody).toContain(`#whatif=`);
+  expect(emailBody).toContain(`m:${SHARE_RENT}`);
+  expect(emailBody).toContain(`/model/${modelId}/scenarios`);
+
+  // SMS href: body-only (most carriers/clients ignore `subject` in
+  // `sms:`), with the same encoded share URL.
+  const smsHref = (await smsLink.getAttribute("href")) ?? "";
+  expect(smsHref).toMatch(/^sms:/);
+  expect(smsHref).not.toContain("subject=");
+  const smsParams = new URLSearchParams(smsHref.replace(/^sms:\??/, ""));
+  const smsBody = smsParams.get("body") ?? "";
+  expect(smsBody).toContain(`#whatif=`);
+  expect(smsBody).toContain(`m:${SHARE_RENT}`);
+  expect(smsBody).toContain(`/model/${modelId}/scenarios`);
+
+  // Cross-check: the share URL embedded in the email body (sans the
+  // trailing newline the email body adds) and the SMS body should be
+  // identical, since both flow through buildShareUrl(overrides).
+  expect(smsBody).toBe(emailBody.trim());
+});

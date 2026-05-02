@@ -13,6 +13,8 @@ import {
   TrendingDown,
   Link as LinkIcon,
   QrCode,
+  Mail,
+  MessageSquare,
   AlertCircle,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -215,6 +217,34 @@ export function WhatIfDrawer({
     }
   }, [overrides, toast]);
 
+  // Pre-built `mailto:` / `sms:` hrefs for the share buttons. Using real
+  // anchor hrefs (rather than imperative `window.location.href = ...`)
+  // lets the browser hand off to the OS's mail/SMS handler the same way
+  // it does for any other link — no popup blocker, no stranded blank
+  // tab, and the user gets right-click → "Copy email address" for free.
+  // We rebuild these from the live `overrides` (the same source of truth
+  // as the copy-link / QR paths) so all four share affordances always
+  // emit the identical `#whatif=` payload — no debounce-window drift.
+  const shareUrl = useMemo(
+    () => buildShareUrl(overrides),
+    [overrides],
+  );
+
+  const emailShareHref = useMemo(() => {
+    if (!shareUrl) return "#";
+    const subject = "Take a look at this what-if scenario";
+    const body = `${shareUrl}\n`;
+    return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }, [shareUrl]);
+
+  // SMS — most carriers/clients ignore a `subject` in `sms:`, so we only
+  // set `body`. iOS's Messages app and Android's default SMS handler
+  // both accept the standard `?body=` query form we emit here.
+  const smsShareHref = useMemo(() => {
+    if (!shareUrl) return "#";
+    return `sms:?body=${encodeURIComponent(shareUrl)}`;
+  }, [shareUrl]);
+
   const openQrDialog = useCallback(async () => {
     const fullUrl = buildShareUrl(overrides);
     setQrUrl(fullUrl);
@@ -350,6 +380,32 @@ export function WhatIfDrawer({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Show QR code for in-meeting sharing</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={emailShareHref}
+                      data-testid="whatif-share-email"
+                      aria-label="Share via email"
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors inline-flex items-center justify-center"
+                    >
+                      <Mail className="h-4 w-4" />
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent>Share via email</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={smsShareHref}
+                      data-testid="whatif-share-sms"
+                      aria-label="Share via SMS"
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors inline-flex items-center justify-center"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent>Share via SMS</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
