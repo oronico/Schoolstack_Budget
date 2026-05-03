@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, or, isNull, lt } from "drizzle-orm";
 import {
   RegisterBody,
   LoginBody,
@@ -19,6 +19,47 @@ const router: IRouter = Router();
 
 const authRateLimiter = createRateLimiter(60_000, 10);
 const strictRateLimiter = createRateLimiter(60_000, 5);
+
+// Round-4 #20: precomputed cost-12 bcrypt hash used for the constant-time
+// dummy compare on /auth/login when the email is unknown. Generated once at
+// module load (not per request) so the cost matches a real user lookup.
+const DUMMY_BCRYPT_HASH = bcrypt.hashSync(
+  "round4-dummy-password-never-matches-anything",
+  12,
+);
+
+// Round-4 #24: minimum interval between forgot-password emails for the same
+// account. Prevents a stalker from rotating IPs to invalidate every
+// legitimate reset link a victim requests and to spam the inbox.
+const FORGOT_PASSWORD_COOLDOWN_MS = 60_000;
+const RESET_TOKEN_TTL_MS = 3_600_000;
+
+// Round-4 #21: bound the per-event metadata blob we persist into events.jsonb
+// so an authenticated attacker can't pump multi-MB payloads through
+// /auth/track. Mirrors the /public/timing limits established in #19.
+const MAX_TRACK_METADATA_KEYS = 16;
+const MAX_TRACK_METADATA_STRING = 256;
+function sanitizeTrackMetadata(input: unknown): Record<string, unknown> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const out: Record<string, unknown> = {};
+  let count = 0;
+  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+    if (count >= MAX_TRACK_METADATA_KEYS) break;
+    if (typeof k !== "string" || k.length > 64) continue;
+    if (typeof v === "string") {
+      out[k] = v.slice(0, MAX_TRACK_METADATA_STRING);
+    } else if (typeof v === "number") {
+      out[k] = Number.isFinite(v) ? v : null;
+    } else if (typeof v === "boolean" || v === null) {
+      out[k] = v;
+    } else {
+      // Drop nested objects/arrays — analytics events should be flat.
+      continue;
+    }
+    count++;
+  }
+  return out;
+}
 
 router.post("/auth/register", authRateLimiter, async (req, res) => {
   try {
@@ -67,13 +108,17 @@ router.post("/auth/login", authRateLimiter, async (req, res) => {
     const { email, password } = parsed.data;
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
-    if (!user) {
-      res.status(401).json({ error: "Invalid email or password." });
-      return;
-    }
-
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
+    // Round-4 #20: equalize timing across the existing-user / unknown-email
+    // branches. Previously the no-user branch returned 401 immediately while
+    // the user-found branch always paid bcrypt.compare's ~150ms cost-12 work,
+    // making the response time a reliable boolean oracle for "is this email
+    // registered?". We now run bcrypt against a dummy hash for unknown users
+    // so the wall-clock cost is the same regardless. The dummy hash is a
+    // valid bcryptjs cost-12 hash of an unrelated value; it will never match
+    // any real password.
+    const passwordHashToCompare = user?.passwordHash ?? DUMMY_BCRYPT_HASH;
+    const valid = await bcrypt.compare(password, passwordHashToCompare);
+    if (!user || !valid) {
       res.status(401).json({ error: "Invalid email or password." });
       return;
     }
@@ -260,14 +305,35 @@ router.post("/auth/forgot-password", strictRateLimiter, async (req, res) => {
     }
     const { email } = parsed.data;
 
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
-    if (user) {
-      const resetTokenRaw = crypto.randomBytes(32).toString("hex");
-      const resetToken = crypto.createHash("sha256").update(resetTokenRaw).digest("hex");
-      const resetTokenExpiry = new Date(Date.now() + 3600000);
-      await db.update(usersTable).set({ resetToken, resetTokenExpiry }).where(eq(usersTable.id, user.id));
-      await trackEvent("requested_password_reset", user.id);
-      const result = await sendPasswordResetEmail(user.email, resetTokenRaw);
+    // Round-4 #24 (round-5 hardening): per-account cooldown enforced via a
+    // single conditional UPDATE so two concurrent requests for the same
+    // account cannot both observe a stale row, both pass the cooldown
+    // check, and both issue tokens/emails. Earlier code did
+    // SELECT -> compute -> UPDATE, which was TOCTOU-bypassable. The
+    // conditional WHERE restricts the update to rows whose previously
+    // recorded resetTokenExpiry is NULL or older than the cooldown
+    // threshold (now + TTL - COOLDOWN, since lastIssuedAt = expiry - TTL).
+    // Only the row(s) that actually pass the predicate come back via
+    // RETURNING; the loser silently no-ops, preserving the generic 200.
+    const now = Date.now();
+    const resetTokenRaw = crypto.randomBytes(32).toString("hex");
+    const resetToken = crypto.createHash("sha256").update(resetTokenRaw).digest("hex");
+    const resetTokenExpiry = new Date(now + RESET_TOKEN_TTL_MS);
+    const cooldownThreshold = new Date(now + RESET_TOKEN_TTL_MS - FORGOT_PASSWORD_COOLDOWN_MS);
+    const updated = await db
+      .update(usersTable)
+      .set({ resetToken, resetTokenExpiry })
+      .where(
+        and(
+          eq(usersTable.email, email.toLowerCase()),
+          or(isNull(usersTable.resetTokenExpiry), lt(usersTable.resetTokenExpiry, cooldownThreshold)),
+        ),
+      )
+      .returning({ id: usersTable.id, email: usersTable.email });
+    const winner = updated[0];
+    if (winner) {
+      await trackEvent("requested_password_reset", winner.id);
+      const result = await sendPasswordResetEmail(winner.email, resetTokenRaw);
       // Round-3 #17: NEVER surface the mailer-failure status to the
       // unauth client. Returning 503 only when the user existed turned
       // this route into a reliable user-enumeration oracle whenever
@@ -276,7 +342,7 @@ router.post("/auth/forgot-password", strictRateLimiter, async (req, res) => {
       // and operators see the failure server-side via the log line.
       if (!result.success) {
         console.error(
-          `[auth] forgot-password: mailer failed for user ${user.id}: ${result.error || "unknown"}`,
+          `[auth] forgot-password: mailer failed for user ${winner.id}: ${result.error || "unknown"}`,
         );
       }
     }
@@ -382,7 +448,10 @@ router.post("/auth/track", authMiddleware, async (req: AuthRequest, res) => {
       res.status(400).json({ error: "Invalid event name." });
       return;
     }
-    const safeMetadata = metadata && typeof metadata === "object" ? metadata : {};
+    // Round-4 #21: bound the persisted metadata blob. The 5MB JSON body
+    // limit is the only previous cap on `safeMetadata`, so any authed
+    // attacker could pump multi-MB jsonb into events per request.
+    const safeMetadata = sanitizeTrackMetadata(metadata);
     await trackEvent(event, req.userId!, safeMetadata);
     res.json({ ok: true });
   } catch (err) {

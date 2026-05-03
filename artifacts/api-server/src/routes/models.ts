@@ -14,7 +14,18 @@ import {
   ArchiveModelParams,
 } from "@workspace/api-zod";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth";
+import { createRateLimiter } from "../lib/rate-limiter";
 import { isRequestAborted } from "../lib/request-abort";
+
+// Round-4 #22: dedicated rate limiter for the unauth /shared/:token surface.
+// Both /shared/:token and /shared/:token/export/decision-comparison-pdf run
+// heavy work per request — runConsultantEngine + per-scenario decision impact
+// recompute, plus a multi-page PDF render on the export route — and previously
+// had ZERO rate limiting. Anyone with a leaked share token (forwarded email,
+// screenshot, accidental git commit) could pin the API by hammering it. We
+// allow 30/min/IP, which is generous for legitimate recipients refreshing
+// the page but cuts off the trivial DoS pattern.
+const sharedLinkRateLimiter = createRateLimiter(60_000, 30);
 import { generateProFormaPDF } from "../lib/pdf-proforma";
 import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
@@ -1600,9 +1611,12 @@ router.delete("/models/:id/share/:token", authMiddleware, async (req: AuthReques
   }
 });
 
-router.get("/shared/:token", async (req, res) => {
+router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
   try {
-    const token = req.params.token;
+    // Express 5's overloaded router.get(path, mw, handler) widens
+    // req.params[":token"] to `string | string[]`. The route-pattern
+    // guarantees a single segment, so narrow it explicitly.
+    const token = req.params.token as string;
     if (!token || token.length !== 64 || !/^[a-f0-9]{64}$/.test(token)) { res.status(400).json({ error: "Invalid share token." }); return; }
 
     const [link] = await db
@@ -1733,9 +1747,12 @@ router.get("/shared/:token", async (req, res) => {
 // payload (precomputed impacts) and the PDF generator are identical — the
 // only difference is the auth surface: the share token replaces the Bearer
 // token, and the share record's modelId is used in place of the URL :id.
-router.post("/shared/:token/export/decision-comparison-pdf", async (req, res) => {
+router.post("/shared/:token/export/decision-comparison-pdf", sharedLinkRateLimiter, async (req, res) => {
   try {
-    const token = req.params.token;
+    // Express 5's overloaded router.post(path, mw, handler) widens
+    // req.params[":token"] to `string | string[]`. The route-pattern
+    // guarantees a single segment, so narrow it explicitly.
+    const token = req.params.token as string;
     if (!token || token.length !== 64 || !/^[a-f0-9]{64}$/.test(token)) {
       res.status(400).json({ error: "Invalid share token." });
       return;

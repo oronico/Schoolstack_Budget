@@ -56,27 +56,42 @@ export interface MessageResponse {
 }
 
 export interface RegisterRequest {
+  /** @maxLength 254 */
   email: string;
-  /** @minLength 8 */
+  /**
+   * @minLength 8
+   * @maxLength 200
+   */
   password: string;
+  /** @maxLength 100 */
   name: string;
+  /** @maxLength 200 */
   schoolName?: string | null;
+  /** @maxLength 100 */
   role?: string | null;
+  /** @maxLength 100 */
   planningStage?: string | null;
 }
 
 export interface LoginRequest {
+  /** @maxLength 254 */
   email: string;
+  /** @maxLength 200 */
   password: string;
 }
 
 export interface ForgotPasswordRequest {
+  /** @maxLength 254 */
   email: string;
 }
 
 export interface ResetPasswordRequest {
+  /** @maxLength 256 */
   token: string;
-  /** @minLength 8 */
+  /**
+   * @minLength 8
+   * @maxLength 200
+   */
   password: string;
 }
 

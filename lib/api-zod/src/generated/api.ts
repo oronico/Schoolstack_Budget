@@ -18,23 +18,41 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Register a new user
  */
+export const registerBodyEmailMax = 254;
+
 export const registerBodyPasswordMin = 8;
+export const registerBodyPasswordMax = 200;
+
+export const registerBodyNameMax = 100;
+
+export const registerBodySchoolNameMax = 200;
+
+export const registerBodyRoleMax = 100;
+
+export const registerBodyPlanningStageMax = 100;
 
 export const RegisterBody = zod.object({
-  email: zod.string().email(),
-  password: zod.string().min(registerBodyPasswordMin),
-  name: zod.string(),
-  schoolName: zod.string().nullish(),
-  role: zod.string().nullish(),
-  planningStage: zod.string().nullish(),
+  email: zod.string().email().max(registerBodyEmailMax),
+  password: zod
+    .string()
+    .min(registerBodyPasswordMin)
+    .max(registerBodyPasswordMax),
+  name: zod.string().max(registerBodyNameMax),
+  schoolName: zod.string().max(registerBodySchoolNameMax).nullish(),
+  role: zod.string().max(registerBodyRoleMax).nullish(),
+  planningStage: zod.string().max(registerBodyPlanningStageMax).nullish(),
 });
 
 /**
  * @summary Login
  */
+export const loginBodyEmailMax = 254;
+
+export const loginBodyPasswordMax = 200;
+
 export const LoginBody = zod.object({
-  email: zod.string().email(),
-  password: zod.string(),
+  email: zod.string().email().max(loginBodyEmailMax),
+  password: zod.string().max(loginBodyPasswordMax),
 });
 
 export const LoginResponse = zod.object({
@@ -145,8 +163,10 @@ export const UpdateLenderLanguageResponse = zod.object({
 /**
  * @summary Request password reset
  */
+export const forgotPasswordBodyEmailMax = 254;
+
 export const ForgotPasswordBody = zod.object({
-  email: zod.string().email(),
+  email: zod.string().email().max(forgotPasswordBodyEmailMax),
 });
 
 export const ForgotPasswordResponse = zod.object({
@@ -156,11 +176,17 @@ export const ForgotPasswordResponse = zod.object({
 /**
  * @summary Reset password with token
  */
+export const resetPasswordBodyTokenMax = 256;
+
 export const resetPasswordBodyPasswordMin = 8;
+export const resetPasswordBodyPasswordMax = 200;
 
 export const ResetPasswordBody = zod.object({
-  token: zod.string(),
-  password: zod.string().min(resetPasswordBodyPasswordMin),
+  token: zod.string().max(resetPasswordBodyTokenMax),
+  password: zod
+    .string()
+    .min(resetPasswordBodyPasswordMin)
+    .max(resetPasswordBodyPasswordMax),
 });
 
 export const ResetPasswordResponse = zod.object({

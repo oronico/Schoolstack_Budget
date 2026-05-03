@@ -742,20 +742,26 @@ components:
         email:
           type: string
           format: email
+          maxLength: 254
         password:
           type: string
           minLength: 8
+          maxLength: 200
         name:
           type: string
+          maxLength: 100
         schoolName:
           type: string
           nullable: true
+          maxLength: 200
         role:
           type: string
           nullable: true
+          maxLength: 100
         planningStage:
           type: string
           nullable: true
+          maxLength: 100
       required:
         - email
         - password
@@ -766,8 +772,10 @@ components:
         email:
           type: string
           format: email
+          maxLength: 254
         password:
           type: string
+          maxLength: 200
       required:
         - email
         - password
@@ -777,6 +785,7 @@ components:
         email:
           type: string
           format: email
+          maxLength: 254
       required:
         - email
     ResetPasswordRequest:
@@ -784,9 +793,11 @@ components:
       properties:
         token:
           type: string
+          maxLength: 256
         password:
           type: string
           minLength: 8
+          maxLength: 200
       required:
         - token
         - password
