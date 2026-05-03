@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import { db } from "@workspace/db";
 import { financialModelsTable, exportsTable, sharedLinksTable, usersTable } from "@workspace/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import {
   CreateModelBody,
   UpdateModelBody,
@@ -35,6 +35,27 @@ import {
   type DecisionType as DecisionEngineDecisionType,
 } from "@workspace/finance";
 import type { Response } from "express";
+
+// Postgres `serial` (int4) caps at 2,147,483,647. `zod.coerce.number()` on
+// the generated path-param schemas accepts fractional ("1.5"), exponential
+// ("1e10"), and overflow ("9999999999999999999") strings — every one of
+// which used to crash the route with a 500 + an error_logs row when
+// Drizzle bound the bogus value to the int4 column. This guard matches
+// the contract the DB actually enforces.
+function isValidModelId(id: number): boolean {
+  return Number.isInteger(id) && id > 0 && id <= 2_147_483_647;
+}
+
+// Strip control bytes that crash Postgres or render badly in PDFs/UI:
+// NULs (0x00) trigger Postgres's "invalid byte sequence for encoding UTF8"
+// when bound to a TEXT column (raising 500 + error_logs noise); other C0
+// control chars and DEL (0x7F) survive Postgres but render as garbage in
+// lender PDFs and email subject lines. We strip rather than reject so a
+// founder pasting a name from a richtext source doesn't lose the save.
+function sanitizeModelName(raw: string): string {
+  // eslint-disable-next-line no-control-regex
+  return raw.replace(/[\x00-\x1F\x7F]/g, "").trim();
+}
 
 function abortGuard(req: AuthRequest, res: Response): boolean {
   if (isRequestAborted(req)) {
@@ -234,13 +255,18 @@ router.post("/models", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
     const { name, currentStep, schoolStage, fundingProfile } = parsed.data;
+    const cleanName = sanitizeModelName(name);
+    if (!cleanName) {
+      res.status(400).json({ error: "Model name is required." });
+      return;
+    }
     const rawData = (req.body as Record<string, unknown>).data as Record<string, unknown> | undefined;
     const normalizedData = normalizeModelData(rawData ?? {});
     const rowCols = extractRowColumns(normalizedData);
 
     const [model] = await db.insert(financialModelsTable).values({
       userId: req.userId!,
-      name,
+      name: cleanName,
       currentStep: currentStep ?? 0,
       data: normalizedData,
       schoolStage: schoolStage as typeof financialModelsTable.$inferInsert["schoolStage"],
@@ -260,7 +286,7 @@ router.post("/models", authMiddleware, async (req: AuthRequest, res) => {
 router.get("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = GetModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -301,7 +327,7 @@ function stripEmptyValues(obj: unknown): unknown {
 router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = UpdateModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -325,13 +351,24 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
     }
 
     const { name, currentStep, status, schoolStage, fundingProfile } = parsed.data;
+    const nextName = name === undefined ? existing.name : sanitizeModelName(name);
+    if (!nextName) {
+      res.status(400).json({ error: "Model name is required." });
+      return;
+    }
     const rawData = (req.body as Record<string, unknown>).data as Record<string, unknown> | undefined;
     const normalizedData = normalizeModelData(rawData ?? {});
     const rowCols = extractRowColumns(normalizedData);
+    // Optimistic concurrency: include the row's prior `updatedAt` in the
+    // WHERE clause so a second simultaneous PUT (e.g. two open tabs racing
+    // a save) cannot silently overwrite the first one's edits. If 0 rows
+    // come back, the row was modified between our SELECT and UPDATE —
+    // surface a 409 so the client can refresh and retry instead of
+    // pretending the save succeeded while the data is gone.
     const [model] = await db
       .update(financialModelsTable)
       .set({
-        name: name ?? existing.name,
+        name: nextName,
         data: normalizedData,
         currentStep: currentStep ?? existing.currentStep,
         status: status ?? existing.status,
@@ -340,8 +377,25 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
         ...rowCols,
         updatedAt: new Date(),
       })
-      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .where(and(
+        eq(financialModelsTable.id, params.data.id),
+        eq(financialModelsTable.userId, req.userId!),
+        // Postgres `timestamp` stores microseconds; JS Date only carries
+        // milliseconds, so a naive `eq(updatedAt, existing.updatedAt)`
+        // always fails to match (the round-tripped Date drops the µs
+        // tail). Truncate both sides to ms so the optimistic-concurrency
+        // check actually succeeds for the row we just SELECTed while
+        // still failing the moment another writer mutates the row.
+        sql`date_trunc('milliseconds', ${financialModelsTable.updatedAt}) = date_trunc('milliseconds', ${existing.updatedAt}::timestamp)`,
+      ))
       .returning();
+
+    if (!model) {
+      res.status(409).json({
+        error: "This model was modified by another session. Please refresh and try again.",
+      });
+      return;
+    }
 
     await trackEvent("updated_model", req.userId, { modelId: model.id });
 
@@ -355,7 +409,7 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
 router.delete("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = DeleteModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -383,7 +437,7 @@ router.delete("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
 router.post("/models/:id/duplicate", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = DuplicateModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -427,7 +481,7 @@ router.post("/models/:id/duplicate", authMiddleware, async (req: AuthRequest, re
 router.post("/models/:id/archive", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ArchiveModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -461,7 +515,7 @@ router.post("/models/:id/archive", authMiddleware, async (req: AuthRequest, res)
 router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -525,7 +579,7 @@ router.get("/models/:id/consultant", authMiddleware, async (req: AuthRequest, re
 router.get("/models/:id/export/pro-forma-pdf", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -570,7 +624,7 @@ router.get("/models/:id/export/pro-forma-pdf", authMiddleware, async (req: AuthR
 router.get("/models/:id/export/loan-readiness-pdf", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -620,7 +674,7 @@ router.get("/models/:id/export/loan-readiness-pdf", authMiddleware, async (req: 
 router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -665,7 +719,7 @@ router.get("/models/:id/export/lender-proforma", authMiddleware, async (req: Aut
 router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -720,7 +774,7 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
 router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -792,7 +846,7 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
 router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -845,7 +899,7 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
 router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -921,7 +975,7 @@ router.post(
   async (req: AuthRequest, res) => {
     try {
       const params = ExportModelParams.safeParse(req.params);
-      if (!params.success) {
+      if (!params.success || !isValidModelId(params.data.id)) {
         res.status(400).json({ error: "Invalid model ID." });
         return;
       }
@@ -989,7 +1043,7 @@ router.post(
 router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -1054,7 +1108,7 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
 router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -1125,7 +1179,7 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
 router.get("/models/:id/export/chesterton-operating-manual", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -1174,7 +1228,7 @@ router.get("/models/:id/export/chesterton-operating-manual", authMiddleware, asy
 router.get("/models/:id/export/single-year", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -1221,7 +1275,7 @@ router.get("/models/:id/export/single-year", authMiddleware, async (req: AuthReq
 router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }
@@ -1292,7 +1346,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
     }
 
     const params = ExportModelParams.safeParse(req.params);
-    if (!params.success) {
+    if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
       return;
     }

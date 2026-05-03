@@ -59,9 +59,10 @@ interface PostResult {
 async function rawPost(
   baseUrl: string,
   path: string,
-  body: string,
+  body: string | Buffer,
   contentType = "application/json",
   contentLengthOverride?: string,
+  extraHeaders: Record<string, string> = {},
 ): Promise<PostResult> {
   // Use raw http.request — node's fetch (undici) refuses to send a request
   // whose Content-Length header disagrees with the actual body length, but
@@ -74,7 +75,8 @@ async function rawPost(
     "Content-Length":
       contentLengthOverride !== undefined
         ? contentLengthOverride
-        : String(Buffer.byteLength(body)),
+        : String(typeof body === "string" ? Buffer.byteLength(body) : body.length),
+    ...extraHeaders,
   };
   return new Promise<PostResult>((resolve, reject) => {
     const req = http.request(
@@ -167,6 +169,44 @@ async function main(): Promise<void> {
       "well-formed JSON still reaches the route handler (4xx, not 500)",
       goodJson.status >= 400 && goodJson.status < 500,
       `got ${goodJson.status}`,
+    );
+
+    // 6a) Content-Encoding: gzip with a body that ISN'T actually gzipped.
+    // body-parser pipes the body through zlib.createGunzip(), which emits
+    // a Z_DATA_ERROR. body-parser wraps that as an http-errors 400 with
+    // `expose: true` but NO `.type` discriminator — the original
+    // classifier missed it and let it fall through to the generic 500 +
+    // error_logs persistence path. The fix in app.ts adds an
+    // http-errors-shaped fallback so any 4xx with `expose: true` is
+    // treated as a client error.
+    const gzipFake = await rawPost(
+      baseUrl,
+      "/api/auth/login",
+      '{"email":"x@y.com","password":"x"}',
+      "application/json",
+      undefined,
+      { "Content-Encoding": "gzip" },
+    );
+    check(
+      "gzip-claimed-but-not-actually-gzipped body is a 4xx (not 500)",
+      gzipFake.status >= 400 && gzipFake.status < 500,
+      `got ${gzipFake.status}: ${gzipFake.bodyText.slice(0, 200)}`,
+    );
+
+    // 6b) Content-Encoding header naming an algorithm body-parser cannot
+    // decompress at all — should be a 4xx (415 in current body-parser).
+    const unknownEncoding = await rawPost(
+      baseUrl,
+      "/api/auth/login",
+      "{}",
+      "application/json",
+      undefined,
+      { "Content-Encoding": "snappy-not-real" },
+    );
+    check(
+      "unknown Content-Encoding is a 4xx (not 500)",
+      unknownEncoding.status >= 400 && unknownEncoding.status < 500,
+      `got ${unknownEncoding.status}: ${unknownEncoding.bodyText.slice(0, 200)}`,
     );
 
     // 6) Unsupported charset → 415, not 500.

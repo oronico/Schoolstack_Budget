@@ -161,6 +161,15 @@ function classifyClientError(
   if (err.type === "charset.unsupported") {
     return { status: 415, message: "Unsupported request body charset." };
   }
+  // Catch-all for http-errors-style 4xx (e.g. body-parser's gzip
+  // decompression failure: it wraps zlib's Z_DATA_ERROR as a 400 with
+  // `expose: true` but no `.type` discriminator). Without this branch,
+  // every "Content-Encoding: gzip" request whose body isn't actually
+  // gzipped becomes a 500 + an entry in error_logs.
+  const status = typeof err.status === "number" ? err.status : err.statusCode;
+  if (typeof status === "number" && status >= 400 && status < 500 && err.expose === true) {
+    return { status, message: err.message || "Bad request." };
+  }
   return null;
 }
 
