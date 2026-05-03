@@ -91,7 +91,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       {
         question: "I only need a Year 1 budget right now. Do I still have to model 5 years?",
         answer:
-          "No. The wizard fills in Years 2–5 automatically with sensible defaults so you can focus on Year 1. When you're ready to think further out, the multi-year view is already there.",
+          "No. When you start a new model you'll pick \"Single-Year Budget\" - the wizard focuses on Year 1, the Year 1 income statement is the core deliverable, and you can export it for your team. Whenever you're ready to think further out, click \"Extend to 5-year\" and the multi-year view picks up where you left off (Years 2-5 are seeded from your Year 1 ramp).",
       },
       {
         question: "Does this account for cash timing, not just totals?",

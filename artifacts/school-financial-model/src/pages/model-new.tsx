@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useCreateModel } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
-import { Loader2 } from "lucide-react";
+import { Loader2, Calendar, TrendingUp, ArrowRight } from "lucide-react";
+import type { ModelDuration } from "@/pages/model-wizard/schema";
 
 function parseSpaceParams(): Record<string, string | number> | null {
   const search = window.location.search;
@@ -33,7 +34,7 @@ function parseSpaceParams(): Record<string, string | number> | null {
   return hasAny ? result : null;
 }
 
-function buildPrefillData(p: Record<string, string | number>): Record<string, unknown> {
+function buildPrefillData(p: Record<string, string | number>, duration: ModelDuration): Record<string, unknown> {
   const data: Record<string, unknown> = {};
 
   const sqft = typeof p.sqft === "number" ? p.sqft : 0;
@@ -56,6 +57,7 @@ function buildPrefillData(p: Record<string, string | number>): Record<string, un
     hasMortgage: false,
     mortgageMonthlyPayment: 0,
     estimatedMonthlyFacilityBudget: 0,
+    modelDuration: duration,
   };
 
   if (schoolName) {
@@ -132,68 +134,129 @@ export function NewModelPage() {
   const [, setLocation] = useLocation();
   const createMutation = useCreateModel();
   const hasTriggered = useRef(false);
+  const [pickedDuration, setPickedDuration] = useState<ModelDuration | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [spaceParams, setSpaceParams] = useState<Record<string, string | number> | null | undefined>(undefined);
 
   useEffect(() => {
-    if (hasTriggered.current) return;
+    setSpaceParams(parseSpaceParams());
+  }, []);
+
+  const handlePick = (duration: ModelDuration) => {
+    if (hasTriggered.current || submitting) return;
     hasTriggered.current = true;
-
-    const spaceParams = parseSpaceParams();
-
-    if (!spaceParams) {
-      (async () => {
-        try {
-          const newModel = await createMutation.mutateAsync({
-            data: { name: "Untitled Model", currentStep: 1, data: {} },
-          });
-          try {
-            window.localStorage.setItem(`wizard:storyMigration:${newModel.id}`, "1");
-            window.localStorage.setItem(`wizard:reorderV2:${newModel.id}`, "1");
-          } catch {
-            /* noop */
-          }
-          setLocation(`/model/${newModel.id}`);
-        } catch {
-          setLocation("/dashboard");
-        }
-      })();
-      return;
-    }
+    setPickedDuration(duration);
+    setSubmitting(true);
 
     (async () => {
       try {
-        const prefillData = buildPrefillData(spaceParams);
+        const isSpaceImport = spaceParams !== null && spaceParams !== undefined;
+        const prefillData = isSpaceImport
+          ? buildPrefillData(spaceParams as Record<string, string | number>, duration)
+          : { schoolProfile: { modelDuration: duration } };
         const modelName =
-          typeof spaceParams.schoolName === "string" && spaceParams.schoolName
-            ? spaceParams.schoolName
+          isSpaceImport && typeof (spaceParams as Record<string, string | number>).schoolName === "string"
+            && (spaceParams as Record<string, string | number>).schoolName
+            ? String((spaceParams as Record<string, string | number>).schoolName)
             : "Untitled Model";
 
         const newModel = await createMutation.mutateAsync({
-          data: {
-            name: modelName,
-            currentStep: 1,
-            data: prefillData,
-          },
+          data: { name: modelName, currentStep: 1, data: prefillData },
         });
-
         try {
           window.localStorage.setItem(`wizard:storyMigration:${newModel.id}`, "1");
           window.localStorage.setItem(`wizard:reorderV2:${newModel.id}`, "1");
         } catch {
           /* noop */
         }
-        sessionStorage.setItem(`space_import_${newModel.id}`, "true");
+        if (isSpaceImport) {
+          sessionStorage.setItem(`space_import_${newModel.id}`, "true");
+        }
         setLocation(`/model/${newModel.id}`);
       } catch {
         setLocation("/dashboard");
       }
     })();
-  }, []);
+  };
+
+  // While we're parsing search params (single-tick effect) show a spinner
+  // rather than flashing the picker. Same loader state covers the brief
+  // window between pick → API round-trip.
+  if (spaceParams === undefined || submitting) {
+    return (
+      <Layout>
+        <div className="flex-1 flex flex-col items-center justify-center py-20 gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground text-sm">
+            {submitting ? `Creating your ${pickedDuration === "single_year" ? "Year 1 budget" : "5-year model"}...` : "Loading..."}
+          </p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div className="flex-1 flex flex-col items-center justify-center py-20 gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground text-sm">Creating your model...</p>
+      <div className="flex-1 flex flex-col items-center justify-center py-12 px-4">
+        <div className="max-w-3xl w-full">
+          <div className="text-center mb-10">
+            <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-3">
+              How far out do you want to plan?
+            </h1>
+            <p className="text-muted-foreground text-base sm:text-lg">
+              Pick what fits where you are right now. You can extend a Year 1 budget into a full
+              5-year projection at any time.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <button
+              type="button"
+              data-testid="pick-single-year"
+              onClick={() => handlePick("single_year")}
+              className="group bg-card rounded-2xl border-2 border-border/60 hover:border-primary hover:shadow-xl hover:-translate-y-1 p-6 sm:p-7 text-left transition-all"
+            >
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4">
+                <Calendar className="h-6 w-6" />
+              </div>
+              <h2 className="font-display font-bold text-xl text-foreground mb-2">
+                Single-Year Budget
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                Build a Year 1 income statement in under an hour. Walk through enrollment,
+                revenue, staffing, and expenses for the coming school year only.
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary group-hover:gap-2.5 transition-all">
+                Start Year 1 budget <ArrowRight className="h-4 w-4" />
+              </span>
+            </button>
+            <button
+              type="button"
+              data-testid="pick-five-year"
+              onClick={() => handlePick("five_year")}
+              className="group bg-card rounded-2xl border-2 border-primary/30 ring-1 ring-primary/20 hover:border-primary hover:shadow-xl hover:-translate-y-1 p-6 sm:p-7 text-left transition-all relative"
+            >
+              <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-[11px] font-semibold">
+                Recommended
+              </span>
+              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                <TrendingUp className="h-6 w-6" />
+              </div>
+              <h2 className="font-display font-bold text-xl text-foreground mb-2">
+                5-Year Projection
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                The full pro-forma. Required for lender packets, board summaries, and any
+                multi-year scenario planning.
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary group-hover:gap-2.5 transition-all">
+                Start 5-year model <ArrowRight className="h-4 w-4" />
+              </span>
+            </button>
+          </div>
+          <p className="text-center text-xs text-muted-foreground mt-8">
+            Not sure? Start with Single-Year - we'll extend it for you when you're ready.
+          </p>
+        </div>
       </div>
     </Layout>
   );

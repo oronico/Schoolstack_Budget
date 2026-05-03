@@ -4,7 +4,9 @@ import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
-import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle, Sparkles } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle, Sparkles, Calendar, TrendingUp } from "lucide-react";
+import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
+import { seedExtendedEnrollment } from "@/lib/use-model-duration";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
@@ -16,7 +18,7 @@ import { useAuth } from "@/lib/auth-context";
 import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
 import { hasCompletePersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
 
-import { fullModelSchema, type FullModelData } from "./schema";
+import { fullModelSchema, isSingleYearModel, type FullModelData } from "./schema";
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { UndoLastAppliedDecisionBanner } from "@/components/decision-flow/UndoLastAppliedDecisionBanner";
@@ -224,6 +226,8 @@ export function ModelWizardPage() {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stepInitialized, setStepInitialized] = useState(false);
   const [showImportBanner, setShowImportBanner] = useState(false);
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [extending, setExtending] = useState(false);
   const [showPrepChecklist, setShowPrepChecklist] = useState(false);
   const [encouragementDismissed, setEncouragementDismissed] = useState(false);
   // Wizard "Continue" guard. Three layers of defense against the
@@ -1105,6 +1109,58 @@ export function ModelWizardPage() {
           }}
         />
       )}
+      {isSingleYearModel(methods.getValues() as { schoolProfile?: { modelDuration?: string } }) && (
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-200">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-1.5 bg-emerald-100 rounded-lg shrink-0">
+                <Calendar className="h-4 w-4 text-emerald-700" />
+              </div>
+              <p className="text-sm font-medium text-emerald-900 truncate">
+                <span className="font-semibold">Single-Year Budget mode</span>
+                <span className="hidden sm:inline text-emerald-700 font-normal"> &middot; focused on Year 1</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              data-testid="banner-extend-to-five-year"
+              onClick={() => setShowExtendModal(true)}
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-800 text-xs font-semibold hover:bg-emerald-50 transition-colors"
+            >
+              <TrendingUp className="h-3.5 w-3.5" /> Extend to 5-year
+            </button>
+          </div>
+        </div>
+      )}
+      <ExtendToFiveYearModal
+        open={showExtendModal}
+        isPending={extending}
+        onClose={() => { if (!extending) setShowExtendModal(false); }}
+        onConfirm={async () => {
+          if (extending) return;
+          setExtending(true);
+          try {
+            const current = methods.getValues() as FullModelData;
+            const seededEnrollment = seedExtendedEnrollment(
+              (current.enrollment ?? {}) as { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number }
+            );
+            const next = {
+              ...current,
+              schoolProfile: { ...(current.schoolProfile ?? {}), modelDuration: "five_year" as const },
+              enrollment: { ...(current.enrollment ?? {}), ...seededEnrollment },
+            };
+            methods.reset(next as FullModelData);
+            if (modelId) {
+              await updateMutation.mutateAsync({ id: modelId, data: { data: next as unknown as Record<string, unknown> } });
+            }
+            setShowExtendModal(false);
+          } catch (err) {
+            console.error("Failed to extend to 5-year:", err);
+          } finally {
+            setExtending(false);
+          }
+        }}
+      />
       {showImportBanner && (
         <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-teal-200">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">

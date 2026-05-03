@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { getExportModelUrl, customFetch } from "@workspace/api-client-react";
 import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3, MessageSquareMore, CheckCircle2, Send, Share2, Copy, Check, Trash2, Link2, BookOpen } from "lucide-react";
-import { isChestertonAcademy } from "../schema";
+import { isChestertonAcademy, isSingleYearModel } from "../schema";
+import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
+import { seedExtendedEnrollment } from "@/lib/use-model-duration";
+import { useUpdateModel } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
 import { BoardPacketPreview } from "../../../components/export/BoardPacketPreview";
@@ -19,9 +22,39 @@ interface SharedLinkItem {
 }
 
 export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId: number | null }) {
-  const { watch } = useFormContext();
+  const { watch, getValues, reset } = useFormContext();
   const schoolType = watch("schoolProfile.schoolType") as string | undefined;
+  const modelDurationValue = watch("schoolProfile.modelDuration") as string | undefined;
   const isChesterton = isChestertonAcademy(schoolType);
+  const isSingleYear = isSingleYearModel({ schoolProfile: { modelDuration: modelDurationValue } });
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [extending, setExtending] = useState(false);
+  const updateMutation = useUpdateModel();
+  const handleExtendConfirm = async () => {
+    if (extending) return;
+    setExtending(true);
+    try {
+      const current = getValues() as Record<string, unknown> & {
+        schoolProfile?: Record<string, unknown>;
+        enrollment?: { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number };
+      };
+      const seededEnrollment = seedExtendedEnrollment(current.enrollment ?? {});
+      const next = {
+        ...current,
+        schoolProfile: { ...(current.schoolProfile ?? {}), modelDuration: "five_year" as const },
+        enrollment: { ...(current.enrollment ?? {}), ...seededEnrollment },
+      };
+      reset(next as never);
+      if (modelId) {
+        await updateMutation.mutateAsync({ id: modelId, data: { data: next as unknown as Record<string, unknown> } });
+      }
+      setShowExtendModal(false);
+    } catch (err) {
+      console.error("Failed to extend to 5-year:", err);
+    } finally {
+      setExtending(false);
+    }
+  };
   const [loading, setLoading] = useState<ExportType | null>(null);
   const [exported, setExported] = useState<Set<ExportType>>(new Set());
   const [showPacketPreview, setShowPacketPreview] = useState(false);
@@ -139,12 +172,15 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
   const handleDownload = async (type: ExportType) => {
     if (!modelId || loading) return;
 
-    if (type === "lenderPacketPdf") {
-      setShowPacketPreview(true);
-      return;
-    }
-
-    if (type === "boardPacketPdf") {
+    if (type === "lenderPacketPdf" || type === "boardPacketPdf") {
+      if (isSingleYear) {
+        setShowExtendModal(true);
+        return;
+      }
+      if (type === "lenderPacketPdf") {
+        setShowPacketPreview(true);
+        return;
+      }
       setShowBoardPreview(true);
       return;
     }
@@ -200,6 +236,13 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
   const anyExported = exported.size > 0;
 
   return (
+    <>
+    <ExtendToFiveYearModal
+      open={showExtendModal}
+      isPending={extending}
+      onClose={() => { if (!extending) setShowExtendModal(false); }}
+      onConfirm={handleExtendConfirm}
+    />
     <div className="text-center py-12 px-4">
       <div className="mx-auto w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-8">
         {anyExported ? (
@@ -246,27 +289,77 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         </div>
       )}
 
+      {isSingleYear && (
+        <div className="max-w-4xl mx-auto mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-left flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+            <FileText className="h-4 w-4 text-emerald-700" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-emerald-900 mb-0.5">You're on Single-Year mode</p>
+            <p className="text-xs text-emerald-800 leading-relaxed">
+              The Lender Packet and Board Summary need a full 5-year projection. The
+              Underwriting Package and Formula Workbook below export your Year 1 numbers
+              today. <button
+                type="button"
+                data-testid="single-year-banner-extend"
+                onClick={() => setShowExtendModal(true)}
+                className="font-semibold text-emerald-900 underline underline-offset-2 hover:text-emerald-700"
+              >Extend to 5-year</button> any time.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <ExportCard
-          icon={<FileText className="h-7 w-7" />}
-          title="Lender-Ready Packet"
-          description="Executive summary, 5-year forecast, DSCR analysis, risk/mitigant assessment & supporting exhibits as PDF"
-          isLoading={loading === "lenderPacketPdf"}
-          isExported={exported.has("lenderPacketPdf")}
-          disabled={loading !== null && loading !== "lenderPacketPdf"}
-          onClick={() => handleDownload("lenderPacketPdf")}
-          highlight
-        />
-        <ExportCard
-          icon={<BarChart3 className="h-7 w-7" />}
-          title="Board Summary"
-          description="Financial outlook, top risks, cash runway, scenario comparison & next steps for board review"
-          isLoading={loading === "boardPacketPdf"}
-          isExported={exported.has("boardPacketPdf")}
-          disabled={loading !== null && loading !== "boardPacketPdf"}
-          onClick={() => handleDownload("boardPacketPdf")}
-          highlight
-        />
+        <div className="relative" data-testid="lender-packet-card-wrapper">
+          <ExportCard
+            icon={<FileText className="h-7 w-7" />}
+            title="Lender-Ready Packet"
+            description={isSingleYear ? "Requires 5-year projection. Extend your model to enable lender-ready exports." : "Executive summary, 5-year forecast, DSCR analysis, risk/mitigant assessment & supporting exhibits as PDF"}
+            isLoading={loading === "lenderPacketPdf"}
+            isExported={exported.has("lenderPacketPdf")}
+            disabled={isSingleYear || (loading !== null && loading !== "lenderPacketPdf")}
+            onClick={() => handleDownload("lenderPacketPdf")}
+            highlight={!isSingleYear}
+          />
+          {isSingleYear && (
+            <button
+              type="button"
+              data-testid="lender-card-extend-cta"
+              onClick={() => setShowExtendModal(true)}
+              className="absolute inset-0 w-full h-full rounded-2xl flex items-end justify-center pb-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Extend to 5-year to enable Lender Packet"
+            >
+              <span className="text-[11px] font-semibold text-primary bg-white px-2.5 py-1 rounded-full shadow border border-primary/30">
+                Extend to 5-year
+              </span>
+            </button>
+          )}
+        </div>
+        <div className="relative" data-testid="board-packet-card-wrapper">
+          <ExportCard
+            icon={<BarChart3 className="h-7 w-7" />}
+            title="Board Summary"
+            description={isSingleYear ? "Requires 5-year projection. Extend your model to enable board-ready exports." : "Financial outlook, top risks, cash runway, scenario comparison & next steps for board review"}
+            isLoading={loading === "boardPacketPdf"}
+            isExported={exported.has("boardPacketPdf")}
+            disabled={isSingleYear || (loading !== null && loading !== "boardPacketPdf")}
+            onClick={() => handleDownload("boardPacketPdf")}
+            highlight={!isSingleYear}
+          />
+          {isSingleYear && (
+            <button
+              type="button"
+              data-testid="board-card-extend-cta"
+              onClick={() => setShowExtendModal(true)}
+              className="absolute inset-0 w-full h-full rounded-2xl flex items-end justify-center pb-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Extend to 5-year to enable Board Summary"
+            >
+              <span className="text-[11px] font-semibold text-primary bg-white px-2.5 py-1 rounded-full shadow border border-primary/30">
+                Extend to 5-year
+              </span>
+            </button>
+          )}
+        </div>
         <ExportCard
           icon={<ClipboardCheck className="h-7 w-7" />}
           title="Underwriting Package"
@@ -538,6 +631,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         />
       )}
     </div>
+    </>
   );
 }
 
