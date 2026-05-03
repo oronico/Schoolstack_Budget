@@ -365,6 +365,27 @@ function renderSection(doc: PDFDoc, section: PacketSection) {
       renderPacketTable(doc, table);
     }
   }
+
+  // Task #455 — surface fragility footnotes attached to linked assumptions
+  // beside the line items they qualify. The board PDF normally omits the
+  // raw linked-assumption labelValue list (board members don't want a wall
+  // of source-field rows), but the per-line legal-status caveats are
+  // material to a 5-year forecast review and need to land in the packet.
+  const noteAssumptions = (section.linkedAssumptions || []).filter((a) => !!a.note);
+  if (noteAssumptions.length > 0) {
+    doc.moveDown(0.2);
+    const margin = doc.page.margins.left;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND.amber);
+    doc.text("Funding-status footnotes", margin, doc.y);
+    for (const a of noteAssumptions) {
+      const indent = margin + 8;
+      const w = doc.page.width - doc.page.margins.right - indent;
+      doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.amber);
+      doc.text(`• ${a.label}: ${a.note}`, indent, doc.y, { width: w });
+    }
+    doc.fillColor(BRAND.black);
+    doc.moveDown(0.3);
+  }
 }
 
 function renderMetrics(doc: PDFDoc, metrics: LinkedMetric[]) {

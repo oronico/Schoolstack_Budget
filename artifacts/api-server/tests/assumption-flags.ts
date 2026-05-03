@@ -640,6 +640,162 @@ function testDepreciationInEngine() {
   }
 }
 
+// Task #455 — assumption-flag coverage for state-funding fragility.
+//
+// The detector pulls in `detectFragileFunding` and emits litigated_funding
+// (warning) or pending_funding (info) flags when a non-active state
+// school-choice program is referenced by a revenue row. These tests pin
+// the contract by constructing minimal private_school payloads in OH/UT/
+// GA/WY and asserting (a) the flag fires, (b) severity matches the
+// program status, and (c) the prompt now embeds the year range computed
+// from the revenue row amounts + opening year (the missing context the
+// code review called out).
+async function testFragilityFlagLitigatedOhVoucher() {
+  console.log("\n=== Fragility Flag — OH voucher (litigated) ===");
+  const payload = {
+    schoolProfile: {
+      schoolName: "Buckeye Prep",
+      state: "OH",
+      schoolType: "private_school",
+      schoolStage: "new_school",
+      fundingProfile: "tuition_based",
+      openingYear: 2026,
+      currentStudents: 0,
+      maxCapacity: 200,
+      ownershipType: "rent",
+      monthlyRent: 5000,
+      annualRentEscalation: 3,
+      debtIncluded: false,
+    },
+    enrollment: { year1: 50, year2: 80, year3: 120, year4: 160, year5: 200, retentionRate: 90 },
+    revenueRows: [
+      { id: "voucher_revenue", category: "school_choice", lineItem: "OH EdChoice Voucher", enabled: true, driverType: "per_student", amounts: [6000, 6180, 6365, 6556, 6753], billingMonths: 12 },
+    ],
+    expenseRows: [],
+    staffingRows: [],
+  };
+  const flags = await detectUnusualAssumptions(payload as Record<string, unknown>);
+  const lit = hasFlag(flags, "litigated_funding");
+  assert("litigated_funding flag fires for OH voucher", !!lit);
+  assert("litigated_funding severity is warning", lit?.severity === "warning");
+  assert("litigated_funding field references the row id", lit?.field === "revenueRows.voucher_revenue");
+  assert(
+    "litigated_funding prompt embeds the computed year range (2026–2030)",
+    !!lit && lit.defaultPrompt.includes("Years 2026–2030"),
+    `prompt was: ${lit?.defaultPrompt ?? "(missing)"}`,
+  );
+  assert(
+    "litigated_funding currentValue mentions 'OH' and the program",
+    !!lit && lit.currentValue.includes("OH") && lit.currentValue.toLowerCase().includes("voucher"),
+  );
+}
+
+async function testFragilityFlagPendingGa() {
+  console.log("\n=== Fragility Flag — GA Promise (pending) ===");
+  // Find the actual pending program in GA so the test isn't brittle if
+  // the catalog renames the row id.
+  const { STATE_FUNDING_MAP, PROGRAM_TYPE_TO_ROW_ID } = await import("@workspace/finance");
+  const gaPending = STATE_FUNDING_MAP.GA.programs.find(p => p.status === "pending");
+  if (!gaPending) {
+    assert("GA pending program exists in catalog (skipped)", false, "no pending program found");
+    return;
+  }
+  const rowId = PROGRAM_TYPE_TO_ROW_ID[gaPending.type];
+  const payload = {
+    schoolProfile: {
+      schoolName: "Peach State Academy",
+      state: "GA",
+      schoolType: "private_school",
+      schoolStage: "new_school",
+      fundingProfile: "tuition_based",
+      openingYear: 2027,
+      currentStudents: 0,
+      maxCapacity: 100,
+      ownershipType: "rent",
+      monthlyRent: 4000,
+      annualRentEscalation: 3,
+      debtIncluded: false,
+    },
+    enrollment: { year1: 30, year2: 50, year3: 70, year4: 90, year5: 100, retentionRate: 90 },
+    revenueRows: [
+      { id: rowId, category: "school_choice", lineItem: "GA Promise Scholarship", enabled: true, driverType: "per_student", amounts: [0, 6500, 6500, 6500, 6500], billingMonths: 12 },
+    ],
+    expenseRows: [],
+    staffingRows: [],
+  };
+  const flags = await detectUnusualAssumptions(payload as Record<string, unknown>);
+  const pending = hasFlag(flags, "pending_funding");
+  assert("pending_funding flag fires for GA pending program", !!pending);
+  assert("pending_funding severity is info", pending?.severity === "info");
+  assert(
+    "pending_funding prompt year range starts at first non-zero year (2028)",
+    !!pending && pending.defaultPrompt.includes("Years 2028–2031"),
+    `prompt was: ${pending?.defaultPrompt ?? "(missing)"}`,
+  );
+}
+
+async function testFragilityFlagBlockedWy() {
+  console.log("\n=== Fragility Flag — WY ESA (blocked, treated as litigated severity) ===");
+  const payload = {
+    schoolProfile: {
+      schoolName: "High Plains School",
+      state: "WY",
+      schoolType: "private_school",
+      schoolStage: "new_school",
+      fundingProfile: "tuition_based",
+      openingYear: 2026,
+      currentStudents: 0,
+      maxCapacity: 80,
+      ownershipType: "rent",
+      monthlyRent: 3000,
+      annualRentEscalation: 3,
+      debtIncluded: false,
+    },
+    enrollment: { year1: 20, year2: 30, year3: 40, year4: 60, year5: 80, retentionRate: 90 },
+    revenueRows: [
+      { id: "esa_revenue", category: "school_choice", lineItem: "WY Steamboat ESA", enabled: true, driverType: "per_student", amounts: [5000, 5150, 5305, 5464, 5628], billingMonths: 12 },
+    ],
+    expenseRows: [],
+    staffingRows: [],
+  };
+  const flags = await detectUnusualAssumptions(payload as Record<string, unknown>);
+  const lit = hasFlag(flags, "litigated_funding");
+  assert("WY blocked program emits litigated_funding (warning)", !!lit && lit.severity === "warning");
+  assert(
+    "WY blocked prompt mentions 'blocked by court order'",
+    !!lit && lit.defaultPrompt.includes("blocked by court order"),
+  );
+}
+
+async function testFragilityFlagActiveAzNoFlag() {
+  console.log("\n=== Fragility Flag — AZ ESA (active, no flag) ===");
+  const payload = {
+    schoolProfile: {
+      schoolName: "Sonoran Academy",
+      state: "AZ",
+      schoolType: "private_school",
+      schoolStage: "new_school",
+      fundingProfile: "tuition_based",
+      openingYear: 2026,
+      currentStudents: 0,
+      maxCapacity: 100,
+      ownershipType: "rent",
+      monthlyRent: 3000,
+      annualRentEscalation: 3,
+      debtIncluded: false,
+    },
+    enrollment: { year1: 30, year2: 50, year3: 70, year4: 90, year5: 100, retentionRate: 90 },
+    revenueRows: [
+      { id: "esa_revenue", category: "school_choice", lineItem: "AZ ESA", enabled: true, driverType: "per_student", amounts: [7000, 7210, 7426, 7649, 7878], billingMonths: 12 },
+    ],
+    expenseRows: [],
+    staffingRows: [],
+  };
+  const flags = await detectUnusualAssumptions(payload as Record<string, unknown>);
+  assert("AZ ESA produces no litigated_funding flag", !hasFlag(flags, "litigated_funding"));
+  assert("AZ ESA produces no pending_funding flag", !hasFlag(flags, "pending_funding"));
+}
+
 async function main() {
   console.log("=== Assumption Flag Test Suite ===");
 
@@ -680,6 +836,10 @@ async function main() {
   await testCollectionRateReducesRevenue();
   await testCashTroughMetric();
   await testWorkbookMonthlyDistribution();
+  await testFragilityFlagLitigatedOhVoucher();
+  await testFragilityFlagPendingGa();
+  await testFragilityFlagBlockedWy();
+  await testFragilityFlagActiveAzNoFlag();
 
   console.log(`\n${"=".repeat(50)}`);
   console.log(`Results: ${passed} passed, ${failed} failed`);

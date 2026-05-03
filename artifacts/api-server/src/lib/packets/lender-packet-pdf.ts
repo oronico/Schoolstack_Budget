@@ -234,6 +234,12 @@ function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket
     subSection(doc, "Supporting Assumptions");
     for (const a of section.linkedAssumptions.slice(0, 10)) {
       labelValue(doc, a.label, a.value);
+      // Task #455 — when an assumption carries a fragility footnote (e.g. a
+      // litigated voucher program), render it as a small italic line right
+      // under the value so the caveat sits next to the dollar amount.
+      if (a.note) {
+        renderAssumptionNote(doc, a.note);
+      }
     }
     if (section.linkedAssumptions.length > 10) {
       doc.font("Helvetica").fontSize(8).fillColor(BRAND.gray);
@@ -241,6 +247,19 @@ function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket
     }
     doc.moveDown(0.3);
   }
+}
+
+// Task #455 — render the small italic footnote attached to a linked
+// assumption (e.g. "OH EdChoice voucher is currently in litigation.").
+// Indented to visually associate with the labelValue line above and
+// colored amber so a quick skim spots the caveat next to the dollars.
+function renderAssumptionNote(doc: PDFDoc, note: string): void {
+  const margin = doc.page.margins.left;
+  const indent = margin + 8;
+  const w = doc.page.width - doc.page.margins.right - indent;
+  doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.amber);
+  doc.text(note, indent, doc.y, { width: w });
+  doc.fillColor(BRAND.black);
 }
 
 function shouldShowAssumptions(sectionId: string): boolean {

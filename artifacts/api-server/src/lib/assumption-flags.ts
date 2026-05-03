@@ -9,6 +9,11 @@ import {
   type SchoolProfile,
   type ModelData,
 } from "./workbook-helpers.js";
+import {
+  detectFragileFunding,
+  type FragileProgramMatch,
+  type SchoolType,
+} from "@workspace/finance";
 
 type YearFinancials = {
   year: number;
@@ -67,6 +72,49 @@ function buildEnrollmentArray(en: Enrollment, yearCount: number): number[] {
 
 function pctStr(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
+}
+
+function buildFragilityFlag(
+  m: FragileProgramMatch,
+  flagType: "litigated_funding" | "pending_funding",
+  severity: FlagSeverity,
+): AssumptionFlag {
+  // Build a status-aware sentence the founder can paste into their lender
+  // narrative. We deliberately quote the program label (not just "ESA") so a
+  // multi-program state (e.g. NH with both ESA and voucher entries) reads
+  // correctly when the founder enables more than one fragile row.
+  const statusLabel =
+    m.status === "litigated"
+      ? "is currently subject to legal challenge"
+      : m.status === "blocked"
+        ? "is currently blocked by court order"
+        : "has been authorized but is not yet disbursing funds";
+  const noteSuffix = m.notes ? ` (${m.notes})` : "";
+  // Year-range context: show "Years 2026–2030" (or "Year 2026" for a
+  // single-year span) so the founder immediately sees how many forecast
+  // years lean on the fragile dollars. Falls back to a generic phrasing
+  // when the helper couldn't compute a range (e.g. legacy model with no
+  // openingYear / amounts).
+  const yearSpan = m.yearRange
+    ? m.yearRange.firstYear === m.yearRange.lastYear
+      ? `Year ${m.yearRange.firstYear}`
+      : `Years ${m.yearRange.firstYear}–${m.yearRange.lastYear}`
+    : "the 5-year forecast";
+  const benchmark =
+    flagType === "litigated_funding"
+      ? "Lenders expect a written backstop plan"
+      : "Confirm program go-live date with the state";
+  return {
+    field: `revenueRows.${m.rowId}`,
+    flagType,
+    currentValue: `${m.stateCode} ${m.programLabel} ${statusLabel}${noteSuffix}`,
+    benchmark,
+    severity,
+    defaultPrompt:
+      flagType === "litigated_funding"
+        ? `Your forecast counts on ${m.stateCode} ${m.programLabel} across ${yearSpan}, which ${statusLabel}. If the dollars stop, what's your backstop — tuition, philanthropy, or scaled-back staffing? Lenders will ask.`
+        : `Your forecast counts on ${m.stateCode} ${m.programLabel} across ${yearSpan}, which ${statusLabel}. Confirm the program's expected start date and what happens to enrollment if it slips a year.`,
+  };
 }
 
 export async function detectUnusualAssumptions(rawData: Record<string, unknown>): Promise<AssumptionFlag[]> {
@@ -327,6 +375,30 @@ export async function detectUnusualAssumptions(rawData: Record<string, unknown>)
         defaultPrompt: `Your opening current ratio is ${currentRatio.toFixed(2)}x, which is below the 1.1x minimum lenders expect. How will you ensure short-term obligations are covered? Consider increasing cash reserves or reducing short-term liabilities.`,
       });
     }
+  }
+
+  // --- STATE-FUNDING FRAGILITY (Task #455) ---
+  //
+  // When a founder's revenue model leans on a school-choice program whose
+  // legal status is unsettled (litigated / blocked / pending), surface that
+  // as an assumption flag so it lands in the lender review and the
+  // founder's "things to explain" list. Litigated and blocked programs are
+  // warnings (the dollars could disappear mid-year); pending programs are
+  // info-tier (legislatively scheduled but not yet flowing).
+  const fragility = detectFragileFunding(
+    (data.revenueRows || []) as Array<{ id: string; lineItem?: string; enabled?: boolean; amounts?: number[] }>,
+    sp.state,
+    sp.schoolType as SchoolType | undefined,
+    sp.openingYear,
+  );
+  for (const m of fragility.litigated) {
+    flags.push(buildFragilityFlag(m, "litigated_funding", "warning"));
+  }
+  for (const m of fragility.blocked) {
+    flags.push(buildFragilityFlag(m, "litigated_funding", "warning"));
+  }
+  for (const m of fragility.pending) {
+    flags.push(buildFragilityFlag(m, "pending_funding", "info"));
   }
 
   if (hasRowData && yearFinancials.length > 0) {

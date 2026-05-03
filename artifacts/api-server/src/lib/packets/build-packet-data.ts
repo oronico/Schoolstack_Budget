@@ -28,6 +28,9 @@ import {
   aggregateRosterCapSavings,
   buildRosterCapInsightText,
   CAP_INSIGHT_MIN_SAVINGS,
+  detectFragileFunding,
+  type FragileFundingReport,
+  type SchoolType,
 } from "@workspace/finance";
 import {
   type PacketData,
@@ -343,21 +346,137 @@ function buildRevenueModel(
       ]
     : [];
 
+  // Task #455 — surface a footnote whenever the revenue forecast leans on
+  // a school-choice program whose legal status is unsettled. Without this,
+  // a lender or board member reading the Revenue Model section sees the
+  // headline numbers but no signal that, e.g., the OH EdChoice voucher line
+  // is currently in litigation. We render litigated/blocked entries as a
+  // warning-tone section callout (`insights[]`) AND attach an inline `note`
+  // to the affected `linkedAssumptions` row so the caveat sits visually
+  // next to the dollar value the lender is reading.
+  const sp = (md.schoolProfile as SchoolProfile | undefined);
+  const fragilityReport = detectFragileFunding(
+    (md.revenueRows || []) as Array<{ id: string; lineItem?: string; enabled?: boolean; amounts?: number[] }>,
+    sp?.state,
+    sp?.schoolType as SchoolType | undefined,
+    sp?.openingYear,
+  );
+  const revenueInsights: PacketInsight[] = buildFragilityInsights(fragilityReport);
+  const fragilityByRowId = new Map<string, ReturnType<typeof buildFragilityNote>>();
+  for (const m of fragilityReport.all) {
+    fragilityByRowId.set(m.rowId, buildFragilityNote(m));
+  }
+
+  // Build the per-line "Revenue Lines" table the board PDF leans on (it
+  // doesn't render `linkedAssumptions`). Including a Note column means the
+  // fragility footnote shows up directly beside the line item the board
+  // is reviewing, not just as a separate callout up top.
+  const fragileRows = (md.revenueRows || []).filter((r) => r.enabled !== false);
+  const lineRows: PacketTableRow[] = fragileRows.map((r) => {
+    const note = fragilityByRowId.get(r.id);
+    const value = fmt(driverVal(r.amounts, 0, r.driverType || "annual", yearlyData[0]?.students || 0, r.escalationRate));
+    return {
+      label: r.lineItem || "Revenue Line",
+      // Render the note in the Y1 cell only when the table has a Note
+      // column (i.e. fragilityReport has any matches). If we always added
+      // a third column the lender PDF would gain a perpetually-empty
+      // "Note" header for every model — undesired noise.
+      values: fragilityReport.all.length > 0 ? [value, note?.short ?? ""] : [value],
+    };
+  });
+  const tables: PacketTable[] = [{
+    title: "Revenue by Year",
+    headers: ["Year", "Total Revenue"],
+    rows,
+  }];
+  if (lineRows.length > 0) {
+    tables.push({
+      title: "Revenue Lines (Year 1)",
+      headers: fragilityReport.all.length > 0 ? ["Line Item", "Year 1", "Note"] : ["Line Item", "Year 1"],
+      rows: lineRows,
+    });
+  }
+
   return {
     ...s,
     narrative,
     linkedMetrics,
-    linkedAssumptions: (md.revenueRows || []).filter((r) => r.enabled !== false).map((r) => ({
-      label: r.lineItem || "Revenue Line",
-      value: fmt(driverVal(r.amounts, 0, r.driverType || "annual", yearlyData[0]?.students || 0, r.escalationRate)),
-      sourceField: `revenueRows[${r.id}]`,
-    })),
-    tables: [{
-      title: "Revenue by Year",
-      headers: ["Year", "Total Revenue"],
-      rows,
-    }],
+    linkedAssumptions: fragileRows.map((r) => {
+      const note = fragilityByRowId.get(r.id);
+      return {
+        label: r.lineItem || "Revenue Line",
+        value: fmt(driverVal(r.amounts, 0, r.driverType || "annual", yearlyData[0]?.students || 0, r.escalationRate)),
+        sourceField: `revenueRows[${r.id}]`,
+        ...(note ? { note: note.full } : {}),
+      };
+    }),
+    tables,
+    ...(revenueInsights.length > 0 ? { insights: revenueInsights } : {}),
   };
+}
+
+/**
+ * Two flavors of the fragility note:
+ *  - `short` is intended for narrow table cells (board PDF Note column);
+ *    just the program.notes string (or a status fallback) so it fits in
+ *    the table layout.
+ *  - `full` is the longer sentence rendered inline under the lender PDF
+ *    linked-assumption row. Includes the year span when known so the
+ *    lender immediately sees how many forecast years depend on the
+ *    fragile dollars.
+ */
+function buildFragilityNote(m: import("@workspace/finance").FragileProgramMatch): { short: string; full: string } {
+  const statusVerb =
+    m.status === "litigated"
+      ? "is currently in litigation"
+      : m.status === "blocked"
+        ? "is currently blocked by court order"
+        : "is authorized but not yet disbursing funds";
+  const yearSpan = m.yearRange
+    ? m.yearRange.firstYear === m.yearRange.lastYear
+      ? ` (Year ${m.yearRange.firstYear})`
+      : ` (Years ${m.yearRange.firstYear}–${m.yearRange.lastYear})`
+    : "";
+  const noteSuffix = m.notes ? ` ${m.notes}` : "";
+  return {
+    short: m.notes ?? `${m.status[0].toUpperCase()}${m.status.slice(1)}`,
+    full: `${m.stateCode} ${m.programLabel} ${statusVerb}${yearSpan}.${noteSuffix}`,
+  };
+}
+
+function buildFragilityInsights(report: FragileFundingReport): PacketInsight[] {
+  const insights: PacketInsight[] = [];
+  // Group by status so a state with multiple fragile programs (e.g. OH with
+  // both an active EdChoice and a litigated expansion) collapses into one
+  // callout per tone instead of cluttering the section with one chip each.
+  if (report.litigated.length > 0 || report.blocked.length > 0) {
+    const items = [...report.litigated, ...report.blocked]
+      .map((m) => {
+        const verb = m.status === "litigated" ? "in active litigation" : "blocked by court order";
+        const note = m.notes ? ` — ${m.notes}` : "";
+        return `${m.stateCode} ${m.programLabel} (${verb})${note}`;
+      })
+      .join("; ");
+    insights.push({
+      label: "Funding source under legal challenge",
+      body: `This 5-year forecast counts on revenue from: ${items}. Lenders and the board should review the school's backstop plan if these programs are paused or struck down.`,
+      tone: "warning",
+    });
+  }
+  if (report.pending.length > 0) {
+    const items = report.pending
+      .map((m) => {
+        const note = m.notes ? ` — ${m.notes}` : "";
+        return `${m.stateCode} ${m.programLabel}${note}`;
+      })
+      .join("; ");
+    insights.push({
+      label: "Funding source pending go-live",
+      body: `Revenue is forecast from programs authorized but not yet disbursing: ${items}. Confirm the program's expected start date with the state before relying on Year 1 dollars.`,
+      tone: "info",
+    });
+  }
+  return insights;
 }
 
 function buildStaffingPlan(

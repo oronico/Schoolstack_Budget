@@ -31,6 +31,15 @@ export interface LinkedAssumption {
   label: string;
   value: string;
   sourceField: string;
+  /**
+   * Optional one-sentence footnote rendered inline beneath the assumption
+   * (italic, accent color in the PDF). Used by Task #455 to surface state
+   * funding-program legal status — e.g. "OH EdChoice voucher is currently
+   * in litigation." — alongside the line item it qualifies, so a lender or
+   * board reviewer reading the Revenue Model section sees the caveat next
+   * to the dollars instead of having to cross-reference an appendix.
+   */
+  note?: string;
 }
 
 export interface LinkedMetric {

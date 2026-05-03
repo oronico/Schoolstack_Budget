@@ -42,6 +42,7 @@ import {
 } from "@/lib/revenue-defaults";
 import { type TuitionTier, getDefaultTuitionTiers } from "@/pages/model-wizard/schema";
 import { getStateFundingConfig, type StateFundingConfig, type SchoolType, type CharterPerPupilRange, type ProgramInfo } from "@/lib/state-funding-data";
+import { detectFragileFunding, type FragileProgramMatch } from "@workspace/finance";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 
@@ -367,6 +368,19 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     setRows(updated);
     setValue("revenueRows", updated, { shouldDirty: true });
   }, [revDefaultBillingMonths, revDefaultCollectionMethod, revDefaultCollectionRate, revDefaultCollectionDelay, defaultsApplied, setValue, rows]);
+
+  // Task #455 — compute the fragility report once per render and look it up
+  // by row id when rendering. Done at the parent so we don't reach into
+  // STATE_FUNDING_MAP from inside every RevenueLineItem instance.
+  const fragilityReport = useMemo(
+    () => detectFragileFunding(rows, stateCode, schoolType as SchoolType | undefined),
+    [rows, stateCode, schoolType],
+  );
+  const fragilityByRowId = useMemo(() => {
+    const map = new Map<string, FragileProgramMatch>();
+    for (const m of fragilityReport.all) map.set(m.rowId, m);
+    return map;
+  }, [fragilityReport]);
 
   const PROGRAM_TYPE_TO_ROW_ID: Record<string, string> = useMemo(() => ({
     esa: "esa_revenue", voucher: "voucher_revenue", tax_credit_scholarship: "scholarship_org",
@@ -1121,6 +1135,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                             locked={false}
                             rowErrors={rowErrors}
                             schoolType={schoolType}
+                            fundingFragility={fragilityByRowId.get(row.id)}
                           />
                         );
                       })}
@@ -1149,6 +1164,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                             locked={false}
                             rowErrors={rowErrors}
                             schoolType={schoolType}
+                            fundingFragility={fragilityByRowId.get(row.id)}
                           />
                         );
                       })}
@@ -1173,6 +1189,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                     lockedMessage="This amount is computed from your grade-band enrollment and per-pupil rates above. Edit those inputs to change funding."
                     rowErrors={rowErrors}
                     schoolType={schoolType}
+                    fundingFragility={fragilityByRowId.get(row.id)}
                   />
                   );
                 })}
@@ -1443,6 +1460,12 @@ interface RevenueLineItemProps {
   lockedMessage?: string;
   rowErrors?: Record<string, { message?: string }>;
   schoolType?: string;
+  /**
+   * Task #455 — when set, render a status chip beside the line item label so
+   * the founder can immediately see that the underlying state-choice program
+   * is in a non-active legal state (litigated / blocked / pending).
+   */
+  fundingFragility?: FragileProgramMatch;
 }
 
 function RevenueLineItem({
@@ -1459,6 +1482,7 @@ function RevenueLineItem({
   lockedMessage,
   rowErrors,
   schoolType,
+  fundingFragility,
 }: RevenueLineItemProps) {
   const [showTiming, setShowTiming] = useState(false);
 
@@ -1498,9 +1522,35 @@ function RevenueLineItem({
             )}
           </button>
           <div className="flex flex-col">
-            <span className="font-medium text-sm text-foreground">{row.lineItem}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-sm text-foreground">{row.lineItem}</span>
+              {fundingFragility && (
+                <span
+                  data-testid={`funding-fragility-chip-${row.id}`}
+                  title={
+                    fundingFragility.notes
+                      ? `${fundingFragility.programLabel} — ${fundingFragility.notes}`
+                      : `${fundingFragility.programLabel} (${fundingFragility.status})`
+                  }
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    fundingFragility.status === "litigated" && "border-amber-300 bg-amber-50 text-amber-800",
+                    fundingFragility.status === "blocked" && "border-red-300 bg-red-50 text-red-800",
+                    fundingFragility.status === "pending" && "border-blue-300 bg-blue-50 text-blue-800",
+                  )}
+                >
+                  <AlertTriangle className="h-3 w-3" />
+                  {fundingFragility.status === "litigated" && "In litigation"}
+                  {fundingFragility.status === "blocked" && "Blocked by court"}
+                  {fundingFragility.status === "pending" && "Pending go-live"}
+                </span>
+              )}
+            </div>
             {row.note && (
               <span className="text-[11px] text-muted-foreground leading-tight mt-0.5">{row.note}</span>
+            )}
+            {fundingFragility?.notes && (
+              <span className="text-[11px] text-muted-foreground leading-tight mt-0.5">{fundingFragility.notes}</span>
             )}
           </div>
         </div>

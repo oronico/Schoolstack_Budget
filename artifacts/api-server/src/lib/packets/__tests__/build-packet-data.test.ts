@@ -307,6 +307,156 @@ async function run(): Promise<void> {
     "personas produced identical copy — the persona switch isn't being threaded into buildPacketData",
   );
 
+  // ---- 4. Task #455 — fragility footnotes on revenue_model section -------
+  // Build a minimal OH private-school payload that references the
+  // litigated EdChoice voucher row and assert the resulting packet (a)
+  // surfaces a `Funding source under legal challenge`-style insight, (b)
+  // attaches an inline `note` to the affected linkedAssumption with the
+  // year range derived from amounts + openingYear, and (c) adds the
+  // per-line "Revenue Lines" table the board PDF leans on (board
+  // renderer ignores `linkedAssumptions`).
+  const ohModel: Record<string, unknown> = {
+    schoolProfile: {
+      schoolName: "Buckeye Prep",
+      state: "OH",
+      schoolType: "private_school",
+      entityType: "llc_single",
+      schoolStage: "new_school",
+      fundingProfile: "tuition_based",
+      openingYear: 2026,
+      currentStudents: 0,
+      maxCapacity: 200,
+      fiscalYearStartMonth: 7,
+      ownershipType: "rent",
+      monthlyRent: 5000,
+      annualRentEscalation: 3,
+      debtIncluded: false,
+    },
+    enrollment: { year1: 50, year2: 80, year3: 120, year4: 160, year5: 200 },
+    revenueRows: [
+      { id: "voucher_revenue", category: "school_choice", lineItem: "OH EdChoice Voucher", enabled: true, driverType: "per_student", amounts: [6000, 6180, 6365, 6556, 6753], billingMonths: 12 },
+      { id: "gross_tuition", category: "tuition_and_fees", lineItem: "Gross Tuition", enabled: true, driverType: "per_student", amounts: [4000, 4120, 4244, 4371, 4502], billingMonths: 12 },
+    ],
+    staffingRows: [],
+    expenseRows: [{ id: "e1", category: "occupancy_facility", lineItem: "Rent", enabled: true, driverType: "monthly", amounts: [5000, 5150, 5305, 5464, 5628] }],
+    capitalAndDebtRows: [],
+    facilities: { annualSalaryIncrease: 3, generalCostInflation: 2.5 },
+  };
+  for (const packetType of ["lender", "board"] as PacketType[]) {
+    const consultantOutput = await runConsultantEngine(ohModel);
+    const packet = await buildPacketData({
+      modelData: ohModel as unknown as ModelData,
+      consultantOutput,
+      modelId: 1,
+      packetType,
+      personaComfort: "comfortable",
+    });
+    const revenue = packet.sections.find((s) => s.id === "revenue_model");
+    check(`${packetType} revenue_model section is present`, !!revenue);
+    if (!revenue) continue;
+
+    // (a) section-level insight callout exists
+    const fragInsight = (revenue.insights ?? []).find((i) =>
+      i.label.toLowerCase().includes("legal") || i.label.toLowerCase().includes("litigation") || i.label.toLowerCase().includes("funding"),
+    );
+    check(
+      `${packetType} revenue_model surfaces a fragility insight callout`,
+      !!fragInsight,
+      `insights were: ${JSON.stringify(revenue.insights ?? [])}`,
+    );
+
+    // (b) inline `note` on the matching linkedAssumption + year range
+    const voucherAssumption = revenue.linkedAssumptions.find((a) =>
+      a.sourceField.includes("voucher_revenue"),
+    );
+    check(
+      `${packetType} voucher linkedAssumption carries an inline note`,
+      !!voucherAssumption?.note,
+      `linkedAssumption was: ${JSON.stringify(voucherAssumption)}`,
+    );
+    check(
+      `${packetType} voucher note embeds the year range (2026–2030)`,
+      !!voucherAssumption?.note && voucherAssumption.note.includes("2026") && voucherAssumption.note.includes("2030"),
+      `note was: ${voucherAssumption?.note ?? "(missing)"}`,
+    );
+    check(
+      `${packetType} voucher note mentions OH and the program label`,
+      !!voucherAssumption?.note && voucherAssumption.note.includes("OH") && voucherAssumption.note.toLowerCase().includes("voucher"),
+      `note was: ${voucherAssumption?.note ?? "(missing)"}`,
+    );
+
+    // The non-fragile (gross_tuition) line should NOT carry a note.
+    const tuitionAssumption = revenue.linkedAssumptions.find((a) =>
+      a.sourceField.includes("gross_tuition"),
+    );
+    check(
+      `${packetType} active line (gross_tuition) does not carry a fragility note`,
+      !!tuitionAssumption && tuitionAssumption.note === undefined,
+      `tuition note was: ${tuitionAssumption?.note ?? "(undefined)"}`,
+    );
+
+    // (c) per-line table with a Note column exists for the board renderer.
+    const lineTable = (revenue.tables ?? []).find((t) => t.title.includes("Revenue Lines"));
+    check(
+      `${packetType} revenue_model includes a per-line "Revenue Lines" table`,
+      !!lineTable,
+      `tables were: ${JSON.stringify((revenue.tables ?? []).map((t) => t.title))}`,
+    );
+    check(
+      `${packetType} per-line table has a Note column when fragility matches exist`,
+      !!lineTable && lineTable.headers.includes("Note"),
+      `headers were: ${JSON.stringify(lineTable?.headers ?? [])}`,
+    );
+    const voucherTableRow = (lineTable?.rows ?? []).find((r) => r.label.includes("Voucher"));
+    check(
+      `${packetType} per-line table row for voucher carries a non-empty Note cell`,
+      // values[] holds the cells *after* the label column, so a 3-header
+      // table ("Line Item" + "Year 1" + "Note") gives a 2-element values
+      // array with the note in the trailing slot.
+      !!voucherTableRow && voucherTableRow.values.length === 2 && voucherTableRow.values[1].length > 0,
+      `voucher row was: ${JSON.stringify(voucherTableRow)}`,
+    );
+  }
+
+  // ---- 5. Task #455 — Active-only payload should not add a Note column ---
+  // Regression: an OH model that uses only `tax_credit_scholarship_revenue`
+  // (active in OH) must NOT decorate the per-line table with a Note column,
+  // otherwise every healthy private-school packet gets an empty column.
+  const ohActiveOnly: Record<string, unknown> = {
+    ...ohModel,
+    revenueRows: [
+      { id: "tax_credit_scholarship_revenue", category: "school_choice", lineItem: "OH Tax Credit Scholarship", enabled: true, driverType: "per_student", amounts: [3000, 3090, 3183, 3278, 3377], billingMonths: 12 },
+      { id: "gross_tuition", category: "tuition_and_fees", lineItem: "Gross Tuition", enabled: true, driverType: "per_student", amounts: [4000, 4120, 4244, 4371, 4502], billingMonths: 12 },
+    ],
+  };
+  const consultantActive = await runConsultantEngine(ohActiveOnly);
+  const activePacket = await buildPacketData({
+    modelData: ohActiveOnly as unknown as ModelData,
+    consultantOutput: consultantActive,
+    modelId: 1,
+    packetType: "lender",
+    personaComfort: "comfortable",
+  });
+  const activeRevenue = activePacket.sections.find((s) => s.id === "revenue_model");
+  const activeLineTable = (activeRevenue?.tables ?? []).find((t) => t.title.includes("Revenue Lines"));
+  check(
+    "active-only OH payload omits the Note column from the per-line table",
+    !!activeLineTable && !activeLineTable.headers.includes("Note"),
+    `headers were: ${JSON.stringify(activeLineTable?.headers ?? [])}`,
+  );
+  check(
+    "active-only OH payload emits no fragility insight",
+    (activeRevenue?.insights ?? []).every(
+      (i) => !i.label.toLowerCase().includes("legal") && !i.label.toLowerCase().includes("litigation") && !i.label.toLowerCase().includes("funding-source"),
+    ),
+    `insights were: ${JSON.stringify(activeRevenue?.insights ?? [])}`,
+  );
+  check(
+    "active-only OH payload emits no inline notes on linkedAssumptions",
+    (activeRevenue?.linkedAssumptions ?? []).every((a) => a.note === undefined),
+    `linkedAssumptions were: ${JSON.stringify(activeRevenue?.linkedAssumptions ?? [])}`,
+  );
+
   // ---- summary -----------------------------------------------------------
   console.log(`\nbuild-packet-data wage-base insight: ${passed} passed, ${failed} failed`);
   if (failed > 0) {

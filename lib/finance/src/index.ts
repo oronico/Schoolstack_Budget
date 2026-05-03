@@ -167,6 +167,35 @@ export {
 
 export type { AccountingExportLike, LiveSnapshotLike } from "./decision-engine/model-shape.js";
 
+// Task #455: state-funding catalog + fragility detector. Re-exported here so
+// both the wizard (RevenueStep chip) and api-server (assumption flags +
+// lender/board PDF footnotes) read the same program-status table.
+export {
+  STATE_FUNDING_MAP,
+  getStateFundingConfig,
+  getAllStatesWithProgram,
+  getCharterMethodologyStates,
+} from "./state-funding-data.js";
+
+export type {
+  CharterMethodology,
+  SchoolChoiceProgramType,
+  ProgramStatus,
+  ProgramInfo,
+  CharterPerPupilRange,
+  StateFundingEntry,
+  SchoolType,
+  StateFundingConfig,
+} from "./state-funding-data.js";
+
+export {
+  ROW_ID_TO_PROGRAM_TYPE,
+  PROGRAM_TYPE_TO_ROW_ID,
+  detectFragileFunding,
+  type FragileProgramMatch,
+  type FragileFundingReport,
+} from "./state-funding-fragility.js";
+
 export function computeStraightLineDepreciation(
   fixedAssets: number,
   usefulLifeYears: number,
