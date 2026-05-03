@@ -34,6 +34,12 @@ function parseSpaceParams(): Record<string, string | number> | null {
   return hasAny ? result : null;
 }
 
+function parseStageParam(): "new_school" | "operating_school" | null {
+  const params = new URLSearchParams(window.location.search);
+  const stage = params.get("stage");
+  return stage === "new_school" || stage === "operating_school" ? stage : null;
+}
+
 function buildPrefillData(p: Record<string, string | number>, duration: ModelDuration): Record<string, unknown> {
   const data: Record<string, unknown> = {};
 
@@ -151,9 +157,20 @@ export function NewModelPage() {
     (async () => {
       try {
         const isSpaceImport = spaceParams !== null && spaceParams !== undefined;
+        const stageSeed = parseStageParam();
+        const baseProfile: Record<string, unknown> = { modelDuration: duration };
+        if (stageSeed) baseProfile.schoolStage = stageSeed;
         const prefillData = isSpaceImport
-          ? buildPrefillData(spaceParams as Record<string, string | number>, duration)
-          : { schoolProfile: { modelDuration: duration } };
+          ? (() => {
+              const built = buildPrefillData(spaceParams as Record<string, string | number>, duration);
+              if (stageSeed) {
+                const sp = (built.schoolProfile as Record<string, unknown>) || {};
+                sp.schoolStage = stageSeed;
+                built.schoolProfile = sp;
+              }
+              return built;
+            })()
+          : { schoolProfile: baseProfile };
         const modelName =
           isSpaceImport && typeof (spaceParams as Record<string, string | number>).schoolName === "string"
             && (spaceParams as Record<string, string | number>).schoolName

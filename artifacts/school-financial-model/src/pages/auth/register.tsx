@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useRegister, useCreateModel } from "@workspace/api-client-react";
+import { useRegister } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth-context";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
@@ -12,7 +12,6 @@ export function RegisterPage() {
   const [, setLocation] = useLocation();
   const { login } = useAuth();
   const registerMutation = useRegister();
-  const createModelMutation = useCreateModel();
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -41,14 +40,7 @@ export function RegisterPage() {
         return;
       }
 
-      try {
-        const newModel = await createModelMutation.mutateAsync({
-          data: { name: "Untitled Model", currentStep: 1, data: {} }
-        });
-        setLocation(`/model/${newModel.id}`);
-      } catch {
-        setLocation("/dashboard");
-      }
+      setLocation("/model/new");
     } catch (err) {
       setError(getApiErrorMessage(err, "Failed to register. Please try again."));
     }

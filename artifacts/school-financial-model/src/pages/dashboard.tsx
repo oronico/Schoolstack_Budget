@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel, type ModelFormData } from "@workspace/api-client-react";
+import { useListModels, useCreateModel, useDeleteModel, useDuplicateModel, useArchiveModel } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout/Layout";
 import { Plus, FileSpreadsheet, Trash2, Clock, Loader2, Copy, Archive, Sparkles, ArrowRight, BarChart3, CheckCircle2, Lightbulb, GitBranch, Lock, MessageSquareMore, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
@@ -77,26 +77,10 @@ export function DashboardPage() {
           : user?.personaStage === "existing"
             ? "operating_school"
             : undefined;
-      const seededData: ModelFormData = seededSchoolStage
-        ? { schoolProfile: { schoolStage: seededSchoolStage } }
-        : {};
-      const newModel = await createMutation.mutateAsync({
-        data: {
-          name: "Untitled Model",
-          currentStep: 1,
-          data: seededData
-        }
-      });
-      // Mark this model as already past the legacy Story-step migration AND
-      // the reorderV2 step-shuffle migration so the wizard's load-time bump
-      // logic never fires for brand-new models created in the new flow.
-      try {
-        window.localStorage.setItem(`wizard:storyMigration:${newModel.id}`, "1");
-        window.localStorage.setItem(`wizard:reorderV2:${newModel.id}`, "1");
-      } catch {
-        /* noop */
-      }
-      setLocation(`/model/${newModel.id}`);
+      // Route through /model/new so the founder picks duration first. Pass
+      // persona-derived schoolStage as a query param the picker honors.
+      const qs = seededSchoolStage ? `?stage=${seededSchoolStage}` : "";
+      setLocation(`/model/new${qs}`);
     } catch (e) {
       console.error(e);
     }
