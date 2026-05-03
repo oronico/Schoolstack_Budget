@@ -22,6 +22,7 @@ import {
 } from "@/lib/revenue-defaults";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona";
+import { useYearCount } from "@/lib/use-model-duration";
 import { enrollmentBenchmarkFor } from "@/lib/school-type-benchmarks";
 import {
   BarChart,
@@ -397,6 +398,7 @@ export function EnrollmentStep() {
   const plannedOpeningYear = watch("schoolProfile.plannedOpeningYear");
 
   const currentStudents = watch("schoolProfile.currentStudents") || 0;
+  const yearCount = useYearCount();
 
   const isNewSchool = schoolStage === "new_school";
   const isFirstYear = schoolStage === "operating_school" && operatingYear === "first_year";
@@ -451,7 +453,7 @@ export function EnrollmentStep() {
   const openingYearLabel = plannedOpeningYear || "2026-27";
   const openingYearNum = parseInt(openingYearLabel.split("-")[0]) || 2026;
 
-  const futureYearLabels = Array.from({ length: 5 }, (_, i) => {
+  const futureYearLabels = Array.from({ length: yearCount }, (_, i) => {
     const start = openingYearNum + i;
     const end = (start + 1) % 100;
     return `${start}-${String(end).padStart(2, "0")}`;
@@ -468,7 +470,7 @@ export function EnrollmentStep() {
     allColumnKeys.push("currentYear");
     allColumnLabels.push(`${openingYearNum - 1}-${String(openingYearNum % 100).padStart(2, "0")} (Current)`);
   }
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < yearCount; i++) {
     allColumnKeys.push(`year${i + 1}`);
     allColumnLabels.push(futureYearLabels[i]);
   }
@@ -623,7 +625,7 @@ export function EnrollmentStep() {
     return rev;
   }, [programs, getTuitionForYear]);
 
-  const chartEnrollments = Array.from({ length: 5 }, (_, i) => totalsByYear[`year${i + 1}`] || 0);
+  const chartEnrollments = Array.from({ length: yearCount }, (_, i) => totalsByYear[`year${i + 1}`] || 0);
   const chartLabels = futureYearLabels;
 
   const hasYear1Data = programs.some(p => p.year1 > 0);

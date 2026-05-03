@@ -45,6 +45,7 @@ import { getStateFundingConfig, type StateFundingConfig, type SchoolType, type C
 import { detectFragileFunding, type FragileProgramMatch } from "@workspace/finance";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch } from "@/lib/coaching/founder-persona";
+import { useYearCount } from "@/lib/use-model-duration";
 
 const CATEGORY_ICONS: Record<RevenueCategory, React.ComponentType<{ className?: string }>> = {
   tuition_and_fees: GraduationCap,
@@ -175,6 +176,9 @@ function getYearCount(_schoolStage: string | undefined): number {
   return YEAR_COUNT;
 }
 
+// Wired in the component below — overrides getYearCount when single-year
+// mode is active so the input grids collapse to a single Y1 column.
+
 function getYearLabel(index: number, schoolStage: string | undefined): string {
   if (schoolStage === "operating_school" && index === 0) return "Current";
   return `Y${index + 1}`;
@@ -198,7 +202,9 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const congregationSupport = watch("schoolProfile.congregationSupport") as boolean | undefined;
   const doesFundraise = watch("schoolProfile.doesFundraise") as boolean | undefined;
   const hasFiscalSponsor = watch("schoolProfile.hasFiscalSponsor") as boolean | undefined;
-  const yearCount = getYearCount(schoolStage);
+  const yearCountBase = getYearCount(schoolStage);
+  const singleYearOverride = useYearCount();
+  const yearCount = singleYearOverride < yearCountBase ? singleYearOverride : yearCountBase;
 
   const enrollment = watch("enrollment");
   const y1Students = enrollment?.year1 || 0;

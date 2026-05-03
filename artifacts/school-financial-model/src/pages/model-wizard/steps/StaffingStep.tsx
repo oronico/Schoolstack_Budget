@@ -24,6 +24,7 @@ import {
   type PayrollTaxCapInsight,
 } from "@/lib/state-payroll-tax-data";
 import { useAuth } from "@/lib/auth-context";
+import { useYearCount } from "@/lib/use-model-duration";
 import { getFounderPersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
 import type { FounderComfort } from "@/lib/coaching/founder-persona";
 import {
@@ -101,15 +102,17 @@ export function StaffingStep() {
 
   const enrollment = watch("enrollment") as { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number } | undefined;
   const maxCapacity = watch("schoolProfile.maxCapacity") as number | undefined;
-  const enrollmentArr = [
+  const yearCount = useYearCount();
+  const enrollmentArrFull = [
     enrollment?.year1 || 0,
     enrollment?.year2 || 0,
     enrollment?.year3 || 0,
     enrollment?.year4 || 0,
     enrollment?.year5 || 0,
   ];
-  const y1Students = enrollmentArr[0];
-  const y5Students = enrollmentArr[4];
+  const enrollmentArr = enrollmentArrFull.slice(0, yearCount);
+  const y1Students = enrollmentArrFull[0];
+  const y5Students = enrollmentArrFull[4];
 
   const colaRate = (watch("facilities.annualSalaryIncrease") as number) ?? 3;
   const modelBenefitsRate = (watch("staffing.benefitsRate") as number) ?? DEFAULT_BENEFITS_RATE;
@@ -1041,7 +1044,7 @@ function StaffCard({
                   step={1}
                 />
               </div>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${enrollmentArr.length}, minmax(0, 1fr))` }}>
                 {enrollmentArr.map((enr, yi) => {
                   const fte = computeEffectiveFte(row, yi, enr);
                   return (

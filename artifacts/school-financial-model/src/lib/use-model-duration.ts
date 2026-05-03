@@ -19,6 +19,19 @@ export function useModelDuration(): { duration: ModelDuration; isSingleYear: boo
 }
 
 /**
+ * Returns the effective number of forecast years to render in the wizard
+ * UI. Single-year mode collapses every multi-year input grid to a single
+ * Year 1 column; five-year keeps the full 5-column layout.
+ *
+ * The underlying schema is always 5 wide — this only governs *visible*
+ * columns and the loop bounds the steps use to render them. Backfill of
+ * Y2-Y5 happens via `seedExtendedEnrollment` when the founder extends.
+ */
+export function useYearCount(): number {
+  return useModelDuration().isSingleYear ? 1 : 5;
+}
+
+/**
  * Pure helper used by the Extend-to-5-year flow.
  *
  * If the founder built their single-year budget without ever touching the

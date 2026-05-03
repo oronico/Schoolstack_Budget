@@ -12,6 +12,7 @@ import { QuickLevers } from "@/components/coaching/QuickLevers";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import { computeMonthlyCashInflow } from "@/lib/revenue-defaults";
 import { useAuth } from "@/lib/auth-context";
+import { useYearCount } from "@/lib/use-model-duration";
 import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { BookOpen, X, ArrowRight } from "lucide-react";
@@ -258,9 +259,11 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
   const capitalAndDebtRows = data.capitalAndDebtRows || [];
   const hasRowData = revenueRows.length > 0 || staffingRows.length > 0 || expenseRows.length > 0;
 
-  const yearCount = hasRowData
+  const singleYearCap = useYearCount();
+  const yearCountFull = hasRowData
     ? (revenueRows[0]?.amounts?.length || expenseRows[0]?.amounts?.length || 5)
     : 5;
+  const yearCount = Math.min(yearCountFull, singleYearCap);
 
   const year1Students = data.enrollment?.year1 || 0;
 

@@ -47,6 +47,7 @@ import { GUIDED_EXPENSE_QUESTIONS } from "@/lib/expense-guided-questions";
 import { getSchoolTypeTrack } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
+import { useYearCount } from "@/lib/use-model-duration";
 
 const CATEGORY_ICONS: Record<string, typeof DollarSign> = {
   personnel: Users,
@@ -373,7 +374,9 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const stateCode = (watch("schoolProfile.state") || "") as string;
   const entityType = (watch("schoolProfile.entityType") || "") as string;
   const cityName = (watch("schoolProfile.city") || "") as string;
-  const yearCount = getYearCount(schoolStage);
+  const yearCountBase = getYearCount(schoolStage);
+  const singleYearOverride = useYearCount();
+  const yearCount = singleYearOverride < yearCountBase ? singleYearOverride : yearCountBase;
 
   const generalCostInflation = (watch("facilities.generalCostInflation") as number) ?? 3;
   const annualRentIncrease = (watch("facilities.annualRentIncrease") as number) ?? 3;
