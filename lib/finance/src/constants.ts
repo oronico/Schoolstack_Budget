@@ -12,3 +12,22 @@ export const YEAR_COUNT = 5;
 
 export const BENCHMARK_DSCR_GREEN = 1.25;
 export const BENCHMARK_DSCR_AMBER = 1.15;
+
+export type CollectionMethod = "autopay" | "invoiced" | "mixed";
+
+export const DEFAULT_COLLECTION_RATE_BY_METHOD: Record<CollectionMethod, number> = {
+  autopay: 100,
+  invoiced: 95,
+  mixed: 95,
+};
+
+export const COLLECTION_RATE_BENCHMARK_COPY =
+  "Most invoiced K-8 schools see 88-93% — set with care";
+
+export function defaultCollectionRateForMethod(method?: string | null): number {
+  if (!method) return DEFAULT_COLLECTION_RATE_BY_METHOD.autopay;
+  if (method === "autopay" || method === "invoiced" || method === "mixed") {
+    return DEFAULT_COLLECTION_RATE_BY_METHOD[method];
+  }
+  return DEFAULT_COLLECTION_RATE_BY_METHOD.autopay;
+}

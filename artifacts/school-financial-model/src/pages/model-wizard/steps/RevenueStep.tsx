@@ -7,7 +7,7 @@ import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent } from "@/lib/per-student-lens";
-import { YEAR_COUNT } from "@workspace/finance";
+import { YEAR_COUNT, DEFAULT_COLLECTION_RATE_BY_METHOD, COLLECTION_RATE_BENCHMARK_COPY } from "@workspace/finance";
 import {
   type RevenueRowData,
   type RevenueCategory,
@@ -1785,12 +1785,18 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               </label>
               <input
                 type="number"
-                value={row.collectionRate ?? 98}
+                value={row.collectionRate ?? DEFAULT_COLLECTION_RATE_BY_METHOD[(row.collectionMethod ?? "autopay") as "autopay" | "invoiced" | "mixed"]}
                 onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
                 className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
                 min={0}
                 max={100}
               />
+              <span
+                className="inline-flex items-center self-start mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help"
+                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR — set this with care and document any assumption above 95% for invoiced billing."
+              >
+                Benchmark · {COLLECTION_RATE_BENCHMARK_COPY}
+              </span>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
@@ -1839,12 +1845,18 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               </label>
               <input
                 type="number"
-                value={row.collectionRate ?? 100}
+                value={row.collectionRate ?? DEFAULT_COLLECTION_RATE_BY_METHOD.autopay}
                 onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
                 className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
                 min={0}
                 max={100}
               />
+              <span
+                className="inline-flex items-center self-start mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help"
+                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR — set this with care and document any assumption above 95% for invoiced billing."
+              >
+                Benchmark · {COLLECTION_RATE_BENCHMARK_COPY}
+              </span>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
@@ -1901,7 +1913,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               </label>
               <input
                 type="number"
-                value={row.collectionRate ?? 100}
+                value={row.collectionRate ?? DEFAULT_COLLECTION_RATE_BY_METHOD.autopay}
                 onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
                 className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
                 min={0}
@@ -1952,7 +1964,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               </label>
               <input
                 type="number"
-                value={row.collectionRate ?? 100}
+                value={row.collectionRate ?? DEFAULT_COLLECTION_RATE_BY_METHOD.autopay}
                 onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
                 className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
                 min={0}
@@ -2033,7 +2045,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               </label>
               <input
                 type="number"
-                value={row.collectionRate ?? 95}
+                value={row.collectionRate ?? DEFAULT_COLLECTION_RATE_BY_METHOD.invoiced}
                 onChange={(e) => { const v = parseFloat(e.target.value); handleTimingOverride("collectionRate", isNaN(v) ? 0 : v); }}
                 className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground w-full"
                 min={0}

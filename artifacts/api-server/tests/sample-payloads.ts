@@ -204,7 +204,7 @@ export const privateSchoolWithESA = {
     foundationGrants: 50000,
   },
   revenueRows: [
-    { id: "r1", category: "tuition_and_fees", lineItem: "Tuition", enabled: true, driverType: "per_student", amounts: [10500, 10815, 11140, 11474, 11818], billingMonths: 10, collectionMethod: "autopay", collectionRate: 95 },
+    { id: "gross_tuition", category: "tuition_and_fees", lineItem: "Gross Tuition", enabled: true, driverType: "per_student", amounts: [10500, 10815, 11140, 11474, 11818], billingMonths: 10, collectionMethod: "autopay", collectionRate: 95 },
     { id: "r2", category: "tuition_and_fees", lineItem: "Registration Fee", enabled: true, driverType: "per_student", amounts: [350, 350, 350, 350, 350], billingMonths: 12 },
     { id: "r3", category: "tuition_offsets", lineItem: "Scholarship Discount", enabled: true, driverType: "per_student", amounts: [-1050, -1082, -1114, -1147, -1182] },
     { id: "r4", category: "school_choice", lineItem: "FL FTC Scholarship", enabled: true, driverType: "per_student", amounts: [8700, 8961, 9230, 9507, 9792], billingMonths: 12, disbursementType: "direct" },

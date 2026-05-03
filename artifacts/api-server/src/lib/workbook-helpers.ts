@@ -7,6 +7,7 @@ import {
   computeRemainingBalance,
   resolveEsc,
   computeEffectiveFte,
+  defaultCollectionRateForMethod,
 } from "@workspace/finance";
 export {
   computeAnnualDebt,
@@ -1709,7 +1710,7 @@ export function computeMonthlyCashInflow(
       if (isTuition) {
         const billingMonths = row.billingMonths ?? 10;
         const collectionRate = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
-          ? (row.collectionRate ?? 95) / 100 : 1;
+          ? (row.collectionRate ?? defaultCollectionRateForMethod(row.collectionMethod)) / 100 : 1;
         const delayDays = (row.collectionMethod === "invoiced" || row.collectionMethod === "mixed")
           ? (row.collectionDelayDays ?? 0) : 0;
         const delayMs = Math.floor(delayDays / 30);

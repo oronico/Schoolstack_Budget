@@ -366,11 +366,29 @@ function renderSection(doc: PDFDoc, section: PacketSection) {
     }
   }
 
+  // Task #456 — surface supporting assumptions (e.g. tuition collection
+  // method + rate) so board readers see the cash-collection lever alongside
+  // the revenue narrative. Mirrors the lender packet renderer. Restricted
+  // to a small allow-list of sections so we don't flood unrelated sections
+  // with source-field labels.
+  if (section.linkedAssumptions && section.linkedAssumptions.length > 0 && shouldShowBoardAssumptions(section.id)) {
+    doc.moveDown(0.3);
+    subSection(doc, "Supporting Assumptions");
+    for (const a of section.linkedAssumptions.slice(0, 10)) {
+      labelValue(doc, a.label, a.value);
+    }
+    if (section.linkedAssumptions.length > 10) {
+      doc.font("Helvetica").fontSize(8).fillColor(BRAND.gray);
+      doc.text(`  ... and ${section.linkedAssumptions.length - 10} more (see Appendix)`);
+    }
+    doc.moveDown(0.3);
+  }
+
   // Task #455 — surface fragility footnotes attached to linked assumptions
-  // beside the line items they qualify. The board PDF normally omits the
-  // raw linked-assumption labelValue list (board members don't want a wall
-  // of source-field rows), but the per-line legal-status caveats are
-  // material to a 5-year forecast review and need to land in the packet.
+  // beside the line items they qualify. Even when the Supporting Assumptions
+  // block above isn't rendered for this section, the per-line legal-status
+  // caveats are material to a 5-year forecast review and need to land in
+  // the packet so the board sees the litigation risk inline with revenue.
   const noteAssumptions = (section.linkedAssumptions || []).filter((a) => !!a.note);
   if (noteAssumptions.length > 0) {
     doc.moveDown(0.2);
@@ -386,6 +404,10 @@ function renderSection(doc: PDFDoc, section: PacketSection) {
     doc.fillColor(BRAND.black);
     doc.moveDown(0.3);
   }
+}
+
+function shouldShowBoardAssumptions(sectionId: string): boolean {
+  return ["revenue_model", "staffing_plan", "capital_debt", "appendix_assumptions"].includes(sectionId);
 }
 
 function renderMetrics(doc: PDFDoc, metrics: LinkedMetric[]) {

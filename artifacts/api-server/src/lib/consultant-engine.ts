@@ -1,7 +1,7 @@
 import { generateTopIssues } from "./decision-rules";
 import { generateHealthSignals, type HealthSignal } from "./financial-health";
 import { computeDaysCashOnHand, computeEffectiveFte as computeEffectiveFteShared, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER, BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./workbook-helpers.js";
-import { computeAnnualDebt, computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials } from "@workspace/finance";
+import { computeAnnualDebt, computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials, defaultCollectionRateForMethod } from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
 
 interface SchoolProfile {
@@ -2585,7 +2585,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     );
     if (invoicedRows.length > 0) {
       const avgCollectionRate = invoicedRows.reduce(
-        (sum, r) => sum + (r.collectionRate ?? 95), 0
+        (sum, r) => sum + (r.collectionRate ?? defaultCollectionRateForMethod(r.collectionMethod)), 0
       ) / invoicedRows.length;
       if (avgCollectionRate < 95) {
         const invoicedRevenue = invoicedRows.reduce(

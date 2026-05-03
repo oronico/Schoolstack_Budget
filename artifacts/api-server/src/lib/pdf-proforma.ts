@@ -4,7 +4,7 @@ import {
   profitLabel, profitMarginLabel, entityTypeDisplay, schoolTypeDisplay,
   ensureSpace, type PDFDoc, type TableColumn,
 } from "./pdf-utils.js";
-import { computeAnnualDebt } from "@workspace/finance";
+import { computeAnnualDebt, defaultCollectionRateForMethod } from "@workspace/finance";
 import { computeMonthlyCashInflow } from "./workbook-helpers.js";
 
 interface SchoolProfile {
@@ -403,6 +403,26 @@ export async function generateProFormaPDF(rawData: Record<string, unknown>): Pro
   ], { zebra: true });
 
   if (revenueRows.length > 0) {
+    // Surface the cash-collection lever for tuition rows so lender / board
+    // PDF readers see method + rate next to the revenue schedule
+    // (Task #456). Only tuition rows carry this assumption; we read the
+    // shared default from `defaultCollectionRateForMethod` so this stays in
+    // lock-step with the engine and wizard.
+    const tuitionCollectionRows = revenueRows.filter(
+      (r) => r.enabled && (r.category === "tuition_and_fees" || r.category === "tuition_offsets"),
+    );
+    if (tuitionCollectionRows.length > 0) {
+      for (const r of tuitionCollectionRows) {
+        const method = (r.collectionMethod ?? "autopay") as "autopay" | "invoiced" | "mixed";
+        const methodLabel = method === "autopay" ? "Autopay / ACH"
+          : method === "invoiced" ? "Invoiced"
+          : "Mixed";
+        const rate = r.collectionRate ?? defaultCollectionRateForMethod(method);
+        labelValue(doc, `${r.lineItem} — Collection`, `${methodLabel} @ ${rate.toFixed(0)}%`);
+      }
+      doc.moveDown(0.2);
+    }
+
     sectionTitle(doc, "Revenue Schedule");
     const revCols: TableColumn[] = [{ header: "Category", width: 150 }, ...yearHeaders.map(h => ({ header: h, width: 80, align: "right" as const }))];
     const catOrder = ["tuition_and_fees", "tuition_offsets", "public_funding", "school_choice", "philanthropy", "other_revenue"];

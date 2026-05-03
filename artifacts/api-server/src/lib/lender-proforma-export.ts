@@ -17,6 +17,7 @@ import {
   type SchoolProfile as SharedSchoolProfile,
   type RevenueRow as SharedRevenueRow,
 } from "./workbook-helpers.js";
+import { defaultCollectionRateForMethod } from "@workspace/finance";
 import { addDecisionHistorySheet } from "./packets/build-decision-history.js";
 
 const SCHOOL_TYPE_DISPLAY: Record<string, string> = {
@@ -79,6 +80,7 @@ interface RevenueRow {
   amounts: number[];
   percentBase?: string;
   collectionRate?: number;
+  collectionMethod?: string;
   paymentTiming?: string;
 }
 
@@ -271,7 +273,11 @@ export function mapModelToTemplateInput(rawData: Record<string, unknown>): Recor
   } else if ((grossTuitionRow as RevenueRow)?.collectionRate) {
     result.collectionRatePct = (grossTuitionRow as RevenueRow).collectionRate! / 100;
   } else {
-    result.collectionRatePct = 0.95;
+    // Task #456: derive default from collectionMethod via shared constant
+    // (DEFAULT_COLLECTION_RATE_BY_METHOD) instead of hard-coding 0.95.
+    result.collectionRatePct = defaultCollectionRateForMethod(
+      (grossTuitionRow as RevenueRow)?.collectionMethod,
+    ) / 100;
   }
 
   let grantsY1 = 0;

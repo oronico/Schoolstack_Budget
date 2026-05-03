@@ -19,6 +19,10 @@ export {
   YEAR_COUNT,
   BENCHMARK_DSCR_GREEN,
   BENCHMARK_DSCR_AMBER,
+  DEFAULT_COLLECTION_RATE_BY_METHOD,
+  COLLECTION_RATE_BENCHMARK_COPY,
+  defaultCollectionRateForMethod,
+  type CollectionMethod,
 } from "./constants.js";
 
 export {

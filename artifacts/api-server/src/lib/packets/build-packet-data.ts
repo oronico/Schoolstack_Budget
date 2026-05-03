@@ -31,6 +31,7 @@ import {
   detectFragileFunding,
   type FragileFundingReport,
   type SchoolType,
+  defaultCollectionRateForMethod,
 } from "@workspace/finance";
 import {
   type PacketData,
@@ -397,22 +398,57 @@ function buildRevenueModel(
     });
   }
 
+  // Task #456: surface collection method & rate on the gross-tuition row in
+  // the lender + board PDF revenue model section so reviewers can see the
+  // assumption driving Y1 tuition cash without diving into the appendix.
+  // Prepended to `linkedAssumptions` below so the cash-collection lever
+  // sits at the top of the Supporting Assumptions block, ahead of the
+  // per-line revenue rows (which already carry Task #455 fragility notes).
+  const grossTuitionRow = (md.revenueRows || []).find(
+    (r) => r.enabled !== false && (r.id === "gross_tuition" || r.category === "tuition_and_fees"),
+  );
+  const collectionAssumptions: LinkedAssumption[] = grossTuitionRow
+    ? [
+        {
+          label: "Tuition Collection Method",
+          value: collectionMethodLabel(grossTuitionRow.collectionMethod),
+          sourceField: `revenueRows[${grossTuitionRow.id}].collectionMethod`,
+        },
+        {
+          label: "Tuition Collection Rate",
+          value: `${(grossTuitionRow.collectionRate ?? defaultCollectionRateForMethod(grossTuitionRow.collectionMethod)).toFixed(1)}%`,
+          sourceField: `revenueRows[${grossTuitionRow.id}].collectionRate`,
+        },
+      ]
+    : [];
+
   return {
     ...s,
     narrative,
     linkedMetrics,
-    linkedAssumptions: fragileRows.map((r) => {
-      const note = fragilityByRowId.get(r.id);
-      return {
-        label: r.lineItem || "Revenue Line",
-        value: fmt(driverVal(r.amounts, 0, r.driverType || "annual", yearlyData[0]?.students || 0, r.escalationRate)),
-        sourceField: `revenueRows[${r.id}]`,
-        ...(note ? { note: note.full } : {}),
-      };
-    }),
+    linkedAssumptions: [
+      ...collectionAssumptions,
+      ...fragileRows.map((r) => {
+        const note = fragilityByRowId.get(r.id);
+        return {
+          label: r.lineItem || "Revenue Line",
+          value: fmt(driverVal(r.amounts, 0, r.driverType || "annual", yearlyData[0]?.students || 0, r.escalationRate)),
+          sourceField: `revenueRows[${r.id}]`,
+          ...(note ? { note: note.full } : {}),
+        };
+      }),
+    ],
     tables,
     ...(revenueInsights.length > 0 ? { insights: revenueInsights } : {}),
   };
+}
+
+function collectionMethodLabel(method?: string | null): string {
+  if (!method) return "Autopay";
+  if (method === "autopay") return "Autopay";
+  if (method === "invoiced") return "Invoiced";
+  if (method === "mixed") return "Mixed (autopay + invoiced)";
+  return method;
 }
 
 /**
@@ -1162,6 +1198,18 @@ function buildAppendixAssumptions(
       value: `${row.driverType || "annual"}, Y1: ${fmt(driverVal(row.amounts, 0, row.driverType || "annual", enrollment[0] || 0, row.escalationRate))}`,
       sourceField: `revenueRows[${row.id}]`,
     });
+    // Task #456: include collection method + rate next to each tuition-flavored
+    // line so the appendix carries the same assumption surface area in lender
+    // and board packets.
+    if (row.category === "tuition_and_fees" || row.category === "tuition_offsets") {
+      const methodLabel = collectionMethodLabel(row.collectionMethod);
+      const rateValue = (row.collectionRate ?? defaultCollectionRateForMethod(row.collectionMethod)).toFixed(1);
+      assumptions.push({
+        label: `  ↳ ${row.lineItem || "Line Item"} — Collection`,
+        value: `${methodLabel} @ ${rateValue}%`,
+        sourceField: `revenueRows[${row.id}].collectionMethod`,
+      });
+    }
   }
 
   for (const nr of normalizeStaffingRows(md)) {
