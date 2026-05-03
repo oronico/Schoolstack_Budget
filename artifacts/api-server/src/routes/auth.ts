@@ -268,9 +268,16 @@ router.post("/auth/forgot-password", strictRateLimiter, async (req, res) => {
       await db.update(usersTable).set({ resetToken, resetTokenExpiry }).where(eq(usersTable.id, user.id));
       await trackEvent("requested_password_reset", user.id);
       const result = await sendPasswordResetEmail(user.email, resetTokenRaw);
+      // Round-3 #17: NEVER surface the mailer-failure status to the
+      // unauth client. Returning 503 only when the user existed turned
+      // this route into a reliable user-enumeration oracle whenever
+      // Resend was rate-limited / down / misconfigured. The reset row
+      // we just persisted is harmless on its own (no email = no token),
+      // and operators see the failure server-side via the log line.
       if (!result.success) {
-        res.status(503).json({ error: result.error || "Unable to send reset email. Please try again later." });
-        return;
+        console.error(
+          `[auth] forgot-password: mailer failed for user ${user.id}: ${result.error || "unknown"}`,
+        );
       }
     }
 

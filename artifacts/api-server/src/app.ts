@@ -12,6 +12,17 @@ export { isRequestAborted, type RequestWithAbort } from "./lib/request-abort";
 
 const app: Express = express();
 
+// Trust the first proxy hop so `req.ip` reflects the *client* address
+// rather than the load balancer's. Without this the rate limiter
+// (which keys on req.ip) collapses every request behind any reverse
+// proxy / CDN / Replit-style ingress into a single shared bucket per
+// endpoint — an attacker doing credential stuffing on /auth/login then
+// trivially locks every legitimate user out (round-3 #16). One hop is
+// the safe default for Replit Deployments and most managed hosts; an
+// operator behind a deeper chain can override via TRUST_PROXY_HOPS.
+const trustProxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS || "1", 10);
+app.set("trust proxy", Number.isFinite(trustProxyHops) && trustProxyHops >= 0 ? trustProxyHops : 1);
+
 app.use(helmet());
 app.use(compression());
 

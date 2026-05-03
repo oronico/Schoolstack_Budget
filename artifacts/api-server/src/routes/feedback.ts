@@ -1,20 +1,25 @@
 import { Router, type IRouter, type Response, type NextFunction } from "express";
-import jwt from "jsonwebtoken";
 import { db, feedbackTable, usersTable } from "@workspace/db";
 import { desc, eq, count } from "drizzle-orm";
-import { authMiddleware, type AuthRequest, getJwtSecret } from "../middlewares/auth";
+import { authMiddleware, type AuthRequest, verifyTokenStrict } from "../middlewares/auth";
 import { adminMiddleware } from "../middlewares/admin";
 
 const router: IRouter = Router();
 
-function optionalAuthMiddleware(req: AuthRequest, _res: Response, next: NextFunction) {
+// Optional auth on /feedback: attribute the row to the caller IFF they
+// present a *currently valid* Bearer token (signature OK, strict claim
+// shape, user still exists, tokenVersion matches). Anything weaker —
+// e.g. a JWT whose signature verifies but whose tokenVersion was bumped
+// by /auth/logout or /auth/reset-password — drops to anonymous instead
+// of being trusted (round-3 #15: previously this route only called
+// jwt.verify and trusted decoded.userId without the version recheck,
+// re-introducing the round-2 bypass on this surface).
+async function optionalAuthMiddleware(req: AuthRequest, _res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith("Bearer ")) {
-    try {
-      const token = authHeader.substring(7);
-      const decoded = jwt.verify(token, getJwtSecret()) as { userId: number };
-      req.userId = decoded.userId;
-    } catch {
+    const result = await verifyTokenStrict(authHeader.substring(7));
+    if (result.ok) {
+      req.userId = result.userId;
     }
   }
   next();

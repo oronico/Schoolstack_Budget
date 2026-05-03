@@ -1,10 +1,17 @@
 import { Router } from "express";
 import { db, errorLogsTable } from "@workspace/db";
-import { desc } from "drizzle-orm";
-import { authMiddleware, type AuthRequest } from "../middlewares/auth";
+import { desc, lt } from "drizzle-orm";
+import { authMiddleware, verifyTokenStrict } from "../middlewares/auth";
 import { adminMiddleware } from "../middlewares/admin";
+import { createRateLimiter } from "../lib/rate-limiter";
 
 const router = Router();
+
+// /errors/report is unauthenticated (frontend calls it pre-login too) but
+// it WRITES to error_logs, so without throttling a single attacker can
+// fill the table indefinitely (round-3 #18). Cap at 30 reports/min/IP.
+// Pair with cleanupOldErrorLogs() below for retention.
+const errorReportRateLimiter = createRateLimiter(60_000, 30);
 
 const SENSITIVE_KEYS = new Set([
   "password",
@@ -36,7 +43,7 @@ function stripSensitive(obj: unknown): unknown {
   return cleaned;
 }
 
-router.post("/errors/report", async (req, res) => {
+router.post("/errors/report", errorReportRateLimiter, async (req, res) => {
   try {
     const { message, stack, url, userAgent } = req.body;
     if (!message || typeof message !== "string") {
@@ -44,17 +51,16 @@ router.post("/errors/report", async (req, res) => {
       return;
     }
 
+    // Optional attribution. Round-3 #15: must run the same strict
+    // signature + claim shape + tokenVersion + DB-existence check as
+    // authMiddleware — a bare jwt.verify here trusts revoked / logged-out
+    // tokens and (worse) trusts whatever the JWT claims as `userId`,
+    // re-introducing the round-2 ghost-user bypass on this surface.
     let userId: string | null = null;
-    try {
-      const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith("Bearer ")) {
-        const jwt = await import("jsonwebtoken");
-        const { getJwtSecret } = await import("../middlewares/auth");
-        const decoded = jwt.default.verify(authHeader.slice(7), getJwtSecret()) as { userId?: number };
-        if (decoded.userId) userId = String(decoded.userId);
-      }
-    } catch {
-      // token extraction is best-effort
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const result = await verifyTokenStrict(authHeader.slice(7));
+      if (result.ok) userId = String(result.userId);
     }
 
     await db.insert(errorLogsTable).values({
@@ -71,6 +77,22 @@ router.post("/errors/report", async (req, res) => {
     res.status(500).json({ error: "Failed to log error" });
   }
 });
+
+// Round-3 #18: bound the growth of error_logs. Without this the table
+// grows monotonically — there's no admin UI to prune it and the
+// rate-limiter cleanup task only sweeps rate_limits. 30 days is enough
+// for triage; older rows are dropped on the same 5-minute interval as
+// the rate-limit sweeper (wired in src/index.ts).
+const ERROR_LOG_RETENTION_MS = 30 * 24 * 60 * 60_000;
+
+export async function cleanupOldErrorLogs() {
+  const cutoff = new Date(Date.now() - ERROR_LOG_RETENTION_MS);
+  try {
+    await db.delete(errorLogsTable).where(lt(errorLogsTable.createdAt, cutoff));
+  } catch (err) {
+    console.error("Error log cleanup error:", err);
+  }
+}
 
 router.get("/admin/errors", authMiddleware, adminMiddleware, async (_req, res) => {
   try {

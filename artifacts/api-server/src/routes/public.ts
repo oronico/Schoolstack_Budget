@@ -384,19 +384,36 @@ router.post("/public/track-cta", rateLimiter, async (req: Request, res: Response
   }
 });
 
+// Round-3 #19: bound every field before it lands in events.metadata.
+// Without these caps an unauth caller can pump multi-MB strings into
+// jsonb (5MB body limit was the only ceiling), and Infinity / NaN /
+// negative values pollute analytics aggregations.
+const TIMING_FIELD_MAX_LEN = 64;
+const TIMING_STEP_MAX = 100;
+const TIMING_DURATION_MAX_SECONDS = 24 * 60 * 60; // 24h is well past any sane wizard session
+
 router.post("/public/timing", rateLimiter, async (req: Request, res: Response) => {
   try {
-    const { step, stepName, durationSeconds, sessionId, wizard } = req.body;
-    if (typeof step !== "number" || typeof durationSeconds !== "number") {
+    const { step, stepName, durationSeconds, sessionId, wizard } = req.body ?? {};
+    if (
+      typeof step !== "number" ||
+      !Number.isInteger(step) ||
+      step < 0 ||
+      step > TIMING_STEP_MAX ||
+      typeof durationSeconds !== "number" ||
+      !Number.isFinite(durationSeconds) ||
+      durationSeconds < 0 ||
+      durationSeconds > TIMING_DURATION_MAX_SECONDS
+    ) {
       res.status(400).json({ error: "Invalid timing data." });
       return;
     }
     await trackEvent("wizard_step_timing", null, {
-      step,
-      stepName: String(stepName || ""),
+      step: Math.floor(step),
+      stepName: String(stepName ?? "").slice(0, TIMING_FIELD_MAX_LEN),
       durationSeconds: Math.round(durationSeconds),
-      sessionId: String(sessionId || ""),
-      wizard: String(wizard || "public"),
+      sessionId: String(sessionId ?? "").slice(0, TIMING_FIELD_MAX_LEN),
+      wizard: String(wizard ?? "public").slice(0, TIMING_FIELD_MAX_LEN),
     });
     res.json({ ok: true });
   } catch (err) {

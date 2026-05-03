@@ -1,5 +1,6 @@
 import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
+import { cleanupOldErrorLogs } from "./routes/errors";
 import { pool, db, errorLogsTable, runMigrations } from "@workspace/db";
 import { applyMigrations as runApplyMigrations } from "./lib/apply-migrations";
 import type { Server } from "http";
@@ -170,4 +171,8 @@ applyMigrations().then(() => {
 
 cleanupTimer = setInterval(() => {
   cleanupExpiredRateLimits().catch(() => {});
+  // Round-3 #18: same 5-minute sweep also prunes error_logs rows older
+  // than 30 days, so an unauth attacker hammering /errors/report can't
+  // grow the table indefinitely.
+  cleanupOldErrorLogs().catch(() => {});
 }, 300_000);
