@@ -320,6 +320,11 @@ export function ModelWizardPage() {
         schoolStage: undefined as string | undefined,
         fundingProfile: undefined as string | undefined,
         entityType: undefined as string | undefined,
+        // Default new models to the 5-year projection. Single-year is opt-in
+        // via the FormSelect on Step 2; this default ensures the dropdown
+        // visibly shows "5-Year Projection" out of the box and that any new
+        // model that the founder never touches the toggle on stays 5-year.
+        modelDuration: "five_year" as "single_year" | "five_year",
         schoolTypeOther: "",
         ein: "",
         locationSecured: false,

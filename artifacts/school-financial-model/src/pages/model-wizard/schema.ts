@@ -164,8 +164,14 @@ export const schoolProfileSchema = z.object({
   // Picked next to school type on this step. Optional + defaulted to
   // "five_year" so legacy models without it continue to validate. Read via
   // `getModelDuration(data)` so consumers don't all need to re-implement the
-  // default fallback.
-  modelDuration: modelDurationSchema.optional(),
+  // default fallback. The preprocess step coerces the empty string that
+  // `FormSelect` emits when nothing is picked yet to `undefined` — without it,
+  // `z.enum().optional()` would reject `""` and block the wizard's Continue
+  // button on Step 2.
+  modelDuration: z.preprocess(
+    v => (v === "" || v === null ? undefined : v),
+    modelDurationSchema.optional(),
+  ),
   entityType: entityTypeSchema,
   ein: z.string().optional(),
   website: z.string().optional(),
