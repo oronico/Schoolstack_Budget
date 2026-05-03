@@ -161,6 +161,26 @@ function buildChestertonSteps(): StepDef[] {
 }
 const CHESTERTON_STEPS: StepDef[] = buildChestertonSteps();
 
+// Exported for unit tests. Mirrors the visibleSteps memo in the wizard so
+// the filtering rules (Chesterton variant + single-year hides Lender
+// Narrative) can be asserted without rendering the whole wizard.
+export function computeVisibleSteps(
+  schoolType: string | undefined,
+  isSingleYear: boolean,
+): StepDef[] {
+  const base = schoolType === "chesterton_academy" ? CHESTERTON_STEPS : STEPS;
+  if (!isSingleYear) return base;
+  // The wizard rail uses `step.id` as identity (`isCurrent = currentStep === step.id`)
+  // and `currentStep` is also a 1-based positional index into this list. After
+  // filtering Lender Narrative out, IDs MUST be reassigned contiguously so the
+  // two coordinate systems stay aligned — otherwise the final step renders as
+  // "step 12" of 11 and clicking the export rail node sets currentStep to an
+  // out-of-bounds index.
+  return base
+    .filter(s => s.title !== "Lender Narrative")
+    .map((s, i) => ({ ...s, id: i + 1 }));
+}
+
 // Maps a saved `currentStep` written under the pre-task-#329 11-step layout
 // (Assumptions at 3 with Capital/DSCR baked in) to the new 12-step layout
 // (Capital & Financing at 7, Assumptions & Sensitivity at 8). Applied
@@ -560,9 +580,15 @@ export function ModelWizardPage() {
   // school type is set to chesterton_academy. We re-derive on every change
   // so the sidebar updates live.
   const watchedSchoolType = (formValues?.schoolProfile as Record<string, unknown> | undefined)?.schoolType as string | undefined;
+  const watchedModelDuration = (formValues?.schoolProfile as Record<string, unknown> | undefined)?.modelDuration as string | undefined;
+  const watchedIsSingleYear = isSingleYearModel({ schoolProfile: { modelDuration: watchedModelDuration } });
+  // The Lender Narrative step writes copy for the lender packet export,
+  // which is gated to 5-year mode. Hiding the step (instead of just
+  // greying it out) keeps single-year founders from walking into a step
+  // they cannot complete. Reappears the moment they extend to 5 years.
   const visibleSteps = useMemo(
-    () => (watchedSchoolType === "chesterton_academy" ? CHESTERTON_STEPS : STEPS),
-    [watchedSchoolType],
+    () => computeVisibleSteps(watchedSchoolType, watchedIsSingleYear),
+    [watchedSchoolType, watchedIsSingleYear],
   );
   const stepIdByTitle = useCallback(
     (title: string) => {
@@ -1339,7 +1365,7 @@ export function ModelWizardPage() {
                 {currentStep === REVIEW_STEP_ID
                   ? "View Consultant Analysis"
                   : currentStep === stepIdByTitle("Consultant")
-                    ? "Continue to Lender Narrative"
+                    ? (watchedIsSingleYear ? "Generate Excel Model" : "Continue to Lender Narrative")
                     : currentStep === NARRATIVE_STEP_ID
                       ? "Generate Excel Model"
                       : "Continue"}{" "}
