@@ -118,7 +118,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
     slug: "five-year-pro-forma",
     seoTitle: "Five Year Pro Forma for Schools",
     seoDescription:
-      "Build a lender-ready 5-year financial projection for your school. Revenue ramp, staffing growth, expense scaling, and a 21-tab Underwriting Package.",
+      "Build a lender-ready 5-year financial projection for your school. Revenue ramp, staffing growth, expense scaling, and a 23-tab Underwriting Package.",
     badge: "FIVE YEAR PRO FORMA",
     Icon: CalendarRange,
     headline: "Five years of financial story,",
@@ -153,7 +153,7 @@ export const SOLUTION_PAGES: SolutionPageData[] = [
       {
         title: "Review and export the full 5-year package.",
         description:
-          "Year-by-year income statement, cash flow, and key ratios. Export the Lender-Ready Packet PDF or 21-tab Excel workbook with live formulas.",
+          "Year-by-year income statement, cash flow, and key ratios. Export the Lender-Ready Packet PDF or 23-tab Excel workbook with live formulas.",
       },
     ],
     faqs: [

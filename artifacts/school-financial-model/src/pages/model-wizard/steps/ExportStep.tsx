@@ -364,7 +364,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
         <ExportCard
           icon={<ClipboardCheck className="h-7 w-7" />}
           title="Underwriting Package"
-          description="21-tab workbook with DSCR, covenants, balance sheet, debt schedule & full formulas"
+          description="23-tab workbook with DSCR, covenants, balance sheet, debt schedule & full formulas"
           isLoading={loading === "underwritingV2"}
           isExported={exported.has("underwritingV2")}
           disabled={loading !== null && loading !== "underwritingV2"}

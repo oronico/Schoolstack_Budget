@@ -76,7 +76,7 @@ export const USE_CASE_PAGES: UseCasePageData[] = [
         icon: <Download className="w-7 h-7 text-[#328555]" />,
         title: "Authorizer-ready exports",
         description:
-          "Export a Lender-Ready Packet PDF, Board Summary, 21-tab Underwriting Package, and Formula Workbook with live Excel math. Everything your authorizer needs in one click.",
+          "Export a Lender-Ready Packet PDF, Board Summary, 23-tab Underwriting Package, and Formula Workbook with live Excel math. Everything your authorizer needs in one click.",
       },
     ],
     audienceBenefits: [
@@ -270,7 +270,7 @@ export const USE_CASE_PAGES: UseCasePageData[] = [
         icon: <Download className="w-7 h-7 text-[#0D9488]" />,
         title: "Lender-Ready Packet exports",
         description:
-          "Borrowers export a complete underwriting package: Lender-Ready Packet PDF, 21-tab Excel workbook with live formulas, Board Summary, and documented assumptions.",
+          "Borrowers export a complete underwriting package: Lender-Ready Packet PDF, 23-tab Excel workbook with live formulas, Board Summary, and documented assumptions.",
       },
       {
         icon: <Handshake className="w-7 h-7 text-[#328555]" />,
@@ -282,7 +282,7 @@ export const USE_CASE_PAGES: UseCasePageData[] = [
     audienceBenefits: [
       "Standardized financial format across all borrower applications",
       "DSCR, break-even, and cash reserve metrics calculated from actual inputs",
-      "21-tab Excel workbook with transparent, auditable formulas",
+      "23-tab Excel workbook with transparent, auditable formulas",
       "Sensitivity analysis showing how borrower financials perform under stress",
       "Shareable read-only links for quick team review without file management",
       "Free for borrowers - reducing barriers to quality financial submissions",

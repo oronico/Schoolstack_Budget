@@ -414,7 +414,7 @@ A strong loan application tells a complete financial story. At minimum, include:
 
 ## How SchoolStack Budget helps
 
-SchoolStack Budget generates a complete Lender-Ready Packet with all the components above - including formatted PDFs, a 21-tab underwriting workbook with live Excel formulas, and a board summary. The platform also calculates DSCR, break-even enrollment, and cash reserves automatically, so you can see exactly what a lender will see before you submit your application.
+SchoolStack Budget generates a complete Lender-Ready Packet with all the components above - including formatted PDFs, a 23-tab underwriting workbook with live Excel formulas, and a board summary. The platform also calculates DSCR, break-even enrollment, and cash reserves automatically, so you can see exactly what a lender will see before you submit your application.
 `,
   },
   {
