@@ -14,7 +14,7 @@ import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { cn } from "@/lib/utils";
-import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, isForProfit, isNonprofit, isChestertonAcademy } from "../schema";
+import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, MODEL_DURATION_LABELS, isForProfit, isNonprofit, isChestertonAcademy } from "../schema";
 import { buildDefaultChestertonData } from "@/lib/chesterton/template";
 // Task #454: facility benchmark strings live in school-type-benchmarks.ts
 // so SchoolProfileStep + StaffingStep share one source of truth and new
@@ -1332,7 +1332,14 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
           label="School Type"
           options={Object.entries(SCHOOL_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
         />
-        
+
+        <FormSelect
+          name="schoolProfile.modelDuration"
+          label="Model Duration"
+          options={(Object.entries(MODEL_DURATION_LABELS) as Array<[string, string]>).map(([value, label]) => ({ value, label }))}
+          helperText="Single-year mode collapses every input to Year 1. Lender Packet & Board Packet need 5-year and will be disabled in single-year mode."
+        />
+
         {schoolType === "other" && (
           <FormInput
             name="schoolProfile.schoolTypeOther"

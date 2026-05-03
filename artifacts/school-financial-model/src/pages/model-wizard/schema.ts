@@ -18,6 +18,17 @@ export const schoolTypeSchema = z.enum(["catholic_school", "charter_school", "ch
   required_error: "Please select the type of school you're building",
   invalid_type_error: "Please select a valid school type",
 });
+
+// Duration of the financial model. "five_year" is the historical default and
+// remains so for all legacy models — the field is optional + defaulted on read
+// so models created before single-year shipped continue to validate as 5-year.
+// "single_year" collapses every multi-year input on the wizard down to Year 1
+// only, and gates the Lender Packet / Board Packet exports (which intrinsically
+// need a multi-year projection) behind a "Requires 5-year model" tooltip.
+export const modelDurationSchema = z.enum(["single_year", "five_year"], {
+  required_error: "Please pick a model duration",
+  invalid_type_error: "Please pick a valid model duration",
+});
 export const entityTypeSchema = z.enum(["sole_practitioner", "llc_single", "llc_partnership", "c_corp", "s_corp", "nonprofit_501c3", "undetermined"], {
   required_error: "Please select your school's legal entity type",
   invalid_type_error: "Please select a valid entity type",
@@ -150,6 +161,11 @@ export const schoolProfileSchema = z.object({
   city: z.string().optional(),
   schoolType: schoolTypeSchema,
   schoolTypeOther: z.string().optional(),
+  // Picked next to school type on this step. Optional + defaulted to
+  // "five_year" so legacy models without it continue to validate. Read via
+  // `getModelDuration(data)` so consumers don't all need to re-implement the
+  // default fallback.
+  modelDuration: modelDurationSchema.optional(),
   entityType: entityTypeSchema,
   ein: z.string().optional(),
   website: z.string().optional(),
@@ -857,6 +873,7 @@ export type SchoolStage = z.infer<typeof schoolStageSchema>;
 export type FundingProfile = z.infer<typeof fundingProfileSchema>;
 export type SchoolType = z.infer<typeof schoolTypeSchema>;
 export type EntityType = z.infer<typeof entityTypeSchema>;
+export type ModelDuration = z.infer<typeof modelDurationSchema>;
 export type OwnershipType = z.infer<typeof ownershipTypeSchema>;
 export type FacilityPhase = z.infer<typeof facilityPhaseSchema>;
 export type TuitionTierType = z.infer<typeof tuitionTierTypeSchema>;
@@ -931,6 +948,23 @@ export function isCatholicSchool(schoolType?: string): boolean {
 export function isChestertonAcademy(schoolType?: string): boolean {
   return schoolType === "chesterton_academy";
 }
+
+// Single source of truth for reading model duration off the wizard data.
+// Defaults to "five_year" so models created before single-year shipped — and
+// any code path that hands us partial data — keep behaving exactly as they
+// did before the toggle existed.
+export function getModelDuration(data?: { schoolProfile?: { modelDuration?: string } } | null): ModelDuration {
+  return data?.schoolProfile?.modelDuration === "single_year" ? "single_year" : "five_year";
+}
+
+export function isSingleYearModel(data?: { schoolProfile?: { modelDuration?: string } } | null): boolean {
+  return getModelDuration(data) === "single_year";
+}
+
+export const MODEL_DURATION_LABELS: Record<ModelDuration, string> = {
+  single_year: "Single-Year Budget (Year 1 only)",
+  five_year: "5-Year Projection (recommended for lenders & boards)",
+};
 
 export function getDefaultTuitionTiers(yearCount: number): TuitionTier[] {
   return [
