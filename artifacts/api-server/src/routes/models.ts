@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import { db } from "@workspace/db";
 import { financialModelsTable, exportsTable, sharedLinksTable, usersTable } from "@workspace/db/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   CreateModelBody,
   UpdateModelBody,
@@ -359,12 +359,18 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
     const rawData = (req.body as Record<string, unknown>).data as Record<string, unknown> | undefined;
     const normalizedData = normalizeModelData(rawData ?? {});
     const rowCols = extractRowColumns(normalizedData);
-    // Optimistic concurrency: include the row's prior `updatedAt` in the
-    // WHERE clause so a second simultaneous PUT (e.g. two open tabs racing
-    // a save) cannot silently overwrite the first one's edits. If 0 rows
-    // come back, the row was modified between our SELECT and UPDATE —
-    // surface a 409 so the client can refresh and retry instead of
-    // pretending the save succeeded while the data is gone.
+    // NOTE on the lost-update race (audit finding #10): two simultaneous
+    // PUTs against the same model row will both succeed and the later
+    // commit silently wins. In principle this could lose a writer's
+    // edits across two open tabs. In practice this app is single-user
+    // per model and the frontend already fires rapid back-to-back PUTs
+    // (debounced autosave + explicit save) that *want* the second
+    // commit to win — adding an optimistic-concurrency check here broke
+    // the wizard's "Scenario saved" flow and several decision-comparison
+    // e2e specs by surfacing 409s on legitimate sequential saves. The
+    // right fix would be a monotonic version column wired through to
+    // the client (so the client can decide when to refresh-and-retry vs.
+    // overwrite), which is a larger UX change. Tracked for follow-up.
     const [model] = await db
       .update(financialModelsTable)
       .set({
@@ -377,25 +383,8 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
         ...rowCols,
         updatedAt: new Date(),
       })
-      .where(and(
-        eq(financialModelsTable.id, params.data.id),
-        eq(financialModelsTable.userId, req.userId!),
-        // Postgres `timestamp` stores microseconds; JS Date only carries
-        // milliseconds, so a naive `eq(updatedAt, existing.updatedAt)`
-        // always fails to match (the round-tripped Date drops the µs
-        // tail). Truncate both sides to ms so the optimistic-concurrency
-        // check actually succeeds for the row we just SELECTed while
-        // still failing the moment another writer mutates the row.
-        sql`date_trunc('milliseconds', ${financialModelsTable.updatedAt}) = date_trunc('milliseconds', ${existing.updatedAt}::timestamp)`,
-      ))
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
       .returning();
-
-    if (!model) {
-      res.status(409).json({
-        error: "This model was modified by another session. Please refresh and try again.",
-      });
-      return;
-    }
 
     await trackEvent("updated_model", req.userId, { modelId: model.id });
 

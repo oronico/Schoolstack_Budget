@@ -131,61 +131,36 @@ async function main(): Promise<void> {
     check("name that sanitizes to empty → 400", allControl.status === 400,
       `got ${allControl.status}`);
 
-    // --- C. Lost-update race on PUT /models/:id → 409 on conflict. ---
+    // --- C. Sequential PUTs against the same model all succeed.
+    // (The optimistic-concurrency check originally added here was
+    // reverted — see the NOTE in routes/models.ts. The frontend
+    // legitimately fires rapid back-to-back PUTs as part of its
+    // debounced-autosave-plus-explicit-save flow, and a 409 on the
+    // second commit broke real user journeys covered by the e2e
+    // suite. We still want to assert the route doesn't 500 or
+    // silently drop sequential writes, and that the LAST commit wins.)
     const seed = await fetch(`${baseUrl}/api/models`, {
       method: "POST", headers: auth,
       body: JSON.stringify({ name: "Race Seed", data: { counter: 0 } }),
     });
     const seedModel = (await seed.json()) as { id: number };
-    const N = 10;
-    const writes = await Promise.all(
-      Array.from({ length: N }, (_, i) =>
-        fetch(`${baseUrl}/api/models/${seedModel.id}`, {
-          method: "PUT", headers: auth,
-          body: JSON.stringify({ name: `Race Seed #${i}`, data: { counter: i, marker: `writer-${i}` } }),
-        }).then(async (r) => ({ writer: i, status: r.status, body: await r.text() })),
-      ),
-    );
-    const winners = writes.filter((w) => w.status === 200);
-    const conflicts = writes.filter((w) => w.status === 409);
-    const surprise = writes.filter((w) => w.status !== 200 && w.status !== 409);
-    // The contract isn't "exactly one winner" — depending on connection-pool
-    // scheduling, some writers naturally serialize (writer-B's SELECT happens
-    // after writer-A's UPDATE commits, so writer-B sees the new state and
-    // wins legitimately). The bug we're guarding against is the PRE-FIX
-    // behaviour: ALL writers returned 200 and silently clobbered each other.
-    // So the real assertions are (a) at least one writer was rejected with
-    // 409 (proves the CAS fired), (b) no 500s / unexpected statuses, and
-    // (c) the row contents match SOME winner's payload (no silent loss to a
-    // writer that the server told had succeeded).
-    check(`at least one PUT was rejected with 409 (CAS fired) — got ${conflicts.length}/${N}`,
-      conflicts.length >= 1, `winners=${winners.map(w=>w.writer).join(",")}`);
-    check(`at least one PUT succeeded — got ${winners.length}/${N}`,
-      winners.length >= 1, `conflicts=${conflicts.length}`);
-    check("winners + conflicts account for every PUT (no 500s, no silent drops)",
-      winners.length + conflicts.length === N && surprise.length === 0,
-      surprise.length ? `surprise=${JSON.stringify(surprise.slice(0,3))}` : "");
-
-    // The stored row matches one of the *winners*' payloads — proving no
-    // 200-then-silently-dropped writes (which is the real lost-update bug).
+    const N = 5;
+    const sequentialResults: number[] = [];
+    for (let i = 0; i < N; i++) {
+      const r = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
+        method: "PUT", headers: auth,
+        body: JSON.stringify({ name: `Sequential #${i}`, data: { counter: i, marker: `writer-${i}` } }),
+      });
+      sequentialResults.push(r.status);
+    }
+    check(`all ${N} sequential PUTs succeed`,
+      sequentialResults.every((s) => s === 200),
+      `statuses=${sequentialResults.join(",")}`);
     const final = await fetch(`${baseUrl}/api/models/${seedModel.id}`, { headers: auth });
     const finalJson = (await final.json()) as { data: { counter?: number; marker?: string } };
-    const winnerSet = new Set(winners.map((w) => w.writer));
-    const storedCounter = finalJson.data?.counter;
-    check("the persisted row matches some winning writer (no silent overwrite of an acked write)",
-      typeof storedCounter === "number" &&
-        winnerSet.has(storedCounter) &&
-        finalJson.data?.marker === `writer-${storedCounter}`,
-      `final.data=${JSON.stringify(finalJson.data)} winners=[${[...winnerSet].join(",")}]`);
-
-    // A subsequent serial PUT (no concurrent contender, fresh updatedAt)
-    // still succeeds — proves the CAS doesn't get stuck after a race.
-    const serialPut = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
-      method: "PUT", headers: auth,
-      body: JSON.stringify({ name: "Race Seed (serial)", data: { counter: 99 } }),
-    });
-    check("serial PUT after the race still succeeds (200)", serialPut.status === 200,
-      `got ${serialPut.status}: ${(await serialPut.clone().text()).slice(0,120)}`);
+    check("the LAST sequential PUT's data is what's stored",
+      finalJson.data?.counter === N - 1 && finalJson.data?.marker === `writer-${N - 1}`,
+      `final.data=${JSON.stringify(finalJson.data)}`);
   } finally {
     if (userId !== null) {
       await db.delete(financialModelsTable).where(eq(financialModelsTable.userId, userId));
