@@ -14,6 +14,7 @@ import {
   PROGRAM_TYPE_TO_ROW_ID,
   STATE_FUNDING_MAP,
 } from "@workspace/finance";
+import type { SchoolType } from "@workspace/finance";
 
 describe("ROW_ID_TO_PROGRAM_TYPE / PROGRAM_TYPE_TO_ROW_ID", () => {
   it("are exact inverses of each other", () => {
@@ -242,5 +243,118 @@ describe("detectFragileFunding — single-program status flip", () => {
       "private_school",
     );
     expect(r.all).toHaveLength(0);
+  });
+});
+
+// Adversarial-input regression — these inputs were uncovered during a
+// post-merge audit ("try to break it every way you can"). Each was
+// silently producing nonsensical output that would have rendered into
+// lender / board PDFs (e.g. "Years null–null" or "Years 2026.7–2028.7").
+describe("detectFragileFunding — adversarial-input regression", () => {
+  it("trims whitespace from stateCode (' OH ' → still matches OH)", () => {
+    const r = detectFragileFunding(
+      [{ id: "voucher_revenue", enabled: true }],
+      " OH ",
+      "private_school",
+    );
+    expect(r.litigated).toHaveLength(1);
+    expect(r.litigated[0].stateCode).toBe("OH");
+  });
+
+  it("normalizes a mixed-case schoolType so charters are still suppressed", () => {
+    // Schema enforces lowercase today; this guard protects against a
+    // stale row from an earlier schema slipping through.
+    const r = detectFragileFunding(
+      [{ id: "voucher_revenue", enabled: true }],
+      "OH",
+      "Charter_School" as unknown as SchoolType,
+    );
+    expect(r.all).toHaveLength(0);
+  });
+
+  it("omits yearRange when openingYear is non-finite (Infinity)", () => {
+    const r = detectFragileFunding(
+      [{ id: "voucher_revenue", enabled: true, amounts: [1000] }],
+      "OH",
+      "private_school",
+      Infinity,
+    );
+    expect(r.litigated[0].yearRange).toBeUndefined();
+  });
+
+  it("omits yearRange when openingYear is NaN", () => {
+    const r = detectFragileFunding(
+      [{ id: "voucher_revenue", enabled: true, amounts: [1000] }],
+      "OH",
+      "private_school",
+      Number.NaN,
+    );
+    expect(r.litigated[0].yearRange).toBeUndefined();
+  });
+
+  it("omits yearRange when openingYear is non-integer (2026.7)", () => {
+    const r = detectFragileFunding(
+      [{ id: "voucher_revenue", enabled: true, amounts: [1000, 1000] }],
+      "OH",
+      "private_school",
+      2026.7,
+    );
+    expect(r.litigated[0].yearRange).toBeUndefined();
+  });
+
+  it("omits yearRange when openingYear is implausibly large (MAX_SAFE_INTEGER)", () => {
+    const r = detectFragileFunding(
+      [{ id: "voucher_revenue", enabled: true, amounts: [1000] }],
+      "OH",
+      "private_school",
+      Number.MAX_SAFE_INTEGER,
+    );
+    expect(r.litigated[0].yearRange).toBeUndefined();
+  });
+
+  it("omits yearRange when openingYear is implausibly small (year 0)", () => {
+    const r = detectFragileFunding(
+      [{ id: "voucher_revenue", enabled: true, amounts: [1000] }],
+      "OH",
+      "private_school",
+      0,
+    );
+    expect(r.litigated[0].yearRange).toBeUndefined();
+  });
+
+  it("ignores non-finite amount entries when computing yearRange", () => {
+    // Infinity and NaN as amount values must not extend the range.
+    const r = detectFragileFunding(
+      [
+        {
+          id: "voucher_revenue",
+          enabled: true,
+          amounts: [Number.POSITIVE_INFINITY, 0, 1000, Number.NaN, 0],
+        },
+      ],
+      "OH",
+      "private_school",
+      2026,
+    );
+    // Only index 2 has a finite positive amount, so the range collapses.
+    expect(r.litigated[0].yearRange).toEqual({ firstYear: 2028, lastYear: 2028 });
+  });
+
+  it("accepts the lower plausible bound (1900) and upper bound (2200)", () => {
+    const lo = detectFragileFunding(
+      [{ id: "voucher_revenue", enabled: true, amounts: [1000] }],
+      "OH",
+      "private_school",
+      1900,
+    );
+    expect(lo.litigated[0].yearRange).toEqual({ firstYear: 1900, lastYear: 1900 });
+
+    const hi = detectFragileFunding(
+      [{ id: "voucher_revenue", enabled: true, amounts: [1000] }],
+      "OH",
+      "private_school",
+      2200,
+    );
+    expect(hi.litigated[0].yearRange).toEqual({ firstYear: 2200, lastYear: 2200 });
   });
 });

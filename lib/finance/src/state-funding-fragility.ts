@@ -91,16 +91,38 @@ interface FragileInputRow {
   amounts?: number[];
 }
 
+/**
+ * Sanity bounds for an opening-year input. Anything outside this window is
+ * almost certainly bad data (e.g. a stale `Number.MAX_SAFE_INTEGER`,
+ * `Infinity`, a non-integer fraction, or a JS-default `0`) and would render
+ * as nonsense in lender/board PDFs (e.g. "Years 2026.7–2028.7" or
+ * "Years null–null"). When the input fails validation we omit the year
+ * range entirely — callers already handle that case for legacy rows that
+ * never had an opening year.
+ */
+const MIN_PLAUSIBLE_OPENING_YEAR = 1900;
+const MAX_PLAUSIBLE_OPENING_YEAR = 2200;
+
 function computeYearRange(
   amounts: number[] | undefined,
   openingYear: number | undefined,
 ): { firstYear: number; lastYear: number } | undefined {
-  if (!amounts || amounts.length === 0 || !openingYear) return undefined;
+  if (!amounts || amounts.length === 0) return undefined;
+  if (
+    openingYear === undefined ||
+    openingYear === null ||
+    !Number.isFinite(openingYear) ||
+    !Number.isInteger(openingYear) ||
+    openingYear < MIN_PLAUSIBLE_OPENING_YEAR ||
+    openingYear > MAX_PLAUSIBLE_OPENING_YEAR
+  ) {
+    return undefined;
+  }
   let firstIdx = -1;
   let lastIdx = -1;
   for (let i = 0; i < amounts.length; i++) {
     const v = Number(amounts[i] ?? 0);
-    if (v > 0) {
+    if (Number.isFinite(v) && v > 0) {
       if (firstIdx < 0) firstIdx = i;
       lastIdx = i;
     }
@@ -135,14 +157,22 @@ export function detectFragileFunding(
   openingYear?: number,
 ): FragileFundingReport {
   if (!rows || rows.length === 0 || !stateCode) return emptyReport();
-  const normalizedState = stateCode.toUpperCase();
+  // Trim before uppercasing so " OH " (e.g. accidental whitespace from a
+  // CSV import or a stale row migrated across schemas) still resolves to
+  // the right state entry instead of silently dropping every match.
+  const normalizedState = stateCode.trim().toUpperCase();
   const entry = STATE_FUNDING_MAP[normalizedState];
   if (!entry) return emptyReport();
 
   // Charter schools never receive school-choice funding in the wizard, so
   // even if a stale row is hanging around (e.g. from a school-type switch),
   // it isn't part of their forecast and shouldn't generate a flag.
-  if (schoolType === "charter_school") return emptyReport();
+  // Defensive lower-case + trim — the schema constrains schoolType to a
+  // lowercase union today, but a future loosening (or a stale row from an
+  // older schema) shouldn't bypass the suppression.
+  const normalizedSchoolType =
+    typeof schoolType === "string" ? schoolType.trim().toLowerCase() : schoolType;
+  if (normalizedSchoolType === "charter_school") return emptyReport();
 
   const report = emptyReport();
   const seen = new Set<string>();

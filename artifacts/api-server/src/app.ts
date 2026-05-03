@@ -134,7 +134,52 @@ app.use("/api", (_req: Request, res: Response) => {
   res.status(404).json({ message: "Not found" });
 });
 
+// Body-parser errors carry a `type` discriminator we can use to map the
+// failure to a proper 4xx instead of a noisy 500. Without this mapping,
+// every malformed JSON payload from a buggy client (or every >5MB upload)
+// becomes "Internal server error" AND gets persisted to the error_logs
+// table, drowning out real server-side faults.
+interface BodyParserError extends Error {
+  type?: string;
+  status?: number;
+  statusCode?: number;
+  expose?: boolean;
+}
+
+function classifyClientError(
+  err: BodyParserError,
+): { status: number; message: string } | null {
+  if (err.type === "entity.parse.failed") {
+    return { status: 400, message: "Malformed JSON in request body." };
+  }
+  if (err.type === "entity.too.large") {
+    return { status: 413, message: "Request body exceeds the 5 MB limit." };
+  }
+  if (err.type === "encoding.unsupported") {
+    return { status: 415, message: "Unsupported request body encoding." };
+  }
+  if (err.type === "charset.unsupported") {
+    return { status: 415, message: "Unsupported request body charset." };
+  }
+  return null;
+}
+
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  const clientError = classifyClientError(err as BodyParserError);
+
+  if (clientError) {
+    // Client-side input bug — log a single line for observability but do
+    // NOT persist to the error_logs table (that table is for server faults
+    // an operator needs to triage).
+    console.warn(
+      `[Client Error] ${req.method} ${req.originalUrl} → ${clientError.status}: ${err.message}`,
+    );
+    if (!res.headersSent) {
+      res.status(clientError.status).json({ error: clientError.message });
+    }
+    return;
+  }
+
   console.error(`[Unhandled Error] ${req.method} ${req.originalUrl}:`, err.message);
 
   const sanitizedBody = req.body ? stripSensitive(req.body) : null;
