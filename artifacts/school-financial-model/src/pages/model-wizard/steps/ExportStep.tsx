@@ -298,8 +298,9 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
             <p className="text-sm font-semibold text-emerald-900 mb-0.5">You're on Single-Year mode</p>
             <p className="text-xs text-emerald-800 leading-relaxed">
               The Lender Packet and Board Summary need a full 5-year projection. The
-              Underwriting Package and Formula Workbook below export your Year 1 numbers
-              today. <button
+              Underwriting Package and Formula Workbook below still produce 5-column
+              workbooks today — Year 2-5 columns will appear empty until you fill them
+              in or extend. <button
                 type="button"
                 data-testid="single-year-banner-extend"
                 onClick={() => setShowExtendModal(true)}
