@@ -3,8 +3,20 @@ import { db, feedbackTable, usersTable } from "@workspace/db";
 import { desc, eq, count } from "drizzle-orm";
 import { authMiddleware, type AuthRequest, verifyTokenStrict } from "../middlewares/auth";
 import { adminMiddleware } from "../middlewares/admin";
+import { createRateLimiter } from "../lib/rate-limiter";
 
 const router: IRouter = Router();
+
+// Round-5 #27: per-IP rate limit on the public feedback inbox. Pre-fix
+// /feedback was the only unauth POST in the API with no limiter at all
+// (cf. /auth/forgot-password, /public/*, /auth/track all rate-limited),
+// so an unauthenticated attacker could flood the admin UI with attacker-
+// chosen `message`/`pageUrl`/`email` content at line speed — both as a
+// DoS on the admin queue and as a vector to push payloads in front of an
+// admin who's about to click. 10/min/IP is generous for legitimate
+// real-user feedback (humans don't submit faster than that) and cuts
+// the trivial flood pattern.
+const feedbackRateLimiter = createRateLimiter(60_000, 10);
 
 // Optional auth on /feedback: attribute the row to the caller IFF they
 // present a *currently valid* Bearer token (signature OK, strict claim
@@ -25,7 +37,7 @@ async function optionalAuthMiddleware(req: AuthRequest, _res: Response, next: Ne
   next();
 }
 
-router.post("/feedback", optionalAuthMiddleware, async (req: AuthRequest, res: Response) => {
+router.post("/feedback", feedbackRateLimiter, optionalAuthMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { category, message, pageUrl, email } = req.body;
 

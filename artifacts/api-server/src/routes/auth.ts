@@ -19,6 +19,15 @@ const router: IRouter = Router();
 
 const authRateLimiter = createRateLimiter(60_000, 10);
 const strictRateLimiter = createRateLimiter(60_000, 5);
+// Round-5 #25: dedicated rate limiter for /auth/register. Even with the
+// timing-equalizing dummy bcrypt below, the 201 vs 409 status divergence
+// remains an enumeration oracle for any caller willing to make N
+// requests. Tightening the per-IP budget from 10/min (authRateLimiter)
+// to 5/min cuts the practical scan rate in half without affecting any
+// realistic legitimate signup flow (a human types one password). A full
+// close requires moving signup to an email-confirmation flow that
+// returns 202 from both branches; tracked for follow-up.
+const registerRateLimiter = createRateLimiter(60_000, 5);
 
 // Round-4 #20: precomputed cost-12 bcrypt hash used for the constant-time
 // dummy compare on /auth/login when the email is unknown. Generated once at
@@ -61,7 +70,7 @@ function sanitizeTrackMetadata(input: unknown): Record<string, unknown> {
   return out;
 }
 
-router.post("/auth/register", authRateLimiter, async (req, res) => {
+router.post("/auth/register", registerRateLimiter, async (req, res) => {
   try {
     const parsed = RegisterBody.safeParse(req.body);
     if (!parsed.success) {
@@ -72,6 +81,32 @@ router.post("/auth/register", authRateLimiter, async (req, res) => {
 
     const existing = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
     if (existing.length > 0) {
+      // Round-5 #25: equalize wall-clock cost across the
+      // duplicate-email and new-email branches so response time can't
+      // boolean-distinguish "is this email registered?" the way the
+      // pre-fix login route could (round-4 #20). The new-email branch
+      // pays bcrypt.hash(password, 12) (~150ms cost-12) PLUS a user
+      // INSERT roundtrip; we mirror BOTH costs here:
+      //   - bcrypt.hash (NOT compare — hash includes salt generation,
+      //     which adds a small but measurable cost vs compare). Using
+      //     hash here matches the new branch byte-for-byte on the CPU
+      //     side. Result is discarded.
+      //   - One no-op UPDATE that touches zero rows, matching the
+      //     wall-clock cost of the user INSERT roundtrip.
+      // The trackEvent INSERT was already moved out of the new
+      // branch's critical path (see below), so we don't need to
+      // simulate it here.
+      // We then return 409 — the status code itself remains an
+      // enumeration oracle for any caller willing to spend a request,
+      // but the per-IP rate limit is tightened to 5/min and the
+      // timing oracle is closed. Full disclosure: closing the
+      // status-code oracle requires moving signup to an email-
+      // confirmation flow (always return 202).
+      await bcrypt.hash(password, 12);
+      await db
+        .update(usersTable)
+        .set({ lastSeenAt: usersTable.lastSeenAt })
+        .where(eq(usersTable.id, -1));
       res.status(409).json({ error: "An account with this email already exists." });
       return;
     }
@@ -87,10 +122,16 @@ router.post("/auth/register", authRateLimiter, async (req, res) => {
     }).returning();
 
     const token = generateToken(user.id, user.tokenVersion);
-    await trackEvent("signed_up", user.id, { email: user.email });
     res.status(201).json({
       user: { id: user.id, email: user.email, name: user.name },
       token,
+    });
+    // Round-5 #25: trackEvent moved AFTER res.json so the new-email
+    // branch's critical-path cost matches the duplicate-email branch
+    // (one bcrypt + one DB roundtrip each). The events row is still
+    // recorded; just fire-and-forget.
+    trackEvent("signed_up", user.id, { email: user.email }).catch((e) => {
+      console.error(`[auth] register: trackEvent failed for user ${user.id}:`, e);
     });
   } catch (err) {
     console.error("Register error:", err);
@@ -331,23 +372,42 @@ router.post("/auth/forgot-password", strictRateLimiter, async (req, res) => {
       )
       .returning({ id: usersTable.id, email: usersTable.email });
     const winner = updated[0];
-    if (winner) {
-      await trackEvent("requested_password_reset", winner.id);
-      const result = await sendPasswordResetEmail(winner.email, resetTokenRaw);
-      // Round-3 #17: NEVER surface the mailer-failure status to the
-      // unauth client. Returning 503 only when the user existed turned
-      // this route into a reliable user-enumeration oracle whenever
-      // Resend was rate-limited / down / misconfigured. The reset row
-      // we just persisted is harmless on its own (no email = no token),
-      // and operators see the failure server-side via the log line.
-      if (!result.success) {
-        console.error(
-          `[auth] forgot-password: mailer failed for user ${winner.id}: ${result.error || "unknown"}`,
-        );
-      }
-    }
 
+    // Round-5 #26: respond FIRST, do the trackEvent + Resend network
+    // call AFTER. Pre-fix the existing-user-past-cooldown branch paid
+    // sendPasswordResetEmail's 100-500ms wall-clock cost in the response
+    // critical path, while the unknown-email and in-cooldown branches
+    // returned in ~5ms after a single UPDATE. That timing differential
+    // was a reliable enumeration oracle for fresh accounts (round-5
+    // hardening of #24 amplified it because the conditional UPDATE made
+    // the no-op branches even faster). Moving the slow work behind the
+    // response makes all three branches return in roughly one DB
+    // roundtrip; the email still goes out, just fire-and-forget. Errors
+    // are logged so operators still see Resend outages.
     res.json({ message: "If an account with that email exists, a reset link has been sent." });
+
+    if (winner) {
+      trackEvent("requested_password_reset", winner.id).catch((e) => {
+        console.error(`[auth] forgot-password: trackEvent failed for user ${winner.id}:`, e);
+      });
+      sendPasswordResetEmail(winner.email, resetTokenRaw)
+        .then((result) => {
+          // Round-3 #17: never surface mailer-failure status to the
+          // unauth client (already enforced by responding above before
+          // we check the result here). Just log so operators notice.
+          if (!result.success) {
+            console.error(
+              `[auth] forgot-password: mailer failed for user ${winner.id}: ${result.error || "unknown"}`,
+            );
+          }
+        })
+        .catch((e) => {
+          console.error(
+            `[auth] forgot-password: sendPasswordResetEmail crashed for user ${winner.id}:`,
+            e,
+          );
+        });
+    }
   } catch (err) {
     console.error("Forgot password error:", err);
     res.status(500).json({ error: "Something went wrong. Please try again later." });
