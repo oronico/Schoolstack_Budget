@@ -181,6 +181,35 @@ export function computeVisibleSteps(
     .map((s, i) => ({ ...s, id: i + 1 }));
 }
 
+// Clamps a 1-based step index into the valid range for the current visible
+// step list. Used in render to absorb the one-frame mismatch between
+// `currentStep` (state) and `visibleSteps.length` (memo) when the founder
+// toggles `modelDuration` while sitting on the last step. Without this the
+// rail header briefly reads "Step 12 of 11", the progress bar overflows
+// (110% width), and `visibleSteps[currentStep - 1].component` crashes
+// because the unguarded `.component` access dereferences `undefined`.
+//
+// Exported for unit tests. Render-only — handlers continue to read raw
+// `currentStep` because they snapshot at call time and the bounds-clamp
+// useEffect always converges before the next user interaction.
+export function clampStep(currentStep: number, visibleStepCount: number): number {
+  if (visibleStepCount <= 0) return 1;
+  if (!Number.isFinite(currentStep) || currentStep < 1) return 1;
+  if (currentStep > visibleStepCount) return visibleStepCount;
+  return currentStep;
+}
+
+// Predicate for the wizard rail's "core fields complete" gate. Returns true
+// when a rail click on `stepId` should trigger the gate (i.e. the step is at
+// or past the gate's anchor). Defaults to `false` when the anchor is missing
+// (`anchorStepId <= 0`) so a `stepIdByTitle` lookup that returned -1 (typo,
+// renamed step, mode that hides the anchor) cannot accidentally widen the
+// gate to match every step in the rail. Exported for unit tests.
+export function isGatedStep(stepId: number, anchorStepId: number): boolean {
+  if (anchorStepId <= 0) return false;
+  return stepId >= anchorStepId;
+}
+
 // Maps a saved `currentStep` written under the pre-task-#329 11-step layout
 // (Assumptions at 3 with Capital/DSCR baked in) to the new 12-step layout
 // (Capital & Financing at 7, Assumptions & Sensitivity at 8). Applied
@@ -611,6 +640,15 @@ export function ModelWizardPage() {
     }
   }, [visibleSteps.length, currentStep]);
 
+  // Render-only clamped index. The useEffect above eventually drags
+  // `currentStep` back into range, but it runs *after* the render that
+  // observed the new `visibleSteps.length`. For that one frame, JSX that
+  // dereferences `visibleSteps[currentStep - 1]` would crash and the
+  // header/progress bar would render "Step 12 of 11" / 110% width.
+  // Using `safeStep` in JSX absorbs the mismatch atomically. Handlers
+  // continue to read raw `currentStep`.
+  const safeStep = clampStep(currentStep, visibleSteps.length);
+
   const performSave = useCallback(async (valuesToSave: Record<string, unknown>): Promise<boolean> => {
     if (!modelId || !initialData) return false;
     setIsSaving(true);
@@ -842,8 +880,8 @@ export function ModelWizardPage() {
     );
   }
 
-  const ActiveStepComponent = visibleSteps[currentStep - 1].component;
-  const isExportStep = currentStep === EXPORT_STEP_ID;
+  const ActiveStepComponent = visibleSteps[safeStep - 1].component;
+  const isExportStep = safeStep === EXPORT_STEP_ID;
 
   const checkCoreFieldsForExport = (): { ok: boolean; missing: string[] } => {
     const vals = methods.getValues();
@@ -1083,7 +1121,7 @@ export function ModelWizardPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const showEncouragement = (currentStep === 5 || currentStep === 6) && !encouragementDismissed;
+  const showEncouragement = (safeStep === 5 || safeStep === 6) && !encouragementDismissed;
   const handleDismissEncouragement = () => {
     setEncouragementDismissed(true);
     if (modelId) {
@@ -1103,7 +1141,7 @@ export function ModelWizardPage() {
         // must be present before we let the founder touch the wizard.
         <FounderPersonaPrompt onComplete={() => {}} />
       )}
-      {showPrepChecklist && currentStep === 1 && (
+      {showPrepChecklist && safeStep === 1 && (
         <WizardPrepChecklist
           onReady={() => {
             setShowPrepChecklist(false);
@@ -1219,7 +1257,7 @@ export function ModelWizardPage() {
                 {initialData?.name || "Untitled Model"}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 md:hidden">
-                Step {currentStep} of {visibleSteps.length}: {visibleSteps[currentStep - 1]?.title}
+                Step {safeStep} of {visibleSteps.length}: {visibleSteps[safeStep - 1]?.title}
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -1255,17 +1293,17 @@ export function ModelWizardPage() {
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-secondary rounded-full -z-10" />
             <div 
               className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full -z-10 transition-all duration-500"
-              style={{ width: `${((currentStep - 1) / Math.max(visibleSteps.length - 1, 1)) * 100}%` }}
+              style={{ width: `${((safeStep - 1) / Math.max(visibleSteps.length - 1, 1)) * 100}%` }}
             />
             {visibleSteps.map((step) => {
               const isCompleted = completedSteps.current.has(step.id);
-              const isCurrent = currentStep === step.id;
+              const isCurrent = safeStep === step.id;
               return (
                 <div key={step.id} className="flex flex-col items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      if (step.id >= REVIEW_STEP_ID) {
+                      if (isGatedStep(step.id, REVIEW_STEP_ID)) {
                         const { ok, missing } = checkCoreFieldsForExport();
                         if (!ok) {
                           alert(`Before you can access ${step.title}, please complete these fields first:\n\n• ${missing.join("\n• ")}\n\nYou can fill these in any order - just make sure they're done before generating your outputs.`);
@@ -1301,10 +1339,10 @@ export function ModelWizardPage() {
       <div className="flex-1 py-8 md:py-12 px-4 sm:px-6 lg:px-8 mx-auto w-full max-w-6xl">
         <FormProvider {...methods}>
           <div className="bg-card rounded-3xl p-6 sm:p-10 shadow-xl shadow-black/5 border border-border/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <MicroLessonContainer data={methods.getValues() as FullModelData} currentStep={currentStep} className="mb-4" />
+            <MicroLessonContainer data={methods.getValues() as FullModelData} currentStep={safeStep} className="mb-4" />
             {!isYetToLaunch(user) && (
               <WhatThisMeansInYourBooks
-                step={currentStep}
+                step={safeStep}
                 schoolType={(methods.getValues() as FullModelData).schoolProfile?.schoolType}
                 entityType={(methods.getValues() as FullModelData).schoolProfile?.entityType}
                 className="mb-4"
@@ -1329,7 +1367,7 @@ export function ModelWizardPage() {
                 </button>
               </div>
             )}
-            {watchedIsSingleYear && currentStep === stepIdByTitle("Consultant") && (
+            {watchedIsSingleYear && safeStep === stepIdByTitle("Consultant") && (
               // Single-year founders skip from Consultant straight to Export
               // because the Lender Narrative step is gated to 5-year mode
               // (task #461). Without this note they'd just see "11 steps"
@@ -1370,7 +1408,7 @@ export function ModelWizardPage() {
                   // on the originally-targeted step. Once the founder
                   // navigates away (Continue / Back / step rail) the hint
                   // would be stale, so we drop it.
-                  initialDeepLinkRef.current.step === currentStep
+                  initialDeepLinkRef.current.step === safeStep
                     ? initialDeepLinkRef.current.focus ?? undefined
                     : undefined
                 }
@@ -1382,7 +1420,7 @@ export function ModelWizardPage() {
             <div className="mt-8 flex items-center justify-between">
               <button
                 onClick={handleBack}
-                disabled={currentStep === 1}
+                disabled={safeStep === 1}
                 className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-muted-foreground hover:bg-black/5 disabled:opacity-0 transition-all"
               >
                 <ArrowLeft className="h-5 w-5" /> Back
@@ -1394,11 +1432,11 @@ export function ModelWizardPage() {
                 aria-busy={isAdvancing}
                 className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
               >
-                {currentStep === REVIEW_STEP_ID
+                {safeStep === REVIEW_STEP_ID
                   ? "View Consultant Analysis"
-                  : currentStep === stepIdByTitle("Consultant")
+                  : safeStep === stepIdByTitle("Consultant")
                     ? (watchedIsSingleYear ? "Generate Excel Model" : "Continue to Lender Narrative")
-                    : currentStep === NARRATIVE_STEP_ID
+                    : safeStep === NARRATIVE_STEP_ID
                       ? "Generate Excel Model"
                       : "Continue"}{" "}
                 <ArrowRight className="h-5 w-5" />
