@@ -156,6 +156,32 @@ describe("seedFiveYearFromYearOne", () => {
     expect(out.expenseRows![0].amounts[2]).toBe(Math.round(120000 * Math.pow(1.07, 2)));
   });
 
+  it("uses caller-supplied rate overrides over the form's resolved defaults", () => {
+    // Simulates the Extend-to-5-year modal: founder leaves the form fields
+    // at their defaults but edits the rates inside the confirmation modal.
+    const input = freshSingleYear();
+    (input.schoolProfile as Record<string, unknown>).enrollmentGrowthRate = 0;
+    (input.tuitionEscalation as unknown) = { rate: 3 };
+    (input.facilities as unknown) = { generalCostInflation: 3, annualSalaryIncrease: 3 };
+
+    const out = seedFiveYearFromYearOne(input, {
+      enrollmentGrowthPct: 5,
+      tuitionEscalationPct: 4,
+      costInflationPct: 2,
+    });
+
+    // enrollment grows 5% — the modal override, not the form's 0%
+    expect(out.enrollment!.year2).toBe(Math.round(80 * 1.05));
+    expect(out.enrollment!.year5).toBe(Math.round(80 * Math.pow(1.05, 4)));
+
+    // tuition revenue escalates at the overridden 4%
+    expect(out.revenueRows![0].amounts[1]).toBe(Math.round(800000 * 1.04));
+    expect(out.revenueRows![0].amounts[4]).toBe(Math.round(800000 * Math.pow(1.04, 4)));
+
+    // expense escalates at the overridden 2% inflation
+    expect(out.expenseRows![0].amounts[2]).toBe(Math.round(120000 * Math.pow(1.02, 2)));
+  });
+
   it("does not mutate the caller's form state", () => {
     const input = freshSingleYear();
     const snapshot = JSON.parse(JSON.stringify(input));

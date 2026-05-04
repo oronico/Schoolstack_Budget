@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle, Sparkles, Calendar, TrendingUp } from "lucide-react";
 import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
-import { seedFiveYearFromYearOne } from "@/lib/seed-five-year";
+import { seedFiveYearFromYearOne, resolveSeedDefaults, type SeedDefaults } from "@/lib/seed-five-year";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
@@ -1292,21 +1292,38 @@ export function ModelWizardPage() {
       <ExtendToFiveYearModal
         open={showExtendModal}
         isPending={extending}
+        defaults={resolveSeedDefaults(methods.getValues() as Partial<FullModelData>)}
         onClose={() => { if (!extending) setShowExtendModal(false); }}
-        onConfirm={async () => {
+        onConfirm={async (overrides: SeedDefaults) => {
           if (extending) return;
           setExtending(true);
           try {
             const current = methods.getValues() as FullModelData;
             // Run the deterministic seeder *before* flipping modelDuration so
             // the seed picks up the founder's existing escalation rates from
-            // the same form snapshot. Then merge in the duration flip.
-            const seeded = seedFiveYearFromYearOne(current);
+            // the same form snapshot. Override with the rates the founder
+            // confirmed in the modal, and persist them back to the matching
+            // form fields so subsequent edits start from the same baseline.
+            const seeded = seedFiveYearFromYearOne(current, overrides);
+            const currentSp = (current.schoolProfile ?? {}) as Record<string, unknown>;
+            const currentFacilities = (current.facilities ?? {}) as Record<string, unknown>;
+            const currentTuitionEsc = (current.tuitionEscalation ?? {}) as Record<string, unknown>;
             const next = {
               ...seeded,
               schoolProfile: {
+                ...currentSp,
                 ...(seeded.schoolProfile ?? {}),
                 modelDuration: "five_year" as const,
+                enrollmentGrowthRate: overrides.enrollmentGrowthPct,
+              },
+              facilities: {
+                ...currentFacilities,
+                annualSalaryIncrease: overrides.salaryEscalationPct,
+                generalCostInflation: overrides.costInflationPct,
+              },
+              tuitionEscalation: {
+                ...currentTuitionEsc,
+                rate: overrides.tuitionEscalationPct,
               },
             } as FullModelData;
             // Single-transaction write to RHF so consumers see one consistent

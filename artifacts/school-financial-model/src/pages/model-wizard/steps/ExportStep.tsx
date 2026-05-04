@@ -4,7 +4,7 @@ import { getExportModelUrl, customFetch } from "@workspace/api-client-react";
 import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3, MessageSquareMore, CheckCircle2, Send, Share2, Copy, Check, Trash2, Link2, BookOpen } from "lucide-react";
 import { isChestertonAcademy, isSingleYearModel } from "../schema";
 import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
-import { seedExtendedEnrollment } from "@/lib/use-model-duration";
+import { seedFiveYearFromYearOne, resolveSeedDefaults, type SeedDefaults } from "@/lib/seed-five-year";
 import { useUpdateModel } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
@@ -30,19 +30,38 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
   const [showExtendModal, setShowExtendModal] = useState(false);
   const [extending, setExtending] = useState(false);
   const updateMutation = useUpdateModel();
-  const handleExtendConfirm = async () => {
+  const handleExtendConfirm = async (overrides: SeedDefaults) => {
     if (extending) return;
     setExtending(true);
     try {
       const current = getValues() as Record<string, unknown> & {
         schoolProfile?: Record<string, unknown>;
-        enrollment?: { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number };
+        facilities?: Record<string, unknown>;
+        tuitionEscalation?: Record<string, unknown>;
       };
-      const seededEnrollment = seedExtendedEnrollment(current.enrollment ?? {});
+      // Mirror the wizard banner path: seed Y2-Y5 across every domain using
+      // the founder's edited rates, then persist those rates back to the
+      // matching wizard fields so subsequent edits start from the same baseline.
+      const seeded = seedFiveYearFromYearOne(current as never, overrides) as Record<string, unknown> & {
+        schoolProfile?: Record<string, unknown>;
+      };
       const next = {
-        ...current,
-        schoolProfile: { ...(current.schoolProfile ?? {}), modelDuration: "five_year" as const },
-        enrollment: { ...(current.enrollment ?? {}), ...seededEnrollment },
+        ...seeded,
+        schoolProfile: {
+          ...(current.schoolProfile ?? {}),
+          ...(seeded.schoolProfile ?? {}),
+          modelDuration: "five_year" as const,
+          enrollmentGrowthRate: overrides.enrollmentGrowthPct,
+        },
+        facilities: {
+          ...(current.facilities ?? {}),
+          annualSalaryIncrease: overrides.salaryEscalationPct,
+          generalCostInflation: overrides.costInflationPct,
+        },
+        tuitionEscalation: {
+          ...(current.tuitionEscalation ?? {}),
+          rate: overrides.tuitionEscalationPct,
+        },
       };
       reset(next as never);
       if (modelId) {
@@ -240,6 +259,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
     <ExtendToFiveYearModal
       open={showExtendModal}
       isPending={extending}
+      defaults={resolveSeedDefaults(getValues() as never)}
       onClose={() => { if (!extending) setShowExtendModal(false); }}
       onConfirm={handleExtendConfirm}
     />
