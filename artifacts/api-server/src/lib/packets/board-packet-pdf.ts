@@ -10,7 +10,7 @@ import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, Boar
 import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
-import { renderCashRunwaySection } from "./cash-runway-pdf.js";
+import { cashStatusBadgeLabel, renderCashRunwaySection } from "./cash-runway-pdf.js";
 
 export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffer> {
   const doc = createDoc();
@@ -140,8 +140,7 @@ export function drawOutlookSection(doc: PDFDoc, packet: BoardPacket) {
   if (packet.cashRunway.runwayMonths > 0) {
     doc.moveDown(0.2);
     const cash = packet.cashRunway;
-    const cashStatus = cash.status === "good" ? "Strong" : cash.status === "warning" ? "Needs Work" : "Not Yet Ready";
-    statusBadge(doc, `Cash Position: ${cash.runwayLabel}`, cashStatus as any);
+    statusBadge(doc, `Cash Position: ${cash.runwayLabel}`, cashStatusBadgeLabel(cash.status));
   }
   doc.moveDown(0.3);
 }

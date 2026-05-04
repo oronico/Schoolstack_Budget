@@ -37,6 +37,24 @@ export function renderCashRunwayTroughCallout(
 }
 
 /**
+ * Maps a `CashRunwayView.status` ("good" / "warning" / "danger") to the
+ * status word `statusBadge` uses for color lookup ("Strong" / "Needs Work" /
+ * "Not Yet Ready"). Both the cover-page outlook block and the dedicated cash
+ * section need the same word for the same status, so they share this helper
+ * (Task #539 — they used to duplicate the inline ternary, which Task #524
+ * caught drifting; the regression test in
+ * `tests/cash-runway-badge-parity.ts` now backstops a single source of truth
+ * rather than two parallel copies).
+ */
+export function cashStatusBadgeLabel(
+  status: CashRunwayView["status"],
+): "Strong" | "Needs Work" | "Not Yet Ready" {
+  if (status === "good") return "Strong";
+  if (status === "warning") return "Needs Work";
+  return "Not Yet Ready";
+}
+
+/**
  * Renders the full Cash & Runway block used by the board packet PDF: section
  * title, runway status badge, year-by-year table, and the trough callout.
  * Lives here alongside `renderCashRunwayTroughCallout` so all cash-runway PDF
@@ -49,8 +67,7 @@ export function renderCashRunwaySection(
 ): void {
   sectionTitle(doc, title);
 
-  const cashStatus = cash.status === "good" ? "Strong" : cash.status === "warning" ? "Needs Work" : "Not Yet Ready";
-  statusBadge(doc, cash.runwayLabel, cashStatus as any);
+  statusBadge(doc, cash.runwayLabel, cashStatusBadgeLabel(cash.status));
   doc.moveDown(0.3);
 
   if (cash.yearByYearCash.length > 0) {
