@@ -450,7 +450,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
             onClick={() => handleDownload("chestertonOperatingManual")}
             highlight
             badge="✓ Live formulas"
-            caption="Tuition, financial aid, faculty payroll, and fundraising totals are live Excel formulas — edit any input on GETTING STARTED and the workbook recalculates."
+            caption="Tuition, financial aid, faculty payroll, fundraising totals, key-assumption bullets, and the parent handout's projection title all run as live Excel formulas — edit any input on GETTING STARTED and the workbook recalculates."
           />
         )}
       </div>

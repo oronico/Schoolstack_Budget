@@ -1506,13 +1506,11 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
     "- This year our goal is to raise $950,000 - the projected fundraising gap for the 2030-31 academic year",
   );
 
-  // NOTE: we intentionally do NOT run recomputeWorkbookAndAssert against
-  // wbPerturbed2. A handful of pre-existing cached strings on other tabs
-  // (e.g. RECRUITING PIPELINE B53's "FINANCIAL PROJECTIONS - 2027 - 28"
-  // banner) are baked in at build time and don't track planningYear, so
-  // a planning-year shift would trip the engine round-trip on cells
-  // unrelated to the Task #356 live-recalc bullets. Coverage of those
-  // cells lives in the baseline + perturbed-tuition recomputes above.
+  // Now that the RECRUITING PIPELINE B53 banner (and the rest of the
+  // Plan_Year-driven cached strings) recompute from data.chesterton
+  // .planningYear at build time, the engine round-trip on a planning-
+  // year-shifted workbook should also pass.
+  recomputeWorkbookAndAssert(wbPerturbed2, "perturbed-planning-year workbook");
 }
 // PARENT HANDOUT — at-a-glance card pulls Year-1 figures from the
 // projections tab so editing GETTING STARTED reflows the dollar

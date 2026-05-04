@@ -2434,7 +2434,11 @@ function buildRecruitingPipeline(wb: ExcelJS.Workbook, data: ChestertonModelInpu
   v += 2;
 
   ws.mergeCells(`B${v}:D${v}`);
-  ws.getCell(`B${v}`).value = { formula: `="FINANCIAL PROJECTIONS - " & Plan_Year & " - " & RIGHT(Plan_Year+1, 2)`, result: "FINANCIAL PROJECTIONS - 2027 - 28" };
+  const recruitingBannerYear = data.chesterton?.planningYear ?? new Date().getFullYear() + 1;
+  ws.getCell(`B${v}`).value = {
+    formula: `="FINANCIAL PROJECTIONS - " & Plan_Year & " - " & RIGHT(Plan_Year+1, 2)`,
+    result: `FINANCIAL PROJECTIONS - ${recruitingBannerYear} - ${String((recruitingBannerYear + 1) % 100).padStart(2, "0")}`,
+  };
   ws.getCell(`B${v}`).font = { italic: true, color: { argb: NAVY } };
   ws.getCell(`B${v}`).alignment = { horizontal: "center" };
   v += 2;
