@@ -136,6 +136,12 @@ PostgreSQL managed by Railway (auto-provisioned)
 ### Backup
 Railway provides automatic daily backups for PostgreSQL databases.
 
+### Restore
+See [`RUNBOOK_DB_RESTORE.md`](./RUNBOOK_DB_RESTORE.md) for the step-by-step
+procedure to restore a Railway snapshot into a throwaway service, verify it,
+and cut the app over to it. The runbook includes who to notify, the rough
+RTO (~30–45 min) and RPO (up to 24h), and a log of trial restores.
+
 ---
 
 ## Monitoring
