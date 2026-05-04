@@ -16,6 +16,125 @@ export function isEmailConfigured(): boolean {
   return !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM;
 }
 
+// Task #533 — env-driven email adapter. Today the only real provider
+// wired up is Resend (driven by RESEND_API_KEY + EMAIL_FROM), but the
+// adapter shape lets us swap to SendGrid / Postmark / SES later without
+// touching every call site. The transactional senders below
+// (sendVerifyEmail, sendAccountAlreadyExistsEmail, sendPasswordResetEmail)
+// route through `deliverTransactionalEmail` so:
+//
+//   - production w/ provider:   email is actually sent
+//   - production w/o provider:  hard error (return success:false) so the
+//                               caller / monitoring sees something is
+//                               misconfigured instead of silently dropping
+//                               founders' verification links
+//   - dev/test w/o provider:    URL is printed to the workspace console
+//                               (the documented dev fallback) and we
+//                               return success:true so fire-and-forget
+//                               callers don't log spurious "failure"
+//                               errors during local development
+//
+// `EMAIL_PROVIDER` is reserved for future explicit provider selection;
+// today it defaults to "resend" and is the only supported value.
+export type EmailProvider = "resend" | "console";
+
+export function getConfiguredEmailProvider(): EmailProvider {
+  // Explicit override wins (useful for tests / forcing the dev logger).
+  const explicit = (process.env.EMAIL_PROVIDER || "").toLowerCase();
+  if (explicit === "console") return "console";
+  if (explicit === "resend") return "resend";
+  // Auto-detect: if Resend creds are present, use Resend. Otherwise fall
+  // back to the console logger.
+  return isEmailConfigured() ? "resend" : "console";
+}
+
+export interface TransactionalEmail {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  /**
+   * Short label included in the dev-fallback console output so a developer
+   * scanning logs can immediately tell which template fired (verify-email,
+   * account-already-exists, password-reset, ...).
+   */
+  kind: string;
+  /**
+   * The clickable URL embedded in the email body, surfaced in the dev
+   * fallback log so a developer can paste it into a browser without
+   * having to render the HTML.
+   */
+  primaryUrl?: string;
+}
+
+export interface DeliveryResult {
+  success: boolean;
+  error?: string;
+  /** "resend" when actually sent, "console" when the dev fallback fired. */
+  provider?: EmailProvider;
+}
+
+export async function deliverTransactionalEmail(
+  email: TransactionalEmail,
+): Promise<DeliveryResult> {
+  const provider = getConfiguredEmailProvider();
+  const fromAddress = process.env.EMAIL_FROM;
+
+  if (provider === "resend" && fromAddress) {
+    const resend = getResend();
+    if (!resend) {
+      // Belt-and-suspenders: getConfiguredEmailProvider only returns
+      // "resend" when isEmailConfigured() is true, so this branch is
+      // unreachable today, but we keep the guard so a future change to
+      // EMAIL_PROVIDER=resend without an API key fails loudly.
+      console.error(`[mailer] ${email.kind}: provider=resend but Resend client is null`);
+      return { success: false, error: "Email service is not configured.", provider };
+    }
+    try {
+      const { data, error } = await resend.emails.send({
+        from: fromAddress,
+        to: [email.to],
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+      });
+      if (error) {
+        console.error(`[mailer] ${email.kind} send error:`, error);
+        return { success: false, error: `Failed to send ${email.kind} email.`, provider };
+      }
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[mailer] ${email.kind} sent to ${email.to} (id: ${data?.id})`);
+      }
+      return { success: true, provider };
+    } catch (err) {
+      console.error(`[mailer] ${email.kind} send failed:`, err);
+      return { success: false, error: `Failed to send ${email.kind} email.`, provider };
+    }
+  }
+
+  // No real provider available. In production this is an outage we want
+  // to surface; in dev we fall back to the console logger so engineers
+  // can copy the verification / reset URL out of the workspace logs.
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      `[mailer] FATAL: ${email.kind} could not be sent — ` +
+        `set RESEND_API_KEY and EMAIL_FROM (provider=${provider}, from=${fromAddress ? "set" : "unset"})`,
+    );
+    return { success: false, error: "Email service is not configured.", provider };
+  }
+
+  // Graceful dev fallback. console.warn (not error) so it stays visible
+  // without polluting error budgets, and we return success:true so
+  // fire-and-forget callers don't log spurious "send failed" lines just
+  // because RESEND_API_KEY isn't set on a developer's machine.
+  console.warn(
+    `[mailer:dev] ${email.kind} → ${email.to}` +
+      (email.primaryUrl ? `\n         link: ${email.primaryUrl}` : "") +
+      `\n         (no email provider configured; set RESEND_API_KEY + EMAIL_FROM to send for real)`,
+  );
+  return { success: true, provider: "console" };
+}
+
 export interface ReviewRequestData {
   requesterName: string;
   requesterEmail: string;
@@ -501,84 +620,58 @@ export async function sendPasswordResetEmail(
   toEmail: string,
   resetToken: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const resend = getResend();
-  const fromAddress = process.env.EMAIL_FROM;
-  if (!process.env.APP_URL && process.env.NODE_ENV === "production") {
-    console.error("[mailer] FATAL: APP_URL is required in production to generate reset links");
-    return { success: false, error: "Server configuration error." };
-  }
-  const appUrl = process.env.APP_URL || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : undefined);
+  const appUrl = resolveAppUrl();
   if (!appUrl) {
-    console.error("[mailer] Cannot generate reset link: neither APP_URL nor REPLIT_DEV_DOMAIN is set");
+    if (process.env.NODE_ENV === "production") {
+      console.error("[mailer] FATAL: APP_URL is required in production to generate reset links");
+    } else {
+      console.error("[mailer] Cannot generate reset link: neither APP_URL nor REPLIT_DEV_DOMAIN is set");
+    }
     return { success: false, error: "Server configuration error." };
   }
   const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
-  if (!resend) {
-    console.error(
-      `[mailer] Resend not configured - password reset email not sent. ` +
-      `Set RESEND_API_KEY to enable.`,
-    );
-    return { success: false, error: "Email service is not configured. Please contact support." };
-  }
-
-  if (!fromAddress) {
-    console.error(
-      `[mailer] EMAIL_FROM not set - cannot send email. ` +
-      `Set EMAIL_FROM to a verified domain sender (e.g. noreply@schoolstack.ai).`,
-    );
-    return { success: false, error: "Email sender is not configured. Please contact support." };
-  }
-
-  try {
-    const { data, error } = await resend.emails.send({
-      from: fromAddress,
-      to: [toEmail],
-      subject: "Reset your SchoolStack Budget password",
-      text: [
-        "Hi,",
-        "",
-        "You requested a password reset for your SchoolStack Budget account.",
-        "",
-        `Click this link to reset your password (valid for 1 hour):`,
-        resetUrl,
-        "",
-        "If you did not request this, you can safely ignore this email.",
-        "",
-        " - The SchoolStack Budget Team",
-      ].join("\n"),
-      html: `
-        <div style="font-family: 'Nunito', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
-          <h2 style="color: #1E293B; font-family: 'Quicksand', Arial, sans-serif;">Reset your password</h2>
-          <p style="color: #475569; line-height: 1.6;">
-            You requested a password reset for your SchoolStack Budget account.
-            Click the button below to create a new password. This link is valid for 1 hour.
-          </p>
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${resetUrl}" style="background-color: #D97706; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
-              Reset Password
-            </a>
-          </div>
-          <p style="color: #94A3B8; font-size: 13px;">
-            If you did not request this, you can safely ignore this email.
-          </p>
-          <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 24px 0;" />
-          <p style="color: #94A3B8; font-size: 12px;">SchoolStack Budget by SchoolStack.ai</p>
+  const result = await deliverTransactionalEmail({
+    kind: "password-reset",
+    to: toEmail,
+    primaryUrl: resetUrl,
+    subject: "Reset your SchoolStack Budget password",
+    text: [
+      "Hi,",
+      "",
+      "You requested a password reset for your SchoolStack Budget account.",
+      "",
+      `Click this link to reset your password (valid for 1 hour):`,
+      resetUrl,
+      "",
+      "If you did not request this, you can safely ignore this email.",
+      "",
+      " - The SchoolStack Budget Team",
+    ].join("\n"),
+    html: `
+      <div style="font-family: 'Nunito', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+        <h2 style="color: #1E293B; font-family: 'Quicksand', Arial, sans-serif;">Reset your password</h2>
+        <p style="color: #475569; line-height: 1.6;">
+          You requested a password reset for your SchoolStack Budget account.
+          Click the button below to create a new password. This link is valid for 1 hour.
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${resetUrl}" style="background-color: #D97706; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">
+            Reset Password
+          </a>
         </div>
-      `,
-    });
-
-    if (error) {
-      console.error("[mailer] Resend error:", error);
-      return { success: false, error: "Failed to send reset email. Please try again." };
-    }
-
-    if (process.env.NODE_ENV !== "production") console.log(`[mailer] Password reset email sent to ${toEmail} (id: ${data?.id})`);
-    return { success: true };
-  } catch (err) {
-    console.error("[mailer] Failed to send password reset email:", err);
-    return { success: false, error: "Failed to send reset email. Please try again." };
+        <p style="color: #94A3B8; font-size: 13px;">
+          If you did not request this, you can safely ignore this email.
+        </p>
+        <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 24px 0;" />
+        <p style="color: #94A3B8; font-size: 12px;">SchoolStack Budget by SchoolStack.ai</p>
+      </div>
+    `,
+  });
+  if (!result.success) {
+    return { success: false, error: result.error ?? "Failed to send reset email. Please try again." };
   }
+  return { success: true };
 }
 
 // Task #527 — confirm-by-email signup. Two new templates:
@@ -602,149 +695,119 @@ export async function sendVerifyEmail(
   toEmail: string,
   verifyToken: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const resend = getResend();
-  const fromAddress = process.env.EMAIL_FROM;
   const appUrl = resolveAppUrl();
   if (!appUrl) {
     if (process.env.NODE_ENV === "production") {
       console.error("[mailer] FATAL: APP_URL is required in production to generate verify-email links");
+    } else {
+      console.error("[mailer] Cannot generate verify-email link: neither APP_URL nor REPLIT_DEV_DOMAIN is set");
     }
     return { success: false, error: "Server configuration error." };
   }
   const verifyUrl = `${appUrl}/verify-email?token=${verifyToken}`;
 
-  if (!resend || !fromAddress) {
-    console.error(
-      `[mailer] sendVerifyEmail: Resend or EMAIL_FROM not configured — verify link for ${toEmail}: ${verifyUrl}`,
-    );
-    return { success: false, error: "Email service is not configured." };
-  }
-
-  try {
-    const { data, error } = await resend.emails.send({
-      from: fromAddress,
-      to: [toEmail],
-      subject: "Confirm your SchoolStack Budget account",
-      text: [
-        "Welcome to SchoolStack Budget!",
-        "",
-        "Click the link below to confirm your email and finish creating your account (valid for 1 hour):",
-        verifyUrl,
-        "",
-        "If you did not request this, you can safely ignore this email.",
-        "",
-        " - The SchoolStack Budget Team",
-      ].join("\n"),
-      html: `
-        <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
-          <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">Confirm your email</h2>
-          <p style="color:#475569;line-height:1.6;">
-            Welcome to SchoolStack Budget. Click the button below to finish creating your account. This link is valid for 1 hour.
-          </p>
-          <div style="text-align:center;margin:32px 0;">
-            <a href="${verifyUrl}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Confirm Email</a>
-          </div>
-          <p style="color:#475569;line-height:1.6;font-size:13px;">
-            If the button doesn't work, paste this URL into your browser:<br/>
-            <span style="word-break:break-all;color:#1E293B;">${verifyUrl}</span>
-          </p>
-          <p style="color:#475569;line-height:1.6;">
-            If you did not request this, you can safely ignore this email.
-          </p>
-          <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;" />
-          <p style="color:#94A3B8;font-size:12px;">SchoolStack Budget by SchoolStack.ai</p>
+  const result = await deliverTransactionalEmail({
+    kind: "verify-email",
+    to: toEmail,
+    primaryUrl: verifyUrl,
+    subject: "Confirm your SchoolStack Budget account",
+    text: [
+      "Welcome to SchoolStack Budget!",
+      "",
+      "Click the link below to confirm your email and finish creating your account (valid for 1 hour):",
+      verifyUrl,
+      "",
+      "If you did not request this, you can safely ignore this email.",
+      "",
+      " - The SchoolStack Budget Team",
+    ].join("\n"),
+    html: `
+      <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">Confirm your email</h2>
+        <p style="color:#475569;line-height:1.6;">
+          Welcome to SchoolStack Budget. Click the button below to finish creating your account. This link is valid for 1 hour.
+        </p>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="${verifyUrl}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Confirm Email</a>
         </div>
-      `,
-    });
-    if (error) {
-      console.error("[mailer] sendVerifyEmail error:", error);
-      return { success: false, error: "Failed to send verification email." };
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[mailer] Verify-email sent to ${toEmail} (id: ${data?.id})`);
-    }
-    return { success: true };
-  } catch (err) {
-    console.error("[mailer] sendVerifyEmail failed:", err);
-    return { success: false, error: "Failed to send verification email." };
+        <p style="color:#475569;line-height:1.6;font-size:13px;">
+          If the button doesn't work, paste this URL into your browser:<br/>
+          <span style="word-break:break-all;color:#1E293B;">${verifyUrl}</span>
+        </p>
+        <p style="color:#475569;line-height:1.6;">
+          If you did not request this, you can safely ignore this email.
+        </p>
+        <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;" />
+        <p style="color:#94A3B8;font-size:12px;">SchoolStack Budget by SchoolStack.ai</p>
+      </div>
+    `,
+  });
+  if (!result.success) {
+    return { success: false, error: result.error ?? "Failed to send verification email." };
   }
+  return { success: true };
 }
 
 export async function sendAccountAlreadyExistsEmail(
   toEmail: string,
   resetToken: string | null,
 ): Promise<{ success: boolean; error?: string }> {
-  const resend = getResend();
-  const fromAddress = process.env.EMAIL_FROM;
   const appUrl = resolveAppUrl();
   if (!appUrl) {
     if (process.env.NODE_ENV === "production") {
       console.error("[mailer] FATAL: APP_URL is required in production");
+    } else {
+      console.error("[mailer] Cannot generate account-exists links: neither APP_URL nor REPLIT_DEV_DOMAIN is set");
     }
     return { success: false, error: "Server configuration error." };
   }
   const loginUrl = `${appUrl}/login`;
   const resetUrl = resetToken ? `${appUrl}/reset-password?token=${resetToken}` : `${appUrl}/forgot-password`;
 
-  if (!resend || !fromAddress) {
-    console.error(
-      `[mailer] sendAccountAlreadyExistsEmail: Resend or EMAIL_FROM not configured — login: ${loginUrl} reset: ${resetUrl}`,
-    );
-    return { success: false, error: "Email service is not configured." };
-  }
-
-  try {
-    const { data, error } = await resend.emails.send({
-      from: fromAddress,
-      to: [toEmail],
-      subject: "You already have a SchoolStack Budget account",
-      text: [
-        "Hi,",
-        "",
-        "Somebody (probably you) just tried to create a SchoolStack Budget account with this email address — but you already have one.",
-        "",
-        `Sign in:    ${loginUrl}`,
-        `Reset password: ${resetUrl}`,
-        "",
-        resetToken
-          ? "The reset link above is valid for 1 hour."
-          : "If you didn't recently request a password reset, click the reset link to start one.",
-        "",
-        "If this wasn't you, no action is needed — your account is unchanged.",
-        "",
-        " - The SchoolStack Budget Team",
-      ].join("\n"),
-      html: `
-        <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
-          <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">You already have an account</h2>
-          <p style="color:#475569;line-height:1.6;">
-            Somebody (probably you) just tried to create a SchoolStack Budget account with this email address — but you already have one.
-          </p>
-          <div style="text-align:center;margin:24px 0;">
-            <a href="${loginUrl}" style="background-color:#1E293B;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Sign in</a>
-            <a href="${resetUrl}" style="background-color:#D97706;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Reset password</a>
-          </div>
-          <p style="color:#475569;line-height:1.6;font-size:13px;">
-            ${resetToken ? "The password reset link is valid for 1 hour." : "If you didn't recently request a reset, use the button above to start one."}
-          </p>
-          <p style="color:#475569;line-height:1.6;">
-            If this wasn't you, no action is needed — your account is unchanged.
-          </p>
-          <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;" />
-          <p style="color:#94A3B8;font-size:12px;">SchoolStack Budget by SchoolStack.ai</p>
+  const result = await deliverTransactionalEmail({
+    kind: "account-already-exists",
+    to: toEmail,
+    primaryUrl: resetUrl,
+    subject: "You already have a SchoolStack Budget account",
+    text: [
+      "Hi,",
+      "",
+      "Somebody (probably you) just tried to create a SchoolStack Budget account with this email address — but you already have one.",
+      "",
+      `Sign in:    ${loginUrl}`,
+      `Reset password: ${resetUrl}`,
+      "",
+      resetToken
+        ? "The reset link above is valid for 1 hour."
+        : "If you didn't recently request a password reset, click the reset link to start one.",
+      "",
+      "If this wasn't you, no action is needed — your account is unchanged.",
+      "",
+      " - The SchoolStack Budget Team",
+    ].join("\n"),
+    html: `
+      <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">You already have an account</h2>
+        <p style="color:#475569;line-height:1.6;">
+          Somebody (probably you) just tried to create a SchoolStack Budget account with this email address — but you already have one.
+        </p>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${loginUrl}" style="background-color:#1E293B;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Sign in</a>
+          <a href="${resetUrl}" style="background-color:#D97706;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Reset password</a>
         </div>
-      `,
-    });
-    if (error) {
-      console.error("[mailer] sendAccountAlreadyExistsEmail error:", error);
-      return { success: false, error: "Failed to send notice." };
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[mailer] Account-exists notice sent to ${toEmail} (id: ${data?.id})`);
-    }
-    return { success: true };
-  } catch (err) {
-    console.error("[mailer] sendAccountAlreadyExistsEmail failed:", err);
-    return { success: false, error: "Failed to send notice." };
+        <p style="color:#475569;line-height:1.6;font-size:13px;">
+          ${resetToken ? "The password reset link is valid for 1 hour." : "If you didn't recently request a reset, use the button above to start one."}
+        </p>
+        <p style="color:#475569;line-height:1.6;">
+          If this wasn't you, no action is needed — your account is unchanged.
+        </p>
+        <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;" />
+        <p style="color:#94A3B8;font-size:12px;">SchoolStack Budget by SchoolStack.ai</p>
+      </div>
+    `,
+  });
+  if (!result.success) {
+    return { success: false, error: result.error ?? "Failed to send notice." };
   }
+  return { success: true };
 }
