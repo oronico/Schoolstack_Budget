@@ -63,3 +63,12 @@ export function useAuth() {
   if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 }
+
+// Non-throwing variant used by leaf wizard step components that may be
+// rendered in isolation by unit tests without the full AuthProvider stack
+// (which depends on react-query + wouter). Returns null when no provider
+// is present so callers can fall back to a sensible default (e.g. show
+// the coach surfaces, matching the basics persona default).
+export function useOptionalAuth() {
+  return useContext(AuthContext);
+}

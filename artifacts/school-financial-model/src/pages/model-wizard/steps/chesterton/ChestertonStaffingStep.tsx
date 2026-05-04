@@ -3,6 +3,7 @@ import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, BookOpen, Calculator } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { useOptionalAuth } from "@/lib/auth-context";
 import { formatCurrency } from "@/lib/utils";
 import { buildDefaultChestertonData, avgSalaryPerPeriod } from "@/lib/chesterton/template";
 
@@ -10,6 +11,10 @@ const FTE_PERIODS = 5; // one Chesterton FTE = 5 periods/day per the CSN manual
 
 export function ChestertonStaffingStep() {
   const { control, setValue } = useFormContext();
+  // Task #416: hide the WhyThisMatters intro from advanced founders.
+  const user = useOptionalAuth()?.user ?? null;
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   // useWatch subscribes via `control` so per-row edits inside useFieldArray
   // inputs (registered with valueAsNumber) trigger a re-render of the totals.
   // Using formContext.watch() here misses those updates — see task #350/#351.
@@ -52,10 +57,12 @@ export function ChestertonStaffingStep() {
         </p>
       </div>
 
-      <WhyThisMatters
-        why="Most schools wildly under-budget faculty cost in Year 1 because they think 'one teacher per subject.' The CSN periods-based view forces you to budget the actual classroom hours you'll need, which scales smoothly as the school grows."
-        revisit="Refresh annually before April board meeting."
-      />
+      {showCoach && (
+        <WhyThisMatters
+          why="Most schools wildly under-budget faculty cost in Year 1 because they think 'one teacher per subject.' The CSN periods-based view forces you to budget the actual classroom hours you'll need, which scales smoothly as the school grows."
+          revisit="Refresh annually before April board meeting."
+        />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <FormInput

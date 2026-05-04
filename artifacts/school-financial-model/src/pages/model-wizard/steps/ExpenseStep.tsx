@@ -368,6 +368,9 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   // out of the pre-opening flow.
   const { user: authUser } = useAuth();
   const yetToLaunch = personaIsYetToLaunch(authUser);
+  // Task #416: hide the WhyThisMatters intro from advanced founders.
+  const guidanceLevel = (authUser?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
@@ -1242,10 +1245,12 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         <p className="text-muted-foreground text-lg">First, a few quick questions about your business operations. Then we'll review your expense details.</p>
       </div>
 
-      <WhyThisMatters
-        why="Expenses are where most first-time budgets quietly break — small categories like insurance, technology, and curriculum add up fast. We'll surface the categories typical for your school type so nothing important slips through."
-        revisit="Come back when you sign a lease, switch vendors, or adopt a new curriculum."
-      />
+      {showCoach && (
+        <WhyThisMatters
+          why="Expenses are where most first-time budgets quietly break — small categories like insurance, technology, and curriculum add up fast. We'll surface the categories typical for your school type so nothing important slips through."
+          revisit="Come back when you sign a lease, switch vendors, or adopt a new curriculum."
+        />
+      )}
 
       <CollapsibleInfoBox
         icon={TrendingUp}

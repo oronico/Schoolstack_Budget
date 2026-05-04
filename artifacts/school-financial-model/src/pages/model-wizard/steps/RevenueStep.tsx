@@ -190,6 +190,9 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const { watch, setValue, getValues, formState: { errors } } = useFormContext();
   const { user } = useAuth();
   const yetToLaunch = isYetToLaunch(user);
+  // Task #416: hide the WhyThisMatters intro from advanced founders.
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolStage = watch("schoolProfile.schoolStage") as string | undefined;
   const schoolType = watch("schoolProfile.schoolType") as string | undefined;
@@ -722,18 +725,20 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           </p>
         </div>
 
-        <WhyThisMatters
-          why={
-            yetToLaunch
-              ? "Naming every source up front — even the small ones — keeps your opening plan honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
-              : "Naming every source up front — even the small ones — keeps your model honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
-          }
-          revisit={
-            yetToLaunch
-              ? "Add new sources as you confirm grants, sponsors, or signed family commitments."
-              : "Add new sources as you confirm grants, sponsors, or new program lines."
-          }
-        />
+        {showCoach && (
+          <WhyThisMatters
+            why={
+              yetToLaunch
+                ? "Naming every source up front — even the small ones — keeps your opening plan honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
+                : "Naming every source up front — even the small ones — keeps your model honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
+            }
+            revisit={
+              yetToLaunch
+                ? "Add new sources as you confirm grants, sponsors, or signed family commitments."
+                : "Add new sources as you confirm grants, sponsors, or new program lines."
+            }
+          />
+        )}
 
         {isCharterType && (
           <div className="flex items-start gap-2 p-4 bg-blue-50 rounded-xl border border-blue-200">

@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { GraduationCap, Users } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { useOptionalAuth } from "@/lib/auth-context";
 import {
   CHESTERTON_GRADES,
   buildDefaultChestertonData,
@@ -17,6 +18,10 @@ const YEAR_KEYS: Array<keyof Omit<ChestertonGradeRow, "grade">> = [
 
 export function ChestertonEnrollmentStep() {
   const { watch, setValue } = useFormContext();
+  // Task #416: hide the WhyThisMatters intro from advanced founders.
+  const user = useOptionalAuth()?.user ?? null;
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   const planningYear = (watch("chesterton.planningYear") as number | undefined) ?? new Date().getFullYear() + 1;
   const phaseEnrollment = watch("chesterton.phaseEnrollment") as ChestertonGradeRow[] | undefined;
 
@@ -48,10 +53,12 @@ export function ChestertonEnrollmentStep() {
         </p>
       </div>
 
-      <WhyThisMatters
-        why="Enrollment is the engine of every school financial model. The CSN matrix forces you to commit grade-by-grade so the financial projection (and your facility plan) match a real, ramp-able cohort."
-        revisit="Re-confirm every February once you have a feel for the incoming freshman class."
-      />
+      {showCoach && (
+        <WhyThisMatters
+          why="Enrollment is the engine of every school financial model. The CSN matrix forces you to commit grade-by-grade so the financial projection (and your facility plan) match a real, ramp-able cohort."
+          revisit="Re-confirm every February once you have a feel for the incoming freshman class."
+        />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <FormInput

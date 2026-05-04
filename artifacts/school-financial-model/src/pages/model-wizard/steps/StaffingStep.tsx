@@ -95,6 +95,9 @@ export function StaffingStep() {
   const { user } = useAuth();
   const personaComfort = getFounderPersona(user).comfort;
   const yetToLaunch = isYetToLaunch(user);
+  // Task #416: hide the WhyThisMatters intro from advanced founders.
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;
@@ -395,10 +398,12 @@ export function StaffingStep() {
         </p>
       </div>
 
-      <WhyThisMatters
-        why="Salaries and benefits are typically the biggest line in a school budget — often 60–70% of expenses. We've pre-loaded a typical roster for your school type so you have a credible starting point even before you've made hires."
-        revisit="Revisit each time you confirm a hire, change a role's hours, or update your benefits package."
-      />
+      {showCoach && (
+        <WhyThisMatters
+          why="Salaries and benefits are typically the biggest line in a school budget — often 60–70% of expenses. We've pre-loaded a typical roster for your school type so you have a credible starting point even before you've made hires."
+          revisit="Revisit each time you confirm a hire, change a role's hours, or update your benefits package."
+        />
+      )}
 
       <CollapsibleCallout
         icon={Lightbulb}

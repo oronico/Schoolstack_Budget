@@ -3,11 +3,16 @@ import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, Users, GraduationCap, Church } from "lucide-react";
 import { FormInput, FormSelect } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { useOptionalAuth } from "@/lib/auth-context";
 import { buildDefaultChestertonData, totalEnrollmentForYear } from "@/lib/chesterton/template";
 import type { ChestertonGradeRow } from "../../schema";
 
 export function ChestertonRecruitingStep() {
   const { control, setValue } = useFormContext();
+  // Task #416: hide the WhyThisMatters intro from advanced founders.
+  const user = useOptionalAuth()?.user ?? null;
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   // useWatch subscribes via `control` so per-row edits inside useFieldArray
   // inputs (registered with valueAsNumber) trigger a re-render of the summary.
   // Using formContext.watch() here misses those updates — see task #350.
@@ -141,10 +146,12 @@ export function ChestertonRecruitingStep() {
         </p>
       </div>
 
-      <WhyThisMatters
-        why="Lenders and CSN both ask: 'Where do your students come from, and how do you reach them?' A named pipeline (sibling list, K-8 feeders, homeschool partners) is the difference between a real plan and a hope."
-        revisit="Update at the end of every recruiting season."
-      />
+      {showCoach && (
+        <WhyThisMatters
+          why="Lenders and CSN both ask: 'Where do your students come from, and how do you reach them?' A named pipeline (sibling list, K-8 feeders, homeschool partners) is the difference between a real plan and a hope."
+          revisit="Update at the end of every recruiting season."
+        />
+      )}
 
       {year1Need > 0 && (
         <div

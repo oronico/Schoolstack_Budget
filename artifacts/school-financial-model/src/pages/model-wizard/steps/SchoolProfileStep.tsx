@@ -1106,6 +1106,11 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
 export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
   const { watch, setValue, getValues } = useFormContext();
   const { user } = useAuth();
+  // Task #416: gate the introductory WhyThisMatters callout behind the same
+  // guidance-level switch the launcher subtitles + accounting-export lesson
+  // already use, so advanced founders don't see coach-only intros.
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   // Task #302: persona-stage gating overrides model.schoolStage. A founder
   // who picked `yet_to_launch` should never see prior-year actuals,
   // QuickBooks/Xero callouts, or any "import last year's books" surfaces —
@@ -1318,10 +1323,12 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
         <p className="text-muted-foreground text-lg">We'll tailor everything to your school's type, stage, and structure. There are no wrong answers here - just tell us where you are today, and we'll meet you there.</p>
       </div>
 
-      <WhyThisMatters
-        why="Your state, school type, and stage shape every default we recommend — from per-pupil funding bands and salary benchmarks to staffing ratios and rent norms. Getting these right up front means the rest of the wizard is pre-tuned for schools like yours."
-        revisit="If your governance changes (for example, you decide to pursue a charter or apply for nonprofit status), come back here first."
-      />
+      {showCoach && (
+        <WhyThisMatters
+          why="Your state, school type, and stage shape every default we recommend — from per-pupil funding bands and salary benchmarks to staffing ratios and rent norms. Getting these right up front means the rest of the wizard is pre-tuned for schools like yours."
+          revisit="If your governance changes (for example, you decide to pursue a charter or apply for nonprofit status), come back here first."
+        />
+      )}
 
       <div>
         <FormInput 

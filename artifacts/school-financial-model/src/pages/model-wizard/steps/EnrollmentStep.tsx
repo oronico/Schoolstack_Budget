@@ -389,6 +389,9 @@ export function EnrollmentStep() {
   const persona = getFounderPersona(user);
   const yetToLaunch = isYetToLaunch(user);
   const newComfort = persona.comfort === "new_to_budgeting";
+  // Task #416: hide the WhyThisMatters intro from advanced founders.
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   const schoolType = watch("schoolProfile.schoolType") || "other";
   const schoolStage = watch("schoolProfile.schoolStage");
   const operatingYear = watch("schoolProfile.operatingYear");
@@ -745,12 +748,14 @@ export function EnrollmentStep() {
         </p>
       </div>
 
-      <WhyThisMatters
-        why={newComfort
-          ? "Enrollment is the engine of your model. Every other number — revenue, staffing, even rent per student — moves with it. We'd rather have your honest best guess today than a perfect number you don't have yet."
-          : "Enrollment drives revenue, staffing ratios, and per-student costs. Best-guess numbers are fine; refine as data comes in."}
-        revisit="Update this whenever you finish an enrollment cycle, sign a new lead family, or get a clearer sense of demand."
-      />
+      {showCoach && (
+        <WhyThisMatters
+          why={newComfort
+            ? "Enrollment is the engine of your model. Every other number — revenue, staffing, even rent per student — moves with it. We'd rather have your honest best guess today than a perfect number you don't have yet."
+            : "Enrollment drives revenue, staffing ratios, and per-student costs. Best-guess numbers are fine; refine as data comes in."}
+          revisit="Update this whenever you finish an enrollment cycle, sign a new lead family, or get a clearer sense of demand."
+        />
+      )}
 
       {programs.length === 0 && (
         <IDontKnowYet

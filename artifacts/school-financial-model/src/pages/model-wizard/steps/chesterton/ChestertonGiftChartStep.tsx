@@ -3,11 +3,16 @@ import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, Trophy, Users } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { useOptionalAuth } from "@/lib/auth-context";
 import { formatCurrency } from "@/lib/utils";
 import { buildDefaultChestertonData } from "@/lib/chesterton/template";
 
 export function ChestertonGiftChartStep() {
   const { control, setValue } = useFormContext();
+  // Task #416: hide the WhyThisMatters intro from advanced founders.
+  const user = useOptionalAuth()?.user ?? null;
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   // useWatch (not formContext.watch) so per-row gift edits inside the
   // useFieldArray rows trigger a live re-render of the pyramid totals —
   // same root cause as task #350.
@@ -64,10 +69,12 @@ export function ChestertonGiftChartStep() {
         </p>
       </div>
 
-      <WhyThisMatters
-        why="A gift chart converts your fundraising goal from a single big number into a list of conversations. Lenders and board members trust schools that can answer 'where do those 5 major gifts come from?' — this step forces that answer."
-        revisit="Refresh this every fall before campaign season opens."
-      />
+      {showCoach && (
+        <WhyThisMatters
+          why="A gift chart converts your fundraising goal from a single big number into a list of conversations. Lenders and board members trust schools that can answer 'where do those 5 major gifts come from?' — this step forces that answer."
+          revisit="Refresh this every fall before campaign season opens."
+        />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-border bg-muted/20 p-4">

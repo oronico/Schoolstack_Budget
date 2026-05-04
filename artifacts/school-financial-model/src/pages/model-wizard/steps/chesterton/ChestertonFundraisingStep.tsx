@@ -3,11 +3,16 @@ import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, Target, HandHeart } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
+import { useOptionalAuth } from "@/lib/auth-context";
 import { formatCurrency } from "@/lib/utils";
 import { DEFAULT_CHESTERTON_FUNDRAISING, buildDefaultChestertonData } from "@/lib/chesterton/template";
 
 export function ChestertonFundraisingStep() {
   const { control, setValue } = useFormContext();
+  // Task #416: hide the WhyThisMatters intro from advanced founders.
+  const user = useOptionalAuth()?.user ?? null;
+  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const showCoach = guidanceLevel !== "advanced";
   // useWatch (not formContext.watch) so per-row goalAmount edits inside the
   // useFieldArray rows trigger a live re-render of the "Committed so far"
   // summary — see task #350.
@@ -52,10 +57,12 @@ export function ChestertonFundraisingStep() {
         </p>
       </div>
 
-      <WhyThisMatters
-        why="Chesterton schools start each year with a fundraising plan, not a wish. Splitting your goal into Major / Mid-Major / Annual Fund / Grassroots / Events makes the work concrete — and lets the gift chart math work backwards from real prospect counts."
-        revisit="Update this every spring once you know what you closed and what carried into next year."
-      />
+      {showCoach && (
+        <WhyThisMatters
+          why="Chesterton schools start each year with a fundraising plan, not a wish. Splitting your goal into Major / Mid-Major / Annual Fund / Grassroots / Events makes the work concrete — and lets the gift chart math work backwards from real prospect counts."
+          revisit="Update this every spring once you know what you closed and what carried into next year."
+        />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <FormInput

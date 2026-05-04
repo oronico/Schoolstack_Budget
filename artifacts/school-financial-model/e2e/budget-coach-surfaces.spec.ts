@@ -205,6 +205,10 @@ test("Budget-coach surfaces: advanced founder loses the coach-only blocks", asyn
   // asserting the (absent) lesson card.
   await expect(page.getByTestId("accounting-export-uploader")).toBeVisible();
   await expect(page.getByTestId("accounting-export-lesson")).toHaveCount(0);
+  // Task #416: the WhyThisMatters intro callout is also coach-gated now —
+  // advanced founders should not see "Why this matters" anywhere on the
+  // School Profile step.
+  await expect(page.getByText("Why this matters", { exact: false })).toHaveCount(0);
 
   // --- Impact summary: KPI nudge container still shows (it's not coach-gated
   //     by design — DSCR<1.20 / runway<6mo / NI<0 are surfaced to every user)
