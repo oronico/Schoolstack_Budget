@@ -226,9 +226,20 @@ the next quarterly trial knows to redo the auth round-trip.
 A trial restore must be performed at least once per quarter so the
 procedure stays warm. Append entries here.
 
-| Date (UTC)       | Operator | Snapshot used      | Restore time | Verification result                          | Notes                                    |
-| ---------------- | -------- | ------------------ | ------------ | -------------------------------------------- | ---------------------------------------- |
-| 2026-05-04 16:20 | on-call  | 2026-05-04 03:00Z  | ~14 min      | Schema diff empty; row counts on `users`, `schools`, `financial_models`, `exports`, `shared_links`, `events` matched prod within ~0.2%; API booted; `/healthz` returned 200; `/auth/login` + `/auth/me` round-trip succeeded for a known test user; `/models` returned that user's saved models | First trial restore. Used throwaway service `postgres-restore-20260504-1620`, deleted next day. |
+Two kinds of entries are valid:
+
+- **Hands-on restore** — an operator with Railway access actually clicked
+  through the procedure against a real snapshot. This is what counts for
+  the quarterly cadence. Put `hands-on` in the Type column.
+- **Documentation walkthrough** — someone read the runbook end-to-end and
+  verified every referenced table, endpoint, and command still exists in
+  the codebase, but did **not** restore a real snapshot. Useful after
+  schema or API changes; does **not** reset the quarterly clock. Put
+  `doc-walkthrough` in the Type column.
+
+| Date (UTC)       | Type            | Operator | Snapshot used | Restore time | Verification result | Notes |
+| ---------------- | --------------- | -------- | ------------- | ------------ | ------------------- | ----- |
+| 2026-05-04       | doc-walkthrough | agent    | n/a           | n/a          | Verified all 6 tables in the row-count SQL block (`users`, `schools`, `financial_models`, `exports`, `shared_links`, `events`) exist in `lib/db/src/schema/`; verified `/healthz`, `/auth/login`, `/auth/me`, and `/models` are all registered in `artifacts/api-server/src/` and present in `lib/api-spec/openapi.yaml`. Runbook commands are consistent with the current code. | Documentation-only pass; **no real Railway restore was performed**. The first hands-on trial restore is still outstanding and must be done by an engineer with Railway access. |
 
 ---
 
