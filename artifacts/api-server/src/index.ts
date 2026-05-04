@@ -1,6 +1,7 @@
 import app from "./app";
 import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
 import { cleanupOldErrorLogs } from "./routes/errors";
+import { cleanupExpiredPendingSignups } from "./routes/auth";
 import { pool, db, errorLogsTable, runMigrations } from "@workspace/db";
 import { applyMigrations as runApplyMigrations } from "./lib/apply-migrations";
 import { seedPreviewDataIfEmpty } from "./lib/seed-preview-data";
@@ -178,4 +179,8 @@ cleanupTimer = setInterval(() => {
   // than 30 days, so an unauth attacker hammering /errors/report can't
   // grow the table indefinitely.
   cleanupOldErrorLogs().catch(() => {});
+  // Task #535: same 5-minute sweep also prunes pending_signups rows
+  // whose verification token has already expired, so abandoned signups
+  // (and their bcrypt'd password hashes) don't accumulate forever.
+  cleanupExpiredPendingSignups().catch(() => {});
 }, 300_000);

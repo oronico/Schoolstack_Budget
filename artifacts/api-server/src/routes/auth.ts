@@ -40,6 +40,28 @@ const registerRateLimiter = createRateLimiter(60_000, 5);
 // inbox cannot resurrect a discarded signup intent.
 const VERIFICATION_TOKEN_TTL_MS = 3_600_000;
 
+// Task #535 — bound the growth of pending_signups. The table holds a
+// bcrypt'd password hash for every register attempt that never made it
+// through verify-email; without a sweeper it grows monotonically and
+// lookups by verificationToken get slower over time. Verify-email and
+// the dev-only synchronous-promotion path already DELETE the row on
+// success, so this only catches the truly abandoned attempts (founder
+// closed the tab, mistyped their email, etc.). Pruned on the same
+// 5-minute interval as the rate-limiter / error-logs sweepers wired in
+// src/index.ts.
+export async function cleanupExpiredPendingSignups(): Promise<number> {
+  try {
+    const deleted = await db
+      .delete(pendingSignupsTable)
+      .where(lt(pendingSignupsTable.verificationTokenExpiry, new Date()))
+      .returning({ id: pendingSignupsTable.id });
+    return deleted.length;
+  } catch (err) {
+    console.error("Pending-signup cleanup error:", err);
+    return 0;
+  }
+}
+
 // Task #527: dev-only flag that returns the raw verification / reset
 // token in the /auth/register response so test suites can drive the
 // verify-email step without a real mailer. Strictly gated on
