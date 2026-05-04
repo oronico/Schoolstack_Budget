@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BENCHMARK_DSCR_GREEN, DECISION_TYPES } from "@workspace/finance";
+import { BENCHMARK_DSCR_GREEN, DECISION_TYPES, DECISION_OUTCOME_STATUSES } from "@workspace/finance";
 
 const numMsg = (field: string) => ({
   invalid_type_error: `Please enter a valid number for ${field}`,
@@ -615,7 +615,12 @@ export const assumptionFlagResponseSchema = z.object({
 export const decisionTypeSchema = z.enum(DECISION_TYPES);
 export type DecisionType = z.infer<typeof decisionTypeSchema>;
 
-export const outcomeStatusSchema = z.enum(["pursued", "declined", "on_hold"]);
+// Same single-source-of-truth pattern as `decisionTypeSchema` above: the list
+// of valid outcome statuses lives in `@workspace/finance`
+// (`DECISION_OUTCOME_STATUSES`) so the Zod schema here, the
+// `DecisionOutcomeStatus` union, the `OUTCOME_LABELS` map, and the scenarios
+// page's option list can never silently fall out of sync.
+export const outcomeStatusSchema = z.enum(DECISION_OUTCOME_STATUSES);
 export type OutcomeStatus = z.infer<typeof outcomeStatusSchema>;
 
 // Actuals snapshot — what *actually* happened after the decision was pursued.

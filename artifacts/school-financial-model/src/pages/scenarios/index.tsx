@@ -51,6 +51,7 @@ import {
   aggregateRosterCapSavings,
   buildRosterCapInsightText,
   CAP_INSIGHT_MIN_SAVINGS,
+  DECISION_OUTCOME_STATUSES,
 } from "@workspace/finance";
 import type { StaffingRowData } from "@/lib/staffing-defaults";
 import {
@@ -93,7 +94,11 @@ const OUTCOME_STATUS_META: Record<OutcomeStatus, { label: string; pillClass: str
   },
 };
 
-const OUTCOME_STATUS_OPTIONS: OutcomeStatus[] = ["pursued", "declined", "on_hold"];
+// Derived from the shared `DECISION_OUTCOME_STATUSES` tuple in
+// `@workspace/finance` so adding a fourth status in one place automatically
+// propagates here (or fails to compile) — see the comment on
+// `outcomeStatusSchema` in `model-wizard/schema.ts`.
+const OUTCOME_STATUS_OPTIONS: readonly OutcomeStatus[] = DECISION_OUTCOME_STATUSES;
 
 // Filter chips shown above the Saved What-If list. "untracked" matches saved
 // scenarios that don't yet have an outcomeStatus set.

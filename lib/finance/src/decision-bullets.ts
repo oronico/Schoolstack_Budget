@@ -5,10 +5,18 @@
 // scenario's overrides. Keeping the implementation here ensures the two
 // surfaces never silently disagree about what the same scenario means.
 
-export { DECISION_TYPES, type DecisionType } from "./decision-types.js";
-import { DECISION_TYPES, type DecisionType } from "./decision-types.js";
-
-export type DecisionOutcomeStatus = "pursued" | "declined" | "on_hold";
+export {
+  DECISION_TYPES,
+  type DecisionType,
+  DECISION_OUTCOME_STATUSES,
+  type DecisionOutcomeStatus,
+} from "./decision-types.js";
+import {
+  DECISION_TYPES,
+  type DecisionType,
+  DECISION_OUTCOME_STATUSES,
+  type DecisionOutcomeStatus,
+} from "./decision-types.js";
 
 export const DECISION_LABELS: Record<DecisionType, string> = {
   add_program: "Add a program",
@@ -48,7 +56,7 @@ export function isDecisionType(v: unknown): v is DecisionType {
 }
 
 export function isDecisionOutcomeStatus(v: unknown): v is DecisionOutcomeStatus {
-  return v === "pursued" || v === "declined" || v === "on_hold";
+  return typeof v === "string" && (DECISION_OUTCOME_STATUSES as readonly string[]).includes(v);
 }
 
 // Coerce a loosely-typed `overrides` blob (e.g. parsed JSON from storage) into
