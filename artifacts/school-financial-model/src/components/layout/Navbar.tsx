@@ -1,8 +1,7 @@
 import { Link } from "wouter";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen, UserCog, ChevronDown, FileSpreadsheet } from "lucide-react";
-import { GuidanceModeSelector } from "@/components/coaching/GuidanceModeSelector";
+import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen, UserCog, ChevronDown, FileSpreadsheet, MessageSquare } from "lucide-react";
 import { BudgetPrimer } from "@/components/coaching/BudgetPrimer";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { SOLUTION_LINK_SUMMARIES } from "@/data/solution-pages";
@@ -241,10 +240,15 @@ export function Navbar() {
                           Budgeting Basics
                         </button>
                         <div className="border-t border-border mx-2" />
-                        <div className="px-4 py-2.5">
-                          <p className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wide mb-1.5">Guidance Level</p>
-                          <GuidanceModeSelector compact />
-                        </div>
+                        <Link
+                          href="/settings#coaching-tone"
+                          onClick={() => setShowHelp(false)}
+                          data-testid="navbar-help-coaching-tone-link"
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-black/5 rounded-b-xl transition-colors"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
+                          Coaching tone
+                        </Link>
                       </div>
                     )}
                   </div>

@@ -94,6 +94,23 @@ describe("SettingsPage — Your founder profile card", () => {
     expect(cta.textContent).toMatch(/pick founder profile/i);
   });
 
+  it("renders a Coaching tone card that wraps the GuidanceModeSelector", () => {
+    currentUser = {
+      id: 1,
+      email: "founder@test.school",
+      name: "Maya",
+      guidanceLevel: "basics",
+    };
+    render(<SettingsPage />);
+    const card = screen.getByTestId("settings-coaching-tone-card");
+    expect(card).toBeTruthy();
+    expect(card.getAttribute("id")).toBe("coaching-tone");
+    // The card should contain all three guidance level options.
+    expect(card.textContent).toMatch(/Compact/);
+    expect(card.textContent).toMatch(/Guided/);
+    expect(card.textContent).toMatch(/Extra help/);
+  });
+
   it("renders the existing+comfortable summary when the user runs a school", () => {
     currentUser = {
       id: 1,

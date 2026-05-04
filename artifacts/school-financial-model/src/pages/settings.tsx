@@ -3,13 +3,14 @@ import { Layout } from "@/components/layout/Layout";
 import { SEOHead } from "@/components/SEOHead";
 import { useAuth } from "@/lib/auth-context";
 import { FounderPersonaPrompt } from "@/components/coaching/FounderPersonaPrompt";
+import { GuidanceModeSelector } from "@/components/coaching/GuidanceModeSelector";
 import {
   getFounderPersona,
   type FounderStage,
   type FounderComfort,
 } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
-import { UserCog, Compass, BookOpen, GraduationCap, Building2, Sparkles } from "lucide-react";
+import { UserCog, Compass, BookOpen, GraduationCap, Building2, Sparkles, MessageSquare } from "lucide-react";
 
 type PersonaSummary = {
   icon: typeof Compass;
@@ -170,6 +171,46 @@ export function SettingsPage() {
               <p className="text-xs text-muted-foreground">
                 Changes take effect on your next dashboard load.
               </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="coaching-tone"
+          data-testid="settings-coaching-tone-card"
+          className="mt-6 rounded-2xl border border-border bg-background shadow-sm overflow-hidden scroll-mt-24"
+        >
+          <div className="px-6 py-5 border-b border-border flex items-start gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <MessageSquare className="h-5 w-5 text-primary" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 className="font-display text-xl font-semibold text-foreground">
+                Coaching tone
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                Choose how much hand-holding you want as you work. You can switch any time.
+              </p>
+            </div>
+          </div>
+
+          <div className="px-6 py-5 space-y-4">
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="font-semibold text-foreground shrink-0">Compact:</span>
+                <span>Short labels and minimal explanations — best if you've built budgets before.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="font-semibold text-foreground shrink-0">Guided:</span>
+                <span>Plain-English explanations and benchmarks at each step. A good default.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="font-semibold text-foreground shrink-0">Extra help:</span>
+                <span>Worked examples and deeper context, including financing tips.</span>
+              </li>
+            </ul>
+            <div className="rounded-xl border border-border bg-muted/30 p-2">
+              <GuidanceModeSelector />
             </div>
           </div>
         </section>
