@@ -20,7 +20,7 @@ import {
   type DecisionFieldChange,
 } from "@/lib/decision-flows";
 import { encodeOverridesToHash } from "@/lib/whatif-engine";
-import type { FullModelData, CustomScenario, AppliedDecisionUndo } from "@/pages/model-wizard/schema";
+import { isSingleYearModel, type FullModelData, type CustomScenario, type AppliedDecisionUndo } from "@/pages/model-wizard/schema";
 
 interface ChangeEnrollmentFlowProps {
   modelId: number;
@@ -47,6 +47,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
   const [isUndoing, setIsUndoing] = useState(false);
 
   const data = (model?.data ?? {}) as FullModelData;
+  const isSingleYear = isSingleYearModel(data);
   const en = data.enrollment;
   const baseEnrollment = [en?.year1 ?? 0, en?.year2 ?? 0, en?.year3 ?? 0, en?.year4 ?? 0, en?.year5 ?? 0];
 
@@ -347,10 +348,12 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
           <div>
             <h2 className="font-display text-xl font-bold text-foreground mb-1">Impact on your model</h2>
             <p className="text-sm text-muted-foreground">
-              Here's what this enrollment shift does to your 5-year picture — and whether your staffing plan still fits.
+              {isSingleYear
+                ? "Here's what this enrollment shift does to your Year 1 picture — and whether your staffing plan still fits."
+                : "Here's what this enrollment shift does to your 5-year picture — and whether your staffing plan still fits."}
             </p>
           </div>
-          <ImpactSummary impact={impact} />
+          <ImpactSummary impact={impact} isSingleYear={isSingleYear} />
         </section>
       )}
 

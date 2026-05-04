@@ -114,6 +114,11 @@ function Sparkline({ values, baseValues, color }: { values: number[]; baseValues
   );
 }
 
+// Task #478 — Y1-Y5 grid is intentional, even for single-year models. The
+// What-If drawer is a planner exploration UI: founders dial Y1 inputs and
+// see how the engine extrapolates them across the standard 5-year window.
+// Showing only Y1 here would defeat the drawer's purpose (illustrating
+// downstream impact of a Y1 change), so we keep all five columns.
 const YEARS = ["Y1", "Y2", "Y3", "Y4", "Y5"] as const;
 
 const EMPTY: WhatIfOverrides = {};

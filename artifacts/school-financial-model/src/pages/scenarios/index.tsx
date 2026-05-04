@@ -2612,89 +2612,97 @@ export function ScenarioPage() {
                         highlightBetter="higher"
                       />
 
-                      <tr className="border-b border-border/40">
-                        <td
-                          colSpan={2 + results.scenarios.length}
-                          className="py-2 px-4 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5"
-                        >
-                          Year 5 Summary
-                        </td>
-                      </tr>
-                      <MetricRow
-                        label="Total Revenue"
-                        base={results.base.metrics.revenue[4]}
-                        scenarios={results.scenarios.map((s) => s.metrics.revenue[4])}
-                        format={fmt}
-                        highlightBetter="higher"
-                      />
-                      <MetricRow
-                        label="Total Expenses"
-                        base={results.base.metrics.totalExpenses[4]}
-                        scenarios={results.scenarios.map((s) => s.metrics.totalExpenses[4])}
-                        format={fmt}
-                        highlightBetter="lower"
-                      />
-                      <MetricRow
-                        label="Net Income"
-                        base={results.base.metrics.netIncome[4]}
-                        scenarios={results.scenarios.map((s) => s.metrics.netIncome[4])}
-                        format={fmt}
-                        highlightBetter="higher"
-                      />
-                      <MetricRow
-                        label="Net Margin"
-                        base={results.base.metrics.netMargin[4]}
-                        scenarios={results.scenarios.map((s) => s.metrics.netMargin[4])}
-                        format={pct}
-                        highlightBetter="higher"
-                      />
-                      <MetricRow
-                        label="Enrollment"
-                        base={results.base.metrics.enrollment[4]}
-                        scenarios={results.scenarios.map((s) => s.metrics.enrollment[4])}
-                        format={(v) => v.toString()}
-                        highlightBetter="higher"
-                      />
-
-                      <tr className="border-b border-border/40">
-                        <td
-                          colSpan={2 + results.scenarios.length}
-                          className="py-2 px-4 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5"
-                        >
-                          Net Income by Year
-                        </td>
-                      </tr>
-                      {[0, 1, 2, 3, 4].map((y) => (
-                        <MetricRow
-                          key={`ni-${y}`}
-                          label={`Year ${y + 1}`}
-                          base={results.base.metrics.netIncome[y]}
-                          scenarios={results.scenarios.map((s) => s.metrics.netIncome[y])}
-                          format={fmt}
-                          highlightBetter="higher"
-                        />
-                      ))}
-
-                      {results.base.metrics.dscr.some((d) => d > 0) && (
+                      {/* Task #478 — Y5 summary + per-year tables only make
+                          sense for 5-year models. Single-year models extrapolate
+                          Y2-Y5 from Y1, so these would publish hidden Y5 numbers
+                          the founder didn't actually project. */}
+                      {!isSingleYearModel(modelData) && (
                         <>
                           <tr className="border-b border-border/40">
                             <td
                               colSpan={2 + results.scenarios.length}
                               className="py-2 px-4 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5"
                             >
-                              DSCR by Year
+                              Year 5 Summary
+                            </td>
+                          </tr>
+                          <MetricRow
+                            label="Total Revenue"
+                            base={results.base.metrics.revenue[4]}
+                            scenarios={results.scenarios.map((s) => s.metrics.revenue[4])}
+                            format={fmt}
+                            highlightBetter="higher"
+                          />
+                          <MetricRow
+                            label="Total Expenses"
+                            base={results.base.metrics.totalExpenses[4]}
+                            scenarios={results.scenarios.map((s) => s.metrics.totalExpenses[4])}
+                            format={fmt}
+                            highlightBetter="lower"
+                          />
+                          <MetricRow
+                            label="Net Income"
+                            base={results.base.metrics.netIncome[4]}
+                            scenarios={results.scenarios.map((s) => s.metrics.netIncome[4])}
+                            format={fmt}
+                            highlightBetter="higher"
+                          />
+                          <MetricRow
+                            label="Net Margin"
+                            base={results.base.metrics.netMargin[4]}
+                            scenarios={results.scenarios.map((s) => s.metrics.netMargin[4])}
+                            format={pct}
+                            highlightBetter="higher"
+                          />
+                          <MetricRow
+                            label="Enrollment"
+                            base={results.base.metrics.enrollment[4]}
+                            scenarios={results.scenarios.map((s) => s.metrics.enrollment[4])}
+                            format={(v) => v.toString()}
+                            highlightBetter="higher"
+                          />
+
+                          <tr className="border-b border-border/40">
+                            <td
+                              colSpan={2 + results.scenarios.length}
+                              className="py-2 px-4 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5"
+                            >
+                              Net Income by Year
                             </td>
                           </tr>
                           {[0, 1, 2, 3, 4].map((y) => (
                             <MetricRow
-                              key={`dscr-${y}`}
+                              key={`ni-${y}`}
                               label={`Year ${y + 1}`}
-                              base={results.base.metrics.dscr[y]}
-                              scenarios={results.scenarios.map((s) => s.metrics.dscr[y])}
-                              format={(v) => (v > 0 ? `${v.toFixed(2)}x` : "N/A")}
+                              base={results.base.metrics.netIncome[y]}
+                              scenarios={results.scenarios.map((s) => s.metrics.netIncome[y])}
+                              format={fmt}
                               highlightBetter="higher"
                             />
                           ))}
+
+                          {results.base.metrics.dscr.some((d) => d > 0) && (
+                            <>
+                              <tr className="border-b border-border/40">
+                                <td
+                                  colSpan={2 + results.scenarios.length}
+                                  className="py-2 px-4 text-xs font-bold text-primary uppercase tracking-wider bg-primary/5"
+                                >
+                                  DSCR by Year
+                                </td>
+                              </tr>
+                              {[0, 1, 2, 3, 4].map((y) => (
+                                <MetricRow
+                                  key={`dscr-${y}`}
+                                  label={`Year ${y + 1}`}
+                                  base={results.base.metrics.dscr[y]}
+                                  scenarios={results.scenarios.map((s) => s.metrics.dscr[y])}
+                                  format={(v) => (v > 0 ? `${v.toFixed(2)}x` : "N/A")}
+                                  highlightBetter="higher"
+                                />
+                              ))}
+                            </>
+                          )}
                         </>
                       )}
 
@@ -3273,7 +3281,7 @@ export function ScenarioPage() {
                       {decisionCompareError}
                     </p>
                   )}
-                  <ImpactSummary impact={columns[0].impact} columns={columns} />
+                  <ImpactSummary impact={columns[0].impact} columns={columns} isSingleYear={isSingleYearModel(modelData)} />
                 </div>
               )}
             </div>

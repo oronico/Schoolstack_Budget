@@ -299,10 +299,12 @@ function DecisionComparisonBlock({
   token,
   schoolName,
   scenarios,
+  isSingleYear,
 }: {
   token: string;
   schoolName?: string;
   scenarios: SharedDecisionScenario[];
+  isSingleYear?: boolean;
 }) {
   const keyOf = (s: SharedDecisionScenario) => `${s.name}|${s.createdAt}`;
   // Initialize with the first two saved decisions so the comparison renders
@@ -624,7 +626,7 @@ function DecisionComparisonBlock({
               {downloadError}
             </p>
           )}
-          <ImpactSummary impact={columns[0].impact} columns={columns} />
+          <ImpactSummary impact={columns[0].impact} columns={columns} isSingleYear={isSingleYear} />
         </div>
       )}
     </section>
@@ -758,7 +760,7 @@ export function SharedModelPage() {
             <MetricCard
               label="Reserve Months"
               value={data.reserveMonths.toFixed(1)}
-              subtext="Operating reserves by Year 5"
+              subtext={isSingleYear ? "Operating reserves" : "Operating reserves by Year 5"}
               icon={Clock}
               status={data.reserveMonths >= 3 ? "good" : data.reserveMonths > 0 ? "warning" : "danger"}
             />
@@ -803,6 +805,7 @@ export function SharedModelPage() {
               token={params.token}
               schoolName={data.schoolName}
               scenarios={data.decisionScenarios}
+              isSingleYear={data.modelDuration === "single_year"}
             />
           )}
       </main>

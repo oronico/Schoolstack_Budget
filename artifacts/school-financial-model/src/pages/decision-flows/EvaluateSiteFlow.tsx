@@ -19,7 +19,7 @@ import {
   type DecisionFieldChange,
 } from "@/lib/decision-flows";
 import { detectFacilityRent, encodeOverridesToHash } from "@/lib/whatif-engine";
-import type { FullModelData, CustomScenario, AppliedDecisionUndo } from "@/pages/model-wizard/schema";
+import { isSingleYearModel, type FullModelData, type CustomScenario, type AppliedDecisionUndo } from "@/pages/model-wizard/schema";
 
 interface EvaluateSiteFlowProps {
   modelId: number;
@@ -46,6 +46,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
   const [isUndoing, setIsUndoing] = useState(false);
 
   const data = (model?.data ?? {}) as FullModelData;
+  const isSingleYear = isSingleYearModel(data);
 
   useEffect(() => {
     if (model) {
@@ -303,10 +304,12 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
           <div>
             <h2 className="font-display text-xl font-bold text-foreground mb-1">Impact on your model</h2>
             <p className="text-sm text-muted-foreground">
-              Here's what moving to this site would do to your 5-year picture — through a lender's eyes.
+              {isSingleYear
+                ? "Here's what moving to this site would do to your Year 1 picture — through a lender's eyes."
+                : "Here's what moving to this site would do to your 5-year picture — through a lender's eyes."}
             </p>
           </div>
-          <ImpactSummary impact={impact} />
+          <ImpactSummary impact={impact} isSingleYear={isSingleYear} />
         </section>
       )}
 

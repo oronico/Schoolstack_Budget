@@ -32,6 +32,16 @@ interface ImpactSummaryProps {
    * the column with the best value per metric gets a winner badge.
    */
   columns?: ComparisonColumn[];
+  /**
+   * When true, the surface is rendered for a single-year model. The engine
+   * still emits length-5 arrays in that case, but Y2-Y5 are extrapolations
+   * from Y1 inputs that aren't user-meaningful. Headline tiles, the per-year
+   * table, and the comparison view all collapse to a single Year-1 column
+   * with "Y1" labels. Mirrors the same `isSingleYear` plumb done for the
+   * mailer and scenario-compare paths in Tasks #469 / #472. Audit:
+   * `.local/audits/y5-anchored-consumers-audit.md` (Task #478).
+   */
+  isSingleYear?: boolean;
 }
 
 function fmtMoney(v: number): string {
@@ -87,7 +97,7 @@ function SignalIcon({ signal }: { signal: "green" | "amber" | "red" }) {
 
 export function ImpactSummary(props: ImpactSummaryProps) {
   if (props.columns && props.columns.length >= 2) {
-    return <ImpactComparison columns={props.columns} />;
+    return <ImpactComparison columns={props.columns} isSingleYear={props.isSingleYear} />;
   }
   if (props.compareWith) {
     return (
@@ -104,13 +114,22 @@ export function ImpactSummary(props: ImpactSummaryProps) {
             narrative: props.compareNarrative,
           },
         ]}
+        isSingleYear={props.isSingleYear}
       />
     );
   }
-  return <ImpactSingle impact={props.impact} />;
+  return <ImpactSingle impact={props.impact} isSingleYear={props.isSingleYear} />;
 }
 
-function ImpactSingle({ impact }: { impact: DecisionImpact }) {
+function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSingleYear?: boolean }) {
+  // Task #478 — single-year models still get length-5 arrays from the
+  // engine, but Y2-Y5 are extrapolations from Y1. Anchor headlines and the
+  // per-year table to Y1 only when isSingleYear, so we never publish a
+  // hidden Y5 number that the founder didn't actually project.
+  const headlineIdx = isSingleYear ? 0 : 4;
+  const headlineLabel = isSingleYear ? "Y1" : "Y5";
+  const tableYears = isSingleYear ? [0] : [0, 1, 2, 3, 4];
+  const tableTitle = isSingleYear ? "Year 1 impact" : "5-year impact";
   const { base, adjusted, deltas, nudges } = impact;
   const { user } = useAuth();
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
@@ -185,29 +204,29 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
       {/* Headline tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border border-border/60 rounded-xl p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Y5 net income Δ</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{headlineLabel} net income Δ</p>
           <p className={cn(
             "text-2xl font-bold font-mono mt-1",
-            deltas.netIncome[4] > 0 ? "text-emerald-700" : deltas.netIncome[4] < 0 ? "text-rose-700" : "text-foreground",
+            deltas.netIncome[headlineIdx] > 0 ? "text-emerald-700" : deltas.netIncome[headlineIdx] < 0 ? "text-rose-700" : "text-foreground",
           )}
             data-testid="impact-y5-net-delta"
           >
-            {fmtMoneyDelta(deltas.netIncome[4])}
+            {fmtMoneyDelta(deltas.netIncome[headlineIdx])}
           </p>
           <p className="text-[10px] text-muted-foreground mt-1">
-            base {fmtMoney(base.netIncome[4])} → after {fmtMoney(adjusted.netIncome[4])}
+            base {fmtMoney(base.netIncome[headlineIdx])} → after {fmtMoney(adjusted.netIncome[headlineIdx])}
           </p>
         </div>
         <div className="bg-card border border-border/60 rounded-xl p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Y5 revenue Δ</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{headlineLabel} revenue Δ</p>
           <p className={cn(
             "text-2xl font-bold font-mono mt-1",
-            deltas.revenue[4] > 0 ? "text-emerald-700" : deltas.revenue[4] < 0 ? "text-rose-700" : "text-foreground",
+            deltas.revenue[headlineIdx] > 0 ? "text-emerald-700" : deltas.revenue[headlineIdx] < 0 ? "text-rose-700" : "text-foreground",
           )}>
-            {fmtMoneyDelta(deltas.revenue[4])}
+            {fmtMoneyDelta(deltas.revenue[headlineIdx])}
           </p>
           <p className="text-[10px] text-muted-foreground mt-1">
-            base {fmtMoney(base.revenue[4])} → after {fmtMoney(adjusted.revenue[4])}
+            base {fmtMoney(base.revenue[headlineIdx])} → after {fmtMoney(adjusted.revenue[headlineIdx])}
           </p>
         </div>
         <div className="bg-card border border-border/60 rounded-xl p-4">
@@ -237,39 +256,46 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
       <div className="bg-card border border-border/60 rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border/60 flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-amber-700" />
-          <h3 className="font-display font-semibold text-sm">5-year impact</h3>
+          <h3 className="font-display font-semibold text-sm">{tableTitle}</h3>
         </div>
         <table className="w-full text-xs" data-testid="impact-year-table">
           <thead className="bg-slate-50">
             <tr className="text-left text-muted-foreground">
               <th className="px-3 py-2 font-medium">Metric</th>
-              {[1, 2, 3, 4, 5].map((y) => (
-                <th key={y} className="px-2 py-2 font-medium text-right">Year {y}</th>
+              {tableYears.map((i) => (
+                <th key={i} className="px-2 py-2 font-medium text-right">Year {i + 1}</th>
               ))}
             </tr>
           </thead>
           <tbody className="font-mono">
             <tr className="border-t border-border/60">
               <td className="px-3 py-2 font-sans text-muted-foreground">Net income Δ</td>
-              {deltas.netIncome.map((d, i) => (
-                <td key={i} className={cn(
-                  "px-2 py-2 text-right",
-                  d > 0 ? "text-emerald-700" : d < 0 ? "text-rose-700" : "text-muted-foreground",
-                )}>{fmtMoneyDelta(d)}</td>
-              ))}
+              {tableYears.map((i) => {
+                const d = deltas.netIncome[i];
+                return (
+                  <td key={i} className={cn(
+                    "px-2 py-2 text-right",
+                    d > 0 ? "text-emerald-700" : d < 0 ? "text-rose-700" : "text-muted-foreground",
+                  )}>{fmtMoneyDelta(d)}</td>
+                );
+              })}
             </tr>
             <tr className="border-t border-border/60 bg-slate-50/40">
               <td className="px-3 py-2 font-sans text-muted-foreground">Revenue Δ</td>
-              {deltas.revenue.map((d, i) => (
-                <td key={i} className={cn(
-                  "px-2 py-2 text-right",
-                  d > 0 ? "text-emerald-700" : d < 0 ? "text-rose-700" : "text-muted-foreground",
-                )}>{fmtMoneyDelta(d)}</td>
-              ))}
+              {tableYears.map((i) => {
+                const d = deltas.revenue[i];
+                return (
+                  <td key={i} className={cn(
+                    "px-2 py-2 text-right",
+                    d > 0 ? "text-emerald-700" : d < 0 ? "text-rose-700" : "text-muted-foreground",
+                  )}>{fmtMoneyDelta(d)}</td>
+                );
+              })}
             </tr>
             <tr className="border-t border-border/60">
               <td className="px-3 py-2 font-sans text-muted-foreground">DSCR after</td>
-              {adjusted.dscr.map((v, i) => {
+              {tableYears.map((i) => {
+                const v = adjusted.dscr[i];
                 const baseV = base.dscr[i];
                 const better = isFinite(v) && isFinite(baseV) && v > baseV;
                 const worse = isFinite(v) && isFinite(baseV) && v < baseV;
@@ -286,7 +312,8 @@ function ImpactSingle({ impact }: { impact: DecisionImpact }) {
             </tr>
             <tr className="border-t border-border/60 bg-slate-50/40">
               <td className="px-3 py-2 font-sans text-muted-foreground">Cash position</td>
-              {adjusted.cashPosition.map((v, i) => {
+              {tableYears.map((i) => {
+                const v = adjusted.cashPosition[i];
                 const isTrough = troughIdx === i;
                 return (
                   <td
@@ -594,7 +621,7 @@ function YearCell({
   return <span className={cls}>{display}</span>;
 }
 
-function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
+function ImpactComparison({ columns, isSingleYear }: { columns: ComparisonColumn[]; isSingleYear?: boolean }) {
   // Defensive clamp — picker enforces 2-4 but keep the renderer robust.
   const cols = columns.slice(0, 4);
   const n = cols.length;
@@ -602,20 +629,28 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
   const narrativeGrid = NARRATIVE_GRID[n] ?? NARRATIVE_GRID[2];
   const flagsGrid = FLAGS_GRID[n] ?? FLAGS_GRID[2];
 
+  // Task #478 — same Y1-only collapse as ImpactSingle. The engine emits
+  // length-5 arrays even for single-year models, but Y2-Y5 are
+  // extrapolations — collapse the comparison to a single Year-1 column.
+  const headlineIdx = isSingleYear ? 0 : 4;
+  const headlineLabel = isSingleYear ? "Y1" : "Y5";
+  const tableYears = isSingleYear ? [0] : [0, 1, 2, 3, 4];
+  const tableTitle = isSingleYear ? "Year 1 impact, side-by-side" : "5-year impact, side-by-side";
+
   const headline: HeadlineMetric[] = [
     {
-      label: "Y5 net income Δ",
+      label: `${headlineLabel} net income Δ`,
       higherIsBetter: true,
-      values: cols.map((c) => c.impact.deltas.netIncome[4]),
-      displays: cols.map((c) => fmtMoneyDelta(c.impact.deltas.netIncome[4])),
-      subs: cols.map((c) => `→ ${fmtMoney(c.impact.adjusted.netIncome[4])}`),
+      values: cols.map((c) => c.impact.deltas.netIncome[headlineIdx]),
+      displays: cols.map((c) => fmtMoneyDelta(c.impact.deltas.netIncome[headlineIdx])),
+      subs: cols.map((c) => `→ ${fmtMoney(c.impact.adjusted.netIncome[headlineIdx])}`),
     },
     {
-      label: "Y5 revenue Δ",
+      label: `${headlineLabel} revenue Δ`,
       higherIsBetter: true,
-      values: cols.map((c) => c.impact.deltas.revenue[4]),
-      displays: cols.map((c) => fmtMoneyDelta(c.impact.deltas.revenue[4])),
-      subs: cols.map((c) => `→ ${fmtMoney(c.impact.adjusted.revenue[4])}`),
+      values: cols.map((c) => c.impact.deltas.revenue[headlineIdx]),
+      displays: cols.map((c) => fmtMoneyDelta(c.impact.deltas.revenue[headlineIdx])),
+      subs: cols.map((c) => `→ ${fmtMoney(c.impact.adjusted.revenue[headlineIdx])}`),
     },
     {
       label: "Break-even shift",
@@ -725,7 +760,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
           <div className="flex items-center gap-2 min-w-0">
             <TrendingUp className="h-4 w-4 text-primary shrink-0" />
             <h3 className="font-display font-semibold text-sm truncate">
-              5-year impact, side-by-side
+              {tableTitle}
             </h3>
           </div>
           <p
@@ -747,8 +782,8 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                   Metric
                 </th>
                 <th className="px-2 py-2 font-medium">Side</th>
-                {[1, 2, 3, 4, 5].map((y) => (
-                  <th key={y} className="px-2 py-2 font-medium text-right">Year {y}</th>
+                {tableYears.map((i) => (
+                  <th key={i} className="px-2 py-2 font-medium text-right">Year {i + 1}</th>
                 ))}
               </tr>
             </thead>
@@ -766,7 +801,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                     <td className={cn("px-2 py-2 font-sans text-[10px] uppercase tracking-wider", palette.headerText)}>
                       {palette.letter}
                     </td>
-                    {c.impact.deltas.netIncome.map((d, yi) => (
+                    {c.impact.deltas.netIncome.slice(0, tableYears.length).map((d, yi) => (
                       <td key={yi} className="px-2 py-2 text-right">
                         <YearCell
                           values={netIncomeYears[yi]}
@@ -793,7 +828,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                     <td className={cn("px-2 py-2 font-sans text-[10px] uppercase tracking-wider", palette.headerText)}>
                       {palette.letter}
                     </td>
-                    {c.impact.deltas.revenue.map((d, yi) => (
+                    {c.impact.deltas.revenue.slice(0, tableYears.length).map((d, yi) => (
                       <td key={yi} className="px-2 py-2 text-right">
                         <YearCell
                           values={revenueYears[yi]}
@@ -820,7 +855,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                     <td className={cn("px-2 py-2 font-sans text-[10px] uppercase tracking-wider", palette.headerText)}>
                       {palette.letter}
                     </td>
-                    {c.impact.adjusted.dscr.map((v, yi) => (
+                    {c.impact.adjusted.dscr.slice(0, tableYears.length).map((v, yi) => (
                       <td key={yi} className="px-2 py-2 text-right">
                         {isFinite(v) ? (
                           <YearCell
@@ -856,7 +891,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                     <td className={cn("px-2 py-2 font-sans text-[10px] uppercase tracking-wider", palette.headerText)}>
                       {palette.letter}
                     </td>
-                    {c.impact.adjusted.cashPosition.map((v, yi) => {
+                    {c.impact.adjusted.cashPosition.slice(0, tableYears.length).map((v, yi) => {
                       const isTrough = sideTrough === yi;
                       return (
                         <td
@@ -913,7 +948,7 @@ function ImpactComparison({ columns }: { columns: ComparisonColumn[] }) {
                     <td className={cn("px-2 py-2 font-sans text-[10px] uppercase tracking-wider", palette.headerText)}>
                       {palette.letter}
                     </td>
-                    {c.impact.adjusted.netMargin.map((v, yi) => (
+                    {c.impact.adjusted.netMargin.slice(0, tableYears.length).map((v, yi) => (
                       <td key={yi} className="px-2 py-2 text-right">
                         <YearCell
                           values={marginYears[yi]}

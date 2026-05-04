@@ -414,6 +414,9 @@ function buildScenarioSnapshots(md: ModelData, co: ConsultantOutput): ScenarioSn
   for (const scenario of scenarios.slice(0, 3)) {
     try {
       const adjEnrollment = enrollment.map((e) => Math.round(e * (1 + (scenario.enrollmentAdjustment || 0) / 100)));
+      // Task #478 — Y5 (index 4) is intentional: the board packet is a
+      // 5-year deliverable and only renders for 5-year models (the
+      // ExportStep card in single-year mode is gated to 1-year exports).
       const y = 4;
       const students = adjEnrollment[y] || 0;
       const bns = computeNewStudents(adjEnrollment, boardRR, y);

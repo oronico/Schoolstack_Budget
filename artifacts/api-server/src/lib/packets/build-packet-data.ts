@@ -292,6 +292,10 @@ function buildEnrollmentPlan(
   md: ModelData,
   enrollment: number[],
 ): PacketSection {
+  // Task #478 — Y5 anchors are intentional here: this builder feeds the
+  // Lender Packet + Board Summary, both of which are 5-year deliverables
+  // and are gated off the Export step entirely for single-year models
+  // (see ExportStep.tsx — the cards only render when modelDuration !== "single_year").
   const y1 = enrollment[0] || 0;
   const y5 = enrollment[4] || enrollment[enrollment.length - 1] || 0;
   const growth = y1 > 0 ? ((y5 / y1 - 1) * 100).toFixed(0) : "—";

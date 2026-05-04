@@ -18,7 +18,7 @@ import {
   type AddProgramInputs,
   type DecisionFieldChange,
 } from "@/lib/decision-flows";
-import type { FullModelData, CustomScenario, AppliedDecisionUndo } from "@/pages/model-wizard/schema";
+import { isSingleYearModel, type FullModelData, type CustomScenario, type AppliedDecisionUndo } from "@/pages/model-wizard/schema";
 
 interface AddProgramFlowProps {
   modelId: number;
@@ -49,6 +49,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
   const [isUndoing, setIsUndoing] = useState(false);
 
   const data = (model?.data ?? {}) as FullModelData;
+  const isSingleYear = isSingleYearModel(data);
 
   const impact = useMemo(() => {
     if (step < 3 || !model) return null;
@@ -366,10 +367,12 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
           <div>
             <h2 className="font-display text-xl font-bold text-foreground mb-1">Impact on your model</h2>
             <p className="text-sm text-muted-foreground">
-              Here's what adding {inputs.name || "this program"} does to your 5-year picture.
+              {isSingleYear
+                ? `Here's what adding ${inputs.name || "this program"} does to your Year 1 picture.`
+                : `Here's what adding ${inputs.name || "this program"} does to your 5-year picture.`}
             </p>
           </div>
-          <ImpactSummary impact={impact} />
+          <ImpactSummary impact={impact} isSingleYear={isSingleYear} />
         </section>
       )}
 

@@ -1795,6 +1795,12 @@ router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
         };
       });
 
+    // Task #478 — surface the model duration so the shared page can collapse
+    // its 5-year tables/headlines to Y1 for single-year models. The engine
+    // still emits length-5 arrays (Y2-Y5 are extrapolated from Y1), but
+    // single-year founders never confirmed those values.
+    const isSingleYear = (profile?.modelDuration as string | undefined) === "single_year";
+
     res.json({
       schoolName,
       state,
@@ -1820,6 +1826,7 @@ router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
       lenderReadiness: consultantOutput.lenderReadiness || null,
       createdAt: link.createdAt.toISOString(),
       decisionScenarios,
+      isSingleYear,
     });
   } catch (err) {
     console.error("Get shared model error:", err);
