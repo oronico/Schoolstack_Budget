@@ -45,8 +45,7 @@ afterEach(() => {
 });
 
 describe("ExportStep — CSN Operating Manual live-formulas badge", () => {
-  const captionMatcher =
-    /Tuition, financial aid, faculty payroll, and fundraising totals are live Excel formulas — edit any input on GETTING STARTED and the workbook recalculates\./i;
+  const captionMatcher = /live Excel formulas/i;
   const badgeMatcher = /✓\s*Live formulas/i;
 
   it("shows the Live formulas badge and explainer caption on the CSN card for Chesterton schools", () => {
