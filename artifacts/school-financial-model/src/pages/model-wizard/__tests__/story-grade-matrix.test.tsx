@@ -88,7 +88,7 @@ describe("Story step grade matrix", () => {
     render(<Harness initial={gradeFiveYearInitial} />);
     for (const key of ["k", "g1", "g2"] as const) {
       const row = screen.getByTestId(`story-grade-detail-${key}`);
-      expect(row.tagName).toBe("TR");
+      expect(row).toBeTruthy();
       expect(screen.getByTestId(`story-grade-year1-${key}`)).toBeTruthy();
       expect(screen.getByTestId(`story-grade-per-pupil-${key}`)).toBeTruthy();
       expect(screen.getByTestId(`story-grade-longterm-${key}`)).toBeTruthy();
@@ -104,7 +104,30 @@ describe("Story step grade matrix", () => {
     // The other cells remain present.
     expect(screen.getByTestId("story-grade-year1-k")).toBeTruthy();
     expect(screen.getByTestId("story-grade-per-pupil-k")).toBeTruthy();
-    expect(screen.getByTestId("story-grade-ratio-k")).toBeTruthy();
+    expect(screen.getByTestId(`story-grade-ratio-k`)).toBeTruthy();
+  });
+
+  // Task #519: on phone-sized viewports, the grade matrix should not require
+  // horizontal scrolling. We achieve this with a responsive layout — the
+  // desktop column header is hidden on mobile (sm:hidden inversion) and each
+  // row stacks its cells with a per-cell label that's sm-hidden on desktop.
+  it("renders mobile-friendly per-row labels and stacks cells (no horizontal scroll)", () => {
+    render(<Harness initial={gradeFiveYearInitial} />);
+    // Each grade row carries a mobile-only label for the Y1 students cell.
+    for (const key of ["k", "g1", "g2"] as const) {
+      const label = screen.getByTestId(`story-grade-year1-label-${key}`);
+      expect(label).toBeTruthy();
+      // Mobile labels should be hidden on sm+ (Tailwind's sm:hidden class).
+      expect(label.className).toMatch(/\bsm:hidden\b/);
+    }
+    // The row container is a CSS grid with grid-cols-1 on mobile so cells
+    // stack vertically rather than overflowing horizontally.
+    const row = screen.getByTestId("story-grade-detail-k");
+    expect(row.className).toMatch(/\bgrid-cols-1\b/);
+    expect(row.className).toMatch(/\bsm:grid-cols-/);
+    // The container is no longer wrapped in overflow-x-auto.
+    const section = row.parentElement;
+    expect(section?.className ?? "").not.toMatch(/overflow-x-auto/);
   });
 });
 
@@ -113,7 +136,7 @@ describe("Story step age-band matrix", () => {
     render(<Harness initial={bandFiveYearInitial} />);
     for (const key of ["k5", "m68"] as const) {
       const row = screen.getByTestId(`story-band-detail-${key}`);
-      expect(row.tagName).toBe("TR");
+      expect(row).toBeTruthy();
       expect(screen.getByTestId(`story-band-year1-${key}`)).toBeTruthy();
       expect(screen.getByTestId(`story-band-per-pupil-${key}`)).toBeTruthy();
       expect(screen.getByTestId(`story-band-longterm-${key}`)).toBeTruthy();
@@ -129,5 +152,20 @@ describe("Story step age-band matrix", () => {
     expect(screen.getByTestId("story-band-year1-k5")).toBeTruthy();
     expect(screen.getByTestId("story-band-per-pupil-k5")).toBeTruthy();
     expect(screen.getByTestId("story-band-ratio-k5")).toBeTruthy();
+  });
+
+  // Task #519: same mobile-friendly layout as the grade matrix above.
+  it("renders mobile-friendly per-row labels and stacks cells (no horizontal scroll)", () => {
+    render(<Harness initial={bandFiveYearInitial} />);
+    for (const key of ["k5", "m68"] as const) {
+      const label = screen.getByTestId(`story-band-year1-label-${key}`);
+      expect(label).toBeTruthy();
+      expect(label.className).toMatch(/\bsm:hidden\b/);
+    }
+    const row = screen.getByTestId("story-band-detail-k5");
+    expect(row.className).toMatch(/\bgrid-cols-1\b/);
+    expect(row.className).toMatch(/\bsm:grid-cols-/);
+    const section = screen.getByTestId("story-bands-detail-section");
+    expect(section.className).not.toMatch(/overflow-x-auto/);
   });
 });
