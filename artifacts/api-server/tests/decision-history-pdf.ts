@@ -333,6 +333,16 @@ async function testLenderPopulated() {
   );
   contains("lender: diff staffing label", text, 'Staffing row "Middle School staff"');
   contains("lender: diff arrow separator", text, " -> ");
+
+  // Trough year callout (Task #378): each typed decision's adjusted forecast
+  // gets the lowest-cash year called out per row, mirroring the in-app
+  // ImpactSummary trough.
+  contains("lender: trough year subhead", text, "Trough year:");
+  contains(
+    "lender: trough callout phrasing",
+    text,
+    "lowest projected cash year after this decision",
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +410,17 @@ async function testBoardPopulated() {
   contains("board: diff revenue label", text, 'Revenue row "Middle School"');
   contains("board: diff staffing label", text, 'Staffing row "Middle School staff"');
   contains("board: diff arrow separator", text, " -> ");
+
+  // Trough year callout (Task #378): the board packet decision-history rows
+  // mirror the lender packet by surfacing the lowest projected cash year per
+  // saved decision so trustees see the runway crunch without flipping back to
+  // the planner's ImpactSummary.
+  contains("board: trough year subhead", text, "Trough year:");
+  contains(
+    "board: trough callout phrasing",
+    text,
+    "lowest projected cash year after this decision",
+  );
 }
 
 // ---------------------------------------------------------------------------

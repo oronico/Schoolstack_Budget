@@ -4,8 +4,10 @@ import {
   OUTCOME_LABELS,
   buildDecisionBullets,
   coercePersistedDecisionOverrides,
+  computeDecisionImpactFromPersisted,
   isDecisionOutcomeStatus,
   isDecisionType,
+  type DecisionEngineModelData,
   type DecisionFieldChange,
   type DecisionOutcomeStatus,
   type DecisionType as DecisionHistoryType,
@@ -52,6 +54,16 @@ export interface DecisionHistoryItem {
   // scenarios pre-this feature simply have an empty array and the renderer
   // degrades gracefully (skips the diff block).
   appliedFieldChanges: DecisionFieldChange[];
+  /**
+   * Lowest projected ending-cash year for the decision's adjusted forecast,
+   * computed by replaying the saved overrides through the decision engine
+   * (Task #378). Mirrors the in-app `ImpactSummary` trough callout so the
+   * board / lender PDFs surface the runway crunch year per decision without
+   * the founder flipping back to the planner. Null when we couldn't compute
+   * an adjusted forecast (missing decision type, malformed overrides, or
+   * a runtime error in the engine — we degrade silently).
+   */
+  troughCallout: { year: number; endingCash: string; isNegative: boolean } | null;
 }
 
 interface RawScenario {
@@ -87,6 +99,56 @@ function coerceAppliedFieldChanges(raw: unknown): DecisionFieldChange[] {
 
 function asString(v: unknown): string | undefined {
   return typeof v === "string" && v.trim() ? v : undefined;
+}
+
+// Match the cash formatter used by `build-cash-runway` so the per-decision
+// trough callout reads consistently with the top-level Cash & Runway card
+// (Task #378 keeps styling aligned with the existing trough callouts in the
+// board / lender packets).
+function fmtCash(n: number): string {
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+// Replay a saved decision's persisted overrides against the current base
+// model and pick out the lowest ending-cash year of the adjusted forecast.
+// Returns null on any failure path (no decision type, malformed overrides,
+// engine throws) so the renderer degrades gracefully — older saved scenarios
+// without a typed decision simply skip the callout.
+function buildTroughCallout(
+  modelData: ModelData,
+  decisionType: DecisionHistoryType | undefined,
+  overrides: ReturnType<typeof coercePersistedDecisionOverrides>,
+): DecisionHistoryItem["troughCallout"] {
+  if (!decisionType) return null;
+  try {
+    const impact = computeDecisionImpactFromPersisted(
+      modelData as unknown as DecisionEngineModelData,
+      decisionType,
+      overrides,
+    );
+    const cash = impact.adjusted.cashPosition;
+    if (!Array.isArray(cash) || cash.length === 0) return null;
+    let bestIdx = -1;
+    let bestVal = Infinity;
+    for (let i = 0; i < cash.length; i++) {
+      const v = cash[i];
+      if (typeof v !== "number" || !isFinite(v)) continue;
+      if (v < bestVal) {
+        bestVal = v;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx < 0) return null;
+    return {
+      year: bestIdx + 1,
+      endingCash: fmtCash(bestVal),
+      isNegative: bestVal < 0,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function formatDate(iso?: string): string | undefined {
@@ -142,6 +204,7 @@ export function buildDecisionHistory(modelData: ModelData): DecisionHistoryItem[
       appliedNote,
       isPendingApply,
       appliedFieldChanges: coerceAppliedFieldChanges(entry.appliedFieldChanges),
+      troughCallout: buildTroughCallout(modelData, decisionType, overrides),
     });
   }
 

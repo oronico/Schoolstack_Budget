@@ -408,6 +408,23 @@ export function renderDecisionHistoryItem(doc: PDFDoc, item: DecisionHistoryItem
     doc.text(item.retrospective, { width: w - 70 });
   }
 
+  // Trough year callout (Task #378). Surfaces the lowest projected
+  // ending-cash year of this decision's adjusted forecast so reviewers see
+  // the runway crunch year per decision without flipping back to the
+  // planner's ImpactSummary. Styling mirrors the top-level CashRunway
+  // trough callout: red copy when negative, navy otherwise.
+  if (item.troughCallout) {
+    doc.font("Helvetica-Bold").fontSize(8).fillColor(BRAND.navy);
+    doc.text("Trough year: ", indent, doc.y, { continued: true, width: w });
+    const calloutColor = item.troughCallout.isNegative ? BRAND.red : BRAND.navy;
+    doc.font("Helvetica").fontSize(8).fillColor(calloutColor);
+    const verb = item.troughCallout.isNegative ? "dips to" : "ends at";
+    doc.text(
+      `Year ${item.troughCallout.year} ${verb} ${item.troughCallout.endingCash} (lowest projected cash year after this decision).`,
+      { width: w - 70 },
+    );
+  }
+
   if (item.outcomeUpdatedAt) {
     const d = new Date(item.outcomeUpdatedAt);
     if (!Number.isNaN(d.getTime())) {
