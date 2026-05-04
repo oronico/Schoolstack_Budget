@@ -28,6 +28,7 @@ import {
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
 import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
+import { AdvisorPreviewPanel } from "@/components/scenarios/AdvisorPreviewPanel";
 import { isSingleYearModel, type FullModelData, type OutcomeStatus, type CustomScenario, type CustomScenarioActuals } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
@@ -2857,6 +2858,32 @@ export function ScenarioPage() {
                 </div>
               )}
             </div>
+
+            {/* Task #477 — Single-year founders only. Renders the same
+                advisor brief HTML the team review email would ship + the
+                same scenario-compare verdict copy that lands in the
+                comparison view, so the founder can confirm the Y1-anchored
+                copy reads correctly before they hit submit. */}
+            {modelId && isSingleYearModel(modelData) && (
+              <div className="mb-8">
+                <AdvisorPreviewPanel
+                  modelId={modelId}
+                  comparison={comparisonResult}
+                  baseName={
+                    compareLeft === "base"
+                      ? "Base Model"
+                      : scenarios[parseInt(compareLeft)]?.name || `Scenario ${parseInt(compareLeft) + 1}`
+                  }
+                  compareName={
+                    compareRight === ""
+                      ? undefined
+                      : compareRight === "base"
+                        ? "Base Model"
+                        : scenarios[parseInt(compareRight)]?.name || `Scenario ${parseInt(compareRight) + 1}`
+                  }
+                />
+              </div>
+            )}
           </>
         )}
 
