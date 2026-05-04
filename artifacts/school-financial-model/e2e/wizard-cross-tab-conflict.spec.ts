@@ -167,9 +167,11 @@ test("Two tabs editing the same model: Tab B's stale save is blocked with the co
 
     // Tab B is still holding the original `version` in lastEtagRef, so
     // its next autosave should send a stale If-Match and the server
-    // should respond 409. The wizard renders a button with the
-    // "Updated in another tab — click to reload" copy when saveError
-    // flips to "conflict".
+    // should respond 409. Task #492 wired the wizard up to render the
+    // shared <ConflictReloadBanner /> when saveError flips to "conflict"
+    // (in addition to a tiny inline "Updated in another tab" pill in the
+    // header). Assert the banner — that's the primary surface and the
+    // one shared with the decision flows / scenarios page / ExportStep.
     const tabBNameInput = tabB.getByLabel("What's the name of your school?");
     await tabBNameInput.fill("E2E Cross-Tab Academy — edited in Tab B");
 
@@ -177,6 +179,16 @@ test("Two tabs editing the same model: Tab B's stale save is blocked with the co
     // tweaks on the inline header pill (Task #506).
     const conflictPrompt = tabB.getByTestId("wizard-save-conflict-reload");
     await expect(conflictPrompt).toBeVisible({ timeout: 15_000 });
+
+    // Task #507 — the wizard also renders the shared ConflictReloadBanner
+    // (Task #492), the same component used by the decision flows, scenarios
+    // page, ExportStep and undo banner. Assert it here too so a regression
+    // that drops the banner from the wizard surface specifically is caught
+    // (the inline pill above is wizard-only).
+    const banner = tabB.getByTestId("conflict-reload-banner");
+    await expect(banner).toBeVisible({ timeout: 15_000 });
+    await expect(banner).toContainText("Your other tab made changes");
+    await expect(tabB.getByTestId("conflict-reload-button")).toBeVisible();
   } finally {
     await tabA.context().close();
     await tabB.context().close();
