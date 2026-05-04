@@ -209,6 +209,11 @@ export function seedFiveYearFromYearOne<T extends Partial<FullModelData>>(
       };
       if (typeof row.escalationRate !== "number") {
         out.escalationRate = rate;
+        // Mark this row's rate as having come from the Extend-to-5-Year seed
+        // so the wizard can show founders a "seeded from Extend-to-5-Year"
+        // tooltip next to the escalation label. Rows that already carried an
+        // explicit founder-typed rate are not stamped.
+        out.escalationRateSeeded = true;
       }
       return out;
     });

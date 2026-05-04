@@ -96,6 +96,7 @@ export interface ExpenseRowData {
   amounts: number[];
   escalationRate?: number;
   escalationRateOverridden?: boolean;
+  escalationRateSeeded?: boolean;
   note?: string;
   accountCode?: string;
 }

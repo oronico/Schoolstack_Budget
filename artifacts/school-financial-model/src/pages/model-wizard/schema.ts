@@ -502,6 +502,11 @@ export const expenseRowSchema = z.object({
   amounts: z.array(z.number()),
   escalationRate: z.number().optional(),
   escalationRateOverridden: z.boolean().optional(),
+  // True when the per-row escalationRate was stamped by the Extend-to-5-Year
+  // seeder rather than typed by the founder. Used by ExpenseStep to surface a
+  // "seeded from Extend-to-5-Year" tooltip so founders understand where the
+  // Y2-Y5 numbers came from.
+  escalationRateSeeded: z.boolean().optional(),
   note: z.string().default(""),
 });
 

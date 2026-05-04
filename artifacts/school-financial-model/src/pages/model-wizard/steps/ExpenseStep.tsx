@@ -2054,6 +2054,15 @@ function ExpenseLineCard({
           <span className="text-[9px] font-medium text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
             {rule.label}
           </span>
+          {row.escalationRateSeeded && (
+            <span
+              data-testid={`expense-row-${row.id}-seeded-badge`}
+              title={`Seeded from Extend-to-5-Year at ${rule.rate}%/yr cost inflation. Editing Y1 will re-project Y2-Y5 from this rate.`}
+              className="text-[9px] font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-help"
+            >
+              seeded from Extend-to-5-Year
+            </span>
+          )}
           {driverHint && (
             <span className="text-[11px] text-muted-foreground">{driverHint}</span>
           )}

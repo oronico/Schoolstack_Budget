@@ -361,9 +361,18 @@ describe("seedFiveYearFromYearOne", () => {
       // Row with no prior rate gets the resolved costInflationPct (5%) stamped.
       expect(out.expenseRows![0].escalationRate).toBe(5);
       expect(out.expenseRows![0].amounts[1]).toBe(Math.round(10000 * 1.05));
-      // A row that already had an escalationRate keeps it (idempotent).
+      // …and is marked as seeded so the wizard can show a "seeded from
+      // Extend-to-5-Year" tooltip next to the escalation label (Task #510).
+      expect(
+        (out.expenseRows![0] as { escalationRateSeeded?: boolean }).escalationRateSeeded,
+      ).toBe(true);
+      // A row that already had an escalationRate keeps it (idempotent) and is
+      // NOT marked as seeded — the rate came from the founder, not the seeder.
       expect(out.expenseRows![1].escalationRate).toBe(8);
       expect(out.expenseRows![1].amounts[1]).toBe(Math.round(10000 * 1.08));
+      expect(
+        (out.expenseRows![1] as { escalationRateSeeded?: boolean }).escalationRateSeeded,
+      ).toBeUndefined();
     });
 
     it("capitalAndDebtRows are held flat at Y1 (debt service convention)", () => {
