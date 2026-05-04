@@ -39,9 +39,12 @@ function makeId(prefix: string): string {
 //   - schoolStage = operating_school + operatingYear = second_year_plus:
 //     enables BOTH the prior-year and current-year actuals columns, which
 //     is required for the "Didn't offer" toggle to render.
-//   - One program (priorYear/currentYear/yearN all 0) so the matrix has
-//     exactly one row and the test can target it deterministically.
-function buildSeedPayload(programId: string): Record<string, unknown> {
+//   - Caller passes one or more program ids/names. Single-program test
+//     uses one row; the multi-program sibling test (Task #367) seeds two
+//     so we can verify per-row reducer fan-out and column-total math.
+function buildSeedPayload(
+  programs: Array<{ id: string; name: string }>,
+): Record<string, unknown> {
   const enrollment = { year1: 0, year2: 0, year3: 0, year4: 0, year5: 0 };
   return {
     name: "E2E Matrix + Grouping Academy",
@@ -97,20 +100,18 @@ function buildSeedPayload(programId: string): Record<string, unknown> {
         sameTuitionForAllBands: true,
       },
       enrollment,
-      programs: [
-        {
-          id: programId,
-          name: "Full Day",
-          annualTuition: 18000,
-          priorYear: 0,
-          currentYear: 0,
-          year1: 0,
-          year2: 0,
-          year3: 0,
-          year4: 0,
-          year5: 0,
-        },
-      ],
+      programs: programs.map((p) => ({
+        id: p.id,
+        name: p.name,
+        annualTuition: 18000,
+        priorYear: 0,
+        currentYear: 0,
+        year1: 0,
+        year2: 0,
+        year3: 0,
+        year4: 0,
+        year5: 0,
+      })),
       revenue: {
         tuitionPerStudent: 18000,
         annualTuitionIncrease: 3,
@@ -276,7 +277,7 @@ test("wizard matrix + grouping: pick 'both', flip on K + 1st + k5, type into mat
 
   const { token } = await registerAndSeed(request);
   const programId = makeId("prog");
-  const payload = buildSeedPayload(programId);
+  const payload = buildSeedPayload([{ id: programId, name: "Full Day" }]);
   const modelId = await createModel(request, token, payload);
 
   const health = trackPageHealth(page);
@@ -501,6 +502,230 @@ test("wizard matrix + grouping: pick 'both', flip on K + 1st + k5, type into mat
   ).not.toContain("9");
 
   // Final health check.
+  expect(
+    health.consoleErrors,
+    `browser console errors:\n${health.consoleErrors.join("\n---\n")}`,
+  ).toEqual([]);
+  expect(
+    health.dialogs,
+    `unexpected blocking dialogs:\n${health.dialogs.join("\n---\n")}`,
+  ).toEqual([]);
+});
+
+// Task #367: companion to the single-program walk above. The fan-out from
+// `programEnrollmentMatrix[programId][year][group]` into
+// `programs[i].year1` is shared across every program/year, so a regression
+// in `sumProgramYear` or in the matrix → programs useEffect could easily
+// land per-program totals on the wrong row without a multi-program test
+// catching it. Column totals at the bottom of each year card are computed
+// independently (see EnrollmentStep.tsx ~line 1136), so we assert them
+// separately rather than as a sum of the per-row totals.
+test("wizard matrix + grouping: two programs fan out to per-row year1 and column totals roll up independently", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(120_000);
+
+  const { token } = await registerAndSeed(request);
+  const programAId = makeId("progA");
+  const programBId = makeId("progB");
+  const payload = buildSeedPayload([
+    { id: programAId, name: "Full Day" },
+    { id: programBId, name: "Half Day" },
+  ]);
+  const modelId = await createModel(request, token, payload);
+
+  const health = trackPageHealth(page);
+  await primeAuthToken(page, token);
+
+  await page.goto(`/model/${modelId}`);
+
+  const prepDialog = page.getByRole("dialog", { name: /What to have ready/i });
+  try {
+    await prepDialog.waitFor({ state: "visible", timeout: 15_000 });
+    await page.getByRole("button", { name: /Let.?s get started/i }).click();
+    await prepDialog.waitFor({ state: "detached", timeout: 5_000 });
+  } catch {
+    // dialog never appeared — proceed
+  }
+
+  const cookieDecline = page.getByRole("button", { name: /^Decline$/ });
+  try {
+    await cookieDecline.click({ timeout: 3000 });
+  } catch {
+    // never appeared — proceed
+  }
+
+  // ---------------------------------------------------------------------
+  // Step 1 (Story): same grouping setup as the single-program test — pick
+  // "both", enable K + 1st + k5 band so the matrix renders three columns.
+  // ---------------------------------------------------------------------
+  await expect(
+    page.getByRole("heading", { name: /Let.?s start with your school.?s story/i }).first(),
+  ).toBeVisible({ timeout: 15_000 });
+
+  const bothBtn = page.getByTestId("story-grouping-mode-both");
+  await expect(bothBtn).toBeVisible();
+  await bothBtn.click();
+  await expect(bothBtn).toHaveAttribute("aria-pressed", "true");
+
+  const kChip = page.getByTestId("story-grade-k");
+  const g1Chip = page.getByTestId("story-grade-g1");
+  const k5BandChip = page.getByTestId("story-grade-band-k5");
+  await kChip.click();
+  await g1Chip.click();
+  const k5Pressed = await k5BandChip.getAttribute("aria-pressed");
+  if (k5Pressed !== "true") {
+    await k5BandChip.click();
+  }
+  await expect(kChip).toHaveAttribute("aria-pressed", "true");
+  await expect(g1Chip).toHaveAttribute("aria-pressed", "true");
+  await expect(k5BandChip).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByRole("button", { name: /Continue/i }).first().click();
+  await expect(
+    page.getByRole("heading", { name: /Tell Us About Your School/i }).first(),
+  ).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Continue/i }).first().click();
+  await expect(
+    page.getByRole("heading", { name: /Programs\s*&\s*Enrollment/i }).first(),
+  ).toBeVisible({ timeout: 15_000 });
+
+  // ---------------------------------------------------------------------
+  // Step 3 (Enrollment): type known year1 values into BOTH programs. We
+  // choose values so every per-row sum, every per-column sum, and the
+  // year total are unique integers, which lets us assert with
+  // toContainText / toHaveText without worrying about a number from one
+  // total accidentally matching another.
+  //
+  //                k    g1   k5   row sum
+  //   Full Day     10   20   30   60
+  //   Half Day      5   15   25   45
+  //   col total    15   35   55   105 (year total)
+  // ---------------------------------------------------------------------
+  const yearOneA: Record<string, number> = { k: 10, g1: 20, k5: 30 };
+  const yearOneB: Record<string, number> = { k: 5, g1: 15, k5: 25 };
+  const expectedRowSumA = yearOneA.k + yearOneA.g1 + yearOneA.k5;
+  const expectedRowSumB = yearOneB.k + yearOneB.g1 + yearOneB.k5;
+  const expectedColK = yearOneA.k + yearOneB.k;
+  const expectedColG1 = yearOneA.g1 + yearOneB.g1;
+  const expectedColK5 = yearOneA.k5 + yearOneB.k5;
+  const expectedYearTotal = expectedRowSumA + expectedRowSumB;
+
+  for (const [pid, vals] of [
+    [programAId, yearOneA],
+    [programBId, yearOneB],
+  ] as const) {
+    const kCell = page.getByTestId(`matrix-cell-${pid}-year1-k`);
+    const g1Cell = page.getByTestId(`matrix-cell-${pid}-year1-g1`);
+    const k5Cell = page.getByTestId(`matrix-cell-${pid}-year1-k5`);
+    await expect(kCell).toBeVisible({ timeout: 10_000 });
+    await expect(g1Cell).toBeVisible();
+    await expect(k5Cell).toBeVisible();
+    await kCell.fill(String(vals.k));
+    await g1Cell.fill(String(vals.g1));
+    await k5Cell.fill(String(vals.k5));
+  }
+
+  // Click outside to commit the last input value.
+  await page.locator("body").click({ position: { x: 1, y: 1 } });
+
+  // Find the year1 card via the program-A K cell, walking up to the
+  // wrapper div (same `rounded-2xl` chrome class as the single-program
+  // test).
+  const year1Card = page
+    .getByTestId(`matrix-cell-${programAId}-year1-k`)
+    .locator('xpath=ancestor::div[contains(@class, "rounded-2xl")][1]');
+  await expect(year1Card).toBeVisible();
+
+  // Header total (rendered as "Total: <sum>").
+  await expect(year1Card).toContainText(`Total: ${expectedYearTotal}`);
+
+  // Per-program row totals — each row is the <tr> that contains the
+  // program's matrix inputs, and its row-total cell is the last numeric
+  // cell. Asserting on innerText keeps us decoupled from cell ordering.
+  const rowA = year1Card.locator("tr").filter({
+    has: page.getByTestId(`matrix-cell-${programAId}-year1-k`),
+  }).first();
+  const rowB = year1Card.locator("tr").filter({
+    has: page.getByTestId(`matrix-cell-${programBId}-year1-k`),
+  }).first();
+  const rowAText = (await rowA.innerText()).replace(/\s+/g, " ");
+  const rowBText = (await rowB.innerText()).replace(/\s+/g, " ");
+  expect(
+    rowAText,
+    `Full Day row total should equal ${expectedRowSumA}: "${rowAText}"`,
+  ).toContain(String(expectedRowSumA));
+  expect(
+    rowBText,
+    `Half Day row total should equal ${expectedRowSumB}: "${rowBText}"`,
+  ).toContain(String(expectedRowSumB));
+  // Cross-check: each row should NOT contain the OTHER program's row sum
+  // (60 vs 45 are unique values not present in any column total). This
+  // catches a per-row reducer that accidentally aggregates across rows.
+  expect(
+    rowAText,
+    `Full Day row should not bleed into Half Day's sum (${expectedRowSumB}): "${rowAText}"`,
+  ).not.toContain(String(expectedRowSumB));
+  expect(
+    rowBText,
+    `Half Day row should not bleed into Full Day's sum (${expectedRowSumA}): "${rowBText}"`,
+  ).not.toContain(String(expectedRowSumA));
+
+  // Column totals at the bottom of the year card. The "Column total" row
+  // is rendered as a final <tr> with the literal text "Column total" in
+  // its first <td>; subsequent cells are one per group then the year
+  // total. We assert each column's td by index rather than computing the
+  // year total as a sum of row totals — that's what makes this test
+  // independent of the row-sum logic.
+  const colTotalRow = year1Card.locator("tr").filter({ hasText: /Column total/ }).first();
+  await expect(colTotalRow).toBeVisible();
+  const colCells = colTotalRow.locator("td");
+  await expect(colCells.nth(1)).toHaveText(String(expectedColK));
+  await expect(colCells.nth(2)).toHaveText(String(expectedColG1));
+  await expect(colCells.nth(3)).toHaveText(String(expectedColK5));
+  // Last cell is the year total.
+  await expect(colCells.nth(4)).toHaveText(String(expectedYearTotal));
+
+  // ---------------------------------------------------------------------
+  // Wait for autosave + the matrix → programs useEffect, then refetch
+  // the model and assert each program's year1 received its own row sum
+  // (not the other program's, not the year total).
+  // ---------------------------------------------------------------------
+  await page.waitForTimeout(2500);
+
+  const reloaded = await fetchModel(request, token, modelId);
+  const reloadedData = (reloaded as { data: Record<string, unknown> }).data;
+  const reloadedPrograms = (reloadedData.programs ?? []) as Array<Record<string, unknown>>;
+  expect(
+    reloadedPrograms.length,
+    "programs[] should still contain exactly two rows",
+  ).toBe(2);
+
+  const byId = new Map(reloadedPrograms.map((p) => [p.id as string, p]));
+  expect(byId.has(programAId), "Full Day program id should round-trip").toBe(true);
+  expect(byId.has(programBId), "Half Day program id should round-trip").toBe(true);
+  expect(
+    byId.get(programAId)?.year1,
+    `programs[Full Day].year1 should equal its own row sum (${expectedRowSumA})`,
+  ).toBe(expectedRowSumA);
+  expect(
+    byId.get(programBId)?.year1,
+    `programs[Half Day].year1 should equal its own row sum (${expectedRowSumB})`,
+  ).toBe(expectedRowSumB);
+
+  // And the matrix itself round-tripped per program/group.
+  const matrix = (reloadedData.programEnrollmentMatrix ?? {}) as Record<
+    string,
+    Record<string, Record<string, number | null>>
+  >;
+  expect(matrix[programAId]?.year1?.k).toBe(yearOneA.k);
+  expect(matrix[programAId]?.year1?.g1).toBe(yearOneA.g1);
+  expect(matrix[programAId]?.year1?.k5).toBe(yearOneA.k5);
+  expect(matrix[programBId]?.year1?.k).toBe(yearOneB.k);
+  expect(matrix[programBId]?.year1?.g1).toBe(yearOneB.g1);
+  expect(matrix[programBId]?.year1?.k5).toBe(yearOneB.k5);
+
   expect(
     health.consoleErrors,
     `browser console errors:\n${health.consoleErrors.join("\n---\n")}`,
