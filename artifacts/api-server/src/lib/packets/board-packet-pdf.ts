@@ -131,7 +131,7 @@ function drawCoverPage(doc: PDFDoc, packet: BoardPacket) {
   doc.text("This summary is generated from the school's financial model for board discussion purposes.", { align: "center" });
 }
 
-function drawOutlookSection(doc: PDFDoc, packet: BoardPacket) {
+export function drawOutlookSection(doc: PDFDoc, packet: BoardPacket) {
   sectionTitle(doc, "Financial Outlook at a Glance");
 
   const outlook = packet.financialOutlook;
