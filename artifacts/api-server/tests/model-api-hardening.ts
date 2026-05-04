@@ -80,40 +80,68 @@ async function main(): Promise<void> {
     });
     const seedModel = (await seed.json()) as { id: number };
 
-    // === 1. Optimistic concurrency via If-Match. ===
+    // === 1. Mandatory optimistic concurrency via If-Match (Task #479). ===
     // Baseline GET emits an ETag the client can echo back.
     const getResp = await fetch(`${baseUrl}/api/models/${seedModel.id}`, { headers: auth });
     const etag = getResp.headers.get("etag");
     check("GET /api/models/:id sets ETag header", !!etag, `etag=${etag}`);
+    check("ETag is the version (e.g. \"1\")", etag === `"1"`, `etag=${etag}`);
+    const getBody = (await getResp.json()) as { version?: number };
+    check("GET response body includes version", typeof getBody.version === "number",
+      `version=${getBody.version}`);
 
-    // PUT without If-Match → still 200 (legacy autosave path).
+    // PUT without If-Match → 428 Precondition Required (header is mandatory).
     const putNoIfMatch = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
       method: "PUT", headers: auth,
       body: JSON.stringify({ name: "No If-Match", data: { v: 1 } }),
     });
-    check("PUT without If-Match still 200 (legacy compat)", putNoIfMatch.status === 200,
-      `got ${putNoIfMatch.status}`);
-    const newEtag = putNoIfMatch.headers.get("etag");
-    check("PUT response sets ETag header", !!newEtag, `etag=${newEtag}`);
+    check("PUT without If-Match → 428 Precondition Required",
+      putNoIfMatch.status === 428, `got ${putNoIfMatch.status}`);
+    const missingBody = (await putNoIfMatch.json()) as { code?: string; currentVersion?: number };
+    check("428 body has code=if_match_required", missingBody.code === "if_match_required");
+    check("428 body surfaces the current server version",
+      typeof missingBody.currentVersion === "number");
 
-    // PUT with stale If-Match → 409.
+    // PUT with fresh If-Match → 200 and version bumped by 1.
+    const putFresh1 = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
+      method: "PUT",
+      headers: { ...auth, "If-Match": etag! },
+      body: JSON.stringify({ name: "Fresh If-Match", data: { v: 2 } }),
+    });
+    check("PUT with matching If-Match → 200", putFresh1.status === 200, `got ${putFresh1.status}`);
+    const newEtag = putFresh1.headers.get("etag");
+    check("PUT response sets a new ETag", !!newEtag && newEtag !== etag,
+      `old=${etag} new=${newEtag}`);
+    const freshBody = (await putFresh1.json()) as { version: number };
+    check("version is exactly previous+1",
+      freshBody.version === (getBody.version! + 1),
+      `was ${getBody.version} → ${freshBody.version}`);
+
+    // PUT with stale If-Match → 409 with current version.
     const putStale = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
       method: "PUT",
       headers: { ...auth, "If-Match": etag! },
-      body: JSON.stringify({ name: "Stale If-Match", data: { v: 2 } }),
+      body: JSON.stringify({ name: "Stale If-Match", data: { v: 3 } }),
     });
     check("PUT with stale If-Match → 409", putStale.status === 409, `got ${putStale.status}`);
-    const conflictBody = (await putStale.json()) as { code?: string; currentVersion?: string };
+    const conflictBody = (await putStale.json()) as { code?: string; currentVersion?: number };
     check("409 body has code=version_conflict", conflictBody.code === "version_conflict");
-    check("409 body surfaces the current server version", !!conflictBody.currentVersion);
+    check("409 body surfaces the current server version as a number",
+      typeof conflictBody.currentVersion === "number");
 
-    // PUT with fresh If-Match → 200.
-    const putFresh = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
+    // Bare numeric If-Match (without quotes) is also accepted.
+    const putBare = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
       method: "PUT",
-      headers: { ...auth, "If-Match": newEtag! },
-      body: JSON.stringify({ name: "Fresh If-Match", data: { v: 3 } }),
+      headers: { ...auth, "If-Match": String(freshBody.version) },
+      body: JSON.stringify({ name: "Bare If-Match", data: { v: 4 } }),
     });
-    check("PUT with matching If-Match → 200", putFresh.status === 200, `got ${putFresh.status}`);
+    check("PUT with bare numeric If-Match → 200", putBare.status === 200, `got ${putBare.status}`);
+    const bareBody = (await putBare.json()) as { version: number };
+
+    // After both successful PUTs the rest of the suite needs the latest etag.
+    const latestEtag = putBare.headers.get("etag");
+    check("latest etag matches latest version",
+      latestEtag === `"${bareBody.version}"`, `etag=${latestEtag} ver=${bareBody.version}`);
 
     // === 4. Server-side hardening rejects bogus values. ===
     const badCap = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
@@ -180,9 +208,10 @@ async function main(): Promise<void> {
     check("PUT priorYearSnapshot.endingCash=-50 → 400", negSnapshot.status === 400,
       `got ${negSnapshot.status}`);
 
-    // Valid edge values still pass.
+    // Valid edge values still pass — but now require a fresh If-Match
+    // since hardening 400s short-circuit before the concurrency check.
     const okEdge = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
-      method: "PUT", headers: auth,
+      method: "PUT", headers: { ...auth, "If-Match": latestEtag! },
       body: JSON.stringify({
         name: "OK edge",
         data: {
@@ -199,6 +228,7 @@ async function main(): Promise<void> {
       }),
     });
     check("PUT with edge-valid values → 200", okEdge.status === 200, `got ${okEdge.status}`);
+    let currentEtag = okEdge.headers.get("etag") ?? latestEtag;
 
     // === 4b. modelDuration is one-way: five_year → single_year is forbidden. ===
     // The seed model was created with modelDuration: five_year. Trying to
@@ -223,7 +253,7 @@ async function main(): Promise<void> {
     // "single_year", so legacy partial saves that don't carry the field
     // are unaffected).
     const omitDuration = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
-      method: "PUT", headers: auth,
+      method: "PUT", headers: { ...auth, "If-Match": currentEtag! },
       body: JSON.stringify({
         name: "No duration",
         data: { schoolProfile: { schoolName: "T" } },
@@ -231,10 +261,11 @@ async function main(): Promise<void> {
     });
     check("PUT that omits modelDuration on a five_year row → 200",
       omitDuration.status === 200, `got ${omitDuration.status}`);
+    currentEtag = omitDuration.headers.get("etag") ?? currentEtag;
 
     // PUT five_year → five_year (no-op duration) → 200.
     const sameDuration = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
-      method: "PUT", headers: auth,
+      method: "PUT", headers: { ...auth, "If-Match": currentEtag! },
       body: JSON.stringify({
         name: "Same duration",
         data: { schoolProfile: { schoolName: "T", modelDuration: "five_year" } },
@@ -242,6 +273,7 @@ async function main(): Promise<void> {
     });
     check("PUT five_year → five_year → 200", sameDuration.status === 200,
       `got ${sameDuration.status}`);
+    currentEtag = sameDuration.headers.get("etag") ?? currentEtag;
 
     // Companion: a fresh single_year model should be allowed to PUT
     // modelDuration: five_year (the documented Extend-to-5-year flow).
@@ -252,9 +284,10 @@ async function main(): Promise<void> {
         data: { schoolProfile: { schoolName: "T", maxCapacity: 100, modelDuration: "single_year" } },
       }),
     });
-    const singleSeedModel = (await singleSeed.json()) as { id: number };
-    const upgrade = await fetch(`${baseUrl}/api/models/${singleSeedModel.id}`, {
-      method: "PUT", headers: auth,
+    const singleSeedBody = (await singleSeed.json()) as { id: number; version: number };
+    const upgrade = await fetch(`${baseUrl}/api/models/${singleSeedBody.id}`, {
+      method: "PUT",
+      headers: { ...auth, "If-Match": `"${singleSeedBody.version}"` },
       body: JSON.stringify({
         name: "Upgrade",
         data: { schoolProfile: { schoolName: "T", maxCapacity: 100, modelDuration: "five_year" } },

@@ -59,12 +59,12 @@ async function seedScenarioFixture(
     createRes.ok(),
     `create model failed: ${createRes.status()} ${await createRes.text()}`,
   ).toBeTruthy();
-  const { id: modelId } = (await createRes.json()) as { id: number };
+  const { id: modelId, version: createdVersion } = (await createRes.json()) as { id: number; version: number };
 
   // Layer the export + scenario onto the model in a separate PUT to mirror
   // how the wizard builds models incrementally.
   const updateRes = await request.put(`/api/models/${modelId}`, {
-    headers: authHeaders,
+    headers: { ...authHeaders, "If-Match": `"${createdVersion}"` },
     data: {
       name: "E2E Test Academy",
       currentStep: 12,

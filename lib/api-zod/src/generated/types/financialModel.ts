@@ -18,6 +18,8 @@ export interface FinancialModel {
   schoolStage?: SchoolStage;
   fundingProfile?: FundingProfile;
   data: ModelFormData;
+  /** Monotonic version, incremented on every PUT. Sent back as If-Match for optimistic concurrency. */
+  version: number;
   updatedAt: Date;
   createdAt: Date;
 }

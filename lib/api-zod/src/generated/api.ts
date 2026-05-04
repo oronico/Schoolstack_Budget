@@ -205,6 +205,11 @@ export const ListModelsResponseItem = zod.object({
   fundingProfile: zod
     .enum(["tuition_based", "charter_public_funded", "hybrid_mixed"])
     .optional(),
+  version: zod
+    .number()
+    .describe(
+      "Monotonic version, incremented on every PUT. Sent back as If-Match for optimistic concurrency.",
+    ),
   updatedAt: zod.date(),
   createdAt: zod.date(),
 });
@@ -1413,6 +1418,11 @@ export const GetModelResponse = zod.object({
     customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
     escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
+  version: zod
+    .number()
+    .describe(
+      "Monotonic version, incremented on every PUT. Sent back as If-Match for optimistic concurrency.",
+    ),
   updatedAt: zod.date(),
   createdAt: zod.date(),
 });
@@ -2619,6 +2629,11 @@ export const UpdateModelResponse = zod.object({
     customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
     escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
+  version: zod
+    .number()
+    .describe(
+      "Monotonic version, incremented on every PUT. Sent back as If-Match for optimistic concurrency.",
+    ),
   updatedAt: zod.date(),
   createdAt: zod.date(),
 });
@@ -3252,6 +3267,11 @@ export const ArchiveModelResponse = zod.object({
     customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
     escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
+  version: zod
+    .number()
+    .describe(
+      "Monotonic version, incremented on every PUT. Sent back as If-Match for optimistic concurrency.",
+    ),
   updatedAt: zod.date(),
   createdAt: zod.date(),
 });

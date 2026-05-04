@@ -60,14 +60,14 @@ async function seedScenarioFixture(
     createRes.ok(),
     `create model failed: ${createRes.status()} ${await createRes.text()}`,
   ).toBeTruthy();
-  const { id: modelId } = (await createRes.json()) as { id: number };
+  const { id: modelId, version: createdVersion } = (await createRes.json()) as { id: number; version: number };
 
   // Seed an evaluate_site scenario marked Pursued so the green
   // "Apply to my model" nudge renders. `appliedToModelAt` is intentionally
   // omitted so the test starts in the pre-apply state and we can prove the
   // round-trip writes it.
   const updateRes = await request.put(`/api/models/${modelId}`, {
-    headers: authHeaders,
+    headers: { ...authHeaders, "If-Match": `"${createdVersion}"` },
     data: {
       name: "E2E Apply Academy",
       currentStep: 12,

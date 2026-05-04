@@ -64,14 +64,14 @@ async function seedScenarioFixture(
     createRes.ok(),
     `create model failed: ${createRes.status()} ${await createRes.text()}`,
   ).toBeTruthy();
-  const { id: modelId } = (await createRes.json()) as { id: number };
+  const { id: modelId, version: createdVersion } = (await createRes.json()) as { id: number; version: number };
 
   // Seed three decision scenarios so we can exercise the 2-col → 3-col
   // → 2-col gating on the Download-as-PDF affordance. Scenarios A and B
   // are different lease offers; C is an enrollment bump so the picker
   // labels show distinct decision-type prefixes.
   const updateRes = await request.put(`/api/models/${modelId}`, {
-    headers: authHeaders,
+    headers: { ...authHeaders, "If-Match": `"${createdVersion}"` },
     data: {
       name: "E2E Compare Academy",
       currentStep: 12,

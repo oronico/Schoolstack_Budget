@@ -273,11 +273,12 @@ export function ModelWizardPage() {
   const [saveError, setSaveError] = useState<false | "network" | "auth" | "validation" | "conflict" | "unknown">(false);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Task #472 — optimistic-concurrency token for /api/models/:id PUTs.
-  // Server's ETag is `"<updatedAt.toISOString()>"`. We init from the
-  // GET response's `updatedAt`, send it as If-Match on every save, and
+  // Task #479 — optimistic-concurrency token for /api/models/:id PUTs.
+  // Server's ETag is `"<version>"` where `version` is a monotonic
+  // integer that increments on every PUT. We init from the GET
+  // response's `version`, send it as If-Match on every save, and
   // refresh from each successful PUT response so back-to-back saves
-  // from this same tab keep a fresh token.
+  // from this same tab keep a fresh token. Required by the server.
   const lastEtagRef = useRef<string | null>(null);
   const [stepInitialized, setStepInitialized] = useState(false);
   const [showImportBanner, setShowImportBanner] = useState(false);
@@ -387,17 +388,19 @@ export function ModelWizardPage() {
       });
     };
     const doSave = async (): Promise<{ updatedAt?: string }> => {
-      let resp = await sendOnce();
-      // Task #472 — on a 409 from a stale If-Match, the response body
-      // includes the server's `currentVersion`. Refresh our token from
-      // it and retry up to 3 more times before surfacing the conflict
-      // UI. This kills spurious 409s caused by intra-page races (multiple
-      // mounts seeding stale react-query cache, server-clock skew, the
-      // server bumping `updated_at` on the prior save in a way our cache
-      // hadn't observed yet, etc.) while still surfacing genuine
-      // cross-tab conflicts: a true concurrent writer keeps moving the
-      // server's row past every refreshed token we send.
-      for (let attempt = 0; attempt < 3 && resp.status === 409; attempt++) {
+      const resp = await sendOnce();
+      // Task #479 — DO NOT retry on 409. With mandatory optimistic
+      // concurrency, a 409 means the server's row has moved past our
+      // last-seen version and the payload we are about to resend was
+      // built against a stale baseline. Auto-adopting the server's
+      // newer token and replaying our PUT would silently last-write-
+      // wins-overwrite whatever the other writer just saved — exactly
+      // the lost-update bug this task closed. Surface the conflict to
+      // the caller (autosave wraps this in setSaveError("conflict"))
+      // so the user is told to reload and merge by hand. We still
+      // refresh `lastEtagRef` from the conflict body so a subsequent
+      // *user-initiated* save against fresh data has a valid token.
+      if (resp.status === 409) {
         try {
           const conflictBody = (await resp.clone().json()) as { currentVersion?: string };
           if (conflictBody.currentVersion) {
@@ -407,7 +410,6 @@ export function ModelWizardPage() {
             if (tag) lastEtagRef.current = tag;
           }
         } catch { /* ignore */ }
-        resp = await sendOnce();
       }
       if (!resp.ok) {
         throw Object.assign(new Error(`save failed: ${resp.status}`), { status: resp.status });
@@ -547,19 +549,19 @@ export function ModelWizardPage() {
   });
 
 
-  // Task #472 — seed the If-Match token from the model's loaded
-  // updatedAt the FIRST time we see a given model (per modelId).
+  // Task #479 — seed the If-Match token from the model's loaded
+  // `version` the FIRST time we see a given model (per modelId).
   // We deliberately do NOT re-seed on subsequent initialData changes:
   // saveModel keeps `lastEtagRef` advanced from each PUT response,
   // and re-seeding from a possibly-stale react-query cache would
-  // clobber that fresh token and trip a false 412 on the next save.
+  // clobber that fresh token and trip a false 409 on the next save.
   const seededEtagModelIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (initialData?.updatedAt && seededEtagModelIdRef.current !== initialData.id) {
-      lastEtagRef.current = `"${initialData.updatedAt}"`;
+    if (initialData?.version != null && seededEtagModelIdRef.current !== initialData.id) {
+      lastEtagRef.current = `"${initialData.version}"`;
       seededEtagModelIdRef.current = initialData.id;
     }
-  }, [initialData?.id, initialData?.updatedAt]);
+  }, [initialData?.id, initialData?.version]);
 
   useEffect(() => {
     if (initialData?.data) {

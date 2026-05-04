@@ -82,7 +82,7 @@ async function seedScenarioFixture(
     createRes.ok(),
     `create model failed: ${createRes.status()} ${await createRes.text()}`,
   ).toBeTruthy();
-  const { id: modelId } = (await createRes.json()) as { id: number };
+  const { id: modelId, version: createdVersion } = (await createRes.json()) as { id: number; version: number };
 
   // Seed two pursued scenarios that each capture a different metric +
   // different asOfYear. We also pin enrollment.year1 so projected
@@ -90,7 +90,7 @@ async function seedScenarioFixture(
   // the enrollment aggregate because deltaPct would be null on a
   // divide-by-zero).
   const updateRes = await request.put(`/api/models/${modelId}`, {
-    headers: authHeaders,
+    headers: { ...authHeaders, "If-Match": `"${createdVersion}"` },
     data: {
       name: "E2E Forecast Academy",
       currentStep: 12,

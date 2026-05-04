@@ -19,6 +19,12 @@ export const financialModelsTable = pgTable("financial_models", {
   capitalAndDebtRowsJson: jsonb("capital_and_debt_rows_json").$type<Record<string, unknown>[]>(),
   lastExportedAt: timestamp("last_exported_at"),
   consultantSummaryJson: jsonb("consultant_summary_json").$type<Record<string, unknown>>(),
+  // Task #479 — monotonic version column for mandatory optimistic
+  // concurrency on PUT /models/:id. Starts at 1 on insert and is bumped
+  // by exactly 1 on every PUT, so the server can detect (and 409) a
+  // stale client without depending on `updated_at` (which is wall-clock
+  // and can collide on rapid back-to-back saves).
+  version: integer("version").default(1).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [

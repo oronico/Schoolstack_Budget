@@ -60,14 +60,14 @@ async function seedScenarioFixture(
     createRes.ok(),
     `create model failed: ${createRes.status()} ${await createRes.text()}`,
   ).toBeTruthy();
-  const { id: modelId } = (await createRes.json()) as { id: number };
+  const { id: modelId, version: createdVersion } = (await createRes.json()) as { id: number; version: number };
 
   // Seed an evaluate_site scenario without an outcomeStatus so the card
   // renders the "Open in planner" button (the Pursued / add_program
   // branches show "Apply to my model" instead). The monthlyRent override
   // gives the planner a non-empty payload to encode + decode.
   const updateRes = await request.put(`/api/models/${modelId}`, {
-    headers: authHeaders,
+    headers: { ...authHeaders, "If-Match": `"${createdVersion}"` },
     data: {
       name: "E2E Planner Academy",
       currentStep: 12,

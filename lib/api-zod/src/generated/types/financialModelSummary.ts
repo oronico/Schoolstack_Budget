@@ -16,6 +16,8 @@ export interface FinancialModelSummary {
   currentStep?: number;
   schoolStage?: SchoolStage;
   fundingProfile?: FundingProfile;
+  /** Monotonic version, incremented on every PUT. Sent back as If-Match for optimistic concurrency. */
+  version: number;
   updatedAt: Date;
   createdAt: Date;
 }

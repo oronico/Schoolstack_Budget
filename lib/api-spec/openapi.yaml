@@ -1995,6 +1995,9 @@ components:
           $ref: "#/components/schemas/SchoolStage"
         fundingProfile:
           $ref: "#/components/schemas/FundingProfile"
+        version:
+          type: integer
+          description: Monotonic version, incremented on every PUT. Sent back as If-Match for optimistic concurrency.
         updatedAt:
           type: string
           format: date-time
@@ -2005,6 +2008,7 @@ components:
         - id
         - name
         - status
+        - version
         - updatedAt
         - createdAt
     FinancialModel:
@@ -2024,6 +2028,9 @@ components:
           $ref: "#/components/schemas/FundingProfile"
         data:
           $ref: "#/components/schemas/ModelFormData"
+        version:
+          type: integer
+          description: Monotonic version, incremented on every PUT. Sent back as If-Match for optimistic concurrency.
         updatedAt:
           type: string
           format: date-time
@@ -2035,6 +2042,7 @@ components:
         - name
         - status
         - data
+        - version
         - updatedAt
         - createdAt
     LendingLabCriterion:

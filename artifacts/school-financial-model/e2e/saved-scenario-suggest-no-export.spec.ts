@@ -63,14 +63,14 @@ async function seedScenarioFixture(
     createRes.ok(),
     `create model failed: ${createRes.status()} ${await createRes.text()}`,
   ).toBeTruthy();
-  const { id: modelId } = (await createRes.json()) as { id: number };
+  const { id: modelId, version: createdVersion } = (await createRes.json()) as { id: number; version: number };
 
   // Seed prior-year actuals (so Suggest has something to pull) but NO
   // accountingExport — this is the fallback path. Mark the scenario as
   // Pursued so the actuals editor surfaces; without that, the
   // "showActualsSurface" gate hides the editor entirely.
   const updateRes = await request.put(`/api/models/${modelId}`, {
-    headers: authHeaders,
+    headers: { ...authHeaders, "If-Match": `"${createdVersion}"` },
     data: {
       name: "E2E Suggest Academy",
       currentStep: 12,

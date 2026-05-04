@@ -298,6 +298,69 @@ function applyAuthHeader(headers: Headers): void {
   }
 }
 
+// Task #479 — model-version cache for mandatory optimistic concurrency
+// on PUT /api/models/:id. The server now requires `If-Match: "<version>"`
+// on every PUT (a missing header is a 428). We populate this cache from
+// any `/api/models/:id` GET / PUT response that carries an `ETag` header
+// (or, as a fallback, a `version` field in the JSON body) and auto-inject
+// `If-Match` before every PUT. Callers that already set `If-Match`
+// explicitly (the wizard's hand-rolled saveModel) are not overridden.
+const MODEL_PATH_RE = /\/api\/models\/(\d+)(?:[/?#]|$)/;
+const modelVersionCache = new Map<number, string>();
+
+function extractModelIdFromUrl(url: string): number | null {
+  const match = MODEL_PATH_RE.exec(url);
+  if (!match) return null;
+  const id = Number.parseInt(match[1], 10);
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
+
+function applyIfMatchHeader(headers: Headers, method: string, url: string): void {
+  if (method !== "PUT") return;
+  if (headers.has("if-match")) return;
+  const id = extractModelIdFromUrl(url);
+  if (id == null) return;
+  const tag = modelVersionCache.get(id);
+  if (tag) headers.set("if-match", tag);
+}
+
+function rememberModelVersion(response: Response, requestUrl: string): void {
+  const id = extractModelIdFromUrl(response.url || requestUrl);
+  if (id == null) return;
+  const etag = response.headers.get("etag");
+  if (etag) {
+    modelVersionCache.set(id, etag);
+    return;
+  }
+  // Fall back to peeking at the JSON body's `version` field. We only do
+  // this for likely-JSON responses to avoid burning a body on streams.
+  const mediaType = getMediaType(response.headers);
+  if (!isJsonMediaType(mediaType)) return;
+  // We don't await here — the read happens lazily on a clone so we
+  // don't disturb the caller's body consumption.
+  response
+    .clone()
+    .json()
+    .then((body) => {
+      const v = (body as { version?: unknown } | null)?.version;
+      if (typeof v === "number" && Number.isFinite(v)) {
+        modelVersionCache.set(id, `"${v}"`);
+      }
+    })
+    .catch(() => {
+      /* ignore — body might not be JSON or already consumed */
+    });
+}
+
+/**
+ * Test-only: clear the optimistic-concurrency model version cache.
+ * Exported so unit tests that share a module instance can reset state
+ * between cases. Production code never needs this.
+ */
+export function _resetModelVersionCacheForTests(): void {
+  modelVersionCache.clear();
+}
+
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
@@ -329,7 +392,19 @@ export async function customFetch<T = unknown>(
   input = applyBaseUrl(input);
   const requestInfo = { method, url: resolveUrl(input) };
 
+  // Task #479 — auto-inject If-Match for PUT /api/models/:id from the
+  // version cache so callers that use the generated `useUpdateModel`
+  // hook (decision flows, scenarios page, ExportStep, undo banner)
+  // satisfy the server's mandatory optimistic-concurrency check
+  // without having to thread the version through manually.
+  applyIfMatchHeader(headers, method, requestInfo.url);
+
   const response = await fetch(input, { ...init, method, headers });
+
+  // Always remember the latest model version we observed, even on
+  // error responses (the server attaches the current ETag to its 409
+  // and 428 bodies so the next retry can succeed).
+  rememberModelVersion(response, requestInfo.url);
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

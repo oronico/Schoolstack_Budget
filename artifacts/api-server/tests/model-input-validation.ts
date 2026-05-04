@@ -83,7 +83,7 @@ async function main(): Promise<void> {
     // Same for PUT, DELETE, duplicate, archive — every modelId-bearing
     // route was patched at the same site.
     const putBogus = await fetch(`${baseUrl}/api/models/1.5`, {
-      method: "PUT", headers: auth, body: JSON.stringify({ name: "x", data: {} }),
+      method: "PUT", headers: { ...auth, "If-Match": "\"1\"" }, body: JSON.stringify({ name: "x", data: {} }),
     });
     check("PUT /api/models/1.5 → 400", putBogus.status === 400, `got ${putBogus.status}`);
     const delBogus = await fetch(`${baseUrl}/api/models/9999999999999999999`, {
@@ -131,36 +131,56 @@ async function main(): Promise<void> {
     check("name that sanitizes to empty → 400", allControl.status === 400,
       `got ${allControl.status}`);
 
-    // --- C. Sequential PUTs against the same model all succeed.
-    // (The optimistic-concurrency check originally added here was
-    // reverted — see the NOTE in routes/models.ts. The frontend
-    // legitimately fires rapid back-to-back PUTs as part of its
-    // debounced-autosave-plus-explicit-save flow, and a 409 on the
-    // second commit broke real user journeys covered by the e2e
-    // suite. We still want to assert the route doesn't 500 or
-    // silently drop sequential writes, and that the LAST commit wins.)
+    // --- C. Sequential PUTs against the same model all succeed when
+    // each one echoes the latest server `version` as If-Match (Task
+    // #479 — optimistic concurrency is mandatory). Asserts the route
+    // doesn't 500 or silently drop sequential writes, that the version
+    // increments by exactly 1 per PUT, and that the LAST commit wins.
     const seed = await fetch(`${baseUrl}/api/models`, {
       method: "POST", headers: auth,
       body: JSON.stringify({ name: "Race Seed", data: { counter: 0 } }),
     });
-    const seedModel = (await seed.json()) as { id: number };
+    const seedModel = (await seed.json()) as { id: number; version: number };
     const N = 5;
     const sequentialResults: number[] = [];
+    let currentVersion = seedModel.version;
     for (let i = 0; i < N; i++) {
       const r = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
-        method: "PUT", headers: auth,
+        method: "PUT",
+        headers: { ...auth, "If-Match": `"${currentVersion}"` },
         body: JSON.stringify({ name: `Sequential #${i}`, data: { counter: i, marker: `writer-${i}` } }),
       });
       sequentialResults.push(r.status);
+      if (r.ok) {
+        const body = (await r.json()) as { version: number };
+        currentVersion = body.version;
+      }
     }
     check(`all ${N} sequential PUTs succeed`,
       sequentialResults.every((s) => s === 200),
       `statuses=${sequentialResults.join(",")}`);
+    check("version increments by exactly N across N sequential PUTs",
+      currentVersion === seedModel.version + N,
+      `seed=${seedModel.version} final=${currentVersion}`);
     const final = await fetch(`${baseUrl}/api/models/${seedModel.id}`, { headers: auth });
     const finalJson = (await final.json()) as { data: { counter?: number; marker?: string } };
     check("the LAST sequential PUT's data is what's stored",
       finalJson.data?.counter === N - 1 && finalJson.data?.marker === `writer-${N - 1}`,
       `final.data=${JSON.stringify(finalJson.data)}`);
+
+    // PUT without If-Match → 428 (Task #479: header is now mandatory).
+    const noIfMatch = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
+      method: "PUT", headers: auth,
+      body: JSON.stringify({ name: "no-if-match", data: {} }),
+    });
+    check("PUT without If-Match → 428 Precondition Required",
+      noIfMatch.status === 428, `got ${noIfMatch.status}`);
+    const noIfMatchBody = (await noIfMatch.json()) as { code?: string; currentVersion?: number };
+    check("428 body has code=if_match_required",
+      noIfMatchBody.code === "if_match_required", `code=${noIfMatchBody.code}`);
+    check("428 body surfaces the current server version",
+      typeof noIfMatchBody.currentVersion === "number",
+      `currentVersion=${noIfMatchBody.currentVersion}`);
   } finally {
     if (userId !== null) {
       await db.delete(financialModelsTable).where(eq(financialModelsTable.userId, userId));

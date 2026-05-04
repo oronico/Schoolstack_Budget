@@ -69,16 +69,33 @@ function sanitizeModelName(raw: string): string {
   return raw.replace(/[\x00-\x1F\x7F]/g, "").trim();
 }
 
-// Task #472 — optimistic-concurrency stub. The full version-column
-// migration is tracked as a follow-up; this header-only check uses the
-// row's `updated_at` (ISO-8601) as the version token. Clients that send
-// `If-Match` get a 409 + the latest server state on mismatch; clients
-// that omit the header keep the legacy last-write-wins behavior so the
-// existing rapid-back-to-back-PUT autosave flow doesn't 409 itself.
+// Task #479 — full optimistic concurrency. We now have a dedicated
+// monotonic `version` integer column on `financial_models` that
+// increments on every PUT, and the ETag / If-Match token is the
+// version (e.g. `"7"`). Clients are required to send `If-Match` on
+// every PUT — omitting the header is a 428 Precondition Required —
+// and a stale token is a 409 with the latest server state.
+//
+// Task #480 superseded the hand-rolled `validateModelDataHardening`
+// helper that used to live here: those rules (maxCapacity >= 1,
+// collectionRate 0..100, non-negative snapshot/projection money
+// fields, monthsCompleted 0..12) are now expressed in the OpenAPI
+// spec and enforced automatically by the generated zod schemas in
+// `UpdateModelBody.safeParse`, so a duplicate runtime check would
+// just diverge over time.
 const reviewRequestEmailSchema = z.string().trim().min(1).max(254).email();
 
-function buildEtag(updatedAt: Date): string {
-  return `"${updatedAt.toISOString()}"`;
+function buildEtag(version: number): string {
+  return `"${version}"`;
+}
+
+// Accept both quoted (`"7"`, the canonical RFC 7232 form) and bare
+// (`7`) values for client convenience, and tolerate accidental
+// whitespace. Returns the numeric version, or NaN if unparseable.
+function parseIfMatchVersion(raw: string): number {
+  const trimmed = raw.trim().replace(/^W\//i, "");
+  const unquoted = trimmed.replace(/^"|"$/g, "");
+  return Number.parseInt(unquoted, 10);
 }
 
 function abortGuard(req: AuthRequest, res: Response): boolean {
@@ -238,6 +255,7 @@ function modelResponse(model: typeof financialModelsTable.$inferSelect) {
     schoolStage: model.schoolStage,
     fundingProfile: model.fundingProfile,
     data: model.data,
+    version: model.version,
     createdAt: model.createdAt.toISOString(),
     updatedAt: model.updatedAt.toISOString(),
   };
@@ -327,7 +345,7 @@ router.get("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
 
-    res.setHeader("ETag", buildEtag(model.updatedAt));
+    res.setHeader("ETag", buildEtag(model.version));
     res.json(modelResponse(model));
   } catch (err) {
     console.error("Get model error:", err);
@@ -415,43 +433,43 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
 
-    // Task #472 — header-only optimistic concurrency check (the version
-    // column is a tracked follow-up). When the client sends `If-Match`,
-    // we compare to the row's current updated_at ETag and 409 on a
-    // mismatch with the latest server state so two open tabs don't
-    // silently clobber each other. Clients that omit the header keep
-    // the legacy last-write-wins behavior so the wizard's existing
-    // rapid-back-to-back-PUT autosave flow still passes.
-    const ifMatch = (req.headers["if-match"] as string | undefined)?.trim();
-    if (ifMatch) {
-      const currentTag = buildEtag(existing.updatedAt);
-      // Accept both quoted and unquoted forms for client convenience.
-      const normalizedClientTag = ifMatch.startsWith("\"") ? ifMatch : `"${ifMatch}"`;
-      if (normalizedClientTag !== currentTag) {
-        res.setHeader("ETag", currentTag);
-        res.status(409).json({
-          error: "Model was updated by another tab or session. Reload to see the latest changes.",
-          code: "version_conflict",
-          currentVersion: existing.updatedAt.toISOString(),
-          model: modelResponse(existing),
-        });
-        return;
-      }
+    // Task #479 — mandatory optimistic concurrency. The client must
+    // send `If-Match: "<version>"` echoing the server's last-known
+    // `version`. Omitting the header is a 428 Precondition Required
+    // (so a misconfigured client fails loudly instead of silently
+    // last-write-wins-ing); a stale token is a 409 with the latest
+    // server state so the caller can refresh-and-retry or surface
+    // a "reload" notice to the user.
+    const ifMatchRaw = (req.headers["if-match"] as string | undefined)?.trim();
+    if (!ifMatchRaw) {
+      res.setHeader("ETag", buildEtag(existing.version));
+      res.status(428).json({
+        error: "Missing If-Match header. Reload the model and retry.",
+        code: "if_match_required",
+        currentVersion: existing.version,
+        model: modelResponse(existing),
+      });
+      return;
+    }
+    const clientVersion = parseIfMatchVersion(ifMatchRaw);
+    if (!Number.isFinite(clientVersion) || clientVersion !== existing.version) {
+      res.setHeader("ETag", buildEtag(existing.version));
+      res.status(409).json({
+        error: "Model was updated by another tab or session. Reload to see the latest changes.",
+        code: "version_conflict",
+        currentVersion: existing.version,
+        model: modelResponse(existing),
+      });
+      return;
     }
 
     const rowCols = extractRowColumns(normalizedData);
-    // NOTE on the lost-update race (audit finding #10): two simultaneous
-    // PUTs against the same model row will both succeed and the later
-    // commit silently wins. In principle this could lose a writer's
-    // edits across two open tabs. In practice this app is single-user
-    // per model and the frontend already fires rapid back-to-back PUTs
-    // (debounced autosave + explicit save) that *want* the second
-    // commit to win — adding an optimistic-concurrency check here broke
-    // the wizard's "Scenario saved" flow and several decision-comparison
-    // e2e specs by surfacing 409s on legitimate sequential saves. The
-    // right fix would be a monotonic version column wired through to
-    // the client (so the client can decide when to refresh-and-retry vs.
-    // overwrite), which is a larger UX change. Tracked for follow-up.
+    // Task #479 — bump `version` by exactly 1 on every successful PUT.
+    // The increment is part of the same UPDATE so two concurrent writers
+    // who both pass the If-Match check cannot both win: the first PUT
+    // moves version forward, and the second's WHERE on the prior version
+    // (added below) matches zero rows. We then return 409 instead of
+    // pretending the save succeeded.
     const [model] = await db
       .update(financialModelsTable)
       .set({
@@ -462,14 +480,41 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
         schoolStage: (schoolStage as typeof financialModelsTable.$inferInsert["schoolStage"]) ?? existing.schoolStage,
         fundingProfile: (fundingProfile as typeof financialModelsTable.$inferInsert["fundingProfile"]) ?? existing.fundingProfile,
         ...rowCols,
+        version: existing.version + 1,
         updatedAt: new Date(),
       })
-      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .where(and(
+        eq(financialModelsTable.id, params.data.id),
+        eq(financialModelsTable.userId, req.userId!),
+        eq(financialModelsTable.version, clientVersion),
+      ))
       .returning();
+
+    if (!model) {
+      // Lost the race against a concurrent PUT that bumped version
+      // between our SELECT and UPDATE. Re-read and 409.
+      const [fresh] = await db
+        .select()
+        .from(financialModelsTable)
+        .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+        .limit(1);
+      if (fresh) {
+        res.setHeader("ETag", buildEtag(fresh.version));
+        res.status(409).json({
+          error: "Model was updated by another tab or session. Reload to see the latest changes.",
+          code: "version_conflict",
+          currentVersion: fresh.version,
+          model: modelResponse(fresh),
+        });
+      } else {
+        res.status(404).json({ error: "Model not found." });
+      }
+      return;
+    }
 
     await trackEvent("updated_model", req.userId, { modelId: model.id });
 
-    res.setHeader("ETag", buildEtag(model.updatedAt));
+    res.setHeader("ETag", buildEtag(model.version));
     res.json(modelResponse(model));
   } catch (err) {
     console.error("Update model error:", err);
