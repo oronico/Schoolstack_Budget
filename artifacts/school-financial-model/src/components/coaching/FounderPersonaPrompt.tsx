@@ -155,7 +155,7 @@ export function FounderPersonaPrompt({ onComplete, mode = "first-time", onClose 
             <Sparkles className="h-6 w-6 text-primary" aria-hidden="true" />
           </div>
           <h2 className="font-display text-2xl font-bold text-foreground">
-            {isEdit ? "Update your founder profile" : "Welcome — let's tailor this to you"}
+            {isEdit ? "Update your founder profile" : "Welcome - let's tailor this to you"}
           </h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
             {isEdit

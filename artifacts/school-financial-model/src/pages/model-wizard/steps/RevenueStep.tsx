@@ -602,7 +602,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       if (min > 0 || max > 0) {
         const midpoint = Math.round((min + max) / 2);
         initialAmounts = new Array(yearCount).fill(midpoint);
-        note = `From ${stateCode || "your state"} program data — typical $${min.toLocaleString()}–$${max.toLocaleString()}/student${matchedProgram.notes ? `. ${matchedProgram.notes}` : ""}`;
+        note = `From ${stateCode || "your state"} program data - typical $${min.toLocaleString()}–$${max.toLocaleString()}/student${matchedProgram.notes ? `. ${matchedProgram.notes}` : ""}`;
       }
     }
     const newRow: RevenueRowData = {
@@ -739,7 +739,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           </h2>
           <p className="text-muted-foreground text-lg">
             {yetToLaunch
-              ? "Check every revenue source you expect in your opening year. We'll set up the right line items and starting points for your plan. Most founders begin with just one or two sources — you can always add more as you firm up commitments."
+              ? "Check every revenue source you expect in your opening year. We'll set up the right line items and starting points for your plan. Most founders begin with just one or two sources - you can always add more as you firm up commitments."
               : "Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget. Most founders start with just one or two sources - you can always add more as your school grows."}
           </p>
         </div>
@@ -748,8 +748,8 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           <WhyThisMatters
             why={
               yetToLaunch
-                ? "Naming every source up front — even the small ones — keeps your opening plan honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
-                : "Naming every source up front — even the small ones — keeps your model honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
+                ? "Naming every source up front - even the small ones - keeps your opening plan honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
+                : "Naming every source up front - even the small ones - keeps your model honest. Lenders and grant reviewers want to see realistic, diversified revenue, not just tuition magically scaling."
             }
             revisit={
               yetToLaunch
@@ -792,7 +792,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             title="Public Funding"
             description={isCharterType
               ? "State, federal, or local per-pupil revenue"
-              : "Charter schools only — state per-pupil funding isn't available to private, microschool, or other non-charter programs."}
+              : "Charter schools only - state per-pupil funding isn't available to private, microschool, or other non-charter programs."}
             disabled={!isCharterType}
           />
           <RevenueSourceCheck
@@ -841,11 +841,11 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">
-          {yetToLaunch ? "Revenue by Source — Opening 5 Years" : "Revenue by Source"}
+          {yetToLaunch ? "Revenue by Source - Opening 5 Years" : "Revenue by Source"}
         </h2>
         <p className="text-muted-foreground text-lg">
           {yetToLaunch
-            ? "Enter the amounts you expect for each year of your opening plan. We've pre-filled typical starting points for a school like yours — adjust them to match your concept."
+            ? "Enter the amounts you expect for each year of your opening plan. We've pre-filled typical starting points for a school like yours - adjust them to match your concept."
             : "Enter your expected amounts for each year. We've filled in smart defaults - adjust them to match your school."}
         </p>
       </div>
@@ -1240,10 +1240,10 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                   label={`Why these ${CATEGORY_LABELS[cat].toLowerCase()} numbers?`}
                   placeholder={
                     total > 0 && y1Students > 0
-                      ? `You're projecting ${formatCurrency(total)} in Year 1 (${formatPerStudent(total, y1Students)}). What anchors that — pricing comps, signed pledges, awarded grants, prior school benchmarks?`
+                      ? `You're projecting ${formatCurrency(total)} in Year 1 (${formatPerStudent(total, y1Students)}). What anchors that - pricing comps, signed pledges, awarded grants, prior school benchmarks?`
                       : total > 0
-                        ? `You're projecting ${formatCurrency(total)} in Year 1. Where does that number come from — pricing comps, signed pledges, awarded grants, or another anchor?`
-                        : "Once you enter amounts, capture how you arrived at them — pricing comps, signed pledges, awarded grants, or prior school benchmarks."
+                        ? `You're projecting ${formatCurrency(total)} in Year 1. Where does that number come from - pricing comps, signed pledges, awarded grants, or another anchor?`
+                        : "Once you enter amounts, capture how you arrived at them - pricing comps, signed pledges, awarded grants, or prior school benchmarks."
                   }
                   helperText="Two sentences max. Lenders and board members will read this side-by-side with your numbers."
                 />
@@ -1563,7 +1563,7 @@ function RevenueLineItem({
                   data-testid={`funding-fragility-chip-${row.id}`}
                   title={
                     fundingFragility.notes
-                      ? `${fundingFragility.programLabel} — ${fundingFragility.notes}`
+                      ? `${fundingFragility.programLabel} - ${fundingFragility.notes}`
                       : `${fundingFragility.programLabel} (${fundingFragility.status})`
                   }
                   className={cn(
@@ -1837,7 +1837,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               />
               <span
                 className="inline-flex items-center self-start mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help"
-                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR — set this with care and document any assumption above 95% for invoiced billing."
+                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR - set this with care and document any assumption above 95% for invoiced billing."
               >
                 Benchmark · {COLLECTION_RATE_BENCHMARK_COPY}
               </span>
@@ -1863,7 +1863,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
         {category === "tuition_and_fees" && isCharter && (
           <div className="col-span-full flex items-start gap-1.5 p-2 bg-teal-50 dark:bg-teal-950/30 rounded-lg text-[11px] text-teal-800 dark:text-teal-300">
             <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-            <span>Charter school revenue is publicly funded — billing months and collection method don't apply.</span>
+            <span>Charter school revenue is publicly funded - billing months and collection method don't apply.</span>
           </div>
         )}
 
@@ -1897,7 +1897,7 @@ function TimingControls({ row, onTimingChange }: TimingControlsProps) {
               />
               <span
                 className="inline-flex items-center self-start mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help"
-                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR — set this with care and document any assumption above 95% for invoiced billing."
+                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR - set this with care and document any assumption above 95% for invoiced billing."
               >
                 Benchmark · {COLLECTION_RATE_BENCHMARK_COPY}
               </span>

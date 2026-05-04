@@ -81,7 +81,7 @@ export function CashRunwayCard({
               data-testid={`${prefix}-trough-callout`}
             >
               {cash.troughCallout.isNegative
-                ? `Tightest cash year: Year ${cash.troughCallout.year} dips to ${cash.troughCallout.endingCash} — additional funding or cost cuts needed before then.`
+                ? `Tightest cash year: Year ${cash.troughCallout.year} dips to ${cash.troughCallout.endingCash} - additional funding or cost cuts needed before then.`
                 : `Tightest cash year: Year ${cash.troughCallout.year} ends at ${cash.troughCallout.endingCash}.`}
             </p>
           )}

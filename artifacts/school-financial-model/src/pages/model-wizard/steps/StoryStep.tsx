@@ -300,7 +300,7 @@ export function StoryStep() {
           Let's start with your school's story
         </h2>
         <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-          Before we touch any numbers, tell us about the school you're building. A good budget starts with a clear story — everything else flows from there.
+          Before we touch any numbers, tell us about the school you're building. A good budget starts with a clear story - everything else flows from there.
         </p>
       </div>
 
@@ -309,7 +309,7 @@ export function StoryStep() {
         <div className="text-sm">
           <p className="font-semibold text-amber-900">Why we ask this first</p>
           <p className="text-amber-800/90 mt-1 leading-relaxed">
-            Lenders, authorizers, and board members read your story before they read your numbers. Putting it down in plain words now makes every number you enter later make sense — to them and to you.
+            Lenders, authorizers, and board members read your story before they read your numbers. Putting it down in plain words now makes every number you enter later make sense - to them and to you.
           </p>
         </div>
       </div>
@@ -334,7 +334,7 @@ export function StoryStep() {
           In a sentence or two, who is this school for?
         </label>
         <p className="text-xs text-muted-foreground">
-          No need to be polished — write it the way you'd describe it to a friend. You'll have a chance to refine this later in the Lender Narrative step.
+          No need to be polished - write it the way you'd describe it to a friend. You'll have a chance to refine this later in the Lender Narrative step.
         </p>
         <textarea
           id="openingStory"
@@ -384,7 +384,7 @@ export function StoryStep() {
         </div>
       </div>
 
-      {/* "Your program" — gentle plain-English program-design sequence
+      {/* "Your program" - gentle plain-English program-design sequence
           (Task #302). Asks about grade bands, how the program is paid for,
           tuition per band, year-1 enrollment, long-term enrollment goal,
           and student-to-teacher ratio. The fields write to the same paths
@@ -400,7 +400,7 @@ export function StoryStep() {
             <h3 className="font-display text-lg font-bold text-foreground">Your program</h3>
             <p className="text-sm text-muted-foreground mt-1">
               {yetToLaunch
-                ? "Sketch out the school you're planning. Don't worry about being precise — you can refine every number later."
+                ? "Sketch out the school you're planning. Don't worry about being precise - you can refine every number later."
                 : "Tell us how your program is set up today. We'll use these as the starting point for your projections."}
             </p>
           </div>
@@ -411,7 +411,7 @@ export function StoryStep() {
           <p className="text-sm font-semibold text-foreground">How do you think about your students?</p>
           {newComfort ? (
             <p className="text-xs text-muted-foreground">
-              Pick whichever feels natural — most microschools and learning pods think in
+              Pick whichever feels natural - most microschools and learning pods think in
               age bands; charter and private schools usually think in grade levels. You can
               switch modes at any time without losing what you've already entered.
             </p>
@@ -509,7 +509,7 @@ export function StoryStep() {
             {newComfort && (
               <p className="text-xs text-muted-foreground">
                 Pick every grade you plan to enroll. We use the same default class size per
-                grade (~14 K-2, ~16 3-5, ~18 middle, ~20 high) — you can override any of
+                grade (~14 K-2, ~16 3-5, ~18 middle, ~20 high) - you can override any of
                 them once you've picked them.
               </p>
             )}
@@ -556,7 +556,7 @@ export function StoryStep() {
               const charterOnly = opt.key === "publicFunding";
               const disabled = charterOnly && schoolType !== "charter_school";
               const helper = disabled
-                ? "Charter schools only — state per-pupil funding isn't available to private, microschool, or other non-charter programs."
+                ? "Charter schools only - state per-pupil funding isn't available to private, microschool, or other non-charter programs."
                 : opt.helper;
               return (
                 <button
@@ -603,7 +603,7 @@ export function StoryStep() {
             </div>
             {newComfort && (
               <p className="text-xs text-muted-foreground">
-                A best-guess number is fine — what would the program look like if you opened today?
+                A best-guess number is fine - what would the program look like if you opened today?
               </p>
             )}
             <div
@@ -748,7 +748,7 @@ export function StoryStep() {
             {newComfort && (
               <p className="text-xs text-muted-foreground">
                 Enter the number of students you expect in each grade. Tuition + ratio
-                pre-fill from typical defaults — edit any of them as needed.
+                pre-fill from typical defaults - edit any of them as needed.
               </p>
             )}
             <div className="rounded-xl border border-border bg-card divide-y divide-border">
@@ -885,7 +885,7 @@ export function StoryStep() {
             placeholder="e.g. 120"
             helperText={
               newComfort
-                ? "What's the size you're building toward? We split it across the bands above using your year-1 mix — you can override any band individually."
+                ? "What's the size you're building toward? We split it across the bands above using your year-1 mix - you can override any band individually."
                 : sumLongTermPerBand > 0
                   ? `Per-band totals already entered: ${sumLongTermPerBand}`
                   : undefined
@@ -919,8 +919,8 @@ export function StoryStep() {
           <p className="font-semibold text-foreground">What happens next</p>
           <p className="mt-1 leading-relaxed">
             {yetToLaunch
-              ? "We'll walk you through the rest in plain English — setup, enrollment, staffing, and costs. Most steps have smart defaults you can accept and refine later. You can always come back and update anything as your plans evolve."
-              : "We'll walk you through the basics — your school's setup, enrollment, revenue, staffing, and expenses. Most steps have smart defaults you can accept and refine later. You can always come back and update anything as your plans evolve."}
+              ? "We'll walk you through the rest in plain English - setup, enrollment, staffing, and costs. Most steps have smart defaults you can accept and refine later. You can always come back and update anything as your plans evolve."
+              : "We'll walk you through the basics - your school's setup, enrollment, revenue, staffing, and expenses. Most steps have smart defaults you can accept and refine later. You can always come back and update anything as your plans evolve."}
           </p>
         </div>
       </div>

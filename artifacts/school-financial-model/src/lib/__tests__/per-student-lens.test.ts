@@ -15,20 +15,20 @@ describe("formatPerStudent", () => {
   });
 
   it("returns the placeholder when enrollment is zero", () => {
-    expect(formatPerStudent(100_000, 0)).toBe("—");
+    expect(formatPerStudent(100_000, 0)).toBe("-");
   });
 
   it("returns the placeholder when enrollment is negative", () => {
-    expect(formatPerStudent(100_000, -5)).toBe("—");
+    expect(formatPerStudent(100_000, -5)).toBe("-");
   });
 
   it("returns the placeholder when total is non-finite", () => {
-    expect(formatPerStudent(NaN, 25)).toBe("—");
-    expect(formatPerStudent(Infinity, 25)).toBe("—");
+    expect(formatPerStudent(NaN, 25)).toBe("-");
+    expect(formatPerStudent(Infinity, 25)).toBe("-");
   });
 
   it("returns the placeholder when enrollment is NaN", () => {
-    expect(formatPerStudent(50_000, NaN)).toBe("—");
+    expect(formatPerStudent(50_000, NaN)).toBe("-");
   });
 
   it("formats negative totals (e.g. tuition discounts) as negative currency by default", () => {
@@ -54,12 +54,12 @@ describe("formatPerFte", () => {
   });
 
   it("returns the placeholder when total FTE is zero (per-fte vs flat driver)", () => {
-    expect(formatPerFte(420_000, 0)).toBe("—");
+    expect(formatPerFte(420_000, 0)).toBe("-");
   });
 
   it("returns the placeholder when inputs are non-finite", () => {
-    expect(formatPerFte(NaN, 5)).toBe("—");
-    expect(formatPerFte(420_000, Infinity)).toBe("—");
+    expect(formatPerFte(NaN, 5)).toBe("-");
+    expect(formatPerFte(420_000, Infinity)).toBe("-");
   });
 
   it("rounds fractional FTE divisions to whole dollars", () => {

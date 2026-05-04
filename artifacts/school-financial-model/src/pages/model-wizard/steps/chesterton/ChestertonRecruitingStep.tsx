@@ -140,7 +140,7 @@ export function ChestertonRecruitingStep() {
         </h2>
         <p className="text-muted-foreground text-lg">
           Map every realistic source of students for your launch class. The CSN Operating Manual coaches schools to
-          plan recruiting against feeder schools, parishes, and homeschool co-ops by name — not as a single hopeful number.
+          plan recruiting against feeder schools, parishes, and homeschool co-ops by name - not as a single hopeful number.
         </p>
       </div>
 
@@ -253,7 +253,7 @@ export function ChestertonRecruitingStep() {
               data-testid="chesterton-recruiting-need-more-callout"
             >
               At a 1-in-{conversionDivisor} conversion rate you need roughly{" "}
-              <strong>{conversionDivisor}× more prospects than seats</strong> — add about{" "}
+              <strong>{conversionDivisor}× more prospects than seats</strong> - add about{" "}
               <strong>{(year1Need * conversionDivisor - totalProspects).toLocaleString()}</strong> more prospects to feel confident hitting Year 1.
             </div>
           )}
@@ -349,7 +349,7 @@ export function ChestertonRecruitingStep() {
               </strong>{" "}
               {priestTeamMemberCount === 1 ? "team member" : "team members"}
               {priestTeamMemberCount === 0 && (
-                <span className="text-amber-700"> — assign a team member to each contact</span>
+                <span className="text-amber-700"> - assign a team member to each contact</span>
               )}
             </div>
           </div>
@@ -446,7 +446,7 @@ export function ChestertonRecruitingStep() {
                     <strong>
                       {(longTermEnrollment - totalFacilityCapacity).toLocaleString()}
                     </strong>{" "}
-                    students — add or expand a future facility to seat the full Year 5 plan.
+                    students - add or expand a future facility to seat the full Year 5 plan.
                   </div>
                 )}
               </div>

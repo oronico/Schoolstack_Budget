@@ -355,7 +355,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           <div className="flex-1">
             <p className="text-sm font-semibold text-emerald-900 mb-0.5">You're on Single-Year mode</p>
             <p className="text-xs text-emerald-800 leading-relaxed">
-              Lender-grade PDF exports — Lender Packet and Board Summary — need a full
+              Lender-grade PDF exports - Lender Packet and Board Summary - need a full
               5-year projection. <button
                 type="button"
                 data-testid="single-year-banner-extend"
@@ -450,7 +450,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
             onClick={() => handleDownload("chestertonOperatingManual")}
             highlight
             badge="✓ Live formulas"
-            caption="Tuition, financial aid, faculty payroll, fundraising totals, key-assumption bullets, and the parent handout's projection title all run as live Excel formulas — edit any input on GETTING STARTED and the workbook recalculates."
+            caption="Tuition, financial aid, faculty payroll, fundraising totals, key-assumption bullets, and the parent handout's projection title all run as live Excel formulas - edit any input on GETTING STARTED and the workbook recalculates."
           />
         )}
       </div>

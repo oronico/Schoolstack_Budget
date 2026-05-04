@@ -73,7 +73,7 @@ function toneClasses(tone: "good" | "bad" | "neutral"): string {
 }
 
 function fmtPct(deltaPct: number | null): string {
-  if (deltaPct === null) return "—";
+  if (deltaPct === null) return "-";
   if (Math.abs(deltaPct) < 0.5) return "on plan";
   const sign = deltaPct > 0 ? "+" : "";
   return `${sign}${deltaPct.toFixed(0)}%`;
@@ -344,7 +344,7 @@ export function ForecastAccuracyView({ rollup }: { rollup: ForecastAccuracyRollu
         and spot patterns across all your past forecasts.
       </p>
 
-      {/* Filter toolbar — metric and year chips persist to ?metric=…&asOfYear=…
+      {/* Filter toolbar - metric and year chips persist to ?metric=…&asOfYear=…
           so a chosen slice survives reloads and is shareable. The aggregate
           band below recomputes against the filtered set. */}
       <div

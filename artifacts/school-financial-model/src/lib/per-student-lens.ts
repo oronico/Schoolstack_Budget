@@ -8,7 +8,7 @@
 // cards (Revenue, Staffing, Expenses) and unit-tested in
 // `__tests__/per-student-lens.test.ts`.
 
-const PLACEHOLDER = "—";
+const PLACEHOLDER = "-";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",

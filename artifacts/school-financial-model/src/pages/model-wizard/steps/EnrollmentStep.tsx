@@ -743,7 +743,7 @@ export function EnrollmentStep() {
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Programs & Enrollment</h2>
         <p className="text-muted-foreground text-lg">
           {newComfort
-            ? "List the schedules families can sign up for — Full Day, Half Day, 2-Day, after-school, and so on. Each one gets its own tuition. The matrix below lets you say how many students are in each grade or age band for that schedule. Don't sweat perfection — you can always come back and adjust."
+            ? "List the schedules families can sign up for - Full Day, Half Day, 2-Day, after-school, and so on. Each one gets its own tuition. The matrix below lets you say how many students are in each grade or age band for that schedule. Don't sweat perfection - you can always come back and adjust."
             : "Add each schedule you offer with its own tuition. Use the matrix below to assign students per grade/band per program."}
         </p>
       </div>
@@ -751,7 +751,7 @@ export function EnrollmentStep() {
       {showCoach && (
         <WhyThisMatters
           why={newComfort
-            ? "Enrollment is the engine of your model. Every other number — revenue, staffing, even rent per student — moves with it. We'd rather have your honest best guess today than a perfect number you don't have yet."
+            ? "Enrollment is the engine of your model. Every other number - revenue, staffing, even rent per student - moves with it. We'd rather have your honest best guess today than a perfect number you don't have yet."
             : "Enrollment drives revenue, staffing ratios, and per-student costs. Best-guess numbers are fine; refine as data comes in."}
           revisit="Update this whenever you finish an enrollment cycle, sign a new lead family, or get a clearer sense of demand."
         />
@@ -759,9 +759,9 @@ export function EnrollmentStep() {
 
       {programs.length === 0 && (
         <IDontKnowYet
-          label="I don't have programs mapped out yet — start me with one"
+          label="I don't have programs mapped out yet - start me with one"
           helperText="We'll add a single 'Full Day' program seeded for your school type. You can rename it, split it, or add more later."
-          appliedMessage="One starter program added — rename or expand below."
+          appliedMessage="One starter program added - rename or expand below."
           onApply={() => {
             const seeded = availableSuggestions[0] || "Full Day";
             const newProgram: Program = {
@@ -982,7 +982,7 @@ export function EnrollmentStep() {
           <h3 className="text-lg font-bold border-b border-border pb-2 mb-4">Enrollment Matrix</h3>
           <p className="text-sm text-muted-foreground mb-4">
             {newComfort
-              ? `For each year, fill in how many students you expect in each ${showGrades ? "grade" : "band"}, broken out by program (Full Day, Half Day, etc.). It's okay to leave cells blank — we'll only count what's there. If a program didn't run in an actuals year, hit "Didn't offer" instead of typing zeros.`
+              ? `For each year, fill in how many students you expect in each ${showGrades ? "grade" : "band"}, broken out by program (Full Day, Half Day, etc.). It's okay to leave cells blank - we'll only count what's there. If a program didn't run in an actuals year, hit "Didn't offer" instead of typing zeros.`
               : `Programs (rows) × ${showGrades && showBands ? "grades + bands" : showGrades ? "grades" : "age bands"} (cols), per year. Use "Didn't offer" for N/A in actuals.`}
           </p>
 
@@ -1074,7 +1074,7 @@ export function EnrollmentStep() {
                                         title="Click to enter a number"
                                         className="w-full rounded-lg border border-dashed border-border bg-background px-2 py-1.5 text-sm text-center text-muted-foreground hover:border-primary hover:text-foreground"
                                       >
-                                        —
+                                        -
                                       </button>
                                     ) : (
                                       <div className="flex items-stretch gap-1">
@@ -1419,8 +1419,8 @@ export function EnrollmentStep() {
                   : ""
               }${
                 waitlistCount > 0 ? ` and a waitlist of ${waitlistCount}` : ""
-              }. What anchors that — letters of intent, family interest list, current waitlist conversion, or comparable schools?`
-            : "What gives you confidence in your Year 1 enrollment number — letters of intent, current waitlist, comparable launches, or community demand?"
+              }. What anchors that - letters of intent, family interest list, current waitlist conversion, or comparable schools?`
+            : "What gives you confidence in your Year 1 enrollment number - letters of intent, current waitlist, comparable launches, or community demand?"
         }
         helperText="A lender or board reviewer will read this next to your enrollment ramp. Be specific about your demand evidence."
       />

@@ -207,7 +207,7 @@ export function DecisionFlowShell({
                 </div>
               )}
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Your model is a living document — changes here are saved as a scenario, not a rewrite.
+                Your model is a living document - changes here are saved as a scenario, not a rewrite.
               </p>
             </div>
           </aside>
@@ -226,7 +226,7 @@ export function DecisionFlowShell({
             <ChevronLeft className="h-4 w-4" /> {step === 1 ? "Back to dashboard" : "Back"}
           </button>
           <p className="hidden md:block text-xs text-muted-foreground italic ml-2">
-            Your model is a living document — refine it as the answers change.
+            Your model is a living document - refine it as the answers change.
           </p>
           {done && doneCta ? (
             <div className="ml-auto">{doneCta}</div>

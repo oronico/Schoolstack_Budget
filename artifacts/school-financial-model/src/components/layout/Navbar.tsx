@@ -196,7 +196,7 @@ export function Navbar() {
     <>
       <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center group" aria-label="SchoolStack Budget — home">
+          <Link href="/" className="flex items-center group" aria-label="SchoolStack Budget - home">
             <img
               src={`${import.meta.env.BASE_URL}logos/schoolstack-budget.svg`}
               alt="SchoolStack Budget"

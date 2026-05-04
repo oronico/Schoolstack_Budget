@@ -43,7 +43,7 @@ function formatDelta(id: string, delta: number, baseValue: number, compareValue:
   if (id === "break_even") {
     if (baseValue < 0 && compareValue >= 0) return "Now breaks even";
     if (baseValue >= 0 && compareValue < 0) return "No longer breaks even";
-    if (delta === 0) return "—";
+    if (delta === 0) return "-";
     return `${sign}${delta} yr`;
   }
   if (id === "cash_runway" || id === "reserve_months") return `${sign}${delta.toFixed(1)} mo`;

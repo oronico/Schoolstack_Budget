@@ -68,7 +68,7 @@ function fmtSavedDate(iso: string): string {
 }
 
 function fmtMoney(val: number): string {
-  if (!isFinite(val)) return "—";
+  if (!isFinite(val)) return "-";
   const abs = Math.abs(val);
   const sign = val < 0 ? "-" : "";
   if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
@@ -77,7 +77,7 @@ function fmtMoney(val: number): string {
 }
 
 function fmtMoneyDelta(val: number): string {
-  if (!isFinite(val)) return "—";
+  if (!isFinite(val)) return "-";
   if (val === 0) return "$0";
   const sign = val > 0 ? "+" : "-";
   const abs = Math.abs(val);
@@ -166,7 +166,7 @@ function buildShareUrl(overrides: WhatIfOverrides): string {
 // share summary so a board chair sees "$14,250" rather than the abbreviated
 // "$14K" we use in the compact UI sparkline labels.
 function fmtUsd(val: number): string {
-  if (!isFinite(val)) return "—";
+  if (!isFinite(val)) return "-";
   const sign = val < 0 ? "-" : "";
   const abs = Math.abs(Math.round(val));
   return `${sign}$${abs.toLocaleString("en-US")}`;
@@ -228,7 +228,7 @@ export function buildEmailShareBody(args: {
 
   if (changes.length === 0) {
     lines.push(
-      "No overrides applied yet — opening the link will show the live planner.",
+      "No overrides applied yet - opening the link will show the live planner.",
     );
   } else {
     lines.push("Changes in this what-if:");
@@ -635,7 +635,7 @@ export function WhatIfDrawer({
               </div>
             </div>
 
-            {/* Saved scenarios picker — lets the founder swap into a saved
+            {/* Saved scenarios picker - lets the founder swap into a saved
                 What-If without leaving the drawer. Sits in its own row so the
                 main header icon cluster stays uncluttered on the 480px-wide
                 drawer. */}
@@ -983,7 +983,7 @@ export function WhatIfDrawer({
                   </span>
                 </div>
 
-                {/* Per-year metrics table — Net Income $/% delta and DSCR before/after */}
+                {/* Per-year metrics table - Net Income $/% delta and DSCR before/after */}
                 <div className="bg-card border border-border/60 rounded-lg overflow-hidden mb-3" data-testid="whatif-impact-grid">
                   <table className="w-full text-[11px]">
                     <thead className="bg-slate-50">
@@ -1019,7 +1019,7 @@ export function WhatIfDrawer({
                         <td className="px-2 py-1.5 font-sans text-muted-foreground">DSCR before</td>
                         {impact.base.dscr.map((v, i) => (
                           <td key={i} className="px-1.5 py-1.5 text-right text-muted-foreground">
-                            {isFinite(v) ? v.toFixed(2) : "—"}
+                            {isFinite(v) ? v.toFixed(2) : "-"}
                           </td>
                         ))}
                       </tr>
@@ -1032,7 +1032,7 @@ export function WhatIfDrawer({
                           return (
                             <td key={i} className="px-1.5 py-1.5 text-right" data-testid={`whatif-dscr-after-Y${i + 1}`}>
                               <span className={cn(better && "text-emerald-700", worse && "text-rose-700")}>
-                                {isFinite(v) ? v.toFixed(2) : "—"}
+                                {isFinite(v) ? v.toFixed(2) : "-"}
                               </span>
                             </td>
                           );
@@ -1066,7 +1066,7 @@ export function WhatIfDrawer({
                               key={y}
                               className="px-1.5 py-1.5 text-right text-muted-foreground"
                             >
-                              —
+                              -
                             </td>
                           ))}
                         </tr>
@@ -1122,7 +1122,7 @@ export function WhatIfDrawer({
                     <p className="text-[10px] text-muted-foreground">Break-even shift</p>
                     <p className="font-mono font-semibold mt-0.5">
                       {impact.deltas.breakEvenYearShift === null
-                        ? "—"
+                        ? "-"
                         : impact.deltas.breakEvenYearShift === 0
                         ? "Same year"
                         : impact.deltas.breakEvenYearShift > 0

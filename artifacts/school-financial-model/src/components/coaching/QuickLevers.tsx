@@ -61,7 +61,7 @@ function DeltaChip({ before, after, label, higherIsBetter = true }: { before: nu
     else if (before === -1 && after === -1) return null;
     else if (delta < 0) display = `${delta} students`;
     else if (delta > 0) display = `+${delta} students`;
-    else display = "—";
+    else display = "-";
   } else if (label === "DSCR") {
     display = `${delta >= 0 ? "+" : ""}${delta.toFixed(2)}x`;
   } else if (label === "Cash Trough") {

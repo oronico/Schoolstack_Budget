@@ -104,7 +104,7 @@ export const ENROLLMENT_BENCHMARKS: Record<string, EnrollmentBenchmark> = {
   },
   learning_pod: {
     label: "Learning pod: Premium small cohorts (≤15) need premium per-student revenue",
-    detail: "Pods cap enrollment by design — usually 8–15 students with one facilitator. With a small base, tuition (and any ESA / micro-grant pass-through) needs to fully fund staffing and shared space.",
+    detail: "Pods cap enrollment by design - usually 8–15 students with one facilitator. With a small base, tuition (and any ESA / micro-grant pass-through) needs to fully fund staffing and shared space.",
   },
   homeschool_coop: {
     label: "Homeschool co-op: Member families share cost, so per-family fees stay low",

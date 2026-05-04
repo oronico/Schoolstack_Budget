@@ -5,7 +5,7 @@ interface ModelMiniSummaryProps {
 }
 
 function fmt(v: number): string {
-  if (!isFinite(v)) return "—";
+  if (!isFinite(v)) return "-";
   if (Math.abs(v) >= 1000) return `$${Math.round(v / 1000).toLocaleString()}k`;
   return `$${Math.round(v).toLocaleString()}`;
 }

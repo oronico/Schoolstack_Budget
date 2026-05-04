@@ -198,7 +198,7 @@ export function SettingsPage() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex gap-2">
                 <span className="font-semibold text-foreground shrink-0">Compact:</span>
-                <span>Short labels and minimal explanations — best if you've built budgets before.</span>
+                <span>Short labels and minimal explanations - best if you've built budgets before.</span>
               </li>
               <li className="flex gap-2">
                 <span className="font-semibold text-foreground shrink-0">Guided:</span>

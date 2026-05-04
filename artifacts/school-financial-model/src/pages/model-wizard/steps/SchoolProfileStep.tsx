@@ -863,7 +863,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
               id: "accounting_export_uploader_lesson",
               title: "Quick lesson: what makes a clean P&L export",
               body:
-                "From QuickBooks, Xero, or Wave, run a Profit & Loss for the most recent full month or year. Export as CSV or Excel — no edits, no merged cells. We read the rightmost numeric column, so summary rows like \"Total Revenue\" and \"Net Income\" land in the right buckets automatically. Skip exports with multiple sheets, pivot tables, or dashboard formatting.",
+                "From QuickBooks, Xero, or Wave, run a Profit & Loss for the most recent full month or year. Export as CSV or Excel - no edits, no merged cells. We read the rightmost numeric column, so summary rows like \"Total Revenue\" and \"Net Income\" land in the right buckets automatically. Skip exports with multiple sheets, pivot tables, or dashboard formatting.",
               readTimeSeconds: 25,
               triggerStepTitle: "",
               checkTrigger: () => true,
@@ -989,7 +989,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
                   Revenue
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  {totals?.totalRevenue !== undefined ? fmtMoney(totals.totalRevenue) : "—"}
+                  {totals?.totalRevenue !== undefined ? fmtMoney(totals.totalRevenue) : "-"}
                 </p>
               </div>
               <div data-testid="accounting-export-expenses">
@@ -997,7 +997,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
                   Expenses
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  {totals?.totalExpenses !== undefined ? fmtMoney(totals.totalExpenses) : "—"}
+                  {totals?.totalExpenses !== undefined ? fmtMoney(totals.totalExpenses) : "-"}
                 </p>
               </div>
               <div data-testid="accounting-export-net">
@@ -1005,7 +1005,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
                   Net income
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  {totals?.netIncome !== undefined ? fmtMoney(totals.netIncome) : "—"}
+                  {totals?.netIncome !== undefined ? fmtMoney(totals.netIncome) : "-"}
                 </p>
               </div>
             </div>
@@ -1014,7 +1014,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
               className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2"
               data-testid="accounting-export-no-totals"
             >
-              We couldn't read any totals from that file — try re-exporting as a Profit &amp; Loss summary.
+              We couldn't read any totals from that file - try re-exporting as a Profit &amp; Loss summary.
             </p>
           )}
 
@@ -1045,7 +1045,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
                     data-testid={chip.testid}
                     title={
                       chip.isGap
-                        ? "The recognized category subtotals don't add up to the headline total — your chart of accounts likely has buckets we didn't map."
+                        ? "The recognized category subtotals don't add up to the headline total - your chart of accounts likely has buckets we didn't map."
                         : undefined
                     }
                   >
@@ -1109,7 +1109,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
                       we recognized {foundList} in this export ({recognized}{" "}
                       account {recognized === 1 ? "category" : "categories"}{" "}
                       detected). The next step in this wizard is where you
-                      map each account to a budget bucket — line up rent,
+                      map each account to a budget bucket - line up rent,
                       payroll, and tuition there so future syncs can keep
                       your model honest.
                     </>
@@ -1359,7 +1359,7 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
 
       {showCoach && (
         <WhyThisMatters
-          why="Your state, school type, and stage shape every default we recommend — from per-pupil funding bands and salary benchmarks to staffing ratios and rent norms. Getting these right up front means the rest of the wizard is pre-tuned for schools like yours."
+          why="Your state, school type, and stage shape every default we recommend - from per-pupil funding bands and salary benchmarks to staffing ratios and rent norms. Getting these right up front means the rest of the wizard is pre-tuned for schools like yours."
           revisit="If your governance changes (for example, you decide to pursue a charter or apply for nonprofit status), come back here first."
         />
       )}
@@ -1429,7 +1429,7 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
           name="schoolProfile.city"
           label="City / Municipality (optional)"
           placeholder="e.g., Seattle"
-          helperText="Most US cities don't require a general business license for a small school. A few — DC, Seattle, San Francisco, Los Angeles — do. If you're in one of those, we'll seed a starter amount on the Expense step; otherwise leave this blank."
+          helperText="Most US cities don't require a general business license for a small school. A few - DC, Seattle, San Francisco, Los Angeles - do. If you're in one of those, we'll seed a starter amount on the Expense step; otherwise leave this blank."
         />
       </div>
 

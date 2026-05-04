@@ -222,7 +222,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
               <p className="text-base text-muted-foreground leading-relaxed">
                 Whether it's a new grade band, an after-school enrichment, or a special-education
                 track, adding a program changes both your revenue and your cost base. We'll model the
-                trade-off in four short steps so you can decide with the numbers — not just the gut.
+                trade-off in four short steps so you can decide with the numbers - not just the gut.
               </p>
             </>
           }
@@ -332,7 +332,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
             </div>
             {inputs.staffingTbd && (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-3">
-                Got it — we'll skip staff costs in this scenario and surface a reminder in the impact step so
+                Got it - we'll skip staff costs in this scenario and surface a reminder in the impact step so
                 you remember to fold them in before sharing this with a lender.
               </p>
             )}
@@ -397,7 +397,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
           doneAction={doneAction}
           onSave={handleSave}
           plannerAvailable={false}
-          plannerUnavailableReason="Add-a-program scenarios use a synthesized revenue row that the live planner can't replay — pick Apply to my model to fold it in instead."
+          plannerUnavailableReason="Add-a-program scenarios use a synthesized revenue row that the live planner can't replay - pick Apply to my model to fold it in instead."
         />
       )}
 

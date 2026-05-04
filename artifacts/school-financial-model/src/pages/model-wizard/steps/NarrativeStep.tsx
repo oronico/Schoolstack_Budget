@@ -364,7 +364,7 @@ export function NarrativeStep({ modelId, jumpToStep }: NarrativeStepProps) {
           Lender Narrative
         </h2>
         <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-          You already shared your school's story at the start. This is the polished version — the one lenders, board members, and grant reviewers will read alongside your numbers. We've pre-filled what we can from your earlier answers.
+          You already shared your school's story at the start. This is the polished version - the one lenders, board members, and grant reviewers will read alongside your numbers. We've pre-filled what we can from your earlier answers.
         </p>
       </div>
 

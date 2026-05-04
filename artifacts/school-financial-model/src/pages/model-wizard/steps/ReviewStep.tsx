@@ -81,7 +81,7 @@ function BudgetToBooksLesson() {
       <p className="text-sm text-foreground/85 leading-relaxed">
         Your budget lives here, but the school operates inside an accounting
         system. Once a month, your bookkeeper will close the books and produce
-        three reports — the same three this model is built around. Putting your
+        three reports - the same three this model is built around. Putting your
         plan into the Budget column of each is what turns a five-year model into
         a tool you actually steer with.
       </p>
@@ -113,7 +113,7 @@ function BudgetToBooksLesson() {
             <GlossaryTerm termKey="balance_sheet">Balance Sheet</GlossaryTerm>
           </p>
           <p className="text-[11px] text-muted-foreground leading-snug mt-1">
-            What you own and owe on a given day —{" "}
+            What you own and owe on a given day -{" "}
             <GlossaryTerm termKey="assets">assets</GlossaryTerm>,{" "}
             <GlossaryTerm termKey="liabilities">liabilities</GlossaryTerm>, and{" "}
             <GlossaryTerm termKey="equity">equity</GlossaryTerm>. Your opening
@@ -560,7 +560,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
         <div className="space-y-1.5">
           {isSingleYear ? (
             <p className="text-sm text-muted-foreground italic py-1">
-              Multi-year escalation rates N/A in single-year mode — COLA, general cost inflation, rent escalation, and enrollment growth rate apply to Years 2-5 only.
+              Multi-year escalation rates N/A in single-year mode - COLA, general cost inflation, rent escalation, and enrollment growth rate apply to Years 2-5 only.
             </p>
           ) : (
             <>

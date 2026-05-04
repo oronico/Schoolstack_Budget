@@ -29,7 +29,7 @@ export interface RationaleFieldProps {
 }
 
 const DEFAULT_PLACEHOLDER =
-  "A sentence or two on how you arrived at these numbers — pricing comps, a signed LOI, a recent quote, or a board mandate.";
+  "A sentence or two on how you arrived at these numbers - pricing comps, a signed LOI, a recent quote, or a board mandate.";
 
 export function RationaleField({
   rationaleKey,

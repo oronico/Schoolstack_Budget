@@ -138,7 +138,7 @@ export function SingleYearScreenshots() {
         src={`${SCREENSHOT_BASE}/single-year-review.png`}
         alt="Review step of the wizard with a one-page Year 1 income statement, key metrics, and what-if call-outs."
         tall
-        caption="The Review step compiles a Year 1 income statement from every wizard input — ready to share."
+        caption="The Review step compiles a Year 1 income statement from every wizard input - ready to share."
         callouts={[
           {
             position: "top-left",
@@ -159,7 +159,7 @@ export function FiveYearScreenshots() {
         src={`${SCREENSHOT_BASE}/five-year-lender-packet.png`}
         alt="Five-year output step of the wizard with revenue, expenses, net income, DSCR, and cash flow rolled up year by year."
         tall
-        caption="Years 1–5 roll up automatically — revenue, expenses, debt coverage, and cash flow in one view."
+        caption="Years 1–5 roll up automatically - revenue, expenses, debt coverage, and cash flow in one view."
         callouts={[
           {
             position: "top-right",
@@ -185,8 +185,8 @@ export function ScenarioScreenshots() {
         title="What-If Drawer"
         subtitle="Live stress-test sliders"
         src={`${SCREENSHOT_BASE}/scenario-whatif-drawer.png`}
-        alt="What-if drawer with sliders for enrollment, tuition, staffing, and facility — showing live impact on Year 3 revenue, net income, and months of cash."
-        caption="Pull the sliders and the Year 3 totals + cash runway update instantly — no recalc, no spreadsheet."
+        alt="What-if drawer with sliders for enrollment, tuition, staffing, and facility - showing live impact on Year 3 revenue, net income, and months of cash."
+        caption="Pull the sliders and the Year 3 totals + cash runway update instantly - no recalc, no spreadsheet."
         callouts={[
           {
             position: "bottom-right",
@@ -218,9 +218,9 @@ export function DebtScreenshots() {
         title="Wizard · Loan & Facility Inputs"
         subtitle="Lending Lab"
         src={`${SCREENSHOT_BASE}/debt-loan-inputs.png`}
-        alt="Wizard step for loan and facility assumptions — loan amount, rate, amortization, balloon, interest-only period."
+        alt="Wizard step for loan and facility assumptions - loan amount, rate, amortization, balloon, interest-only period."
         tall
-        caption="Model the real loan you're being offered — rate, amortization, balloon, interest-only, all of it."
+        caption="Model the real loan you're being offered - rate, amortization, balloon, interest-only, all of it."
         callouts={[
           {
             position: "top-right",
@@ -255,7 +255,7 @@ export function GuidanceScreenshots() {
         src={`${SCREENSHOT_BASE}/guidance-staffing-coaching.png`}
         alt="Staffing step of the wizard with inline coaching tips and benchmarks visible next to the inputs."
         tall
-        caption="Coaching shows up in context — right next to the input you're filling in, never in a side panel."
+        caption="Coaching shows up in context - right next to the input you're filling in, never in a side panel."
         callouts={[
           {
             position: "top-right",

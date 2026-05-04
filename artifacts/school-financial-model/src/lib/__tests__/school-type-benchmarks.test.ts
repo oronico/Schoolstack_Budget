@@ -78,7 +78,7 @@ describe("school-type-benchmarks (Task #454 first-class personas)", () => {
     expect(ENROLLMENT_BENCHMARKS.learning_pod).toEqual({
       label: "Learning pod: Premium small cohorts (≤15) need premium per-student revenue",
       detail:
-        "Pods cap enrollment by design — usually 8–15 students with one facilitator. With a small base, tuition (and any ESA / micro-grant pass-through) needs to fully fund staffing and shared space.",
+        "Pods cap enrollment by design - usually 8–15 students with one facilitator. With a small base, tuition (and any ESA / micro-grant pass-through) needs to fully fund staffing and shared space.",
     });
   });
 

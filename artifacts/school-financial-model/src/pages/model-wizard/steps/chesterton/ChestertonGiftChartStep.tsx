@@ -69,7 +69,7 @@ export function ChestertonGiftChartStep() {
 
       {showCoach && (
         <WhyThisMatters
-          why="A gift chart converts your fundraising goal from a single big number into a list of conversations. Lenders and board members trust schools that can answer 'where do those 5 major gifts come from?' — this step forces that answer."
+          why="A gift chart converts your fundraising goal from a single big number into a list of conversations. Lenders and board members trust schools that can answer 'where do those 5 major gifts come from?' - this step forces that answer."
           revisit="Refresh this every fall before campaign season opens."
         />
       )}

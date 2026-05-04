@@ -74,7 +74,7 @@ describe("buildEmailShareBody — overrides branches", () => {
   it("falls back to a friendly placeholder when no overrides are applied", () => {
     const body = build({});
     expect(body).toContain(
-      "No overrides applied yet — opening the link will show the live planner.",
+      "No overrides applied yet - opening the link will show the live planner.",
     );
     expect(body).not.toContain("Changes in this what-if:");
     expect(body).not.toContain("Headline impact:");
@@ -108,7 +108,7 @@ describe("buildEmailShareBody — overrides branches", () => {
   it("ignores an enrollment override that is all zeros", () => {
     const body = build({ enrollmentDelta: [0, 0, 0, 0, 0] });
     expect(body).toContain(
-      "No overrides applied yet — opening the link will show the live planner.",
+      "No overrides applied yet - opening the link will show the live planner.",
     );
   });
 
@@ -130,7 +130,7 @@ describe("buildEmailShareBody — overrides branches", () => {
   it("skips a tuition override that is exactly zero", () => {
     const body = build({ tuitionDeltaPerStudent: 0 });
     expect(body).toContain(
-      "No overrides applied yet — opening the link will show the live planner.",
+      "No overrides applied yet - opening the link will show the live planner.",
     );
   });
 
@@ -142,7 +142,7 @@ describe("buildEmailShareBody — overrides branches", () => {
   it("skips a fit-out override that is exactly zero", () => {
     const body = build({ oneTimeFitOut: 0 });
     expect(body).toContain(
-      "No overrides applied yet — opening the link will show the live planner.",
+      "No overrides applied yet - opening the link will show the live planner.",
     );
   });
 

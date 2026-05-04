@@ -400,7 +400,7 @@ export function StaffingStep() {
 
       {showCoach && (
         <WhyThisMatters
-          why="Salaries and benefits are typically the biggest line in a school budget — often 60–70% of expenses. We've pre-loaded a typical roster for your school type so you have a credible starting point even before you've made hires."
+          why="Salaries and benefits are typically the biggest line in a school budget - often 60–70% of expenses. We've pre-loaded a typical roster for your school type so you have a credible starting point even before you've made hires."
           revisit="Revisit each time you confirm a hire, change a role's hours, or update your benefits package."
         />
       )}
@@ -412,7 +412,7 @@ export function StaffingStep() {
         bgColor="bg-primary/5"
         summary={<>
           <span className="font-semibold">Year 1 roster</span>
-          <span className="text-muted-foreground"> — {y1Students || "?"} → {y5Students || "?"} students over 5 years. Typical ratio: {benchmark.ratio}.</span>
+          <span className="text-muted-foreground"> - {y1Students || "?"} → {y5Students || "?"} students over 5 years. Typical ratio: {benchmark.ratio}.</span>
         </>}
       >
         <p className="text-sm text-foreground">
@@ -436,7 +436,7 @@ export function StaffingStep() {
           bgColor="bg-blue-50/50"
           summary={<>
             <span className="font-semibold"><GlossaryTerm termKey="cola" schoolType={schoolType}>COLA</GlossaryTerm> {colaRate}%</span>
-            <span className="text-muted-foreground"> — Y1 salaries: ${costs.totalSalariesWages.toLocaleString()} → Y5: ${Math.round(costs.totalSalariesWages * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}</span>
+            <span className="text-muted-foreground"> - Y1 salaries: ${costs.totalSalariesWages.toLocaleString()} → Y5: ${Math.round(costs.totalSalariesWages * Math.pow(1 + colaRate / 100, 4)).toLocaleString()}</span>
           </>}
         >
           <p className="text-sm text-foreground">
@@ -452,7 +452,7 @@ export function StaffingStep() {
         bgColor="bg-emerald-50/50"
         summary={<>
           <span className="font-semibold">Use a payroll provider</span>
-          <span className="text-muted-foreground"> — Gusto, ADP, or Paychex handle tax withholding and compliance automatically.</span>
+          <span className="text-muted-foreground"> - Gusto, ADP, or Paychex handle tax withholding and compliance automatically.</span>
         </>}
       >
         <p className="text-sm text-foreground">
@@ -734,8 +734,8 @@ export function StaffingStep() {
               label={`Why this ${FUNCTION_CATEGORY_LABELS[cat].toLowerCase()} plan?`}
               placeholder={
                 catCost.grandTotal > 0 && y1Students > 0
-                  ? `${catCost.headcount} role${catCost.headcount === 1 ? "" : "s"} totaling ${formatCurrency(catCost.grandTotal)} Y1 (${formatPerStudent(catCost.grandTotal, y1Students)}). What anchors that — comp benchmarks, prior school experience, a hiring plan, or an org chart?`
-                  : "How did you size this group — comp benchmarks, prior school experience, a hiring plan, or an org chart?"
+                  ? `${catCost.headcount} role${catCost.headcount === 1 ? "" : "s"} totaling ${formatCurrency(catCost.grandTotal)} Y1 (${formatPerStudent(catCost.grandTotal, y1Students)}). What anchors that - comp benchmarks, prior school experience, a hiring plan, or an org chart?`
+                  : "How did you size this group - comp benchmarks, prior school experience, a hiring plan, or an org chart?"
               }
               helperText="Lenders look for a hiring plan that matches the ramp. Two sentences on the source of these roles and rates."
             />

@@ -57,14 +57,14 @@ export function getPersonaTone(user: UserResponse | null | undefined): PersonaTo
     return {
       greeting: (firstName: string) =>
         newComfort
-          ? `Welcome, ${firstName} — let's plan your school together`
+          ? `Welcome, ${firstName} - let's plan your school together`
           : `Welcome, ${firstName}`,
       emptyStateTitle: newComfort
         ? "Let's plan your school in plain English"
         : "Let's build your opening-year plan",
       emptyStateBody: newComfort
         ? "We'll ask simple questions about your school and turn your answers into a budget. No spreadsheets or jargon required."
-        : "Answer questions about your program, enrollment, and staffing — we'll assemble a 5-year projection you can take to a lender or board.",
+        : "Answer questions about your program, enrollment, and staffing - we'll assemble a 5-year projection you can take to a lender or board.",
       newModelCta: "Start planning",
     };
   }
@@ -72,7 +72,7 @@ export function getPersonaTone(user: UserResponse | null | undefined): PersonaTo
     return {
       greeting: (firstName: string) =>
         newComfort
-          ? `Welcome back, ${firstName} — let's keep your numbers steady`
+          ? `Welcome back, ${firstName} - let's keep your numbers steady`
           : `Welcome back, ${firstName}`,
       emptyStateTitle: newComfort
         ? "Let's get your school's numbers organized"

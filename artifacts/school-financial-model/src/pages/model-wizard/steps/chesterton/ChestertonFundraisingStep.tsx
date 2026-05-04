@@ -57,7 +57,7 @@ export function ChestertonFundraisingStep() {
 
       {showCoach && (
         <WhyThisMatters
-          why="Chesterton schools start each year with a fundraising plan, not a wish. Splitting your goal into Major / Mid-Major / Annual Fund / Grassroots / Events makes the work concrete — and lets the gift chart math work backwards from real prospect counts."
+          why="Chesterton schools start each year with a fundraising plan, not a wish. Splitting your goal into Major / Mid-Major / Annual Fund / Grassroots / Events makes the work concrete - and lets the gift chart math work backwards from real prospect counts."
           revisit="Update this every spring once you know what you closed and what carried into next year."
         />
       )}

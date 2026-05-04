@@ -222,7 +222,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
               </h1>
               <p className="text-base text-muted-foreground leading-relaxed">
                 Whether your re-enrollment came in stronger than expected, you're tightening a
-                recruitment target, or your board wants to plan for a slower ramp — let's see what
+                recruitment target, or your board wants to plan for a slower ramp - let's see what
                 the new enrollment picture does to revenue, cash, and break-even.
               </p>
               <p className="mt-4 text-xs text-muted-foreground">
@@ -234,7 +234,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
             </>
           }
           prepareList={[
-            "How many more (or fewer) students per year — relative to your current model",
+            "How many more (or fewer) students per year - relative to your current model",
             "Optional: a new retention rate",
             "Optional: a tuition adjustment per student",
             "Why this change is on the table (re-enrollment, board ask, downside test)",
@@ -359,8 +359,8 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
             <h2 className="font-display text-xl font-bold text-foreground mb-1">Impact on your model</h2>
             <p className="text-sm text-muted-foreground">
               {isSingleYear
-                ? "Here's what this enrollment shift does to your Year 1 picture — and whether your staffing plan still fits."
-                : "Here's what this enrollment shift does to your 5-year picture — and whether your staffing plan still fits."}
+                ? "Here's what this enrollment shift does to your Year 1 picture - and whether your staffing plan still fits."
+                : "Here's what this enrollment shift does to your 5-year picture - and whether your staffing plan still fits."}
             </p>
           </div>
           <ImpactSummary impact={impact} isSingleYear={isSingleYear} />

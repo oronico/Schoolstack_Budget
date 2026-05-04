@@ -800,7 +800,7 @@ export const EXPLAINERS: Record<string, Explainer> = {
       },
       micro: {
         whatThisMeans: "The benefits rate covers health insurance, retirement, and similar costs on top of salary. For micro programs, benefits costs can be a significant percentage of your total budget since your team is small.",
-        whatToDoNext: "If your team is mostly contractors (1099), benefits may not apply — set this lower. For W-2 employees, 20-25% is a reasonable default. If you're the only employee, research individual health insurance costs in your area to set a more precise rate.",
+        whatToDoNext: "If your team is mostly contractors (1099), benefits may not apply - set this lower. For W-2 employees, 20-25% is a reasonable default. If you're the only employee, research individual health insurance costs in your area to set a more precise rate.",
       },
     },
     audienceLevel: ["basics", "extra"],
@@ -822,11 +822,11 @@ export const EXPLAINERS: Record<string, Explainer> = {
     },
     schoolTypeVariants: {
       charter: {
-        whatThisMeans: "The collection rate applies to any fees your charter school charges (registration, activity, technology fees). For per-pupil state funding, collection is typically 100% once enrollment is verified — this setting mainly affects ancillary fee revenue.",
+        whatThisMeans: "The collection rate applies to any fees your charter school charges (registration, activity, technology fees). For per-pupil state funding, collection is typically 100% once enrollment is verified - this setting mainly affects ancillary fee revenue.",
         whatToDoNext: "If your charter school is tuition-free and only charges minimal fees, a 95-98% collection rate is reasonable. If you don't charge any fees, this setting won't significantly impact your model since per-pupil funding flows through a different mechanism.",
       },
       private: {
-        whatToDoNext: "Private schools with robust autopay enrollment can plan for 97-99%. For families on payment plans or invoicing, 92-95% is more realistic. Budget your financial aid separately — collection rate applies to the net amount after aid, not gross tuition.",
+        whatToDoNext: "Private schools with robust autopay enrollment can plan for 97-99%. For families on payment plans or invoicing, 92-95% is more realistic. Budget your financial aid separately - collection rate applies to the net amount after aid, not gross tuition.",
       },
       micro: {
         whatThisMeans: "The collection rate is the percentage of fees you actually receive from families. With smaller groups and closer relationships, micro programs often see higher collection rates than larger schools.",

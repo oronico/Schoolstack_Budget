@@ -45,7 +45,7 @@ interface ImpactSummaryProps {
 }
 
 function fmtMoney(v: number): string {
-  if (!isFinite(v)) return "—";
+  if (!isFinite(v)) return "-";
   const abs = Math.abs(v);
   if (abs >= 1_000_000) return `${v < 0 ? "-" : ""}$${(abs / 1_000_000).toFixed(2)}M`;
   if (abs >= 1000) return `${v < 0 ? "-" : ""}$${(abs / 1000).toFixed(1)}k`;
@@ -59,7 +59,7 @@ function fmtMoneyDelta(v: number): string {
 }
 
 function fmtBreakEven(shift: number | null): string {
-  if (shift === null) return "—";
+  if (shift === null) return "-";
   if (shift === 0) return "Same";
   if (shift > 0) return `+${shift}y`;
   return `${shift}y`;
@@ -149,7 +149,7 @@ function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSing
         key: "dscr",
         label: "DSCR slips below 1.20",
         oneLiner: `Adjusted DSCR ${adjusted.dscr[dscrYearIdx].toFixed(2)} in Year ${dscrYearIdx + 1}.`,
-        body: `Your adjusted DSCR drops to ${adjusted.dscr[dscrYearIdx].toFixed(2)} in Year ${dscrYearIdx + 1}. Most lenders want at least 1.20 — flag this on the board memo, or pair the decision with an enrollment or expense lever before you commit.`,
+        body: `Your adjusted DSCR drops to ${adjusted.dscr[dscrYearIdx].toFixed(2)} in Year ${dscrYearIdx + 1}. Most lenders want at least 1.20 - flag this on the board memo, or pair the decision with an enrollment or expense lever before you commit.`,
       });
     }
     if (adjusted.cashRunwayMonths < 6) {
@@ -157,7 +157,7 @@ function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSing
         key: "runway",
         label: "Cash runway under 6 months",
         oneLiner: `Adjusted runway ${adjusted.cashRunwayMonths.toFixed(1)} months.`,
-        body: `After this decision, the model only has ${adjusted.cashRunwayMonths.toFixed(1)} months of runway. That's the threshold where a single missed enrollment month becomes a payroll problem — line up a reserve, line of credit, or smaller starting commitment first.`,
+        body: `After this decision, the model only has ${adjusted.cashRunwayMonths.toFixed(1)} months of runway. That's the threshold where a single missed enrollment month becomes a payroll problem - line up a reserve, line of credit, or smaller starting commitment first.`,
       });
     }
     const niYearIdx = adjusted.netIncome.findIndex((n) => n < 0);
@@ -166,7 +166,7 @@ function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSing
         key: "ni",
         label: `Net income negative in Year ${niYearIdx + 1}`,
         oneLiner: `Adjusted Year ${niYearIdx + 1} net income negative.`,
-        body: `Adjusted net income is ${adjusted.netIncome[niYearIdx] < 0 ? "negative" : "thin"} in Year ${niYearIdx + 1}. New schools often plan for a year or two of red ink, but it should be a deliberate choice — make sure your reserves and your board memo line up with that plan.`,
+        body: `Adjusted net income is ${adjusted.netIncome[niYearIdx] < 0 ? "negative" : "thin"} in Year ${niYearIdx + 1}. New schools often plan for a year or two of red ink, but it should be a deliberate choice - make sure your reserves and your board memo line up with that plan.`,
       });
     }
     return items;
@@ -234,7 +234,7 @@ function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSing
             {fmtBreakEven(deltas.breakEvenYearShift)}
           </p>
           <p className="text-[10px] text-muted-foreground mt-1">
-            base Y{base.breakEvenYear ?? "—"} → after Y{adjusted.breakEvenYear ?? "—"}
+            base Y{base.breakEvenYear ?? "-"} → after Y{adjusted.breakEvenYear ?? "-"}
           </p>
         </div>
         <div className="bg-card border border-border/60 rounded-xl p-4">
@@ -304,7 +304,7 @@ function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSing
                     better && "text-emerald-700",
                     worse && "text-rose-700",
                   )}>
-                    {isFinite(v) ? v.toFixed(2) : "—"}
+                    {isFinite(v) ? v.toFixed(2) : "-"}
                   </td>
                 );
               })}
@@ -358,7 +358,7 @@ function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSing
               <span data-testid="impact-cash-trough-label">
                 Year {troughIdx + 1} at {fmtMoney(adjusted.cashPosition[troughIdx])}
               </span>{" "}
-              <span className="text-foreground/70">— lowest projected cash year after this decision.</span>
+              <span className="text-foreground/70">- lowest projected cash year after this decision.</span>
             </p>
           </div>
         )}
@@ -384,7 +384,7 @@ function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSing
         </div>
       )}
 
-      {/* KPI threshold nudges — always shown (DSCR<1.20, runway<6mo, NI<0).
+      {/* KPI threshold nudges - always shown (DSCR<1.20, runway<6mo, NI<0).
           Basics/extra get the full coaching callout (label + body paragraph
           + "Try a What-If to fix it" link). Advanced founders get a compact
           inline metric flag instead — a small amber pill per failing KPI
@@ -685,7 +685,7 @@ function ImpactComparison({ columns, isSingleYear }: { columns: ComparisonColumn
       higherIsBetter: false,
       values: cols.map((c) => c.impact.deltas.breakEvenYearShift),
       displays: cols.map((c) => fmtBreakEven(c.impact.deltas.breakEvenYearShift)),
-      subs: cols.map((c) => `to Y${c.impact.adjusted.breakEvenYear ?? "—"}`),
+      subs: cols.map((c) => `to Y${c.impact.adjusted.breakEvenYear ?? "-"}`),
     },
     {
       label: "Cash runway Δ",
@@ -763,7 +763,7 @@ function ImpactComparison({ columns, isSingleYear }: { columns: ComparisonColumn
         })}
       </div>
 
-      {/* Headline tiles — one per metric, with N inner cells */}
+      {/* Headline tiles - one per metric, with N inner cells */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <HeadlineTile metric={headline[0]} testId="cmp-y5-net" columnCount={n} />
         <HeadlineTile metric={headline[1]} testId="cmp-y5-rev" columnCount={n} />
@@ -771,7 +771,7 @@ function ImpactComparison({ columns, isSingleYear }: { columns: ComparisonColumn
         <HeadlineTile metric={headline[3]} testId="cmp-runway" columnCount={n} />
       </div>
 
-      {/* Per-year table — interleaves all decision rows for each metric.
+      {/* Per-year table - interleaves all decision rows for each metric.
           The "Side" column shows A/B/C/D so founders can see at a glance
           which decision a row belongs to.
 
@@ -892,7 +892,7 @@ function ImpactComparison({ columns, isSingleYear }: { columns: ComparisonColumn
                             display={v.toFixed(2)}
                           />
                         ) : (
-                          "—"
+                          "-"
                         )}
                       </td>
                     ))}
@@ -900,7 +900,7 @@ function ImpactComparison({ columns, isSingleYear }: { columns: ComparisonColumn
                 );
               })}
 
-              {/* Cash position after — surfaces the per-year trough so
+              {/* Cash position after - surfaces the per-year trough so
                   founders can spot the runway crunch year lenders zero in on.
                   Each side's lowest cash year gets a ring + down-arrow icon so
                   founders see the crunch year at a glance, on top of the
@@ -991,7 +991,7 @@ function ImpactComparison({ columns, isSingleYear }: { columns: ComparisonColumn
             </tbody>
           </table>
         </div>
-        {/* Per-side trough summary — restates each column's worst cash year as
+        {/* Per-side trough summary - restates each column's worst cash year as
             a one-line callout so founders don't have to scan the table to find
             the runway crunch year. Mirrors the column palette so the labels
             line up visually with the A/B/C/D columns above. */}
@@ -1049,7 +1049,7 @@ function ImpactComparison({ columns, isSingleYear }: { columns: ComparisonColumn
                     palette.headerText,
                   )}
                 >
-                  {palette.letter} — Why
+                  {palette.letter} - Why
                 </p>
                 {c.narrative ? (
                   <p className="text-sm text-foreground/85 leading-relaxed whitespace-pre-line">
@@ -1078,7 +1078,7 @@ function ImpactComparison({ columns, isSingleYear }: { columns: ComparisonColumn
                   palette.headerText,
                 )}
               >
-                {palette.letter} — flags
+                {palette.letter} - flags
               </p>
               {c.impact.nudges.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">No flags raised.</p>

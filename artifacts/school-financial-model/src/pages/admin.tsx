@@ -198,7 +198,7 @@ const RANGE_OPTIONS: { value: CtaRange; label: string }[] = [
 // dash when there are no data points yet (e.g. brand new capability page).
 function MiniSparkline({ values, color = "#0f766e" }: { values: number[]; color?: string }) {
   if (!values || values.length === 0) {
-    return <span className="text-xs text-muted-foreground">—</span>;
+    return <span className="text-xs text-muted-foreground">-</span>;
   }
   const max = Math.max(...values, 1);
   const min = 0;
@@ -230,7 +230,7 @@ function MiniSparkline({ values, color = "#0f766e" }: { values: number[]; color?
 // percentage to avoid showing infinite/NaN; "new" keeps it human readable.
 function DeltaBadge({ current, previous, invertColor = false }: { current: number; previous: number; invertColor?: boolean }) {
   if (previous === 0 && current === 0) {
-    return <span className="text-[11px] text-muted-foreground">—</span>;
+    return <span className="text-[11px] text-muted-foreground">-</span>;
   }
   if (previous === 0) {
     return (
@@ -712,7 +712,7 @@ function CtaConversionSection() {
                             <th className="py-2 px-3 text-right">Sign-ups</th>
                             <th className="py-2 px-3 text-right">Click rate</th>
                             <th className="py-2 pl-3 text-right">
-                              Trend ({data.bucketUnit === "week" ? "weekly" : data.bucketUnit === "day" ? "daily" : "—"})
+                              Trend ({data.bucketUnit === "week" ? "weekly" : data.bucketUnit === "day" ? "daily" : "-"})
                             </th>
                           </tr>
                         </thead>
@@ -755,7 +755,7 @@ function CtaConversionSection() {
                                   </div>
                                 ) : (
                                   <span className="text-xs text-muted-foreground">
-                                    —
+                                    -
                                   </span>
                                 )}
                               </td>
@@ -2059,7 +2059,7 @@ function LowEngagementBadge({
         <p className="font-semibold mb-1">Low engagement</p>
         <p>
           Engaged {(surface.engagementRate * 100).toFixed(1)}% of{" "}
-          {surface.shown.toLocaleString()} impressions over the last 30 days —
+          {surface.shown.toLocaleString()} impressions over the last 30 days -
           below the {ratePct}% floor we apply once a surface clears{" "}
           {threshold.minImpressions} impressions. Consider rewriting or
           retiring the copy.

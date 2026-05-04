@@ -495,7 +495,7 @@ function DecisionComparisonBlock({
       </div>
       <p className="text-sm text-slate-500 mb-4">
         Pick 2-4 saved decisions and see Y5 net income, break-even shift, DSCR, and cash
-        runway side-by-side — same numbers as the founder's planner, with the strongest
+        runway side-by-side - same numbers as the founder's planner, with the strongest
         column highlighted per metric.
       </p>
       <div
@@ -588,7 +588,7 @@ function DecisionComparisonBlock({
           {canDownload ? (
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <p className="text-xs text-slate-500">
-                Take this comparison straight to the board — one page, the same numbers
+                Take this comparison straight to the board - one page, the same numbers
                 you see here.
               </p>
               <button
@@ -794,7 +794,7 @@ export function SharedModelPage() {
           <ExpenseBreakdownSection data={data} />
         </section>
 
-        {/* Side-by-side decision comparison + Download-as-PDF — only renders
+        {/* Side-by-side decision comparison + Download-as-PDF - only renders
             when the founder has at least two saved decision-flow scenarios.
             The PDF download hits the token-authed counterpart route so the
             recipient never needs an account. */}

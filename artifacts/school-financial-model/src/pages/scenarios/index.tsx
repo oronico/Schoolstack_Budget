@@ -299,7 +299,7 @@ function ActualsCoachIntro({ idx }: { idx: number }) {
         why={
           <>
             <GlossaryTerm termKey="actuals" onOpen={handleGlossaryOpen}>Actuals</GlossaryTerm> are what really
-            happened — the enrollment, revenue, and expenses you can read off
+            happened - the enrollment, revenue, and expenses you can read off
             your bank statement and bookkeeping. Comparing them to your
             projections gives you{" "}
             <GlossaryTerm termKey="variance" onOpen={handleGlossaryOpen}>variance</GlossaryTerm>: where you
@@ -307,7 +307,7 @@ function ActualsCoachIntro({ idx }: { idx: number }) {
             that turns a model into a tool you actually steer with.
           </>
         }
-        revisit="Update actuals at the end of every month or quarter — the more recent the data, the better the next decision you make."
+        revisit="Update actuals at the end of every month or quarter - the more recent the data, the better the next decision you make."
       />
     </div>
   );
@@ -381,7 +381,7 @@ function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachPro
             <span className="font-semibold">{it.label} {it.direction === "good" ? "beat" : "missed"} by {Math.abs(it.pct * 100).toFixed(0)}%.</span>{" "}
             {verbose ? (
               it.direction === "good"
-                ? "Worth noting in your board memo — and worth understanding so you can plan around it next year."
+                ? "Worth noting in your board memo - and worth understanding so you can plan around it next year."
                 : "A 10%+ miss usually means an assumption needs revisiting before the next decision rolls. Open the planner and see if it's enrollment, pricing, or a single line item."
             ) : null}
           </p>
@@ -393,7 +393,7 @@ function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachPro
       >
         In accounting, this is called{" "}
         <GlossaryTerm termKey="variance_analysis">variance analysis</GlossaryTerm>{" "}
-        — comparing planned to actual on the same{" "}
+        - comparing planned to actual on the same{" "}
         <GlossaryTerm termKey="pl_statement">P&amp;L</GlossaryTerm> line. Doing
         it monthly is what turns a budget into a tool you steer with.
       </p>
@@ -605,7 +605,7 @@ function ActualsLine({
         <div className="min-w-0">
           <div className="text-[11px] font-medium text-foreground truncate">{label}</div>
           <div className="text-[10px] text-muted-foreground font-mono">
-            Projected {hasProjected ? fmtActualVal(projected!, kind) : "—"}
+            Projected {hasProjected ? fmtActualVal(projected!, kind) : "-"}
           </div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -940,8 +940,8 @@ export function CustomScenarioCard({
     if (filled === 0) {
       setSuggestionFeedback(
         suggestion.sourceLabels.length === 0
-          ? "No suggestions available — add prior-year actuals or current-year projections in setup to enable this."
-          : "Nothing to suggest — every field is already filled in.",
+          ? "No suggestions available - add prior-year actuals or current-year projections in setup to enable this."
+          : "Nothing to suggest - every field is already filled in.",
       );
     } else {
       const sourceList = suggestion.sourceLabels.slice(0, 2).join(" · ");
@@ -1264,7 +1264,7 @@ export function CustomScenarioCard({
       )}
       <ul className="text-xs text-muted-foreground space-y-1 mb-3">
         {bullets.length === 0 ? (
-          <li>(No overrides — baseline)</li>
+          <li>(No overrides - baseline)</li>
         ) : (
           bullets.map((b, i) => <li key={i}>• {b}</li>)
         )}
@@ -1323,7 +1323,7 @@ export function CustomScenarioCard({
         );
       })()}
 
-      {/* Outcome status controls — what actually happened with this decision? */}
+      {/* Outcome status controls - what actually happened with this decision? */}
       <div className="mb-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
           What happened?
@@ -1353,7 +1353,7 @@ export function CustomScenarioCard({
         </div>
       </div>
 
-      {/* Retrospective note — short reflection on how it actually landed */}
+      {/* Retrospective note - short reflection on how it actually landed */}
       <div className="mb-4">
         {editingRetro ? (
           <div data-testid={`custom-scenario-retro-editor-${idx}`}>
@@ -1362,7 +1362,7 @@ export function CustomScenarioCard({
               onChange={(e) => setRetroDraft(e.target.value)}
               rows={3}
               maxLength={500}
-              placeholder="Short reflection — e.g. 'Signed the lease in March; enrollment came in 5 students under plan'"
+              placeholder="Short reflection - e.g. 'Signed the lease in March; enrollment came in 5 students under plan'"
               className="w-full text-xs border border-border rounded-md px-2 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
               data-testid={`custom-scenario-retro-textarea-${idx}`}
             />
@@ -1411,7 +1411,7 @@ export function CustomScenarioCard({
         )}
       </div>
 
-      {/* Actuals snapshot — projected vs realized numbers for one model year.
+      {/* Actuals snapshot - projected vs realized numbers for one model year.
           Surfaces only for Pursued scenarios (or when actuals already exist)
           since founders won't have realized numbers for declined / on-hold
           decisions. The schema accepts optional fields so this stays a
@@ -1786,7 +1786,7 @@ export function CustomScenarioCard({
                   data-testid={`custom-scenario-actuals-upload-removed-notice-${idx}`}
                 >
                   <p className="text-[10px] text-amber-900 leading-snug min-w-0">
-                    Upload removed — book-sourced values are now editable as plain entries.
+                    Upload removed - book-sourced values are now editable as plain entries.
                   </p>
                   <button
                     type="button"
@@ -1885,7 +1885,7 @@ export function CustomScenarioCard({
                 onChange={(e) => setActualsDraft({ ...actualsDraft, notes: e.target.value })}
                 rows={2}
                 maxLength={300}
-                placeholder="Optional context — e.g. 'Pre-K projected 24, came in at 19'"
+                placeholder="Optional context - e.g. 'Pre-K projected 24, came in at 19'"
                 className="w-full text-[11px] border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 data-testid={`custom-scenario-actuals-notes-${idx}`}
               />
@@ -1926,7 +1926,7 @@ export function CustomScenarioCard({
         </div>
       )}
 
-      {/* Pursued nudge — fold the change into the base model so future decision
+      {/* Pursued nudge - fold the change into the base model so future decision
           flows compare against current reality, not stale assumptions. */}
       {showApplyNudge && (
         <div
@@ -2687,7 +2687,7 @@ export function ScenarioPage() {
                         highlightBetter="higher"
                       />
 
-                      {/* Task #478 — Y5 summary + per-year tables only make
+                      {/* Task #478 - Y5 summary + per-year tables only make
                           sense for 5-year models. Single-year models extrapolate
                           Y2-Y5 from Y1, so these would publish hidden Y5 numbers
                           the founder didn't actually project. */}
@@ -2942,7 +2942,7 @@ export function ScenarioPage() {
               )}
             </div>
 
-            {/* Task #477 — Single-year founders only. Renders the same
+            {/* Task #477 - Single-year founders only. Renders the same
                 advisor brief HTML the team review email would ship + the
                 same scenario-compare verdict copy that lands in the
                 comparison view, so the founder can confirm the Y1-anchored
@@ -2970,7 +2970,7 @@ export function ScenarioPage() {
           </>
         )}
 
-        {/* Compare 2-4 saved decision scenarios — uses computeDecisionImpactFromPersisted
+        {/* Compare 2-4 saved decision scenarios - uses computeDecisionImpactFromPersisted
             so each column is rerun against the *current* base model. Only shown when
             the founder has at least two saved decision-flow scenarios (i.e. those with
             a decisionType). What-If-only scenarios use the deep comparison above. */}
@@ -3066,8 +3066,8 @@ export function ScenarioPage() {
                   </h2>
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Pick 2-4 saved decisions — candidate sites, enrollment paths, or new
-                  programs — and see Y5 net income, break-even shift, DSCR, and cash
+                  Pick 2-4 saved decisions - candidate sites, enrollment paths, or new
+                  programs - and see Y5 net income, break-even shift, DSCR, and cash
                   runway side-by-side, with the strongest column highlighted per metric.
                 </p>
                 <div
@@ -3161,7 +3161,7 @@ export function ScenarioPage() {
 
               {columns.length >= 2 && !hasDup && (
                 <div className="mt-6 space-y-4" data-testid="decision-compare-result">
-                  {/* Share link — copies a `#compare=…` URL that pre-selects
+                  {/* Share link - copies a `#compare=…` URL that pre-selects
                       the same 2-4 saved decisions on the recipient's load.
                       Distinct from the live planner's What-If quick-share:
                       this one is for saved decision scenarios on the
@@ -3170,7 +3170,7 @@ export function ScenarioPage() {
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-xs text-muted-foreground">
                       Send a co-founder or board member straight to this exact
-                      comparison — they'll land on the same {effectiveKeys.length} columns.
+                      comparison - they'll land on the same {effectiveKeys.length} columns.
                     </p>
                     <button
                       type="button"
@@ -3197,7 +3197,7 @@ export function ScenarioPage() {
                           toast({
                             title: "Link copied",
                             description:
-                              "Paste it in Slack or email — the recipient lands on this exact comparison.",
+                              "Paste it in Slack or email - the recipient lands on this exact comparison.",
                           });
                         } catch {
                           toast({
@@ -3222,7 +3222,7 @@ export function ScenarioPage() {
                       )}
                     </button>
                   </div>
-                  {/* Download-as-PDF action — only shown for the binary
+                  {/* Download-as-PDF action - only shown for the binary
                       A vs B case because the backend PDF generator renders
                       a side-by-side comparison of exactly two scenarios.
                       For 3-4 column comparisons the user can drop a column
@@ -3232,7 +3232,7 @@ export function ScenarioPage() {
                   {columns.length === 2 && selectedScenarios[0] && selectedScenarios[1] && (
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <p className="text-xs text-muted-foreground">
-                        Take this comparison straight to the board — one page, the same numbers
+                        Take this comparison straight to the board - one page, the same numbers
                         you see here.
                       </p>
                       <button
@@ -3363,7 +3363,7 @@ export function ScenarioPage() {
           );
         })()}
 
-        {/* Forecast accuracy — roll-up of projected vs actual across every
+        {/* Forecast accuracy - roll-up of projected vs actual across every
             Pursued saved scenario that has actuals captured. Sits above the
             saved-scenarios list so a founder lands on the aggregate insight
             ("you tend to over-project enrollment by 5%") before drilling into
@@ -3373,7 +3373,7 @@ export function ScenarioPage() {
           <ForecastAccuracyView rollup={forecastAccuracyRollup} />
         )}
 
-        {/* Custom What-If scenarios — saved from the Live What-If Planner drawer */}
+        {/* Custom What-If scenarios - saved from the Live What-If Planner drawer */}
         {(() => {
           const custom = ((modelData as Record<string, unknown>).customScenarios as
             | CustomScenario[]
@@ -3553,7 +3553,7 @@ export function ScenarioPage() {
                 <h2 className="font-display text-xl font-bold text-foreground">Saved What-If scenarios</h2>
                 <span className="text-sm text-muted-foreground">({custom.length})</span>
               </div>
-              {/* Filter + search + sort toolbar — keeps the list scannable
+              {/* Filter + search + sort toolbar - keeps the list scannable
                   as the number of saved decisions grows. Selections persist
                   to the URL (?outcome=…&q=…&sort=…) so reloads/shares keep
                   the view. */}

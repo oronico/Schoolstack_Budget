@@ -313,7 +313,7 @@ function PayrollTaxSection({
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
           Employer-side payroll taxes (FICA, FUTA, state unemployment).
-          {stateName ? ` Auto-populated for ${stateName} — ` : " "}
+          {stateName ? ` Auto-populated for ${stateName} - ` : " "}
           Applied as a default to each new staff role - override per role on the Staffing step.
         </p>
         {statePayrollTaxEntry.components.length > 0 && (
@@ -513,8 +513,8 @@ export function AssumptionsStep() {
         <p className="text-muted-foreground text-lg">
           {isSingleYear
             ? (yetToLaunch
-                ? "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital plans are in. Use this screen to set the rates and structural settings that shape your opening Year 1 budget. Multi-year escalators are hidden in single-year mode — extend to a 5-year model to enable them."
-                : "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates and structural settings for your Year 1 budget. Multi-year escalators are hidden in single-year mode — extend to a 5-year model to enable them.")
+                ? "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital plans are in. Use this screen to set the rates and structural settings that shape your opening Year 1 budget. Multi-year escalators are hidden in single-year mode - extend to a 5-year model to enable them."
+                : "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates and structural settings for your Year 1 budget. Multi-year escalators are hidden in single-year mode - extend to a 5-year model to enable them.")
             : (yetToLaunch
                 ? "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital plans are in. Use this screen to set the rates, escalators, and structural settings that shape your opening 5-year projection."
                 : "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates, escalators, and structural settings that stress-test your 5-year model.")}
@@ -527,11 +527,11 @@ export function AssumptionsStep() {
           iconColor="text-emerald-700"
           borderColor="border-emerald-200"
           bgColor="bg-emerald-50/60"
-          summary={<><span className="font-semibold">The defaults are a great starting point</span><span className="text-muted-foreground"> — pre-filled with typical rates for schools like yours.</span></>}
+          summary={<><span className="font-semibold">The defaults are a great starting point</span><span className="text-muted-foreground"> - pre-filled with typical rates for schools like yours.</span></>}
         >
           <p className="text-sm text-emerald-800">
             {yetToLaunch
-              ? "Most founders leave them as-is on their first pass — you can always come back and fine-tune later as your plan firms up. If a field shows a default badge, it means you've customized it."
+              ? "Most founders leave them as-is on their first pass - you can always come back and fine-tune later as your plan firms up. If a field shows a default badge, it means you've customized it."
               : "Most founders leave them as-is on their first pass - you can always come back and fine-tune later. If a field shows a default badge, it means you've customized it."}
           </p>
         </AssumptionsCallout>
@@ -542,7 +542,7 @@ export function AssumptionsStep() {
         iconColor="text-teal-700"
         borderColor="border-teal-200"
         bgColor="bg-teal-50/60"
-        summary={<><span className="font-semibold">Why assumptions matter</span><span className="text-muted-foreground"> — every projection flows from the rates you set here.</span></>}
+        summary={<><span className="font-semibold">Why assumptions matter</span><span className="text-muted-foreground"> - every projection flows from the rates you set here.</span></>}
       >
         <p className="text-sm text-teal-800">
           Realistic assumptions are the foundation of a strong plan - they build credibility with anyone reviewing your model.
@@ -602,7 +602,7 @@ export function AssumptionsStep() {
 
             {isSingleYear && (
               <InfoBadge>
-                Tuition escalation and enrollment growth rates apply to Year 2-5 projections only. They're hidden in single-year mode — extend to a 5-year model to set them.
+                Tuition escalation and enrollment growth rates apply to Year 2-5 projections only. They're hidden in single-year mode - extend to a 5-year model to set them.
               </InfoBadge>
             )}
 
@@ -808,7 +808,7 @@ export function AssumptionsStep() {
               description="Multi-year escalation rates (COLA, inflation, rent) apply to Year 2-5 only."
             />
             <InfoBadge>
-              Single-year mode — escalation rates N/A. COLA, general cost inflation, and rent escalation only affect Years 2-5. Extend to a 5-year model to set them.
+              Single-year mode - escalation rates N/A. COLA, general cost inflation, and rent escalation only affect Years 2-5. Extend to a 5-year model to set them.
             </InfoBadge>
           </section>
         ) : (

@@ -307,7 +307,7 @@ function ForgottenCostsPrompt({
         <Lightbulb className={cn("h-4 w-4 flex-shrink-0", isOpen ? "text-amber-600" : "text-muted-foreground")} />
         <span className="text-sm">
           <span className="font-semibold">Common costs schools forget</span>
-          {!isOpen && <span className="text-muted-foreground"> — quick-check items you may be missing</span>}
+          {!isOpen && <span className="text-muted-foreground"> - quick-check items you may be missing</span>}
         </span>
       </button>
 
@@ -717,7 +717,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         // against `lastLocalLicenseNoteRef`.
         const stampedCitation =
           shouldEnable && localBusinessLicenseProfile
-            ? `From ${localBusinessLicenseProfile.city} business-tax rate — ${localBusinessLicenseProfile.basisNote}`
+            ? `From ${localBusinessLicenseProfile.city} business-tax rate - ${localBusinessLicenseProfile.basisNote}`
             : null;
         const noteIsStaleStamp =
           lastLocalLicenseNoteRef.current !== null &&
@@ -1286,7 +1286,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
 
       {showCoach && (
         <WhyThisMatters
-          why="Expenses are where most first-time budgets quietly break — small categories like insurance, technology, and curriculum add up fast. We'll surface the categories typical for your school type so nothing important slips through."
+          why="Expenses are where most first-time budgets quietly break - small categories like insurance, technology, and curriculum add up fast. We'll surface the categories typical for your school type so nothing important slips through."
           revisit="Come back when you sign a lease, switch vendors, or adopt a new curriculum."
         />
       )}
@@ -1298,7 +1298,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
         bgColor="bg-teal-50/50"
         summary={<>
           <span className="font-semibold">Smart <GlossaryTerm termKey="escalation_rate" schoolType={schoolType}>Escalation</GlossaryTerm> Applied</span>
-          <span className="text-muted-foreground"> — Inflation {generalCostInflation}% · Rent {annualRentIncrease}%</span>
+          <span className="text-muted-foreground"> - Inflation {generalCostInflation}% · Rent {annualRentIncrease}%</span>
           {jumpToStep && <button type="button" onClick={(e) => { e.stopPropagation(); jumpToStep(2); }} className="ml-2 text-teal-600 font-medium underline underline-offset-2 hover:text-teal-800 transition-colors text-xs">Adjust →</button>}
         </>}
       >
@@ -1426,7 +1426,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                 </p>
               ) : (
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                  <span className="font-medium">Most US cities don't require a general business license for a small school</span> — leave this at $0 unless yours does. The handful that do require one for schools include <span className="font-medium">Washington DC</span> (Basic Business License), <span className="font-medium">Seattle</span> (Business License Tax Certificate), <span className="font-medium">San Francisco</span> (Business Registration Certificate), and <span className="font-medium">Los Angeles</span> (Business Tax Registration). Confirm with your city or county clerk if you're unsure.
+                  <span className="font-medium">Most US cities don't require a general business license for a small school</span> - leave this at $0 unless yours does. The handful that do require one for schools include <span className="font-medium">Washington DC</span> (Basic Business License), <span className="font-medium">Seattle</span> (Business License Tax Certificate), <span className="font-medium">San Francisco</span> (Business Registration Certificate), and <span className="font-medium">Los Angeles</span> (Business Tax Registration). Confirm with your city or county clerk if you're unsure.
                 </p>
               )}
             </div>
@@ -1634,15 +1634,15 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
           <span className="font-semibold">Chart of Accounts</span>
           <span className="text-muted-foreground">
             {yetToLaunch
-              ? " — Pre-filled account codes you can hand to a bookkeeper later"
-              : " — Pre-filled account codes align with QuickBooks/Xero"}
+              ? " - Pre-filled account codes you can hand to a bookkeeper later"
+              : " - Pre-filled account codes align with QuickBooks/Xero"}
           </span>
         </>}
       >
         <p className="text-sm text-foreground">
           {yetToLaunch
             ? <>Each expense line has an optional account code (<Hash className="h-3 w-3 inline text-muted-foreground" /> field). Once you're ready to start tracking the books, you can hand these codes to whoever is keeping your books so your budget and bookkeeping line up from day one.</>
-            : <>Each expense line has an optional account code (<Hash className="h-3 w-3 inline text-muted-foreground" /> field). Customize codes to match your accounting software — your budget will align with bookkeeping from day one.</>}
+            : <>Each expense line has an optional account code (<Hash className="h-3 w-3 inline text-muted-foreground" /> field). Customize codes to match your accounting software - your budget will align with bookkeeping from day one.</>}
         </p>
         <div className="flex flex-wrap gap-2">
           {Object.entries(COA_CATEGORY_RANGES).map(([, info]) => (
@@ -1795,10 +1795,10 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                   label={`Why these ${label.toLowerCase()} numbers?`}
                   placeholder={
                     y1CategorySums[cat] > 0 && y1Students > 0
-                      ? `${formatCurrency(y1CategorySums[cat])} in Y1 (${formatPerStudent(y1CategorySums[cat], y1Students)}). What anchors that — quotes, signed contracts, vendor bids, or comparable schools?`
-                      : "Where did these numbers come from — quotes, signed contracts, vendor bids, or comparable school benchmarks?"
+                      ? `${formatCurrency(y1CategorySums[cat])} in Y1 (${formatPerStudent(y1CategorySums[cat], y1Students)}). What anchors that - quotes, signed contracts, vendor bids, or comparable schools?`
+                      : "Where did these numbers come from - quotes, signed contracts, vendor bids, or comparable school benchmarks?"
                   }
-                  helperText="A reviewer should see your evidence — a recent quote, a vendor bid, or a defensible benchmark."
+                  helperText="A reviewer should see your evidence - a recent quote, a vendor bid, or a defensible benchmark."
                 />
               </div>
             )}
@@ -1884,8 +1884,8 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                 label="Why these capital items?"
                 placeholder={
                   y1CategorySums["capital_financing"] > 0
-                    ? `${formatCurrency(y1CategorySums["capital_financing"])} in Y1 capital. What's behind those numbers — vendor quotes for furniture/equipment, a contractor estimate for buildout, or a financing plan?`
-                    : "Capital purchases (furniture, equipment, buildout). What's the source of the estimates — vendor quotes, contractor bids, or comparable buildouts?"
+                    ? `${formatCurrency(y1CategorySums["capital_financing"])} in Y1 capital. What's behind those numbers - vendor quotes for furniture/equipment, a contractor estimate for buildout, or a financing plan?`
+                    : "Capital purchases (furniture, equipment, buildout). What's the source of the estimates - vendor quotes, contractor bids, or comparable buildouts?"
                 }
                 helperText="Lenders look closely at startup capital. Cite the quotes or bids that back each line."
               />

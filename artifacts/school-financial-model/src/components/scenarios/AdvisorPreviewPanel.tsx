@@ -229,7 +229,7 @@ export function AdvisorPreviewPanel({
         )}
       </div>
 
-      {/* Task #482 — submit straight from the preview pane. */}
+      {/* Task #482 - submit straight from the preview pane. */}
       <div className="mt-5" data-testid="advisor-preview-submit">
         {reviewSubmitted ? (
           <div
@@ -239,7 +239,7 @@ export function AdvisorPreviewPanel({
             <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
             <div>
               <h3 className="font-display font-bold text-base text-green-900 mb-1">
-                Review requested — we'll be in touch
+                Review requested - we'll be in touch
               </h3>
               <p className="text-sm text-green-700">
                 Check your email for a confirmation. Our advisors will review
@@ -263,7 +263,7 @@ export function AdvisorPreviewPanel({
             </div>
             <p className="text-sm text-muted-foreground">
               Our school finance advisors will review your model and reply with
-              personalized feedback within 5–7 business days — free.
+              personalized feedback within 5–7 business days - free.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -352,7 +352,7 @@ export function AdvisorPreviewPanel({
             ) : (
               <p className="text-xs text-muted-foreground">
                 Same form as the wizard's <em>Get Your Free Expert Review</em>{" "}
-                — free, 5–7 day turnaround.
+                - free, 5–7 day turnaround.
               </p>
             )}
           </div>

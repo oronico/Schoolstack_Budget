@@ -12,7 +12,7 @@ const PREP_ITEMS = [
   },
   {
     label: "Project enrollment & revenue",
-    hint: "Even rough ballparks work — you can refine when you have real numbers.",
+    hint: "Even rough ballparks work - you can refine when you have real numbers.",
   },
   {
     label: "Plan staffing & expenses",
@@ -48,7 +48,7 @@ export function WizardPrepChecklist({ onReady }: WizardPrepChecklistProps) {
           </div>
           <h2 className="font-display text-xl font-bold text-foreground">Here's what to expect</h2>
           <p className="text-sm text-muted-foreground mt-2">
-            We start with your school's story, then walk through the numbers together. You don't need every answer ready — smart defaults and "I don't know yet" options are everywhere.
+            We start with your school's story, then walk through the numbers together. You don't need every answer ready - smart defaults and "I don't know yet" options are everywhere.
           </p>
         </div>
 

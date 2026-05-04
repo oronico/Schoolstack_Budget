@@ -218,7 +218,7 @@ test("single-year mode collapses Capital & Financing and Assumptions to Year 1 o
   await continueUntil(page, /Assumptions\s*&\s*Sensitivity/i);
 
   // Cost Escalation section becomes the N/A note.
-  await expect(page.getByText(/Single-year mode — escalation rates N\/A/i)).toBeVisible();
+  await expect(page.getByText(/Single-year mode - escalation rates N\/A/i)).toBeVisible();
   // The Cost Escalation input fields (COLA, General Cost Inflation, Rent Escalation)
   // must not render — assert via accessible labels (the InfoBadge copy intentionally
   // names these fields, so plain text assertions would over-match).

@@ -226,7 +226,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
               </h1>
               <p className="text-base text-muted-foreground leading-relaxed">
                 Real estate is the single biggest fixed-cost decision a school makes. Before you sign
-                a lease — or commit to fit-out — let's see what happens to your DSCR, cash runway, and
+                a lease - or commit to fit-out - let's see what happens to your DSCR, cash runway, and
                 break-even year if this site becomes reality.
               </p>
               {detected.monthlyRent && (
@@ -241,7 +241,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
             </>
           }
           prepareList={[
-            "Proposed monthly rent (gross — include CAM/NNN if you have it)",
+            "Proposed monthly rent (gross - include CAM/NNN if you have it)",
             "Annual rent escalation in the lease",
             "Optional: square footage and a one-time fit-out estimate",
             "What year this kicks in (signing now? Year 2?)",
@@ -253,7 +253,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
         <section className="max-w-2xl space-y-5" data-testid="evaluate-site-inputs">
           <div>
             <h2 className="font-display text-xl font-bold text-foreground mb-1">Tell us about the site</h2>
-            <p className="text-sm text-muted-foreground">Use the broker's pro forma if you have one — otherwise, your best guess.</p>
+            <p className="text-sm text-muted-foreground">Use the broker's pro forma if you have one - otherwise, your best guess.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -315,8 +315,8 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
             <h2 className="font-display text-xl font-bold text-foreground mb-1">Impact on your model</h2>
             <p className="text-sm text-muted-foreground">
               {isSingleYear
-                ? "Here's what moving to this site would do to your Year 1 picture — through a lender's eyes."
-                : "Here's what moving to this site would do to your 5-year picture — through a lender's eyes."}
+                ? "Here's what moving to this site would do to your Year 1 picture - through a lender's eyes."
+                : "Here's what moving to this site would do to your 5-year picture - through a lender's eyes."}
             </p>
           </div>
           <ImpactSummary impact={impact} isSingleYear={isSingleYear} />

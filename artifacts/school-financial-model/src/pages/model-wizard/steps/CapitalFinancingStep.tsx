@@ -125,7 +125,7 @@ export function CapitalFinancingStep() {
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Capital &amp; Financing</h2>
         <p className="text-muted-foreground text-lg">
-          If you're financing facilities, equipment, or working capital with debt, set the loan terms and lender covenants here. Skip the details if you have no loan — your model still builds without one.
+          If you're financing facilities, equipment, or working capital with debt, set the loan terms and lender covenants here. Skip the details if you have no loan - your model still builds without one.
         </p>
       </div>
 
@@ -179,10 +179,10 @@ export function CapitalFinancingStep() {
                 hasLoan
                   ? `You're modeling a $${(loanAmount ?? 0).toLocaleString()} loan${
                       loanRate ? ` at ${loanRate}%` : ""
-                    }${loanTermYears ? ` over ${loanTermYears} years` : ""}. Which lender (or lender type) gave you those terms — a term sheet, an LOI, a comparable deal, or a market rate quote?`
+                    }${loanTermYears ? ` over ${loanTermYears} years` : ""}. Which lender (or lender type) gave you those terms - a term sheet, an LOI, a comparable deal, or a market rate quote?`
                   : "If you plan to add debt later, capture the lender type, expected rate, and source of those expectations here. Reviewers will look for an anchor."
               }
-              helperText="Lenders read this first. A clear source — term sheet, banker conversation, comparable deal — moves the conversation faster."
+              helperText="Lenders read this first. A clear source - term sheet, banker conversation, comparable deal - moves the conversation faster."
             />
           </div>
         </section>
@@ -242,16 +242,16 @@ export function CapitalFinancingStep() {
             placeholder={
               hasLoan && Array.isArray(dscrByYear) && dscrByYear.some((v) => (v ?? 0) > 0)
                 ? (isSingleYear
-                    ? `Your Year 1 DSCR target is ${(dscrByYear[0] ?? 1.10).toFixed(2)}x. What's the source — a draft term sheet, your lender's standard package, or a conservative self-imposed target?`
+                    ? `Your Year 1 DSCR target is ${(dscrByYear[0] ?? 1.10).toFixed(2)}x. What's the source - a draft term sheet, your lender's standard package, or a conservative self-imposed target?`
                     : `Your DSCR ramp is ${dscrByYear
                         .slice(0, 5)
                         .map((v, i) => `Y${i + 1} ${(v ?? [1.10, 1.15, 1.20, 1.25, 1.25][i]).toFixed(2)}x`)
-                        .join(" → ")}. What's the source — a draft term sheet, your lender's standard package, or a conservative self-imposed target?`)
+                        .join(" → ")}. What's the source - a draft term sheet, your lender's standard package, or a conservative self-imposed target?`)
                 : "If your lender has shared draft covenants, capture them here with the source (term sheet, RFP, banker conversation). Otherwise note the basis for your self-imposed targets."
             }
             helperText={isSingleYear
-              ? "A self-imposed Year 1 DSCR target tells lenders you've already stress-tested your model — call out where it came from."
-              : "A self-imposed DSCR ramp tells lenders you've already stress-tested your model — call out where the targets came from."}
+              ? "A self-imposed Year 1 DSCR target tells lenders you've already stress-tested your model - call out where it came from."
+              : "A self-imposed DSCR ramp tells lenders you've already stress-tested your model - call out where the targets came from."}
           />
         </section>
       </div>

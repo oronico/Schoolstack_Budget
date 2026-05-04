@@ -143,7 +143,7 @@ export function SaveActions({
           <div className="text-xs leading-relaxed text-amber-900">
             <p className="font-semibold">Coach: pick "Apply to my model" only when you're ready</p>
             <p className="text-amber-900/85 mt-0.5">
-              "Apply" rewrites your base model to assume this decision is happening — every future scenario will compare against the new baseline. If you're still weighing options, "Save &amp; review later" keeps the scenario without changing your base.
+              "Apply" rewrites your base model to assume this decision is happening - every future scenario will compare against the new baseline. If you're still weighing options, "Save &amp; review later" keeps the scenario without changing your base.
             </p>
           </div>
         </div>

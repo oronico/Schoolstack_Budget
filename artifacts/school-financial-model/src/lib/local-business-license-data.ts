@@ -51,7 +51,7 @@ const PROFILES: LocalBusinessLicenseProfile[] = [
     state: "CA",
     city: "San Francisco",
     suggestedAnnual: 100,
-    basisNote: "All businesses operating in SF — including nonprofits — must hold a Business Registration Certificate from the Office of the Treasurer. The annual fee scales with gross receipts; small schools typically land in the $54–$200 range. SF gross receipts tax is a separate filing with its own small-business exemption thresholds.",
+    basisNote: "All businesses operating in SF - including nonprofits - must hold a Business Registration Certificate from the Office of the Treasurer. The annual fee scales with gross receipts; small schools typically land in the $54–$200 range. SF gross receipts tax is a separate filing with its own small-business exemption thresholds.",
   },
   {
     state: "CA",

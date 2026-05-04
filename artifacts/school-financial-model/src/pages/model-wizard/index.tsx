@@ -1027,7 +1027,7 @@ export function ModelWizardPage() {
           if (!profile?.schoolName || !(profile.schoolName as string).trim()) missing.push("School name");
           if (!profile?.schoolType) missing.push("School type");
           if (missing.length > 0) {
-            alert(`Before we go further, please tell us:\n\n• ${missing.join("\n• ")}\n\nEverything else on this page is optional — you can come back any time.`);
+            alert(`Before we go further, please tell us:\n\n• ${missing.join("\n• ")}\n\nEverything else on this page is optional - you can come back any time.`);
             return false;
           }
           return true;
@@ -1447,7 +1447,7 @@ export function ModelWizardPage() {
                     onClick={() => { if (typeof window !== "undefined") window.location.reload(); }}
                     className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 underline underline-offset-2"
                   >
-                    <AlertCircle className="h-3 w-3" /> Updated in another tab — click to reload
+                    <AlertCircle className="h-3 w-3" /> Updated in another tab - click to reload
                   </button>
                 ) : saveError ? (
                   <span data-testid="wizard-save-error-unknown" className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save issue - retrying</span>

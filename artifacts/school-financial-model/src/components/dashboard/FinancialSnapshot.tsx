@@ -202,7 +202,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               defaultLabel="Operating Surplus"
               enabled={enabled}
               value={
-                metrics ? formatCurrency(metrics.operatingSurplus) : "—"
+                metrics ? formatCurrency(metrics.operatingSurplus) : "-"
               }
               icon={<TrendingUp className="w-4 h-4" />}
               tone="green"
@@ -212,7 +212,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               labelId="netIncome"
               defaultLabel="Net Income"
               enabled={enabled}
-              value={metrics ? formatCurrency(metrics.netIncome) : "—"}
+              value={metrics ? formatCurrency(metrics.netIncome) : "-"}
               icon={<DollarSign className="w-4 h-4" />}
               tone={metrics && metrics.netIncome < 0 ? "rose" : "green"}
               testIdSuffix="net-income"
@@ -223,7 +223,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               enabled={enabled}
               value={
                 !metrics || metrics.dscr === null
-                  ? "—"
+                  ? "-"
                   : `${metrics.dscr.toFixed(2)}x`
               }
               caption={
@@ -237,7 +237,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               labelId="cashReserve"
               defaultLabel="Cash Reserve"
               enabled={enabled}
-              value={metrics ? `${metrics.reserveMonths.toFixed(1)} mo` : "—"}
+              value={metrics ? `${metrics.reserveMonths.toFixed(1)} mo` : "-"}
               icon={<Wallet className="w-4 h-4" />}
               tone="amber"
               testIdSuffix="cash-reserve"

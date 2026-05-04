@@ -57,7 +57,7 @@ const decisionCards: Array<{
         revenue and cost.
       </>
     ),
-    coachSubtitle: "Best for: \"Should we add 6th grade next year?\" or \"Is the after-school track worth it?\" — about 5 minutes.",
+    coachSubtitle: "Best for: \"Should we add 6th grade next year?\" or \"Is the after-school track worth it?\" - about 5 minutes.",
     tooltip: "Holds your base model fixed and layers a new program on top, so you see the marginal revenue, marginal cost, and net effect on DSCR / cash / break-even.",
     Icon: GraduationCap,
     bg: "bg-amber-50/50",
@@ -76,7 +76,7 @@ const decisionCards: Array<{
         <GlossaryTerm termKey="break_even">break-even</GlossaryTerm>.
       </>
     ),
-    coachSubtitle: "Best for: comparing two lease offers, stress-testing a fit-out budget, or pressure-testing rent before you sign — about 5 minutes.",
+    coachSubtitle: "Best for: comparing two lease offers, stress-testing a fit-out budget, or pressure-testing rent before you sign - about 5 minutes.",
     tooltip: "Plugs in monthly rent, fit-out, and concessions, then re-runs the model so you can compare the new debt-service coverage and cash trough against your base.",
     Icon: Building2,
     bg: "bg-teal-50/50",
@@ -94,7 +94,7 @@ const decisionCards: Array<{
         against your <GlossaryTerm termKey="break_even">break-even</GlossaryTerm>.
       </>
     ),
-    coachSubtitle: "Best for: deciding whether to bump tuition 4%, what happens if 5 families don't return, or how aggressive your re-enroll target should be — about 5 minutes.",
+    coachSubtitle: "Best for: deciding whether to bump tuition 4%, what happens if 5 families don't return, or how aggressive your re-enroll target should be - about 5 minutes.",
     tooltip: "Holds program structure fixed and re-projects revenue, runway, and net income against the new enrollment / pricing assumption.",
     Icon: Users,
     bg: "bg-emerald-50/50",
@@ -157,7 +157,7 @@ export function DecisionLauncher({ models, onStartNew, startNewPending }: Decisi
       // rather than dead-ending in a modal.
       toast({
         title: "Let's build a base model first",
-        description: `${TITLE_FOR_TYPE[type]} runs on top of an existing model — about 30–45 minutes to set one up, then your decision plugs right in.`,
+        description: `${TITLE_FOR_TYPE[type]} runs on top of an existing model - about 30–45 minutes to set one up, then your decision plugs right in.`,
       });
       onStartNew();
       return;
@@ -284,7 +284,7 @@ export function DecisionLauncher({ models, onStartNew, startNewPending }: Decisi
             {eligibleModels.length === 0 ? (
               <div className="space-y-3">
                 <p className="text-sm text-foreground/80">
-                  Build a quick base model first — about 30–45 minutes — then come back here to play
+                  Build a quick base model first - about 30–45 minutes - then come back here to play
                   out this decision against it.
                 </p>
                 <button
@@ -418,7 +418,7 @@ export function ThingsHaveChangedBanner({ models, staleDays = 30 }: ThingsHaveCh
                   <span className="font-semibold">Coach:</span> a model older
                   than ~30 days usually means enrollment, payroll, or rent has
                   drifted from your projection. The fastest way to catch up is
-                  a 5-minute decision flow — pick the chip that matches what
+                  a 5-minute decision flow - pick the chip that matches what
                   changed and we'll re-run the math against today.
                 </span>
               </p>
