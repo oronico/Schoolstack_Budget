@@ -248,14 +248,24 @@ node migrate.cjs && exec node index.cjs
 
 **Demo login (preview environments only)**
 
-Each PR's freshly provisioned Postgres is auto-seeded on first API startup with one verified demo user and two complete sample financial models (a microschool and a private school, both at the Review/Export step). Reviewers can log in directly without registering:
+Each PR's freshly provisioned Postgres is auto-seeded on first API startup with one verified demo user and three complete sample financial models (a microschool, a private school, and a charter school on per-pupil public funding, all at the Review/Export step). Reviewers can log in directly without registering:
 
 | Field | Value |
 |-------|-------|
 | Email | `demo@schoolstack.ai` |
-| Password | `demo1234` |
+| Password | `demo1234` (or whatever `PREVIEW_DEMO_PASSWORD` is set to on the service) |
 
 The seed runs only when the `users` table is empty, so it's a no-op on every restart after the first and a no-op on production (which always has users). The auto-seed can be disabled by setting `SKIP_PREVIEW_SEED=true` on the service — kept on production as belt-and-suspenders.
+
+**Rotating the demo password (per-environment override)**
+
+PR deploy-preview URLs are not authenticated, so anyone who finds one can poke around as the demo user. To make that less trivial — and to give a future shared-staging environment a stronger secret — set `PREVIEW_DEMO_PASSWORD` on the Railway environment (or in the Railway *PR Environment template* so every new PR inherits it):
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PREVIEW_DEMO_PASSWORD` | No | Overrides the demo user's password used by the auto-seed. When set, the seeded user's bcrypt hash verifies this value instead of the documented default `demo1234`. When unset (or empty), the seed falls back to `demo1234`. Only takes effect on the first seed (empty-DB run); rotating it on an already-seeded environment requires either resetting the database or updating the user manually. Has no effect when `SKIP_PREVIEW_SEED=true`.
+
+The resolved value is logged once at seed time, e.g. `[seed] Done. Reviewers can log in with demo@schoolstack.ai / <password> (password source: PREVIEW_DEMO_PASSWORD override)`, so operators can confirm which value is live without inspecting the database.
 
 **Reviewer workflow**
 1. Open the PR and wait for the Netlify and Railway checks to go green.

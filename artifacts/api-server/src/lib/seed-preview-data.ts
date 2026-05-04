@@ -36,8 +36,30 @@ import {
 // SKIP_PREVIEW_SEED escape hatch below for belt-and-suspenders.
 
 export const DEMO_USER_EMAIL = "demo@schoolstack.ai";
-export const DEMO_USER_PASSWORD = "demo1234";
+// Default password used when PREVIEW_DEMO_PASSWORD is not set in the
+// environment. Documented in README so reviewers know what to type on
+// a default-config preview. Per task #540, individual environments can
+// override this by setting PREVIEW_DEMO_PASSWORD on the Railway service
+// (or any other env-var source) — the seed will use that value instead
+// without any code changes.
+export const DEMO_USER_PASSWORD_DEFAULT = "demo1234";
+// Back-compat alias kept for existing imports/tests that referenced the
+// hardcoded default before task #540 made it configurable.
+export const DEMO_USER_PASSWORD = DEMO_USER_PASSWORD_DEFAULT;
 const DEMO_USER_NAME = "Demo Reviewer";
+
+/**
+ * Resolve the demo-user password from the environment, falling back to
+ * the documented default. Exported so tests can exercise both branches
+ * without poking at module internals.
+ */
+export function resolveDemoPassword(env: NodeJS.ProcessEnv = process.env): string {
+  const override = env.PREVIEW_DEMO_PASSWORD;
+  if (typeof override === "string" && override.length > 0) {
+    return override;
+  }
+  return DEMO_USER_PASSWORD_DEFAULT;
+}
 
 // The three demo financial models all come from the canonical
 // demo-models/ directory so a tweak there is reflected in both the
@@ -116,7 +138,8 @@ export async function seedPreviewDataIfEmpty(deps: SeedPreviewDataDeps = {}): Pr
 
     log("[seed] Empty users table — seeding demo user and sample models...");
 
-    const passwordHash = await bcrypt.hash(DEMO_USER_PASSWORD, 12);
+    const demoPassword = resolveDemoPassword();
+    const passwordHash = await bcrypt.hash(demoPassword, 12);
     const [demoUser] = await database
       .insert(usersTable)
       .values({
@@ -148,8 +171,12 @@ export async function seedPreviewDataIfEmpty(deps: SeedPreviewDataDeps = {}): Pr
       log(`[seed]   + model: ${model.name} (id=${model.id})`);
     }
 
+    const passwordSource =
+      demoPassword === DEMO_USER_PASSWORD_DEFAULT
+        ? "default"
+        : "PREVIEW_DEMO_PASSWORD override";
     log(
-      `[seed] Done. Reviewers can log in with ${DEMO_USER_EMAIL} / ${DEMO_USER_PASSWORD}.`,
+      `[seed] Done. Reviewers can log in with ${DEMO_USER_EMAIL} / ${demoPassword} (password source: ${passwordSource}).`,
     );
   } catch (err) {
     // A failed seed must not prevent the server from starting. The

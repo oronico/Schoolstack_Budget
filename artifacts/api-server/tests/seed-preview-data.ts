@@ -1,7 +1,9 @@
 // Task #531 — unit test for the preview-data auto-seed.
 // Task #541 — extended to assert the third (charter) demo model.
+// Task #540 — extended to assert PREVIEW_DEMO_PASSWORD override
+//             (env-set) and the documented fallback (env-unset).
 //
-// Validates the four behaviors documented in seed-preview-data.ts:
+// Validates the behaviors documented in seed-preview-data.ts:
 //   1. SKIP_PREVIEW_SEED=true       → no inserts, no reads
 //   2. database undefined           → no-op (no DB to seed)
 //   3. users table not empty        → no inserts
@@ -9,6 +11,11 @@
 //      with the documented credentials/shape, and at least one model
 //      uses fundingProfile === "charter_public_funded" so reviewers can
 //      smoke-test the public-funding code path in one click.
+//   5. PREVIEW_DEMO_PASSWORD unset  → seeded user's hash verifies the
+//      documented default password.
+//   6. PREVIEW_DEMO_PASSWORD set    → seeded user's hash verifies the
+//      override (NOT the default), and the override is what's printed in
+//      the operator-credentials log line.
 //
 // Uses an in-memory fake of the drizzle query builder so this stays
 // hermetic — no DATABASE_URL required, no migrations to run, runs in
@@ -17,8 +24,10 @@
 import bcrypt from "bcryptjs";
 import {
   seedPreviewDataIfEmpty,
+  resolveDemoPassword,
   DEMO_USER_EMAIL,
   DEMO_USER_PASSWORD,
+  DEMO_USER_PASSWORD_DEFAULT,
 } from "../src/lib/seed-preview-data.js";
 
 let passed = 0;
@@ -136,7 +145,12 @@ async function run() {
 
   // Case 4: empty users table → 1 user + 3 models with the documented shape
   // (microschool + private school + charter — see task #541).
+  // Task #540: this case also pins the env-unset branch — with no
+  // PREVIEW_DEMO_PASSWORD in the environment, the seeded user's hash
+  // must verify the documented default password.
   {
+    const originalPwd = process.env.PREVIEW_DEMO_PASSWORD;
+    delete process.env.PREVIEW_DEMO_PASSWORD;
     const { fakeDb, inserted } = makeFakeDb({ existingUsers: 0 });
     const logs: unknown[][] = [];
     await seedPreviewDataIfEmpty({
@@ -231,6 +245,101 @@ async function run() {
       logs.some((row) => row.some((arg) =>
         typeof arg === "string" && arg.includes(DEMO_USER_EMAIL),
       )),
+    );
+
+    // Task #540 — env-unset branch: hash must verify the documented
+    // default password (NOT some other accidental value).
+    check(
+      "PREVIEW_DEMO_PASSWORD unset → hash verifies the documented default",
+      typeof user?.passwordHash === "string" &&
+        bcrypt.compareSync(
+          DEMO_USER_PASSWORD_DEFAULT,
+          user!.passwordHash!,
+        ),
+    );
+    check(
+      "PREVIEW_DEMO_PASSWORD unset → log line names the default source",
+      logs.some((row) => row.some((arg) =>
+        typeof arg === "string" && arg.includes("password source: default"),
+      )),
+    );
+
+    if (originalPwd === undefined) delete process.env.PREVIEW_DEMO_PASSWORD;
+    else process.env.PREVIEW_DEMO_PASSWORD = originalPwd;
+  }
+
+  // Case 5 (task #540): PREVIEW_DEMO_PASSWORD set → hash verifies the
+  // override (NOT the default), and the operator-credentials log line
+  // prints the override and tags the source as "override".
+  {
+    const originalPwd = process.env.PREVIEW_DEMO_PASSWORD;
+    const overridePassword = "s3cret-preview-pw!";
+    process.env.PREVIEW_DEMO_PASSWORD = overridePassword;
+    const { fakeDb, inserted } = makeFakeDb({ existingUsers: 0 });
+    const logs: unknown[][] = [];
+    await seedPreviewDataIfEmpty({
+      database: fakeDb as never,
+      log: (...a) => logs.push(a),
+      logError: () => {},
+    });
+
+    const userRows = inserted.filter((r) => r.table === "users");
+    const user = userRows[0]?.values as
+      | { passwordHash?: string }
+      | undefined;
+
+    check(
+      "PREVIEW_DEMO_PASSWORD set → hash verifies the override",
+      typeof user?.passwordHash === "string" &&
+        bcrypt.compareSync(overridePassword, user!.passwordHash!),
+    );
+    check(
+      "PREVIEW_DEMO_PASSWORD set → hash does NOT verify the default",
+      typeof user?.passwordHash === "string" &&
+        !bcrypt.compareSync(
+          DEMO_USER_PASSWORD_DEFAULT,
+          user!.passwordHash!,
+        ),
+    );
+    check(
+      "PREVIEW_DEMO_PASSWORD set → log line prints the override password",
+      logs.some((row) => row.some((arg) =>
+        typeof arg === "string" && arg.includes(overridePassword),
+      )),
+    );
+    check(
+      "PREVIEW_DEMO_PASSWORD set → log line tags source as override",
+      logs.some((row) => row.some((arg) =>
+        typeof arg === "string" &&
+        arg.includes("password source: PREVIEW_DEMO_PASSWORD override"),
+      )),
+    );
+
+    if (originalPwd === undefined) delete process.env.PREVIEW_DEMO_PASSWORD;
+    else process.env.PREVIEW_DEMO_PASSWORD = originalPwd;
+  }
+
+  // Case 6 (task #540): direct unit coverage of the resolver helper —
+  // pin both branches independently of the seed flow so a regression
+  // in the resolver itself can't be masked by the seed wiring.
+  {
+    check(
+      "resolveDemoPassword({}) → default",
+      resolveDemoPassword({} as NodeJS.ProcessEnv) === DEMO_USER_PASSWORD_DEFAULT,
+    );
+    check(
+      "resolveDemoPassword({ PREVIEW_DEMO_PASSWORD: '' }) → default (empty ignored)",
+      resolveDemoPassword({ PREVIEW_DEMO_PASSWORD: "" } as NodeJS.ProcessEnv) ===
+        DEMO_USER_PASSWORD_DEFAULT,
+    );
+    check(
+      "resolveDemoPassword({ PREVIEW_DEMO_PASSWORD: 'foo' }) → 'foo'",
+      resolveDemoPassword({ PREVIEW_DEMO_PASSWORD: "foo" } as NodeJS.ProcessEnv) ===
+        "foo",
+    );
+    check(
+      "DEMO_USER_PASSWORD back-compat alias still equals the default",
+      DEMO_USER_PASSWORD === DEMO_USER_PASSWORD_DEFAULT,
     );
   }
 
