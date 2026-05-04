@@ -59,6 +59,56 @@ export interface ParsedAccountingExport {
   recognizedRowCount: number;
 }
 
+// Threshold for the "category subtotals don't reconcile to the headline" check
+// (see `computeCategorySubtotalReconciliation`). When the curated category
+// subtotals add up to less than 90% of the headline figure, we consider the
+// gap material enough to surface as an "Other revenue / expense" hint so the
+// founder knows the breakdown is missing buckets from their chart of
+// accounts.
+export const CATEGORY_RECONCILIATION_THRESHOLD = 0.9;
+
+// Result of reconciling the curated category subtotals against the headline
+// totals. `revenueGap` / `expenseGap` are populated only when the parser
+// found at least one category on that side AND the sum of those categories
+// is materially below the headline (under `CATEGORY_RECONCILIATION_THRESHOLD`
+// of it). Each gap is the dollar amount unaccounted for and is always
+// positive; the UI labels it as "Other revenue / expense $X" so the founder
+// can see at a glance which side has un-mapped buckets. When the parser
+// found no categories on a side, that side's gap is left undefined — that
+// "no breakdown at all" state is already handled separately by the UI.
+export interface CategorySubtotalReconciliation {
+  revenueGap?: number;
+  expenseGap?: number;
+}
+
+export function computeCategorySubtotalReconciliation(
+  totals: AccountingExportTotals,
+): CategorySubtotalReconciliation {
+  const result: CategorySubtotalReconciliation = {};
+
+  const hasRevenueCategory =
+    totals.tuitionRevenue !== undefined || totals.philanthropyRevenue !== undefined;
+  if (hasRevenueCategory && totals.totalRevenue !== undefined && totals.totalRevenue > 0) {
+    const sum = (totals.tuitionRevenue ?? 0) + (totals.philanthropyRevenue ?? 0);
+    if (sum < totals.totalRevenue * CATEGORY_RECONCILIATION_THRESHOLD) {
+      const gap = Math.round(totals.totalRevenue - sum);
+      if (gap > 0) result.revenueGap = gap;
+    }
+  }
+
+  const hasExpenseCategory =
+    totals.payrollExpense !== undefined || totals.facilityExpense !== undefined;
+  if (hasExpenseCategory && totals.totalExpenses !== undefined && totals.totalExpenses > 0) {
+    const sum = (totals.payrollExpense ?? 0) + (totals.facilityExpense ?? 0);
+    if (sum < totals.totalExpenses * CATEGORY_RECONCILIATION_THRESHOLD) {
+      const gap = Math.round(totals.totalExpenses - sum);
+      if (gap > 0) result.expenseGap = gap;
+    }
+  }
+
+  return result;
+}
+
 // 1 MB is a comfortable cap for a P&L export (typical CSVs are under 10 KB
 // and a P&L-only XLSX rarely tops 100 KB). We refuse anything larger to
 // avoid pathological parser inputs.

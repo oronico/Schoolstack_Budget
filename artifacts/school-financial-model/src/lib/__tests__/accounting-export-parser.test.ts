@@ -3,6 +3,7 @@ import {
   parseAccountingExportCsv,
   parseAccountingExportRows,
   parseAccountingNumber,
+  computeCategorySubtotalReconciliation,
 } from "@workspace/finance";
 
 describe("parseAccountingNumber", () => {
@@ -437,5 +438,118 @@ describe("parseAccountingExportRows", () => {
         expect.stringMatching(/Total Expenses/i),
       ]),
     );
+  });
+});
+
+// --- Category subtotal reconciliation ---------------------------------------
+//
+// When the curated category subtotals add up to materially less than the
+// headline total (under 90%), the wizard surfaces an "Other revenue /
+// expense $X" chip so the founder knows their chart of accounts has
+// un-mapped buckets the breakdown is missing. These tests pin the gap
+// math so that warning can't silently regress.
+describe("computeCategorySubtotalReconciliation", () => {
+  it("flags a revenue gap when tuition + philanthropy fall short of headline revenue", () => {
+    // Headline says $575k revenue but the categories we recognized
+    // (tuition + donations) only total $400k — that's a 30% shortfall and
+    // a clear sign the founder's books have un-mapped revenue buckets.
+    const result = computeCategorySubtotalReconciliation({
+      totalRevenue: 575_000,
+      tuitionRevenue: 320_000,
+      philanthropyRevenue: 80_000,
+    });
+    expect(result.revenueGap).toBe(175_000);
+    expect(result.expenseGap).toBeUndefined();
+  });
+
+  it("flags an expense gap when payroll + facility fall short of headline expenses", () => {
+    const result = computeCategorySubtotalReconciliation({
+      totalExpenses: 500_000,
+      payrollExpense: 260_000,
+      facilityExpense: 50_000,
+    });
+    expect(result.expenseGap).toBe(190_000);
+    expect(result.revenueGap).toBeUndefined();
+  });
+
+  it("does not flag a gap when categories cover at least 90% of the headline", () => {
+    // 92% coverage — close enough that we don't surface the warning. The
+    // small remaining gap is more likely rounding / a tiny misc account
+    // than a missing bucket the founder needs to map.
+    const result = computeCategorySubtotalReconciliation({
+      totalRevenue: 500_000,
+      tuitionRevenue: 400_000,
+      philanthropyRevenue: 60_000,
+      totalExpenses: 400_000,
+      payrollExpense: 300_000,
+      facilityExpense: 70_000,
+    });
+    expect(result.revenueGap).toBeUndefined();
+    expect(result.expenseGap).toBeUndefined();
+  });
+
+  it("does not flag a gap when no categories were recognized on a side", () => {
+    // The "no categories at all" state is handled separately by the UI
+    // (we just don't render the breakdown row). We must not surface a
+    // confusing "Other revenue $575k" chip that equals the entire
+    // headline figure when there's no breakdown to gap-check against.
+    const result = computeCategorySubtotalReconciliation({
+      totalRevenue: 575_000,
+      totalExpenses: 400_000,
+    });
+    expect(result.revenueGap).toBeUndefined();
+    expect(result.expenseGap).toBeUndefined();
+  });
+
+  it("does not flag a gap when the headline total is missing", () => {
+    // If we only recognized category sub-rows but never found a Total
+    // Revenue row, we have nothing to reconcile against.
+    const result = computeCategorySubtotalReconciliation({
+      tuitionRevenue: 100_000,
+      philanthropyRevenue: 20_000,
+    });
+    expect(result.revenueGap).toBeUndefined();
+  });
+
+  it("flags both sides independently when each has a material shortfall", () => {
+    const result = computeCategorySubtotalReconciliation({
+      totalRevenue: 600_000,
+      tuitionRevenue: 300_000,
+      totalExpenses: 500_000,
+      payrollExpense: 200_000,
+    });
+    expect(result.revenueGap).toBe(300_000);
+    expect(result.expenseGap).toBe(300_000);
+  });
+
+  it("treats a partial category recognition (only one of two) as enough to gap-check", () => {
+    // The founder's books surfaced tuition but no donations row — that
+    // single-category breakdown is still a real breakdown, so a 50% gap
+    // against headline revenue should fire the warning.
+    const result = computeCategorySubtotalReconciliation({
+      totalRevenue: 400_000,
+      tuitionRevenue: 200_000,
+    });
+    expect(result.revenueGap).toBe(200_000);
+  });
+
+  it("integrates with parseAccountingExportCsv on a real-world Xero shortfall", () => {
+    // Mirrors the task example: headline revenue $575k but the curated
+    // categories (tuition + donations) only sum to $400k. The reconciler
+    // should land on a $175k gap when fed the parser's output directly.
+    const csv = [
+      "Operating Income,,",
+      "  Tuition Income,,\"320,000\"",
+      "  Donations Received,,\"80,000\"",
+      "Total Operating Income,,\"575,000\"",
+      "Less Operating Expenses,,",
+      "  Wages and Salaries,,\"180,000\"",
+      "  Rent,,\"40,000\"",
+      "Total Operating Expenses,,\"400,000\"",
+    ].join("\n");
+    const parsed = parseAccountingExportCsv(csv);
+    const recon = computeCategorySubtotalReconciliation(parsed.totals);
+    expect(recon.revenueGap).toBe(175_000);
+    expect(recon.expenseGap).toBe(180_000);
   });
 });

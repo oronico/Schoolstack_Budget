@@ -25,6 +25,7 @@ import {
   parseAccountingExportCsv,
   parseAccountingExportRows,
   MAX_ACCOUNTING_EXPORT_BYTES,
+  computeCategorySubtotalReconciliation,
   type AccountingExportLike,
   type ParsedAccountingExport,
 } from "@/lib/decision-flows";
@@ -612,7 +613,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
   // recognized before they head into mapping. Each chip is omitted when
   // the parser couldn't find a matching row, so a sparse export only
   // shows the chips we actually picked up.
-  const categoryChips: Array<{ label: string; value: number; testid: string }> = [];
+  const categoryChips: Array<{ label: string; value: number; testid: string; isGap?: boolean }> = [];
   if (totals?.tuitionRevenue !== undefined) {
     categoryChips.push({
       label: "Tuition",
@@ -639,6 +640,31 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
       label: "Facility / Rent",
       value: totals.facilityExpense,
       testid: "accounting-export-facility",
+    });
+  }
+  // Reconcile the curated category subtotals against the headline totals.
+  // When the categories we recognized add up to materially less than the
+  // headline figure (under 90%), it's a strong signal the founder's chart
+  // of accounts has un-mapped buckets the breakdown is missing — surface
+  // that gap as an "Other revenue / expense" chip so the founder can see
+  // the breakdown is incomplete rather than thinking we got it all.
+  const reconciliation = totals
+    ? computeCategorySubtotalReconciliation(totals)
+    : { revenueGap: undefined, expenseGap: undefined };
+  if (reconciliation.revenueGap !== undefined) {
+    categoryChips.push({
+      label: "Other revenue",
+      value: reconciliation.revenueGap,
+      testid: "accounting-export-other-revenue",
+      isGap: true,
+    });
+  }
+  if (reconciliation.expenseGap !== undefined) {
+    categoryChips.push({
+      label: "Other expense",
+      value: reconciliation.expenseGap,
+      testid: "accounting-export-other-expense",
+      isGap: true,
     });
   }
 
@@ -1011,10 +1037,21 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
                 {categoryChips.map((chip) => (
                   <span
                     key={chip.testid}
-                    className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-foreground"
+                    className={
+                      chip.isGap
+                        ? "inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-900"
+                        : "inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-foreground"
+                    }
                     data-testid={chip.testid}
+                    title={
+                      chip.isGap
+                        ? "The recognized category subtotals don't add up to the headline total — your chart of accounts likely has buckets we didn't map."
+                        : undefined
+                    }
                   >
-                    <span className="text-muted-foreground">{chip.label}</span>
+                    <span className={chip.isGap ? "text-amber-800" : "text-muted-foreground"}>
+                      {chip.label}
+                    </span>
                     <span className="font-semibold">{fmtMoney(chip.value)}</span>
                   </span>
                 ))}

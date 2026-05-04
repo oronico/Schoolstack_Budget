@@ -39,8 +39,11 @@ export {
   parseAccountingExportRows,
   parseAccountingNumber,
   MAX_ACCOUNTING_EXPORT_BYTES,
+  computeCategorySubtotalReconciliation,
+  CATEGORY_RECONCILIATION_THRESHOLD,
   type AccountingExportLike,
   type AccountingExportTotals,
+  type CategorySubtotalReconciliation,
   type LiveSnapshotLike,
   type ParsedAccountingExport,
 } from "@workspace/finance";
