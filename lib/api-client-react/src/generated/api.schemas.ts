@@ -302,6 +302,10 @@ export interface RevenueRow {
   note?: string;
   billingMonths?: RevenueRowBillingMonths;
   collectionMethod?: RevenueRowCollectionMethod;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
   collectionRate?: number;
   collectionDelayDays?: number;
   paymentFrequency?: RevenueRowPaymentFrequency;
@@ -424,10 +428,47 @@ export interface CovenantThresholds {
 }
 
 export interface PriorYearSnapshot {
+  /** @minimum 0 */
   endingEnrollment?: number;
+  /** @minimum 0 */
   totalRevenue?: number;
+  /** @minimum 0 */
   totalExpenses?: number;
+  /** @minimum 0 */
   endingCash?: number;
+  /** @minimum 0 */
+  tuitionRevenue?: number;
+  /** @minimum 0 */
+  publicFundingRevenue?: number;
+  /** @minimum 0 */
+  philanthropyRevenue?: number;
+  /** @minimum 0 */
+  otherRevenue?: number;
+  /** @minimum 0 */
+  personnelExpenses?: number;
+  /** @minimum 0 */
+  facilityExpenses?: number;
+  /** @minimum 0 */
+  instructionalExpenses?: number;
+  /** @minimum 0 */
+  adminExpenses?: number;
+  [key: string]: unknown;
+}
+
+export interface CurrentYearProjection {
+  /** @minimum 0 */
+  currentEnrollment?: number;
+  /** @minimum 0 */
+  projectedRevenue?: number;
+  /** @minimum 0 */
+  projectedExpenses?: number;
+  /** @minimum 0 */
+  currentCash?: number;
+  /**
+   * @minimum 0
+   * @maximum 12
+   */
+  monthsCompleted?: number;
   [key: string]: unknown;
 }
 
@@ -624,6 +665,7 @@ export interface SchoolProfile {
   fundingProfile?: FundingProfile;
   openingYear?: number;
   currentStudents?: number;
+  /** @minimum 1 */
   maxCapacity?: number;
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;
@@ -755,8 +797,6 @@ export type ModelFormDataRevenueDefaults = { [key: string]: unknown };
 
 export type ModelFormDataRevenueSources = { [key: string]: unknown };
 
-export type ModelFormDataCurrentYearProjection = { [key: string]: unknown };
-
 export type ModelFormDataCustomCategoryLabels = { [key: string]: string };
 
 export type ModelFormDataEscalationRates = { [key: string]: unknown };
@@ -785,7 +825,7 @@ export interface ModelFormData {
   tuitionEscalation?: ModelFormDataTuitionEscalation;
   revenueDefaults?: ModelFormDataRevenueDefaults;
   revenueSources?: ModelFormDataRevenueSources;
-  currentYearProjection?: ModelFormDataCurrentYearProjection;
+  currentYearProjection?: CurrentYearProjection;
   customCategoryLabels?: ModelFormDataCustomCategoryLabels;
   escalationRates?: ModelFormDataEscalationRates;
   [key: string]: unknown;

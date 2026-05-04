@@ -69,79 +69,6 @@ function sanitizeModelName(raw: string): string {
   return raw.replace(/[\x00-\x1F\x7F]/g, "").trim();
 }
 
-// Task #472 — server-side hardening for the five fields the wizard form
-// validates but the loose generated UpdateModelBody schema previously
-// let through on direct PATCH:
-//   - schoolProfile.maxCapacity must be >= 1 (downstream Excel utilization
-//     and EnrollmentStep tooltip both render NaN% when 0 sneaks in).
-//   - revenueRows[].collectionRate must be 0..100 (an over-100 rate
-//     produces impossible cash positions in the lender Excel cash flow).
-//   - priorYearSnapshot.{currentCash,projectedRevenue,...} optional money
-//     fields must be >= 0 (negative injection corrupts the engine).
-//   - currentYearProjection.{currentCash,projectedRevenue,...} same.
-// Returns null when valid, or a human-readable error string otherwise.
-function validateModelDataHardening(data: Record<string, unknown> | null | undefined): string | null {
-  if (!data || typeof data !== "object") return null;
-  const sp = (data as Record<string, unknown>).schoolProfile as Record<string, unknown> | undefined;
-  if (sp && typeof sp === "object") {
-    const cap = sp.maxCapacity;
-    if (cap !== undefined && cap !== null) {
-      if (typeof cap !== "number" || !Number.isFinite(cap) || cap < 1) {
-        return "schoolProfile.maxCapacity must be at least 1.";
-      }
-    }
-  }
-  const revRows = (data as Record<string, unknown>).revenueRows as Array<Record<string, unknown>> | undefined;
-  if (Array.isArray(revRows)) {
-    for (const row of revRows) {
-      const r = row?.collectionRate;
-      if (r !== undefined && r !== null) {
-        if (typeof r !== "number" || !Number.isFinite(r) || r < 0 || r > 100) {
-          return "revenueRows[].collectionRate must be between 0 and 100.";
-        }
-      }
-    }
-  }
-  const NON_NEG_SNAPSHOT_FIELDS = [
-    "endingEnrollment", "totalRevenue", "totalExpenses", "endingCash",
-    "tuitionRevenue", "publicFundingRevenue", "philanthropyRevenue",
-    "otherRevenue", "personnelExpenses", "facilityExpenses",
-    "instructionalExpenses", "adminExpenses",
-  ];
-  const priorSnap = (data as Record<string, unknown>).priorYearSnapshot as Record<string, unknown> | undefined;
-  if (priorSnap && typeof priorSnap === "object") {
-    for (const f of NON_NEG_SNAPSHOT_FIELDS) {
-      const v = priorSnap[f];
-      if (v !== undefined && v !== null) {
-        if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
-          return `priorYearSnapshot.${f} cannot be negative.`;
-        }
-      }
-    }
-  }
-  const NON_NEG_PROJECTION_FIELDS = [
-    "currentEnrollment", "projectedRevenue", "projectedExpenses", "currentCash",
-  ];
-  const proj = (data as Record<string, unknown>).currentYearProjection as Record<string, unknown> | undefined;
-  if (proj && typeof proj === "object") {
-    for (const f of NON_NEG_PROJECTION_FIELDS) {
-      const v = proj[f];
-      if (v !== undefined && v !== null) {
-        if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
-          return `currentYearProjection.${f} cannot be negative.`;
-        }
-      }
-    }
-    const months = proj.monthsCompleted;
-    if (months !== undefined && months !== null) {
-      if (typeof months !== "number" || !Number.isFinite(months) || months < 0 || months > 12) {
-        return "currentYearProjection.monthsCompleted must be between 0 and 12.";
-      }
-    }
-  }
-  return null;
-}
-
 // Task #472 — optimistic-concurrency stub. The full version-column
 // migration is tracked as a follow-up; this header-only check uses the
 // row's `updated_at` (ISO-8601) as the version token. Clients that send
@@ -457,15 +384,6 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
     }
     const rawData = (req.body as Record<string, unknown>).data as Record<string, unknown> | undefined;
     const normalizedData = normalizeModelData(rawData ?? {});
-
-    // Task #472 — server-side hardening for fields the loose generated
-    // UpdateModelBody schema previously let through (maxCapacity >= 1,
-    // collectionRate 0..100, snapshot/projection .min(0)).
-    const hardeningError = validateModelDataHardening(normalizedData);
-    if (hardeningError) {
-      res.status(400).json({ error: hardeningError });
-      return;
-    }
 
     // Single-year mode is one-way. Once a model has been promoted to
     // five_year (whether at creation via the /model/new picker or via the

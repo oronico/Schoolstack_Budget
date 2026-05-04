@@ -7,9 +7,29 @@
  */
 
 export interface PriorYearSnapshot {
+  /** @minimum 0 */
   endingEnrollment?: number;
+  /** @minimum 0 */
   totalRevenue?: number;
+  /** @minimum 0 */
   totalExpenses?: number;
+  /** @minimum 0 */
   endingCash?: number;
+  /** @minimum 0 */
+  tuitionRevenue?: number;
+  /** @minimum 0 */
+  publicFundingRevenue?: number;
+  /** @minimum 0 */
+  philanthropyRevenue?: number;
+  /** @minimum 0 */
+  otherRevenue?: number;
+  /** @minimum 0 */
+  personnelExpenses?: number;
+  /** @minimum 0 */
+  facilityExpenses?: number;
+  /** @minimum 0 */
+  instructionalExpenses?: number;
+  /** @minimum 0 */
+  adminExpenses?: number;
   [key: string]: unknown;
 }

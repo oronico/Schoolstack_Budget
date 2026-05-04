@@ -29,6 +29,7 @@ export interface SchoolProfile {
   fundingProfile?: FundingProfile;
   openingYear?: number;
   currentStudents?: number;
+  /** @minimum 1 */
   maxCapacity?: number;
   fiscalYearStartMonth?: number;
   isPartialFirstYear?: boolean;

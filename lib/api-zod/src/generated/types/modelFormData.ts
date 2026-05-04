@@ -8,13 +8,13 @@
 import type { AccountingExport } from "./accountingExport";
 import type { CapitalDebtRow } from "./capitalDebtRow";
 import type { CovenantThresholds } from "./covenantThresholds";
+import type { CurrentYearProjection } from "./currentYearProjection";
 import type { Enrollment } from "./enrollment";
 import type { ExpenseRow } from "./expenseRow";
 import type { Facilities } from "./facilities";
 import type { ModelFormDataAssumptionFlagResponsesItem } from "./modelFormDataAssumptionFlagResponsesItem";
 import type { ModelFormDataAssumptionFlagsItem } from "./modelFormDataAssumptionFlagsItem";
 import type { ModelFormDataBudgetNarrative } from "./modelFormDataBudgetNarrative";
-import type { ModelFormDataCurrentYearProjection } from "./modelFormDataCurrentYearProjection";
 import type { ModelFormDataCustomCategoryLabels } from "./modelFormDataCustomCategoryLabels";
 import type { ModelFormDataEscalationRates } from "./modelFormDataEscalationRates";
 import type { ModelFormDataProgramsItem } from "./modelFormDataProgramsItem";
@@ -56,7 +56,7 @@ export interface ModelFormData {
   tuitionEscalation?: ModelFormDataTuitionEscalation;
   revenueDefaults?: ModelFormDataRevenueDefaults;
   revenueSources?: ModelFormDataRevenueSources;
-  currentYearProjection?: ModelFormDataCurrentYearProjection;
+  currentYearProjection?: CurrentYearProjection;
   customCategoryLabels?: ModelFormDataCustomCategoryLabels;
   escalationRates?: ModelFormDataEscalationRates;
   [key: string]: unknown;

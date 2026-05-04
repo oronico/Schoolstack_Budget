@@ -916,6 +916,8 @@ components:
           enum: [autopay, invoiced, mixed]
         collectionRate:
           type: number
+          minimum: 0
+          maximum: 100
         collectionDelayDays:
           type: integer
         paymentFrequency:
@@ -1137,12 +1139,60 @@ components:
       properties:
         endingEnrollment:
           type: integer
+          minimum: 0
         totalRevenue:
           type: number
+          minimum: 0
         totalExpenses:
           type: number
+          minimum: 0
         endingCash:
           type: number
+          minimum: 0
+        tuitionRevenue:
+          type: number
+          minimum: 0
+        publicFundingRevenue:
+          type: number
+          minimum: 0
+        philanthropyRevenue:
+          type: number
+          minimum: 0
+        otherRevenue:
+          type: number
+          minimum: 0
+        personnelExpenses:
+          type: number
+          minimum: 0
+        facilityExpenses:
+          type: number
+          minimum: 0
+        instructionalExpenses:
+          type: number
+          minimum: 0
+        adminExpenses:
+          type: number
+          minimum: 0
+    CurrentYearProjection:
+      type: object
+      additionalProperties: true
+      properties:
+        currentEnrollment:
+          type: number
+          minimum: 0
+        projectedRevenue:
+          type: number
+          minimum: 0
+        projectedExpenses:
+          type: number
+          minimum: 0
+        currentCash:
+          type: number
+          minimum: 0
+        monthsCompleted:
+          type: number
+          minimum: 0
+          maximum: 12
     AccountingUploadEntry:
       type: object
       description: >
@@ -1358,8 +1408,7 @@ components:
           type: object
           additionalProperties: true
         currentYearProjection:
-          type: object
-          additionalProperties: true
+          $ref: "#/components/schemas/CurrentYearProjection"
         customCategoryLabels:
           type: object
           additionalProperties:
@@ -1395,6 +1444,7 @@ components:
           type: integer
         maxCapacity:
           type: integer
+          minimum: 1
         fiscalYearStartMonth:
           type: integer
         isPartialFirstYear:

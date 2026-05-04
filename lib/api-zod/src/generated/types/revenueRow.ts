@@ -26,6 +26,10 @@ export interface RevenueRow {
   note?: string;
   billingMonths?: RevenueRowBillingMonths;
   collectionMethod?: RevenueRowCollectionMethod;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
   collectionRate?: number;
   collectionDelayDays?: number;
   paymentFrequency?: RevenueRowPaymentFrequency;

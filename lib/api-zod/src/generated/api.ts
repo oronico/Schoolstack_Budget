@@ -213,6 +213,7 @@ export const ListModelsResponse = zod.array(ListModelsResponseItem);
 /**
  * @summary Create a new financial model
  */
+
 export const createModelBodyDataEnrollmentRetentionRateMin = 0;
 export const createModelBodyDataEnrollmentRetentionRateMax = 100;
 
@@ -220,9 +221,47 @@ export const createModelBodyDataEnrollmentApplicationsReceivedMin = 0;
 
 export const createModelBodyDataEnrollmentWaitlistCountMin = 0;
 
+export const createModelBodyDataRevenueRowsItemCollectionRateMin = 0;
+export const createModelBodyDataRevenueRowsItemCollectionRateMax = 100;
+
 export const createModelBodyDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const createModelBodyDataPriorYearSnapshotEndingEnrollmentMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotTotalRevenueMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotTotalExpensesMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotEndingCashMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotTuitionRevenueMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotPublicFundingRevenueMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotPhilanthropyRevenueMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotOtherRevenueMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotPersonnelExpensesMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotFacilityExpensesMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotInstructionalExpensesMin = 0;
+
+export const createModelBodyDataPriorYearSnapshotAdminExpensesMin = 0;
+
 export const createModelBodyDataCovenantThresholdsDscrByYearMin = 5;
 export const createModelBodyDataCovenantThresholdsDscrByYearMax = 5;
+
+export const createModelBodyDataCurrentYearProjectionCurrentEnrollmentMin = 0;
+
+export const createModelBodyDataCurrentYearProjectionProjectedRevenueMin = 0;
+
+export const createModelBodyDataCurrentYearProjectionProjectedExpensesMin = 0;
+
+export const createModelBodyDataCurrentYearProjectionCurrentCashMin = 0;
+
+export const createModelBodyDataCurrentYearProjectionMonthsCompletedMin = 0;
+export const createModelBodyDataCurrentYearProjectionMonthsCompletedMax = 12;
 
 export const CreateModelBody = zod.object({
   name: zod.string(),
@@ -268,7 +307,7 @@ export const CreateModelBody = zod.object({
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
-        maxCapacity: zod.number().optional(),
+        maxCapacity: zod.number().min(1).optional(),
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
@@ -457,7 +496,11 @@ export const CreateModelBody = zod.object({
           collectionMethod: zod
             .enum(["autopay", "invoiced", "mixed"])
             .optional(),
-          collectionRate: zod.number().optional(),
+          collectionRate: zod
+            .number()
+            .min(createModelBodyDataRevenueRowsItemCollectionRateMin)
+            .max(createModelBodyDataRevenueRowsItemCollectionRateMax)
+            .optional(),
           collectionDelayDays: zod.number().optional(),
           paymentFrequency: zod
             .enum(["monthly", "quarterly", "semi_annual", "annual"])
@@ -563,10 +606,54 @@ export const CreateModelBody = zod.object({
       .optional(),
     priorYearSnapshot: zod
       .object({
-        endingEnrollment: zod.number().optional(),
-        totalRevenue: zod.number().optional(),
-        totalExpenses: zod.number().optional(),
-        endingCash: zod.number().optional(),
+        endingEnrollment: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotEndingEnrollmentMin)
+          .optional(),
+        totalRevenue: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotTotalRevenueMin)
+          .optional(),
+        totalExpenses: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotTotalExpensesMin)
+          .optional(),
+        endingCash: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotEndingCashMin)
+          .optional(),
+        tuitionRevenue: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotTuitionRevenueMin)
+          .optional(),
+        publicFundingRevenue: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotPublicFundingRevenueMin)
+          .optional(),
+        philanthropyRevenue: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotPhilanthropyRevenueMin)
+          .optional(),
+        otherRevenue: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotOtherRevenueMin)
+          .optional(),
+        personnelExpenses: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotPersonnelExpensesMin)
+          .optional(),
+        facilityExpenses: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotFacilityExpensesMin)
+          .optional(),
+        instructionalExpenses: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotInstructionalExpensesMin)
+          .optional(),
+        adminExpenses: zod
+          .number()
+          .min(createModelBodyDataPriorYearSnapshotAdminExpensesMin)
+          .optional(),
       })
       .optional(),
     accountingExport: zod
@@ -693,7 +780,31 @@ export const CreateModelBody = zod.object({
     tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
     revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
     revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
-    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod
+      .object({
+        currentEnrollment: zod
+          .number()
+          .min(createModelBodyDataCurrentYearProjectionCurrentEnrollmentMin)
+          .optional(),
+        projectedRevenue: zod
+          .number()
+          .min(createModelBodyDataCurrentYearProjectionProjectedRevenueMin)
+          .optional(),
+        projectedExpenses: zod
+          .number()
+          .min(createModelBodyDataCurrentYearProjectionProjectedExpensesMin)
+          .optional(),
+        currentCash: zod
+          .number()
+          .min(createModelBodyDataCurrentYearProjectionCurrentCashMin)
+          .optional(),
+        monthsCompleted: zod
+          .number()
+          .min(createModelBodyDataCurrentYearProjectionMonthsCompletedMin)
+          .max(createModelBodyDataCurrentYearProjectionMonthsCompletedMax)
+          .optional(),
+      })
+      .optional(),
     customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
     escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
@@ -713,9 +824,47 @@ export const getModelResponseDataEnrollmentApplicationsReceivedMin = 0;
 
 export const getModelResponseDataEnrollmentWaitlistCountMin = 0;
 
+export const getModelResponseDataRevenueRowsItemCollectionRateMin = 0;
+export const getModelResponseDataRevenueRowsItemCollectionRateMax = 100;
+
 export const getModelResponseDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const getModelResponseDataPriorYearSnapshotEndingEnrollmentMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotTotalRevenueMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotTotalExpensesMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotEndingCashMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotTuitionRevenueMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotPublicFundingRevenueMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotPhilanthropyRevenueMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotOtherRevenueMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotPersonnelExpensesMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotFacilityExpensesMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotInstructionalExpensesMin = 0;
+
+export const getModelResponseDataPriorYearSnapshotAdminExpensesMin = 0;
+
 export const getModelResponseDataCovenantThresholdsDscrByYearMin = 5;
 export const getModelResponseDataCovenantThresholdsDscrByYearMax = 5;
+
+export const getModelResponseDataCurrentYearProjectionCurrentEnrollmentMin = 0;
+
+export const getModelResponseDataCurrentYearProjectionProjectedRevenueMin = 0;
+
+export const getModelResponseDataCurrentYearProjectionProjectedExpensesMin = 0;
+
+export const getModelResponseDataCurrentYearProjectionCurrentCashMin = 0;
+
+export const getModelResponseDataCurrentYearProjectionMonthsCompletedMin = 0;
+export const getModelResponseDataCurrentYearProjectionMonthsCompletedMax = 12;
 
 export const GetModelResponse = zod.object({
   id: zod.number(),
@@ -763,7 +912,7 @@ export const GetModelResponse = zod.object({
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
-        maxCapacity: zod.number().optional(),
+        maxCapacity: zod.number().min(1).optional(),
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
@@ -952,7 +1101,11 @@ export const GetModelResponse = zod.object({
           collectionMethod: zod
             .enum(["autopay", "invoiced", "mixed"])
             .optional(),
-          collectionRate: zod.number().optional(),
+          collectionRate: zod
+            .number()
+            .min(getModelResponseDataRevenueRowsItemCollectionRateMin)
+            .max(getModelResponseDataRevenueRowsItemCollectionRateMax)
+            .optional(),
           collectionDelayDays: zod.number().optional(),
           paymentFrequency: zod
             .enum(["monthly", "quarterly", "semi_annual", "annual"])
@@ -1058,10 +1211,54 @@ export const GetModelResponse = zod.object({
       .optional(),
     priorYearSnapshot: zod
       .object({
-        endingEnrollment: zod.number().optional(),
-        totalRevenue: zod.number().optional(),
-        totalExpenses: zod.number().optional(),
-        endingCash: zod.number().optional(),
+        endingEnrollment: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotEndingEnrollmentMin)
+          .optional(),
+        totalRevenue: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotTotalRevenueMin)
+          .optional(),
+        totalExpenses: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotTotalExpensesMin)
+          .optional(),
+        endingCash: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotEndingCashMin)
+          .optional(),
+        tuitionRevenue: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotTuitionRevenueMin)
+          .optional(),
+        publicFundingRevenue: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotPublicFundingRevenueMin)
+          .optional(),
+        philanthropyRevenue: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotPhilanthropyRevenueMin)
+          .optional(),
+        otherRevenue: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotOtherRevenueMin)
+          .optional(),
+        personnelExpenses: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotPersonnelExpensesMin)
+          .optional(),
+        facilityExpenses: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotFacilityExpensesMin)
+          .optional(),
+        instructionalExpenses: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotInstructionalExpensesMin)
+          .optional(),
+        adminExpenses: zod
+          .number()
+          .min(getModelResponseDataPriorYearSnapshotAdminExpensesMin)
+          .optional(),
       })
       .optional(),
     accountingExport: zod
@@ -1188,7 +1385,31 @@ export const GetModelResponse = zod.object({
     tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
     revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
     revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
-    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod
+      .object({
+        currentEnrollment: zod
+          .number()
+          .min(getModelResponseDataCurrentYearProjectionCurrentEnrollmentMin)
+          .optional(),
+        projectedRevenue: zod
+          .number()
+          .min(getModelResponseDataCurrentYearProjectionProjectedRevenueMin)
+          .optional(),
+        projectedExpenses: zod
+          .number()
+          .min(getModelResponseDataCurrentYearProjectionProjectedExpensesMin)
+          .optional(),
+        currentCash: zod
+          .number()
+          .min(getModelResponseDataCurrentYearProjectionCurrentCashMin)
+          .optional(),
+        monthsCompleted: zod
+          .number()
+          .min(getModelResponseDataCurrentYearProjectionMonthsCompletedMin)
+          .max(getModelResponseDataCurrentYearProjectionMonthsCompletedMax)
+          .optional(),
+      })
+      .optional(),
     customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
     escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
@@ -1210,9 +1431,47 @@ export const updateModelBodyDataEnrollmentApplicationsReceivedMin = 0;
 
 export const updateModelBodyDataEnrollmentWaitlistCountMin = 0;
 
+export const updateModelBodyDataRevenueRowsItemCollectionRateMin = 0;
+export const updateModelBodyDataRevenueRowsItemCollectionRateMax = 100;
+
 export const updateModelBodyDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const updateModelBodyDataPriorYearSnapshotEndingEnrollmentMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotTotalRevenueMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotTotalExpensesMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotEndingCashMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotTuitionRevenueMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotPublicFundingRevenueMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotPhilanthropyRevenueMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotOtherRevenueMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotPersonnelExpensesMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotFacilityExpensesMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotInstructionalExpensesMin = 0;
+
+export const updateModelBodyDataPriorYearSnapshotAdminExpensesMin = 0;
+
 export const updateModelBodyDataCovenantThresholdsDscrByYearMin = 5;
 export const updateModelBodyDataCovenantThresholdsDscrByYearMax = 5;
+
+export const updateModelBodyDataCurrentYearProjectionCurrentEnrollmentMin = 0;
+
+export const updateModelBodyDataCurrentYearProjectionProjectedRevenueMin = 0;
+
+export const updateModelBodyDataCurrentYearProjectionProjectedExpensesMin = 0;
+
+export const updateModelBodyDataCurrentYearProjectionCurrentCashMin = 0;
+
+export const updateModelBodyDataCurrentYearProjectionMonthsCompletedMin = 0;
+export const updateModelBodyDataCurrentYearProjectionMonthsCompletedMax = 12;
 
 export const UpdateModelBody = zod.object({
   name: zod.string().optional(),
@@ -1259,7 +1518,7 @@ export const UpdateModelBody = zod.object({
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
-        maxCapacity: zod.number().optional(),
+        maxCapacity: zod.number().min(1).optional(),
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
@@ -1448,7 +1707,11 @@ export const UpdateModelBody = zod.object({
           collectionMethod: zod
             .enum(["autopay", "invoiced", "mixed"])
             .optional(),
-          collectionRate: zod.number().optional(),
+          collectionRate: zod
+            .number()
+            .min(updateModelBodyDataRevenueRowsItemCollectionRateMin)
+            .max(updateModelBodyDataRevenueRowsItemCollectionRateMax)
+            .optional(),
           collectionDelayDays: zod.number().optional(),
           paymentFrequency: zod
             .enum(["monthly", "quarterly", "semi_annual", "annual"])
@@ -1554,10 +1817,54 @@ export const UpdateModelBody = zod.object({
       .optional(),
     priorYearSnapshot: zod
       .object({
-        endingEnrollment: zod.number().optional(),
-        totalRevenue: zod.number().optional(),
-        totalExpenses: zod.number().optional(),
-        endingCash: zod.number().optional(),
+        endingEnrollment: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotEndingEnrollmentMin)
+          .optional(),
+        totalRevenue: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotTotalRevenueMin)
+          .optional(),
+        totalExpenses: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotTotalExpensesMin)
+          .optional(),
+        endingCash: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotEndingCashMin)
+          .optional(),
+        tuitionRevenue: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotTuitionRevenueMin)
+          .optional(),
+        publicFundingRevenue: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotPublicFundingRevenueMin)
+          .optional(),
+        philanthropyRevenue: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotPhilanthropyRevenueMin)
+          .optional(),
+        otherRevenue: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotOtherRevenueMin)
+          .optional(),
+        personnelExpenses: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotPersonnelExpensesMin)
+          .optional(),
+        facilityExpenses: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotFacilityExpensesMin)
+          .optional(),
+        instructionalExpenses: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotInstructionalExpensesMin)
+          .optional(),
+        adminExpenses: zod
+          .number()
+          .min(updateModelBodyDataPriorYearSnapshotAdminExpensesMin)
+          .optional(),
       })
       .optional(),
     accountingExport: zod
@@ -1684,7 +1991,31 @@ export const UpdateModelBody = zod.object({
     tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
     revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
     revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
-    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod
+      .object({
+        currentEnrollment: zod
+          .number()
+          .min(updateModelBodyDataCurrentYearProjectionCurrentEnrollmentMin)
+          .optional(),
+        projectedRevenue: zod
+          .number()
+          .min(updateModelBodyDataCurrentYearProjectionProjectedRevenueMin)
+          .optional(),
+        projectedExpenses: zod
+          .number()
+          .min(updateModelBodyDataCurrentYearProjectionProjectedExpensesMin)
+          .optional(),
+        currentCash: zod
+          .number()
+          .min(updateModelBodyDataCurrentYearProjectionCurrentCashMin)
+          .optional(),
+        monthsCompleted: zod
+          .number()
+          .min(updateModelBodyDataCurrentYearProjectionMonthsCompletedMin)
+          .max(updateModelBodyDataCurrentYearProjectionMonthsCompletedMax)
+          .optional(),
+      })
+      .optional(),
     customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
     escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
@@ -1697,9 +2028,47 @@ export const updateModelResponseDataEnrollmentApplicationsReceivedMin = 0;
 
 export const updateModelResponseDataEnrollmentWaitlistCountMin = 0;
 
+export const updateModelResponseDataRevenueRowsItemCollectionRateMin = 0;
+export const updateModelResponseDataRevenueRowsItemCollectionRateMax = 100;
+
 export const updateModelResponseDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const updateModelResponseDataPriorYearSnapshotEndingEnrollmentMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotTotalRevenueMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotTotalExpensesMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotEndingCashMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotTuitionRevenueMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotPublicFundingRevenueMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotPhilanthropyRevenueMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotOtherRevenueMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotPersonnelExpensesMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotFacilityExpensesMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotInstructionalExpensesMin = 0;
+
+export const updateModelResponseDataPriorYearSnapshotAdminExpensesMin = 0;
+
 export const updateModelResponseDataCovenantThresholdsDscrByYearMin = 5;
 export const updateModelResponseDataCovenantThresholdsDscrByYearMax = 5;
+
+export const updateModelResponseDataCurrentYearProjectionCurrentEnrollmentMin = 0;
+
+export const updateModelResponseDataCurrentYearProjectionProjectedRevenueMin = 0;
+
+export const updateModelResponseDataCurrentYearProjectionProjectedExpensesMin = 0;
+
+export const updateModelResponseDataCurrentYearProjectionCurrentCashMin = 0;
+
+export const updateModelResponseDataCurrentYearProjectionMonthsCompletedMin = 0;
+export const updateModelResponseDataCurrentYearProjectionMonthsCompletedMax = 12;
 
 export const UpdateModelResponse = zod.object({
   id: zod.number(),
@@ -1747,7 +2116,7 @@ export const UpdateModelResponse = zod.object({
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
-        maxCapacity: zod.number().optional(),
+        maxCapacity: zod.number().min(1).optional(),
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
@@ -1936,7 +2305,11 @@ export const UpdateModelResponse = zod.object({
           collectionMethod: zod
             .enum(["autopay", "invoiced", "mixed"])
             .optional(),
-          collectionRate: zod.number().optional(),
+          collectionRate: zod
+            .number()
+            .min(updateModelResponseDataRevenueRowsItemCollectionRateMin)
+            .max(updateModelResponseDataRevenueRowsItemCollectionRateMax)
+            .optional(),
           collectionDelayDays: zod.number().optional(),
           paymentFrequency: zod
             .enum(["monthly", "quarterly", "semi_annual", "annual"])
@@ -2044,10 +2417,54 @@ export const UpdateModelResponse = zod.object({
       .optional(),
     priorYearSnapshot: zod
       .object({
-        endingEnrollment: zod.number().optional(),
-        totalRevenue: zod.number().optional(),
-        totalExpenses: zod.number().optional(),
-        endingCash: zod.number().optional(),
+        endingEnrollment: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotEndingEnrollmentMin)
+          .optional(),
+        totalRevenue: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotTotalRevenueMin)
+          .optional(),
+        totalExpenses: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotTotalExpensesMin)
+          .optional(),
+        endingCash: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotEndingCashMin)
+          .optional(),
+        tuitionRevenue: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotTuitionRevenueMin)
+          .optional(),
+        publicFundingRevenue: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotPublicFundingRevenueMin)
+          .optional(),
+        philanthropyRevenue: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotPhilanthropyRevenueMin)
+          .optional(),
+        otherRevenue: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotOtherRevenueMin)
+          .optional(),
+        personnelExpenses: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotPersonnelExpensesMin)
+          .optional(),
+        facilityExpenses: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotFacilityExpensesMin)
+          .optional(),
+        instructionalExpenses: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotInstructionalExpensesMin)
+          .optional(),
+        adminExpenses: zod
+          .number()
+          .min(updateModelResponseDataPriorYearSnapshotAdminExpensesMin)
+          .optional(),
       })
       .optional(),
     accountingExport: zod
@@ -2174,7 +2591,31 @@ export const UpdateModelResponse = zod.object({
     tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
     revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
     revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
-    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod
+      .object({
+        currentEnrollment: zod
+          .number()
+          .min(updateModelResponseDataCurrentYearProjectionCurrentEnrollmentMin)
+          .optional(),
+        projectedRevenue: zod
+          .number()
+          .min(updateModelResponseDataCurrentYearProjectionProjectedRevenueMin)
+          .optional(),
+        projectedExpenses: zod
+          .number()
+          .min(updateModelResponseDataCurrentYearProjectionProjectedExpensesMin)
+          .optional(),
+        currentCash: zod
+          .number()
+          .min(updateModelResponseDataCurrentYearProjectionCurrentCashMin)
+          .optional(),
+        monthsCompleted: zod
+          .number()
+          .min(updateModelResponseDataCurrentYearProjectionMonthsCompletedMin)
+          .max(updateModelResponseDataCurrentYearProjectionMonthsCompletedMax)
+          .optional(),
+      })
+      .optional(),
     customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
     escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
@@ -2214,9 +2655,47 @@ export const archiveModelResponseDataEnrollmentApplicationsReceivedMin = 0;
 
 export const archiveModelResponseDataEnrollmentWaitlistCountMin = 0;
 
+export const archiveModelResponseDataRevenueRowsItemCollectionRateMin = 0;
+export const archiveModelResponseDataRevenueRowsItemCollectionRateMax = 100;
+
 export const archiveModelResponseDataStaffingRowsItemStaffingModeDefault = `fixed`;
+export const archiveModelResponseDataPriorYearSnapshotEndingEnrollmentMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotTotalRevenueMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotTotalExpensesMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotEndingCashMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotTuitionRevenueMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotPublicFundingRevenueMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotPhilanthropyRevenueMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotOtherRevenueMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotPersonnelExpensesMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotFacilityExpensesMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotInstructionalExpensesMin = 0;
+
+export const archiveModelResponseDataPriorYearSnapshotAdminExpensesMin = 0;
+
 export const archiveModelResponseDataCovenantThresholdsDscrByYearMin = 5;
 export const archiveModelResponseDataCovenantThresholdsDscrByYearMax = 5;
+
+export const archiveModelResponseDataCurrentYearProjectionCurrentEnrollmentMin = 0;
+
+export const archiveModelResponseDataCurrentYearProjectionProjectedRevenueMin = 0;
+
+export const archiveModelResponseDataCurrentYearProjectionProjectedExpensesMin = 0;
+
+export const archiveModelResponseDataCurrentYearProjectionCurrentCashMin = 0;
+
+export const archiveModelResponseDataCurrentYearProjectionMonthsCompletedMin = 0;
+export const archiveModelResponseDataCurrentYearProjectionMonthsCompletedMax = 12;
 
 export const ArchiveModelResponse = zod.object({
   id: zod.number(),
@@ -2264,7 +2743,7 @@ export const ArchiveModelResponse = zod.object({
           .optional(),
         openingYear: zod.number().optional(),
         currentStudents: zod.number().optional(),
-        maxCapacity: zod.number().optional(),
+        maxCapacity: zod.number().min(1).optional(),
         fiscalYearStartMonth: zod.number().optional(),
         isPartialFirstYear: zod.boolean().optional(),
         year1OperatingMonths: zod.number().optional(),
@@ -2453,7 +2932,11 @@ export const ArchiveModelResponse = zod.object({
           collectionMethod: zod
             .enum(["autopay", "invoiced", "mixed"])
             .optional(),
-          collectionRate: zod.number().optional(),
+          collectionRate: zod
+            .number()
+            .min(archiveModelResponseDataRevenueRowsItemCollectionRateMin)
+            .max(archiveModelResponseDataRevenueRowsItemCollectionRateMax)
+            .optional(),
           collectionDelayDays: zod.number().optional(),
           paymentFrequency: zod
             .enum(["monthly", "quarterly", "semi_annual", "annual"])
@@ -2561,10 +3044,56 @@ export const ArchiveModelResponse = zod.object({
       .optional(),
     priorYearSnapshot: zod
       .object({
-        endingEnrollment: zod.number().optional(),
-        totalRevenue: zod.number().optional(),
-        totalExpenses: zod.number().optional(),
-        endingCash: zod.number().optional(),
+        endingEnrollment: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotEndingEnrollmentMin)
+          .optional(),
+        totalRevenue: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotTotalRevenueMin)
+          .optional(),
+        totalExpenses: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotTotalExpensesMin)
+          .optional(),
+        endingCash: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotEndingCashMin)
+          .optional(),
+        tuitionRevenue: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotTuitionRevenueMin)
+          .optional(),
+        publicFundingRevenue: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotPublicFundingRevenueMin)
+          .optional(),
+        philanthropyRevenue: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotPhilanthropyRevenueMin)
+          .optional(),
+        otherRevenue: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotOtherRevenueMin)
+          .optional(),
+        personnelExpenses: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotPersonnelExpensesMin)
+          .optional(),
+        facilityExpenses: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotFacilityExpensesMin)
+          .optional(),
+        instructionalExpenses: zod
+          .number()
+          .min(
+            archiveModelResponseDataPriorYearSnapshotInstructionalExpensesMin,
+          )
+          .optional(),
+        adminExpenses: zod
+          .number()
+          .min(archiveModelResponseDataPriorYearSnapshotAdminExpensesMin)
+          .optional(),
       })
       .optional(),
     accountingExport: zod
@@ -2691,7 +3220,35 @@ export const ArchiveModelResponse = zod.object({
     tuitionEscalation: zod.record(zod.string(), zod.unknown()).optional(),
     revenueDefaults: zod.record(zod.string(), zod.unknown()).optional(),
     revenueSources: zod.record(zod.string(), zod.unknown()).optional(),
-    currentYearProjection: zod.record(zod.string(), zod.unknown()).optional(),
+    currentYearProjection: zod
+      .object({
+        currentEnrollment: zod
+          .number()
+          .min(
+            archiveModelResponseDataCurrentYearProjectionCurrentEnrollmentMin,
+          )
+          .optional(),
+        projectedRevenue: zod
+          .number()
+          .min(archiveModelResponseDataCurrentYearProjectionProjectedRevenueMin)
+          .optional(),
+        projectedExpenses: zod
+          .number()
+          .min(
+            archiveModelResponseDataCurrentYearProjectionProjectedExpensesMin,
+          )
+          .optional(),
+        currentCash: zod
+          .number()
+          .min(archiveModelResponseDataCurrentYearProjectionCurrentCashMin)
+          .optional(),
+        monthsCompleted: zod
+          .number()
+          .min(archiveModelResponseDataCurrentYearProjectionMonthsCompletedMin)
+          .max(archiveModelResponseDataCurrentYearProjectionMonthsCompletedMax)
+          .optional(),
+      })
+      .optional(),
     customCategoryLabels: zod.record(zod.string(), zod.string()).optional(),
     escalationRates: zod.record(zod.string(), zod.unknown()).optional(),
   }),
