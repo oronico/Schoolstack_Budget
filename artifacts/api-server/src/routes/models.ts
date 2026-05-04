@@ -1773,6 +1773,8 @@ router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
     const state = typeof profile?.state === "string" ? profile.state : "";
     const schoolType = typeof profile?.schoolType === "string" ? profile.schoolType : "";
     const entityType = typeof profile?.entityType === "string" ? profile.entityType : "";
+    const modelDuration: "single_year" | "five_year" =
+      profile?.modelDuration === "single_year" ? "single_year" : "five_year";
 
     const yearFinancials = computeYearFinancialsFromData(data);
     const consultantOutput = await runConsultantEngine(data);
@@ -1846,6 +1848,7 @@ router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
       state,
       schoolType,
       entityType,
+      modelDuration,
       enrollment,
       revenue,
       expenses,

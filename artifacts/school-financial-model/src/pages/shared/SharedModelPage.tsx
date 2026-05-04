@@ -25,6 +25,12 @@ interface SharedModelData {
   state: string;
   schoolType: string;
   entityType: string;
+  // "single_year" tells the shared page to render only Year 1 in the
+  // Summary/Revenue/Expense tables and the enrollment chart so a founder
+  // who built a single-year budget doesn't accidentally show a lender or
+  // board $0 in Y2-Y5. Older payloads without the field are treated as
+  // 5-year so we never silently collapse an existing share link.
+  modelDuration?: "single_year" | "five_year";
   enrollment: number[];
   revenue: number[];
   expenses: number[];
@@ -82,17 +88,24 @@ function MetricCard({ label, value, subtext, icon: Icon, status }: {
 }
 
 function SummaryTable({ data }: { data: SharedModelData }) {
-  const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
+  // Single-year payloads still return 5-element arrays from the engine; cap
+  // the visible columns to Y1 only so a single-year founder doesn't show a
+  // lender or board $0 across Y2-Y5.
+  const isSingleYear = data.modelDuration === "single_year";
+  const cap = isSingleYear ? 1 : 5;
+  const allYears = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
+  const years = allYears.slice(0, cap);
+  const slice = <T,>(arr: T[]) => arr.slice(0, cap);
   const rows: { label: string; values: string[]; bold?: boolean }[] = [
-    { label: "Enrollment", values: data.enrollment.map(e => e.toLocaleString()) },
-    { label: "Total Revenue", values: data.revenue.map(fmt), bold: true },
-    { label: "Total Expenses", values: data.expenses.map(fmt), bold: true },
-    { label: "Net Income", values: data.netIncome.map(fmt), bold: true },
-    { label: "Net Margin", values: data.netMargin.map(pct) },
+    { label: "Enrollment", values: slice(data.enrollment).map(e => e.toLocaleString()) },
+    { label: "Total Revenue", values: slice(data.revenue).map(fmt), bold: true },
+    { label: "Total Expenses", values: slice(data.expenses).map(fmt), bold: true },
+    { label: "Net Income", values: slice(data.netIncome).map(fmt), bold: true },
+    { label: "Net Margin", values: slice(data.netMargin).map(pct) },
   ];
 
-  if (data.dscr.some(d => d > 0)) {
-    rows.push({ label: "DSCR", values: data.dscr.map(d => d > 0 ? `${d.toFixed(2)}x` : "N/A") });
+  if (slice(data.dscr).some(d => d > 0)) {
+    rows.push({ label: "DSCR", values: slice(data.dscr).map(d => d > 0 ? `${d.toFixed(2)}x` : "N/A") });
   }
 
   return (
@@ -124,7 +137,11 @@ function SummaryTable({ data }: { data: SharedModelData }) {
 }
 
 function RevenueBreakdownSection({ data }: { data: SharedModelData }) {
-  const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
+  const isSingleYear = data.modelDuration === "single_year";
+  const cap = isSingleYear ? 1 : 5;
+  const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].slice(0, cap);
+  const breakdown = data.revenueBreakdown.slice(0, cap);
+  const revenue = data.revenue.slice(0, cap);
 
   return (
     <div className="overflow-x-auto">
@@ -140,25 +157,25 @@ function RevenueBreakdownSection({ data }: { data: SharedModelData }) {
         <tbody>
           <tr className="border-b border-slate-100">
             <td className="py-2.5 pr-4 text-slate-600">Tuition & Fees</td>
-            {data.revenueBreakdown.map((rb, i) => (
+            {breakdown.map((rb, i) => (
               <td key={i} className="text-right py-2.5 px-3 text-slate-800">{fmt(rb.tuition)}</td>
             ))}
           </tr>
           <tr className="border-b border-slate-100">
             <td className="py-2.5 pr-4 text-slate-600">Public Funding</td>
-            {data.revenueBreakdown.map((rb, i) => (
+            {breakdown.map((rb, i) => (
               <td key={i} className="text-right py-2.5 px-3 text-slate-800">{fmt(rb.public)}</td>
             ))}
           </tr>
           <tr className="border-b border-slate-100">
             <td className="py-2.5 pr-4 text-slate-600">Grants & Philanthropy</td>
-            {data.revenueBreakdown.map((rb, i) => (
+            {breakdown.map((rb, i) => (
               <td key={i} className="text-right py-2.5 px-3 text-slate-800">{fmt(rb.philanthropy)}</td>
             ))}
           </tr>
           <tr className="border-b border-slate-100 font-semibold">
             <td className="py-2.5 pr-4 text-slate-600">Total Revenue</td>
-            {data.revenue.map((r, i) => (
+            {revenue.map((r, i) => (
               <td key={i} className="text-right py-2.5 px-3 text-slate-800">{fmt(r)}</td>
             ))}
           </tr>
@@ -169,8 +186,14 @@ function RevenueBreakdownSection({ data }: { data: SharedModelData }) {
 }
 
 function ExpenseBreakdownSection({ data }: { data: SharedModelData }) {
-  const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
-  const otherOpex = data.expenses.map((e, i) => e - data.staffingCost[i] - data.facilityCost[i] - data.debtService[i]);
+  const isSingleYear = data.modelDuration === "single_year";
+  const cap = isSingleYear ? 1 : 5;
+  const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"].slice(0, cap);
+  const expenses = data.expenses.slice(0, cap);
+  const staffingCost = data.staffingCost.slice(0, cap);
+  const facilityCost = data.facilityCost.slice(0, cap);
+  const debtService = data.debtService.slice(0, cap);
+  const otherOpex = expenses.map((e, i) => e - staffingCost[i] - facilityCost[i] - debtService[i]);
 
   return (
     <div className="overflow-x-auto">
@@ -186,13 +209,13 @@ function ExpenseBreakdownSection({ data }: { data: SharedModelData }) {
         <tbody>
           <tr className="border-b border-slate-100">
             <td className="py-2.5 pr-4 text-slate-600">Staffing</td>
-            {data.staffingCost.map((s, i) => (
+            {staffingCost.map((s, i) => (
               <td key={i} className="text-right py-2.5 px-3 text-slate-800">{fmt(s)}</td>
             ))}
           </tr>
           <tr className="border-b border-slate-100">
             <td className="py-2.5 pr-4 text-slate-600">Facility</td>
-            {data.facilityCost.map((f, i) => (
+            {facilityCost.map((f, i) => (
               <td key={i} className="text-right py-2.5 px-3 text-slate-800">{fmt(f)}</td>
             ))}
           </tr>
@@ -202,17 +225,17 @@ function ExpenseBreakdownSection({ data }: { data: SharedModelData }) {
               <td key={i} className="text-right py-2.5 px-3 text-slate-800">{fmt(o)}</td>
             ))}
           </tr>
-          {data.debtService.some(d => d > 0) && (
+          {debtService.some(d => d > 0) && (
             <tr className="border-b border-slate-100">
               <td className="py-2.5 pr-4 text-slate-600">Debt Service</td>
-              {data.debtService.map((d, i) => (
+              {debtService.map((d, i) => (
                 <td key={i} className="text-right py-2.5 px-3 text-slate-800">{fmt(d)}</td>
               ))}
             </tr>
           )}
           <tr className="border-b border-slate-100 font-semibold">
             <td className="py-2.5 pr-4 text-slate-600">Total Expenses</td>
-            {data.expenses.map((e, i) => (
+            {expenses.map((e, i) => (
               <td key={i} className="text-right py-2.5 px-3 text-slate-800">{fmt(e)}</td>
             ))}
           </tr>
@@ -223,10 +246,12 @@ function ExpenseBreakdownSection({ data }: { data: SharedModelData }) {
 }
 
 function EnrollmentChart({ enrollment }: { enrollment: number[] }) {
+  // Length-1 inputs (single-year mode) render a single Y1 bar instead of
+  // four ghost bars. Callers should pass the already-sliced array.
   const max = Math.max(...enrollment, 1);
 
   return (
-    <div className="flex items-end gap-3 h-40">
+    <div className="flex items-end gap-3 h-40" data-testid="shared-enrollment-chart">
       {enrollment.map((e, i) => (
         <div key={i} className="flex-1 flex flex-col items-center gap-1">
           <span className="text-xs font-semibold text-slate-700">{e}</span>
@@ -648,8 +673,12 @@ export function SharedModelPage() {
     );
   }
 
+  const isSingleYear = data.modelDuration === "single_year";
   const y1Margin = data.netMargin[0];
   const y5NetIncome = data.netIncome[4];
+  const enrollmentForChart = isSingleYear ? data.enrollment.slice(0, 1) : data.enrollment;
+  const summaryHeading = isSingleYear ? "Year 1 Financial Summary" : "5-Year Financial Summary";
+  const headerLabel = isSingleYear ? "Single-Year Financial Model" : "5-Year Financial Model";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -671,7 +700,7 @@ export function SharedModelPage() {
               )}
             </div>
           </div>
-          <div className="text-xs text-slate-400">5-Year Financial Model</div>
+          <div className="text-xs text-slate-400" data-testid="shared-header-label">{headerLabel}</div>
         </div>
       </header>
 
@@ -687,7 +716,7 @@ export function SharedModelPage() {
           <MetricCard
             label="Year 1 Enrollment"
             value={data.enrollment[0].toLocaleString()}
-            subtext={`→ ${data.enrollment[4].toLocaleString()} by Year 5`}
+            subtext={isSingleYear ? undefined : `→ ${data.enrollment[4].toLocaleString()} by Year 5`}
             icon={Users}
           />
           <MetricCard
@@ -707,12 +736,14 @@ export function SharedModelPage() {
             icon={Clock}
             status={data.daysCashOnHand >= 60 ? "good" : data.daysCashOnHand >= 30 ? "warning" : "danger"}
           />
-          <MetricCard
-            label="Year 5 Net Income"
-            value={fmt(y5NetIncome)}
-            icon={y5NetIncome >= 0 ? TrendingUp : TrendingDown}
-            status={y5NetIncome > 0 ? "good" : "danger"}
-          />
+          {!isSingleYear && (
+            <MetricCard
+              label="Year 5 Net Income"
+              value={fmt(y5NetIncome)}
+              icon={y5NetIncome >= 0 ? TrendingUp : TrendingDown}
+              status={y5NetIncome > 0 ? "good" : "danger"}
+            />
+          )}
         </section>
 
         {data.dscr.some(d => d > 0) && (
@@ -743,11 +774,11 @@ export function SharedModelPage() {
 
         <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8">
           <h2 className="text-lg font-bold text-slate-800 mb-4">Enrollment Projection</h2>
-          <EnrollmentChart enrollment={data.enrollment} />
+          <EnrollmentChart enrollment={enrollmentForChart} />
         </section>
 
         <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">5-Year Financial Summary</h2>
+          <h2 className="text-lg font-bold text-slate-800 mb-4" data-testid="shared-summary-heading">{summaryHeading}</h2>
           <SummaryTable data={data} />
         </section>
 

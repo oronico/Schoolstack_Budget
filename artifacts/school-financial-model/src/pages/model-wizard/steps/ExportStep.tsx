@@ -172,6 +172,16 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
   const handleDownload = async (type: ExportType) => {
     if (!modelId || loading) return;
 
+    // Single-year guard: Underwriting Package and Formula Workbook each
+    // build a 5-column workbook today (Y2-Y5 columns would be zeros for a
+    // single-year founder), so route the click to the same Extend-to-5-year
+    // modal the Lender/Board cards already use instead of producing a
+    // misleading export.
+    if (isSingleYear && (type === "underwritingV2" || type === "formula")) {
+      setShowExtendModal(true);
+      return;
+    }
+
     if (type === "lenderPacketPdf" || type === "boardPacketPdf") {
       if (isSingleYear) {
         setShowExtendModal(true);
@@ -297,15 +307,13 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           <div className="flex-1">
             <p className="text-sm font-semibold text-emerald-900 mb-0.5">You're on Single-Year mode</p>
             <p className="text-xs text-emerald-800 leading-relaxed">
-              The Lender Packet and Board Summary need a full 5-year projection. The
-              Underwriting Package and Formula Workbook below still produce 5-column
-              workbooks today — Year 2-5 columns will appear empty until you fill them
-              in or extend. <button
+              Lender-grade exports — Lender Packet, Board Summary, Underwriting Package,
+              and Formula Workbook — need a full 5-year projection. <button
                 type="button"
                 data-testid="single-year-banner-extend"
                 onClick={() => setShowExtendModal(true)}
                 className="font-semibold text-emerald-900 underline underline-offset-2 hover:text-emerald-700"
-              >Extend to 5-year</button> any time.
+              >Extend to 5-year</button> any time to unlock them.
             </p>
           </div>
         </div>
@@ -361,24 +369,54 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
             </button>
           )}
         </div>
-        <ExportCard
-          icon={<ClipboardCheck className="h-7 w-7" />}
-          title="Underwriting Package"
-          description="23-tab workbook with DSCR, covenants, balance sheet, debt schedule & full formulas"
-          isLoading={loading === "underwritingV2"}
-          isExported={exported.has("underwritingV2")}
-          disabled={loading !== null && loading !== "underwritingV2"}
-          onClick={() => handleDownload("underwritingV2")}
-        />
-        <ExportCard
-          icon={<FileSpreadsheet className="h-7 w-7" />}
-          title="Formula Workbook"
-          description="Assumptions page with live formulas - lenders can test the math"
-          isLoading={loading === "formula"}
-          isExported={exported.has("formula")}
-          disabled={loading !== null && loading !== "formula"}
-          onClick={() => handleDownload("formula")}
-        />
+        <div className="relative" data-testid="underwriting-card-wrapper">
+          <ExportCard
+            icon={<ClipboardCheck className="h-7 w-7" />}
+            title="Underwriting Package"
+            description={isSingleYear ? "Requires 5-year projection — Extend your model to enable lender-grade exports." : "23-tab workbook with DSCR, covenants, balance sheet, debt schedule & full formulas"}
+            isLoading={loading === "underwritingV2"}
+            isExported={exported.has("underwritingV2")}
+            disabled={isSingleYear || (loading !== null && loading !== "underwritingV2")}
+            onClick={() => handleDownload("underwritingV2")}
+          />
+          {isSingleYear && (
+            <button
+              type="button"
+              data-testid="underwriting-card-extend-cta"
+              onClick={() => setShowExtendModal(true)}
+              className="absolute inset-0 w-full h-full rounded-2xl flex items-end justify-center pb-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Extend to 5-year to enable Underwriting Package"
+            >
+              <span className="text-[11px] font-semibold text-primary bg-white px-2.5 py-1 rounded-full shadow border border-primary/30">
+                Extend to 5-year
+              </span>
+            </button>
+          )}
+        </div>
+        <div className="relative" data-testid="formula-card-wrapper">
+          <ExportCard
+            icon={<FileSpreadsheet className="h-7 w-7" />}
+            title="Formula Workbook"
+            description={isSingleYear ? "Requires 5-year projection — Extend your model to enable lender-grade exports." : "Assumptions page with live formulas - lenders can test the math"}
+            isLoading={loading === "formula"}
+            isExported={exported.has("formula")}
+            disabled={isSingleYear || (loading !== null && loading !== "formula")}
+            onClick={() => handleDownload("formula")}
+          />
+          {isSingleYear && (
+            <button
+              type="button"
+              data-testid="formula-card-extend-cta"
+              onClick={() => setShowExtendModal(true)}
+              className="absolute inset-0 w-full h-full rounded-2xl flex items-end justify-center pb-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Extend to 5-year to enable Formula Workbook"
+            >
+              <span className="text-[11px] font-semibold text-primary bg-white px-2.5 py-1 rounded-full shadow border border-primary/30">
+                Extend to 5-year
+              </span>
+            </button>
+          )}
+        </div>
         {isChesterton && (
           <ExportCard
             icon={<BookOpen className="h-7 w-7" />}
