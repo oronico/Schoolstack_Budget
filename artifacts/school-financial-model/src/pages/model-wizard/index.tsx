@@ -593,8 +593,13 @@ export function ModelWizardPage() {
     return () => {
       if (modelId) {
         const elapsed = (Date.now() - stepStartTime.current) / 1000;
-        const stepName = visibleSteps[currentStep - 1]?.title || "";
-        sendModelTiming(currentStep, stepName, elapsed, modelId);
+        // Clamp inline — `safeStep` isn't in scope at this useEffect level
+        // and the cleanup closure captures the prior `currentStep`. After a
+        // duration toggle that shrank `visibleSteps`, the captured index can
+        // be out of bounds, so we clamp before reading the title.
+        const safeIdx = clampStep(currentStep, visibleSteps.length);
+        const stepName = visibleSteps[safeIdx - 1]?.title || "";
+        sendModelTiming(safeIdx, stepName, elapsed, modelId);
       }
     };
   }, [currentStep, modelId, stepInitialized]);
@@ -1041,9 +1046,10 @@ export function ModelWizardPage() {
         } catch (err) {
           console.warn("Failed to persist wizard progress:", err);
         }
+        const safeIdx = clampStep(currentStep, visibleSteps.length);
         trackCoachingEvent("wizard_section_completed", {
-          section: visibleSteps[currentStep - 1].title.toLowerCase(),
-          step: currentStep,
+          section: visibleSteps[safeIdx - 1]?.title.toLowerCase() ?? "",
+          step: safeIdx,
           modelId: modelId ?? null,
           guidanceLevel: user?.guidanceLevel ?? null,
         });
