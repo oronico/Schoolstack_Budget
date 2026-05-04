@@ -1,0 +1,117 @@
+Before public launch, prepare this app for a GitHub → Netlify → Railway production deployment.
+
+Do not assume Replit is the production hosting environment. Replit is the development environment only. The source of truth is GitHub. The frontend/public app is hosted on Netlify. Backend services and/or databases are hosted on Railway for the apps that require them.
+
+Perform a full pre-publication audit and hardening pass.
+
+1. Repository and GitHub readiness
+- Confirm all code is committed and pushed to the correct GitHub repository.
+- Confirm the production branch is clearly identified.
+- Confirm no secrets, API keys, database URLs, tokens, .env files, service keys, Plaid keys, SMTP keys, webhook secrets, or admin credentials are committed.
+- Add or verify .gitignore includes .env, .env.local, .env.production, node_modules, build outputs, logs, local database files, and temporary files.
+- Confirm README includes:
+  - app purpose
+  - local setup
+  - required environment variables
+  - build command
+  - dev command
+  - deployment target
+  - known limitations
+- Add a release checklist file named PUBLIC_LAUNCH_CHECKLIST.md.
+
+2. Netlify deployment readiness
+- Confirm this app is configured for Netlify, not Replit hosting.
+- Confirm the correct build command.
+- Confirm the correct publish directory.
+- Confirm whether the app is static, server-rendered, or uses Netlify functions.
+- Add or verify netlify.toml if needed.
+- Confirm any redirects are configured, especially single-page app fallback routing if this is a React/Vite app.
+- Confirm the app works after a clean production build.
+- Confirm the deployed Netlify site does not depend on Replit-specific URLs, ports, or environment behavior.
+- Confirm all public environment variables are intentionally safe for the browser.
+- Confirm private secrets are not bundled into frontend code.
+
+3. Railway deployment readiness
+For the apps hosted on Railway:
+- Confirm which services are hosted on Railway.
+- Confirm whether Railway is hosting the backend API, database, worker, or full app.
+- Confirm Railway environment variables are complete and separated from Netlify variables.
+- Confirm production Railway variables are not using development database URLs.
+- Confirm the backend binds to Railway’s expected port environment variable.
+- Confirm Railway healthcheck route exists and returns 200.
+- Confirm database migrations run cleanly.
+- Confirm Railway logs do not expose applicant data, banking data, secrets, tokens, or stack traces.
+- Confirm public API routes are limited to the minimum needed.
+- Confirm admin/reviewer/scoring/export routes require authentication.
+
+4. Frontend to backend connection
+- Confirm the frontend uses a production API base URL from environment variables.
+- Confirm the production frontend points to the correct Railway backend, not localhost and not Replit.
+- Confirm CORS only allows the approved Netlify production domain and any approved preview/staging domains.
+- Confirm failed API calls show user-friendly messages.
+- Confirm no API keys are exposed in browser network traffic unless they are explicitly public client keys.
+
+5. Security and access control
+- Lock down all admin, underwriting, scoring, borrower records, export, document upload, and dashboard routes.
+- Confirm applicants cannot access another applicant’s information by changing a URL ID.
+- Confirm underwriter-only fields never appear in public frontend responses.
+- Confirm server-side validation exists for all public forms.
+- Confirm rate limiting or spam protection exists on public submission endpoints.
+- Confirm uploaded files are private, limited by file type and size, and cannot execute code.
+- Confirm error messages do not reveal database details, stack traces, secrets, or internal logic.
+
+6. Data and database protections
+- Confirm production database is separate from development and test databases.
+- Remove seed data, fake users, test borrower records, sample applications, and mock admin accounts.
+- Confirm backups are enabled or documented.
+- Confirm there is a recovery process if data is accidentally deleted.
+- Confirm sensitive applicant data is not logged in Netlify, Railway, browser console, or analytics tools.
+
+7. Application workflow controls
+- Confirm users cannot bypass the screener and directly access the full application unless qualified.
+- Confirm the 30-day screener resubmission rule is enforced.
+- Confirm the application does not repeat screener questions.
+- Confirm submitted applications are locked, timestamped, and versioned.
+- Confirm scoring outputs are auditable and do not overwrite original applicant responses.
+- Confirm rejected or ineligible users receive the correct message and cannot keep cycling through the workflow.
+
+8. Testing before launch
+Run a production-style smoke test using the deployed Netlify URL and Railway backend.
+
+Test:
+- public landing page
+- screener start
+- qualified screener path
+- ineligible screener path
+- 30-day resubmission restriction
+- application access
+- application save
+- application submit
+- document upload
+- applicant confirmation message
+- admin login
+- underwriter dashboard
+- scoring output
+- export/download
+- mobile layout
+- bad inputs
+- duplicate submissions
+- expired sessions
+- unauthorized access attempts
+- direct URL access to protected routes
+
+9. Final launch report
+Before I publish or share the public URL, give me a final report with:
+- GitHub repo and branch
+- Netlify site name and production URL
+- Railway project/services used
+- production environment variable checklist, without revealing values
+- build command
+- publish directory
+- API base URL confirmation
+- database confirmation
+- authentication confirmation
+- protected route confirmation
+- test results
+- unresolved issues
+- recommendation: publish, publish with cautions, or do not publish
