@@ -1,0 +1,89 @@
+4. Data privacy and borrower protection
+Audit all forms and database fields.
+Confirm:
+- We only collect data needed for screening or application review.
+- Sensitive fields are clearly justified.
+- Users are told how their information will be used.
+- No Social Security numbers are collected unless explicitly approved.
+- Bank connection language is clear and accurate.
+- Plaid language does not overpromise what we can or cannot see.
+- Any financial, enrollment, facility, or legal data is stored securely.
+- Applicant data is not sent to third-party services unless intentional and documented.
+- Admin access is role-based.
+- The app has an audit trail for major workflow steps.
+
+5. Application workflow audit
+If this app includes an eligibility screener or application:
+- Confirm screener logic matches the current eligibility rules exactly.
+- Confirm applicants who fail the screener receive the correct message.
+- Confirm applicants cannot bypass the screener and access the application unless qualified.
+- Confirm the 30-day resubmission window is enforced if applicable.
+- Confirm the app does not ask the same questions again in the application that were already captured in the screener unless there is a clear operational reason.
+- Confirm application status transitions are controlled by a state machine or equivalent workflow guard.
+- Confirm applicants cannot edit locked submissions after final submit unless the system intentionally allows corrections.
+- Confirm every submitted record has a timestamp, applicant identifier, status, and source.
+
+6. Calculation and scoring audit
+If the app includes loan calculations, eligibility scoring, or underwriting scoring:
+- Create test cases for every loan amount, term, interest rate, and repayment structure.
+- Confirm calculations match the approved amortization schedule.
+- Confirm rounding is consistent.
+- Confirm old loan terms are removed.
+- Confirm scoring outputs are explainable and auditable.
+- Confirm no AI-generated score is treated as a final credit decision without human review.
+- Confirm declined or ineligible users receive neutral, factual language.
+
+7. UX and accessibility audit
+Perform a full public user test:
+- Desktop, tablet, and mobile.
+- Chrome, Safari, Edge, and Firefox.
+- Keyboard-only navigation.
+- Screen reader labels for forms and buttons.
+- Clear error messages.
+- Required fields marked correctly.
+- Progress indicators where forms are long.
+- Save/resume behavior if applicable.
+- Confirmation screen after submit.
+- Email confirmation if enabled.
+- No dead links.
+- No broken images.
+- No layout issues on mobile.
+- No confusing technical language.
+
+8. Production deployment setup
+Before publishing:
+- Confirm build command works.
+- Confirm start command works.
+- Confirm production environment variables are set.
+- Confirm deployment secrets are separate from development secrets.
+- Confirm the app is connected to the correct production database.
+- Confirm the custom domain is configured if applicable.
+- Confirm SSL/HTTPS is active.
+- Confirm analytics and monitoring are enabled.
+- Confirm error logging is enabled but does not capture sensitive applicant data.
+- Confirm backups are configured for the database.
+- Confirm there is a rollback plan.
+
+9. Remove development tools
+Before production:
+- Remove live reload scripts.
+- Remove debugging banners.
+- Remove test routes.
+- Remove seed data routes.
+- Remove admin backdoors.
+- Remove sample login credentials.
+- Remove unused pages and dead navigation.
+- Remove commented-out code that references private strategy, underwriting logic, or internal assumptions.
+
+10. Pre-launch test report
+Create a PUBLIC_RELEASE_AUDIT.md file with:
+- Summary of what was reviewed.
+- List of changed files.
+- Security issues found and fixed.
+- Remaining risks.
+- Known limitations.
+- Test cases run.
+- Screenshots or notes for key user flows.
+- Confirmation that no secrets are hardcoded.
+- Confirmation that no internal/private materials are publicly accessible.
+- Confirmation that production deployment uses the correct database and environment variables.
