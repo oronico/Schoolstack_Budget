@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRoute, useLocation, useSearchParams } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
+import { useConflictBanner } from "@/components/ConflictReloadBanner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
 import { Slider } from "@/components/ui/slider";
@@ -1964,7 +1965,18 @@ export function ScenarioPage() {
   const { data: model, isLoading } = useGetModel(modelId || 0, {
     query: { queryKey: [`/api/models/${modelId || 0}`], enabled: !!modelId },
   });
-  const updateMutation = useUpdateModel();
+  const conflict = useConflictBanner();
+  // Wire a global onError so every mutateAsync caller below (debounced
+  // scenario save, decision-compare picker, custom scenario edits, what-if
+  // applies, etc.) consistently surfaces the shared "your other tab edited
+  // this" banner on a 409 instead of bubbling up an "HTTP 409" toast.
+  const updateMutation = useUpdateModel({
+    mutation: {
+      onError: (err) => {
+        conflict.handleMutationError(err);
+      },
+    },
+  });
   const queryClient = useQueryClient();
 
   const [scenarios, setScenarios] = useState<ScenarioAdjustments[]>([]);
@@ -2313,10 +2325,20 @@ export function ScenarioPage() {
         `/api/models/${modelId}`,
       ]);
       const priorSnapshot = (fresh?.data ?? modelData) as Record<string, unknown>;
-      await updateMutation.mutateAsync({
-        id: modelId,
-        data: { data: adjustedData as Record<string, unknown> },
-      });
+      try {
+        await updateMutation.mutateAsync({
+          id: modelId,
+          data: { data: adjustedData as Record<string, unknown> },
+        });
+      } catch (err) {
+        // Task #492 — swallow 409s so the WhatIfDrawer doesn't show its
+        // generic "Apply failed: HTTP 409" toast on top of the shared
+        // ConflictReloadBanner the mutation's onError just opened. Re-throw
+        // anything else so the drawer's error toast still surfaces real
+        // failures (network, validation, server crash).
+        if (conflict.handleMutationError(err)) return;
+        throw err;
+      }
       await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
       toast({
         title: "Applied to model",
@@ -2338,7 +2360,7 @@ export function ScenarioPage() {
         ),
       });
     },
-    [modelId, updateMutation, queryClient, modelData, toast]
+    [modelId, updateMutation, queryClient, modelData, toast, conflict]
   );
 
   const handleSaveAsScenarioFromWhatIf = useCallback(
@@ -2357,15 +2379,23 @@ export function ScenarioPage() {
         ...(existing || []),
         { name, overrides, createdAt: new Date().toISOString() },
       ];
-      await updateMutation.mutateAsync({
-        id: modelId,
-        data: {
-          data: { ...freshData, customScenarios: updated } as Record<string, unknown>,
-        },
-      });
+      try {
+        await updateMutation.mutateAsync({
+          id: modelId,
+          data: {
+            data: { ...freshData, customScenarios: updated } as Record<string, unknown>,
+          },
+        });
+      } catch (err) {
+        // Task #492 — same pattern as handleApplyWhatIfFromScenarios above:
+        // 409s are surfaced via the shared ConflictReloadBanner, so we must
+        // not reject (the drawer would show "Save failed: HTTP 409").
+        if (conflict.handleMutationError(err)) return;
+        throw err;
+      }
       await queryClient.invalidateQueries({ queryKey: [`/api/models/${modelId}`] });
     },
-    [modelId, modelData, updateMutation, queryClient]
+    [modelId, modelData, updateMutation, queryClient, conflict]
   );
 
   // Clears the founder's uploaded accounting export from the persisted
@@ -2444,6 +2474,7 @@ export function ScenarioPage() {
 
   return (
     <Layout>
+      {conflict.banner}
       <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-4 mb-8">
           <button

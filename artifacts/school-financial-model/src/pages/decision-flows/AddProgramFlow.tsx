@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
+import { useConflictBanner } from "@/components/ConflictReloadBanner";
 import { Loader2, GraduationCap, ArrowRight } from "lucide-react";
 import { DecisionFlowShell } from "@/components/decision-flow/DecisionFlowShell";
 import { ModelMiniSummary } from "@/components/decision-flow/ModelMiniSummary";
@@ -30,6 +31,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
   const [, setLocation] = useLocation();
   const { data: model, isLoading } = useGetModel(modelId);
   const updateMutation = useUpdateModel();
+  const conflict = useConflictBanner();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [inputs, setInputs] = useState<AddProgramInputs>(buildBlankAddProgramInputs);
@@ -125,10 +127,15 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
       };
     }
 
-    await updateMutation.mutateAsync({
-      id: modelId,
-      data: { data: nextData as Record<string, unknown> },
-    });
+    try {
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: nextData as Record<string, unknown> },
+      });
+    } catch (err) {
+      if (conflict.handleMutationError(err)) return;
+      throw err;
+    }
     setDoneAction(action);
     setDone(true);
 
@@ -163,6 +170,8 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
       setApplyResult(null);
       setDone(false);
       setDoneAction(null);
+    } catch (err) {
+      if (!conflict.handleMutationError(err)) throw err;
     } finally {
       setIsUndoing(false);
     }
@@ -196,6 +205,7 @@ export function AddProgramFlow({ modelId }: AddProgramFlowProps) {
       sidebar={<ModelMiniSummary data={data} />}
       data={data}
     >
+      {conflict.banner}
       {step === 1 && (
         <WhyStep
           decisionType="add_program"

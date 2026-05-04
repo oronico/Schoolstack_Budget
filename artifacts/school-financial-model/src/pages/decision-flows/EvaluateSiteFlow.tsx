@@ -8,6 +8,7 @@ import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
 import { WhyStep } from "@/components/decision-flow/WhyStep";
 import { SaveActions, type SaveAction } from "@/components/decision-flow/SaveActions";
 import { ApplyConfirmation } from "@/components/decision-flow/ApplyConfirmation";
+import { useConflictBanner } from "@/components/ConflictReloadBanner";
 import {
   applyDecisionToData,
   buildBlankSiteInputs,
@@ -29,6 +30,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
   const [, setLocation] = useLocation();
   const { data: model, isLoading } = useGetModel(modelId);
   const updateMutation = useUpdateModel();
+  const conflict = useConflictBanner();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [inputs, setInputs] = useState<SiteInputs>({ newMonthlyRent: 0 });
@@ -131,10 +133,15 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
       };
     }
 
-    await updateMutation.mutateAsync({
-      id: modelId,
-      data: { data: nextData as Record<string, unknown> },
-    });
+    try {
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: nextData as Record<string, unknown> },
+      });
+    } catch (err) {
+      if (conflict.handleMutationError(err)) return;
+      throw err;
+    }
     setDoneAction(action);
     setDone(true);
 
@@ -168,6 +175,8 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
       setApplyResult(null);
       setDone(false);
       setDoneAction(null);
+    } catch (err) {
+      if (!conflict.handleMutationError(err)) throw err;
     } finally {
       setIsUndoing(false);
     }
@@ -201,6 +210,7 @@ export function EvaluateSiteFlow({ modelId }: EvaluateSiteFlowProps) {
       sidebar={<ModelMiniSummary data={data} />}
       data={data}
     >
+      {conflict.banner}
       {step === 1 && (
         <WhyStep
           decisionType="evaluate_site"

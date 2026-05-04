@@ -1,5 +1,6 @@
 interface ApiErrorShape {
   name: string;
+  status?: number;
   data?: { error?: string } | null;
   message?: string;
 }
@@ -11,6 +12,10 @@ function isApiError(err: unknown): err is ApiErrorShape {
     "name" in err &&
     (err as Record<string, unknown>).name === "ApiError"
   );
+}
+
+export function isConflictError(err: unknown): boolean {
+  return isApiError(err) && err.status === 409;
 }
 
 export function getApiErrorMessage(err: unknown, fallback: string): string {

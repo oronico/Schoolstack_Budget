@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
+import { useConflictBanner } from "@/components/ConflictReloadBanner";
 import { Loader2, Users, ArrowRight } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { DecisionFlowShell } from "@/components/decision-flow/DecisionFlowShell";
@@ -30,6 +31,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
   const [, setLocation] = useLocation();
   const { data: model, isLoading } = useGetModel(modelId);
   const updateMutation = useUpdateModel();
+  const conflict = useConflictBanner();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [inputs, setInputs] = useState<EnrollmentChangeInputs>(buildBlankEnrollmentChangeInputs);
@@ -127,10 +129,15 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
       };
     }
 
-    await updateMutation.mutateAsync({
-      id: modelId,
-      data: { data: nextData as Record<string, unknown> },
-    });
+    try {
+      await updateMutation.mutateAsync({
+        id: modelId,
+        data: { data: nextData as Record<string, unknown> },
+      });
+    } catch (err) {
+      if (conflict.handleMutationError(err)) return;
+      throw err;
+    }
     setDoneAction(action);
     setDone(true);
 
@@ -164,6 +171,8 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
       setApplyResult(null);
       setDone(false);
       setDoneAction(null);
+    } catch (err) {
+      if (!conflict.handleMutationError(err)) throw err;
     } finally {
       setIsUndoing(false);
     }
@@ -197,6 +206,7 @@ export function ChangeEnrollmentFlow({ modelId }: ChangeEnrollmentFlowProps) {
       sidebar={<ModelMiniSummary data={data} />}
       data={data}
     >
+      {conflict.banner}
       {step === 1 && (
         <WhyStep
           decisionType="change_enrollment"

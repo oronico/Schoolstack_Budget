@@ -6,6 +6,7 @@ import { isChestertonAcademy, isSingleYearModel } from "../schema";
 import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
 import { seedFiveYearFromYearOne, resolveSeedDefaults, type SeedDefaults } from "@/lib/seed-five-year";
 import { useUpdateModel } from "@workspace/api-client-react";
+import { useConflictBanner } from "@/components/ConflictReloadBanner";
 import { Link } from "wouter";
 import { LenderPacketPreview } from "../../../components/export/LenderPacketPreview";
 import { BoardPacketPreview } from "../../../components/export/BoardPacketPreview";
@@ -30,6 +31,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
   const [showExtendModal, setShowExtendModal] = useState(false);
   const [extending, setExtending] = useState(false);
   const updateMutation = useUpdateModel();
+  const conflict = useConflictBanner();
   const handleExtendConfirm = async (overrides: SeedDefaults) => {
     if (extending) return;
     setExtending(true);
@@ -69,7 +71,12 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       }
       setShowExtendModal(false);
     } catch (err) {
-      console.error("Failed to extend to 5-year:", err);
+      if (conflict.handleMutationError(err)) {
+        // 409 — the shared banner now tells the founder to reload; no console
+        // noise needed.
+      } else {
+        console.error("Failed to extend to 5-year:", err);
+      }
     } finally {
       setExtending(false);
     }
@@ -256,6 +263,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
 
   return (
     <>
+    {conflict.banner}
     <ExtendToFiveYearModal
       open={showExtendModal}
       isPending={extending}

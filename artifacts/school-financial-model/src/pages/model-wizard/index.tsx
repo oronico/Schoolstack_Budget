@@ -22,6 +22,7 @@ import { fullModelSchema, isSingleYearModel, type FullModelData } from "./schema
 import { migrateGrantsToPhilanthropy, type RevenueRowData } from "@/lib/revenue-defaults";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { UndoLastAppliedDecisionBanner } from "@/components/decision-flow/UndoLastAppliedDecisionBanner";
+import { ConflictReloadBanner } from "@/components/ConflictReloadBanner";
 import type { WhatIfOverrides } from "@/lib/whatif-engine";
 import type { CustomScenario } from "./schema";
 import { useToast } from "@/hooks/use-toast";
@@ -1246,6 +1247,14 @@ export function ModelWizardPage() {
           }}
         />
       )}
+      {saveError === "conflict" && (
+        // Task #492 — when the autosave catches a 409 (the server's optimistic
+        // concurrency rejection from Task #479) show the same shared
+        // "Your other tab made changes" banner the decision flows / scenarios
+        // page / ExportStep / undo banner now use, instead of relying solely
+        // on the tiny inline header pill.
+        <ConflictReloadBanner />
+      )}
       {modelId && (
         // Surface a persistent "Undo last applied decision" control whenever
         // the model carries a fresh `appliedDecisionUndo` record (last 24h).
@@ -1408,9 +1417,13 @@ export function ModelWizardPage() {
                 ) : saveError === "validation" ? (
                   <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Could not save - check your entries</span>
                 ) : saveError === "conflict" ? (
-                  <button type="button" onClick={() => window.location.reload()} className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 underline underline-offset-2">
-                    <AlertCircle className="h-3 w-3" /> Updated in another tab - click to reload
-                  </button>
+                  // The full-width ConflictReloadBanner rendered below is the
+                  // primary surface for this state — keep a tiny inline cue in
+                  // the header (matching the rest of the saveError badges) so
+                  // founders glancing at the save status still see the issue.
+                  <span className="flex items-center gap-1.5 text-amber-600">
+                    <AlertCircle className="h-3 w-3" /> Updated in another tab
+                  </span>
                 ) : saveError ? (
                   <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save issue - retrying</span>
                 ) : lastSaved ? (

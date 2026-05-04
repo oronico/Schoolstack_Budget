@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Undo2, Loader2, X } from "lucide-react";
 import { useUpdateModel } from "@workspace/api-client-react";
+import { useConflictBanner } from "@/components/ConflictReloadBanner";
 import { cn } from "@/lib/utils";
 import {
   DECISION_THEME,
@@ -46,6 +47,7 @@ export function UndoLastAppliedDecisionBanner({
   const [isUndoing, setIsUndoing] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const updateMutation = useUpdateModel();
+  const conflict = useConflictBanner();
 
   const undoRecord = (data as { appliedDecisionUndo?: AppliedDecisionUndo })
     .appliedDecisionUndo;
@@ -78,6 +80,8 @@ export function UndoLastAppliedDecisionBanner({
         data: { data: undoRecord.snapshot },
       });
       onUndone?.();
+    } catch (err) {
+      if (!conflict.handleMutationError(err)) throw err;
     } finally {
       setIsUndoing(false);
     }
@@ -96,14 +100,18 @@ export function UndoLastAppliedDecisionBanner({
         data: { data: next },
       });
       setDismissed(true);
+    } catch (err) {
+      if (!conflict.handleMutationError(err)) throw err;
     } finally {
       setIsUndoing(false);
     }
   };
 
   return (
-    <div
-      className={cn(
+    <>
+      {conflict.banner}
+      <div
+        className={cn(
         "border-b",
         theme.bg,
         "border-border/50",
@@ -162,6 +170,7 @@ export function UndoLastAppliedDecisionBanner({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
