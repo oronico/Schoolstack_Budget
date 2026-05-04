@@ -12,7 +12,7 @@ import { GlossaryTerm } from "./GlossaryTerm";
 import { cn } from "@/lib/utils";
 
 interface WhatThisMeansInYourBooksProps {
-  step: number;
+  stepTitle: string;
   schoolType?: string;
   entityType?: string;
   className?: string;
@@ -26,7 +26,7 @@ const STATEMENT_BADGE_CLASSES: Record<StatementKind, string> = {
 };
 
 export function WhatThisMeansInYourBooks({
-  step,
+  stepTitle,
   schoolType,
   entityType,
   className,
@@ -34,7 +34,7 @@ export function WhatThisMeansInYourBooks({
   const { user } = useAuth();
   const level =
     (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const rawEntry = BOOKKEEPING_TRANSLATIONS[step];
+  const rawEntry = stepTitle ? BOOKKEEPING_TRANSLATIONS[stepTitle] : undefined;
   const entityKnown = !!entityType && entityType !== "undetermined";
   const isNonprofit = entityType === "nonprofit_501c3";
 
@@ -66,27 +66,29 @@ export function WhatThisMeansInYourBooks({
     : undefined;
 
   const defaultOpen = level !== "advanced";
-  const [openByStep, setOpenByStep] = useState<Record<number, boolean>>({});
-  const open = openByStep[step] ?? defaultOpen;
+  const [openByStep, setOpenByStep] = useState<Record<string, boolean>>({});
+  const open = openByStep[stepTitle] ?? defaultOpen;
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
     if (!entry || gated) return;
-    const key = `step-${step}`;
+    const key = `step-${stepTitle}`;
     if (trackedRef.current === key) return;
     trackedRef.current = key;
     trackCoachingEvent("bookkeeping_sidebar_shown", {
-      step,
+      stepTitle,
       guidanceLevel: level,
       lineCount: entry.lines.length,
     });
-  }, [step, level, entry, gated]);
+  }, [stepTitle, level, entry, gated]);
 
   if (!entry || gated || entry.lines.length === 0) return null;
 
+  const testIdSlug = stepTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
   return (
     <div
-      data-testid={`bookkeeping-sidebar-step-${step}`}
+      data-testid={`bookkeeping-sidebar-${testIdSlug}`}
       className={cn(
         "rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50/70 to-emerald-50/50 shadow-sm",
         className,
@@ -97,7 +99,7 @@ export function WhatThisMeansInYourBooks({
         onClick={() =>
           setOpenByStep((prev) => ({
             ...prev,
-            [step]: !(prev[step] ?? defaultOpen),
+            [stepTitle]: !(prev[stepTitle] ?? defaultOpen),
           }))
         }
         aria-expanded={open}

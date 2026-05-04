@@ -1467,7 +1467,7 @@ export function ModelWizardPage() {
             <MicroLessonContainer data={methods.getValues() as FullModelData} currentStepTitle={visibleSteps[safeStep - 1]?.title || ""} className="mb-4" />
             {!isYetToLaunch(user) && (
               <WhatThisMeansInYourBooks
-                step={safeStep}
+                stepTitle={visibleSteps[safeStep - 1]?.title || ""}
                 schoolType={(methods.getValues() as FullModelData).schoolProfile?.schoolType}
                 entityType={(methods.getValues() as FullModelData).schoolProfile?.entityType}
                 className="mb-4"

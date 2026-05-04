@@ -81,7 +81,7 @@ test("Revenue step shows the bookkeeping-translation sidebar to basics-mode user
 
   await page.goto(`/model/${modelId}`);
 
-  const sidebar = page.getByTestId("bookkeeping-sidebar-step-4");
+  const sidebar = page.getByTestId("bookkeeping-sidebar-revenue");
   await expect(sidebar).toBeVisible();
   // The sidebar header should be the literal "What this means in your books"
   // surface — not the diagnostic panel or any other coaching widget.
