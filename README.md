@@ -236,10 +236,21 @@ The deploy-preview build in `netlify.toml` rewrites `VITE_API_BASE_URL` to point
 - **Railway** — on the `schoolstackbudget` service, enable *Settings → Environments → Pull Request Environments* and seed the ephemeral Postgres from the migrations plugin.
 - **Netlify** — Deploy Previews are on by default; no extra config needed beyond `netlify.toml`.
 
+**Demo login (preview environments only)**
+
+Each PR's freshly provisioned Postgres is auto-seeded on first API startup with one verified demo user and two complete sample financial models (a microschool and a private school, both at the Review/Export step). Reviewers can log in directly without registering:
+
+| Field | Value |
+|-------|-------|
+| Email | `demo@schoolstack.ai` |
+| Password | `demo1234` |
+
+The seed runs only when the `users` table is empty, so it's a no-op on every restart after the first and a no-op on production (which always has users). The auto-seed can be disabled by setting `SKIP_PREVIEW_SEED=true` on the service — kept on production as belt-and-suspenders.
+
 **Reviewer workflow**
 1. Open the PR and wait for the Netlify and Railway checks to go green.
 2. Click the Netlify "Deploy Preview" link in the PR for the frontend URL.
-3. The corresponding Railway API is at `https://schoolstackbudget-pr-<PR_NUMBER>.up.railway.app` — useful for hitting `/api/health` directly.
+3. Log in with the demo credentials above and open one of the seeded models, or hit `https://schoolstackbudget-pr-<PR_NUMBER>.up.railway.app/api/health` directly.
 4. Smoke-test the change end-to-end. Migrations, env-var changes, and Dockerfile edits all run against the preview stack first.
 
 ---

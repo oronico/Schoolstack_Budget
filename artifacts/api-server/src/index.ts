@@ -3,6 +3,7 @@ import { cleanupExpiredRateLimits } from "./lib/rate-limiter";
 import { cleanupOldErrorLogs } from "./routes/errors";
 import { pool, db, errorLogsTable, runMigrations } from "@workspace/db";
 import { applyMigrations as runApplyMigrations } from "./lib/apply-migrations";
+import { seedPreviewDataIfEmpty } from "./lib/seed-preview-data";
 import type { Server } from "http";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -160,14 +161,16 @@ function gracefulShutdown(signal: string) {
 process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.once("SIGINT", () => gracefulShutdown("SIGINT"));
 
-applyMigrations().then(() => {
-  server = app.listen(port, "0.0.0.0", () => {
-    console.log(`Server listening on 0.0.0.0:${port}`);
-    if (isProduction) {
-      console.log(`[startup] Production mode — CORS origins: ${process.env.ALLOWED_ORIGINS || "(not set)"}`);
-    }
+applyMigrations()
+  .then(() => seedPreviewDataIfEmpty())
+  .then(() => {
+    server = app.listen(port, "0.0.0.0", () => {
+      console.log(`Server listening on 0.0.0.0:${port}`);
+      if (isProduction) {
+        console.log(`[startup] Production mode — CORS origins: ${process.env.ALLOWED_ORIGINS || "(not set)"}`);
+      }
+    });
   });
-});
 
 cleanupTimer = setInterval(() => {
   cleanupExpiredRateLimits().catch(() => {});
