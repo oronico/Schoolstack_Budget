@@ -224,6 +224,108 @@ describe("ImpactSummary — comparison view phone responsive layout", () => {
   });
 });
 
+describe("ImpactSummary — single view, single-year mode (Task #483)", () => {
+  // When `isSingleYear` is true the headline tile, per-year table, and
+  // section title all collapse to Y1 so a founder who only modeled Year 1
+  // never sees a Y5 number they didn't actually project.
+  it("renders a Y1 headline label and a single-column 'Year 1 impact' table", () => {
+    const impact = makeImpact();
+    render(<ImpactSummary impact={impact} isSingleYear={true} />);
+
+    // The headline net-income tile labels itself "Y1 net income Δ" and not
+    // "Y5 net income Δ".
+    expect(
+      screen.getByText(/^Y1 net income Δ$/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/^Y5 net income Δ$/i),
+    ).toBeNull();
+
+    // Section title flips from "5-year impact" to "Year 1 impact".
+    expect(screen.getByText("Year 1 impact")).toBeInTheDocument();
+    expect(screen.queryByText("5-year impact")).toBeNull();
+
+    // The per-year table shows exactly one Year column header (Year 1) —
+    // not Year 1..5.
+    const table = screen.getByTestId("impact-year-table");
+    const yearHeaders = within(table)
+      .getAllByRole("columnheader")
+      .filter((h) => /^Year [1-5]$/.test(h.textContent || ""));
+    expect(yearHeaders).toHaveLength(1);
+    expect(yearHeaders[0].textContent).toBe("Year 1");
+  });
+
+  it("falls back to the Y5 headline + 5-year table when isSingleYear is false", () => {
+    const impact = makeImpact();
+    render(<ImpactSummary impact={impact} isSingleYear={false} />);
+
+    expect(screen.getByText(/^Y5 net income Δ$/i)).toBeInTheDocument();
+    expect(screen.getByText("5-year impact")).toBeInTheDocument();
+
+    const table = screen.getByTestId("impact-year-table");
+    const yearHeaders = within(table)
+      .getAllByRole("columnheader")
+      .filter((h) => /^Year [1-5]$/.test(h.textContent || ""));
+    expect(yearHeaders).toHaveLength(5);
+  });
+});
+
+describe("ImpactSummary — comparison view, single-year mode (Task #483)", () => {
+  function renderTwoColComparison(isSingleYear: boolean) {
+    const impactA = makeImpact();
+    const impactB = makeImpact();
+    render(
+      <ImpactSummary
+        impact={impactA}
+        isSingleYear={isSingleYear}
+        columns={[
+          { impact: impactA, label: "Site A" },
+          { impact: impactB, label: "Site B" },
+        ]}
+      />,
+    );
+  }
+
+  it("flips the comparison headline to Y1 and the table title to 'Year 1 impact, side-by-side'", () => {
+    renderTwoColComparison(true);
+
+    // Headline tiles use the "Y1" prefix instead of "Y5".
+    expect(screen.getByText(/^Y1 net income Δ$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Y5 net income Δ$/i)).toBeNull();
+
+    // Section title.
+    expect(
+      screen.getByText("Year 1 impact, side-by-side"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("5-year impact, side-by-side"),
+    ).toBeNull();
+
+    // The comparison table collapses to a single Year 1 column header.
+    const table = screen.getByTestId("comparison-year-table");
+    const yearHeaders = within(table)
+      .getAllByRole("columnheader")
+      .filter((h) => /^Year [1-5]$/.test(h.textContent || ""));
+    expect(yearHeaders).toHaveLength(1);
+    expect(yearHeaders[0].textContent).toBe("Year 1");
+  });
+
+  it("renders the full Y5 headline + 5-column table when isSingleYear is false", () => {
+    renderTwoColComparison(false);
+
+    expect(screen.getByText(/^Y5 net income Δ$/i)).toBeInTheDocument();
+    expect(
+      screen.getByText("5-year impact, side-by-side"),
+    ).toBeInTheDocument();
+
+    const table = screen.getByTestId("comparison-year-table");
+    const yearHeaders = within(table)
+      .getAllByRole("columnheader")
+      .filter((h) => /^Year [1-5]$/.test(h.textContent || ""));
+    expect(yearHeaders).toHaveLength(5);
+  });
+});
+
 describe("ImpactSummary — comparison view trough highlights", () => {
   it("marks each side's lowest cash year independently and lists them in the summary", () => {
     // A's trough is Y3 (-$50k); B's trough is Y4 ($20k).

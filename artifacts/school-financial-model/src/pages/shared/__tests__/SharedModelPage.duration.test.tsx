@@ -113,6 +113,57 @@ describe("SharedModelPage — single-year column gating", () => {
     expect(chart.querySelectorAll(":scope > div")).toHaveLength(5);
   });
 
+  it("collapses headline tiles and the Y1 enrollment subtext in single-year mode (Task #483)", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => basePayload({ modelDuration: "single_year" }),
+    });
+
+    renderWithToken("d".repeat(64));
+
+    await waitFor(() => expect(screen.getByText("Test Academy")).toBeInTheDocument());
+
+    // The Year 1 headline tiles still render.
+    expect(screen.getByText("Year 1 Enrollment")).toBeInTheDocument();
+    expect(screen.getByText("Year 1 Revenue")).toBeInTheDocument();
+    expect(screen.getByText("Year 1 Net Margin")).toBeInTheDocument();
+
+    // The Year 5 Net Income headline tile is suppressed — single-year
+    // founders never modeled Y5 so we never publish a Y5 number to a
+    // lender or board.
+    expect(screen.queryByText("Year 5 Net Income")).toBeNull();
+
+    // The "→ X by Year 5" subtext on the Year 1 Enrollment card is also
+    // suppressed in single-year mode.
+    expect(screen.queryByText(/by Year 5/i)).toBeNull();
+
+    // Sanity: the summary table heading reflects the Y1 collapse too.
+    expect(screen.getByTestId("shared-summary-heading")).toHaveTextContent(
+      /Year 1 Financial Summary/i,
+    );
+  });
+
+  it("keeps the Year 5 headline tile and 'by Year 5' enrollment subtext in 5-year mode (Task #483)", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => basePayload({
+        modelDuration: "five_year",
+        enrollment: [50, 100, 150, 200, 250],
+        netIncome: [50_000, 100_000, 150_000, 200_000, 300_000],
+      }),
+    });
+
+    renderWithToken("e".repeat(64));
+
+    await waitFor(() => expect(screen.getByText("Test Academy")).toBeInTheDocument());
+
+    // Year 5 headline tile renders for 5-year founders.
+    expect(screen.getByText("Year 5 Net Income")).toBeInTheDocument();
+
+    // The Year 1 Enrollment card carries the "→ 250 by Year 5" subtext.
+    expect(screen.getByText(/→\s*250\s*by Year 5/i)).toBeInTheDocument();
+  });
+
   it("treats a payload missing modelDuration as 5-year (back-compat)", async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
