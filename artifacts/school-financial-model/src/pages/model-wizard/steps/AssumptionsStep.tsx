@@ -8,6 +8,7 @@ import { EXPLAINERS } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { cn } from "@/lib/utils";
+import { useYearCount } from "@/lib/use-model-duration";
 import {
   DEFAULT_BENEFITS_RATE,
   DEFAULT_PAYROLL_TAX_RATE,
@@ -412,6 +413,7 @@ export function AssumptionsStep() {
   const { user } = useAuth();
   const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const showReassurance = guidanceLevel === "extra" || guidanceLevel === "basics";
+  const isSingleYear = useYearCount() === 1;
 
   const schoolType = watch("schoolProfile.schoolType") as SchoolType | undefined;
   const stateCode = watch("schoolProfile.state") as string || "";
@@ -508,9 +510,13 @@ export function AssumptionsStep() {
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Assumptions &amp; Sensitivity</h2>
         <p className="text-muted-foreground text-lg">
-          {yetToLaunch
-            ? "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital plans are in. Use this screen to set the rates, escalators, and structural settings that shape your opening 5-year projection."
-            : "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates, escalators, and structural settings that stress-test your 5-year model."}
+          {isSingleYear
+            ? (yetToLaunch
+                ? "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital plans are in. Use this screen to set the rates and structural settings that shape your opening Year 1 budget. Multi-year escalators are hidden in single-year mode — extend to a 5-year model to enable them."
+                : "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates and structural settings for your Year 1 budget. Multi-year escalators are hidden in single-year mode — extend to a 5-year model to enable them.")
+            : (yetToLaunch
+                ? "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital plans are in. Use this screen to set the rates, escalators, and structural settings that shape your opening 5-year projection."
+                : "The dial-tuning step. Your enrollment, revenue, staffing, expense, and capital decisions are already in. Use this screen to adjust the rates, escalators, and structural settings that stress-test your 5-year model.")}
         </p>
       </div>
 
@@ -551,7 +557,7 @@ export function AssumptionsStep() {
             onReset={resetRevenueDrivers}
           />
           <div className="space-y-4">
-            {isTuitionBased && (
+            {isTuitionBased && !isSingleYear && (
               <div>
                 <AssumptionField
                   label="Tuition Escalation Rate"
@@ -567,29 +573,37 @@ export function AssumptionsStep() {
               </div>
             )}
 
-            <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
-              <label className="text-sm font-semibold text-foreground">Enrollment Growth Rate</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={watch("schoolProfile.enrollmentGrowthRate") ?? ""}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    setValue("schoolProfile.enrollmentGrowthRate", isNaN(val) ? undefined : val, { shouldDirty: true });
-                  }}
-                  className="w-28 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                  placeholder="e.g. 10"
-                  step={1}
-                  min={0}
-                  max={100}
-                />
-                <span className="text-sm text-muted-foreground font-medium">% per year</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Annual enrollment growth rate used for out-year revenue projections. Applied after your explicit year-by-year enrollment inputs.
-              </p>
+            {!isSingleYear && (
+              <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
+                <label className="text-sm font-semibold text-foreground">Enrollment Growth Rate</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={watch("schoolProfile.enrollmentGrowthRate") ?? ""}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setValue("schoolProfile.enrollmentGrowthRate", isNaN(val) ? undefined : val, { shouldDirty: true });
+                    }}
+                    className="w-28 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    placeholder="e.g. 10"
+                    step={1}
+                    min={0}
+                    max={100}
+                  />
+                  <span className="text-sm text-muted-foreground font-medium">% per year</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Annual enrollment growth rate used for out-year revenue projections. Applied after your explicit year-by-year enrollment inputs.
+                </p>
 
-            </div>
+              </div>
+            )}
+
+            {isSingleYear && (
+              <InfoBadge>
+                Tuition escalation and enrollment growth rates apply to Year 2-5 projections only. They're hidden in single-year mode — extend to a 5-year model to set them.
+              </InfoBadge>
+            )}
 
             {isCharter && stateFundingConfig && (
               <div className="rounded-xl border border-teal-200 bg-teal-50/40 p-4 space-y-3">
@@ -785,6 +799,18 @@ export function AssumptionsStep() {
           </div>
         </section>
 
+        {isSingleYear ? (
+          <section>
+            <SectionHeader
+              icon={<TrendingUp className="h-5 w-5 text-primary" />}
+              title="Cost Escalation"
+              description="Multi-year escalation rates (COLA, inflation, rent) apply to Year 2-5 only."
+            />
+            <InfoBadge>
+              Single-year mode — escalation rates N/A. COLA, general cost inflation, and rent escalation only affect Years 2-5. Extend to a 5-year model to set them.
+            </InfoBadge>
+          </section>
+        ) : (
         <section>
           <SectionHeader
             icon={<TrendingUp className="h-5 w-5 text-primary" />}
@@ -840,6 +866,7 @@ export function AssumptionsStep() {
             </InfoBadge>
           </div>
         </section>
+        )}
 
         <section>
           <SectionHeader
@@ -860,7 +887,9 @@ export function AssumptionsStep() {
 
             <InfoBadge>
               Individual staff roles, salaries, and FTE counts are configured on the Staffing step.
-              COLA (salary escalation) is set above under Cost Escalation.
+              {isSingleYear
+                ? " COLA (salary escalation) only applies to Year 2-5 and is hidden in single-year mode."
+                : " COLA (salary escalation) is set above under Cost Escalation."}
             </InfoBadge>
           </div>
         </section>
@@ -910,11 +939,13 @@ export function AssumptionsStep() {
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-sm font-semibold text-primary">
                     <Shield className="h-3.5 w-3.5" />
-                    5-Year Projection
+                    {isSingleYear ? "1-Year Budget" : "5-Year Projection"}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Industry standard for comprehensive financial models. Covers startup through stabilization.
+                  {isSingleYear
+                    ? "Single-year mode focuses on Year 1 only. Extend to a 5-year projection from the banner above when ready."
+                    : "Industry standard for comprehensive financial models. Covers startup through stabilization."}
                 </p>
               </div>
             </div>

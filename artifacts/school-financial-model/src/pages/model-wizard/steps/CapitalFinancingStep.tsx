@@ -4,6 +4,7 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { cn } from "@/lib/utils";
+import { useYearCount } from "@/lib/use-model-duration";
 import type { FullModelData } from "../schema";
 import type { SchoolType } from "@/lib/state-funding-data";
 
@@ -115,6 +116,9 @@ export function CapitalFinancingStep() {
   const dscrByYear = watch("covenantThresholds.dscrByYear") as
     | (number | undefined)[]
     | undefined;
+  const yearCount = useYearCount();
+  const isSingleYear = yearCount === 1;
+  const dscrYears = isSingleYear ? [0] : [0, 1, 2, 3, 4];
 
   return (
     <div className="space-y-8">
@@ -186,15 +190,17 @@ export function CapitalFinancingStep() {
         <section>
           <SectionHeader
             icon={<Shield className="h-5 w-5 text-primary" />}
-            title={<>Step-Up <GlossaryTerm termKey="dscr" schoolType={schoolType}>DSCR</GlossaryTerm> Covenants</>}
+            title={<>{isSingleYear ? "Year 1 " : "Step-Up "}<GlossaryTerm termKey="dscr" schoolType={schoolType}>DSCR</GlossaryTerm> Covenant{isSingleYear ? "" : "s"}</>}
             description={hasLoan
-              ? "If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets."
+              ? (isSingleYear
+                  ? "Set your Year 1 minimum DSCR target. Year 2-5 step-up targets become available when you extend to a 5-year model."
+                  : "If you have debt, it's smart to plan for your coverage ratio to improve each year as enrollment grows. Set year-by-year targets.")
               : "These settings become relevant if you add loan details above."}
           />
           {hasLoan ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-5 gap-3">
-                {[0, 1, 2, 3, 4].map(y => (
+              <div className={cn("grid gap-3", isSingleYear ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3" : "grid-cols-5")}>
+                {dscrYears.map(y => (
                   <AssumptionField
                     key={y}
                     label={`Year ${y + 1}`}
@@ -211,17 +217,21 @@ export function CapitalFinancingStep() {
               <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900">
                 <Lightbulb className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                 <span>
-                  Step-up covenants start lower in early years when your school is still growing, then tighten as cash flow stabilizes.
-                  A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.
+                  {isSingleYear
+                    ? <>A common Year 1 minimum DSCR is around 1.10x while a school is still ramping up. Your Consultant Analysis and workbook will check Year 1 against this threshold. Extend to a 5-year model to set step-up targets for Years 2-5.</>
+                    : <>Step-up covenants start lower in early years when your school is still growing, then tighten as cash flow stabilizes. A common pattern is 1.10x → 1.15x → 1.20x → 1.25x → 1.25x. Your Consultant Analysis and workbook will check each year against its specific threshold.</>}
                 </span>
               </div>
-              <FinancingInsight text="If you have loan covenants, missing your DSCR targets can trigger default provisions - plan conservatively so you have room to meet each year's target." />
+              <FinancingInsight text={isSingleYear
+                ? "If you have loan covenants, missing your Year 1 DSCR target can trigger default provisions - plan conservatively so you have room to meet it."
+                : "If you have loan covenants, missing your DSCR targets can trigger default provisions - plan conservatively so you have room to meet each year's target."}
+              />
             </div>
           ) : (
             <div className={cn("flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200/60 p-4")}>
               <Info className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-slate-500 leading-relaxed">
-                No loan configured - DSCR covenants don't apply yet. If you add a loan amount in the Debt Terms section above, year-by-year covenant targets will appear here.
+                No loan configured - DSCR covenants don't apply yet. If you add a loan amount in the Debt Terms section above, {isSingleYear ? "a Year 1 covenant target" : "year-by-year covenant targets"} will appear here.
               </p>
             </div>
           )}
@@ -231,13 +241,17 @@ export function CapitalFinancingStep() {
             label="Why these covenant thresholds?"
             placeholder={
               hasLoan && Array.isArray(dscrByYear) && dscrByYear.some((v) => (v ?? 0) > 0)
-                ? `Your DSCR ramp is ${dscrByYear
-                    .slice(0, 5)
-                    .map((v, i) => `Y${i + 1} ${(v ?? [1.10, 1.15, 1.20, 1.25, 1.25][i]).toFixed(2)}x`)
-                    .join(" → ")}. What's the source — a draft term sheet, your lender's standard package, or a conservative self-imposed target?`
+                ? (isSingleYear
+                    ? `Your Year 1 DSCR target is ${(dscrByYear[0] ?? 1.10).toFixed(2)}x. What's the source — a draft term sheet, your lender's standard package, or a conservative self-imposed target?`
+                    : `Your DSCR ramp is ${dscrByYear
+                        .slice(0, 5)
+                        .map((v, i) => `Y${i + 1} ${(v ?? [1.10, 1.15, 1.20, 1.25, 1.25][i]).toFixed(2)}x`)
+                        .join(" → ")}. What's the source — a draft term sheet, your lender's standard package, or a conservative self-imposed target?`)
                 : "If your lender has shared draft covenants, capture them here with the source (term sheet, RFP, banker conversation). Otherwise note the basis for your self-imposed targets."
             }
-            helperText="A self-imposed DSCR ramp tells lenders you've already stress-tested your model — call out where the targets came from."
+            helperText={isSingleYear
+              ? "A self-imposed Year 1 DSCR target tells lenders you've already stress-tested your model — call out where it came from."
+              : "A self-imposed DSCR ramp tells lenders you've already stress-tested your model — call out where the targets came from."}
           />
         </section>
       </div>
