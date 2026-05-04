@@ -292,11 +292,30 @@ async function primeAuthToken(page: Page, token: string): Promise<void> {
   }, token);
 }
 
+// Pre-seed the per-model "I've seen the prep checklist" flag so the
+// `WizardPrepChecklist` modal never opens for this spec. Previously the
+// teardown helper raced the modal's first render — when the dialog
+// appeared after the helper's 8 s wait, it would still be open at the
+// step-rail click and intercept pointer events, timing out the test.
+// Setting the localStorage key before navigation removes the race
+// entirely (the wizard's mount-time effect short-circuits and never
+// flips `showPrepChecklist` to true).
+async function primeWizardPrepDismissed(
+  page: Page,
+  modelId: number,
+): Promise<void> {
+  await page.addInitScript((id) => {
+    window.localStorage.setItem(`wizard_prep_seen_${id}`, "1");
+  }, modelId);
+}
+
 async function dismissOnboardingOverlays(page: Page): Promise<void> {
-  // Wizard "Here's what to expect" prep dialog — fires on first model load.
+  // Wizard "Here's what to expect" prep dialog — should already be
+  // suppressed via `primeWizardPrepDismissed`, but click it if it
+  // somehow rendered (e.g. modelId mismatch in a future refactor).
   const introBtn = page.getByRole("button", { name: /Let.?s get started/i });
   try {
-    await introBtn.click({ timeout: 8000 });
+    await introBtn.click({ timeout: 2000 });
   } catch {
     // dialog never appeared — proceed
   }
@@ -318,6 +337,7 @@ test("Chesterton wizard branch renders the CSN flow and exports the Operating Ma
   const { token } = await registerAndSeed(request);
   const modelId = await createModel(request, token, buildChestertonSeedModel());
   await primeAuthToken(page, token);
+  await primeWizardPrepDismissed(page, modelId);
 
   // ----- 1. Land on the wizard, dismiss noise. -----
   await page.goto(`/model/${modelId}`);
