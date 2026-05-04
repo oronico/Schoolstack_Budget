@@ -17,6 +17,7 @@ const LoginPage = lazy(() => import("@/pages/auth/login").then(m => ({ default: 
 const RegisterPage = lazy(() => import("@/pages/auth/register").then(m => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import("@/pages/auth/forgot-password").then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/auth/reset-password").then(m => ({ default: m.ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import("@/pages/auth/verify-email").then(m => ({ default: m.VerifyEmailPage })));
 const DashboardPage = lazy(() => import("@/pages/dashboard").then(m => ({ default: m.DashboardPage })));
 const NewModelPage = lazy(() => import("@/pages/model-new").then(m => ({ default: m.NewModelPage })));
 const ModelWizardPage = lazy(() => import("@/pages/model-wizard").then(m => ({ default: m.ModelWizardPage })));
@@ -141,6 +142,7 @@ function AppRouter() {
         <Route path="/register" component={RegisterPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
+        <Route path="/verify-email" component={VerifyEmailPage} />
         <Route path="/underwriting" component={PublicWizardRedirect} />
         <Route path="/shared/:token" component={SharedModelPage} />
         <Route path="/resources/:slug" component={ArticlePage} />

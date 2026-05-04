@@ -21,6 +21,7 @@ import { db } from "@workspace/db";
 import { usersTable, financialModelsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import app from "../src/app.js";
+import { registerAndVerify } from "./helpers/register-and-verify.js";
 
 let passed = 0;
 let failed = 0;
@@ -60,13 +61,9 @@ async function main(): Promise<void> {
   try {
     // Register a user to exercise the auth-required routes.
     const email = `model-input-test-${Date.now()}@example.com`;
-    const reg = await fetch(`${baseUrl}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password: "Password123!", name: "Input Tester" }),
+    const { token, user } = await registerAndVerify(baseUrl, {
+      email, password: "Password123!", name: "Input Tester",
     });
-    if (!reg.ok) throw new Error(`register failed: ${reg.status} ${await reg.text()}`);
-    const { token, user } = (await reg.json()) as { token: string; user: { id: number } };
     userId = user.id;
     const auth = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 

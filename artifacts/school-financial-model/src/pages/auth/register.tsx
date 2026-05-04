@@ -1,46 +1,32 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useRegister } from "@workspace/api-client-react";
-import { useAuth } from "@/lib/auth-context";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { SEOHead } from "@/components/SEOHead";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { reportAttributedSignup } from "@/lib/cta-tracking";
 
 export function RegisterPage() {
-  const [, setLocation] = useLocation();
-  const { login } = useAuth();
   const registerMutation = useRegister();
-  
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState("");
+  // Task #527: confirm-by-email signup. After /auth/register returns 202,
+  // we no longer log the user in here — we show a "check your inbox"
+  // panel and wait for them to click the verification link, which lands
+  // on /verify-email and provisions the account there.
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     try {
-      const res = await registerMutation.mutateAsync({ data: { name, email, password } });
-      login(res.token, res.user);
-      reportAttributedSignup(res.token);
-
-      const returnTo = sessionStorage.getItem("auth_return_to");
-      if (returnTo) {
-        sessionStorage.removeItem("auth_return_to");
-        if (returnTo.includes("?")) {
-          const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-          window.location.href = base + returnTo;
-        } else {
-          setLocation(returnTo);
-        }
-        return;
-      }
-
-      setLocation("/model/new");
+      await registerMutation.mutateAsync({ data: { name, email, password } });
+      setSubmittedEmail(email);
     } catch (err) {
       setError(getApiErrorMessage(err, "Failed to register. Please try again."));
     }
@@ -71,6 +57,29 @@ export function RegisterPage() {
               </div>
             )}
 
+            {submittedEmail ? (
+              <div data-testid="register-check-inbox" className="space-y-5">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mx-auto">
+                  <Mail className="h-7 w-7 text-primary" />
+                </div>
+                <h2 className="text-xl font-semibold text-center text-foreground">Check your inbox</h2>
+                <p className="text-sm text-muted-foreground text-center leading-relaxed">
+                  If <span className="font-semibold text-foreground">{submittedEmail}</span> isn't already
+                  registered, we just sent a verification link. Click it to finish creating your account —
+                  it's valid for the next hour.
+                </p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Already have an account with this email? Check the same inbox for sign-in instructions instead.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setSubmittedEmail(null); setPassword(""); }}
+                  className="w-full py-3 rounded-xl border-2 border-border bg-background font-semibold text-foreground hover:bg-muted transition-colors"
+                >
+                  Use a different email
+                </button>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold mb-1.5">Full Name</label>
@@ -149,6 +158,7 @@ export function RegisterPage() {
                 {registerMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create Account"}
               </button>
             </form>
+            )}
 
             <p className="mt-8 text-center text-sm text-muted-foreground">
               Already have an account?{" "}

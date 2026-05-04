@@ -29,6 +29,7 @@ import jwt from "jsonwebtoken";
 import { db, feedbackTable, errorLogsTable, usersTable, eventsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import app from "../src/app.js";
+import { registerAndVerify } from "./helpers/register-and-verify.js";
 
 let passed = 0;
 let failed = 0;
@@ -86,16 +87,13 @@ async function main() {
   const { baseUrl, close } = await startServer();
   try {
     // ─── Setup: register a real user. ─────────────────────────────────
+    // Task #527: /auth/register no longer returns a token directly — it's
+    // now a confirm-by-email flow. Use the helper that drives both the
+    // 202 register response and /auth/verify-email (via _devToken).
     const email = `round3-test-${Date.now()}@example.com`;
-    const reg = await postJson(baseUrl, "/api/auth/register", {
-      email,
-      password: "Password123!",
-      name: "Round3 Tester",
+    const { token: validToken, user } = await registerAndVerify(baseUrl, {
+      email, password: "Password123!", name: "Round3 Tester",
     });
-    if (reg.status !== 200 && reg.status !== 201) {
-      throw new Error(`register failed: ${reg.status} ${reg.body}`);
-    }
-    const { token: validToken, user } = reg.json as { token: string; user: { id: number } };
     const userId = user.id;
 
     // ─── #15a  /api/feedback honors the strict auth decoder. ──────────

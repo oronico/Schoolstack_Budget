@@ -106,16 +106,20 @@ async function main() {
     // =======================================================================
     // #25 — register timing oracle
     // =======================================================================
-    // Setup: register a "real" user we can use as the duplicate-email probe.
+    // Setup: register + verify a "real" user we can use as the duplicate-email
+    // probe. Task #527: register is now confirm-by-email (202 with the same
+    // body for both branches) so we have to drive verify-email from the
+    // dev-only `_devToken` to actually create the row.
     const realEmail = `round5-real-${stamp}@example.com`;
     const realPassword = "RealPasswordForRound5!";
-    const reg = await postJson(baseUrl, "/api/auth/register", {
-      email: realEmail,
-      password: realPassword,
-      name: "Round 5 Real",
+    const setupReg = await postJson(baseUrl, "/api/auth/register", {
+      email: realEmail, password: realPassword, name: "Round 5 Real",
     });
-    check(`setup: register real user`, reg.status === 201, `status=${reg.status} body=${reg.body.slice(0, 200)}`);
-    const realUserId = (reg.json as { user?: { id?: number } } | null)?.user?.id ?? 0;
+    check(`setup: register real user (202)`, setupReg.status === 202, `status=${setupReg.status} body=${setupReg.body.slice(0, 200)}`);
+    // In non-prod the new-branch register response carries `user`/`token`
+    // directly (synchronous verify, see auth.ts comment) so we don't have
+    // to round-trip through /auth/verify-email here.
+    const realUserId = (setupReg.json as { user?: { id?: number } } | null)?.user?.id ?? 0;
     if (realUserId) createdUserIds.push(realUserId);
 
     // Warm up — first request of each branch may include JIT / DB pool overhead.
@@ -132,8 +136,27 @@ async function main() {
     const dupTimes: number[] = [];
     const newTimes: number[] = [];
     const newUserEmails: string[] = [];
+    // Task #527: collect non-volatile parts of each response body so we can
+    // assert the duplicate-email branch and the new-email branch return the
+    // same 202 + identical message (no `_devBranch` / `_devToken` in prod;
+    // in dev they exist but differ — we strip them before comparing).
+    const stripDev = (b: unknown) => {
+      const o = b && typeof b === "object" ? { ...(b as Record<string, unknown>) } : {};
+      // _devToken / _devBranch leak in non-prod for test plumbing; the
+      // new branch additionally surfaces `token` and `user` so e2e specs
+      // can stay on the legacy register-then-read-token shape (see
+      // auth.ts isNonProd() block). All four are stripped here so we
+      // assert the prod-visible body equivalence.
+      for (const k of ["_devToken", "_devBranch", "token", "user"]) {
+        delete (o as Record<string, unknown>)[k];
+      }
+      return o;
+    };
+    let dupBody: unknown = null;
+    let newBody: unknown = null;
     for (let i = 0; i < SAMPLES; i++) {
-      // Duplicate-email branch — should pay dummy bcrypt.compare cost.
+      // Duplicate-email branch — sends a "password reset" email and pays
+      // 1× bcrypt.hash so the timing matches the new-email branch.
       const dup = await timed(() =>
         postJson(baseUrl, "/api/auth/register", {
           email: realEmail,
@@ -141,10 +164,12 @@ async function main() {
           name: `dup-${i}`,
         }),
       );
-      check(`#25 duplicate-email returns 409`, dup.value.status === 409);
+      check(`#25 duplicate-email returns 202`, dup.value.status === 202, `status=${dup.value.status}`);
       dupTimes.push(dup.ms);
+      if (i === 0) dupBody = dup.value.json;
 
-      // New-email branch — pays real bcrypt.hash cost.
+      // New-email branch — also 202; pays real bcrypt.hash cost on a
+      // pending_signups row (no usersTable insert until verify).
       const newEmail = `round5-new-${stamp}-${i}@example.com`;
       const fresh = await timed(() =>
         postJson(baseUrl, "/api/auth/register", {
@@ -153,12 +178,20 @@ async function main() {
           name: `fresh-${i}`,
         }),
       );
-      check(`#25 new-email returns 201`, fresh.value.status === 201);
+      check(`#25 new-email returns 202`, fresh.value.status === 202, `status=${fresh.value.status}`);
       newTimes.push(fresh.ms);
-      const newId = (fresh.value.json as { user?: { id?: number } } | null)?.user?.id;
-      if (newId) createdUserIds.push(newId);
+      if (i === 0) newBody = fresh.value.json;
       newUserEmails.push(newEmail);
     }
+
+    // Task #527 acceptance: response equivalence. Both branches must
+    // produce the exact same client-visible body so an attacker can't
+    // distinguish "email already registered" from "email is fresh".
+    check(
+      `#25 duplicate vs new register response bodies are identical (modulo dev-only fields)`,
+      JSON.stringify(stripDev(dupBody)) === JSON.stringify(stripDev(newBody)),
+      `dup=${JSON.stringify(stripDev(dupBody))} new=${JSON.stringify(stripDev(newBody))}`,
+    );
 
     const dupMedian = median(dupTimes);
     const newMedian = median(newTimes);

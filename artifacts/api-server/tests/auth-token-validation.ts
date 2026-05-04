@@ -28,6 +28,7 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import app from "../src/app.js";
+import { registerAndVerify } from "./helpers/register-and-verify.js";
 
 let passed = 0;
 let failed = 0;
@@ -79,13 +80,9 @@ async function main(): Promise<void> {
   try {
     // --- Set up a real user we can use for the revocation tests. ---
     const email = `auth-token-test-${Date.now()}@example.com`;
-    const reg = await fetch(`${baseUrl}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password: "Password123!", name: "Auth Tester" }),
+    const { token: validToken, user } = await registerAndVerify(baseUrl, {
+      email, password: "Password123!", name: "Auth Tester",
     });
-    if (!reg.ok) throw new Error(`register failed: ${reg.status} ${await reg.text()}`);
-    const { token: validToken, user } = (await reg.json()) as { token: string; user: { id: number } };
     const userId = user.id;
 
     // --- 1. Sanity: a freshly-issued token is accepted. ---

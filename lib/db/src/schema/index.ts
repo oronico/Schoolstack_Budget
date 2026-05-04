@@ -7,3 +7,4 @@ export * from "./rate-limits";
 export * from "./feedback";
 export * from "./error-logs";
 export * from "./shared-links";
+export * from "./pending-signups";

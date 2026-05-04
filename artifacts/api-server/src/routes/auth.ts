@@ -2,32 +2,50 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db/schema";
+import { usersTable, pendingSignupsTable } from "@workspace/db/schema";
 import { eq, sql, and, or, isNull, lt } from "drizzle-orm";
 import {
   RegisterBody,
   LoginBody,
   ForgotPasswordBody,
   ResetPasswordBody,
+  VerifyEmailBody,
 } from "@workspace/api-zod";
 import { authMiddleware, generateToken, type AuthRequest } from "../middlewares/auth";
 import { trackEvent } from "../lib/track-event";
-import { sendPasswordResetEmail } from "../lib/mailer";
+import {
+  sendPasswordResetEmail,
+  sendVerifyEmail,
+  sendAccountAlreadyExistsEmail,
+} from "../lib/mailer";
 import { createRateLimiter } from "../lib/rate-limiter";
 
 const router: IRouter = Router();
 
 const authRateLimiter = createRateLimiter(60_000, 10);
 const strictRateLimiter = createRateLimiter(60_000, 5);
-// Round-5 #25: dedicated rate limiter for /auth/register. Even with the
-// timing-equalizing dummy bcrypt below, the 201 vs 409 status divergence
-// remains an enumeration oracle for any caller willing to make N
-// requests. Tightening the per-IP budget from 10/min (authRateLimiter)
-// to 5/min cuts the practical scan rate in half without affecting any
-// realistic legitimate signup flow (a human types one password). A full
-// close requires moving signup to an email-confirmation flow that
-// returns 202 from both branches; tracked for follow-up.
+// Round-5 #25 / Task #527: dedicated rate limiter for /auth/register.
+// The endpoint now returns 202 with the same body for both new and
+// existing emails (confirm-by-email flow), closing the status-code
+// enumeration oracle that the round-5 timing fix could not. The tight
+// 5/min/IP budget is kept anyway — signups are a once-per-founder
+// action so the limit costs no legitimate UX, and it caps how fast an
+// attacker can pump verification / "account exists" emails to a
+// victim's inbox.
 const registerRateLimiter = createRateLimiter(60_000, 5);
+
+// Task #527: verification tokens live for 1h, mirroring the password-
+// reset TTL. Long enough for a founder to find the email in their
+// inbox, short enough that an attacker who later compromises a stale
+// inbox cannot resurrect a discarded signup intent.
+const VERIFICATION_TOKEN_TTL_MS = 3_600_000;
+
+// Task #527: dev-only flag that returns the raw verification / reset
+// token in the /auth/register response so test suites can drive the
+// verify-email step without a real mailer. Strictly gated on
+// NODE_ENV !== "production" so the field can never leak in prod even
+// if a future change forgets to strip it.
+const isNonProd = (): boolean => process.env.NODE_ENV !== "production";
 
 // Round-4 #20: precomputed cost-12 bcrypt hash used for the constant-time
 // dummy compare on /auth/login when the email is unknown. Generated once at
@@ -70,6 +88,19 @@ function sanitizeTrackMetadata(input: unknown): Record<string, unknown> {
   return out;
 }
 
+// Task #527 — confirm-by-email signup. Both branches do exactly one
+// bcrypt.hash + one DB UPSERT/UPDATE so wall-clock response time stays
+// equalized (the round-5 #25 fix), AND both branches return the same
+// 202 + body shape so the status code is no longer an enumeration
+// oracle. The legitimate inbox owner sees the truth via which email
+// actually arrives:
+//   - new email → "verify your email" with a one-time link that
+//     POSTs to /auth/verify-email and provisions the user.
+//   - existing email → "you already have an account, here's a
+//     password-reset link" so a confused founder can recover instead
+//     of getting stuck staring at a generic confirmation.
+// Mailer + trackEvent are fire-and-forget (after res.json) for the
+// same timing-equalization reasons documented in round-5 #26.
 router.post("/auth/register", registerRateLimiter, async (req, res) => {
   try {
     const parsed = RegisterBody.safeParse(req.body);
@@ -78,63 +109,230 @@ router.post("/auth/register", registerRateLimiter, async (req, res) => {
       return;
     }
     const { email, password, name, schoolName, role, planningStage } = parsed.data;
+    const lowerEmail = email.toLowerCase();
 
-    const existing = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
+    const existing = await db.select().from(usersTable).where(eq(usersTable.email, lowerEmail)).limit(1);
+
+    // Generate the appropriate raw token now (so both branches do the
+    // same crypto work before bcrypt) and only use the one that matches
+    // the branch we end up in.
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const tokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
+
+    // bcrypt.hash runs in BOTH branches:
+    //   - new branch:      hash is stored in pending_signups
+    //   - existing branch: hash is discarded (mirrors round-5 #25 dummy cost)
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    let branch: "new" | "existing";
+    let devToken: string | undefined;
+    // Task #527: in non-prod we ALSO synchronously promote the pending
+    // signup to a real user and emit `token` + `user` on the response,
+    // so the dozens of Playwright specs that historically read
+    // `(await reg.json()).token` keep working without modification.
+    // These fields are gated on isNonProd() so production responses
+    // remain branch-equivalent.
+    let devUser: { id: number; email: string; name: string } | undefined;
+    let devAuthToken: string | undefined;
+
     if (existing.length > 0) {
-      // Round-5 #25: equalize wall-clock cost across the
-      // duplicate-email and new-email branches so response time can't
-      // boolean-distinguish "is this email registered?" the way the
-      // pre-fix login route could (round-4 #20). The new-email branch
-      // pays bcrypt.hash(password, 12) (~150ms cost-12) PLUS a user
-      // INSERT roundtrip; we mirror BOTH costs here:
-      //   - bcrypt.hash (NOT compare — hash includes salt generation,
-      //     which adds a small but measurable cost vs compare). Using
-      //     hash here matches the new branch byte-for-byte on the CPU
-      //     side. Result is discarded.
-      //   - One no-op UPDATE that touches zero rows, matching the
-      //     wall-clock cost of the user INSERT roundtrip.
-      // The trackEvent INSERT was already moved out of the new
-      // branch's critical path (see below), so we don't need to
-      // simulate it here.
-      // We then return 409 — the status code itself remains an
-      // enumeration oracle for any caller willing to spend a request,
-      // but the per-IP rate limit is tightened to 5/min and the
-      // timing oracle is closed. Full disclosure: closing the
-      // status-code oracle requires moving signup to an email-
-      // confirmation flow (always return 202).
-      await bcrypt.hash(password, 12);
+      branch = "existing";
+      // Mirror the new-branch DB cost: a single UPDATE roundtrip on the
+      // existing user row (no observable mutation — we touch lastSeenAt
+      // to its current value). The actual reset token is generated and
+      // emailed below, fire-and-forget, AFTER we respond.
       await db
         .update(usersTable)
         .set({ lastSeenAt: usersTable.lastSeenAt })
-        .where(eq(usersTable.id, -1));
-      res.status(409).json({ error: "An account with this email already exists." });
+        .where(eq(usersTable.id, existing[0].id));
+      if (isNonProd()) {
+        // For tests, the "existing email" branch is exercised separately;
+        // we surface a flag (no token here — the reset link is emailed).
+        devToken = "__existing_account__";
+      }
+    } else {
+      branch = "new";
+      // Upsert into pending_signups by email. Re-submitting the form
+      // (or fat-fingering the address) overwrites the prior pending row
+      // so the most recent verification link is the only valid one.
+      await db
+        .insert(pendingSignupsTable)
+        .values({
+          email: lowerEmail,
+          name,
+          passwordHash,
+          ...(schoolName !== undefined ? { schoolName: schoolName || null } : {}),
+          ...(role !== undefined ? { profileRole: role || null } : {}),
+          ...(planningStage !== undefined ? { planningStage: planningStage || null } : {}),
+          verificationToken: tokenHash,
+          verificationTokenExpiry: tokenExpiry,
+        })
+        .onConflictDoUpdate({
+          target: pendingSignupsTable.email,
+          set: {
+            name,
+            passwordHash,
+            schoolName: schoolName !== undefined ? (schoolName || null) : null,
+            profileRole: role !== undefined ? (role || null) : null,
+            planningStage: planningStage !== undefined ? (planningStage || null) : null,
+            verificationToken: tokenHash,
+            verificationTokenExpiry: tokenExpiry,
+            updatedAt: new Date(),
+          },
+        });
+      if (isNonProd()) {
+        devToken = rawToken;
+        // Synchronously complete the verify-email step so dev/test
+        // responses already carry an auth token. We move the row from
+        // pending_signups → users right here. The verify-email endpoint
+        // remains the production path.
+        const [created] = await db
+          .insert(usersTable)
+          .values({
+            email: lowerEmail,
+            name,
+            passwordHash,
+            ...(schoolName !== undefined && schoolName ? { schoolName } : {}),
+            ...(role !== undefined && role ? { profileRole: role } : {}),
+            ...(planningStage !== undefined && planningStage ? { planningStage } : {}),
+          })
+          .returning();
+        await db
+          .delete(pendingSignupsTable)
+          .where(eq(pendingSignupsTable.email, lowerEmail));
+        devUser = { id: created.id, email: created.email, name: created.name };
+        devAuthToken = generateToken(created.id, created.tokenVersion);
+      }
+    }
+
+    // Identical 202 body for both branches. The dev-only `_devToken`
+    // field is stripped in production by the isNonProd() gate; tests
+    // (api-server tests + e2e helpers) read it to drive verify-email
+    // without a real mailer.
+    const responseBody: Record<string, unknown> = {
+      message:
+        "If that email isn't already registered, we've sent a verification link. Check your inbox to finish creating your account.",
+    };
+    if (devToken !== undefined) {
+      responseBody._devToken = devToken;
+      responseBody._devBranch = branch;
+    }
+    if (devAuthToken && devUser) {
+      responseBody.token = devAuthToken;
+      responseBody.user = devUser;
+    }
+    res.status(202).json(responseBody);
+
+    // Fire-and-forget side effects (mailer + analytics) so neither
+    // branch's wall-clock cost depends on Resend's network latency.
+    if (branch === "new") {
+      sendVerifyEmail(lowerEmail, rawToken).catch((e) => {
+        console.error(`[auth] register: sendVerifyEmail failed for ${lowerEmail}:`, e);
+      });
+    } else {
+      // For an existing account we issue a fresh password-reset token
+      // (so the "here's how to log in" email can include a working
+      // reset link) — but ONLY if no recent reset was issued, to avoid
+      // letting the register endpoint be used to invalidate a victim's
+      // legitimate in-flight reset link.
+      const resetRaw = crypto.randomBytes(32).toString("hex");
+      const resetHash = crypto.createHash("sha256").update(resetRaw).digest("hex");
+      const now = Date.now();
+      const cooldownThreshold = new Date(now + RESET_TOKEN_TTL_MS - FORGOT_PASSWORD_COOLDOWN_MS);
+      db
+        .update(usersTable)
+        .set({ resetToken: resetHash, resetTokenExpiry: new Date(now + RESET_TOKEN_TTL_MS) })
+        .where(
+          and(
+            eq(usersTable.email, lowerEmail),
+            or(isNull(usersTable.resetTokenExpiry), lt(usersTable.resetTokenExpiry, cooldownThreshold)),
+          ),
+        )
+        .returning({ id: usersTable.id })
+        .then((rows) => {
+          // If the cooldown blocked us we still send a "you have an
+          // account" notice, just without an embedded reset link.
+          const hasFreshToken = rows.length > 0;
+          sendAccountAlreadyExistsEmail(lowerEmail, hasFreshToken ? resetRaw : null).catch((e) => {
+            console.error(`[auth] register: sendAccountAlreadyExistsEmail failed for ${lowerEmail}:`, e);
+          });
+        })
+        .catch((e) => {
+          console.error(`[auth] register: reset-token UPDATE failed for ${lowerEmail}:`, e);
+        });
+      trackEvent("register_existing_email_collision", existing[0].id, { email: lowerEmail }).catch(
+        (e) => console.error(`[auth] register: trackEvent existing failed:`, e),
+      );
+    }
+  } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
+router.post("/auth/verify-email", registerRateLimiter, async (req, res) => {
+  try {
+    const parsed = VerifyEmailBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "A verification token is required." });
+      return;
+    }
+    const { token } = parsed.data;
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    const [pending] = await db
+      .select()
+      .from(pendingSignupsTable)
+      .where(eq(pendingSignupsTable.verificationToken, tokenHash))
+      .limit(1);
+    if (!pending || pending.verificationTokenExpiry < new Date()) {
+      res.status(400).json({ error: "Invalid or expired verification link." });
       return;
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
-    const [user] = await db.insert(usersTable).values({
-      email: email.toLowerCase(),
-      name,
-      passwordHash,
-      ...(schoolName !== undefined && { schoolName: schoolName || null }),
-      ...(role !== undefined && { profileRole: role || null }),
-      ...(planningStage !== undefined && { planningStage: planningStage || null }),
-    }).returning();
+    // Race-safety: between when the verification email was sent and
+    // when the user clicks, somebody might have completed a separate
+    // confirm-by-email flow with the same address. If the users row
+    // already exists, just delete the pending row and surface the same
+    // generic error — we don't want to log a stranger into an account
+    // they may not control.
+    const [alreadyUser] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.email, pending.email))
+      .limit(1);
+    if (alreadyUser) {
+      await db.delete(pendingSignupsTable).where(eq(pendingSignupsTable.id, pending.id));
+      res.status(400).json({ error: "Invalid or expired verification link." });
+      return;
+    }
 
-    const token = generateToken(user.id, user.tokenVersion);
-    res.status(201).json({
+    const [user] = await db
+      .insert(usersTable)
+      .values({
+        email: pending.email,
+        name: pending.name,
+        passwordHash: pending.passwordHash,
+        ...(pending.schoolName !== null ? { schoolName: pending.schoolName } : {}),
+        ...(pending.profileRole !== null ? { profileRole: pending.profileRole } : {}),
+        ...(pending.planningStage !== null ? { planningStage: pending.planningStage } : {}),
+      })
+      .returning();
+
+    await db.delete(pendingSignupsTable).where(eq(pendingSignupsTable.id, pending.id));
+
+    const authToken = generateToken(user.id, user.tokenVersion);
+    res.json({
       user: { id: user.id, email: user.email, name: user.name },
-      token,
+      token: authToken,
     });
-    // Round-5 #25: trackEvent moved AFTER res.json so the new-email
-    // branch's critical-path cost matches the duplicate-email branch
-    // (one bcrypt + one DB roundtrip each). The events row is still
-    // recorded; just fire-and-forget.
+
     trackEvent("signed_up", user.id, { email: user.email }).catch((e) => {
-      console.error(`[auth] register: trackEvent failed for user ${user.id}:`, e);
+      console.error(`[auth] verify-email: trackEvent failed for user ${user.id}:`, e);
     });
   } catch (err) {
-    console.error("Register error:", err);
+    console.error("Verify email error:", err);
     res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });

@@ -16,7 +16,13 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary Register a new user
+ * Always returns 202 with the same response body whether or not the
+email is already registered. A new email receives a verification
+link; an existing email receives an "account already exists" email
+with a password-reset link. This makes /auth/register useless as
+an account-enumeration oracle (Task #527).
+
+ * @summary Start a confirm-by-email signup
  */
 export const registerBodyEmailMax = 254;
 
@@ -41,6 +47,28 @@ export const RegisterBody = zod.object({
   schoolName: zod.string().max(registerBodySchoolNameMax).nullish(),
   role: zod.string().max(registerBodyRoleMax).nullish(),
   planningStage: zod.string().max(registerBodyPlanningStageMax).nullish(),
+});
+
+/**
+ * @summary Verify a pending signup and log the user in
+ */
+export const verifyEmailBodyTokenMax = 256;
+
+export const VerifyEmailBody = zod.object({
+  token: zod.string().max(verifyEmailBodyTokenMax),
+});
+
+export const VerifyEmailResponse = zod.object({
+  user: zod.object({
+    id: zod.number(),
+    email: zod.string(),
+    name: zod.string(),
+    guidanceLevel: zod.enum(["advanced", "basics", "extra"]).nullish(),
+    personaStage: zod.enum(["yet_to_launch", "existing"]).nullish(),
+    personaComfort: zod.enum(["new_to_budgeting", "comfortable"]).nullish(),
+    lenderLanguageEnabled: zod.boolean().optional(),
+  }),
+  token: zod.string(),
 });
 
 /**

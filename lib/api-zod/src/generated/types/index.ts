@@ -115,3 +115,4 @@ export * from "./userResponse";
 export * from "./userResponseGuidanceLevel";
 export * from "./userResponsePersonaComfort";
 export * from "./userResponsePersonaStage";
+export * from "./verifyEmailRequest";

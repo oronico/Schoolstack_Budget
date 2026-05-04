@@ -85,6 +85,11 @@ export interface ForgotPasswordRequest {
   email: string;
 }
 
+export interface VerifyEmailRequest {
+  /** @maxLength 256 */
+  token: string;
+}
+
 export interface ResetPasswordRequest {
   /** @maxLength 256 */
   token: string;

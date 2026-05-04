@@ -31,6 +31,7 @@ import type { AddressInfo } from "node:net";
 import { db, usersTable, eventsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import app from "../src/app.js";
+import { registerAndVerify } from "./helpers/register-and-verify.js";
 
 let passed = 0;
 let failed = 0;
@@ -99,15 +100,15 @@ async function main() {
     const stamp = Date.now();
     const realEmail = `round4-real-${stamp}@example.com`;
     const realPassword = "RealPasswordForRound4!";
-    const reg = await postJson(baseUrl, "/api/auth/register", {
-      email: realEmail,
-      password: realPassword,
-      name: "Round 4 Real",
+    // Task #527: register is now confirm-by-email (202). Drive both
+    // legs (register + verify-email via _devToken) through the helper
+    // so we still get a usable bearer token + userId for the probes.
+    const verified = await registerAndVerify(baseUrl, {
+      email: realEmail, password: realPassword, name: "Round 4 Real",
     });
-    check("setup: register real user", reg.status === 201, `status=${reg.status} body=${reg.body.slice(0, 200)}`);
-    const realToken = (reg.json as { token?: string } | null)?.token ?? "";
-    check("setup: real user token issued", !!realToken);
-    const realUserId = (reg.json as { user?: { id?: number } } | null)?.user?.id ?? 0;
+    const realToken = verified.token;
+    check("setup: register real user (verified)", !!realToken);
+    const realUserId = verified.user.id;
 
     // =======================================================================
     // #20 — login timing oracle

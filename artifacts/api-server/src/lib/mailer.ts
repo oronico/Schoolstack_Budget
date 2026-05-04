@@ -580,3 +580,171 @@ export async function sendPasswordResetEmail(
     return { success: false, error: "Failed to send reset email. Please try again." };
   }
 }
+
+// Task #527 — confirm-by-email signup. Two new templates:
+//   - sendVerifyEmail:           sent to NEW emails. The link inside POSTs
+//                                to /auth/verify-email which provisions the
+//                                user and logs them in.
+//   - sendAccountAlreadyExistsEmail: sent when somebody tries to register
+//                                with an address that already has an
+//                                account. Includes a password-reset link
+//                                so a confused founder can recover. The
+//                                attacker who hit /auth/register sees the
+//                                same generic 202 either way (only the
+//                                inbox owner sees the truth).
+function resolveAppUrl(): string | null {
+  if (process.env.APP_URL) return process.env.APP_URL;
+  if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  return null;
+}
+
+export async function sendVerifyEmail(
+  toEmail: string,
+  verifyToken: string,
+): Promise<{ success: boolean; error?: string }> {
+  const resend = getResend();
+  const fromAddress = process.env.EMAIL_FROM;
+  const appUrl = resolveAppUrl();
+  if (!appUrl) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[mailer] FATAL: APP_URL is required in production to generate verify-email links");
+    }
+    return { success: false, error: "Server configuration error." };
+  }
+  const verifyUrl = `${appUrl}/verify-email?token=${verifyToken}`;
+
+  if (!resend || !fromAddress) {
+    console.error(
+      `[mailer] sendVerifyEmail: Resend or EMAIL_FROM not configured — verify link for ${toEmail}: ${verifyUrl}`,
+    );
+    return { success: false, error: "Email service is not configured." };
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: [toEmail],
+      subject: "Confirm your SchoolStack Budget account",
+      text: [
+        "Welcome to SchoolStack Budget!",
+        "",
+        "Click the link below to confirm your email and finish creating your account (valid for 1 hour):",
+        verifyUrl,
+        "",
+        "If you did not request this, you can safely ignore this email.",
+        "",
+        " - The SchoolStack Budget Team",
+      ].join("\n"),
+      html: `
+        <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+          <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">Confirm your email</h2>
+          <p style="color:#475569;line-height:1.6;">
+            Welcome to SchoolStack Budget. Click the button below to finish creating your account. This link is valid for 1 hour.
+          </p>
+          <div style="text-align:center;margin:32px 0;">
+            <a href="${verifyUrl}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Confirm Email</a>
+          </div>
+          <p style="color:#475569;line-height:1.6;font-size:13px;">
+            If the button doesn't work, paste this URL into your browser:<br/>
+            <span style="word-break:break-all;color:#1E293B;">${verifyUrl}</span>
+          </p>
+          <p style="color:#475569;line-height:1.6;">
+            If you did not request this, you can safely ignore this email.
+          </p>
+          <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;" />
+          <p style="color:#94A3B8;font-size:12px;">SchoolStack Budget by SchoolStack.ai</p>
+        </div>
+      `,
+    });
+    if (error) {
+      console.error("[mailer] sendVerifyEmail error:", error);
+      return { success: false, error: "Failed to send verification email." };
+    }
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[mailer] Verify-email sent to ${toEmail} (id: ${data?.id})`);
+    }
+    return { success: true };
+  } catch (err) {
+    console.error("[mailer] sendVerifyEmail failed:", err);
+    return { success: false, error: "Failed to send verification email." };
+  }
+}
+
+export async function sendAccountAlreadyExistsEmail(
+  toEmail: string,
+  resetToken: string | null,
+): Promise<{ success: boolean; error?: string }> {
+  const resend = getResend();
+  const fromAddress = process.env.EMAIL_FROM;
+  const appUrl = resolveAppUrl();
+  if (!appUrl) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[mailer] FATAL: APP_URL is required in production");
+    }
+    return { success: false, error: "Server configuration error." };
+  }
+  const loginUrl = `${appUrl}/login`;
+  const resetUrl = resetToken ? `${appUrl}/reset-password?token=${resetToken}` : `${appUrl}/forgot-password`;
+
+  if (!resend || !fromAddress) {
+    console.error(
+      `[mailer] sendAccountAlreadyExistsEmail: Resend or EMAIL_FROM not configured — login: ${loginUrl} reset: ${resetUrl}`,
+    );
+    return { success: false, error: "Email service is not configured." };
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: [toEmail],
+      subject: "You already have a SchoolStack Budget account",
+      text: [
+        "Hi,",
+        "",
+        "Somebody (probably you) just tried to create a SchoolStack Budget account with this email address — but you already have one.",
+        "",
+        `Sign in:    ${loginUrl}`,
+        `Reset password: ${resetUrl}`,
+        "",
+        resetToken
+          ? "The reset link above is valid for 1 hour."
+          : "If you didn't recently request a password reset, click the reset link to start one.",
+        "",
+        "If this wasn't you, no action is needed — your account is unchanged.",
+        "",
+        " - The SchoolStack Budget Team",
+      ].join("\n"),
+      html: `
+        <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+          <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">You already have an account</h2>
+          <p style="color:#475569;line-height:1.6;">
+            Somebody (probably you) just tried to create a SchoolStack Budget account with this email address — but you already have one.
+          </p>
+          <div style="text-align:center;margin:24px 0;">
+            <a href="${loginUrl}" style="background-color:#1E293B;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Sign in</a>
+            <a href="${resetUrl}" style="background-color:#D97706;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;margin:4px;">Reset password</a>
+          </div>
+          <p style="color:#475569;line-height:1.6;font-size:13px;">
+            ${resetToken ? "The password reset link is valid for 1 hour." : "If you didn't recently request a reset, use the button above to start one."}
+          </p>
+          <p style="color:#475569;line-height:1.6;">
+            If this wasn't you, no action is needed — your account is unchanged.
+          </p>
+          <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;" />
+          <p style="color:#94A3B8;font-size:12px;">SchoolStack Budget by SchoolStack.ai</p>
+        </div>
+      `,
+    });
+    if (error) {
+      console.error("[mailer] sendAccountAlreadyExistsEmail error:", error);
+      return { success: false, error: "Failed to send notice." };
+    }
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[mailer] Account-exists notice sent to ${toEmail} (id: ${data?.id})`);
+    }
+    return { success: true };
+  } catch (err) {
+    console.error("[mailer] sendAccountAlreadyExistsEmail failed:", err);
+    return { success: false, error: "Failed to send notice." };
+  }
+}
