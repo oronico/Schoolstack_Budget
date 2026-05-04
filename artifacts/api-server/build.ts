@@ -42,12 +42,10 @@ async function buildAll() {
       !(pkg.dependencies?.[dep]?.startsWith("workspace:")),
   );
 
-  await esbuild({
-    entryPoints: [path.resolve(__dirname, "src/index.ts")],
-    platform: "node",
+  const sharedEsbuildOptions = {
+    platform: "node" as const,
     bundle: true,
-    format: "cjs",
-    outfile: path.resolve(distDir, "index.cjs"),
+    format: "cjs" as const,
     define: {
       "process.env.NODE_ENV": '"production"',
     },
@@ -59,7 +57,23 @@ async function buildAll() {
     },
     minify: true,
     external: externals,
-    logLevel: "info",
+    logLevel: "info" as const,
+  };
+
+  await esbuild({
+    ...sharedEsbuildOptions,
+    entryPoints: [path.resolve(__dirname, "src/index.ts")],
+    outfile: path.resolve(distDir, "index.cjs"),
+  });
+
+  // Standalone migration runner. Shipped as its own bundle so the Docker
+  // entrypoint can run migrations as a distinct step (and fail the deploy
+  // loudly) before booting the API server.
+  console.log("building migrate entry...");
+  await esbuild({
+    ...sharedEsbuildOptions,
+    entryPoints: [path.resolve(__dirname, "src/migrate.ts")],
+    outfile: path.resolve(distDir, "migrate.cjs"),
   });
 
   // Ship the SQL migrations alongside the bundle so drizzle's migrator can find

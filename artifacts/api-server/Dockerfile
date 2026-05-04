@@ -20,6 +20,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=base /build/artifacts/api-server/dist/index.cjs ./index.cjs
+COPY --from=base /build/artifacts/api-server/dist/migrate.cjs ./migrate.cjs
+# Drizzle SQL migrations live next to the bundles so the runtime migrator
+# (and the explicit migrate step below) can find them via DRIZZLE_MIGRATIONS_DIR.
+COPY --from=base /build/artifacts/api-server/dist/drizzle ./drizzle
 
 RUN npm install --no-save adm-zip@0.5.16
 
@@ -28,4 +32,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 USER appuser
 
 EXPOSE 3000
-CMD ["node", "index.cjs"]
+# Run migrations as a distinct step before booting the API. A failed migration
+# exits non-zero, which fails the Railway deploy loudly instead of starting an
+# API against an out-of-date schema. `exec` ensures Node replaces the shell so
+# SIGTERM still reaches the server for graceful shutdown.
+CMD ["sh", "-c", "node migrate.cjs && exec node index.cjs"]

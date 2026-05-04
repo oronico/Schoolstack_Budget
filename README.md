@@ -232,6 +232,16 @@ Every open pull request gets a full prod-shape stack so infra changes (Dockerfil
 
 The deploy-preview build in `netlify.toml` rewrites `VITE_API_BASE_URL` to point at the matching Railway preview API, so the preview frontend automatically talks to the preview backend (not prod).
 
+**Migrations on preview deploys**
+
+Each preview deploy runs the Drizzle migrations against the ephemeral Postgres before the API starts. The Dockerfile entrypoint is:
+
+```
+node migrate.cjs && exec node index.cjs
+```
+
+`migrate.cjs` is a standalone bundle of `artifacts/api-server/src/migrate.ts` that calls `runMigrations()` from `@workspace/db` (equivalent to `pnpm --filter @workspace/db run migrate`) and exits non-zero on any error. A failed migration aborts the `&&` chain, so the API never boots against an out-of-date schema and the Railway deploy is marked failed — exactly the signal we want when reviewing migration changes on a PR.
+
 **One-time setup**
 - **Railway** — on the `schoolstackbudget` service, enable *Settings → Environments → Pull Request Environments* and seed the ephemeral Postgres from the migrations plugin.
 - **Netlify** — Deploy Previews are on by default; no extra config needed beyond `netlify.toml`.
@@ -252,6 +262,7 @@ The seed runs only when the `users` table is empty, so it's a no-op on every res
 2. Click the Netlify "Deploy Preview" link in the PR for the frontend URL.
 3. Log in with the demo credentials above and open one of the seeded models, or hit `https://schoolstackbudget-pr-<PR_NUMBER>.up.railway.app/api/health` directly.
 4. Smoke-test the change end-to-end. Migrations, env-var changes, and Dockerfile edits all run against the preview stack first.
+5. If the Railway deploy fails at the `[migrate]` step, fix the offending SQL/migration in the PR — the deploy will retry automatically on the next push.
 
 ---
 

@@ -27,4 +27,8 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://localhost:3000/api/healthz || exit 1
 
-CMD ["node", "dist/index.cjs"]
+# Run migrations as a distinct step before booting the API. A failed migration
+# exits non-zero, which fails the deploy loudly instead of starting an API
+# against an out-of-date schema. `exec` ensures Node replaces the shell so
+# SIGTERM still reaches the server for graceful shutdown.
+CMD ["sh", "-c", "node dist/migrate.cjs && exec node dist/index.cjs"]
