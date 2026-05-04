@@ -1514,6 +1514,57 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
   // unrelated to the Task #356 live-recalc bullets. Coverage of those
   // cells lives in the baseline + perturbed-tuition recomputes above.
 }
+// PARENT HANDOUT — at-a-glance card pulls Year-1 figures from the
+// projections tab so editing GETTING STARTED reflows the dollar
+// values. Cash reserves stays static (no input drives it).
+{
+  const handout2 = wbPerturbed.getWorksheet("Parent Handout")!;
+  const proj2 = wbPerturbed.getWorksheet("1 - 5 YR FINANCIAL PROJECTIONS")!;
+  const findProjRow = (label: string): number => {
+    let idx = -1;
+    proj2.eachRow((r, i) => { if (r.getCell(1).value === label) idx = i; });
+    return idx;
+  };
+  const netRevRow = findProjRow("Net Tuition + Fees");
+  const opExRow = findProjRow("Total Operating Expense");
+  const gapRow = findProjRow("Fundraising Gap");
+
+  // The at-a-glance dollar cells live in column F next to THE NEED bullets:
+  // F8 Net tuition, F9 OpEx, F10 Min fundraising, F11 Cash reserves (static),
+  // F12 TOTAL MINIMUM FUNDRAISING.
+  const sheetRef = "'1 - 5 YR FINANCIAL PROJECTIONS'";
+  expectFormula(
+    "PARENT HANDOUT: Net tuition and fees pulls Year-1 net revenue from projections tab",
+    readFormula(handout2, "F8"),
+    `=${sheetRef}!$C$${netRevRow}`,
+    100800,
+  );
+  expectFormula(
+    "PARENT HANDOUT: Projected operating expense pulls Year-1 OpEx from projections tab",
+    readFormula(handout2, "F9"),
+    `=${sheetRef}!$C$${opExRow}`,
+    101100,
+  );
+  expectFormula(
+    "PARENT HANDOUT: Mininum fundraising need pulls Year-1 fundraising gap",
+    readFormula(handout2, "F10"),
+    `=${sheetRef}!$C$${gapRow}`,
+    300,
+  );
+  const cashCell = readFormula(handout2, "F11");
+  expect(
+    "PARENT HANDOUT: Cash reserves stays static (no formula, $37,080 placeholder)",
+    cashCell.formula === undefined && cashCell.result === 37080,
+    { formula: undefined, result: 37080 },
+    cashCell,
+  );
+  expectFormula(
+    "PARENT HANDOUT: TOTAL MINIMUM FUNDRAISING = fundraising gap + static cash reserves",
+    readFormula(handout2, "F12"),
+    `=${sheetRef}!$C$${gapRow}+37080`,
+    300 + 37080,
+  );
+}
 
 // HyperFormula recompute — load both workbook variants into an Excel-
 // evaluation engine, recalculate every formula from scratch, and assert

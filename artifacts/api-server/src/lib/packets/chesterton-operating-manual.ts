@@ -494,11 +494,26 @@ function buildGettingStarted(
   return { schoolNameAddress, planYearAddress, avgSalaryAddress, tfgAddress };
 }
 
+interface ProjectionsRefs {
+  // Sheet-qualified absolute addresses for the Year-1 cells of the headline
+  // rollup rows on the projections tab. Other tabs (e.g. the Parent Handout
+  // at-a-glance card) reference these so a GETTING STARTED edit reflows
+  // every dependent cell on recalc.
+  netRevenueY1Address: string;
+  operatingExpenseY1Address: string;
+  fundraisingGapY1Address: string;
+  // Cached Year-1 results, used as fallbacks when callers need a numeric
+  // value to seed their own cached cell.result alongside the formula.
+  netRevenueY1: number;
+  operatingExpenseY1: number;
+  fundraisingGapY1: number;
+}
+
 function buildProjections(
   wb: ExcelJS.Workbook,
   data: ChestertonModelInput,
   refs: { planYearAddress: string; schoolNameAddress: string; avgSalaryAddress: string },
-) {
+): ProjectionsRefs {
   const ws = wb.addWorksheet(TAB_PROJECTIONS, {
     properties: { tabColor: { argb: NAVY } },
     views: [{ showGridLines: false, state: "frozen", xSplit: 2, ySplit: 7 }],
@@ -1140,6 +1155,20 @@ function buildProjections(
   ws.getCell(`A${row}`).value = "© Copyright Society of G.K. Chesterton and the Chesterton Schools Network, 2008-2026. All rights reserved.";
   ws.getCell(`A${row}`).font = { italic: true, size: 9, color: { argb: NAVY } };
   ws.getCell(`A${row}`).alignment = { horizontal: "center" };
+
+  // Year-1 sits in column C (col 2 = Year 0, col 3 = Year 1). Hand the
+  // sheet-qualified absolute addresses + cached results back so the Parent
+  // Handout's at-a-glance card can wire its dollar cells to the same source
+  // of truth instead of re-declaring placeholders.
+  const Y1_COL = 3;
+  return {
+    netRevenueY1Address: `'${TAB_PROJECTIONS}'!$C$${netRevenueRow}`,
+    operatingExpenseY1Address: `'${TAB_PROJECTIONS}'!$C$${operatingExpenseRow}`,
+    fundraisingGapY1Address: `'${TAB_PROJECTIONS}'!$C$${fundraisingGapRow}`,
+    netRevenueY1: readCachedNumber(ws, netRevenueRow, Y1_COL),
+    operatingExpenseY1: readCachedNumber(ws, operatingExpenseRow, Y1_COL),
+    fundraisingGapY1: readCachedNumber(ws, fundraisingGapRow, Y1_COL),
+  };
 }
 
 function buildSalarySchedule(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
@@ -2859,14 +2888,28 @@ const PARENT_HANDOUT_NEED_BULLETS: string[] = [
 const PARENT_HANDOUT_NEED_BULLET_DYNAMIC_IDX = 3;
 
 const PARENT_HANDOUT_PROJECTIONS_TITLE = "2025-26 Projections - At a Glance";
+// Cash reserves is the only at-a-glance row with no GETTING STARTED input
+// driving it (it's a CSN-recommended buffer, not a computed line on the
+// projections tab), so it stays a static placeholder. The other rows are
+// rewritten as cross-sheet formulas at emit time so editing enrollment or
+// tuition on GETTING STARTED reflows the card. See PARENT_HANDOUT_CASH_RESERVES.
+const PARENT_HANDOUT_CASH_RESERVES = 37080;
 const PARENT_HANDOUT_PROJECTIONS_ROWS: Array<{ label: string; placeholder: number }> = [
   { label: "Net tuition and fees", placeholder: 245700 },
   { label: "Projected operating expense", placeholder: 431102 },
   { label: "Mininum fundraising need", placeholder: 185402 },
-  { label: "Cash reserves", placeholder: 37080 },
+  { label: "Cash reserves", placeholder: PARENT_HANDOUT_CASH_RESERVES },
   { label: "TOTAL MINIMUM FUNDRAISING", placeholder: 222482 },
   { label: "TOTAL SET GOAL", placeholder: 426526 },
 ];
+// Indices into PARENT_HANDOUT_PROJECTIONS_ROWS — kept as constants so the
+// formula-vs-static branching in buildParentHandout doesn't silently break
+// if the at-a-glance order is reshuffled.
+const PARENT_HANDOUT_PROJECTIONS_NET_TUITION_IDX = 0;
+const PARENT_HANDOUT_PROJECTIONS_OP_EX_IDX = 1;
+const PARENT_HANDOUT_PROJECTIONS_MIN_NEED_IDX = 2;
+const PARENT_HANDOUT_PROJECTIONS_CASH_RESERVES_IDX = 3;
+const PARENT_HANDOUT_PROJECTIONS_TOTAL_MIN_IDX = 4;
 
 const PARENT_HANDOUT_GOAL_HEADING = "II. FUNDRAISING GOAL";
 const PARENT_HANDOUT_GOAL_ROWS: Array<{ label: string; share?: number }> = [
@@ -3211,7 +3254,12 @@ function buildTrainingSchedule(wb: ExcelJS.Workbook) {
   ws.getCell(`A${r}`).alignment = { horizontal: "center" };
 }
 
-function buildParentHandout(wb: ExcelJS.Workbook, data: ChestertonModelInput, tfgValue: number) {
+function buildParentHandout(
+  wb: ExcelJS.Workbook,
+  data: ChestertonModelInput,
+  tfgValue: number,
+  projRefs: ProjectionsRefs,
+) {
   const ws = wb.addWorksheet(TAB_PARENT_HANDOUT, {
     properties: { tabColor: { argb: CREAM } },
     views: [{ showGridLines: false }],
@@ -3296,12 +3344,36 @@ function buildParentHandout(wb: ExcelJS.Workbook, data: ChestertonModelInput, tf
       const proj = PARENT_HANDOUT_PROJECTIONS_ROWS[i];
       ws.getCell(`E${r}`).value = proj.label;
       ws.getCell(`E${r}`).alignment = { wrapText: true, vertical: "middle" };
-      ws.getCell(`F${r}`).value = proj.placeholder;
-      ws.getCell(`F${r}`).numFmt = CUR;
-      ws.getCell(`F${r}`).alignment = { horizontal: "right", vertical: "middle" };
+      const valueCell = ws.getCell(`F${r}`);
+      // Wire each at-a-glance dollar to the matching Year-1 cell on the
+      // projections tab so a GETTING STARTED edit (enrollment, tuition,
+      // financial aid %, etc.) reflows the card on recalc. Cash reserves
+      // has no driving input on the projections tab and stays static
+      // (documented above PARENT_HANDOUT_CASH_RESERVES).
+      if (i === PARENT_HANDOUT_PROJECTIONS_NET_TUITION_IDX) {
+        setFormula(valueCell, `=${projRefs.netRevenueY1Address}`, projRefs.netRevenueY1);
+      } else if (i === PARENT_HANDOUT_PROJECTIONS_OP_EX_IDX) {
+        setFormula(valueCell, `=${projRefs.operatingExpenseY1Address}`, projRefs.operatingExpenseY1);
+      } else if (i === PARENT_HANDOUT_PROJECTIONS_MIN_NEED_IDX) {
+        setFormula(valueCell, `=${projRefs.fundraisingGapY1Address}`, projRefs.fundraisingGapY1);
+      } else if (i === PARENT_HANDOUT_PROJECTIONS_TOTAL_MIN_IDX) {
+        // TOTAL MINIMUM FUNDRAISING = projected fundraising gap + the
+        // static cash-reserves buffer.
+        setFormula(
+          valueCell,
+          `=${projRefs.fundraisingGapY1Address}+${PARENT_HANDOUT_CASH_RESERVES}`,
+          projRefs.fundraisingGapY1 + PARENT_HANDOUT_CASH_RESERVES,
+        );
+      } else {
+        // Cash reserves (PARENT_HANDOUT_PROJECTIONS_CASH_RESERVES_IDX) and
+        // any future static rows fall through to the placeholder value.
+        valueCell.value = proj.placeholder;
+      }
+      valueCell.numFmt = CUR;
+      valueCell.alignment = { horizontal: "right", vertical: "middle" };
       if (proj.label.startsWith("TOTAL")) {
         ws.getCell(`E${r}`).font = { bold: true };
-        ws.getCell(`F${r}`).font = { bold: true };
+        valueCell.font = { bold: true };
       }
     }
   }
@@ -3434,7 +3506,7 @@ export async function generateChestertonOperatingManual(
     ? (data.chesterton?.fundraisingGoals ?? []).reduce((s, x) => s + (x.goalAmount ?? 0), 0)
     : (data.chesterton?.totalFundraisingGoal ?? 0);
   const refs = buildGettingStarted(wb, data, fundraisingRowCount);
-  buildProjections(wb, data, refs);
+  const projRefs = buildProjections(wb, data, refs);
   buildSalarySchedule(wb, data);
   buildKeyAssumptions(wb, data);
   buildFundraisingGoals(wb, data);
@@ -3443,7 +3515,7 @@ export async function generateChestertonOperatingManual(
   buildRecruitingPipeline(wb, data);
   buildCadence(wb, data);
   buildTrainingSchedule(wb);
-  buildParentHandout(wb, data, tfgValue);
+  buildParentHandout(wb, data, tfgValue, projRefs);
 
   return wb;
 }
