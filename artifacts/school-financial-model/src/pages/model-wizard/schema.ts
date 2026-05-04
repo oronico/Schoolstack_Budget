@@ -404,6 +404,11 @@ export const revenueRowSchema = z.object({
   percentBase: z.string().optional(),
   escalationRate: z.number().optional(),
   escalationRateOverridden: z.boolean().optional(),
+  // True when the per-row escalationRate was stamped by the Extend-to-5-Year
+  // seeder (rather than typed by the founder). Used by RevenueStep to render
+  // a "seeded from Extend-to-5-Year" indicator next to the rate, mirroring
+  // the same flag on expenseRowSchema (Task #514).
+  escalationRateSeeded: z.boolean().optional(),
   note: z.string().optional(),
   billingMonths: z.union([z.literal(9), z.literal(10), z.literal(12)]).optional(),
   collectionMethod: z.enum(["autopay", "invoiced", "mixed"]).optional(),

@@ -177,14 +177,30 @@ export function seedFiveYearFromYearOne<T extends Partial<FullModelData>>(
   }
 
   // ── revenueRows[].amounts (5 wide)
+  // Mirror the expense-row treatment: stamp the resolved per-row rate (so the
+  // wizard doesn't silently re-derive a different one from category defaults
+  // on next render) and mark it as having come from the Extend-to-5-Year seed
+  // unless the founder explicitly overrode it. RevenueStep reads
+  // escalationRateSeeded to render the indigo "seeded from Extend-to-5-Year"
+  // badge next to the row (Task #514).
   const revenueRows = form.revenueRows as Array<Record<string, unknown>> | undefined;
   if (Array.isArray(revenueRows)) {
     next.revenueRows = revenueRows.map((row) => {
-      const rate = pickRevenueRowRate(
-        row as { category?: string; escalationRate?: number; escalationRateOverridden?: boolean },
-        resolved,
-      );
-      return { ...row, amounts: fillAmounts(row.amounts as number[] | undefined, rate) };
+      const typedRow = row as {
+        category?: string;
+        escalationRate?: number;
+        escalationRateOverridden?: boolean;
+      };
+      const rate = pickRevenueRowRate(typedRow, resolved);
+      const out: Record<string, unknown> = {
+        ...row,
+        amounts: fillAmounts(row.amounts as number[] | undefined, rate),
+      };
+      if (typeof row.escalationRate !== "number" && !typedRow.escalationRateOverridden) {
+        out.escalationRate = rate;
+        out.escalationRateSeeded = true;
+      }
+      return out;
     });
   }
 

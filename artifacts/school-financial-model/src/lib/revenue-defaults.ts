@@ -176,6 +176,11 @@ export interface RevenueRowData {
   percentBase?: string;
   escalationRate?: number;
   escalationRateOverridden?: boolean;
+  // Set by the Extend-to-5-Year seeder when it stamps the per-row
+  // escalationRate. RevenueStep reads this to render a "seeded from
+  // Extend-to-5-Year" badge (Task #514). Cleared/absent for rows the
+  // founder has explicitly overridden.
+  escalationRateSeeded?: boolean;
   note?: string;
   billingMonths?: 9 | 10 | 12;
   collectionMethod?: CollectionMethod;

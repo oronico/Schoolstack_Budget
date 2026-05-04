@@ -332,6 +332,78 @@ describe("seedFiveYearFromYearOne", () => {
       expect(out.expenseRows![0].amounts).toEqual([10000, 10500, 11025, 11576, 12155]);
     });
 
+    it("stamps the resolved per-row escalationRate onto each seeded revenue row (Task #514)", () => {
+      // Mirrors the expense-row stamping rule: rows whose rate the seeder
+      // filled in get marked with escalationRateSeeded so RevenueStep can
+      // render the indigo "seeded from Extend-to-5-Year" badge. Rows whose
+      // rate the founder explicitly overrode are left untouched.
+      const out = seedFiveYearFromYearOne({
+        tuitionEscalation: { rate: 4 } as unknown as FullModelData["tuitionEscalation"],
+        facilities: { generalCostInflation: 5 } as unknown as FullModelData["facilities"],
+        revenueRows: [
+          {
+            id: "r_tuition",
+            category: "tuition_and_fees",
+            lineItem: "Tuition",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [800000, 0, 0, 0, 0],
+          },
+          {
+            id: "r_public",
+            category: "public_funding",
+            lineItem: "State per-pupil",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [200000, 0, 0, 0, 0],
+          },
+          {
+            id: "r_phil",
+            category: "philanthropy",
+            lineItem: "Donations",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [50000, 0, 0, 0, 0],
+          },
+          {
+            id: "r_overridden",
+            category: "tuition_and_fees",
+            lineItem: "Founder-set",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [100000, 0, 0, 0, 0],
+            escalationRate: 8,
+            escalationRateOverridden: true,
+          },
+        ] as unknown as FullModelData["revenueRows"],
+      });
+
+      // Tuition row: stamped with the resolved tuition rate (4%) and seeded.
+      expect(out.revenueRows![0].escalationRate).toBe(4);
+      expect(
+        (out.revenueRows![0] as { escalationRateSeeded?: boolean }).escalationRateSeeded,
+      ).toBe(true);
+
+      // Public funding follows costInflationPct (5%).
+      expect(out.revenueRows![1].escalationRate).toBe(5);
+      expect(
+        (out.revenueRows![1] as { escalationRateSeeded?: boolean }).escalationRateSeeded,
+      ).toBe(true);
+
+      // Philanthropy is held flat at rate 0 — still stamped because the
+      // seeder is the one that picked the rate.
+      expect(out.revenueRows![2].escalationRate).toBe(0);
+      expect(
+        (out.revenueRows![2] as { escalationRateSeeded?: boolean }).escalationRateSeeded,
+      ).toBe(true);
+
+      // Founder-overridden row keeps its rate and is NOT marked as seeded.
+      expect(out.revenueRows![3].escalationRate).toBe(8);
+      expect(
+        (out.revenueRows![3] as { escalationRateSeeded?: boolean }).escalationRateSeeded,
+      ).toBeUndefined();
+    });
+
     it("stamps the resolved per-row escalationRate onto each seeded expense row (Task #498)", () => {
       // Without this, ExpenseStep's getEscalationRule would fall back to its
       // category default and silently overwrite the seeded Y2-Y5 cells when

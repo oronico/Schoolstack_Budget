@@ -1579,6 +1579,15 @@ function RevenueLineItem({
                   {fundingFragility.status === "pending" && "Pending go-live"}
                 </span>
               )}
+              {row.escalationRateSeeded && !row.escalationRateOverridden && (
+                <span
+                  data-testid={`revenue-row-${row.id}-seeded-badge`}
+                  title={`Seeded from Extend-to-5-Year at ${row.escalationRate ?? 0}%/yr. Editing Y1 will re-project Y2-Y5 from this rate.`}
+                  className="text-[9px] font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-help"
+                >
+                  seeded from Extend-to-5-Year
+                </span>
+              )}
             </div>
             {row.note && (
               <span className="text-[11px] text-muted-foreground leading-tight mt-0.5">{row.note}</span>
