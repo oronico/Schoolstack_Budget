@@ -6,6 +6,7 @@ import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
 import { EXPLAINERS } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { cn } from "@/lib/utils";
 import { useYearCount } from "@/lib/use-model-duration";
@@ -411,7 +412,7 @@ function AssumptionsCallout({
 export function AssumptionsStep() {
   const { watch, setValue } = useFormContext<FullModelData>();
   const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const { guidanceLevel } = useShowCoach();
   const showReassurance = guidanceLevel === "extra" || guidanceLevel === "basics";
   const isSingleYear = useYearCount() === 1;
 

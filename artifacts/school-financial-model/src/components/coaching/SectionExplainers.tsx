@@ -2,9 +2,9 @@ import { useAuth } from "@/lib/auth-context";
 import {
   getExplainersForSection,
   type Explainer,
-  type GuidanceLevel,
 } from "@/lib/coaching/explainers";
 import { isYetToLaunch } from "@/lib/coaching/founder-persona";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { InlineHelpCard } from "./InlineHelpCard";
 
 interface SectionExplainersProps {
@@ -49,7 +49,7 @@ function explainerHasForbiddenCopy(e: Explainer): boolean {
 
 export function SectionExplainers({ section, className, schoolType }: SectionExplainersProps) {
   const { user } = useAuth();
-  const level = (user?.guidanceLevel as GuidanceLevel) || "basics";
+  const { guidanceLevel: level } = useShowCoach();
   const yetToLaunch = isYetToLaunch(user);
   const explainers = getExplainersForSection(section, level).filter(
     (e) => !yetToLaunch || !explainerHasForbiddenCopy(e),

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import {
   BOOKKEEPING_TRANSLATIONS,
@@ -32,8 +33,7 @@ export function WhatThisMeansInYourBooks({
   className,
 }: WhatThisMeansInYourBooksProps) {
   const { user } = useAuth();
-  const level =
-    (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const { guidanceLevel: level } = useShowCoach();
   const rawEntry = stepTitle ? BOOKKEEPING_TRANSLATIONS[stepTitle] : undefined;
   const entityKnown = !!entityType && entityType !== "undetermined";
   const isNonprofit = entityType === "nonprofit_501c3";

@@ -12,6 +12,7 @@ import { QuickLevers } from "@/components/coaching/QuickLevers";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import { computeMonthlyCashInflow } from "@/lib/revenue-defaults";
 import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { useYearCount } from "@/lib/use-model-duration";
 import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
@@ -22,7 +23,7 @@ const BUDGET_TO_BOOKS_LESSON_ID = "budget_to_books_review";
 
 function BudgetToBooksLesson() {
   const { user } = useAuth();
-  const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const { guidanceLevel: level } = useShowCoach();
   // Skip the variance/Actuals prompt for yet_to_launch founders — Task #302
   // hides every actuals-vs-budget surface until they're actually operating.
   const yetToLaunch = isYetToLaunch(user);

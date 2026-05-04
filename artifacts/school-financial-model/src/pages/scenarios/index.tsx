@@ -41,6 +41,7 @@ import {
 import { parseExportSourceLabel, parseLiveSnapshotSourceLabel } from "@/lib/actuals-source";
 import { highlightMatch } from "@/lib/text-highlight";
 import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { getFounderPersona, type FounderComfort } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
@@ -264,8 +265,7 @@ function describeScenario(cs: CustomScenario): string[] {
 // Explains what actuals are vs projections in plain terms, with the two
 // terms wrapped in glossary popovers so newer founders can dig deeper.
 function ActualsCoachIntro({ idx }: { idx: number }) {
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const { guidanceLevel } = useShowCoach();
   // Track once per mount per scenario index. Advanced founders never see
   // this intro so we skip the ping for them too — keeps the analytics
   // signal aligned with what's actually rendered.
@@ -325,9 +325,7 @@ interface ActualsVarianceCoachProps {
   decisionType: CustomScenario["decisionType"];
 }
 function ActualsVarianceCoach({ idx, projected, draft }: ActualsVarianceCoachProps) {
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const verbose = guidanceLevel !== "advanced";
+  const { guidanceLevel, showCoach: verbose } = useShowCoach();
 
   // Variance computation runs at every guidance level so even an advanced
   // founder sees a quiet one-liner when actuals miss projections by more

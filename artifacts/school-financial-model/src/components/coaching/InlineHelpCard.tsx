@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, HelpCircle, Calculator, BarChart3, BookOpen, La
 import { cn } from "@/lib/utils";
 import type { Explainer, ExtraDepthContent } from "@/lib/coaching/explainers";
 import { resolveExplainerBody } from "@/lib/coaching/explainers";
-import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
 interface InlineHelpCardProps {
@@ -15,8 +15,7 @@ interface InlineHelpCardProps {
 }
 
 export function InlineHelpCard({ explainer, className, defaultOpen, section, schoolType }: InlineHelpCardProps) {
-  const { user } = useAuth();
-  const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const { guidanceLevel: level } = useShowCoach();
   const [isOpen, setIsOpen] = useState(defaultOpen ?? false);
   const body = resolveExplainerBody(explainer, schoolType);
 

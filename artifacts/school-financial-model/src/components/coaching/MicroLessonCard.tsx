@@ -3,7 +3,7 @@ import { X, Lightbulb, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTriggeredLessons, dismissLesson, type MicroLesson } from "@/lib/coaching/micro-lessons";
 import type { FullModelData } from "@/pages/model-wizard/schema";
-import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
 interface MicroLessonContainerProps {
@@ -56,8 +56,7 @@ export function MicroLessonCardInner({ lesson, onDismiss }: { lesson: MicroLesso
 }
 
 export function MicroLessonContainer({ data, currentStepTitle, className }: MicroLessonContainerProps) {
-  const { user } = useAuth();
-  const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const { guidanceLevel: level } = useShowCoach();
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const lessons = useMemo(() => {

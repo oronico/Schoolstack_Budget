@@ -3,7 +3,7 @@ import { AlertTriangle, AlertCircle, Info, ArrowRight, Lightbulb } from "lucide-
 import { cn } from "@/lib/utils";
 import { runDiagnostics, computeWhatIfSuggestions, type DiagnosticFinding, type DiagnosticSeverity, type WhatIfSuggestion } from "@/lib/coaching/diagnostics-engine";
 import type { FullModelData } from "@/pages/model-wizard/schema";
-import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
 interface DiagnosticPanelProps {
@@ -121,8 +121,7 @@ function DiagnosticCard({ finding, onNavigate, whatIf }: { finding: DiagnosticFi
 }
 
 export function DiagnosticPanel({ data, onNavigateToStep, className, maxResults = 3, relevantIds }: DiagnosticPanelProps) {
-  const { user } = useAuth();
-  const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const { guidanceLevel: level } = useShowCoach();
 
   const findings = useMemo(() => {
     // When a decision-flow shell scopes us via `relevantIds`, fetch a wider

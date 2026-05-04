@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useLocation } from "wouter";
 import { Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
 interface WhatIfLinkProps {
@@ -40,8 +40,7 @@ const ENGAGED_EVENT_FOR_SOURCE = {
  */
 export function WhatIfLink({ source, detail, className, children }: WhatIfLinkProps) {
   const [location, setLocation] = useLocation();
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
+  const { guidanceLevel } = useShowCoach();
   // Fire the surface engagement event at most once per mount so the
   // coaching funnel measures unique engagements per nudge render.
   const engagedRef = useRef(false);
