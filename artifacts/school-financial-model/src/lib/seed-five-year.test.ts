@@ -332,6 +332,40 @@ describe("seedFiveYearFromYearOne", () => {
       expect(out.expenseRows![0].amounts).toEqual([10000, 10500, 11025, 11576, 12155]);
     });
 
+    it("stamps the resolved per-row escalationRate onto each seeded expense row (Task #498)", () => {
+      // Without this, ExpenseStep's getEscalationRule would fall back to its
+      // category default and silently overwrite the seeded Y2-Y5 cells when
+      // the wizard re-renders.
+      const out = seedFiveYearFromYearOne({
+        facilities: { generalCostInflation: 5 } as unknown as FullModelData["facilities"],
+        expenseRows: [
+          {
+            id: "ex1",
+            category: "instructional_program",
+            lineItem: "Curriculum",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [10000, 0, 0, 0, 0],
+          },
+          {
+            id: "ex2",
+            category: "instructional_program",
+            lineItem: "Already-set rate",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [10000, 0, 0, 0, 0],
+            escalationRate: 8,
+          },
+        ] as unknown as FullModelData["expenseRows"],
+      });
+      // Row with no prior rate gets the resolved costInflationPct (5%) stamped.
+      expect(out.expenseRows![0].escalationRate).toBe(5);
+      expect(out.expenseRows![0].amounts[1]).toBe(Math.round(10000 * 1.05));
+      // A row that already had an escalationRate keeps it (idempotent).
+      expect(out.expenseRows![1].escalationRate).toBe(8);
+      expect(out.expenseRows![1].amounts[1]).toBe(Math.round(10000 * 1.08));
+    });
+
     it("capitalAndDebtRows are held flat at Y1 (debt service convention)", () => {
       const out = seedFiveYearFromYearOne({
         capitalAndDebtRows: [

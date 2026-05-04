@@ -31,9 +31,22 @@ export interface EscalationRates {
 const RENT_CANONICAL_KEYS = ["Rent / Lease"];
 
 export function getEscalationRule(
-  row: { driverType: ExpenseDriverType; canonicalKey?: string; category?: string },
+  row: { driverType: ExpenseDriverType; canonicalKey?: string; category?: string; escalationRate?: number },
   rates: EscalationRates,
 ): EscalationRule {
+  // Task #498: an explicit per-row escalationRate (e.g. one stamped by the
+  // Extend-to-5-Year seeder) is the source of truth — honor it before any
+  // category-rule fallback so the wizard never silently re-projects Y2-Y5
+  // away from the seeded values.
+  if (typeof row.escalationRate === "number") {
+    const rate = row.escalationRate;
+    return {
+      rate,
+      label: rate > 0 ? `${rate}% escalation` : "no escalation",
+      type: "inflation",
+    };
+  }
+
   if (row.canonicalKey && RENT_CANONICAL_KEYS.includes(row.canonicalKey)) {
     return { rate: rates.annualRentIncrease, label: "per lease terms", type: "rent" };
   }

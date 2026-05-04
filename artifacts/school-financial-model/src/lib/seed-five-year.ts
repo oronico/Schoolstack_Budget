@@ -189,6 +189,13 @@ export function seedFiveYearFromYearOne<T extends Partial<FullModelData>>(
   }
 
   // ── expenseRows[].amounts
+  // We *also* stamp the resolved per-row escalationRate back onto the row.
+  // The wizard's ExpenseStep recomputes Y2-Y5 from Y1 on every render using
+  // `getEscalationRule(row, escalationRates)`; without an explicit per-row
+  // rate it would fall back to the category default, which can differ from
+  // (or drift away from) whatever the seeder used. Persisting the rate the
+  // seeder picked makes the seeder the single source of truth so the wizard
+  // never silently overwrites the seeded Y2-Y5 cells.
   const expenseRows = form.expenseRows as Array<Record<string, unknown>> | undefined;
   if (Array.isArray(expenseRows)) {
     next.expenseRows = expenseRows.map((row) => {
@@ -196,7 +203,14 @@ export function seedFiveYearFromYearOne<T extends Partial<FullModelData>>(
         row as { escalationRate?: number; escalationRateOverridden?: boolean },
         resolved,
       );
-      return { ...row, amounts: fillAmounts(row.amounts as number[] | undefined, rate) };
+      const out: Record<string, unknown> = {
+        ...row,
+        amounts: fillAmounts(row.amounts as number[] | undefined, rate),
+      };
+      if (typeof row.escalationRate !== "number") {
+        out.escalationRate = rate;
+      }
+      return out;
     });
   }
 

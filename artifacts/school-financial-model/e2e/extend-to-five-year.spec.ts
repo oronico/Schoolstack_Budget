@@ -275,15 +275,15 @@ test("Extend-to-5-Year seeds non-zero Y2-Y5 across enrollment, revenue, and expe
   expect(expectedRevenue).toEqual([600000, 618000, 636540, 655636, 675305]);
   expect(revenueAmounts).toEqual(expectedRevenue);
 
-  // 4. Expense step: Y2-Y5 amount cells are non-zero. We can't assert exact
-  //    values here the way we do for enrollment/revenue: the ExpenseStep
-  //    re-runs its own per-category escalation rule against Y1 and overwrites
-  //    any Y2-Y5 cell the founder hasn't manually edited (see
-  //    `escalatedAmounts` in ExpenseStep.tsx). So the on-screen Y2-Y5 values
-  //    reflect the wizard's category rule, not seed-five-year.ts directly —
-  //    locking the seed math here would actually pin the wizard's rule. The
-  //    exact expense escalation math is asserted at the unit level
-  //    (src/lib/seed-five-year.test.ts).
+  // 4. Expense step: Y2-Y5 amount cells match the seeded math exactly.
+  //    Task #498 — seed-five-year.ts now stamps the resolved per-row
+  //    `escalationRate` onto each seeded expense row, and ExpenseStep's
+  //    `getEscalationRule` honors that explicit per-row rate before falling
+  //    back to its category default. That makes the seeder the single source
+  //    of truth, so the wizard can no longer silently re-project Y2-Y5 away
+  //    from the seeded values. We assert exact values here the same way
+  //    enrollment and revenue do, so any future regression that overwrites
+  //    seeded expense cells trips this test.
   //    The category accordion state ("Program" group for our seeded
   //    `instructional_program` row) can race with the form reset — toggle
   //    until the seeded row is mounted, then expand the row card so the
@@ -312,11 +312,15 @@ test("Extend-to-5-Year seeds non-zero Y2-Y5 across enrollment, revenue, and expe
     await expect(input).toBeVisible({ timeout: 10_000 });
     expenseAmounts.push(Number((await input.inputValue()) || "0"));
   }
-  expect(expenseAmounts[0]).toBe(400000);
-  for (let i = 1; i < 5; i++) {
-    expect(
-      expenseAmounts[i],
-      `expense year${i + 1} should be non-zero, got ${expenseAmounts[i]}`,
-    ).toBeGreaterThan(0);
-  }
+  // 400000 * 1.03^n, rounded — same documented costInflationPct default of
+  // 3%/yr the seeder uses for instructional_program rows.
+  const expectedExpense = [
+    400000,
+    Math.round(400000 * 1.03),
+    Math.round(400000 * Math.pow(1.03, 2)),
+    Math.round(400000 * Math.pow(1.03, 3)),
+    Math.round(400000 * Math.pow(1.03, 4)),
+  ];
+  expect(expectedExpense).toEqual([400000, 412000, 424360, 437091, 450204]);
+  expect(expenseAmounts).toEqual(expectedExpense);
 });
