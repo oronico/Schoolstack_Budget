@@ -1,4 +1,4 @@
-import type { FullModelData } from "@/pages/model-wizard/schema";
+import { isSingleYearModel, type FullModelData } from "@/pages/model-wizard/schema";
 import { computeAnnualDebt, DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE, DEFAULT_COLA_PCT } from "@workspace/finance";
 import { computeQuickLevers } from "@/lib/scenario-engine";
 
@@ -15,6 +15,14 @@ export interface DiagnosticFinding {
 
 interface DiagnosticRule {
   id: string;
+  /**
+   * `true` if the rule reads from per-year arrays at index >= 1 (Y2-Y5).
+   * In single-year mode every Y2-Y5 entry is phantom (computed against a
+   * zero-padded enrollment array or the Y1 fallback the engine uses for
+   * empty years), so multi-year rules would fire on data the founder never
+   * entered. We skip them entirely when the model is single-year.
+   */
+  multiYear?: boolean;
   check: (data: FullModelData, computed: ComputedMetrics) => Omit<DiagnosticFinding, "id"> | null;
 }
 
@@ -272,8 +280,13 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
 }
 
 const RULES: DiagnosticRule[] = [
+  // Multi-year: scans all 5 years of ending cash. In single-year mode the
+  // engine still emits length-5 arrays computed against phantom Y1-fallback
+  // students, so a Y2-Y5 negative would not be a real founder-modelled
+  // condition. The single-year-safe variant below covers Y1 only.
   {
     id: "negative_cash",
+    multiYear: true,
     check: (_data, m) => {
       const badYear = m.endingCashByYear.findIndex(c => c < 0);
       if (badYear === -1) return null;
@@ -282,6 +295,20 @@ const RULES: DiagnosticRule[] = [
         headline: `I'm seeing cash go negative in Year ${badYear + 1}`,
         explanation: `Your projected ending cash drops below zero in Year ${badYear + 1}. That means the school wouldn't be able to cover its bills. We see this a lot in early drafts, so don't worry - it's fixable.`,
         action: "I'd start by reviewing your revenue assumptions or trimming expenses so cash stays positive every year. Even small timing adjustments can make a big difference.",
+        targetStep: 7,
+      };
+    },
+  },
+  {
+    id: "negative_cash_y1",
+    check: (_data, m) => {
+      const y1Cash = m.endingCashByYear[0];
+      if (y1Cash === undefined || y1Cash >= 0) return null;
+      return {
+        severity: "critical",
+        headline: "I'm seeing Year 1 cash go negative",
+        explanation: "Your projected ending cash for Year 1 drops below zero. That means the school wouldn't be able to cover its bills. We see this a lot in early drafts, so don't worry - it's fixable.",
+        action: "I'd start by reviewing your revenue assumptions or trimming expenses so cash stays positive in Year 1. Even small timing adjustments can make a big difference.",
         targetStep: 7,
       };
     },
@@ -347,7 +374,10 @@ const RULES: DiagnosticRule[] = [
     },
   },
   {
+    // Multi-year: compares Y2-Y4 enrollment against the prior year. Phantom
+    // in single-year mode (Y2-Y5 enrollment is zero / Y1 fallback there).
     id: "fast_enrollment_growth",
+    multiYear: true,
     check: (_data, m) => {
       for (let y = 1; y < 5; y++) {
         const prev = m.enrollment[y - 1];
@@ -385,7 +415,11 @@ const RULES: DiagnosticRule[] = [
     },
   },
   {
+    // Multi-year: ratios Y5 over Y1 for both revenue and expenses. In
+    // single-year mode Y5 is engine-computed against phantom Y1-fallback
+    // enrollment + escalation, so the ratio is meaningless.
     id: "expense_growth_exceeds_revenue",
+    multiYear: true,
     check: (_data, m) => {
       if (m.revenueByYear[0] <= 0 || m.expensesByYear[0] <= 0) return null;
       if (m.revenueByYear[4] <= 0) return null;
@@ -415,7 +449,10 @@ const RULES: DiagnosticRule[] = [
     },
   },
   {
+    // Multi-year: scans the minimum ending cash across Y1-Y3. Phantom in
+    // single-year mode for the Y2/Y3 components.
     id: "surplus_but_tight_cash",
+    multiYear: true,
     check: (_data, m) => {
       if (m.y1NetIncome <= 0 || m.y1Revenue <= 0) return null;
       const minCash = Math.min(...m.endingCashByYear.slice(0, 3));
@@ -459,8 +496,11 @@ const RULES: DiagnosticRule[] = [
 export function runDiagnostics(data: FullModelData, maxResults = 3): DiagnosticFinding[] {
   const metrics = computeMetrics(data);
   const findings: DiagnosticFinding[] = [];
+  const isSingleYear = isSingleYearModel(data);
 
   for (const rule of RULES) {
+    if (isSingleYear && rule.multiYear) continue;
+    if (!isSingleYear && rule.id === "negative_cash_y1") continue;
     const result = rule.check(data, metrics);
     if (result) findings.push({ id: rule.id, ...result });
   }

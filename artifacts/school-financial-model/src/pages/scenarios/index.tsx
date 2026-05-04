@@ -28,7 +28,7 @@ import {
 import { computeScenarios, type ScenarioAdjustments, type ScenarioResult, type NudgeItem } from "@/lib/scenario-engine";
 import { compareScenarios } from "@/lib/scenario-compare";
 import { ScenarioComparisonView } from "@/components/consultant/ScenarioComparisonView";
-import type { FullModelData, OutcomeStatus, CustomScenario, CustomScenarioActuals } from "@/pages/model-wizard/schema";
+import { isSingleYearModel, type FullModelData, type OutcomeStatus, type CustomScenario, type CustomScenarioActuals } from "@/pages/model-wizard/schema";
 import { WhatIfTrigger } from "@/components/whatif/WhatIfTrigger";
 import { encodeOverridesToHash, type WhatIfOverrides } from "@/lib/whatif-engine";
 import {
@@ -2189,8 +2189,10 @@ export function ScenarioPage() {
       ? { ...DEFAULT_SCENARIO, name: "Base Model" }
       : results.scenarios[rightIdx]?.adjustments;
 
-    return compareScenarios(leftMetrics, rightMetrics, leftAdj, rightAdj);
-  }, [results, compareLeft, compareRight, scenarios]);
+    return compareScenarios(leftMetrics, rightMetrics, leftAdj, rightAdj, {
+      isSingleYear: isSingleYearModel(modelData),
+    });
+  }, [results, compareLeft, compareRight, scenarios, modelData]);
 
   const persistScenarios = useCallback(
     (updated: ScenarioAdjustments[]) => {

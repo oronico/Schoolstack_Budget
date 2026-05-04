@@ -37,6 +37,10 @@ export interface ComparisonResult {
   worsenedCount: number;
 }
 
+export interface CompareScenariosOptions {
+  isSingleYear?: boolean;
+}
+
 function fmt(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
@@ -65,29 +69,35 @@ function severity(deltaPct: number): DeltaSeverity {
   return "major";
 }
 
-function revenueExplanation(base: number, compare: number, delta: number): string {
-  if (Math.abs(delta) < 1000) return "Revenue stays roughly the same across both scenarios.";
-  const dir = delta > 0 ? "higher" : "lower";
-  const word = delta > 0 ? "more" : "less";
-  return `Year 5 revenue is ${fmt(Math.abs(delta))} ${dir} (${fmt(base)} → ${fmt(compare)}), meaning the school collects ${word} each year to fund operations.`;
+function revenueExplanation(yearLabel: string) {
+  return (base: number, compare: number, delta: number): string => {
+    if (Math.abs(delta) < 1000) return "Revenue stays roughly the same across both scenarios.";
+    const dir = delta > 0 ? "higher" : "lower";
+    const word = delta > 0 ? "more" : "less";
+    return `${yearLabel} revenue is ${fmt(Math.abs(delta))} ${dir} (${fmt(base)} → ${fmt(compare)}), meaning the school collects ${word} each year to fund operations.`;
+  };
 }
 
-function expenseExplanation(base: number, compare: number, delta: number): string {
-  if (Math.abs(delta) < 1000) return "Expenses are virtually unchanged between scenarios.";
-  const dir = delta > 0 ? "higher" : "lower";
-  return `Year 5 expenses are ${fmt(Math.abs(delta))} ${dir} (${fmt(base)} → ${fmt(compare)}). ${delta > 0 ? "This increases the cost pressure on the school." : "This frees up budget for programs or reserves."}`;
+function expenseExplanation(yearLabel: string) {
+  return (base: number, compare: number, delta: number): string => {
+    if (Math.abs(delta) < 1000) return "Expenses are virtually unchanged between scenarios.";
+    const dir = delta > 0 ? "higher" : "lower";
+    return `${yearLabel} expenses are ${fmt(Math.abs(delta))} ${dir} (${fmt(base)} → ${fmt(compare)}). ${delta > 0 ? "This increases the cost pressure on the school." : "This frees up budget for programs or reserves."}`;
+  };
 }
 
-function netIncomeExplanation(base: number, compare: number, delta: number): string {
-  if (Math.abs(delta) < 1000) return "Net income is essentially the same in both scenarios.";
-  if (compare > 0 && base <= 0) return `The scenario turns a deficit into a surplus of ${fmt(compare)} by Year 5 - a meaningful improvement.`;
-  if (compare <= 0 && base > 0) return `The scenario turns a Year 5 surplus into a deficit of ${fmt(Math.abs(compare))} - this needs attention.`;
-  const dir = delta > 0 ? "stronger" : "weaker";
-  return `Year 5 bottom line is ${dir} by ${fmt(Math.abs(delta))} (${fmt(base)} → ${fmt(compare)}).`;
+function netIncomeExplanation(yearLabel: string) {
+  return (base: number, compare: number, delta: number): string => {
+    if (Math.abs(delta) < 1000) return "Net income is essentially the same in both scenarios.";
+    if (compare > 0 && base <= 0) return `The scenario turns a deficit into a surplus of ${fmt(compare)} by ${yearLabel} - a meaningful improvement.`;
+    if (compare <= 0 && base > 0) return `The scenario turns a ${yearLabel} surplus into a deficit of ${fmt(Math.abs(compare))} - this needs attention.`;
+    const dir = delta > 0 ? "stronger" : "weaker";
+    return `${yearLabel} bottom line is ${dir} by ${fmt(Math.abs(delta))} (${fmt(base)} → ${fmt(compare)}).`;
+  };
 }
 
-function marginExplanation(base: number, compare: number): string {
-  if (Math.abs(compare - base) < 0.005) return "Net margin is essentially unchanged.";
+function marginExplanation(_base: number, compare: number): string {
+  if (Math.abs(compare - _base) < 0.005) return "Net margin is essentially unchanged.";
   if (compare >= 0.05) return `Net margin of ${pct(compare)} gives the school a healthy cushion for unexpected costs.`;
   if (compare >= 0 && compare < 0.05) return `Net margin of ${pct(compare)} is thin - the school is breaking even but has little room for error.`;
   return `Net margin of ${pct(compare)} means the school is spending more than it earns. This needs to be addressed.`;
@@ -116,10 +126,12 @@ function cashRunwayExplanation(base: number, compare: number): string {
   return "Cash runway is the same in both scenarios.";
 }
 
-function enrollmentExplanation(base: number, compare: number, delta: number): string {
-  if (Math.abs(delta) < 1) return "Enrollment is the same in both scenarios.";
-  const dir = delta > 0 ? "more" : "fewer";
-  return `Year 5 enrollment is ${Math.abs(Math.round(delta))} students ${dir} (${Math.round(base)} → ${Math.round(compare)}). ${delta > 0 ? "More students typically means more revenue, but watch that staffing scales appropriately." : "Fewer students means less tuition revenue and may require adjusting staff."}`;
+function enrollmentExplanation(yearLabel: string) {
+  return (base: number, compare: number, delta: number): string => {
+    if (Math.abs(delta) < 1) return "Enrollment is the same in both scenarios.";
+    const dir = delta > 0 ? "more" : "fewer";
+    return `${yearLabel} enrollment is ${Math.abs(Math.round(delta))} students ${dir} (${Math.round(base)} → ${Math.round(compare)}). ${delta > 0 ? "More students typically means more revenue, but watch that staffing scales appropriately." : "Fewer students means less tuition revenue and may require adjusting staff."}`;
+  };
 }
 
 function breakEvenExplanation(base: number | null, compare: number | null): string {
@@ -142,72 +154,86 @@ interface MetricSpec {
   explain: (base: number, compare: number, delta: number) => string;
 }
 
-const METRIC_SPECS: MetricSpec[] = [
-  {
-    id: "revenue_y5",
-    label: "Year 5 Revenue",
-    getBase: (m) => m.revenue[4] ?? m.revenue[m.revenue.length - 1] ?? 0,
-    getCompare: (m) => m.revenue[4] ?? m.revenue[m.revenue.length - 1] ?? 0,
-    higherIsBetter: true,
-    explain: revenueExplanation,
-  },
-  {
-    id: "expenses_y5",
-    label: "Year 5 Expenses",
-    getBase: (m) => m.totalExpenses[4] ?? m.totalExpenses[m.totalExpenses.length - 1] ?? 0,
-    getCompare: (m) => m.totalExpenses[4] ?? m.totalExpenses[m.totalExpenses.length - 1] ?? 0,
-    higherIsBetter: false,
-    explain: expenseExplanation,
-  },
-  {
-    id: "net_income_y5",
-    label: "Year 5 Net Income",
-    getBase: (m) => m.netIncome[4] ?? m.netIncome[m.netIncome.length - 1] ?? 0,
-    getCompare: (m) => m.netIncome[4] ?? m.netIncome[m.netIncome.length - 1] ?? 0,
-    higherIsBetter: true,
-    explain: netIncomeExplanation,
-  },
-  {
-    id: "net_margin_y5",
-    label: "Year 5 Net Margin",
-    getBase: (m) => m.netMargin[4] ?? m.netMargin[m.netMargin.length - 1] ?? 0,
-    getCompare: (m) => m.netMargin[4] ?? m.netMargin[m.netMargin.length - 1] ?? 0,
-    higherIsBetter: true,
-    explain: marginExplanation,
-  },
-  {
-    id: "dscr_y5",
-    label: "Year 5 DSCR",
-    getBase: (m) => m.dscr[4] ?? m.dscr[m.dscr.length - 1] ?? 0,
-    getCompare: (m) => m.dscr[4] ?? m.dscr[m.dscr.length - 1] ?? 0,
-    higherIsBetter: true,
-    explain: dscrExplanation,
-  },
-  {
-    id: "reserve_months",
-    label: "Reserve Months (Year 5)",
-    getBase: (m) => m.reserveMonths,
-    getCompare: (m) => m.reserveMonths,
-    higherIsBetter: true,
-    explain: reserveExplanation,
-  },
-  {
-    id: "cash_runway",
-    label: "Cash Runway",
-    getBase: (m) => m.cashRunwayMonths,
-    getCompare: (m) => m.cashRunwayMonths,
-    higherIsBetter: true,
-    explain: cashRunwayExplanation,
-  },
-  {
-    id: "enrollment_y5",
-    label: "Year 5 Enrollment",
-    getBase: (m) => m.enrollment[4] ?? m.enrollment[m.enrollment.length - 1] ?? 0,
-    getCompare: (m) => m.enrollment[4] ?? m.enrollment[m.enrollment.length - 1] ?? 0,
-    higherIsBetter: true,
-    explain: enrollmentExplanation,
-  },
-];
+function buildMetricSpecs(isSingleYear: boolean): MetricSpec[] {
+  const idx = isSingleYear ? 0 : 4;
+  const yearLabel = isSingleYear ? "Year 1" : "Year 5";
+  const yearTag = isSingleYear ? "y1" : "y5";
+  const at = (arr: number[]): number => arr[idx] ?? arr[arr.length - 1] ?? 0;
+
+  return [
+    {
+      id: `revenue_${yearTag}`,
+      label: `${yearLabel} Revenue`,
+      getBase: (m) => at(m.revenue),
+      getCompare: (m) => at(m.revenue),
+      higherIsBetter: true,
+      explain: revenueExplanation(yearLabel),
+    },
+    {
+      id: `expenses_${yearTag}`,
+      label: `${yearLabel} Expenses`,
+      getBase: (m) => at(m.totalExpenses),
+      getCompare: (m) => at(m.totalExpenses),
+      higherIsBetter: false,
+      explain: expenseExplanation(yearLabel),
+    },
+    {
+      id: `net_income_${yearTag}`,
+      label: `${yearLabel} Net Income`,
+      getBase: (m) => at(m.netIncome),
+      getCompare: (m) => at(m.netIncome),
+      higherIsBetter: true,
+      explain: netIncomeExplanation(yearLabel),
+    },
+    {
+      id: `net_margin_${yearTag}`,
+      label: `${yearLabel} Net Margin`,
+      getBase: (m) => at(m.netMargin),
+      getCompare: (m) => at(m.netMargin),
+      higherIsBetter: true,
+      explain: marginExplanation,
+    },
+    {
+      id: `dscr_${yearTag}`,
+      label: `${yearLabel} DSCR`,
+      getBase: (m) => at(m.dscr),
+      getCompare: (m) => at(m.dscr),
+      higherIsBetter: true,
+      explain: dscrExplanation,
+    },
+    // `reserveMonths` and `cashRunwayMonths` are scalar metrics the engine
+    // derives from the full 5-year cash trajectory. They are not Y1-safe
+    // (Y2-Y5 phantom zeros leak into both numbers) so we drop them in
+    // single-year mode rather than mislabel a multi-year-derived value as
+    // "Year 1". The five-year branch keeps them.
+    ...(isSingleYear ? [] : [
+      {
+        id: "reserve_months",
+        label: "Reserve Months",
+        getBase: (m: ScenarioMetrics) => m.reserveMonths,
+        getCompare: (m: ScenarioMetrics) => m.reserveMonths,
+        higherIsBetter: true,
+        explain: reserveExplanation,
+      },
+      {
+        id: "cash_runway",
+        label: "Cash Runway",
+        getBase: (m: ScenarioMetrics) => m.cashRunwayMonths,
+        getCompare: (m: ScenarioMetrics) => m.cashRunwayMonths,
+        higherIsBetter: true,
+        explain: cashRunwayExplanation,
+      },
+    ]),
+    {
+      id: `enrollment_${yearTag}`,
+      label: `${yearLabel} Enrollment`,
+      getBase: (m) => at(m.enrollment),
+      getCompare: (m) => at(m.enrollment),
+      higherIsBetter: true,
+      explain: enrollmentExplanation(yearLabel),
+    },
+  ];
+}
 
 function computeDirection(delta: number, higherIsBetter: boolean): DeltaDirection {
   if (Math.abs(delta) < 0.001) return "unchanged";
@@ -220,8 +246,12 @@ export function compareScenarios(
   compareMetrics: ScenarioMetrics,
   baseAdjustments?: ScenarioAdjustments,
   compareAdjustments?: ScenarioAdjustments,
+  options?: CompareScenariosOptions,
 ): ComparisonResult {
-  const metricDeltas: MetricDelta[] = METRIC_SPECS.map((spec) => {
+  const isSingleYear = options?.isSingleYear === true;
+  const specs = buildMetricSpecs(isSingleYear);
+
+  const metricDeltas: MetricDelta[] = specs.map((spec) => {
     const baseValue = spec.getBase(baseMetrics);
     const compareValue = spec.getCompare(compareMetrics);
     const delta = compareValue - baseValue;
@@ -242,42 +272,44 @@ export function compareScenarios(
     };
   });
 
-  const beBase = baseMetrics.breakEvenYear;
-  const beCompare = compareMetrics.breakEvenYear;
-  let beDirection: DeltaDirection = "unchanged";
-  let beDeltaPct = 0;
-  let beDelta = 0;
+  if (!isSingleYear) {
+    const beBase = baseMetrics.breakEvenYear;
+    const beCompare = compareMetrics.breakEvenYear;
+    let beDirection: DeltaDirection = "unchanged";
+    let beDeltaPct = 0;
+    let beDelta = 0;
 
-  if (beCompare !== null && beBase === null) {
-    beDirection = "improved";
-    beDeltaPct = 0.4;
-  } else if (beCompare === null && beBase !== null) {
-    beDirection = "worsened";
-    beDeltaPct = 0.4;
-  } else if (beCompare !== null && beBase !== null) {
-    beDelta = beCompare - beBase;
-    if (beDelta < 0) {
+    if (beCompare !== null && beBase === null) {
       beDirection = "improved";
-      beDeltaPct = Math.abs(beDelta) / 5 * 0.3;
-    } else if (beDelta > 0) {
+      beDeltaPct = 0.4;
+    } else if (beCompare === null && beBase !== null) {
       beDirection = "worsened";
-      beDeltaPct = Math.abs(beDelta) / 5 * 0.3;
+      beDeltaPct = 0.4;
+    } else if (beCompare !== null && beBase !== null) {
+      beDelta = beCompare - beBase;
+      if (beDelta < 0) {
+        beDirection = "improved";
+        beDeltaPct = Math.abs(beDelta) / 5 * 0.3;
+      } else if (beDelta > 0) {
+        beDirection = "worsened";
+        beDeltaPct = Math.abs(beDelta) / 5 * 0.3;
+      }
     }
-  }
 
-  const breakEvenDelta: MetricDelta = {
-    id: "break_even",
-    label: "Break-Even Year",
-    baseValue: beBase ?? -1,
-    compareValue: beCompare ?? -1,
-    delta: beDelta,
-    deltaPct: beDeltaPct,
-    direction: beDirection,
-    severity: beDeltaPct >= 0.15 ? "major" : beDeltaPct >= 0.05 ? "moderate" : "minor",
-    explanation: breakEvenExplanation(beBase, beCompare),
-    higherIsBetter: false,
-  };
-  metricDeltas.push(breakEvenDelta);
+    const breakEvenDelta: MetricDelta = {
+      id: "break_even",
+      label: "Break-Even Year",
+      baseValue: beBase ?? -1,
+      compareValue: beCompare ?? -1,
+      delta: beDelta,
+      deltaPct: beDeltaPct,
+      direction: beDirection,
+      severity: beDeltaPct >= 0.15 ? "major" : beDeltaPct >= 0.05 ? "moderate" : "minor",
+      explanation: breakEvenExplanation(beBase, beCompare),
+      higherIsBetter: false,
+    };
+    metricDeltas.push(breakEvenDelta);
+  }
 
   const improved = metricDeltas.filter((d) => d.direction === "improved");
   const worsened = metricDeltas.filter((d) => d.direction === "worsened");
@@ -290,30 +322,33 @@ export function compareScenarios(
     ? worsened.reduce((worst, d) => Math.abs(d.deltaPct) > Math.abs(worst.deltaPct) ? d : worst)
     : null;
 
+  const yearPhrase = isSingleYear ? "Year 1" : "across the 5-year projection";
   let verdict: OverallVerdict;
   let verdictExplanation: string;
 
   if (improved.length > 0 && worsened.length === 0) {
     verdict = "stronger";
-    verdictExplanation = `This scenario improves ${improved.length} metric${improved.length > 1 ? "s" : ""} with no trade-offs. It is clearly stronger than the base.`;
+    verdictExplanation = `This scenario improves ${improved.length} ${yearPhrase} metric${improved.length > 1 ? "s" : ""} with no trade-offs. It is clearly stronger than the base.`;
   } else if (worsened.length > 0 && improved.length === 0) {
     verdict = "weaker";
-    verdictExplanation = `This scenario worsens ${worsened.length} metric${worsened.length > 1 ? "s" : ""} with no improvements. It is weaker than the base.`;
+    verdictExplanation = `This scenario worsens ${worsened.length} ${yearPhrase} metric${worsened.length > 1 ? "s" : ""} with no improvements. It is weaker than the base.`;
   } else if (improved.length === 0 && worsened.length === 0) {
     verdict = "mixed";
-    verdictExplanation = "The two scenarios are essentially identical across all key metrics.";
+    verdictExplanation = isSingleYear
+      ? "The two scenarios are essentially identical across every Year 1 metric."
+      : "The two scenarios are essentially identical across all key metrics.";
   } else {
     const impScore = improved.reduce((s, d) => s + Math.abs(d.deltaPct), 0);
     const worScore = worsened.reduce((s, d) => s + Math.abs(d.deltaPct), 0);
     if (impScore > worScore * 1.5) {
       verdict = "stronger";
-      verdictExplanation = `On balance, this scenario is stronger - ${improved.length} metric${improved.length > 1 ? "s" : ""} improve${improved.length === 1 ? "s" : ""} while ${worsened.length} worsen${worsened.length === 1 ? "s" : ""}, but the improvements outweigh the trade-offs.`;
+      verdictExplanation = `On balance, this scenario is stronger ${isSingleYear ? "in Year 1" : ""} - ${improved.length} metric${improved.length > 1 ? "s" : ""} improve${improved.length === 1 ? "s" : ""} while ${worsened.length} worsen${worsened.length === 1 ? "s" : ""}, but the improvements outweigh the trade-offs.`.replace("  ", " ");
     } else if (worScore > impScore * 1.5) {
       verdict = "weaker";
-      verdictExplanation = `On balance, this scenario is weaker - ${worsened.length} metric${worsened.length > 1 ? "s" : ""} worsen${worsened.length === 1 ? "s" : ""} while ${improved.length} improve${improved.length === 1 ? "s" : ""}, and the downsides outweigh the gains.`;
+      verdictExplanation = `On balance, this scenario is weaker ${isSingleYear ? "in Year 1" : ""} - ${worsened.length} metric${worsened.length > 1 ? "s" : ""} worsen${worsened.length === 1 ? "s" : ""} while ${improved.length} improve${improved.length === 1 ? "s" : ""}, and the downsides outweigh the gains.`.replace("  ", " ");
     } else {
       verdict = "mixed";
-      verdictExplanation = `This scenario involves real trade-offs: ${improved.length} metric${improved.length > 1 ? "s" : ""} improve${improved.length === 1 ? "s" : ""} and ${worsened.length} worsen${worsened.length === 1 ? "s" : ""}. Review each change to decide which matters more for your school.`;
+      verdictExplanation = `This scenario involves real trade-offs${isSingleYear ? " in Year 1" : ""}: ${improved.length} metric${improved.length > 1 ? "s" : ""} improve${improved.length === 1 ? "s" : ""} and ${worsened.length} worsen${worsened.length === 1 ? "s" : ""}. Review each change to decide which matters more for your school.`;
     }
   }
 

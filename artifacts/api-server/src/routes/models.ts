@@ -1581,6 +1581,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
       return sum + salary * count;
     }, 0);
     const staffingCostPercent = y1Rev > 0 ? (y1StaffingCost / y1Rev) * 100 : 0;
+    const isSingleYear = (profile?.modelDuration as string | undefined) === "single_year";
 
     const [teamResult, confirmResult] = await Promise.all([
       sendReviewRequestToTeam({
@@ -1616,6 +1617,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
         criticalSeverityCount,
         sharedViewUrl,
         source: "authenticated",
+        isSingleYear,
       }),
       sendReviewConfirmation(validatedEmail, name, schoolName),
     ]);

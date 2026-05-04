@@ -51,6 +51,7 @@ export interface ReviewRequestData {
   breakEvenYear?: number | null;
   staffCount?: number;
   staffingCostPercent?: number;
+  isSingleYear?: boolean;
 }
 
 function escapeHtml(str: string): string {
@@ -83,25 +84,39 @@ function severityDot(severity: "critical" | "high" | "medium"): string {
   return "🟢";
 }
 
-export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<{ success: boolean; error?: string }> {
-  const resend = getResend();
-  const fromAddress = process.env.EMAIL_FROM;
-  const notifyEmail = process.env.REVIEW_NOTIFY_EMAIL || fromAddress;
+export interface RenderedReviewRequest {
+  subject: string;
+  html: string;
+  priority: "high" | "standard";
+}
 
-  if (!resend || !fromAddress || !notifyEmail) {
-    return { success: false, error: "Email service is not configured." };
-  }
-
+/**
+ * Pure renderer for the advisor brief email. Exported so single-year /
+ * five-year template behaviour can be asserted without going through Resend.
+ */
+export function renderReviewRequestEmail(data: ReviewRequestData): RenderedReviewRequest {
   const priority = determinePriority(data);
-  const breakEven = data.breakEvenYear ?? findBreakEvenYear(data.netIncome);
+  const isSingleYear = data.isSingleYear === true;
+  // Break-even must be Y1-only in single-year mode. `findBreakEvenYear`
+  // scans all five entries; the engine zero-pads Y2-Y5 for single-year
+  // models and a zero net income reads as "broke even", which would
+  // surface as a phantom "Year 2" break-even in the brief.
+  const breakEven = isSingleYear
+    ? ((data.netIncome[0] ?? 0) >= 0 ? 1 : null)
+    : (data.breakEvenYear ?? findBreakEvenYear(data.netIncome));
   const source = data.source || "authenticated";
   const isPublic = source === "public";
 
   const y1Rev = data.revenue[0] || 0;
   const y1Exp = data.expenses[0] || 0;
   const y1Margin = y1Rev > 0 ? ((y1Rev - y1Exp) / y1Rev * 100).toFixed(1) : "0.0";
-  const y5Rev = data.revenue[data.revenue.length - 1] || 0;
-  const y5NI = data.netIncome[data.netIncome.length - 1] || 0;
+  // Single-year models keep length-5 arrays for engine compatibility but only
+  // Y1 reflects what the founder actually entered. Anchor the headline rev /
+  // net-income on Y1 (and label them Y1) so advisors don't read the phantom
+  // zero-padded Y5 entry as the school's projected fifth year.
+  const headlineYearLabel = isSingleYear ? "Y1" : "Y5";
+  const headlineRev = isSingleYear ? y1Rev : (data.revenue[data.revenue.length - 1] || 0);
+  const headlineNI = isSingleYear ? (data.netIncome[0] || 0) : (data.netIncome[data.netIncome.length - 1] || 0);
 
   const priorityBadge = priority === "high"
     ? `<div style="background:#FEE2E2;border:1px solid #FECACA;border-radius:6px;padding:8px 16px;margin-bottom:16px;text-align:center;"><span style="color:#DC2626;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;">⚠ High Priority Review</span></div>`
@@ -111,10 +126,14 @@ export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<
     ? `<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;padding:8px 16px;margin-bottom:16px;"><span style="color:#92400E;font-size:13px;">📋 <strong>Public wizard user</strong> — this person has not created an account yet.</span></div>`
     : "";
 
-  const yearHeaders = data.enrollment.map((_, i) => `<th style="padding:6px 10px;border-bottom:2px solid #D97706;text-align:right;color:#1E293B;font-size:12px;">Y${i + 1}</th>`).join("");
+  // Single-year models render the rollup as Y1 only. Five-year models render
+  // every year present in the array (typically 5).
+  const yearCount = isSingleYear ? 1 : data.enrollment.length;
+  const yearHeaders = Array.from({ length: yearCount }, (_, i) => `<th style="padding:6px 10px;border-bottom:2px solid #D97706;text-align:right;color:#1E293B;font-size:12px;">Y${i + 1}</th>`).join("");
 
   function yearRow(label: string, values: number[], formatter: (n: number) => string = fmtCurrency): string {
-    return `<tr><td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;font-weight:600;color:#1E293B;font-size:13px;">${label}</td>${values.map(v => `<td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;text-align:right;color:#475569;font-size:13px;">${formatter(v)}</td>`).join("")}</tr>`;
+    const sliced = values.slice(0, yearCount);
+    return `<tr><td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;font-weight:600;color:#1E293B;font-size:13px;">${label}</td>${sliced.map(v => `<td style="padding:5px 10px;border-bottom:1px solid #E2E8F0;text-align:right;color:#475569;font-size:13px;">${formatter(v)}</td>`).join("")}</tr>`;
   }
 
   const findingsHtml = data.criticalFindings.length > 0
@@ -144,7 +163,7 @@ export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<
           ${data.schoolStage ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Stage</td><td style="color:#1E293B;font-size:13px;">${escapeHtml(data.schoolStage)}</td></tr>` : ""}
           ${data.openingYear ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Opening Year</td><td style="color:#1E293B;font-size:13px;">${data.openingYear}</td></tr>` : ""}
           ${data.maxCapacity ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Max Capacity</td><td style="color:#1E293B;font-size:13px;">${data.maxCapacity.toLocaleString()} students</td></tr>` : ""}
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Enrollment Y1→Y5</td><td style="color:#1E293B;font-size:13px;">${data.enrollment.map(e => e.toLocaleString()).join(" → ")}</td></tr>
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">${data.isSingleYear === true ? "Enrollment Y1" : "Enrollment Y1→Y5"}</td><td style="color:#1E293B;font-size:13px;">${data.isSingleYear === true ? (data.enrollment[0] ?? 0).toLocaleString() : data.enrollment.map(e => e.toLocaleString()).join(" → ")}</td></tr>
           ${data.isFaithAffiliated ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Faith-Affiliated</td><td style="color:#1E293B;font-size:13px;">Yes${data.faithAffiliation ? " — " + escapeHtml(data.faithAffiliation) : ""}</td></tr>` : ""}
         </table>
 
@@ -163,8 +182,10 @@ export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<
         <h3 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;border-bottom:2px solid #D97706;padding-bottom:4px;font-size:14px;">Financial Snapshot</h3>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 4px;">
           <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Revenue</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(y1Rev)}</td><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Margin</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${y1Margin}%</td></tr>
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y5 Revenue</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(y5Rev)}</td><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y5 Net Income</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(y5NI)}</td></tr>
-          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Break-even</td><td style="color:#1E293B;font-weight:600;font-size:13px;" colspan="3">${breakEven ? `Year ${breakEven}` : "Not within projection"}</td></tr>
+          ${isSingleYear
+            ? `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Y1 Net Income</td><td style="color:#1E293B;font-weight:600;font-size:13px;" colspan="3">${fmtCurrency(headlineNI)}</td></tr>`
+            : `<tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">${headlineYearLabel} Revenue</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(headlineRev)}</td><td style="padding:3px 0;color:#94A3B8;font-size:13px;">${headlineYearLabel} Net Income</td><td style="color:#1E293B;font-weight:600;font-size:13px;">${fmtCurrency(headlineNI)}</td></tr>`}
+          <tr><td style="padding:3px 0;color:#94A3B8;font-size:13px;">Break-even</td><td style="color:#1E293B;font-weight:600;font-size:13px;" colspan="3">${breakEven ? `Year ${breakEven}` : (isSingleYear ? "Not reached in Year 1" : "Not within projection")}</td></tr>
         </table>
         <table style="width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:12px;">
           <thead><tr><th style="padding:5px 10px;border-bottom:2px solid #D97706;text-align:left;color:#1E293B;font-size:12px;">Metric</th>${yearHeaders}</tr></thead>
@@ -209,13 +230,28 @@ export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<
 
   const subjectPrefix = priority === "high" ? "⚠ " : "";
   const subjectSource = isPublic ? " [Public]" : "";
+  const subject = `${subjectPrefix}Review Brief: ${data.schoolName} (${data.state})${subjectSource}`;
+
+  return { subject, html, priority };
+}
+
+export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<{ success: boolean; error?: string }> {
+  const resend = getResend();
+  const fromAddress = process.env.EMAIL_FROM;
+  const notifyEmail = process.env.REVIEW_NOTIFY_EMAIL || fromAddress;
+
+  if (!resend || !fromAddress || !notifyEmail) {
+    return { success: false, error: "Email service is not configured." };
+  }
+
+  const { subject, html } = renderReviewRequestEmail(data);
 
   try {
     const { error } = await resend.emails.send({
       from: fromAddress,
       to: [notifyEmail],
       replyTo: data.requesterEmail,
-      subject: `${subjectPrefix}Review Brief: ${data.schoolName} (${data.state})${subjectSource}`,
+      subject,
       html,
     });
     if (error) {

@@ -245,6 +245,7 @@ router.post("/public/request-review", rateLimiter, async (req: Request, res: Res
       return sum + salary * count;
     }, 0);
     const staffingCostPercent = y1Rev > 0 ? (y1StaffingCost / y1Rev) * 100 : 0;
+    const isSingleYear = (profile?.modelDuration as string | undefined) === "single_year";
 
     const [teamResult, confirmResult] = await Promise.all([
       sendReviewRequestToTeam({
@@ -279,6 +280,7 @@ router.post("/public/request-review", rateLimiter, async (req: Request, res: Res
         criticalFindings: findings,
         criticalSeverityCount,
         source: "public",
+        isSingleYear,
       }),
       sendReviewConfirmation(trimmedEmail, trimmedName, schoolName),
     ]);
