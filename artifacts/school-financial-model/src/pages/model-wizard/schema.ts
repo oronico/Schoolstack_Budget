@@ -407,7 +407,11 @@ export const revenueRowSchema = z.object({
   note: z.string().optional(),
   billingMonths: z.union([z.literal(9), z.literal(10), z.literal(12)]).optional(),
   collectionMethod: z.enum(["autopay", "invoiced", "mixed"]).optional(),
-  collectionRate: z.number().optional(),
+  // Cap at 0-100% — uncapped values previously let the wizard form ship
+  // a 150% collection assumption that the JS engine ignored (assumes
+  // 100% accrual for net income) but the Excel monthly cash flow
+  // honored, producing impossible cash positions in lender exports.
+  collectionRate: z.coerce.number().min(0, "Collection rate can't be negative").max(100, "Collection rate can't exceed 100%").optional(),
   collectionDelayDays: z.number().optional(),
   paymentFrequency: z.enum(["monthly", "quarterly", "semi_annual", "annual"]).optional(),
   paymentTiming: z.enum(["upfront", "arrears"]).optional(),

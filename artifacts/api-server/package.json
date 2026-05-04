@@ -8,13 +8,14 @@
     "build": "tsx ./build.ts",
     "start": "node dist/index.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "pnpm run test:parity && pnpm run test:cross-engine && pnpm run test:decision-history && pnpm run test:decision-history-pdf && pnpm run test:decision-comparison-pdf-route && pnpm run test:lender-packet-pdf-route && pnpm run test:board-packet-pdf-route && pnpm run test:health && pnpm run test:board-packet-cap-insight && pnpm run test:board-packet-recruiting-projections && pnpm run test:inline-rationale-rollup && pnpm run test:forecast-accuracy-pdf && pnpm run test:account-accounting-uploads-route && pnpm run test:workbook-helpers-school-model && pnpm run test:build-packet-data && pnpm run test:collection-rate-sensitivity && pnpm run test:error-handler-malformed-input && pnpm run test:auth-token-validation && pnpm run test:model-input-validation && pnpm run test:round3-adversarial && pnpm run test:round4-adversarial && pnpm run test:round5-adversarial",
+    "test": "pnpm run test:parity && pnpm run test:cross-engine && pnpm run test:decision-history && pnpm run test:decision-history-pdf && pnpm run test:decision-comparison-pdf-route && pnpm run test:lender-packet-pdf-route && pnpm run test:board-packet-pdf-route && pnpm run test:health && pnpm run test:board-packet-cap-insight && pnpm run test:board-packet-recruiting-projections && pnpm run test:inline-rationale-rollup && pnpm run test:forecast-accuracy-pdf && pnpm run test:account-accounting-uploads-route && pnpm run test:workbook-helpers-school-model && pnpm run test:build-packet-data && pnpm run test:collection-rate-sensitivity && pnpm run test:error-handler-malformed-input && pnpm run test:auth-token-validation && pnpm run test:model-input-validation && pnpm run test:model-api-hardening && pnpm run test:round3-adversarial && pnpm run test:round4-adversarial && pnpm run test:round5-adversarial",
     "test:round3-adversarial": "tsx ./tests/round3-adversarial.ts",
     "test:round4-adversarial": "tsx ./tests/round4-adversarial.ts",
     "test:round5-adversarial": "tsx ./tests/round5-adversarial.ts",
     "test:error-handler-malformed-input": "tsx ./tests/error-handler-malformed-input.ts",
     "test:auth-token-validation": "tsx ./tests/auth-token-validation.ts",
     "test:model-input-validation": "tsx ./tests/model-input-validation.ts",
+    "test:model-api-hardening": "tsx ./tests/model-api-hardening.ts",
     "test:collection-rate-sensitivity": "tsx ./tests/collection-rate-sensitivity.ts",
     "qa:excel": "tsx ./tests/excel-qa.ts",
     "qa:golden": "tsx ./tests/golden-model.ts",
@@ -61,7 +62,8 @@
     "hyperformula": "^3.2.0",
     "jsonwebtoken": "^9.0.3",
     "pdfkit": "^0.17.2",
-    "resend": "^6.9.3"
+    "resend": "^6.9.3",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",

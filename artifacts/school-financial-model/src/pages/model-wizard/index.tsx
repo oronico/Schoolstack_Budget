@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense, useMemo, type ComponentType } from "react";
 import { useRoute, useLocation, useSearch } from "wouter";
-import { useGetModel, useUpdateModel } from "@workspace/api-client-react";
+import { useGetModel } from "@workspace/api-client-react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
@@ -270,9 +270,15 @@ export function ModelWizardPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [saveError, setSaveError] = useState<false | "network" | "auth" | "validation" | "unknown">(false);
+  const [saveError, setSaveError] = useState<false | "network" | "auth" | "validation" | "conflict" | "unknown">(false);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Task #472 — optimistic-concurrency token for /api/models/:id PUTs.
+  // Server's ETag is `"<updatedAt.toISOString()>"`. We init from the
+  // GET response's `updatedAt`, send it as If-Match on every save, and
+  // refresh from each successful PUT response so back-to-back saves
+  // from this same tab keep a fresh token.
+  const lastEtagRef = useRef<string | null>(null);
   const [stepInitialized, setStepInitialized] = useState(false);
   const [showImportBanner, setShowImportBanner] = useState(false);
   const [showExtendModal, setShowExtendModal] = useState(false);
@@ -352,7 +358,73 @@ export function ModelWizardPage() {
     query: { queryKey: [`/api/models/${modelId || 0}`], enabled: !!modelId }
   });
 
-  const updateMutation = useUpdateModel();
+  // Task #472 — central PUT helper that always carries the latest
+  // If-Match token and refreshes `lastEtagRef` from the response. We
+  // route every wizard save (autosave, what-if apply, extend-to-5y,
+  // reset, etc.) through this so a save in one path never invalidates
+  // the next save in another path with a stale ETag.
+  //
+  // Saves are serialized through `inFlightSaveRef` so back-to-back
+  // debounced autosaves can't pre-form requests with the same stale
+  // If-Match and trip a self-induced 412. After serialization, a 412
+  // always means a genuine cross-tab edit and is surfaced as a
+  // reload-notice via the existing saveError("conflict") UI.
+  const inFlightSaveRef = useRef<Promise<unknown>>(Promise.resolve());
+  const saveModel = useCallback(async (
+    data: Record<string, unknown>,
+  ): Promise<{ updatedAt?: string }> => {
+    if (!modelId) throw Object.assign(new Error("no model id"), { status: 0 });
+    const sendOnce = async (): Promise<Response> => {
+      const token = typeof localStorage !== "undefined" ? localStorage.getItem("auth_token") : null;
+      return fetch(`/api/models/${modelId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(lastEtagRef.current ? { "If-Match": lastEtagRef.current } : {}),
+        },
+        body: JSON.stringify(data),
+      });
+    };
+    const doSave = async (): Promise<{ updatedAt?: string }> => {
+      let resp = await sendOnce();
+      // Task #472 — on a 409 from a stale If-Match, the response body
+      // includes the server's `currentVersion`. Refresh our token from
+      // it and retry up to 3 more times before surfacing the conflict
+      // UI. This kills spurious 409s caused by intra-page races (multiple
+      // mounts seeding stale react-query cache, server-clock skew, the
+      // server bumping `updated_at` on the prior save in a way our cache
+      // hadn't observed yet, etc.) while still surfacing genuine
+      // cross-tab conflicts: a true concurrent writer keeps moving the
+      // server's row past every refreshed token we send.
+      for (let attempt = 0; attempt < 3 && resp.status === 409; attempt++) {
+        try {
+          const conflictBody = (await resp.clone().json()) as { currentVersion?: string };
+          if (conflictBody.currentVersion) {
+            lastEtagRef.current = `"${conflictBody.currentVersion}"`;
+          } else {
+            const tag = resp.headers.get("etag");
+            if (tag) lastEtagRef.current = tag;
+          }
+        } catch { /* ignore */ }
+        resp = await sendOnce();
+      }
+      if (!resp.ok) {
+        throw Object.assign(new Error(`save failed: ${resp.status}`), { status: resp.status });
+      }
+      const newEtag = resp.headers.get("etag");
+      let body: { updatedAt?: string } = {};
+      try { body = (await resp.clone().json()) as { updatedAt?: string }; } catch { /* ignore */ }
+      if (newEtag) lastEtagRef.current = newEtag;
+      else if (body.updatedAt) lastEtagRef.current = `"${body.updatedAt}"`;
+      return body;
+    };
+    const next = inFlightSaveRef.current.then(doSave, doSave);
+    // Keep the chain alive even if a save rejects so the next caller
+    // still gets to run instead of inheriting a poisoned promise.
+    inFlightSaveRef.current = next.catch(() => {});
+    return next;
+  }, [modelId]);
 
   // Step list is derived from the school type so picking "Chesterton Academy"
   // swaps in the periods-based salary schedule + fundraising flow. We watch
@@ -474,6 +546,20 @@ export function ModelWizardPage() {
     mode: "onChange"
   });
 
+
+  // Task #472 — seed the If-Match token from the model's loaded
+  // updatedAt the FIRST time we see a given model (per modelId).
+  // We deliberately do NOT re-seed on subsequent initialData changes:
+  // saveModel keeps `lastEtagRef` advanced from each PUT response,
+  // and re-seeding from a possibly-stale react-query cache would
+  // clobber that fresh token and trip a false 412 on the next save.
+  const seededEtagModelIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (initialData?.updatedAt && seededEtagModelIdRef.current !== initialData.id) {
+      lastEtagRef.current = `"${initialData.updatedAt}"`;
+      seededEtagModelIdRef.current = initialData.id;
+    }
+  }, [initialData?.id, initialData?.updatedAt]);
 
   useEffect(() => {
     if (initialData?.data) {
@@ -674,15 +760,15 @@ export function ModelWizardPage() {
         cleanedValues.schoolProfile = sp;
       }
       const normalizedValues = normalizeEscalationOverrideRows(cleanedValues);
-      await updateMutation.mutateAsync({
-        id: modelId,
-        data: {
-          name: (profile?.schoolName as string) || initialData.name,
-          currentStep,
-          ...(stageVal ? { schoolStage: stageVal } : {}),
-          ...(fundingVal ? { fundingProfile: fundingVal } : {}),
-          data: normalizedValues,
-        }
+      // Task #472 — route through the ETag-aware saveModel helper so
+      // every save (autosave, what-if apply, extend, etc.) carries the
+      // current If-Match and refreshes our token from the response.
+      await saveModel({
+        name: (profile?.schoolName as string) || initialData.name,
+        currentStep,
+        ...(stageVal ? { schoolStage: stageVal } : {}),
+        ...(fundingVal ? { fundingProfile: fundingVal } : {}),
+        data: normalizedValues,
       });
       setLastSaved(new Date());
       setSaveError(false);
@@ -694,6 +780,16 @@ export function ModelWizardPage() {
         setSaveError("auth");
       } else if (status === 400) {
         setSaveError("validation");
+      } else if (status === 409) {
+        // Task #472 — another tab/session updated this model. Stop the
+        // autosave retry loop and tell the user to reload so they don't
+        // unknowingly overwrite the other writer's edits.
+        setSaveError("conflict");
+        retryCountRef.current = 999;
+        if (retryTimerRef.current) {
+          clearTimeout(retryTimerRef.current);
+          retryTimerRef.current = null;
+        }
       } else if (!navigator.onLine || status === 0 || (err instanceof TypeError && /fetch|network/i.test((err as Error).message))) {
         setSaveError("network");
       } else {
@@ -703,7 +799,7 @@ export function ModelWizardPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [modelId, initialData, currentStep, updateMutation]);
+  }, [modelId, initialData, currentStep, saveModel]);
 
   useEffect(() => {
     if (!modelId || !initialData) return;
@@ -776,11 +872,14 @@ export function ModelWizardPage() {
         data: normalizedValues,
       });
       const token = localStorage.getItem("auth_token");
+      // Task #472 — also attach If-Match on the keepalive flush so the
+      // beforeunload save honors the same concurrency contract.
       fetch(`/api/models/${modelId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(lastEtagRef.current ? { "If-Match": lastEtagRef.current } : {}),
         },
         body,
         keepalive: true,
@@ -805,10 +904,7 @@ export function ModelWizardPage() {
     const cleaned = stripEmptyValues(JSON.parse(JSON.stringify(adjustedData))) as Record<string, unknown>;
     const normalized = normalizeEscalationOverrideRows(cleaned);
     try {
-      await updateMutation.mutateAsync({
-        id: modelId,
-        data: { data: normalized },
-      });
+      await saveModel({ data: normalized });
     } catch (err) {
       // Server write failed — keep the form on the prior snapshot so the UI
       // doesn't drift from server state. Surface the error to the caller.
@@ -828,10 +924,7 @@ export function ModelWizardPage() {
             methods.reset(priorSnapshot);
             const undoCleaned = stripEmptyValues(JSON.parse(JSON.stringify(priorSnapshot))) as Record<string, unknown>;
             const undoNormalized = normalizeEscalationOverrideRows(undoCleaned);
-            await updateMutation.mutateAsync({
-              id: modelId,
-              data: { data: undoNormalized },
-            });
+            await saveModel({ data: undoNormalized });
             setLastSaved(new Date());
             toast({ title: "Undone", description: "Your previous model values are restored." });
           }}
@@ -840,7 +933,7 @@ export function ModelWizardPage() {
         </ToastAction>
       ),
     });
-  }, [methods, modelId, updateMutation, toast]);
+  }, [methods, modelId, saveModel, toast]);
 
   const handleSaveAsScenarioFromWhatIf = useCallback(
     async (overrides: WhatIfOverrides, name: string) => {
@@ -862,12 +955,9 @@ export function ModelWizardPage() {
       const next = { ...current, customScenarios: updated };
       const cleaned = stripEmptyValues(JSON.parse(JSON.stringify(next))) as Record<string, unknown>;
       const normalized = normalizeEscalationOverrideRows(cleaned);
-      await updateMutation.mutateAsync({
-        id: modelId,
-        data: { data: normalized },
-      });
+      await saveModel({ data: normalized });
     },
-    [modelId, methods, updateMutation]
+    [modelId, methods, saveModel]
   );
 
   if (!modelId) {
@@ -1117,10 +1207,7 @@ export function ModelWizardPage() {
     completedSteps.current = new Set();
     localStorage.removeItem(`wizard_completed_${modelId}`);
     try {
-      await updateMutation.mutateAsync({
-        id: modelId,
-        data: { currentStep: 1, data: emptyData }
-      });
+      await saveModel({ currentStep: 1, data: emptyData });
     } catch (err) {
       console.warn("Failed to reset model:", err);
     }
@@ -1226,10 +1313,7 @@ export function ModelWizardPage() {
             // post-extend snapshot (and the autosave debounce fires once).
             methods.reset(next);
             if (modelId) {
-              await updateMutation.mutateAsync({
-                id: modelId,
-                data: { data: next as unknown as Record<string, unknown> },
-              });
+              await saveModel({ data: next as unknown as Record<string, unknown> });
             }
             // Land on Enrollment so the founder reviews the seeded ramp.
             const enrollmentStepId = stepIdByTitle("Enrollment");
@@ -1292,6 +1376,10 @@ export function ModelWizardPage() {
                   <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Offline - will retry</span>
                 ) : saveError === "validation" ? (
                   <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Could not save - check your entries</span>
+                ) : saveError === "conflict" ? (
+                  <button type="button" onClick={() => window.location.reload()} className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 underline underline-offset-2">
+                    <AlertCircle className="h-3 w-3" /> Updated in another tab - click to reload
+                  </button>
                 ) : saveError ? (
                   <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save issue - retrying</span>
                 ) : lastSaved ? (

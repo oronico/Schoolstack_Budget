@@ -1,5 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { z } from "zod";
 import { PublicExportUnderwritingBody } from "@workspace/api-zod";
+
+// Task #472 — strict email validation for review-request handlers.
+const reviewRequestEmailSchema = z.string().trim().min(1).max(254).email();
 import { generateSingleYearBudget } from "../lib/underwriting-export";
 import { generateFormulaWorkbook } from "../lib/formula-export";
 import { runConsultantEngine, computeYearFinancialsFromData } from "../lib/consultant-engine";
@@ -74,6 +78,21 @@ router.post("/public/export-single-year", rateLimiter, async (req: Request, res:
     }
 
     const data = parsed.data as Record<string, unknown>;
+
+    // Task #472 — gate the single-year endpoint by modelDuration. The
+    // multi-year code path produces a different workbook layout, and
+    // routing those models here silently truncated their projections.
+    // Surfacing a clean 400 lets the caller pick the multi-year export
+    // route instead of getting a confusing single-year file.
+    const profileForGate = (data.schoolProfile || {}) as Record<string, unknown>;
+    if (profileForGate.modelDuration !== "single_year") {
+      res.status(400).json({
+        error: "Single-year export is only available for single-year models. Use the multi-year export endpoint instead.",
+        code: "wrong_model_duration",
+      });
+      return;
+    }
+
     const rawYear = parseInt(req.query.year as string || "0", 10);
     const yearIndex = isNaN(rawYear) ? 0 : Math.max(0, Math.min(rawYear, 4));
 
@@ -121,11 +140,8 @@ router.post("/public/consultant", rateLimiter, async (req: Request, res: Respons
 
 router.post("/public/request-review", rateLimiter, async (req: Request, res: Response) => {
   try {
-    if (!isEmailConfigured()) {
-      res.status(503).json({ error: "Email service is not configured." });
-      return;
-    }
-
+    // Task #472 — email-service config gate moved BELOW input validation
+    // so a malformed payload always returns 400, not 503.
     const contentLength = parseInt(req.headers["content-length"] || "0", 10);
     if (contentLength > MAX_PAYLOAD_SIZE) {
       res.status(413).json({ error: "Payload too large." });
@@ -147,9 +163,19 @@ router.post("/public/request-review", rateLimiter, async (req: Request, res: Res
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      res.status(400).json({ error: "Please provide a valid email address." });
+    // Task #472 — Zod email so a bad address surfaces a clean 400
+    // rather than 500ing out of the mailer when Resend rejects it.
+    const emailParse = reviewRequestEmailSchema.safeParse(trimmedEmail);
+    if (!emailParse.success) {
+      res.status(400).json({
+        error: "Please provide a valid email address.",
+        code: "invalid_email",
+      });
+      return;
+    }
+
+    if (!isEmailConfigured()) {
+      res.status(503).json({ error: "Email service is not configured." });
       return;
     }
 

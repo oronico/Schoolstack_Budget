@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import crypto from "crypto";
 import { db } from "@workspace/db";
 import { financialModelsTable, exportsTable, sharedLinksTable, usersTable } from "@workspace/db/schema";
@@ -66,6 +67,91 @@ function isValidModelId(id: number): boolean {
 function sanitizeModelName(raw: string): string {
   // eslint-disable-next-line no-control-regex
   return raw.replace(/[\x00-\x1F\x7F]/g, "").trim();
+}
+
+// Task #472 — server-side hardening for the five fields the wizard form
+// validates but the loose generated UpdateModelBody schema previously
+// let through on direct PATCH:
+//   - schoolProfile.maxCapacity must be >= 1 (downstream Excel utilization
+//     and EnrollmentStep tooltip both render NaN% when 0 sneaks in).
+//   - revenueRows[].collectionRate must be 0..100 (an over-100 rate
+//     produces impossible cash positions in the lender Excel cash flow).
+//   - priorYearSnapshot.{currentCash,projectedRevenue,...} optional money
+//     fields must be >= 0 (negative injection corrupts the engine).
+//   - currentYearProjection.{currentCash,projectedRevenue,...} same.
+// Returns null when valid, or a human-readable error string otherwise.
+function validateModelDataHardening(data: Record<string, unknown> | null | undefined): string | null {
+  if (!data || typeof data !== "object") return null;
+  const sp = (data as Record<string, unknown>).schoolProfile as Record<string, unknown> | undefined;
+  if (sp && typeof sp === "object") {
+    const cap = sp.maxCapacity;
+    if (cap !== undefined && cap !== null) {
+      if (typeof cap !== "number" || !Number.isFinite(cap) || cap < 1) {
+        return "schoolProfile.maxCapacity must be at least 1.";
+      }
+    }
+  }
+  const revRows = (data as Record<string, unknown>).revenueRows as Array<Record<string, unknown>> | undefined;
+  if (Array.isArray(revRows)) {
+    for (const row of revRows) {
+      const r = row?.collectionRate;
+      if (r !== undefined && r !== null) {
+        if (typeof r !== "number" || !Number.isFinite(r) || r < 0 || r > 100) {
+          return "revenueRows[].collectionRate must be between 0 and 100.";
+        }
+      }
+    }
+  }
+  const NON_NEG_SNAPSHOT_FIELDS = [
+    "endingEnrollment", "totalRevenue", "totalExpenses", "endingCash",
+    "tuitionRevenue", "publicFundingRevenue", "philanthropyRevenue",
+    "otherRevenue", "personnelExpenses", "facilityExpenses",
+    "instructionalExpenses", "adminExpenses",
+  ];
+  const priorSnap = (data as Record<string, unknown>).priorYearSnapshot as Record<string, unknown> | undefined;
+  if (priorSnap && typeof priorSnap === "object") {
+    for (const f of NON_NEG_SNAPSHOT_FIELDS) {
+      const v = priorSnap[f];
+      if (v !== undefined && v !== null) {
+        if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
+          return `priorYearSnapshot.${f} cannot be negative.`;
+        }
+      }
+    }
+  }
+  const NON_NEG_PROJECTION_FIELDS = [
+    "currentEnrollment", "projectedRevenue", "projectedExpenses", "currentCash",
+  ];
+  const proj = (data as Record<string, unknown>).currentYearProjection as Record<string, unknown> | undefined;
+  if (proj && typeof proj === "object") {
+    for (const f of NON_NEG_PROJECTION_FIELDS) {
+      const v = proj[f];
+      if (v !== undefined && v !== null) {
+        if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
+          return `currentYearProjection.${f} cannot be negative.`;
+        }
+      }
+    }
+    const months = proj.monthsCompleted;
+    if (months !== undefined && months !== null) {
+      if (typeof months !== "number" || !Number.isFinite(months) || months < 0 || months > 12) {
+        return "currentYearProjection.monthsCompleted must be between 0 and 12.";
+      }
+    }
+  }
+  return null;
+}
+
+// Task #472 — optimistic-concurrency stub. The full version-column
+// migration is tracked as a follow-up; this header-only check uses the
+// row's `updated_at` (ISO-8601) as the version token. Clients that send
+// `If-Match` get a 409 + the latest server state on mismatch; clients
+// that omit the header keep the legacy last-write-wins behavior so the
+// existing rapid-back-to-back-PUT autosave flow doesn't 409 itself.
+const reviewRequestEmailSchema = z.string().trim().min(1).max(254).email();
+
+function buildEtag(updatedAt: Date): string {
+  return `"${updatedAt.toISOString()}"`;
 }
 
 function abortGuard(req: AuthRequest, res: Response): boolean {
@@ -313,6 +399,7 @@ router.get("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
 
+    res.setHeader("ETag", buildEtag(model.updatedAt));
     res.json(modelResponse(model));
   } catch (err) {
     console.error("Get model error:", err);
@@ -369,6 +456,40 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
     }
     const rawData = (req.body as Record<string, unknown>).data as Record<string, unknown> | undefined;
     const normalizedData = normalizeModelData(rawData ?? {});
+
+    // Task #472 — server-side hardening for fields the loose generated
+    // UpdateModelBody schema previously let through (maxCapacity >= 1,
+    // collectionRate 0..100, snapshot/projection .min(0)).
+    const hardeningError = validateModelDataHardening(normalizedData);
+    if (hardeningError) {
+      res.status(400).json({ error: hardeningError });
+      return;
+    }
+
+    // Task #472 — header-only optimistic concurrency check (the version
+    // column is a tracked follow-up). When the client sends `If-Match`,
+    // we compare to the row's current updated_at ETag and 409 on a
+    // mismatch with the latest server state so two open tabs don't
+    // silently clobber each other. Clients that omit the header keep
+    // the legacy last-write-wins behavior so the wizard's existing
+    // rapid-back-to-back-PUT autosave flow still passes.
+    const ifMatch = (req.headers["if-match"] as string | undefined)?.trim();
+    if (ifMatch) {
+      const currentTag = buildEtag(existing.updatedAt);
+      // Accept both quoted and unquoted forms for client convenience.
+      const normalizedClientTag = ifMatch.startsWith("\"") ? ifMatch : `"${ifMatch}"`;
+      if (normalizedClientTag !== currentTag) {
+        res.setHeader("ETag", currentTag);
+        res.status(409).json({
+          error: "Model was updated by another tab or session. Reload to see the latest changes.",
+          code: "version_conflict",
+          currentVersion: existing.updatedAt.toISOString(),
+          model: modelResponse(existing),
+        });
+        return;
+      }
+    }
+
     const rowCols = extractRowColumns(normalizedData);
     // NOTE on the lost-update race (audit finding #10): two simultaneous
     // PUTs against the same model row will both succeed and the later
@@ -399,6 +520,7 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
 
     await trackEvent("updated_model", req.userId, { modelId: model.id });
 
+    res.setHeader("ETag", buildEtag(model.updatedAt));
     res.json(modelResponse(model));
   } catch (err) {
     console.error("Update model error:", err);
@@ -1340,11 +1462,6 @@ router.get("/models/:id/review-available", authMiddleware, async (_req: AuthRequ
 
 router.post("/models/:id/request-review", authMiddleware, async (req: AuthRequest, res) => {
   try {
-    if (!isEmailConfigured()) {
-      res.status(503).json({ error: "Email service is not configured." });
-      return;
-    }
-
     const params = ExportModelParams.safeParse(req.params);
     if (!params.success || !isValidModelId(params.data.id)) {
       res.status(400).json({ error: "Invalid model ID." });
@@ -1352,14 +1469,26 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
     }
 
     const { name, email, message } = req.body || {};
-    if (!name || !email) {
+    if (!name || typeof name !== "string" || !email || typeof email !== "string") {
       res.status(400).json({ error: "Name and email are required." });
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      res.status(400).json({ error: "Please provide a valid email address." });
+    // Task #472 — Zod email check runs BEFORE the email-service config
+    // gate so a bad address always surfaces a deterministic 400, not
+    // a 503 that would mask the real validation error from the caller.
+    const emailParse = reviewRequestEmailSchema.safeParse(email);
+    if (!emailParse.success) {
+      res.status(400).json({
+        error: "Please provide a valid email address.",
+        code: "invalid_email",
+      });
+      return;
+    }
+    const validatedEmail = emailParse.data;
+
+    if (!isEmailConfigured()) {
+      res.status(503).json({ error: "Email service is not configured." });
       return;
     }
 
@@ -1456,7 +1585,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
     const [teamResult, confirmResult] = await Promise.all([
       sendReviewRequestToTeam({
         requesterName: name,
-        requesterEmail: email,
+        requesterEmail: validatedEmail,
         message: message || undefined,
         schoolName,
         state,
@@ -1488,7 +1617,7 @@ router.post("/models/:id/request-review", authMiddleware, async (req: AuthReques
         sharedViewUrl,
         source: "authenticated",
       }),
-      sendReviewConfirmation(email, name, schoolName),
+      sendReviewConfirmation(validatedEmail, name, schoolName),
     ]);
 
     if (!teamResult.success || !confirmResult.success) {
