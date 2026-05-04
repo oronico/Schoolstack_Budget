@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen, UserCog, ChevronDown, FileSpreadsheet, MessageSquare } from "lucide-react";
+import { LogOut, LayoutDashboard, Settings, HelpCircle, BookOpen, UserCog, ChevronDown, MessageSquare } from "lucide-react";
 import { BudgetPrimer } from "@/components/coaching/BudgetPrimer";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { SOLUTION_LINK_SUMMARIES } from "@/data/solution-pages";
@@ -281,15 +281,6 @@ export function Navbar() {
                         >
                           <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
                           Account settings
-                        </Link>
-                        <Link
-                          href="/account"
-                          onClick={() => setShowSettings(false)}
-                          data-testid="navbar-account-link"
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
-                        >
-                          <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />
-                          Saved uploads
                         </Link>
                         <div className="border-t border-border mx-2" />
                         <button
