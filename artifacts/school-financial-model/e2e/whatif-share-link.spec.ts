@@ -280,6 +280,15 @@ test("Email and SMS share buttons expose mailto: / sms: hrefs with the same #wha
   expect(emailBody).toContain(`m:${SHARE_RENT}`);
   expect(emailBody).toContain(`/model/${modelId}/scenarios`);
 
+  // Task #448 — the email body must include a short, plain-text summary
+  // of the active overrides so a board chair can make sense of the link
+  // without clicking. Pin on the literal lines our builder emits so a
+  // copy regression (e.g. dropping the "Changes" header, or going back
+  // to a bare URL) fails here.
+  expect(emailBody).toContain("Changes in this what-if:");
+  expect(emailBody).toContain(`Monthly rent: $${SHARE_RENT.toLocaleString("en-US")}`);
+  expect(emailBody).toContain("Open the live planner:");
+
   // SMS href: body-only (most carriers/clients ignore `subject` in
   // `sms:`), with the same encoded share URL.
   const smsHref = (await smsLink.getAttribute("href")) ?? "";
@@ -291,8 +300,9 @@ test("Email and SMS share buttons expose mailto: / sms: hrefs with the same #wha
   expect(smsBody).toContain(`m:${SHARE_RENT}`);
   expect(smsBody).toContain(`/model/${modelId}/scenarios`);
 
-  // Cross-check: the share URL embedded in the email body (sans the
-  // trailing newline the email body adds) and the SMS body should be
-  // identical, since both flow through buildShareUrl(overrides).
-  expect(smsBody).toBe(emailBody.trim());
+  // Cross-check: the SMS body is just the share URL (SMS is space-
+  // constrained, so we don't pad it with the multi-line summary), and
+  // that exact URL must appear inside the richer email body. Both flow
+  // through buildShareUrl(overrides) so they cannot drift apart.
+  expect(emailBody).toContain(smsBody);
 });

@@ -34,6 +34,7 @@ import {
   decodeOverridesFromHash,
   isEmptyOverrides,
   type WhatIfOverrides,
+  type WhatIfImpact,
 } from "@/lib/whatif-engine";
 import type { CustomScenario, FullModelData } from "@/pages/model-wizard/schema";
 import { cn } from "@/lib/utils";
@@ -159,6 +160,128 @@ function buildShareUrl(overrides: WhatIfOverrides): string {
   if (typeof window === "undefined") return "";
   const { pathWithHash } = buildWhatIfHashTarget(overrides);
   return `${window.location.origin}${pathWithHash}`;
+}
+
+// Pretty-prints a whole-dollar amount like "$14,250". Used for the email
+// share summary so a board chair sees "$14,250" rather than the abbreviated
+// "$14K" we use in the compact UI sparkline labels.
+function fmtUsd(val: number): string {
+  if (!isFinite(val)) return "—";
+  const sign = val < 0 ? "-" : "";
+  const abs = Math.abs(Math.round(val));
+  return `${sign}$${abs.toLocaleString("en-US")}`;
+}
+
+// Builds the plain-text body for the `mailto:` share. A bare URL alone
+// gives the recipient no context — this prepends a 2-3 line summary of
+// the active overrides and the headline impact (DSCR shift, break-even
+// shift, cash runway delta) so the email is readable on its own. The
+// URL still appears at the bottom so the recipient can open the live
+// planner. Pulled out as a pure helper so the e2e suite can pin on the
+// exact lines and so a future "Share via Slack" / "Share via Teams"
+// affordance can reuse the same summary text.
+export function buildEmailShareBody(args: {
+  shareUrl: string;
+  overrides: WhatIfOverrides;
+  impact: WhatIfImpact;
+  baseEnrollment: number[];
+  baseRetention: number | undefined;
+}): string {
+  const { shareUrl, overrides, impact, baseEnrollment, baseRetention } = args;
+  const lines: string[] = [];
+
+  const changes: string[] = [];
+  if (overrides.monthlyRent !== undefined) {
+    const wasStr =
+      impact.detectedBaseMonthlyRent !== null
+        ? ` (was ${fmtUsd(impact.detectedBaseMonthlyRent)})`
+        : "";
+    changes.push(`Monthly rent: ${fmtUsd(overrides.monthlyRent)}${wasStr}`);
+  }
+  if (overrides.enrollmentDelta && overrides.enrollmentDelta.some((v) => v !== 0)) {
+    const parts = overrides.enrollmentDelta
+      .map((d, i) => {
+        if (d === 0) return null;
+        const base = baseEnrollment[i] ?? 0;
+        const sign = d > 0 ? "+" : "";
+        return `Y${i + 1} ${sign}${d} (${base} → ${base + d})`;
+      })
+      .filter((s): s is string => s !== null);
+    changes.push(`Enrollment: ${parts.join(", ")} students`);
+  }
+  if (overrides.retentionRate !== undefined) {
+    const wasStr =
+      typeof baseRetention === "number" ? ` (was ${baseRetention}%)` : "";
+    changes.push(`Retention: ${overrides.retentionRate}%${wasStr}`);
+  }
+  if (
+    overrides.tuitionDeltaPerStudent !== undefined &&
+    overrides.tuitionDeltaPerStudent !== 0
+  ) {
+    const delta = overrides.tuitionDeltaPerStudent;
+    const sign = delta > 0 ? "+" : "-";
+    changes.push(`Tuition: ${sign}${fmtUsd(Math.abs(delta))}/student`);
+  }
+  if (overrides.oneTimeFitOut !== undefined && overrides.oneTimeFitOut !== 0) {
+    changes.push(`One-time fit-out (Y1): ${fmtUsd(overrides.oneTimeFitOut)}`);
+  }
+
+  if (changes.length === 0) {
+    lines.push(
+      "No overrides applied yet — opening the link will show the live planner.",
+    );
+  } else {
+    lines.push("Changes in this what-if:");
+    for (const c of changes) lines.push(`- ${c}`);
+  }
+
+  // Headline impact: pick the year with the largest DSCR swing so the
+  // summary surfaces the worst-affected year (the one a lender will
+  // focus on), not just Y1. Skip when the swing is negligible.
+  const impactLines: string[] = [];
+  const baseDscr = impact.base.dscr ?? [];
+  const adjDscr = impact.adjusted.dscr ?? [];
+  let worstIdx = -1;
+  let worstDelta = 0;
+  for (let i = 0; i < Math.min(baseDscr.length, adjDscr.length); i++) {
+    const b = baseDscr[i];
+    const a = adjDscr[i];
+    if (!isFinite(b) || !isFinite(a)) continue;
+    const d = Math.abs(a - b);
+    if (d > worstDelta) {
+      worstDelta = d;
+      worstIdx = i;
+    }
+  }
+  if (worstIdx >= 0 && worstDelta >= 0.05) {
+    impactLines.push(
+      `DSCR Y${worstIdx + 1}: ${baseDscr[worstIdx].toFixed(2)} → ${adjDscr[worstIdx].toFixed(2)}`,
+    );
+  }
+  const beShift = impact.deltas.breakEvenYearShift;
+  if (beShift !== null && beShift !== 0) {
+    const sign = beShift > 0 ? "+" : "";
+    const yr = Math.abs(beShift) === 1 ? "year" : "years";
+    impactLines.push(`Break-even shifts ${sign}${beShift} ${yr}`);
+  }
+  const runway = impact.deltas.cashRunwayDeltaMonths;
+  if (typeof runway === "number" && Math.abs(runway) >= 1) {
+    const sign = runway > 0 ? "+" : "";
+    impactLines.push(`Cash runway: ${sign}${runway.toFixed(0)} mo`);
+  }
+  if (impact.deltas.fitOutYear1 && impact.deltas.fitOutYear1 !== 0) {
+    impactLines.push(`Y1 fit-out outlay: ${fmtUsd(impact.deltas.fitOutYear1)}`);
+  }
+
+  if (impactLines.length > 0) {
+    lines.push("");
+    lines.push("Headline impact:");
+    for (const l of impactLines) lines.push(`- ${l}`);
+  }
+
+  lines.push("");
+  lines.push(`Open the live planner: ${shareUrl}`);
+  return lines.join("\n");
 }
 
 export function WhatIfDrawer({
@@ -301,9 +424,21 @@ export function WhatIfDrawer({
   const emailShareHref = useMemo(() => {
     if (!shareUrl) return "#";
     const subject = "Take a look at this what-if scenario";
-    const body = `${shareUrl}\n`;
+    // Use the immediate `overrides` (not the debounced copy) so the
+    // changes-list in the body cannot drift from the `shareUrl`, which
+    // also derives from `overrides`. `impact` still trails by the
+    // debounce window (~80ms); the headline-impact lines guard against
+    // negligible swings, so a stale impact at most omits a line — it
+    // never contradicts the change list or the URL.
+    const body = buildEmailShareBody({
+      shareUrl,
+      overrides,
+      impact,
+      baseEnrollment,
+      baseRetention,
+    });
     return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  }, [shareUrl]);
+  }, [shareUrl, overrides, impact, baseEnrollment, baseRetention]);
 
   // SMS — most carriers/clients ignore a `subject` in `sms:`, so we only
   // set `body`. iOS's Messages app and Android's default SMS handler
