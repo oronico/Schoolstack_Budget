@@ -109,7 +109,7 @@ The API server uses a multi-stage Dockerfile:
 The file `artifacts/school-financial-model/public/_redirects` handles routing:
 
 ```
-/api/*  https://workspaceapi-server-production-bffd.up.railway.app/api/:splat  200!
+/api/*  https://schoolstackbudget.up.railway.app/api/:splat  200
 /*      /index.html   200
 ```
 

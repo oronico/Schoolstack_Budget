@@ -11,6 +11,8 @@ A full-stack financial modeling platform for school founders to create lender-re
 
 **Production:** [budget.schoolstack.ai](https://budget.schoolstack.ai)
 
+**Launch state:** see [`PUBLIC_LAUNCH_CHECKLIST.md`](PUBLIC_LAUNCH_CHECKLIST.md) (gated PASS/FAIL/N/A) and [`docs/LAUNCH_REPORT.md`](docs/LAUNCH_REPORT.md) (env-var contract, smoke-test evidence, operator hand-off).
+
 ---
 
 ## Overview

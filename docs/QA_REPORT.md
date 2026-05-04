@@ -136,7 +136,7 @@ Landing page at 375px viewport:
 ## Test Environment
 
 - **Frontend:** Netlify CDN (budget.schoolstack.ai)
-- **API:** Railway (workspaceapi-server-production-bffd.up.railway.app)
+- **API:** Railway (schoolstackbudget.up.railway.app)
 - **Database:** Railway PostgreSQL
 - **Browsers:** Chromium (Playwright), manual verification
 - **Tools:** curl, ExcelJS, Playwright e2e
