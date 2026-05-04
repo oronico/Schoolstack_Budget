@@ -839,7 +839,7 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
               body:
                 "From QuickBooks, Xero, or Wave, run a Profit & Loss for the most recent full month or year. Export as CSV or Excel — no edits, no merged cells. We read the rightmost numeric column, so summary rows like \"Total Revenue\" and \"Net Income\" land in the right buckets automatically. Skip exports with multiple sheets, pivot tables, or dashboard formatting.",
               readTimeSeconds: 25,
-              triggerStep: 0,
+              triggerStepTitle: "",
               checkTrigger: () => true,
             }}
             onDismiss={() => {

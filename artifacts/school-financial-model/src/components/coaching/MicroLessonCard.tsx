@@ -8,7 +8,12 @@ import { trackCoachingEvent } from "@/lib/coaching/track";
 
 interface MicroLessonContainerProps {
   data: FullModelData;
-  currentStep: number;
+  // Title of the wizard step currently being rendered (e.g. "Expenses").
+  // The wizard resolves the visible step list to a title at render time so
+  // that lessons fire on the correctly-named step regardless of model
+  // duration or school-type variant — see `getTriggeredLessons` for the
+  // matching rules and skip-on-missing semantics.
+  currentStepTitle: string;
   className?: string;
 }
 
@@ -50,14 +55,14 @@ export function MicroLessonCardInner({ lesson, onDismiss }: { lesson: MicroLesso
   );
 }
 
-export function MicroLessonContainer({ data, currentStep, className }: MicroLessonContainerProps) {
+export function MicroLessonContainer({ data, currentStepTitle, className }: MicroLessonContainerProps) {
   const { user } = useAuth();
   const level = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const lessons = useMemo(() => {
-    return getTriggeredLessons(data, currentStep, level).filter(l => !dismissedIds.has(l.id));
-  }, [data, currentStep, dismissedIds, level]);
+    return getTriggeredLessons(data, currentStepTitle, level).filter(l => !dismissedIds.has(l.id));
+  }, [data, currentStepTitle, dismissedIds, level]);
 
   const trackedRef = useRef<string>("");
   useEffect(() => {
@@ -68,11 +73,11 @@ export function MicroLessonContainer({ data, currentStep, className }: MicroLess
     for (const lesson of lessons) {
       trackCoachingEvent("micro_lesson_shown", {
         lessonId: lesson.id,
-        step: currentStep,
+        step: currentStepTitle,
         guidanceLevel: level,
       });
     }
-  }, [lessons, currentStep, level]);
+  }, [lessons, currentStepTitle, level]);
 
   if (level === "advanced" || lessons.length === 0) return null;
 
