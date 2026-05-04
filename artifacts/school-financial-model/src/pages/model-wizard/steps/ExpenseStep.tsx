@@ -1058,6 +1058,45 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   }, [personnelCosts, expenseRows, allOperatingCategories, totalFTE]);
   const costPerStudent = y1Students > 0 ? Math.round(y1OperatingTotal / y1Students) : 0;
 
+  // Task #512: live Y1 → Year-N cost ramp preview shown above the 5yr
+  // summary cards. Mirrors the Extend-to-5-Year modal preview, and uses
+  // the same per-row escalation logic the seeder applies (see
+  // `pickExpenseRowRate` in seed-five-year.ts): an explicit per-row
+  // `escalationRate` is honored, otherwise we fall back to general cost
+  // inflation. Capital & debt rows are held flat, matching the seeder.
+  const rampYears = yearCount;
+  const y1PayrollPreview = personnelCosts?.grandTotal || 0;
+  const y5PayrollPreview = useMemo(() => {
+    if (y1PayrollPreview <= 0 || rampYears <= 1) return y1PayrollPreview;
+    return Math.round(
+      y1PayrollPreview * Math.pow(1 + (annualSalaryIncrease || 0) / 100, rampYears - 1),
+    );
+  }, [y1PayrollPreview, rampYears, annualSalaryIncrease]);
+
+  const { y1NonPayrollPreview, y5NonPayrollPreview } = useMemo(() => {
+    let y1Sum = 0;
+    let y5Sum = 0;
+    const pickRowRate = (r: ExpenseRowData): number =>
+      typeof r.escalationRate === "number" ? r.escalationRate : (generalCostInflation || 0);
+    for (const cat of allOperatingCategories) {
+      const catRows = expenseRows.filter((r) => r.category === cat && r.enabled);
+      for (const r of catRows) {
+        const y1 = annualize(r.amounts[0] || 0, r.driverType, totalFTE);
+        y1Sum += y1;
+        const rate = pickRowRate(r);
+        const y5 = rampYears <= 1
+          ? y1
+          : Math.round(y1 * Math.pow(1 + rate / 100, rampYears - 1));
+        y5Sum += y5;
+      }
+    }
+    // Capital/debt is intentionally excluded so this preview matches the
+    // Extend-to-5-Year modal's non-payroll preview (which is built from
+    // expense rows only). Keeping the two surfaces in sync prevents
+    // founders from seeing different Y5 numbers in the two places.
+    return { y1NonPayrollPreview: y1Sum, y5NonPayrollPreview: y5Sum };
+  }, [expenseRows, allOperatingCategories, totalFTE, generalCostInflation, rampYears]);
+
   const yearLabels = Array.from({ length: yearCount }, (_, i) => `Y${i + 1}`);
 
   if (showCategoryPicker) {
@@ -1510,6 +1549,51 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
               <span className="text-amber-700 font-semibold"> - that exceeds your building capacity. You'll want to address this before finalizing your plan.</span>
             ) : (
               <span> ({Math.round(((maxCapacity - y5Students) / maxCapacity) * 100)}% spare capacity by Year 5 - room to grow).</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {rampYears > 1 && (y1PayrollPreview > 0 || y1NonPayrollPreview > 0) && (
+        <div
+          data-testid="expense-ramp-preview"
+          className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Year 1 → Year {rampYears} preview
+            </span>
+            <span className="text-[11px] text-muted-foreground hidden sm:inline">
+              · updates live as you edit salaries and cost rates
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {y1PayrollPreview > 0 && (
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-card border border-border/40 px-3 py-2">
+                <span className="text-sm text-muted-foreground">Payroll</span>
+                <span className="tabular-nums text-sm font-medium text-foreground">
+                  <span data-testid="expense-ramp-payroll-y1">{formatCurrency(y1PayrollPreview)}</span>
+                  <span className="mx-1.5 text-muted-foreground">→</span>
+                  <span data-testid="expense-ramp-payroll-y5">{formatCurrency(y5PayrollPreview)}</span>
+                  <span className="ml-2 text-[11px] text-muted-foreground">
+                    @ {annualSalaryIncrease}%/yr
+                  </span>
+                </span>
+              </div>
+            )}
+            {y1NonPayrollPreview > 0 && (
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-card border border-border/40 px-3 py-2">
+                <span className="text-sm text-muted-foreground">Expenses (non-payroll)</span>
+                <span className="tabular-nums text-sm font-medium text-foreground">
+                  <span data-testid="expense-ramp-nonpayroll-y1">{formatCurrency(y1NonPayrollPreview)}</span>
+                  <span className="mx-1.5 text-muted-foreground">→</span>
+                  <span data-testid="expense-ramp-nonpayroll-y5">{formatCurrency(y5NonPayrollPreview)}</span>
+                  <span className="ml-2 text-[11px] text-muted-foreground">
+                    per-row escalation
+                  </span>
+                </span>
+              </div>
             )}
           </div>
         </div>
