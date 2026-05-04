@@ -1407,27 +1407,33 @@ export function ModelWizardPage() {
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="text-xs font-medium text-muted-foreground">
                 {isSaving ? (
-                  <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</span>
+                  <span data-testid="wizard-save-status-saving" className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</span>
                 ) : saveError === "auth" ? (
-                  <button type="button" onClick={() => { localStorage.removeItem("auth_token"); setLocation("/login"); }} className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 underline underline-offset-2">
+                  <button type="button" data-testid="wizard-save-auth-relogin" onClick={() => { localStorage.removeItem("auth_token"); setLocation("/login"); }} className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 underline underline-offset-2">
                     <AlertCircle className="h-3 w-3" /> Session expired - log in again
                   </button>
                 ) : saveError === "network" ? (
-                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Offline - will retry</span>
+                  <span data-testid="wizard-save-error-network" className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Offline - will retry</span>
                 ) : saveError === "validation" ? (
-                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Could not save - check your entries</span>
+                  <span data-testid="wizard-save-error-validation" className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Could not save - check your entries</span>
                 ) : saveError === "conflict" ? (
                   // The full-width ConflictReloadBanner rendered below is the
-                  // primary surface for this state — keep a tiny inline cue in
-                  // the header (matching the rest of the saveError badges) so
-                  // founders glancing at the save status still see the issue.
-                  <span className="flex items-center gap-1.5 text-amber-600">
-                    <AlertCircle className="h-3 w-3" /> Updated in another tab
-                  </span>
+                  // primary surface for this state — keep an inline cue in the
+                  // header (matching the rest of the saveError badges) that
+                  // doubles as a one-click reload so founders glancing at the
+                  // save status can recover without scrolling to the banner.
+                  <button
+                    type="button"
+                    data-testid="wizard-save-conflict-reload"
+                    onClick={() => { if (typeof window !== "undefined") window.location.reload(); }}
+                    className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 underline underline-offset-2"
+                  >
+                    <AlertCircle className="h-3 w-3" /> Updated in another tab — click to reload
+                  </button>
                 ) : saveError ? (
-                  <span className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save issue - retrying</span>
+                  <span data-testid="wizard-save-error-unknown" className="flex items-center gap-1.5 text-amber-600"><AlertCircle className="h-3 w-3" /> Save issue - retrying</span>
                 ) : lastSaved ? (
-                  <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved</span>
+                  <span data-testid="wizard-save-status-saved" className="flex items-center gap-1.5"><CheckCircle2 className="h-3 w-3 text-primary" /> Saved</span>
                 ) : null}
               </div>
               <button

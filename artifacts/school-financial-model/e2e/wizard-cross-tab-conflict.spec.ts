@@ -173,9 +173,9 @@ test("Two tabs editing the same model: Tab B's stale save is blocked with the co
     const tabBNameInput = tabB.getByLabel("What's the name of your school?");
     await tabBNameInput.fill("E2E Cross-Tab Academy — edited in Tab B");
 
-    const conflictPrompt = tabB.getByRole("button", {
-      name: /Updated in another tab.*click to reload/i,
-    });
+    // Selecting via testid keeps the regression net resilient to copy
+    // tweaks on the inline header pill (Task #506).
+    const conflictPrompt = tabB.getByTestId("wizard-save-conflict-reload");
     await expect(conflictPrompt).toBeVisible({ timeout: 15_000 });
   } finally {
     await tabA.context().close();
