@@ -1295,6 +1295,18 @@ export function ModelWizardPage() {
         open={showExtendModal}
         isPending={extending}
         defaults={resolveSeedDefaults(methods.getValues() as Partial<FullModelData>)}
+        y1Enrollment={(() => {
+          const v = methods.getValues() as Partial<FullModelData>;
+          const e = v.enrollment as { year1?: number } | undefined;
+          return Number(e?.year1) || 0;
+        })()}
+        y1TuitionRevenue={(() => {
+          const v = methods.getValues() as Partial<FullModelData>;
+          const rows = (v.revenueRows ?? []) as Array<{ category?: string; amounts?: number[] }>;
+          return rows
+            .filter((r) => r.category === "tuition_and_fees")
+            .reduce((sum, r) => sum + (Number(r.amounts?.[0]) || 0), 0);
+        })()}
         onClose={() => { if (!extending) setShowExtendModal(false); }}
         onConfirm={async (overrides: SeedDefaults) => {
           if (extending) return;

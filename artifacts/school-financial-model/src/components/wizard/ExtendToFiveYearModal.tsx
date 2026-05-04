@@ -14,6 +14,30 @@ interface ExtendToFiveYearModalProps {
    * fallbacks). Pre-fills the editable rate inputs.
    */
   defaults?: SeedDefaults;
+  /**
+   * Year-1 baselines used to render the live Y1 → Y5 preview row inside the
+   * modal so founders can sanity-check the curve before confirming. The
+   * preview uses the same `round(y1 * (1+rate/100)^4)` formula as the
+   * deterministic seeder (`escalate(y1, rate, 4)` in `seed-five-year.ts`).
+   */
+  y1Enrollment?: number;
+  y1TuitionRevenue?: number;
+}
+
+function projectYear5(y1: number, ratePct: number): number {
+  if (!y1 || y1 <= 0) return 0;
+  return Math.round(y1 * Math.pow(1 + ratePct / 100, 4));
+}
+
+function formatCurrency(n: number): string {
+  if (!Number.isFinite(n)) return "$0";
+  if (Math.abs(n) >= 1_000_000) {
+    return `$${(n / 1_000_000).toFixed(n >= 10_000_000 ? 1 : 2)}M`;
+  }
+  if (Math.abs(n) >= 1_000) {
+    return `$${Math.round(n / 1_000).toLocaleString()}k`;
+  }
+  return `$${Math.round(n).toLocaleString()}`;
 }
 
 /**
@@ -29,6 +53,8 @@ export function ExtendToFiveYearModal({
   onConfirm,
   isPending = false,
   defaults,
+  y1Enrollment,
+  y1TuitionRevenue,
 }: ExtendToFiveYearModalProps) {
   const resolvedDefaults: SeedDefaults = defaults ?? SEED_DEFAULTS_FALLBACK;
   const [rates, setRates] = useState<SeedDefaults>(resolvedDefaults);
@@ -156,6 +182,53 @@ export function ExtendToFiveYearModal({
               "Applied to expense rows and other-revenue rows.",
             )}
           </div>
+          {(Boolean(y1Enrollment && y1Enrollment > 0) ||
+            Boolean(y1TuitionRevenue && y1TuitionRevenue > 0)) && (
+            <div
+              data-testid="extend-preview"
+              className="mt-4 pt-3 border-t border-border/60"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Year 1 → Year 5 preview
+              </p>
+              <div className="space-y-1.5 text-sm">
+                {y1Enrollment && y1Enrollment > 0 ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Enrollment</span>
+                    <span className="tabular-nums font-medium text-foreground">
+                      <span data-testid="extend-preview-enrollment-y1">
+                        {Math.round(y1Enrollment).toLocaleString()}
+                      </span>
+                      <span className="mx-1.5 text-muted-foreground">→</span>
+                      <span data-testid="extend-preview-enrollment-y5">
+                        {projectYear5(y1Enrollment, rates.enrollmentGrowthPct).toLocaleString()}
+                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        @ {rates.enrollmentGrowthPct}%/yr
+                      </span>
+                    </span>
+                  </div>
+                ) : null}
+                {y1TuitionRevenue && y1TuitionRevenue > 0 ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Tuition revenue</span>
+                    <span className="tabular-nums font-medium text-foreground">
+                      <span data-testid="extend-preview-tuition-y1">
+                        {formatCurrency(y1TuitionRevenue)}
+                      </span>
+                      <span className="mx-1.5 text-muted-foreground">→</span>
+                      <span data-testid="extend-preview-tuition-y5">
+                        {formatCurrency(projectYear5(y1TuitionRevenue, rates.tuitionEscalationPct))}
+                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        @ {rates.tuitionEscalationPct}%/yr
+                      </span>
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
         </div>
         <ul className="space-y-2 mb-6 text-sm text-foreground">
           <li className="flex items-start gap-2">
