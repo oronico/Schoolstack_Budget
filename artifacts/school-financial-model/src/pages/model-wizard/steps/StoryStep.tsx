@@ -544,25 +544,36 @@ export function StoryStep() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {TUITION_SOURCE_OPTIONS.map((opt) => {
               const isOn = !!revenueSources[opt.key];
+              // Public per-pupil funding from the state is only available to
+              // charter schools. Disable the toggle (and the "on" state) for
+              // every other school type so we never collect contradictory
+              // intent on the way into the wizard.
+              const charterOnly = opt.key === "publicFunding";
+              const disabled = charterOnly && schoolType !== "charter_school";
+              const helper = disabled
+                ? "Charter schools only — state per-pupil funding isn't available to private, microschool, or other non-charter programs."
+                : opt.helper;
               return (
                 <button
                   key={opt.key}
                   type="button"
-                  onClick={() => setSource(opt.key, !isOn)}
+                  onClick={() => !disabled && setSource(opt.key, !isOn)}
+                  disabled={disabled}
                   data-testid={`story-tuition-source-${opt.key}`}
-                  aria-pressed={isOn}
+                  aria-pressed={isOn && !disabled}
                   className={cn(
                     "rounded-xl border-2 px-3 py-3 text-left transition-all",
-                    isOn
+                    isOn && !disabled
                       ? "bg-amber-100 border-amber-400 text-amber-900 shadow-sm"
-                      : "bg-card border-border text-foreground/80 hover:border-amber-300"
+                      : "bg-card border-border text-foreground/80 hover:border-amber-300",
+                    disabled && "opacity-50 cursor-not-allowed hover:border-border"
                   )}
                 >
                   <p className="text-sm font-semibold flex items-center gap-1.5">
                     {opt.label}
-                    {isOn && <CheckCircle2 className="h-3.5 w-3.5" />}
+                    {isOn && !disabled && <CheckCircle2 className="h-3.5 w-3.5" />}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{opt.helper}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{helper}</p>
                 </button>
               );
             })}

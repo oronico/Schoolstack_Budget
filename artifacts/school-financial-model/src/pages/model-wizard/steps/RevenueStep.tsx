@@ -243,8 +243,20 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       if (fundingProfile !== "charter_public_funded") {
         setValue("schoolProfile.fundingProfile", "charter_public_funded", { shouldDirty: true });
       }
+      return;
     }
-  }, [isCharterType, revenueSources, fundingProfile, setValue]);
+    // Non-charter schools cannot receive state public per-pupil funding.
+    // If a legacy model has publicFunding=true on a non-charter type, clear it
+    // and re-derive the funding profile from the remaining sources.
+    if (schoolType && revenueSources?.publicFunding) {
+      const cleared = { ...revenueSources, publicFunding: false };
+      setValue("revenueSources", cleared, { shouldDirty: true });
+      const derived = deriveFundingProfile(cleared);
+      if (derived !== fundingProfile) {
+        setValue("schoolProfile.fundingProfile", derived, { shouldDirty: true });
+      }
+    }
+  }, [isCharterType, schoolType, revenueSources, fundingProfile, setValue]);
 
   const formRows = watch("revenueRows") as RevenueRowData[] | undefined;
   const [rows, setRows] = useState<RevenueRowData[]>([]);
@@ -293,7 +305,12 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       const depositTiming = watch("schoolProfile.charterDepositTiming") as CharterDepositTiming | undefined;
       const perPupilRange = stateFundingConfig?.charterBasePerPupil;
       const perPupilMidpoint = perPupilRange ? Math.round((perPupilRange.min + perPupilRange.max) / 2) : undefined;
-      const defaults = generateDefaultRevenueRows(fundingProfile, yearCount, depositTiming, {
+      // Charter schools always use charter_public_funded for seeding, even if
+      // the form value hasn't been normalized yet by the force-charter effect
+      // — otherwise the very first render seeds from the default
+      // "tuition_based" profile and we'd never get state_local_perpupil.
+      const seedingProfile: FundingProfile = isCharterType ? "charter_public_funded" : fundingProfile;
+      const defaults = generateDefaultRevenueRows(seedingProfile, yearCount, depositTiming, {
         isCharter: isCharterType,
         openingYear: openingYear ?? undefined,
         perPupilMidpoint,
@@ -317,13 +334,15 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   }, [formRows, fundingProfile, yearCount, defaultsApplied, setValue, deriveEnabledCategories, schoolType, entityType, isDiocesan, isFaithAffiliated, congregationSupport, doesFundraise, hasFiscalSponsor]);
 
   const CHARTER_HIDDEN_CATEGORIES: RevenueCategory[] = ["tuition_and_fees", "tuition_offsets", "school_choice"];
+  const NON_CHARTER_HIDDEN_CATEGORIES: RevenueCategory[] = ["public_funding"];
   useEffect(() => {
     if (!defaultsApplied) return;
-    const isCharter = schoolType === "charter_school";
-    if (!isCharter) return;
     if (rows.length === 0) return;
+    const isCharter = schoolType === "charter_school";
+    const hidden = isCharter ? CHARTER_HIDDEN_CATEGORIES : (schoolType ? NON_CHARTER_HIDDEN_CATEGORIES : []);
+    if (hidden.length === 0) return;
     const updated = rows.map((row) => {
-      if (CHARTER_HIDDEN_CATEGORIES.includes(row.category) && row.enabled) {
+      if (hidden.includes(row.category) && row.enabled) {
         return { ...row, enabled: false };
       }
       return row;
@@ -334,7 +353,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
     setValue("revenueRows", updated, { shouldDirty: true });
     setEnabledCategories((prev) => {
       const next = new Set(prev);
-      CHARTER_HIDDEN_CATEGORIES.forEach((c) => next.delete(c as RevenueCategory));
+      hidden.forEach((c) => next.delete(c));
       return next;
     });
   }, [schoolType, defaultsApplied, setValue, rows]);
@@ -771,7 +790,10 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             onChange={(v) => handleRevenueSourceChange("publicFunding", v)}
             icon={<Landmark className="h-5 w-5" />}
             title="Public Funding"
-            description="State, federal, or local per-pupil revenue"
+            description={isCharterType
+              ? "State, federal, or local per-pupil revenue"
+              : "Charter schools only — state per-pupil funding isn't available to private, microschool, or other non-charter programs."}
+            disabled={!isCharterType}
           />
           <RevenueSourceCheck
             checked={revenueSources?.schoolChoice ?? false}

@@ -404,7 +404,7 @@ const LINE_ITEM_CATALOG: LineItemDef[] = [
 
   { id: "scholarships_aid", category: "tuition_offsets", lineItem: "Scholarships / Financial Aid / Discount Rate", driverType: "percent_of_base", enabledFor: ["tuition_based", "hybrid_mixed"] },
 
-  { id: "state_local_perpupil", category: "public_funding", lineItem: "State / Local Per-Pupil Revenue", driverType: "per_student", enabledFor: ["charter_public_funded", "hybrid_mixed"] },
+  { id: "state_local_perpupil", category: "public_funding", lineItem: "State / Local Per-Pupil Revenue", driverType: "per_student", enabledFor: ["charter_public_funded"] },
   { id: "title_i", category: "public_funding", lineItem: "Title I - Low-Income Students", driverType: "per_student", enabledFor: ["charter_public_funded"] },
   { id: "title_ii", category: "public_funding", lineItem: "Title II - Teacher Quality", driverType: "annual_fixed", enabledFor: ["charter_public_funded"] },
   { id: "title_iii", category: "public_funding", lineItem: "Title III - English Learners", driverType: "per_student", enabledFor: ["charter_public_funded"] },
