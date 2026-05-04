@@ -445,6 +445,7 @@ router.get(
         .select({
           source: sql<string>`metadata->>'source'`.as("source"),
           section: sql<string>`metadata->>'section'`.as("section"),
+          bucket: bucketExpr.as("bucket"),
           count: count(),
         })
         .from(eventsTable)
@@ -453,7 +454,7 @@ router.get(
             ? and(eq(eventsTable.eventName, "capability_section_impression"), windowFilter)
             : eq(eventsTable.eventName, "capability_section_impression"),
         )
-        .groupBy(sql`metadata->>'source'`, sql`metadata->>'section'`);
+        .groupBy(sql`metadata->>'source'`, sql`metadata->>'section'`, bucketExpr);
 
       const scrollDepths = await db
         .select({
@@ -473,6 +474,7 @@ router.get(
         .select({
           source: sql<string>`metadata->>'source'`.as("source"),
           section: sql<string>`metadata->>'section'`.as("section"),
+          bucket: bucketExpr.as("bucket"),
           count: count(),
         })
         .from(eventsTable)
@@ -488,7 +490,7 @@ router.get(
                 sql`metadata->>'section' IS NOT NULL`,
               ),
         )
-        .groupBy(sql`metadata->>'source'`, sql`metadata->>'section'`);
+        .groupBy(sql`metadata->>'source'`, sql`metadata->>'section'`, bucketExpr);
 
       // Track per-position click totals (collapsed across the whole current
       // period) for the "Primary CTA" / "Closing CTA" columns.
@@ -567,20 +569,57 @@ router.get(
 
       // Section-level engagement aggregation. All inputs already respect
       // the active windowFilter, so this reflects the selected date range.
+      // We also keep per-bucket trend arrays so the admin UI can render a
+      // small sparkline showing whether a recent copy/design change moved
+      // engagement up or down on a given section. Trends only exist for
+      // windowed ranges; "all" returns empty arrays.
+      const startMs = cfg.windowed ? cfg.currentStart.getTime() : 0;
+      const bucketMs = cfg.bucketMs;
+      const bucketCount = cfg.bucketCount;
+      const trendIndex = (ts: number): number =>
+        Math.min(
+          bucketCount - 1,
+          Math.max(0, Math.floor((ts - startMs) / bucketMs)),
+        );
+
       const sectionImpressionsBySource = new Map<string, Map<string, number>>();
+      const sectionImpressionTrends = new Map<string, number[]>();
       for (const r of sectionImpressions) {
         if (!r.source || !r.section) continue;
         const map = sectionImpressionsBySource.get(r.source) || new Map<string, number>();
         map.set(r.section, (map.get(r.section) || 0) + r.count);
         sectionImpressionsBySource.set(r.source, map);
+        if (cfg.windowed) {
+          const ts = (r.bucket instanceof Date ? r.bucket : new Date(r.bucket)).getTime();
+          if (ts < startMs) continue;
+          const key = `${r.source}|${r.section}`;
+          let arr = sectionImpressionTrends.get(key);
+          if (!arr) {
+            arr = new Array(bucketCount).fill(0) as number[];
+            sectionImpressionTrends.set(key, arr);
+          }
+          arr[trendIndex(ts)] += r.count;
+        }
       }
 
       const sectionClicksBySource = new Map<string, Map<string, number>>();
+      const sectionClickTrends = new Map<string, number[]>();
       for (const r of clicksBySection) {
         if (!r.source || !r.section) continue;
         const map = sectionClicksBySource.get(r.source) || new Map<string, number>();
         map.set(r.section, (map.get(r.section) || 0) + r.count);
         sectionClicksBySource.set(r.source, map);
+        if (cfg.windowed) {
+          const ts = (r.bucket instanceof Date ? r.bucket : new Date(r.bucket)).getTime();
+          if (ts < startMs) continue;
+          const key = `${r.source}|${r.section}`;
+          let arr = sectionClickTrends.get(key);
+          if (!arr) {
+            arr = new Array(bucketCount).fill(0) as number[];
+            sectionClickTrends.set(key, arr);
+          }
+          arr[trendIndex(ts)] += r.count;
+        }
       }
 
       const scrollDepthBySource = new Map<string, Record<string, number>>();
@@ -610,12 +649,23 @@ router.get(
           const impressions = imps.get(section) || 0;
           const sectionClicks = clicks.get(section) || 0;
           const signups = sectionSignups.get(`${source}|${section}`) || 0;
+          const trendKey = `${source}|${section}`;
+          const impressionsTrend = cfg.windowed
+            ? sectionImpressionTrends.get(trendKey) ??
+              new Array(cfg.bucketCount).fill(0)
+            : [];
+          const clicksTrend = cfg.windowed
+            ? sectionClickTrends.get(trendKey) ??
+              new Array(cfg.bucketCount).fill(0)
+            : [];
           return {
             section,
             impressions,
             clicks: sectionClicks,
             signups,
             clickRate: impressions > 0 ? sectionClicks / impressions : 0,
+            impressionsTrend,
+            clicksTrend,
           };
         }).filter(
           (s) => s.impressions > 0 || s.clicks > 0 || s.signups > 0,

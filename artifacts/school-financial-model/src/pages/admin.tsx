@@ -180,6 +180,8 @@ interface CtaConversionData {
       clicks: number;
       signups: number;
       clickRate: number;
+      impressionsTrend: number[];
+      clicksTrend: number[];
     }[];
     scrollDepth: { d25: number; d50: number; d75: number; d100: number };
   }[];
@@ -708,7 +710,10 @@ function CtaConversionSection() {
                               Clicks from section
                             </th>
                             <th className="py-2 px-3 text-right">Sign-ups</th>
-                            <th className="py-2 pl-3 text-right">Click rate</th>
+                            <th className="py-2 px-3 text-right">Click rate</th>
+                            <th className="py-2 pl-3 text-right">
+                              Trend ({data.bucketUnit === "week" ? "weekly" : data.bucketUnit === "day" ? "daily" : "—"})
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -716,6 +721,7 @@ function CtaConversionSection() {
                             <tr
                               key={s.section}
                               className="border-b border-border/30 last:border-0"
+                              data-testid={`section-engagement-row-${page.source}-${s.section}`}
                             >
                               <td className="py-2 pr-3 font-medium text-foreground">
                                 {SECTION_LABELS[s.section] || s.section}
@@ -729,8 +735,29 @@ function CtaConversionSection() {
                               <td className="py-2 px-3 text-right text-muted-foreground">
                                 {s.signups}
                               </td>
-                              <td className="py-2 pl-3 text-right font-bold text-primary">
+                              <td className="py-2 px-3 text-right font-bold text-primary">
                                 {(s.clickRate * 100).toFixed(1)}%
+                              </td>
+                              <td
+                                className="py-2 pl-3 text-right"
+                                data-testid={`section-engagement-trend-${page.source}-${s.section}`}
+                              >
+                                {data.bucketUnit ? (
+                                  <div className="inline-flex flex-col items-end gap-0.5">
+                                    <MiniSparkline
+                                      values={s.impressionsTrend}
+                                      color="#0f766e"
+                                    />
+                                    <MiniSparkline
+                                      values={s.clicksTrend}
+                                      color="#b45309"
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">
+                                    —
+                                  </span>
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -745,7 +772,7 @@ function CtaConversionSection() {
                             <td className="py-2 px-3 text-right">
                               {totalSignups}
                             </td>
-                            <td className="py-2 pl-3 text-right">
+                            <td className="py-2 px-3 text-right">
                               {totalImpressions > 0
                                 ? ((totalClicks / totalImpressions) * 100).toFixed(
                                     1,
@@ -753,6 +780,7 @@ function CtaConversionSection() {
                                 : "0.0"}
                               %
                             </td>
+                            <td className="py-2 pl-3 text-right" />
                           </tr>
                         </tbody>
                       </table>
