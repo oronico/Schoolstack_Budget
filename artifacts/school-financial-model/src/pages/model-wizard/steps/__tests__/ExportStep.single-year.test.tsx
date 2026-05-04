@@ -47,19 +47,17 @@ afterEach(() => {
 });
 
 describe("ExportStep — single-year gating across all four lender-grade cards", () => {
-  it("disables Lender, Board, Underwriting, and Formula cards in single-year mode", () => {
+  it("disables only Lender + Board cards in single-year mode; Underwriting + Formula stay enabled", () => {
     render(<Harness modelDuration="single_year" />);
 
-    // All four wrappers render their Extend-to-5-year overlay CTAs.
+    // Lender + Board still need a 5-year projection, so their overlay CTAs render.
     expect(screen.getByTestId("lender-card-extend-cta")).toBeInTheDocument();
     expect(screen.getByTestId("board-card-extend-cta")).toBeInTheDocument();
-    expect(screen.getByTestId("underwriting-card-extend-cta")).toBeInTheDocument();
-    expect(screen.getByTestId("formula-card-extend-cta")).toBeInTheDocument();
 
-    // Underlying ExportCard buttons render the "Requires 5-year" copy and
-    // are disabled so the button itself can't fire a download. Look up
-    // the card via its wrapper testid because the banner copy mentions
-    // each card name and would otherwise match multiple roles.
+    // Underwriting + Formula are now single-year aware — no overlay CTA.
+    expect(screen.queryByTestId("underwriting-card-extend-cta")).toBeNull();
+    expect(screen.queryByTestId("formula-card-extend-cta")).toBeNull();
+
     const cardButton = (testid: string) =>
       screen.getByTestId(testid).querySelector("button:not([data-testid])") as HTMLButtonElement;
 
@@ -70,30 +68,23 @@ describe("ExportStep — single-year gating across all four lender-grade cards",
 
     expect(lender).toBeDisabled();
     expect(board).toBeDisabled();
-    expect(underwriting).toBeDisabled();
-    expect(formula).toBeDisabled();
+    expect(underwriting).not.toBeDisabled();
+    expect(formula).not.toBeDisabled();
 
-    // Underwriting + Formula now use the same gating copy as Lender/Board.
-    expect(underwriting.textContent).toMatch(/Requires 5-year projection/i);
-    expect(formula.textContent).toMatch(/Requires 5-year projection/i);
-
-    // Single-year banner no longer claims Underwriting/Formula are usable
-    // in this mode — copy lists all four exports as gated.
+    // Banner copy lists only the gated exports.
     expect(
-      screen.getByText(/Lender Packet, Board Summary, Underwriting Package, and Formula Workbook/i),
+      screen.getByText(/Lender Packet and Board Summary/i),
     ).toBeInTheDocument();
   });
 
   it("leaves all four lender-grade cards enabled in 5-year mode", () => {
     render(<Harness modelDuration="five_year" />);
 
-    // No Extend-to-5-year overlay CTAs should exist on any card.
     expect(screen.queryByTestId("lender-card-extend-cta")).toBeNull();
     expect(screen.queryByTestId("board-card-extend-cta")).toBeNull();
     expect(screen.queryByTestId("underwriting-card-extend-cta")).toBeNull();
     expect(screen.queryByTestId("formula-card-extend-cta")).toBeNull();
 
-    // ExportCard buttons are clickable.
     expect(screen.getByRole("button", { name: /Lender-Ready Packet/i })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: /Board Summary/i })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: /Underwriting Package/i })).not.toBeDisabled();

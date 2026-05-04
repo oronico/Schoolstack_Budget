@@ -25,14 +25,25 @@ import {
   type RationaleSectionKey,
 } from "./packets/inline-rationale-rollup.js";
 
-const TAB_NAMES = [
-  "Instructions", "Cover", "Assumptions", "Program Profile",
-  "Enrollment Drivers", "Tuition & Funding", "Staffing Drivers", "OpEx Drivers", "Capital Stack",
-  "Enrollment Tuition Fcst", "Staffing Costs Fcst", "Budget Detail", "Budget Summary",
-  "Monthly Cash Flow Y1", "5-Year Operating Stmt", "Debt Schedule", "Balance Sheet",
-  "DSCR & Covenants", "Sources & Uses", "Scenarios", "Underwriting Snapshot", "Financial Health",
-  "Budget Narrative",
-];
+function getYearCount(data: { schoolProfile?: SchoolProfile } | ModelData): number {
+  const sp = (data as { schoolProfile?: SchoolProfile }).schoolProfile || {};
+  return (sp as SchoolProfile).modelDuration === "single_year" ? 1 : 5;
+}
+
+function operatingStmtTabName(yc: number): string {
+  return yc === 1 ? "Year 1 Operating Stmt" : "5-Year Operating Stmt";
+}
+
+function getTabNames(yc: number): string[] {
+  return [
+    "Instructions", "Cover", "Assumptions", "Program Profile",
+    "Enrollment Drivers", "Tuition & Funding", "Staffing Drivers", "OpEx Drivers", "Capital Stack",
+    "Enrollment Tuition Fcst", "Staffing Costs Fcst", "Budget Detail", "Budget Summary",
+    "Monthly Cash Flow Y1", operatingStmtTabName(yc), "Debt Schedule", "Balance Sheet",
+    "DSCR & Covenants", "Sources & Uses", "Scenarios", "Underwriting Snapshot", "Financial Health",
+    "Budget Narrative",
+  ];
+}
 
 function resolveRowEscalation(escalationRate: number | undefined, fallback: number, overridden?: boolean): number {
   return overridden ? (escalationRate ?? 0) : resolveEsc(escalationRate, fallback);
@@ -51,6 +62,8 @@ function getOpMonths(sp: SchoolProfile): number {
 function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
   const ws = wb.addWorksheet("Cover");
   const sp = data.schoolProfile || {};
+  const yc = getYearCount(data);
+  const TAB_NAMES = getTabNames(yc);
   ws.columns = [{ width: 4 }, { width: 40 }, { width: 40 }, { width: 4 }];
   printSetup(ws);
 
@@ -62,7 +75,7 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
 
   r += 2;
   ws.mergeCells(r, 2, r, 3);
-  ws.getCell(r, 2).value = "5-Year Financial Model & Underwriting Workbook";
+  ws.getCell(r, 2).value = yc === 1 ? "Year 1 Financial Model & Underwriting Workbook" : "5-Year Financial Model & Underwriting Workbook";
   ws.getCell(r, 2).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
   ws.getCell(r, 2).alignment = { horizontal: "center" };
 
@@ -108,9 +121,10 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
 
 function buildInstructions(wb: ExcelJS.Workbook, data: ModelData) {
   const sp = data.schoolProfile || {} as SchoolProfile;
+  const yc = getYearCount(data);
   addInstructionsSheet(wb, {
     workbookType: "underwriting",
-    tabNames: TAB_NAMES,
+    tabNames: getTabNames(yc),
     schoolName: sp.schoolName || undefined,
     schoolType: sp.entityType || undefined,
   });
@@ -134,6 +148,7 @@ interface AsmReg {
 }
 
 function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, costInflation: number, prorationFactor: number, startingCash: number): AsmReg {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Assumptions");
   const sp = data.schoolProfile || {};
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
@@ -141,7 +156,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   const expenseRows = (data.expenseRows || []).filter(r => r.enabled);
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   ws.columns = [{ width: 36 }, { width: 18 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }];
   printSetup(ws);
 
@@ -184,13 +199,13 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   const maxCapRow = r;
 
   r += 2;
-  sec(ws, r, 7); ws.getCell(r, 1).value = "ENROLLMENT";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "ENROLLMENT";
   r++;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
   r++;
   ws.getCell(r, 1).value = "Total Students"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     cell.value = enrollment[y]; cell.numFmt = NUM; dc(cell); inputCell(cell);
   }
@@ -218,15 +233,15 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
 
   if (tiers.length > 0) {
     r += 2;
-    sec(ws, r, 7); ws.getCell(r, 1).value = "TUITION TIERS";
+    sec(ws, r, yc + 2); ws.getCell(r, 1).value = "TUITION TIERS";
     r++;
-    ws.getRow(r).values = ["Tier", "Discount %", ...yLabels.slice(0, 5).map((_, i) => `Yr ${i + 1} Students`)];
-    hdr(ws, r, 7);
+    ws.getRow(r).values = ["Tier", "Discount %", ...yLabels.slice(0, yc).map((_, i) => `Yr ${i + 1} Students`)];
+    hdr(ws, r, yc + 2);
     for (const t of tiers) {
       r++;
       ws.getCell(r, 1).value = t.label || t.tierType; dc(ws.getCell(r, 1));
       ws.getCell(r, 2).value = (t.discountPercent || 0) / 100; ws.getCell(r, 2).numFmt = PCT; dc(ws.getCell(r, 2)); inputCell(ws.getCell(r, 2));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const cell = ws.getCell(r, y + 3);
         cell.value = t.studentCounts?.[y] ?? 0; cell.numFmt = NUM; dc(cell); inputCell(cell);
       }
@@ -387,7 +402,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     ws.getCell(r, 4).value = gbp.h912 || 0; ws.getCell(r, 4).numFmt = CUR; dc(ws.getCell(r, 4)); inputCell(ws.getCell(r, 4));
     r += 2;
     ws.getRow(r).values = ["Grade-Band Enrollment", ...yLabels];
-    hdr(ws, r, 6);
+    hdr(ws, r, yc + 1);
     const bands = [
       { label: "K-5", data: gbe.k5 },
       { label: "6-8", data: gbe.m68 },
@@ -396,7 +411,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     for (const band of bands) {
       r++;
       ws.getCell(r, 1).value = `  ${band.label}`; dc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const cell = ws.getCell(r, y + 2);
         cell.value = band.data?.[y] ?? 0; cell.numFmt = NUM; dc(cell); inputCell(cell);
       }
@@ -410,10 +425,10 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   const hasWeighted = (sp.spedCount?.some(v => v > 0)) || (sp.ellCount?.some(v => v > 0)) || (sp.ecoDisCount?.some(v => v > 0));
   if (hasWeighted) {
     r += 2;
-    sec(ws, r, 7); ws.getCell(r, 1).value = "WEIGHTED ENROLLMENT POPULATIONS";
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = "WEIGHTED ENROLLMENT POPULATIONS";
     r++;
     ws.getRow(r).values = ["Population", ...yLabels];
-    hdr(ws, r, 6);
+    hdr(ws, r, yc + 1);
     const weightedGroups: { label: string; data: number[] | undefined; setRow: (row: number) => void }[] = [
       { label: "Special Education (SPED)", data: sp.spedCount, setRow: (row: number) => { spedRow = row; } },
       { label: "English Language Learners (ELL)", data: sp.ellCount, setRow: (row: number) => { ellRow = row; } },
@@ -424,7 +439,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
       r++;
       group.setRow(r);
       ws.getCell(r, 1).value = group.label; dc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const cell = ws.getCell(r, y + 2);
         cell.value = group.data?.[y] ?? 0; cell.numFmt = NUM; dc(cell); inputCell(cell);
       }
@@ -435,6 +450,7 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
 }
 
 function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Program Profile");
   const sp = data.schoolProfile || {};
   const hasPhases = sp.facilityPhases && sp.facilityPhases.length > 0;
@@ -476,23 +492,23 @@ function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
   }
 
   if (sp.facilityPhases && sp.facilityPhases.length > 0) {
-    const yLabelsUW = yearLabels(sp.openingYear);
+    const yLabelsUW = yearLabels(sp.openingYear, yc);
     const timeline = buildPhaseTimelineData(sp.facilityPhases);
     const phaseDetails = buildPhaseDetails(sp.facilityPhases);
 
     r++;
     ws.getCell(r, 1).value = "";
-    for (let yi = 0; yi < 5; yi++) {
+    for (let yi = 0; yi < yc; yi++) {
       ws.getCell(r, yi + 2).value = yLabelsUW[yi];
       ws.getCell(r, yi + 2).font = SECTION_FONT;
       ws.getCell(r, yi + 2).alignment = { horizontal: "center" };
     }
-    for (let c = 1; c <= 6; c++) { ws.getCell(r, c).fill = SECTION_FILL; ws.getCell(r, c).border = BORDER; }
+    for (let c = 1; c <= yc + 1; c++) { ws.getCell(r, c).fill = SECTION_FILL; ws.getCell(r, c).border = BORDER; }
     ws.getRow(r).height = 24;
 
     r++;
     ws.getCell(r, 1).value = "Arrangement"; bc(ws.getCell(r, 1));
-    for (let yi = 0; yi < 5; yi++) {
+    for (let yi = 0; yi < yc; yi++) {
       const cell = ws.getCell(r, yi + 2);
       const yearData = timeline.get(yi + 1);
       if (yearData) {
@@ -509,7 +525,7 @@ function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
 
     r++;
     ws.getCell(r, 1).value = "Monthly Cost"; dc(ws.getCell(r, 1));
-    for (let yi = 0; yi < 5; yi++) {
+    for (let yi = 0; yi < yc; yi++) {
       const cell = ws.getCell(r, yi + 2);
       const yearData = timeline.get(yi + 1);
       if (!yearData) {
@@ -526,7 +542,7 @@ function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
 
     r++;
     ws.getCell(r, 1).value = "Key Terms"; dc(ws.getCell(r, 1));
-    for (let yi = 0; yi < 5; yi++) {
+    for (let yi = 0; yi < yc; yi++) {
       const cell = ws.getCell(r, yi + 2);
       const yearData = timeline.get(yi + 1);
       cell.value = !yearData ? "—" : (yearData.keyTerms || "");
@@ -538,7 +554,7 @@ function buildProgramProfile(wb: ExcelJS.Workbook, data: ModelData) {
       r++;
       ws.getCell(r, 1).value = `${pd.label} (${pd.yearRange})`;
       ws.getCell(r, 1).font = { ...BF, color: { argb: pd.color } };
-      for (let c = 1; c <= 6; c++) {
+      for (let c = 1; c <= yc + 1; c++) {
         ws.getCell(r, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: pd.bgColor } };
         ws.getCell(r, c).border = BORDER;
       }
@@ -561,9 +577,10 @@ interface EnrollmentDriverRefs {
 }
 
 function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], asmReg: AsmReg): EnrollmentDriverRefs {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Enrollment Drivers");
   const sp = data.schoolProfile || {};
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   const programs = data.programs || [];
   ws.columns = [{ width: 32 }, ...Array(7).fill({ width: 14 })];
   printSetup(ws);
@@ -597,7 +614,7 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
         ws.getCell(r, c).value = p.priorYear ?? 0; ws.getCell(r, c).numFmt = NUM; dc(ws.getCell(r, c)); c++;
         ws.getCell(r, c).value = p.currentYear ?? 0; ws.getCell(r, c).numFmt = NUM; dc(ws.getCell(r, c)); c++;
       }
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const v = [p.year1, p.year2, p.year3, p.year4, p.year5][y];
         ws.getCell(r, c).value = v; ws.getCell(r, c).numFmt = NUM; dc(ws.getCell(r, c)); inputCell(ws.getCell(r, c));
         c++;
@@ -617,7 +634,7 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
     ws.getCell(r, c).value = data.priorYearSnapshot?.endingEnrollment ?? 0; ws.getCell(r, c).numFmt = NUM; bc(ws.getCell(r, c)); c++;
     ws.getCell(r, c).value = data.currentYearProjection?.currentEnrollment ?? 0; ws.getCell(r, c).numFmt = NUM; bc(ws.getCell(r, c)); c++;
   }
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, c);
     if (programs.length > 0 && programFirstRow > 0 && programLastRow > 0) {
       setFormula(cell, `SUM(${cn(programFirstRow, c)}:${cn(programLastRow, c)})`, enrollment[y]);
@@ -636,7 +653,7 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   ws.getCell(r, 1).value = "Capacity Utilization"; dc(ws.getCell(r, 1));
   const cap = sp.maxCapacity || 0;
   const capCellAddr = `$${colLetter(2)}$${r - 1}`;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = startCol + y;
     const cell = ws.getCell(r, col);
     const totalAddr = cn(totalStudentsRow, col);
@@ -650,7 +667,7 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
 
   r += 2;
   ws.getCell(r, 1).value = "Enrollment Growth Rate"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = startCol + y;
     const cell = ws.getCell(r, col);
     if (y === 0) {
@@ -680,7 +697,7 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
       r++;
       weightedPopRows.push(r);
       ws.getCell(r, 1).value = group.label; dc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const col = startCol + y;
         const cell = ws.getCell(r, col);
         const asmCol = y + 2;
@@ -692,7 +709,7 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
     if (weightedPopRows.length > 0) {
       r++;
       ws.getCell(r, 1).value = "Total Weighted Population"; bc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const col = startCol + y;
         const cell = ws.getCell(r, col);
         const sumParts = weightedPopRows.map(wr => cn(wr, col)).join("+");
@@ -703,7 +720,7 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
       const totalRow = r;
       r++;
       ws.getCell(r, 1).value = "Weighted % of Total"; dc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const col = startCol + y;
         const cell = ws.getCell(r, col);
         const enrollAddr = cn(totalStudentsRow, col);
@@ -719,26 +736,27 @@ function buildEnrollmentDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollmen
 }
 
 function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], edRefs: EnrollmentDriverRefs) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Tuition & Funding");
   const sp = data.schoolProfile || {};
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
   const programs = data.programs || [];
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   const costInflPct = (data.tuitionEscalation?.rate ?? 3);
   const tfRR = data.enrollment?.retentionRate ?? 85;
   const hasProgramBreakdown = programs.length > 0;
-  ws.columns = [{ width: 36 }, ...Array(6).fill({ width: 16 })];
+  ws.columns = [{ width: 36 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = "Tuition & Funding Drivers";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   const CATEGORY_ORDER = [
     "tuition_and_fees", "tuition_offsets", "school_choice",
@@ -766,7 +784,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
     if (!rows || rows.length === 0) continue;
 
     r++;
-    sec(ws, r, 6);
+    sec(ws, r, yc + 1);
     ws.getCell(r, 1).value = catLabel(cat).toUpperCase();
 
     const catLineFirstRow = r + 1;
@@ -787,7 +805,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         const base = rv.amounts?.[0] ?? 0;
         const hasEsc = esc > 0;
         const escRow = hasEsc ? rateRow + 1 : 0;
-        for (let y = 0; y < 5; y++) {
+        for (let y = 0; y < yc; y++) {
           const cell = ws.getCell(rateRow, y + 2);
           const rate = y === 0 ? base : base * Math.pow(1 + esc / 100, y);
           if (y === 0) {
@@ -816,7 +834,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
           r++;
           ws.getCell(r, 1).value = `  ${p.name || "Program"}`; dc(ws.getCell(r, 1));
           const edProgRow = edRefs.programRows.get(String(pi));
-          for (let y = 0; y < 5; y++) {
+          for (let y = 0; y < yc; y++) {
             const cell = ws.getCell(r, y + 2);
             const progEnroll = [p.year1, p.year2, p.year3, p.year4, p.year5][y] ?? 0;
             const rateAddr = cn(rateRow, y + 2);
@@ -836,7 +854,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         r++;
         ws.getCell(r, 1).value = `  Subtotal: ${rv.lineItem}`; bc(ws.getCell(r, 1));
         lineSubtotalRows.push(r);
-        for (let y = 0; y < 5; y++) {
+        for (let y = 0; y < yc; y++) {
           const col = y + 2;
           const cell = ws.getCell(r, col);
           const students = enrollment[y];
@@ -848,7 +866,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
         r++;
         ws.getCell(r, 1).value = rv.lineItem; dc(ws.getCell(r, 1));
         lineSubtotalRows.push(r);
-        for (let y = 0; y < 5; y++) {
+        for (let y = 0; y < yc; y++) {
           const students = enrollment[y];
           const val = computeRevLineItem(rv, y, students, tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y));
           const cell = ws.getCell(r, y + 2);
@@ -861,7 +879,7 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
     r++;
     const catTotalLabel = `Total ${catLabel(cat)}`;
     ws.getCell(r, 1).value = catTotalLabel; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const col = y + 2;
       const cell = ws.getCell(r, col);
       let catTotal = 0;
@@ -877,8 +895,8 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "GRAND TOTAL REVENUE";
-  for (let y = 0; y < 5; y++) {
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "GRAND TOTAL REVENUE";
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     const cell = ws.getCell(r, col);
     const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, tfRR, y), computeReturningStudents(enrollment, tfRR, y));
@@ -889,11 +907,11 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
 
   if (tiers.length > 0) {
     r += 2;
-    sec(ws, r, 6); ws.getCell(r, 1).value = "TUITION TIERS";
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = "TUITION TIERS";
     for (const t of tiers) {
       r++;
       ws.getCell(r, 1).value = `${t.label} (${t.discountPercent}% discount)`; dc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         ws.getCell(r, y + 2).value = t.studentCounts?.[y] ?? 0; ws.getCell(r, y + 2).numFmt = NUM; dc(ws.getCell(r, y + 2));
       }
     }
@@ -901,11 +919,12 @@ function buildTuitionFunding(wb: ExcelJS.Workbook, data: ModelData, enrollment: 
 }
 
 function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, prorationFactor: number) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Staffing Drivers");
   const sp = data.schoolProfile || {};
   const sdRR = data.enrollment?.retentionRate ?? 85;
   const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   ws.columns = [{ width: 28 }, { width: 16 }, { width: 10 }, { width: 14 }, { width: 12 }, { width: 12 }, { width: 14 }, { width: 12 }];
   printSetup(ws);
 
@@ -934,13 +953,13 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
   }
 
   r += 2;
-  sec(ws, r, 7); ws.getCell(r, 1).value = "5-YEAR TOTAL PERSONNEL COST";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = yc === 1 ? "YEAR 1 TOTAL PERSONNEL COST" : "5-YEAR TOTAL PERSONNEL COST";
   r++;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
   r++;
   ws.getCell(r, 1).value = "Total Personnel"; bc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const pf = y === 0 ? prorationFactor : 1;
     const val = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
     const cell = ws.getCell(r, y + 2);
@@ -952,7 +971,7 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
   const costInflPct = (data.tuitionEscalation?.rate ?? 3);
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, sdRR, y), computeReturningStudents(enrollment, sdRR, y));
     const pf = y === 0 ? prorationFactor : 1;
     const pers = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
@@ -964,7 +983,7 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
   r++;
   ws.getCell(r, 1).value = "Students per FTE"; dc(ws.getCell(r, 1));
   const totalFte = staffingRows.reduce((s, sr) => s + sr.fte, 0);
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 2);
     cell.value = totalFte > 0 ? Math.round(enrollment[y] / totalFte * 10) / 10 : 0;
     cell.numFmt = "0.0"; dc(cell);
@@ -972,26 +991,27 @@ function buildStaffingDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment:
 }
 
 function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[]) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("OpEx Drivers");
   const sp = data.schoolProfile || {};
   const oeRR = data.enrollment?.retentionRate ?? 85;
   const expenseRows = (data.expenseRows || []).filter(r => r.enabled);
   const staffingRows = data.staffingRows || [];
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
   const costInflPct = (data.tuitionEscalation?.rate ?? 3);
-  ws.columns = [{ width: 32 }, ...Array(6).fill({ width: 16 })];
+  ws.columns = [{ width: 32 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = "Operating Expense Drivers";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   const uwBaseCats = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
   const uwCustomCats = [...new Set(expenseRows.map(e => e.category).filter(c => !uwBaseCats.includes(c) && c !== "personnel" && c !== "capital_financing"))];
@@ -1002,12 +1022,12 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     const catRows = expenseRows.filter(e => e.category === cat);
     if (catRows.length === 0) continue;
     r++;
-    sec(ws, r, 6); ws.getCell(r, 1).value = expCatLabel(cat, uwCcLabels);
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = expCatLabel(cat, uwCcLabels);
     const catFirstRow = r + 1;
     for (const ex of catRows) {
       r++;
       ws.getCell(r, 1).value = `  ${ex.lineItem}`; dc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y));
         let val: number;
         if (ex.driverType === "percent_of_revenue") {
@@ -1025,7 +1045,7 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     r++;
     catTotalRows.push(r);
     ws.getCell(r, 1).value = `Total ${expCatLabel(cat, uwCcLabels)}`; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y));
       let catTotal = 0;
       for (const ex of catRows) {
@@ -1049,8 +1069,8 @@ function buildOpExDrivers(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL OPERATING EXPENSES";
-  for (let y = 0; y < 5; y++) {
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "TOTAL OPERATING EXPENSES";
+  for (let y = 0; y < yc; y++) {
     const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y));
     const oeFTE = computeTotalFTE(staffingRows, y, enrollment[y]);
     const val = computeExpenseForYear(expenseRows, y, enrollment[y], rev, costInflPct, computeNewStudents(enrollment, oeRR, y), computeReturningStudents(enrollment, oeRR, y), oeFTE);
@@ -1114,38 +1134,39 @@ function buildCapitalStack(wb: ExcelJS.Workbook, data: ModelData) {
 }
 
 function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[]) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Enrollment Tuition Fcst");
   const sp = data.schoolProfile || {};
   const revenueRows = (data.revenueRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
   const costInflPct = (data.tuitionEscalation?.rate ?? 3);
   const etfRR = data.enrollment?.retentionRate ?? 85;
-  const yLabels = yearLabels(sp.openingYear);
-  ws.columns = [{ width: 36 }, ...Array(5).fill({ width: 16 })];
+  const yLabels = yearLabels(sp.openingYear, yc);
+  ws.columns = [{ width: 36 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = "Enrollment & Tuition Forecast";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   r++;
   ws.getCell(r, 1).value = "Total Students"; bc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = enrollment[y]; ws.getCell(r, y + 2).numFmt = NUM; bc(ws.getCell(r, y + 2));
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "REVENUE FORECAST";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "REVENUE FORECAST";
   const etfFirstRow = r + 1;
   for (const rv of revenueRows) {
     r++;
     ws.getCell(r, 1).value = rv.lineItem; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, etfRR, y), computeReturningStudents(enrollment, etfRR, y));
       const sign = rv.category === "tuition_offsets" ? -1 : 1;
       ws.getCell(r, y + 2).value = Math.round(val * sign); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
@@ -1154,8 +1175,8 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
   const etfLastRow = r;
 
   r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL REVENUE";
-  for (let y = 0; y < 5; y++) {
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "TOTAL REVENUE";
+  for (let y = 0; y < yc; y++) {
     const val = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, etfRR, y), computeReturningStudents(enrollment, etfRR, y));
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(etfFirstRow, col)}:${cn(etfLastRow, col)})`, Math.round(val));
@@ -1164,7 +1185,7 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
 
   r += 2;
   ws.getCell(r, 1).value = "Revenue per Student"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const rev = computeRevenueForYear(revenueRows, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, etfRR, y), computeReturningStudents(enrollment, etfRR, y));
     ws.getCell(r, y + 2).value = enrollment[y] > 0 ? Math.round(rev / enrollment[y]) : 0;
     ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
@@ -1172,21 +1193,22 @@ function buildEnrollmentTuitionForecast(wb: ExcelJS.Workbook, data: ModelData, e
 }
 
 function buildStaffingCostsForecast(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, prorationFactor: number) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Staffing Costs Fcst");
   const sp = data.schoolProfile || {};
   const staffingRows = (data.staffingRows || []).map(r => normalizeStaffingRow(r as unknown as Record<string, unknown>));
-  const yLabels = yearLabels(sp.openingYear);
-  ws.columns = [{ width: 30 }, ...Array(5).fill({ width: 16 })];
+  const yLabels = yearLabels(sp.openingYear, yc);
+  ws.columns = [{ width: 30 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = "Staffing Costs Forecast";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   const categories = ["instructional", "school_leadership", "student_support", "operations", "administrative", "other"];
   const scfCatTotalRows: number[] = [];
@@ -1194,7 +1216,7 @@ function buildStaffingCostsForecast(wb: ExcelJS.Workbook, data: ModelData, enrol
     const catRows = staffingRows.filter(s => s.functionCategory === cat);
     if (catRows.length === 0) continue;
     r++;
-    sec(ws, r, 6); ws.getCell(r, 1).value = funcLabel(cat);
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = funcLabel(cat);
     const catFirstRow = r + 1;
     for (const sr of catRows) {
       r++;
@@ -1202,7 +1224,7 @@ function buildStaffingCostsForecast(wb: ExcelJS.Workbook, data: ModelData, enrol
         ? ` [1:${sr.studentRatio}]`
         : ` [${sr.fte} FTE]`;
       ws.getCell(r, 1).value = `  ${sr.roleName}${ratioTag}`; dc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const pf = y === 0 ? prorationFactor : 1;
         const loaded = computeStaffingLoaded(sr, y, enrollment[y]);
         const val = loaded * Math.pow(1 + salaryEsc, y) * pf;
@@ -1213,7 +1235,7 @@ function buildStaffingCostsForecast(wb: ExcelJS.Workbook, data: ModelData, enrol
     r++;
     scfCatTotalRows.push(r);
     ws.getCell(r, 1).value = `Total ${funcLabel(cat)}`; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       let catTotal = 0;
       for (const sr of catRows) {
         const pf = y === 0 ? prorationFactor : 1;
@@ -1226,8 +1248,8 @@ function buildStaffingCostsForecast(wb: ExcelJS.Workbook, data: ModelData, enrol
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL PERSONNEL";
-  for (let y = 0; y < 5; y++) {
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "TOTAL PERSONNEL";
+  for (let y = 0; y < yc; y++) {
     const pf = y === 0 ? prorationFactor : 1;
     const val = computePersonnelForYear(staffingRows, salaryEsc, pf, y, enrollment[y]);
     const col = y + 2;
@@ -1249,6 +1271,7 @@ interface CanonicalTotals {
 }
 
 function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], salaryEsc: number, costInflPct: number, prorationFactor: number, canonical: CanonicalTotals) {
+  const yc = getYearCount(data);
   const bdRR = data.enrollment?.retentionRate ?? 85;
   const ws = wb.addWorksheet("Budget Detail");
   const sp = data.schoolProfile || {};
@@ -1257,26 +1280,26 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   const expenseRows = (data.expenseRows || []).filter(r => r.enabled);
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const tiers = data.tuitionTiers || [];
-  const yLabels = yearLabels(sp.openingYear);
-  ws.columns = [{ width: 36 }, ...Array(5).fill({ width: 16 })];
+  const yLabels = yearLabels(sp.openingYear, yc);
+  ws.columns = [{ width: 36 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = `${sp.schoolName || "School"} - Budget Detail`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "REVENUE";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "REVENUE";
   const revFirstRow = r + 1;
   for (const rv of revenueRows) {
     r++;
     ws.getCell(r, 1).value = `  ${rv.lineItem}`; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const val = computeRevLineItem(rv, y, enrollment[y], tiers, costInflPct, sp, computeNewStudents(enrollment, bdRR, y), computeReturningStudents(enrollment, bdRR, y));
       const sign = rv.category === "tuition_offsets" ? -1 : 1;
       const pf = y === 0 ? prorationFactor : 1;
@@ -1291,7 +1314,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   // (computeBaseFinancials). The Excel SUM(...) formula recalculates from the
   // per-row breakdowns above, which are mathematically equivalent.
   const revByYear: number[] = canonical.revByYear;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const val = revByYear[y];
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(revFirstRow, col)}:${cn(revLastRow, col)})`, Math.round(val));
@@ -1299,12 +1322,12 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "PERSONNEL";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "PERSONNEL";
   const persFirstRow = r + 1;
   for (const sr of staffingRows) {
     r++;
     ws.getCell(r, 1).value = `  ${sr.roleName}`; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const pf = y === 0 ? prorationFactor : 1;
       const loaded = computeStaffingLoaded(sr, y, enrollment[y]);
       ws.getCell(r, y + 2).value = Math.round(loaded * Math.pow(1 + salaryEsc, y) * pf);
@@ -1316,7 +1339,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   const persTotalRow = r;
   ws.getCell(r, 1).value = "Total Personnel"; bc(ws.getCell(r, 1));
   const persByYear: number[] = canonical.persByYear;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const val = persByYear[y];
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(persFirstRow, col)}:${cn(persLastRow, col)})`, Math.round(val));
@@ -1324,7 +1347,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "OPERATING EXPENSES";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "OPERATING EXPENSES";
   const bdBaseCats = ["instructional_program", "technology", "occupancy_facility", "administrative_general"];
   const bdCustomCats = [...new Set(expenseRows.map(e => e.category).filter(c => !bdBaseCats.includes(c) && c !== "personnel" && c !== "capital_financing"))];
   const expCategories = [...bdBaseCats, ...bdCustomCats];
@@ -1339,7 +1362,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
     for (const ex of catRows) {
       r++;
       ws.getCell(r, 1).value = `    ${ex.lineItem}`; dc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const rev = revByYear[y];
         let val: number;
         if (ex.driverType === "percent_of_revenue") {
@@ -1357,7 +1380,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
     if (catRows.length > 1) {
       r++;
       ws.getCell(r, 1).value = `  Total ${expCatLabel(cat, bdCcLabels)}`; bc(ws.getCell(r, 1));
-      for (let y = 0; y < 5; y++) {
+      for (let y = 0; y < yc; y++) {
         const col = y + 2;
         const catTotal = catRows.reduce((sum, ex) => {
           const rev = revByYear[y];
@@ -1381,7 +1404,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   const opexTotalRow = r;
   ws.getCell(r, 1).value = "Total Operating Expenses"; bc(ws.getCell(r, 1));
   const opexByYear: number[] = canonical.opexByYear;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const val = opexByYear[y];
     const col = y + 2;
     if (bdCatSumRows.length > 0) {
@@ -1394,12 +1417,12 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "CAPITAL & DEBT SERVICE";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "CAPITAL & DEBT SERVICE";
   const cdFirstRow = r + 1;
   for (const cd of capDebtRows) {
     r++;
     ws.getCell(r, 1).value = `  ${cd.lineItem}`; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const val = cd.isLoan
         ? computeAnnualDebtForYear(cd.loanPrincipal || 0, (cd.loanRate || 0) / 100, cd.loanTermYears || 0, y)
         : driverVal(cd.amounts, y, cd.driverType, enrollment[y]);
@@ -1411,7 +1434,7 @@ function buildBudgetDetail(wb: ExcelJS.Workbook, data: ModelData, enrollment: nu
   const cdTotalRow = r;
   ws.getCell(r, 1).value = "Total Capital & Debt"; bc(ws.getCell(r, 1));
   const cdByYear: number[] = canonical.cdByYear;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const val = cdByYear[y];
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(cdFirstRow, col)}:${cn(cdLastRow, col)})`, Math.round(val));
@@ -1429,21 +1452,22 @@ interface BudgetDetailRefs {
 }
 
 function buildBudgetSummary(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], bdRefs?: BudgetDetailRefs) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Budget Summary");
   const sp = data.schoolProfile || {};
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   const niLabel = netIncomeLabel(sp.entityType);
-  ws.columns = [{ width: 36 }, ...Array(5).fill({ width: 16 })];
+  ws.columns = [{ width: 36 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = `${sp.schoolName || "School"} - Budget Summary`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   const bdSheet = "'Budget Detail'";
   const refRows: [string, number[], number | undefined][] = [
@@ -1458,7 +1482,7 @@ function buildBudgetSummary(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   for (const [label, arr, bdRowRef] of refRows) {
     r++;
     ws.getCell(r, 1).value = label; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const col = y + 2;
       if (bdRowRef) {
         setFormula(ws.getCell(r, col), `${bdSheet}!${cn(bdRowRef, col)}`, Math.round(arr[y]));
@@ -1473,7 +1497,7 @@ function buildBudgetSummary(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   const totalExpRow = r;
   ws.getCell(r, 1).value = "Total Expenses"; bc(ws.getCell(r, 1));
   const totalExpByYear = persByYear.map((p, y) => p + opexByYear[y] + cdByYear[y]);
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(persRow, col)}:${cn(cdRow, col)})`, Math.round(totalExpByYear[y]));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
@@ -1481,13 +1505,13 @@ function buildBudgetSummary(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
 
   const revRow = persRow - 1;
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "KEY METRICS";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "KEY METRICS";
 
   r++;
   const niRow = r;
   ws.getCell(r, 1).value = niLabel; bc(ws.getCell(r, 1));
   const niByYear = revByYear.map((rev, y) => rev - totalExpByYear[y]);
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     setFormula(ws.getCell(r, col), `${cn(revRow, col)}-${cn(totalExpRow, col)}`, Math.round(niByYear[y]));
     ws.getCell(r, col).numFmt = CUR;
@@ -1496,7 +1520,7 @@ function buildBudgetSummary(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
 
   r++;
   ws.getCell(r, 1).value = "Net Margin %"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     setFormula(ws.getCell(r, col), `IF(${cn(revRow, col)}=0,0,${cn(niRow, col)}/${cn(revRow, col)})`, revByYear[y] > 0 ? niByYear[y] / revByYear[y] : 0);
     ws.getCell(r, col).numFmt = PCT; dc(ws.getCell(r, col));
@@ -1505,21 +1529,21 @@ function buildBudgetSummary(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   r++;
   ws.getCell(r, 1).value = "Cumulative " + niLabel; dc(ws.getCell(r, 1));
   let cumNI = 0;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     cumNI += niByYear[y];
     ws.getCell(r, y + 2).value = Math.round(cumNI); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
 
   r++;
   ws.getCell(r, 1).value = "Revenue per Student"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = enrollment[y] > 0 ? Math.round(revByYear[y] / enrollment[y]) : 0;
     ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
 
   r++;
   ws.getCell(r, 1).value = "Cost per Student"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = enrollment[y] > 0 ? Math.round(totalExpByYear[y] / enrollment[y]) : 0;
     ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
@@ -1752,20 +1776,23 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
 }
 
 function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], depreciationByYear?: number[]) {
-  const ws = wb.addWorksheet("5-Year Operating Stmt");
+  const yc = getYearCount(data);
+  const ws = wb.addWorksheet(operatingStmtTabName(yc));
   const sp = data.schoolProfile || {};
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   const niLabel = netIncomeLabel(sp.entityType);
-  ws.columns = [{ width: 36 }, ...Array(5).fill({ width: 16 })];
+  ws.columns = [{ width: 36 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
-  ws.getCell(r, 1).value = `${sp.schoolName || "School"} - 5-Year Operating Statement`;
+  ws.mergeCells(r, 1, r, yc + 1);
+  ws.getCell(r, 1).value = yc === 1
+    ? `${sp.schoolName || "School"} - Year 1 Operating Statement`
+    : `${sp.schoolName || "School"} - 5-Year Operating Statement`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r++;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   const currentBasis = sp.accountingBasis ? accountingBasisLabel(sp.accountingBasis).toLowerCase() : "undetermined";
   const basisNote = `Projections prepared on an accrual basis. School currently keeps books on a ${currentBasis} basis.`;
   ws.getCell(r, 1).value = basisNote;
@@ -1773,49 +1800,49 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
 
   r += 1;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "REVENUE";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "REVENUE";
   r++;
   const revRow = r;
   ws.getCell(r, 1).value = "Total Revenue"; gc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(revByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2));
   }
 
   r++;
   r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "EXPENSES";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "EXPENSES";
   r++;
   const persRow = r;
   ws.getCell(r, 1).value = "Personnel"; bc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(persByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
   r++;
   const opRow = r;
   ws.getCell(r, 1).value = "Operating Expenses"; bc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(opexByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
   r++;
   const cdRow = r;
   ws.getCell(r, 1).value = "Capital & Debt Service"; bc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(cdByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
   r++;
   const deprRow = r;
   ws.getCell(r, 1).value = "Depreciation"; bc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(depreciationByYear?.[y] ?? 0); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
   r++;
   const totExpRow = r;
   ws.getCell(r, 1).value = "Total Expenses"; gc(ws.getCell(r, 1));
   const totalExpByYear = persByYear.map((p, y) => p + opexByYear[y] + cdByYear[y] + (depreciationByYear?.[y] ?? 0));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(persRow, col)}:${cn(deprRow, col)})`, Math.round(totalExpByYear[y]));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col));
@@ -1823,12 +1850,12 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
 
   r++;
   r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "BOTTOM LINE";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "BOTTOM LINE";
   const niWithDepr = niByYear.map((ni, y) => ni - (depreciationByYear?.[y] ?? 0));
   r++;
   const niRow = r;
   ws.getCell(r, 1).value = niLabel; gc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     setFormula(ws.getCell(r, col), `${cn(revRow, col)}-${cn(totExpRow, col)}`, Math.round(niWithDepr[y]));
     ws.getCell(r, col).numFmt = CUR; gc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
@@ -1836,7 +1863,7 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
 
   r++;
   ws.getCell(r, 1).value = "Net Margin %"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     setFormula(ws.getCell(r, col), `IF(${cn(revRow, col)}=0,0,${cn(niRow, col)}/${cn(revRow, col)})`, revByYear[y] > 0 ? niWithDepr[y] / revByYear[y] : 0);
     ws.getCell(r, col).numFmt = PCT; dc(ws.getCell(r, col));
@@ -1846,7 +1873,7 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
   const cumNIRow = r;
   ws.getCell(r, 1).value = niLabel.includes("Net Income") ? "Cumulative Net Income" : "Cumulative Profit"; bc(ws.getCell(r, 1));
   let cumNIVal = 0;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     cumNIVal += niWithDepr[y];
     const col = y + 2;
     const cell = ws.getCell(r, col);
@@ -1859,11 +1886,11 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
   ws.getCell(r, 1).value = "Break-even"; bc(ws.getCell(r, 1));
   let beYear = -1;
   let cumCheck = 0;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     cumCheck += niWithDepr[y];
     if (beYear < 0 && cumCheck >= 0) beYear = y;
   }
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     const cell = ws.getCell(r, col);
     if (y === beYear) {
@@ -1880,25 +1907,26 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
 }
 
 function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Debt Schedule");
   const sp = data.schoolProfile || {};
   const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
   const loans = capDebtRows.filter(r => r.isLoan);
-  const yLabels = yearLabels(sp.openingYear);
-  ws.columns = [{ width: 28 }, ...Array(5).fill({ width: 16 })];
+  const yLabels = yearLabels(sp.openingYear, yc);
+  ws.columns = [{ width: 28 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = "Debt Schedule";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "LOAN TERMS";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "LOAN TERMS";
   r++;
   ws.getCell(r, 1).value = "Loan Name"; dc(ws.getCell(r, 1));
   ws.getCell(r, 2).value = "Principal"; dc(ws.getCell(r, 2)); ws.getCell(r, 2).numFmt = CUR;
@@ -1944,12 +1972,12 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     const pmtRef = cn(termRef.nameRow, termRef.pmtCol);
 
     r += 2;
-    sec(ws, r, 6); ws.getCell(r, 1).value = `AMORTIZATION: ${loan.lineItem || "Loan"}`;
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = `AMORTIZATION: ${loan.lineItem || "Loan"}`;
 
     r++;
     const bbRow = r;
     ws.getCell(r, 1).value = "Beginning Balance"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const col = y + 2;
       const bal = y === 0 ? loanPrincipal : computeRemainingBalance(loanPrincipal, loanRate, loanTerm, y - 1);
       if (y === 0) {
@@ -1964,7 +1992,7 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     r++;
     const intRow = r;
     ws.getCell(r, 1).value = "Interest"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const col = y + 2;
       const interest = computeInterestPortion(loanPrincipal, loanRate, loanTerm, y);
       interestByYear[y] += interest;
@@ -1978,7 +2006,7 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     r++;
     const prinRow = r;
     ws.getCell(r, 1).value = "Principal Payment"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const col = y + 2;
       const prinPay = computePrincipalPortion(loanPrincipal, loanRate, loanTerm, y);
       principalByYear[y] += prinPay;
@@ -1992,7 +2020,7 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     r++;
     const pmtRow = r;
     ws.getCell(r, 1).value = "Total Payment"; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const col = y + 2;
       const total = computeAnnualDebtForYear(loanPrincipal, loanRate, loanTerm, y);
       debtByYear[y] += total;
@@ -2003,7 +2031,7 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     r++;
     const ebRow = r;
     ws.getCell(r, 1).value = "Ending Balance"; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const col = y + 2;
       const bal = computeRemainingBalance(loanPrincipal, loanRate, loanTerm, y);
       balanceByYear[y] += bal;
@@ -2016,10 +2044,10 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
 
   if (loans.length > 1) {
     r += 2;
-    sec(ws, r, 6); ws.getCell(r, 1).value = "TOTAL ALL LOANS";
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = "TOTAL ALL LOANS";
     r++;
     ws.getCell(r, 1).value = "Total Debt Service"; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const col = y + 2;
       const parts = loanBlocks.map(lb => cn(lb.pmtRow, col));
       setFormula(ws.getCell(r, col), parts.join("+"), Math.round(debtByYear[y]));
@@ -2027,7 +2055,7 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     }
     r++;
     ws.getCell(r, 1).value = "Total Outstanding Debt"; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const col = y + 2;
       const parts = loanBlocks.map(lb => cn(lb.ebRow, col));
       setFormula(ws.getCell(r, col), parts.join("+"), Math.round(balanceByYear[y]));
@@ -2054,29 +2082,30 @@ interface CrossTabRefs {
 }
 
 function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: number[], balanceByYear: number[], startingCash: number, crossRefs: CrossTabRefs, endingCashY1?: number, depreciationByYear?: number[], projectedARByYear?: number[]) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Balance Sheet");
   const sp = data.schoolProfile || {};
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   const eqLabel = equityLabel(sp.entityType);
   const ob = data.openingBalances || {};
-  ws.columns = [{ width: 36 }, ...Array(5).fill({ width: 16 })];
+  ws.columns = [{ width: 36 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   const cfTab = "'Monthly Cash Flow Y1'";
-  const osTab = "'5-Year Operating Stmt'";
+  const osTab = `'${operatingStmtTabName(yc)}'`;
   const dsTab = "'Debt Schedule'";
   const hasCfRef = crossRefs.cfCumCashRow > 0;
   const hasNiRef = crossRefs.opStmtNiRow > 0;
   const hasDebtRef = crossRefs.debtBalanceRow > 0;
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = `${sp.schoolName || "School"} - Balance Sheet`;
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   const openCash = ob.cash ?? startingCash;
   const openAR = ob.accountsReceivable ?? 0;
@@ -2088,24 +2117,24 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   if (endingCashY1 !== undefined) {
     cashByYear.push(endingCashY1);
     let cumNI = 0;
-    for (let y = 1; y < 5; y++) {
+    for (let y = 1; y < yc; y++) {
       cumNI += niByYear[y];
       cashByYear.push(endingCashY1 + cumNI);
     }
   } else {
     let cumNI = 0;
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       cumNI += niByYear[y];
       cashByYear.push(openCash + cumNI);
     }
   }
 
   r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "ASSETS";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "ASSETS";
   r++;
   const cashRow = r;
   ws.getCell(r, 1).value = "Cash & Equivalents"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     if (y === 0 && hasCfRef) {
       setFormula(ws.getCell(r, col), `${cfTab}!${cn(crossRefs.cfCumCashRow, 13)}`, Math.round(cashByYear[y]));
@@ -2123,14 +2152,14 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   r++;
   const arRow = r;
   ws.getCell(r, 1).value = "Accounts Receivable"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const arVal = projectedARByYear?.[y] ?? openAR;
     ws.getCell(r, y + 2).value = Math.round(arVal); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   const faRow = r;
   ws.getCell(r, 1).value = "Fixed Assets (Net of Depreciation)"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const cumDepr = depreciationByYear ? depreciationByYear.slice(0, y + 1).reduce((a, b) => a + b, 0) : 0;
     const netFA = Math.max(0, openFA - cumDepr);
     ws.getCell(r, y + 2).value = Math.round(netFA); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
@@ -2138,14 +2167,14 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   r++;
   const oaRow = r;
   ws.getCell(r, 1).value = "Other Assets"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(openOA); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   const taRow = r;
   ws.getCell(r, 1).value = "Total Assets"; bc(ws.getCell(r, 1));
   const totalAssets: number[] = [];
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     const arVal = projectedARByYear?.[y] ?? openAR;
     const cumDepr = depreciationByYear ? depreciationByYear.slice(0, y + 1).reduce((a, b) => a + b, 0) : 0;
@@ -2157,17 +2186,17 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "LIABILITIES";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "LIABILITIES";
   r++;
   const apRow = r;
   ws.getCell(r, 1).value = "Accounts Payable"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(openAP); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   const ltdRow = r;
   ws.getCell(r, 1).value = "Long-Term Debt"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     if (hasDebtRef) {
       setFormula(ws.getCell(r, col), `${dsTab}!${cn(crossRefs.debtBalanceRow, col)}`, Math.round(balanceByYear[y]));
@@ -2180,7 +2209,7 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   const tlRow = r;
   ws.getCell(r, 1).value = "Total Liabilities"; bc(ws.getCell(r, 1));
   const totalLiabilities: number[] = [];
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     const tl = openAP + balanceByYear[y];
     totalLiabilities.push(tl);
@@ -2189,12 +2218,12 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = eqLabel.toUpperCase();
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = eqLabel.toUpperCase();
   r++;
   const eqRow = r;
   ws.getCell(r, 1).value = eqLabel; bc(ws.getCell(r, 1));
   const equityByYear: number[] = [];
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     const eq = totalAssets[y] - totalLiabilities[y];
     equityByYear.push(eq);
@@ -2204,7 +2233,7 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
 
   r += 2;
   ws.getCell(r, 1).value = "Balance Check (should = 0)"; bc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const col = y + 2;
     const check = Math.round(totalAssets[y]) - Math.round(totalLiabilities[y]) - Math.round(equityByYear[y]);
     setFormula(ws.getCell(r, col), `${cn(taRow, col)}-${cn(tlRow, col)}-${cn(eqRow, col)}`, check);
@@ -2217,70 +2246,71 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
 }
 
 function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], cashByYear: number[], depreciationByYear?: number[], projectedARByYear?: number[]) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("DSCR & Covenants");
   const sp = data.schoolProfile || {};
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   const ct = data.covenantThresholds || {};
   const minDSCR = ct.minDSCR ?? BENCHMARK_DSCR_GREEN;
   const minDaysCash = ct.minDaysCashOnHand ?? 45;
   const minMonths = ct.minMonthsRunway ?? 2;
   const minCapUtil = ct.minCapacityUtil ?? 0.7;
   const cap = sp.maxCapacity || 0;
-  ws.columns = [{ width: 36 }, ...Array(5).fill({ width: 16 })];
+  ws.columns = [{ width: 36 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = "DSCR & Covenant Checks";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
   r += 2;
   ws.getRow(r).values = ["", ...yLabels];
-  hdr(ws, r, 6);
+  hdr(ws, r, yc + 1);
 
   r++;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "CASH FLOW & DEBT";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "CASH FLOW & DEBT";
   r++;
   ws.getCell(r, 1).value = "Revenue"; dc(ws.getCell(r, 1));
   const dscrRevRow = r;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(revByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   ws.getCell(r, 1).value = "Personnel"; dc(ws.getCell(r, 1));
   const dscrPersRow = r;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(persByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   ws.getCell(r, 1).value = "Operating Expenses"; dc(ws.getCell(r, 1));
   const dscrOpexRow = r;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(opexByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   ws.getCell(r, 1).value = "Net Income"; bc(ws.getCell(r, 1));
   const niRow = r;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(niByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
   r++;
   ws.getCell(r, 1).value = "Depreciation Add-Back"; dc(ws.getCell(r, 1));
   const deprRow = r;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(depreciationByYear?.[y] ?? 0); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   ws.getCell(r, 1).value = "Debt Service (Loan)"; dc(ws.getCell(r, 1));
   const dsRow = r;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(cdByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   ws.getCell(r, 1).value = "CFADS (NI + Depr + DS)"; bc(ws.getCell(r, 1));
   const cfadsRow = r;
   const cfads: number[] = [];
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const depr = depreciationByYear?.[y] ?? 0;
     const v = niByYear[y] + depr + cdByYear[y];
     cfads.push(v);
@@ -2291,7 +2321,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
 
   r++;
   ws.getCell(r, 1).value = "DSCR"; bc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const dscr = cdByYear[y] > 0 ? cfads[y] / cdByYear[y] : 0;
     const col = y + 2;
     if (cdByYear[y] > 0) {
@@ -2303,19 +2333,19 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "LIQUIDITY METRICS";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "LIQUIDITY METRICS";
   const totalExp = revByYear.map((rev, y) => rev - niByYear[y]);
 
   r++;
   ws.getCell(r, 1).value = "Ending Cash"; dc(ws.getCell(r, 1));
   const cashRow = r;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(cashByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
 
   r++;
   ws.getCell(r, 1).value = "Days Cash on Hand"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const days = totalExp[y] > 0 ? (cashByYear[y] / totalExp[y]) * 365 : 0;
     const col = y + 2;
     const totalExpFormula = `${cn(dscrRevRow, col)}-${cn(niRow, col)}`;
@@ -2325,7 +2355,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
 
   r++;
   ws.getCell(r, 1).value = "Months of Runway"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const months = totalExp[y] > 0 ? cashByYear[y] / (totalExp[y] / 12) : 0;
     const col = y + 2;
     const totalExpFormula = `${cn(dscrRevRow, col)}-${cn(niRow, col)}`;
@@ -2335,34 +2365,34 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
 
   r++;
   ws.getCell(r, 1).value = "Capacity Utilization"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = cap > 0 ? enrollment[y] / cap : 0;
     ws.getCell(r, y + 2).numFmt = PCT; dc(ws.getCell(r, y + 2));
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "BREAK-EVEN ANALYSIS";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "BREAK-EVEN ANALYSIS";
   r++;
   ws.getCell(r, 1).value = "Revenue per Student"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = enrollment[y] > 0 ? Math.round(revByYear[y] / enrollment[y]) : 0;
     ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   ws.getCell(r, 1).value = "Fixed Costs (Pers + Debt)"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(persByYear[y] + cdByYear[y]);
     ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   ws.getCell(r, 1).value = "Variable Cost per Student (OpEx)"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = enrollment[y] > 0 ? Math.round(opexByYear[y] / enrollment[y]) : 0;
     ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
   r++;
   ws.getCell(r, 1).value = "Break-Even Enrollment"; bc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const rps = enrollment[y] > 0 ? revByYear[y] / enrollment[y] : 0;
     const vcps = enrollment[y] > 0 ? opexByYear[y] / enrollment[y] : 0;
     const cm = rps - vcps;
@@ -2373,7 +2403,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   }
 
   r += 2;
-  sec(ws, r, 6); ws.getCell(r, 1).value = "COVENANT CHECKS";
+  sec(ws, r, yc + 1); ws.getCell(r, 1).value = "COVENANT CHECKS";
 
   const ob = data.openingBalances || {};
   const openAP = ob.accountsPayable ?? 0;
@@ -2411,7 +2441,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   for (const [label, fn] of checks) {
     r++;
     ws.getCell(r, 1).value = label; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const result = fn(y);
       ws.getCell(r, y + 2).value = result;
       ws.getCell(r, y + 2).font = { ...BF, color: { argb: result === "PASS" ? EVERGREEN : result === "FAIL" ? "FFFF0000" : "FF999999" } };
@@ -2500,11 +2530,12 @@ function buildSourcesAndUses(wb: ExcelJS.Workbook, data: ModelData, startingCash
 }
 
 function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[]) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Scenarios");
   const sp = data.schoolProfile || {};
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   const niLabel = netIncomeLabel(sp.entityType);
-  ws.columns = [{ width: 28 }, ...Array(5).fill({ width: 16 })];
+  ws.columns = [{ width: 28 }, ...Array(yc).fill({ width: 16 })];
   printSetup(ws);
   const prorationFactor = sp.isPartialFirstYear ? (sp.year1OperatingMonths || 10) / 12 : 1;
   const scRR = data.enrollment?.retentionRate ?? 85;
@@ -2514,7 +2545,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
 
   const facByYear: number[] = [];
   const otherOpexByYear: number[] = [];
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const pf = y === 0 ? prorationFactor : 1;
     let facTotal = 0;
     let otherTotal = 0;
@@ -2545,7 +2576,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
   }
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, yc + 1);
   ws.getCell(r, 1).value = "Scenario Analysis";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
@@ -2559,7 +2590,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
 
   for (const scenario of scenarios) {
     r += 2;
-    sec(ws, r, 6); ws.getCell(r, 1).value = scenario.name.toUpperCase();
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = scenario.name.toUpperCase();
     r++;
     const staffAdj = scenario.staffingAdjustment || 0;
     const facAdj = scenario.facilityAdjustment || 0;
@@ -2575,7 +2606,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
 
     r++;
     ws.getRow(r).values = ["", ...yLabels];
-    hdr(ws, r, 6);
+    hdr(ws, r, yc + 1);
 
     const enrollFactor = 1 + scenario.enrollmentAdjustment / 100;
     const revFactor = 1 + scenario.tuitionAdjustment / 100;
@@ -2590,26 +2621,26 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
 
     r++;
     ws.getCell(r, 1).value = "Revenue"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) { ws.getCell(r, y + 2).value = Math.round(adjRev[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2)); }
+    for (let y = 0; y < yc; y++) { ws.getCell(r, y + 2).value = Math.round(adjRev[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2)); }
 
     r++;
     ws.getCell(r, 1).value = "Total Expenses"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) { ws.getCell(r, y + 2).value = Math.round(adjTotalExp[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2)); }
+    for (let y = 0; y < yc; y++) { ws.getCell(r, y + 2).value = Math.round(adjTotalExp[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2)); }
 
     r++;
     ws.getCell(r, 1).value = niLabel; bc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) { ws.getCell(r, y + 2).value = Math.round(adjNI[y]); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2)); outputCell(ws.getCell(r, y + 2)); }
+    for (let y = 0; y < yc; y++) { ws.getCell(r, y + 2).value = Math.round(adjNI[y]); ws.getCell(r, y + 2).numFmt = CUR; gc(ws.getCell(r, y + 2)); outputCell(ws.getCell(r, y + 2)); }
 
     r++;
     ws.getCell(r, 1).value = "Net Margin %"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       ws.getCell(r, y + 2).value = adjRev[y] > 0 ? adjNI[y] / adjRev[y] : 0;
       ws.getCell(r, y + 2).numFmt = PCT; dc(ws.getCell(r, y + 2));
     }
 
     r++;
     ws.getCell(r, 1).value = "DSCR"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const scenCfads = adjNI[y] + cdByYear[y];
       ws.getCell(r, y + 2).value = cdByYear[y] > 0 ? Math.round(scenCfads / cdByYear[y] * 100) / 100 : "N/A";
       ws.getCell(r, y + 2).numFmt = "0.00x"; dc(ws.getCell(r, y + 2));
@@ -2617,7 +2648,7 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
 
     r++;
     ws.getCell(r, 1).value = "Break-Even Enrollment"; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const rps = adjEnroll[y] > 0 ? adjRev[y] / adjEnroll[y] : 0;
       const vcps = adjEnroll[y] > 0 ? adjOpex[y] / adjEnroll[y] : 0;
       const cm = rps - vcps;
@@ -2628,15 +2659,16 @@ function buildScenarios(wb: ExcelJS.Workbook, data: ModelData, enrollment: numbe
 }
 
 function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], cashByYear: number[], balanceByYear: number[]) {
+  const yc = getYearCount(data);
   const ws = wb.addWorksheet("Underwriting Snapshot");
   const sp = data.schoolProfile || {};
-  const yLabels = yearLabels(sp.openingYear);
+  const yLabels = yearLabels(sp.openingYear, yc);
   const niLabel = netIncomeLabel(sp.entityType);
-  ws.columns = [{ width: 28 }, { width: 30 }, { width: 4 }, ...Array(5).fill({ width: 14 })];
+  ws.columns = [{ width: 28 }, { width: 30 }, { width: 4 }, ...Array(yc).fill({ width: 14 })];
   printSetup(ws);
 
   let r = 1;
-  ws.mergeCells(r, 1, r, 8);
+  ws.mergeCells(r, 1, r, yc + 3);
   ws.getCell(r, 1).value = "Underwriting Snapshot - Loan Committee Summary";
   ws.getCell(r, 1).font = { bold: true, size: 14, name: "Calibri", color: { argb: NAVY } };
 
@@ -2657,10 +2689,10 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
   }
 
   r += 2;
-  sec(ws, r, 8); ws.getCell(r, 1).value = "5-YEAR FINANCIAL TREND";
+  sec(ws, r, yc + 3); ws.getCell(r, 1).value = yc === 1 ? "YEAR 1 FINANCIAL SNAPSHOT" : "5-YEAR FINANCIAL TREND";
   r++;
   ws.getRow(r).values = ["", "", "", ...yLabels];
-  for (let c = 4; c <= 8; c++) { ws.getCell(r, c).font = HEADER_FONT; ws.getCell(r, c).fill = HEADER_FILL; ws.getCell(r, c).border = BORDER; ws.getCell(r, c).alignment = { horizontal: "center" }; }
+  for (let c = 4; c <= yc + 3; c++) { ws.getCell(r, c).font = HEADER_FONT; ws.getCell(r, c).fill = HEADER_FILL; ws.getCell(r, c).border = BORDER; ws.getCell(r, c).alignment = { horizontal: "center" }; }
 
   const trendLines: [string, number[]][] = [
     ["Revenue", revByYear],
@@ -2672,27 +2704,27 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
   for (const [label, arr] of trendLines) {
     r++;
     ws.getCell(r, 1).value = label; dc(ws.getCell(r, 1));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       ws.getCell(r, y + 4).value = Math.round(arr[y]); ws.getCell(r, y + 4).numFmt = CUR; dc(ws.getCell(r, y + 4));
     }
   }
 
   r += 2;
-  sec(ws, r, 8); ws.getCell(r, 1).value = "KEY RATIOS";
+  sec(ws, r, yc + 3); ws.getCell(r, 1).value = "KEY RATIOS";
   r++;
   ws.getRow(r).values = ["", "", "", ...yLabels];
-  for (let c = 4; c <= 8; c++) { ws.getCell(r, c).font = HEADER_FONT; ws.getCell(r, c).fill = HEADER_FILL; ws.getCell(r, c).border = BORDER; ws.getCell(r, c).alignment = { horizontal: "center" }; }
+  for (let c = 4; c <= yc + 3; c++) { ws.getCell(r, c).font = HEADER_FONT; ws.getCell(r, c).fill = HEADER_FILL; ws.getCell(r, c).border = BORDER; ws.getCell(r, c).alignment = { horizontal: "center" }; }
 
   r++;
   ws.getCell(r, 1).value = "Net Margin"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 4).value = revByYear[y] > 0 ? niByYear[y] / revByYear[y] : 0;
     ws.getCell(r, y + 4).numFmt = PCT; dc(ws.getCell(r, y + 4));
   }
 
   r++;
   ws.getCell(r, 1).value = "DSCR"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const snapCfads = niByYear[y] + cdByYear[y];
     ws.getCell(r, y + 4).value = cdByYear[y] > 0 ? Math.round(snapCfads / cdByYear[y] * 100) / 100 : "N/A";
     ws.getCell(r, y + 4).numFmt = "0.00x"; dc(ws.getCell(r, y + 4));
@@ -2701,19 +2733,19 @@ function buildUnderwritingSnapshot(wb: ExcelJS.Workbook, data: ModelData, enroll
   r++;
   ws.getCell(r, 1).value = "Capacity Utilization"; dc(ws.getCell(r, 1));
   const cap = sp.maxCapacity || 0;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 4).value = cap > 0 ? enrollment[y] / cap : 0;
     ws.getCell(r, y + 4).numFmt = PCT; dc(ws.getCell(r, y + 4));
   }
 
   r++;
   ws.getCell(r, 1).value = "Enrollment"; dc(ws.getCell(r, 1));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 4).value = enrollment[y]; ws.getCell(r, y + 4).numFmt = NUM; dc(ws.getCell(r, y + 4));
   }
 
   r += 2;
-  ws.mergeCells(r, 1, r, 8);
+  ws.mergeCells(r, 1, r, yc + 3);
   ws.getCell(r, 1).value = "Prepared by SchoolStack Budget - budget.schoolstack.ai";
   ws.getCell(r, 1).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF999999" } };
   ws.getCell(r, 1).alignment = { horizontal: "center" };
@@ -2738,6 +2770,7 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   wb.calcProperties = { fullCalcOnLoad: true };
 
   const sp = data.schoolProfile || {};
+  const yc = getYearCount(data);
   const enrollment = getEnrollmentArray(data.enrollment);
   // ESCALATION SOURCE RESOLUTION
   // Each category resolves its own field, falling back to the shared rate:
@@ -2814,11 +2847,11 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   const tuitionRows = (data.revenueRows || []).filter(r => r.enabled && (r.category === "tuition_and_fees"));
   const tuitionByYear: number[] = Array(5).fill(0);
   for (const row of tuitionRows) {
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       tuitionByYear[y] += (row.amounts?.[y] ?? 0);
     }
   }
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const depr = computeStraightLineDepreciation(openFA, usefulLife, y);
     depreciationByYear.push(depr.annualDepreciation);
     const tuitionRev = tuitionByYear[y] > 0 ? tuitionByYear[y] : revByYear[y] * 0.7;
@@ -2848,7 +2881,7 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   for (const rv of (effectiveData.revenueRows || []).filter(r => r.enabled)) {
     const cat = rv.category || "other";
     if (!revCatsUW[cat]) revCatsUW[cat] = new Array(5).fill(0);
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const students = enrollment[y];
       const val = computeRevLineItem(rv, y, students, effectiveData.tuitionTiers || [], costInflPct, sp, computeNewStudents(enrollment, dashRR, y), computeReturningStudents(enrollment, dashRR, y));
       revCatsUW[cat][y] += rv.category === "tuition_offsets" ? -Math.abs(val) : val;
@@ -2861,6 +2894,7 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   await addDashboardSheet(wb, {
     schoolName: sp.schoolName || "School",
     entityType: sp.entityType || "",
+    yearCount: yc,
     enrollment,
     revenueByYear: revByYear,
     personnelByYear: persByYear,
@@ -2873,7 +2907,7 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
     startingCash,
     hasDebt,
     revenueCategories: revCatsUW,
-    cumNIRef: { sheetName: "5-Year Operating Stmt", row: opStmtCumNIRow, startCol: 2 },
+    cumNIRef: { sheetName: operatingStmtTabName(yc), row: opStmtCumNIRow, startCol: 2 },
   });
 
   buildNarrativeTab(wb, data, computedFlags);

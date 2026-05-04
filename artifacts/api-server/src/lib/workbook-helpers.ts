@@ -166,8 +166,11 @@ export function schoolYearLabel(baseYear: number | undefined, offset: number): s
   return `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
 }
 
-export function yearLabels(openingYear?: number): string[] {
-  return [0, 1, 2, 3, 4].map(i => schoolYearLabel(openingYear, i));
+export function yearLabels(openingYear?: number, count: number = 5): string[] {
+  const n = Math.max(1, Math.min(5, count));
+  const seq: number[] = [];
+  for (let i = 0; i < n; i++) seq.push(i);
+  return seq.map(i => schoolYearLabel(openingYear, i));
 }
 
 export function schoolTypeLabel(t?: string, o?: string): string {
@@ -328,6 +331,7 @@ export function driverVal(
 }
 
 export interface SchoolProfile {
+  modelDuration?: "single_year" | "five_year";
   schoolName?: string;
   state?: string;
   schoolType?: string;
@@ -982,6 +986,7 @@ export function addInstructionsSheet(wb: ExcelJS.Workbook, config: InstructionsC
 export interface DashboardInput {
   schoolName: string;
   entityType: string;
+  yearCount?: number;
   enrollment: number[];
   revenueByYear: number[];
   personnelByYear: number[];
@@ -1013,6 +1018,11 @@ function statusIcon(status: string): string {
 }
 
 export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardInput) {
+  const yc = Math.max(1, Math.min(5, input.yearCount ?? 5));
+  const lastY = yc - 1;
+  const benchCol = 3 + yc;
+  const signalsRightCol = Math.max(8, benchCol + 1);
+  const yearEndLetter = colLetter(2 + yc);
   const ws = wb.addWorksheet("Financial Health");
   ws.columns = [
     { width: 4 }, { width: 28 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 20 }, { width: 40 },
@@ -1023,13 +1033,13 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   const cfRules: { row: number; greenThreshold: string; amberThreshold: string; mode: "gte" | "lte" }[] = [];
 
   let r = 2;
-  ws.mergeCells(r, 2, r, 8);
+  ws.mergeCells(r, 2, r, signalsRightCol);
   ws.getCell(r, 2).value = `${input.schoolName} — Financial Health Dashboard`;
   ws.getCell(r, 2).font = { bold: true, size: 16, name: "Calibri", color: { argb: NAVY } };
   ws.getRow(r).height = 30;
 
   r++;
-  ws.mergeCells(r, 2, r, 8);
+  ws.mergeCells(r, 2, r, signalsRightCol);
   ws.getCell(r, 2).value = `Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`;
   ws.getCell(r, 2).font = { size: 11, italic: true, name: "Calibri", color: { argb: "FF6B7280" } };
 
@@ -1045,25 +1055,27 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   redDot.font = { size: 11, name: "Calibri", bold: true, color: { argb: DASHBOARD_RED } };
 
   r += 2;
-  for (let c = 2; c <= 8; c++) {
+  for (let c = 2; c <= 2 + yc; c++) {
     ws.getCell(r, c).fill = SECTION_FILL;
     ws.getCell(r, c).border = BORDER;
   }
+  ws.getCell(r, benchCol).fill = SECTION_FILL;
+  ws.getCell(r, benchCol).border = BORDER;
   ws.getCell(r, 2).value = "Metric";
   ws.getCell(r, 2).font = SECTION_FONT;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 3).value = `Year ${y + 1}`;
     ws.getCell(r, y + 3).font = SECTION_FONT;
     ws.getCell(r, y + 3).alignment = { horizontal: "center" };
   }
-  ws.getCell(r, 8).value = "Benchmark";
-  ws.getCell(r, 8).font = SECTION_FONT;
-  ws.getCell(r, 8).alignment = { horizontal: "center" };
+  ws.getCell(r, benchCol).value = "Benchmark";
+  ws.getCell(r, benchCol).font = SECTION_FONT;
+  ws.getCell(r, benchCol).alignment = { horizontal: "center" };
   ws.getRow(r).height = 24;
 
   r++;
   ws.getCell(r, 2).value = "Enrollment"; dc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 3).value = input.enrollment[y];
     ws.getCell(r, y + 3).numFmt = NUM;
     dc(ws.getCell(r, y + 3));
@@ -1072,7 +1084,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
 
   r++;
   ws.getCell(r, 2).value = "Revenue"; dc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 3).value = input.revenueByYear[y];
     ws.getCell(r, y + 3).numFmt = CUR;
     dc(ws.getCell(r, y + 3));
@@ -1081,7 +1093,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
 
   r++;
   ws.getCell(r, 2).value = "Personnel"; dc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 3).value = input.personnelByYear[y];
     ws.getCell(r, y + 3).numFmt = CUR;
     dc(ws.getCell(r, y + 3));
@@ -1090,7 +1102,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
 
   r++;
   ws.getCell(r, 2).value = "Operating Expenses"; dc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 3).value = input.opexByYear[y];
     ws.getCell(r, y + 3).numFmt = CUR;
     dc(ws.getCell(r, y + 3));
@@ -1099,7 +1111,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
 
   r++;
   ws.getCell(r, 2).value = "Debt Service"; dc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 3).value = input.debtServiceByYear[y];
     ws.getCell(r, y + 3).numFmt = CUR;
     dc(ws.getCell(r, y + 3));
@@ -1109,7 +1121,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   r++;
   const netIncomeRow = r;
   ws.getCell(r, 2).value = "Net Income"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const ni = input.netIncomeByYear[y];
     const cell = ws.getCell(r, y + 3);
     cell.value = ni;
@@ -1123,7 +1135,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   r++;
   const endingCashRow = r;
   ws.getCell(r, 2).value = "Ending Cash"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const cash = input.cashByYear[y];
     const cell = ws.getCell(r, y + 3);
     cell.value = cash;
@@ -1137,7 +1149,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   r++;
   const netMarginRow = r;
   ws.getCell(r, 2).value = "Net Margin"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const rev = input.revenueByYear[y];
     const margin = rev > 0 ? input.netIncomeByYear[y] / rev : 0;
     const cell = ws.getCell(r, y + 3);
@@ -1152,7 +1164,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   r++;
   const rpsRow = r;
   ws.getCell(r, 2).value = "Revenue per Student"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const rps = input.enrollment[y] > 0 ? input.revenueByYear[y] / input.enrollment[y] : 0;
     const cell = ws.getCell(r, y + 3);
     cell.value = rps;
@@ -1161,12 +1173,12 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: rps >= BENCHMARK_REV_PER_STUDENT_GREEN ? GREEN_BG : rps >= BENCHMARK_REV_PER_STUDENT_AMBER ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = `≥ $${BENCHMARK_REV_PER_STUDENT_GREEN.toLocaleString()}`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = `≥ $${BENCHMARK_REV_PER_STUDENT_GREEN.toLocaleString()}`; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
   cfRules.push({ row: rpsRow, greenThreshold: String(BENCHMARK_REV_PER_STUDENT_GREEN), amberThreshold: String(BENCHMARK_REV_PER_STUDENT_AMBER), mode: "gte" });
 
   r++;
   ws.getCell(r, 2).value = "Cost per Student"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const totalCost = input.personnelByYear[y] + input.opexByYear[y] + input.debtServiceByYear[y];
     const cps = input.enrollment[y] > 0 ? totalCost / input.enrollment[y] : 0;
     const cell = ws.getCell(r, y + 3);
@@ -1178,7 +1190,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
 
   r++;
   ws.getCell(r, 2).value = "  Instructional / Student"; dc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const instrCost = input.instructionalByYear ? (input.instructionalByYear[y] || 0) : 0;
     const ips = input.enrollment[y] > 0 ? instrCost / input.enrollment[y] : 0;
     const cell = ws.getCell(r, y + 3);
@@ -1190,7 +1202,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
 
   r++;
   ws.getCell(r, 2).value = "  Facility / Student"; dc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const facCost = input.facilityCostByYear ? (input.facilityCostByYear[y] || 0) : (input.opexByYear[y] * 0.3);
     const fps = input.enrollment[y] > 0 ? facCost / input.enrollment[y] : 0;
     const cell = ws.getCell(r, y + 3);
@@ -1200,11 +1212,11 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fps <= 2000 ? GREEN_BG : fps <= 3500 ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = "≤ $2,000 / $2k–$3.5k / > $3,500"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = "≤ $2,000 / $2k–$3.5k / > $3,500"; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
 
   r++;
   ws.getCell(r, 2).value = "Surplus per Student"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const sps = input.enrollment[y] > 0 ? input.netIncomeByYear[y] / input.enrollment[y] : 0;
     const cell = ws.getCell(r, y + 3);
     cell.value = sps;
@@ -1217,7 +1229,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   r++;
   const payrollRow = r;
   ws.getCell(r, 2).value = "Payroll %"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const rev = input.revenueByYear[y];
     const pPct = rev > 0 ? input.personnelByYear[y] / rev : 0;
     const cell = ws.getCell(r, y + 3);
@@ -1227,13 +1239,13 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: pPct <= BENCHMARK_PAYROLL_GREEN ? GREEN_BG : pPct <= BENCHMARK_PAYROLL_AMBER ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = `≤ ${Math.round(BENCHMARK_PAYROLL_GREEN * 100)}%`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = `≤ ${Math.round(BENCHMARK_PAYROLL_GREEN * 100)}%`; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
   cfRules.push({ row: payrollRow, greenThreshold: String(BENCHMARK_PAYROLL_GREEN), amberThreshold: String(BENCHMARK_PAYROLL_AMBER), mode: "lte" });
 
   r++;
   const facilityRow = r;
   ws.getCell(r, 2).value = "Facility %"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const rev = input.revenueByYear[y];
     const facCost = input.facilityCostByYear ? (input.facilityCostByYear[y] || 0) : (input.opexByYear[y] * 0.3);
     const fPct = rev > 0 ? facCost / rev : 0;
@@ -1244,14 +1256,14 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fPct <= BENCHMARK_FACILITY_GREEN ? GREEN_BG : fPct <= BENCHMARK_FACILITY_AMBER ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = `≤ ${Math.round(BENCHMARK_FACILITY_GREEN * 100)}%`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = `≤ ${Math.round(BENCHMARK_FACILITY_GREEN * 100)}%`; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
   cfRules.push({ row: facilityRow, greenThreshold: String(BENCHMARK_FACILITY_GREEN), amberThreshold: String(BENCHMARK_FACILITY_AMBER), mode: "lte" });
 
   if (input.hasManagementFee) {
     r++;
     const mgmtFeeRow = r;
     ws.getCell(r, 2).value = "Management Fee %"; bc(ws.getCell(r, 2));
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       const rev = input.revenueByYear[y];
       const feePct = rev > 0 ? (input.managementFeePercent || 0) / 100 : 0;
       const cell = ws.getCell(r, y + 3);
@@ -1261,14 +1273,14 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
       cell.alignment = { horizontal: "right" };
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: feePct <= 0.10 ? GREEN_BG : feePct <= 0.15 ? AMBER_BG : RED_BG } };
     }
-    ws.getCell(r, 8).value = "≤ 15%"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+    ws.getCell(r, benchCol).value = "≤ 15%"; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
     cfRules.push({ row: mgmtFeeRow, greenThreshold: "0.10", amberThreshold: "0.15", mode: "lte" });
   }
 
   r++;
   const opMarginRow = r;
   ws.getCell(r, 2).value = "Operating Margin"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const rev = input.revenueByYear[y];
     const opMargin = rev > 0 ? (rev - input.personnelByYear[y] - input.opexByYear[y]) / rev : 0;
     const cell = ws.getCell(r, y + 3);
@@ -1278,25 +1290,25 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: opMargin >= 0.10 ? GREEN_BG : opMargin >= 0 ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = "≥ 10%"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = "≥ 10%"; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
   cfRules.push({ row: opMarginRow, greenThreshold: "0.10", amberThreshold: "0", mode: "gte" });
 
   r++;
-  const revSourcesByYear: number[] = new Array(5).fill(0);
+  const revSourcesByYear: number[] = new Array(yc).fill(0);
   if (input.revenueCategories) {
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       for (const [, vals] of Object.entries(input.revenueCategories)) {
         if ((vals[y] || 0) > 0) revSourcesByYear[y]++;
       }
     }
   } else {
-    for (let y = 0; y < 5; y++) {
+    for (let y = 0; y < yc; y++) {
       revSourcesByYear[y] = (input.revenueByYear[y] || 0) > 0 ? 1 : 0;
     }
   }
   ws.getCell(r, 2).value = "Revenue Sources"; bc(ws.getCell(r, 2));
   ws.getCell(r, 2).border = BORDER;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const cnt = revSourcesByYear[y];
     const cell = ws.getCell(r, y + 3);
     cell.value = cnt;
@@ -1305,7 +1317,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cnt >= BENCHMARK_REV_SOURCES_GREEN ? GREEN_BG : cnt >= BENCHMARK_REV_SOURCES_AMBER ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = `≥ ${BENCHMARK_REV_SOURCES_GREEN} sources`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = `≥ ${BENCHMARK_REV_SOURCES_GREEN} sources`; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
 
   const totalExpByYear = input.revenueByYear.map((_, i) =>
     input.personnelByYear[i] + input.opexByYear[i] + input.debtServiceByYear[i]
@@ -1314,7 +1326,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   r++;
   const dscrRow = r;
   ws.getCell(r, 2).value = "DSCR"; bc(ws.getCell(r, 2));
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const yRev = input.revenueByYear[y];
     const yNOI = yRev - input.personnelByYear[y] - input.opexByYear[y];
     const yDebt = input.debtServiceByYear[y];
@@ -1328,7 +1340,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: yDSCR >= BENCHMARK_DSCR_GREEN ? GREEN_BG : yDSCR >= BENCHMARK_DSCR_AMBER ? AMBER_BG : RED_BG } };
     }
   }
-  ws.getCell(r, 8).value = input.hasDebt ? `≥ ${BENCHMARK_DSCR_GREEN.toFixed(2)}x` : "N/A"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = input.hasDebt ? `≥ ${BENCHMARK_DSCR_GREEN.toFixed(2)}x` : "N/A"; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
   if (input.hasDebt) {
     cfRules.push({ row: dscrRow, greenThreshold: String(BENCHMARK_DSCR_GREEN), amberThreshold: String(BENCHMARK_DSCR_AMBER), mode: "gte" });
   }
@@ -1336,17 +1348,17 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   r++;
   const cumNI: number[] = [];
   let cumSum = 0;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     cumSum += input.netIncomeByYear[y];
     cumNI.push(cumSum);
   }
   let breakEvenYear = -1;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     if (cumNI[y] >= 0) { breakEvenYear = y; break; }
   }
   ws.getCell(r, 2).value = "Break-even Year"; bc(ws.getCell(r, 2));
   ws.getCell(r, 2).border = BORDER;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const cell = ws.getCell(r, y + 3);
     if (input.cumNIRef) {
       const refCol = colLetter(input.cumNIRef.startCol + y);
@@ -1367,12 +1379,12 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.border = BORDER;
     cell.alignment = { horizontal: "center" };
   }
-  ws.getCell(r, 8).value = "Year 1"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = "Year 1"; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
 
   r++;
   ws.getCell(r, 2).value = "Cash Runway (Months)"; bc(ws.getCell(r, 2));
   ws.getCell(r, 2).border = BORDER;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const cashBal = input.cashByYear[y] || 0;
     const totalExp = totalExpByYear[y] || 0;
     const monthlyBurnY = totalExp / 12;
@@ -1385,12 +1397,12 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cappedM >= 24 ? GREEN_BG : cappedM >= 12 ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = "≥ 24 months"; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = "≥ 24 months"; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
 
   r++;
   ws.getCell(r, 2).value = "Days Cash on Hand"; bc(ws.getCell(r, 2));
   ws.getCell(r, 2).border = BORDER;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const dcohVal = computeDaysCashOnHand(input.cashByYear[y] || 0, totalExpByYear[y] || 0);
     const rounded = Math.round(dcohVal);
     const cell = ws.getCell(r, y + 3);
@@ -1400,11 +1412,11 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     cell.alignment = { horizontal: "right" };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: rounded >= BENCHMARK_DCOH_GREEN ? GREEN_BG : rounded >= BENCHMARK_DCOH_AMBER ? AMBER_BG : RED_BG } };
   }
-  ws.getCell(r, 8).value = `≥ ${BENCHMARK_DCOH_GREEN} days`; ws.getCell(r, 8).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, 8).border = BORDER;
+  ws.getCell(r, benchCol).value = `≥ ${BENCHMARK_DCOH_GREEN} days`; ws.getCell(r, benchCol).font = { ...NF, italic: true, color: { argb: "FF6B7280" } }; ws.getCell(r, benchCol).border = BORDER;
 
   let cashRunwayMonths = 60;
   let _runCash = input.startingCash;
-  for (let y = 0; y < 5; y++) {
+  for (let y = 0; y < yc; y++) {
     const mNI = input.netIncomeByYear[y] / 12;
     for (let m = 0; m < 12; m++) {
       _runCash += mNI;
@@ -1413,24 +1425,24 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     if (_runCash <= 0) break;
   }
 
-  const y5Rev = input.revenueByYear[4] || 1;
-  const y5Pers = input.personnelByYear[4];
-  const y5TotalExp = totalExpByYear[4];
+  const y5Rev = input.revenueByYear[lastY] || 1;
+  const y5Pers = input.personnelByYear[lastY];
+  const y5TotalExp = totalExpByYear[lastY];
   const staffPct = y5Pers / y5Rev;
 
-  const facilityCostY5 = input.facilityCostByYear ? (input.facilityCostByYear[4] || 0) : (input.opexByYear[4] * 0.3);
+  const facilityCostY5 = input.facilityCostByYear ? (input.facilityCostByYear[lastY] || 0) : (input.opexByYear[lastY] * 0.3);
   const facPct = facilityCostY5 / y5Rev;
 
-  const y5NI = input.netIncomeByYear[4];
+  const y5NI = input.netIncomeByYear[lastY];
   const y5Margin = y5Rev > 0 ? y5NI / y5Rev : 0;
   const y1Margin = input.revenueByYear[0] > 0 ? input.netIncomeByYear[0] / input.revenueByYear[0] : 0;
 
   const monthlyBurn = y5TotalExp / 12;
-  const y5Cash = input.cashByYear[4];
+  const y5Cash = input.cashByYear[lastY];
   const reserveMonths = monthlyBurn > 0 ? y5Cash / monthlyBurn : 0;
 
-  const y5Debt = input.debtServiceByYear[4];
-  const y5NOI = y5Rev - y5Pers - input.opexByYear[4];
+  const y5Debt = input.debtServiceByYear[lastY];
+  const y5NOI = y5Rev - y5Pers - input.opexByYear[lastY];
   const dscr = y5Debt > 0 ? y5NOI / y5Debt : 0;
 
   let philanthropy = 0;
@@ -1443,7 +1455,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     y1NetMargin: y1Margin,
     lastYearNetMargin: y5Margin,
     breakEvenYear,
-    yearCount: 5,
+    yearCount: yc,
     cashRunwayMonths,
     reserveMonths,
     staffingCostPct: staffPct,
@@ -1457,7 +1469,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   });
 
   r += 2;
-  for (let c = 2; c <= 8; c++) {
+  for (let c = 2; c <= signalsRightCol; c++) {
     ws.getCell(r, c).fill = SECTION_FILL;
     ws.getCell(r, c).border = BORDER;
   }
@@ -1468,7 +1480,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   ws.mergeCells(r, 4, r, 5);
   ws.getCell(r, 4).value = "Assessment";
   ws.getCell(r, 4).font = SECTION_FONT;
-  ws.mergeCells(r, 6, r, 8);
+  ws.mergeCells(r, 6, r, signalsRightCol);
   ws.getCell(r, 6).value = "Watch Item";
   ws.getCell(r, 6).font = SECTION_FONT;
   ws.getRow(r).height = 24;
@@ -1490,7 +1502,7 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
     ws.getCell(r, 4).border = BORDER;
     ws.getCell(r, 4).alignment = { wrapText: true };
 
-    ws.mergeCells(r, 6, r, 8);
+    ws.mergeCells(r, 6, r, signalsRightCol);
     ws.getCell(r, 6).value = signal.watchItem;
     ws.getCell(r, 6).font = { size: 11, name: "Calibri", italic: true, color: { argb: "FF6B7280" } };
     ws.getCell(r, 6).border = BORDER;
@@ -1513,13 +1525,13 @@ export async function addDashboardSheet(wb: ExcelJS.Workbook, input: DashboardIn
   ws.getCell(r, 3).border = BORDER;
 
   r += 2;
-  ws.mergeCells(r, 2, r, 8);
+  ws.mergeCells(r, 2, r, signalsRightCol);
   ws.getCell(r, 2).value = "Built by SchoolStack Budget  •  budget.schoolstack.ai";
   ws.getCell(r, 2).font = { italic: true, size: 11, color: { argb: "FF9CA3AF" }, name: "Calibri" };
   ws.getCell(r, 2).alignment = { horizontal: "center" };
 
   for (const rule of cfRules) {
-    const range = `C${rule.row}:G${rule.row}`;
+    const range = `C${rule.row}:${yearEndLetter}${rule.row}`;
     const greenFill = { fill: { type: "pattern" as const, pattern: "solid" as const, bgColor: { argb: GREEN_BG } } };
     const amberFill = { fill: { type: "pattern" as const, pattern: "solid" as const, bgColor: { argb: AMBER_BG } } };
     const redFill = { fill: { type: "pattern" as const, pattern: "solid" as const, bgColor: { argb: RED_BG } } };
