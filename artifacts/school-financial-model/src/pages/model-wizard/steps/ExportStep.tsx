@@ -5,6 +5,7 @@ import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardC
 import { isChestertonAcademy, isSingleYearModel } from "../schema";
 import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
 import { seedFiveYearFromYearOne, resolveSeedDefaults, type SeedDefaults } from "@/lib/seed-five-year";
+import { calculatePersonnelCosts } from "@/lib/staffing-defaults";
 import { useUpdateModel } from "@workspace/api-client-react";
 import { useConflictBanner } from "@/components/ConflictReloadBanner";
 import { Link } from "wouter";
@@ -268,6 +269,35 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       open={showExtendModal}
       isPending={extending}
       defaults={resolveSeedDefaults(getValues() as never)}
+      y1Enrollment={(() => {
+        const v = getValues() as { enrollment?: { year1?: number } };
+        return Number(v.enrollment?.year1) || 0;
+      })()}
+      y1TuitionRevenue={(() => {
+        const v = getValues() as { revenueRows?: Array<{ category?: string; amounts?: number[] }> };
+        return (v.revenueRows ?? [])
+          .filter((r) => r.category === "tuition_and_fees")
+          .reduce((sum, r) => sum + (Number(r.amounts?.[0]) || 0), 0);
+      })()}
+      y1Payroll={(() => {
+        const v = getValues() as {
+          enrollment?: { year1?: number };
+          staffingRows?: Parameters<typeof calculatePersonnelCosts>[0];
+        };
+        const y1Enroll = Number(v.enrollment?.year1) || 0;
+        const staffingRows = v.staffingRows ?? [];
+        if (!staffingRows.length) return 0;
+        return calculatePersonnelCosts(staffingRows, y1Enroll).grandTotal;
+      })()}
+      y1ExpenseRows={(() => {
+        const v = getValues() as { expenseRows?: Array<{ amounts?: number[]; escalationRate?: number }> };
+        return (v.expenseRows ?? [])
+          .map((r) => ({
+            amount: Number(r.amounts?.[0]) || 0,
+            rate: typeof r.escalationRate === "number" ? r.escalationRate : undefined,
+          }))
+          .filter((r) => r.amount > 0);
+      })()}
       onClose={() => { if (!extending) setShowExtendModal(false); }}
       onConfirm={handleExtendConfirm}
     />

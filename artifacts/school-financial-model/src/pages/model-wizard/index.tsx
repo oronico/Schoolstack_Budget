@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle, Sparkles, Calendar, TrendingUp } from "lucide-react";
 import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
+import { calculatePersonnelCosts } from "@/lib/staffing-defaults";
 import { seedFiveYearFromYearOne, resolveSeedDefaults, type SeedDefaults } from "@/lib/seed-five-year";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
@@ -1315,6 +1316,24 @@ export function ModelWizardPage() {
           return rows
             .filter((r) => r.category === "tuition_and_fees")
             .reduce((sum, r) => sum + (Number(r.amounts?.[0]) || 0), 0);
+        })()}
+        y1Payroll={(() => {
+          const v = methods.getValues() as Partial<FullModelData>;
+          const e = v.enrollment as { year1?: number } | undefined;
+          const y1Enroll = Number(e?.year1) || 0;
+          const staffingRows = (v.staffingRows ?? []) as Parameters<typeof calculatePersonnelCosts>[0];
+          if (!staffingRows.length) return 0;
+          return calculatePersonnelCosts(staffingRows, y1Enroll).grandTotal;
+        })()}
+        y1ExpenseRows={(() => {
+          const v = methods.getValues() as Partial<FullModelData>;
+          const rows = (v.expenseRows ?? []) as Array<{ amounts?: number[]; escalationRate?: number }>;
+          return rows
+            .map((r) => ({
+              amount: Number(r.amounts?.[0]) || 0,
+              rate: typeof r.escalationRate === "number" ? r.escalationRate : undefined,
+            }))
+            .filter((r) => r.amount > 0);
         })()}
         onClose={() => { if (!extending) setShowExtendModal(false); }}
         onConfirm={async (overrides: SeedDefaults) => {

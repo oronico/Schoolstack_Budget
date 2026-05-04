@@ -144,6 +144,110 @@ describe("ExtendToFiveYearModal", () => {
     );
   });
 
+  it("renders Y1→Y5 payroll preview using salaryEscalationPct", () => {
+    render(
+      <ExtendToFiveYearModal
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        defaults={{
+          enrollmentGrowthPct: 0,
+          tuitionEscalationPct: 3,
+          salaryEscalationPct: 5,
+          costInflationPct: 3,
+        }}
+        y1Payroll={500_000}
+      />,
+    );
+    expect(screen.getByTestId("extend-preview")).toBeInTheDocument();
+    expect(screen.getByTestId("extend-preview-payroll-y1")).toHaveTextContent("$500k");
+    // 500_000 * 1.05^4 = 607_753.13 → $608k
+    expect(screen.getByTestId("extend-preview-payroll-y5")).toHaveTextContent("$608k");
+  });
+
+  it("updates the payroll preview when salary rate is edited", () => {
+    render(
+      <ExtendToFiveYearModal
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        defaults={FALLBACK}
+        y1Payroll={1_000_000}
+      />,
+    );
+    // Default salary rate = 3% → 1M * 1.03^4 = 1_125_508.81 → $1.13M
+    expect(screen.getByTestId("extend-preview-payroll-y5")).toHaveTextContent("$1.13M");
+    fireEvent.change(screen.getByTestId("extend-rate-salary"), { target: { value: "6" } });
+    // 1M * 1.06^4 = 1_262_476.96 → $1.26M
+    expect(screen.getByTestId("extend-preview-payroll-y5")).toHaveTextContent("$1.26M");
+  });
+
+  it("renders non-payroll expense preview using per-row rates plus modal default", () => {
+    render(
+      <ExtendToFiveYearModal
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        defaults={FALLBACK}
+        y1ExpenseRows={[
+          { amount: 100_000 }, // uses modal default 3%
+          { amount: 50_000, rate: 0 }, // pinned flat
+        ]}
+      />,
+    );
+    expect(screen.getByTestId("extend-preview-nonpayroll-y1")).toHaveTextContent("$150k");
+    // 100k * 1.03^4 = 112_550 + 50k flat = 162_550 → $163k
+    expect(screen.getByTestId("extend-preview-nonpayroll-y5")).toHaveTextContent("$163k");
+    // Editing cost inflation only affects the unpinned row
+    fireEvent.change(screen.getByTestId("extend-rate-cost"), { target: { value: "10" } });
+    // 100k * 1.10^4 = 146_410 + 50k = 196_410 → $196k
+    expect(screen.getByTestId("extend-preview-nonpayroll-y5")).toHaveTextContent("$196k");
+  });
+
+  it("preview Y5 expense matches what the seeder will produce", () => {
+    const expenseRows = [
+      { amounts: [200_000], escalationRate: undefined as number | undefined },
+      { amounts: [80_000], escalationRate: 7 },
+    ];
+    const seedRates: SeedDefaults = {
+      enrollmentGrowthPct: 0,
+      tuitionEscalationPct: 3,
+      salaryEscalationPct: 3,
+      costInflationPct: 4,
+    };
+    const seeded = seedFiveYearFromYearOne(
+      { expenseRows } as unknown as Parameters<typeof seedFiveYearFromYearOne>[0],
+      seedRates,
+    );
+    const seededRows = (seeded as unknown as { expenseRows: Array<{ amounts: number[] }> }).expenseRows;
+    const seededY5Total = seededRows.reduce((s, r) => s + (Number(r.amounts[4]) || 0), 0);
+
+    render(
+      <ExtendToFiveYearModal
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        defaults={seedRates}
+        y1ExpenseRows={expenseRows.map((r) => ({
+          amount: r.amounts[0],
+          rate: r.escalationRate,
+        }))}
+      />,
+    );
+    // formatCurrency rounds; compare against the same formatter output
+    const y5 = screen.getByTestId("extend-preview-nonpayroll-y5").textContent || "";
+    // sanity: seeder Y5 sum > Y1 sum
+    expect(seededY5Total).toBeGreaterThan(280_000);
+    // Re-format the seeder total the same way the modal does
+    const expected =
+      seededY5Total >= 1_000_000
+        ? `$${(seededY5Total / 1_000_000).toFixed(seededY5Total >= 10_000_000 ? 1 : 2)}M`
+        : seededY5Total >= 1_000
+          ? `$${Math.round(seededY5Total / 1_000).toLocaleString()}k`
+          : `$${Math.round(seededY5Total).toLocaleString()}`;
+    expect(y5).toContain(expected);
+  });
+
   it("passes the founder's edited rates through onConfirm", () => {
     const onConfirm = vi.fn();
     const defaults: SeedDefaults = {

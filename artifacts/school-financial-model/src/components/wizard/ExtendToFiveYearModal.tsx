@@ -22,6 +22,20 @@ interface ExtendToFiveYearModalProps {
    */
   y1Enrollment?: number;
   y1TuitionRevenue?: number;
+  /**
+   * Year-1 payroll grand total (salaries + benefits + payroll taxes +
+   * payroll-like contractors), as produced by `calculatePersonnelCosts`. The
+   * Y5 preview applies `salaryEscalationPct` flat across 4 years, matching
+   * how the compute engine escalates payroll downstream.
+   */
+  y1Payroll?: number;
+  /**
+   * Year-1 non-payroll expense rows. Preview Y5 sums each row escalated by
+   * its own `rate` (when the row has an `escalationRate` override) or the
+   * modal's current `costInflationPct` otherwise — matching the seeder's
+   * `pickExpenseRowRate` behaviour exactly.
+   */
+  y1ExpenseRows?: Array<{ amount: number; rate?: number }>;
 }
 
 function projectYear5(y1: number, ratePct: number): number {
@@ -55,6 +69,8 @@ export function ExtendToFiveYearModal({
   defaults,
   y1Enrollment,
   y1TuitionRevenue,
+  y1Payroll,
+  y1ExpenseRows,
 }: ExtendToFiveYearModalProps) {
   const resolvedDefaults: SeedDefaults = defaults ?? SEED_DEFAULTS_FALLBACK;
   const [rates, setRates] = useState<SeedDefaults>(resolvedDefaults);
@@ -182,8 +198,22 @@ export function ExtendToFiveYearModal({
               "Applied to expense rows and other-revenue rows.",
             )}
           </div>
-          {(Boolean(y1Enrollment && y1Enrollment > 0) ||
-            Boolean(y1TuitionRevenue && y1TuitionRevenue > 0)) && (
+          {(() => {
+            const y1NonPayroll = (y1ExpenseRows ?? []).reduce(
+              (sum, r) => sum + (Number(r.amount) || 0),
+              0,
+            );
+            const y5NonPayroll = (y1ExpenseRows ?? []).reduce((sum, r) => {
+              const amt = Number(r.amount) || 0;
+              const rate = typeof r.rate === "number" ? r.rate : rates.costInflationPct;
+              return sum + projectYear5(amt, rate);
+            }, 0);
+            const showEnrollment = Boolean(y1Enrollment && y1Enrollment > 0);
+            const showTuition = Boolean(y1TuitionRevenue && y1TuitionRevenue > 0);
+            const showPayroll = Boolean(y1Payroll && y1Payroll > 0);
+            const showNonPayroll = y1NonPayroll > 0;
+            if (!showEnrollment && !showTuition && !showPayroll && !showNonPayroll) return null;
+            return (
             <div
               data-testid="extend-preview"
               className="mt-4 pt-3 border-t border-border/60"
@@ -226,9 +256,44 @@ export function ExtendToFiveYearModal({
                     </span>
                   </div>
                 ) : null}
+                {showPayroll ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Payroll</span>
+                    <span className="tabular-nums font-medium text-foreground">
+                      <span data-testid="extend-preview-payroll-y1">
+                        {formatCurrency(y1Payroll as number)}
+                      </span>
+                      <span className="mx-1.5 text-muted-foreground">→</span>
+                      <span data-testid="extend-preview-payroll-y5">
+                        {formatCurrency(projectYear5(y1Payroll as number, rates.salaryEscalationPct))}
+                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        @ {rates.salaryEscalationPct}%/yr
+                      </span>
+                    </span>
+                  </div>
+                ) : null}
+                {showNonPayroll ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Expenses (non-payroll)</span>
+                    <span className="tabular-nums font-medium text-foreground">
+                      <span data-testid="extend-preview-nonpayroll-y1">
+                        {formatCurrency(y1NonPayroll)}
+                      </span>
+                      <span className="mx-1.5 text-muted-foreground">→</span>
+                      <span data-testid="extend-preview-nonpayroll-y5">
+                        {formatCurrency(y5NonPayroll)}
+                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        @ {rates.costInflationPct}%/yr
+                      </span>
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
-          )}
+            );
+          })()}
         </div>
         <ul className="space-y-2 mb-6 text-sm text-foreground">
           <li className="flex items-start gap-2">
