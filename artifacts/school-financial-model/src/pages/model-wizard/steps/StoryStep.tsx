@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { SCHOOL_TYPE_LABELS } from "../schema";
 import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona";
+import { useModelDuration } from "@/lib/use-model-duration";
 import {
   GRADE_BAND_KEYS,
   GRADE_BAND_DEFAULT_RATIO,
@@ -64,6 +65,10 @@ export function StoryStep() {
   const persona = getFounderPersona(user);
   const yetToLaunch = isYetToLaunch(user);
   const newComfort = persona.comfort === "new_to_budgeting";
+  // Single-year mode hides the Y5 column on both the age-band and grade
+  // matrices below — single-year founders shouldn't be asked for Y5
+  // numbers they explicitly opted out of on the duration picker.
+  const { isSingleYear } = useModelDuration();
   const openingStory = (watch("budgetNarrative.openingStory") as string) || "";
   const foundingQuestions = (watch("budgetNarrative.foundingQuestions") as string[]) || [];
   const gradeBandEnrollment = (watch("schoolProfile.gradeBandEnrollment") as
@@ -601,102 +606,118 @@ export function StoryStep() {
                 A best-guess number is fine — what would the program look like if you opened today?
               </p>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {activeBands.map((opt) => {
-                const arr = (gradeBandEnrollment[opt.key] as (number | null)[] | undefined) ?? [0, 0, 0, 0, 0];
-                const year1Raw = arr[0];
-                const year1 = typeof year1Raw === "number" ? year1Raw : 0;
-                const perPupil = gradeBandPerPupil[opt.key] ?? 0;
-                const ratioOverride = gradeBandRatio[opt.key];
-                const ratioDefault = GRADE_BAND_DEFAULT_RATIO[opt.key];
-                const longTermShare = computeLongTermShare(opt.key);
-                const displayLabel = opt.key === "other" && otherLabel ? otherLabel : opt.label;
-                return (
-                  <div
-                    key={opt.key}
-                    className="rounded-xl border border-border bg-card px-3 py-3 space-y-3"
-                    data-testid={`story-band-detail-${opt.key}`}
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{displayLabel}</p>
-                    <div>
-                      <label className="text-xs text-muted-foreground">{yetToLaunch ? "Year-1 students" : "Students this year"}</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={year1}
-                        onChange={(e) => setBandYear1(opt.key, Number(e.target.value || 0))}
-                        className="w-full rounded-lg border border-border px-3 py-2 text-sm mt-1"
-                        data-testid={`story-band-year1-${opt.key}`}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Tuition per student / year</label>
-                      <div className="relative mt-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={perPupil}
-                          onChange={(e) => setBandPerPupil(opt.key, Number(e.target.value || 0))}
-                          className="w-full rounded-lg border border-border pl-6 pr-3 py-2 text-sm"
-                          data-testid={`story-band-per-pupil-${opt.key}`}
-                          disabled={sameTuition && activeBands[0]?.key !== opt.key}
-                        />
-                      </div>
-                      {sameTuition && activeBands[0]?.key !== opt.key && (
-                        <p className="text-[10px] text-muted-foreground mt-1">Synced from {activeBands[0]?.label}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Year-5 students</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={gradeBandLongTermGoal[opt.key] ?? ""}
-                        placeholder={longTermShare > 0 ? String(longTermShare) : ""}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setValue(
-                            `schoolProfile.gradeBandLongTermGoal.${opt.key}`,
-                            v === "" ? undefined : Number(v) || 0,
-                            { shouldDirty: true },
-                          );
-                        }}
-                        className="w-full rounded-lg border border-border px-3 py-2 text-sm mt-1"
-                        data-testid={`story-band-longterm-${opt.key}`}
-                      />
-                      {gradeBandLongTermGoal[opt.key] === undefined && longTermShare > 0 && (
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          Default: {longTermShare} (proportional to year-1 mix)
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Students per teacher</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={ratioOverride ?? ""}
-                        placeholder={String(ratioDefault)}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === "") {
-                            setBandRatio(opt.key, undefined);
-                          } else {
-                            const parsed = Number(v);
-                            setBandRatio(opt.key, Number.isFinite(parsed) && parsed > 0 ? parsed : undefined);
-                          }
-                        }}
-                        className="w-full rounded-lg border border-border px-3 py-2 text-sm mt-1"
-                        data-testid={`story-band-ratio-${opt.key}`}
-                      />
-                      {ratioOverride === undefined && (
-                        <p className="text-[10px] text-muted-foreground mt-1">Default for this band: {ratioDefault} students per teacher</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="overflow-x-auto rounded-xl border border-border bg-card" data-testid="story-bands-detail-section">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="text-left font-semibold px-3 py-2">Band</th>
+                    <th className="text-left font-semibold px-3 py-2">{yetToLaunch ? "Y1 students" : "Students now"}</th>
+                    <th className="text-left font-semibold px-3 py-2">Tuition $/yr</th>
+                    {!isSingleYear && (
+                      <th className="text-left font-semibold px-3 py-2" data-testid="story-band-y5-header">
+                        Y5 students
+                      </th>
+                    )}
+                    <th className="text-left font-semibold px-3 py-2">Students / teacher</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeBands.map((opt) => {
+                    const arr = (gradeBandEnrollment[opt.key] as (number | null)[] | undefined) ?? [0, 0, 0, 0, 0];
+                    const year1Raw = arr[0];
+                    const year1 = typeof year1Raw === "number" ? year1Raw : 0;
+                    const perPupil = gradeBandPerPupil[opt.key] ?? 0;
+                    const ratioOverride = gradeBandRatio[opt.key];
+                    const ratioDefault = GRADE_BAND_DEFAULT_RATIO[opt.key];
+                    const longTermShare = computeLongTermShare(opt.key);
+                    const displayLabel = opt.key === "other" && otherLabel ? otherLabel : opt.label;
+                    const tuitionDisabled = sameTuition && activeBands[0]?.key !== opt.key;
+                    return (
+                      <tr
+                        key={opt.key}
+                        className="border-t border-border align-top"
+                        data-testid={`story-band-detail-${opt.key}`}
+                      >
+                        <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">{displayLabel}</td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={year1}
+                            onChange={(e) => setBandYear1(opt.key, Number(e.target.value || 0))}
+                            className="w-24 rounded-lg border border-border px-2 py-1.5 text-sm"
+                            data-testid={`story-band-year1-${opt.key}`}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={perPupil}
+                              onChange={(e) => setBandPerPupil(opt.key, Number(e.target.value || 0))}
+                              className="w-28 rounded-lg border border-border pl-5 pr-2 py-1.5 text-sm"
+                              data-testid={`story-band-per-pupil-${opt.key}`}
+                              disabled={tuitionDisabled}
+                            />
+                          </div>
+                          {tuitionDisabled && (
+                            <p className="text-[10px] text-muted-foreground mt-1">Synced from {activeBands[0]?.label}</p>
+                          )}
+                        </td>
+                        {!isSingleYear && (
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              min={0}
+                              value={gradeBandLongTermGoal[opt.key] ?? ""}
+                              placeholder={longTermShare > 0 ? String(longTermShare) : ""}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setValue(
+                                  `schoolProfile.gradeBandLongTermGoal.${opt.key}`,
+                                  v === "" ? undefined : Number(v) || 0,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                              className="w-24 rounded-lg border border-border px-2 py-1.5 text-sm"
+                              data-testid={`story-band-longterm-${opt.key}`}
+                            />
+                            {gradeBandLongTermGoal[opt.key] === undefined && longTermShare > 0 && (
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                Default: {longTermShare}
+                              </p>
+                            )}
+                          </td>
+                        )}
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={ratioOverride ?? ""}
+                            placeholder={String(ratioDefault)}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === "") {
+                                setBandRatio(opt.key, undefined);
+                              } else {
+                                const parsed = Number(v);
+                                setBandRatio(opt.key, Number.isFinite(parsed) && parsed > 0 ? parsed : undefined);
+                              }
+                            }}
+                            className="w-20 rounded-lg border border-border px-2 py-1.5 text-sm"
+                            data-testid={`story-band-ratio-${opt.key}`}
+                          />
+                          {ratioOverride === undefined && (
+                            <p className="text-[10px] text-muted-foreground mt-1">Default: {ratioDefault}</p>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -713,91 +734,106 @@ export function StoryStep() {
                 pre-fill from typical defaults — edit any of them as needed.
               </p>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {activeGrades.map((key) => {
-                const arr = (gradeEnrollment[key] as (number | null)[] | undefined) ?? [0, 0, 0, 0, 0];
-                const y1Raw = arr[0];
-                const y1 = typeof y1Raw === "number" ? y1Raw : 0;
-                const perPupil = gradePerPupil[key] ?? 0;
-                const ratioOverride = gradeRatio[key];
-                const ratioDefault = GRADE_DEFAULT_RATIO[key];
-                const longTermVal = gradeLongTermGoal[key];
-                return (
-                  <div
-                    key={key}
-                    className="rounded-xl border border-border bg-card px-3 py-3 space-y-3"
-                    data-testid={`story-grade-detail-${key}`}
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{GRADE_LABELS[key]}</p>
-                    <div>
-                      <label className="text-xs text-muted-foreground">{yetToLaunch ? "Year-1 students" : "Students this year"}</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={y1}
-                        onChange={(e) => setGradeYear1(key, Number(e.target.value || 0))}
-                        className="w-full rounded-lg border border-border px-3 py-2 text-sm mt-1"
-                        data-testid={`story-grade-year1-${key}`}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Tuition per student / year</label>
-                      <div className="relative mt-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={perPupil}
-                          onChange={(e) => setGradePerPupil(key, Number(e.target.value || 0))}
-                          className="w-full rounded-lg border border-border pl-6 pr-3 py-2 text-sm"
-                          data-testid={`story-grade-per-pupil-${key}`}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Year-5 students</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={longTermVal ?? ""}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setValue(
-                            `schoolProfile.gradeLongTermGoal.${key}`,
-                            v === "" ? undefined : Number(v) || 0,
-                            { shouldDirty: true },
-                          );
-                        }}
-                        className="w-full rounded-lg border border-border px-3 py-2 text-sm mt-1"
-                        data-testid={`story-grade-longterm-${key}`}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Students per teacher</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={ratioOverride ?? ""}
-                        placeholder={String(ratioDefault)}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === "") {
-                            setGradeRatio(key, undefined);
-                          } else {
-                            const parsed = Number(v);
-                            setGradeRatio(key, Number.isFinite(parsed) && parsed > 0 ? parsed : undefined);
-                          }
-                        }}
-                        className="w-full rounded-lg border border-border px-3 py-2 text-sm mt-1"
-                        data-testid={`story-grade-ratio-${key}`}
-                      />
-                      {ratioOverride === undefined && (
-                        <p className="text-[10px] text-muted-foreground mt-1">Default for this grade: {ratioDefault} students per teacher</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="overflow-x-auto rounded-xl border border-border bg-card">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="text-left font-semibold px-3 py-2">Grade</th>
+                    <th className="text-left font-semibold px-3 py-2">{yetToLaunch ? "Y1 students" : "Students now"}</th>
+                    <th className="text-left font-semibold px-3 py-2">Tuition $/yr</th>
+                    {!isSingleYear && (
+                      <th className="text-left font-semibold px-3 py-2" data-testid="story-grade-y5-header">
+                        Y5 students
+                      </th>
+                    )}
+                    <th className="text-left font-semibold px-3 py-2">Students / teacher</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeGrades.map((key) => {
+                    const arr = (gradeEnrollment[key] as (number | null)[] | undefined) ?? [0, 0, 0, 0, 0];
+                    const y1Raw = arr[0];
+                    const y1 = typeof y1Raw === "number" ? y1Raw : 0;
+                    const perPupil = gradePerPupil[key] ?? 0;
+                    const ratioOverride = gradeRatio[key];
+                    const ratioDefault = GRADE_DEFAULT_RATIO[key];
+                    const longTermVal = gradeLongTermGoal[key];
+                    return (
+                      <tr
+                        key={key}
+                        className="border-t border-border align-top"
+                        data-testid={`story-grade-detail-${key}`}
+                      >
+                        <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap">{GRADE_LABELS[key]}</td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={y1}
+                            onChange={(e) => setGradeYear1(key, Number(e.target.value || 0))}
+                            className="w-24 rounded-lg border border-border px-2 py-1.5 text-sm"
+                            data-testid={`story-grade-year1-${key}`}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={perPupil}
+                              onChange={(e) => setGradePerPupil(key, Number(e.target.value || 0))}
+                              className="w-28 rounded-lg border border-border pl-5 pr-2 py-1.5 text-sm"
+                              data-testid={`story-grade-per-pupil-${key}`}
+                            />
+                          </div>
+                        </td>
+                        {!isSingleYear && (
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              min={0}
+                              value={longTermVal ?? ""}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setValue(
+                                  `schoolProfile.gradeLongTermGoal.${key}`,
+                                  v === "" ? undefined : Number(v) || 0,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                              className="w-24 rounded-lg border border-border px-2 py-1.5 text-sm"
+                              data-testid={`story-grade-longterm-${key}`}
+                            />
+                          </td>
+                        )}
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={ratioOverride ?? ""}
+                            placeholder={String(ratioDefault)}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === "") {
+                                setGradeRatio(key, undefined);
+                              } else {
+                                const parsed = Number(v);
+                                setGradeRatio(key, Number.isFinite(parsed) && parsed > 0 ? parsed : undefined);
+                              }
+                            }}
+                            className="w-20 rounded-lg border border-border px-2 py-1.5 text-sm"
+                            data-testid={`story-grade-ratio-${key}`}
+                          />
+                          {ratioOverride === undefined && (
+                            <p className="text-[10px] text-muted-foreground mt-1">Default: {ratioDefault}</p>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
