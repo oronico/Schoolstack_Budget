@@ -107,19 +107,21 @@ async function main() {
     // #25 — register timing oracle
     // =======================================================================
     // Setup: register + verify a "real" user we can use as the duplicate-email
-    // probe. Task #527: register is now confirm-by-email (202 with the same
-    // body for both branches) so we have to drive verify-email from the
-    // dev-only `_devToken` to actually create the row.
+    // probe. Task #527/#534: register is confirm-by-email (202 with the same
+    // body for both branches and no auth token) so we have to drive
+    // /auth/verify-email from the dev-only `_devToken` to actually create
+    // the row.
     const realEmail = `round5-real-${stamp}@example.com`;
     const realPassword = "RealPasswordForRound5!";
     const setupReg = await postJson(baseUrl, "/api/auth/register", {
       email: realEmail, password: realPassword, name: "Round 5 Real",
     });
     check(`setup: register real user (202)`, setupReg.status === 202, `status=${setupReg.status} body=${setupReg.body.slice(0, 200)}`);
-    // In non-prod the new-branch register response carries `user`/`token`
-    // directly (synchronous verify, see auth.ts comment) so we don't have
-    // to round-trip through /auth/verify-email here.
-    const realUserId = (setupReg.json as { user?: { id?: number } } | null)?.user?.id ?? 0;
+    const setupDevToken = (setupReg.json as { _devToken?: string } | null)?._devToken;
+    check(`setup: register exposes _devToken`, !!setupDevToken && setupDevToken !== "__existing_account__", `token=${setupDevToken}`);
+    const setupVerify = await postJson(baseUrl, "/api/auth/verify-email", { token: setupDevToken });
+    check(`setup: verify-email returns 200`, setupVerify.status === 200, `status=${setupVerify.status} body=${setupVerify.body.slice(0, 200)}`);
+    const realUserId = (setupVerify.json as { user?: { id?: number } } | null)?.user?.id ?? 0;
     if (realUserId) createdUserIds.push(realUserId);
 
     // Warm up — first request of each branch may include JIT / DB pool overhead.
@@ -136,18 +138,16 @@ async function main() {
     const dupTimes: number[] = [];
     const newTimes: number[] = [];
     const newUserEmails: string[] = [];
-    // Task #527: collect non-volatile parts of each response body so we can
-    // assert the duplicate-email branch and the new-email branch return the
-    // same 202 + identical message (no `_devBranch` / `_devToken` in prod;
-    // in dev they exist but differ — we strip them before comparing).
+    // Task #527/#534: collect non-volatile parts of each response body so we
+    // can assert the duplicate-email branch and the new-email branch return
+    // the same 202 + identical message (no `_devBranch` / `_devToken` in
+    // prod; in dev they exist but differ — we strip them before comparing).
     const stripDev = (b: unknown) => {
       const o = b && typeof b === "object" ? { ...(b as Record<string, unknown>) } : {};
-      // _devToken / _devBranch leak in non-prod for test plumbing; the
-      // new branch additionally surfaces `token` and `user` so e2e specs
-      // can stay on the legacy register-then-read-token shape (see
-      // auth.ts isNonProd() block). All four are stripped here so we
-      // assert the prod-visible body equivalence.
-      for (const k of ["_devToken", "_devBranch", "token", "user"]) {
+      // _devToken / _devBranch leak in non-prod for test plumbing only.
+      // Both are stripped here so we assert the prod-visible body
+      // equivalence.
+      for (const k of ["_devToken", "_devBranch"]) {
         delete (o as Record<string, unknown>)[k];
       }
       return o;

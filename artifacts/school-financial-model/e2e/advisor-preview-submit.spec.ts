@@ -5,6 +5,7 @@ import {
   type APIRequestContext,
   type Page,
 } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #486 — Lock in the in-pane "Send this to the SchoolStack team" submit
 // affordance Task #482 added to the single-year Advisor Preview Panel on the
@@ -143,22 +144,7 @@ async function registerAndSeed(
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `playwright-advisor-preview-${stamp}@e2e.schoolstack.test`;
 
-  const backoffsMs = [2000, 5000, 10000, 20000, 30000];
-  let registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  for (const wait of backoffsMs) {
-    if (registerRes.status() !== 429) break;
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    registerRes = await request.post("/api/auth/register", {
-      data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-    });
-  }
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   await seedPersona(request, token);
   return { token };
 }

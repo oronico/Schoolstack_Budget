@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as XLSX from "xlsx";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #339: data-entry coverage for the Chesterton (CSN) wizard branch.
 //
@@ -200,22 +201,7 @@ async function registerAndSeed(request: APIRequestContext): Promise<{ token: str
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `playwright-chesterton-data-${stamp}@e2e.schoolstack.test`;
 
-  const backoffsMs = [2000, 5000, 10000, 20000, 30000];
-  let registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  for (const wait of backoffsMs) {
-    if (registerRes.status() !== 429) break;
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    registerRes = await request.post("/api/auth/register", {
-      data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-    });
-  }
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   await seedPersona(request, token);
   const guidanceRes = await request.patch("/api/auth/guidance-level", {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

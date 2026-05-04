@@ -66,11 +66,24 @@ async function seedFounder(): Promise<SeededFixture> {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `screenshots-${stamp}@capture.schoolstack.test`;
 
-  const { token } = await api<{ token: string }>("POST", "/api/auth/register", {
-    email,
-    password: TEST_PASSWORD,
-    name: "Bright Horizons Founder",
-  });
+  // Task #534: register no longer auto-promotes the pending signup; the
+  // dev-only `_devToken` from the 202 response is the verification
+  // token we POST to /auth/verify-email to actually create the user.
+  const reg = await api<{ _devToken?: string; _devBranch?: string }>(
+    "POST",
+    "/api/auth/register",
+    { email, password: TEST_PASSWORD, name: "Bright Horizons Founder" },
+  );
+  if (!reg._devToken || reg._devBranch !== "new") {
+    throw new Error(
+      `register did not return a fresh _devToken (branch=${reg._devBranch}); is API_URL pointing at a non-dev server?`,
+    );
+  }
+  const { token } = await api<{ token: string }>(
+    "POST",
+    "/api/auth/verify-email",
+    { token: reg._devToken },
+  );
 
   await api("PATCH", "/api/auth/persona", { stage: "existing", comfort: "comfortable" }, token);
 

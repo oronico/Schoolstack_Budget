@@ -5,6 +5,7 @@ import {
   type APIRequestContext,
   type Page,
 } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #337: end-to-end coverage for the three running summaries the
 // Chesterton wizard renders on steps 6 (Fundraising), 7 (Gift Chart),
@@ -179,22 +180,7 @@ async function registerAndSeed(request: APIRequestContext): Promise<{ token: str
   const email = `playwright-chesterton-summaries-${stamp}@e2e.schoolstack.test`;
 
   // Same per-IP rate-limit backoff as the other chesterton specs.
-  const backoffsMs = [2000, 5000, 10000, 20000, 30000];
-  let registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  for (const wait of backoffsMs) {
-    if (registerRes.status() !== 429) break;
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    registerRes = await request.post("/api/auth/register", {
-      data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-    });
-  }
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   await seedPersona(request, token);
   const guidanceRes = await request.patch("/api/auth/guidance-level", {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

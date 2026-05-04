@@ -1,5 +1,6 @@
 import { seedPersona } from "./utils/seed-persona";
 import { test, expect, type APIRequestContext, type Page } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #464: end-to-end coverage for the single-year wizard step list.
 //
@@ -15,19 +16,7 @@ const TEST_PASSWORD = "PlaywrightTest12345!";
 async function registerAndSeed(request: APIRequestContext): Promise<string> {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `playwright-single-year-steplist-${stamp}@e2e.schoolstack.test`;
-  const backoffsMs = [2000, 5000, 10000, 20000, 30000];
-  let res = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  for (const wait of backoffsMs) {
-    if (res.status() !== 429) break;
-    await new Promise((r) => setTimeout(r, wait));
-    res = await request.post("/api/auth/register", {
-      data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-    });
-  }
-  expect(res.ok(), `register failed: ${res.status()} ${await res.text()}`).toBeTruthy();
-  const { token } = (await res.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   await seedPersona(request, token);
   const guidance = await request.patch("/api/auth/guidance-level", {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

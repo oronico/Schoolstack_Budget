@@ -1,11 +1,12 @@
-// Task #527 — confirm-by-email signup. /auth/register no longer returns
-// a token directly; the founder has to click a verification link in
-// their inbox which POSTs to /auth/verify-email. Tests don't have a
-// mailbox to read, so we surface the raw verification token via a
-// dev-only `_devToken` field on the 202 response (gated on
-// NODE_ENV !== "production"). This helper chains the two requests and
-// returns the same `{ token, user }` shape the old register endpoint
-// used to return, so individual tests barely have to change.
+// Task #527 / Task #534 — confirm-by-email signup. /auth/register no
+// longer returns a token directly; the founder has to click a
+// verification link in their inbox which POSTs to /auth/verify-email.
+// Tests don't have a mailbox to read, so we surface the raw
+// verification token via a dev-only `_devToken` field on the 202
+// response (gated on NODE_ENV !== "production"). This helper chains
+// the two requests and returns the same `{ token, user }` shape the
+// old register endpoint used to return, so individual tests barely
+// have to change.
 export type RegisterAndVerifyResult = {
   token: string;
   user: { id: number; email: string; name: string };
@@ -23,17 +24,10 @@ export async function registerAndVerify(
   if (reg.status !== 202) {
     throw new Error(`register failed: status=${reg.status} body=${(await reg.text()).slice(0, 300)}`);
   }
-  const regJson = (await reg.json()) as Partial<RegisterAndVerifyResult> & {
+  const regJson = (await reg.json()) as {
     _devToken?: string;
     _devBranch?: string;
   };
-  // Non-prod register handler synchronously promotes the pending signup
-  // and includes `token` + `user` on the dev-only response so we don't
-  // need a second roundtrip. Fall back to /auth/verify-email if we ever
-  // run this against a build that doesn't surface them.
-  if (regJson.token && regJson.user) {
-    return { token: regJson.token, user: regJson.user };
-  }
   const devToken = regJson._devToken;
   const branch = regJson._devBranch;
   if (!devToken || branch !== "new") {

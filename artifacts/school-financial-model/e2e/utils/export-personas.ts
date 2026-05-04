@@ -9,6 +9,7 @@ import { autoResolveBlockingFlags } from "./auto-resolve-flags";
 import { seedPersona } from "./seed-persona";
 import type { APIRequestContext, Page } from "./test";
 import { expect } from "./test";
+import { registerAndVerifyE2E } from "./register-and-verify";
 
 // Shared persona seeding + auth-prime helpers for the export-download
 // e2e specs (`export-download-personas.spec.ts` from Task #449 and
@@ -73,18 +74,7 @@ export async function seedPersonaModel(
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `playwright-${persona.label}-${stamp}@e2e.schoolstack.test`;
 
-  const registerRes = await request.post("/api/auth/register", {
-    data: {
-      email,
-      password: TEST_PASSWORD,
-      name: "Playwright Founder",
-    },
-  });
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   await seedPersona(request, token);
 
   const authHeaders = { Authorization: `Bearer ${token}` };

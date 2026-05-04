@@ -6,6 +6,7 @@ import {
   type Page,
   type Browser,
 } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #513 — extends the Task #507 coverage of the shared
 // `<ConflictReloadBanner />` to the surfaces the original spec didn't
@@ -54,14 +55,7 @@ async function seedModel(
   const prefix = opts.emailPrefix ?? "playwright-conflict-other";
   const email = `${prefix}-${stamp}@e2e.schoolstack.test`;
 
-  const registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   await seedPersona(request, token);
 
   const baseSchoolProfile: Record<string, unknown> = {

@@ -5,6 +5,7 @@ import {
   type APIRequestContext,
   type Page,
 } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #522: end-to-end coverage for the Story-step enrollment matrix's
 // mobile-friendly layout (Task #519). The vitest unit tests confirm the
@@ -142,22 +143,7 @@ async function registerAndSeed(
 
   // Same retry-on-429 pattern as sibling specs — the register endpoint is
   // IP-rate-limited and full-suite runs can blow through the window.
-  const backoffsMs = [2000, 5000, 10000, 20000, 30000];
-  let registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  for (const wait of backoffsMs) {
-    if (registerRes.status() !== 429) break;
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    registerRes = await request.post("/api/auth/register", {
-      data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-    });
-  }
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
 
   await seedPersona(request, token, {
     stage: "yet_to_launch",

@@ -6,6 +6,7 @@ import {
   type Page,
   type ConsoleMessage,
 } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #354: companion smoke spec for the grouping/matrix surface that the
 // six-paths smoke does not touch. The six-paths smoke proves each
@@ -175,22 +176,7 @@ async function registerAndSeed(request: APIRequestContext): Promise<{ token: str
   const email = `playwright-matrix-${stamp}@e2e.schoolstack.test`;
 
   // Same retry-on-429 pattern as the six-paths smoke spec.
-  const backoffsMs = [2000, 5000, 10000, 20000, 30000];
-  let registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  for (const wait of backoffsMs) {
-    if (registerRes.status() !== 429) break;
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    registerRes = await request.post("/api/auth/register", {
-      data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-    });
-  }
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
 
   // stage = "existing" so the actuals (priorYear/currentYear) columns and
   // the "Didn't offer" toggle render — they're suppressed for yet-to-launch.

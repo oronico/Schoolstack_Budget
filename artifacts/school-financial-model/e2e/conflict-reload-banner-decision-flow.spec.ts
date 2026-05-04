@@ -1,5 +1,6 @@
 import { seedPersona } from "./utils/seed-persona";
 import { test, expect, type APIRequestContext, type Page, type Browser } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #507 — locks in the shared ConflictReloadBanner introduced in Task #492.
 //
@@ -33,14 +34,7 @@ async function seedDecisionFixture(request: APIRequestContext): Promise<SeededFi
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `playwright-conflict-banner-${stamp}@e2e.schoolstack.test`;
 
-  const registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   await seedPersona(request, token);
 
   const createRes = await request.post("/api/models", {

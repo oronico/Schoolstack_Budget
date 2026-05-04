@@ -1,5 +1,6 @@
 import { seedPersona } from "./utils/seed-persona";
 import { test, expect, type APIRequestContext, type Page } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #286: regression coverage for the budget-coach surfaces shown to
 // basics-mode founders.
@@ -41,14 +42,7 @@ async function seedFixture(
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `playwright-budget-coach-${guidanceLevel}-${stamp}@e2e.schoolstack.test`;
 
-  const registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Coach" },
-  });
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Coach" });
 
   await seedPersona(request, token);
 

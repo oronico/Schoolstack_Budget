@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as XLSX from "xlsx";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #334: end-to-end exercise of the Chesterton (CSN) wizard branch.
 //
@@ -240,22 +241,7 @@ async function registerAndSeed(request: APIRequestContext): Promise<{ token: str
 
   // Same backoff dance as wizard-smoke-six-paths — the registration route
   // is rate-limited per IP and earlier tests in the run can saturate it.
-  const backoffsMs = [2000, 5000, 10000, 20000, 30000];
-  let registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  for (const wait of backoffsMs) {
-    if (registerRes.status() !== 429) break;
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    registerRes = await request.post("/api/auth/register", {
-      data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-    });
-  }
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   await seedPersona(request, token);
   // Skip the dashboard guidance overlay so the wizard renders unobstructed.
   const guidanceRes = await request.patch("/api/auth/guidance-level", {

@@ -6,6 +6,7 @@ import {
   type Locator,
   type Page,
 } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #320: end-to-end coverage of the state + entity-type wiring on the
 // Expenses step and the state-driven payroll-tax re-seed on the Staffing step.
@@ -39,14 +40,7 @@ async function seedModel(
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `playwright-state-triggers-${stamp}@e2e.schoolstack.test`;
 
-  const registerRes = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   await seedPersona(request, token);
 
   const authHeaders = { Authorization: `Bearer ${token}` };

@@ -9,6 +9,7 @@ import {
   expectNoForbiddenTerms,
   sweepPage,
 } from "./utils/jargon-free";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #304: a yet_to_launch + new_to_budgeting founder must NEVER see
 // actuals / prior-year / QuickBooks / Xero / variance / forecast-accuracy
@@ -314,22 +315,7 @@ async function registerUser(
   // The registration endpoint is rate-limited per IP. Retry a few times
   // with backoff so this spec doesn't fail spuriously when other e2e
   // tests have just hit the same endpoint.
-  const backoffsMs = [2000, 5000, 10000, 20000, 30000];
-  let res = await request.post("/api/auth/register", {
-    data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-  });
-  for (const wait of backoffsMs) {
-    if (res.status() !== 429) break;
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    res = await request.post("/api/auth/register", {
-      data: { email, password: TEST_PASSWORD, name: "Playwright Founder" },
-    });
-  }
-  expect(
-    res.ok(),
-    `register failed: ${res.status()} ${await res.text()}`,
-  ).toBeTruthy();
-  const { token } = (await res.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   return { token, email };
 }
 

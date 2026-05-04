@@ -1,5 +1,6 @@
 import { seedPersona } from "./utils/seed-persona";
 import { test, expect, type APIRequestContext, type Page } from "./utils/test";
+import { registerAndVerifyE2E } from "./utils/register-and-verify";
 
 // Task #390: covers the metric / asOfYear chip toolbar on the Forecast
 // accuracy view. The pure helper `filterForecastAccuracy` is already covered
@@ -44,18 +45,7 @@ async function seedScenarioFixture(
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `playwright-${stamp}@e2e.schoolstack.test`;
 
-  const registerRes = await request.post("/api/auth/register", {
-    data: {
-      email,
-      password: TEST_PASSWORD,
-      name: "Playwright Founder",
-    },
-  });
-  expect(
-    registerRes.ok(),
-    `register failed: ${registerRes.status()} ${await registerRes.text()}`,
-  ).toBeTruthy();
-  const { token } = (await registerRes.json()) as { token: string };
+  const { token } = await registerAndVerifyE2E(request, { email, password: TEST_PASSWORD, name: "Playwright Founder" });
   // The Forecast accuracy view is gated to "existing" founders — the
   // yet_to_launch persona hides every actuals / variance surface, so
   // seeding the default ("existing") persona keeps the section rendered.

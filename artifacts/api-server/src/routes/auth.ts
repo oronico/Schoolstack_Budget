@@ -123,6 +123,12 @@ function sanitizeTrackMetadata(input: unknown): Record<string, unknown> {
 //     of getting stuck staring at a generic confirmation.
 // Mailer + trackEvent are fire-and-forget (after res.json) for the
 // same timing-equalization reasons documented in round-5 #26.
+//
+// Task #534: dev/test no longer auto-promotes the pending signup to a
+// real user. The only non-prod escape hatch on this response is
+// `_devToken` (+ `_devBranch`) so test helpers can drive
+// /auth/verify-email without a real mailer. Dev and production now
+// share identical register → verify-email flows.
 router.post("/auth/register", registerRateLimiter, async (req, res) => {
   try {
     const parsed = RegisterBody.safeParse(req.body);
@@ -149,14 +155,6 @@ router.post("/auth/register", registerRateLimiter, async (req, res) => {
 
     let branch: "new" | "existing";
     let devToken: string | undefined;
-    // Task #527: in non-prod we ALSO synchronously promote the pending
-    // signup to a real user and emit `token` + `user` on the response,
-    // so the dozens of Playwright specs that historically read
-    // `(await reg.json()).token` keep working without modification.
-    // These fields are gated on isNonProd() so production responses
-    // remain branch-equivalent.
-    let devUser: { id: number; email: string; name: string } | undefined;
-    let devAuthToken: string | undefined;
 
     if (existing.length > 0) {
       branch = "existing";
@@ -205,26 +203,6 @@ router.post("/auth/register", registerRateLimiter, async (req, res) => {
         });
       if (isNonProd()) {
         devToken = rawToken;
-        // Synchronously complete the verify-email step so dev/test
-        // responses already carry an auth token. We move the row from
-        // pending_signups → users right here. The verify-email endpoint
-        // remains the production path.
-        const [created] = await db
-          .insert(usersTable)
-          .values({
-            email: lowerEmail,
-            name,
-            passwordHash,
-            ...(schoolName !== undefined && schoolName ? { schoolName } : {}),
-            ...(role !== undefined && role ? { profileRole: role } : {}),
-            ...(planningStage !== undefined && planningStage ? { planningStage } : {}),
-          })
-          .returning();
-        await db
-          .delete(pendingSignupsTable)
-          .where(eq(pendingSignupsTable.email, lowerEmail));
-        devUser = { id: created.id, email: created.email, name: created.name };
-        devAuthToken = generateToken(created.id, created.tokenVersion);
       }
     }
 
@@ -239,10 +217,6 @@ router.post("/auth/register", registerRateLimiter, async (req, res) => {
     if (devToken !== undefined) {
       responseBody._devToken = devToken;
       responseBody._devBranch = branch;
-    }
-    if (devAuthToken && devUser) {
-      responseBody.token = devAuthToken;
-      responseBody.user = devUser;
     }
     res.status(202).json(responseBody);
 
