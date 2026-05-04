@@ -1412,7 +1412,7 @@ export function ModelWizardPage() {
           </div>
         </div>
       )}
-      <div className="bg-card border-b border-border sticky top-20 z-40">
+      <div className="bg-card border-b border-border sticky top-20 z-40 overflow-x-clip">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -1491,13 +1491,13 @@ export function ModelWizardPage() {
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 cursor-pointer",
+                      "w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold border-2 transition-all duration-300 cursor-pointer",
                       isCurrent ? "bg-primary border-primary text-primary-foreground scale-110 shadow-md shadow-primary/30" : 
                       isCompleted ? "bg-primary border-primary text-primary-foreground hover:scale-110 hover:shadow-md hover:shadow-primary/30" : 
                       "bg-card border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
                     )}
                   >
-                    {isCompleted && !isCurrent ? <CheckCircle2 className="h-4 w-4" /> : step.id}
+                    {isCompleted && !isCurrent ? <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" /> : step.id}
                   </button>
                   <span className={cn(
                     "text-[10px] uppercase tracking-wider font-semibold absolute mt-10",

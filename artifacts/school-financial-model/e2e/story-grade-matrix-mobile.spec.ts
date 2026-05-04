@@ -280,7 +280,7 @@ test.describe("Story step grade matrix — real-browser layout", () => {
     await fillGradeInputs(page);
 
     // The matrix detail section must not introduce horizontal overflow at
-    // a phone width. We assert two things:
+    // a phone width. We assert three things:
     //   1. The matrix detail section's own scrollWidth fits within its
     //      clientWidth — defends against the case where some ancestor's
     //      overflow:hidden masks a child overflow that would otherwise
@@ -289,13 +289,9 @@ test.describe("Story step grade matrix — real-browser layout", () => {
     //   2. The matrix detail section is itself no wider than the viewport
     //      — which is the founder-visible symptom the task is about
     //      (the matrix can't push the page wider than the phone screen).
-    //
-    // We deliberately do NOT assert document.documentElement.scrollWidth
-    // === window.innerWidth here, because the wizard chrome (sidebar,
-    // sticky header, persona overlay residue, etc.) can introduce a few
-    // pixels of unrelated overflow on phone widths that have nothing to
-    // do with this task. A regression in StoryStep would still trip the
-    // section-scoped assertions below.
+    //   3. The whole document does not scroll horizontally at a phone
+    //      width (Task #526) — the wizard chrome (step rail, sticky
+    //      header, persona overlay) must also fit inside the viewport.
     const detailMetrics = await page
       .getByTestId("story-grades-detail-section")
       .evaluate((el) => ({
@@ -315,6 +311,23 @@ test.describe("Story step grade matrix — real-browser layout", () => {
         `wide at a 390px viewport — the matrix should not push the page wider ` +
         `than the founder's phone screen.`,
     ).toBeLessThanOrEqual(390);
+
+    // Task #526 — the whole document must also fit within the phone
+    // viewport. Previously the wizard's step rail rendered 12 fixed-width
+    // step circles in a `justify-between` row, which blew past the
+    // 390px viewport by ~10px and caused a stuck horizontal scroll bar
+    // on every wizard step. Re-enabled now that the rail uses smaller
+    // circles on mobile and the chrome clips horizontal overflow.
+    const pageMetrics = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(
+      pageMetrics.scrollWidth,
+      `document scrollWidth (${pageMetrics.scrollWidth}) exceeded window ` +
+        `innerWidth (${pageMetrics.innerWidth}) — the wizard chrome is ` +
+        `pushing the page wider than the phone viewport.`,
+    ).toBeLessThanOrEqual(pageMetrics.innerWidth);
 
     // The desktop column header is hidden on mobile (it lives inside the
     // `hidden sm:grid` row). Confirm it's not visible at this width so the
