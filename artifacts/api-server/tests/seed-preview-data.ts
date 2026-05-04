@@ -1,11 +1,14 @@
 // Task #531 — unit test for the preview-data auto-seed.
+// Task #541 — extended to assert the third (charter) demo model.
 //
 // Validates the four behaviors documented in seed-preview-data.ts:
 //   1. SKIP_PREVIEW_SEED=true       → no inserts, no reads
 //   2. database undefined           → no-op (no DB to seed)
 //   3. users table not empty        → no inserts
-//   4. users table empty            → 1 user + 2 financial_models inserted
-//      with the documented credentials/shape
+//   4. users table empty            → 1 user + 3 financial_models inserted
+//      with the documented credentials/shape, and at least one model
+//      uses fundingProfile === "charter_public_funded" so reviewers can
+//      smoke-test the public-funding code path in one click.
 //
 // Uses an in-memory fake of the drizzle query builder so this stays
 // hermetic — no DATABASE_URL required, no migrations to run, runs in
@@ -131,7 +134,8 @@ async function run() {
     );
   }
 
-  // Case 4: empty users table → 1 user + 2 models with the documented shape.
+  // Case 4: empty users table → 1 user + 3 models with the documented shape
+  // (microschool + private school + charter — see task #541).
   {
     const { fakeDb, inserted } = makeFakeDb({ existingUsers: 0 });
     const logs: unknown[][] = [];
@@ -150,9 +154,23 @@ async function run() {
       `users=${userRows.length}`,
     );
     check(
-      "empty DB → exactly 2 financial_models inserted",
-      modelRows.length === 2,
+      "empty DB → exactly 3 financial_models inserted",
+      modelRows.length === 3,
       `models=${modelRows.length}`,
+    );
+
+    // Task #541 — at least one demo model must exercise the
+    // charter / public-funding code path (ADM grade-band funding,
+    // public-funding revenue rows, charter consultant narrative).
+    const charterRows = modelRows.filter(
+      (r) =>
+        (r.values as { fundingProfile?: string }).fundingProfile ===
+        "charter_public_funded",
+    );
+    check(
+      "empty DB → at least one model uses charter_public_funded",
+      charterRows.length >= 1,
+      `charter_models=${charterRows.length}`,
     );
 
     const user = userRows[0]?.values as
