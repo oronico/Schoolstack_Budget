@@ -1329,6 +1329,38 @@ export function ModelWizardPage() {
                 </button>
               </div>
             )}
+            {watchedIsSingleYear && currentStep === stepIdByTitle("Consultant") && (
+              // Single-year founders skip from Consultant straight to Export
+              // because the Lender Narrative step is gated to 5-year mode
+              // (task #461). Without this note they'd just see "11 steps"
+              // with no explanation for the missing one — so we surface a
+              // brief inline pointer to the Extend-to-5-year flow they
+              // already see in the top banner.
+              <div
+                data-testid="lender-narrative-single-year-note"
+                className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3"
+              >
+                <div className="shrink-0 mt-0.5 w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-emerald-900">
+                    Looking for the Lender Narrative step?
+                  </p>
+                  <p className="text-xs text-emerald-700 mt-1">
+                    The lender packet is built from a 5-year projection, so the Lender Narrative step appears once you extend this model to 5 years.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  data-testid="consultant-extend-to-five-year"
+                  onClick={() => setShowExtendModal(true)}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-800 text-xs font-semibold hover:bg-emerald-50 transition-colors"
+                >
+                  Extend to 5-year
+                </button>
+              </div>
+            )}
             <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
               <ActiveStepComponent
                 jumpToStep={setCurrentStep}
