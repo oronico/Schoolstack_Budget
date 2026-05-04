@@ -96,4 +96,30 @@ describe("ExportStep — single-year gating for Lender + Board packets", () => {
     expect(screen.getByText(/Lender-Ready Packet/i)).toBeInTheDocument();
     expect(screen.getByText(/Board Summary/i)).toBeInTheDocument();
   });
+
+  // Task #485 — the Chesterton CSN Operating Manual export pulls from its
+  // own `data.chesterton.*` shape (year0..year5 fields) rather than from the
+  // wizard's collapsed single-year shape, so it stays exportable for a
+  // Chesterton founder even when modelDuration === "single_year". Guard
+  // against a future regression that would gate it behind the Lender/Board
+  // extend modal.
+  it("keeps the Chesterton CSN Operating Manual card enabled in single-year mode", () => {
+    function ChestertonHarness() {
+      const methods = useForm({
+        defaultValues: {
+          schoolProfile: { modelDuration: "single_year", schoolType: "chesterton_academy" },
+          enrollment: { year1: 60 },
+        },
+      });
+      return (
+        <FormProvider {...methods}>
+          <ExportStep modelId={42} />
+        </FormProvider>
+      );
+    }
+    render(<ChestertonHarness />);
+    const csnButton = screen.getByRole("button", { name: /CSN Operating Manual/i });
+    expect(csnButton).toBeInTheDocument();
+    expect(csnButton).not.toBeDisabled();
+  });
 });

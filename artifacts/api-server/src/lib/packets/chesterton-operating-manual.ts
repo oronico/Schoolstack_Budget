@@ -1,6 +1,15 @@
 // Chesterton Schools Network (CSN) Operating Manual export.
 // Tabs mirror `3_Operating_Manual_2026_FV.xlsx`. Cross-sheet formulas use
 // named ranges defined on GETTING STARTED so editing inputs cascades.
+//
+// Task #485 audit: this generator only consumes `data.chesterton.*`, which
+// carries its own `year0..year5` schema (see ChestertonGradeRow below). It
+// does NOT branch on `schoolProfile.modelDuration`, so a Chesterton founder
+// in single-year mode still gets the full 5-year CSN template — unfilled
+// future-year cells stay blank, matching the unmodified upstream workbook.
+// Lender Packet PDF + Board Summary PDF were the deliverables that needed
+// gating; this one is safe to export from single-year mode and the
+// ExportStep card reflects that (no `isSingleYear` overlay).
 
 import ExcelJS from "exceljs";
 import { HyperFormula } from "hyperformula";

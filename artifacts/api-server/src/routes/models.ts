@@ -894,6 +894,13 @@ router.get("/models/:id/export/lender-packet", authMiddleware, async (req: AuthR
   }
 });
 
+// Lender Packet PDF — Task #485 audit: this stays a 5-year-only deliverable
+// by product decision. The cover page reads "5-Year Financial Model", the
+// debt-service section renders Y1-Y5 DSCR + reserve trend tables, and the
+// scenario/forecast-accuracy sections all key off multi-year trajectories.
+// A Y1-only variant would not satisfy the lender use case (lenders ask for
+// the multi-year forecast directly), so single-year founders are gated to
+// "Extend to 5-year" upstream in ExportStep.tsx rather than here.
 router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
@@ -1019,6 +1026,13 @@ router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRe
   }
 });
 
+// Board Summary PDF — Task #485 audit: same product call as the Lender
+// Packet PDF above. Cover reads "5-Year Financial Overview for Board
+// Review", and the cash-runway / scenario-comparison / recruiting-projection
+// sections all assume a 5-year window (trough callouts only make sense over
+// multiple years; the Y5 scenario snapshot is the headline trustees ask for).
+// Single-year founders are routed through the "Extend to 5-year" gate in
+// ExportStep.tsx; we do not render a Y1-only board PDF.
 router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
@@ -1299,6 +1313,17 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
 // when schoolType === "chesterton_academy"; we still let any model hit
 // the route (the workbook just falls back to defaults) so the founder
 // can preview the format even before they finish the wizard.
+//
+// Task #485 audit: this export is intentionally independent of the
+// `schoolProfile.modelDuration` setting. The CSN workbook is a 5-year
+// template by design (Tab "1 - 5 YR FINANCIAL PROJECTIONS"), and its
+// inputs come from `data.chesterton.*` (phaseEnrollment carries year0..
+// year5 directly), not from the wizard's collapsed single-year shape.
+// A founder who selected "Single-Year" mode can still export a complete
+// CSN manual — empty future-year cells just stay blank in the workbook,
+// matching the behavior of the unmodified CSN template. As a result,
+// ExportStep.tsx does NOT gate the Chesterton card on isSingleYear (only
+// on isChesterton).
 router.get("/models/:id/export/chesterton-operating-manual", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
