@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Mail, Loader2, AlertCircle, ScanEye } from "lucide-react";
+import { Mail, Loader2, AlertCircle, ScanEye, MessageSquareMore, Send, CheckCircle2 } from "lucide-react";
 import { customFetch } from "@workspace/api-client-react";
 import type { ComparisonResult } from "@/lib/scenario-compare";
 
@@ -43,6 +43,11 @@ const VERDICT_BADGE: Record<ComparisonResult["verdict"], { label: string; classN
  * (`renderReviewRequestEmail` server-side, `compareScenarios` client-side)
  * so what the founder previews is what advisors actually receive. See
  * Task #477.
+ *
+ * Task #482: also includes a "Send to advisors" submit affordance so founders
+ * can act on the preview without leaving Scenarios. Mirrors the wizard's
+ * Export-step request-review form (POST /api/models/:id/request-review,
+ * gated on /api/models/:id/review-available).
  */
 export function AdvisorPreviewPanel({
   modelId,
@@ -54,6 +59,16 @@ export function AdvisorPreviewPanel({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  // Request-review state — mirrors ExportStep so submit/success/error UX matches.
+  const [reviewAvailable, setReviewAvailable] = useState<boolean | null>(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewName, setReviewName] = useState("");
+  const [reviewEmail, setReviewEmail] = useState("");
+  const [reviewMessage, setReviewMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +94,45 @@ export function AdvisorPreviewPanel({
     };
   }, [modelId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    customFetch<{ available: boolean }>(`/api/models/${modelId}/review-available`)
+      .then((res) => {
+        if (cancelled) return;
+        setReviewAvailable(res.available);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setReviewAvailable(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [modelId]);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewName.trim() || !reviewEmail.trim()) return;
+    setReviewLoading(true);
+    setReviewError(null);
+    try {
+      await customFetch(`/api/models/${modelId}/request-review`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: reviewName.trim(),
+          email: reviewEmail.trim(),
+          message: reviewMessage.trim() || undefined,
+        }),
+      });
+      setReviewSubmitted(true);
+      setShowReviewForm(false);
+    } catch {
+      setReviewError("Something went wrong. Please try again.");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   // Push the rendered HTML into the iframe via srcdoc so the email's
   // inline <style>/<table> markup renders in isolation from the host page.
   // sandbox="" blocks scripts entirely — the brief is static HTML.
@@ -86,6 +140,12 @@ export function AdvisorPreviewPanel({
     if (!data?.html) return "";
     return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#F8FAFC;">${data.html}</body></html>`;
   }, [data?.html]);
+
+  // Treat the still-loading (null) state as disabled so a fast click can't
+  // open the form before /review-available resolves and avoid a 503 from the
+  // server. Matches the wizard's hard-gate behavior.
+  const submitDisabled = reviewAvailable !== true;
+  const submitUnavailable = reviewAvailable === false;
 
   return (
     <div
@@ -166,6 +226,136 @@ export function AdvisorPreviewPanel({
             className="w-full"
             style={{ height: 720, border: 0, background: "#F8FAFC" }}
           />
+        )}
+      </div>
+
+      {/* Task #482 — submit straight from the preview pane. */}
+      <div className="mt-5" data-testid="advisor-preview-submit">
+        {reviewSubmitted ? (
+          <div
+            className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-start gap-3"
+            data-testid="advisor-preview-submitted"
+          >
+            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-display font-bold text-base text-green-900 mb-1">
+                Review requested — we'll be in touch
+              </h3>
+              <p className="text-sm text-green-700">
+                Check your email for a confirmation. Our advisors will review
+                your model and get back to you within 5–7 business days.
+              </p>
+            </div>
+          </div>
+        ) : showReviewForm ? (
+          <form
+            onSubmit={handleReviewSubmit}
+            className="bg-gradient-to-b from-amber-50/80 to-white border-2 border-amber-400/40 rounded-xl p-5 space-y-4 text-left"
+            data-testid="advisor-preview-form"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                <MessageSquareMore className="h-4 w-4 text-amber-600" />
+              </div>
+              <h3 className="font-display font-bold text-base text-foreground">
+                Send this to the SchoolStack team
+              </h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Our school finance advisors will review your model and reply with
+              personalized feedback within 5–7 business days — free.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Your name</label>
+                <input
+                  type="text"
+                  required
+                  value={reviewName}
+                  onChange={(e) => setReviewName(e.target.value)}
+                  data-testid="advisor-preview-input-name"
+                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                  placeholder="Jane Smith"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Your email</label>
+                <input
+                  type="email"
+                  required
+                  value={reviewEmail}
+                  onChange={(e) => setReviewEmail(e.target.value)}
+                  data-testid="advisor-preview-input-email"
+                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                  placeholder="jane@school.org"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Questions or notes <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={reviewMessage}
+                onChange={(e) => setReviewMessage(e.target.value)}
+                rows={3}
+                data-testid="advisor-preview-input-message"
+                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 resize-none"
+                placeholder="Anything specific you'd like us to look at?"
+              />
+            </div>
+            {reviewError && (
+              <p className="text-sm text-red-600" data-testid="advisor-preview-error">
+                {reviewError}
+              </p>
+            )}
+            <div className="flex gap-3 pt-1">
+              <button
+                type="submit"
+                disabled={reviewLoading || !reviewName.trim() || !reviewEmail.trim()}
+                data-testid="advisor-preview-submit-button"
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-amber-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-amber-600 shadow-md shadow-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {reviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {reviewLoading ? "Sending..." : "Send to advisors"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowReviewForm(false); setReviewError(null); }}
+                className="px-4 py-2.5 rounded-lg border border-border text-muted-foreground hover:bg-muted/50 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowReviewForm(true)}
+              disabled={submitDisabled}
+              data-testid="advisor-preview-open-form"
+              className="inline-flex items-center justify-center gap-2 bg-amber-500 text-white font-semibold py-2.5 px-5 rounded-lg hover:bg-amber-600 shadow-md shadow-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="h-4 w-4" />
+              Send this to the SchoolStack team
+            </button>
+            {submitUnavailable ? (
+              <p
+                className="text-xs text-muted-foreground"
+                data-testid="advisor-preview-unavailable-hint"
+              >
+                Email isn't configured on this server yet, so review requests
+                can't be delivered. Ask your admin to set up the SchoolStack
+                mailer to enable this.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Same form as the wizard's <em>Get Your Free Expert Review</em>{" "}
+                — free, 5–7 day turnaround.
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>
