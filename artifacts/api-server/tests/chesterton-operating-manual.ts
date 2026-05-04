@@ -1390,6 +1390,131 @@ const wbPerturbed = await generateChestertonOperatingManual(perturbed);
   );
 }
 
+// Live-recalc bullets — Task #356 rewrote two KEY ASSUMPTIONS bullets
+// and the Parent Handout's E7 + dollar-goal bullet to emit Excel
+// formulas that pull from the Plan_Year / TFG / Attrition_Rate named
+// ranges so editing those inputs on GETTING STARTED reflows the
+// surrounding sentence text. Pin both the formula text AND the cached
+// result against perturbed inputs so a future "fix" that flips them
+// back to baked strings (or drops a named-range reference) trips this
+// test instead of slipping out to founders.
+{
+  // Helper: find the KEY ASSUMPTIONS bullet whose formula text matches
+  // the given substring. Returns the cell object so we can assert on
+  // both `.formula` and `.result`.
+  function findAssumptionsBullet(
+    ws: import("exceljs").Worksheet,
+    needle: string,
+  ): FormulaCell {
+    let found: FormulaCell | null = null;
+    ws.eachRow(row => {
+      row.eachCell(cell => {
+        const v = cell.value as unknown;
+        if (v && typeof v === "object" && "formula" in (v as object)) {
+          const f = (v as { formula?: unknown }).formula;
+          if (typeof f === "string" && f.includes(needle)) {
+            found = v as FormulaCell;
+          }
+        }
+      });
+    });
+    return found ?? { formula: undefined, result: undefined };
+  }
+
+  // Build a third workbook variant with attritionRate + planningYear
+  // shifted so the cached results have to track the new inputs.
+  const perturbed2 = JSON.parse(JSON.stringify(sample)) as typeof sample;
+  perturbed2.chesterton.attritionRate = 0.18;
+  perturbed2.chesterton.planningYear = 2030;
+  // Bump TFG via the fundraising rows + the totalFundraisingGoal mirror
+  // (the KEY ASSUMPTIONS bullet's cached result uses the latter as its
+  // fallback, while the GETTING STARTED TFG named range is rolled up as
+  // SUM of the rows — so we keep both in sync at 950,000).
+  perturbed2.chesterton.fundraisingGoals = [
+    { category: "Major Gifts", goalAmount: 500000, numberOfGifts: 5, averageGift: 100000 },
+    { category: "Mid-Level Gifts", goalAmount: 300000, numberOfGifts: 30, averageGift: 10000 },
+    { category: "Annual Fund", goalAmount: 150000, numberOfGifts: 150, averageGift: 1000 },
+  ];
+  perturbed2.chesterton.totalFundraisingGoal = 950000;
+  const wbPerturbed2 = await generateChestertonOperatingManual(perturbed2);
+
+  // ── KEY ASSUMPTIONS attrition bullet ──
+  const assumeBaseline = wb.getWorksheet("3 - KEY ASSUMPTIONS")!;
+  const assumePerturbed = wbPerturbed2.getWorksheet("3 - KEY ASSUMPTIONS")!;
+  const attritionBaseline = findAssumptionsBullet(assumeBaseline, "Attrition_Rate");
+  expectFormula(
+    "KEY ASSUMPTIONS attrition bullet: pulls Attrition_Rate via TEXT(_,\"0%\")",
+    attritionBaseline,
+    `="Assume annual attrition of ~"&TEXT(Attrition_Rate,"0%")&" will be offset by incoming transfer students."`,
+    `Assume annual attrition of ~10% will be offset by incoming transfer students.`,
+  );
+  const attritionPerturbed = findAssumptionsBullet(assumePerturbed, "Attrition_Rate");
+  expectFormula(
+    "KEY ASSUMPTIONS attrition bullet: cached result tracks attritionRate 0.10 → 0.18",
+    attritionPerturbed,
+    `="Assume annual attrition of ~"&TEXT(Attrition_Rate,"0%")&" will be offset by incoming transfer students."`,
+    `Assume annual attrition of ~18% will be offset by incoming transfer students.`,
+  );
+
+  // ── KEY ASSUMPTIONS fundraising-goal bullet ──
+  const fundGoalBaseline = findAssumptionsBullet(assumeBaseline, "Fundraising goal for ");
+  expectFormula(
+    "KEY ASSUMPTIONS fundraising-goal bullet: pulls Plan_Year + TFG",
+    fundGoalBaseline,
+    `="Fundraising goal for "&Plan_Year&"-"&(Plan_Year+1)&" is $"&TEXT(TFG,"#,##0")&"; fundraising plan to be built around Gala, annual appeals, ongoing major gift fundraising"`,
+    `Fundraising goal for 2027-2028 is $750,000; fundraising plan to be built around Gala, annual appeals, ongoing major gift fundraising`,
+  );
+  const fundGoalPerturbed = findAssumptionsBullet(assumePerturbed, "Fundraising goal for ");
+  expectFormula(
+    "KEY ASSUMPTIONS fundraising-goal bullet: cached result tracks Plan_Year 2027→2030 + TFG 750k→950k",
+    fundGoalPerturbed,
+    `="Fundraising goal for "&Plan_Year&"-"&(Plan_Year+1)&" is $"&TEXT(TFG,"#,##0")&"; fundraising plan to be built around Gala, annual appeals, ongoing major gift fundraising"`,
+    `Fundraising goal for 2030-2031 is $950,000; fundraising plan to be built around Gala, annual appeals, ongoing major gift fundraising`,
+  );
+
+  // ── Parent Handout projection title (E7) ──
+  const handoutBaseline = wb.getWorksheet("Parent Handout")!;
+  const handoutPerturbed = wbPerturbed2.getWorksheet("Parent Handout")!;
+  const e7Baseline = readFormula(handoutBaseline, "E7");
+  expectFormula(
+    "Parent Handout E7: projection title pulls Plan_Year",
+    e7Baseline,
+    `=Plan_Year&"-"&RIGHT(Plan_Year+1,2)&" Projections - At a Glance"`,
+    "2027-28 Projections - At a Glance",
+  );
+  const e7Perturbed = readFormula(handoutPerturbed, "E7");
+  expectFormula(
+    "Parent Handout E7: cached result tracks Plan_Year 2027 → 2030",
+    e7Perturbed,
+    `=Plan_Year&"-"&RIGHT(Plan_Year+1,2)&" Projections - At a Glance"`,
+    "2030-31 Projections - At a Glance",
+  );
+
+  // ── Parent Handout dollar-goal bullet (bullet 4 = row 8 + idx 3 = A11) ──
+  const a11Baseline = readFormula(handoutBaseline, "A11");
+  expectFormula(
+    "Parent Handout bullet 4 (A11): pulls TFG + Plan_Year for the dollar goal + academic-year tag",
+    a11Baseline,
+    `="- This year our goal is to raise $"&TEXT(TFG,"#,##0")&" - the projected fundraising gap for the "&Plan_Year&"-"&RIGHT(Plan_Year+1,2)&" academic year"`,
+    "- This year our goal is to raise $750,000 - the projected fundraising gap for the 2027-28 academic year",
+  );
+  const a11Perturbed = readFormula(handoutPerturbed, "A11");
+  expectFormula(
+    "Parent Handout bullet 4 (A11): cached result tracks Plan_Year 2027→2030 + TFG 750k→950k",
+    a11Perturbed,
+    `="- This year our goal is to raise $"&TEXT(TFG,"#,##0")&" - the projected fundraising gap for the "&Plan_Year&"-"&RIGHT(Plan_Year+1,2)&" academic year"`,
+    "- This year our goal is to raise $950,000 - the projected fundraising gap for the 2030-31 academic year",
+  );
+
+  // NOTE: we intentionally do NOT run recomputeWorkbookAndAssert against
+  // wbPerturbed2. A handful of pre-existing cached strings on other tabs
+  // (e.g. RECRUITING PIPELINE B53's "FINANCIAL PROJECTIONS - 2027 - 28"
+  // banner) are baked in at build time and don't track planningYear, so
+  // a planning-year shift would trip the engine round-trip on cells
+  // unrelated to the Task #356 live-recalc bullets. Coverage of those
+  // cells lives in the baseline + perturbed-tuition recomputes above.
+}
+
 // HyperFormula recompute — load both workbook variants into an Excel-
 // evaluation engine, recalculate every formula from scratch, and assert
 // the recomputed value matches each cached `result` to within 1e-6.
