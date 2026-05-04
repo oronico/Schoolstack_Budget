@@ -220,6 +220,28 @@ The wizard walks school founders through eight steps:
 
 Build configuration is in `netlify.toml`. See `docs/DEPLOYMENT_GUIDE.md` for detailed procedures.
 
+### Preview environments (per-PR staging)
+
+Every open pull request gets a full prod-shape stack so infra changes (Dockerfile, env-var contract, migrations, Netlify build settings) can be smoke-tested before merging.
+
+| Layer | Where | URL pattern |
+|-------|-------|-------------|
+| Frontend | Netlify Deploy Preview | `https://deploy-preview-<PR>--<site>.netlify.app` |
+| API | Railway PR Environment | `https://schoolstackbudget-pr-<PR>.up.railway.app` |
+| Database | Ephemeral Postgres provisioned by Railway with the PR Environment | (internal) |
+
+The deploy-preview build in `netlify.toml` rewrites `VITE_API_BASE_URL` to point at the matching Railway preview API, so the preview frontend automatically talks to the preview backend (not prod).
+
+**One-time setup**
+- **Railway** — on the `schoolstackbudget` service, enable *Settings → Environments → Pull Request Environments* and seed the ephemeral Postgres from the migrations plugin.
+- **Netlify** — Deploy Previews are on by default; no extra config needed beyond `netlify.toml`.
+
+**Reviewer workflow**
+1. Open the PR and wait for the Netlify and Railway checks to go green.
+2. Click the Netlify "Deploy Preview" link in the PR for the frontend URL.
+3. The corresponding Railway API is at `https://schoolstackbudget-pr-<PR_NUMBER>.up.railway.app` — useful for hitting `/api/health` directly.
+4. Smoke-test the change end-to-end. Migrations, env-var changes, and Dockerfile edits all run against the preview stack first.
+
 ---
 
 ## Brand

@@ -8,6 +8,27 @@
   BASE_PATH = "/"
   VITE_API_BASE_URL = "https://schoolstackbudget.up.railway.app"
 
+# Deploy Previews: Netlify builds a unique URL per open PR.
+# Point the preview frontend at the matching Railway PR Environment API
+# instead of prod. Railway's PR Environments expose URLs of the form
+#   https://schoolstackbudget-pr-<PR_NUMBER>.up.railway.app
+# Netlify exposes the PR number as REVIEW_ID during deploy-preview builds,
+# which we substitute into VITE_API_BASE_URL at build time via a small
+# wrapper in the build command below.
+[context.deploy-preview]
+  command = "pnpm install --frozen-lockfile && VITE_API_BASE_URL=\"https://schoolstackbudget-pr-${REVIEW_ID}.up.railway.app\" pnpm --filter @workspace/school-financial-model run build"
+
+[context.deploy-preview.environment]
+  BASE_PATH = "/"
+  # VITE_API_BASE_URL is set dynamically in the deploy-preview command above
+  # so each PR's frontend talks to its own Railway preview API.
+
+# Branch deploys (e.g. a long-lived `staging` branch) get the same prod
+# build but can be overridden per-branch in the Netlify dashboard.
+[context.branch-deploy.environment]
+  BASE_PATH = "/"
+  VITE_API_BASE_URL = "https://schoolstackbudget.up.railway.app"
+
 [[headers]]
   for = "/assets/*"
   [headers.values]
