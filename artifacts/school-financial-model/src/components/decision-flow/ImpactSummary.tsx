@@ -386,36 +386,64 @@ function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSing
       )}
 
       {/* KPI threshold nudges — always shown (DSCR<1.20, runway<6mo, NI<0).
-          Advanced founders get the tight one-liner + What-If link only;
-          basics/extra also get the full coaching paragraph. */}
+          Basics/extra get the full coaching callout (label + body paragraph
+          + "Try a What-If to fix it" link). Advanced founders get a compact
+          inline metric flag instead — a small amber pill per failing KPI
+          with an inline What-If link — matching the rest of the advanced
+          experience where the warning chrome is dialed back to a marker. */}
       {kpiNudges.length > 0 && (
-        <div className="space-y-2" data-testid="impact-coach-nudges">
-          {kpiNudges.map((n) => (
-            <div
-              key={n.key}
-              className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/70 p-3"
-              data-testid={`impact-coach-nudge-${n.key}`}
-            >
-              <Lightbulb className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
-              <div className="text-sm flex-1 min-w-0">
-                <p className="font-semibold text-amber-900">
-                  {showCoach ? `Coach: ${n.label}` : n.label}
-                </p>
-                <p className="text-amber-900/85 text-xs mt-0.5 leading-relaxed">
-                  {showCoach ? n.body : n.oneLiner}
-                </p>
-                <div className="mt-2">
-                  <WhatIfLink
-                    source="impact_summary"
-                    detail={{ kpi: n.key, guidanceLevel }}
-                  >
-                    Try a What-If to fix it
-                  </WhatIfLink>
+        guidanceLevel === "advanced" ? (
+          <div
+            className="flex flex-wrap items-center gap-2"
+            data-testid="impact-coach-nudges"
+          >
+            {kpiNudges.map((n) => (
+              <div
+                key={n.key}
+                className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50/70 px-2.5 py-1 text-xs text-amber-900"
+                data-testid={`impact-coach-nudge-${n.key}`}
+              >
+                <Lightbulb className="h-3 w-3 text-amber-700 shrink-0" />
+                <span className="font-semibold">{n.label}</span>
+                <WhatIfLink
+                  source="impact_summary"
+                  detail={{ kpi: n.key, guidanceLevel }}
+                  className="text-[11px]"
+                >
+                  What-If
+                </WhatIfLink>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2" data-testid="impact-coach-nudges">
+            {kpiNudges.map((n) => (
+              <div
+                key={n.key}
+                className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/70 p-3"
+                data-testid={`impact-coach-nudge-${n.key}`}
+              >
+                <Lightbulb className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
+                <div className="text-sm flex-1 min-w-0">
+                  <p className="font-semibold text-amber-900">
+                    {showCoach ? `Coach: ${n.label}` : n.label}
+                  </p>
+                  <p className="text-amber-900/85 text-xs mt-0.5 leading-relaxed">
+                    {showCoach ? n.body : n.oneLiner}
+                  </p>
+                  <div className="mt-2">
+                    <WhatIfLink
+                      source="impact_summary"
+                      detail={{ kpi: n.key, guidanceLevel }}
+                    >
+                      Try a What-If to fix it
+                    </WhatIfLink>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );

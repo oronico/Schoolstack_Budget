@@ -212,10 +212,25 @@ test("Budget-coach surfaces: advanced founder loses the coach-only blocks", asyn
 
   // --- Impact summary: KPI nudge container still shows (it's not coach-gated
   //     by design — DSCR<1.20 / runway<6mo / NI<0 are surfaced to every user)
-  //     but the verbose "Coach:" prefix is dropped for advanced founders. ---
+  //     but in advanced mode it collapses from a full amber callout to a
+  //     compact inline metric pill: no "Coach:" prefix, no verbose body
+  //     paragraph, and the action drops to a tight inline "What-If" link. ---
   await walkToImpactStep(page, modelId);
-  await expect(page.getByTestId("impact-coach-nudges")).toBeVisible();
-  await expect(page.getByTestId("impact-coach-nudges")).not.toContainText(/Coach:/);
+  const advancedNudges = page.getByTestId("impact-coach-nudges");
+  await expect(advancedNudges).toBeVisible();
+  await expect(advancedNudges).not.toContainText(/Coach:/);
+  // Verbose coaching copy is gone in the compact treatment.
+  await expect(advancedNudges).not.toContainText(/Try a What-If to fix it/);
+  // The compact pill exposes the inline What-If link with the short label.
+  const niNudgeAdvanced = page.getByTestId("impact-coach-nudge-ni");
+  const runwayNudgeAdvanced = page.getByTestId("impact-coach-nudge-runway");
+  const firedNudge = (await niNudgeAdvanced.count())
+    ? niNudgeAdvanced
+    : runwayNudgeAdvanced;
+  await expect(firedNudge.first()).toBeVisible();
+  await expect(
+    firedNudge.first().getByTestId("whatif-link-impact_summary"),
+  ).toHaveText(/What-If/);
 });
 
 test("Budget-coach surfaces: post-upload coach line summarizes recognized totals", async ({
