@@ -250,24 +250,25 @@ test("Extend-to-5-Year seeds non-zero Y2-Y5 across enrollment, revenue, and expe
     page.getByRole("heading", { name: /Programs & Enrollment/i }),
   ).toBeVisible({ timeout: 10_000 });
 
-  // 2. Enrollment Y2-Y5 fields are non-zero. The program-row inputs are the
-  //    canonical surface — enrollment.yearN is derived from the sum of
-  //    program.yearN, so seeing a non-zero ramp on the program row covers
-  //    both the program and aggregate enrollment fields.
+  // 2. Enrollment Y2-Y5 fields match the documented seed rule. The form
+  //    payload doesn't override schoolProfile.enrollmentGrowthRate, so the
+  //    seeder applies the documented default of 0% growth → Y1 held flat
+  //    across Y2-Y5. The program-row inputs are the canonical surface —
+  //    enrollment.yearN is derived from the sum of program.yearN, so seeing
+  //    the ramp on the program row covers both fields.
+  //
+  //    These are exact-value assertions (not just non-zero) so that any
+  //    accidental change to enrollmentGrowthPct, the escalation formula, or
+  //    the rounding strategy in seed-five-year.ts trips this test.
   await expect
     .poll(async () => (await readRowAmounts(page, PROGRAM_NAME))[1] ?? 0, { timeout: 10_000 })
     .toBeGreaterThan(0);
   const enrollmentAmounts = await readRowAmounts(page, PROGRAM_NAME);
-  expect(enrollmentAmounts).toHaveLength(5);
-  expect(enrollmentAmounts[0]).toBe(60);
-  for (let i = 1; i < 5; i++) {
-    expect(
-      enrollmentAmounts[i],
-      `enrollment year${i + 1} should be non-zero, got ${enrollmentAmounts[i]}`,
-    ).toBeGreaterThan(0);
-  }
+  // Documented default: enrollmentGrowthPct = 0 → Y1=60 held flat.
+  expect(enrollmentAmounts).toEqual([60, 60, 60, 60, 60]);
 
-  // 3. Revenue step: Y2-Y5 amount cells for the seeded row are non-zero.
+  // 3. Revenue step: tuition_and_fees rows escalate at the documented
+  //    default tuitionEscalationPct of 3%/yr (Y1 * 1.03^n, rounded).
   await jumpToStep(page, "Revenue");
   await expect.poll(async () => rowIsPresent(page, REVENUE_LINE_ITEM), { timeout: 10_000 }).toBeTruthy();
   await expect
@@ -276,19 +277,30 @@ test("Extend-to-5-Year seeds non-zero Y2-Y5 across enrollment, revenue, and expe
     })
     .toBeGreaterThan(0);
   const revenueAmounts = await readRowAmounts(page, REVENUE_LINE_ITEM);
-  expect(revenueAmounts).toHaveLength(5);
-  expect(revenueAmounts[0]).toBe(600000);
-  for (let i = 1; i < 5; i++) {
-    expect(
-      revenueAmounts[i],
-      `revenue year${i + 1} should be non-zero, got ${revenueAmounts[i]}`,
-    ).toBeGreaterThan(0);
-  }
+  // 600000 * 1.03^n, rounded — matches escalate() in seed-five-year.ts.
+  const expectedRevenue = [
+    600000,
+    Math.round(600000 * 1.03),
+    Math.round(600000 * Math.pow(1.03, 2)),
+    Math.round(600000 * Math.pow(1.03, 3)),
+    Math.round(600000 * Math.pow(1.03, 4)),
+  ];
+  expect(expectedRevenue).toEqual([600000, 618000, 636540, 655636, 675305]);
+  expect(revenueAmounts).toEqual(expectedRevenue);
 
-  // 4. Expense step: Y2-Y5 amount cells are non-zero. The category accordion
-  //    state ("Program" group for our seeded `instructional_program` row)
-  //    can race with the form reset — sometimes it lands expanded, sometimes
-  //    collapsed. Toggle until the seeded line item is visible.
+  // 4. Expense step: Y2-Y5 amount cells are non-zero. We can't assert exact
+  //    values here the way we do for enrollment/revenue: the ExpenseStep
+  //    re-runs its own per-category escalation rule against Y1 and overwrites
+  //    any Y2-Y5 cell the founder hasn't manually edited (see
+  //    `escalatedAmounts` in ExpenseStep.tsx). So the on-screen Y2-Y5 values
+  //    reflect the wizard's category rule, not seed-five-year.ts directly —
+  //    locking the seed math here would actually pin the wizard's rule. The
+  //    exact expense escalation math is asserted at the unit level
+  //    (src/lib/seed-five-year.test.ts).
+  //    The category accordion state ("Program" group for our seeded
+  //    `instructional_program` row) can race with the form reset — sometimes
+  //    it lands expanded, sometimes collapsed. Toggle until the seeded line
+  //    item is visible.
   await jumpToStep(page, "Expenses");
   const programHeader = page
     .getByRole("button", { name: /^Program\b.*active/i })

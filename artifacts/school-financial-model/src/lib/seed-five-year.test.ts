@@ -189,6 +189,210 @@ describe("seedFiveYearFromYearOne", () => {
     expect(input).toEqual(snapshot);
   });
 
+  // Task #493: lock in *every* documented rule from the seed so an accidental
+  // tweak (rate change, rounding swap, default fallback rewire, category
+  // re-bucket, etc.) trips a unit test instead of silently drifting the
+  // projection. The e2e test only validates that Y2-Y5 become non-zero;
+  // these assertions verify the actual math.
+  describe("documented growth/inflation rules (Task #493 regression lock)", () => {
+    it("documented default fallbacks haven't changed", () => {
+      // Drift in these numbers means every existing model that didn't set an
+      // explicit rate will silently re-project. Lock them in.
+      const defaults = resolveSeedDefaults(undefined);
+      expect(defaults).toEqual({
+        enrollmentGrowthPct: 0,
+        tuitionEscalationPct: 3,
+        salaryEscalationPct: 3,
+        costInflationPct: 3,
+      });
+    });
+
+    it("revenue: tuition_offsets and school_choice categories also follow tuitionEscalationPct", () => {
+      const out = seedFiveYearFromYearOne({
+        revenueRows: [
+          {
+            id: "ro",
+            category: "tuition_offsets",
+            lineItem: "Sibling Discount",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [-20000, 0, 0, 0, 0],
+          },
+          {
+            id: "rc",
+            category: "school_choice",
+            lineItem: "ESA",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [100000, 0, 0, 0, 0],
+          },
+        ] as FullModelData["revenueRows"],
+      });
+      // Negative Y1 → escalate() short-circuits to 0 for empty cells (the
+      // current contract: only positive Y1 baselines extrapolate).
+      expect(out.revenueRows![0].amounts).toEqual([-20000, 0, 0, 0, 0]);
+      // school_choice escalates at the documented 3% tuition default.
+      expect(out.revenueRows![1].amounts).toEqual([
+        100000,
+        Math.round(100000 * 1.03),
+        Math.round(100000 * Math.pow(1.03, 2)),
+        Math.round(100000 * Math.pow(1.03, 3)),
+        Math.round(100000 * Math.pow(1.03, 4)),
+      ]);
+      expect(out.revenueRows![1].amounts).toEqual([100000, 103000, 106090, 109273, 112551]);
+    });
+
+    it("revenue: public_funding and other_revenue follow costInflationPct", () => {
+      const out = seedFiveYearFromYearOne({
+        revenueRows: [
+          {
+            id: "rp",
+            category: "public_funding",
+            lineItem: "State per-pupil",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [200000, 0, 0, 0, 0],
+          },
+          {
+            id: "ro",
+            category: "other_revenue",
+            lineItem: "Misc",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [10000, 0, 0, 0, 0],
+          },
+        ] as FullModelData["revenueRows"],
+      });
+      expect(out.revenueRows![0].amounts).toEqual([200000, 206000, 212180, 218545, 225102]);
+      expect(out.revenueRows![1].amounts).toEqual([10000, 10300, 10609, 10927, 11255]);
+    });
+
+    it("revenue: grants_contributions are held flat (rate = 0)", () => {
+      const out = seedFiveYearFromYearOne({
+        revenueRows: [
+          {
+            id: "rg",
+            category: "grants_contributions",
+            lineItem: "Foundation grant",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [75000, 0, 0, 0, 0],
+          },
+        ] as FullModelData["revenueRows"],
+      });
+      expect(out.revenueRows![0].amounts).toEqual([75000, 75000, 75000, 75000, 75000]);
+    });
+
+    it("revenue: an explicit per-row escalationRate overrides category defaults", () => {
+      const out = seedFiveYearFromYearOne({
+        revenueRows: [
+          {
+            id: "rt",
+            category: "tuition_and_fees",
+            lineItem: "Tuition",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [400000, 0, 0, 0, 0],
+            escalationRate: 8,
+            escalationRateOverridden: true,
+          },
+        ] as unknown as FullModelData["revenueRows"],
+      });
+      expect(out.revenueRows![0].amounts).toEqual([
+        400000,
+        Math.round(400000 * 1.08),
+        Math.round(400000 * Math.pow(1.08, 2)),
+        Math.round(400000 * Math.pow(1.08, 3)),
+        Math.round(400000 * Math.pow(1.08, 4)),
+      ]);
+      expect(out.revenueRows![0].amounts).toEqual([400000, 432000, 466560, 503885, 544196]);
+    });
+
+    it("expense: an explicit per-row escalationRate overrides costInflationPct", () => {
+      const out = seedFiveYearFromYearOne({
+        expenseRows: [
+          {
+            id: "ex",
+            category: "instructional_program",
+            lineItem: "Curriculum",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [10000, 0, 0, 0, 0],
+            escalationRate: 5,
+          },
+        ] as unknown as FullModelData["expenseRows"],
+      });
+      expect(out.expenseRows![0].amounts).toEqual([
+        10000,
+        Math.round(10000 * 1.05),
+        Math.round(10000 * Math.pow(1.05, 2)),
+        Math.round(10000 * Math.pow(1.05, 3)),
+        Math.round(10000 * Math.pow(1.05, 4)),
+      ]);
+      expect(out.expenseRows![0].amounts).toEqual([10000, 10500, 11025, 11576, 12155]);
+    });
+
+    it("capitalAndDebtRows are held flat at Y1 (debt service convention)", () => {
+      const out = seedFiveYearFromYearOne({
+        capitalAndDebtRows: [
+          {
+            id: "d1",
+            category: "debt_service",
+            lineItem: "Loan payment",
+            enabled: true,
+            driverType: "annual_fixed",
+            amounts: [36000, 0, 0, 0, 0],
+          },
+        ] as unknown as FullModelData["capitalAndDebtRows"],
+      });
+      expect(
+        (out.capitalAndDebtRows as Array<{ amounts: number[] }>)[0].amounts,
+      ).toEqual([36000, 36000, 36000, 36000, 36000]);
+    });
+
+    it("enrollment uses the documented compound-growth formula at the resolved rate", () => {
+      // Custom 7% growth, Y1 = 50 → Y2..Y5 = round(50 * 1.07^n).
+      const out = seedFiveYearFromYearOne({
+        schoolProfile: { enrollmentGrowthRate: 7 } as unknown as FullModelData["schoolProfile"],
+        enrollment: { year1: 50, year2: 0, year3: 0, year4: 0, year5: 0 } as FullModelData["enrollment"],
+      });
+      expect(out.enrollment).toEqual({
+        year1: 50,
+        year2: Math.round(50 * 1.07),
+        year3: Math.round(50 * Math.pow(1.07, 2)),
+        year4: Math.round(50 * Math.pow(1.07, 3)),
+        year5: Math.round(50 * Math.pow(1.07, 4)),
+      });
+      expect(out.enrollment).toEqual({ year1: 50, year2: 54, year3: 57, year4: 61, year5: 66 });
+    });
+
+    it("revenue.annualTuitionIncrease falls through as the tuition default when tuitionEscalation is unset", () => {
+      const defaults = resolveSeedDefaults({
+        revenue: { annualTuitionIncrease: 4 } as unknown as FullModelData["revenue"],
+      });
+      expect(defaults.tuitionEscalationPct).toBe(4);
+    });
+
+    it("preserves null cells in grade-level enrollment (didn't offer this grade)", () => {
+      const input: Partial<FullModelData> = {
+        schoolProfile: {
+          gradeEnrollment: {
+            k: [12, 0, 0, 0, 0],
+            "1": [10, null, 12, null, 14],
+          },
+        } as unknown as FullModelData["schoolProfile"],
+      };
+      const out = seedFiveYearFromYearOne(input);
+      const ge = (
+        out.schoolProfile as { gradeEnrollment: Record<string, Array<number | null>> }
+      ).gradeEnrollment;
+      // Default growth = 0 → flat
+      expect(ge.k).toEqual([12, 12, 12, 12, 12]);
+      // Nulls preserved, founder-entered values preserved
+      expect(ge["1"]).toEqual([10, null, 12, null, 14]);
+    });
+  });
+
   it("preserves null cells in grade-band enrollment (didn't offer this band)", () => {
     const input: Partial<FullModelData> = {
       schoolProfile: {
