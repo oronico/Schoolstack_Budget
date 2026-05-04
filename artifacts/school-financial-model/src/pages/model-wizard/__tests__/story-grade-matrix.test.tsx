@@ -129,6 +129,33 @@ describe("Story step grade matrix", () => {
     const section = row.parentElement;
     expect(section?.className ?? "").not.toMatch(/overflow-x-auto/);
   });
+
+  // Task #520 totals row, adapted for the responsive div layout (Task #519).
+  it("renders a totals row summing Y1, tuition revenue, and Y5", () => {
+    render(<Harness initial={gradeFiveYearInitial} />);
+    const totalsRow = screen.getByTestId("story-grade-totals-row");
+    expect(totalsRow).toBeTruthy();
+    // Mirrors the per-row grid so the layout works on phones and desktop.
+    expect(totalsRow.className).toMatch(/\bgrid-cols-1\b/);
+    expect(totalsRow.className).toMatch(/\bsm:grid-cols-/);
+    // Y1 sum: 10 + 12 + 14 = 36
+    expect(screen.getByTestId("story-grade-total-year1").textContent).toContain("36");
+    // Tuition revenue sum: 10*8000 + 12*8500 + 14*9000 = 80000 + 102000 + 126000 = 308000
+    expect(screen.getByTestId("story-grade-total-tuition").textContent).toContain("308,000");
+    // Y5 sum (none entered) = 0
+    expect(screen.getByTestId("story-grade-total-y5").textContent).toContain("0");
+    // Ratio shown as a weighted average string.
+    expect(screen.getByTestId("story-grade-total-ratio").textContent).toContain("avg");
+    // When no band footer is visible, the legacy `story-year1-total`
+    // testid lives on the grade footer so existing selectors keep working.
+    expect(screen.getByTestId("story-year1-total").textContent).toBe("36");
+  });
+
+  it("hides the Y5 totals cell in single-year mode", () => {
+    render(<Harness initial={gradeSingleYearInitial} />);
+    expect(screen.queryByTestId("story-grade-total-y5")).toBeNull();
+    expect(screen.getByTestId("story-grade-total-year1").textContent).toContain("36");
+  });
 });
 
 describe("Story step age-band matrix", () => {
@@ -167,5 +194,30 @@ describe("Story step age-band matrix", () => {
     expect(row.className).toMatch(/\bsm:grid-cols-/);
     const section = screen.getByTestId("story-bands-detail-section");
     expect(section.className).not.toMatch(/overflow-x-auto/);
+  });
+
+  // Task #520 totals row, adapted for the responsive div layout (Task #519).
+  it("renders a totals row summing Y1 and tuition revenue across bands", () => {
+    render(<Harness initial={bandFiveYearInitial} />);
+    const totalsRow = screen.getByTestId("story-band-totals-row");
+    expect(totalsRow).toBeTruthy();
+    // Mirrors the per-row grid so it stacks on mobile and lines up with cells on sm+.
+    expect(totalsRow.className).toMatch(/\bgrid-cols-1\b/);
+    expect(totalsRow.className).toMatch(/\bsm:grid-cols-/);
+    // Y1 sum: 10 + 8 = 18
+    expect(screen.getByTestId("story-band-total-year1").textContent).toContain("18");
+    // Tuition revenue: 10*9000 + 8*10000 = 170000
+    expect(screen.getByTestId("story-band-total-tuition").textContent).toContain("170,000");
+    expect(screen.getByTestId("story-band-total-y5")).toBeTruthy();
+    expect(screen.getByTestId("story-band-total-ratio").textContent).toContain("avg");
+    // The legacy `story-year1-total` testid is preserved on the band footer
+    // when bands are visible, so existing selectors keep working.
+    expect(screen.getByTestId("story-year1-total").textContent).toBe("18");
+  });
+
+  it("hides the Y5 band totals cell in single-year mode", () => {
+    render(<Harness initial={bandSingleYearInitial} />);
+    expect(screen.queryByTestId("story-band-total-y5")).toBeNull();
+    expect(screen.getByTestId("story-band-total-year1").textContent).toContain("18");
   });
 });

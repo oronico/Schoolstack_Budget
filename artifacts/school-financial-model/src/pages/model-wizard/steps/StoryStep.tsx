@@ -735,6 +735,63 @@ export function StoryStep() {
                   </div>
                 );
               })}
+              {/* Totals "row" — Task #520. Mirrors the row grid above so
+                  it reads like a real footer on desktop while staying
+                  stacked on mobile. The legacy `story-year1-total`
+                  testid lives here so any existing selector that read
+                  the running total keeps working. */}
+              {(() => {
+                const y1Sum = activeBands.reduce((sum, opt) => {
+                  const arr = gradeBandEnrollment[opt.key] as (number | null)[] | undefined;
+                  const v = arr?.[0];
+                  return sum + (typeof v === "number" ? v : 0);
+                }, 0);
+                const tuitionSum = activeBands.reduce((sum, opt) => {
+                  const arr = gradeBandEnrollment[opt.key] as (number | null)[] | undefined;
+                  const v = arr?.[0];
+                  const y1 = typeof v === "number" ? v : 0;
+                  const perPupil = gradeBandPerPupil[opt.key] ?? 0;
+                  return sum + y1 * perPupil;
+                }, 0);
+                const y5Sum = activeBands.reduce(
+                  (sum, opt) => sum + computeLongTermShare(opt.key),
+                  0,
+                );
+                const teacherCount = activeBands.reduce((sum, opt) => {
+                  const arr = gradeBandEnrollment[opt.key] as (number | null)[] | undefined;
+                  const v = arr?.[0];
+                  const y1 = typeof v === "number" ? v : 0;
+                  const ratio = gradeBandRatio[opt.key] ?? GRADE_BAND_DEFAULT_RATIO[opt.key];
+                  return sum + (ratio > 0 ? y1 / ratio : 0);
+                }, 0);
+                const avgRatio = teacherCount > 0 ? y1Sum / teacherCount : 0;
+                return (
+                  <div
+                    className={`grid grid-cols-1 ${isSingleYear ? "sm:grid-cols-4" : "sm:grid-cols-5"} gap-3 sm:gap-0 sm:items-start p-3 sm:p-2 bg-muted/30 text-xs font-semibold text-foreground`}
+                    data-testid="story-band-totals-row"
+                  >
+                    <div className="sm:px-3 sm:py-1">Total</div>
+                    <div className="sm:px-3 sm:py-1" data-testid="story-band-total-year1">
+                      <span className="sm:hidden text-[11px] uppercase tracking-wider text-muted-foreground mr-1">Y1 total</span>
+                      <span data-testid="story-year1-total">{y1Sum}</span>
+                    </div>
+                    <div className="sm:px-3 sm:py-1" data-testid="story-band-total-tuition">
+                      <span className="sm:hidden text-[11px] uppercase tracking-wider text-muted-foreground mr-1">Tuition total</span>
+                      ${tuitionSum.toLocaleString()}/yr
+                    </div>
+                    {!isSingleYear && (
+                      <div className="sm:px-3 sm:py-1" data-testid="story-band-total-y5">
+                        <span className="sm:hidden text-[11px] uppercase tracking-wider text-muted-foreground mr-1">Y5 total</span>
+                        {y5Sum}
+                      </div>
+                    )}
+                    <div className="sm:px-3 sm:py-1" data-testid="story-band-total-ratio">
+                      <span className="sm:hidden text-[11px] uppercase tracking-wider text-muted-foreground mr-1">Avg ratio</span>
+                      {avgRatio > 0 ? `${avgRatio.toFixed(1)} avg` : "-"}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -865,17 +922,85 @@ export function StoryStep() {
                   </div>
                 );
               })}
+              {/* Totals "row" — Task #520. Same div+grid pattern as the
+                  band totals above. The legacy `story-year1-total`
+                  testid lives on the grade footer only when no band
+                  footer is visible to claim it (avoids duplicate ids in
+                  "both" mode). */}
+              {(() => {
+                const y1Sum = activeGrades.reduce((sum, key) => {
+                  const arr = gradeEnrollment[key] as (number | null)[] | undefined;
+                  const v = arr?.[0];
+                  return sum + (typeof v === "number" ? v : 0);
+                }, 0);
+                const tuitionSum = activeGrades.reduce((sum, key) => {
+                  const arr = gradeEnrollment[key] as (number | null)[] | undefined;
+                  const v = arr?.[0];
+                  const y1 = typeof v === "number" ? v : 0;
+                  const perPupil = gradePerPupil[key] ?? 0;
+                  return sum + y1 * perPupil;
+                }, 0);
+                const y5Sum = activeGrades.reduce(
+                  (sum, key) => sum + (gradeLongTermGoal[key] ?? 0),
+                  0,
+                );
+                const teacherCount = activeGrades.reduce((sum, key) => {
+                  const arr = gradeEnrollment[key] as (number | null)[] | undefined;
+                  const v = arr?.[0];
+                  const y1 = typeof v === "number" ? v : 0;
+                  const ratio = gradeRatio[key] ?? GRADE_DEFAULT_RATIO[key];
+                  return sum + (ratio > 0 ? y1 / ratio : 0);
+                }, 0);
+                const avgRatio = teacherCount > 0 ? y1Sum / teacherCount : 0;
+                const claimsLegacyTestid = !(showBands && activeBands.length > 0);
+                return (
+                  <div
+                    className={`grid grid-cols-1 ${isSingleYear ? "sm:grid-cols-4" : "sm:grid-cols-5"} gap-3 sm:gap-0 sm:items-start p-3 sm:p-2 bg-muted/30 text-xs font-semibold text-foreground`}
+                    data-testid="story-grade-totals-row"
+                  >
+                    <div className="sm:px-3 sm:py-1">Total</div>
+                    <div className="sm:px-3 sm:py-1" data-testid="story-grade-total-year1">
+                      <span className="sm:hidden text-[11px] uppercase tracking-wider text-muted-foreground mr-1">Y1 total</span>
+                      {claimsLegacyTestid ? (
+                        <span data-testid="story-year1-total">{y1Sum}</span>
+                      ) : (
+                        y1Sum
+                      )}
+                    </div>
+                    <div className="sm:px-3 sm:py-1" data-testid="story-grade-total-tuition">
+                      <span className="sm:hidden text-[11px] uppercase tracking-wider text-muted-foreground mr-1">Tuition total</span>
+                      ${tuitionSum.toLocaleString()}/yr
+                    </div>
+                    {!isSingleYear && (
+                      <div className="sm:px-3 sm:py-1" data-testid="story-grade-total-y5">
+                        <span className="sm:hidden text-[11px] uppercase tracking-wider text-muted-foreground mr-1">Y5 total</span>
+                        {y5Sum}
+                      </div>
+                    )}
+                    <div className="sm:px-3 sm:py-1" data-testid="story-grade-total-ratio">
+                      <span className="sm:hidden text-[11px] uppercase tracking-wider text-muted-foreground mr-1">Avg ratio</span>
+                      {avgRatio > 0 ? `${avgRatio.toFixed(1)} avg` : "-"}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
 
-        {totalYear1 > 0 && (
-          <p className="text-xs text-muted-foreground" data-testid="story-year1-total">
-            {yetToLaunch ? "That's " : "Total: "}
-            <span className="font-semibold text-foreground">{totalYear1}</span>{" "}
-            {yetToLaunch ? "students in your opening year." : "students currently enrolled."}
-          </p>
-        )}
+        {/* The matrix tfoot rows above already show per-section totals.
+            We only fall back to this combined line when neither matrix is
+            visible (e.g. the founder hasn't picked any grades or bands
+            yet) so the running total still shows up somewhere. */}
+        {totalYear1 > 0 &&
+          !(showBands && activeBands.length > 0) &&
+          !(showGrades && activeGrades.length > 0) && (
+            <p className="text-xs text-muted-foreground" data-testid="story-year1-total">
+              {yetToLaunch ? "That's " : "Total: "}
+              <span className="font-semibold text-foreground">{totalYear1}</span>{" "}
+              {yetToLaunch ? "students in your opening year." : "students currently enrolled."}
+            </p>
+          )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormInput
