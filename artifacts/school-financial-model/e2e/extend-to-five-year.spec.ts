@@ -189,22 +189,6 @@ async function readRowAmounts(page: Page, rowText: string): Promise<number[]> {
   }, rowText);
 }
 
-// Visibility helper that matches either rendered text OR an input whose
-// value equals/contains the needle (line items in Revenue/Expense rows are
-// editable inputs, not text nodes).
-async function rowIsPresent(page: Page, needle: string): Promise<boolean> {
-  return page.evaluate((n) => {
-    const all = Array.from(document.querySelectorAll<HTMLElement>("body *"));
-    for (const el of all) {
-      if ((el.textContent ?? "").includes(n)) return true;
-    }
-    const inputs = Array.from(
-      document.querySelectorAll<HTMLInputElement>('input[type="text"], input:not([type])'),
-    );
-    return inputs.some((i) => (i.value ?? "").includes(n));
-  }, needle);
-}
-
 test("Extend-to-5-Year seeds non-zero Y2-Y5 across enrollment, revenue, and expense steps", async ({
   page,
   request,
@@ -269,14 +253,17 @@ test("Extend-to-5-Year seeds non-zero Y2-Y5 across enrollment, revenue, and expe
 
   // 3. Revenue step: tuition_and_fees rows escalate at the documented
   //    default tuitionEscalationPct of 3%/yr (Y1 * 1.03^n, rounded).
+  //    Task #494 — locate the row by its stable data-testid and read each
+  //    `amount-y{N}` input directly instead of DOM-walking.
   await jumpToStep(page, "Revenue");
-  await expect.poll(async () => rowIsPresent(page, REVENUE_LINE_ITEM), { timeout: 10_000 }).toBeTruthy();
-  await expect
-    .poll(async () => (await readRowAmounts(page, REVENUE_LINE_ITEM))[1] ?? 0, {
-      timeout: 10_000,
-    })
-    .toBeGreaterThan(0);
-  const revenueAmounts = await readRowAmounts(page, REVENUE_LINE_ITEM);
+  const revenueRow = page.getByTestId("revenue-row-rev-extend-1");
+  await expect(revenueRow).toBeVisible({ timeout: 10_000 });
+  const revenueAmounts: number[] = [];
+  for (let yi = 1; yi <= 5; yi++) {
+    const input = revenueRow.getByTestId(`amount-y${yi}`);
+    await expect(input).toBeVisible({ timeout: 10_000 });
+    revenueAmounts.push(Number((await input.inputValue()) || "0"));
+  }
   // 600000 * 1.03^n, rounded — matches escalate() in seed-five-year.ts.
   const expectedRevenue = [
     600000,
@@ -298,32 +285,33 @@ test("Extend-to-5-Year seeds non-zero Y2-Y5 across enrollment, revenue, and expe
   //    exact expense escalation math is asserted at the unit level
   //    (src/lib/seed-five-year.test.ts).
   //    The category accordion state ("Program" group for our seeded
-  //    `instructional_program` row) can race with the form reset — sometimes
-  //    it lands expanded, sometimes collapsed. Toggle until the seeded line
-  //    item is visible.
+  //    `instructional_program` row) can race with the form reset — toggle
+  //    until the seeded row is mounted, then expand the row card so the
+  //    per-year grid renders.
   await jumpToStep(page, "Expenses");
   const programHeader = page
     .getByRole("button", { name: /^Program\b.*active/i })
     .first();
   await expect(programHeader).toBeVisible({ timeout: 10_000 });
+  const expenseRow = page.getByTestId("expense-row-exp-extend-1");
   await expect
     .poll(
       async () => {
-        if (!(await rowIsPresent(page, EXPENSE_LINE_ITEM))) {
+        if (!(await expenseRow.count())) {
           await programHeader.click().catch(() => {});
         }
-        return rowIsPresent(page, EXPENSE_LINE_ITEM);
+        return expenseRow.count();
       },
       { timeout: 15_000, intervals: [500, 1000, 1500] },
     )
-    .toBeTruthy();
-  await expect
-    .poll(async () => (await readRowAmounts(page, EXPENSE_LINE_ITEM))[1] ?? 0, {
-      timeout: 10_000,
-    })
     .toBeGreaterThan(0);
-  const expenseAmounts = await readRowAmounts(page, EXPENSE_LINE_ITEM);
-  expect(expenseAmounts).toHaveLength(5);
+  await expenseRow.getByTestId("expand-row-exp-extend-1").click();
+  const expenseAmounts: number[] = [];
+  for (let yi = 1; yi <= 5; yi++) {
+    const input = expenseRow.getByTestId(`amount-y${yi}`);
+    await expect(input).toBeVisible({ timeout: 10_000 });
+    expenseAmounts.push(Number((await input.inputValue()) || "0"));
+  }
   expect(expenseAmounts[0]).toBe(400000);
   for (let i = 1; i < 5; i++) {
     expect(

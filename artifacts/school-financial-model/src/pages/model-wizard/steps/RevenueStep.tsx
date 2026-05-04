@@ -1502,6 +1502,7 @@ function RevenueLineItem({
 
   return (
     <div
+      data-testid={`revenue-row-${row.id}`}
       className={cn(
         "rounded-xl border-2 p-4 transition-all",
         hasErrors
@@ -1633,6 +1634,7 @@ function RevenueLineItem({
                     {row.driverType === "percent_of_base" ? "%" : "$"}
                   </span>
                   <input
+                    data-testid={`amount-y${yi + 1}`}
                     type="number"
                     value={row.amounts[yi] ?? 0}
                     onChange={(e) => onAmountChange(yi, parseFloat(e.target.value) || 0)}

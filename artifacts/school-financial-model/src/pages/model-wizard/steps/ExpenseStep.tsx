@@ -1985,7 +1985,7 @@ function ExpenseLineCard({
 
   if (!row.enabled) {
     return (
-      <div className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-muted/20 opacity-50">
+      <div data-testid={`expense-row-${row.id}`} className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-muted/20 opacity-50">
         <input type="checkbox" checked={false} onChange={toggleEnabled} className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary" />
         <span className="text-sm text-muted-foreground line-through flex-1">{row.lineItem || "Unnamed"}</span>
         <button type="button" onClick={() => onRemove(row.id)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5">
@@ -1996,11 +1996,11 @@ function ExpenseLineCard({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-white transition-all">
+    <div data-testid={`expense-row-${row.id}`} className="rounded-xl border border-border bg-white transition-all">
       <div className="px-4 py-3 space-y-2">
         <div className="flex items-center gap-3">
           <input type="checkbox" checked={row.enabled} onChange={toggleEnabled} className="h-4 w-4 rounded border-border text-primary focus:ring-primary flex-shrink-0" />
-          <button type="button" onClick={() => setIsOpen(!isOpen)} className="p-0.5 rounded-md hover:bg-muted transition-colors flex-shrink-0">
+          <button data-testid={`expand-row-${row.id}`} type="button" onClick={() => setIsOpen(!isOpen)} className="p-0.5 rounded-md hover:bg-muted transition-colors flex-shrink-0">
             {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
           </button>
           <input
@@ -2096,6 +2096,7 @@ function ExpenseLineCard({
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 font-medium">{label}</div>
                   <div className="relative">
                     <input
+                      data-testid={`amount-y${i + 1}`}
                       type="number"
                       value={row.amounts[i] ?? 0}
                       onChange={(e) => {
