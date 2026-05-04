@@ -7,9 +7,9 @@ import {
   type PDFDoc, BRAND,
 } from "../pdf-utils.js";
 import type { LenderPacket, RiskMitigant, BudgetNarrativeData, FlaggedAssumptionExport } from "./build-lender-packet";
-import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
+import { renderCashRunwayTroughCallout } from "./cash-runway-pdf.js";
 
 export async function generateLenderPacketPDF(packet: LenderPacket): Promise<Buffer> {
   const doc = createDoc();
@@ -226,7 +226,7 @@ function renderSection(doc: PDFDoc, section: PacketSection, packet: LenderPacket
   // callout for the trough year so lenders see the runway crunch year at
   // a glance — same wording used in the board packet (Task #213).
   if (section.id === "debt_service" && packet.cashRunway?.troughCallout) {
-    renderTroughCallout(doc, packet.cashRunway);
+    renderCashRunwayTroughCallout(doc, packet.cashRunway, { prependEnsureSpace: 24 });
   }
 
   if (section.linkedAssumptions.length > 0 && shouldShowAssumptions(section.id)) {
@@ -312,23 +312,6 @@ function renderRiskMitigants(doc: PDFDoc, riskMitigants: RiskMitigant[]) {
 
     doc.moveDown(0.5);
   }
-}
-
-function renderTroughCallout(doc: PDFDoc, cash: CashRunwayView) {
-  if (!cash.troughCallout) return;
-  ensureSpace(doc, 24);
-  doc.moveDown(0.3);
-  const calloutColor = cash.troughCallout.isNegative ? BRAND.red : BRAND.navy;
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(calloutColor);
-  doc.text(
-    cash.troughCallout.isNegative
-      ? `Tightest cash year: Year ${cash.troughCallout.year} dips to ${cash.troughCallout.endingCash} — additional funding or cost cuts needed before then.`
-      : `Tightest cash year: Year ${cash.troughCallout.year} ends at ${cash.troughCallout.endingCash}.`,
-    doc.page.margins.left,
-    doc.y,
-    { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
-  );
-  doc.moveDown(0.3);
 }
 
 function drawFooterNote(doc: PDFDoc, text: string) {

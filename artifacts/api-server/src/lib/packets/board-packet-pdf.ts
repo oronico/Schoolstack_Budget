@@ -6,9 +6,11 @@ import {
   renderPacketTable, renderPacketInsights, renderLinkedMetrics,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
-import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, CashRunwayView, BoardNarrativeData, BoardFlaggedAssumption, BoardRecruitingProjections } from "./build-board-packet";
+import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, BoardNarrativeData, BoardFlaggedAssumption, BoardRecruitingProjections } from "./build-board-packet";
+import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
+import { renderCashRunwaySection } from "./cash-runway-pdf.js";
 
 export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffer> {
   const doc = createDoc();
@@ -32,7 +34,7 @@ export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffe
       continue;
     }
     if (section.id === "cash_flow") {
-      renderCashRunway(doc, packet.cashRunway, section);
+      renderCashRunwaySection(doc, packet.cashRunway, section.title || "Cash & Runway Position");
       continue;
     }
     if (section.id === "decision_history") {
@@ -204,44 +206,6 @@ function renderFocusAreas(doc: PDFDoc, areas: BoardFocusArea[], section: PacketS
     doc.text(area.impact, indent + 12, doc.y, { width: w - 12 });
 
     doc.moveDown(0.4);
-  }
-}
-
-function renderCashRunway(doc: PDFDoc, cash: CashRunwayView, section: PacketSection) {
-  sectionTitle(doc, "Cash & Runway Position");
-
-  const cashStatus = cash.status === "good" ? "Strong" : cash.status === "warning" ? "Needs Work" : "Not Yet Ready";
-  statusBadge(doc, cash.runwayLabel, cashStatus as any);
-  doc.moveDown(0.3);
-
-  if (cash.yearByYearCash.length > 0) {
-    const cols: TableColumn[] = [
-      { header: "Year", width: 70 },
-      { header: "Ending Cash", width: 130, align: "right" },
-      { header: "Cumulative Net Income", width: 150, align: "right" },
-      { header: "Reserve", width: 90, align: "right" },
-    ];
-    const rows = cash.yearByYearCash.map((c) => [
-      `Year ${c.year}${c.isTrough ? "  (trough)" : ""}`,
-      c.endingCash,
-      c.cumulative,
-      c.reserveMonths,
-    ]);
-    drawTable(doc, cols, rows, { zebra: true });
-
-    if (cash.troughCallout) {
-      doc.moveDown(0.3);
-      const calloutColor = cash.troughCallout.isNegative ? BRAND.red : BRAND.navy;
-      doc.font("Helvetica-Bold").fontSize(9).fillColor(calloutColor);
-      doc.text(
-        cash.troughCallout.isNegative
-          ? `Tightest cash year: Year ${cash.troughCallout.year} dips to ${cash.troughCallout.endingCash} — additional funding or cost cuts needed before then.`
-          : `Tightest cash year: Year ${cash.troughCallout.year} ends at ${cash.troughCallout.endingCash}.`,
-        doc.page.margins.left,
-        doc.y,
-        { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
-      );
-    }
   }
 }
 

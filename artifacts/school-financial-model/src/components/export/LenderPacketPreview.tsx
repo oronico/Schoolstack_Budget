@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText, TrendingUp } from "lucide-react";
+import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { trackExport } from "@/hooks/useExportTracker";
 import { InsightCallout } from "@/components/coaching/InsightCallout";
 import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
+import { CashRunwayCard, type CashRunwayView } from "./CashRunwayCard";
 
 interface LinkedMetric {
   label: string;
@@ -61,20 +62,6 @@ interface NarrativeSummary {
   keyRisks: string[];
   keyStrengths: string[];
   recommendedFocus: string;
-}
-
-interface CashRunwayView {
-  runwayMonths: number;
-  runwayLabel: string;
-  status: "good" | "warning" | "danger";
-  yearByYearCash: {
-    year: number;
-    cumulative: string;
-    reserveMonths: string;
-    endingCash: string;
-    isTrough: boolean;
-  }[];
-  troughCallout: { year: number; endingCash: string; isNegative: boolean } | null;
 }
 
 interface LenderPacket {
@@ -202,7 +189,7 @@ export function LenderPacketPreview({
         <div className="flex-1 overflow-y-auto px-6 pb-6">
           <NarrativeHeader narrative={packet.narrative} readiness={packet.lenderReadiness} />
           {packet.dscrSummary && <DSCRCard dscr={packet.dscrSummary} />}
-          {packet.cashRunway && <CashRunwayCard cash={packet.cashRunway} />}
+          {packet.cashRunway && <CashRunwayCard cash={packet.cashRunway} variant="lender" />}
           {packet.riskMitigants.length > 0 && <RiskMitigantCards risks={packet.riskMitigants} />}
           <div className="space-y-2 mt-6">
             {packet.sections
@@ -318,66 +305,6 @@ function DSCRCard({ dscr }: { dscr: NonNullable<LenderPacket["dscrSummary"]> }) 
         <span>Benchmark: {dscr.benchmark}</span>
       </div>
       <p className="text-sm text-muted-foreground mt-2">{dscr.trendDescription}</p>
-    </div>
-  );
-}
-
-function CashRunwayCard({ cash }: { cash: CashRunwayView }) {
-  const bg =
-    cash.status === "good"
-      ? "bg-green-50 border-green-200"
-      : cash.status === "warning"
-        ? "bg-amber-50 border-amber-200"
-        : "bg-red-50 border-red-200";
-
-  return (
-    <div className={`mt-4 rounded-xl border p-4 ${bg}`} data-testid="lender-packet-cash-runway">
-      <div className="flex items-center gap-2 mb-2">
-        <TrendingUp className="h-4 w-4" />
-        <span className="font-bold text-sm text-[#1E293B]">Cash & Runway</span>
-      </div>
-      <p className="text-sm text-muted-foreground mb-3">{cash.runwayLabel}</p>
-      {cash.yearByYearCash.length > 0 && (
-        <>
-          <div className="grid grid-cols-5 gap-2" data-testid="lender-packet-ending-cash-row">
-            {cash.yearByYearCash.map((c) => {
-              const isNegative = c.endingCash.startsWith("-") || c.endingCash.startsWith("(");
-              const tileBg = c.isTrough
-                ? "bg-red-100 border-red-300 ring-1 ring-red-300"
-                : "bg-white/60 border-transparent";
-              return (
-                <div
-                  key={c.year}
-                  className={`text-center rounded-lg p-2 border ${tileBg}`}
-                  data-testid={`lender-packet-ending-cash-y${c.year}`}
-                  data-trough={c.isTrough ? "true" : "false"}
-                >
-                  <p className="text-[10px] text-muted-foreground font-medium">
-                    Year {c.year}
-                    {c.isTrough && (
-                      <span className="ml-1 text-[9px] font-bold text-red-700 uppercase">Trough</span>
-                    )}
-                  </p>
-                  <p className={`text-xs font-bold ${isNegative ? "text-red-700" : "text-[#1E293B]"}`}>
-                    {c.endingCash}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">{c.reserveMonths}</p>
-                </div>
-              );
-            })}
-          </div>
-          {cash.troughCallout && (
-            <p
-              className={`mt-3 text-xs font-medium ${cash.troughCallout.isNegative ? "text-red-700" : "text-[#1E293B]"}`}
-              data-testid="lender-packet-trough-callout"
-            >
-              {cash.troughCallout.isNegative
-                ? `Tightest cash year: Year ${cash.troughCallout.year} dips to ${cash.troughCallout.endingCash} — additional funding or cost cuts needed before then.`
-                : `Tightest cash year: Year ${cash.troughCallout.year} ends at ${cash.troughCallout.endingCash}.`}
-            </p>
-          )}
-        </>
-      )}
     </div>
   );
 }
