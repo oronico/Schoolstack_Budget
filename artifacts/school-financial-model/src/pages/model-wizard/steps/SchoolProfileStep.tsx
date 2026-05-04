@@ -14,7 +14,7 @@ import { useAuth } from "@/lib/auth-context";
 import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { cn } from "@/lib/utils";
-import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, MODEL_DURATION_LABELS, isForProfit, isNonprofit, isChestertonAcademy } from "../schema";
+import { SCHOOL_TYPE_LABELS, ENTITY_TYPE_LABELS, MODEL_DURATION_LABELS, isForProfit, isNonprofit, isChestertonAcademy, isSingleYearModel } from "../schema";
 import { buildDefaultChestertonData } from "@/lib/chesterton/template";
 // Task #454: facility benchmark strings live in school-type-benchmarks.ts
 // so SchoolProfileStep + StaffingStep share one source of truth and new
@@ -1127,6 +1127,11 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
   }, [yetToLaunch, schoolStage, setValue]);
   const operatingYear = watch("schoolProfile.operatingYear");
   const schoolType = watch("schoolProfile.schoolType");
+  // Model Duration is locked once the model exists. We read the current
+  // value so the locked-display chip + helper copy can render the right
+  // mode without ever exposing an editable toggle. See the locked block
+  // below for the rationale.
+  const modelDuration = watch("schoolProfile.modelDuration");
   const entityType = watch("schoolProfile.entityType");
   const isAccredited = watch("schoolProfile.isAccredited");
   const lendingLabIntent = watch("schoolProfile.lendingLabIntent");
@@ -1333,12 +1338,37 @@ export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
           options={Object.entries(SCHOOL_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
         />
 
-        <FormSelect
-          name="schoolProfile.modelDuration"
-          label="Model Duration"
-          options={(Object.entries(MODEL_DURATION_LABELS) as Array<[string, string]>).map(([value, label]) => ({ value, label }))}
-          helperText="Single-year mode collapses every input to Year 1. Lender Packet & Board Packet need 5-year and will be disabled in single-year mode."
-        />
+        {/* Model Duration is locked once the model exists. Picking happens
+            on /model/new (the duration picker) and the only allowed change
+            is the one-way Single-Year → 5-Year promotion via the
+            "Extend to 5-year" CTA on the wizard banner / ExportStep.
+            Five-year cannot be downgraded back to single-year because
+            the seeded Y2-Y5 inputs, scenarios, decision history, and any
+            already-issued shared lender/board exports would silently
+            misrepresent the model. The server enforces the same rule
+            with `code: "duration_downgrade_forbidden"`. */}
+        <div>
+          <label className="text-sm font-medium text-foreground">Model Duration</label>
+          <div
+            data-testid="model-duration-locked"
+            data-duration={isSingleYearModel({ schoolProfile: { modelDuration: modelDuration as string | undefined } }) ? "single_year" : "five_year"}
+            className="mt-1 flex items-center justify-between gap-3 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm"
+          >
+            <span className="font-medium">
+              {MODEL_DURATION_LABELS[
+                isSingleYearModel({ schoolProfile: { modelDuration: modelDuration as string | undefined } })
+                  ? "single_year"
+                  : "five_year"
+              ]}
+            </span>
+            <span className="text-xs text-muted-foreground">Locked</span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {isSingleYearModel({ schoolProfile: { modelDuration: modelDuration as string | undefined } })
+              ? "Use the \u201CExtend to 5-year\u201D button in the banner above (or on the Export step) to promote this model. The reverse direction is not supported \u2014 start a new model from /model/new if you need a fresh single-year budget."
+              : "5-Year models cannot be downgraded to single-year because the seeded Y2\u2013Y5 inputs, scenarios, decision history, and any already-issued lender/board exports would no longer match the model. Start a new model from /model/new if you need a single-year budget."}
+          </p>
+        </div>
 
         {schoolType === "other" && (
           <FormInput

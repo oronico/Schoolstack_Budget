@@ -200,6 +200,69 @@ async function main(): Promise<void> {
     });
     check("PUT with edge-valid values → 200", okEdge.status === 200, `got ${okEdge.status}`);
 
+    // === 4b. modelDuration is one-way: five_year → single_year is forbidden. ===
+    // The seed model was created with modelDuration: five_year. Trying to
+    // PUT it back to single_year must 400 with code=duration_downgrade_forbidden.
+    const downgrade = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
+      method: "PUT", headers: auth,
+      body: JSON.stringify({
+        name: "Downgrade attempt",
+        data: { schoolProfile: { schoolName: "T", modelDuration: "single_year" } },
+      }),
+    });
+    check("PUT five_year → single_year → 400", downgrade.status === 400,
+      `got ${downgrade.status}`);
+    if (downgrade.status === 400) {
+      const body = (await downgrade.json()) as { code?: string };
+      check("downgrade 400 body has code=duration_downgrade_forbidden",
+        body.code === "duration_downgrade_forbidden", `code=${body.code}`);
+    }
+
+    // PUT that omits modelDuration entirely against a five_year row → 200
+    // (the guard only fires when the incoming value is literally
+    // "single_year", so legacy partial saves that don't carry the field
+    // are unaffected).
+    const omitDuration = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
+      method: "PUT", headers: auth,
+      body: JSON.stringify({
+        name: "No duration",
+        data: { schoolProfile: { schoolName: "T" } },
+      }),
+    });
+    check("PUT that omits modelDuration on a five_year row → 200",
+      omitDuration.status === 200, `got ${omitDuration.status}`);
+
+    // PUT five_year → five_year (no-op duration) → 200.
+    const sameDuration = await fetch(`${baseUrl}/api/models/${seedModel.id}`, {
+      method: "PUT", headers: auth,
+      body: JSON.stringify({
+        name: "Same duration",
+        data: { schoolProfile: { schoolName: "T", modelDuration: "five_year" } },
+      }),
+    });
+    check("PUT five_year → five_year → 200", sameDuration.status === 200,
+      `got ${sameDuration.status}`);
+
+    // Companion: a fresh single_year model should be allowed to PUT
+    // modelDuration: five_year (the documented Extend-to-5-year flow).
+    const singleSeed = await fetch(`${baseUrl}/api/models`, {
+      method: "POST", headers: auth,
+      body: JSON.stringify({
+        name: "Single Seed",
+        data: { schoolProfile: { schoolName: "T", maxCapacity: 100, modelDuration: "single_year" } },
+      }),
+    });
+    const singleSeedModel = (await singleSeed.json()) as { id: number };
+    const upgrade = await fetch(`${baseUrl}/api/models/${singleSeedModel.id}`, {
+      method: "PUT", headers: auth,
+      body: JSON.stringify({
+        name: "Upgrade",
+        data: { schoolProfile: { schoolName: "T", maxCapacity: 100, modelDuration: "five_year" } },
+      }),
+    });
+    check("PUT single_year → five_year (Extend flow) → 200",
+      upgrade.status === 200, `got ${upgrade.status}`);
+
     // === 2. Authenticated request-review email validation. ===
     // Note: returns 503 unless RESEND is configured. The validation
     // step runs before the mailer, so we still observe a 400 for bad

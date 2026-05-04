@@ -467,6 +467,36 @@ router.put("/models/:id", authMiddleware, async (req: AuthRequest, res) => {
       return;
     }
 
+    // Single-year mode is one-way. Once a model has been promoted to
+    // five_year (whether at creation via the /model/new picker or via the
+    // Extend-to-5-year modal), the founder cannot drop back to single_year:
+    // the seeded Y2-Y5 inputs, scenarios, decision history, and any
+    // already-issued shared lender/board exports would all silently
+    // misrepresent what's actually in the model. The reverse direction
+    // (single_year → five_year) is allowed and is the documented Extend
+    // flow. A missing/legacy modelDuration on the existing row counts as
+    // five_year (matches getModelDuration's default), so the legacy back-compat
+    // path is also locked.
+    const existingProfile = (existing.data as Record<string, unknown> | null)
+      ?.schoolProfile as Record<string, unknown> | undefined;
+    const existingDuration =
+      existingProfile?.modelDuration === "single_year" ? "single_year" : "five_year";
+    const incomingProfile = normalizedData?.schoolProfile as
+      | Record<string, unknown>
+      | undefined;
+    const incomingDurationRaw = incomingProfile?.modelDuration;
+    if (
+      existingDuration === "five_year" &&
+      incomingDurationRaw === "single_year"
+    ) {
+      res.status(400).json({
+        error:
+          "modelDuration cannot be downgraded from five_year to single_year. Create a new single-year model instead.",
+        code: "duration_downgrade_forbidden",
+      });
+      return;
+    }
+
     // Task #472 — header-only optimistic concurrency check (the version
     // column is a tracked follow-up). When the client sends `If-Match`,
     // we compare to the row's current updated_at ETag and 409 on a
