@@ -260,6 +260,7 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
   const hasRowData = revenueRows.length > 0 || staffingRows.length > 0 || expenseRows.length > 0;
 
   const singleYearCap = useYearCount();
+  const isSingleYear = singleYearCap === 1;
   const yearCountFull = hasRowData
     ? (revenueRows[0]?.amounts?.length || expenseRows[0]?.amounts?.length || 5)
     : 5;
@@ -556,13 +557,23 @@ export function ReviewStep({ jumpToStep }: { jumpToStep: (step: number) => void 
 
       <Section title="Assumptions & Sensitivity" step={8} icon={<DollarSign className="h-5 w-5" />}>
         <div className="space-y-1.5">
-          <Item label={<><GlossaryTerm termKey="cola">COLA</GlossaryTerm> (Cost of Living Adjustment)</>} value={formatPercent(data.facilities?.annualSalaryIncrease)} />
-          <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
-          <Item label="Rent Escalation" value={formatPercent(data.facilities?.annualRentIncrease)} />
+          {isSingleYear ? (
+            <p className="text-sm text-muted-foreground italic py-1">
+              Multi-year escalation rates N/A in single-year mode — COLA, general cost inflation, rent escalation, and enrollment growth rate apply to Years 2-5 only.
+            </p>
+          ) : (
+            <>
+              <Item label={<><GlossaryTerm termKey="cola">COLA</GlossaryTerm> (Cost of Living Adjustment)</>} value={formatPercent(data.facilities?.annualSalaryIncrease)} />
+              <Item label="General Cost Inflation" value={formatPercent(data.facilities?.generalCostInflation)} />
+              <Item label="Rent Escalation" value={formatPercent(data.facilities?.annualRentIncrease)} />
+            </>
+          )}
           {data.tuitionEscalation?.rate !== undefined && (
             <Item label="Tuition Escalation" value={formatPercent(data.tuitionEscalation?.rate)} />
           )}
-          <Item label="Enrollment Growth Rate" value={formatPercent(data.schoolProfile?.enrollmentGrowthRate)} />
+          {!isSingleYear && (
+            <Item label="Enrollment Growth Rate" value={formatPercent(data.schoolProfile?.enrollmentGrowthRate)} />
+          )}
           {data.enrollment?.retentionRate !== undefined && (
             <Item label="Student Retention" value={formatPercent(data.enrollment?.retentionRate)} />
           )}

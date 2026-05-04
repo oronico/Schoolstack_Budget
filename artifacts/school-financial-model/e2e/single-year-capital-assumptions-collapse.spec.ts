@@ -235,4 +235,32 @@ test("single-year mode collapses Capital & Financing and Assumptions to Year 1 o
   await expect(page.getByText(/1-Year Budget/i)).toBeVisible();
   // Header copy mentions single-year mode.
   await expect(page.getByText(/single-year mode/i).first()).toBeVisible();
+
+  // ---- Review step ----
+  // Task #465: the Review step's "Assumptions & Sensitivity" summary card
+  // must hide COLA, General Cost Inflation, Rent Escalation, and Enrollment
+  // Growth Rate in single-year mode and replace them with an N/A note.
+  await continueUntil(page, /Does Everything Look Right/i);
+
+  // The new N/A note replaces the four hidden rows.
+  await expect(
+    page.getByText(/Multi-year escalation rates N\/A in single-year mode/i),
+  ).toBeVisible();
+
+  // The four hidden labels must not render as Item rows. The Item component
+  // wraps labels in a `span.text-sm.font-medium.text-muted-foreground`, so we
+  // assert there is no such span whose visible text exactly matches each
+  // hidden label. Using exact text avoids matching the descriptive N/A note
+  // (which mentions these field names in prose).
+  for (const exactLabel of [
+    "COLA (Cost of Living Adjustment)",
+    "General Cost Inflation",
+    "Rent Escalation",
+    "Enrollment Growth Rate",
+  ]) {
+    await expect(
+      page.locator("span.text-muted-foreground").getByText(exactLabel, { exact: true }),
+      `${exactLabel} should not render as a Review row in single-year mode`,
+    ).toHaveCount(0);
+  }
 });
