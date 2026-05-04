@@ -1332,6 +1332,9 @@ function buildKeyAssumptions(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
   ws.getCell(`D${row}`).value = "Notes";
   hdr(ws, row, 4);
   row += 1;
+  // CSN-published placeholder table — the source workbook ships these
+  // "XX" cells for the founder to overwrite by hand. There is no
+  // GETTING STARTED input for freshman composition, so they stay static.
   const compositionRows: Array<[string, string, string]> = [
     ["Siblings of current students", "XX", "If applicable"],
     ["[Feeder school] graduates", "XX", "This is xx% of current [feeder school] 8th grade class"],
@@ -1373,6 +1376,8 @@ function buildKeyAssumptions(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
   ws.getCell(`D${row}`).value = "7th";
   hdr(ws, row, 4);
   row += 1;
+  // CSN-published placeholder table — feeder/homeschool/charter slots
+  // for the founder to fill in by hand; not derivable from inputs.
   for (const target of [
     "School Name (K-8 parochial)",
     "School Name (K-8 parochial)",
@@ -1396,16 +1401,36 @@ function buildKeyAssumptions(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
   ws.getCell(`B${row}`).value = "(3) OTHER FINANCIAL ASSUMPTIONS";
   ws.getCell(`B${row}`).font = { bold: true, size: 12, color: { argb: NAVY } };
   row += 1;
-  for (const bullet of [
-    "In order to limit costs associated with excess capacity, we will fill only one section per grade for a maximum of 23 students per grade",
-    "Assume annual attrition of ~10% will be offset by incoming transfer students.",
-    "Assume each student / parent will be trained in peer to peer fundraising to help cover fundraising gap per student",
-    `Fundraising goal for ${(data.chesterton?.planningYear ?? 2027)}-${((data.chesterton?.planningYear ?? 2027) + 1)} is $${(data.chesterton?.totalFundraisingGoal ?? 356526).toLocaleString()}; fundraising plan to be built around Gala, annual appeals, ongoing major gift fundraising`,
-    "Our current facility will accommodate projected enrollment growth through 20xx.",
-  ]) {
+  // Each bullet is either a static CSN-published policy line (no input
+  // to reference) or a formula that recomputes from named ranges on
+  // GETTING STARTED so editing those inputs cascades into the bullet text.
+  const planYearFallback = data.chesterton?.planningYear ?? 2027;
+  const tfgFallback = data.chesterton?.totalFundraisingGoal ?? 356526;
+  const attritionFallback = data.chesterton?.attritionRate ?? 0.10;
+  const otherFinancialBullets: Array<{ formula?: string; result: string; text?: string }> = [
+    // Static CSN-published policy lines — no GETTING STARTED input to
+    // reference, so they intentionally stay baked in.
+    { text: "In order to limit costs associated with excess capacity, we will fill only one section per grade for a maximum of 23 students per grade", result: "" },
+    {
+      formula: `="Assume annual attrition of ~"&TEXT(Attrition_Rate,"0%")&" will be offset by incoming transfer students."`,
+      result: `Assume annual attrition of ~${Math.round(attritionFallback * 100)}% will be offset by incoming transfer students.`,
+    },
+    { text: "Assume each student / parent will be trained in peer to peer fundraising to help cover fundraising gap per student", result: "" },
+    {
+      formula: `="Fundraising goal for "&Plan_Year&"-"&(Plan_Year+1)&" is $"&TEXT(TFG,"#,##0")&"; fundraising plan to be built around Gala, annual appeals, ongoing major gift fundraising"`,
+      result: `Fundraising goal for ${planYearFallback}-${planYearFallback + 1} is $${tfgFallback.toLocaleString()}; fundraising plan to be built around Gala, annual appeals, ongoing major gift fundraising`,
+    },
+    { text: "Our current facility will accommodate projected enrollment growth through 20xx.", result: "" },
+  ];
+  for (const bullet of otherFinancialBullets) {
     ws.mergeCells(`B${row}:D${row}`);
-    ws.getCell(`B${row}`).value = bullet;
-    ws.getCell(`B${row}`).alignment = { wrapText: true, vertical: "top" };
+    const cell = ws.getCell(`B${row}`);
+    if (bullet.formula) {
+      setFormula(cell, bullet.formula, bullet.result);
+    } else {
+      cell.value = bullet.text;
+    }
+    cell.alignment = { wrapText: true, vertical: "top" };
     row += 1;
   }
   row += 1;
@@ -1419,6 +1444,10 @@ function buildKeyAssumptions(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
   ws.getCell(`D${row}`).value = "Location";
   hdr(ws, row, 4);
   row += 1;
+  // CSN-published placeholder facilities — capacity/location are
+  // founder-curated property research, not derivable from any GETTING
+  // STARTED input. We only render the fallback when the founder has not
+  // entered their own prospectiveFacilities list.
   const facilityFallback: Array<[string, number, string]> = [
     ["Location 1", 70, "TBD"],
     ["Location 2", 100, "TBD"],
@@ -1443,6 +1472,10 @@ function buildKeyAssumptions(wb: ExcelJS.Workbook, data: ChestertonModelInput) {
   ws.getCell(`D${row}`).value = "Team Member(s) Assigned";
   hdr(ws, row, 4);
   row += 1;
+  // CSN-published placeholder priest contacts. The actual outreach list
+  // is rendered above from data.chesterton.priestlyOutreach; these
+  // "Father TBD" rows are the source workbook's empty starter rows and
+  // are not derivable from any GETTING STARTED input.
   for (let i = 0; i < 7; i++) {
     ws.getCell(`B${row}`).value = "Father TBD";
     ws.getCell(`C${row}`).value = "Parish Name";
@@ -2442,6 +2475,11 @@ const CADENCE_QUARTER_CYCLES: [string, string, string, string] = [
   "CYCLE 4",
 ];
 
+// All Cadence-tab content below — quarter banners, headlines, missions,
+// and bullets — is verbatim CSN-published copy from the source workbook.
+// None of these cells are derivable from a GETTING STARTED input, so they
+// stay static (only the school-name and plan-year header cells on the
+// Cadence/CSN Training Schedule tabs use formulas, see buildCadence).
 const CADENCE_CATEGORIES: CadenceCategory[] = [
   {
     label: "(1) RECRUITING / ADMISSIONS",
@@ -2805,6 +2843,10 @@ const PARENT_HANDOUT_EXAMPLE_BANNER = "EXAMPLE HANDOUT FOR PARENTS - FOR EXAMPLE
 const PARENT_HANDOUT_PLANNING_FOR = "PLANNING FOR";
 
 const PARENT_HANDOUT_NEED_HEADING = "I. THE NEED";
+// Static CSN-published copy. Bullet 4 is rewritten as a formula at
+// emit time so the dollar goal and academic-year tag follow TFG and
+// Plan_Year (see buildParentHandout); the rest are policy lines with
+// no GETTING STARTED input to reference and stay baked in.
 const PARENT_HANDOUT_NEED_BULLETS: string[] = [
   "- The actual cost to educate each student exceeds tuition revenue per student",
   "- Chesterton parents raise funds each year to cover the gap between tuition revenue and operating costs",
@@ -2812,6 +2854,9 @@ const PARENT_HANDOUT_NEED_BULLETS: string[] = [
   "- This year our goal is to raise $300,000 - the projected fundraising gap for the 2025-26 academic year",
   "- The fundraising total includes about $50,000 in cash reserves to enhance sustainability and financial health",
 ];
+// Index of the bullet whose contents derive from Plan_Year + TFG. Kept as
+// a constant so future reorderings don't silently break the formula swap.
+const PARENT_HANDOUT_NEED_BULLET_DYNAMIC_IDX = 3;
 
 const PARENT_HANDOUT_PROJECTIONS_TITLE = "2025-26 Projections - At a Glance";
 const PARENT_HANDOUT_PROJECTIONS_ROWS: Array<{ label: string; placeholder: number }> = [
@@ -3216,14 +3261,35 @@ function buildParentHandout(wb: ExcelJS.Workbook, data: ChestertonModelInput, tf
   ws.getCell("A7").font = { bold: true, size: 12, color: { argb: NAVY } };
 
   ws.mergeCells("E7:F7");
-  ws.getCell("E7").value = PARENT_HANDOUT_PROJECTIONS_TITLE;
+  // "<Plan_Year>-<YY> Projections - At a Glance" recomputes from
+  // Plan_Year so editing the planning year on GETTING STARTED reflows
+  // the section title automatically.
+  {
+    const planYear = data.chesterton?.planningYear ?? new Date().getFullYear() + 1;
+    setFormula(
+      ws.getCell("E7"),
+      `=Plan_Year&"-"&RIGHT(Plan_Year+1,2)&" Projections - At a Glance"`,
+      `${planYear}-${String((planYear + 1) % 100).padStart(2, "0")} Projections - At a Glance`,
+    );
+  }
   ws.getCell("E7").font = { bold: true, color: { argb: NAVY } };
   ws.getCell("E7").alignment = { horizontal: "center" };
 
   for (let i = 0; i < PARENT_HANDOUT_NEED_BULLETS.length; i++) {
     const r = 8 + i;
     ws.mergeCells(`A${r}:D${r}`);
-    ws.getCell(`A${r}`).value = PARENT_HANDOUT_NEED_BULLETS[i];
+    if (i === PARENT_HANDOUT_NEED_BULLET_DYNAMIC_IDX) {
+      // Dollar goal + academic-year tag follow TFG and Plan_Year so
+      // editing inputs on GETTING STARTED rewrites this bullet live.
+      const planYear = data.chesterton?.planningYear ?? new Date().getFullYear() + 1;
+      setFormula(
+        ws.getCell(`A${r}`),
+        `="- This year our goal is to raise $"&TEXT(TFG,"#,##0")&" - the projected fundraising gap for the "&Plan_Year&"-"&RIGHT(Plan_Year+1,2)&" academic year"`,
+        `- This year our goal is to raise $${tfgValue.toLocaleString()} - the projected fundraising gap for the ${planYear}-${String((planYear + 1) % 100).padStart(2, "0")} academic year`,
+      );
+    } else {
+      ws.getCell(`A${r}`).value = PARENT_HANDOUT_NEED_BULLETS[i];
+    }
     ws.getCell(`A${r}`).alignment = { wrapText: true, vertical: "top" };
     ws.getRow(r).height = 22;
     if (i < PARENT_HANDOUT_PROJECTIONS_ROWS.length) {
