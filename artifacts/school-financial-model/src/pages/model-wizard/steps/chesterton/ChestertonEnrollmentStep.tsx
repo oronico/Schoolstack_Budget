@@ -3,7 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { GraduationCap, Users } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
-import { useOptionalAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import {
   CHESTERTON_GRADES,
   buildDefaultChestertonData,
@@ -18,10 +18,8 @@ const YEAR_KEYS: Array<keyof Omit<ChestertonGradeRow, "grade">> = [
 
 export function ChestertonEnrollmentStep() {
   const { watch, setValue } = useFormContext();
-  // Task #416: hide the WhyThisMatters intro from advanced founders.
-  const user = useOptionalAuth()?.user ?? null;
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
+  const { showCoach } = useShowCoach();
   const planningYear = (watch("chesterton.planningYear") as number | undefined) ?? new Date().getFullYear() + 1;
   const phaseEnrollment = watch("chesterton.phaseEnrollment") as ChestertonGradeRow[] | undefined;
 

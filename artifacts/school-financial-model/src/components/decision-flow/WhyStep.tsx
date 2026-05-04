@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useRef } from "react";
 import type { DecisionType } from "@/pages/model-wizard/schema";
 import { cn } from "@/lib/utils";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
-import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { EXPLAINERS } from "@/lib/coaching/explainers";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
@@ -26,9 +26,8 @@ interface WhyStepProps {
 }
 
 export function WhyStep({ decisionType, intro, prepareList, narrative, setNarrative }: WhyStepProps) {
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #499: shared coach-gate hook keeps every coach-gated surface in sync.
+  const { guidanceLevel, showCoach } = useShowCoach();
   const coachExplainer = EXPLAINERS[`decision_${decisionType}`];
   // Pull "common reasons" chips from the explainer so the coach copy and
   // the chip set stay in lockstep — explainers.ts is now the single source

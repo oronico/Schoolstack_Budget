@@ -15,8 +15,8 @@ import { StoryStep } from "../steps/StoryStep";
 //      founder's value via `methods.reset(d)`).
 // After step 3 the K-5 band must still be active and Year-1 must still be 12.
 
-vi.mock("@/lib/auth-context", () => ({
-  useAuth: () => ({
+vi.mock("@/lib/auth-context", () => {
+  const ctx = () => ({
     user: {
       id: 1,
       email: "founder@test.school",
@@ -29,8 +29,9 @@ vi.mock("@/lib/auth-context", () => ({
     login: () => {},
     logout: () => {},
     refetchUser: async () => {},
-  }),
-}));
+  });
+  return { useAuth: ctx, useOptionalAuth: ctx };
+});
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { TrendingUp, AlertTriangle, CircleCheckBig, Trophy, Lightbulb, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DecisionImpact } from "@/lib/decision-flows";
-import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { WhatIfLink } from "@/components/coaching/WhatIfLink";
 
@@ -131,9 +131,8 @@ function ImpactSingle({ impact, isSingleYear }: { impact: DecisionImpact; isSing
   const tableYears = isSingleYear ? [0] : [0, 1, 2, 3, 4];
   const tableTitle = isSingleYear ? "Year 1 impact" : "5-year impact";
   const { base, adjusted, deltas, nudges } = impact;
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #499: shared coach-gate hook keeps every coach-gated surface in sync.
+  const { guidanceLevel, showCoach } = useShowCoach();
 
   // KPI threshold nudges — fire when the *adjusted* model crosses common
   // red lines: DSCR below 1.20 in any year, runway under 6 months, or any

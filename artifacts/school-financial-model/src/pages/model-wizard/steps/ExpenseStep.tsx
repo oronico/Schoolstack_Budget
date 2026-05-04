@@ -46,6 +46,7 @@ import {
 import { GUIDED_EXPENSE_QUESTIONS } from "@/lib/expense-guided-questions";
 import { getSchoolTypeTrack } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
 import { useYearCount } from "@/lib/use-model-duration";
 
@@ -368,9 +369,8 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   // out of the pre-opening flow.
   const { user: authUser } = useAuth();
   const yetToLaunch = personaIsYetToLaunch(authUser);
-  // Task #416: hide the WhyThisMatters intro from advanced founders.
-  const guidanceLevel = (authUser?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
+  const { showCoach } = useShowCoach();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;

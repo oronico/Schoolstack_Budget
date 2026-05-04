@@ -3,7 +3,7 @@ import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, BookOpen, Calculator } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
-import { useOptionalAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { formatCurrency } from "@/lib/utils";
 import { buildDefaultChestertonData, avgSalaryPerPeriod } from "@/lib/chesterton/template";
 
@@ -11,10 +11,8 @@ const FTE_PERIODS = 5; // one Chesterton FTE = 5 periods/day per the CSN manual
 
 export function ChestertonStaffingStep() {
   const { control, setValue } = useFormContext();
-  // Task #416: hide the WhyThisMatters intro from advanced founders.
-  const user = useOptionalAuth()?.user ?? null;
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
+  const { showCoach } = useShowCoach();
   // useWatch subscribes via `control` so per-row edits inside useFieldArray
   // inputs (registered with valueAsNumber) trigger a re-render of the totals.
   // Using formContext.watch() here misses those updates — see task #350/#351.

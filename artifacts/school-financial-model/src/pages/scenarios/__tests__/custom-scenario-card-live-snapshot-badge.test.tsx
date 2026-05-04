@@ -2,15 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("@/lib/auth-context", () => ({
-  useAuth: () => ({
+vi.mock("@/lib/auth-context", () => {
+  const ctx = () => ({
     user: { id: 1, email: "founder@test.school", name: "Founder", guidanceLevel: "advanced" },
     isLoading: false,
     login: () => {},
     logout: () => {},
     refetchUser: async () => {},
-  }),
-}));
+  });
+  return { useAuth: ctx, useOptionalAuth: ctx };
+});
 vi.mock("@/lib/coaching/track", () => ({
   trackCoachingEvent: () => {},
 }));

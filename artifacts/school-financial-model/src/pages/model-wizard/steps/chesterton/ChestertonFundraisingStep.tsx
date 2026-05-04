@@ -3,16 +3,14 @@ import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, Trash2, Target, HandHeart } from "lucide-react";
 import { FormInput } from "@/components/ui/form-inputs";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
-import { useOptionalAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { formatCurrency } from "@/lib/utils";
 import { DEFAULT_CHESTERTON_FUNDRAISING, buildDefaultChestertonData } from "@/lib/chesterton/template";
 
 export function ChestertonFundraisingStep() {
   const { control, setValue } = useFormContext();
-  // Task #416: hide the WhyThisMatters intro from advanced founders.
-  const user = useOptionalAuth()?.user ?? null;
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
+  const { showCoach } = useShowCoach();
   // useWatch (not formContext.watch) so per-row goalAmount edits inside the
   // useFieldArray rows trigger a live re-render of the "Committed so far"
   // summary — see task #350.

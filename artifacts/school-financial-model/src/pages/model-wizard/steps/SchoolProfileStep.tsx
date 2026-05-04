@@ -11,6 +11,7 @@ import { InlineHelpCard } from "@/components/coaching/InlineHelpCard";
 import { MicroLessonCardInner } from "@/components/coaching/MicroLessonCard";
 import { EXPLAINERS } from "@/lib/coaching/explainers";
 import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { cn } from "@/lib/utils";
@@ -547,9 +548,8 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
   // remove can't bleed into a different file.
   const [confirmRemoveExport, setConfirmRemoveExport] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
+  const { guidanceLevel, showCoach } = useShowCoach();
 
   // Track the lesson + post-upload coach-line surfacings exactly once each
   // per mount so the analytics view doesn't get spammed by re-renders.
@@ -1143,11 +1143,8 @@ function AccountingExportUploader({ focused }: { focused?: boolean }) {
 export function SchoolProfileStep({ focus }: { focus?: string } = {}) {
   const { watch, setValue, getValues } = useFormContext();
   const { user } = useAuth();
-  // Task #416: gate the introductory WhyThisMatters callout behind the same
-  // guidance-level switch the launcher subtitles + accounting-export lesson
-  // already use, so advanced founders don't see coach-only intros.
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
+  const { showCoach } = useShowCoach();
   // Task #302: persona-stage gating overrides model.schoolStage. A founder
   // who picked `yet_to_launch` should never see prior-year actuals,
   // QuickBooks/Xero callouts, or any "import last year's books" surfaces —

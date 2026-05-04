@@ -4,7 +4,7 @@ import { GraduationCap, Building2, Users, Sparkles, X, FileSpreadsheet, ChevronR
 import { differenceInDays, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 
@@ -116,9 +116,8 @@ export function DecisionLauncher({ models, onStartNew, startNewPending }: Decisi
   const { toast } = useToast();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingType, setPendingType] = useState<LaunchableType | null>(null);
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #499: shared coach-gate hook keeps every coach-gated surface in sync.
+  const { guidanceLevel, showCoach } = useShowCoach();
 
   // Fire once per mount when the launcher renders for a coach-mode user, so
   // the coaching dashboard can measure how often the subtitles actually show.
@@ -340,9 +339,8 @@ interface ThingsHaveChangedBannerProps {
 
 export function ThingsHaveChangedBanner({ models, staleDays = 30 }: ThingsHaveChangedBannerProps) {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #499: shared coach-gate hook keeps every coach-gated surface in sync.
+  const { guidanceLevel, showCoach } = useShowCoach();
   const trackedRef = useRef(false);
   const stale = useMemo(() => {
     return models

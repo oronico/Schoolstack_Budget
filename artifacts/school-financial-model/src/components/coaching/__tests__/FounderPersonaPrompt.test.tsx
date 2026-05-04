@@ -11,15 +11,16 @@ vi.mock("@workspace/api-client-react", () => ({
   customFetch: (...args: unknown[]) => mockCustomFetch(...args),
 }));
 
-vi.mock("@/lib/auth-context", () => ({
-  useAuth: () => ({
+vi.mock("@/lib/auth-context", () => {
+  const ctx = () => ({
     user: currentUser,
     refetchUser,
     isLoading: false,
     login: () => {},
     logout: () => {},
-  }),
-}));
+  });
+  return { useAuth: ctx, useOptionalAuth: ctx };
+});
 
 vi.mock("@/lib/coaching/track", () => ({
   trackCoachingEvent: () => {},

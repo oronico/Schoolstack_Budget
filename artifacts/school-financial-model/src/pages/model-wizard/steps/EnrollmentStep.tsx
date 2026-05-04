@@ -21,6 +21,7 @@ import {
   type StudentGroupingMode,
 } from "@/lib/revenue-defaults";
 import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { isYetToLaunch, getFounderPersona } from "@/lib/coaching/founder-persona";
 import { useYearCount } from "@/lib/use-model-duration";
 import { enrollmentBenchmarkFor } from "@/lib/school-type-benchmarks";
@@ -389,9 +390,8 @@ export function EnrollmentStep() {
   const persona = getFounderPersona(user);
   const yetToLaunch = isYetToLaunch(user);
   const newComfort = persona.comfort === "new_to_budgeting";
-  // Task #416: hide the WhyThisMatters intro from advanced founders.
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
+  const { showCoach } = useShowCoach();
   const schoolType = watch("schoolProfile.schoolType") || "other";
   const schoolStage = watch("schoolProfile.schoolStage");
   const operatingYear = watch("schoolProfile.operatingYear");

@@ -6,7 +6,7 @@ import type { DecisionType, FullModelData } from "@/pages/model-wizard/schema";
 import { DECISION_LABELS, DECISION_THEME } from "@/lib/decision-flows";
 import { SectionExplainers } from "@/components/coaching/SectionExplainers";
 import { DiagnosticPanel } from "@/components/coaching/DiagnosticPanel";
-import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
 export const STEP_LABELS = ["Why", "Inputs", "Impact", "Save"] as const;
@@ -93,9 +93,8 @@ export function DecisionFlowShell({
   const [, setLocation] = useLocation();
   const theme = DECISION_THEME[decisionType];
   const title = DECISION_LABELS[decisionType];
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoaching = guidanceLevel !== "advanced";
+  // Task #499: shared coach-gate hook keeps every coach-gated surface in sync.
+  const { guidanceLevel, showCoach: showCoaching } = useShowCoach();
   const sidebarSection = `decision_${decisionType}`;
   const trackedDiagnosticRef = useRef(false);
   useEffect(() => {

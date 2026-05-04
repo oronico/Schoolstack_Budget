@@ -16,8 +16,8 @@ import { EnrollmentStep } from "../steps/EnrollmentStep";
 //   4. Toggling "Didn't offer" for an actuals year nulls every cell in that
 //      row+year so it shows N/A instead of zero.
 
-vi.mock("@/lib/auth-context", () => ({
-  useAuth: () => ({
+vi.mock("@/lib/auth-context", () => {
+  const ctx = () => ({
     user: {
       id: 1,
       email: "founder@test.school",
@@ -30,8 +30,9 @@ vi.mock("@/lib/auth-context", () => ({
     login: () => {},
     logout: () => {},
     refetchUser: async () => {},
-  }),
-}));
+  });
+  return { useAuth: ctx, useOptionalAuth: ctx };
+});
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();

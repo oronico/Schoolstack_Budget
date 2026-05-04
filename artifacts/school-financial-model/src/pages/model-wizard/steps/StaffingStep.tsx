@@ -24,6 +24,7 @@ import {
   type PayrollTaxCapInsight,
 } from "@/lib/state-payroll-tax-data";
 import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { useYearCount } from "@/lib/use-model-duration";
 import { getFounderPersona, isYetToLaunch } from "@/lib/coaching/founder-persona";
 import type { FounderComfort } from "@/lib/coaching/founder-persona";
@@ -95,9 +96,8 @@ export function StaffingStep() {
   const { user } = useAuth();
   const personaComfort = getFounderPersona(user).comfort;
   const yetToLaunch = isYetToLaunch(user);
-  // Task #416: hide the WhyThisMatters intro from advanced founders.
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
+  const { showCoach } = useShowCoach();
   const schoolStage = (watch("schoolProfile.schoolStage") || "new_school") as SchoolStage;
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolType = (watch("schoolProfile.schoolType") || "private_school") as string;

@@ -3,7 +3,7 @@ import { CheckCircle2, Wand2, FileSpreadsheet, ClipboardList, Lightbulb } from "
 import { cn } from "@/lib/utils";
 import type { DecisionType } from "@/pages/model-wizard/schema";
 import { DECISION_THEME } from "@/lib/decision-flows";
-import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 
 export type SaveAction = "apply" | "planner" | "later";
@@ -35,9 +35,8 @@ export function SaveActions({
 }: SaveActionsProps) {
   const theme = DECISION_THEME[decisionType];
   const [hover, setHover] = useState<SaveAction | null>(null);
-  const { user } = useAuth();
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #499: shared coach-gate hook keeps every coach-gated surface in sync.
+  const { guidanceLevel, showCoach } = useShowCoach();
 
   // The "Apply to my model" reminder is the most consequential message in
   // this step (Apply rewrites the base model), so we only surface it when

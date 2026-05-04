@@ -44,6 +44,7 @@ import { type TuitionTier, getDefaultTuitionTiers } from "@/pages/model-wizard/s
 import { getStateFundingConfig, type StateFundingConfig, type SchoolType, type CharterPerPupilRange, type ProgramInfo } from "@/lib/state-funding-data";
 import { detectFragileFunding, type FragileProgramMatch } from "@workspace/finance";
 import { useAuth } from "@/lib/auth-context";
+import { useShowCoach } from "@/lib/coaching/use-show-coach";
 import { isYetToLaunch } from "@/lib/coaching/founder-persona";
 import { useYearCount } from "@/lib/use-model-duration";
 
@@ -190,9 +191,8 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
   const { watch, setValue, getValues, formState: { errors } } = useFormContext();
   const { user } = useAuth();
   const yetToLaunch = isYetToLaunch(user);
-  // Task #416: hide the WhyThisMatters intro from advanced founders.
-  const guidanceLevel = (user?.guidanceLevel as "advanced" | "basics" | "extra") || "basics";
-  const showCoach = guidanceLevel !== "advanced";
+  // Task #416 / #499: shared coach-gate hook keeps every wizard step in sync.
+  const { showCoach } = useShowCoach();
   const fundingProfile = (watch("schoolProfile.fundingProfile") || "tuition_based") as FundingProfile;
   const schoolStage = watch("schoolProfile.schoolStage") as string | undefined;
   const schoolType = watch("schoolProfile.schoolType") as string | undefined;

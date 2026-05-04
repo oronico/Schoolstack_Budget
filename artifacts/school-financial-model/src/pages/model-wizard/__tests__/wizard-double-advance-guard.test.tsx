@@ -51,8 +51,8 @@ vi.mock("@workspace/api-client-react", () => {
   };
 });
 
-vi.mock("@/lib/auth-context", () => ({
-  useAuth: () => ({
+vi.mock("@/lib/auth-context", () => {
+  const ctx = () => ({
     // persona fields are required so FounderPersonaPrompt early-returns
     // and the wizard chrome (Continue button + step indicator) actually
     // mounts. Without these the prompt overlays the wizard and Continue
@@ -69,8 +69,9 @@ vi.mock("@/lib/auth-context", () => ({
     login: () => {},
     logout: () => {},
     refetchUser: async () => {},
-  }),
-}));
+  });
+  return { useAuth: ctx, useOptionalAuth: ctx };
+});
 
 // Belt-and-braces: even if the persona fields above don't dismiss the
 // prompt for some reason, mocking it to null guarantees the wizard

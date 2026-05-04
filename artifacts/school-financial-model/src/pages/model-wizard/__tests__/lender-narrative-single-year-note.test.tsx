@@ -48,15 +48,16 @@ vi.mock("@workspace/api-client-react", () => ({
   }),
 }));
 
-vi.mock("@/lib/auth-context", () => ({
-  useAuth: () => ({
+vi.mock("@/lib/auth-context", () => {
+  const ctx = () => ({
     user: { id: 1, email: "founder@test.school", name: "Founder" },
     isLoading: false,
     login: () => {},
     logout: () => {},
     refetchUser: async () => {},
-  }),
-}));
+  });
+  return { useAuth: ctx, useOptionalAuth: ctx };
+});
 
 vi.mock("@/components/layout/Layout", () => ({
   Layout: ({ children }: { children: React.ReactNode }) =>
