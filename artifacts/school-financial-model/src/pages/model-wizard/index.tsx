@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebounce } from "use-debounce";
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, X, Building2, AlertCircle, Sparkles, Calendar, TrendingUp } from "lucide-react";
 import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
-import { seedExtendedEnrollment } from "@/lib/use-model-duration";
+import { seedFiveYearFromYearOne } from "@/lib/seed-five-year";
 import { Layout } from "@/components/layout/Layout";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "@workspace/finance";
@@ -1211,17 +1211,31 @@ export function ModelWizardPage() {
           setExtending(true);
           try {
             const current = methods.getValues() as FullModelData;
-            const seededEnrollment = seedExtendedEnrollment(
-              (current.enrollment ?? {}) as { year1?: number; year2?: number; year3?: number; year4?: number; year5?: number }
-            );
+            // Run the deterministic seeder *before* flipping modelDuration so
+            // the seed picks up the founder's existing escalation rates from
+            // the same form snapshot. Then merge in the duration flip.
+            const seeded = seedFiveYearFromYearOne(current);
             const next = {
-              ...current,
-              schoolProfile: { ...(current.schoolProfile ?? {}), modelDuration: "five_year" as const },
-              enrollment: { ...(current.enrollment ?? {}), ...seededEnrollment },
-            };
-            methods.reset(next as FullModelData);
+              ...seeded,
+              schoolProfile: {
+                ...(seeded.schoolProfile ?? {}),
+                modelDuration: "five_year" as const,
+              },
+            } as FullModelData;
+            // Single-transaction write to RHF so consumers see one consistent
+            // post-extend snapshot (and the autosave debounce fires once).
+            methods.reset(next);
             if (modelId) {
-              await updateMutation.mutateAsync({ id: modelId, data: { data: next as unknown as Record<string, unknown> } });
+              await updateMutation.mutateAsync({
+                id: modelId,
+                data: { data: next as unknown as Record<string, unknown> },
+              });
+            }
+            // Land on Enrollment so the founder reviews the seeded ramp.
+            const enrollmentStepId = stepIdByTitle("Enrollment");
+            if (enrollmentStepId > 0) {
+              setCurrentStep(enrollmentStepId);
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }
             setShowExtendModal(false);
           } catch (err) {

@@ -52,18 +52,22 @@ export function ExtendToFiveYearModal({
           </h2>
         </div>
         <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-          We'll keep everything you've entered for Year 1 and seed Years 2-5 with sensible
-          defaults from your enrollment goal. You can refine each year on every step before
-          you generate lender or board packets.
+          We'll seed Years 2&ndash;5 from your Year 1 inputs using your escalation rates,
+          then drop you on the Enrollment step so you can review the ramp before continuing.
+          You can edit any year afterwards.
         </p>
         <ul className="space-y-2 mb-6 text-sm text-foreground">
           <li className="flex items-start gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-            <span>Your Year 1 numbers are preserved exactly as you entered them.</span>
+            <span>Your Year 1 numbers stay exactly as you entered them.</span>
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-            <span>Years 2-5 are seeded from your Y1 ramp - edit any of them later.</span>
+            <span>Enrollment, tuition, staffing, and expenses for Years 2&ndash;5 are derived from Year 1 using your assumption rates (defaults: flat enrollment, 3%/yr tuition, 3%/yr salary, 3%/yr cost inflation).</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+            <span>Any Y2&ndash;Y5 values you've already entered are preserved &mdash; only empty years get reseeded.</span>
           </li>
           <li className="flex items-start gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
