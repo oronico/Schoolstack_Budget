@@ -4,9 +4,13 @@ Pre-generated financial model exports for three school types, designed for state
 
 ## Contents
 
-- **Bright Horizons Microschool** (TX) - 15-40 students, tuition + philanthropy, $25K microloan
+- **Oakwood Learning Studio** (AZ) - 20-40 students, tuition + philanthropy, $20K microloan
 - **Riverside Christian Academy** (FL) - 200-400 students, tuition-driven nonprofit, $1.2M mortgage
 - **Liberty STEM Charter School** (AZ) - 200-600 students, per-pupil public funding, $575K debt
+
+The three schools are sourced from the canonical demo data in
+`src/lib/demo-models/` (see task #546), the same data used to seed
+PR-preview environments.
 
 Each model includes 4 export formats:
 - Formula Workbook (.xlsx)
