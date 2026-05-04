@@ -70,7 +70,7 @@ import {
   type ProjectedSnapshot,
 } from "@/lib/decision-flows";
 import type { DecisionType } from "@/pages/model-wizard/schema";
-import { ImpactSummary } from "@/components/decision-flow/ImpactSummary";
+import { ImpactSummary, findTroughIndex } from "@/components/decision-flow/ImpactSummary";
 import { ForecastAccuracyView } from "@/components/forecast-accuracy/ForecastAccuracyView";
 import { computeForecastAccuracy } from "@/lib/forecast-accuracy";
 import { isYetToLaunch as personaIsYetToLaunch } from "@/lib/coaching/founder-persona";
@@ -462,6 +462,13 @@ interface CustomScenarioCardProps {
   // so callers/tests that don't need search behave exactly as before.
   // (Task #215)
   searchQuery?: string;
+  // Adjusted-side cash-position forecast (length-5, year 1 → year 5) for this
+  // saved scenario, used to render the at-a-glance trough badge that mirrors
+  // the in-impact callout from ImpactSummary. Returns null when the scenario
+  // has no decisionType (legacy / non-decision saves) or the forecast couldn't
+  // be computed — the card silently omits the badge in that case so layout
+  // never breaks. (Task #377)
+  getAdjustedCashPosition?: () => readonly number[] | null;
 }
 
 // "Mar 14" formatter shared with the wizard upload card so the caption in
@@ -740,6 +747,7 @@ export function CustomScenarioCard({
   staffingRows,
   personaComfort,
   searchQuery = "",
+  getAdjustedCashPosition,
 }: CustomScenarioCardProps) {
   const [editingRetro, setEditingRetro] = useState(false);
   // Inline rename state. We keep the saved scenario's `(name, createdAt)`
@@ -966,6 +974,21 @@ export function CustomScenarioCard({
       : cs.narrative
     : null;
   const bullets = describeScenario(cs);
+  // Trough badge data (Task #377): mirrors the in-impact "lowest cash year"
+  // callout on the saved-scenario card itself so founders see the runway
+  // crunch year without opening the scenario. Skipped when the page didn't
+  // wire `getAdjustedCashPosition` (legacy callers / tests), when the
+  // scenario has no decisionType, or when the forecast has no finite value.
+  const troughBadge = useMemo(() => {
+    if (!getAdjustedCashPosition) return null;
+    const cashPosition = getAdjustedCashPosition();
+    if (!cashPosition || cashPosition.length === 0) return null;
+    const idx = findTroughIndex(cashPosition);
+    if (idx === null) return null;
+    const value = cashPosition[idx];
+    if (!isFinite(value)) return null;
+    return { yearLabel: `Y${idx + 1}`, value, negative: value < 0 };
+  }, [getAdjustedCashPosition]);
   const target = { name: cs.name, createdAt: cs.createdAt };
   const statusMeta = cs.outcomeStatus ? OUTCOME_STATUS_META[cs.outcomeStatus] : null;
 
@@ -1241,13 +1264,31 @@ export function CustomScenarioCard({
           “{narrativeExcerpt}”
         </p>
       )}
-      <ul className="text-xs text-muted-foreground space-y-1 mb-4">
+      <ul className="text-xs text-muted-foreground space-y-1 mb-3">
         {bullets.length === 0 ? (
           <li>(No overrides — baseline)</li>
         ) : (
           bullets.map((b, i) => <li key={i}>• {b}</li>)
         )}
       </ul>
+      {troughBadge && (
+        <div
+          className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium ring-1 mb-4 ${
+            troughBadge.negative
+              ? "bg-rose-50 ring-rose-300 text-rose-700"
+              : "bg-amber-50 ring-amber-300 text-amber-800"
+          }`}
+          data-testid={`custom-scenario-trough-badge-${idx}`}
+        >
+          <TrendingDown className="h-3 w-3" aria-hidden="true" />
+          <span>
+            <span className="font-semibold">Trough:</span>{" "}
+            <span data-testid={`custom-scenario-trough-label-${idx}`}>
+              {troughBadge.yearLabel} at {fmt(troughBadge.value)}
+            </span>
+          </span>
+        </div>
+      )}
 
       {/*
         Wage-base cap savings insight (Task #322): if any staffing row's
@@ -3650,6 +3691,24 @@ export function ScenarioPage() {
                           asOfYear,
                         )
                       }
+                      getAdjustedCashPosition={() => {
+                        // Trough badge (Task #377): only computable when the
+                        // saved scenario has a decisionType — legacy / non-
+                        // decision saves have no decision-engine path. Wrap
+                        // in try/catch so a single bad scenario can't take
+                        // out the whole list.
+                        if (!cs.decisionType) return null;
+                        try {
+                          const impact = computeDecisionImpactFromPersisted(
+                            modelData,
+                            cs.decisionType as DecisionType,
+                            cs.overrides as PersistedDecisionOverrides,
+                          );
+                          return impact.adjusted.cashPosition;
+                        } catch {
+                          return null;
+                        }
+                      }}
                       getActualsSuggestion={(asOfYear) =>
                         buildActualsSuggestion(
                           modelData,

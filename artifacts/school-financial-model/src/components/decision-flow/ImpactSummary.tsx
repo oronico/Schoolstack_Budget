@@ -75,7 +75,7 @@ function fmtRunway(months: number): string {
 // the *earliest* year so the founder sees the first crunch — that's the year
 // a lender will ask about first ("when do you nearly run out?"). Returns null
 // when the input has no finite values (e.g. an empty or all-NaN forecast).
-function findTroughIndex(values: readonly (number | null | undefined)[]): number | null {
+export function findTroughIndex(values: readonly (number | null | undefined)[]): number | null {
   let bestIdx: number | null = null;
   let bestVal = Infinity;
   for (let i = 0; i < values.length; i++) {
