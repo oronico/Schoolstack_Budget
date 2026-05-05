@@ -5,6 +5,9 @@
 // Task #558 — extended to assert the fourth (Chesterton Academy) demo
 //             model so the chesterton-preview branch deploy never
 //             silently regresses to fewer than four demos.
+// Task #551 — extended to assert in-place rotation of the demo
+//             password on already-seeded previews when the
+//             PREVIEW_DEMO_PASSWORD env var changes.
 //
 // Validates the behaviors documented in seed-preview-data.ts:
 //   1. SKIP_PREVIEW_SEED=true       → no inserts, no reads
@@ -21,6 +24,13 @@
 //   6. PREVIEW_DEMO_PASSWORD set    → seeded user's hash verifies the
 //      override (NOT the default), and the override is what's printed in
 //      the operator-credentials log line.
+//   7. Already-seeded preview + new PREVIEW_DEMO_PASSWORD → demo user's
+//      passwordHash is updated in place so the new value verifies and
+//      the old one does not.
+//   8. Already-seeded preview + matching PREVIEW_DEMO_PASSWORD → demo
+//      user's passwordHash is left alone (no spurious update).
+//   9. Already-seeded preview but no `demo@schoolstack.ai` row (prod
+//      shape) → no update issued (prod safety).
 //
 // Uses an in-memory fake of the drizzle query builder so this stays
 // hermetic — no DATABASE_URL required, no migrations to run, runs in
@@ -53,15 +63,45 @@ interface InsertedRow {
   values: Record<string, unknown>;
 }
 
-function makeFakeDb(opts: { existingUsers?: number } = {}) {
+interface UpdatedRow {
+  table: string;
+  set: Record<string, unknown>;
+}
+
+interface FakeUser {
+  id: number;
+  email: string;
+  passwordHash: string;
+}
+
+function makeFakeDb(
+  opts: { existingUsers?: number; demoUsers?: FakeUser[] } = {},
+) {
   const inserted: InsertedRow[] = [];
+  const updated: UpdatedRow[] = [];
+  // The select pipeline is shaped to emulate the small slice of the
+  // drizzle query builder this module actually uses:
+  //   - select({...}).from(t).limit(n)            → existence probe
+  //   - select({...}).from(t).where(c).limit(n)   → demo-user lookup
+  // The probe is keyed on the absence of a `where` (returns the
+  // synthetic existingUsers list); the lookup is keyed on the
+  // presence of `where` (returns the configured demoUsers list,
+  // defaulted to empty so prod-shaped DBs return no demo row).
   let nextId = 1;
+  const demoUsers = opts.demoUsers ?? [];
 
   const fakeDb = {
-    select() {
+    select(_proj?: unknown) {
       return {
         from(_table: unknown) {
           return {
+            where(_cond: unknown) {
+              return {
+                limit(_n: number) {
+                  return Promise.resolve(demoUsers.slice(0, _n));
+                },
+              };
+            },
             limit(_n: number) {
               const count = opts.existingUsers ?? 0;
               return Promise.resolve(
@@ -90,9 +130,25 @@ function makeFakeDb(opts: { existingUsers?: number } = {}) {
         },
       };
     },
+    update(table: { _: { name?: string } } & Record<string, unknown>) {
+      const tableName =
+        (table as Record<symbol, unknown>)[
+          Symbol.for("drizzle:Name")
+        ] as string | undefined ?? "unknown";
+      return {
+        set(values: Record<string, unknown>) {
+          updated.push({ table: tableName, set: values });
+          return {
+            where(_cond: unknown) {
+              return Promise.resolve();
+            },
+          };
+        },
+      };
+    },
   };
 
-  return { fakeDb, inserted };
+  return { fakeDb, inserted, updated };
 }
 
 async function run() {
@@ -133,9 +189,14 @@ async function run() {
     check("missing database → no inserts", inserted.length === 0);
   }
 
-  // Case 3: existing users → no inserts (idempotency / prod safety).
+  // Case 3: existing users with no demo row → no inserts AND no
+  // updates (this is the production shape — real users, no
+  // `demo@schoolstack.ai` row — and we must never touch it).
   {
-    const { fakeDb, inserted } = makeFakeDb({ existingUsers: 1 });
+    const { fakeDb, inserted, updated } = makeFakeDb({
+      existingUsers: 1,
+      demoUsers: [],
+    });
     await seedPreviewDataIfEmpty({
       database: fakeDb as never,
       log: () => {},
@@ -145,6 +206,11 @@ async function run() {
       "users table not empty → no inserts",
       inserted.length === 0,
       `inserted=${inserted.length}`,
+    );
+    check(
+      "users table not empty + no demo row → no updates (prod safety)",
+      updated.length === 0,
+      `updated=${updated.length}`,
     );
   }
 
@@ -332,6 +398,170 @@ async function run() {
       logs.some((row) => row.some((arg) =>
         typeof arg === "string" &&
         arg.includes("password source: PREVIEW_DEMO_PASSWORD override"),
+      )),
+    );
+
+    if (originalPwd === undefined) delete process.env.PREVIEW_DEMO_PASSWORD;
+    else process.env.PREVIEW_DEMO_PASSWORD = originalPwd;
+  }
+
+  // Case 7 (task #551): already-seeded preview + new
+  // PREVIEW_DEMO_PASSWORD → demo user's stored hash is rotated in
+  // place so the new value verifies and the old one no longer does.
+  {
+    const originalPwd = process.env.PREVIEW_DEMO_PASSWORD;
+    const oldPassword = "old-demo-pw";
+    const newPassword = "rotated-preview-pw!";
+    process.env.PREVIEW_DEMO_PASSWORD = newPassword;
+    const oldHash = bcrypt.hashSync(oldPassword, 4);
+    const { fakeDb, inserted, updated } = makeFakeDb({
+      existingUsers: 1,
+      demoUsers: [
+        { id: 42, email: DEMO_USER_EMAIL, passwordHash: oldHash },
+      ],
+    });
+    const logs: unknown[][] = [];
+    await seedPreviewDataIfEmpty({
+      database: fakeDb as never,
+      log: (...a) => logs.push(a),
+      logError: () => {},
+    });
+
+    check(
+      "rotation: no inserts on already-seeded DB",
+      inserted.length === 0,
+      `inserted=${inserted.length}`,
+    );
+    check(
+      "rotation: exactly one users update issued",
+      updated.length === 1 && updated[0]?.table === "users",
+      `updated=${JSON.stringify(updated.map((u) => u.table))}`,
+    );
+
+    const newHash = updated[0]?.set.passwordHash as string | undefined;
+    check(
+      "rotation: new hash verifies the new env value",
+      typeof newHash === "string" && bcrypt.compareSync(newPassword, newHash),
+    );
+    check(
+      "rotation: new hash does NOT verify the old password",
+      typeof newHash === "string" && !bcrypt.compareSync(oldPassword, newHash),
+    );
+    check(
+      "rotation: log line names the override source",
+      logs.some((row) => row.some((arg) =>
+        typeof arg === "string" &&
+        arg.includes("Rotated demo password") &&
+        arg.includes("PREVIEW_DEMO_PASSWORD override"),
+      )),
+    );
+
+    if (originalPwd === undefined) delete process.env.PREVIEW_DEMO_PASSWORD;
+    else process.env.PREVIEW_DEMO_PASSWORD = originalPwd;
+  }
+
+  // Case 8 (task #551): already-seeded preview + matching
+  // PREVIEW_DEMO_PASSWORD → no spurious update (idempotent across
+  // restarts so we don't churn bcrypt on every boot).
+  {
+    const originalPwd = process.env.PREVIEW_DEMO_PASSWORD;
+    const currentPassword = "already-current-pw";
+    process.env.PREVIEW_DEMO_PASSWORD = currentPassword;
+    const currentHash = bcrypt.hashSync(currentPassword, 4);
+    const { fakeDb, inserted, updated } = makeFakeDb({
+      existingUsers: 1,
+      demoUsers: [
+        { id: 7, email: DEMO_USER_EMAIL, passwordHash: currentHash },
+      ],
+    });
+    await seedPreviewDataIfEmpty({
+      database: fakeDb as never,
+      log: () => {},
+      logError: () => {},
+    });
+
+    check(
+      "rotation no-op: no inserts when hash already verifies",
+      inserted.length === 0,
+    );
+    check(
+      "rotation no-op: no updates when hash already verifies",
+      updated.length === 0,
+      `updated=${updated.length}`,
+    );
+
+    if (originalPwd === undefined) delete process.env.PREVIEW_DEMO_PASSWORD;
+    else process.env.PREVIEW_DEMO_PASSWORD = originalPwd;
+  }
+
+  // Case 9 (task #551): already-seeded preview + env-unset → if the
+  // stored hash already verifies the documented default, the seed is
+  // a no-op (no churn). This covers the common "operator never set
+  // the override" preview shape.
+  {
+    const originalPwd = process.env.PREVIEW_DEMO_PASSWORD;
+    delete process.env.PREVIEW_DEMO_PASSWORD;
+    const defaultHash = bcrypt.hashSync(DEMO_USER_PASSWORD_DEFAULT, 4);
+    const { fakeDb, updated } = makeFakeDb({
+      existingUsers: 1,
+      demoUsers: [
+        { id: 11, email: DEMO_USER_EMAIL, passwordHash: defaultHash },
+      ],
+    });
+    await seedPreviewDataIfEmpty({
+      database: fakeDb as never,
+      log: () => {},
+      logError: () => {},
+    });
+
+    check(
+      "rotation env-unset: no updates when hash matches the default",
+      updated.length === 0,
+      `updated=${updated.length}`,
+    );
+
+    if (originalPwd === undefined) delete process.env.PREVIEW_DEMO_PASSWORD;
+    else process.env.PREVIEW_DEMO_PASSWORD = originalPwd;
+  }
+
+  // Case 10 (task #551): already-seeded preview where the operator
+  // CLEARED PREVIEW_DEMO_PASSWORD → demo user's hash gets rotated
+  // back to the documented default (so resetting the override is also
+  // a one-step "edit env var → restart" flow).
+  {
+    const originalPwd = process.env.PREVIEW_DEMO_PASSWORD;
+    delete process.env.PREVIEW_DEMO_PASSWORD;
+    const stalePassword = "previously-overridden-pw";
+    const staleHash = bcrypt.hashSync(stalePassword, 4);
+    const { fakeDb, updated } = makeFakeDb({
+      existingUsers: 1,
+      demoUsers: [
+        { id: 99, email: DEMO_USER_EMAIL, passwordHash: staleHash },
+      ],
+    });
+    const logs: unknown[][] = [];
+    await seedPreviewDataIfEmpty({
+      database: fakeDb as never,
+      log: (...a) => logs.push(a),
+      logError: () => {},
+    });
+
+    const newHash = updated[0]?.set.passwordHash as string | undefined;
+    check(
+      "rotation env-cleared: exactly one users update issued",
+      updated.length === 1 && updated[0]?.table === "users",
+    );
+    check(
+      "rotation env-cleared: new hash verifies the documented default",
+      typeof newHash === "string" &&
+        bcrypt.compareSync(DEMO_USER_PASSWORD_DEFAULT, newHash),
+    );
+    check(
+      "rotation env-cleared: log line tags source as default",
+      logs.some((row) => row.some((arg) =>
+        typeof arg === "string" &&
+        arg.includes("Rotated demo password") &&
+        arg.includes("password source: default"),
       )),
     );
 

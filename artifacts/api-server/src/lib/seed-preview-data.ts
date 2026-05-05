@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
 import { db, usersTable, financialModelsTable } from "@workspace/db";
 import {
   CHARTER_SCHOOL_DEMO,
@@ -163,8 +164,19 @@ export async function seedPreviewDataIfEmpty(deps: SeedPreviewDataDeps = {}): Pr
 
     if (existingUsers.length > 0) {
       // Database has at least one user — assume this is either
-      // production or an already-seeded preview. Either way, nothing
-      // to do.
+      // production or an already-seeded preview. The full seed is a
+      // no-op, but we still want to honor a *changed*
+      // PREVIEW_DEMO_PASSWORD on an already-seeded preview so
+      // operators can rotate the demo password by editing the env
+      // var and restarting the service (see task #551). The rotate
+      // path is gated on:
+      //   - the demo user actually existing (matched by the
+      //     hardcoded DEMO_USER_EMAIL), so production — which has
+      //     real users but no `demo@schoolstack.ai` — is untouched
+      //   - SKIP_PREVIEW_SEED !== "true" (already enforced by the
+      //     early return at the top of this function), the same
+      //     belt-and-suspenders the full seed uses
+      await rotateDemoPasswordIfChanged({ database, log, logError });
       return;
     }
 
@@ -220,5 +232,83 @@ export async function seedPreviewDataIfEmpty(deps: SeedPreviewDataDeps = {}): Pr
     // worst-case outcome is reviewers see an empty preview and have
     // to register manually — same as before this script existed.
     logError("[seed] Failed to seed preview data:", err);
+  }
+}
+
+interface RotateDemoPasswordDeps {
+  database: NonNullable<SeedPreviewDataDeps["database"]>;
+  log: NonNullable<SeedPreviewDataDeps["log"]>;
+  logError: NonNullable<SeedPreviewDataDeps["logError"]>;
+}
+
+/**
+ * Task #551 — let operators rotate the preview demo password without
+ * resetting the database.
+ *
+ * Looks up the demo user by the hardcoded `DEMO_USER_EMAIL`. If that
+ * user exists and its stored bcrypt hash does NOT verify the
+ * currently-resolved `PREVIEW_DEMO_PASSWORD` (or the documented
+ * default when the env var is unset), re-hash and update the row in
+ * place. This makes rotation a one-step "edit env var → restart
+ * service" flow on already-seeded previews.
+ *
+ * Production safety: the lookup is keyed on the demo email, which
+ * does not exist in production. Even if a row with that email somehow
+ * appeared in production, `SKIP_PREVIEW_SEED=true` (which we keep set
+ * on prod) short-circuits the whole `seedPreviewDataIfEmpty` call
+ * before this function runs.
+ *
+ * Errors are caught and logged so a transient DB hiccup never blocks
+ * server startup.
+ */
+async function rotateDemoPasswordIfChanged(
+  deps: RotateDemoPasswordDeps,
+): Promise<void> {
+  const { database, log, logError } = deps;
+  try {
+    const [existingDemoUser] = await database
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        passwordHash: usersTable.passwordHash,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.email, DEMO_USER_EMAIL))
+      .limit(1);
+
+    if (!existingDemoUser) {
+      // No demo user in this DB — this is either production or a
+      // preview where the demo user was deleted. Nothing to rotate.
+      return;
+    }
+
+    const desiredPassword = resolveDemoPassword();
+    const currentHash = existingDemoUser.passwordHash;
+    if (
+      typeof currentHash === "string" &&
+      currentHash.length > 0 &&
+      bcrypt.compareSync(desiredPassword, currentHash)
+    ) {
+      // Hash already verifies the current env value — nothing to do.
+      return;
+    }
+
+    const newHash = await bcrypt.hash(desiredPassword, 12);
+    await database
+      .update(usersTable)
+      .set({ passwordHash: newHash })
+      .where(eq(usersTable.id, existingDemoUser.id));
+
+    const passwordSource =
+      desiredPassword === DEMO_USER_PASSWORD_DEFAULT
+        ? "default"
+        : "PREVIEW_DEMO_PASSWORD override";
+    log(
+      `[seed] Rotated demo password for ${DEMO_USER_EMAIL} to match current env (password source: ${passwordSource}).`,
+    );
+  } catch (err) {
+    // A failed rotation must not prevent the server from starting.
+    // Operators can fall back to the manual update path.
+    logError("[seed] Failed to rotate demo password:", err);
   }
 }

@@ -263,9 +263,9 @@ PR deploy-preview URLs are not authenticated, so anyone who finds one can poke a
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `PREVIEW_DEMO_PASSWORD` | No | Overrides the demo user's password used by the auto-seed. When set, the seeded user's bcrypt hash verifies this value instead of the documented default `demo1234`. When unset (or empty), the seed falls back to `demo1234`. Only takes effect on the first seed (empty-DB run); rotating it on an already-seeded environment requires either resetting the database or updating the user manually. Has no effect when `SKIP_PREVIEW_SEED=true`.
+| `PREVIEW_DEMO_PASSWORD` | No | Overrides the demo user's password used by the auto-seed. When set, the seeded user's bcrypt hash verifies this value instead of the documented default `demo1234`. When unset (or empty), the seed falls back to `demo1234`. Honored on both the first seed (empty-DB run) and on subsequent restarts: if the env var changes after the demo user already exists, the next API restart re-hashes and updates that user's `passwordHash` in place — so rotation is a one-step "edit env var → restart service" flow with no database surgery. Clearing the override (unsetting it) rotates the demo user back to `demo1234` on the next restart. The rotate path only ever touches the row whose email is `demo@schoolstack.ai`, so production users are untouched. Has no effect when `SKIP_PREVIEW_SEED=true`.
 
-The resolved value is logged once at seed time, e.g. `[seed] Done. Reviewers can log in with demo@schoolstack.ai / <password> (password source: PREVIEW_DEMO_PASSWORD override)`, so operators can confirm which value is live without inspecting the database.
+The resolved value is logged once at seed time, e.g. `[seed] Done. Reviewers can log in with demo@schoolstack.ai / <password> (password source: PREVIEW_DEMO_PASSWORD override)`, so operators can confirm which value is live without inspecting the database. When a rotation happens on an already-seeded preview, the API additionally logs `[seed] Rotated demo password for demo@schoolstack.ai to match current env (password source: …)` so the rotation event itself is auditable from the Railway logs.
 
 **Reviewer workflow**
 1. Open the PR and wait for the Netlify and Railway checks to go green.
