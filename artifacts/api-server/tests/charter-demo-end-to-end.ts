@@ -22,6 +22,15 @@
 //      Must complete without throwing and produce a non-trivial buffer.
 //   3. `buildLenderPacket`    — the lender PDF packet builder.
 //      Must complete without throwing and produce a populated packet.
+//   4. `buildBoardPacket` + `generateBoardPacketPDF` — the board packet
+//      builder plus the PDF renderer it feeds. Task #545's original smoke
+//      test skipped these even though the board packet has its own
+//      narrative enrichment, recruiting projections, and cap insight
+//      logic that could regress for charter / public-funded models
+//      without anyone noticing (Task #548). Both must complete without
+//      throwing, the packet must carry a populated `sections` list, and
+//      the rendered PDF buffer must look like a real PDF (`%PDF-` magic
+//      bytes, non-trivial size).
 //
 // Hermetic: no DB, no network, no env vars required.
 
@@ -31,6 +40,8 @@ import {
 } from "../src/lib/consultant-engine.js";
 import { generateWorkbook } from "../src/lib/excel-export.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
+import { buildBoardPacket } from "../src/lib/packets/build-board-packet.js";
+import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import { CHARTER_SCHOOL_MODEL } from "../src/lib/seed-preview-data.js";
 import type { ModelData } from "../src/lib/workbook-helpers.js";
 
@@ -210,6 +221,61 @@ async function run(): Promise<void> {
       typeof lender.lenderReadiness?.status === "string" &&
       lender.lenderReadiness.status.length > 0,
     `status=${lender?.lenderReadiness?.status ?? "(missing)"}`,
+  );
+
+  // ---- 4. Board packet + PDF ------------------------------------------------
+  // Task #548 — the board packet has its own narrative enrichment,
+  // recruiting projections, and cap insight logic that the original
+  // Task #545 smoke test never exercised for the charter demo. Run the
+  // builder *and* the PDF renderer it feeds so both surfaces fail loudly
+  // if the charter / public-funded path regresses.
+  let board: ReturnType<typeof buildBoardPacket> | undefined;
+  try {
+    board = buildBoardPacket(
+      data as unknown as ModelData,
+      consultant,
+      /* modelId */ 1,
+      "comfortable",
+    );
+    check("buildBoardPacket completes without throwing", true);
+  } catch (err) {
+    check(
+      "buildBoardPacket completes without throwing",
+      false,
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+  check(
+    "board packet has at least one populated section",
+    !!board && Array.isArray(board.sections) && board.sections.length > 0,
+    `sections=${board?.sections?.length ?? "(missing)"}`,
+  );
+
+  let boardPdf: Buffer | undefined;
+  if (board) {
+    try {
+      boardPdf = await generateBoardPacketPDF(board);
+      check("generateBoardPacketPDF completes without throwing", true);
+    } catch (err) {
+      check(
+        "generateBoardPacketPDF completes without throwing",
+        false,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+  check(
+    "board PDF buffer is non-trivial in size (> 1KB)",
+    !!boardPdf && boardPdf.length > 1024,
+    `length=${boardPdf?.length ?? "(missing)"}`,
+  );
+  // Quick magic-bytes check — every real PDF starts with "%PDF-"; this
+  // catches the "we returned an empty/HTML buffer" class of regressions
+  // without parsing the document.
+  check(
+    "board PDF buffer has %PDF- magic bytes",
+    !!boardPdf && boardPdf.subarray(0, 5).toString() === "%PDF-",
+    `bytes=${boardPdf?.subarray(0, 5).toString("hex")}`,
   );
 
   finishAndExit();
