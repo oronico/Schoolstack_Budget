@@ -79,7 +79,10 @@ const PRIVATE_SCHOOL_MODEL = {
   data: PRIVATE_SCHOOL_DEMO.data,
 };
 
-const CHARTER_SCHOOL_MODEL = {
+// Exported so the end-to-end smoke test (tests/charter-demo-end-to-end.ts,
+// task #545) can run this exact payload through the consultant engine,
+// workbook export, and lender packet without re-declaring it.
+export const CHARTER_SCHOOL_MODEL = {
   name: `${CHARTER_SCHOOL_DEMO.baseSchoolName} (Demo Charter School)`,
   schoolStage: CHARTER_SCHOOL_DEMO.schoolStage,
   fundingProfile: CHARTER_SCHOOL_DEMO.fundingProfile,
