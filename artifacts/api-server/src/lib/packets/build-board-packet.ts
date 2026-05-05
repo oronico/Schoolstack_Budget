@@ -93,16 +93,38 @@ export interface BoardRecruitingProjections {
   projections: BoardRecruitingProjection[];
 }
 
+export interface FinancialOutlook {
+  headline: string;
+  status: "healthy" | "watch" | "needs_attention";
+  summary: string;
+}
+
+/**
+ * Maps a `FinancialOutlook.status` ("healthy" / "watch" /
+ * "needs_attention") to the status word `statusBadge` uses for color
+ * lookup ("Strong" / "Needs Work" / "Not Yet Ready"). Today only the
+ * board-cover outlook badge in `drawBoardCover` renders this badge, so
+ * there is no parity bug to backstop yet — but extracting the helper
+ * here (next to `FinancialOutlook`) means any future renderer (e.g. the
+ * Financial Outlook at a Glance section, a board-packet email summary)
+ * can import the same mapping rather than copying the inline ternary,
+ * which is exactly how the cash-runway badge drifted in Task #524 before
+ * Task #539 collapsed it onto a single helper. Task #550.
+ */
+export function financialOutlookBadgeLabel(
+  status: FinancialOutlook["status"],
+): "Strong" | "Needs Work" | "Not Yet Ready" {
+  if (status === "healthy") return "Strong";
+  if (status === "watch") return "Needs Work";
+  return "Not Yet Ready";
+}
+
 export interface BoardPacket extends PacketData {
   topRisks: BoardRiskItem[];
   focusAreas: BoardFocusArea[];
   scenarioSnapshots: ScenarioSnapshot[];
   cashRunway: CashRunwayView;
-  financialOutlook: {
-    headline: string;
-    status: "healthy" | "watch" | "needs_attention";
-    summary: string;
-  };
+  financialOutlook: FinancialOutlook;
   boardNarrative: BoardNarrativeData;
   boardFlaggedAssumptions: BoardFlaggedAssumption[];
   decisionHistory: DecisionHistoryItem[];

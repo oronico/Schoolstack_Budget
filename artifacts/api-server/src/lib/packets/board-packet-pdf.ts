@@ -6,7 +6,7 @@ import {
   renderPacketTable, renderPacketInsights, renderLinkedMetrics,
   type PDFDoc, type TableColumn, BRAND,
 } from "../pdf-utils.js";
-import type { BoardPacket, BoardRiskItem, BoardFocusArea, ScenarioSnapshot, BoardNarrativeData, BoardFlaggedAssumption, BoardRecruitingProjections } from "./build-board-packet";
+import { financialOutlookBadgeLabel, type BoardPacket, type BoardRiskItem, type BoardFocusArea, type ScenarioSnapshot, type BoardNarrativeData, type BoardFlaggedAssumption, type BoardRecruitingProjections } from "./build-board-packet.js";
 import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
@@ -99,9 +99,11 @@ function drawCoverPage(doc: PDFDoc, packet: BoardPacket) {
   doc.text(`Prepared ${new Date(packet.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, { align: "center" });
   doc.moveDown(2);
 
-  const outlookColor = packet.financialOutlook.status === "healthy" ? "Strong"
-    : packet.financialOutlook.status === "watch" ? "Needs Work" : "Not Yet Ready";
-  statusBadge(doc, `Financial Outlook: ${packet.financialOutlook.headline}`, outlookColor as any);
+  statusBadge(
+    doc,
+    `Financial Outlook: ${packet.financialOutlook.headline}`,
+    financialOutlookBadgeLabel(packet.financialOutlook.status),
+  );
   doc.moveDown(0.5);
   bodyText(doc, packet.financialOutlook.summary);
 
