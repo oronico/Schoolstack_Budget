@@ -4,6 +4,17 @@ A long-lived preview environment aimed at Chesterton (a real prospective partner
 
 This is a **prospect-facing demo URL**, not a public site. Treat the URL and password the same way you would a sales demo room key: share it with the Chesterton point of contact via the team password manager, not in a public Slack channel or marketing email.
 
+> **Note (task #578).** An earlier plan (`docs/WHITE_LABEL_STRATEGY.md`
+> M6) contemplated retiring this preview by onboarding Chesterton as a
+> *tenant* of the SchoolStack Budget codebase (one shared deployment
+> serving multiple white-label customers). That direction was reversed
+> by the founder: **Budget is our product**; white-labeling is a
+> separate business line that should live in its own deployment, not
+> as a tenant of this codebase. As a result, this preview stack stays
+> in place as the prospect demo for Chesterton, and no `chesterton`
+> entry was added to `lib/tenant/src/registry.ts`. Future white-label
+> work belongs in a separate codebase or fork, not in this repo.
+
 ---
 
 ## What Chesterton sees
