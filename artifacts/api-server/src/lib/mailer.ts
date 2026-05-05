@@ -51,12 +51,16 @@ export function getConfiguredEmailProvider(): EmailProvider {
 export interface TransactionalEmail {
   to: string;
   subject: string;
-  text: string;
+  /**
+   * Optional plain-text body. Some templates (e.g. the rich advisor-review
+   * brief sent to the team inbox) ship HTML only.
+   */
+  text?: string;
   html: string;
   /**
    * Short label included in the dev-fallback console output so a developer
    * scanning logs can immediately tell which template fired (verify-email,
-   * account-already-exists, password-reset, ...).
+   * account-already-exists, password-reset, review-request-team, ...).
    */
   kind: string;
   /**
@@ -65,6 +69,12 @@ export interface TransactionalEmail {
    * having to render the HTML.
    */
   primaryUrl?: string;
+  /**
+   * Optional Reply-To header. The advisor-review team brief uses this so
+   * a reviewer hitting "Reply" lands in the founder's inbox rather than
+   * the no-reply From address.
+   */
+  replyTo?: string;
 }
 
 export interface DeliveryResult {
@@ -95,8 +105,9 @@ export async function deliverTransactionalEmail(
         from: fromAddress,
         to: [email.to],
         subject: email.subject,
-        text: email.text,
+        ...(email.text !== undefined ? { text: email.text } : {}),
         html: email.html,
+        ...(email.replyTo ? { replyTo: email.replyTo } : {}),
       });
       if (error) {
         console.error(`[mailer] ${email.kind} send error:`, error);
@@ -129,6 +140,7 @@ export async function deliverTransactionalEmail(
   // because RESEND_API_KEY isn't set on a developer's machine.
   console.warn(
     `[mailer:dev] ${email.kind} → ${email.to}` +
+      (email.replyTo ? `\n         reply-to: ${email.replyTo}` : "") +
       (email.primaryUrl ? `\n         link: ${email.primaryUrl}` : "") +
       `\n         (no email provider configured; set RESEND_API_KEY + EMAIL_FROM to send for real)`,
   );
@@ -355,43 +367,30 @@ export function renderReviewRequestEmail(data: ReviewRequestData): RenderedRevie
 }
 
 export async function sendReviewRequestToTeam(data: ReviewRequestData): Promise<{ success: boolean; error?: string }> {
-  const resend = getResend();
-  const fromAddress = process.env.EMAIL_FROM;
-  const notifyEmail = process.env.REVIEW_NOTIFY_EMAIL || fromAddress;
-
-  if (!resend || !fromAddress || !notifyEmail) {
-    return { success: false, error: "Email service is not configured." };
-  }
-
   const { subject, html } = renderReviewRequestEmail(data);
+  // Resolve the team inbox. In production w/ a real provider, EMAIL_FROM
+  // is required (deliverTransactionalEmail will surface the outage if it
+  // is missing), so notifyEmail will fall back to it. The placeholder is
+  // only ever hit in pure-dev runs where neither env var is set, and it
+  // exists purely so the dev-fallback console line still reads cleanly.
+  const notifyEmail =
+    process.env.REVIEW_NOTIFY_EMAIL || process.env.EMAIL_FROM || "team@unconfigured.local";
 
-  try {
-    const { error } = await resend.emails.send({
-      from: fromAddress,
-      to: [notifyEmail],
-      replyTo: data.requesterEmail,
-      subject,
-      html,
-    });
-    if (error) {
-      console.error("[mailer] Team notification error:", error);
-      return { success: false, error: "Failed to send notification." };
-    }
-    return { success: true };
-  } catch (err) {
-    console.error("[mailer] Team notification failed:", err);
-    return { success: false, error: "Failed to send notification." };
+  const result = await deliverTransactionalEmail({
+    kind: "review-request-team",
+    to: notifyEmail,
+    subject,
+    html,
+    replyTo: data.requesterEmail,
+    primaryUrl: data.sharedViewUrl,
+  });
+  if (!result.success) {
+    return { success: false, error: result.error ?? "Failed to send notification." };
   }
+  return { success: true };
 }
 
 export async function sendReviewConfirmation(toEmail: string, requesterName: string, schoolName: string): Promise<{ success: boolean; error?: string }> {
-  const resend = getResend();
-  const fromAddress = process.env.EMAIL_FROM;
-
-  if (!resend || !fromAddress) {
-    return { success: false, error: "Email service is not configured." };
-  }
-
   const html = `
     <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
       <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">We received your review request</h2>
@@ -415,23 +414,17 @@ export async function sendReviewConfirmation(toEmail: string, requesterName: str
     </div>
   `;
 
-  try {
-    const { error } = await resend.emails.send({
-      from: fromAddress,
-      to: [toEmail],
-      subject: `Review request received — ${schoolName}`,
-      html,
-      text: `Hi ${requesterName},\n\nWe've received your request to review the financial model for ${schoolName}. Our team will look it over and get back to you within 5-7 business days.\n\nThanks for using SchoolStack Budget.\n— The SchoolStack Team`,
-    });
-    if (error) {
-      console.error("[mailer] Confirmation error:", error);
-      return { success: false, error: "Failed to send confirmation." };
-    }
-    return { success: true };
-  } catch (err) {
-    console.error("[mailer] Confirmation failed:", err);
-    return { success: false, error: "Failed to send confirmation." };
+  const result = await deliverTransactionalEmail({
+    kind: "review-confirmation",
+    to: toEmail,
+    subject: `Review request received — ${schoolName}`,
+    html,
+    text: `Hi ${requesterName},\n\nWe've received your request to review the financial model for ${schoolName}. Our team will look it over and get back to you within 5-7 business days.\n\nThanks for using SchoolStack Budget.\n— The SchoolStack Team`,
+  });
+  if (!result.success) {
+    return { success: false, error: result.error ?? "Failed to send confirmation." };
   }
+  return { success: true };
 }
 
 export interface ReviewFeedbackData {
@@ -456,13 +449,6 @@ function nl2br(str: string): string {
 }
 
 export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ success: boolean; error?: string }> {
-  const resend = getResend();
-  const fromAddress = process.env.EMAIL_FROM;
-
-  if (!resend || !fromAddress) {
-    return { success: false, error: "Email service is not configured." };
-  }
-
   const firstName = data.recipientName.split(" ")[0] || data.recipientName;
 
   const metricsTable = `
@@ -596,24 +582,18 @@ export async function sendReviewFeedback(data: ReviewFeedbackData): Promise<{ su
     "The SchoolStack Team",
   ].join("\n");
 
-  try {
-    const { error } = await resend.emails.send({
-      from: fromAddress,
-      to: [data.recipientEmail],
-      subject: `Your SchoolStack Budget Review — ${data.schoolName}`,
-      html,
-      text,
-      replyTo: fromAddress,
-    });
-    if (error) {
-      console.error("[mailer] Review feedback error:", error);
-      return { success: false, error: "Failed to send review feedback." };
-    }
-    return { success: true };
-  } catch (err) {
-    console.error("[mailer] Review feedback failed:", err);
-    return { success: false, error: "Failed to send review feedback." };
+  const result = await deliverTransactionalEmail({
+    kind: "review-feedback",
+    to: data.recipientEmail,
+    subject: `Your SchoolStack Budget Review — ${data.schoolName}`,
+    html,
+    text,
+    primaryUrl: data.dashboardUrl,
+  });
+  if (!result.success) {
+    return { success: false, error: result.error ?? "Failed to send review feedback." };
   }
+  return { success: true };
 }
 
 export async function sendPasswordResetEmail(
