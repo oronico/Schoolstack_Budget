@@ -2,6 +2,7 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
+import { tenantMiddleware } from "@workspace/tenant/express";
 import router from "./routes";
 import { pool, db, errorLogsTable } from "@workspace/db";
 import { stripSensitive } from "./routes/errors";
@@ -74,6 +75,14 @@ app.use(
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// Task #571 (M1 of WHITE_LABEL_STRATEGY): attach `req.tenant` from
+// hostname so M2+ refactors can read brand/colors/SEO/email config off
+// the request instead of module-level constants. M1 itself wires up
+// the resolver only — no downstream consumer reads `req.tenant` yet,
+// so this middleware is observably a no-op. The X-Tenant header
+// override is honoured outside production for dev/test.
+app.use(tenantMiddleware());
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const EXPORT_TIMEOUT_MS = 120_000;

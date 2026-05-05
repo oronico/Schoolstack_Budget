@@ -1,0 +1,29 @@
+{
+  "name": "@workspace/tenant",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./express": "./src/express.ts",
+    "./react": "./src/react.tsx"
+  },
+  "scripts": {
+    "test": "tsx ./src/__tests__/registry.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "express": "^5",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "express": { "optional": true },
+    "react": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "tsx": "catalog:"
+  }
+}
