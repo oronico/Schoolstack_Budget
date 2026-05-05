@@ -11,6 +11,7 @@
 // This test loads each demo school and runs it end-to-end through:
 //   - runConsultantEngine
 //   - generateWorkbook (formula workbook)
+//   - generateUnderwritingWorkbook (legislator-samples underwriting xlsx)
 //   - buildLenderPacket + generateLenderPacketPDF
 //   - buildBoardPacket + generateBoardPacketPDF
 //
@@ -19,6 +20,7 @@
 
 import { runConsultantEngine } from "../src/lib/consultant-engine.js";
 import { generateWorkbook } from "../src/lib/excel-export.js";
+import { generateUnderwritingWorkbook } from "../src/lib/underwriting-workbook.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
 import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js";
 import { buildBoardPacket } from "../src/lib/packets/build-board-packet.js";
@@ -66,11 +68,17 @@ function looksLikePdf(buf: Buffer): boolean {
   return tail.includes("%%EOF");
 }
 
+// `underwriting` toggles the legislator-samples-only underwriting
+// workbook check. Only the three schools that ship in the legislator
+// samples script (microschool / private / charter) are exported as an
+// underwriting package, so we only smoke-test that path for those
+// three. The CSN-shaped Chesterton demo isn't part of the legislator
+// run and doesn't need to be covered here.
 const DEMO_MODELS = [
-  { label: "CHARTER_SCHOOL_DEMO", model: CHARTER_SCHOOL_DEMO },
-  { label: "CHESTERTON_ACADEMY_DEMO", model: CHESTERTON_ACADEMY_DEMO },
-  { label: "MICROSCHOOL_DEMO", model: MICROSCHOOL_DEMO },
-  { label: "PRIVATE_SCHOOL_DEMO", model: PRIVATE_SCHOOL_DEMO },
+  { label: "CHARTER_SCHOOL_DEMO", model: CHARTER_SCHOOL_DEMO, underwriting: true },
+  { label: "CHESTERTON_ACADEMY_DEMO", model: CHESTERTON_ACADEMY_DEMO, underwriting: false },
+  { label: "MICROSCHOOL_DEMO", model: MICROSCHOOL_DEMO, underwriting: true },
+  { label: "PRIVATE_SCHOOL_DEMO", model: PRIVATE_SCHOOL_DEMO, underwriting: true },
 ];
 
 // Task #558 — pin the canonical inventory size so a future change
@@ -81,7 +89,11 @@ const DEMO_MODELS = [
 // side; keeping both in sync is the contract.
 const EXPECTED_DEMO_COUNT = 4;
 
-async function smokeTestModel(label: string, data: Record<string, unknown>) {
+async function smokeTestModel(
+  label: string,
+  data: Record<string, unknown>,
+  underwriting: boolean,
+) {
   let consultantOutput: Awaited<ReturnType<typeof runConsultantEngine>> | null =
     null;
   try {
@@ -126,6 +138,28 @@ async function smokeTestModel(label: string, data: Record<string, unknown>) {
       false,
       err instanceof Error ? err.message : String(err),
     );
+  }
+
+  if (underwriting) {
+    try {
+      const uwWorkbook = await generateUnderwritingWorkbook(data);
+      const uwBuffer = Buffer.from(await uwWorkbook.xlsx.writeBuffer());
+      check(
+        `${label}: underwriting workbook generates non-empty buffer`,
+        uwBuffer.length > 1024,
+        `bytes=${uwBuffer.length}`,
+      );
+      check(
+        `${label}: underwriting workbook bytes look like a valid xlsx`,
+        looksLikeXlsx(uwBuffer),
+      );
+    } catch (err) {
+      check(
+        `${label}: generateUnderwritingWorkbook completes`,
+        false,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
   }
 
   try {
@@ -176,12 +210,16 @@ async function run() {
     `got=${DEMO_MODELS.length}`,
   );
 
-  for (const { label, model } of DEMO_MODELS) {
+  for (const { label, model, underwriting } of DEMO_MODELS) {
     check(
       `${label}: shared module exposes a data record`,
       model && typeof model.data === "object" && model.data !== null,
     );
-    await smokeTestModel(label, model.data as Record<string, unknown>);
+    await smokeTestModel(
+      label,
+      model.data as Record<string, unknown>,
+      underwriting,
+    );
   }
 
   console.log(`\ndemo-models-smoke: ${passed} passed, ${failed} failed`);
