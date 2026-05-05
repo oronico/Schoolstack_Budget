@@ -1,0 +1,58 @@
+name: migration-check
+
+# Catches broken database migrations on the PR check itself, before a Railway
+# preview deploy is attempted. Boots a throwaway Postgres, runs the production
+# migration bundle (`dist/migrate.cjs`) against it, and fails the build if any
+# migration errors out. Mirrors what Railway runs before booting the API.
+
+on:
+  # Run on EVERY PR (no paths filter). The check is the gate that protects
+  # Railway preview deploys, so it must execute on each PR regardless of
+  # which files changed — a refactor in unrelated code can still ship a
+  # broken `pnpm-lock.yaml` or build that breaks the migrate bundle.
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-migrations:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: migrations_check
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MIGRATIONS_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/migrations_check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build api-server (produces dist/migrate.cjs + dist/drizzle/*)
+        run: pnpm --filter @workspace/api-server run build
+
+      - name: Run production migration bundle against throwaway Postgres
+        run: pnpm --filter @workspace/api-server run check:migrations
