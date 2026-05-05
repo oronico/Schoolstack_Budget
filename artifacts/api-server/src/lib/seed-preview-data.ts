@@ -65,14 +65,21 @@ export function resolveDemoPassword(env: NodeJS.ProcessEnv = process.env): strin
 // demo-models/ directory so a tweak there is reflected in both the
 // PR-preview seed and the legislator-samples script (see task #546).
 // The seed only adds its own "(Demo …)" name suffix on top.
-const MICROSCHOOL_MODEL = {
+//
+// All three are exported so the end-to-end smoke tests
+// (tests/charter-demo-end-to-end.ts for the charter / public-funding
+// path, tests/non-charter-demos-end-to-end.ts for the two tuition
+// paths — task #547) can run these exact payloads through the
+// consultant engine, workbook export, and lender packet without
+// re-declaring them.
+export const MICROSCHOOL_MODEL = {
   name: `${MICROSCHOOL_DEMO.baseSchoolName} (Demo Microschool)`,
   schoolStage: MICROSCHOOL_DEMO.schoolStage,
   fundingProfile: MICROSCHOOL_DEMO.fundingProfile,
   data: MICROSCHOOL_DEMO.data,
 };
 
-const PRIVATE_SCHOOL_MODEL = {
+export const PRIVATE_SCHOOL_MODEL = {
   name: `${PRIVATE_SCHOOL_DEMO.baseSchoolName} (Demo Private School)`,
   schoolStage: PRIVATE_SCHOOL_DEMO.schoolStage,
   fundingProfile: PRIVATE_SCHOOL_DEMO.fundingProfile,
