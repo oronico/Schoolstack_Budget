@@ -223,16 +223,20 @@ for (const sc of scenarios) {
 // badge when `runwayMonths === 0` (the only condition under which the
 // cover currently skips the badge), this test would silently pass with
 // no parity coverage. Assert the skip path explicitly so a future edit
-// that flips the threshold is caught.
+// that flips the threshold is caught. Note: since Task #556,
+// `drawOutlookSection` also emits a "Financial Outlook: ..." badge
+// unconditionally, so we filter to the cash badge by label prefix
+// rather than asserting on total badge count.
 {
   const cash = makeCashRunway("warning", 0, "Cash runway not yet projected");
   const packet = makePacket(cash);
   const cover = captureDoc();
   drawOutlookSection(cover.doc, packet);
+  const cashBadges = cover.badges.filter((b) => b.label.startsWith("Cash Position:"));
   check(
     "runwayMonths=0: cover-page outlook skips the cash badge",
-    cover.badges.length === 0,
-    `badges captured: ${JSON.stringify(cover.badges)}`,
+    cashBadges.length === 0,
+    `cash badges captured: ${JSON.stringify(cashBadges)}`,
   );
 }
 

@@ -74,7 +74,7 @@ export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffe
   return docToBuffer(doc);
 }
 
-function drawCoverPage(doc: PDFDoc, packet: BoardPacket) {
+export function drawCoverPage(doc: PDFDoc, packet: BoardPacket) {
   const pageW = doc.page.width;
   const margin = doc.page.margins.left;
   const contentW = pageW - margin * 2;
@@ -137,7 +137,17 @@ export function drawOutlookSection(doc: PDFDoc, packet: BoardPacket) {
   sectionTitle(doc, "Financial Outlook at a Glance");
 
   const outlook = packet.financialOutlook;
-  bodyText(doc, `${outlook.headline} ${outlook.summary}`);
+  // Mirror the cover-page badge so a trustee skimming the section sees the
+  // same color cue the cover gave them. Uses `financialOutlookBadgeLabel`
+  // (Task #550) so the cover and section can't drift on the status →
+  // color mapping. Task #556.
+  statusBadge(
+    doc,
+    `Financial Outlook: ${outlook.headline}`,
+    financialOutlookBadgeLabel(outlook.status),
+  );
+  doc.moveDown(0.2);
+  bodyText(doc, outlook.summary);
 
   if (packet.cashRunway.runwayMonths > 0) {
     doc.moveDown(0.2);
