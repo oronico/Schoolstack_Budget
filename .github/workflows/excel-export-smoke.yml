@@ -1,0 +1,41 @@
+name: excel-export-smoke
+
+# Catches broken Excel exports on the PR check itself, before a founder
+# downloads a workbook that fails to open in Excel. Generates each of the
+# four export formats (Formula, Lender Pro Forma, Underwriting V2, Legacy)
+# from a fixture model, parses the resulting workbook back with ExcelJS,
+# and asserts every expected sheet is present and has at least one
+# populated cell. Mirrors the migration-check.yml pattern for database
+# migrations (Task #538).
+
+on:
+  # Run on EVERY PR (no paths filter). The check is the gate that
+  # protects founders from corrupt downloads, so it must execute on each
+  # PR regardless of which files changed — a refactor in shared workbook
+  # helpers can break exports even when the export builders themselves
+  # were untouched.
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  smoke-excel-exports:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Smoke-open every Excel export format
+        run: pnpm --filter @workspace/api-server run test:excel-export-smoke
