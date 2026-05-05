@@ -23,7 +23,9 @@ function validateEnv() {
     ["ALLOWED_ORIGINS", "Comma-separated list of allowed CORS origins"],
     ["ADMIN_EMAILS", "Comma-separated list of admin email addresses"],
     ["RESEND_API_KEY", "Resend API key for transactional emails"],
+    ["POSTMARK_SERVER_TOKEN", "Postmark server token (failover provider for transactional emails)"],
     ["EMAIL_FROM", "Sender address for outgoing emails"],
+    ["EMAIL_PROVIDER", "Override email provider selection: resend | postmark | console"],
   ];
 
   let hasFatal = false;

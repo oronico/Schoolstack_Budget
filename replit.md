@@ -127,5 +127,19 @@ CI gates include `typecheck`, `test` (vitest), and `e2e` (Playwright) to ensure 
 - **Excel Export**: ExcelJS
 - **PDF Export**: PDFKit
 - **Authentication**: bcryptjs, jsonwebtoken
-- **Email**: Resend
+- **Email**: Resend (primary) and Postmark (failover) — selected at runtime by `EMAIL_PROVIDER`
+
+### Email provider failover (Tasks #533, #543)
+Transactional email goes through `deliverTransactionalEmail` in `artifacts/api-server/src/lib/mailer.ts`. The active provider is chosen by env vars at runtime, with no code change needed to swap:
+
+- **Auto-detect (default)**: Resend wins if `RESEND_API_KEY + EMAIL_FROM` are set; otherwise Postmark wins if `POSTMARK_SERVER_TOKEN + EMAIL_FROM` are set; otherwise the dev console logger fires (success:true in dev so fire-and-forget callers don't log spurious failures, success:false + console.error in production so monitoring sees the outage).
+- **Explicit override**: `EMAIL_PROVIDER=resend|postmark|console` wins over auto-detect.
+
+**Failover playbook** (Resend outage / deliverability problem):
+1. Make sure `POSTMARK_SERVER_TOKEN` and `EMAIL_FROM` are set on the API server (Railway env vars). Optional: `POSTMARK_MESSAGE_STREAM` to route through a non-default Postmark stream.
+2. Set `EMAIL_PROVIDER=postmark` and restart the API server.
+3. Every transactional sender (verify-email, password-reset, welcome, account-already-exists, review-request-team / -confirmation / -feedback) re-routes to Postmark on the next send.
+4. To revert, unset `EMAIL_PROVIDER` (or set it back to `resend`) and restart.
+
+A/B between providers is not automated today — it's a manual swap of `EMAIL_PROVIDER`. The adapter shape (`EmailProvider` union, single `deliverTransactionalEmail` choke point) makes adding SendGrid / SES later a one-file change.
 - **SEO**: react-helmet-async

@@ -1,10 +1,10 @@
 /**
- * Task #533 — env-driven email adapter.
+ * Task #533 + #543 — env-driven email adapter.
  *
  * The transactional senders (verify-email, account-already-exists,
  * password-reset) route through `deliverTransactionalEmail`, which is
- * the env-driven adapter that decides whether to call Resend or fall
- * back to the dev console logger. This file pins the three observable
+ * the env-driven adapter that decides whether to call Resend, Postmark,
+ * or fall back to the dev console logger. This file pins the observable
  * behaviours that matter:
  *
  *   1. dev fallback (no provider)        → success:true, console.warn,
@@ -18,9 +18,19 @@
  *                                          (useful for local-only test
  *                                          runs that should never email
  *                                          a real inbox)
+ *   4. Postmark provider selection (#543) — auto-detect when only
+ *                                           Postmark creds are set,
+ *                                           explicit EMAIL_PROVIDER=
+ *                                           postmark wins over Resend,
+ *                                           and missing token surfaces
+ *                                           a real configuration error
+ *   5. Postmark send path                — fetches the Postmark API with
+ *                                          the right URL / headers / body
+ *                                          (with `fetch` stubbed so we
+ *                                          don't hit the network)
  *
  * We exercise `deliverTransactionalEmail` directly so the assertions
- * don't depend on a network round-trip to Resend.
+ * don't depend on a network round-trip to Resend or Postmark.
  */
 import {
   deliverTransactionalEmail,
@@ -41,7 +51,16 @@ function check(name: string, cond: boolean, detail?: string) {
 
 // Stash + restore the env vars we mutate so the test is order-safe and
 // doesn't bleed into sibling tests in the same `pnpm test` run.
-const ENV_KEYS = ["RESEND_API_KEY", "EMAIL_FROM", "EMAIL_PROVIDER", "NODE_ENV", "APP_URL", "REPLIT_DEV_DOMAIN"] as const;
+const ENV_KEYS = [
+  "RESEND_API_KEY",
+  "POSTMARK_SERVER_TOKEN",
+  "POSTMARK_MESSAGE_STREAM",
+  "EMAIL_FROM",
+  "EMAIL_PROVIDER",
+  "NODE_ENV",
+  "APP_URL",
+  "REPLIT_DEV_DOMAIN",
+] as const;
 const originalEnv: Record<string, string | undefined> = {};
 for (const k of ENV_KEYS) originalEnv[k] = process.env[k];
 
@@ -184,6 +203,7 @@ async function main() {
   setEnv({
     NODE_ENV: "development",
     RESEND_API_KEY: "re_dummy",
+    POSTMARK_SERVER_TOKEN: undefined,
     EMAIL_FROM: "noreply@example.com",
     EMAIL_PROVIDER: undefined,
   });
@@ -192,6 +212,220 @@ async function main() {
     getConfiguredEmailProvider() === "resend",
     `got ${getConfiguredEmailProvider()}`,
   );
+  check(
+    "auto-detect: isEmailConfigured() is true when Resend creds are set",
+    isEmailConfigured() === true,
+  );
+
+  // --- 4a. Postmark provider selection (Task #543) ----------------------
+  // Auto-detect: only Postmark creds set → Postmark wins.
+  setEnv({
+    NODE_ENV: "development",
+    RESEND_API_KEY: undefined,
+    POSTMARK_SERVER_TOKEN: "pm_dummy",
+    EMAIL_FROM: "noreply@example.com",
+    EMAIL_PROVIDER: undefined,
+  });
+  check(
+    "postmark/auto-detect: getConfiguredEmailProvider() === 'postmark' when only Postmark creds are set",
+    getConfiguredEmailProvider() === "postmark",
+    `got ${getConfiguredEmailProvider()}`,
+  );
+  check(
+    "postmark/auto-detect: isEmailConfigured() is true when only Postmark creds are set",
+    isEmailConfigured() === true,
+  );
+
+  // Auto-detect tie-break: both providers configured → Resend wins so
+  // existing deployments don't change behaviour just because Postmark
+  // was added alongside as a failover.
+  setEnv({
+    NODE_ENV: "development",
+    RESEND_API_KEY: "re_dummy",
+    POSTMARK_SERVER_TOKEN: "pm_dummy",
+    EMAIL_FROM: "noreply@example.com",
+    EMAIL_PROVIDER: undefined,
+  });
+  check(
+    "postmark/auto-detect: Resend wins when both providers' creds are set (preserves historical default)",
+    getConfiguredEmailProvider() === "resend",
+    `got ${getConfiguredEmailProvider()}`,
+  );
+
+  // Explicit override: EMAIL_PROVIDER=postmark wins over Resend creds —
+  // this is the documented ops failover (set EMAIL_PROVIDER=postmark on
+  // the API server during a Resend outage and restart).
+  setEnv({
+    NODE_ENV: "development",
+    RESEND_API_KEY: "re_dummy",
+    POSTMARK_SERVER_TOKEN: "pm_dummy",
+    EMAIL_FROM: "noreply@example.com",
+    EMAIL_PROVIDER: "postmark",
+  });
+  check(
+    "postmark/explicit: EMAIL_PROVIDER=postmark wins over Resend creds (ops failover)",
+    getConfiguredEmailProvider() === "postmark",
+    `got ${getConfiguredEmailProvider()}`,
+  );
+
+  // EMAIL_PROVIDER=postmark + EMAIL_FROM but no token must fail loudly
+  // in any environment — silently dropping the message would let an ops
+  // misconfiguration go unnoticed past a deploy.
+  setEnv({
+    NODE_ENV: "production",
+    RESEND_API_KEY: undefined,
+    POSTMARK_SERVER_TOKEN: undefined,
+    EMAIL_FROM: "noreply@example.com",
+    EMAIL_PROVIDER: "postmark",
+  });
+  {
+    const { result, error } = await capture(() => deliverTransactionalEmail(sampleEmail));
+    check(
+      "postmark/no-token: returns success:false (real outage, surface it)",
+      result.success === false && result.provider === "postmark",
+      `got ${JSON.stringify(result)}`,
+    );
+    check(
+      "postmark/no-token: emits console.error naming POSTMARK_SERVER_TOKEN",
+      error.length === 1 && error[0]?.includes("POSTMARK_SERVER_TOKEN") === true,
+      `error=${JSON.stringify(error)}`,
+    );
+  }
+
+  // --- 4b. Postmark send path (fetch stubbed) ---------------------------
+  // Stub global.fetch so we can assert the adapter calls Postmark's API
+  // with the right URL / headers / body shape (and returns success:true)
+  // without making a real network round-trip.
+  setEnv({
+    NODE_ENV: "production",
+    RESEND_API_KEY: undefined,
+    POSTMARK_SERVER_TOKEN: "pm_real_dummy",
+    EMAIL_FROM: "noreply@example.com",
+    EMAIL_PROVIDER: "postmark",
+    POSTMARK_MESSAGE_STREAM: undefined,
+  });
+  {
+    const captured: { url?: string; init?: RequestInit } = {};
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      captured.url = typeof url === "string" ? url : url.toString();
+      captured.init = init;
+      return new Response(JSON.stringify({ MessageID: "stub-message-id" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+    try {
+      const replyEmail = { ...sampleEmail, replyTo: "founder@example.com" };
+      const result = await deliverTransactionalEmail(replyEmail);
+      check(
+        "postmark/send: returns success:true with provider tag 'postmark'",
+        result.success === true && result.provider === "postmark",
+        `got ${JSON.stringify(result)}`,
+      );
+      check(
+        "postmark/send: POSTs to https://api.postmarkapp.com/email",
+        captured.url === "https://api.postmarkapp.com/email" && captured.init?.method === "POST",
+        `url=${captured.url} method=${captured.init?.method}`,
+      );
+      const headers = (captured.init?.headers ?? {}) as Record<string, string>;
+      check(
+        "postmark/send: sends X-Postmark-Server-Token header from env",
+        headers["X-Postmark-Server-Token"] === "pm_real_dummy",
+        `header=${headers["X-Postmark-Server-Token"]}`,
+      );
+      check(
+        "postmark/send: sends application/json content-type",
+        headers["Content-Type"] === "application/json",
+      );
+      const body = JSON.parse((captured.init?.body as string) || "{}");
+      check(
+        "postmark/send: body carries From / To / Subject from EMAIL_FROM and the email payload",
+        body.From === "noreply@example.com" &&
+          body.To === replyEmail.to &&
+          body.Subject === replyEmail.subject,
+        `body=${JSON.stringify(body)}`,
+      );
+      check(
+        "postmark/send: body includes HtmlBody, TextBody, and ReplyTo when present",
+        body.HtmlBody === replyEmail.html &&
+          body.TextBody === replyEmail.text &&
+          body.ReplyTo === replyEmail.replyTo,
+        `body=${JSON.stringify(body)}`,
+      );
+      check(
+        "postmark/send: body defaults MessageStream to 'outbound' when POSTMARK_MESSAGE_STREAM is unset",
+        body.MessageStream === "outbound",
+        `MessageStream=${body.MessageStream}`,
+      );
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  }
+
+  // POSTMARK_MESSAGE_STREAM lets ops route through a custom stream
+  // (e.g. a separate transactional-vs-broadcast split) without a code
+  // change. Pin that the env var actually flows through to the body.
+  setEnv({
+    NODE_ENV: "production",
+    RESEND_API_KEY: undefined,
+    POSTMARK_SERVER_TOKEN: "pm_real_dummy",
+    EMAIL_FROM: "noreply@example.com",
+    EMAIL_PROVIDER: "postmark",
+    POSTMARK_MESSAGE_STREAM: "transactional-stream-2",
+  });
+  {
+    const captured: { init?: RequestInit } = {};
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+      captured.init = init;
+      return new Response(JSON.stringify({ MessageID: "x" }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const result = await deliverTransactionalEmail(sampleEmail);
+      const body = JSON.parse((captured.init?.body as string) || "{}");
+      check(
+        "postmark/send: POSTMARK_MESSAGE_STREAM overrides the default 'outbound' stream",
+        result.success === true && body.MessageStream === "transactional-stream-2",
+        `MessageStream=${body.MessageStream}`,
+      );
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  }
+
+  // Postmark API returning a non-200 (e.g. 422 inactive recipient,
+  // 401 bad token) must surface as success:false + a console.error so
+  // monitoring catches it — same shape as the Resend error branch.
+  setEnv({
+    NODE_ENV: "production",
+    RESEND_API_KEY: undefined,
+    POSTMARK_SERVER_TOKEN: "pm_real_dummy",
+    EMAIL_FROM: "noreply@example.com",
+    EMAIL_PROVIDER: "postmark",
+  });
+  {
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ ErrorCode: 10, Message: "Bad or missing API token." }), {
+        status: 401,
+      })) as typeof fetch;
+    try {
+      const { result, error } = await capture(() => deliverTransactionalEmail(sampleEmail));
+      check(
+        "postmark/send: non-2xx response → success:false with provider tag 'postmark'",
+        result.success === false && result.provider === "postmark",
+        `got ${JSON.stringify(result)}`,
+      );
+      check(
+        "postmark/send: non-2xx response logs the status code for triage",
+        error.length === 1 && error[0]?.includes("401") === true,
+        `error=${JSON.stringify(error)}`,
+      );
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  }
 
   // --- 5. welcome email goes through the shared adapter -----------------
   // Task #552 — the new-user welcome email is fired fire-and-forget after

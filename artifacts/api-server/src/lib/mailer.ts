@@ -12,16 +12,25 @@ function getResend(): Resend | null {
   return resendClient;
 }
 
-export function isEmailConfigured(): boolean {
+function isResendConfigured(): boolean {
   return !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM;
 }
 
-// Task #533 — env-driven email adapter. Today the only real provider
-// wired up is Resend (driven by RESEND_API_KEY + EMAIL_FROM), but the
-// adapter shape lets us swap to SendGrid / Postmark / SES later without
-// touching every call site. The transactional senders below
-// (sendVerifyEmail, sendAccountAlreadyExistsEmail, sendPasswordResetEmail)
-// route through `deliverTransactionalEmail` so:
+function isPostmarkConfigured(): boolean {
+  return !!process.env.POSTMARK_SERVER_TOKEN && !!process.env.EMAIL_FROM;
+}
+
+export function isEmailConfigured(): boolean {
+  return isResendConfigured() || isPostmarkConfigured();
+}
+
+// Task #533 + #543 — env-driven email adapter. Real providers wired up
+// today are Resend (RESEND_API_KEY + EMAIL_FROM) and Postmark
+// (POSTMARK_SERVER_TOKEN + EMAIL_FROM). The adapter shape lets us swap
+// between them — or add SendGrid / SES later — without touching every
+// `sendVerifyEmail` / `sendPasswordResetEmail` / `sendReview*` call site.
+// The transactional senders below all route through
+// `deliverTransactionalEmail` so:
 //
 //   - production w/ provider:   email is actually sent
 //   - production w/o provider:  hard error (return success:false) so the
@@ -34,18 +43,31 @@ export function isEmailConfigured(): boolean {
 //                               callers don't log spurious "failure"
 //                               errors during local development
 //
-// `EMAIL_PROVIDER` is reserved for future explicit provider selection;
-// today it defaults to "resend" and is the only supported value.
-export type EmailProvider = "resend" | "console";
+// Selection rules for `EMAIL_PROVIDER`:
+//   - explicit "resend" | "postmark" | "console" wins (handy for ops
+//     failover and for forcing the dev logger from staging / tests)
+//   - auto-detect prefers Resend when both providers' creds are set
+//     (preserves the historical default), else picks whichever real
+//     provider is configured, else falls back to the console logger.
+//
+// Ops failover / A-B (documented in replit.md): if Resend has an outage
+// or a deliverability problem, set EMAIL_PROVIDER=postmark on the API
+// server (POSTMARK_SERVER_TOKEN + EMAIL_FROM must be present) and
+// restart — every sender re-routes without a code change.
+export type EmailProvider = "resend" | "postmark" | "console";
 
 export function getConfiguredEmailProvider(): EmailProvider {
-  // Explicit override wins (useful for tests / forcing the dev logger).
+  // Explicit override wins (useful for tests / forcing the dev logger /
+  // ops swapping providers without a code change).
   const explicit = (process.env.EMAIL_PROVIDER || "").toLowerCase();
   if (explicit === "console") return "console";
   if (explicit === "resend") return "resend";
-  // Auto-detect: if Resend creds are present, use Resend. Otherwise fall
-  // back to the console logger.
-  return isEmailConfigured() ? "resend" : "console";
+  if (explicit === "postmark") return "postmark";
+  // Auto-detect. Resend wins ties so existing deployments don't change
+  // behaviour just because POSTMARK_SERVER_TOKEN was added alongside.
+  if (isResendConfigured()) return "resend";
+  if (isPostmarkConfigured()) return "postmark";
+  return "console";
 }
 
 export interface TransactionalEmail {
@@ -94,7 +116,7 @@ export async function deliverTransactionalEmail(
     const resend = getResend();
     if (!resend) {
       // Belt-and-suspenders: getConfiguredEmailProvider only returns
-      // "resend" when isEmailConfigured() is true, so this branch is
+      // "resend" when isResendConfigured() is true, so this branch is
       // unreachable today, but we keep the guard so a future change to
       // EMAIL_PROVIDER=resend without an API key fails loudly.
       console.error(`[mailer] ${email.kind}: provider=resend but Resend client is null`);
@@ -123,13 +145,69 @@ export async function deliverTransactionalEmail(
     }
   }
 
+  if (provider === "postmark" && fromAddress) {
+    // Postmark is a plain HTTPS API — we use global `fetch` directly so
+    // we don't pull in another SDK / lockfile entry just to act as an
+    // ops-side failover for Resend. Auth is a single header
+    // (X-Postmark-Server-Token); a 200 response carries `MessageID`,
+    // anything else is treated as a send failure consistent with the
+    // Resend branch above.
+    const token = process.env.POSTMARK_SERVER_TOKEN;
+    if (!token) {
+      // Mirrors the Resend "client is null" guard: explicit
+      // EMAIL_PROVIDER=postmark without the server token must fail loudly
+      // rather than silently dropping the message.
+      console.error(`[mailer] ${email.kind}: provider=postmark but POSTMARK_SERVER_TOKEN is not set`);
+      return { success: false, error: "Email service is not configured.", provider };
+    }
+    try {
+      const body: Record<string, string> = {
+        From: fromAddress,
+        To: email.to,
+        Subject: email.subject,
+        HtmlBody: email.html,
+        // Every Postmark server ships with a default "outbound" stream;
+        // POSTMARK_MESSAGE_STREAM lets ops point at a custom stream
+        // (e.g. a separate broadcast/transactional split) without code
+        // changes.
+        MessageStream: process.env.POSTMARK_MESSAGE_STREAM || "outbound",
+      };
+      if (email.text !== undefined) body.TextBody = email.text;
+      if (email.replyTo) body.ReplyTo = email.replyTo;
+
+      const resp = await fetch("https://api.postmarkapp.com/email", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Postmark-Server-Token": token,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        const detail = await resp.text().catch(() => "");
+        console.error(`[mailer] ${email.kind} postmark send error:`, resp.status, detail);
+        return { success: false, error: `Failed to send ${email.kind} email.`, provider };
+      }
+      if (process.env.NODE_ENV !== "production") {
+        const data = (await resp.json().catch(() => ({}))) as { MessageID?: string };
+        console.log(`[mailer] ${email.kind} sent to ${email.to} via Postmark (id: ${data.MessageID ?? "?"})`);
+      }
+      return { success: true, provider };
+    } catch (err) {
+      console.error(`[mailer] ${email.kind} postmark send failed:`, err);
+      return { success: false, error: `Failed to send ${email.kind} email.`, provider };
+    }
+  }
+
   // No real provider available. In production this is an outage we want
   // to surface; in dev we fall back to the console logger so engineers
   // can copy the verification / reset URL out of the workspace logs.
   if (process.env.NODE_ENV === "production") {
     console.error(
       `[mailer] FATAL: ${email.kind} could not be sent — ` +
-        `set RESEND_API_KEY and EMAIL_FROM (provider=${provider}, from=${fromAddress ? "set" : "unset"})`,
+        `set RESEND_API_KEY and EMAIL_FROM (or POSTMARK_SERVER_TOKEN and EMAIL_FROM) ` +
+        `(provider=${provider}, from=${fromAddress ? "set" : "unset"})`,
     );
     return { success: false, error: "Email service is not configured.", provider };
   }
@@ -137,12 +215,12 @@ export async function deliverTransactionalEmail(
   // Graceful dev fallback. console.warn (not error) so it stays visible
   // without polluting error budgets, and we return success:true so
   // fire-and-forget callers don't log spurious "send failed" lines just
-  // because RESEND_API_KEY isn't set on a developer's machine.
+  // because no provider creds are set on a developer's machine.
   console.warn(
     `[mailer:dev] ${email.kind} → ${email.to}` +
       (email.replyTo ? `\n         reply-to: ${email.replyTo}` : "") +
       (email.primaryUrl ? `\n         link: ${email.primaryUrl}` : "") +
-      `\n         (no email provider configured; set RESEND_API_KEY + EMAIL_FROM to send for real)`,
+      `\n         (no email provider configured; set RESEND_API_KEY+EMAIL_FROM or POSTMARK_SERVER_TOKEN+EMAIL_FROM to send for real)`,
   );
   return { success: true, provider: "console" };
 }
