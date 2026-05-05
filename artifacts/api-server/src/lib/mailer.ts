@@ -728,6 +728,89 @@ export async function sendVerifyEmail(
   return { success: true };
 }
 
+// Task #552 — new-user welcome email. Fired fire-and-forget after
+// /auth/verify-email successfully provisions the account, so it shares
+// the verify-email / password-reset flow's adapter semantics:
+//   - prod w/ provider:  Resend delivers the welcome email
+//   - prod w/o provider: console.error + success:false (caller already
+//                         logs "welcome email failed" but does not block
+//                         the founder's first login)
+//   - dev w/o provider:  console.warn with the dashboard link surfaced
+//                         so a developer scanning workspace logs can
+//                         tell which template fired and where it would
+//                         have pointed
+// Like the other senders in this file, we resolve APP_URL via the same
+// helper so the dashboard link works locally (REPLIT_DEV_DOMAIN) as
+// well as in production (APP_URL).
+export async function sendWelcomeEmail(
+  toEmail: string,
+  name: string,
+): Promise<{ success: boolean; error?: string }> {
+  const appUrl = resolveAppUrl();
+  // The dashboard link is a nice-to-have. If neither APP_URL nor
+  // REPLIT_DEV_DOMAIN is set we still want the welcome to go out — the
+  // body just won't carry a CTA button. This mirrors how the advisor-
+  // confirmation template degrades gracefully (no link in some flows).
+  const dashboardUrl = appUrl ? `${appUrl}/` : null;
+  const firstName = (name || "").split(" ")[0] || name || "there";
+
+  const ctaButton = dashboardUrl
+    ? `
+        <div style="text-align:center;margin:32px 0;">
+          <a href="${dashboardUrl}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Open My Dashboard</a>
+        </div>`
+    : "";
+  const ctaText = dashboardUrl ? `\nOpen your dashboard: ${dashboardUrl}\n` : "";
+
+  const result = await deliverTransactionalEmail({
+    kind: "welcome",
+    to: toEmail,
+    ...(dashboardUrl ? { primaryUrl: dashboardUrl } : {}),
+    subject: "Welcome to SchoolStack Budget",
+    text: [
+      `Hi ${firstName},`,
+      "",
+      "Welcome to SchoolStack Budget — your account is ready to go.",
+      "",
+      "Here's what you can do next:",
+      "  • Build a 5-year financial model for your school",
+      "  • Generate board-ready and lender-ready packets",
+      "  • Request a free advisor review when your model is ready",
+      ctaText,
+      "If you have questions or want to talk through your plan, just reply to this email — we read every one.",
+      "",
+      " — The SchoolStack Budget Team",
+    ].join("\n"),
+    html: `
+      <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">Welcome to SchoolStack Budget</h2>
+        <p style="color:#475569;line-height:1.6;">
+          Hi ${escapeHtml(firstName)},
+        </p>
+        <p style="color:#475569;line-height:1.6;">
+          Your account is ready to go. SchoolStack Budget helps founders build a
+          5-year financial model, generate board-ready and lender-ready packets,
+          and request a free advisor review when your model is ready.
+        </p>
+        ${ctaButton}
+        <p style="color:#475569;line-height:1.6;">
+          If you have questions or want to talk through your plan, just reply to
+          this email — we read every one.
+        </p>
+        <p style="color:#475569;line-height:1.6;margin-bottom:0;">
+          — The SchoolStack Budget Team
+        </p>
+        <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;" />
+        <p style="color:#94A3B8;font-size:12px;">SchoolStack Budget by SchoolStack.ai</p>
+      </div>
+    `,
+  });
+  if (!result.success) {
+    return { success: false, error: result.error ?? "Failed to send welcome email." };
+  }
+  return { success: true };
+}
+
 export async function sendAccountAlreadyExistsEmail(
   toEmail: string,
   resetToken: string | null,

@@ -17,6 +17,7 @@ import {
   sendPasswordResetEmail,
   sendVerifyEmail,
   sendAccountAlreadyExistsEmail,
+  sendWelcomeEmail,
 } from "../lib/mailer";
 import { createRateLimiter } from "../lib/rate-limiter";
 
@@ -326,6 +327,17 @@ router.post("/auth/verify-email", registerRateLimiter, async (req, res) => {
 
     trackEvent("signed_up", user.id, { email: user.email }).catch((e) => {
       console.error(`[auth] verify-email: trackEvent failed for user ${user.id}:`, e);
+    });
+
+    // Task #552 — fire-and-forget welcome email after the account lands.
+    // Mirrors the verify-email / password-reset pattern: never blocks the
+    // response and never surfaces to the caller, but routes through the
+    // shared `deliverTransactionalEmail` adapter so a future provider
+    // swap (SendGrid / Postmark / SES) is a one-file change and so a
+    // developer running locally without RESEND_API_KEY sees the welcome
+    // template surface in the workspace logs alongside the other senders.
+    sendWelcomeEmail(user.email, user.name).catch((e) => {
+      console.error(`[auth] verify-email: sendWelcomeEmail failed for user ${user.id}:`, e);
     });
   } catch (err) {
     console.error("Verify email error:", err);
