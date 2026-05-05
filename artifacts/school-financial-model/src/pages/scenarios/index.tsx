@@ -60,10 +60,12 @@ import {
   applyPersistedScenarioToData,
   buildActualsSuggestion,
   buildDecisionBullets,
+  computeCategorySubtotalReconciliation,
   computeDecisionImpactFromPersisted,
   computeProjectedSnapshot,
   DECISION_LABELS,
   DECISION_THEME,
+  type AccountingExportTotals,
   type ActualsSuggestion,
   type ActualsSuggestionField,
   type ActualsContributor,
@@ -431,8 +433,15 @@ interface CustomScenarioCardProps {
   // step. Used to render a "Pulled from your books: filename.csv · uploaded
   // Mar 14" caption when the suggestion engine sourced fields from it, plus
   // a "Replace export" deep-link back into the wizard step that owns the
-  // upload UI. Undefined when no export is present.
-  accountingExportInfo?: { filename?: string; uploadedAt?: string };
+  // upload UI. `totals` (when present) feeds the un-mapped revenue/expense
+  // gap chip — the same reconciliation warning the wizard's upload summary
+  // card shows — so founders reviewing saved actuals see it too. Undefined
+  // when no export is present.
+  accountingExportInfo?: {
+    filename?: string;
+    uploadedAt?: string;
+    totals?: AccountingExportTotals;
+  };
   // URL the "Replace export" link should navigate to — built once at the
   // page level so the card stays decoupled from the route shape.
   replaceExportHref?: string;
@@ -1777,6 +1786,56 @@ export function CustomScenarioCard({
                         </>
                       )}
                     </div>
+                  </div>
+                );
+              })()}
+              {(() => {
+                // Un-mapped revenue/expense gap chips — same reconciliation
+                // signal the wizard's upload summary card surfaces (Task #402)
+                // so a founder reviewing saved actuals here sees the same
+                // "Other revenue / Other expense" warning when the curated
+                // category subtotals don't add up to the headline total. The
+                // wizard's contributing-account list lives on this same
+                // editor (under each ActualsLine row), so anchoring the gap
+                // chips alongside it keeps the breakdown story coherent.
+                // Skipped when no totals are persisted (parser found nothing
+                // useful) — matches the wizard behaviour.
+                const totals = accountingExportInfo?.totals;
+                if (!totals) return null;
+                const recon = computeCategorySubtotalReconciliation(totals);
+                if (
+                  recon.revenueGap === undefined &&
+                  recon.expenseGap === undefined
+                ) {
+                  return null;
+                }
+                return (
+                  <div
+                    className="flex flex-wrap items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50/60 px-2 py-1.5"
+                    data-testid={`custom-scenario-actuals-export-gap-${idx}`}
+                    title="The recognized category subtotals don't add up to the headline total - your chart of accounts likely has buckets we didn't map."
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/80">
+                      Un-mapped:
+                    </span>
+                    {recon.revenueGap !== undefined && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-900"
+                        data-testid={`custom-scenario-actuals-export-gap-revenue-${idx}`}
+                      >
+                        <span className="text-amber-800">Other revenue</span>
+                        <span className="font-semibold">{fmtActualVal(recon.revenueGap, "money")}</span>
+                      </span>
+                    )}
+                    {recon.expenseGap !== undefined && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-900"
+                        data-testid={`custom-scenario-actuals-export-gap-expense-${idx}`}
+                      >
+                        <span className="text-amber-800">Other expense</span>
+                        <span className="font-semibold">{fmtActualVal(recon.expenseGap, "money")}</span>
+                      </span>
+                    )}
                   </div>
                 );
               })()}
@@ -3720,6 +3779,7 @@ export function ScenarioPage() {
                           ? {
                               filename: modelData.accountingExport.filename,
                               uploadedAt: modelData.accountingExport.uploadedAt,
+                              totals: modelData.accountingExport.totals,
                             }
                           : undefined
                       }
