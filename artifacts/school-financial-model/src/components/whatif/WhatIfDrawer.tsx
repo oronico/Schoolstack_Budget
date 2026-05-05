@@ -1171,21 +1171,21 @@ export function WhatIfDrawer({
           {/* Apply confirmation dialog */}
           {showApplyConfirm && (
             <div
-              className="absolute inset-0 z-10 bg-slate-900/40 flex items-center justify-center p-5 animate-in fade-in-0"
+              className="absolute inset-0 z-10 bg-slate-900/40 flex items-center justify-center p-2 sm:p-5 animate-in fade-in-0"
               data-testid="whatif-apply-confirm"
             >
-              <div className="bg-background border border-border rounded-xl p-5 shadow-xl max-w-sm w-full">
-                <h4 className="font-display font-bold text-base text-foreground mb-2">
+              <div className="bg-background border border-border rounded-xl p-4 sm:p-5 shadow-xl max-w-sm w-full">
+                <h4 className="font-display font-bold text-lg sm:text-base text-foreground mb-2">
                   Apply changes to model?
                 </h4>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm sm:text-xs text-muted-foreground mb-4">
                   This will overwrite your current enrollment and lease assumptions. You can undo by
                   reverting in the wizard.
                 </p>
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 sm:justify-end">
                   <button
                     onClick={() => setShowApplyConfirm(false)}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md border border-border bg-background text-foreground hover:bg-muted"
+                    className="w-full sm:w-auto px-3 py-2.5 sm:py-1.5 text-sm font-medium rounded-md border border-border bg-background text-foreground hover:bg-muted"
                   >
                     Cancel
                   </button>
@@ -1193,7 +1193,7 @@ export function WhatIfDrawer({
                     onClick={handleApply}
                     disabled={isApplying}
                     data-testid="whatif-apply-confirm-yes"
-                    className="px-3 py-1.5 text-sm font-medium rounded-md bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-60"
+                    className="w-full sm:w-auto px-3 py-3 sm:py-1.5 text-sm font-medium rounded-md bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-60"
                   >
                     {isApplying ? "Applying…" : "Apply changes"}
                   </button>
@@ -1265,14 +1265,14 @@ export function WhatIfDrawer({
 
           {showSaveDialog && (
             <div
-              className="absolute inset-0 z-10 bg-slate-900/40 flex items-center justify-center p-5 animate-in fade-in-0"
+              className="absolute inset-0 z-10 bg-slate-900/40 flex items-center justify-center p-2 sm:p-5 animate-in fade-in-0"
               data-testid="whatif-save-dialog"
             >
-              <div className="bg-background border border-border rounded-xl p-5 shadow-xl max-w-sm w-full">
-                <h4 className="font-display font-bold text-base text-foreground mb-2">
+              <div className="bg-background border border-border rounded-xl p-4 sm:p-5 shadow-xl max-w-sm w-full">
+                <h4 className="font-display font-bold text-lg sm:text-base text-foreground mb-2">
                   Save as scenario
                 </h4>
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className="text-sm sm:text-xs text-muted-foreground mb-3">
                   Give this what-if a name. It will appear on the Scenarios page.
                 </p>
                 <input
@@ -1282,12 +1282,12 @@ export function WhatIfDrawer({
                   placeholder="e.g. Slower lease ramp"
                   data-testid="whatif-scenario-name"
                   autoFocus
-                  className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background mb-4 focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-3 sm:py-2 text-sm border border-border rounded-md bg-background mb-4 focus:outline-none focus:ring-1 focus:ring-primary"
                 />
-                <div className="flex items-center gap-2 justify-end">
+                <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 sm:justify-end">
                   <button
                     onClick={() => setShowSaveDialog(false)}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md border border-border bg-background text-foreground hover:bg-muted"
+                    className="w-full sm:w-auto px-3 py-2.5 sm:py-1.5 text-sm font-medium rounded-md border border-border bg-background text-foreground hover:bg-muted"
                   >
                     Cancel
                   </button>
@@ -1295,7 +1295,7 @@ export function WhatIfDrawer({
                     onClick={handleSaveScenario}
                     disabled={!scenarioName.trim()}
                     data-testid="whatif-save-confirm-yes"
-                    className="px-3 py-1.5 text-sm font-medium rounded-md bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"
+                    className="w-full sm:w-auto px-3 py-3 sm:py-1.5 text-sm font-medium rounded-md bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"
                   >
                     Save
                   </button>
