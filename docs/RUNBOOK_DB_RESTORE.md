@@ -44,17 +44,23 @@ Post in `#incidents` (or whatever the active incident channel is) with:
 
 ## Rough RTO
 
-These are observed numbers from the trial restore (see "Trial restore log"
-below). They are rough — Railway snapshot restores are not SLA'd.
+These are still **estimates**, not observed numbers — the 2026-05-05
+hands-on trial had to be discarded before the verification clock
+could run end-to-end (see "Trial restore log" below for why). The
+one observed data point: getting from "click Restore" to "staged
+volume ready to apply" on a 234 MB snapshot took ~30 min, which is
+longer than the 10–20 min previously assumed. The next hands-on
+trial should follow Option A and replace the rest of these numbers
+with real measurements.
 
 | Step                                         | Time       |
 | -------------------------------------------- | ---------- |
 | Decide which snapshot to use                 | 5 min      |
-| Trigger Railway restore into new service     | 10–20 min  |
+| Get a side-by-side restored DB (Option A)    | 20–40 min  |
 | Pull connection string, run smoke checks     | 5 min      |
 | Point app at restored DB (env var swap)      | 5 min      |
 | Netlify/API redeploy + cache warm            | 5–10 min   |
-| **Total RTO**                                | **30–45 min** |
+| **Total RTO (estimate)**                     | **40–65 min** |
 
 RPO is **up to 24 hours** — Railway snapshots are daily. Anything written
 between the last snapshot and the incident is lost unless it can be
@@ -64,17 +70,35 @@ reconstructed from logs or user re-entry.
 
 ## Quick path (incident mode)
 
+> **Important — read before clicking Restore.** The 2026-05-05 hands-on
+> trial proved that Railway's **Restore** button does **not** create a
+> parallel throwaway service. Instead it creates a new *volume* and
+> stages a swap on the existing Postgres service. If you then click the
+> top-bar **Deploy / Apply changes** button, prod's volume is replaced
+> with the snapshot — i.e. you overwrite production. Read the
+> "Side-by-side restore" section below before using Restore in incident
+> mode.
+
 1. Open Railway → project → Postgres add-on → **Backups** tab.
 2. Pick the most recent snapshot from **before** the bad event.
-3. Click **Restore** → choose **Restore to a new service** (never overwrite the
-   live DB on the first try).
-4. Wait for the new service to boot (status: `Active`).
-5. Copy the new service's `DATABASE_URL` from its **Variables** tab.
-6. Run the verification checks in the next section.
-7. If verification passes, swap `DATABASE_URL` on the API service to the
-   restored one, redeploy, and announce restore in `#incidents`.
-8. Leave the old (broken) DB service running but unattached for at least 24h
-   in case you need to diff against it.
+3. Decide which path you need:
+   - **Side-by-side verification first** (preferred, safer): follow
+     "Side-by-side restore via pg_dump/pg_restore" below. This is the
+     only way confirmed to give you a parallel restored DB you can
+     point the app at without touching prod.
+   - **In-place rollback** (only if prod is already unusable and you
+     accept losing everything written since the snapshot): click
+     **Restore** on the snapshot row → review the staged changes → click
+     **Deploy / Apply changes** at the top of the canvas. This swaps
+     the live Postgres service's volume to the snapshot. There is no
+     undo once Deploy is clicked.
+4. Run the verification checks in the next section against whichever DB
+   you ended up with.
+5. If you used the side-by-side path and verification passes, swap
+   `DATABASE_URL` on the API service to the restored one, redeploy, and
+   announce restore in `#incidents`.
+6. Leave the old (broken) DB service running but unattached for at
+   least 24h in case you need to diff against it.
 
 ---
 
@@ -94,20 +118,81 @@ sure when the incident started, look at:
 When in doubt, pick an older snapshot. You can always restore again to a
 newer one; you cannot un-overwrite live data.
 
-### 2. Restore into a throwaway service
+### 2. Get a side-by-side restored database
 
-- Click **Restore** on the snapshot row.
-- Choose **Restore to a new service** and name it
-  `postgres-restore-YYYYMMDD-HHMM` (UTC).
-- Wait for status `Active`. This takes 10–20 minutes for our current data
-  size.
-- Do **not** click "Restore in place" during an incident — it overwrites the
-  live DB and you lose your ability to compare.
+> **What the Railway UI actually does — verified 2026-05-05.** The
+> Railway **Backups → Restore** button does not create a parallel
+> Postgres service you can attach to independently. It creates a new
+> *volume* (e.g. shown as `postgres-restore-YYYYMMDD-HHMM` in the
+> canvas) and **stages a swap** on the existing Postgres service
+> (visible as a "Restoring backup..." badge plus an "Apply N changes /
+> Deploy" pill in the top bar). If you click Deploy/Apply, the live
+> Postgres service's volume is replaced with the snapshot — i.e. you
+> overwrite production. There is no undo. The new volume tile also has
+> no Variables tab and no `DATABASE_URL` of its own; only services do.
+>
+> If you opened the Restore button by mistake, **discard the staged
+> changes** before doing anything else: hover the Postgres service
+> tile, find the small revert/discard arrow on it (or use the
+> "Details" → revert option next to "Apply N changes"), and confirm
+> the tile returns to plain "Online" with no "Changes" badge.
+
+There are two ways to get a parallel restored DB you can verify
+without touching prod:
+
+**Option A — pg_dump from prod, pg_restore into a fresh service
+(recommended, works today).**
+
+1. In the Railway canvas, click **+ New** → **Database** → **Add
+   PostgreSQL**. Wait until it shows `Online`. This is your throwaway.
+2. Open the new service → **Variables** → copy `DATABASE_URL` →
+   `export RESTORE_DB_URL='<paste>'`.
+3. From your laptop:
+
+   ```bash
+   # Dump prod (read-only operation, but use a low-traffic window).
+   pg_dump --no-owner --no-acl --format=custom \
+     "$PROD_DB_URL" > /tmp/prod.dump
+
+   # Restore into the throwaway. --clean drops conflicting objects in
+   # the throwaway only — never run this against $PROD_DB_URL.
+   pg_restore --no-owner --no-acl --clean --if-exists \
+     --dbname="$RESTORE_DB_URL" /tmp/prod.dump
+   ```
+
+   This restores the *current* prod state, not a point-in-time
+   snapshot. For point-in-time, ask Railway support to expose the
+   snapshot file, or use Option B and accept the risk.
+
+**Option B — Railway in-place restore (only when prod is already
+unusable).**
+
+1. On the Backups tab, click **Restore** on the chosen snapshot.
+2. Review the staged changes carefully. The Postgres service should
+   show "Changes" / "Restoring backup..." and the top bar should show
+   "Apply N changes / Deploy".
+3. Click **Apply changes / Deploy**. This swaps the live Postgres
+   volume to the snapshot. Production is now the snapshot; everything
+   written after the snapshot timestamp is lost.
+4. Skip ahead to "Verify the restore" and run the checks against
+   `$PROD_DB_URL` (since prod *is* the restore now).
+
+> Naming note: in the current Railway UI you cannot freely rename the
+> volume after it's created. Use whatever Railway assigns; the
+> trial-restore log records the snapshot timestamp, which is what
+> matters for traceability.
 
 ### 3. Get the connection string
 
-- Open the new service → **Variables** → copy `DATABASE_URL`.
+- Open the throwaway Postgres **service** (not the volume tile) →
+  **Variables** tab on the right-side detail panel → copy
+  `DATABASE_URL`.
 - Export it locally: `export RESTORE_DB_URL='<paste>'`
+- If the only thing you can find is a volume tile with a Settings tab
+  showing "Mount to service" and "Volume Size", you opened a volume,
+  not a service. Volumes do not expose `DATABASE_URL`. Go back to the
+  project canvas and open the *service* tile (the larger one with the
+  Postgres logo and an Online/Active status).
 
 ### 4. Verify the restore
 
@@ -171,7 +256,9 @@ curl -fsS "http://localhost:$PORT/healthz"
 #    restore-validation account (NOT a personal or customer account; never
 #    paste a real user's password into a shell) and confirm /auth/me
 #    returns the expected profile. Credentials live in 1Password under
-#    "DB restore validation account". The cookie jar carries the session.
+#    "DB restore validation account" *if it has been created* — see the
+#    fallback note below if it hasn't (the 2026-05-05 trial confirmed the
+#    account does not yet exist). The cookie jar carries the session.
 curl -fsS -c /tmp/restore-cookies.txt \
   -H 'content-type: application/json' \
   -d '{"email":"<restore-validation@example.com>","password":"<from-1password>"}' \
@@ -189,10 +276,14 @@ The restore is usable when:
 - `/models` returns that user's saved models (non-empty for any active
   account).
 
-If the validation account credentials are unavailable, fall back to:
-confirm the schools count from step (c) is non-zero and `/healthz`
-returns 200. Note the reduced confidence in the trial-restore log so
-the next quarterly trial knows to redo the auth round-trip.
+If the validation account credentials are unavailable (currently the
+default — the dedicated 1Password account has not been created yet,
+per the 2026-05-05 trial), fall back to: confirm the schools count
+from step (c) is non-zero and `/healthz` returns 200. Note the
+reduced confidence in the trial-restore log so the next quarterly
+trial knows to redo the auth round-trip. Creating that 1Password
+account is tracked as a follow-up so the next trial can do the full
+round-trip.
 
 > The endpoints above are the canonical ones in `lib/api-spec/openapi.yaml`.
 > If the API surface changes (e.g. `/healthz` is renamed or `/models` moves
@@ -201,8 +292,12 @@ the next quarterly trial knows to redo the auth round-trip.
 
 ### 5. Cut over (only after verification passes)
 
+The exact steps depend on which path you took in step 2:
+
+**If you used Option A (side-by-side via pg_dump/pg_restore):**
+
 - In Railway → API service → **Variables**, set `DATABASE_URL` to the
-  restored service's connection string.
+  throwaway Postgres service's connection string.
 - Trigger a redeploy of the API service.
 - On Netlify, trigger a deploy (or just a cache purge) so any edge cached
   responses clear.
@@ -210,14 +305,38 @@ the next quarterly trial knows to redo the auth round-trip.
 - Announce in `#incidents` that the restore is live and note the data loss
   window (everything written after the snapshot timestamp is gone).
 
+**If you used Option B (Railway in-place restore):**
+
+- The cutover already happened when you clicked Apply changes / Deploy
+  on the Postgres service — prod is now serving the snapshot.
+- Trigger a redeploy of the API service so its connection pool is
+  fresh; on Netlify, purge the cache.
+- Hit `/healthz` and a couple of real endpoints from a browser to
+  confirm.
+- Announce in `#incidents` that the in-place restore is live and note
+  the data loss window.
+
 ### 6. Clean up (next business day, not during the incident)
 
-- Rename the old broken service to `postgres-broken-YYYYMMDD` and leave it
-  detached but running for 24–72h in case you need to diff.
-- Once the team agrees the restore is good, delete the broken service.
-- Rename the restored service to the canonical `postgres` name.
-- File a postmortem; link this runbook from it and note anything that was
-  unclear or wrong so the next person has it easier.
+**Option A cleanup:**
+
+- Once the team agrees the restored data is good, you have two
+  choices: keep using the throwaway Postgres service as the new prod
+  (in which case rename it in Railway to something canonical and leave
+  the original Postgres detached for 24–72h before deleting), or
+  pg_dump the throwaway and pg_restore back into the original Postgres
+  service so the canonical service keeps its name and connection
+  string.
+- Either way: keep the broken/original DB around (detached) for 24–72h
+  so you can diff if anything looks wrong.
+
+**Option B cleanup:**
+
+- Delete the orphan `postgres-restore-YYYYMMDD-HHMM` volume tile that
+  Railway leaves behind after the in-place restore. It is no longer
+  attached to any service and just costs storage.
+- File a postmortem; link this runbook from it and note anything that
+  was unclear or wrong so the next person has it easier.
 
 ---
 
@@ -240,6 +359,7 @@ Two kinds of entries are valid:
 | Date (UTC)       | Type            | Operator | Snapshot used | Restore time | Verification result | Notes |
 | ---------------- | --------------- | -------- | ------------- | ------------ | ------------------- | ----- |
 | 2026-05-04       | doc-walkthrough | agent    | n/a           | n/a          | Verified all 6 tables in the row-count SQL block (`users`, `schools`, `financial_models`, `exports`, `shared_links`, `events`) exist in `lib/db/src/schema/`; verified `/healthz`, `/auth/login`, `/auth/me`, and `/models` are all registered in `artifacts/api-server/src/` and present in `lib/api-spec/openapi.yaml`. Runbook commands are consistent with the current code. | Documentation-only pass; **no real Railway restore was performed**. The first hands-on trial restore is still outstanding and must be done by an engineer with Railway access. |
+| 2026-05-05       | hands-on        | founder (with agent paired for verification) | 2026-05-05 17:17 UTC manual snapshot, 234 MB | ~30 min from click to "ready to apply" (staged but **not deployed**) | **Verification not completed.** The restore was discarded before a `DATABASE_URL` could be obtained, because the Railway UI's "Restore" path turned out to stage an in-place volume swap on the existing Postgres service rather than create a parallel throwaway service as the runbook described. Clicking Deploy/Apply would have overwritten production. No connection string, no schema diff, no row counts, no app-boot, no `/healthz`/`/auth/login`/`/auth/me`/`/models` were run. | **Trial succeeded at its real purpose: surfacing dangerous runbook gaps before an incident.** Findings, all fixed in this same edit: (1) Railway "Restore" stages a swap on the existing service, not a new service — runbook now warns about this and adds a discard-the-changes recovery step. (2) The throwaway service name is not freely settable in the current UI; use whatever Railway assigns. (3) Volume tiles do not expose `DATABASE_URL`; only service tiles do. (4) The "DB restore validation account" referenced in 1Password does not exist yet; runbook now flags this as the current default and points at the schools-count + `/healthz` fallback. (5) Added an Option A procedure (pg_dump from prod + pg_restore into a fresh Postgres service) as the safe side-by-side path; Option B (Railway in-place restore) is documented for last-resort use. RTO numbers in the table at the top remain estimates — the next hands-on trial should follow Option A end-to-end so they can be replaced with observed values. |
 
 ---
 

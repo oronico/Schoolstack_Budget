@@ -147,9 +147,14 @@ Railway provides automatic daily backups for PostgreSQL databases.
 
 ### Restore
 See [`RUNBOOK_DB_RESTORE.md`](./RUNBOOK_DB_RESTORE.md) for the step-by-step
-procedure to restore a Railway snapshot into a throwaway service, verify it,
-and cut the app over to it. The runbook includes who to notify, the rough
-RTO (~30–45 min) and RPO (up to 24h), and a log of trial restores.
+procedure to restore a Railway snapshot, verify it, and cut the app over.
+**Read the "Important — read before clicking Restore" callout at the top of
+the runbook first** — Railway's Restore button stages an in-place volume
+swap on the existing Postgres service rather than creating a parallel
+throwaway service, and the runbook documents the safer side-by-side path
+(Option A: pg_dump + pg_restore into a fresh service). The runbook
+includes who to notify, the rough RTO (~40–65 min, estimate) and RPO
+(up to 24h), and a log of trial restores.
 
 ---
 
