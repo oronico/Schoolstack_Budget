@@ -4,6 +4,7 @@ import { db, usersTable, financialModelsTable } from "@workspace/db";
 import {
   CHARTER_SCHOOL_DEMO,
   CHESTERTON_ACADEMY_DEMO,
+  CHESTERTON_ACADEMY_CSN_WIZARD_DEMO,
   MICROSCHOOL_DEMO,
   PRIVATE_SCHOOL_DEMO,
 } from "./demo-models/index.js";
@@ -21,22 +22,27 @@ import {
 //      reviewers can log in with directly. It is a verified `users` row
 //      (NOT a pending_signups row), so the standard /auth/login flow works
 //      with no email round-trip.
-//   2. Four complete `financial_models` rows owned by that user — a
+//   2. Five complete `financial_models` rows owned by that user — a
 //      tuition-based microschool, a tuition-based private school, a
 //      charter school on per-pupil public funding (ADM / grade-band),
-//      and a Chesterton-Schools-Network-shaped Catholic classical
-//      academy (also tuition-based, but with the CSN single-freshman-
-//      class founding pattern, classical subject specialists, and the
-//      CSN-template philanthropy pyramid) — all at currentStep 7 (the
+//      a Chesterton-Schools-Network-shaped Catholic classical academy
+//      using the standard `private_school` shape (also tuition-based,
+//      with the CSN single-freshman-class founding pattern, classical
+//      subject specialists, and the CSN-template philanthropy pyramid),
+//      and a fifth Chesterton-shaped row that uses
+//      `schoolType: "chesterton_academy"` and a populated
+//      `data.chesterton.*` block so the wizard switches to the
+//      dedicated CSN steps and the CSN Operating Manual export tab is
+//      gated on without any reviewer setup — all at currentStep 7 (the
 //      Review/Export step) so reviewers see populated charts, exports,
 //      and the consultant engine immediately on opening the model. The
 //      charter row exercises the `fundingProfile: charter_public_funded`
 //      code path (public-funding revenue rows, ADM grade-band per-pupil
 //      calc, charter consultant narrative) which is meaningfully
 //      different from the tuition flow — see task #541. The Chesterton
-//      Academy row is the founding-class demo used by the
+//      Academy rows are the founding-class demos used by the
 //      `chesterton-preview` branch deploy (see docs/CHESTERTON_PREVIEW.md
-//      and task #558).
+//      and tasks #558 and #560).
 //
 // The seed is idempotent and self-gating: it runs only when the `users`
 // table is empty. That single check is the safety net that prevents this
@@ -69,18 +75,20 @@ export function resolveDemoPassword(env: NodeJS.ProcessEnv = process.env): strin
   return DEMO_USER_PASSWORD_DEFAULT;
 }
 
-// The four demo financial models all come from the canonical
+// The five demo financial models all come from the canonical
 // demo-models/ directory so a tweak there is reflected in both the
 // PR-preview seed and (where applicable) the legislator-samples
 // script (see task #546). The seed only adds its own "(Demo …)" name
-// suffix on top.
+// suffix on top (the fifth, CSN-wizard demo keeps its base name as-is
+// since the "— CSN Operating Manual View" suffix is already part of
+// the canonical name).
 //
-// All four are exported so the end-to-end smoke tests
+// All five are exported so the end-to-end smoke tests
 // (tests/charter-demo-end-to-end.ts for the charter / public-funding
-// path, tests/non-charter-demos-end-to-end.ts for the three tuition
-// paths — task #547 and task #558) can run these exact payloads
-// through the consultant engine, workbook export, and lender packet
-// without re-declaring them.
+// path, tests/non-charter-demos-end-to-end.ts for the four tuition
+// paths — task #547, task #558, and task #560) can run these exact
+// payloads through the consultant engine, workbook export, and
+// lender packet without re-declaring them.
 export const MICROSCHOOL_MODEL = {
   name: `${MICROSCHOOL_DEMO.baseSchoolName} (Demo Microschool)`,
   schoolStage: MICROSCHOOL_DEMO.schoolStage,
@@ -117,6 +125,23 @@ export const CHESTERTON_ACADEMY_MODEL = {
   schoolStage: CHESTERTON_ACADEMY_DEMO.schoolStage,
   fundingProfile: CHESTERTON_ACADEMY_DEMO.fundingProfile,
   data: CHESTERTON_ACADEMY_DEMO.data,
+};
+
+// Task #560 — fifth demo modeled on the same CSN founding-class
+// Catholic classical academy as CHESTERTON_ACADEMY_MODEL above, but
+// using `schoolType: "chesterton_academy"` and a populated
+// `data.chesterton.*` block so the wizard switches to the dedicated
+// CHESTERTON_STEPS branch (Enrollment → Staffing → Fundraising → Gift
+// Chart → Recruiting with periods-based math) AND the CSN Operating
+// Manual export tab is gated on the moment the reviewer opens this
+// model. Standard ModelData fields (revenueRows, staffingRows, etc.)
+// are kept populated so consultant/lender/board exports still work.
+// See docs/CHESTERTON_PREVIEW.md for context.
+export const CHESTERTON_CSN_WIZARD_MODEL = {
+  name: CHESTERTON_ACADEMY_CSN_WIZARD_DEMO.baseSchoolName,
+  schoolStage: CHESTERTON_ACADEMY_CSN_WIZARD_DEMO.schoolStage,
+  fundingProfile: CHESTERTON_ACADEMY_CSN_WIZARD_DEMO.fundingProfile,
+  data: CHESTERTON_ACADEMY_CSN_WIZARD_DEMO.data,
 };
 
 export interface SeedPreviewDataDeps {
@@ -204,6 +229,7 @@ export async function seedPreviewDataIfEmpty(deps: SeedPreviewDataDeps = {}): Pr
       PRIVATE_SCHOOL_MODEL,
       CHARTER_SCHOOL_MODEL,
       CHESTERTON_ACADEMY_MODEL,
+      CHESTERTON_CSN_WIZARD_MODEL,
     ]) {
       const [model] = await database
         .insert(financialModelsTable)

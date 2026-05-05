@@ -8,17 +8,26 @@
 // Task #551 — extended to assert in-place rotation of the demo
 //             password on already-seeded previews when the
 //             PREVIEW_DEMO_PASSWORD env var changes.
+// Task #560 — extended to assert the fifth (Chesterton Academy CSN
+//             Operating Manual View) demo, which uses
+//             `schoolType: "chesterton_academy"` so the wizard
+//             switches to the dedicated CHESTERTON_STEPS branch and
+//             the CSN Operating Manual export tab gates on the moment
+//             the reviewer opens the model.
 //
 // Validates the behaviors documented in seed-preview-data.ts:
 //   1. SKIP_PREVIEW_SEED=true       → no inserts, no reads
 //   2. database undefined           → no-op (no DB to seed)
 //   3. users table not empty        → no inserts
-//   4. users table empty            → 1 user + 4 financial_models inserted
+//   4. users table empty            → 1 user + 5 financial_models inserted
 //      with the documented credentials/shape, including at least one
 //      model with fundingProfile === "charter_public_funded" so the
-//      public-funding code path is exercised in one click, and a
+//      public-funding code path is exercised in one click, a
 //      Chesterton Academy demo so the chesterton-preview branch deploy
-//      always opens onto the CSN-shaped founding-class scenario.
+//      always opens onto the CSN-shaped founding-class scenario, and
+//      a fifth model with `schoolType: "chesterton_academy"` so the
+//      dedicated wizard branch + CSN Operating Manual export are also
+//      pre-staged.
 //   5. PREVIEW_DEMO_PASSWORD unset  → seeded user's hash verifies the
 //      documented default password.
 //   6. PREVIEW_DEMO_PASSWORD set    → seeded user's hash verifies the
@@ -214,9 +223,10 @@ async function run() {
     );
   }
 
-  // Case 4: empty users table → 1 user + 4 models with the documented shape
+  // Case 4: empty users table → 1 user + 5 models with the documented shape
   // (microschool + private school + charter — see task #541 — plus the
-  // CSN-shaped Chesterton academy added in task #558).
+  // CSN-shaped Chesterton academy added in task #558, plus the dedicated
+  // chesterton_academy / CSN Operating Manual View demo added in task #560).
   // Task #540: this case also pins the env-unset branch — with no
   // PREVIEW_DEMO_PASSWORD in the environment, the seeded user's hash
   // must verify the documented default password.
@@ -240,8 +250,8 @@ async function run() {
       `users=${userRows.length}`,
     );
     check(
-      "empty DB → exactly 4 financial_models inserted",
-      modelRows.length === 4,
+      "empty DB → exactly 5 financial_models inserted",
+      modelRows.length === 5,
       `models=${modelRows.length}`,
     );
 
@@ -257,6 +267,40 @@ async function run() {
       "empty DB → at least one model is the Chesterton Academy demo",
       chestertonRows.length >= 1,
       `chesterton_models=${chestertonRows.length}`,
+    );
+
+    // Task #560 — at least one demo model must use
+    // `schoolType: "chesterton_academy"` so the dedicated wizard
+    // branch (CHESTERTON_STEPS) and the CSN Operating Manual export
+    // tab gate on the moment a reviewer opens the model. The shape
+    // also requires a populated `data.chesterton.*` block, since
+    // every Chesterton-branch step reads exclusively from there. We
+    // pin both invariants here because either one missing breaks the
+    // dedicated CSN reviewer experience.
+    const csnWizardRows = modelRows.filter((r) => {
+      const data = (r.values as { data?: Record<string, unknown> }).data;
+      const profile = data?.schoolProfile as Record<string, unknown> | undefined;
+      const chesterton = data?.chesterton as Record<string, unknown> | undefined;
+      return (
+        profile?.schoolType === "chesterton_academy" &&
+        !!chesterton &&
+        Array.isArray(chesterton.phaseEnrollment)
+      );
+    });
+    check(
+      "empty DB → at least one model uses schoolType=chesterton_academy with a chesterton.* block",
+      csnWizardRows.length >= 1,
+      `csn_wizard_models=${csnWizardRows.length}`,
+    );
+    check(
+      "empty DB → CSN-wizard demo's chesterton.phaseEnrollment has all four grades",
+      (() => {
+        const data = (csnWizardRows[0]?.values as { data?: Record<string, unknown> })?.data;
+        const phase = (data?.chesterton as { phaseEnrollment?: Array<{ grade?: string }> } | undefined)?.phaseEnrollment;
+        if (!Array.isArray(phase)) return false;
+        const grades = new Set(phase.map((r) => r?.grade));
+        return ["freshman", "sophomore", "junior", "senior"].every((g) => grades.has(g));
+      })(),
     );
 
     // Task #541 — at least one demo model must exercise the

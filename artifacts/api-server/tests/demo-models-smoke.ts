@@ -1,6 +1,10 @@
 // Task #549 — smoke test for the canonical demo schools.
+// Task #560 — extended to cover the fifth (CSN Operating Manual View)
+//             demo, including a round-trip through the dedicated
+//             generateChestertonOperatingManual export when the demo
+//             carries a `data.chesterton.*` block.
 //
-// The four demo schools live in a single shared module
+// The five demo schools live in a single shared module
 // (src/lib/demo-models/) consumed by the PR-preview seed (and, for
 // the original three, the legislator-samples script). If a future
 // tweak to the canonical data
@@ -14,6 +18,8 @@
 //   - generateUnderwritingWorkbook (legislator-samples underwriting xlsx)
 //   - buildLenderPacket + generateLenderPacketPDF
 //   - buildBoardPacket + generateBoardPacketPDF
+//   - generateChestertonOperatingManual (only for demos that carry
+//     a `data.chesterton.*` block — task #560)
 //
 // asserting the bytes look like valid xlsx / PDF so shape drift in the
 // canonical data is caught the moment it lands.
@@ -25,10 +31,12 @@ import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
 import { generateLenderPacketPDF } from "../src/lib/packets/lender-packet-pdf.js";
 import { buildBoardPacket } from "../src/lib/packets/build-board-packet.js";
 import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
+import { generateChestertonOperatingManual } from "../src/lib/packets/chesterton-operating-manual.js";
 import type { ModelData } from "../src/lib/workbook-helpers.js";
 import {
   CHARTER_SCHOOL_DEMO,
   CHESTERTON_ACADEMY_DEMO,
+  CHESTERTON_ACADEMY_CSN_WIZARD_DEMO,
   MICROSCHOOL_DEMO,
   PRIVATE_SCHOOL_DEMO,
 } from "../src/lib/demo-models/index.js";
@@ -77,17 +85,18 @@ function looksLikePdf(buf: Buffer): boolean {
 const DEMO_MODELS = [
   { label: "CHARTER_SCHOOL_DEMO", model: CHARTER_SCHOOL_DEMO, underwriting: true },
   { label: "CHESTERTON_ACADEMY_DEMO", model: CHESTERTON_ACADEMY_DEMO, underwriting: false },
+  { label: "CHESTERTON_ACADEMY_CSN_WIZARD_DEMO", model: CHESTERTON_ACADEMY_CSN_WIZARD_DEMO, underwriting: false },
   { label: "MICROSCHOOL_DEMO", model: MICROSCHOOL_DEMO, underwriting: true },
   { label: "PRIVATE_SCHOOL_DEMO", model: PRIVATE_SCHOOL_DEMO, underwriting: true },
 ];
 
-// Task #558 — pin the canonical inventory size so a future change
-// that drops a demo (e.g. the CSN-shaped Chesterton demo) without
-// removing it from this list, or adds a new demo without registering
-// it here, fails this smoke test loudly. The seed test
-// (tests/seed-preview-data.ts) pins the same number on the insert
-// side; keeping both in sync is the contract.
-const EXPECTED_DEMO_COUNT = 4;
+// Task #558 / #560 — pin the canonical inventory size so a future
+// change that drops a demo (e.g. one of the CSN-shaped Chesterton
+// demos) without removing it from this list, or adds a new demo
+// without registering it here, fails this smoke test loudly. The
+// seed test (tests/seed-preview-data.ts) pins the same number on
+// the insert side; keeping both in sync is the contract.
+const EXPECTED_DEMO_COUNT = 5;
 
 async function smokeTestModel(
   label: string,
@@ -200,6 +209,44 @@ async function smokeTestModel(
       false,
       err instanceof Error ? err.message : String(err),
     );
+  }
+
+  // Task #560 — if the demo carries a `data.chesterton.*` block,
+  // round-trip it through the dedicated CSN Operating Manual export
+  // so the Chesterton-only branch is also smoke-tested. Demos that
+  // don't carry the block (the standard microschool / private school
+  // / charter / private_school-shaped Chesterton demo) are skipped
+  // because the export would fail by design — the route requires a
+  // populated chesterton block.
+  const dataObj = data as { chesterton?: unknown };
+  if (
+    dataObj.chesterton &&
+    typeof dataObj.chesterton === "object" &&
+    Array.isArray(
+      (dataObj.chesterton as { phaseEnrollment?: unknown }).phaseEnrollment,
+    )
+  ) {
+    try {
+      const wb = await generateChestertonOperatingManual(
+        data as Parameters<typeof generateChestertonOperatingManual>[0],
+      );
+      const buf = Buffer.from(await wb.xlsx.writeBuffer());
+      check(
+        `${label}: CSN Operating Manual generates non-empty buffer`,
+        buf.length > 1024,
+        `bytes=${buf.length}`,
+      );
+      check(
+        `${label}: CSN Operating Manual bytes look like a valid xlsx`,
+        looksLikeXlsx(buf),
+      );
+    } catch (err) {
+      check(
+        `${label}: CSN Operating Manual export completes`,
+        false,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
   }
 }
 

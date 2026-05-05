@@ -4,5 +4,6 @@
 
 export { CHARTER_SCHOOL_DEMO } from "./charter-school.js";
 export { CHESTERTON_ACADEMY_DEMO } from "./chesterton-academy.js";
+export { CHESTERTON_ACADEMY_CSN_WIZARD_DEMO } from "./chesterton-academy-csn-wizard.js";
 export { MICROSCHOOL_DEMO } from "./microschool.js";
 export { PRIVATE_SCHOOL_DEMO } from "./private-school.js";

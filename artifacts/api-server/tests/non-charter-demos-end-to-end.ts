@@ -3,6 +3,11 @@
 // Task #558 — extended to also exercise the Chesterton Academy demo,
 // the fourth seeded demo (private_school schoolType, CSN founding-
 // class shape) used by the chesterton-preview branch deploy.
+// Task #560 — extended to also exercise the fifth seeded demo
+// (chesterton_academy schoolType, populated `data.chesterton.*`
+// block) so the dedicated CHESTERTON_STEPS wizard branch and CSN
+// Operating Manual export are exercised through the same
+// consultant/workbook/lender flow as the other tuition demos.
 //
 // Task #545 added an end-to-end smoke test that loads
 // `CHARTER_SCHOOL_MODEL` (the seeded `charter_public_funded` /
@@ -45,6 +50,7 @@ import { generateWorkbook } from "../src/lib/excel-export.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
 import {
   CHESTERTON_ACADEMY_MODEL,
+  CHESTERTON_CSN_WIZARD_MODEL,
   MICROSCHOOL_MODEL,
   PRIVATE_SCHOOL_MODEL,
 } from "../src/lib/seed-preview-data.js";
@@ -71,7 +77,7 @@ interface DemoCase {
   // Expected `schoolType` on `data.schoolProfile`, sanity-checked so a
   // refactor that flips the seed payload to a different type is caught
   // before the rest of this test gives a misleading result.
-  expectedSchoolType: "microschool" | "private_school";
+  expectedSchoolType: "microschool" | "private_school" | "chesterton_academy";
   // Substrings the consultant narrative MUST contain (lowercased) to
   // prove the engine engaged the right tuition-side branch.
   // A match against ANY of these passes the assertion — the wording in
@@ -113,6 +119,21 @@ const CASES: DemoCase[] = [
     label: "chesterton academy (Chesterton Academy of Saint Edmund)",
     model: CHESTERTON_ACADEMY_MODEL,
     expectedSchoolType: "private_school",
+    expectedNarrativeAny: ["tuition", "private school"],
+  },
+  {
+    // Task #560 — Fifth seeded demo, modeled on the same CSN
+    // founding-class plan as the row above but using `schoolType:
+    // "chesterton_academy"` (and a populated `data.chesterton.*`
+    // block) so the wizard switches to the dedicated CHESTERTON_STEPS
+    // branch and the CSN Operating Manual export tab gates on. The
+    // consultant engine still classifies this as `isPrivate` via
+    // `fundingProfile === "tuition_based"`, so the same tuition /
+    // private-school narrative substrings must appear and no
+    // charter-only language may leak in.
+    label: "chesterton academy CSN wizard (Chesterton Academy of Saint Edmund — CSN Operating Manual View)",
+    model: CHESTERTON_CSN_WIZARD_MODEL,
+    expectedSchoolType: "chesterton_academy",
     expectedNarrativeAny: ["tuition", "private school"],
   },
 ];
@@ -303,13 +324,15 @@ async function runCase(c: DemoCase): Promise<void> {
   );
 }
 
-// Task #558 — pin the canonical tuition-demo inventory size. The
-// seeded preview environment has 4 demos total, of which 3 are
-// tuition-based (microschool, private school, Chesterton academy)
-// and 1 is charter (covered by tests/charter-demo-end-to-end.ts).
-// If a future change drops or adds a tuition demo here without
-// updating CASES, this guard fails loudly.
-const EXPECTED_TUITION_CASES = 3;
+// Task #558 / #560 — pin the canonical tuition-demo inventory size.
+// The seeded preview environment has 5 demos total, of which 4 are
+// tuition-based (microschool, private school, Chesterton academy
+// using the standard private_school shape, and Chesterton academy
+// using the dedicated chesterton_academy / CSN wizard shape) and 1
+// is charter (covered by tests/charter-demo-end-to-end.ts). If a
+// future change drops or adds a tuition demo here without updating
+// CASES, this guard fails loudly.
+const EXPECTED_TUITION_CASES = 4;
 
 async function run(): Promise<void> {
   check(
