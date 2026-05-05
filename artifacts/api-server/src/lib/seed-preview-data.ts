@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { db, usersTable, financialModelsTable } from "@workspace/db";
 import {
   CHARTER_SCHOOL_DEMO,
+  CHESTERTON_ACADEMY_DEMO,
   MICROSCHOOL_DEMO,
   PRIVATE_SCHOOL_DEMO,
 } from "./demo-models/index.js";
@@ -19,16 +20,22 @@ import {
 //      reviewers can log in with directly. It is a verified `users` row
 //      (NOT a pending_signups row), so the standard /auth/login flow works
 //      with no email round-trip.
-//   2. Three complete `financial_models` rows owned by that user — a
-//      tuition-based microschool, a tuition-based private school, and a
-//      charter school on per-pupil public funding (ADM / grade-band) —
-//      all at currentStep 7 (the Review/Export step) so reviewers see
-//      populated charts, exports, and the consultant engine immediately
-//      on opening the model. The charter row exercises the
-//      `fundingProfile: charter_public_funded` code path (public-funding
-//      revenue rows, ADM grade-band per-pupil calc, charter consultant
-//      narrative) which is meaningfully different from the tuition flow
-//      — see task #541.
+//   2. Four complete `financial_models` rows owned by that user — a
+//      tuition-based microschool, a tuition-based private school, a
+//      charter school on per-pupil public funding (ADM / grade-band),
+//      and a Chesterton-Schools-Network-shaped Catholic classical
+//      academy (also tuition-based, but with the CSN single-freshman-
+//      class founding pattern, classical subject specialists, and the
+//      CSN-template philanthropy pyramid) — all at currentStep 7 (the
+//      Review/Export step) so reviewers see populated charts, exports,
+//      and the consultant engine immediately on opening the model. The
+//      charter row exercises the `fundingProfile: charter_public_funded`
+//      code path (public-funding revenue rows, ADM grade-band per-pupil
+//      calc, charter consultant narrative) which is meaningfully
+//      different from the tuition flow — see task #541. The Chesterton
+//      Academy row is the founding-class demo used by the
+//      `chesterton-preview` branch deploy (see docs/CHESTERTON_PREVIEW.md
+//      and task #558).
 //
 // The seed is idempotent and self-gating: it runs only when the `users`
 // table is empty. That single check is the safety net that prevents this
@@ -61,17 +68,18 @@ export function resolveDemoPassword(env: NodeJS.ProcessEnv = process.env): strin
   return DEMO_USER_PASSWORD_DEFAULT;
 }
 
-// The three demo financial models all come from the canonical
+// The four demo financial models all come from the canonical
 // demo-models/ directory so a tweak there is reflected in both the
-// PR-preview seed and the legislator-samples script (see task #546).
-// The seed only adds its own "(Demo …)" name suffix on top.
+// PR-preview seed and (where applicable) the legislator-samples
+// script (see task #546). The seed only adds its own "(Demo …)" name
+// suffix on top.
 //
-// All three are exported so the end-to-end smoke tests
+// All four are exported so the end-to-end smoke tests
 // (tests/charter-demo-end-to-end.ts for the charter / public-funding
-// path, tests/non-charter-demos-end-to-end.ts for the two tuition
-// paths — task #547) can run these exact payloads through the
-// consultant engine, workbook export, and lender packet without
-// re-declaring them.
+// path, tests/non-charter-demos-end-to-end.ts for the three tuition
+// paths — task #547 and task #558) can run these exact payloads
+// through the consultant engine, workbook export, and lender packet
+// without re-declaring them.
 export const MICROSCHOOL_MODEL = {
   name: `${MICROSCHOOL_DEMO.baseSchoolName} (Demo Microschool)`,
   schoolStage: MICROSCHOOL_DEMO.schoolStage,
@@ -94,6 +102,20 @@ export const CHARTER_SCHOOL_MODEL = {
   schoolStage: CHARTER_SCHOOL_DEMO.schoolStage,
   fundingProfile: CHARTER_SCHOOL_DEMO.fundingProfile,
   data: CHARTER_SCHOOL_DEMO.data,
+};
+
+// Task #558 — fourth demo modeled on a CSN founding-class Catholic
+// classical academy. Uses the standard `private_school` schoolType so
+// it flows through the consultant engine, formula workbook, lender
+// packet, and board packet identically to the other tuition demos.
+// Re-export lets the non-charter demos end-to-end smoke test exercise
+// it the same way it exercises the microschool and private-school
+// payloads.
+export const CHESTERTON_ACADEMY_MODEL = {
+  name: `${CHESTERTON_ACADEMY_DEMO.baseSchoolName} (Demo Chesterton Academy)`,
+  schoolStage: CHESTERTON_ACADEMY_DEMO.schoolStage,
+  fundingProfile: CHESTERTON_ACADEMY_DEMO.fundingProfile,
+  data: CHESTERTON_ACADEMY_DEMO.data,
 };
 
 export interface SeedPreviewDataDeps {
@@ -165,7 +187,12 @@ export async function seedPreviewDataIfEmpty(deps: SeedPreviewDataDeps = {}): Pr
 
     log(`[seed] Created demo user: ${demoUser.email} (id=${demoUser.id})`);
 
-    for (const sample of [MICROSCHOOL_MODEL, PRIVATE_SCHOOL_MODEL, CHARTER_SCHOOL_MODEL]) {
+    for (const sample of [
+      MICROSCHOOL_MODEL,
+      PRIVATE_SCHOOL_MODEL,
+      CHARTER_SCHOOL_MODEL,
+      CHESTERTON_ACADEMY_MODEL,
+    ]) {
       const [model] = await database
         .insert(financialModelsTable)
         .values({

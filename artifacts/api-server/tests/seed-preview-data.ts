@@ -2,15 +2,20 @@
 // Task #541 — extended to assert the third (charter) demo model.
 // Task #540 — extended to assert PREVIEW_DEMO_PASSWORD override
 //             (env-set) and the documented fallback (env-unset).
+// Task #558 — extended to assert the fourth (Chesterton Academy) demo
+//             model so the chesterton-preview branch deploy never
+//             silently regresses to three demos.
 //
 // Validates the behaviors documented in seed-preview-data.ts:
 //   1. SKIP_PREVIEW_SEED=true       → no inserts, no reads
 //   2. database undefined           → no-op (no DB to seed)
 //   3. users table not empty        → no inserts
-//   4. users table empty            → 1 user + 3 financial_models inserted
-//      with the documented credentials/shape, and at least one model
-//      uses fundingProfile === "charter_public_funded" so reviewers can
-//      smoke-test the public-funding code path in one click.
+//   4. users table empty            → 1 user + 4 financial_models inserted
+//      with the documented credentials/shape, including at least one
+//      model with fundingProfile === "charter_public_funded" so the
+//      public-funding code path is exercised in one click, and a
+//      Chesterton Academy demo so the chesterton-preview branch deploy
+//      always opens onto the CSN-shaped founding-class scenario.
 //   5. PREVIEW_DEMO_PASSWORD unset  → seeded user's hash verifies the
 //      documented default password.
 //   6. PREVIEW_DEMO_PASSWORD set    → seeded user's hash verifies the
@@ -168,9 +173,23 @@ async function run() {
       `users=${userRows.length}`,
     );
     check(
-      "empty DB → exactly 3 financial_models inserted",
-      modelRows.length === 3,
+      "empty DB → exactly 4 financial_models inserted",
+      modelRows.length === 4,
       `models=${modelRows.length}`,
+    );
+
+    // Task #558 — at least one demo model must be the Chesterton
+    // Academy founding-class demo (name suffix "(Demo Chesterton
+    // Academy)"). Reviewers landing on the chesterton-preview branch
+    // deploy must always see this scenario after logging in.
+    const chestertonRows = modelRows.filter((r) =>
+      typeof (r.values as { name?: string }).name === "string" &&
+      (r.values as { name: string }).name.includes("Demo Chesterton Academy"),
+    );
+    check(
+      "empty DB → at least one model is the Chesterton Academy demo",
+      chestertonRows.length >= 1,
+      `chesterton_models=${chestertonRows.length}`,
     );
 
     // Task #541 — at least one demo model must exercise the

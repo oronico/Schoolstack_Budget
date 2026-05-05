@@ -29,6 +29,23 @@
   BASE_PATH = "/"
   VITE_API_BASE_URL = "https://schoolstackbudget.up.railway.app"
 
+# `chesterton-preview` is a long-lived branch deploy aimed at the
+# Chesterton Schools Network prospect (see docs/CHESTERTON_PREVIEW.md
+# and task #558). It points the frontend at a dedicated Railway
+# environment with its own ephemeral Postgres + PREVIEW_DEMO_PASSWORD
+# override, so anyone who finds the URL still hits a non-prod database
+# and a non-default demo password.
+#
+# The Railway URL below is the convention — the operator must claim
+# `schoolstackbudget-chesterton.up.railway.app` when creating the
+# Railway environment, OR override `VITE_API_BASE_URL` in the Netlify
+# UI for this branch. If the override is missing, the build still
+# succeeds but the frontend will talk to prod, which we explicitly do
+# not want for a prospect demo.
+[context.chesterton-preview.environment]
+  BASE_PATH = "/"
+  VITE_API_BASE_URL = "https://schoolstackbudget-chesterton.up.railway.app"
+
 [[headers]]
   for = "/assets/*"
   [headers.values]

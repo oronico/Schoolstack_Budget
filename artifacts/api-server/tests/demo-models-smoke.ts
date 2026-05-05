@@ -1,8 +1,9 @@
 // Task #549 — smoke test for the canonical demo schools.
 //
-// The three demo schools live in a single shared module
-// (src/lib/demo-models/) consumed by both the PR-preview seed and the
-// legislator-samples script. If a future tweak to the canonical data
+// The four demo schools live in a single shared module
+// (src/lib/demo-models/) consumed by the PR-preview seed (and, for
+// the original three, the legislator-samples script). If a future
+// tweak to the canonical data
 // uses a field shape the consultant engine, workbook generator, or PDF
 // packet builders don't expect, the only signal today is either a
 // broken PR preview or someone manually running the legislator script.
@@ -25,6 +26,7 @@ import { generateBoardPacketPDF } from "../src/lib/packets/board-packet-pdf.js";
 import type { ModelData } from "../src/lib/workbook-helpers.js";
 import {
   CHARTER_SCHOOL_DEMO,
+  CHESTERTON_ACADEMY_DEMO,
   MICROSCHOOL_DEMO,
   PRIVATE_SCHOOL_DEMO,
 } from "../src/lib/demo-models/index.js";
@@ -66,9 +68,18 @@ function looksLikePdf(buf: Buffer): boolean {
 
 const DEMO_MODELS = [
   { label: "CHARTER_SCHOOL_DEMO", model: CHARTER_SCHOOL_DEMO },
+  { label: "CHESTERTON_ACADEMY_DEMO", model: CHESTERTON_ACADEMY_DEMO },
   { label: "MICROSCHOOL_DEMO", model: MICROSCHOOL_DEMO },
   { label: "PRIVATE_SCHOOL_DEMO", model: PRIVATE_SCHOOL_DEMO },
 ];
+
+// Task #558 — pin the canonical inventory size so a future change
+// that drops a demo (e.g. the CSN-shaped Chesterton demo) without
+// removing it from this list, or adds a new demo without registering
+// it here, fails this smoke test loudly. The seed test
+// (tests/seed-preview-data.ts) pins the same number on the insert
+// side; keeping both in sync is the contract.
+const EXPECTED_DEMO_COUNT = 4;
 
 async function smokeTestModel(label: string, data: Record<string, unknown>) {
   let consultantOutput: Awaited<ReturnType<typeof runConsultantEngine>> | null =
@@ -159,6 +170,12 @@ async function smokeTestModel(label: string, data: Record<string, unknown>) {
 }
 
 async function run() {
+  check(
+    `DEMO_MODELS contains exactly ${EXPECTED_DEMO_COUNT} demos`,
+    DEMO_MODELS.length === EXPECTED_DEMO_COUNT,
+    `got=${DEMO_MODELS.length}`,
+  );
+
   for (const { label, model } of DEMO_MODELS) {
     check(
       `${label}: shared module exposes a data record`,

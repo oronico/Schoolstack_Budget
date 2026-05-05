@@ -1,5 +1,8 @@
-// Task #547 — End-to-end smoke test for the two tuition-based
+// Task #547 — End-to-end smoke test for the tuition-based
 // (non-charter) demo models.
+// Task #558 — extended to also exercise the Chesterton Academy demo,
+// the fourth seeded demo (private_school schoolType, CSN founding-
+// class shape) used by the chesterton-preview branch deploy.
 //
 // Task #545 added an end-to-end smoke test that loads
 // `CHARTER_SCHOOL_MODEL` (the seeded `charter_public_funded` /
@@ -41,6 +44,7 @@ import {
 import { generateWorkbook } from "../src/lib/excel-export.js";
 import { buildLenderPacket } from "../src/lib/packets/build-lender-packet.js";
 import {
+  CHESTERTON_ACADEMY_MODEL,
   MICROSCHOOL_MODEL,
   PRIVATE_SCHOOL_MODEL,
 } from "../src/lib/seed-preview-data.js";
@@ -98,6 +102,17 @@ const CASES: DemoCase[] = [
     // Risk" (the two predicates `< 0.6` and `> 0.5` together cover
     // every possible tuitionPct). "Private schools" appears in the
     // descriptions of both.
+    expectedNarrativeAny: ["tuition", "private school"],
+  },
+  {
+    // Task #558 — Chesterton Academy demo also runs through the
+    // `isPrivate` consultant branch (it uses `schoolType:
+    // "private_school"` so the consultant treats it as a private
+    // school; the CSN flavor is in the input numbers, not the
+    // narrative branch). Same expected substrings as Riverside.
+    label: "chesterton academy (Chesterton Academy of Saint Edmund)",
+    model: CHESTERTON_ACADEMY_MODEL,
+    expectedSchoolType: "private_school",
     expectedNarrativeAny: ["tuition", "private school"],
   },
 ];
@@ -288,7 +303,21 @@ async function runCase(c: DemoCase): Promise<void> {
   );
 }
 
+// Task #558 — pin the canonical tuition-demo inventory size. The
+// seeded preview environment has 4 demos total, of which 3 are
+// tuition-based (microschool, private school, Chesterton academy)
+// and 1 is charter (covered by tests/charter-demo-end-to-end.ts).
+// If a future change drops or adds a tuition demo here without
+// updating CASES, this guard fails loudly.
+const EXPECTED_TUITION_CASES = 3;
+
 async function run(): Promise<void> {
+  check(
+    `CASES contains exactly ${EXPECTED_TUITION_CASES} tuition demos`,
+    CASES.length === EXPECTED_TUITION_CASES,
+    `got=${CASES.length}`,
+  );
+
   for (const c of CASES) {
     await runCase(c);
   }

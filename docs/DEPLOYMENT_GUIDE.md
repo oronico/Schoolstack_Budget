@@ -5,6 +5,15 @@
 
 ---
 
+## Preview Environments
+
+Two preview surfaces sit alongside production:
+
+- **Per-PR previews** — every open pull request gets its own Netlify Deploy Preview + Railway PR Environment with auto-seeded demo data. See the README's [Preview environments](../README.md#preview-environments-per-pr-staging) section for the contract and reviewer workflow.
+- **Chesterton preview (`chesterton-preview` branch)** — a long-lived prospect-facing demo URL with a dedicated Railway environment and a rotated `PREVIEW_DEMO_PASSWORD`. See [`CHESTERTON_PREVIEW.md`](./CHESTERTON_PREVIEW.md) for the operator one-time setup and the reviewer one-pager.
+
+---
+
 ## Architecture Overview
 
 ```

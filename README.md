@@ -248,7 +248,7 @@ node migrate.cjs && exec node index.cjs
 
 **Demo login (preview environments only)**
 
-Each PR's freshly provisioned Postgres is auto-seeded on first API startup with one verified demo user and three complete sample financial models (a microschool, a private school, and a charter school on per-pupil public funding, all at the Review/Export step). Reviewers can log in directly without registering:
+Each PR's freshly provisioned Postgres is auto-seeded on first API startup with one verified demo user and four complete sample financial models (a microschool, a private school, a charter school on per-pupil public funding, and a Chesterton Schools Network–shaped Catholic classical academy, all at the Review/Export step). Reviewers can log in directly without registering:
 
 | Field | Value |
 |-------|-------|
