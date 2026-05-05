@@ -133,7 +133,7 @@ export interface SeedPreviewDataDeps {
  *   - SKIP_PREVIEW_SEED=true        → skip unconditionally (prod safety)
  *   - DATABASE_URL not configured   → skip with warning (no DB to seed)
  *   - any users already exist       → skip silently
- *   - users table empty             → insert demo user + 3 models
+ *   - users table empty             → insert demo user + 4 models
  *
  * Errors are logged but never thrown — a failed seed must not prevent
  * the API from starting up. The DB-emptiness check is the single

@@ -4,7 +4,7 @@
 //             (env-set) and the documented fallback (env-unset).
 // Task #558 — extended to assert the fourth (Chesterton Academy) demo
 //             model so the chesterton-preview branch deploy never
-//             silently regresses to three demos.
+//             silently regresses to fewer than four demos.
 //
 // Validates the behaviors documented in seed-preview-data.ts:
 //   1. SKIP_PREVIEW_SEED=true       → no inserts, no reads
@@ -148,8 +148,9 @@ async function run() {
     );
   }
 
-  // Case 4: empty users table → 1 user + 3 models with the documented shape
-  // (microschool + private school + charter — see task #541).
+  // Case 4: empty users table → 1 user + 4 models with the documented shape
+  // (microschool + private school + charter — see task #541 — plus the
+  // CSN-shaped Chesterton academy added in task #558).
   // Task #540: this case also pins the env-unset branch — with no
   // PREVIEW_DEMO_PASSWORD in the environment, the seeded user's hash
   // must verify the documented default password.
