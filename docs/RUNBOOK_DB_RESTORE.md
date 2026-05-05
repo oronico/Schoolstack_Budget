@@ -255,13 +255,13 @@ curl -fsS "http://localhost:$PORT/healthz"
 # 2. Auth round-trip against restored data — log in as the dedicated
 #    restore-validation account (NOT a personal or customer account; never
 #    paste a real user's password into a shell) and confirm /auth/me
-#    returns the expected profile. Credentials live in 1Password under
-#    "DB restore validation account" *if it has been created* — see the
-#    fallback note below if it hasn't (the 2026-05-05 trial confirmed the
-#    account does not yet exist). The cookie jar carries the session.
+#    returns the expected profile. The account email is the well-known
+#    `restore-validation@schoolstack.example`; its password lives in
+#    1Password under "DB restore validation account". The cookie jar
+#    carries the session.
 curl -fsS -c /tmp/restore-cookies.txt \
   -H 'content-type: application/json' \
-  -d '{"email":"<restore-validation@example.com>","password":"<from-1password>"}' \
+  -d '{"email":"restore-validation@schoolstack.example","password":"<from-1password>"}' \
   "http://localhost:$PORT/auth/login"
 
 curl -fsS -b /tmp/restore-cookies.txt "http://localhost:$PORT/auth/me"
@@ -276,14 +276,28 @@ The restore is usable when:
 - `/models` returns that user's saved models (non-empty for any active
   account).
 
-If the validation account credentials are unavailable (currently the
-default — the dedicated 1Password account has not been created yet,
-per the 2026-05-05 trial), fall back to: confirm the schools count
-from step (c) is non-zero and `/healthz` returns 200. Note the
-reduced confidence in the trial-restore log so the next quarterly
-trial knows to redo the auth round-trip. Creating that 1Password
-account is tracked as a follow-up so the next trial can do the full
-round-trip.
+If the validation account credentials are unavailable for any reason
+(e.g. 1Password is unreachable mid-incident), fall back to: confirm
+the schools count from step (c) is non-zero and `/healthz` returns
+200. Note the reduced confidence in the trial-restore log so the
+next quarterly trial knows to redo the auth round-trip.
+
+> Provisioning the validation account on a fresh DB. The account
+> exists in production already (Task #581). If you ever need to
+> recreate it — e.g. on a parallel restored DB before cutover, or on
+> a future environment — pull the password from the "DB restore
+> validation account" 1Password entry and run the idempotent seeder:
+>
+> ```bash
+> export RESTORE_VALIDATION_PASSWORD='<paste-from-1password>'
+> export DATABASE_URL="$RESTORE_DB_URL"   # or $PROD_DB_URL
+> pnpm --filter @workspace/api-server exec tsx \
+>   src/scripts/ensure-restore-validation-account.ts
+> ```
+>
+> Re-running is safe: the seeder is a no-op when the row already
+> exists with the right password and at least one financial model;
+> it rotates the password in place if the env-var value differs.
 
 > The endpoints above are the canonical ones in `lib/api-spec/openapi.yaml`.
 > If the API surface changes (e.g. `/healthz` is renamed or `/models` moves
