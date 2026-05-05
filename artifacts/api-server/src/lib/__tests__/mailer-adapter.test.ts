@@ -26,6 +26,7 @@ import {
   deliverTransactionalEmail,
   getConfiguredEmailProvider,
   isEmailConfigured,
+  pickWelcomeTrack,
   sendWelcomeEmail,
 } from "../mailer.js";
 
@@ -225,9 +226,12 @@ async function main() {
       warn[0]?.includes("welcome") === true,
       `warn[0]=${warn[0]}`,
     );
+    // Task #557 — the no-signal default branch points at /model/new
+    // (the wizard duration picker) rather than the dashboard root, so
+    // a founder who reads only the welcome knows what to click first.
     check(
-      "welcome/dev/no-provider: log includes the dashboard link",
-      warn[0]?.includes("https://app.example.com/") === true,
+      "welcome/dev/no-provider: log includes the default-branch deep link (/model/new)",
+      warn[0]?.includes("https://app.example.com/model/new") === true,
       `warn[0]=${warn[0]}`,
     );
   }
@@ -254,6 +258,148 @@ async function main() {
       "welcome/prod/no-provider: emits console.error (not a quiet warn)",
       error.length === 1 && warn.length === 0,
       `warn=${warn.length} error=${error.length}`,
+    );
+  }
+
+  // --- 6b. welcome email branches on planningStage / profileRole -------
+  // Task #557 — the welcome body should branch on the founder's
+  // planningStage / profileRole so a "yet-to-launch" founder sees a
+  // different first-action than a founder who is already running a
+  // school. The deep-link CTA must point at the most relevant wizard
+  // step (model wizard / actuals importer) instead of the dashboard
+  // root. Capture the dev-fallback log so we can assert on the subject
+  // and the embedded URL without rendering the HTML.
+  function asWarnHaystack(warn: string[]): string {
+    return warn.join("\n");
+  }
+
+  // pickWelcomeTrack: pure routing helper. Pin the buckets we care
+  // about so a future copy edit can't accidentally reroute the CTA.
+  check(
+    "pickWelcomeTrack: 'planning' planningStage → yet-to-launch",
+    pickWelcomeTrack("planning", "founder") === "yet-to-launch",
+    `got ${pickWelcomeTrack("planning", "founder")}`,
+  );
+  check(
+    "pickWelcomeTrack: 'exploring' planningStage → yet-to-launch",
+    pickWelcomeTrack("exploring", null) === "yet-to-launch",
+  );
+  check(
+    "pickWelcomeTrack: 'negotiating' planningStage → yet-to-launch",
+    pickWelcomeTrack("Negotiating a lease", "founder") === "yet-to-launch",
+  );
+  check(
+    "pickWelcomeTrack: 'operating' planningStage → operating",
+    pickWelcomeTrack("operating", "founder") === "operating",
+  );
+  check(
+    "pickWelcomeTrack: 'running for 3 years' planningStage → operating",
+    pickWelcomeTrack("Running for 3 years", "founder") === "operating",
+  );
+  check(
+    "pickWelcomeTrack: 'head of school' profileRole (no planningStage) → operating",
+    pickWelcomeTrack(null, "Head of School") === "operating",
+  );
+  check(
+    "pickWelcomeTrack: operating signal wins over a 'planning' role label",
+    pickWelcomeTrack("operating", "planning to expand") === "operating",
+  );
+  check(
+    "pickWelcomeTrack: nothing known → default",
+    pickWelcomeTrack(null, null) === "default",
+  );
+  check(
+    "pickWelcomeTrack: empty strings → default (treated as missing)",
+    pickWelcomeTrack("", "") === "default",
+  );
+
+  setEnv({
+    NODE_ENV: "development",
+    RESEND_API_KEY: undefined,
+    EMAIL_FROM: undefined,
+    EMAIL_PROVIDER: undefined,
+    APP_URL: "https://app.example.com",
+    REPLIT_DEV_DOMAIN: undefined,
+  });
+
+  // yet-to-launch founder → "Build my Year-1 model"
+  {
+    const { result, warn } = await capture(() =>
+      sendWelcomeEmail("jane@school.example", "Jane Founder", "planning", "founder"),
+    );
+    const hay = asWarnHaystack(warn);
+    check(
+      "welcome/yet-to-launch: returns success:true via dev fallback",
+      result.success === true,
+      `got ${JSON.stringify(result)}`,
+    );
+    check(
+      "welcome/yet-to-launch: deep-links to /model/new?stage=new_school",
+      hay.includes("https://app.example.com/model/new?stage=new_school"),
+      `warn=${hay}`,
+    );
+    check(
+      "welcome/yet-to-launch: does NOT route through the operating-school CTA",
+      !hay.includes("stage=operating_school"),
+      `warn=${hay}`,
+    );
+    check(
+      "welcome/yet-to-launch: dev log still tagged with the 'welcome' kind",
+      hay.includes("welcome"),
+    );
+  }
+
+  // operating-school founder → "Import my existing actuals"
+  {
+    const { result, warn } = await capture(() =>
+      sendWelcomeEmail("ada@oldschool.example", "Ada Headmaster", "operating", "Head of School"),
+    );
+    const hay = asWarnHaystack(warn);
+    check(
+      "welcome/operating: returns success:true via dev fallback",
+      result.success === true,
+      `got ${JSON.stringify(result)}`,
+    );
+    check(
+      "welcome/operating: deep-links to /model/new?stage=operating_school",
+      hay.includes("https://app.example.com/model/new?stage=operating_school"),
+      `warn=${hay}`,
+    );
+    check(
+      "welcome/operating: does NOT route through the new-school CTA",
+      !hay.includes("stage=new_school"),
+      `warn=${hay}`,
+    );
+  }
+
+  // default founder (no signal) → /model/new (no stage)
+  {
+    const { result, warn } = await capture(() =>
+      sendWelcomeEmail("zed@school.example", "Zed Founder", null, null),
+    );
+    const hay = asWarnHaystack(warn);
+    check(
+      "welcome/default: returns success:true via dev fallback",
+      result.success === true,
+      `got ${JSON.stringify(result)}`,
+    );
+    check(
+      "welcome/default: deep-links to /model/new (no stage hint)",
+      hay.includes("https://app.example.com/model/new\n") ||
+        hay.includes("https://app.example.com/model/new ") ||
+        hay.includes("https://app.example.com/model/new)"),
+      `warn=${hay}`,
+    );
+    check(
+      "welcome/default: does NOT carry an operating/new stage hint",
+      !hay.includes("stage=operating_school") && !hay.includes("stage=new_school"),
+      `warn=${hay}`,
+    );
+    check(
+      "welcome/default: does NOT point at the dashboard root (regression guard)",
+      !hay.includes("https://app.example.com/\n") &&
+        !hay.includes("https://app.example.com/ "),
+      `warn=${hay}`,
     );
   }
 

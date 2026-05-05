@@ -336,7 +336,21 @@ router.post("/auth/verify-email", registerRateLimiter, async (req, res) => {
     // swap (SendGrid / Postmark / SES) is a one-file change and so a
     // developer running locally without RESEND_API_KEY sees the welcome
     // template surface in the workspace logs alongside the other senders.
-    sendWelcomeEmail(user.email, user.name).catch((e) => {
+    //
+    // Task #557 — pass `planningStage` / `profileRole` (captured at
+    // /auth/register and persisted onto the new users row above) so the
+    // welcome email can branch on what we already know about the
+    // founder. A "yet-to-launch" founder gets a Year-1 model CTA, an
+    // operating-school founder gets an actuals-import CTA, and a
+    // founder we have no signal for falls back to the generic "start my
+    // financial model" CTA — but the deep link is always to a real
+    // wizard step, never the dashboard root.
+    sendWelcomeEmail(
+      user.email,
+      user.name,
+      user.planningStage ?? null,
+      user.profileRole ?? null,
+    ).catch((e) => {
       console.error(`[auth] verify-email: sendWelcomeEmail failed for user ${user.id}:`, e);
     });
   } catch (err) {

@@ -742,40 +742,140 @@ export async function sendVerifyEmail(
 // Like the other senders in this file, we resolve APP_URL via the same
 // helper so the dashboard link works locally (REPLIT_DEV_DOMAIN) as
 // well as in production (APP_URL).
+//
+// Task #557 — branch the welcome on what we already know about the
+// founder. /auth/register optionally captures `planningStage` (e.g.
+// "planning", "exploring", "operating") and `profileRole` (e.g.
+// "founder", "head of school"). Using that signal we route the founder
+// to the most relevant first action instead of dropping them on the
+// dashboard root with three generic bullets:
+//
+//   - yet-to-launch  → "Build my Year-1 model"
+//                       deep-link: /model/new?stage=new_school
+//   - operating      → "Import my existing actuals"
+//                       deep-link: /model/new?stage=operating_school
+//   - default        → "Start my financial model"
+//                       deep-link: /model/new
+//
+// The branch is purely additive: when we have no signal we still send a
+// useful welcome with a real first-step CTA (model wizard duration
+// picker), never the dashboard root.
+export type WelcomeTrack = "yet-to-launch" | "operating" | "default";
+
+/**
+ * Decide which welcome-email branch to use based on the planningStage /
+ * profileRole captured at signup. Both inputs are free-text strings
+ * (the columns are nullable text in postgres) so we substring-match
+ * against a few known buckets and otherwise fall back to "default".
+ *
+ * Exported for unit tests in mailer-adapter.test.ts.
+ */
+export function pickWelcomeTrack(
+  planningStage: string | null | undefined,
+  profileRole: string | null | undefined,
+): WelcomeTrack {
+  const stage = (planningStage || "").toLowerCase();
+  const role = (profileRole || "").toLowerCase();
+
+  // Operating school first: a founder who is already running a school
+  // is best served by importing last year's actuals, even if they also
+  // happen to identify as "head of school".
+  if (/operat|runn|exist|open(ed|ing)?\b/.test(stage)) return "operating";
+  if (/head|principal|director|administrator|operator/.test(role)) return "operating";
+
+  // Pre-launch / planning / exploring → year-1 model wizard.
+  if (/plan|explor|search|negotiat|prepar|consider|pre.?open|yet/.test(stage)) {
+    return "yet-to-launch";
+  }
+
+  return "default";
+}
+
+interface WelcomeCopy {
+  subject: string;
+  /**
+   * Path appended to APP_URL for the primary CTA. We keep paths (not
+   * full URLs) here so the branch tests don't depend on whether
+   * APP_URL or REPLIT_DEV_DOMAIN is the configured host.
+   */
+  ctaPath: string;
+  ctaLabel: string;
+  /** One-line headline shown above the bullets. */
+  headline: string;
+  /** Plain-language paragraph explaining the recommended first action. */
+  body: string;
+}
+
+function welcomeCopyFor(track: WelcomeTrack): WelcomeCopy {
+  if (track === "yet-to-launch") {
+    return {
+      subject: "Welcome — let's build your Year-1 model",
+      ctaPath: "/model/new?stage=new_school",
+      ctaLabel: "Build my Year-1 model",
+      headline: "Your account is ready — let's plan your school.",
+      body:
+        "You told us you're still in the planning stages, so the most useful thing to do next is build your opening-year financial model. We'll walk you through enrollment, staffing, revenue and expenses one section at a time and assemble a 5-year projection you can take to a lender or board.",
+    };
+  }
+  if (track === "operating") {
+    return {
+      subject: "Welcome — let's bring in your existing actuals",
+      ctaPath: "/model/new?stage=operating_school",
+      ctaLabel: "Import my existing actuals",
+      headline: "Your account is ready — let's wire up your real numbers.",
+      body:
+        "Since you're already running a school, the fastest way to get value out of SchoolStack Budget is to bring in last year's actuals. We'll start a model in operating-school mode so the prior-year, actuals editor and variance panels are turned on from the first step.",
+    };
+  }
+  return {
+    subject: "Welcome to SchoolStack Budget",
+    ctaPath: "/model/new",
+    ctaLabel: "Start my financial model",
+    headline: "Your account is ready to go.",
+    body:
+      "SchoolStack Budget helps founders build a 5-year financial model, generate board-ready and lender-ready packets, and request a free advisor review when the model is ready. The first step is starting your model — we'll ask whether it's for a planned or operating school and tailor the wizard from there.",
+  };
+}
+
 export async function sendWelcomeEmail(
   toEmail: string,
   name: string,
+  planningStage?: string | null,
+  profileRole?: string | null,
 ): Promise<{ success: boolean; error?: string }> {
   const appUrl = resolveAppUrl();
-  // The dashboard link is a nice-to-have. If neither APP_URL nor
+  const track = pickWelcomeTrack(planningStage, profileRole);
+  const copy = welcomeCopyFor(track);
+  // The CTA link is a nice-to-have. If neither APP_URL nor
   // REPLIT_DEV_DOMAIN is set we still want the welcome to go out — the
   // body just won't carry a CTA button. This mirrors how the advisor-
   // confirmation template degrades gracefully (no link in some flows).
-  const dashboardUrl = appUrl ? `${appUrl}/` : null;
+  const ctaUrl = appUrl ? `${appUrl}${copy.ctaPath}` : null;
   const firstName = (name || "").split(" ")[0] || name || "there";
 
-  const ctaButton = dashboardUrl
+  const ctaButton = ctaUrl
     ? `
         <div style="text-align:center;margin:32px 0;">
-          <a href="${dashboardUrl}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Open My Dashboard</a>
+          <a href="${ctaUrl}" style="background-color:#D97706;color:white;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">${escapeHtml(copy.ctaLabel)}</a>
         </div>`
     : "";
-  const ctaText = dashboardUrl ? `\nOpen your dashboard: ${dashboardUrl}\n` : "";
+  const ctaText = ctaUrl ? `\n${copy.ctaLabel}: ${ctaUrl}\n` : "";
 
   const result = await deliverTransactionalEmail({
     kind: "welcome",
     to: toEmail,
-    ...(dashboardUrl ? { primaryUrl: dashboardUrl } : {}),
-    subject: "Welcome to SchoolStack Budget",
+    ...(ctaUrl ? { primaryUrl: ctaUrl } : {}),
+    subject: copy.subject,
     text: [
       `Hi ${firstName},`,
       "",
-      "Welcome to SchoolStack Budget — your account is ready to go.",
+      copy.headline,
       "",
-      "Here's what you can do next:",
-      "  • Build a 5-year financial model for your school",
+      copy.body,
+      "",
+      "Once your first model is in, you can also:",
       "  • Generate board-ready and lender-ready packets",
-      "  • Request a free advisor review when your model is ready",
+      "  • Request a free advisor review of your projections",
       ctaText,
       "If you have questions or want to talk through your plan, just reply to this email — we read every one.",
       "",
@@ -783,16 +883,19 @@ export async function sendWelcomeEmail(
     ].join("\n"),
     html: `
       <div style="font-family:'Nunito',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
-        <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">Welcome to SchoolStack Budget</h2>
+        <h2 style="color:#1E293B;font-family:'Quicksand',Arial,sans-serif;">${escapeHtml(copy.headline)}</h2>
         <p style="color:#475569;line-height:1.6;">
           Hi ${escapeHtml(firstName)},
         </p>
         <p style="color:#475569;line-height:1.6;">
-          Your account is ready to go. SchoolStack Budget helps founders build a
-          5-year financial model, generate board-ready and lender-ready packets,
-          and request a free advisor review when your model is ready.
+          ${escapeHtml(copy.body)}
         </p>
         ${ctaButton}
+        <p style="color:#475569;line-height:1.6;">
+          Once your first model is in, you can also generate board-ready and
+          lender-ready packets and request a free advisor review of your
+          projections.
+        </p>
         <p style="color:#475569;line-height:1.6;">
           If you have questions or want to talk through your plan, just reply to
           this email — we read every one.
