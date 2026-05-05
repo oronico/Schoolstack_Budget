@@ -66,10 +66,25 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           rate: overrides.tuitionEscalationPct,
         },
       };
-      reset(next as never);
+      // Task #518 — DO NOT call `reset(next)` before awaiting the PUT.
+      // Flipping `schoolProfile.modelDuration` to "five_year" re-grows the
+      // wizard's `visibleSteps` (single-year hides "Lender Narrative", so
+      // five-year adds it back at id 11). With `currentStep` already clamped
+      // to the last single-year slot (11), the next render swaps the
+      // ActiveStepComponent over to NarrativeStep and unmounts ExportStep —
+      // taking our `useConflictBanner` hook (and its `{conflict.banner}` JSX)
+      // with it. By the time the 409 from a stale cross-tab edit resolves,
+      // there's nothing left to render the banner on, and the wizard's own
+      // autosave-driven banner doesn't fire either because `methods.reset`
+      // clears `dirtyFields`. Net effect: a silently dropped extend.
+      //
+      // Defer the reset until after `mutateAsync` resolves successfully.
+      // On a 409 we never reset, so ExportStep stays mounted long enough
+      // for the catch below to flip the shared banner open.
       if (modelId) {
         await updateMutation.mutateAsync({ id: modelId, data: { data: next as unknown as Record<string, unknown> } });
       }
+      reset(next as never);
       setShowExtendModal(false);
     } catch (err) {
       if (conflict.handleMutationError(err)) {

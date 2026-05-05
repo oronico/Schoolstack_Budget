@@ -288,24 +288,19 @@ test("Scenarios page: a stale debounced save surfaces the shared banner, and Rel
   }
 });
 
-// FIXME(task-513): The ExportStep "Extend to 5-year" handler calls
+// Task #518 fixed the silent-drop bug this test was parked for: the
+// ExportStep "Extend to 5-year" handler used to call
 // `methods.reset(next)` BEFORE awaiting `updateMutation.mutateAsync`,
-// which flips `schoolProfile.modelDuration` to "five_year" and
-// re-grows `visibleSteps` from 11 → 12. With `currentStep` still
-// pointing at the old single-year Export id, the wizard re-renders
-// the now-step-11 component (Lender Narrative) and unmounts the
-// ExportStep — which means the `useConflictBanner` hook that owns
-// `{conflict.banner}` for this surface is gone by the time the 409
-// resolves and `conflict.handleMutationError(err)` runs in the
-// `catch`. The wizard's own `<ConflictReloadBanner />` (Task #492)
-// also doesn't fire because `methods.reset` clears `dirtyFields`,
-// so the `performSave` autosave effect (line ~816) bails before it
-// can race the stale `lastEtagRef`. Net effect: a cross-tab
-// extend-to-5-year is silently dropped (no banner, no save). This
-// test reliably reproduces the gap and is parked as `.fixme` until
-// the surface is rewired (likely: defer `reset` until after
-// `mutateAsync` resolves so the catch can still own the banner).
-test.fixme("ExportStep: a stale Extend-to-5-year save surfaces the shared banner", async ({
+// which flipped `schoolProfile.modelDuration` to "five_year",
+// re-grew `visibleSteps` from 11 → 12, and unmounted ExportStep
+// (taking the `{conflict.banner}` JSX with it) before the 409 from a
+// stale cross-tab edit could land in the catch. The handler now
+// defers the reset until after `mutateAsync` resolves successfully,
+// so on a 409 ExportStep stays mounted long enough for
+// `conflict.handleMutationError(err)` to flip the shared banner
+// open — and the server-side `modelDuration` stays "single_year"
+// because the failed PUT never landed.
+test("ExportStep: a stale Extend-to-5-year save surfaces the shared banner", async ({
   browser,
   request,
 }) => {
