@@ -1,0 +1,336 @@
+You are preparing SchoolStack Budget for public launch today. This is a 4-hour launch stabilization sprint, not a feature rebuild.
+
+Repository:
+oronico/Schoolstack_Budget
+
+Primary production URLs:
+Frontend: https://budget.schoolstack.ai
+API/Railway target currently configured in netlify.toml: https://schoolstackbudget.up.railway.app
+
+Goal:
+Confirm SchoolStack Budget is safe, stable, and usable for public launch in connection with the Lending Lab loan launch. The public-facing budget tool must help school founders build a lender-ready model, export a usable workbook, and submit or save their information without broken routes, blank pages, console errors, or data leakage.
+
+Non-negotiable constraints:
+1. Do not rewrite the application.
+2. Do not introduce new product architecture.
+3. Do not change underwriting formulas unless a test proves they are wrong.
+4. Do not add Plaid, ACH, loan closing, or lender workflow features. This launch is budget readiness and export only.
+5. Do not use npm or yarn. This repo intentionally requires pnpm.
+6. Do not expose secrets, tokens, database URLs, API keys, borrower data, school data, or admin information in the client bundle, logs, screenshots, or console output.
+7. Do not ship if public users are forced into a broken route or dead-end flow.
+8. Remove any outdated references that conflict with the current go-live purpose.
+
+Run this in order.
+
+PHASE 1. Environment and build verification
+
+1. Confirm local/Replit package manager is pnpm.
+   - Run:
+     corepack enable
+     pnpm --version
+     node --version
+   - Do not run npm install. The root package.json blocks non-pnpm installs.
+
+2. Install dependencies:
+   pnpm install --frozen-lockfile
+
+3. Run root typecheck:
+   pnpm run typecheck
+
+4. Run frontend build:
+   pnpm --filter @workspace/school-financial-model run build
+
+5. Run API build:
+   pnpm --filter @workspace/api-server run build
+
+6. Run available focused QA scripts:
+   pnpm --filter @workspace/api-server run qa:excel
+   pnpm --filter @workspace/api-server run qa:golden
+   pnpm --filter @workspace/api-server run qa:parity
+   pnpm --filter @workspace/api-server run qa:phases
+   pnpm --filter @workspace/api-server run qa:formula-results
+   pnpm --filter @workspace/api-server run qa:flags
+   pnpm --filter @workspace/api-server run qa:smoke-arithmetic
+   pnpm --filter @workspace/api-server run test:parity
+   pnpm --filter @workspace/school-financial-model run test
+
+If any script fails, capture:
+- command
+- error
+- file path
+- whether it blocks launch
+- proposed fix
+
+PHASE 2. Fix the public go-live route issue
+
+Critical issue:
+The README says the public underwriting wizard is available at /underwriting without creating an account, but App.tsx currently routes /underwriting to PublicWizardRedirect, which redirects to /register.
+
+Fix required:
+1. Inspect frontend pages and components to locate the actual public wizard implementation. Search for:
+   - PublicWizard
+   - Underwriting
+   - public wizard
+   - localStorage
+   - export-underwriting
+   - export-budget
+   - consultant
+   - modelData
+   - wizard
+2. If the real public wizard exists, wire /underwriting to that component.
+3. If the real public wizard was removed or renamed, create the smallest safe route that allows public users to:
+   - enter school profile
+   - enter enrollment, revenue, staffing, and expenses
+   - review key financial outputs
+   - run consultant/readiness analysis
+   - export workbook through /api/public/export-budget or /api/public/export-underwriting
+4. Do not require login for /underwriting.
+5. Make sure /underwriting uses localStorage only for browser persistence, not backend save.
+6. Add a clear optional CTA to create an account only after export or at the end of the flow.
+7. Confirm direct navigation to https://budget.schoolstack.ai/underwriting works after Netlify SPA fallback.
+
+Acceptance tests:
+- Visiting /underwriting in incognito should not redirect to /register.
+- User can complete the flow without logging in.
+- User can export XLSX without logging in.
+- Refreshing during the flow preserves data if localStorage is intended.
+- Clearing localStorage resets the public wizard without errors.
+
+PHASE 3. Verify production routing and API proxy
+
+1. Confirm netlify.toml build settings:
+   - command should build frontend successfully
+   - publish should point to artifacts/school-financial-model/dist/public
+   - /api/* should proxy to the actual current Railway API
+2. Confirm Netlify Node version:
+   - README says Node 24+
+   - netlify.toml currently sets NODE_VERSION=20
+   - Run the production build with Node 20 and Node 24 if possible.
+   - If Node 20 builds cleanly, leave it and document.
+   - If Node 20 fails but Node 24 passes, update netlify.toml to NODE_VERSION=24.
+3. Confirm frontend API base behavior:
+   - If using Netlify proxy, avoid hardcoding unnecessary production API calls in the client.
+   - Confirm VITE_API_BASE_URL does not break same-origin /api proxy.
+4. Test live health endpoints:
+   - GET https://budget.schoolstack.ai/api/health
+   - GET https://budget.schoolstack.ai/api/ready
+   - GET https://schoolstackbudget.up.railway.app/health
+   - GET https://schoolstackbudget.up.railway.app/api/ready
+
+Acceptance:
+- /api/health returns 200.
+- /api/ready returns 200 and confirms DB connected.
+- Frontend pages do not show CORS errors.
+- API calls from budget.schoolstack.ai resolve through Netlify.
+
+PHASE 4. Environment variable verification
+
+In Railway production, confirm:
+- NODE_ENV=production
+- DATABASE_URL is present
+- JWT_SECRET is present and strong
+- APP_URL=https://budget.schoolstack.ai
+- ALLOWED_ORIGINS includes https://budget.schoolstack.ai
+- RESEND_API_KEY is present if review request and password reset emails are live
+- EMAIL_FROM is set if emails are live
+- ADMIN_EMAILS is set if public review requests go to the team
+
+Do not print secret values. Only report present/missing.
+
+Acceptance:
+- Server starts without fatal startup errors.
+- Registration/login flows work if enabled.
+- Forgot password returns safe response.
+- Review-request email endpoint either works or is hidden/disabled gracefully if email is not configured.
+
+PHASE 5. Public export and workbook QA
+
+Test the following public API endpoints from the live frontend domain:
+- POST /api/public/export-budget
+- POST /api/public/export-underwriting
+- POST /api/public/export-single-year?year=0
+- POST /api/public/consultant
+
+Use realistic sample school data:
+- School name: Launch Test Academy
+- Type: microschool or private school
+- Students: 20 in Year 1, growing conservatively
+- Revenue: tuition or ESA
+- Staffing: founder/head of school plus teacher or contractor
+- Expenses: rent, insurance, curriculum, software, marketing, professional services
+- Loan/debt: include and exclude debt scenarios
+
+Validate workbook downloads:
+1. File opens in Excel or Google Sheets.
+2. XLSX magic bytes are valid.
+3. Workbook has expected tabs.
+4. No cells show:
+   - undefined
+   - NaN
+   - #REF!
+   - #DIV/0!
+   - #VALUE!
+5. Revenue totals match user inputs.
+6. Expense totals match user inputs.
+7. Net income equals revenue minus expenses.
+8. DSCR appears only where debt service exists and calculates correctly.
+9. Year 1 monthly or pro forma tabs align to annual summary.
+10. Filenames are sanitized and do not allow path or script injection.
+
+Acceptance:
+- Public workbook export is successful from incognito with no login.
+- Workbook is lender-usable.
+- Workbook math matches UI outputs.
+- No broken formulas.
+
+PHASE 6. Security and privacy hardening
+
+1. Search for exposed secrets:
+   - DATABASE_URL
+   - JWT_SECRET
+   - RESEND_API_KEY
+   - password
+   - bearer
+   - token
+   - private key
+   - railway
+   - postgres://
+   - smtp
+2. Confirm no secrets are committed in:
+   - source files
+   - docs
+   - sample files
+   - generated bundles
+   - public assets
+3. Confirm API error responses do not leak stack traces.
+4. Confirm frontend console does not log full model data, emails, auth tokens, or sensitive fields.
+5. Confirm error logging strips sensitive fields before database persistence.
+6. Confirm public endpoints enforce payload size and rate limiting.
+7. Confirm CORS only allows known SchoolStack origins and required deployment preview origins.
+8. Confirm admin routes require admin access, not merely logged-in status.
+9. Confirm shared model routes do not expose private models unless tokenized.
+10. Confirm localStorage use is acceptable for public wizard data and clearly disclosed through privacy/cookie language if needed.
+
+Acceptance:
+- No secrets in repo or frontend bundle.
+- No sensitive model payloads logged to browser console in production.
+- Admin dashboard inaccessible to regular users.
+- Public endpoints are rate-limited.
+- Error responses are generic.
+
+PHASE 7. Public UX smoke test
+
+Run the full public user journey on desktop and mobile.
+
+Desktop:
+- Chrome
+- Safari if available
+
+Mobile viewport:
+- 375px width
+- 430px width
+
+Test these routes:
+- /
+- /underwriting
+- /resources
+- /terms
+- /privacy
+- /login
+- /register
+- /forgot-password
+- /dashboard, unauthenticated should redirect safely
+- /admin, unauthenticated should redirect safely
+
+Test flows:
+1. Landing page loads and CTA points to the correct go-live path.
+2. Public wizard starts without login.
+3. Required fields validate clearly.
+4. User can navigate forward and backward without data loss.
+5. User can see plain-English financial guidance.
+6. Analysis page renders without undefined or NaN.
+7. Export step downloads workbook.
+8. Optional account creation works after the public flow.
+9. No dead links to unfinished features.
+10. No references to outdated loan terms if the budget tool mentions Lending Lab or loan readiness.
+
+PHASE 8. Lending Lab alignment check
+
+Because this goes live with the loan window today, remove or revise any visible copy that conflicts with current program rules.
+
+Current go-live positioning:
+- This is SchoolStack Budget, a budget and financial modeling tool.
+- It supports Lending Lab readiness but is not the loan application itself.
+- The tool should help founders understand whether their model can support debt.
+- Avoid implying that use of the tool guarantees approval.
+- Avoid presenting outdated Cycle 1 terms as current loan terms.
+- Avoid saying the tool is only for charter schools.
+- Avoid implying Plaid or ACH are part of this budget tool.
+- Avoid saying public users must create an account before using the public readiness tool.
+
+Search and verify visible copy for:
+- old dates
+- 3% interest
+- $5K increments if current loan product changed
+- Microschool Loan Pilot
+- application opens July 2025
+- public underwriting wizard no auth
+- Plaid
+- ACH
+- guaranteed review
+- loan approval language
+- home-based program language
+- charter language
+
+If uncertain, use neutral copy:
+“SchoolStack Budget helps school founders build a clearer financial model and understand budget readiness. It is not a loan application and does not guarantee funding.”
+
+PHASE 9. Launch proof pack
+
+Create a launch proof note in docs or as a markdown report with:
+1. Git commit SHA tested
+2. Date/time tested
+3. Commands run
+4. Build status
+5. Typecheck status
+6. API health status
+7. API readiness status
+8. Public route status
+9. Export status
+10. Workbook QA status
+11. Auth route status
+12. Admin protection status
+13. Known launch limitations
+14. Blockers, if any
+15. Decision: GO, GO WITH WATCH ITEMS, or NO GO
+
+Recommended launch decision rules:
+- NO GO if /underwriting redirects to register and there is no public usable path.
+- NO GO if workbook exports fail.
+- NO GO if /api/ready fails.
+- NO GO if secrets are exposed in client or repo.
+- NO GO if admin routes are accessible to regular users.
+- GO WITH WATCH ITEMS if emails are not configured but the email-dependent UI is hidden or gracefully disabled.
+- GO WITH WATCH ITEMS if noncritical TypeScript warnings exist but build and runtime pass.
+
+PHASE 10. Commit and deploy
+
+If fixes are required:
+1. Create a branch:
+   launch/budget-readiness-today
+2. Commit only minimal launch fixes.
+3. Do not include generated secret files or local env files.
+4. Push branch.
+5. Open PR with:
+   - summary
+   - tests run
+   - screenshots or route proof
+   - known limitations
+6. If approved, merge to main and trigger Netlify/Railway deploy.
+7. After deploy, rerun live production smoke tests.
+
+Final deliverable back to Allison:
+- One-page GO/NO-GO summary
+- Any remaining launch risks
+- Exact URLs tested
+- Any required manual env var fixes in Railway or Netlify
