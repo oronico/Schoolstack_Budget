@@ -36,9 +36,9 @@ export function PrivacyPolicyPage() {
               We automatically collect certain information about how you interact with the Service, including pages visited, features used, timestamps, browser type, and device information. This data is used to improve the Service and for aggregate analytics.
             </p>
 
-            <h3 className="font-display text-lg font-semibold text-foreground mt-4">Guest Usage</h3>
+            <h3 className="font-display text-lg font-semibold text-foreground mt-4">Public Pages</h3>
             <p>
-              The public underwriting wizard can be used without an account. Data entered in guest mode is stored locally in your browser (localStorage) and is not transmitted to our servers unless you choose to run an analysis or export.
+              Public marketing pages — including the home page, <code>/underwriting</code>, <code>/solutions</code>, and <code>/resources</code> — do not require an account and do not collect financial model data. Aggregate analytics (page views, device type) are collected as described under "Usage Data" above. Building a financial model requires a free account so your work can be saved and resumed.
             </p>
           </section>
 

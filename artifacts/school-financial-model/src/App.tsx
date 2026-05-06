@@ -21,7 +21,7 @@ const VerifyEmailPage = lazy(() => import("@/pages/auth/verify-email").then(m =>
 const DashboardPage = lazy(() => import("@/pages/dashboard").then(m => ({ default: m.DashboardPage })));
 const NewModelPage = lazy(() => import("@/pages/model-new").then(m => ({ default: m.NewModelPage })));
 const ModelWizardPage = lazy(() => import("@/pages/model-wizard").then(m => ({ default: m.ModelWizardPage })));
-const PublicWizardRedirect = lazy(() => Promise.resolve({ default: () => { window.location.replace((import.meta.env.BASE_URL || "/").replace(/\/$/, "") + "/register"); return null; } }));
+const UnderwritingLandingPage = lazy(() => import("@/pages/underwriting").then(m => ({ default: m.UnderwritingLandingPage })));
 const ScenarioPage = lazy(() => import("@/pages/scenarios").then(m => ({ default: m.ScenarioPage })));
 const DecisionFlowDispatcher = lazy(() => import("@/pages/decision-flows").then(m => ({ default: m.DecisionFlowDispatcher })));
 const AdminPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPage })));
@@ -143,7 +143,7 @@ function AppRouter() {
         <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/verify-email" component={VerifyEmailPage} />
-        <Route path="/underwriting" component={PublicWizardRedirect} />
+        <Route path="/underwriting" component={UnderwritingLandingPage} />
         <Route path="/shared/:token" component={SharedModelPage} />
         <Route path="/resources/:slug" component={ArticlePage} />
         <Route path="/resources" component={ResourcesPage} />
