@@ -179,3 +179,9 @@ id = "Sw8reQ3S42YsUwQyTtWXK"
 uri = "file://.local/outputs/SchoolStack-Budget.pptx"
 type = "slides"
 title = "SchoolStack Budget.pptx"
+
+[[outputs]]
+id = "t9_Y5B_2G2dobdnnwUdFY"
+uri = "file://docs/RESTORE_TRIAL_WORKSHEET.md"
+type = "text"
+title = "Restore trial worksheet (Option A pair-live)"
