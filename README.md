@@ -22,7 +22,7 @@ SchoolStack Budget walks school founders through a comprehensive 5-year financia
 ### Key Features
 
 - **8-Step Financial Model Wizard** — Profile, Enrollment, Revenue, Staffing, Expenses, Review, Consultant Analysis, Export
-- **Public Landing at `/underwriting`** — Tool overview + Sign-up / Log-in CTAs for prospective school founders. The full wizard requires a free account so models save server-side and survive device changes.
+- **Public Underwriting Wizard** — Try the tool at `/underwriting` without an account: a 6-step guest wizard (profile → enrollment → revenue → staffing → expenses → review) that persists to browser localStorage, runs the same readiness analysis (`POST /api/public/consultant`), and downloads the Excel workbook (`POST /api/public/export-budget`). Account-creation CTA at the end migrates founders to the full multi-step authenticated wizard.
 - **Scenario Planner** — Up to 3 named what-if scenarios with adjustment sliders and deep comparison mode
 - **Decision Engine** — "What should I fix first?" panel surfacing the top 3 financial issues with severity ranking and fix-it navigation
 - **Budgeting Co-Pilot** — Three guidance levels (basics/advanced/extra), inline explainer cards, and KPI formula transparency drawers
