@@ -2496,7 +2496,23 @@ function buildBalanceSheet(wb: ExcelJS.Workbook, data: ModelData, niByYear: numb
   return { cashByYear, totalAssets, totalLiabilities, equityByYear };
 }
 
-function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], cashByYear: number[], depreciationByYear?: number[], projectedARByYear?: number[]) {
+/**
+ * Task #618 — `canonicalDsCovenants` overrides (when provided) carry the
+ * canonical lender-grade DSCR, accrual cash position, and break-even
+ * student counts straight off `@workspace/finance`. The local CFADS
+ * formula, balance-sheet cash, and per-student break-even calc are
+ * still rendered, but the DISPLAYED value in the headline rows comes
+ * from canonical so every lender-facing surface ties to the same
+ * numbers. The export-reconciliation regression test enforces that
+ * these overrides match canonical to the cent.
+ */
+interface DSCRCovenantsCanonicalOverrides {
+  dscr: number[];
+  cashPosition: number[];
+  breakEvenStudents: Array<number | null>;
+}
+
+function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], cashByYear: number[], depreciationByYear?: number[], projectedARByYear?: number[], canonicalOverrides?: DSCRCovenantsCanonicalOverrides) {
   const yc = getYearCount(data);
   const ws = wb.addWorksheet("DSCR & Covenants");
   const sp = data.schoolProfile || {};
@@ -2573,12 +2589,30 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   r++;
   ws.getCell(r, 1).value = "DSCR"; bc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
-    const dscr = cdByYear[y] > 0 ? cfads[y] / cdByYear[y] : 0;
+    // Task #618 — DSCR row uses the canonical lender-grade DSCR
+    // (NetIncome + DebtService) / DebtService from @workspace/finance
+    // when provided, so this surface ties to the lender packet,
+    // dashboard, and Lender Pro Forma stress tests. The CFADS row
+    // above remains for the loan-committee audience.
+    const canonicalDscr = canonicalOverrides?.dscr[y];
     const col = y + 2;
-    if (cdByYear[y] > 0) {
-      setFormula(ws.getCell(r, col), `IF(${cn(dsRow, col)}=0,"N/A",${cn(cfadsRow, col)}/${cn(dsRow, col)})`, Math.round(dscr * 100) / 100);
+    if (canonicalOverrides && canonicalDscr !== undefined) {
+      // Canonical encodes "no debt service modeled" as exactly 0;
+      // surface it as N/A here. Otherwise display the canonical
+      // ratio — including cases where the workbook's loan-only
+      // `cdByYear` is 0 but canonical sees cap-debt rows.
+      if (canonicalDscr === 0) {
+        ws.getCell(r, col).value = "N/A";
+      } else {
+        ws.getCell(r, col).value = Math.round(canonicalDscr * 100) / 100;
+      }
     } else {
-      ws.getCell(r, col).value = "N/A";
+      const dscr = cdByYear[y] > 0 ? cfads[y] / cdByYear[y] : 0;
+      if (cdByYear[y] > 0) {
+        setFormula(ws.getCell(r, col), `IF(${cn(dsRow, col)}=0,"N/A",${cn(cfadsRow, col)}/${cn(dsRow, col)})`, Math.round(dscr * 100) / 100);
+      } else {
+        ws.getCell(r, col).value = "N/A";
+      }
     }
     ws.getCell(r, col).numFmt = "0.00x"; bc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
   }
@@ -2591,8 +2625,32 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   ws.getCell(r, 1).value = "Ending Cash"; dc(ws.getCell(r, 1));
   const cashRow = r;
   for (let y = 0; y < yc; y++) {
-    ws.getCell(r, y + 2).value = Math.round(cashByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+    // Task #618 — Ending Cash row uses the canonical accrual cash
+    // position from @workspace/finance when provided, matching the
+    // dashboard / lender packet "ending cash" headline. The
+    // balance-sheet-style cashByYear (working-capital, AR/AP) still
+    // drives the rest of the workbook (Days Cash, Months Runway,
+    // Current Ratio) where lenders expect the working-capital view.
+    const ec = canonicalOverrides?.cashPosition[y] ?? cashByYear[y];
+    ws.getCell(r, y + 2).value = Math.round(ec); ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
   }
+
+  // Task #618 — hidden working-capital cash basis row. The Ending
+  // Cash row above is now canonical accrual cash (so it ties to the
+  // dashboard / lender packet headline), but Days Cash on Hand,
+  // Months of Runway, and Current Ratio are lender working-capital
+  // metrics and must stay on `cashByYear`. Without this row, their
+  // live formulas would reference the canonical Ending Cash row and
+  // diverge from their cached values on workbook recalculation —
+  // exactly the export drift this task is closing.
+  r++;
+  ws.getCell(r, 1).value = "Working-Capital Cash (basis for runway/days)"; dc(ws.getCell(r, 1));
+  const wcCashRow = r;
+  for (let y = 0; y < yc; y++) {
+    ws.getCell(r, y + 2).value = Math.round(cashByYear[y]);
+    ws.getCell(r, y + 2).numFmt = CUR; dc(ws.getCell(r, y + 2));
+  }
+  ws.getRow(r).hidden = true;
 
   r++;
   ws.getCell(r, 1).value = "Days Cash on Hand"; dc(ws.getCell(r, 1));
@@ -2600,7 +2658,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
     const days = totalExp[y] > 0 ? (cashByYear[y] / totalExp[y]) * 365 : 0;
     const col = y + 2;
     const totalExpFormula = `${cn(dscrRevRow, col)}-${cn(niRow, col)}`;
-    setFormula(ws.getCell(r, col), `IF((${totalExpFormula})=0,0,(${cn(cashRow, col)}/(${totalExpFormula}))*365)`, Math.round(days));
+    setFormula(ws.getCell(r, col), `IF((${totalExpFormula})=0,0,(${cn(wcCashRow, col)}/(${totalExpFormula}))*365)`, Math.round(days));
     ws.getCell(r, col).numFmt = NUM; dc(ws.getCell(r, col));
   }
 
@@ -2610,7 +2668,7 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
     const months = totalExp[y] > 0 ? cashByYear[y] / (totalExp[y] / 12) : 0;
     const col = y + 2;
     const totalExpFormula = `${cn(dscrRevRow, col)}-${cn(niRow, col)}`;
-    setFormula(ws.getCell(r, col), `IF((${totalExpFormula})=0,0,${cn(cashRow, col)}/((${totalExpFormula})/12))`, Math.round(months * 10) / 10);
+    setFormula(ws.getCell(r, col), `IF((${totalExpFormula})=0,0,${cn(wcCashRow, col)}/((${totalExpFormula})/12))`, Math.round(months * 10) / 10);
     ws.getCell(r, col).numFmt = "0.0"; dc(ws.getCell(r, col));
   }
 
@@ -2644,12 +2702,24 @@ function buildDSCRCovenants(wb: ExcelJS.Workbook, data: ModelData, enrollment: n
   r++;
   ws.getCell(r, 1).value = "Break-Even Enrollment"; bc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
-    const rps = enrollment[y] > 0 ? revByYear[y] / enrollment[y] : 0;
-    const vcps = enrollment[y] > 0 ? opexByYear[y] / enrollment[y] : 0;
-    const cm = rps - vcps;
-    const fc = persByYear[y] + cdByYear[y];
-    const be = cm > 0 ? Math.ceil(fc / cm) : 0;
-    ws.getCell(r, y + 2).value = cm > 0 ? be : "N/A"; ws.getCell(r, y + 2).numFmt = NUM;
+    // Task #618 — Break-Even Enrollment displays the canonical
+    // contribution-margin break-even from @workspace/finance when
+    // provided, so this row ties to the dashboard, the lender
+    // packet's break-even downside, and the Lender Pro Forma
+    // stress-tests sheet. The per-student rows above remain as the
+    // loan-committee derivation trail.
+    const canonicalBE = canonicalOverrides?.breakEvenStudents[y];
+    if (canonicalOverrides && canonicalBE !== undefined) {
+      ws.getCell(r, y + 2).value = canonicalBE === null ? "N/A" : canonicalBE;
+    } else {
+      const rps = enrollment[y] > 0 ? revByYear[y] / enrollment[y] : 0;
+      const vcps = enrollment[y] > 0 ? opexByYear[y] / enrollment[y] : 0;
+      const cm = rps - vcps;
+      const fc = persByYear[y] + cdByYear[y];
+      const be = cm > 0 ? Math.ceil(fc / cm) : 0;
+      ws.getCell(r, y + 2).value = cm > 0 ? be : "N/A";
+    }
+    ws.getCell(r, y + 2).numFmt = NUM;
     bc(ws.getCell(r, y + 2)); outputCell(ws.getCell(r, y + 2));
   }
 
@@ -3204,7 +3274,17 @@ async function generateWorkbook(
   const crossRefs: CrossTabRefs = { cfCumCashRow, opStmtNiRow, debtBalanceRow };
   const { cashByYear } = buildBalanceSheet(wb, data, niByYear, balanceByYear, startingCash, crossRefs, endingCashY1, depreciationByYear, projectedARByYear);
 
-  buildDSCRCovenants(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear, depreciationByYear, projectedARByYear);
+  // Task #618 — pass the canonical lender-grade DSCR, accrual cash
+  // position, and contribution-margin break-even into the DSCR &
+  // Covenants sheet so its headline rows tie to the dashboard, lender
+  // packet, and Lender Pro Forma stress tests to the cent. Locked
+  // down by the export-reconciliation regression test.
+  const canonicalOverrides: DSCRCovenantsCanonicalOverrides = {
+    dscr: [...beMetrics.dscr],
+    cashPosition: [...beMetrics.cashPosition],
+    breakEvenStudents: [...beMetrics.breakEvenStudents],
+  };
+  buildDSCRCovenants(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear, depreciationByYear, projectedARByYear, canonicalOverrides);
   buildSourcesAndUses(wb, data, startingCash);
   buildScenarios(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear);
   buildUnderwritingSnapshot(wb, data, enrollment, revByYear, persByYear, opexByYear, debtServiceByYear, niByYear, cashByYear, balanceByYear);
