@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   findFounderRow,
   getSuggestedFounderComp,
+  getFounderCompBenchmark,
   getReportedFounderCompYears,
   getNormalizedFounderCompYears,
   computeFounderCompNormalization,
@@ -46,19 +47,91 @@ const founderRow = (rate: number, opts: Partial<StaffingRowLike> = {}): Staffing
     ...opts,
   } as StaffingRowLike);
 
-describe("getSuggestedFounderComp", () => {
-  it("returns base comp for the school type when state is unknown", () => {
-    const v = getSuggestedFounderComp("private_school", "OH");
-    expect(v).toBe(95_000);
+describe("getSuggestedFounderComp (Task #633: NAIS / NACSA / BLS benchmarks)", () => {
+  it("returns the NAIS xs-band median for a small private school in an average-COL state", () => {
+    // private_school xs band ($140k) × medium COL (1.0) × experienced (1.0)
+    expect(getSuggestedFounderComp("private_school", "OH", 100)).toBe(140_000);
   });
-  it("applies the high-COL multiplier (1.25x) for CA / NY / etc.", () => {
-    expect(getSuggestedFounderComp("private_school", "CA")).toBe(Math.round((95_000 * 1.25) / 1000) * 1000);
+  it("uses the size band derived from year-1 enrollment", () => {
+    // private_school s band ($180k) × medium COL × experienced
+    expect(getSuggestedFounderComp("private_school", "OH", 220)).toBe(180_000);
+    // private_school m band ($230k)
+    expect(getSuggestedFounderComp("private_school", "OH", 400)).toBe(230_000);
   });
-  it("applies the medium-high-COL multiplier (1.10x) for CO / IL / etc.", () => {
-    expect(getSuggestedFounderComp("charter_school", "CO")).toBe(Math.round((110_000 * 1.1) / 1000) * 1000);
+  it("applies the very-high COL multiplier (1.30x) for CA / NY / DC", () => {
+    // 140_000 * 1.30 = 182_000
+    expect(getSuggestedFounderComp("private_school", "CA", 100)).toBe(182_000);
+  });
+  it("applies the high COL multiplier (1.15x) for CO / IL / etc.", () => {
+    // charter_school xs band ($95k) * 1.15 = 109_250 → 109_000
+    expect(getSuggestedFounderComp("charter_school", "CO", 100)).toBe(109_000);
+  });
+  it("applies the low-COL multiplier (0.90x) for low-COL states", () => {
+    // private_school xs ($140k) * 0.90 = 126_000
+    expect(getSuggestedFounderComp("private_school", "MS", 100)).toBe(126_000);
+  });
+  it("applies the early-career tenure adjustment (0.85x) when founder has <4 years", () => {
+    // 140_000 * 0.85 = 119_000
+    expect(getSuggestedFounderComp("private_school", "OH", 100, 1)).toBe(119_000);
+  });
+  it("falls back to a blended NAIS+NACSA median for uncovered school types", () => {
+    // 'other' is uncovered → fallback table xs band = avg(140k, 95k) = 117_500 → 118_000
+    // medium COL × experienced (1.0) → 118_000
+    expect(getSuggestedFounderComp("other", "OH", 100)).toBe(118_000);
   });
   it("returns undefined when school type is missing", () => {
     expect(getSuggestedFounderComp(undefined, "CA")).toBeUndefined();
+  });
+});
+
+describe("getFounderCompBenchmark", () => {
+  it("returns a citation pointing at NAIS for private schools", () => {
+    const b = getFounderCompBenchmark({
+      schoolType: "private_school",
+      stateCode: "OH",
+      enrollmentY1: 100,
+    });
+    expect(b?.source.shortLabel).toMatch(/NAIS/);
+    expect(b?.isFallback).toBe(false);
+    expect(b?.sizeBand.key).toBe("xs");
+    expect(b?.colTier.key).toBe("medium");
+    expect(b?.tenureBand.key).toBe("experienced");
+    expect(b?.amount).toBe(140_000);
+  });
+  it("returns a citation pointing at NACSA for charter schools", () => {
+    const b = getFounderCompBenchmark({
+      schoolType: "charter_school",
+      stateCode: "TX",
+      enrollmentY1: 220,
+    });
+    expect(b?.source.shortLabel).toMatch(/NACSA/);
+    expect(b?.sizeBand.key).toBe("s");
+  });
+  it("returns a citation pointing at BLS for microschool / pod / coop / tutoring", () => {
+    const b = getFounderCompBenchmark({
+      schoolType: "microschool",
+      stateCode: "OH",
+      enrollmentY1: 30,
+    });
+    expect(b?.source.shortLabel).toMatch(/BLS/);
+  });
+  it("flags isFallback=true and uses a blended source for uncovered school types", () => {
+    const b = getFounderCompBenchmark({
+      schoolType: "boarding_school_with_farm",
+      stateCode: "OH",
+      enrollmentY1: 100,
+    });
+    expect(b?.isFallback).toBe(true);
+    expect(b?.source.shortLabel).toMatch(/[Ff]allback/);
+  });
+  it("includes a one-sentence explanation that mentions the size band", () => {
+    const b = getFounderCompBenchmark({
+      schoolType: "private_school",
+      stateCode: "CA",
+      enrollmentY1: 100,
+    });
+    expect(b?.explanation).toMatch(/under 150 students/i);
+    expect(b?.explanation).toMatch(/very high cost/i);
   });
 });
 
@@ -108,11 +181,24 @@ describe("getNormalizedFounderCompYears (defaulting + override)", () => {
     });
     expect(getNormalizedFounderCompYears(m, 5)).toEqual([90_000, 92_000, 95_000, 95_000, 95_000]);
   });
-  it("defaults to the suggested market rate (school type × state) when no override", () => {
-    const m = baseModel({ schoolProfile: { schoolType: "private_school", state: "CA" } as never });
+  it("defaults to the suggested market rate (school type × size × state) when no override", () => {
+    const m = baseModel({
+      schoolProfile: { schoolType: "private_school", state: "CA" } as never,
+      enrollment: { year1: 100 } as never,
+    });
     const ys = getNormalizedFounderCompYears(m, 5);
-    // CA → 95k * 1.25 = 118,750 → rounded to nearest $1k = 119,000
-    expect(ys[0]).toBe(119_000);
+    // private_school xs band ($140k) × very-high COL (1.30) × experienced (1.0)
+    // = 182_000 (rounded to nearest $1k)
+    expect(ys[0]).toBe(182_000);
+  });
+  it("picks a larger size band when year-1 enrollment grows", () => {
+    const m = baseModel({
+      schoolProfile: { schoolType: "private_school", state: "OH" } as never,
+      enrollment: { year1: 400 } as never,
+    });
+    const ys = getNormalizedFounderCompYears(m, 5);
+    // private_school m band ($230k) × medium COL (1.0) × experienced (1.0) = 230_000
+    expect(ys[0]).toBe(230_000);
   });
 });
 

@@ -12,6 +12,26 @@
 
 import type { FullModelData, StaffingRowLike, PayrollTaxComponentLike } from "./decision-engine/model-shape.js";
 import { YEAR_COUNT, DEFAULT_BENEFITS_RATE, DEFAULT_PAYROLL_TAX_RATE } from "./constants.js";
+import { getFounderCompBenchmark } from "./founder-comp-benchmarks.js";
+
+export {
+  getFounderCompBenchmark,
+  sizeBandFor,
+  colTierFor,
+  tenureBandFor,
+  SIZE_BANDS,
+  COL_TIERS,
+  TENURE_BANDS,
+  type FounderCompBenchmark,
+  type FounderCompBenchmarkInput,
+  type SizeBand,
+  type SizeBandDef,
+  type ColTier,
+  type ColTierDef,
+  type TenureBand,
+  type TenureBandDef,
+  type BenchmarkSource,
+} from "./founder-comp-benchmarks.js";
 
 /** Identifies the founder/leader row in the staffing roster. We pick the
  *  highest-paid `school_leadership` row (by FTE-weighted annualized rate),
@@ -33,42 +53,31 @@ export function findFounderRow(
   });
 }
 
-/** Small benchmark lookup table. Out of scope to provide a benchmark for
- *  every region (per the task spec), but we cover the main school types
- *  with simple state cost-of-living multipliers for the high-cost states. */
-const BASE_FOUNDER_COMP_BY_TYPE: Record<string, number> = {
-  charter_school: 110_000,
-  charter_public_funded: 110_000,
-  private_school: 95_000,
-  microschool: 75_000,
-  homeschool_coop: 55_000,
-  learning_pod: 55_000,
-  tutoring_center: 70_000,
-  other: 85_000,
-};
-
-const HIGH_COL_STATES = new Set([
-  "CA", "NY", "MA", "WA", "DC", "HI", "NJ", "CT",
-]);
-const MED_HIGH_COL_STATES = new Set([
-  "CO", "OR", "MD", "VA", "IL", "MN",
-]);
-
 /** Returns a suggested market-rate founder annual compensation for a school
- *  type and (optionally) state. Used to back the wizard's "use suggested
- *  market rate" affordance. Returns `undefined` when we don't have a sensible
- *  default to offer. */
+ *  type, state, and (optionally) year-1 enrollment + founder tenure. Used to
+ *  back the wizard's "use suggested market rate" affordance.
+ *
+ *  Backed by `getFounderCompBenchmark` (NAIS / NACSA / BLS medians keyed on
+ *  school type × size band × COL tier × tenure band). Returns `undefined`
+ *  only when `schoolType` is missing — uncovered school types still get a
+ *  blended fallback benchmark so the affordance always has something
+ *  sensible to offer.
+ *
+ *  Callers that want the source citation / size-band info for inline
+ *  display should call `getFounderCompBenchmark` directly. */
 export function getSuggestedFounderComp(
   schoolType?: string | null,
   stateCode?: string | null,
+  enrollmentY1?: number | null,
+  founderTenureYears?: number | null,
 ): number | undefined {
-  if (!schoolType) return undefined;
-  const base = BASE_FOUNDER_COMP_BY_TYPE[schoolType] ?? BASE_FOUNDER_COMP_BY_TYPE.other;
-  const upper = (stateCode || "").toUpperCase();
-  let mult = 1;
-  if (HIGH_COL_STATES.has(upper)) mult = 1.25;
-  else if (MED_HIGH_COL_STATES.has(upper)) mult = 1.1;
-  return Math.round((base * mult) / 1000) * 1000;
+  const bench = getFounderCompBenchmark({
+    schoolType,
+    stateCode,
+    enrollmentY1,
+    founderTenureYears,
+  });
+  return bench?.amount;
 }
 
 /** Pad / clamp a per-year array to exactly `yearCount` entries, broadcasting
@@ -141,8 +150,17 @@ export function getNormalizedFounderCompYears(
   if (Array.isArray(normalized) && normalized.length > 0) {
     return padYears(normalized, yearCount, normalized[0] ?? 0);
   }
-  const sp = data.schoolProfile as { schoolType?: string; state?: string } | undefined;
-  const suggested = getSuggestedFounderComp(sp?.schoolType, sp?.state);
+  const sp = data.schoolProfile as
+    | { schoolType?: string; state?: string; founderTenureYears?: number }
+    | undefined;
+  const enrollmentY1 =
+    typeof data.enrollment?.year1 === "number" ? data.enrollment.year1 : undefined;
+  const suggested = getSuggestedFounderComp(
+    sp?.schoolType,
+    sp?.state,
+    enrollmentY1,
+    sp?.founderTenureYears,
+  );
   if (suggested && suggested > 0) {
     return Array.from({ length: yearCount }, (_, y) => Math.round(suggested * Math.pow(colaFactor, y)));
   }

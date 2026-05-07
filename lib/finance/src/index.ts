@@ -111,7 +111,23 @@ export {
   getReportedFounderCompYears,
   getNormalizedFounderCompYears,
   computeFounderCompNormalization,
+  getFounderCompBenchmark,
+  sizeBandFor,
+  colTierFor,
+  tenureBandFor,
+  SIZE_BANDS,
+  COL_TIERS,
+  TENURE_BANDS,
   type FounderCompNormalization,
+  type FounderCompBenchmark,
+  type FounderCompBenchmarkInput,
+  type SizeBand,
+  type SizeBandDef,
+  type ColTier,
+  type ColTierDef,
+  type TenureBand,
+  type TenureBandDef,
+  type BenchmarkSource,
 } from "./founder-comp.js";
 
 export {

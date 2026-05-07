@@ -15,7 +15,7 @@ import {
   computeEffectiveFte,
   buildCapInsightText,
   CAP_INSIGHT_MIN_SAVINGS,
-  getSuggestedFounderComp,
+  getFounderCompBenchmark,
 } from "@workspace/finance";
 import {
   getStatePayrollTaxEntry,
@@ -98,7 +98,11 @@ const QUICK_FINDER_STORAGE_PREFIX = "staffing-quick-finder-filter:";
  *   - Reported (as planned): what they actually plan to draw
  *   - Normalized (market rate): what a market-rate hire would cost
  * The "Use suggested market rate" button populates the normalized row
- * from a small school-type × state-COL lookup. The wizard schema fields
+ * from `getFounderCompBenchmark` (Task #633), which resolves a real
+ * compensation benchmark keyed on school type × enrollment size band ×
+ * state cost-of-living tier × founder tenure band, sourced from NAIS,
+ * NACSA, and BLS OEWS medians. The panel shows the source citation
+ * inline so founders trust the suggested figure. The wizard schema fields
  * `staffing.reportedFounderComp[]` and `staffing.normalizedFounderComp[]`
  * carry these values into the engine; the difference becomes the
  * "founder-comp normalization adjustment" surfaced on lender packets and
@@ -108,20 +112,33 @@ function FounderCompPanel({
   schoolType,
   stateCode,
   colaRate,
+  enrollmentY1,
 }: {
   schoolType: string;
   stateCode: string;
   colaRate: number;
+  enrollmentY1: number;
 }) {
   const { watch, setValue } = useFormContext();
   const yearCount = useYearCount();
   const reported = (watch("staffing.reportedFounderComp") as number[] | undefined) || [];
   const normalized = (watch("staffing.normalizedFounderComp") as number[] | undefined) || [];
   const legacy = (watch("staffing.founderSalary") as number | undefined) || 0;
-  const suggested = useMemo(
-    () => getSuggestedFounderComp(schoolType, stateCode),
-    [schoolType, stateCode],
+  const founderTenureYears = (watch("schoolProfile.founderTenureYears") as number | undefined) ?? null;
+  // Task #633: benchmark now resolves school type × size band × COL tier ×
+  // founder tenure against NAIS / NACSA / BLS medians. We surface the
+  // citation inline so the founder understands where the number came from.
+  const benchmark = useMemo(
+    () =>
+      getFounderCompBenchmark({
+        schoolType,
+        stateCode,
+        enrollmentY1,
+        founderTenureYears,
+      }),
+    [schoolType, stateCode, enrollmentY1, founderTenureYears],
   );
+  const suggested = benchmark?.amount;
 
   const setReportedYear = useCallback(
     (yIdx: number, value: number) => {
@@ -218,13 +235,13 @@ function FounderCompPanel({
             <div className="text-[11px] uppercase tracking-wider font-semibold text-amber-900">
               Market rate (normalized)
             </div>
-            {suggested && suggested > 0 && (
+            {suggested && suggested > 0 && benchmark && (
               <button
                 type="button"
                 onClick={applySuggested}
                 data-testid="founder-apply-suggested"
                 className="text-[11px] font-semibold text-primary hover:text-primary/80 underline-offset-2 hover:underline"
-                title={`Suggested ${formatCurrency(suggested)} Y1, escalated by ${colaRate}% COLA`}
+                title={`${benchmark.explanation} ${formatCurrency(suggested)} Y1, escalated by ${colaRate}% COLA. Source: ${benchmark.source.citation}`}
               >
                 Use suggested market rate
               </button>
@@ -247,11 +264,31 @@ function FounderCompPanel({
               </label>
             ))}
           </div>
-          {suggested && suggested > 0 && (
-            <p className="text-[11px] text-amber-900/70 mt-2">
-              Suggested benchmark: {formatCurrency(suggested)} Y1 for {schoolType.replace(/_/g, " ")}
-              {stateCode ? ` in ${stateCode}` : ""}, escalated by your {colaRate}% COLA.
-            </p>
+          {suggested && suggested > 0 && benchmark && (
+            <div className="mt-2 space-y-1" data-testid="founder-benchmark-source">
+              <p className="text-[11px] text-amber-900/80 leading-snug">
+                Suggested benchmark: <span className="font-semibold">{formatCurrency(suggested)}</span> Y1
+                {stateCode ? ` in ${stateCode}` : ""}, escalated by your {colaRate}% COLA.
+              </p>
+              <p className="text-[11px] text-amber-900/70 leading-snug">
+                <span
+                  className="inline-block mr-1.5 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-semibold uppercase tracking-wide"
+                  data-testid="founder-benchmark-source-pill"
+                  title={benchmark.source.citation}
+                >
+                  {benchmark.source.shortLabel}
+                </span>
+                {benchmark.explanation}
+                {benchmark.isFallback && (
+                  <span className="ml-1 italic">
+                    (fallback — your school type isn't in NAIS or NACSA medians)
+                  </span>
+                )}
+              </p>
+              <p className="text-[10.5px] text-amber-900/60 leading-snug">
+                Source: {benchmark.source.citation}
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -854,6 +891,7 @@ export function StaffingStep() {
                 schoolType={schoolType}
                 stateCode={stateCode}
                 colaRate={colaRate}
+                enrollmentY1={y1Students}
               />
             )}
             <div className="flex items-baseline justify-between mb-2 gap-3">
