@@ -515,6 +515,8 @@ export interface CapitalDebtRow {
   amounts: number[]; note?: string; isLoan?: boolean;
   loanPrincipal?: number; loanRate?: number; loanTermYears?: number;
   flatAnnualDebtService?: number;
+  flatInterestRate?: number;
+  flatStartingBalance?: number;
   purpose?: string;
 }
 
@@ -828,6 +830,52 @@ export function computeInstructionalCostByYear(
     result.push(computeExpenseForYear(instrRows, y, enrollment[y], revenueByYear[y], costInflationPct, undefined, undefined, fte));
   }
   return result;
+}
+
+/**
+ * Splits a flat (guest-entered) annual debt-service payment into Interest /
+ * Principal / Ending-Balance year-by-year using a constant-rate amortization.
+ *
+ * - `annualPayment` is the total cash-out per year (held flat across years).
+ * - `startingBalance` is the outstanding principal at the start of year 0.
+ * - `annualRatePct` is the periodic interest rate expressed as a percent (e.g. 7 = 7%/yr).
+ *
+ * If the accrued interest in a given year exceeds the annual payment, interest
+ * is *capped* at the payment so the user-entered cash-out is never silently
+ * exceeded. In that case principal is 0 and the balance does not amortize that
+ * year (we deliberately do not model negative amortization — the unpaid
+ * interest is treated as off-statement). When the balance reaches zero,
+ * subsequent years emit zero interest, principal, and balance.
+ */
+export function computeFlatDebtSplit(
+  annualPayment: number,
+  startingBalance: number,
+  annualRatePct: number,
+  yearCount: number,
+): { interest: number[]; principal: number[]; balance: number[] } {
+  const rateFrac = annualRatePct / 100;
+  const interest: number[] = [];
+  const principal: number[] = [];
+  const balance: number[] = [];
+  let bal = Math.max(0, startingBalance);
+  for (let y = 0; y < yearCount; y++) {
+    if (bal <= 0 || annualPayment <= 0) {
+      interest.push(0);
+      principal.push(0);
+      balance.push(0);
+      continue;
+    }
+    const accrued = bal * rateFrac;
+    const interestY = Math.min(accrued, annualPayment);
+    let principalY = annualPayment - interestY;
+    if (principalY < 0) principalY = 0;
+    if (principalY > bal) principalY = bal;
+    bal = Math.max(0, bal - principalY);
+    interest.push(interestY);
+    principal.push(principalY);
+    balance.push(bal);
+  }
+  return { interest, principal, balance };
 }
 
 export function computeCapDebtForYear(rows: CapitalDebtRow[], y: number, students: number): number {

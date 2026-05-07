@@ -20,6 +20,10 @@ export interface CapitalDebtRow {
   loanRate?: number;
   loanTermYears?: number;
   flatAnnualDebtService?: number;
+  /** Optional annual interest rate (percent) for guest debt rows. Enables interest/principal split on the Debt Schedule. */
+  flatInterestRate?: number;
+  /** Optional starting outstanding balance for guest debt rows. Used together with flatInterestRate to amortize the row across the projection. */
+  flatStartingBalance?: number;
   purpose?: CapitalDebtRowPurpose;
   [key: string]: unknown;
 }

@@ -579,6 +579,18 @@ export const CreateModelBody = zod.object({
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
           flatAnnualDebtService: zod.number().optional(),
+          flatInterestRate: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional annual interest rate (percent) for guest debt rows. Enables interest\/principal split on the Debt Schedule.",
+            ),
+          flatStartingBalance: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional starting outstanding balance for guest debt rows. Used together with flatInterestRate to amortize the row across the projection.",
+            ),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
@@ -1185,6 +1197,18 @@ export const GetModelResponse = zod.object({
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
           flatAnnualDebtService: zod.number().optional(),
+          flatInterestRate: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional annual interest rate (percent) for guest debt rows. Enables interest\/principal split on the Debt Schedule.",
+            ),
+          flatStartingBalance: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional starting outstanding balance for guest debt rows. Used together with flatInterestRate to amortize the row across the projection.",
+            ),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
@@ -1797,6 +1821,18 @@ export const UpdateModelBody = zod.object({
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
           flatAnnualDebtService: zod.number().optional(),
+          flatInterestRate: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional annual interest rate (percent) for guest debt rows. Enables interest\/principal split on the Debt Schedule.",
+            ),
+          flatStartingBalance: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional starting outstanding balance for guest debt rows. Used together with flatInterestRate to amortize the row across the projection.",
+            ),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
@@ -2398,6 +2434,18 @@ export const UpdateModelResponse = zod.object({
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
           flatAnnualDebtService: zod.number().optional(),
+          flatInterestRate: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional annual interest rate (percent) for guest debt rows. Enables interest\/principal split on the Debt Schedule.",
+            ),
+          flatStartingBalance: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional starting outstanding balance for guest debt rows. Used together with flatInterestRate to amortize the row across the projection.",
+            ),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
@@ -3031,6 +3079,18 @@ export const ArchiveModelResponse = zod.object({
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
           flatAnnualDebtService: zod.number().optional(),
+          flatInterestRate: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional annual interest rate (percent) for guest debt rows. Enables interest\/principal split on the Debt Schedule.",
+            ),
+          flatStartingBalance: zod
+            .number()
+            .optional()
+            .describe(
+              "Optional starting outstanding balance for guest debt rows. Used together with flatInterestRate to amortize the row across the projection.",
+            ),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )

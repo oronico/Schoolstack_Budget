@@ -104,8 +104,10 @@ export interface GuestModel {
   hasExistingDebt: boolean;
   existingDebtBalance: number;
   existingAnnualDebtService: number;
+  existingDebtInterestRate: number;
   requestedLoanAmount: number;
   requestedLoanAnnualDebtService: number;
+  requestedLoanInterestRate: number;
 
   beginningCash: number;
   expectedSummerRevenueGap: boolean;
@@ -162,8 +164,10 @@ export const EMPTY_MODEL: GuestModel = {
   hasExistingDebt: false,
   existingDebtBalance: 0,
   existingAnnualDebtService: 0,
+  existingDebtInterestRate: 0,
   requestedLoanAmount: 0,
   requestedLoanAnnualDebtService: 0,
+  requestedLoanInterestRate: 0,
 
   beginningCash: 0,
   expectedSummerRevenueGap: false,
@@ -359,6 +363,8 @@ export function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       loanRate: 0,
       loanTermYears: 0,
       flatAnnualDebtService: m.existingAnnualDebtService,
+      flatInterestRate: m.existingDebtInterestRate > 0 ? m.existingDebtInterestRate : undefined,
+      flatStartingBalance: m.existingDebtBalance > 0 ? m.existingDebtBalance : undefined,
       note: "Pre-existing debt entered by guest wizard",
     });
   }
@@ -374,6 +380,8 @@ export function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       loanRate: 0,
       loanTermYears: 0,
       flatAnnualDebtService: m.requestedLoanAnnualDebtService,
+      flatInterestRate: m.requestedLoanInterestRate > 0 ? m.requestedLoanInterestRate : undefined,
+      flatStartingBalance: m.requestedLoanAmount > 0 ? m.requestedLoanAmount : undefined,
       note: "Requested financing entered by guest wizard",
     });
   }
@@ -1193,6 +1201,7 @@ export function UnderwritingLandingPage() {
                     <div className="grid sm:grid-cols-2 gap-3 mt-3">
                       <FieldText label="Outstanding balance ($)" type="number" min={0} value={String(model.existingDebtBalance)} onChange={(v) => updateNum("existingDebtBalance", v)} testId="input-existing-debt-balance" />
                       <FieldText label="Annual debt service ($)" type="number" min={0} value={String(model.existingAnnualDebtService)} onChange={(v) => updateNum("existingAnnualDebtService", v)} testId="input-existing-debt-service" hint="Total annual P+I payments" />
+                      <FieldText label="Interest rate (%) — optional" type="number" min={0} step={0.1} value={String(model.existingDebtInterestRate)} onChange={(v) => updateNum("existingDebtInterestRate", v)} testId="input-existing-debt-rate" hint="Lets us split the payment into Interest vs. Principal on the Debt Schedule" />
                     </div>
                   ) : null}
                 </div>
@@ -1202,6 +1211,7 @@ export function UnderwritingLandingPage() {
                   <div className="grid sm:grid-cols-2 gap-3">
                     <FieldText label="Requested loan amount ($)" type="number" min={0} value={String(model.requestedLoanAmount)} onChange={(v) => updateNum("requestedLoanAmount", v)} testId="input-requested-loan" hint="Leave $0 if not seeking a loan" />
                     <FieldText label="Estimated annual debt service ($)" type="number" min={0} value={String(model.requestedLoanAnnualDebtService)} onChange={(v) => updateNum("requestedLoanAnnualDebtService", v)} testId="input-requested-debt-service" hint="Estimated annual P+I on the requested loan" />
+                    <FieldText label="Interest rate (%) — optional" type="number" min={0} step={0.1} value={String(model.requestedLoanInterestRate)} onChange={(v) => updateNum("requestedLoanInterestRate", v)} testId="input-requested-loan-rate" hint="Lets us split the payment into Interest vs. Principal on the Debt Schedule" />
                   </div>
                 </div>
 

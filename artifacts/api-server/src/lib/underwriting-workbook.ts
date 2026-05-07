@@ -21,7 +21,7 @@ import {
   normalizeStaffingRow, getEnrollmentArray,
   computeAnnualDebt, computeAnnualDebtForYear, computeInterestPortion, computePrincipalPortion, computeRemainingBalance, computeDaysCashOnHand,
   computeRevLineItem, computeRevenueForYear, computePersonnelForYear, computeStaffingLoaded,
-  computeExpenseForYear, computeFacilityCostByYear, computeInstructionalCostByYear, computeCapDebtForYear, computeDebtServiceForYear,
+  computeExpenseForYear, computeFacilityCostByYear, computeInstructionalCostByYear, computeCapDebtForYear, computeDebtServiceForYear, computeFlatDebtSplit,
   driverVal, resolveEsc, tuitionWithTiers, computeNewStudents, computeReturningStudents, computeTotalFTE,
   buildPhaseTimelineData, buildPhaseDetails,
   OWNERSHIP_COLORS, OWNERSHIP_BG_COLORS,
@@ -2189,9 +2189,13 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     r += 2;
     sec(ws, r, yc + 1); ws.getCell(r, 1).value = "OTHER CONTRACTUAL DEBT SERVICE";
     for (const fd of flatDebtRows) {
+      const annual = fd.flatAnnualDebtService || 0;
+      const ratePct = fd.flatInterestRate || 0;
+      const startBal = fd.flatStartingBalance || 0;
+      const hasSplit = ratePct > 0 && startBal > 0;
+
       r++;
       flatDebtRowNumbers.push(r);
-      const annual = fd.flatAnnualDebtService || 0;
       ws.getCell(r, 1).value = fd.lineItem || "Other contractual debt service";
       dc(ws.getCell(r, 1));
       for (let y = 0; y < yc; y++) {
@@ -2201,6 +2205,37 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
         cell.numFmt = CUR;
         dc(cell);
         inputCell(cell);
+      }
+
+      if (hasSplit) {
+        const split = computeFlatDebtSplit(annual, startBal, ratePct, yc);
+
+        r++;
+        ws.getCell(r, 1).value = "  Interest"; dc(ws.getCell(r, 1));
+        for (let y = 0; y < yc; y++) {
+          const col = y + 2;
+          interestByYear[y] += split.interest[y];
+          ws.getCell(r, col).value = Math.round(split.interest[y]);
+          ws.getCell(r, col).numFmt = CUR; dc(ws.getCell(r, col));
+        }
+
+        r++;
+        ws.getCell(r, 1).value = "  Principal"; dc(ws.getCell(r, 1));
+        for (let y = 0; y < yc; y++) {
+          const col = y + 2;
+          principalByYear[y] += split.principal[y];
+          ws.getCell(r, col).value = Math.round(split.principal[y]);
+          ws.getCell(r, col).numFmt = CUR; dc(ws.getCell(r, col));
+        }
+
+        r++;
+        ws.getCell(r, 1).value = "  Ending Balance"; dc(ws.getCell(r, 1));
+        for (let y = 0; y < yc; y++) {
+          const col = y + 2;
+          balanceByYear[y] += split.balance[y];
+          ws.getCell(r, col).value = Math.round(split.balance[y]);
+          ws.getCell(r, col).numFmt = CUR; dc(ws.getCell(r, col)); outputCell(ws.getCell(r, col));
+        }
       }
     }
 

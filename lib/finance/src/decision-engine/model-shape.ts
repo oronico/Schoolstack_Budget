@@ -95,6 +95,8 @@ export interface CapitalDebtRowLike {
   loanRate?: number;
   loanTermYears?: number;
   flatAnnualDebtService?: number;
+  flatInterestRate?: number;
+  flatStartingBalance?: number;
   driverType: string;
   amounts?: number[];
   lineItem?: string;

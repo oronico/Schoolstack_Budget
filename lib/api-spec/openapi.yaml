@@ -1027,6 +1027,12 @@ components:
           type: number
         flatAnnualDebtService:
           type: number
+        flatInterestRate:
+          type: number
+          description: Optional annual interest rate (percent) for guest debt rows. Enables interest/principal split on the Debt Schedule.
+        flatStartingBalance:
+          type: number
+          description: Optional starting outstanding balance for guest debt rows. Used together with flatInterestRate to amortize the row across the projection.
         purpose:
           type: string
           enum: [startup, operating, refinance]
