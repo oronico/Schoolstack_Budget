@@ -1,0 +1,120 @@
+Build the next phase as “Full Underwriting Mode,” separate from the public guest wizard.
+
+Do not replace /underwriting. Add an authenticated underwriting workflow that converts a guest model or application record into a lender-grade underwriting file.
+
+Core requirements:
+
+1. Add underwriting data model
+Create structured sections for:
+- applicant/legal entity
+- founder/owner profile
+- school model
+- enrollment evidence
+- revenue evidence
+- expenses
+- staffing/founder compensation
+- facility compliance
+- insurance
+- existing debt
+- requested loan
+- use of funds
+- bank verification
+- document checklist
+- underwriting notes
+- final decision
+
+2. Add policy gates
+Implement hard-stop or manual-review flags:
+- charter school
+- sole proprietor
+- virtual-only
+- residential/home-based over policy cap
+- prohibited use of funds
+- ongoing litigation
+- no legal entity
+- no bank verification
+- no lease/facility path
+- no insurance path
+- requested amount outside allowed range
+
+3. Add evidence scoring
+Every key claim must have evidence status:
+- not provided
+- self-reported
+- document provided
+- verified
+- contradictory
+
+Score evidence separately from the financial answer.
+
+4. Add underwriting metrics
+Calculate:
+- DSCR
+- net income
+- net income after founder salary normalization
+- days cash on hand
+- cash runway
+- facility cost %
+- staffing cost %
+- debt-to-revenue
+- break-even enrollment
+- 10% enrollment downside
+- 20% enrollment downside
+- 90-day ESA/public funding delay
+- summer cash gap
+
+5. Add risk rating
+Create risk ratings:
+- Eligibility
+- Repayment capacity
+- Enrollment confidence
+- Facility/compliance
+- Financial management
+- Founder sustainability
+- Liquidity
+- Documentation completeness
+
+Use:
+Low / Moderate / Elevated / High / Critical
+
+6. Add credit memo export
+Generate a draft credit memo with:
+- executive summary
+- loan request
+- eligibility screen
+- verified facts
+- financial analysis
+- risk analysis
+- mitigants
+- open diligence items
+- conditions to close
+- recommendation
+
+7. Add audit trail
+Track:
+- who changed what
+- timestamp
+- prior value
+- new value
+- source of evidence
+- manual override reason
+
+8. Add tests
+Create regression tests for:
+- ineligible school type
+- missing founder salary
+- unverified enrollment
+- lease not in entity name
+- no CO/occupancy evidence
+- DSCR below 1.0x
+- 90-day funding delay failure
+- model passes only because founder unpaid
+- application cannot be approved with unresolved hard-stop flags
+
+Deliver:
+- implementation plan
+- database/schema changes
+- UI flow
+- scoring/risk rules
+- credit memo template
+- test plan
