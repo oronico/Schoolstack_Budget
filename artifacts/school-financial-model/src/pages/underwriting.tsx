@@ -10,6 +10,10 @@ import {
   Loader2,
   RotateCcw,
   Sparkles,
+  AlertTriangle,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 
@@ -30,6 +34,26 @@ type SchoolType =
 type SchoolStage = "new_school" | "operating_school";
 type ModelDuration = "single_year" | "five_year";
 type FundingProfile = "tuition_based" | "charter_public_funded" | "hybrid_mixed";
+
+type EnrollmentValidationStatus =
+  | "projected"
+  | "waitlist"
+  | "verbal_commitments"
+  | "deposits_collected"
+  | "signed_agreements";
+
+type FacilityType =
+  | "commercial"
+  | "church_shared"
+  | "dedicated_school"
+  | "community_center"
+  | "residential"
+  | "virtual"
+  | "other";
+
+type ReadinessStatus = "obtained" | "in_process" | "not_started" | "unknown";
+type InsuranceStatus = "active" | "quoted" | "not_started" | "unknown";
+type PublicFundingApprovalStatus = "approved" | "pending" | "not_applicable";
 
 interface GuestModel {
   version: number;
@@ -57,6 +81,36 @@ interface GuestModel {
   annualInsurance: number;
   annualCurriculum: number;
   annualOtherOpex: number;
+
+  founderIsPaidYear1: boolean;
+  founderAnnualCompensation: number;
+  founderCompensationBeginsYear: number;
+  unpaidOrVolunteerLaborDescription: string;
+
+  enrollmentValidationStatus: EnrollmentValidationStatus;
+  signedAgreementCount: number;
+  depositCount: number;
+  averageDepositAmount: number;
+  tuitionCollectionRate: number;
+  retentionRate: number;
+
+  facilityType: FacilityType;
+  leaseSigned: boolean;
+  leaseInEntityName: boolean;
+  occupancyDocumentationStatus: ReadinessStatus;
+  fireInspectionStatus: ReadinessStatus;
+  insuranceStatus: InsuranceStatus;
+
+  hasExistingDebt: boolean;
+  existingDebtBalance: number;
+  existingAnnualDebtService: number;
+  requestedLoanAmount: number;
+  requestedLoanAnnualDebtService: number;
+
+  beginningCash: number;
+  expectedSummerRevenueGap: boolean;
+  publicFundingApprovalStatus: PublicFundingApprovalStatus;
+  canWithstand90DayDelay: boolean;
 }
 
 const EMPTY_MODEL: GuestModel = {
@@ -85,6 +139,36 @@ const EMPTY_MODEL: GuestModel = {
   annualInsurance: 8000,
   annualCurriculum: 8000,
   annualOtherOpex: 12000,
+
+  founderIsPaidYear1: false,
+  founderAnnualCompensation: 0,
+  founderCompensationBeginsYear: 2,
+  unpaidOrVolunteerLaborDescription: "",
+
+  enrollmentValidationStatus: "projected",
+  signedAgreementCount: 0,
+  depositCount: 0,
+  averageDepositAmount: 0,
+  tuitionCollectionRate: 95,
+  retentionRate: 85,
+
+  facilityType: "commercial",
+  leaseSigned: false,
+  leaseInEntityName: false,
+  occupancyDocumentationStatus: "unknown",
+  fireInspectionStatus: "unknown",
+  insuranceStatus: "unknown",
+
+  hasExistingDebt: false,
+  existingDebtBalance: 0,
+  existingAnnualDebtService: 0,
+  requestedLoanAmount: 0,
+  requestedLoanAnnualDebtService: 0,
+
+  beginningCash: 0,
+  expectedSummerRevenueGap: false,
+  publicFundingApprovalStatus: "not_applicable",
+  canWithstand90DayDelay: false,
 };
 
 function loadGuestModel(): GuestModel {
@@ -129,50 +213,12 @@ function projectEnrollment(year1: number, growthPct: number): number[] {
   ];
 }
 
-/**
- * Assemble the guest model into the canonical wizard data shape that the
- * /api/public/* endpoints already accept. The PublicExportUnderwritingBody
- * Zod schema treats the body as `{ [key: string]: unknown }` and the
- * underlying engines fill in defaults for anything we omit, so partial
- * payloads still produce valid Excel + consultant analysis output.
- */
 function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
   const enroll = projectEnrollment(m.year1Students, m.annualGrowthPct);
   const teachersPerYear = enroll.map((s) =>
     Math.max(1, Math.ceil(s / Math.max(1, m.studentsPerTeacher))),
   );
 
-  // CANONICAL PAYLOAD CONTRACT — keep in lockstep with the authenticated
-  // wizard's Zod schemas (see model-wizard/schema.ts) and the engine in
-  // lib/finance/src/decision-engine/scenario-engine.ts.
-  //
-  // Critical (Task #598 underwriting fix sprint, Phase 1):
-  //   - revenueRowSchema.category enum (schema.ts:393):
-  //       "tuition_and_fees" | "tuition_offsets" | "public_funding" |
-  //       "school_choice" | "grants_contributions" | "philanthropy" |
-  //       "other_revenue"
-  //   - revenueRowSchema.driverType enum (schema.ts:399):
-  //       "annual_fixed" | "monthly" | "per_student" | "percent_of_base"
-  //   - expenseRow canonical built-in categories (expense-defaults.ts):
-  //       "personnel" | "instructional_program" | "technology" |
-  //       "occupancy_facility" | "administrative_general" | "capital_financing"
-  //   - expenseRowSchema.driverType enum (schema.ts:503):
-  //       "annual_fixed" | "monthly" | "per_student" |
-  //       "per_new_student" | "per_returning_student" |
-  //       "percent_of_revenue" | "per_fte"
-  //
-  // BUG that PHASE 1 fixes:
-  //   The previous payload labelled tuition + per-pupil rows as
-  //   driverType "per_student" while ALSO pre-multiplying the amounts by
-  //   enrollment. The engine then multiplied a SECOND time inside
-  //   driverVal() (`base * students`), producing ~30x revenue. A 30-student
-  //   microschool at $12k tuition was emitting ~$21M Y5. Per-student amounts
-  //   must be the per-pupil rate; the engine handles the multiplication.
-  //
-  //   benefitsRate / payrollTaxRate are WHOLE PERCENTS in the canonical
-  //   schema (z.number().min(0).max(100), see schema.ts:463-464). The engine
-  //   divides by 100 internally (scenario-engine.ts:226, 248). Sending
-  //   decimals (0.18, 0.0765) made benefits + payroll tax round to zero.
   const revenueRows: Array<Record<string, unknown>> = [];
   if (m.perStudentTuition > 0) {
     revenueRows.push({
@@ -181,9 +227,9 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       lineItem: "Tuition revenue",
       enabled: true,
       driverType: "per_student",
-      // PER-STUDENT RATE — engine multiplies by enrollment internally.
       amounts: [m.perStudentTuition, m.perStudentTuition, m.perStudentTuition, m.perStudentTuition, m.perStudentTuition],
       escalationRate: 3,
+      collectionRate: m.tuitionCollectionRate,
     });
   }
   if (m.perPupilPublicFunding > 0) {
@@ -193,7 +239,6 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       lineItem: "Per-pupil public funding",
       enabled: true,
       driverType: "per_student",
-      // PER-STUDENT RATE — engine multiplies by enrollment internally.
       amounts: [m.perPupilPublicFunding, m.perPupilPublicFunding, m.perPupilPublicFunding, m.perPupilPublicFunding, m.perPupilPublicFunding],
       escalationRate: 2,
     });
@@ -218,7 +263,6 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
     fte: teachersPerYear[0],
     annualizedRate: m.avgTeacherSalary,
     benefitsEligible: true,
-    // Whole percents — engine divides by 100. 0.18/0.0765 zeroed out benefits + tax.
     benefitsRate: 18,
     payrollTaxRate: 7.65,
     payrollLike: true,
@@ -236,6 +280,22 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       benefitsRate: 18,
       payrollTaxRate: 7.65,
       payrollLike: true,
+      notes: "",
+    });
+  }
+  if (m.founderIsPaidYear1 && m.founderAnnualCompensation > 0) {
+    staffingRows.push({
+      id: "staff_founder",
+      roleName: "Founder / executive director",
+      functionCategory: "school_leadership",
+      employmentType: "full_time",
+      fte: 1,
+      annualizedRate: m.founderAnnualCompensation,
+      benefitsEligible: true,
+      benefitsRate: 18,
+      payrollTaxRate: 7.65,
+      payrollLike: true,
+      startYear: m.founderCompensationBeginsYear,
       notes: "",
     });
   }
@@ -262,10 +322,6 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
     });
   }
   if (m.annualCurriculum > 0) {
-    // The UI labels this as "Annual curriculum & materials" (a total),
-    // so flow it through as annual_fixed. If we want per-student behavior
-    // later, rename the field to "Curriculum per student" and switch
-    // driverType to "per_student" with the per-pupil rate as the amount.
     expenseRows.push({
       id: "exp_curriculum",
       category: "instructional_program",
@@ -286,6 +342,36 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
     });
   }
 
+  const capitalAndDebtRows: Array<Record<string, unknown>> = [];
+  if (m.hasExistingDebt && m.existingAnnualDebtService > 0) {
+    capitalAndDebtRows.push({
+      id: "debt_existing",
+      lineItem: "Existing debt service",
+      enabled: true,
+      driverType: "annual_fixed",
+      amounts: [m.existingAnnualDebtService, m.existingAnnualDebtService, m.existingAnnualDebtService, m.existingAnnualDebtService, m.existingAnnualDebtService],
+      isLoan: false,
+      loanPrincipal: 0,
+      loanRate: 0,
+      loanTermYears: 0,
+      note: "Pre-existing debt entered by guest wizard",
+    });
+  }
+  if (m.requestedLoanAmount > 0 && m.requestedLoanAnnualDebtService > 0) {
+    capitalAndDebtRows.push({
+      id: "debt_requested",
+      lineItem: "Requested loan debt service",
+      enabled: true,
+      driverType: "annual_fixed",
+      amounts: [m.requestedLoanAnnualDebtService, m.requestedLoanAnnualDebtService, m.requestedLoanAnnualDebtService, m.requestedLoanAnnualDebtService, m.requestedLoanAnnualDebtService],
+      isLoan: false,
+      loanPrincipal: 0,
+      loanRate: 0,
+      loanTermYears: 0,
+      note: "Requested financing entered by guest wizard",
+    });
+  }
+
   return {
     schoolProfile: {
       schoolName: m.schoolName || "Untitled School",
@@ -297,7 +383,7 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       fiscalYearStartMonth: 7,
       isPartialFirstYear: false,
       year1OperatingMonths: 12,
-      locationSecured: m.monthlyRent > 0,
+      locationSecured: m.leaseSigned,
       ownershipType: m.monthlyRent > 0 ? "rent" : undefined,
       monthlyRent: m.monthlyRent,
       annualRentEscalation: 3,
@@ -306,7 +392,14 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       hasMortgage: false,
       mortgageMonthlyPayment: 0,
     },
-    enrollment: { year1: enroll[0], year2: enroll[1], year3: enroll[2], year4: enroll[3], year5: enroll[4] },
+    enrollment: {
+      year1: enroll[0],
+      year2: enroll[1],
+      year3: enroll[2],
+      year4: enroll[3],
+      year5: enroll[4],
+      retentionRate: m.retentionRate,
+    },
     programs: [],
     tuitionEscalation: { rate: 3 },
     revenueSources: {
@@ -331,7 +424,10 @@ function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       annualInsurance: m.annualInsurance,
     },
     expenseRows,
-    capitalAndDebtRows: [],
+    capitalAndDebtRows,
+    openingBalances: {
+      cash: m.beginningCash,
+    },
     priorYearSnapshot: {},
     budgetNarrative: {
       missionAndVision: "",
@@ -354,7 +450,8 @@ const STEP_TITLES = [
   "Enrollment",
   "Revenue",
   "Staffing",
-  "Expenses",
+  "Expenses & facility",
+  "Debt & cash",
   "Review & export",
 ];
 
@@ -365,6 +462,11 @@ function fmtMoney(n: number): string {
   if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`;
   if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}K`;
   return `${sign}$${Math.round(abs).toLocaleString()}`;
+}
+
+function fmtPct(n: number): string {
+  if (!isFinite(n)) return "—";
+  return `${n.toFixed(1)}%`;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -386,6 +488,7 @@ function FieldText(props: {
   hint?: string;
   type?: "text" | "number";
   min?: number;
+  max?: number;
   step?: number;
 }) {
   return (
@@ -396,6 +499,7 @@ function FieldText(props: {
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
         min={props.min}
+        max={props.max}
         step={props.step}
         data-testid={props.testId}
         className="w-full px-3 py-2 border border-[#1E293B]/15 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#328555]/30 focus:border-[#328555] text-[#1E293B] bg-white"
@@ -433,6 +537,171 @@ function FieldSelect<T extends string>(props: {
   );
 }
 
+function FieldToggle(props: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  testId: string;
+  hint?: string;
+}) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={props.checked}
+        onChange={(e) => props.onChange(e.target.checked)}
+        data-testid={props.testId}
+        className="mt-0.5 w-4 h-4 text-[#328555] border-[#1E293B]/20 rounded focus:ring-[#328555]/30"
+      />
+      <div>
+        <span className="block text-sm font-semibold text-[#1E293B]">{props.label}</span>
+        {props.hint ? <span className="block text-xs text-[#1E293B]/50 mt-0.5">{props.hint}</span> : null}
+      </div>
+    </label>
+  );
+}
+
+type FlagSeverity = "critical" | "high" | "caution" | "strong";
+
+interface LenderFlag {
+  severity: FlagSeverity;
+  label: string;
+}
+
+function computeLenderFlags(m: GuestModel, enrollProjection: number[]): LenderFlag[] {
+  const flags: LenderFlag[] = [];
+  const enroll = enrollProjection;
+  const y1Rev =
+    m.perStudentTuition * enroll[0] * (m.tuitionCollectionRate / 100) +
+    m.perPupilPublicFunding * enroll[0] +
+    m.philanthropyAnnual;
+
+  const annualRent = m.monthlyRent * 12;
+  const facilityTotal = annualRent + m.annualUtilities + m.annualInsurance;
+  const facilityRatio = y1Rev > 0 ? (facilityTotal / y1Rev) * 100 : 0;
+
+  const teacherCount = Math.max(1, Math.ceil(enroll[0] / Math.max(1, m.studentsPerTeacher)));
+  let staffingTotal = teacherCount * m.avgTeacherSalary * 1.2565 + m.numAdminStaff * m.avgAdminSalary * 1.2565;
+  if (m.founderIsPaidYear1 && m.founderAnnualCompensation > 0 && m.founderCompensationBeginsYear <= 1) {
+    staffingTotal += m.founderAnnualCompensation * 1.2565;
+  }
+  const staffingRatio = y1Rev > 0 ? (staffingTotal / y1Rev) * 100 : 0;
+
+  const totalExpenses = staffingTotal + facilityTotal + m.annualCurriculum + m.annualOtherOpex;
+  const netIncome = y1Rev - totalExpenses;
+
+  const totalDebtService = m.existingAnnualDebtService + m.requestedLoanAnnualDebtService;
+  const dscr = totalDebtService > 0 ? netIncome / totalDebtService : 0;
+
+  const monthlyCashBurn = totalExpenses / 12;
+  const daysCashOnHand = monthlyCashBurn > 0 ? (m.beginningCash / (monthlyCashBurn / 30)) : 999;
+
+  if (!m.founderIsPaidYear1) {
+    flags.push({ severity: "high", label: "No founder compensation in Year 1 — lenders may question sustainability" });
+  }
+
+  if (m.schoolStage === "new_school" && m.enrollmentValidationStatus !== "signed_agreements" && m.enrollmentValidationStatus !== "deposits_collected") {
+    if (m.depositCount < 10 && m.signedAgreementCount < 10) {
+      flags.push({ severity: "high", label: "Fewer than 10 deposits or signed agreements for Year 1" });
+    }
+  }
+
+  if (m.tuitionCollectionRate >= 100) {
+    flags.push({ severity: "caution", label: "Tuition collection modeled at 100%" });
+  }
+
+  if (m.schoolStage === "operating_school" && m.retentionRate < 80) {
+    flags.push({ severity: "high", label: `Retention rate ${m.retentionRate}% is below 80% for an operating school` });
+  }
+
+  if (m.facilityType === "residential") {
+    flags.push({ severity: "high", label: "Residential facility — may be ineligible for some lending programs" });
+  }
+
+  if (!m.leaseSigned && m.monthlyRent > 0) {
+    flags.push({ severity: "high", label: "No signed lease" });
+  }
+
+  if (m.occupancyDocumentationStatus === "not_started" || m.occupancyDocumentationStatus === "unknown") {
+    flags.push({ severity: "high", label: "No occupancy documentation path" });
+  }
+
+  if (m.insuranceStatus === "not_started" || m.insuranceStatus === "unknown") {
+    flags.push({ severity: "high", label: "No insurance path" });
+  }
+
+  if (facilityRatio > 22) {
+    flags.push({ severity: "high", label: `Facility cost is ${fmtPct(facilityRatio)} of revenue (above 22% threshold)` });
+  } else if (facilityRatio > 15 && facilityRatio <= 22) {
+    flags.push({ severity: "caution", label: `Facility cost is ${fmtPct(facilityRatio)} of revenue (above 15% benchmark)` });
+  } else if (facilityRatio <= 15 && facilityRatio > 0) {
+    flags.push({ severity: "strong", label: `Facility cost is ${fmtPct(facilityRatio)} of revenue (below 15% benchmark)` });
+  }
+
+  if (staffingRatio > 65) {
+    flags.push({ severity: "high", label: `Staffing is ${fmtPct(staffingRatio)} of revenue (above 65% threshold)` });
+  } else if (staffingRatio > 55 && staffingRatio <= 65) {
+    flags.push({ severity: "caution", label: `Staffing is ${fmtPct(staffingRatio)} of revenue (above 55% benchmark)` });
+  } else if (staffingRatio <= 55 && staffingRatio > 0) {
+    flags.push({ severity: "strong", label: `Staffing is ${fmtPct(staffingRatio)} of revenue (below 55% benchmark)` });
+  }
+
+  if (daysCashOnHand < 30) {
+    flags.push({ severity: "critical", label: `Days cash on hand: ${Math.round(daysCashOnHand)} (critical — below 30 days)` });
+  } else if (daysCashOnHand < 45) {
+    flags.push({ severity: "high", label: `Days cash on hand: ${Math.round(daysCashOnHand)} (below 45-day threshold)` });
+  } else if (daysCashOnHand < 90) {
+    flags.push({ severity: "caution", label: `Days cash on hand: ${Math.round(daysCashOnHand)} (below 90-day benchmark)` });
+  } else if (daysCashOnHand >= 90 && daysCashOnHand < 999) {
+    flags.push({ severity: "strong", label: `Days cash on hand: ${Math.round(daysCashOnHand)} (above 90-day benchmark)` });
+  }
+
+  if (totalDebtService > 0) {
+    if (dscr < 1.0) {
+      flags.push({ severity: "critical", label: `DSCR is ${dscr.toFixed(2)}x (below 1.0x — cannot cover debt)` });
+    } else if (dscr < 1.15) {
+      flags.push({ severity: "high", label: `DSCR is ${dscr.toFixed(2)}x (below 1.15x threshold)` });
+    } else if (dscr < 1.25) {
+      flags.push({ severity: "caution", label: `DSCR is ${dscr.toFixed(2)}x (below 1.25x benchmark)` });
+    } else {
+      flags.push({ severity: "strong", label: `DSCR is ${dscr.toFixed(2)}x (above 1.25x benchmark)` });
+    }
+  }
+
+  if (netIncome > 0 && y1Rev > 0) {
+    const margin = (netIncome / y1Rev) * 100;
+    if (margin > 5) {
+      flags.push({ severity: "strong", label: `Projected Year 1 margin: ${fmtPct(margin)}` });
+    }
+  } else if (netIncome < 0) {
+    flags.push({ severity: "high", label: `Year 1 projected deficit: ${fmtMoney(netIncome)}` });
+  }
+
+  if (m.leaseSigned && m.leaseInEntityName) {
+    flags.push({ severity: "strong", label: "Lease signed and in the school entity's name" });
+  }
+
+  if (m.enrollmentValidationStatus === "signed_agreements" && m.signedAgreementCount >= 10) {
+    flags.push({ severity: "strong", label: `${m.signedAgreementCount} signed enrollment agreements` });
+  } else if (m.enrollmentValidationStatus === "deposits_collected" && m.depositCount >= 10) {
+    flags.push({ severity: "strong", label: `${m.depositCount} enrollment deposits collected (avg ${fmtMoney(m.averageDepositAmount)})` });
+  }
+
+  if (!m.canWithstand90DayDelay && (m.fundingProfile === "charter_public_funded" || m.fundingProfile === "hybrid_mixed")) {
+    flags.push({ severity: "high", label: "Cannot withstand a 90-day public funding delay" });
+  }
+
+  return flags;
+}
+
+function overallReadiness(flags: LenderFlag[]): { status: string; color: string; Icon: typeof ShieldCheck } {
+  const hasCritical = flags.some((f) => f.severity === "critical");
+  const highCount = flags.filter((f) => f.severity === "high").length;
+  if (hasCritical || highCount >= 4) return { status: "Not Yet Ready", color: "#DC2626", Icon: ShieldX };
+  if (highCount >= 2) return { status: "Developing", color: "#D97706", Icon: ShieldAlert };
+  return { status: "Strong", color: "#328555", Icon: ShieldCheck };
+}
+
 interface ConsultantResult {
   executiveSummary?: string;
   metrics?: Record<string, { value?: number; label?: string; status?: string }>;
@@ -457,6 +726,13 @@ export function UnderwritingLandingPage() {
     () => projectEnrollment(model.year1Students, model.annualGrowthPct),
     [model.year1Students, model.annualGrowthPct],
   );
+
+  const lenderFlags = useMemo(
+    () => computeLenderFlags(model, enrollProjection),
+    [model, enrollProjection],
+  );
+
+  const readiness = useMemo(() => overallReadiness(lenderFlags), [lenderFlags]);
 
   function update<K extends keyof GuestModel>(k: K, v: GuestModel[K]) {
     setModel((m) => ({ ...m, [k]: v }));
@@ -540,6 +816,10 @@ export function UnderwritingLandingPage() {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  const strengths = lenderFlags.filter((f) => f.severity === "strong").slice(0, 3);
+  const concerns = lenderFlags.filter((f) => f.severity === "critical" || f.severity === "high" || f.severity === "caution").slice(0, 3);
+  const topConcern = concerns[0];
+
   return (
     <Layout>
       <section className="bg-gradient-to-b from-[#FAF9F7] to-white py-10 md:py-16">
@@ -575,7 +855,7 @@ export function UnderwritingLandingPage() {
               const isCurrent = n === step;
               const isDone = n < step;
               return (
-                <li key={n} className="flex-1 min-w-[120px]">
+                <li key={n} className="flex-1 min-w-[100px]">
                   <button
                     type="button"
                     onClick={() => setStep(n)}
@@ -679,6 +959,40 @@ export function UnderwritingLandingPage() {
                     ))}
                   </div>
                 </div>
+
+                <div className="border-t border-[#1E293B]/10 pt-5">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-3">Enrollment validation</h3>
+                  <FieldSelect
+                    label="Enrollment evidence"
+                    value={model.enrollmentValidationStatus}
+                    testId="select-enrollment-validation"
+                    onChange={(v) => update("enrollmentValidationStatus", v)}
+                    options={[
+                      { value: "projected", label: "Projected (no commitments yet)" },
+                      { value: "waitlist", label: "Waitlist interest" },
+                      { value: "verbal_commitments", label: "Verbal commitments" },
+                      { value: "deposits_collected", label: "Deposits collected" },
+                      { value: "signed_agreements", label: "Signed enrollment agreements" },
+                    ]}
+                    hint="Lenders weigh enrollment evidence heavily"
+                  />
+                  {model.enrollmentValidationStatus === "signed_agreements" ? (
+                    <div className="mt-3">
+                      <FieldText label="Signed agreement count" type="number" min={0} value={String(model.signedAgreementCount)} onChange={(v) => updateNum("signedAgreementCount", v)} testId="input-signed-agreements" />
+                    </div>
+                  ) : null}
+                  {model.enrollmentValidationStatus === "deposits_collected" ? (
+                    <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                      <FieldText label="Number of deposits" type="number" min={0} value={String(model.depositCount)} onChange={(v) => updateNum("depositCount", v)} testId="input-deposit-count" />
+                      <FieldText label="Average deposit amount ($)" type="number" min={0} value={String(model.averageDepositAmount)} onChange={(v) => updateNum("averageDepositAmount", v)} testId="input-avg-deposit" />
+                    </div>
+                  ) : null}
+
+                  <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                    <FieldText label="Tuition collection rate (%)" type="number" min={0} max={100} step={1} value={String(model.tuitionCollectionRate)} onChange={(v) => updateNum("tuitionCollectionRate", v)} testId="input-collection-rate" hint="Percent of billed tuition you expect to collect" />
+                    <FieldText label="Retention rate (%)" type="number" min={0} max={100} step={1} value={String(model.retentionRate)} onChange={(v) => updateNum("retentionRate", v)} testId="input-retention-rate" hint="Year-over-year student retention" />
+                  </div>
+                </div>
               </div>
             ) : null}
 
@@ -709,14 +1023,53 @@ export function UnderwritingLandingPage() {
                   <FieldText label="Number of admin / leadership FTEs" type="number" min={0} step={0.5} value={String(model.numAdminStaff)} onChange={(v) => updateNum("numAdminStaff", v)} testId="input-num-admin" />
                   <FieldText label="Average admin salary ($)" type="number" min={0} step={1000} value={String(model.avgAdminSalary)} onChange={(v) => updateNum("avgAdminSalary", v)} testId="input-admin-salary" />
                 </div>
+
+                <div className="border-t border-[#1E293B]/10 pt-5">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-3">Founder compensation</h3>
+                  <FieldToggle
+                    label="Founder is paid in Year 1"
+                    checked={model.founderIsPaidYear1}
+                    onChange={(v) => update("founderIsPaidYear1", v)}
+                    testId="toggle-founder-paid"
+                    hint="Is the founder drawing a salary from the school?"
+                  />
+                  {model.founderIsPaidYear1 ? (
+                    <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                      <FieldText label="Founder annual compensation ($)" type="number" min={0} step={1000} value={String(model.founderAnnualCompensation)} onChange={(v) => updateNum("founderAnnualCompensation", v)} testId="input-founder-comp" />
+                      <FieldSelect
+                        label="Compensation begins"
+                        value={String(model.founderCompensationBeginsYear) as string}
+                        testId="select-founder-comp-year"
+                        onChange={(v) => updateNum("founderCompensationBeginsYear", v)}
+                        options={[
+                          { value: "1", label: "Year 1" },
+                          { value: "2", label: "Year 2" },
+                          { value: "3", label: "Year 3" },
+                          { value: "4", label: "Year 4" },
+                          { value: "5", label: "Year 5" },
+                        ]}
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <FieldText
+                        label="Unpaid / volunteer labor description (optional)"
+                        value={model.unpaidOrVolunteerLaborDescription}
+                        onChange={(v) => update("unpaidOrVolunteerLaborDescription", v)}
+                        testId="input-volunteer-description"
+                        hint="Briefly describe who is doing unpaid work and their roles"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             ) : null}
 
             {step === 5 ? (
               <div className="space-y-5">
-                <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Expenses</h2>
+                <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Expenses & facility</h2>
                 <p className="text-sm text-[#1E293B]/60">
-                  Capture your big-rock annual costs. Curriculum scales per student; the others stay flat.
+                  Capture your big-rock annual costs and facility readiness.
                 </p>
                 <FieldText label="Monthly rent ($)" type="number" min={0} step={100} value={String(model.monthlyRent)} onChange={(v) => updateNum("monthlyRent", v)} testId="input-monthly-rent" />
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -724,13 +1077,141 @@ export function UnderwritingLandingPage() {
                   <FieldText label="Annual insurance ($)" type="number" min={0} step={500} value={String(model.annualInsurance)} onChange={(v) => updateNum("annualInsurance", v)} testId="input-insurance" />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <FieldText label="Annual curriculum & materials ($)" type="number" min={0} step={500} value={String(model.annualCurriculum)} onChange={(v) => updateNum("annualCurriculum", v)} testId="input-curriculum" hint="Scales with enrollment" />
+                  <FieldText label="Annual curriculum & materials ($)" type="number" min={0} step={500} value={String(model.annualCurriculum)} onChange={(v) => updateNum("annualCurriculum", v)} testId="input-curriculum" />
                   <FieldText label="Other annual operating ($)" type="number" min={0} step={500} value={String(model.annualOtherOpex)} onChange={(v) => updateNum("annualOtherOpex", v)} testId="input-other-opex" />
+                </div>
+
+                <div className="border-t border-[#1E293B]/10 pt-5">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-3">Facility readiness</h3>
+                  <FieldSelect
+                    label="Facility type"
+                    value={model.facilityType}
+                    testId="select-facility-type"
+                    onChange={(v) => update("facilityType", v)}
+                    options={[
+                      { value: "commercial", label: "Commercial space" },
+                      { value: "church_shared", label: "Church / shared space" },
+                      { value: "dedicated_school", label: "Dedicated school building" },
+                      { value: "community_center", label: "Community center" },
+                      { value: "residential", label: "Residential property" },
+                      { value: "virtual", label: "Virtual / online" },
+                      { value: "other", label: "Other" },
+                    ]}
+                  />
+                  <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                    <FieldToggle label="Lease signed" checked={model.leaseSigned} onChange={(v) => update("leaseSigned", v)} testId="toggle-lease-signed" />
+                    <FieldToggle label="Lease in school entity name" checked={model.leaseInEntityName} onChange={(v) => update("leaseInEntityName", v)} testId="toggle-lease-entity" />
+                  </div>
+                  <div className="grid sm:grid-cols-3 gap-3 mt-3">
+                    <FieldSelect
+                      label="Occupancy docs"
+                      value={model.occupancyDocumentationStatus}
+                      testId="select-occupancy-status"
+                      onChange={(v) => update("occupancyDocumentationStatus", v)}
+                      options={[
+                        { value: "obtained", label: "Obtained" },
+                        { value: "in_process", label: "In process" },
+                        { value: "not_started", label: "Not started" },
+                        { value: "unknown", label: "Unknown" },
+                      ]}
+                    />
+                    <FieldSelect
+                      label="Fire inspection"
+                      value={model.fireInspectionStatus}
+                      testId="select-fire-status"
+                      onChange={(v) => update("fireInspectionStatus", v)}
+                      options={[
+                        { value: "obtained", label: "Passed" },
+                        { value: "in_process", label: "Scheduled" },
+                        { value: "not_started", label: "Not started" },
+                        { value: "unknown", label: "Unknown" },
+                      ]}
+                    />
+                    <FieldSelect
+                      label="Insurance"
+                      value={model.insuranceStatus}
+                      testId="select-insurance-status"
+                      onChange={(v) => update("insuranceStatus", v)}
+                      options={[
+                        { value: "active", label: "Active" },
+                        { value: "quoted", label: "Quoted" },
+                        { value: "not_started", label: "Not started" },
+                        { value: "unknown", label: "Unknown" },
+                      ]}
+                    />
+                  </div>
                 </div>
               </div>
             ) : null}
 
             {step === 6 ? (
+              <div className="space-y-5">
+                <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Debt & cash</h2>
+                <p className="text-sm text-[#1E293B]/60">
+                  Tell us about any existing debt and your cash position. These drive DSCR and cash runway calculations.
+                </p>
+
+                <FieldText label="Beginning cash on hand ($)" type="number" min={0} step={1000} value={String(model.beginningCash)} onChange={(v) => updateNum("beginningCash", v)} testId="input-beginning-cash" hint="Cash available before Year 1 operations begin" />
+
+                <div className="border-t border-[#1E293B]/10 pt-5">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-3">Existing debt</h3>
+                  <FieldToggle label="School has existing debt" checked={model.hasExistingDebt} onChange={(v) => update("hasExistingDebt", v)} testId="toggle-existing-debt" />
+                  {model.hasExistingDebt ? (
+                    <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                      <FieldText label="Outstanding balance ($)" type="number" min={0} value={String(model.existingDebtBalance)} onChange={(v) => updateNum("existingDebtBalance", v)} testId="input-existing-debt-balance" />
+                      <FieldText label="Annual debt service ($)" type="number" min={0} value={String(model.existingAnnualDebtService)} onChange={(v) => updateNum("existingAnnualDebtService", v)} testId="input-existing-debt-service" hint="Total annual P+I payments" />
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="border-t border-[#1E293B]/10 pt-5">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-3">Requested financing</h3>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <FieldText label="Requested loan amount ($)" type="number" min={0} value={String(model.requestedLoanAmount)} onChange={(v) => updateNum("requestedLoanAmount", v)} testId="input-requested-loan" hint="Leave $0 if not seeking a loan" />
+                    <FieldText label="Estimated annual debt service ($)" type="number" min={0} value={String(model.requestedLoanAnnualDebtService)} onChange={(v) => updateNum("requestedLoanAnnualDebtService", v)} testId="input-requested-debt-service" hint="Estimated annual P+I on the requested loan" />
+                  </div>
+                </div>
+
+                <div className="border-t border-[#1E293B]/10 pt-5">
+                  <h3 className="text-sm font-bold text-[#1E293B] mb-3">Cash flow considerations</h3>
+                  {(model.fundingProfile === "charter_public_funded" || model.fundingProfile === "hybrid_mixed") ? (
+                    <>
+                      <FieldSelect
+                        label="Public funding approval status"
+                        value={model.publicFundingApprovalStatus}
+                        testId="select-funding-approval"
+                        onChange={(v) => update("publicFundingApprovalStatus", v)}
+                        options={[
+                          { value: "approved", label: "Approved" },
+                          { value: "pending", label: "Pending" },
+                          { value: "not_applicable", label: "Not applicable" },
+                        ]}
+                      />
+                      <div className="mt-3">
+                        <FieldToggle
+                          label="Can withstand a 90-day public funding delay"
+                          checked={model.canWithstand90DayDelay}
+                          onChange={(v) => update("canWithstand90DayDelay", v)}
+                          testId="toggle-90day-delay"
+                          hint="Many charter payments arrive 60-90 days after the fiscal year starts"
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                  <div className="mt-3">
+                    <FieldToggle
+                      label="Expecting a summer revenue gap"
+                      checked={model.expectedSummerRevenueGap}
+                      onChange={(v) => update("expectedSummerRevenueGap", v)}
+                      testId="toggle-summer-gap"
+                      hint="Many schools collect tuition only during the academic year"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {step === 7 ? (
               <div className="space-y-6">
                 <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Review & export</h2>
 
@@ -739,7 +1220,61 @@ export function UnderwritingLandingPage() {
                   <div className="flex justify-between"><span className="text-[#1E293B]/60">Year-1 students</span><span className="font-semibold text-[#1E293B]" data-testid="review-y1-students">{model.year1Students.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-[#1E293B]/60">Year-5 students (projected)</span><span className="font-semibold text-[#1E293B]" data-testid="review-y5-students">{enrollProjection[4].toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-[#1E293B]/60">Per-student tuition</span><span className="font-semibold text-[#1E293B]">{fmtMoney(model.perStudentTuition)}/yr</span></div>
+                  <div className="flex justify-between"><span className="text-[#1E293B]/60">Tuition collection rate</span><span className="font-semibold text-[#1E293B]">{model.tuitionCollectionRate}%</span></div>
                   <div className="flex justify-between"><span className="text-[#1E293B]/60">Annual rent</span><span className="font-semibold text-[#1E293B]">{fmtMoney(model.monthlyRent * 12)}</span></div>
+                  <div className="flex justify-between"><span className="text-[#1E293B]/60">Beginning cash</span><span className="font-semibold text-[#1E293B]">{fmtMoney(model.beginningCash)}</span></div>
+                  {model.requestedLoanAmount > 0 ? (
+                    <div className="flex justify-between"><span className="text-[#1E293B]/60">Requested loan</span><span className="font-semibold text-[#1E293B]">{fmtMoney(model.requestedLoanAmount)}</span></div>
+                  ) : null}
+                </div>
+
+                <div className="border-2 rounded-xl p-5" style={{ borderColor: `${readiness.color}30` }} data-testid="lender-readiness-snapshot">
+                  <h3 className="font-display text-base font-bold text-[#1E293B] mb-4 flex items-center gap-2">
+                    <readiness.Icon className="w-5 h-5" style={{ color: readiness.color }} />
+                    Lender Readiness Snapshot
+                  </h3>
+
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-sm font-semibold text-[#1E293B]/60">Overall:</span>
+                    <span className="px-3 py-1 rounded-full text-sm font-bold text-white" style={{ backgroundColor: readiness.color }} data-testid="readiness-status">
+                      {readiness.status}
+                    </span>
+                  </div>
+
+                  {strengths.length > 0 ? (
+                    <div className="mb-4">
+                      <p className="text-xs font-bold text-[#328555] uppercase tracking-wide mb-2">Strengths</p>
+                      <ul className="space-y-1">
+                        {strengths.map((f, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-[#1E293B]/80">
+                            <CheckCircle2 className="w-4 h-4 mt-0.5 text-[#328555] shrink-0" />
+                            {f.label}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {concerns.length > 0 ? (
+                    <div className="mb-4">
+                      <p className="text-xs font-bold text-[#D97706] uppercase tracking-wide mb-2">Lender concerns</p>
+                      <ul className="space-y-1">
+                        {concerns.map((f, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-[#1E293B]/80">
+                            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: f.severity === "critical" ? "#DC2626" : f.severity === "high" ? "#D97706" : "#CA8A04" }} />
+                            {f.label}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {topConcern ? (
+                    <div className="bg-[#FEF3C7] border border-[#D97706]/20 rounded-lg p-3">
+                      <p className="text-xs font-bold text-[#92400E] uppercase tracking-wide mb-1">Suggested next fix</p>
+                      <p className="text-sm text-[#92400E]">{topConcern.label}</p>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3">
