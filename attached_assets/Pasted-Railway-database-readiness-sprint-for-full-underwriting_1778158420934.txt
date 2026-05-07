@@ -1,0 +1,355 @@
+Railway database readiness sprint for full underwriting.
+
+Repo:
+oronico/Schoolstack_Budget
+
+Goal:
+Confirm the Railway Postgres database supports the current public guest wizard and authenticated budget model today, then design the schema extension required for full underwriting. Do not break existing users, saved models, exports, auth, shared links, or analytics.
+
+Current DB state:
+The app already has tables for users, schools, financial_models, exports, events, rate_limits, feedback, error_logs, shared_links, and pending_signups. The financial_models table stores most model data in JSONB. That is acceptable for budgeting, but not sufficient for full underwriting.
+
+Part A. Verify Railway production database
+
+1. Confirm Railway has a Postgres service attached.
+2. Confirm API service has DATABASE_URL set.
+3. Confirm /api/ready returns 200 and db: connected.
+4. Confirm schema tables exist:
+   - users
+   - schools
+   - financial_models
+   - exports
+   - events
+   - feedback
+   - error_logs
+   - rate_limit_hits
+   - shared_links
+   - pending_signups
+5. Confirm indexes exist for:
+   - financial_models_user_id_idx
+   - schools_user_id_idx
+   - exports_user_id_idx
+   - exports_model_id_idx
+   - events_user_id_idx
+   - events_event_name_idx
+6. Confirm migrations or schema push process works in production.
+7. Confirm Railway backups are enabled.
+8. Confirm no public endpoint can expose raw database contents.
+9. Confirm error_logs.request_body is sanitized and does not store passwords, tokens, secrets, bank account numbers, or PII beyond what is necessary.
+10. Confirm data retention expectations are documented.
+
+Return a short Railway DB health report:
+- connected: yes/no
+- tables present
+- indexes present
+- backups enabled
+- migration strategy
+- risks
+
+Part B. Add full underwriting database design
+
+Do not implement blindly. First create a schema proposal document:
+
+docs/FULL_UNDERWRITING_DATABASE_SCHEMA_PLAN.md
+
+Include recommended tables:
+
+1. underwriting_applications
+Fields:
+- id
+- user_id
+- school_id
+- financial_model_id
+- status
+- submitted_at
+- current_stage
+- requested_amount
+- requested_product_type
+- requested_term_months
+- use_of_funds_summary
+- assigned_underwriter_id
+- created_at
+- updated_at
+
+2. borrower_entities
+Fields:
+- id
+- application_id
+- legal_name
+- dba
+- entity_type
+- tax_classification
+- ein_last4 or encrypted_ein_reference
+- state_of_registration
+- registration_status
+- good_standing_status
+- nonprofit_status
+- fiscal_sponsor_name
+- created_at
+- updated_at
+
+3. founder_profiles
+Fields:
+- id
+- application_id
+- founder_name
+- role
+- email
+- phone
+- founder_compensation_year1
+- founder_compensation_normalized
+- compensation_gap_flag
+- succession_plan_status
+- background_notes
+- created_at
+- updated_at
+
+4. underwriting_documents
+Fields:
+- id
+- application_id
+- document_type
+- file_name
+- storage_url or storage_key
+- uploaded_by_user_id
+- uploaded_at
+- verification_status
+- verified_by_user_id
+- verified_at
+- expiration_date
+- notes
+
+Document types:
+- articles_of_incorporation
+- certificate_of_good_standing
+- ein_letter
+- lease
+- certificate_of_occupancy
+- fire_inspection
+- insurance_coi
+- financial_model
+- bank_statement
+- tuition_contract
+- enrollment_deposit_evidence
+- debt_schedule
+- tax_return
+- reference_letter
+- other
+
+5. underwriting_evidence
+Fields:
+- id
+- application_id
+- claim_type
+- claimed_value
+- evidence_status
+- source_document_id
+- verified_value
+- verification_notes
+- verified_by_user_id
+- verified_at
+
+Evidence statuses:
+- not_provided
+- self_reported
+- document_provided
+- verified
+- contradictory
+- expired
+- manual_review
+
+6. underwriting_metrics_snapshots
+Fields:
+- id
+- application_id
+- model_id
+- snapshot_json
+- dscr
+- net_income_y1
+- net_income_y2
+- normalized_net_income_y1
+- days_cash_on_hand
+- cash_runway_months
+- staffing_pct_revenue
+- facility_pct_revenue
+- debt_to_revenue
+- break_even_enrollment
+- downside_10_dscr
+- downside_20_dscr
+- funding_delay_survival
+- created_at
+
+7. eligibility_gate_results
+Fields:
+- id
+- application_id
+- gate_code
+- gate_label
+- result
+- severity
+- explanation
+- override_allowed
+- override_reason
+- overridden_by_user_id
+- overridden_at
+- created_at
+
+Gate result values:
+- pass
+- fail
+- manual_review
+- not_applicable
+
+8. underwriting_risk_ratings
+Fields:
+- id
+- application_id
+- category
+- rating
+- rationale
+- mitigants
+- created_by_user_id
+- created_at
+- updated_at
+
+Categories:
+- eligibility
+- repayment_capacity
+- enrollment_confidence
+- facility_compliance
+- financial_management
+- founder_sustainability
+- liquidity
+- documentation_completeness
+
+Ratings:
+- low
+- moderate
+- elevated
+- high
+- critical
+
+9. credit_memos
+Fields:
+- id
+- application_id
+- memo_status
+- memo_json
+- recommendation
+- recommended_amount
+- recommended_terms
+- conditions_summary
+- created_by_user_id
+- approved_by_user_id
+- created_at
+- updated_at
+
+10. closing_conditions
+Fields:
+- id
+- application_id
+- condition_type
+- description
+- status
+- due_date
+- satisfied_by_document_id
+- satisfied_by_user_id
+- satisfied_at
+- created_at
+- updated_at
+
+11. underwriting_decisions
+Fields:
+- id
+- application_id
+- decision
+- approved_amount
+- terms_json
+- reason_codes
+- decision_notes
+- decided_by_user_id
+- decided_at
+
+Decisions:
+- approved
+- declined
+- withdrawn
+- incomplete
+- waitlisted
+- manual_review
+
+12. audit_log
+Fields:
+- id
+- actor_user_id
+- entity_type
+- entity_id
+- action
+- prior_value_json
+- new_value_json
+- reason
+- created_at
+
+13. policy_rule_versions
+Fields:
+- id
+- policy_name
+- version
+- rules_json
+- effective_start_date
+- effective_end_date
+- created_by_user_id
+- created_at
+
+Part C. Implement only safe foundation if approved
+
+After schema plan is reviewed, implement Phase 1 tables only:
+- underwriting_applications
+- underwriting_documents
+- underwriting_evidence
+- underwriting_metrics_snapshots
+- eligibility_gate_results
+- audit_log
+
+Do not yet build UI for everything.
+Do not migrate existing financial_models into applications automatically.
+Do not delete existing JSONB fields.
+
+Part D. Migration requirements
+
+1. Use Drizzle schema files under lib/db/src/schema.
+2. Export new tables through lib/db/src/schema/index.ts.
+3. Generate migration using:
+   pnpm --filter @workspace/db run generate
+4. Apply locally or staging using:
+   pnpm --filter @workspace/db run migrate
+5. Do not use push-force in production.
+6. Add indexes:
+   - application_id on all child tables
+   - user_id on underwriting_applications
+   - status on underwriting_applications
+   - document_type on underwriting_documents
+   - verification_status on underwriting_documents
+   - gate_code on eligibility_gate_results
+   - entity_type/entity_id on audit_log
+7. Add foreign keys with sensible delete behavior.
+8. Avoid storing raw full EINs, bank account numbers, SSNs, or sensitive financial credentials.
+9. Document all PII decisions.
+
+Part E. Tests
+
+Add DB/schema tests or smoke scripts that verify:
+- application can be created
+- document can be attached to application
+- evidence can be linked to a document
+- metrics snapshot can be saved
+- eligibility gate result can be saved
+- audit log writes on update
+- deleting a user cascades or preserves records according to policy
+- no migration breaks existing financial_models
+
+Deliverables:
+1. Railway DB health report
+2. FULL_UNDERWRITING_DATABASE_SCHEMA_PLAN.md
+3. Recommended Phase 1 migration plan
+4. Risk list before production migration

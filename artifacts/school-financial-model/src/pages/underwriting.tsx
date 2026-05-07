@@ -55,7 +55,7 @@ type ReadinessStatus = "obtained" | "in_process" | "not_started" | "unknown";
 type InsuranceStatus = "active" | "quoted" | "not_started" | "unknown";
 type PublicFundingApprovalStatus = "approved" | "pending" | "not_applicable";
 
-interface GuestModel {
+export interface GuestModel {
   version: number;
   schoolName: string;
   schoolType: SchoolType;
@@ -113,7 +113,7 @@ interface GuestModel {
   canWithstand90DayDelay: boolean;
 }
 
-const EMPTY_MODEL: GuestModel = {
+export const EMPTY_MODEL: GuestModel = {
   version: STORAGE_VERSION,
   schoolName: "",
   schoolType: "microschool",
@@ -202,7 +202,7 @@ function clearGuestModel() {
   }
 }
 
-function projectEnrollment(year1: number, growthPct: number): number[] {
+export function projectEnrollment(year1: number, growthPct: number): number[] {
   const g = 1 + growthPct / 100;
   return [
     Math.round(year1),
@@ -213,7 +213,7 @@ function projectEnrollment(year1: number, growthPct: number): number[] {
   ];
 }
 
-function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
+export function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
   const enroll = projectEnrollment(m.year1Students, m.annualGrowthPct);
   const teachersPerYear = enroll.map((s) =>
     Math.max(1, Math.ceil(s / Math.max(1, m.studentsPerTeacher))),
@@ -568,7 +568,7 @@ interface LenderFlag {
   label: string;
 }
 
-function computeLenderFlags(m: GuestModel, enrollProjection: number[]): LenderFlag[] {
+export function computeLenderFlags(m: GuestModel, enrollProjection: number[]): LenderFlag[] {
   const flags: LenderFlag[] = [];
   const enroll = enrollProjection;
   const y1Rev =
@@ -660,13 +660,13 @@ function computeLenderFlags(m: GuestModel, enrollProjection: number[]): LenderFl
 
   if (totalDebtService > 0) {
     if (dscr < 1.0) {
-      flags.push({ severity: "critical", label: `Est. DSCR is ${dscr.toFixed(2)}x (below 1.0x — cannot cover debt)` });
+      flags.push({ severity: "critical", label: `Estimated DSCR is ${dscr.toFixed(2)}x (below 1.0x — cannot cover debt)` });
     } else if (dscr < 1.15) {
-      flags.push({ severity: "high", label: `Est. DSCR is ${dscr.toFixed(2)}x (below 1.15x threshold)` });
+      flags.push({ severity: "high", label: `Estimated DSCR is ${dscr.toFixed(2)}x (below 1.15x threshold)` });
     } else if (dscr < 1.25) {
-      flags.push({ severity: "caution", label: `Est. DSCR is ${dscr.toFixed(2)}x (below 1.25x benchmark)` });
+      flags.push({ severity: "caution", label: `Estimated DSCR is ${dscr.toFixed(2)}x (below 1.25x benchmark)` });
     } else {
-      flags.push({ severity: "strong", label: `Est. DSCR is ${dscr.toFixed(2)}x (above 1.25x benchmark)` });
+      flags.push({ severity: "strong", label: `Estimated DSCR is ${dscr.toFixed(2)}x (above 1.25x benchmark)` });
     }
   }
 
@@ -994,6 +994,7 @@ export function UnderwritingLandingPage() {
                     <FieldText label="Tuition collection rate (%)" type="number" min={0} max={100} step={1} value={String(model.tuitionCollectionRate)} onChange={(v) => updateNum("tuitionCollectionRate", v)} testId="input-collection-rate" hint="Applied to annual revenue: effective tuition = sticker × collection rate" />
                     <FieldText label="Retention rate (%)" type="number" min={0} max={100} step={1} value={String(model.retentionRate)} onChange={(v) => updateNum("retentionRate", v)} testId="input-retention-rate" hint="Year-over-year student retention" />
                   </div>
+                  <p className="text-xs text-[#1E293B]/50 mt-2" data-testid="collection-rate-note">This simplified guest model applies collection rate to projected tuition revenue. The full model may handle timing and receivables in more detail.</p>
                 </div>
               </div>
             ) : null}
@@ -1278,7 +1279,7 @@ export function UnderwritingLandingPage() {
                     </div>
                   ) : null}
 
-                  <p className="text-xs text-[#1E293B]/40 mt-3">DSCR estimates are based on entered debt service amounts, not modeled loan terms.</p>
+                  <p className="text-xs text-[#1E293B]/40 mt-3" data-testid="dscr-disclaimer">Estimated DSCR based on guest-entered annual debt service. The full underwriting workbook computes DSCR from modeled loan terms.</p>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3">
