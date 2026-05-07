@@ -1,0 +1,147 @@
+Product-language QA cleanup for SchoolStack Budget.
+
+Goal:
+Founder-facing language must consistently position SchoolStack Budget as a school-facing planning and learning tool, not a bank underwriting system. Lender-grade outputs are allowed, but the founder experience should not feel like a credit decision or loan approval workflow.
+
+Fix these items:
+
+1. Strengthen founder-voice tests
+
+Find:
+founder-voice.test.ts or any founder-facing copy/language test file.
+
+Update the banned or restricted term list to include:
+- approved
+- declined
+- ineligible
+- failed
+- fail
+- passed
+- pass/fail
+- credit decision
+- underwriting decision
+- loan approval
+- approval packet
+- bank determination
+- borrower approval
+- rejection
+- rejected
+
+Allow only narrow exceptions:
+- internal test names
+- API status strings not shown to founders
+- legal/privacy language where unavoidable
+- phrases like “password reset failed” only if system-error context and not model-readiness context
+
+Document each exception in the test file.
+
+Preferred founder-facing replacements:
+- “worth strengthening”
+- “needs more clarity”
+- “may raise questions”
+- “not yet ready to share externally”
+- “model needs revision”
+- “this assumption needs support”
+- “a lender or funder may ask about this”
+- “your model gets stronger when...”
+
+2. Rename founder-visible backend error strings
+
+Search for founder-visible copy containing:
+- Underwriting Model workbook
+- underwriting workbook
+- underwriting file
+- underwriting packet
+- credit memo
+- loan approval packet
+
+Replace founder-visible references with:
+- Founder Planning Workbook
+- 5-Year Financial Model
+- 1-Year Operating Budget
+- Board and Funder Summary
+- Lender Conversation Snapshot
+
+Important:
+Do not rename internal code paths if risky before launch. But any visible user-facing error, toast, modal, download label, or email copy should use founder-facing labels.
+
+3. Normalize export labels and filenames
+
+Canonical founder-facing export labels:
+
+- Founder Planning Workbook
+- 1-Year Operating Budget
+- 5-Year Financial Model
+- Board and Funder Summary
+- Lender Conversation Snapshot
+
+Audit:
+- button labels
+- toast messages
+- export dropdown labels
+- filenames
+- PDF titles
+- Excel workbook cover tabs
+- backend error messages
+- test snapshots
+- docs visible to founders
+
+Specific issue:
+If a one-year export is labeled generically as “Budget Workbook” or “Single-Year Export,” rename it to “1-Year Operating Budget.”
+
+Filename examples:
+- SchoolName_1-Year_Operating_Budget.xlsx
+- SchoolName_5-Year_Financial_Model.xlsx
+- SchoolName_Founder_Planning_Workbook.xlsx
+- SchoolName_Board_and_Funder_Summary.pdf
+- SchoolName_Lender_Conversation_Snapshot.pdf
+
+Avoid:
+- Underwriting_Model.xlsx
+- Credit_Memo.pdf
+- Loan_Approval_Packet.pdf
+- Bank_Packet.xlsx
+
+4. Founder-facing copy rule
+
+The product should say:
+“SchoolStack Budget helps you build a clear, realistic financial model.”
+
+It should not say:
+“SchoolStack Budget underwrites your school.”
+
+The app may say:
+“This is the kind of question a lender or funder may ask.”
+
+It should not say:
+“You pass/fail underwriting.”
+
+5. Add regression tests
+
+Add tests that fail if founder-visible strings include:
+- Underwriting Model workbook
+- credit memo
+- approval packet
+- declined
+- ineligible
+- pass/fail
+
+Add tests that require the five canonical export labels to appear wherever export options are shown.
+
+6. Final proof note
+
+Update the proof pack with a section:
+
+“Founder-facing language QA”
+
+Include:
+- banned language test status
+- canonical export labels verified
+- remaining exceptions, if any
+- screenshots or route notes for export labels
+
+Return:
+- files changed
+- exact strings replaced
+- tests run
+- remaining watch items

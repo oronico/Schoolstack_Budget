@@ -12,6 +12,25 @@ const BANNED_PATTERNS: Array<{ label: string; re: RegExp }> = [
   { label: "underwriting file", re: /underwriting\s+file/i },
   { label: "approval packet", re: /approval\s+packet/i },
   { label: "bank review", re: /bank\s+review/i },
+  // Judgment words (per task #655). Generic JS error handling like
+  // "Failed to load packet" is fine — these patterns target the
+  // credit-verdict spirit (application/loan/funding/credit verdicts),
+  // plus the literal "ineligible" and "pass/fail" phrases the task
+  // bans outright.
+  { label: "ineligible", re: /\bineligible\b/i },
+  { label: "pass/fail (only allowed in internal test names)", re: /\bpass\s*[\/]\s*fail\b/i },
+  {
+    label: 'credit-verdict "approved" (e.g. "loan approved", "application approved")',
+    re: /\b(?:loan|funding|credit|application|underwriting)\s+(?:was\s+|is\s+|has\s+|got\s+|been\s+)?approved\b|\bapproved\s+for\s+(?:a\s+)?(?:loan|funding|credit)\b/i,
+  },
+  {
+    label: 'credit-verdict "declined" (e.g. "loan declined", "application declined")',
+    re: /\b(?:loan|funding|credit|application|underwriting)\s+(?:was\s+|is\s+|has\s+|got\s+|been\s+)?declined\b/i,
+  },
+  {
+    label: 'credit-verdict "failed" (e.g. "underwriting failed", "credit check failed")',
+    re: /\b(?:loan|funding|credit|application|underwriting|credit\s+check|credit\s+review)\s+(?:was\s+|is\s+|has\s+|got\s+|been\s+)?failed\b/i,
+  },
   { label: 'old export label "Lender-Ready Packet"', re: /Lender[-\s]Ready\s+Packet/i },
   { label: 'old export label "Lender Packet"', re: /\bLender\s+Packet\b/i },
   { label: 'old export label "Board Summary"', re: /\bBoard\s+Summary\b/i },

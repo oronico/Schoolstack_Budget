@@ -1296,7 +1296,7 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
     sendBinary(res, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `${safeName}_Founder_Planning_Workbook.xlsx`);
   } catch (err) {
     console.error("Underwriting V2 export error:", err);
-    res.status(500).json({ error: "Something went wrong generating the Underwriting Model workbook." });
+    res.status(500).json({ error: "Something went wrong generating the Founder Planning Workbook." });
   }
 });
 
@@ -1448,7 +1448,7 @@ router.get("/models/:id/export", authMiddleware, async (req: AuthRequest, res) =
       : 5;
     const safeSchool = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
     const fileName = yearCount === 1
-      ? `${safeSchool}_Operating_Budget.xlsx`
+      ? `${safeSchool}_1-Year_Operating_Budget.xlsx`
       : `${safeSchool}_5-Year_Financial_Model.xlsx`;
 
     const consultantOutput = await runConsultantEngine(data);

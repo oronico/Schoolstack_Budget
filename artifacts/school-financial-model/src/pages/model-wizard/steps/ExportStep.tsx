@@ -249,7 +249,7 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
       const fallbackNames: Record<ExportType, string> = {
-        formula: isSingleYear ? `Operating_Budget_${modelId}.xlsx` : `5_Year_Financial_Model_${modelId}.xlsx`,
+        formula: isSingleYear ? `1-Year_Operating_Budget_${modelId}.xlsx` : `5-Year_Financial_Model_${modelId}.xlsx`,
         underwritingV2: `Founder_Planning_Workbook_${modelId}.xlsx`,
         lenderPacketPdf: `Lender_Conversation_Snapshot_${modelId}.pdf`,
         boardPacketPdf: `Board_and_Funder_Summary_${modelId}.pdf`,
