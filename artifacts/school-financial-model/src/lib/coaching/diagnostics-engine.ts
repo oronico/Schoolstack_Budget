@@ -35,6 +35,9 @@ export interface ComputedMetrics {
   enrollment: number[];
   revenueByYear: number[];
   expensesByYear: number[];
+  staffingByYear: number[];
+  opexByYear: number[];
+  capDebtByYear: number[];
   grantRevenue: number;
   endingCashByYear: number[];
   breakevenEnrollment: number;
@@ -215,6 +218,9 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
   const breakevenEnrollment = contributionMargin > 0 ? Math.ceil(y1FixedCosts / contributionMargin) : Infinity;
 
   const expensesByYear = [0, 0, 0, 0, 0];
+  const staffingByYear = [0, 0, 0, 0, 0];
+  const opexByYear = [0, 0, 0, 0, 0];
+  const capDebtByYear = [0, 0, 0, 0, 0];
   for (let y = 0; y < 5; y++) {
     const students = enrollment[y] || y1Students;
     const ns = y === 0 ? students : Math.max(0, students - Math.min(students, Math.round((enrollment[y - 1] || 0) * (retentionRate / 100))));
@@ -249,6 +255,9 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
       }
     }
     expensesByYear[y] = staffY + opY + capDebtY;
+    staffingByYear[y] = staffY;
+    opexByYear[y] = opY;
+    capDebtByYear[y] = capDebtY;
   }
 
   const y1TotalExpenses = y1StaffingCost + y1OpExpenses + y1CapDebt;
@@ -271,6 +280,9 @@ export function computeMetrics(data: FullModelData): ComputedMetrics {
     enrollment,
     revenueByYear,
     expensesByYear,
+    staffingByYear,
+    opexByYear,
+    capDebtByYear,
     grantRevenue,
     endingCashByYear,
     breakevenEnrollment,

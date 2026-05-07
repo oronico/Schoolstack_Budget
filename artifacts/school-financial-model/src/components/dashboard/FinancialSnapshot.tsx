@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useGetModel } from "@workspace/api-client-react";
 import { DollarSign, TrendingUp, Shield, Wallet, Loader2, AlertTriangle } from "lucide-react";
 import {
@@ -143,11 +143,20 @@ function KpiTile({
   );
 }
 
+const YEAR_OPTIONS: Array<{ value: 0 | 1 | 2 | 3 | 4; label: string }> = [
+  { value: 0, label: "Year 1" },
+  { value: 1, label: "Year 2" },
+  { value: 2, label: "Year 3" },
+  { value: 3, label: "Year 4" },
+  { value: 4, label: "Year 5" },
+];
+
 export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps) {
   const { enabled, toggle } = useLenderLanguage();
   const { data: model, isLoading } = useGetModel(modelId, {
     query: { queryKey: [`/api/models/${modelId}`, "snapshot"] },
   });
+  const [selectedYear, setSelectedYear] = useState<0 | 1 | 2 | 3 | 4>(0);
 
   const metrics = useMemo(() => {
     if (!model?.data) return null;
@@ -164,41 +173,48 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         monthlyExpense > 0
           ? Math.max(0, startingCash + m.y1NetIncome) / monthlyExpense
           : 0;
-      // Task #609 — surface the lowest cash month so founders see when
-      // tuition gaps and payroll obligations actually trough their cash.
+      // Task #609 / #648 — surface the lowest cash month so founders see when
+      // tuition gaps and payroll obligations actually trough their cash, for
+      // any of years 1-5.
       const sp = data.schoolProfile ?? {};
       const opMonths = Math.max(
         1,
         Math.min((sp as { operatingMonthsPerYear?: number }).operatingMonthsPerYear ?? 12, 12),
       );
       const fyStart = (sp as { fiscalYearStartMonth?: number }).fiscalYearStartMonth ?? 7;
-      const annualOpex = Math.max(
-        0,
-        m.y1TotalExpenses - m.y1StaffingCost - loanDebtService,
-      );
-      const series = computeYear1MonthlyCashFlow({
-        revenueRows: (data.revenueRows ?? []) as unknown as MonthlyRevenueRowLike[],
-        yearIndex: 0,
-        students: m.enrollment?.[0] ?? 0,
-        annualPersonnel: m.y1StaffingCost,
-        annualOpex,
-        annualDebt: loanDebtService,
-        openingCash: startingCash,
-        opMonths,
-      });
-      const lowestCashMonth = findLowestCashMonth(series.cumulative, fyStart);
       const monthLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-      const chartData = series.inflow.map((inflow, i) => {
-        const calIdx = ((fyStart - 1 + i) % 12 + 12) % 12;
-        return {
-          month: monthLabels[calIdx],
-          inflow,
-          outflow: -series.outflow[i],
-          net: series.net[i],
-          ending: series.cumulative[i],
-          isLow: lowestCashMonth?.monthIndex === i,
-        };
-      });
+      const revenueRows = (data.revenueRows ?? []) as unknown as MonthlyRevenueRowLike[];
+      const yearOpeningCash = (y: number) =>
+        y === 0 ? startingCash : m.endingCashByYear[y - 1] ?? startingCash;
+      const buildYear = (y: 0 | 1 | 2 | 3 | 4) => {
+        const annualOpex = Math.max(0, m.opexByYear[y] ?? 0);
+        const annualPersonnel = Math.max(0, m.staffingByYear[y] ?? 0);
+        const annualDebt = Math.max(0, m.capDebtByYear[y] ?? 0);
+        const series = computeYear1MonthlyCashFlow({
+          revenueRows,
+          yearIndex: y,
+          students: m.enrollment?.[y] ?? 0,
+          annualPersonnel,
+          annualOpex,
+          annualDebt,
+          openingCash: yearOpeningCash(y),
+          opMonths,
+        });
+        const lowestCashMonth = findLowestCashMonth(series.cumulative, fyStart);
+        const chartData = series.inflow.map((inflow, i) => {
+          const calIdx = ((fyStart - 1 + i) % 12 + 12) % 12;
+          return {
+            month: monthLabels[calIdx],
+            inflow,
+            outflow: -series.outflow[i],
+            net: series.net[i],
+            ending: series.cumulative[i],
+            isLow: lowestCashMonth?.monthIndex === i,
+          };
+        });
+        return { lowestCashMonth, chartData };
+      };
+      const byYear = [0, 1, 2, 3, 4].map((y) => buildYear(y as 0 | 1 | 2 | 3 | 4));
       return {
         operatingSurplus,
         netIncome: m.y1NetIncome,
@@ -207,13 +223,24 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         loanDebtService,
         revenue: m.y1Revenue,
         hasNumbers: m.y1Revenue > 0 || m.y1TotalExpenses > 0,
-        lowestCashMonth,
-        chartData,
+        byYear,
+        revenueByYear: m.revenueByYear,
+        expensesByYear: m.expensesByYear,
       };
     } catch {
       return null;
     }
   }, [model]);
+
+  const yearMetrics = metrics?.byYear[selectedYear] ?? null;
+  const lowestCashMonth = yearMetrics?.lowestCashMonth ?? null;
+  const chartData = yearMetrics?.chartData ?? null;
+  const yearLabel = YEAR_OPTIONS[selectedYear].label;
+  const hasYearNumbers = !!(
+    metrics &&
+    ((metrics.revenueByYear[selectedYear] ?? 0) > 0 ||
+      (metrics.expensesByYear[selectedYear] ?? 0) > 0)
+  );
 
   return (
     <div
@@ -223,7 +250,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h2 className="font-display text-lg font-bold text-foreground">
-            Year 1 financial snapshot
+            Financial snapshot
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             From <span className="font-medium text-foreground">{modelName}</span>
@@ -265,11 +292,11 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         </div>
       ) : (
         <>
-          {metrics?.lowestCashMonth && (
+          {lowestCashMonth && hasYearNumbers && (
             <div
               data-testid="dashboard-lowest-cash-callout"
               className={`flex items-start gap-3 mb-4 rounded-xl border p-3 ${
-                metrics.lowestCashMonth.isNegative
+                lowestCashMonth.isNegative
                   ? "border-rose-200 bg-rose-50 text-rose-900"
                   : "border-amber-200 bg-amber-50 text-amber-900"
               }`}
@@ -277,45 +304,76 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <div className="text-sm">
                 <span className="font-semibold">
-                  Lowest cash month: {metrics.lowestCashMonth.monthLabel}
+                  Lowest cash month ({yearLabel}): {lowestCashMonth.monthLabel}
                 </span>
                 <span className="ml-1">
-                  ({formatCurrency(metrics.lowestCashMonth.amount)})
+                  ({formatCurrency(lowestCashMonth.amount)})
                 </span>
                 <p className="text-xs opacity-80 mt-0.5">
-                  {metrics.lowestCashMonth.isNegative
+                  {lowestCashMonth.isNegative
                     ? "Cash dips below zero — plan a reserve or line of credit before this month."
                     : "This is the month lenders focus on. Plan reserves to cover the trough."}
                 </p>
               </div>
             </div>
           )}
-          {metrics?.chartData && metrics.hasNumbers && (
+          {chartData && hasYearNumbers && (
             <div
               data-testid="dashboard-monthly-cashflow-chart"
               className="mb-4 rounded-xl border border-border/60 bg-secondary/20 p-3 sm:p-4"
             >
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-2">
                 <h3 className="font-display text-sm font-semibold text-foreground">
-                  Year 1 monthly cash flow
+                  {yearLabel} monthly cash flow
                 </h3>
-                <p className="text-[11px] text-muted-foreground">
-                  Bars: inflow vs outflow. Line: ending cash.
-                  {metrics.lowestCashMonth && (
-                    <>
-                      {" "}Lowest month{" "}
-                      <span className="font-semibold text-foreground">
-                        {metrics.lowestCashMonth.monthLabel}
-                      </span>{" "}
-                      highlighted.
-                    </>
-                  )}
-                </p>
+                <div
+                  role="tablist"
+                  aria-label="Choose forecast year"
+                  data-testid="dashboard-cashflow-year-selector"
+                  className="flex flex-wrap gap-1 rounded-lg bg-secondary/50 p-1 self-start sm:self-auto"
+                >
+                  {YEAR_OPTIONS.map((opt) => {
+                    const active = opt.value === selectedYear;
+                    const yearHasNumbers =
+                      (metrics?.revenueByYear[opt.value] ?? 0) > 0 ||
+                      (metrics?.expensesByYear[opt.value] ?? 0) > 0;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        disabled={!yearHasNumbers}
+                        data-testid={`dashboard-cashflow-year-${opt.value + 1}`}
+                        onClick={() => setSelectedYear(opt.value)}
+                        className={`text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors ${
+                          active
+                            ? "bg-white text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        } ${!yearHasNumbers ? "opacity-40 cursor-not-allowed" : ""}`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+              <p className="text-[11px] text-muted-foreground mb-2">
+                Bars: inflow vs outflow. Line: ending cash.
+                {lowestCashMonth && (
+                  <>
+                    {" "}Lowest month{" "}
+                    <span className="font-semibold text-foreground">
+                      {lowestCashMonth.monthLabel}
+                    </span>{" "}
+                    highlighted.
+                  </>
+                )}
+              </p>
               <div className="h-56 sm:h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
-                    data={metrics.chartData}
+                    data={chartData}
                     margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid
@@ -364,7 +422,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
                       fill="#16a34a"
                       radius={[3, 3, 0, 0]}
                     >
-                      {metrics.chartData.map((d, i) => (
+                      {chartData.map((d, i) => (
                         <Cell
                           key={`in-${i}`}
                           fill={d.isLow ? "#0f5132" : "#16a34a"}
@@ -377,7 +435,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
                       fill="#e11d48"
                       radius={[0, 0, 3, 3]}
                     >
-                      {metrics.chartData.map((d, i) => (
+                      {chartData.map((d, i) => (
                         <Cell
                           key={`out-${i}`}
                           fill={d.isLow ? "#881337" : "#e11d48"}
