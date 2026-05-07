@@ -763,6 +763,24 @@ export const CreateModelBody = zod.object({
         }),
       )
       .optional(),
+    assumptionConfidence: zod
+      .record(
+        zod.string(),
+        zod.object({
+          confidence: zod.enum([
+            "actuals",
+            "signed_agreement",
+            "quote",
+            "research",
+            "estimate",
+          ]),
+          evidenceNote: zod.string().optional(),
+        }),
+      )
+      .optional()
+      .describe(
+        "Task #659 — per-assumption confidence + evidence note. Keyed by\nAssumptionKey (see lib\/finance\/src\/assumption-registry.ts). Each\nvalue is `{ confidence, evidenceNote? }` with confidence one of\nactuals | signed_agreement | quote | research | estimate.\n",
+      ),
     assumptionFlags: zod
       .array(
         zod.object({
@@ -1396,6 +1414,24 @@ export const GetModelResponse = zod.object({
         }),
       )
       .optional(),
+    assumptionConfidence: zod
+      .record(
+        zod.string(),
+        zod.object({
+          confidence: zod.enum([
+            "actuals",
+            "signed_agreement",
+            "quote",
+            "research",
+            "estimate",
+          ]),
+          evidenceNote: zod.string().optional(),
+        }),
+      )
+      .optional()
+      .describe(
+        "Task #659 — per-assumption confidence + evidence note. Keyed by\nAssumptionKey (see lib\/finance\/src\/assumption-registry.ts). Each\nvalue is `{ confidence, evidenceNote? }` with confidence one of\nactuals | signed_agreement | quote | research | estimate.\n",
+      ),
     assumptionFlags: zod
       .array(
         zod.object({
@@ -2035,6 +2071,24 @@ export const UpdateModelBody = zod.object({
         }),
       )
       .optional(),
+    assumptionConfidence: zod
+      .record(
+        zod.string(),
+        zod.object({
+          confidence: zod.enum([
+            "actuals",
+            "signed_agreement",
+            "quote",
+            "research",
+            "estimate",
+          ]),
+          evidenceNote: zod.string().optional(),
+        }),
+      )
+      .optional()
+      .describe(
+        "Task #659 — per-assumption confidence + evidence note. Keyed by\nAssumptionKey (see lib\/finance\/src\/assumption-registry.ts). Each\nvalue is `{ confidence, evidenceNote? }` with confidence one of\nactuals | signed_agreement | quote | research | estimate.\n",
+      ),
     assumptionFlags: zod
       .array(
         zod.object({
@@ -2663,6 +2717,24 @@ export const UpdateModelResponse = zod.object({
         }),
       )
       .optional(),
+    assumptionConfidence: zod
+      .record(
+        zod.string(),
+        zod.object({
+          confidence: zod.enum([
+            "actuals",
+            "signed_agreement",
+            "quote",
+            "research",
+            "estimate",
+          ]),
+          evidenceNote: zod.string().optional(),
+        }),
+      )
+      .optional()
+      .describe(
+        "Task #659 — per-assumption confidence + evidence note. Keyed by\nAssumptionKey (see lib\/finance\/src\/assumption-registry.ts). Each\nvalue is `{ confidence, evidenceNote? }` with confidence one of\nactuals | signed_agreement | quote | research | estimate.\n",
+      ),
     assumptionFlags: zod
       .array(
         zod.object({
@@ -3325,6 +3397,24 @@ export const ArchiveModelResponse = zod.object({
         }),
       )
       .optional(),
+    assumptionConfidence: zod
+      .record(
+        zod.string(),
+        zod.object({
+          confidence: zod.enum([
+            "actuals",
+            "signed_agreement",
+            "quote",
+            "research",
+            "estimate",
+          ]),
+          evidenceNote: zod.string().optional(),
+        }),
+      )
+      .optional()
+      .describe(
+        "Task #659 — per-assumption confidence + evidence note. Keyed by\nAssumptionKey (see lib\/finance\/src\/assumption-registry.ts). Each\nvalue is `{ confidence, evidenceNote? }` with confidence one of\nactuals | signed_agreement | quote | research | estimate.\n",
+      ),
     assumptionFlags: zod
       .array(
         zod.object({
@@ -3663,6 +3753,35 @@ export const GetConsultantAnalysisResponse = zod.object({
     ),
   }),
   generatedAt: zod.date(),
+});
+
+/**
+ * @summary Plain-English founder summary of the financial model
+ */
+export const GetFounderSummaryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetFounderSummaryResponse = zod.object({
+  schoolName: zod.string(),
+  generatedAt: zod.string(),
+  sections: zod.array(
+    zod.object({
+      id: zod.enum([
+        "what_your_model_says",
+        "what_looks_strong",
+        "what_needs_clarity",
+        "what_could_create_cash_pressure",
+        "what_to_fix_first",
+        "what_reviewers_may_ask",
+      ]),
+      title: zod.string(),
+      paragraphs: zod.array(zod.string()),
+      bullets: zod.array(zod.string()).optional(),
+    }),
+  ),
+  allowedFigures: zod.array(zod.string()),
+  bundle: zod.record(zod.string(), zod.unknown()),
 });
 
 /**

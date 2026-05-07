@@ -12,6 +12,7 @@ import type { CurrentYearProjection } from "./currentYearProjection";
 import type { Enrollment } from "./enrollment";
 import type { ExpenseRow } from "./expenseRow";
 import type { Facilities } from "./facilities";
+import type { ModelFormDataAssumptionConfidence } from "./modelFormDataAssumptionConfidence";
 import type { ModelFormDataAssumptionFlagResponsesItem } from "./modelFormDataAssumptionFlagResponsesItem";
 import type { ModelFormDataAssumptionFlagsItem } from "./modelFormDataAssumptionFlagsItem";
 import type { ModelFormDataBudgetNarrative } from "./modelFormDataBudgetNarrative";
@@ -50,6 +51,12 @@ export interface ModelFormData {
   covenantThresholds?: CovenantThresholds;
   budgetNarrative?: ModelFormDataBudgetNarrative;
   assumptionFlagResponses?: ModelFormDataAssumptionFlagResponsesItem[];
+  /** Task #659 — per-assumption confidence + evidence note. Keyed by
+AssumptionKey (see lib/finance/src/assumption-registry.ts). Each
+value is `{ confidence, evidenceNote? }` with confidence one of
+actuals | signed_agreement | quote | research | estimate.
+ */
+  assumptionConfidence?: ModelFormDataAssumptionConfidence;
   assumptionFlags?: ModelFormDataAssumptionFlagsItem[];
   programs?: ModelFormDataProgramsItem[];
   tuitionTiers?: ModelFormDataTuitionTiersItem[];

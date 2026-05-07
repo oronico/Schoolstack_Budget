@@ -12,12 +12,25 @@ import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { cashStatusBadgeLabel, renderCashRunwaySection } from "./cash-runway-pdf.js";
 import { renderNarrativeCommentarySection } from "./lender-packet-pdf.js";
+import { buildFounderSummary, type FounderSummary } from "./build-founder-summary.js";
+import type { ConsultantOutput } from "../consultant-engine.js";
+import type { ModelData } from "../workbook-helpers.js";
 
-export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffer> {
+export async function generateBoardPacketPDF(
+  packet: BoardPacket,
+  founderSummary?: FounderSummary,
+): Promise<Buffer> {
   const doc = createDoc();
 
   drawCoverPage(doc, packet);
   doc.addPage();
+
+  // Task #660 - Plain-English founder summary leads the body of the packet
+  // when supplied. Same canonical engine that powers the in-app /summary
+  // route, so trustees see the same six sections the founder reviewed.
+  if (founderSummary) {
+    renderFounderSummarySection(doc, founderSummary);
+  }
 
   // Task #617 - board-ready narrative commentary leads the body of the
   // packet. Same canonical-engine bundle the lender commentary uses, so
@@ -405,4 +418,58 @@ function shouldShowBoardAssumptions(sectionId: string): boolean {
 
 function renderMetrics(doc: PDFDoc, metrics: LinkedMetric[]) {
   renderLinkedMetrics(doc, metrics, { limit: 6 });
+}
+
+/**
+ * Task #660 - Render the plain-English founder summary as a lead block on
+ * the Board and Funder Summary PDF. Six short sections with paragraphs and
+ * (optional) bullets, in the same order the in-app /summary page renders.
+ */
+function renderFounderSummarySection(doc: PDFDoc, summary: FounderSummary) {
+  if (!summary || summary.sections.length === 0) return;
+  sectionTitle(doc, "Plain-English Summary");
+  doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.gray);
+  doc.text(
+    "A plain-language read of your model. Same six sections you see in the in-app summary view, sourced from the canonical engine.",
+    doc.page.margins.left,
+    doc.y,
+    { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
+  );
+  doc.fillColor(BRAND.black);
+  doc.moveDown(0.4);
+
+  for (const sect of summary.sections) {
+    ensureSpace(doc, 60);
+    subSection(doc, sect.title);
+    for (const p of sect.paragraphs) {
+      ensureSpace(doc, 30);
+      bodyText(doc, p);
+    }
+    if (sect.bullets && sect.bullets.length > 0) {
+      doc.moveDown(0.1);
+      const indent = doc.page.margins.left + 12;
+      const w = doc.page.width - doc.page.margins.right - indent;
+      for (const b of sect.bullets) {
+        ensureSpace(doc, 18);
+        doc.font("Helvetica").fontSize(9).fillColor(BRAND.darkGray);
+        doc.text(`\u2022 ${b}`, indent, doc.y, { width: w });
+      }
+      doc.fillColor(BRAND.black);
+    }
+    doc.moveDown(0.3);
+  }
+}
+
+/**
+ * Convenience entry point: build a founder summary from the canonical
+ * engine and render the section in one call. Kept here so callers that
+ * already have ModelData + ConsultantOutput in hand don't have to import
+ * the builder separately.
+ */
+export function renderFounderSummaryFromEngine(
+  doc: PDFDoc,
+  modelData: ModelData,
+  co: ConsultantOutput,
+) {
+  renderFounderSummarySection(doc, buildFounderSummary(modelData, co));
 }

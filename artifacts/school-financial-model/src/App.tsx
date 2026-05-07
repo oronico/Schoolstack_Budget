@@ -23,6 +23,7 @@ const NewModelPage = lazy(() => import("@/pages/model-new").then(m => ({ default
 const ModelWizardPage = lazy(() => import("@/pages/model-wizard").then(m => ({ default: m.ModelWizardPage })));
 const UnderwritingLandingPage = lazy(() => import("@/pages/underwriting").then(m => ({ default: m.UnderwritingLandingPage })));
 const ScenarioPage = lazy(() => import("@/pages/scenarios").then(m => ({ default: m.ScenarioPage })));
+const ModelSummaryPage = lazy(() => import("@/pages/model-summary").then(m => ({ default: m.ModelSummaryPage })));
 const DecisionFlowDispatcher = lazy(() => import("@/pages/decision-flows").then(m => ({ default: m.DecisionFlowDispatcher })));
 const AdminPage = lazy(() => import("@/pages/admin").then(m => ({ default: m.AdminPage })));
 const SettingsPage = lazy(() => import("@/pages/settings").then(m => ({ default: m.SettingsPage })));
@@ -161,6 +162,9 @@ function AppRouter() {
         </Route>
         <Route path="/model/:id/scenarios">
           {() => <ProtectedRoute component={ScenarioPage} />}
+        </Route>
+        <Route path="/model/:id/summary">
+          {() => <ProtectedRoute component={ModelSummaryPage} />}
         </Route>
         <Route path="/decisions/:type/:modelId">
           {() => <ProtectedRoute component={DecisionFlowDispatcher} />}

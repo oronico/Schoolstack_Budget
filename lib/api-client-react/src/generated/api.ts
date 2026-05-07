@@ -24,6 +24,7 @@ import type {
   FinancialModel,
   FinancialModelSummary,
   ForgotPasswordRequest,
+  FounderSummary,
   HealthStatus,
   LenderLanguageRequest,
   LoginRequest,
@@ -1452,6 +1453,93 @@ export function useGetConsultantAnalysis<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetConsultantAnalysisQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Plain-English founder summary of the financial model
+ */
+export const getGetFounderSummaryUrl = (id: number) => {
+  return `/api/models/${id}/summary`;
+};
+
+export const getFounderSummary = async (
+  id: number,
+  options?: RequestInit,
+): Promise<FounderSummary> => {
+  return customFetch<FounderSummary>(getGetFounderSummaryUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFounderSummaryQueryKey = (id: number) => {
+  return [`/api/models/${id}/summary`] as const;
+};
+
+export const getGetFounderSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFounderSummary>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFounderSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetFounderSummaryQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getFounderSummary>>
+  > = ({ signal }) => getFounderSummary(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFounderSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFounderSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFounderSummary>>
+>;
+export type GetFounderSummaryQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Plain-English founder summary of the financial model
+ */
+
+export function useGetFounderSummary<
+  TData = Awaited<ReturnType<typeof getFounderSummary>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getFounderSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFounderSummaryQueryOptions(id, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

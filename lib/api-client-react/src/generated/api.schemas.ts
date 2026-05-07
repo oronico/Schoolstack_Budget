@@ -759,6 +759,17 @@ export interface Facilities {
   [key: string]: unknown;
 }
 
+export type ModelFormDataAssumptionConfidenceConfidence =
+  (typeof ModelFormDataAssumptionConfidenceConfidence)[keyof typeof ModelFormDataAssumptionConfidenceConfidence];
+
+export const ModelFormDataAssumptionConfidenceConfidence = {
+  actuals: "actuals",
+  signed_agreement: "signed_agreement",
+  quote: "quote",
+  research: "research",
+  estimate: "estimate",
+} as const;
+
 export type ModelFormDataAssumptionFlagsItemSeverity =
   (typeof ModelFormDataAssumptionFlagsItemSeverity)[keyof typeof ModelFormDataAssumptionFlagsItemSeverity];
 
@@ -774,6 +785,20 @@ export type ModelFormDataAssumptionFlagResponsesItem = {
   field?: string;
   flagType?: string;
   reason?: string;
+};
+
+/**
+ * Task #659 — per-assumption confidence + evidence note. Keyed by
+AssumptionKey (see lib/finance/src/assumption-registry.ts). Each
+value is `{ confidence, evidenceNote? }` with confidence one of
+actuals | signed_agreement | quote | research | estimate.
+
+ */
+export type ModelFormDataAssumptionConfidence = {
+  [key: string]: {
+    confidence: ModelFormDataAssumptionConfidenceConfidence;
+    evidenceNote?: string;
+  };
 };
 
 export type ModelFormDataAssumptionFlagsItem = {
@@ -822,6 +847,12 @@ export interface ModelFormData {
   covenantThresholds?: CovenantThresholds;
   budgetNarrative?: ModelFormDataBudgetNarrative;
   assumptionFlagResponses?: ModelFormDataAssumptionFlagResponsesItem[];
+  /** Task #659 — per-assumption confidence + evidence note. Keyed by
+AssumptionKey (see lib/finance/src/assumption-registry.ts). Each
+value is `{ confidence, evidenceNote? }` with confidence one of
+actuals | signed_agreement | quote | research | estimate.
+ */
+  assumptionConfidence?: ModelFormDataAssumptionConfidence;
   assumptionFlags?: ModelFormDataAssumptionFlagsItem[];
   programs?: ModelFormDataProgramsItem[];
   tuitionTiers?: ModelFormDataTuitionTiersItem[];
@@ -921,6 +952,35 @@ export interface ExpenseSensitivityCell {
   enrollmentPct: number;
   expenseInflationPct: number;
   netIncome: number;
+}
+
+export type FounderSummarySectionId =
+  (typeof FounderSummarySectionId)[keyof typeof FounderSummarySectionId];
+
+export const FounderSummarySectionId = {
+  what_your_model_says: "what_your_model_says",
+  what_looks_strong: "what_looks_strong",
+  what_needs_clarity: "what_needs_clarity",
+  what_could_create_cash_pressure: "what_could_create_cash_pressure",
+  what_to_fix_first: "what_to_fix_first",
+  what_reviewers_may_ask: "what_reviewers_may_ask",
+} as const;
+
+export interface FounderSummarySection {
+  id: FounderSummarySectionId;
+  title: string;
+  paragraphs: string[];
+  bullets?: string[];
+}
+
+export type FounderSummaryBundle = { [key: string]: unknown };
+
+export interface FounderSummary {
+  schoolName: string;
+  generatedAt: string;
+  sections: FounderSummarySection[];
+  allowedFigures: string[];
+  bundle: FounderSummaryBundle;
 }
 
 export type ConsultantOutputLenderReadiness =

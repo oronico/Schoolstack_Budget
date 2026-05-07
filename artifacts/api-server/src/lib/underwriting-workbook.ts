@@ -50,9 +50,16 @@ function operatingStmtTabName(yc: number): string {
   return yc === 1 ? "Year 1 Operating Stmt" : "5-Year Operating Stmt";
 }
 
-function getTabNames(yc: number): string[] {
+function getTabNames(yc: number, hasFounderSummary = false): string[] {
+  // Task #660 - "Plain-English Summary" tab is only included when the
+  // caller passed a prebuilt founder summary (i.e. the export route ran
+  // the canonical engine first). Older callers and unit tests that
+  // invoke generateUnderwritingWorkbook(data) directly should not see a
+  // ToC entry pointing to a tab that was not rendered.
   return [
-    "Instructions", "Cover", "Assumptions", "Program Profile",
+    "Instructions", "Cover",
+    ...(hasFounderSummary ? ["Plain-English Summary"] : []),
+    "Assumptions", "Program Profile",
     "Enrollment Drivers", "Tuition & Funding", "Staffing Drivers", "OpEx Drivers", "Capital Stack",
     "Enrollment Tuition Fcst", "Staffing Costs Fcst", "Budget Detail", "Budget Summary",
     "Monthly Cash Flow Y1", operatingStmtTabName(yc), "Debt Schedule", "Balance Sheet",
@@ -75,11 +82,11 @@ function getOpMonths(sp: SchoolProfile): number {
   return 12;
 }
 
-function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
+function buildCover(wb: ExcelJS.Workbook, data: ModelData, hasFounderSummary = false) {
   const ws = wb.addWorksheet("Cover");
   const sp = data.schoolProfile || {};
   const yc = getYearCount(data);
-  const TAB_NAMES = getTabNames(yc);
+  const TAB_NAMES = getTabNames(yc, hasFounderSummary);
   ws.columns = [{ width: 4 }, { width: 40 }, { width: 40 }, { width: 4 }];
   printSetup(ws);
 
@@ -135,12 +142,12 @@ function buildCover(wb: ExcelJS.Workbook, data: ModelData) {
   ws.getCell(r, 2).alignment = { horizontal: "center" };
 }
 
-function buildInstructions(wb: ExcelJS.Workbook, data: ModelData) {
+function buildInstructions(wb: ExcelJS.Workbook, data: ModelData, hasFounderSummary = false) {
   const sp = data.schoolProfile || {} as SchoolProfile;
   const yc = getYearCount(data);
   addInstructionsSheet(wb, {
     workbookType: "underwriting",
-    tabNames: getTabNames(yc),
+    tabNames: getTabNames(yc, hasFounderSummary),
     schoolName: sp.schoolName || undefined,
     schoolType: sp.entityType || undefined,
   });
@@ -3056,11 +3063,19 @@ interface ComputedFlag {
   currentValue?: string;
 }
 
-export async function generateUnderwritingWorkbook(data: Record<string, unknown>, computedFlags?: ComputedFlag[]): Promise<ExcelJS.Workbook> {
-  return generateWorkbook(data as ModelData, computedFlags);
+export async function generateUnderwritingWorkbook(
+  data: Record<string, unknown>,
+  computedFlags?: ComputedFlag[],
+  founderSummary?: import("./packets/build-founder-summary.js").FounderSummary,
+): Promise<ExcelJS.Workbook> {
+  return generateWorkbook(data as ModelData, computedFlags, founderSummary);
 }
 
-async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[]): Promise<ExcelJS.Workbook> {
+async function generateWorkbook(
+  data: ModelData,
+  computedFlags?: ComputedFlag[],
+  founderSummary?: import("./packets/build-founder-summary.js").FounderSummary,
+): Promise<ExcelJS.Workbook> {
   const wb = new ExcelJS.Workbook();
   wb.creator = "SchoolStack Budget";
   wb.created = new Date();
@@ -3095,8 +3110,21 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
     capitalAndDebtRows: (data.capitalAndDebtRows || []).filter(r => !r.isLoan),
   };
 
-  buildInstructions(wb, data);
-  buildCover(wb, data);
+  // Task #660 - Plain-English Summary tab. Sourced from the same canonical
+  // engine output that powers the in-app /summary route and the Board PDF,
+  // so a board member, lender, or founder reading the workbook sees the
+  // identical six-section narrative without numbers drifting between
+  // surfaces. Skipped silently if the route did not pass the prebuilt
+  // summary (older callers that have not been migrated). The Cover ToC
+  // and Instructions list are only updated to reference the tab when the
+  // tab is actually rendered, so smoke tests that build the workbook
+  // without a summary do not see an orphan ToC link.
+  const hasFounderSummary = founderSummary !== undefined;
+  buildInstructions(wb, data, hasFounderSummary);
+  buildCover(wb, data, hasFounderSummary);
+  if (founderSummary) {
+    buildFounderSummaryTab(wb, founderSummary);
+  }
   const asmReg = buildAssumptions(wb, data, enrollment, salaryEsc, costInflation, prorationFactor, startingCash);
   buildProgramProfile(wb, data);
   const edRefs = buildEnrollmentDrivers(wb, data, enrollment, asmReg);
@@ -3376,6 +3404,57 @@ function buildAssumptionsConfidenceTab(wb: ExcelJS.Workbook, data: ModelData) {
         ? { ...NF, bold: true, color: { argb: "FFD97706" } }
         : NF;
     row++;
+  }
+}
+
+/**
+ * Task #660 - "Plain-English Summary" tab. Renders the six-section
+ * founder summary built off the canonical engine. Coach voice, no
+ * banned words, every figure traces back to the engine's bundle.
+ */
+function buildFounderSummaryTab(
+  wb: ExcelJS.Workbook,
+  summary: import("./packets/build-founder-summary.js").FounderSummary,
+) {
+  const ws = wb.addWorksheet("Plain-English Summary");
+  printSetup(ws);
+  ws.columns = [{ width: 2 }, { width: 110 }];
+
+  let row = 1;
+  ws.getRow(row).values = ["", "Plain-English Summary"];
+  ws.getCell(row, 2).font = { bold: true, size: 16, name: "Calibri", color: { argb: NAVY } };
+  row += 1;
+  ws.getCell(row, 2).value = `${summary.schoolName} - generated ${new Date(summary.generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`;
+  ws.getCell(row, 2).font = { ...NF, italic: true, color: { argb: "FF666666" } };
+  row += 1;
+  ws.getCell(row, 2).value =
+    "Read-only. Every figure below is sourced from the canonical engine that powers the dashboard, lender packet, and board summary, so the numbers cannot drift across surfaces.";
+  ws.getCell(row, 2).font = { ...NF, italic: true, color: { argb: "FF666666" } };
+  ws.getCell(row, 2).alignment = { wrapText: true, vertical: "top" };
+  row += 2;
+
+  for (const section of summary.sections) {
+    sec(ws, row, 2);
+    ws.getCell(row, 2).value = section.title;
+    ws.getCell(row, 2).font = { ...BF, color: { argb: NAVY } };
+    row += 1;
+    for (const p of section.paragraphs) {
+      ws.getCell(row, 2).value = p;
+      ws.getCell(row, 2).font = NF;
+      ws.getCell(row, 2).alignment = { wrapText: true, vertical: "top" };
+      ws.getRow(row).height = Math.max(18, Math.min(120, Math.ceil(p.length / 90) * 16));
+      row += 1;
+    }
+    if (section.bullets && section.bullets.length > 0) {
+      for (const b of section.bullets) {
+        ws.getCell(row, 2).value = `\u2022 ${b}`;
+        ws.getCell(row, 2).font = NF;
+        ws.getCell(row, 2).alignment = { wrapText: true, vertical: "top" };
+        ws.getRow(row).height = Math.max(18, Math.min(120, Math.ceil(b.length / 88) * 16));
+        row += 1;
+      }
+    }
+    row += 1;
   }
 }
 

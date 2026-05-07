@@ -144,6 +144,7 @@ import { generateLenderPacketPDF } from "../lib/packets/lender-packet-pdf";
 import { buildLenderSummary } from "../lib/packets/build-lender-summary";
 import { buildBoardPacket } from "../lib/packets/build-board-packet";
 import { generateBoardPacketPDF } from "../lib/packets/board-packet-pdf";
+import { buildFounderSummary, type FounderSummary } from "../lib/packets/build-founder-summary";
 import {
   ACCURACY_METRICS,
   type AccuracyMetricKey,
@@ -982,6 +983,45 @@ router.get("/models/:id/export/lender-packet-pdf", authMiddleware, async (req: A
   }
 });
 
+// Task #660 — Plain-English founder summary. Read-only JSON endpoint that
+// powers the in-app /model/:id/summary route and is also embedded into the
+// Board and Funder Summary PDF + Founder Planning Workbook XLSX. Same
+// canonical engine pass that powers every other export, so the numbers
+// can never drift across surfaces.
+router.get("/models/:id/summary", authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const params = ExportModelParams.safeParse(req.params);
+    if (!params.success || !isValidModelId(params.data.id)) {
+      res.status(400).json({ error: "Invalid model ID." });
+      return;
+    }
+
+    const [model] = await db
+      .select()
+      .from(financialModelsTable)
+      .where(and(eq(financialModelsTable.id, params.data.id), eq(financialModelsTable.userId, req.userId!)))
+      .limit(1);
+
+    if (!model) {
+      res.status(404).json({ error: "Model not found." });
+      return;
+    }
+
+    if (abortGuard(req, res)) return;
+
+    const data = normalizeModelData(model.data as Record<string, unknown>);
+    const consultantOutput = await runConsultantEngine(data);
+
+    if (abortGuard(req, res)) return;
+
+    const summary = buildFounderSummary(data, consultantOutput);
+    res.json(summary);
+  } catch (err) {
+    console.error("Founder summary error:", err);
+    res.status(500).json({ error: "Something went wrong generating the plain-English summary." });
+  }
+});
+
 router.get("/models/:id/export/board-packet", authMiddleware, async (req: AuthRequest, res) => {
   try {
     const params = ExportModelParams.safeParse(req.params);
@@ -1091,7 +1131,11 @@ router.get("/models/:id/export/board-packet-pdf", authMiddleware, async (req: Au
       personaComfort,
       forecastAccuracyFilter,
     );
-    const buffer = await generateBoardPacketPDF(packet);
+    // Task #660 - Plain-English founder summary leads the body of the
+    // Board and Funder Summary PDF (six sections, coach voice, every
+    // figure sourced from the canonical engine).
+    const founderSummary: FounderSummary = buildFounderSummary(data, consultantOutput);
+    const buffer = await generateBoardPacketPDF(packet, founderSummary);
 
     if (abortGuard(req, res)) return;
 
@@ -1232,7 +1276,10 @@ router.get("/models/:id/export/underwriting", authMiddleware, async (req: AuthRe
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const workbook = await generateUnderwritingWorkbookV2(data, computedFlags);
+    // Task #660 - Plain-English Summary tab uses the canonical engine
+    // output already computed above.
+    const founderSummary = buildFounderSummary(data, consultantOutput);
+    const workbook = await generateUnderwritingWorkbookV2(data, computedFlags, founderSummary);
     const buffer = await workbook.xlsx.writeBuffer();
 
     if (abortGuard(req, res)) return;
@@ -1298,7 +1345,12 @@ router.get("/models/:id/export/underwriting-v2", authMiddleware, async (req: Aut
     const schoolName = (typeof profile?.schoolName === "string" ? profile.schoolName : "") || "School";
     const safeName = schoolName.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_");
 
-    const workbook = await generateUnderwritingWorkbookV2(data, computedFlags);
+    // Task #660 - Plain-English Summary tab in the Founder Planning
+    // Workbook is sourced from the canonical engine output we just ran,
+    // so it cannot disagree with the in-app /summary view or the Board
+    // and Funder Summary PDF.
+    const founderSummary = buildFounderSummary(data, consultantOutput);
+    const workbook = await generateUnderwritingWorkbookV2(data, computedFlags, founderSummary);
     const buffer = await workbook.xlsx.writeBuffer();
 
     if (abortGuard(req, res)) return;

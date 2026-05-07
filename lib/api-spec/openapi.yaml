@@ -437,6 +437,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /models/{id}/summary:
+    get:
+      operationId: getFounderSummary
+      tags: [models]
+      summary: Plain-English founder summary of the financial model
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Founder summary built from the canonical engine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FounderSummary"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /models/{id}/export:
     get:
       operationId: exportModel
@@ -1831,6 +1861,56 @@ components:
         - enrollmentPct
         - expenseInflationPct
         - netIncome
+    FounderSummarySection:
+      type: object
+      properties:
+        id:
+          type: string
+          enum:
+            - what_your_model_says
+            - what_looks_strong
+            - what_needs_clarity
+            - what_could_create_cash_pressure
+            - what_to_fix_first
+            - what_reviewers_may_ask
+        title:
+          type: string
+        paragraphs:
+          type: array
+          items:
+            type: string
+        bullets:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - title
+        - paragraphs
+    FounderSummary:
+      type: object
+      properties:
+        schoolName:
+          type: string
+        generatedAt:
+          type: string
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/FounderSummarySection"
+        allowedFigures:
+          type: array
+          items:
+            type: string
+        bundle:
+          type: object
+          additionalProperties: true
+      required:
+        - schoolName
+        - generatedAt
+        - sections
+        - allowedFigures
+        - bundle
     ConsultantOutput:
       type: object
       properties:

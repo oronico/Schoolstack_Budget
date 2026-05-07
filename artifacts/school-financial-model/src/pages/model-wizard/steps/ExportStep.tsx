@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { getExportModelUrl, customFetch } from "@workspace/api-client-react";
-import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3, MessageSquareMore, CheckCircle2, Send, Share2, Copy, Check, Trash2, Link2, BookOpen } from "lucide-react";
+import { Download, Loader2, PartyPopper, ArrowRight, FileSpreadsheet, ClipboardCheck, FileText, BarChart3, MessageSquareMore, CheckCircle2, Send, Share2, Copy, Check, Trash2, Link2, BookOpen, Sparkles } from "lucide-react";
 import { isChestertonAcademy, isSingleYearModel } from "../schema";
 import { ExtendToFiveYearModal } from "@/components/wizard/ExtendToFiveYearModal";
 import { seedFiveYearFromYearOne, resolveSeedDefaults, type SeedDefaults } from "@/lib/seed-five-year";
@@ -478,6 +478,31 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
           />
         )}
       </div>
+
+      {modelId && (
+        <div className="max-w-4xl mx-auto mb-10">
+          <a
+            href={`/model/${modelId}/summary`}
+            data-testid="founder-summary-link"
+            className="block text-left bg-gradient-to-r from-primary/5 via-white to-primary/5 border-2 border-primary/30 hover:border-primary/60 rounded-2xl p-6 transition-all hover:shadow-lg"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-bold text-lg text-foreground mb-1">
+                  View Plain-English Summary
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  A coach-voice read of your model in six short sections - what it says, what looks strong, what needs more clarity, what could create cash pressure, what to fix first, and what a reviewer may ask. Same numbers as your downloads.
+                </p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+            </div>
+          </a>
+        </div>
+      )}
 
       {reviewAvailable && (reviewSubmitted || showReviewForm) && (
         <div className="mt-10 max-w-2xl mx-auto">
