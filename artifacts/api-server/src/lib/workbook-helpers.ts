@@ -512,6 +512,7 @@ export interface CapitalDebtRow {
   id: string; lineItem: string; enabled: boolean; driverType: string;
   amounts: number[]; note?: string; isLoan?: boolean;
   loanPrincipal?: number; loanRate?: number; loanTermYears?: number;
+  flatAnnualDebtService?: number;
   purpose?: string;
 }
 

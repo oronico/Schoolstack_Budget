@@ -358,6 +358,7 @@ export function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       loanPrincipal: 0,
       loanRate: 0,
       loanTermYears: 0,
+      flatAnnualDebtService: m.existingAnnualDebtService,
       note: "Pre-existing debt entered by guest wizard",
     });
   }
@@ -372,6 +373,7 @@ export function buildModelDataPayload(m: GuestModel): Record<string, unknown> {
       loanPrincipal: 0,
       loanRate: 0,
       loanTermYears: 0,
+      flatAnnualDebtService: m.requestedLoanAnnualDebtService,
       note: "Requested financing entered by guest wizard",
     });
   }

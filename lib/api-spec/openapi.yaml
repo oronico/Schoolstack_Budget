@@ -1025,6 +1025,8 @@ components:
           type: number
         loanTermYears:
           type: number
+        flatAnnualDebtService:
+          type: number
         purpose:
           type: string
           enum: [startup, operating, refinance]

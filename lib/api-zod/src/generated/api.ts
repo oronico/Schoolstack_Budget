@@ -578,6 +578,7 @@ export const CreateModelBody = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          flatAnnualDebtService: zod.number().optional(),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
@@ -1183,6 +1184,7 @@ export const GetModelResponse = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          flatAnnualDebtService: zod.number().optional(),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
@@ -1794,6 +1796,7 @@ export const UpdateModelBody = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          flatAnnualDebtService: zod.number().optional(),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
@@ -2394,6 +2397,7 @@ export const UpdateModelResponse = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          flatAnnualDebtService: zod.number().optional(),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )
@@ -3026,6 +3030,7 @@ export const ArchiveModelResponse = zod.object({
           loanPrincipal: zod.number().optional(),
           loanRate: zod.number().optional(),
           loanTermYears: zod.number().optional(),
+          flatAnnualDebtService: zod.number().optional(),
           purpose: zod.enum(["startup", "operating", "refinance"]).optional(),
         }),
       )

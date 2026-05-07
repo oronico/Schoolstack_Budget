@@ -311,6 +311,9 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
         }
       } else {
         cdTotal += driverVal(r.amounts, y, r.driverType, students);
+        if (r.flatAnnualDebtService && r.flatAnnualDebtService > 0) {
+          loanDebtService += r.flatAnnualDebtService;
+        }
       }
     }
 

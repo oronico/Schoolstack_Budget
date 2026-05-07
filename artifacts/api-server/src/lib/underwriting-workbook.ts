@@ -2072,6 +2072,19 @@ function buildDebtSchedule(wb: ExcelJS.Workbook, data: ModelData) {
     debtBalanceRow = -1;
   }
 
+  // Guest debt rows (isLoan:false) carry an explicit flatAnnualDebtService
+  // when the wizard collected an annual payment without principal/term info.
+  // Fold those amounts into debtByYear so DSCR & Covenants reflects the real
+  // debt burden, even though we don't amortize them on the Debt Schedule.
+  const flatDebtRows = capDebtRows.filter(r => !r.isLoan && (r.flatAnnualDebtService || 0) > 0);
+  if (flatDebtRows.length > 0) {
+    for (let y = 0; y < yc; y++) {
+      for (const fd of flatDebtRows) {
+        debtByYear[y] += fd.flatAnnualDebtService || 0;
+      }
+    }
+  }
+
   return { debtByYear, interestByYear, principalByYear, balanceByYear, debtBalanceRow };
 }
 

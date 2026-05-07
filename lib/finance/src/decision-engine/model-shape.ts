@@ -80,8 +80,10 @@ export interface CapitalDebtRowLike {
   loanPrincipal?: number;
   loanRate?: number;
   loanTermYears?: number;
+  flatAnnualDebtService?: number;
   driverType: string;
   amounts?: number[];
+  lineItem?: string;
 }
 
 export interface TuitionTierLike {

@@ -384,6 +384,7 @@ export interface CapitalDebtRow {
   loanPrincipal?: number;
   loanRate?: number;
   loanTermYears?: number;
+  flatAnnualDebtService?: number;
   purpose?: CapitalDebtRowPurpose;
   [key: string]: unknown;
 }
