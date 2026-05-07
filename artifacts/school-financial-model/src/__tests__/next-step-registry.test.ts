@@ -27,6 +27,23 @@ const ENGINE_FILES = [
   // Scenario engine + decision flows — NudgeItem.nextStep
   "lib/finance/src/decision-engine/scenario-engine.ts",
   "lib/finance/src/decision-engine/decision-flows.ts",
+  // Underwriting wizard — LenderFlag.label / .nextStep
+  "artifacts/school-financial-model/src/pages/underwriting.tsx",
+];
+
+// Primary user-facing text fields per engine — these must also pass the
+// banned-word check, not only nextStep. Task #658 review pass 3.
+const PRIMARY_TEXT_FIELDS = [
+  "title",
+  "headline",
+  "summary",
+  "explanation",
+  "message",
+  "label",
+  "whyItMatters",
+  "recommendedAction",
+  "action",
+  "defaultPrompt",
 ];
 
 const BANNED = [
@@ -111,5 +128,52 @@ describe("Task #658 — nextStep registry enforcement", () => {
 
   it("totals at least 25 emit sites across all engines (sanity floor)", () => {
     expect(allHits.length).toBeGreaterThanOrEqual(25);
+  });
+
+  // Task #658 review pass 3 — also enforce coach tone on primary text
+  // fields (title / summary / headline / message / label / etc.). This
+  // catches verdict-style phrasing in the headline of a flag, not just
+  // the next-step copy underneath it.
+  describe("primary text fields are coach-tone (no banned words)", () => {
+    const RE = new RegExp(
+      `(${PRIMARY_TEXT_FIELDS.join("|")})\\s*:\\s*(?:[^,\\n]*?\\?\\s*[^:]*?:\\s*)?(["'\`])((?:\\\\.|(?!\\2).)*)\\2`,
+      "g",
+    );
+
+    interface PrimaryHit { file: string; line: number; field: string; literal: string }
+    const primary: PrimaryHit[] = [];
+
+    for (const rel of ENGINE_FILES) {
+      const src = readFileSync(resolve(REPO_ROOT, rel), "utf8");
+      const lines = src.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        // Skip pure interface declarations (`title: string;`) and
+        // anything inside an obvious comment line.
+        if (/^\s*\/\//.test(line)) continue;
+        // Skip select-option label lists — they're UI option text, not
+        // flag copy (e.g. `{ value: "x", label: "Microschool" }`).
+        if (/value\s*:\s*["']/.test(line) && /label\s*:/.test(line)) continue;
+        RE.lastIndex = 0;
+        let m: RegExpExecArray | null;
+        while ((m = RE.exec(line)) !== null) {
+          if (/string\s*;?\s*$/.test(line.trim())) continue;
+          primary.push({ file: rel, line: i + 1, field: m[1], literal: m[3] });
+        }
+      }
+    }
+
+    it("finds at least 50 primary-text emit sites (sanity floor)", () => {
+      expect(primary.length).toBeGreaterThanOrEqual(50);
+    });
+
+    it("no primary-text literal contains a banned credit-verdict word", () => {
+      for (const h of primary) {
+        const flat = h.literal.replace(/\$\{[^}]*\}/g, " ");
+        for (const re of BANNED) {
+          expect(re.test(flat), `${h.file}:${h.line} (${h.field}) → banned ${re}: "${h.literal}"`).toBe(false);
+        }
+      }
+    });
   });
 });

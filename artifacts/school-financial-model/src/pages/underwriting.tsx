@@ -580,6 +580,11 @@ type FlagSeverity = "critical" | "high" | "caution" | "strong";
 interface LenderFlag {
   severity: FlagSeverity;
   label: string;
+  // Task #658 — required coach-voice next step shown beneath each flag.
+  // For "strong" flags this is a brief encouragement-and-keep-going line;
+  // for caution/high/critical it's the concrete fix the founder can make
+  // right now in this same wizard.
+  nextStep: string;
 }
 
 export function computeLenderFlags(m: GuestModel, enrollProjection: number[]): LenderFlag[] {
@@ -610,101 +615,221 @@ export function computeLenderFlags(m: GuestModel, enrollProjection: number[]): L
   const monthlyCashBurn = totalExpenses / 12;
   const daysCashOnHand = monthlyCashBurn > 0 ? (m.beginningCash / (monthlyCashBurn / 30)) : 999;
 
+  // Task #658 — every flag carries a coach-voice label and a concrete
+  // `nextStep` the founder can act on inside this wizard. Tone target:
+  // describe the current state plainly, then point at the next move.
+  // No verdict words ("approved", "declined", "ineligible", "rejected").
   if (!m.founderIsPaidYear1 && m.founderAnnualCompensation > 0) {
-    flags.push({ severity: "caution", label: `Founder compensation deferred to Year ${m.founderCompensationBeginsYear}` });
+    flags.push({
+      severity: "caution",
+      label: `Your model defers founder compensation to Year ${m.founderCompensationBeginsYear} — let's make sure that's intentional.`,
+      nextStep: `Open Step 2 (You) and either bring founder compensation into Year 1 at a market rate, or add a note explaining why deferring to Year ${m.founderCompensationBeginsYear} fits your runway.`,
+    });
   } else if (!m.founderIsPaidYear1 && m.founderAnnualCompensation === 0) {
-    flags.push({ severity: "high", label: "No founder compensation planned — lenders may question sustainability" });
+    flags.push({
+      severity: "high",
+      label: "Your model shows no founder compensation — lenders look for a sustainable plan here.",
+      nextStep: "Open Step 2 (You) and add a market-rate founder salary (typical range $70K-$120K), even if you intend to discount it personally — note the discount separately.",
+    });
   }
 
   if (m.schoolStage === "new_school" && m.enrollmentValidationStatus !== "signed_agreements" && m.enrollmentValidationStatus !== "deposits_collected") {
     if (m.depositCount < 10 && m.signedAgreementCount < 10) {
-      flags.push({ severity: "high", label: "Fewer than 10 deposits or signed agreements for Year 1" });
+      flags.push({
+        severity: "high",
+        label: "Year 1 currently has fewer than 10 deposits or signed agreements — let's strengthen the demand evidence.",
+        nextStep: "Open Step 4 (Enrollment) and either log your current signed agreements / deposits, or note the recruiting milestones you'll hit before opening day.",
+      });
     }
   }
 
   if (m.tuitionCollectionRate >= 100) {
-    flags.push({ severity: "caution", label: "Tuition collection modeled at 100%" });
+    flags.push({
+      severity: "caution",
+      label: "Your model assumes 100% tuition collection — most schools see some shortfall.",
+      nextStep: "Open Step 5 (Revenue) and set your tuition collection rate to a realistic 92-97% so the model carries a small cushion.",
+    });
   }
 
   if (m.schoolStage === "operating_school" && m.retentionRate < 80) {
-    flags.push({ severity: "high", label: `Retention rate ${m.retentionRate}% is below 80% for an operating school` });
+    flags.push({
+      severity: "high",
+      label: `Your retention rate of ${m.retentionRate}% is below the 80% benchmark for operating schools — let's see what's driving it.`,
+      nextStep: "Open Step 4 (Enrollment) and either revise the retention rate upward with a recovery plan, or paste in the historical retention numbers and the actions you're taking to lift them.",
+    });
   }
 
   if (m.facilityType === "residential") {
-    flags.push({ severity: "high", label: "Residential facility — may not qualify for some lending programs" });
+    flags.push({
+      severity: "high",
+      label: "You've selected a residential facility — some lending programs limit eligibility on residential conversions.",
+      nextStep: "Open Step 7 (Facility) and confirm zoning + occupancy classification for the residential site, and document the lending programs you've already pre-screened for the property type.",
+    });
   }
 
   if (!m.leaseSigned && m.monthlyRent > 0) {
-    flags.push({ severity: "high", label: "No signed lease" });
+    flags.push({
+      severity: "high",
+      label: "Your model assumes lease costs but the lease isn't signed yet — let's lock that down.",
+      nextStep: "Open Step 7 (Facility) and either upload the signed lease, or add the target signing date and the LOI status you're working from.",
+    });
   }
 
   if (m.occupancyDocumentationStatus === "not_started" || m.occupancyDocumentationStatus === "unknown") {
-    flags.push({ severity: "high", label: "No occupancy documentation path" });
+    flags.push({
+      severity: "high",
+      label: "Your occupancy documentation isn't in place yet — it's the kind of question reviewers ask up front.",
+      nextStep: "Open Step 7 (Facility) and outline the path to occupancy (CO inspection, fire marshal, ADA), with target dates next to each.",
+    });
   }
 
   if (m.insuranceStatus === "not_started" || m.insuranceStatus === "unknown") {
-    flags.push({ severity: "high", label: "No insurance path" });
+    flags.push({
+      severity: "high",
+      label: "Insurance isn't set up yet — let's at least sketch the path.",
+      nextStep: "Open Step 7 (Facility) and add either a placeholder broker / quote or the carrier you'll work with, plus the target binding date.",
+    });
   }
 
   if (facilityRatio > 22) {
-    flags.push({ severity: "high", label: `Facility cost is ${fmtPct(facilityRatio)} of revenue (above 22% threshold)` });
+    flags.push({
+      severity: "high",
+      label: `Facility cost is ${fmtPct(facilityRatio)} of revenue, above the 22% benchmark — let's right-size the footprint.`,
+      nextStep: "Open Step 7 (Facility) and trim a fixed-cost line (smaller square footage, shared space, or phased build-out) until facility lands under 20% of Year 1 revenue.",
+    });
   } else if (facilityRatio > 15 && facilityRatio <= 22) {
-    flags.push({ severity: "caution", label: `Facility cost is ${fmtPct(facilityRatio)} of revenue (above 15% benchmark)` });
+    flags.push({
+      severity: "caution",
+      label: `Facility cost is ${fmtPct(facilityRatio)} of revenue — workable, and close to the 15% benchmark.`,
+      nextStep: "Open Step 7 (Facility) and look for one small reduction (renegotiate utilities, reduce one shared space) to bring facility under 15% of Year 1 revenue.",
+    });
   } else if (facilityRatio <= 15 && facilityRatio > 0) {
-    flags.push({ severity: "strong", label: `Facility cost is ${fmtPct(facilityRatio)} of revenue (below 15% benchmark)` });
+    flags.push({
+      severity: "strong",
+      label: `Facility cost is ${fmtPct(facilityRatio)} of revenue — comfortably under the 15% benchmark.`,
+      nextStep: "Keep an eye on facility costs as enrollment grows; revisit Step 7 (Facility) before any expansion or lease renewal.",
+    });
   }
 
   if (staffingRatio > 65) {
-    flags.push({ severity: "high", label: `Staffing is ${fmtPct(staffingRatio)} of revenue (above 65% threshold)` });
+    flags.push({
+      severity: "high",
+      label: `Staffing is ${fmtPct(staffingRatio)} of revenue, above the 65% benchmark — let's tighten the staffing plan.`,
+      nextStep: "Open Step 6 (Staffing) and either move one Year 1 role to a Year 2 start date, or convert a full-time role to part-time, until staffing lands under 65% of revenue.",
+    });
   } else if (staffingRatio > 55 && staffingRatio <= 65) {
-    flags.push({ severity: "caution", label: `Staffing is ${fmtPct(staffingRatio)} of revenue (above 55% benchmark)` });
+    flags.push({
+      severity: "caution",
+      label: `Staffing is ${fmtPct(staffingRatio)} of revenue — within range, just shy of the 55% benchmark.`,
+      nextStep: "Open Step 6 (Staffing) and look for one role you can defer to Year 2, or one to convert to part-time, to bring staffing closer to 55% of revenue.",
+    });
   } else if (staffingRatio <= 55 && staffingRatio > 0) {
-    flags.push({ severity: "strong", label: `Staffing is ${fmtPct(staffingRatio)} of revenue (below 55% benchmark)` });
+    flags.push({
+      severity: "strong",
+      label: `Staffing is ${fmtPct(staffingRatio)} of revenue — comfortably under the 55% benchmark.`,
+      nextStep: "Keep an eye on staffing as you grow; revisit Step 6 (Staffing) every time you add or change a role.",
+    });
   }
 
   if (daysCashOnHand < 30) {
-    flags.push({ severity: "critical", label: `Days cash on hand: ${Math.round(daysCashOnHand)} (critical — below 30 days)` });
+    flags.push({
+      severity: "critical",
+      label: `You have ${Math.round(daysCashOnHand)} days cash on hand — let's build a cushion before opening day.`,
+      nextStep: "Open Step 2 (You) and either raise opening cash via startup fundraising / line of credit, or trim Step 8 (Operating Expenses) until cash on hand clears 45 days.",
+    });
   } else if (daysCashOnHand < 45) {
-    flags.push({ severity: "high", label: `Days cash on hand: ${Math.round(daysCashOnHand)} (below 45-day threshold)` });
+    flags.push({
+      severity: "high",
+      label: `You have ${Math.round(daysCashOnHand)} days cash on hand — under the 45-day cushion most lenders look for.`,
+      nextStep: "Open Step 2 (You) and raise opening cash, or trim Step 8 (Operating Expenses), to push cash on hand past 45 days.",
+    });
   } else if (daysCashOnHand < 90) {
-    flags.push({ severity: "caution", label: `Days cash on hand: ${Math.round(daysCashOnHand)} (below 90-day benchmark)` });
+    flags.push({
+      severity: "caution",
+      label: `You have ${Math.round(daysCashOnHand)} days cash on hand — workable, and approaching the 90-day benchmark.`,
+      nextStep: "Open Step 2 (You) and look for a small bump in opening cash so you clear the 90-day cushion comfortably.",
+    });
   } else if (daysCashOnHand >= 90 && daysCashOnHand < 999) {
-    flags.push({ severity: "strong", label: `Days cash on hand: ${Math.round(daysCashOnHand)} (above 90-day benchmark)` });
+    flags.push({
+      severity: "strong",
+      label: `You have ${Math.round(daysCashOnHand)} days cash on hand — comfortably above the 90-day benchmark.`,
+      nextStep: "Keep this cushion as enrollment grows; re-check Step 2 (You) before any major capex or hiring decision.",
+    });
   }
 
   if (totalDebtService > 0) {
     if (dscr < 1.0) {
-      flags.push({ severity: "critical", label: `Estimated DSCR is ${dscr.toFixed(2)}x (below 1.0x — cannot cover debt)` });
+      flags.push({
+        severity: "critical",
+        label: `Estimated DSCR is ${dscr.toFixed(2)}x — operating income doesn't yet cover debt service.`,
+        nextStep: "Open Step 9 (Debt) and lower the loan principal, extend the term, or phase the capex into smaller tranches until DSCR clears 1.15x.",
+      });
     } else if (dscr < 1.15) {
-      flags.push({ severity: "high", label: `Estimated DSCR is ${dscr.toFixed(2)}x (below 1.15x threshold)` });
+      flags.push({
+        severity: "high",
+        label: `Estimated DSCR is ${dscr.toFixed(2)}x — under the 1.15x cushion most lenders look for.`,
+        nextStep: "Open Step 9 (Debt) and lower the loan principal or extend the term, or revisit Step 5 (Revenue) to lift operating income, until DSCR clears 1.15x.",
+      });
     } else if (dscr < 1.25) {
-      flags.push({ severity: "caution", label: `Estimated DSCR is ${dscr.toFixed(2)}x (below 1.25x benchmark)` });
+      flags.push({
+        severity: "caution",
+        label: `Estimated DSCR is ${dscr.toFixed(2)}x — workable, just shy of the 1.25x benchmark.`,
+        nextStep: "Open Step 5 (Revenue) and lift operating income by 5-10%, or revisit Step 9 (Debt) for a slightly better term, until DSCR clears 1.25x.",
+      });
     } else {
-      flags.push({ severity: "strong", label: `Estimated DSCR is ${dscr.toFixed(2)}x (above 1.25x benchmark)` });
+      flags.push({
+        severity: "strong",
+        label: `Estimated DSCR is ${dscr.toFixed(2)}x — comfortably above the 1.25x benchmark.`,
+        nextStep: "Keep an eye on DSCR as you finalize loan terms; re-check Step 9 (Debt) before signing.",
+      });
     }
   }
 
   if (netIncome > 0 && y1Rev > 0) {
     const margin = (netIncome / y1Rev) * 100;
     if (margin > 5) {
-      flags.push({ severity: "strong", label: `Projected Year 1 margin: ${fmtPct(margin)}` });
+      flags.push({
+        severity: "strong",
+        label: `Projected Year 1 margin is ${fmtPct(margin)} — a healthy starting point.`,
+        nextStep: "Keep this margin protected as you grow; revisit Steps 5-8 every time enrollment or staffing changes meaningfully.",
+      });
     }
   } else if (netIncome < 0) {
-    flags.push({ severity: "high", label: `Year 1 projected deficit: ${fmtMoney(netIncome)}` });
+    flags.push({
+      severity: "high",
+      label: `Year 1 currently shows a deficit of ${fmtMoney(netIncome)} — let's close it together.`,
+      nextStep: "Open Step 8 (Operating Expenses) and trim a fixed-cost line, or revisit Step 5 (Revenue) to add a tuition or per-pupil source, until Year 1 net income clears zero.",
+    });
   }
 
   if (m.leaseSigned && m.leaseInEntityName) {
-    flags.push({ severity: "strong", label: "Lease signed and in the school entity's name" });
+    flags.push({
+      severity: "strong",
+      label: "Lease is signed and held in the school entity's name — exactly what reviewers want to see.",
+      nextStep: "Keep the signed lease handy in your readiness materials; revisit Step 7 (Facility) on renewal.",
+    });
   }
 
   if (m.enrollmentValidationStatus === "signed_agreements" && m.signedAgreementCount >= 10) {
-    flags.push({ severity: "strong", label: `${m.signedAgreementCount} signed enrollment agreements` });
+    flags.push({
+      severity: "strong",
+      label: `${m.signedAgreementCount} signed enrollment agreements — strong demand evidence.`,
+      nextStep: "Keep adding signed agreements through opening day; revisit Step 4 (Enrollment) as new commitments come in.",
+    });
   } else if (m.enrollmentValidationStatus === "deposits_collected" && m.depositCount >= 10) {
-    flags.push({ severity: "strong", label: `${m.depositCount} enrollment deposits collected (avg ${fmtMoney(m.averageDepositAmount)})` });
+    flags.push({
+      severity: "strong",
+      label: `${m.depositCount} enrollment deposits collected (avg ${fmtMoney(m.averageDepositAmount)}) — strong demand evidence.`,
+      nextStep: "Keep collecting deposits through opening day; revisit Step 4 (Enrollment) as deposit count grows.",
+    });
   }
 
   if (!m.canWithstand90DayDelay && (m.fundingProfile === "charter_public_funded" || m.fundingProfile === "hybrid_mixed")) {
-    flags.push({ severity: "high", label: "Cannot withstand a 90-day public funding delay" });
+    flags.push({
+      severity: "high",
+      label: "Your model can't currently absorb a 90-day public funding delay — common when the state pays in arrears.",
+      nextStep: "Open Step 2 (You) and raise opening cash, or arrange a short-term line of credit in Step 9 (Debt), so you can carry payroll through the first state disbursement.",
+    });
   }
 
   return flags;
@@ -783,12 +908,12 @@ export function UnderwritingLandingPage() {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error || `Analysis failed (HTTP ${res.status})`);
+        throw new Error(body.error || `Analysis didn't complete (HTTP ${res.status})`);
       }
       const result = (await res.json()) as ConsultantResult;
       setAnalysis(result);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Analysis failed.";
+      const msg = err instanceof Error ? err.message : "Analysis didn't complete.";
       setAnalysisError(msg);
     } finally {
       setIsAnalyzing(false);
@@ -807,7 +932,7 @@ export function UnderwritingLandingPage() {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error || `Export failed (HTTP ${res.status})`);
+        throw new Error(body.error || `Export didn't complete (HTTP ${res.status})`);
       }
       const blob = await res.blob();
       const cd = res.headers.get("content-disposition") || "";
@@ -816,7 +941,7 @@ export function UnderwritingLandingPage() {
       const filename = match?.[1] || `${safeName}-Budget.xlsx`;
       downloadBlob(blob, filename);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Export failed.";
+      const msg = err instanceof Error ? err.message : "Export didn't complete.";
       setExportError(msg);
     } finally {
       setIsExporting(false);
@@ -1287,11 +1412,17 @@ export function UnderwritingLandingPage() {
                   {strengths.length > 0 ? (
                     <div className="mb-4">
                       <p className="text-xs font-bold text-[#328555] uppercase tracking-wide mb-2">Strengths</p>
-                      <ul className="space-y-1">
+                      <ul className="space-y-2">
                         {strengths.map((f, i) => (
                           <li key={i} className="flex items-start gap-2 text-sm text-[#1E293B]/80">
                             <CheckCircle2 className="w-4 h-4 mt-0.5 text-[#328555] shrink-0" />
-                            {f.label}
+                            <div>
+                              <div>{f.label}</div>
+                              {/* Task #658 — every flag carries a coach-voice next step */}
+                              <div className="text-xs text-[#328555] mt-0.5">
+                                <span className="font-semibold">Next step:</span> {f.nextStep}
+                              </div>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -1301,11 +1432,16 @@ export function UnderwritingLandingPage() {
                   {concerns.length > 0 ? (
                     <div className="mb-4">
                       <p className="text-xs font-bold text-[#D97706] uppercase tracking-wide mb-2">Things to address before talking to a lender</p>
-                      <ul className="space-y-1">
+                      <ul className="space-y-2">
                         {concerns.map((f, i) => (
                           <li key={i} className="flex items-start gap-2 text-sm text-[#1E293B]/80">
                             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: f.severity === "critical" ? "#DC2626" : f.severity === "high" ? "#D97706" : "#CA8A04" }} />
-                            {f.label}
+                            <div>
+                              <div>{f.label}</div>
+                              <div className="text-xs text-[#92400E] mt-0.5">
+                                <span className="font-semibold">Next step:</span> {f.nextStep}
+                              </div>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -1316,6 +1452,9 @@ export function UnderwritingLandingPage() {
                     <div className="bg-[#FEF3C7] border border-[#D97706]/20 rounded-lg p-3">
                       <p className="text-xs font-bold text-[#92400E] uppercase tracking-wide mb-1">Suggested next fix</p>
                       <p className="text-sm text-[#92400E]">{topConcern.label}</p>
+                      <p className="text-xs text-[#92400E] mt-1">
+                        <span className="font-semibold">Next step:</span> {topConcern.nextStep}
+                      </p>
                     </div>
                   ) : null}
 
