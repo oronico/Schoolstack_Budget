@@ -11,12 +11,22 @@ import type { CashRunwayView } from "./build-cash-runway";
 import type { PacketSection, LinkedMetric } from "./packet-types";
 import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { cashStatusBadgeLabel, renderCashRunwaySection } from "./cash-runway-pdf.js";
+import { renderNarrativeCommentarySection } from "./lender-packet-pdf.js";
 
 export async function generateBoardPacketPDF(packet: BoardPacket): Promise<Buffer> {
   const doc = createDoc();
 
   drawCoverPage(doc, packet);
   doc.addPage();
+
+  // Task #617 - board-ready narrative commentary leads the body of the
+  // packet. Same canonical-engine bundle the lender commentary uses, so
+  // the two narratives can never disagree on a number.
+  renderNarrativeCommentarySection(
+    doc,
+    "Board Commentary",
+    packet.boardCommentary,
+  );
 
   drawOutlookSection(doc, packet);
 

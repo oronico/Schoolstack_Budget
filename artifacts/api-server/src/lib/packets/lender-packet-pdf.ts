@@ -22,6 +22,7 @@ import { renderForecastAccuracySection } from "./forecast-accuracy-pdf.js";
 import { renderCashRunwayTroughCallout } from "./cash-runway-pdf.js";
 import { drawLenderSummaryPage } from "./lender-summary-pdf.js";
 import type { LenderSummaryData } from "./build-lender-summary.js";
+import type { NarrativeCommentary } from "./build-narrative-commentary.js";
 
 export async function generateLenderPacketPDF(
   packet: LenderPacket,
@@ -40,6 +41,15 @@ export async function generateLenderPacketPDF(
 
   drawCoverPage(doc, packet);
   doc.addPage();
+
+  // Task #617 - lender-ready narrative commentary leads the body of the
+  // packet. Every figure printed here was produced by the same canonical
+  // engine that built the rest of the report (guard test enforces).
+  renderNarrativeCommentarySection(
+    doc,
+    "Lender Commentary",
+    packet.lenderCommentary,
+  );
 
   const execSection = packet.sections.find(s => s.id === "executive_summary" && s.included);
   if (execSection) {
@@ -552,3 +562,34 @@ function drawFooterNote(doc: PDFDoc, text: string) {
   doc.moveDown(0.3);
 }
 
+
+/**
+ * Task #617 - Renders the lender / board narrative commentary block as a
+ * lead section of the PDF. Each paragraph from `commentary.paragraphs` is
+ * rendered as plain prose with a navy section title bar, matching the
+ * styling used elsewhere in the packet. We intentionally do NOT print
+ * the source bundle - that surfaces in the in-app preview only, where a
+ * founder can audit the inputs before regenerating.
+ */
+export function renderNarrativeCommentarySection(
+  doc: PDFDoc,
+  title: string,
+  commentary: NarrativeCommentary,
+) {
+  if (!commentary || commentary.paragraphs.length === 0) return;
+  sectionTitle(doc, title);
+  for (const paragraph of commentary.paragraphs) {
+    ensureSpace(doc, 40);
+    bodyText(doc, paragraph);
+  }
+  doc.moveDown(0.3);
+  doc.font("Helvetica-Oblique").fontSize(8).fillColor(BRAND.gray);
+  doc.text(
+    "Every figure in this commentary is sourced from the same canonical engine that powers the rest of this packet.",
+    doc.page.margins.left,
+    doc.y,
+    { width: doc.page.width - doc.page.margins.left - doc.page.margins.right },
+  );
+  doc.fillColor(BRAND.black);
+  doc.moveDown(0.5);
+}

@@ -14,6 +14,11 @@ import {
   type LenderStressTestResults,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
+import {
+  buildNarrativeBundle,
+  buildLenderCommentary,
+  type NarrativeCommentary,
+} from "./build-narrative-commentary";
 import { buildCashRunway, type CashRunwayView } from "./build-cash-runway";
 import { buildDecisionHistory, type DecisionHistoryItem } from "./build-decision-history";
 import {
@@ -107,6 +112,14 @@ export interface LenderPacket extends PacketData {
    * workbook all show identical numbers.
    */
   lenderStressTests: LenderStressTestResults;
+  /**
+   * Task #617 - lender-ready narrative commentary block. Renders as the
+   * lead block in the PDF (after the one-page summary, before the
+   * executive summary) and surfaces in the in-app preview with a
+   * "Regenerate" affordance. Every numeric figure in `paragraphs` is
+   * present in `allowedFigures` (guard test enforces).
+   */
+  lenderCommentary: NarrativeCommentary;
 }
 
 export interface BreakEvenDownsideExport {
@@ -254,6 +267,12 @@ export function buildLenderPacket(
     // of the packet is built from, so reusing that result keeps every
     // surface (dashboard, PDF, workbook) reconciled.
     lenderStressTests: consultantOutput.lenderStressTests,
+    // Task #617 - deterministic lender commentary, built from a typed
+    // source bundle so every numeric figure in the paragraphs reconciles
+    // to the canonical engine output (guard test enforces no hallucinations).
+    lenderCommentary: buildLenderCommentary(
+      buildNarrativeBundle(modelData, consultantOutput),
+    ),
   };
 }
 

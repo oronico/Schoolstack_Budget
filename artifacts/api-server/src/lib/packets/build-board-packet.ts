@@ -19,6 +19,11 @@ import {
   type DecisionEngineModelData,
 } from "@workspace/finance";
 import { buildPacketData } from "./build-packet-data";
+import {
+  buildNarrativeBundle,
+  buildBoardCommentary,
+  type NarrativeCommentary,
+} from "./build-narrative-commentary";
 import { buildCashRunway, type CashRunwayView } from "./build-cash-runway";
 import { buildDecisionHistory, type DecisionHistoryItem } from "./build-decision-history";
 import {
@@ -151,6 +156,13 @@ export interface BoardPacket extends PacketData {
    * Task #436.
    */
   recruitingProjections: BoardRecruitingProjections | null;
+  /**
+   * Task #617 - board-ready narrative commentary block (warmer tone).
+   * Renders as the lead block in the board PDF and surfaces in the
+   * in-app preview with a "Regenerate" affordance. Every numeric figure
+   * in `paragraphs` reconciles to canonical engine output (guard test).
+   */
+  boardCommentary: NarrativeCommentary;
 }
 
 const BOARD_PACKET_SECTIONS: SectionId[] = [
@@ -286,6 +298,12 @@ export function buildBoardPacket(
     forecastAccuracyFilter: normalizedFilter,
     forecastAccuracyUnfilteredCount: fullForecastAccuracy.entries.length,
     recruitingProjections,
+    // Task #617 - deterministic board commentary, built from the same
+    // canonical bundle the lender commentary uses so the two narratives
+    // can never disagree on a number.
+    boardCommentary: buildBoardCommentary(
+      buildNarrativeBundle(modelData, consultantOutput),
+    ),
   };
 }
 

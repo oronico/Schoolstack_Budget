@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { X, Download, Loader2, Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, FileText, RefreshCw } from "lucide-react";
 import { trackExport } from "@/hooks/useExportTracker";
 import { InsightCallout } from "@/components/coaching/InsightCallout";
 import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
@@ -64,6 +64,17 @@ interface NarrativeSummary {
   recommendedFocus: string;
 }
 
+/**
+ * Task #617 - lender-ready narrative commentary block returned from the
+ * canonical engine alongside the rest of the packet. Optional so older
+ * cached responses keep rendering.
+ */
+interface NarrativeCommentary {
+  paragraphs: string[];
+  allowedFigures: string[];
+  generatedAt: string;
+}
+
 interface LenderPacket {
   packetType: string;
   schoolName: string;
@@ -86,6 +97,9 @@ interface LenderPacket {
     explanation: string;
   };
   cashRunway: CashRunwayView;
+  // Task #617 - lender commentary block, surfaced as the lead block in
+  // both the in-app preview and the downloaded PDF.
+  lenderCommentary?: NarrativeCommentary;
 }
 
 export function LenderPacketPreview({
@@ -99,29 +113,43 @@ export function LenderPacketPreview({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  // Task #617 - "Regenerate" rebuilds the packet (and its lender commentary)
+  // without dismissing the preview, so founders can refresh after editing.
+  const [regenerating, setRegenerating] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["executive_summary", "five_year_projection", "key_risks"]));
 
-  useEffect(() => {
-    const fetchPacket = async () => {
-      try {
-        const token = localStorage.getItem("auth_token");
-        const res = await fetch(
-          `/api/models/${modelId}/export/lender-packet${buildForecastFilterQuery()}`,
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
-        );
-        if (!res.ok) throw new Error("Failed to load packet");
-        const data = await res.json();
-        setPacket(data);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load packet");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPacket();
+  const fetchPacket = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      // Cache-bust on regenerate so a CDN / client cache cannot serve stale prose.
+      const filterQuery = buildForecastFilterQuery();
+      const ts = `${filterQuery ? "&" : "?"}_=${Date.now()}`;
+      const res = await fetch(
+        `/api/models/${modelId}/export/lender-packet${filterQuery}${ts}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          cache: "no-store",
+        },
+      );
+      if (!res.ok) throw new Error("Failed to load packet");
+      const data = await res.json();
+      setPacket(data);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load packet");
+    }
   }, [modelId]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchPacket().finally(() => setLoading(false));
+  }, [fetchPacket]);
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    await fetchPacket();
+    setRegenerating(false);
+  };
 
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
@@ -188,8 +216,17 @@ export function LenderPacketPreview({
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <PacketHeader packet={packet} onClose={onClose} onDownload={handleDownloadPdf} downloading={downloadingPdf} />
+        <PacketHeader packet={packet} onClose={onClose} onDownload={handleDownloadPdf} downloading={downloadingPdf} onRegenerate={handleRegenerate} regenerating={regenerating} />
         <div className="flex-1 overflow-y-auto px-6 pb-6">
+          {packet.lenderCommentary && (
+            <CommentaryBlock
+              title="Lender Commentary"
+              accent="lender"
+              commentary={packet.lenderCommentary}
+              onRegenerate={handleRegenerate}
+              regenerating={regenerating}
+            />
+          )}
           <NarrativeHeader narrative={packet.narrative} readiness={packet.lenderReadiness} />
           {packet.dscrSummary && <DSCRCard dscr={packet.dscrSummary} />}
           {packet.cashRunway && <CashRunwayCard cash={packet.cashRunway} variant="lender" />}
@@ -217,11 +254,15 @@ function PacketHeader({
   onClose,
   onDownload,
   downloading,
+  onRegenerate,
+  regenerating,
 }: {
   packet: LenderPacket;
   onClose: () => void;
   onDownload: () => void;
   downloading: boolean;
+  onRegenerate: () => void;
+  regenerating: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-[#1E293B] to-[#334155] rounded-t-2xl">
@@ -244,6 +285,16 @@ function PacketHeader({
       </div>
       <div className="flex items-center gap-2">
         <button
+          onClick={onRegenerate}
+          disabled={regenerating || downloading}
+          data-testid="regenerate-commentary-button"
+          title="Rebuild the lender commentary from the latest model values"
+          className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {regenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          {regenerating ? "Regenerating..." : "Regenerate"}
+        </button>
+        <button
           onClick={onDownload}
           disabled={downloading}
           className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
@@ -254,6 +305,72 @@ function PacketHeader({
         <button onClick={onClose} className="p-2 text-white/60 hover:text-white transition-colors">
           <X className="h-5 w-5" />
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Task #617 - Lead-block commentary card surfaced above the rest of the
+ * packet preview. Mirrors what gets rendered as the lead block in the
+ * downloaded PDF. The "regenerated at" stamp gives founders a clear
+ * signal that the prose was rebuilt from the latest engine values.
+ */
+export function CommentaryBlock({
+  title,
+  accent,
+  commentary,
+  onRegenerate,
+  regenerating,
+}: {
+  title: string;
+  accent: "lender" | "board";
+  commentary: NarrativeCommentary;
+  onRegenerate: () => void;
+  regenerating: boolean;
+}) {
+  if (!commentary.paragraphs.length) return null;
+  const headerBg =
+    accent === "lender"
+      ? "bg-[#1E293B] text-white"
+      : "bg-[#328555] text-white";
+  const stamp = (() => {
+    try {
+      return new Date(commentary.generatedAt).toLocaleString();
+    } catch {
+      return commentary.generatedAt;
+    }
+  })();
+  return (
+    <div
+      data-testid={`commentary-block-${accent}`}
+      className="mt-6 rounded-xl border border-gray-200 overflow-hidden"
+    >
+      <div className={`flex items-center justify-between px-4 py-2 ${headerBg}`}>
+        <span className="text-xs font-bold uppercase tracking-wide">{title}</span>
+        <button
+          onClick={onRegenerate}
+          disabled={regenerating}
+          data-testid={`commentary-regenerate-${accent}`}
+          className="flex items-center gap-1 text-[11px] font-medium text-white/90 hover:text-white disabled:opacity-50"
+        >
+          {regenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+          {regenerating ? "Regenerating" : "Regenerate"}
+        </button>
+      </div>
+      <div className="px-4 py-3 bg-white space-y-3">
+        {commentary.paragraphs.map((p, i) => (
+          <p
+            key={i}
+            data-testid={`commentary-paragraph-${accent}-${i}`}
+            className="text-sm leading-relaxed text-[#1E293B]"
+          >
+            {p}
+          </p>
+        ))}
+        <p className="text-[11px] text-muted-foreground italic pt-1">
+          Every figure above was sourced from the same canonical engine that powers the rest of this packet. Regenerated at {stamp}.
+        </p>
       </div>
     </div>
   );

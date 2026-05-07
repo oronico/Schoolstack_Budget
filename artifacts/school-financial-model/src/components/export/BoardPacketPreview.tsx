@@ -1,9 +1,21 @@
-import { useState, useEffect } from "react";
-import { X, Download, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Lightbulb, BarChart3 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { X, Download, Loader2, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Lightbulb, BarChart3, RefreshCw } from "lucide-react";
 import { trackExport } from "@/hooks/useExportTracker";
 import { InsightCallout } from "@/components/coaching/InsightCallout";
 import { buildForecastFilterQuery } from "@/lib/forecast-accuracy-query";
 import { CashRunwayCard, type CashRunwayView } from "./CashRunwayCard";
+import { CommentaryBlock } from "./LenderPacketPreview";
+
+/**
+ * Task #617 - board-ready narrative commentary block returned alongside
+ * the rest of the board packet. Optional so older cached responses keep
+ * rendering. Same shape as the lender commentary so they share a UI.
+ */
+interface NarrativeCommentary {
+  paragraphs: string[];
+  allowedFigures: string[];
+  generatedAt: string;
+}
 
 interface LinkedMetric {
   label: string;
@@ -87,6 +99,9 @@ interface BoardPacket {
     status: "healthy" | "watch" | "needs_attention";
     summary: string;
   };
+  // Task #617 - board commentary block, surfaced as the lead block in
+  // both the in-app preview and the downloaded PDF.
+  boardCommentary?: NarrativeCommentary;
 }
 
 export function BoardPacketPreview({
@@ -100,31 +115,44 @@ export function BoardPacketPreview({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  // Task #617 - "Regenerate" rebuilds the packet (and its board commentary)
+  // without dismissing the preview, so trustees can refresh after edits.
+  const [regenerating, setRegenerating] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(["executive_summary", "five_year_projection"]),
   );
 
-  useEffect(() => {
-    const fetchPacket = async () => {
-      try {
-        const token = localStorage.getItem("auth_token");
-        const res = await fetch(
-          `/api/models/${modelId}/export/board-packet${buildForecastFilterQuery()}`,
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
-        );
-        if (!res.ok) throw new Error("Failed to load packet");
-        const data = await res.json();
-        setPacket(data);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load packet");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPacket();
+  const fetchPacket = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      const filterQuery = buildForecastFilterQuery();
+      const ts = `${filterQuery ? "&" : "?"}_=${Date.now()}`;
+      const res = await fetch(
+        `/api/models/${modelId}/export/board-packet${filterQuery}${ts}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          cache: "no-store",
+        },
+      );
+      if (!res.ok) throw new Error("Failed to load packet");
+      const data = await res.json();
+      setPacket(data);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load packet");
+    }
   }, [modelId]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchPacket().finally(() => setLoading(false));
+  }, [fetchPacket]);
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    await fetchPacket();
+    setRegenerating(false);
+  };
 
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
@@ -191,8 +219,17 @@ export function BoardPacketPreview({
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <Header packet={packet} onClose={onClose} onDownload={handleDownloadPdf} downloading={downloadingPdf} />
+        <Header packet={packet} onClose={onClose} onDownload={handleDownloadPdf} downloading={downloadingPdf} onRegenerate={handleRegenerate} regenerating={regenerating} />
         <div className="flex-1 overflow-y-auto px-6 pb-6">
+          {packet.boardCommentary && (
+            <CommentaryBlock
+              title="Board Commentary"
+              accent="board"
+              commentary={packet.boardCommentary}
+              onRegenerate={handleRegenerate}
+              regenerating={regenerating}
+            />
+          )}
           <OutlookBanner outlook={packet.financialOutlook} narrative={packet.narrative} />
           <CashRunwayCard cash={packet.cashRunway} variant="board" />
           <RiskCards risks={packet.topRisks} />
@@ -221,11 +258,15 @@ function Header({
   onClose,
   onDownload,
   downloading,
+  onRegenerate,
+  regenerating,
 }: {
   packet: BoardPacket;
   onClose: () => void;
   onDownload: () => void;
   downloading: boolean;
+  onRegenerate: () => void;
+  regenerating: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-[#328555] to-[#0D9488] rounded-t-2xl">
@@ -247,6 +288,16 @@ function Header({
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <button
+          onClick={onRegenerate}
+          disabled={regenerating || downloading}
+          data-testid="regenerate-commentary-button"
+          title="Rebuild the board commentary from the latest model values"
+          className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {regenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          {regenerating ? "Regenerating..." : "Regenerate"}
+        </button>
         <button
           onClick={onDownload}
           disabled={downloading}
