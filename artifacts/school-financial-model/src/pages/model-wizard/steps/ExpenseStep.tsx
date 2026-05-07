@@ -5,6 +5,7 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
+import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent } from "@/lib/per-student-lens";
 import {
@@ -1279,6 +1280,10 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       <div>
         <h2 className="font-display text-3xl font-bold text-foreground mb-3">Expenses & Operations</h2>
         <p className="text-muted-foreground text-lg">First, a few quick questions about your business operations. Then we'll review your expense details.</p>
+        <div className="mt-3 grid gap-2 max-w-2xl">
+          <ConceptExplainer concept="expense" />
+          <ConceptExplainer concept="net_income" />
+        </div>
       </div>
 
       {showCoach && (
@@ -1437,6 +1442,7 @@ export function ExpenseStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
             description="A dedicated savings account for the school"
           />
           <FinancingInsight text="Aim for 45-90 days of operating reserves. A dedicated savings account is a simple way to show you're managing cash well - and it protects your school from surprises." className="ml-12 -mt-2" />
+          <ConceptExplainer concept="reserves" className="ml-12" />
 
           <BusinessOperationsToggle
             checked={hasBusinessAccount === true}

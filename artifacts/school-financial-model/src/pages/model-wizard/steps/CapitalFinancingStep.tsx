@@ -3,6 +3,7 @@ import { Building2, Shield, Lightbulb, Info } from "lucide-react";
 import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { RationaleField } from "@/components/coaching/RationaleField";
+import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { cn } from "@/lib/utils";
 import { useYearCount } from "@/lib/use-model-duration";
 import type { FullModelData } from "../schema";
@@ -127,6 +128,7 @@ export function CapitalFinancingStep() {
         <p className="text-muted-foreground text-lg">
           If you're financing facilities, equipment, or working capital with debt, set the loan terms and lender covenants here. Skip the details if you have no loan - your model still builds without one.
         </p>
+        <ConceptExplainer concept="debt_service" className="mt-3 max-w-2xl" />
       </div>
 
       <div className="space-y-10">

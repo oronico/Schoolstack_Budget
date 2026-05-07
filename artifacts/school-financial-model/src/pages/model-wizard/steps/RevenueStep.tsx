@@ -5,6 +5,7 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
+import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent } from "@/lib/per-student-lens";
 import { YEAR_COUNT, DEFAULT_COLLECTION_RATE_BY_METHOD, COLLECTION_RATE_BENCHMARK_COPY, REVENUE_QUALITY_LABELS, REVENUE_QUALITY_DEFINITIONS, REVENUE_QUALITY_ORDER, inferRevenueQuality, type RevenueQuality } from "@workspace/finance";
@@ -754,6 +755,8 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
               ? "Check every revenue source you expect in your opening year. We'll set up the right line items and starting points for your plan. Most founders begin with just one or two sources - you can always add more as you firm up commitments."
               : "Check every revenue source that applies to your school. We'll set up the right line items and defaults for your budget. Most founders start with just one or two sources - you can always add more as your school grows."}
           </p>
+          <ConceptExplainer concept="revenue" className="mt-3 max-w-2xl" />
+          <ConceptExplainer concept="timing" className="mt-2 max-w-2xl" />
         </div>
 
         {showCoach && (

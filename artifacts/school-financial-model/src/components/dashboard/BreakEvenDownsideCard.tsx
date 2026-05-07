@@ -3,6 +3,7 @@ import { useGetModel } from "@workspace/api-client-react";
 import { computeBaseFinancials, computeDownsideBand } from "@workspace/finance";
 import { Target, TrendingDown, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
 import type { FullModelData } from "@/pages/model-wizard/schema";
 
 interface Props {
@@ -59,6 +60,7 @@ export function BreakEvenDownsideCard({ modelId, modelName }: Props) {
             — students needed to cover costs and what happens if enrollment
             slips.
           </p>
+          <ConceptExplainer concept="break_even" className="mt-2 max-w-xl" />
         </div>
       </div>
 

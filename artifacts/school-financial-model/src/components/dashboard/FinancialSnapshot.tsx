@@ -33,6 +33,8 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisNumber } from "@/components/coaching/WhyThisNumber";
+import { ConceptExplainer } from "@/components/coaching/ConceptExplainer";
+import { PayingYourselfMatters } from "@/components/coaching/PayingYourselfMatters";
 import { LENDER_LABELS } from "@/lib/coaching/lender-labels";
 import { useLenderLanguage } from "@/lib/coaching/use-lender-language";
 import type { HeadlineMetricKey } from "@workspace/finance";
@@ -696,6 +698,16 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
             <p className="text-xs text-muted-foreground mt-3 italic">
               Add revenue and expenses to your model to see live numbers here.
             </p>
+          )}
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <ConceptExplainer concept="cash_flow" />
+            <ConceptExplainer concept="net_income" />
+          </div>
+          {model?.data && (
+            <PayingYourselfMatters
+              data={model.data as unknown as FullModelData}
+              className="mt-4"
+            />
           )}
         </>
       )}

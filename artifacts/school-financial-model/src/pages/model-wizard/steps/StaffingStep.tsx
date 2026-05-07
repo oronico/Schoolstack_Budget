@@ -6,6 +6,8 @@ import { FinancingInsight } from "@/components/coaching/FinancingInsight";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
 import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
+import { PayingYourselfMatters } from "@/components/coaching/PayingYourselfMatters";
+import type { FullModelData } from "@/pages/model-wizard/schema";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent, formatPerFte } from "@/lib/per-student-lens";
 import { highlightMatch } from "@/lib/text-highlight";
@@ -1002,12 +1004,19 @@ export function StaffingStep() {
         return (
           <div key={cat} id={`staffing-cat-${cat}`} className="scroll-mt-4">
             {cat === "school_leadership" && hasAnyLeader && (
-              <FounderCompPanel
-                schoolType={schoolType}
-                stateCode={stateCode}
-                colaRate={colaRate}
-                enrollmentArr={enrollmentArr}
-              />
+              <>
+                <PayingYourselfMatters
+                  data={watch() as FullModelData}
+                  yearCount={yearCount}
+                  className="mb-4"
+                />
+                <FounderCompPanel
+                  schoolType={schoolType}
+                  stateCode={stateCode}
+                  colaRate={colaRate}
+                  enrollmentArr={enrollmentArr}
+                />
+              </>
             )}
             <div className="flex items-baseline justify-between mb-2 gap-3">
               <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
