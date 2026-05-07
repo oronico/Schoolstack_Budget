@@ -145,6 +145,14 @@ export function buildLenderPacket(
     if (next.id === "debt_service") {
       next = enrichDebtServiceSection(next, consultantOutput, cashRunway);
     }
+    // Task #611: surface the founder-comp normalization adjustment on the
+    // staffing section. Lenders / boards underwrite to the *market* cost of
+    // running the school, not the founder's voluntary discount, so the
+    // packet uses the normalized view as primary and prints the per-year
+    // delta vs the as-planned comp the founder actually plans to draw.
+    if (next.id === "staffing_plan") {
+      next = enrichStaffingPlanSection(next, consultantOutput);
+    }
     return appendFounderReasoning(next, rollups);
   });
 
@@ -366,6 +374,116 @@ function enrichDebtServiceSection(
     ...section,
     linkedMetrics: [...section.linkedMetrics, ...reserveMetrics],
     tables: [...(section.tables || []), reserveTable],
+  };
+}
+
+/**
+ * Task #611: Append the founder-compensation normalization view to the
+ * staffing section so the lender / board reader sees both:
+ *   - what the founder *plans to draw* (as planned, dashboard primary), and
+ *   - what a market-rate hire in the same role would cost (normalized,
+ *     packet primary).
+ * The per-year delta is the adjustment that flows through to staffing
+ * cost, net income, and DSCR on the normalized view. When the founder is
+ * already paying market rate (or no leadership row exists), there's
+ * nothing to normalize and we leave the section unchanged.
+ */
+function enrichStaffingPlanSection(
+  section: PacketSection,
+  co: ConsultantOutput,
+): PacketSection {
+  const nv = co.normalizedView;
+  if (!nv || !nv.founderComp.hasAdjustment) return section;
+
+  const fc = nv.founderComp;
+  const yearCount = fc.delta.length;
+  const fmtUSD = (n: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+
+  const rows: PacketTableRow[] = [];
+  for (let y = 0; y < yearCount; y++) {
+    rows.push({
+      label: `Year ${y + 1}`,
+      values: [
+        fmtUSD(fc.reported[y] || 0),
+        fmtUSD(fc.normalized[y] || 0),
+        fmtUSD(fc.delta[y] || 0),
+      ],
+    });
+  }
+  rows.push({
+    label: "Total adjustment (Y1–Y" + yearCount + ")",
+    values: ["—", "—", fmtUSD(fc.totalDelta)],
+    isBold: true,
+  });
+
+  const normalizationTable: PacketTable = {
+    title: "Founder Compensation Normalization",
+    headers: ["Year", "As Planned (Reported)", "Market Rate (Normalized)", "Loaded Adjustment"],
+    rows,
+  };
+
+  // Per-year DSCR / net income / runway comparison gives the lender the
+  // headline "what changes when we normalize" in one glance.
+  const cmpRows: PacketTableRow[] = [];
+  for (let y = 0; y < yearCount; y++) {
+    cmpRows.push({
+      label: `Year ${y + 1}`,
+      values: [
+        fmtUSD(nv.reported.netIncome[y] || 0),
+        fmtUSD(nv.normalized.netIncome[y] || 0),
+        (nv.reported.dscr[y] ?? 0).toFixed(2) + "x",
+        (nv.normalized.dscr[y] ?? 0).toFixed(2) + "x",
+      ],
+    });
+  }
+  const comparisonTable: PacketTable = {
+    title: "As-Planned vs Normalized: Net Income & DSCR",
+    headers: ["Year", "Net Income (Reported)", "Net Income (Normalized)", "DSCR (Reported)", "DSCR (Normalized)"],
+    rows: cmpRows,
+  };
+
+  const runwayTable: PacketTable = {
+    title: "As-Planned vs Normalized: Cash Runway",
+    headers: ["View", "Cash Runway (months)", "Reserve (months)"],
+    rows: [
+      {
+        label: "As Planned (Reported)",
+        values: [
+          (nv.reported.cashRunwayMonths ?? 0).toFixed(1),
+          (nv.reported.reserveMonths ?? 0).toFixed(1),
+        ],
+      },
+      {
+        label: "Lender View (Normalized)",
+        values: [
+          (nv.normalized.cashRunwayMonths ?? 0).toFixed(1),
+          (nv.normalized.reserveMonths ?? 0).toFixed(1),
+        ],
+      },
+    ],
+  };
+
+  const totalLabel = fc.totalDelta >= 0 ? "increases" : "decreases";
+  const sign = fc.totalDelta >= 0 ? "+" : "";
+  const dscrR = nv.reported.dscr[0] ?? 0;
+  const dscrN = nv.normalized.dscr[0] ?? 0;
+  const runR = nv.reported.cashRunwayMonths ?? 0;
+  const runN = nv.normalized.cashRunwayMonths ?? 0;
+  const adjNarrative =
+    `Founder compensation is normalized to market rate for the lender / board view. ` +
+    `The 5-year normalization adjustment ${totalLabel} fully-loaded staffing cost by ${sign}${fmtUSD(fc.totalDelta)} ` +
+    `(salary + benefits + payroll tax). Year-1 DSCR moves from ${dscrR.toFixed(2)}x to ${dscrN.toFixed(2)}x and ` +
+    `cash runway moves from ${runR.toFixed(1)} to ${runN.toFixed(1)} months when normalized. ` +
+    `DSCR, runway, and net income figures elsewhere in this packet reflect the normalized view; ` +
+    `the founder dashboard reflects the as-planned view.`;
+
+  return {
+    ...section,
+    narrative: section.narrative
+      ? section.narrative.trimEnd() + " " + adjNarrative
+      : adjNarrative,
+    tables: [...(section.tables || []), normalizationTable, comparisonTable, runwayTable],
   };
 }
 

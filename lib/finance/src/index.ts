@@ -93,6 +93,7 @@ export {
   computeQuickLevers,
   computeBreakEvenStudentsForYear,
   computeDownsideBand,
+  computeNormalizedFinancials,
   type ScenarioAdjustments,
   type ScenarioMetrics,
   type ScenarioResult,
@@ -101,7 +102,17 @@ export {
   type QuickLever,
   type DownsideBand,
   type DownsideScenario,
+  type NormalizedFinancialsView,
 } from "./decision-engine/scenario-engine.js";
+
+export {
+  findFounderRow,
+  getSuggestedFounderComp,
+  getReportedFounderCompYears,
+  getNormalizedFounderCompYears,
+  computeFounderCompNormalization,
+  type FounderCompNormalization,
+} from "./founder-comp.js";
 
 export {
   applyWhatIfOverrides,

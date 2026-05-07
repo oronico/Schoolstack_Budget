@@ -14,6 +14,7 @@ import type { DecisionIssue } from "./decisionIssue";
 import type { ExpenseSensitivityCell } from "./expenseSensitivityCell";
 import type { HealthSignal } from "./healthSignal";
 import type { LendingLabAssessment } from "./lendingLabAssessment";
+import type { NormalizedFinancialsView } from "./normalizedFinancialsView";
 import type { RevenueComposition } from "./revenueComposition";
 import type { RevenueQualityYearRollup } from "./revenueQualityYearRollup";
 import type { SensitivityCell } from "./sensitivityCell";
@@ -39,5 +40,6 @@ export interface ConsultantOutput {
   topIssues: DecisionIssue[];
   healthSignals: HealthSignal[];
   lendingLabAssessment: LendingLabAssessment;
+  normalizedView?: NormalizedFinancialsView;
   generatedAt: Date;
 }

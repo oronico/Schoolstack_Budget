@@ -10,8 +10,11 @@ import {
   computeRevenueQualityRollup,
   computeYear1MonthlyCashFlow,
   computeCashRunwayMonths,
+  computeNormalizedFinancials,
   type RevenueQualityYearRollup,
   type MonthlyRevenueRowLike,
+  type NormalizedFinancialsView,
+  type DecisionEngineModelData,
 } from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
 
@@ -141,6 +144,11 @@ interface LegacyStaffing {
   adminSalary?: number;
   founderSalary?: number;
   benefitsRate?: number;
+  // Task #611: per-year founder comp arrays. The legacy compute path uses
+  // `reportedFounderComp[0]` (or its broadcast) as Y1 founder draw when
+  // present; otherwise it falls back to `founderSalary`.
+  reportedFounderComp?: number[];
+  normalizedFounderComp?: number[];
 }
 
 interface LegacyFacilities {
@@ -392,6 +400,15 @@ export interface ConsultantOutput {
   healthSignals: HealthSignal[];
   lendingLabAssessment: LendingLabAssessment;
   assumptionFlags: import("./assumption-flags").AssumptionFlag[];
+  /**
+   * Task #611: parallel "as planned" vs "normalized" view of the model.
+   * The reported view is the founder-dashboard primary; the normalized
+   * view (founder comp at market rate, with benefits + payroll tax
+   * adjusted) is the lender / board packet primary. The `founderComp`
+   * sub-object carries the per-year delta surfaced on the lender skim
+   * tab and on consultant analysis.
+   */
+  normalizedView: NormalizedFinancialsView;
   generatedAt: string;
 }
 
@@ -934,7 +951,14 @@ function computeYearFinancialsLegacy(
   const teacherCount = studentsPerTeacher > 0 ? Math.ceil(students / studentsPerTeacher) : 0;
   const teacherPayroll = teacherCount * (st.teacherSalary || 0) * salaryEsc * pf;
   const adminPayroll = (st.adminStaffCount || 0) * (st.adminSalary || 0) * salaryEsc * pf;
-  const founderSalary = (st.founderSalary || 0) * salaryEsc * pf;
+  // Task #611: Year-1 founder draw prefers the new per-year
+  // `reportedFounderComp` array; falls back to legacy `founderSalary`.
+  const reportedY1 = Array.isArray(st.reportedFounderComp) && st.reportedFounderComp[yearIndex] !== undefined
+    ? st.reportedFounderComp[yearIndex]
+    : Array.isArray(st.reportedFounderComp) && st.reportedFounderComp[0] !== undefined
+      ? st.reportedFounderComp[0]
+      : (st.founderSalary || 0);
+  const founderSalary = reportedY1 * (Array.isArray(st.reportedFounderComp) && st.reportedFounderComp[yearIndex] !== undefined ? 1 : salaryEsc) * pf;
   const totalSalaries = teacherPayroll + adminPayroll + founderSalary;
   const benefits = totalSalaries * ((st.benefitsRate || 0) / 100);
   const totalStaffingCost = totalSalaries + benefits;
@@ -3062,6 +3086,12 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
 
   const assumptionFlags = await detectUnusualAssumptions(rawData);
 
+  // Task #611: parallel as-planned vs normalized view (founder comp at
+  // market rate). Cast through unknown — api-server's strict zod-typed
+  // ModelData is a structural subset of finance's permissive
+  // FullModelData, matching the convention used elsewhere in this file.
+  const normalizedView = computeNormalizedFinancials(data as unknown as DecisionEngineModelData);
+
   return {
     executiveSummary,
     biggestStrength,
@@ -3083,6 +3113,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     healthSignals,
     lendingLabAssessment,
     assumptionFlags,
+    normalizedView,
     generatedAt: new Date().toISOString(),
   };
 }

@@ -3412,6 +3412,47 @@ export const GetConsultantAnalysisResponse = zod.object({
       })
       .optional(),
   }),
+  normalizedView: zod
+    .object({
+      reported: zod
+        .object({
+          revenue: zod.array(zod.number()),
+          netIncome: zod.array(zod.number()),
+          staffingCost: zod.array(zod.number()),
+          totalExpenses: zod.array(zod.number()),
+          netMargin: zod.array(zod.number()),
+          dscr: zod.array(zod.number()),
+          cashRunwayMonths: zod.number(),
+          reserveMonths: zod.number(),
+        })
+        .describe(
+          "Subset of the full scenario-engine metrics used for the as-planned vs\nnormalized comparison on lender \/ board packets. Per-year arrays are\nY1..YN.\n",
+        ),
+      normalized: zod
+        .object({
+          revenue: zod.array(zod.number()),
+          netIncome: zod.array(zod.number()),
+          staffingCost: zod.array(zod.number()),
+          totalExpenses: zod.array(zod.number()),
+          netMargin: zod.array(zod.number()),
+          dscr: zod.array(zod.number()),
+          cashRunwayMonths: zod.number(),
+          reserveMonths: zod.number(),
+        })
+        .describe(
+          "Subset of the full scenario-engine metrics used for the as-planned vs\nnormalized comparison on lender \/ board packets. Per-year arrays are\nY1..YN.\n",
+        ),
+      founderComp: zod.object({
+        reported: zod.array(zod.number()),
+        normalized: zod.array(zod.number()),
+        reportedLoaded: zod.array(zod.number()),
+        normalizedLoaded: zod.array(zod.number()),
+        delta: zod.array(zod.number()),
+        totalDelta: zod.number(),
+        hasAdjustment: zod.boolean(),
+      }),
+    })
+    .optional(),
   generatedAt: zod.date(),
 });
 
@@ -3637,5 +3678,46 @@ export const PublicConsultantAnalysisResponse = zod.object({
       })
       .optional(),
   }),
+  normalizedView: zod
+    .object({
+      reported: zod
+        .object({
+          revenue: zod.array(zod.number()),
+          netIncome: zod.array(zod.number()),
+          staffingCost: zod.array(zod.number()),
+          totalExpenses: zod.array(zod.number()),
+          netMargin: zod.array(zod.number()),
+          dscr: zod.array(zod.number()),
+          cashRunwayMonths: zod.number(),
+          reserveMonths: zod.number(),
+        })
+        .describe(
+          "Subset of the full scenario-engine metrics used for the as-planned vs\nnormalized comparison on lender \/ board packets. Per-year arrays are\nY1..YN.\n",
+        ),
+      normalized: zod
+        .object({
+          revenue: zod.array(zod.number()),
+          netIncome: zod.array(zod.number()),
+          staffingCost: zod.array(zod.number()),
+          totalExpenses: zod.array(zod.number()),
+          netMargin: zod.array(zod.number()),
+          dscr: zod.array(zod.number()),
+          cashRunwayMonths: zod.number(),
+          reserveMonths: zod.number(),
+        })
+        .describe(
+          "Subset of the full scenario-engine metrics used for the as-planned vs\nnormalized comparison on lender \/ board packets. Per-year arrays are\nY1..YN.\n",
+        ),
+      founderComp: zod.object({
+        reported: zod.array(zod.number()),
+        normalized: zod.array(zod.number()),
+        reportedLoaded: zod.array(zod.number()),
+        normalizedLoaded: zod.array(zod.number()),
+        delta: zod.array(zod.number()),
+        totalDelta: zod.number(),
+        hasAdjustment: zod.boolean(),
+      }),
+    })
+    .optional(),
   generatedAt: zod.date(),
 });

@@ -11,6 +11,7 @@ import {
   type LowestCashMonth,
   type MonthlyRevenueRowLike,
 } from "../monthly-cash-flow.js";
+import { computeFounderCompNormalization, type FounderCompNormalization } from "../founder-comp.js";
 
 export interface ScenarioAdjustments {
   name: string;
@@ -129,6 +130,20 @@ function buildBreakEvenArrays(
     }
   }
   return { breakEvenStudents, breakEvenUtilization };
+}
+
+/** Parallel "as planned" vs "normalized" view. The reported view is the
+ *  founder-facing dashboard primary; the normalized view is the lender /
+ *  board packet primary. The two views differ only in founder compensation
+ *  treatment — see `founder-comp.ts` for the resolution rules. */
+export interface NormalizedFinancialsView {
+  /** Reported / as-planned metrics (founder draws what they actually plan). */
+  reported: ScenarioMetrics;
+  /** Normalized metrics (founder comp at market rate, with benefits + payroll
+   *  tax adjusted accordingly). */
+  normalized: ScenarioMetrics;
+  /** Per-year and total founder-comp delta details. */
+  founderComp: FounderCompNormalization;
 }
 
 export interface NudgeItem {
@@ -542,6 +557,87 @@ export function computeBaseFinancials(data: FullModelData): ScenarioMetrics {
   const maxCapacity = typeof maxCapacityRaw === "number" ? maxCapacityRaw : undefined;
   const beArrays = buildBreakEvenArrays(baseShape, maxCapacity);
   return { ...baseShape, ...beArrays };
+}
+
+/** Apply a per-year founder-comp delta to a baseline ScenarioMetrics,
+ *  re-deriving the dependent fields (totalExpenses, netIncome, netMargin,
+ *  dscr, reserveMonths, cashRunwayMonths, cashPosition). The delta is added
+ *  to staffing cost (positive delta = founder underpays themselves vs
+ *  market, so the lender-facing view shows higher staffing cost and lower
+ *  net income). */
+function applyFounderCompDelta(
+  base: ScenarioMetrics,
+  delta: number[],
+  startingCash: number,
+): ScenarioMetrics {
+  const yearCount = base.netIncome.length;
+  const staffingCost = base.staffingCost.map((s, i) => s + (delta[i] || 0));
+  const totalExpenses = base.totalExpenses.map((t, i) => t + (delta[i] || 0));
+  const netIncome = base.netIncome.map((n, i) => n - (delta[i] || 0));
+  const netMargin = base.revenue.map((r, i) => (r > 0 ? netIncome[i] / r : 0));
+  const loanDS = base.loanDebtService || base.netIncome.map(() => 0);
+  const dscr = loanDS.map((ds, i) => {
+    if (ds > 0) return Math.round(((netIncome[i] + ds) / ds) * 100) / 100;
+    return 0;
+  });
+  const staffingPctOfRevenue = base.revenue.map((r, i) => (r > 0 ? staffingCost[i] / r : 0));
+  const breakEvenIdx = netIncome.findIndex((ni) => ni >= 0);
+
+  let cumNI = 0;
+  for (const ni of netIncome) cumNI += ni;
+  const monthlyExp = totalExpenses[yearCount - 1] / 12;
+  const reserveMonths = monthlyExp > 0 && cumNI > 0 ? cumNI / monthlyExp : 0;
+
+  let cashRunwayMonths = yearCount * 12;
+  let runningCash = startingCash;
+  for (let y = 0; y < yearCount; y++) {
+    const monthlyNI = netIncome[y] / 12;
+    let broke = false;
+    for (let m = 0; m < 12; m++) {
+      runningCash += monthlyNI;
+      if (runningCash <= 0) {
+        cashRunwayMonths = y * 12 + m + 1;
+        broke = true;
+        break;
+      }
+    }
+    if (broke) break;
+  }
+
+  const cashPosition: number[] = [];
+  let cumCash = startingCash;
+  for (let y = 0; y < yearCount; y++) {
+    cumCash += netIncome[y];
+    cashPosition.push(cumCash);
+  }
+
+  return {
+    ...base,
+    staffingCost,
+    totalExpenses,
+    netIncome,
+    netMargin,
+    dscr,
+    staffingPctOfRevenue,
+    breakEvenYear: breakEvenIdx >= 0 ? breakEvenIdx + 1 : null,
+    cashRunwayMonths: Math.round(cashRunwayMonths * 10) / 10,
+    reserveMonths: Math.round(reserveMonths * 10) / 10,
+    cashPosition,
+  };
+}
+
+/** Returns parallel "as planned" vs "normalized" financials for a model.
+ *  The reported view is the founder-dashboard primary; the normalized view
+ *  is the lender / board-packet primary. They differ only in founder-comp
+ *  treatment (salary + benefits + payroll tax). See `founder-comp.ts`. */
+export function computeNormalizedFinancials(data: FullModelData): NormalizedFinancialsView {
+  const reported = computeBaseFinancials(data);
+  const founderComp = computeFounderCompNormalization(data, reported.netIncome.length);
+  const startingCash = data.openingBalances?.cash || 0;
+  const normalized = founderComp.hasAdjustment
+    ? applyFounderCompDelta(reported, founderComp.delta, startingCash)
+    : reported;
+  return { reported, normalized, founderComp };
 }
 
 function applyAdjustments(

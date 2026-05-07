@@ -1836,6 +1836,8 @@ components:
             $ref: "#/components/schemas/HealthSignal"
         lendingLabAssessment:
           $ref: "#/components/schemas/LendingLabAssessment"
+        normalizedView:
+          $ref: "#/components/schemas/NormalizedFinancialsView"
         generatedAt:
           type: string
           format: date-time
@@ -1860,6 +1862,90 @@ components:
         - healthSignals
         - lendingLabAssessment
         - generatedAt
+    # Task #611: parallel as-planned vs market-rate-normalized financials.
+    # Founder dashboard surfaces `reported`; lender / board packets surface
+    # `normalized`; `founderComp.delta` is the per-year adjustment.
+    NormalizedFinancialsView:
+      type: object
+      properties:
+        reported:
+          $ref: "#/components/schemas/NormalizedScenarioMetrics"
+        normalized:
+          $ref: "#/components/schemas/NormalizedScenarioMetrics"
+        founderComp:
+          $ref: "#/components/schemas/FounderCompNormalization"
+      required:
+        - reported
+        - normalized
+        - founderComp
+    NormalizedScenarioMetrics:
+      type: object
+      description: |
+        Subset of the full scenario-engine metrics used for the as-planned vs
+        normalized comparison on lender / board packets. Per-year arrays are
+        Y1..YN.
+      properties:
+        revenue:
+          type: array
+          items: { type: number }
+        netIncome:
+          type: array
+          items: { type: number }
+        staffingCost:
+          type: array
+          items: { type: number }
+        totalExpenses:
+          type: array
+          items: { type: number }
+        netMargin:
+          type: array
+          items: { type: number }
+        dscr:
+          type: array
+          items: { type: number }
+        cashRunwayMonths:
+          type: number
+        reserveMonths:
+          type: number
+      required:
+        - revenue
+        - netIncome
+        - staffingCost
+        - totalExpenses
+        - netMargin
+        - dscr
+        - cashRunwayMonths
+        - reserveMonths
+    FounderCompNormalization:
+      type: object
+      properties:
+        reported:
+          type: array
+          items: { type: number }
+        normalized:
+          type: array
+          items: { type: number }
+        reportedLoaded:
+          type: array
+          items: { type: number }
+        normalizedLoaded:
+          type: array
+          items: { type: number }
+        delta:
+          type: array
+          items: { type: number }
+        totalDelta:
+          type: number
+        hasAdjustment:
+          type: boolean
+      required:
+        - reported
+        - normalized
+        - reportedLoaded
+        - normalizedLoaded
+        - delta
+        - totalDelta
+        - hasAdjustment
     ConsultantRecommendation:
       type: object
       properties:

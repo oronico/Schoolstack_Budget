@@ -1020,6 +1020,39 @@ export interface LendingLabAssessment {
   expenseAllocation?: ExpenseAllocation;
 }
 
+/**
+ * Subset of the full scenario-engine metrics used for the as-planned vs
+normalized comparison on lender / board packets. Per-year arrays are
+Y1..YN.
+
+ */
+export interface NormalizedScenarioMetrics {
+  revenue: number[];
+  netIncome: number[];
+  staffingCost: number[];
+  totalExpenses: number[];
+  netMargin: number[];
+  dscr: number[];
+  cashRunwayMonths: number;
+  reserveMonths: number;
+}
+
+export interface FounderCompNormalization {
+  reported: number[];
+  normalized: number[];
+  reportedLoaded: number[];
+  normalizedLoaded: number[];
+  delta: number[];
+  totalDelta: number;
+  hasAdjustment: boolean;
+}
+
+export interface NormalizedFinancialsView {
+  reported: NormalizedScenarioMetrics;
+  normalized: NormalizedScenarioMetrics;
+  founderComp: FounderCompNormalization;
+}
+
 export interface ConsultantOutput {
   executiveSummary: string;
   biggestStrength: string;
@@ -1040,6 +1073,7 @@ export interface ConsultantOutput {
   topIssues: DecisionIssue[];
   healthSignals: HealthSignal[];
   lendingLabAssessment: LendingLabAssessment;
+  normalizedView?: NormalizedFinancialsView;
   generatedAt: string;
 }
 

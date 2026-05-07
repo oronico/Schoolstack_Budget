@@ -132,6 +132,16 @@ export interface FacilitiesLike {
 export interface StaffingLike {
   benefitsRate?: number;
   payrollTaxRate?: number;
+  /** Legacy single-value founder salary (Y1). Backward-compat input only;
+   *  newer models populate `reportedFounderComp` per year. */
+  founderSalary?: number;
+  /** Per-year founder comp the founder actually plans to draw ("as planned").
+   *  Length up to 5 (Y1-Y5). Drives the founder-facing dashboard view. */
+  reportedFounderComp?: number[];
+  /** Per-year founder comp at market rate ("normalized"). Lender / board
+   *  packets use this as the primary view, with the delta vs reported
+   *  surfaced as a normalization adjustment. Length up to 5. */
+  normalizedFounderComp?: number[];
   [key: string]: unknown;
 }
 

@@ -33,6 +33,7 @@ import {
   Grid3X3,
   Clock,
   HelpCircle,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ConsultantOutput } from "@workspace/api-client-react";
@@ -397,6 +398,75 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
             jumpToStep={jumpToStep}
           />
         )
+      )}
+
+      {/* Task #611: Founder-comp normalization delta. Lender / board packets
+          underwrite to market-rate founder comp, not the founder's voluntary
+          discount, so we surface the delta inline on consultant analysis
+          (which doubles as the lender skim tab) when it's non-trivial. */}
+      {data.normalizedView?.founderComp?.hasAdjustment && (
+        <div
+          className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50/40 p-5 shadow-sm"
+          data-testid="founder-comp-normalization-callout"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="h-4 w-4 text-amber-700" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-amber-900 text-sm mb-1">
+                Founder compensation: lender-view normalization
+              </h4>
+              <p className="text-[13px] text-amber-900/85 leading-relaxed mb-3">
+                Lenders underwrite to the <span className="font-semibold">market</span> cost of
+                running your school, not the discount you take as the founder. The numbers below
+                show what changes when founder comp is set to market rate. Your founder dashboard
+                stays on as-planned; lender and board packets show the normalized view.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-2">
+                {data.normalizedView.founderComp.delta.map((d, i) => (
+                  <div key={i} className="rounded-lg bg-white/70 border border-amber-200/60 px-2 py-1.5 text-center">
+                    <div className="text-[10px] uppercase tracking-wider text-amber-800/70 font-semibold">Year {i + 1}</div>
+                    <div className={cn("text-[13px] font-semibold tabular-nums", d > 0 ? "text-rose-700" : d < 0 ? "text-green-700" : "text-foreground/70")}>
+                      {d > 0 ? "+" : ""}
+                      {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0, notation: Math.abs(d) >= 100000 ? "compact" : "standard" }).format(d)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[12px] text-amber-900/70 leading-snug">
+                5-year total adjustment to staffing cost:{" "}
+                <span className="font-semibold tabular-nums">
+                  {data.normalizedView.founderComp.totalDelta >= 0 ? "+" : ""}
+                  {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(data.normalizedView.founderComp.totalDelta)}
+                </span>
+                . This flows through to net income, DSCR, and runway on the lender packet.
+              </p>
+              <p
+                className="text-[12px] text-amber-900 leading-snug mt-2 font-medium"
+                data-testid="founder-comp-normalization-impact"
+              >
+                Year&nbsp;1 DSCR drops from{" "}
+                <span className="tabular-nums font-semibold">
+                  {(data.normalizedView.reported.dscr[0] ?? 0).toFixed(2)}x
+                </span>{" "}
+                to{" "}
+                <span className="tabular-nums font-semibold">
+                  {(data.normalizedView.normalized.dscr[0] ?? 0).toFixed(2)}x
+                </span>
+                ; cash runway drops from{" "}
+                <span className="tabular-nums font-semibold">
+                  {(data.normalizedView.reported.cashRunwayMonths ?? 0).toFixed(1)} mo
+                </span>{" "}
+                to{" "}
+                <span className="tabular-nums font-semibold">
+                  {(data.normalizedView.normalized.cashRunwayMonths ?? 0).toFixed(1)} mo
+                </span>{" "}
+                when normalized.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">

@@ -15,6 +15,7 @@ import {
   computeEffectiveFte,
   buildCapInsightText,
   CAP_INSIGHT_MIN_SAVINGS,
+  getSuggestedFounderComp,
 } from "@workspace/finance";
 import {
   getStatePayrollTaxEntry,
@@ -88,6 +89,175 @@ function CollapsibleCallout({
 }
 
 const QUICK_FINDER_STORAGE_PREFIX = "staffing-quick-finder-filter:";
+
+/**
+ * Task #611: Per-year founder compensation panel. Founders almost always
+ * underpay themselves in early years; lenders and boards underwrite to
+ * the *market* cost of running the school, not the founder's voluntary
+ * discount. This panel lets the founder enter both:
+ *   - Reported (as planned): what they actually plan to draw
+ *   - Normalized (market rate): what a market-rate hire would cost
+ * The "Use suggested market rate" button populates the normalized row
+ * from a small school-type × state-COL lookup. The wizard schema fields
+ * `staffing.reportedFounderComp[]` and `staffing.normalizedFounderComp[]`
+ * carry these values into the engine; the difference becomes the
+ * "founder-comp normalization adjustment" surfaced on lender packets and
+ * the consultant analysis lender skim tab.
+ */
+function FounderCompPanel({
+  schoolType,
+  stateCode,
+  colaRate,
+}: {
+  schoolType: string;
+  stateCode: string;
+  colaRate: number;
+}) {
+  const { watch, setValue } = useFormContext();
+  const yearCount = useYearCount();
+  const reported = (watch("staffing.reportedFounderComp") as number[] | undefined) || [];
+  const normalized = (watch("staffing.normalizedFounderComp") as number[] | undefined) || [];
+  const legacy = (watch("staffing.founderSalary") as number | undefined) || 0;
+  const suggested = useMemo(
+    () => getSuggestedFounderComp(schoolType, stateCode),
+    [schoolType, stateCode],
+  );
+
+  const setReportedYear = useCallback(
+    (yIdx: number, value: number) => {
+      const next = Array.from({ length: yearCount }, (_, i) => {
+        if (i === yIdx) return value;
+        if (typeof reported[i] === "number") return reported[i];
+        // Backfill prior values with whatever the founder had (legacy or 0)
+        // so the array is always fully populated and the engine doesn't
+        // silently broadcast the new value backward.
+        if (i === 0 && legacy > 0) return Math.round(legacy * Math.pow(1 + colaRate / 100, i));
+        return reported[i] ?? 0;
+      });
+      setValue("staffing.reportedFounderComp", next, { shouldDirty: true });
+    },
+    [reported, yearCount, legacy, colaRate, setValue],
+  );
+
+  const setNormalizedYear = useCallback(
+    (yIdx: number, value: number) => {
+      const next = Array.from({ length: yearCount }, (_, i) =>
+        i === yIdx ? value : (normalized[i] ?? 0),
+      );
+      setValue("staffing.normalizedFounderComp", next, { shouldDirty: true });
+    },
+    [normalized, yearCount, setValue],
+  );
+
+  const applySuggested = useCallback(() => {
+    if (!suggested || suggested <= 0) return;
+    const next = Array.from({ length: yearCount }, (_, i) =>
+      Math.round(suggested * Math.pow(1 + colaRate / 100, i)),
+    );
+    setValue("staffing.normalizedFounderComp", next, { shouldDirty: true });
+  }, [suggested, yearCount, colaRate, setValue]);
+
+  // Show the y1 reported placeholder from legacy if no per-year value yet.
+  const reportedDisplay = (i: number): number | "" => {
+    const v = reported[i];
+    if (typeof v === "number") return v;
+    if (i === 0 && legacy > 0) return legacy;
+    return "";
+  };
+  const normalizedDisplay = (i: number): number | "" => {
+    const v = normalized[i];
+    if (typeof v === "number") return v;
+    return "";
+  };
+
+  return (
+    <div
+      className="mb-4 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/60 to-yellow-50/40 p-4"
+      data-testid="founder-comp-panel"
+    >
+      <div className="flex items-start gap-2 mb-2">
+        <DollarSign className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
+        <div className="flex-1">
+          <h4 className="font-semibold text-sm text-amber-900">Founder compensation: as-planned vs market</h4>
+          <p className="text-[12.5px] text-amber-900/80 leading-snug mt-1">
+            Most founders take a discount in early years to protect cash. That's a legitimate
+            choice — but lenders and boards underwrite to the <span className="font-semibold">market</span>{" "}
+            cost of running the school. Enter both numbers per year so we can show your{" "}
+            <span className="font-semibold">as-planned</span> view on your dashboard and the{" "}
+            <span className="font-semibold">normalized</span> view on lender / board packets.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+        <div className="rounded-lg bg-white/70 border border-amber-200/60 p-3">
+          <div className="text-[11px] uppercase tracking-wider font-semibold text-amber-900 mb-2">
+            As planned (reported)
+          </div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {Array.from({ length: yearCount }).map((_, i) => (
+              <label key={i} className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-muted-foreground">Y{i + 1}</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={reportedDisplay(i)}
+                  onChange={(e) => setReportedYear(i, Number(e.target.value) || 0)}
+                  data-testid={`founder-reported-y${i + 1}`}
+                  className="w-full rounded border border-border bg-card px-1.5 py-1 text-[12px] text-foreground tabular-nums outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  placeholder="0"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg bg-white/70 border border-amber-200/60 p-3">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="text-[11px] uppercase tracking-wider font-semibold text-amber-900">
+              Market rate (normalized)
+            </div>
+            {suggested && suggested > 0 && (
+              <button
+                type="button"
+                onClick={applySuggested}
+                data-testid="founder-apply-suggested"
+                className="text-[11px] font-semibold text-primary hover:text-primary/80 underline-offset-2 hover:underline"
+                title={`Suggested ${formatCurrency(suggested)} Y1, escalated by ${colaRate}% COLA`}
+              >
+                Use suggested market rate
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {Array.from({ length: yearCount }).map((_, i) => (
+              <label key={i} className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-muted-foreground">Y{i + 1}</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={normalizedDisplay(i)}
+                  onChange={(e) => setNormalizedYear(i, Number(e.target.value) || 0)}
+                  data-testid={`founder-normalized-y${i + 1}`}
+                  className="w-full rounded border border-border bg-card px-1.5 py-1 text-[12px] text-foreground tabular-nums outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  placeholder={suggested && i === 0 ? String(suggested) : "0"}
+                />
+              </label>
+            ))}
+          </div>
+          {suggested && suggested > 0 && (
+            <p className="text-[11px] text-amber-900/70 mt-2">
+              Suggested benchmark: {formatCurrency(suggested)} Y1 for {schoolType.replace(/_/g, " ")}
+              {stateCode ? ` in ${stateCode}` : ""}, escalated by your {colaRate}% COLA.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function StaffingStep() {
   const { watch, setValue, formState: { errors } } = useFormContext();
@@ -679,6 +849,13 @@ export function StaffingStep() {
 
         return (
           <div key={cat} id={`staffing-cat-${cat}`} className="scroll-mt-4">
+            {cat === "school_leadership" && hasAnyLeader && (
+              <FounderCompPanel
+                schoolType={schoolType}
+                stateCode={stateCode}
+                colaRate={colaRate}
+              />
+            )}
             <div className="flex items-baseline justify-between mb-2 gap-3">
               <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 {FUNCTION_CATEGORY_LABELS[cat]}
