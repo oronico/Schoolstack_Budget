@@ -1,0 +1,169 @@
+Reframe SchoolStack Budget around founder learning, accurate modeling, and lender-grade deliverables.
+
+Product principle:
+SchoolStack Budget is for school founders first. It should help even inexperienced entrepreneurs learn financial accounting and budgeting in a safe, welcoming way. The product should produce accurate, credible outputs that can later support lender, funder, board, landlord, or partner conversations.
+
+Do not make the product feel like a bank portal.
+Do not build a loan origination system.
+Do not lead with underwriting judgment.
+Do not make founders feel rejected or inadequate.
+
+The experience should feel:
+- clear
+- warm
+- serious
+- educational
+- empowering
+- accurate
+- nonjudgmental
+
+Core user journey:
+1. Founder learns the concept.
+2. Founder enters their best available data.
+3. If actuals exist, founder enters actuals.
+4. If actuals do not exist, founder builds reasonable assumptions.
+5. The tool checks the model for accuracy, gaps, and fragile assumptions.
+6. The founder receives plain-English coaching.
+7. The founder exports a lender-grade, funder-ready, board-ready model.
+
+Required product language:
+Use:
+- “Let’s build this together.”
+- “Here’s what this means.”
+- “This assumption may need support.”
+- “A lender or funder may ask about this.”
+- “Your model gets stronger when...”
+- “This is worth revisiting before you share the model externally.”
+- “This does not mean your school is weak. It means this part of the plan needs more clarity.”
+
+Avoid:
+- approved
+- declined
+- ineligible
+- failed
+- underwriting decision
+- credit decision
+- bank determination
+- pass/fail unless used only for internal tests
+
+Next sprint priorities:
+
+1. Beginner-friendly learning layer
+Add short explanations near each major input:
+- What is revenue?
+- What is an expense?
+- What is net income?
+- What is cash flow?
+- Why does timing matter?
+- What is break-even enrollment?
+- What are reserves?
+- What is debt service?
+- Why should the founder pay themselves eventually?
+
+Each explanation should be plain English and no more than 2-4 sentences.
+
+2. Actuals-first pathway for operating schools
+If the school is already operating, ask:
+- Do you have actual revenue and expenses from last year?
+- What was your ending cash?
+- What was actual enrollment?
+- What revenue sources did you actually receive?
+- What expenses did you actually pay?
+- Do you have a profit and loss statement?
+
+Then use actuals as the starting point for projections.
+
+3. Assumptions-first pathway for new schools
+If the school is launching, ask:
+- How many students are realistically committed?
+- What tuition or public funding is expected?
+- When will money actually arrive?
+- What must be paid before school starts?
+- What expenses are fixed no matter how many students enroll?
+- What expenses grow with students?
+
+Make clear:
+“Since you do not have actuals yet, we are building a planning model from assumptions. The stronger the evidence behind each assumption, the stronger the model.”
+
+4. Model accuracy checks
+Add founder-friendly checks:
+- Revenue seems high for the number of students.
+- Staffing may be too low for the number of students.
+- Facility cost may be high relative to revenue.
+- Founder compensation is missing.
+- Cash goes negative in one or more months.
+- Enrollment growth may need more evidence.
+- Public funding timing may create a cash gap.
+- Donations are carrying the model.
+
+Frame these as coaching, not rejection.
+
+5. Cash flow as a core teaching feature
+Add or strengthen monthly cash flow:
+- beginning cash
+- cash received
+- cash paid
+- ending cash
+- lowest cash month
+- months below zero
+- summer gap
+- timing of tuition, ESA, voucher, or grant payments
+
+Plain-English output:
+“Your annual budget may look balanced, but cash gets tight in September because expenses arrive before revenue.”
+
+6. Founder compensation teaching
+Add a section:
+“Paying yourself matters.”
+
+Explain:
+- Many founders start unpaid.
+- That may be realistic temporarily.
+- A sustainable school eventually needs to pay the people doing the work.
+- The model should show when founder compensation begins.
+
+Show two views:
+- Your current model
+- Your model with founder compensation included
+
+7. Lender-grade outputs, but school-facing labels
+Export outputs should be named:
+- 1-Year Operating Budget
+- 5-Year Financial Model
+- Founder Planning Workbook
+- Board and Funder Summary
+- Lender Conversation Snapshot
+
+Do not call founder-facing exports:
+- credit memo
+- underwriting file
+- approval packet
+- bank review
+
+8. Assumption quality layer
+For key assumptions, ask:
+- Is this based on actuals?
+- Is this based on a signed agreement?
+- Is this based on a quote?
+- Is this based on research?
+- Is this an estimate?
+
+Use this to create an “Assumptions Confidence” section in the export.
+
+9. Plain-English summary page
+Every model should generate:
+- What your model says
+- What looks strong
+- What needs more clarity
+- What could create cash pressure
+- What to fix first
+- What someone reviewing this may ask
+
+10. Guardrail
+Every risk flag must include a next step.
+
+Bad:
+“Staffing costs are too high.”
+
+Better:
+“Staffing is 72% of revenue. That may leave too little room for rent, curriculum, and reserves. Consider phasing in one role later or increasing enrollment before hiring.”
