@@ -193,6 +193,10 @@ export interface RevenueRowData {
   grantStatus?: GrantStatus;
   receiptQuarter?: 1 | 2 | 3 | 4;
   timingOverridden?: boolean;
+  // Task #613 — revenue quality classification. When absent, callers infer
+  // a default from category + id via `inferRevenueQuality` in @workspace/finance.
+  revenueQuality?: "contracted" | "projected" | "donor_dependent" | "policy_dependent";
+  revenueQualityOverridden?: boolean;
 }
 
 const DEPOSIT_TIMING_TO_FREQUENCY: Record<string, PaymentFrequency> = {

@@ -254,6 +254,36 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
   }));
 
   const PIE_COLORS = [CHART_COLORS.green, CHART_COLORS.teal, CHART_COLORS.amber];
+
+  // Task #613 — revenue quality donut + hard-revenue coverage callout. We
+  // surface the Y1 contracted/projected/donor/policy split as a donut so
+  // founders and consultants see at a glance how much of their forecast is
+  // signed-contract dollars vs. dependent on a donor or policy decision.
+  const rqRollup = data.revenueQuality ?? [];
+  const rqY1 = rqRollup[0];
+  const RQ_COLORS: Record<string, string> = {
+    contracted: CHART_COLORS.green,
+    policy_dependent: CHART_COLORS.teal,
+    projected: CHART_COLORS.navy,
+    donor_dependent: CHART_COLORS.amber,
+  };
+  const RQ_LABELS: Record<string, string> = {
+    contracted: "Contracted",
+    policy_dependent: "Policy-Dependent",
+    projected: "Projected",
+    donor_dependent: "Donor-Dependent",
+  };
+  const rqDonutData = rqY1
+    ? (["contracted", "policy_dependent", "projected", "donor_dependent"] as const)
+        .map((k) => ({
+          key: k,
+          name: RQ_LABELS[k],
+          value: Math.round(rqY1.pctByBucket[k] * 100),
+          dollars: rqY1.byBucket[k],
+        }))
+        .filter((d) => d.value > 0)
+    : null;
+
   const y1PieData = revComp && revComp.length > 0
     ? [
         { name: "Tuition & Fees", value: Math.round(revComp[0].tuitionPct * 100) },
@@ -490,6 +520,98 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
 
       {data.healthSignals && data.healthSignals.length > 0 && (
         <HealthSignalsSection signals={data.healthSignals} />
+      )}
+
+      {rqY1 && rqDonutData && rqDonutData.length > 0 && (
+        <div data-testid="revenue-quality-section" className="bg-white rounded-2xl p-6 border border-border/60 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <PieChartIcon className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-bold text-lg text-foreground">Revenue Quality</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-5">
+            How much of Year 1 revenue is signed-contract dollars vs. dependent on donors or policy decisions. Lenders weight contracted revenue most heavily.
+          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col items-center">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Year 1 Mix</p>
+              <div className="h-48 w-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={rqDonutData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                      {rqDonutData.map((d, index) => (
+                        <Cell key={index} fill={RQ_COLORS[d.key]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => `${value}%`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap justify-center gap-3 mt-2">
+                {rqDonutData.map((entry, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: RQ_COLORS[entry.key] }} />
+                    <span className="text-muted-foreground">{entry.name}: <span className="font-semibold text-foreground">{entry.value}%</span></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="lg:col-span-2 flex flex-col gap-4">
+              <div
+                data-testid="hard-revenue-coverage"
+                className={cn(
+                  "rounded-2xl p-5 border-2",
+                  rqY1.hardRevenueCoverage === null
+                    ? "bg-muted/30 border-border"
+                    : rqY1.hardRevenueCoverage >= 1.0
+                      ? "bg-green-50 border-green-200"
+                      : rqY1.hardRevenueCoverage >= 0.75
+                        ? "bg-amber-50 border-amber-200"
+                        : "bg-rose-50 border-rose-200"
+                )}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                  Hard Revenue Coverage of Fixed Costs + Debt Service
+                </p>
+                <p className="text-3xl font-bold text-foreground">
+                  {rqY1.hardRevenueCoverage === null
+                    ? "—"
+                    : `${rqY1.hardRevenueCoverage.toFixed(2)}×`}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {rqY1.hardRevenueCoverage === null
+                    ? "No fixed costs or debt service in Year 1."
+                    : rqY1.hardRevenueCoverage >= 1.0
+                      ? "Contracted revenue alone covers staffing, facility, and debt — a strong lender signal."
+                      : rqY1.hardRevenueCoverage >= 0.75
+                        ? "Contracted revenue covers most of the fixed obligations; the gap relies on projected, donor, or policy revenue."
+                        : "Contracted revenue covers a minority of fixed obligations — the model leans heavily on softer revenue sources."}
+                </p>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-border/60">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-secondary/50">
+                      <th className="text-left px-4 py-2.5 font-semibold text-muted-foreground text-xs">Bucket</th>
+                      {rqRollup.map((y) => (
+                        <th key={y.year} className="text-right px-4 py-2.5 font-semibold text-muted-foreground text-xs">Year {y.year}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(["contracted", "policy_dependent", "projected", "donor_dependent"] as const).map((bucket) => (
+                      <tr key={bucket} className="border-t border-border/40">
+                        <td className="px-4 py-2 font-medium text-xs">{RQ_LABELS[bucket]}</td>
+                        {rqRollup.map((y) => (
+                          <td key={y.year} className="text-right px-4 py-2 text-xs">{Math.round(y.pctByBucket[bucket] * 100)}%</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {revChartData && revChartData.length > 0 && (

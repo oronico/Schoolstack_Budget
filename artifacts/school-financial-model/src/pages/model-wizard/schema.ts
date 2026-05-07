@@ -425,6 +425,12 @@ export const revenueRowSchema = z.object({
   grantStatus: z.enum(["confirmed", "projected"]).optional(),
   receiptQuarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
   timingOverridden: z.boolean().optional(),
+  // Task #613: revenue quality classification. Defaults are inferred per
+  // category + id by the engine (`inferRevenueQuality`) when this field is
+  // absent, so legacy models migrate transparently. The wizard surfaces a
+  // dropdown so founders can override.
+  revenueQuality: z.enum(["contracted", "projected", "donor_dependent", "policy_dependent"]).optional(),
+  revenueQualityOverridden: z.boolean().optional(),
 });
 
 export const revenueDefaultsSchema = z.object({

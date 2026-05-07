@@ -1666,6 +1666,41 @@ components:
         - tuitionPct
         - publicPct
         - philanthropyPct
+    RevenueQualityYearRollup:
+      type: object
+      description: |
+        Per-year breakdown of revenue by "quality" bucket — contracted (signed
+        agreements), projected (unsigned forecasts), donor-dependent
+        (philanthropy/grants), and policy-dependent (vouchers, ESAs, public
+        funding). Includes a "hard revenue coverage" ratio = contracted ÷
+        (fixed costs + debt service).
+      properties:
+        year:
+          type: integer
+        byBucket:
+          type: object
+          properties:
+            contracted: { type: number }
+            projected: { type: number }
+            donor_dependent: { type: number }
+            policy_dependent: { type: number }
+          required: [contracted, projected, donor_dependent, policy_dependent]
+        pctByBucket:
+          type: object
+          properties:
+            contracted: { type: number }
+            projected: { type: number }
+            donor_dependent: { type: number }
+            policy_dependent: { type: number }
+          required: [contracted, projected, donor_dependent, policy_dependent]
+        hardRevenueCoverage:
+          type: number
+          nullable: true
+      required:
+        - year
+        - byBucket
+        - pctByBucket
+        - hardRevenueCoverage
     CostComposition:
       type: object
       properties:
@@ -1761,6 +1796,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RevenueComposition"
+        revenueQuality:
+          type: array
+          items:
+            $ref: "#/components/schemas/RevenueQualityYearRollup"
         costComposition:
           type: array
           items:
@@ -1809,6 +1848,7 @@ components:
         - lenderReadinessExplanation
         - keyMetrics
         - revenueComposition
+        - revenueQuality
         - costComposition
         - cumulativeFinancials
         - stressTests

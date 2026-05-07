@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials } from "@workspace/finance";
+import { computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials, computeRevenueQualityRollup, type RevenueQualityYearInputs } from "@workspace/finance";
 import {
   NAVY, WHITE, LIGHT_GRAY, GREEN_BG, EVERGREEN, CREAM, INPUT_CELL_FILL, DASHBOARD_GREEN,
   HEADER_FILL, HEADER_FONT, SECTION_FILL, SECTION_FONT, NF, BF,
@@ -228,6 +228,111 @@ function buildAssumptions(wb: ExcelJS.Workbook, data: ModelData, enrollment: num
     ws.getCell(r, 6).value = timingStatus; dc(ws.getCell(r, 6));
     if ((rv as unknown as Record<string, unknown>).timingOverridden) {
       ws.getCell(r, 6).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF3CD" } };
+    }
+  }
+
+  // Task #613 — Revenue Quality breakdown. Underwriters get a per-year
+  // dollar + percent split across contracted / projected / donor-dependent
+  // / policy-dependent buckets, and the "hard revenue coverage" ratio
+  // (contracted ÷ (fixed costs + debt service)) so they can see at a glance
+  // whether locked revenue alone covers obligations. We compute the rollup
+  // inline using @workspace/finance + workbook helpers so the workbook
+  // doesn't need to thread the consultant engine output through.
+  if (revenueRows.length > 0) {
+    const rqDebtIncluded = sp.debtIncluded !== false;
+    const rqCostInflPct = costInflation * 100;
+    const rqStaffingRows = (data.staffingRows || []).map(sr => normalizeStaffingRow(sr as unknown as Record<string, unknown>));
+    const rqExpenseRows = data.expenseRows || [];
+    const rqCapDebtRows = (data.capitalAndDebtRows || []).filter(rd => rqDebtIncluded || !rd.isLoan);
+    const rqRetentionRate = (data.enrollment as Record<string, unknown> | undefined)?.retentionRate as number | undefined ?? 85;
+
+    const rqYearInputs: RevenueQualityYearInputs[] = [];
+    for (let y = 0; y < yc; y++) {
+      const students = enrollment[y] || 0;
+      const ns = computeNewStudents(enrollment, rqRetentionRate, y);
+      const rs = computeReturningStudents(enrollment, rqRetentionRate, y);
+      const totalFte = computeTotalFTE(rqStaffingRows, y, students);
+
+      // Replicate computeRevenueForYear's per-row pass to get each row's
+      // dollar amount for this year (with percent-of-base + tuition offsets
+      // sign-flip applied).
+      const rowVals = new Map<string, number>();
+      for (const rv of revenueRows) {
+        if (!rv.enabled || rv.driverType === "percent_of_base") continue;
+        rowVals.set(rv.id, computeRevLineItem(rv, y, students, tiers, rqCostInflPct, sp, ns, rs));
+      }
+      for (const rv of revenueRows) {
+        if (!rv.enabled || rv.driverType !== "percent_of_base") continue;
+        const baseVal = rowVals.get(rv.percentBase || "") || 0;
+        let pctVal = rv.amounts?.[y] ?? 0;
+        if ((rv.escalationRate ?? 0) !== 0 && y > 0) {
+          pctVal = (rv.amounts?.[0] ?? 0) * Math.pow(1 + (rv.escalationRate ?? 0) / 100, y);
+        }
+        rowVals.set(rv.id, baseVal * (pctVal / 100));
+      }
+      const pf = y === 0 ? prorationFactor : 1;
+      const rowAmountsById: Record<string, number> = {};
+      for (const rv of revenueRows) {
+        if (!rv.enabled) continue;
+        const v = (rowVals.get(rv.id) || 0) * pf;
+        rowAmountsById[rv.id] = rv.category === "tuition_offsets" ? -Math.abs(v) : v;
+      }
+
+      const totalRevForY = computeRevenueForYear(revenueRows, y, students, tiers, rqCostInflPct, sp, ns, rs);
+      const personnel = computePersonnelForYear(rqStaffingRows, salaryEsc, prorationFactor, y, students);
+      const facility = computeFacilityCostByYear(rqExpenseRows, enrollment, [totalRevForY], 1, rqCostInflPct, rqRetentionRate, rqStaffingRows)[0] ?? 0;
+      const debtSvc = computeDebtServiceForYear(rqCapDebtRows, y);
+
+      rqYearInputs.push({
+        year: y + 1,
+        rowAmountsById,
+        fixedCosts: personnel + facility,
+        debtService: debtSvc,
+      });
+      // Suppress unused-warning for totalFte — we keep computeTotalFTE for
+      // parity with other facility-cost call sites that pass it through.
+      void totalFte;
+    }
+
+    const rqRollup = computeRevenueQualityRollup(revenueRows as unknown as Parameters<typeof computeRevenueQualityRollup>[0], rqYearInputs);
+
+    r += 2;
+    sec(ws, r, yc + 1); ws.getCell(r, 1).value = "REVENUE QUALITY";
+    r++;
+    ws.getRow(r).values = ["Bucket", ...yLabels];
+    hdr(ws, r, yc + 1);
+    const buckets: Array<{ key: "contracted" | "projected" | "donor_dependent" | "policy_dependent"; label: string }> = [
+      { key: "contracted", label: "Contracted" },
+      { key: "projected", label: "Projected" },
+      { key: "donor_dependent", label: "Donor-dependent" },
+      { key: "policy_dependent", label: "Policy-dependent" },
+    ];
+    for (const b of buckets) {
+      r++;
+      ws.getCell(r, 1).value = b.label; dc(ws.getCell(r, 1));
+      for (let y = 0; y < yc; y++) {
+        const cell = ws.getCell(r, y + 2);
+        cell.value = rqRollup[y]?.byBucket[b.key] ?? 0;
+        cell.numFmt = CUR; dc(cell);
+      }
+    }
+    for (const b of buckets) {
+      r++;
+      ws.getCell(r, 1).value = `${b.label} %`; dc(ws.getCell(r, 1));
+      for (let y = 0; y < yc; y++) {
+        const cell = ws.getCell(r, y + 2);
+        cell.value = rqRollup[y]?.pctByBucket[b.key] ?? 0;
+        cell.numFmt = PCT; dc(cell);
+      }
+    }
+    r++;
+    ws.getCell(r, 1).value = "Hard Rev Coverage (Contracted ÷ Fixed + Debt)"; dc(ws.getCell(r, 1));
+    for (let y = 0; y < yc; y++) {
+      const cell = ws.getCell(r, y + 2);
+      const cov = rqRollup[y]?.hardRevenueCoverage;
+      cell.value = cov === null || cov === undefined ? "n/a" : cov;
+      cell.numFmt = "0.00\"×\"";
+      dc(cell);
     }
   }
 

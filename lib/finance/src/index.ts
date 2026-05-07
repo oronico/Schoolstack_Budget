@@ -207,6 +207,17 @@ export {
   type FragileFundingReport,
 } from "./state-funding-fragility.js";
 
+export {
+  inferRevenueQuality,
+  computeRevenueQualityRollup,
+  REVENUE_QUALITY_LABELS,
+  REVENUE_QUALITY_DEFINITIONS,
+  REVENUE_QUALITY_ORDER,
+  type RevenueQuality,
+  type RevenueQualityYearRollup,
+  type RevenueQualityYearInputs,
+} from "./revenue-quality.js";
+
 export function computeStraightLineDepreciation(
   fixedAssets: number,
   usefulLifeYears: number,

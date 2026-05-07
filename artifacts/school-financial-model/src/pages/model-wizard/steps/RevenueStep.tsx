@@ -7,7 +7,7 @@ import { WhyThisMatters } from "@/components/coaching/WhyThisMatters";
 import { RationaleField } from "@/components/coaching/RationaleField";
 import { cn, formatCurrency } from "@/lib/utils";
 import { formatPerStudent } from "@/lib/per-student-lens";
-import { YEAR_COUNT, DEFAULT_COLLECTION_RATE_BY_METHOD, COLLECTION_RATE_BENCHMARK_COPY } from "@workspace/finance";
+import { YEAR_COUNT, DEFAULT_COLLECTION_RATE_BY_METHOD, COLLECTION_RATE_BENCHMARK_COPY, REVENUE_QUALITY_LABELS, REVENUE_QUALITY_DEFINITIONS, REVENUE_QUALITY_ORDER, inferRevenueQuality, type RevenueQuality } from "@workspace/finance";
 import {
   type RevenueRowData,
   type RevenueCategory,
@@ -562,6 +562,16 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
       }
       return { ...r, ...patch };
     });
+    syncToForm(updated);
+  };
+
+  // Task #613 — patch fields on a row that are NOT timing-related (e.g.
+  // revenueQuality + revenueQualityOverridden) without flipping the row's
+  // timingOverridden flag. Reusing updateTimingField for these fields would
+  // misleadingly mark timing as Custom whenever a founder reclassified
+  // revenue quality.
+  const updateRowField = (id: string, field: string, value: unknown) => {
+    const updated = rows.map((r) => (r.id === id ? { ...r, [field]: value } : r));
     syncToForm(updated);
   };
 
@@ -1170,6 +1180,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                             onDriverChange={(dt) => updateDriver(row.id, dt)}
                             onAmountChange={(yi, val) => updateAmount(row.id, yi, val)}
                             onTimingChange={(field, val) => updateTimingField(row.id, field, val)}
+                            onFieldChange={(field, val) => updateRowField(row.id, field, val)}
                             onRemove={() => removeRow(row.id)}
                             y1Students={y1Students}
                             locked={false}
@@ -1199,6 +1210,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                             onDriverChange={(dt) => updateDriver(row.id, dt)}
                             onAmountChange={(yi, val) => updateAmount(row.id, yi, val)}
                             onTimingChange={(field, val) => updateTimingField(row.id, field, val)}
+                            onFieldChange={(field, val) => updateRowField(row.id, field, val)}
                             onRemove={() => removeRow(row.id)}
                             y1Students={y1Students}
                             locked={false}
@@ -1223,6 +1235,7 @@ export function RevenueStep({ jumpToStep }: { jumpToStep?: (step: number) => voi
                     onDriverChange={(dt) => updateDriver(row.id, dt)}
                     onAmountChange={(yi, val) => updateAmount(row.id, yi, val)}
                     onTimingChange={(field, val) => updateTimingField(row.id, field, val)}
+                    onFieldChange={(field, val) => updateRowField(row.id, field, val)}
                     onRemove={() => removeRow(row.id)}
                     y1Students={y1Students}
                     locked={row.id === "state_local_perpupil" && gradeBandActive}
@@ -1494,6 +1507,11 @@ interface RevenueLineItemProps {
   onDriverChange: (dt: RevenueDriverType) => void;
   onAmountChange: (yearIndex: number, value: number) => void;
   onTimingChange: (field: string, value: unknown) => void;
+  /**
+   * Task #613 — patch a non-timing field on the row (used for revenue
+   * quality classification) without setting timingOverridden.
+   */
+  onFieldChange: (field: string, value: unknown) => void;
   onRemove: () => void;
   y1Students?: number;
   locked?: boolean;
@@ -1516,6 +1534,7 @@ function RevenueLineItem({
   onDriverChange,
   onAmountChange,
   onTimingChange,
+  onFieldChange,
   onRemove,
   y1Students = 0,
   locked = false,
@@ -1644,6 +1663,41 @@ function RevenueLineItem({
                   {row.driverType === "percent_of_base" && "% of base tuition revenue"}
                 </span>
               </div>
+              {/* Task #613 — revenue quality classifier dropdown.
+                  Founders can override the inferred bucket; the badge below
+                  surfaces whether the value is auto-classified or custom so
+                  lender packets and the consultant view can explain the
+                  basis. */}
+              {(() => {
+                const inferred = inferRevenueQuality({ id: row.id, category: row.category });
+                const current = (row.revenueQuality as RevenueQuality | undefined) ?? inferred;
+                const isOverridden = row.revenueQualityOverridden === true;
+                return (
+                  <div className="flex flex-col gap-0.5">
+                    <select
+                      data-testid={`revenue-quality-${row.id}`}
+                      value={current}
+                      onChange={(e) => {
+                        const v = e.target.value as RevenueQuality;
+                        onFieldChange("revenueQuality", v);
+                        onFieldChange("revenueQualityOverridden", v !== inferred);
+                      }}
+                      title={REVENUE_QUALITY_DEFINITIONS[current]}
+                      className="text-xs border border-border rounded-lg px-2 py-1.5 bg-card text-foreground cursor-pointer"
+                    >
+                      {REVENUE_QUALITY_ORDER.map((q) => (
+                        <option key={q} value={q}>{REVENUE_QUALITY_LABELS[q]}</option>
+                      ))}
+                    </select>
+                    <span className={cn(
+                      "text-[9px] leading-tight inline-flex items-center self-start px-1 rounded",
+                      isOverridden ? "bg-amber-100 text-amber-800" : "text-muted-foreground"
+                    )}>
+                      {isOverridden ? "Custom" : "Auto"}
+                    </span>
+                  </div>
+                );
+              })()}
             </>
           )}
           <button

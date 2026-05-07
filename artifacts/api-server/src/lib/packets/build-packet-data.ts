@@ -32,6 +32,9 @@ import {
   type FragileFundingReport,
   type SchoolType,
   defaultCollectionRateForMethod,
+  REVENUE_QUALITY_LABELS,
+  REVENUE_QUALITY_ORDER,
+  type RevenueQuality,
 } from "@workspace/finance";
 import {
   type PacketData,
@@ -351,6 +354,25 @@ function buildRevenueModel(
       ]
     : [];
 
+  // Task #613 — also expose the Y1 contracted % and hard-revenue coverage
+  // ratio as headline metrics so they appear alongside the existing
+  // composition percentages in the linked-metrics rail.
+  const rqY1 = co.revenueQuality?.[0];
+  if (rqY1) {
+    linkedMetrics.push({
+      label: "Year 1 Contracted Revenue %",
+      value: pct(rqY1.pctByBucket.contracted),
+      sourceEngine: "consultant" as const,
+    });
+    if (rqY1.hardRevenueCoverage !== null) {
+      linkedMetrics.push({
+        label: "Hard Revenue Coverage (Y1)",
+        value: `${rqY1.hardRevenueCoverage.toFixed(2)}×`,
+        sourceEngine: "consultant" as const,
+      });
+    }
+  }
+
   // Task #455 — surface a footnote whenever the revenue forecast leans on
   // a school-choice program whose legal status is unsettled. Without this,
   // a lender or board member reading the Revenue Model section sees the
@@ -394,6 +416,29 @@ function buildRevenueModel(
     headers: ["Year", "Total Revenue"],
     rows,
   }];
+
+  // Task #613 — Revenue Quality breakdown table. Lenders specifically ask
+  // "how much of this is contracted dollars vs. donor / policy
+  // dependent?" — surfacing the engine's bucket rollup here keeps the
+  // answer in the same section as the headline revenue numbers.
+  const rqRollup = co.revenueQuality ?? [];
+  if (rqRollup.length > 0) {
+    const qualityHeaders = ["Bucket", ...rqRollup.map((y) => yearLabel(y.year))];
+    const qualityRows: PacketTableRow[] = REVENUE_QUALITY_ORDER.map((bucket: RevenueQuality) => ({
+      label: REVENUE_QUALITY_LABELS[bucket],
+      values: rqRollup.map((y) => `${fmt(y.byBucket[bucket])} (${pct(y.pctByBucket[bucket])})`),
+    }));
+    qualityRows.push({
+      label: "Hard revenue coverage of fixed + debt",
+      values: rqRollup.map((y) => y.hardRevenueCoverage === null ? "—" : `${y.hardRevenueCoverage.toFixed(2)}×`),
+      isBold: true,
+    });
+    tables.push({
+      title: "Revenue Quality (Contracted vs. Projected vs. Donor / Policy Dependent)",
+      headers: qualityHeaders,
+      rows: qualityRows,
+    });
+  }
   if (lineRows.length > 0) {
     tables.push({
       title: "Revenue Lines (Year 1)",

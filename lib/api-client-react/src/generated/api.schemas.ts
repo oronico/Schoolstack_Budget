@@ -832,6 +832,35 @@ export interface RevenueComposition {
   philanthropyPct: number;
 }
 
+export type RevenueQualityYearRollupByBucket = {
+  contracted: number;
+  projected: number;
+  donor_dependent: number;
+  policy_dependent: number;
+};
+
+export type RevenueQualityYearRollupPctByBucket = {
+  contracted: number;
+  projected: number;
+  donor_dependent: number;
+  policy_dependent: number;
+};
+
+/**
+ * Per-year breakdown of revenue by "quality" bucket — contracted (signed
+agreements), projected (unsigned forecasts), donor-dependent
+(philanthropy/grants), and policy-dependent (vouchers, ESAs, public
+funding). Includes a "hard revenue coverage" ratio = contracted ÷
+(fixed costs + debt service).
+
+ */
+export interface RevenueQualityYearRollup {
+  year: number;
+  byBucket: RevenueQualityYearRollupByBucket;
+  pctByBucket: RevenueQualityYearRollupPctByBucket;
+  hardRevenueCoverage: number | null;
+}
+
 export interface CostComposition {
   staffingPctOfRevenue: number;
   facilityPctOfRevenue: number;
@@ -1000,6 +1029,7 @@ export interface ConsultantOutput {
   lenderReadinessExplanation: string;
   keyMetrics: ConsultantKeyMetric[];
   revenueComposition: RevenueComposition[];
+  revenueQuality: RevenueQualityYearRollup[];
   costComposition: CostComposition[];
   cumulativeFinancials: CumulativeYear[];
   stressTests: StressScenario[];

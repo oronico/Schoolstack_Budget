@@ -3291,6 +3291,28 @@ export const GetConsultantAnalysisResponse = zod.object({
       philanthropyPct: zod.number(),
     }),
   ),
+  revenueQuality: zod.array(
+    zod
+      .object({
+        year: zod.number(),
+        byBucket: zod.object({
+          contracted: zod.number(),
+          projected: zod.number(),
+          donor_dependent: zod.number(),
+          policy_dependent: zod.number(),
+        }),
+        pctByBucket: zod.object({
+          contracted: zod.number(),
+          projected: zod.number(),
+          donor_dependent: zod.number(),
+          policy_dependent: zod.number(),
+        }),
+        hardRevenueCoverage: zod.number().nullable(),
+      })
+      .describe(
+        'Per-year breakdown of revenue by \"quality\" bucket — contracted (signed\nagreements), projected (unsigned forecasts), donor-dependent\n(philanthropy\/grants), and policy-dependent (vouchers, ESAs, public\nfunding). Includes a \"hard revenue coverage\" ratio = contracted ÷\n(fixed costs + debt service).\n',
+      ),
+  ),
   costComposition: zod.array(
     zod.object({
       staffingPctOfRevenue: zod.number(),
@@ -3493,6 +3515,28 @@ export const PublicConsultantAnalysisResponse = zod.object({
       publicPct: zod.number(),
       philanthropyPct: zod.number(),
     }),
+  ),
+  revenueQuality: zod.array(
+    zod
+      .object({
+        year: zod.number(),
+        byBucket: zod.object({
+          contracted: zod.number(),
+          projected: zod.number(),
+          donor_dependent: zod.number(),
+          policy_dependent: zod.number(),
+        }),
+        pctByBucket: zod.object({
+          contracted: zod.number(),
+          projected: zod.number(),
+          donor_dependent: zod.number(),
+          policy_dependent: zod.number(),
+        }),
+        hardRevenueCoverage: zod.number().nullable(),
+      })
+      .describe(
+        'Per-year breakdown of revenue by \"quality\" bucket — contracted (signed\nagreements), projected (unsigned forecasts), donor-dependent\n(philanthropy\/grants), and policy-dependent (vouchers, ESAs, public\nfunding). Includes a \"hard revenue coverage\" ratio = contracted ÷\n(fixed costs + debt service).\n',
+      ),
   ),
   costComposition: zod.array(
     zod.object({

@@ -15,6 +15,7 @@ import type { ExpenseSensitivityCell } from "./expenseSensitivityCell";
 import type { HealthSignal } from "./healthSignal";
 import type { LendingLabAssessment } from "./lendingLabAssessment";
 import type { RevenueComposition } from "./revenueComposition";
+import type { RevenueQualityYearRollup } from "./revenueQualityYearRollup";
 import type { SensitivityCell } from "./sensitivityCell";
 import type { StressScenario } from "./stressScenario";
 
@@ -27,6 +28,7 @@ export interface ConsultantOutput {
   lenderReadinessExplanation: string;
   keyMetrics: ConsultantKeyMetric[];
   revenueComposition: RevenueComposition[];
+  revenueQuality: RevenueQualityYearRollup[];
   costComposition: CostComposition[];
   cumulativeFinancials: CumulativeYear[];
   stressTests: StressScenario[];

@@ -1,7 +1,7 @@
 import { generateTopIssues } from "./decision-rules";
 import { generateHealthSignals, type HealthSignal } from "./financial-health";
 import { computeDaysCashOnHand, computeEffectiveFte as computeEffectiveFteShared, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER, BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./workbook-helpers.js";
-import { computeAnnualDebt, computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials, defaultCollectionRateForMethod } from "@workspace/finance";
+import { computeAnnualDebt, computeStraightLineDepreciation, computeProjectedAR, computeBaseFinancials, defaultCollectionRateForMethod, computeRevenueQualityRollup, type RevenueQualityYearRollup } from "@workspace/finance";
 import { detectUnusualAssumptions } from "./assumption-flags";
 
 interface SchoolProfile {
@@ -173,6 +173,10 @@ interface RevenueRow {
   grantStatus?: string;
   receiptQuarter?: number;
   escalationRate?: number;
+  // Task #613 — revenue quality classification (founder override). When
+  // unset, the engine infers a default per category + id via
+  // `inferRevenueQuality` from @workspace/finance.
+  revenueQuality?: "contracted" | "projected" | "donor_dependent" | "policy_dependent";
 }
 
 interface PayrollTaxComponent {
@@ -363,6 +367,9 @@ export interface ConsultantOutput {
   lenderReadinessExplanation: string;
   keyMetrics: KeyMetric[];
   revenueComposition: RevenueComposition[];
+  // Task #613 — per-year revenue quality rollup ($ + % per bucket) plus the
+  // hard-revenue coverage ratio (contracted $ / (fixed costs + debt service)).
+  revenueQuality: RevenueQualityYearRollup[];
   costComposition: CostComposition[];
   cumulativeFinancials: CumulativeYear[];
   stressTests: StressScenario[];
@@ -501,6 +508,65 @@ function hasGradeBandConsultant(sp?: SchoolProfile): boolean {
     (arr) => arr && arr.some((v) => (v ?? 0) > 0),
   );
   return hasEnrollment && ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
+}
+
+/**
+ * Task #613 helper — exposes the per-row annual dollar amount that
+ * `computeRevenueForYear` collapses into bucket totals. Used by the
+ * revenue-quality rollup so each row's classification picks up the
+ * right dollars per year (including escalation, tuition tiers, and
+ * percent-of-base offsets).
+ */
+function computeRevenueRowAmountsForYear(
+  rows: RevenueRow[],
+  yearIdx: number,
+  students: number,
+  tuitionTiers?: TuitionTier[],
+  sp?: SchoolProfile,
+): Map<string, number> {
+  const rowValues = new Map<string, number>();
+
+  for (const row of rows) {
+    if (!row.enabled || row.driverType === "percent_of_base") continue;
+    if (row.id === "state_local_perpupil" && sp && hasGradeBandConsultant(sp)) {
+      rowValues.set(row.id, computeGradeBandRevenueConsultant(sp, yearIdx));
+    } else if (row.id === "gross_tuition" && row.driverType === "per_student" && tuitionTiers && tuitionTiers.length > 0) {
+      let perStudentAmount: number;
+      if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
+        perStudentAmount = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
+      } else {
+        perStudentAmount = row.amounts?.[yearIdx] ?? 0;
+      }
+      rowValues.set(row.id, computeTuitionWithTiers(perStudentAmount, yearIdx, students, tuitionTiers));
+    } else {
+      rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students, row.escalationRate));
+    }
+  }
+
+  for (const row of rows) {
+    if (!row.enabled || row.driverType !== "percent_of_base") continue;
+    const baseVal = rowValues.get(row.percentBase || "") || 0;
+    let pctVal: number;
+    if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
+      pctVal = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
+    } else {
+      pctVal = row.amounts?.[yearIdx] ?? 0;
+    }
+    const percentage = pctVal / 100;
+    rowValues.set(row.id, baseVal * percentage);
+  }
+
+  // Tuition offsets reduce contracted tuition, so flip their sign so the
+  // quality rollup nets correctly inside the contracted bucket.
+  for (const row of rows) {
+    if (!row.enabled) continue;
+    if (row.category === "tuition_offsets") {
+      const v = rowValues.get(row.id) || 0;
+      rowValues.set(row.id, -Math.abs(v));
+    }
+  }
+
+  return rowValues;
 }
 
 function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number, tuitionTiers?: TuitionTier[], sp?: SchoolProfile): RevenueBreakdown {
@@ -1674,6 +1740,40 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     publicPct: yf.totalRevenue > 0 ? yf.publicRevenue / yf.totalRevenue : 0,
     philanthropyPct: yf.totalRevenue > 0 ? yf.philanthropyRevenue / yf.totalRevenue : 0,
   }));
+
+  // Task #613 — revenue-quality rollup. We compute per-row annual dollars
+  // for each year (escalation + tiers + percent-of-base honored), bucket
+  // them by inferred/overridden revenue quality, and pair the contracted
+  // bucket against fixed obligations (staffing + facility + loan debt
+  // service) to produce the "hard revenue coverage" ratio lenders ask for.
+  const revenueQualityRollup: RevenueQualityYearRollup[] = (() => {
+    if (!hasRowData) return [];
+    const rqRows = data.revenueRows || [];
+    const rqTiers = data.tuitionTiers;
+    const rqYearInputs = yearFinancials.map((yf, idx) => {
+      const pf = idx === 0 ? prorationFactor : 1;
+      const amountsMap = computeRevenueRowAmountsForYear(
+        rqRows,
+        idx,
+        enrollmentByYear[idx] ?? 0,
+        rqTiers,
+        sp,
+      );
+      const rowAmountsById: Record<string, number> = {};
+      for (const [rowId, amount] of amountsMap.entries()) {
+        rowAmountsById[rowId] = amount * pf;
+      }
+      const fixedCosts = (yf.totalStaffingCost || 0) + (yf.facilityCost || 0);
+      const debtSvc = yf.loanDebtService ?? 0;
+      return {
+        year: yf.year,
+        rowAmountsById,
+        fixedCosts,
+        debtService: debtSvc,
+      };
+    });
+    return computeRevenueQualityRollup(rqRows, rqYearInputs);
+  })();
 
   const costComposition: CostComposition[] = yearFinancials.map(yf => ({
     staffingPctOfRevenue: yf.totalRevenue > 0 ? yf.totalStaffingCost / yf.totalRevenue : 0,
@@ -2946,6 +3046,7 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
     lenderReadinessExplanation,
     keyMetrics,
     revenueComposition,
+    revenueQuality: revenueQualityRollup,
     costComposition,
     cumulativeFinancials,
     stressTests,
