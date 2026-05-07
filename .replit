@@ -24,10 +24,6 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "e2e"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "test"
 
 [[workflows.workflow.tasks]]
@@ -38,16 +34,9 @@ args = "typecheck"
 task = "workflow.run"
 args = "api-tests"
 
-[[workflows.workflow]]
-name = "e2e"
-author = "agent"
-
-[workflows.workflow.metadata]
-isValidation = true
-
 [[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "E2E_PORT=23192 E2E_START_SERVERS=1 pnpm --filter @workspace/school-financial-model run test:e2e:smoke"
+task = "workflow.run"
+args = "e2e"
 
 [[workflows.workflow]]
 name = "test"
@@ -78,6 +67,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/api-server run test"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "e2e"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash scripts/e2e-with-crash-detection.sh"
 
 [workflows.workflow.metadata]
 isValidation = true
