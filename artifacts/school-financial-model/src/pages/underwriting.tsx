@@ -660,13 +660,13 @@ function computeLenderFlags(m: GuestModel, enrollProjection: number[]): LenderFl
 
   if (totalDebtService > 0) {
     if (dscr < 1.0) {
-      flags.push({ severity: "critical", label: `DSCR is ${dscr.toFixed(2)}x (below 1.0x — cannot cover debt)` });
+      flags.push({ severity: "critical", label: `Est. DSCR is ${dscr.toFixed(2)}x (below 1.0x — cannot cover debt)` });
     } else if (dscr < 1.15) {
-      flags.push({ severity: "high", label: `DSCR is ${dscr.toFixed(2)}x (below 1.15x threshold)` });
+      flags.push({ severity: "high", label: `Est. DSCR is ${dscr.toFixed(2)}x (below 1.15x threshold)` });
     } else if (dscr < 1.25) {
-      flags.push({ severity: "caution", label: `DSCR is ${dscr.toFixed(2)}x (below 1.25x benchmark)` });
+      flags.push({ severity: "caution", label: `Est. DSCR is ${dscr.toFixed(2)}x (below 1.25x benchmark)` });
     } else {
-      flags.push({ severity: "strong", label: `DSCR is ${dscr.toFixed(2)}x (above 1.25x benchmark)` });
+      flags.push({ severity: "strong", label: `Est. DSCR is ${dscr.toFixed(2)}x (above 1.25x benchmark)` });
     }
   }
 
@@ -1150,7 +1150,7 @@ export function UnderwritingLandingPage() {
               <div className="space-y-5">
                 <h2 className="font-display text-lg md:text-xl font-bold text-[#1E293B]">Debt & cash</h2>
                 <p className="text-sm text-[#1E293B]/60">
-                  Tell us about any existing debt and your cash position. These drive DSCR and cash runway calculations.
+                  Tell us about any existing debt and your cash position. These drive estimated DSCR and cash runway calculations.
                 </p>
 
                 <FieldText label="Beginning cash on hand ($)" type="number" min={0} step={1000} value={String(model.beginningCash)} onChange={(v) => updateNum("beginningCash", v)} testId="input-beginning-cash" hint="Cash available before Year 1 operations begin" />

@@ -12,149 +12,206 @@
 |-----|-----------|-----|
 | $21M Y5 revenue for 30-student school | `per_student` tuition was pre-multiplied by enrollment in the payload builder, then multiplied again by the engine | Payload now emits raw per-student amount; engine does the multiplication |
 | Collection rate ignored | Engine has no `collectionRate` field | Payload builder now multiplies `perStudentTuition × (collectionRate / 100)` before sending to engine |
-| Deferred founder comp dropped | Founder staffing row only emitted when `founderIsPaidYear1 === true` | Row now emitted whenever `founderAnnualCompensation > 0`, with `startYear` set to deferred year |
-| DSCR always 0 for guest debt | Guest debt rows use `isLoan: false` (no amortization); engine only computes DSCR from `isLoan: true` rows | Lender readiness snapshot computes its own guest-estimated DSCR from user-entered debt service amounts |
+| Deferred founder comp dropped | Founder staffing row only emitted when `founderIsPaidYear1 === true` | Row now emitted whenever `founderAnnualCompensation > 0`, with `startYear` clamped to [1,5] |
+| DSCR always 0 for guest debt | Guest debt rows use `isLoan: false` (no amortization); engine only computes DSCR from `isLoan: true` rows | Lender readiness snapshot computes its own guest-estimated DSCR from user-entered debt service; UI labels it "Est. DSCR" |
 
 ---
 
-## 2. Worked Example — 30-Student Microschool
+## 2. Default Model Payload Snippet
 
-### Inputs
-| Parameter | Value |
-|-----------|-------|
-| Enrollment Y1 | 30 students |
-| Growth rate | 10% / year |
-| Per-student tuition | $12,000 |
-| Collection rate | 95% |
-| Per-pupil public funding | $0 |
-| Philanthropy | $0 |
-| Students per teacher | 15 |
-| Avg teacher salary | $48,000 |
-| Admin staff | 1 |
-| Avg admin salary | $42,000 |
-| Founder comp | $65,000 (deferred to Year 2) |
-| Monthly rent | $3,500 |
-| Utilities | $6,000 / yr |
-| Insurance | $4,800 / yr |
+The default `EMPTY_MODEL` values (from `underwriting.tsx` line 116):
 
-### Expected Revenue (hand-calculated)
-| Year | Students | Effective Tuition | Revenue |
-|------|----------|-------------------|---------|
-| Y1 | 30 | $12,000 × 0.95 = $11,400 | $342,000 |
-| Y2 | 33 | $11,400 × 1.03 = $11,742 | $387,486 |
-| Y3 | 36 | $11,400 × 1.03² = $12,094 | $435,396 |
-| Y4 | 40 | $11,400 × 1.03³ = $12,457 | $498,289 |
-| Y5 | 44 | $11,400 × 1.03⁴ = $12,831 | $564,557 |
+```json
+{
+  "schoolName": "",
+  "schoolType": "microschool",
+  "schoolStage": "new_school",
+  "fundingProfile": "tuition_based",
+  "year1Students": 30,
+  "annualGrowthPct": 15,
+  "perStudentTuition": 12000,
+  "perPupilPublicFunding": 0,
+  "philanthropyAnnual": 0,
+  "studentsPerTeacher": 12,
+  "avgTeacherSalary": 55000,
+  "numAdminStaff": 1,
+  "avgAdminSalary": 65000,
+  "monthlyRent": 4000,
+  "annualUtilities": 12000,
+  "annualInsurance": 8000,
+  "annualCurriculum": 8000,
+  "annualOtherOpex": 12000,
+  "founderIsPaidYear1": false,
+  "founderAnnualCompensation": 0,
+  "founderCompensationBeginsYear": 2,
+  "tuitionCollectionRate": 95,
+  "retentionRate": 85,
+  "facilityType": "commercial",
+  "leaseSigned": false,
+  "beginningCash": 0,
+  "hasExistingDebt": false,
+  "existingAnnualDebtService": 0,
+  "requestedLoanAnnualDebtService": 0
+}
+```
 
-Revenue is now **credible** — Y5 is ~$565K for 44 students, not $21M.
+After `buildModelDataPayload` processes this, the key revenue row becomes:
 
-### Staffing (Y1)
-| Role | FTE | Rate | Loaded (×1.2565) | Active Y1? |
-|------|-----|------|------------------|-----------|
-| Teacher × 2 | 2.0 | $48,000 | $120,624 | Yes |
-| Admin × 1 | 1.0 | $42,000 | $52,773 | Yes |
-| Founder | 1.0 | $65,000 | $81,673 | **No** (startYear=2) |
-| **Y1 Total** | | | **$173,397** | |
-| **Y2 Total** | | | **~$261,000** (founder added) | |
+```json
+{
+  "id": "rev_tuition",
+  "category": "tuition_and_fees",
+  "lineItem": "Tuition revenue",
+  "driverType": "per_student",
+  "amounts": [11400, 11400, 11400, 11400, 11400],
+  "escalationRate": 3
+}
+```
 
-### Facility (Y1)
-| Item | Amount |
-|------|--------|
-| Rent | $42,000 |
-| Utilities | $6,000 |
-| Insurance | $4,800 |
-| **Total** | **$52,800** |
-
-### Net Income Estimate (Y1)
-- Revenue: $342,000
-- Staffing: $173,397
-- Facility: $52,800
-- Other OpEx: ~$10,000
-- **Net Income: ~$106K** (positive Y1 with deferred founder comp)
+Note: `11400 = 12000 × (95 / 100)` — collection rate applied at payload level.
 
 ---
 
-## 3. Debt Variant
+## 3. Worked Example — Default 30-Student Microschool (Y1 through Y5)
 
-### Guest debt scenario
+### Enrollment Projection
+| Year | Y1 | Y2 | Y3 | Y4 | Y5 |
+|------|----|----|----|----|-----|
+| Students | 30 | 35 | 40 | 46 | 53 |
+| Teachers (÷12, ceil) | 3 | 3 | 4 | 4 | 5 |
+
+Growth: 15%/yr, `ceil(students / studentsPerTeacher)`.
+
+### Revenue (Y1–Y5)
+
+Effective per-student tuition: $12,000 × 0.95 = $11,400, escalating at 3%/yr.
+
+| Year | Students | Eff. Tuition/Student | Total Revenue |
+|------|----------|---------------------|---------------|
+| Y1 | 30 | $11,400.00 | **$342,000** |
+| Y2 | 35 | $11,742.00 | **$410,970** |
+| Y3 | 40 | $12,094.26 | **$483,770** |
+| Y4 | 46 | $12,457.09 | **$573,026** |
+| Y5 | 53 | $12,830.80 | **$680,032** |
+
+### Staffing (Y1–Y5)
+
+Loaded multiplier: 1 + 0.20 (benefits) + 0.0765 (payroll tax) = 1.2765.
+Salary escalation: 2.5%/yr default.
+
+| Year | Teachers | Teacher Cost | Admin Cost | Founder | Total Staffing |
+|------|----------|-------------|------------|---------|----------------|
+| Y1 | 3 × $55,000 | $210,608 | $82,973 | $0 (not paid) | **$293,580** |
+| Y2 | 3 × $56,375 | $215,873 | $85,047 | $0 (comp=0) | **$300,920** |
+| Y3 | 4 × $57,784 | $295,125 | $87,173 | $0 | **$382,298** |
+| Y4 | 4 × $59,229 | $302,503 | $89,353 | $0 | **$391,856** |
+| Y5 | 5 × $60,709 | $387,458 | $91,587 | $0 | **$479,045** |
+
+Note: Default model has `founderAnnualCompensation = 0`, so no founder row is emitted.
+
+### Facility (Y1–Y5)
+
+| Item | Y1 | Y2 | Y3 | Y4 | Y5 |
+|------|----|----|----|----|-----|
+| Rent ($4,000/mo) | $48,000 | $49,392 | $50,824 | $52,298 | $53,815 |
+| Utilities | $12,000 | $12,348 | $12,706 | $13,075 | $13,454 |
+| Insurance | $8,000 | $8,232 | $8,471 | $8,716 | $8,969 |
+| **Total** | **$68,000** | **$69,972** | **$72,001** | **$74,089** | **$76,238** |
+
+Facility escalation: 2.9% default.
+
+### Operating Expenses (Y1–Y5)
+
+| Item | Y1 | Y2 | Y3 | Y4 | Y5 |
+|------|----|----|----|----|-----|
+| Curriculum | $8,000 | $8,232 | $8,471 | $8,716 | $8,969 |
+| Other OpEx | $12,000 | $12,348 | $12,706 | $13,075 | $13,454 |
+| **Total** | **$20,000** | **$20,580** | **$21,177** | **$21,791** | **$22,423** |
+
+### Summary P&L (Y1–Y5)
+
+| | Y1 | Y2 | Y3 | Y4 | Y5 |
+|---|----|----|----|----|-----|
+| **Revenue** | $342,000 | $410,970 | $483,770 | $573,026 | $680,032 |
+| Staffing | $293,580 | $300,920 | $382,298 | $391,856 | $479,045 |
+| Facility | $68,000 | $69,972 | $72,001 | $74,089 | $76,238 |
+| OpEx | $20,000 | $20,580 | $21,177 | $21,791 | $22,423 |
+| **Total Expenses** | **$381,580** | **$391,472** | **$475,476** | **$487,736** | **$577,706** |
+| **Net Income** | **-$39,580** | **$19,498** | **$8,294** | **$85,290** | **$102,326** |
+
+Y1 shows a small deficit (typical for new microschool); profitability begins Y2. Y5 is ~$102K net — credible for 53 students, NOT $21M.
+
+---
+
+## 4. Debt Variant
+
+### Guest debt scenario (modified from default)
 | Field | Value |
 |-------|-------|
 | Existing annual debt service | $18,000 |
 | Requested loan annual debt service | $12,000 |
 | Total debt service | $30,000 |
 
-### Guest-estimated DSCR
-- Net Income (Y1): ~$106K
-- DSCR = $106K / $30K = **3.53x** (above 1.25x benchmark → "strong")
+### Guest-estimated DSCR (Y1 with debt, using default model + $65K founder comp deferred to Y2)
+
+With founder comp of $65K starting Y2, Y1 staffing stays the same but Y1 revenue = $342K.
+
+- Net Income (Y1): -$39,580 (default model, Y1 deficit)
+- Est. DSCR = -$39,580 / $30,000 = **-1.32x** → "critical" severity flag
+
+With positive Y2 net income of $19,498:
+- Est. DSCR (Y2) = $19,498 / $30,000 = **0.65x** → still below 1.0x
+
+This correctly flags debt service coverage risk for a startup microschool.
 
 Engine DSCR sheet shows 0 for guest debt rows (by design — `isLoan: false`).
-Lender readiness snapshot uses its own calculation from user-entered debt service.
+Lender readiness snapshot computes its own guest-estimated DSCR from user-entered debt service.
+UI labels this as "Est. DSCR" to distinguish from engine-computed loan DSCR.
 
 ---
 
-## 4. Readiness Flags
+## 5. Top Readiness Flags for Default Model
 
-| Flag | Severity | Condition |
-|------|----------|-----------|
-| Founder comp deferred | caution | `founderAnnualCompensation > 0 && !founderIsPaidYear1` |
-| No founder comp planned | high | `founderAnnualCompensation === 0 && !founderIsPaidYear1` |
-| Collection rate at 100% | caution | `tuitionCollectionRate >= 100` |
-| Enrollment validation | high | New school with < 10 deposits/agreements |
-| Facility ratio | strong/caution/high | < 15% / 15-22% / > 22% |
-| Staffing ratio | strong/caution/high | < 55% / 55-65% / > 65% |
-| Days cash on hand | critical/high/caution/strong | < 30 / 30-45 / 45-90 / 90+ |
-| DSCR | critical/high/caution/strong | < 1.0 / 1.0-1.15 / 1.15-1.25 / 1.25+ |
-| Net margin | strong/high | > 5% positive / negative |
+The default model (`EMPTY_MODEL`) produces these flags:
 
----
+| # | Severity | Flag |
+|---|----------|------|
+| 1 | **high** | No founder compensation planned — lenders may question sustainability |
+| 2 | **high** | Fewer than 10 deposits or signed agreements for Year 1 |
+| 3 | **high** | No signed lease |
+| 4 | **high** | No occupancy documentation path |
+| 5 | **high** | No insurance path |
+| 6 | **high** | Staffing is 85.8% of revenue (above 65% threshold) |
+| 7 | **critical** | Days cash on hand: 0 (critical — below 30 days) |
+| 8 | **high** | Year 1 projected deficit: -$39,580 |
 
-## 5. Validation Results
-
-### 5.1 Typecheck
-```
-✅ PASS — all packages (scripts, api-server, school-financial-model, mockup-sandbox)
-```
-
-### 5.2 Unit Tests
-```
-✅ school-financial-model: 1096 tests passed
-✅ api-server: 37 tests passed
-```
-
-### 5.3 E2E Smoke Tests
-```
-✅ 8/8 wizard smoke tests passed (charter, private, learning lab — operating & new)
-```
-
-### 5.4 QA: Excel Export
-```
-✅ 30/30 exports passed (all payloads × all export types)
-```
-
-### 5.5 QA: Formula Results
-```
-✅ Standard Export — all formula cells cached, P&L/Revenue/Staff/Expense/CapDebt match expected
-✅ Underwriting V2 Cross-Tab — CF↔BS cash, DS↔BS debt, BS A=L+E, NI accumulation verified
-```
-
-### 5.6 QA: Smoke Arithmetic
-```
-✅ Private+ESA: all assertions pass
-✅ Charter: all assertions pass (debt service non-trivial, DSCR numeric)
-✅ HomeschoolCoop: all assertions pass (zero-debt fixture)
-✅ Non-trivial row arithmetic: percent_of_base and percent_of_revenue verified
-✅ 32/32 passed
-```
+Default model correctly surfaces 1 critical + 7 high flags — a new school with zero cash, no lease, no insurance, and high staffing ratio is NOT lender-ready. This is the expected behavior.
 
 ---
 
-## 6. Verdict
+## 6. Validation Results
 
-### GO ✅
+| # | Command | Result | Details |
+|---|---------|--------|---------|
+| 1 | `pnpm run typecheck` | **PASS** | All packages clean (scripts, api-server, school-financial-model, mockup-sandbox) |
+| 2 | `pnpm --filter @workspace/school-financial-model run test` | **PASS** | 68 test files, 1096 tests passed |
+| 3 | `pnpm --filter @workspace/api-server run test` | **PASS** | 37 tests passed |
+| 4 | `pnpm --filter @workspace/api-server run qa:excel` | **PASS** | 30/30 exports passed (6 payloads × 5 export types) |
+| 5 | `pnpm --filter @workspace/api-server run qa:formula-results` | **PASS** | Standard export + UW V2 cross-tab consistency verified |
+| 6 | `pnpm --filter @workspace/api-server run qa:smoke-arithmetic` | **PASS** | 32/32 assertions (Private+ESA, Charter, HomeschoolCoop, row math) |
+| 7 | `E2E_PORT=23192 E2E_START_SERVERS=1 pnpm --filter @workspace/school-financial-model run test:e2e:smoke` | **PASS** | 8/8 wizard smoke tests (charter, private, learning lab × operating/new) |
 
-All six validation suites pass. The revenue inflation bug is fixed and verified with hand-calculated examples. Deferred founder compensation, collection rate application, and DSCR treatment are all functioning correctly. The guest wizard produces credible financial projections suitable for lender readiness assessment.
+All 7 validation commands: **PASS**
 
-### Remaining items (follow-up, not blockers)
-1. Engine-level `collectionRate` support (currently applied in payload builder — works but couples the logic to the wizard)
-2. Engine-level guest debt DSCR computation (currently `isLoan: false` rows produce DSCR=0 in the engine; readiness snapshot has its own calculation)
-3. Payroll tax component wage-base caps in the guest wizard (currently uses flat 7.65% rate)
+---
+
+## 7. Verdict
+
+### GO
+
+All validation suites pass. The revenue inflation bug ($21M → ~$680K Y5) is fixed and verified with hand-calculated examples matching the default model. Collection rate is correctly applied at the payload level. Deferred founder compensation emits properly with `startYear` support. Guest-estimated DSCR is clearly labeled "Est. DSCR" in the UI to distinguish from engine loan DSCR. Readiness flags fire correctly for the default model state.
+
+### Follow-up items (not blockers)
+1. **Task #599**: Engine-level `collectionRate` support (currently applied in payload builder)
+2. **Task #600**: Expose deferred founder comp inputs in UI when founder is not paid Y1
+3. **Task #601**: Engine-level guest debt DSCR so exported workbooks show real ratios
