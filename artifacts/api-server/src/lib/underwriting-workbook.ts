@@ -1881,7 +1881,41 @@ function buildMonthlyCashFlowY1(wb: ExcelJS.Workbook, data: ModelData, enrollmen
   return { endingCashY1: cumCashMonthly[11], cumCashRow, minCashMonth: minCashMonthIdx + 1, minCashAmount: Math.round(minCash), minCashMonthLabel };
 }
 
-function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], depreciationByYear?: number[]) {
+/**
+ * Pre-computes the interest portion of every year's debt service so that the
+ * Operating Statement can render "Interest Expense" as its own line above Net
+ * Income (task #642). Mirrors the per-loan and per-flat-debt-row math used
+ * inside buildDebtSchedule, but runs without writing to a worksheet so we can
+ * call it before the Operating Statement is built (the debt schedule is
+ * constructed afterward to preserve tab order).
+ */
+function computeInterestByYear(data: ModelData, yc: number): number[] {
+  const result: number[] = [0, 0, 0, 0, 0];
+  const capDebtRows = (data.capitalAndDebtRows || []).filter(r => r.enabled);
+  for (const cd of capDebtRows) {
+    if (cd.isLoan) {
+      const principal = cd.loanPrincipal || 0;
+      const rate = (cd.loanRate || 0) / 100;
+      const term = cd.loanTermYears || 0;
+      for (let y = 0; y < yc; y++) {
+        result[y] += computeInterestPortion(principal, rate, term, y);
+      }
+    } else if ((cd.flatAnnualDebtService || 0) > 0) {
+      const annual = cd.flatAnnualDebtService || 0;
+      const ratePct = cd.flatInterestRate || 0;
+      const startBal = cd.flatStartingBalance || 0;
+      if (ratePct > 0 && startBal > 0) {
+        const split = computeFlatDebtSplit(annual, startBal, ratePct, yc);
+        for (let y = 0; y < yc; y++) {
+          result[y] += split.interest[y];
+        }
+      }
+    }
+  }
+  return result;
+}
+
+function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollment: number[], revByYear: number[], persByYear: number[], opexByYear: number[], cdByYear: number[], niByYear: number[], depreciationByYear?: number[], interestByYear?: number[]) {
   const yc = getYearCount(data);
   const ws = wb.addWorksheet(operatingStmtTabName(yc));
   const sp = data.schoolProfile || {};
@@ -1932,11 +1966,26 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
   for (let y = 0; y < yc; y++) {
     ws.getCell(r, y + 2).value = Math.round(opexByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
+  // Split the legacy "Capital & Debt Service" line into "Interest Expense"
+  // (driven by interestByYear from buildDebtSchedule, covering both amortizing
+  // loans and guest debt rows that carry an interest rate) and "Principal &
+  // Capital Outlays" (the remainder: loan principal, flat-debt principal, and
+  // pure capex). This matches how lenders expect to read a GAAP-style
+  // proforma. Net Income still reflects the full cdByYear deduction so it ties
+  // to the Balance Sheet and to Budget Summary. Task #642.
+  const intByYear = interestByYear ?? new Array(yc).fill(0);
+  const principalCapByYear = cdByYear.map((cd, y) => cd - (intByYear[y] ?? 0));
+  r++;
+  const intRow = r;
+  ws.getCell(r, 1).value = "Interest Expense"; bc(ws.getCell(r, 1));
+  for (let y = 0; y < yc; y++) {
+    ws.getCell(r, y + 2).value = Math.round(intByYear[y] ?? 0); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
+  }
   r++;
   const cdRow = r;
-  ws.getCell(r, 1).value = "Capital & Debt Service"; bc(ws.getCell(r, 1));
+  ws.getCell(r, 1).value = "Principal & Capital Outlays"; bc(ws.getCell(r, 1));
   for (let y = 0; y < yc; y++) {
-    ws.getCell(r, y + 2).value = Math.round(cdByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
+    ws.getCell(r, y + 2).value = Math.round(principalCapByYear[y]); ws.getCell(r, y + 2).numFmt = CUR; bc(ws.getCell(r, y + 2));
   }
   r++;
   const deprRow = r;
@@ -1947,7 +1996,7 @@ function buildOperatingStatement(wb: ExcelJS.Workbook, data: ModelData, enrollme
   r++;
   const totExpRow = r;
   ws.getCell(r, 1).value = "Total Expenses"; gc(ws.getCell(r, 1));
-  const totalExpByYear = persByYear.map((p, y) => p + opexByYear[y] + cdByYear[y] + (depreciationByYear?.[y] ?? 0));
+  const totalExpByYear = persByYear.map((p, y) => p + opexByYear[y] + (intByYear[y] ?? 0) + principalCapByYear[y] + (depreciationByYear?.[y] ?? 0));
   for (let y = 0; y < yc; y++) {
     const col = y + 2;
     setFormula(ws.getCell(r, col), `SUM(${cn(persRow, col)}:${cn(deprRow, col)})`, Math.round(totalExpByYear[y]));
@@ -3110,7 +3159,8 @@ async function generateWorkbook(data: ModelData, computedFlags?: ComputedFlag[])
   }
 
   const { endingCashY1, cumCashRow: cfCumCashRow } = buildMonthlyCashFlowY1(wb, effectiveData, enrollment, salaryEsc, costInflPct, prorationFactor, startingCash);
-  const { niRow: opStmtNiRow, cumNIRow: opStmtCumNIRow } = buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear, depreciationByYear);
+  const interestByYear = computeInterestByYear(effectiveData, yc);
+  const { niRow: opStmtNiRow, cumNIRow: opStmtCumNIRow } = buildOperatingStatement(wb, effectiveData, enrollment, revByYear, persByYear, opexByYear, cdByYear, niByYear, depreciationByYear, interestByYear);
 
   const debtResult = buildDebtSchedule(wb, effectiveData);
   const debtServiceByYear = debtResult.debtByYear;
