@@ -65,6 +65,15 @@ export function hasActualsSeedData(
 }
 
 export function seedY1FromActuals(input: FullModelData): FullModelData {
+  // Pathway guard — only run on models the founder has explicitly tagged
+  // "actuals". Without this, a future caller that loops over models for
+  // bulk-seeding (e.g. an admin backfill) could silently seed an
+  // assumptions-pathway model that happens to carry a stray
+  // priorYearSnapshot — exactly the contract the docstring promises to
+  // prevent. The wizard call site (`handleNext` on Actuals Intake) is
+  // already guarded by step visibility, so this is belt-and-suspenders.
+  const pathway = input.schoolProfile?.wizardPathway;
+  if (pathway !== undefined && pathway !== "actuals") return input;
   const snapshot = input.priorYearSnapshot as Snapshot | undefined;
   if (!hasActualsSeedData(snapshot)) return input;
   const snap = snapshot as Snapshot;
