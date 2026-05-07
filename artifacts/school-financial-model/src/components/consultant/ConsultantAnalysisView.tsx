@@ -39,10 +39,22 @@ import type { ConsultantOutput } from "@workspace/api-client-react";
 import { SchoolProfileLendingLabIntent } from "@workspace/api-client-react";
 import { KPI_FORMULAS } from "@/lib/coaching/kpi-formulas";
 import { KpiFormulaDrawer } from "@/components/coaching/ExplainerDrawer";
+import { WhyThisNumber } from "@/components/coaching/WhyThisNumber";
+import type { HeadlineMetricKey } from "@workspace/finance";
 import { trackCoachingEvent } from "@/lib/coaching/track";
 import { TopIssuesPanel } from "./TopIssuesPanel";
 import { HealthSignalsSection } from "./HealthSignalCard";
 import { LendingLabCard } from "./LendingLabCard";
+
+function metricNameToHeadlineKey(name: string): HeadlineMetricKey | undefined {
+  const lower = name.toLowerCase();
+  if (lower.includes("dscr") || lower.includes("debt service coverage")) return "y1_dscr";
+  if (lower.includes("reserve") || lower.includes("days cash") || lower.includes("cash on hand")) return "y1_reserve_months";
+  if (lower.includes("cash trough") || lower.includes("ending cash")) return "y1_ending_cash";
+  if (lower.includes("break-even") || lower.includes("break even") || lower.includes("breakeven")) return "break_even_year";
+  if (lower.includes("year 1") && (lower.includes("margin") || lower.includes("surplus") || lower.includes("profit"))) return "y1_net_income";
+  return undefined;
+}
 
 function metricNameToKpiId(name: string): string | undefined {
   const lower = name.toLowerCase();
@@ -135,6 +147,10 @@ interface ConsultantAnalysisViewProps {
   exportStepNumber?: number;
   lendingLabIntent?: SchoolProfileLendingLabIntent;
   hasLoan?: boolean;
+  /** Raw model data, used by the per-metric "Why this number?" popover so
+   *  each headline metric is traceable to the assumptions that drive it
+   *  (Task #614). */
+  modelData?: unknown;
 }
 
 const KPI_PLAIN_ENGLISH: Record<string, (value: string) => string> = {
@@ -202,7 +218,7 @@ function generateHealthSummary(data: ConsultantOutput): string {
   return `We've reviewed your financial model and have some observations to share.${fallbackSnippet}${riskDetail} Let's walk through the key findings together.`;
 }
 
-export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, lendingLabIntent, hasLoan }: ConsultantAnalysisViewProps) {
+export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jumpToStep, exportStepNumber = 9, lendingLabIntent, hasLoan, modelData }: ConsultantAnalysisViewProps) {
   const [openKpi, setOpenKpi] = useState<string | null>(null);
   const [sensitivityTab, setSensitivityTab] = useState<"revenue" | "expense">("revenue");
   const lendingRelevant = lendingLabIntent === SchoolProfileLendingLabIntent.plan_to_apply || lendingLabIntent === SchoolProfileLendingLabIntent.want_to_understand || hasLoan;
@@ -503,6 +519,19 @@ export function ConsultantAnalysisView({ data, niLabel, cumNiLabel, modelId, jum
                     How is this calculated?
                   </button>
                 )}
+                {(() => {
+                  const headlineKey = metricNameToHeadlineKey(metric.name);
+                  if (!headlineKey || !modelData) return null;
+                  return (
+                    <div className="mt-2 pt-2 border-t border-border/40">
+                      <WhyThisNumber
+                        metricKey={headlineKey}
+                        data={modelData as never}
+                        testIdSuffix={`consultant-${headlineKey}`}
+                      />
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}

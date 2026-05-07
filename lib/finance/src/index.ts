@@ -238,6 +238,21 @@ export {
   type RevenueQualityYearInputs,
 } from "./revenue-quality.js";
 
+export {
+  ASSUMPTION_REGISTRY,
+  HEADLINE_METRIC_LABELS,
+  METRIC_DRIVER_KEYS,
+  computeMetricDrivers,
+  isAssumptionKey,
+  listAssumptionKeys,
+  type AssumptionKey,
+  type AssumptionMeta,
+  type AssumptionFormat,
+  type AssumptionDriver,
+  type HeadlineMetricKey,
+  type MetricDriverInfo,
+} from "./assumption-registry.js";
+
 export function computeStraightLineDepreciation(
   fixedAssets: number,
   usefulLifeYears: number,

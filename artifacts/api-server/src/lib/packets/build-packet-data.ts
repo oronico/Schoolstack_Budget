@@ -37,6 +37,10 @@ import {
   findLowestCashMonth,
   type RevenueQuality,
   type MonthlyRevenueRowLike,
+  ASSUMPTION_REGISTRY,
+  computeMetricDrivers,
+  type DecisionEngineModelData as FullModelData,
+  type HeadlineMetricKey,
 } from "@workspace/finance";
 import {
   type PacketData,
@@ -1292,9 +1296,43 @@ function buildAppendixAssumptions(
     });
   }
 
+  // Task #614 — "Assumption sources" appendix. Prepend a per-headline-metric
+  // mapping so a lender can scan from a key output (DSCR, runway, ending
+  // cash, net income, break-even) directly to the wizard step that owns
+  // each driving assumption. Entries are sourced from the canonical
+  // @workspace/finance assumption registry, which a unit test guards
+  // against unknown keys.
+  const sourcesPrefix: LinkedAssumption[] = [];
+  try {
+    const drivers = computeMetricDrivers(md as unknown as FullModelData);
+    sourcesPrefix.push({
+      label: "— Assumption sources by headline metric —",
+      value: "(maps each key output to the assumptions and wizard step that drive it)",
+      sourceField: "assumption_sources_header",
+    });
+    for (const metricKey of Object.keys(drivers) as HeadlineMetricKey[]) {
+      const info = drivers[metricKey];
+      sourcesPrefix.push({
+        label: info.label,
+        value: info.drivers
+          .map((d) => `${ASSUMPTION_REGISTRY[d.key].label}: ${d.value}`)
+          .join("; "),
+        sourceField: `metric:${metricKey}`,
+        note: `Driven by inputs in: ${Array.from(
+          new Set(info.drivers.map((d) => ASSUMPTION_REGISTRY[d.key].stepTitle)),
+        ).join(", ")}.`,
+      });
+    }
+  } catch {
+    // Engine error — skip the per-metric appendix so the existing
+    // assumptions list still renders.
+  }
+
+  const allAssumptions = [...sourcesPrefix, ...assumptions];
+
   return {
     ...s,
-    narrative: `Complete list of ${assumptions.length} assumptions used in this financial model.`,
-    linkedAssumptions: assumptions,
+    narrative: `Complete list of ${assumptions.length} assumptions used in this financial model, with each headline metric tied to its driving assumptions.`,
+    linkedAssumptions: allAssumptions,
   };
 }

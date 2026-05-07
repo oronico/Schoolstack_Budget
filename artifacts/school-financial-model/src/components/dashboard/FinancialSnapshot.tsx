@@ -10,8 +10,10 @@ import {
 } from "@workspace/finance";
 import { formatCurrency } from "@/lib/utils";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
+import { WhyThisNumber } from "@/components/coaching/WhyThisNumber";
 import { LENDER_LABELS } from "@/lib/coaching/lender-labels";
 import { useLenderLanguage } from "@/lib/coaching/use-lender-language";
+import type { HeadlineMetricKey } from "@workspace/finance";
 import type { FullModelData } from "@/pages/model-wizard/schema";
 
 interface FinancialSnapshotProps {
@@ -60,6 +62,8 @@ interface KpiTileProps {
   icon: React.ReactNode;
   tone: "green" | "rose" | "blue" | "amber";
   testIdSuffix: string;
+  metricKey?: HeadlineMetricKey;
+  modelData?: FullModelData | null;
 }
 
 function KpiTile({
@@ -71,6 +75,8 @@ function KpiTile({
   icon,
   tone,
   testIdSuffix,
+  metricKey,
+  modelData,
 }: KpiTileProps) {
   const entry = LENDER_LABELS[labelId];
   const isLender = enabled && !!entry;
@@ -111,6 +117,15 @@ function KpiTile({
       </p>
       {caption && (
         <p className="text-[11px] text-muted-foreground mt-1">{caption}</p>
+      )}
+      {metricKey && modelData && (
+        <div className="mt-2">
+          <WhyThisNumber
+            metricKey={metricKey}
+            data={modelData}
+            testIdSuffix={testIdSuffix}
+          />
+        </div>
       )}
     </div>
   );
@@ -261,6 +276,8 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               icon={<TrendingUp className="w-4 h-4" />}
               tone="green"
               testIdSuffix="operating-surplus"
+              metricKey="y1_operating_surplus"
+              modelData={(model?.data as unknown as FullModelData) ?? null}
             />
             <KpiTile
               labelId="netIncome"
@@ -270,6 +287,8 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               icon={<DollarSign className="w-4 h-4" />}
               tone={metrics && metrics.netIncome < 0 ? "rose" : "green"}
               testIdSuffix="net-income"
+              metricKey="y1_net_income"
+              modelData={(model?.data as unknown as FullModelData) ?? null}
             />
             <KpiTile
               labelId="coverageRatio"
@@ -286,6 +305,8 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               icon={<Shield className="w-4 h-4" />}
               tone="blue"
               testIdSuffix="coverage-ratio"
+              metricKey="y1_dscr"
+              modelData={(model?.data as unknown as FullModelData) ?? null}
             />
             <KpiTile
               labelId="cashReserve"
@@ -295,6 +316,8 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               icon={<Wallet className="w-4 h-4" />}
               tone="amber"
               testIdSuffix="cash-reserve"
+              metricKey="y1_reserve_months"
+              modelData={(model?.data as unknown as FullModelData) ?? null}
             />
           </div>
           {metrics && !metrics.hasNumbers && (
