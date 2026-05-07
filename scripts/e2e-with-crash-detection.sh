@@ -13,13 +13,45 @@
 #      since the run started.
 # Either signal fails the workflow with a clear message, so a green run
 # really does mean the api-server stayed healthy end-to-end.
+#
+# Log retention (task #596): each run writes a per-run combined log to
+# .local/e2e-logs/e2e-<timestamp>.log. To keep the workspace tidy we
+# prune that directory after each run, keeping only the most recent
+# LOG_RETENTION_COUNT files (default 10). Adjust by exporting
+# LOG_RETENTION_COUNT before invoking this script.
 
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="${REPO_ROOT}/.local/e2e-logs"
+LOG_RETENTION_COUNT="${LOG_RETENTION_COUNT:-10}"
 mkdir -p "${LOG_DIR}"
 RUN_LOG="${LOG_DIR}/e2e-$(date -u +%Y%m%dT%H%M%SZ).log"
+
+# Run retention on every exit path (success or failure) so the directory
+# stays bounded even when the workflow fails partway through.
+trap 'prune_old_logs || true' EXIT
+
+prune_old_logs() {
+  # Keep the newest ${LOG_RETENTION_COUNT} e2e-*.log files; delete the rest.
+  # Uses find + sort by filename (timestamps are lexicographically sortable
+  # because they're zero-padded UTC ISO-8601), which avoids relying on
+  # mtime or GNU-only `ls` flags.
+  local keep="${LOG_RETENTION_COUNT}"
+  if ! [[ "${keep}" =~ ^[0-9]+$ ]] || [ "${keep}" -lt 1 ]; then
+    keep=10
+  fi
+  local to_delete
+  to_delete=$(find "${LOG_DIR}" -maxdepth 1 -type f -name 'e2e-*.log' \
+    | sort \
+    | head -n -"${keep}")
+  if [ -n "${to_delete}" ]; then
+    local deleted_count
+    deleted_count=$(printf '%s\n' "${to_delete}" | wc -l | tr -d ' ')
+    echo "[e2e-wrapper] Pruning ${deleted_count} old log(s); keeping newest ${keep}."
+    printf '%s\n' "${to_delete}" | xargs rm -f --
+  fi
+}
 
 # Capture the run start as a Postgres-friendly UTC timestamp so the
 # error_logs query below only sees crashes from *this* run, not stale
