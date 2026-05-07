@@ -1277,6 +1277,8 @@ export function UnderwritingLandingPage() {
                       <p className="text-sm text-[#92400E]">{topConcern.label}</p>
                     </div>
                   ) : null}
+
+                  <p className="text-xs text-[#1E293B]/40 mt-3">DSCR estimates are based on entered debt service amounts, not modeled loan terms.</p>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3">
