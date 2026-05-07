@@ -18,6 +18,7 @@ const allowlist = [
   "exceljs",
   "express",
   "helmet",
+  "hyperformula",
   "jsonwebtoken",
   "resend",
   "pdfkit",
