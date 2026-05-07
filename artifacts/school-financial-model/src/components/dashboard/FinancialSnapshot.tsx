@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useGetModel } from "@workspace/api-client-react";
-import { DollarSign, TrendingUp, Shield, Wallet, Loader2, AlertTriangle } from "lucide-react";
+import { DollarSign, TrendingUp, Shield, Wallet, Loader2, AlertTriangle, PieChart as PieChartIcon } from "lucide-react";
 import {
   Bar,
   CartesianGrid,
@@ -8,6 +8,8 @@ import {
   ComposedChart,
   Legend,
   Line,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,7 +20,15 @@ import {
   computeAnnualDebt,
   computeYear1MonthlyCashFlow,
   findLowestCashMonth,
+  computeRevenueQualityRollup,
+  computeRevenueRowAmountsForYear,
+  REVENUE_QUALITY_DEFINITIONS,
+  REVENUE_QUALITY_LABELS,
   type MonthlyRevenueRowLike,
+  type RevenueQuality,
+  type RevenueRowAmountsRowLike,
+  type RevenueRowAmountsSchoolProfileLike,
+  type TuitionTierLike,
 } from "@workspace/finance";
 import { formatCurrency } from "@/lib/utils";
 import { GlossaryTerm } from "@/components/coaching/GlossaryTerm";
@@ -64,6 +74,20 @@ function computeY1LoanDebtService(data: FullModelData): number {
   }
   return total;
 }
+
+const RQ_COLORS: Record<RevenueQuality, string> = {
+  contracted: "#328555",
+  policy_dependent: "#0D9488",
+  projected: "#1E293B",
+  donor_dependent: "#D97706",
+};
+
+const RQ_BUCKET_ORDER: readonly RevenueQuality[] = [
+  "contracted",
+  "policy_dependent",
+  "projected",
+  "donor_dependent",
+] as const;
 
 interface KpiTileProps {
   labelId: string;
@@ -215,6 +239,40 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         return { lowestCashMonth, chartData };
       };
       const byYear = [0, 1, 2, 3, 4].map((y) => buildYear(y as 0 | 1 | 2 | 3 | 4));
+
+      // Task #629 — Revenue Quality donut for the dashboard snapshot.
+      // Mirrors the consultant analysis view: bucket Y1 revenue dollars
+      // into contracted / policy / projected / donor and pair contracted
+      // (hard) revenue against fixed costs + debt service for the
+      // hard-revenue coverage callout. Uses the shared
+      // `computeRevenueRowAmountsForYear` helper from @workspace/finance
+      // so the snapshot stays in lock-step with the consultant engine
+      // (tuition tiers, grade-band per-pupil, percent-of-base, etc.).
+      const rqRows = (data.revenueRows ?? []) as RevenueRowAmountsRowLike[];
+      const rqStudents = m.enrollment?.[0] ?? 0;
+      const rqAmountsMap = computeRevenueRowAmountsForYear(
+        rqRows,
+        0,
+        rqStudents,
+        (data.tuitionTiers ?? undefined) as TuitionTierLike[] | undefined,
+        sp as RevenueRowAmountsSchoolProfileLike | undefined,
+      );
+      const rowAmountsById: Record<string, number> = {};
+      for (const [rowId, amount] of rqAmountsMap.entries()) {
+        rowAmountsById[rowId] = amount;
+      }
+      const fixedCosts = (m.y1StaffingCost || 0) + (m.y1FacilityCost || 0);
+      const [revenueQualityY1] = computeRevenueQualityRollup(
+        rqRows,
+        [
+          {
+            year: 1,
+            rowAmountsById,
+            fixedCosts,
+            debtService: loanDebtService,
+          },
+        ],
+      );
       return {
         operatingSurplus,
         netIncome: m.y1NetIncome,
@@ -226,6 +284,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         byYear,
         revenueByYear: m.revenueByYear,
         expensesByYear: m.expensesByYear,
+        revenueQualityY1,
       };
     } catch {
       return null;
@@ -241,6 +300,18 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
     ((metrics.revenueByYear[selectedYear] ?? 0) > 0 ||
       (metrics.expensesByYear[selectedYear] ?? 0) > 0)
   );
+
+  const rqDonutData = useMemo(() => {
+    const rq = metrics?.revenueQualityY1;
+    if (!rq || rq.totalRevenue <= 0) return null;
+    const data = RQ_BUCKET_ORDER.map((k) => ({
+      key: k,
+      name: REVENUE_QUALITY_LABELS[k],
+      pct: Math.round(rq.pctByBucket[k] * 100),
+      dollars: rq.byBucket[k],
+    })).filter((d) => d.pct > 0);
+    return data.length > 0 ? data : null;
+  }, [metrics]);
 
   return (
     <div
@@ -537,6 +608,90 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
               modelData={(model?.data as unknown as FullModelData) ?? null}
             />
           </div>
+          {metrics?.revenueQualityY1 && rqDonutData && (
+            <div
+              data-testid="dashboard-revenue-quality"
+              className="mt-4 rounded-2xl border border-border/60 bg-secondary/20 p-4"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <PieChartIcon className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">
+                  Revenue Quality
+                </h3>
+                {metrics.revenueQualityY1.hardRevenueCoverage !== null && (
+                  <span
+                    data-testid="dashboard-hard-revenue-coverage"
+                    title={`Hard Revenue Coverage: contracted Year-1 revenue divided by fixed costs (staffing + facility) plus loan debt service. ${REVENUE_QUALITY_DEFINITIONS.contracted}`}
+                    className={`ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      metrics.revenueQualityY1.hardRevenueCoverage >= 1.0
+                        ? "bg-green-100 text-green-800"
+                        : metrics.revenueQualityY1.hardRevenueCoverage >= 0.75
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-rose-100 text-rose-800"
+                    }`}
+                  >
+                    <Shield className="w-3 h-3" />
+                    Hard coverage{" "}
+                    {metrics.revenueQualityY1.hardRevenueCoverage.toFixed(2)}×
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-[7rem_1fr] gap-4 items-center">
+                <div className="h-28 w-28 mx-auto sm:mx-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={rqDonutData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={32}
+                        outerRadius={52}
+                        paddingAngle={3}
+                        dataKey="pct"
+                        strokeWidth={0}
+                      >
+                        {rqDonutData.map((d) => (
+                          <Cell key={d.key} fill={RQ_COLORS[d.key]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number, _name, item) => {
+                          const dollars =
+                            (item?.payload as { dollars?: number } | undefined)
+                              ?.dollars ?? 0;
+                          return [
+                            `${value}% (${formatCurrency(dollars)})`,
+                            item?.payload?.name as string,
+                          ];
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                  {rqDonutData.map((d) => (
+                    <li
+                      key={d.key}
+                      data-testid={`dashboard-rq-legend-${d.key}`}
+                      title={REVENUE_QUALITY_DEFINITIONS[d.key]}
+                      className="flex items-center gap-1.5 cursor-help"
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: RQ_COLORS[d.key] }}
+                      />
+                      <span className="text-muted-foreground">
+                        {d.name}:{" "}
+                        <span className="font-semibold text-foreground">
+                          {d.pct}%
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
           {metrics && !metrics.hasNumbers && (
             <p className="text-xs text-muted-foreground mt-3 italic">
               Add revenue and expenses to your model to see live numbers here.

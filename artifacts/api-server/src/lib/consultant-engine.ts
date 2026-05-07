@@ -8,6 +8,7 @@ import {
   computeBaseFinancials,
   defaultCollectionRateForMethod,
   computeRevenueQualityRollup,
+  computeRevenueRowAmountsForYear,
   computeYear1MonthlyCashFlow,
   computeCashRunwayMonths,
   computeNormalizedFinancials,
@@ -536,65 +537,6 @@ function hasGradeBandConsultant(sp?: SchoolProfile): boolean {
     (arr) => arr && arr.some((v) => (v ?? 0) > 0),
   );
   return hasEnrollment && ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0);
-}
-
-/**
- * Task #613 helper — exposes the per-row annual dollar amount that
- * `computeRevenueForYear` collapses into bucket totals. Used by the
- * revenue-quality rollup so each row's classification picks up the
- * right dollars per year (including escalation, tuition tiers, and
- * percent-of-base offsets).
- */
-function computeRevenueRowAmountsForYear(
-  rows: RevenueRow[],
-  yearIdx: number,
-  students: number,
-  tuitionTiers?: TuitionTier[],
-  sp?: SchoolProfile,
-): Map<string, number> {
-  const rowValues = new Map<string, number>();
-
-  for (const row of rows) {
-    if (!row.enabled || row.driverType === "percent_of_base") continue;
-    if (row.id === "state_local_perpupil" && sp && hasGradeBandConsultant(sp)) {
-      rowValues.set(row.id, computeGradeBandRevenueConsultant(sp, yearIdx));
-    } else if (row.id === "gross_tuition" && row.driverType === "per_student" && tuitionTiers && tuitionTiers.length > 0) {
-      let perStudentAmount: number;
-      if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
-        perStudentAmount = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
-      } else {
-        perStudentAmount = row.amounts?.[yearIdx] ?? 0;
-      }
-      rowValues.set(row.id, computeTuitionWithTiers(perStudentAmount, yearIdx, students, tuitionTiers));
-    } else {
-      rowValues.set(row.id, computeDriverValue(row.amounts, yearIdx, row.driverType, students, row.escalationRate));
-    }
-  }
-
-  for (const row of rows) {
-    if (!row.enabled || row.driverType !== "percent_of_base") continue;
-    const baseVal = rowValues.get(row.percentBase || "") || 0;
-    let pctVal: number;
-    if (row.escalationRate !== undefined && row.escalationRate !== 0 && yearIdx > 0) {
-      pctVal = (row.amounts?.[0] ?? 0) * Math.pow(1 + row.escalationRate / 100, yearIdx);
-    } else {
-      pctVal = row.amounts?.[yearIdx] ?? 0;
-    }
-    const percentage = pctVal / 100;
-    rowValues.set(row.id, baseVal * percentage);
-  }
-
-  // Tuition offsets reduce contracted tuition, so flip their sign so the
-  // quality rollup nets correctly inside the contracted bucket.
-  for (const row of rows) {
-    if (!row.enabled) continue;
-    if (row.category === "tuition_offsets") {
-      const v = rowValues.get(row.id) || 0;
-      rowValues.set(row.id, -Math.abs(v));
-    }
-  }
-
-  return rowValues;
 }
 
 function computeRevenueForYear(rows: RevenueRow[], yearIdx: number, students: number, tuitionTiers?: TuitionTier[], sp?: SchoolProfile): RevenueBreakdown {

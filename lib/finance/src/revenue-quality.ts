@@ -55,6 +55,231 @@ interface RevenueRowLike {
 }
 
 /**
+ * Per-row driver-shape for `computeRevenueRowAmountsForYear`. Mirrors the
+ * fields the consultant engine reads off `RevenueRow` and the dashboard
+ * snapshot reads off `FullModelData.revenueRows`. Loose-typed so both the
+ * server and client can pass their own row types in.
+ */
+export interface RevenueRowAmountsRowLike {
+  id: string;
+  enabled?: boolean;
+  category?: string;
+  driverType?: string;
+  amounts?: number[];
+  escalationRate?: number;
+  percentBase?: string;
+}
+
+export interface TuitionTierLike {
+  discountPercent?: number;
+  studentCounts?: number[];
+}
+
+export interface RevenueRowAmountsSchoolProfileLike {
+  gradeBandEnrollment?: { k5?: number[]; m68?: number[]; h912?: number[] };
+  gradeBandPerPupil?: { k5?: number; m68?: number; h912?: number };
+  enrollmentRevenueMethod?: string;
+  priorYearADM?: number;
+  priorYearADA?: number;
+}
+
+function hasGradeBand(sp?: RevenueRowAmountsSchoolProfileLike): boolean {
+  if (!sp?.gradeBandEnrollment || !sp?.gradeBandPerPupil) return false;
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  const hasEnrollment = [gbe.k5, gbe.m68, gbe.h912].some(
+    (arr) => arr && arr.some((v) => (v ?? 0) > 0),
+  );
+  return (
+    hasEnrollment && ((gbp.k5 || 0) + (gbp.m68 || 0) + (gbp.h912 || 0) > 0)
+  );
+}
+
+function computeGradeBandRevenue(
+  sp: RevenueRowAmountsSchoolProfileLike,
+  yearIdx: number,
+): number {
+  const gbe = sp.gradeBandEnrollment;
+  const gbp = sp.gradeBandPerPupil;
+  if (!gbe || !gbp) return 0;
+  const k5e = gbe.k5?.[yearIdx] ?? 0;
+  const m68e = gbe.m68?.[yearIdx] ?? 0;
+  const h912e = gbe.h912?.[yearIdx] ?? 0;
+  if (k5e + m68e + h912e === 0) return 0;
+  let total =
+    k5e * (gbp.k5 || 0) + m68e * (gbp.m68 || 0) + h912e * (gbp.h912 || 0);
+  if (sp.enrollmentRevenueMethod === "ada") {
+    const adm = sp.priorYearADM || 0;
+    const ada = sp.priorYearADA || 0;
+    total *= adm > 0 ? Math.min(ada / adm, 1) : 0.95;
+  }
+  return total;
+}
+
+function computeTuitionWithTiers(
+  grossTuitionPerStudent: number,
+  yearIdx: number,
+  totalStudents: number,
+  tuitionTiers?: TuitionTierLike[],
+): number {
+  if (!tuitionTiers || tuitionTiers.length === 0) {
+    return grossTuitionPerStudent * totalStudents;
+  }
+  let rawTierTotal = 0;
+  for (const tier of tuitionTiers) {
+    rawTierTotal += tier.studentCounts?.[yearIdx] ?? 0;
+  }
+  if (rawTierTotal === 0) {
+    return grossTuitionPerStudent * totalStudents;
+  }
+  const scaleFactor =
+    rawTierTotal > totalStudents ? totalStudents / rawTierTotal : 1;
+  let totalTuition = 0;
+  let allocatedStudents = 0;
+  for (const tier of tuitionTiers) {
+    const rawCount = tier.studentCounts?.[yearIdx] ?? 0;
+    const scaledCount = rawCount * scaleFactor;
+    allocatedStudents += scaledCount;
+    const discount = (tier.discountPercent || 0) / 100;
+    totalTuition += scaledCount * grossTuitionPerStudent * (1 - discount);
+  }
+  const remainingStudents = totalStudents - allocatedStudents;
+  if (remainingStudents > 0) {
+    totalTuition += remainingStudents * grossTuitionPerStudent;
+  }
+  return totalTuition;
+}
+
+function computeDriverValue(
+  amounts: number[] | undefined,
+  yearIdx: number,
+  driverType: string | undefined,
+  students: number,
+  escalationRate?: number,
+): number {
+  let base: number;
+  const esc = escalationRate !== undefined && escalationRate !== 0 ? escalationRate : 0;
+  if (esc !== 0 && yearIdx > 0) {
+    const y1 = amounts?.[0] ?? 0;
+    base = y1 * Math.pow(1 + esc / 100, yearIdx);
+  } else {
+    base = amounts?.[yearIdx] ?? 0;
+  }
+  switch (driverType) {
+    case "monthly":
+      return base * 12;
+    case "per_student":
+      return base * students;
+    case "per_new_student":
+      return base * students;
+    case "per_returning_student":
+      return 0;
+    case "annual_fixed":
+    default:
+      return base;
+  }
+}
+
+/**
+ * Per-row dollar amounts for a given year, keyed by row id. Mirrors the
+ * consultant engine so the dashboard snapshot, lender packet, and
+ * consultant view all bucket the same dollar values into the
+ * revenue-quality rollup.
+ *
+ * Honored:
+ * - per-row escalation (snapshot uses Y1 only, so escalation is a no-op
+ *   there; the multi-year callers exercise the escalation branch)
+ * - tuition tiers on `gross_tuition` rows with `per_student` driver
+ * - grade-band per-pupil funding on `state_local_perpupil` when the
+ *   school profile carries grade-band enrollment + per-pupil rates
+ * - percent-of-base rows (resolved after the first pass so they can
+ *   reference any base row's value)
+ * - tuition-offsets sign flip (offsets reduce contracted tuition, so
+ *   they're stored as negative values inside the contracted bucket)
+ */
+export function computeRevenueRowAmountsForYear(
+  rows: readonly RevenueRowAmountsRowLike[],
+  yearIdx: number,
+  students: number,
+  tuitionTiers?: TuitionTierLike[],
+  schoolProfile?: RevenueRowAmountsSchoolProfileLike,
+): Map<string, number> {
+  const rowValues = new Map<string, number>();
+
+  for (const row of rows) {
+    if (!row.enabled || !row.id || row.driverType === "percent_of_base") continue;
+    if (
+      row.id === "state_local_perpupil" &&
+      schoolProfile &&
+      hasGradeBand(schoolProfile)
+    ) {
+      rowValues.set(row.id, computeGradeBandRevenue(schoolProfile, yearIdx));
+    } else if (
+      row.id === "gross_tuition" &&
+      row.driverType === "per_student" &&
+      tuitionTiers &&
+      tuitionTiers.length > 0
+    ) {
+      let perStudentAmount: number;
+      if (
+        row.escalationRate !== undefined &&
+        row.escalationRate !== 0 &&
+        yearIdx > 0
+      ) {
+        perStudentAmount =
+          (row.amounts?.[0] ?? 0) *
+          Math.pow(1 + row.escalationRate / 100, yearIdx);
+      } else {
+        perStudentAmount = row.amounts?.[yearIdx] ?? 0;
+      }
+      rowValues.set(
+        row.id,
+        computeTuitionWithTiers(perStudentAmount, yearIdx, students, tuitionTiers),
+      );
+    } else {
+      rowValues.set(
+        row.id,
+        computeDriverValue(
+          row.amounts,
+          yearIdx,
+          row.driverType,
+          students,
+          row.escalationRate,
+        ),
+      );
+    }
+  }
+
+  for (const row of rows) {
+    if (!row.enabled || !row.id || row.driverType !== "percent_of_base") continue;
+    const baseVal = rowValues.get(row.percentBase || "") || 0;
+    let pctVal: number;
+    if (
+      row.escalationRate !== undefined &&
+      row.escalationRate !== 0 &&
+      yearIdx > 0
+    ) {
+      pctVal =
+        (row.amounts?.[0] ?? 0) *
+        Math.pow(1 + row.escalationRate / 100, yearIdx);
+    } else {
+      pctVal = row.amounts?.[yearIdx] ?? 0;
+    }
+    rowValues.set(row.id, baseVal * (pctVal / 100));
+  }
+
+  for (const row of rows) {
+    if (!row.enabled || !row.id) continue;
+    if (row.category === "tuition_offsets") {
+      const v = rowValues.get(row.id) || 0;
+      rowValues.set(row.id, -Math.abs(v));
+    }
+  }
+
+  return rowValues;
+}
+
+/**
  * Infer the default quality bucket for a revenue row based on its category
  * and well-known line-item ids. The wizard stamps an explicit value when
  * the founder overrides; otherwise this function picks the bucket.

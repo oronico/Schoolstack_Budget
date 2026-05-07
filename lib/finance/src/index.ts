@@ -258,12 +258,16 @@ export {
 export {
   inferRevenueQuality,
   computeRevenueQualityRollup,
+  computeRevenueRowAmountsForYear,
   REVENUE_QUALITY_LABELS,
   REVENUE_QUALITY_DEFINITIONS,
   REVENUE_QUALITY_ORDER,
   type RevenueQuality,
   type RevenueQualityYearRollup,
   type RevenueQualityYearInputs,
+  type RevenueRowAmountsRowLike,
+  type RevenueRowAmountsSchoolProfileLike,
+  type TuitionTierLike,
 } from "./revenue-quality.js";
 
 export {
