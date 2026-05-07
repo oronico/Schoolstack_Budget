@@ -248,12 +248,21 @@ export function ExportStep({ modelId }: { jumpToStep?: (s:number)=>void, modelId
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/);
+      const rawSchoolName = (() => {
+        const v = getValues() as { schoolProfile?: { schoolName?: string } };
+        return (v.schoolProfile?.schoolName ?? "").trim();
+      })();
+      const safeSchoolName = (rawSchoolName || `Model_${modelId}`)
+        .replace(/[^a-zA-Z0-9 _-]/g, "")
+        .replace(/\s+/g, "_") || `Model_${modelId}`;
       const fallbackNames: Record<ExportType, string> = {
-        formula: isSingleYear ? `1-Year_Operating_Budget_${modelId}.xlsx` : `5-Year_Financial_Model_${modelId}.xlsx`,
-        underwritingV2: `Founder_Planning_Workbook_${modelId}.xlsx`,
-        lenderPacketPdf: `Lender_Conversation_Snapshot_${modelId}.pdf`,
-        boardPacketPdf: `Board_and_Funder_Summary_${modelId}.pdf`,
-        chestertonOperatingManual: `Chesterton_CSN_Operating_Manual_${modelId}.xlsx`,
+        formula: isSingleYear
+          ? `${safeSchoolName}_1-Year_Operating_Budget.xlsx`
+          : `${safeSchoolName}_5-Year_Financial_Model.xlsx`,
+        underwritingV2: `${safeSchoolName}_Founder_Planning_Workbook.xlsx`,
+        lenderPacketPdf: `${safeSchoolName}_Lender_Conversation_Snapshot.pdf`,
+        boardPacketPdf: `${safeSchoolName}_Board_and_Funder_Summary.pdf`,
+        chestertonOperatingManual: `${safeSchoolName}_Chesterton_CSN_Operating_Manual.xlsx`,
       };
       const filename = filenameMatch?.[1] || fallbackNames[type];
       const url = window.URL.createObjectURL(blob);

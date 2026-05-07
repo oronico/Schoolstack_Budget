@@ -68,7 +68,7 @@ const AUDIENCES: AudienceCard[] = [
     slug: "lenders",
     name: "Lenders & CDFIs",
     tagline:
-      "Consistent borrower financials with DSCR, sensitivity, and an underwriting packet.",
+      "Consistent borrower financials with DSCR, sensitivity, and a Lender Conversation Snapshot.",
     Icon: Handshake,
     accent: "from-[#4A7CB8]/15 to-[#4A7CB8]/5",
     iconBg: "bg-[#4A7CB8]/15",

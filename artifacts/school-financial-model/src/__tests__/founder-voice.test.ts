@@ -62,8 +62,57 @@ const BANNED_PATTERNS: BannedPattern[] = [
   { label: "bank determination", re: /bank\s+determination/i },
   { label: "credit memo", re: /credit\s+memo/i },
   { label: "underwriting file", re: /underwriting\s+file/i },
+  { label: "underwriting packet", re: /underwriting\s+packet/i },
+  { label: "underwriting workbook", re: /underwriting\s+workbook/i },
+  { label: '"Underwriting Model workbook"', re: /Underwriting\s+Model\s+workbook/i },
   { label: "approval packet", re: /approval\s+packet/i },
+  { label: "loan approval packet", re: /loan\s+approval\s+packet/i },
+  { label: "loan approval", re: /loan\s+approval/i, extraAllowlist: ["pages/underwriting.tsx"] },
+  { label: "borrower approval", re: /borrower\s+approval/i },
   { label: "bank review", re: /bank\s+review/i },
+  // "Rejection / rejected" — the Replit-managed conflict banner uses
+  // "rejected with a 409" in a code comment (stripped) and the unhandled
+  // promise rejection handler is a JS API name (allowlisted).
+  {
+    label: '"rejected" (literal)',
+    re: /\brejected\b/i,
+    extraAllowlist: [
+      // PromiseRejectionEvent / mockRejectedValueOnce are JS API names.
+      "lib/error-reporter.ts",
+      "components/coaching/__tests__/FounderPersonaPrompt.test.tsx",
+    ],
+  },
+  {
+    label: '"rejection" (literal)',
+    re: /\brejection\b/i,
+    extraAllowlist: [
+      // window.onunhandledrejection is the standard browser API name.
+      "lib/error-reporter.ts",
+    ],
+  },
+  // Task #676 — verdict-style "passed / failed / pass / fail" usage on the
+  // founder's plan, application, model, or workbook is banned. The literal
+  // words "pass(ed)" / "fail" appear all over the codebase in legitimate
+  // contexts (pass-through taxes, "first pass", "fail loudly" test
+  // narration, the LendingLabCard internal status keys, descriptive prose
+  // like "schools can fail if they run out of cash"), so the ban is
+  // scoped to verdict patterns.
+  {
+    label: '"passed/failed" as a verdict on the founder, plan, model or application',
+    re: /\b(you|your|the)\s+(model|plan|application|school|budget|workbook|submission|package|packet|review)\s+(have\s+|has\s+|did\s+not\s+|didn't\s+)?(pass(ed)?|fail(ed)?)\b/i,
+    extraAllowlist: [
+      // Internal lender-reviewer screen — out of scope per task #655 / #676.
+      "pages/underwriting.tsx",
+    ],
+  },
+  {
+    label: '"passed/failed" the underwriting / credit / lender review',
+    re: /\b(pass(ed)?|fail(ed)?)\s+(the\s+)?(underwriting|credit\s+review|lender\s+review|loan\s+review|approval|application)\b/i,
+  },
+  {
+    label: '"pass/fail verdict"',
+    re: /\b(pass|fail)\s+(verdict|determination|decision)\b/i,
+  },
   // Literal judgment-word bans (per task #655). Allowlists below cover the
   // narrow non-founder-verdict contexts where these words legitimately
   // appear (cookie consent, scenarios tracker, /underwriting reviewer
@@ -140,6 +189,138 @@ function stripComments(src: string): string {
     .join("\n");
   return out;
 }
+
+// Task #676 — the five canonical export labels every founder-facing surface
+// must use, and the canonical filename pattern those exports must download
+// under (the leading `SchoolName_` prefix is verified separately in
+// ExportStep tests, since the school name is dynamic).
+const CANONICAL_EXPORT_LABELS = [
+  "Founder Planning Workbook",
+  "1-Year Operating Budget",
+  "5-Year Financial Model",
+  "Board and Funder Summary",
+  "Lender Conversation Snapshot",
+];
+
+const CANONICAL_FILENAME_TOKENS = [
+  "Founder_Planning_Workbook",
+  "1-Year_Operating_Budget",
+  "5-Year_Financial_Model",
+  "Board_and_Funder_Summary",
+  "Lender_Conversation_Snapshot",
+];
+
+const EXPORT_STEP_PATH = join(SRC_ROOT, "pages/model-wizard/steps/ExportStep.tsx");
+
+// Other founder-facing surfaces that name the canonical exports. Each entry
+// asserts the surface uses at least one canonical label (the specific labels
+// vary — e.g. the lender preview only references "Lender Conversation
+// Snapshot") and uses no deprecated label.
+const CANONICAL_LABEL_SURFACES: Array<{ path: string; mustContain: string[] }> = [
+  {
+    path: "pages/model-wizard/steps/ExportStep.tsx",
+    mustContain: CANONICAL_EXPORT_LABELS,
+  },
+  {
+    path: "components/export/LenderPacketPreview.tsx",
+    mustContain: ["Lender Conversation Snapshot"],
+  },
+  {
+    path: "components/export/BoardPacketPreview.tsx",
+    mustContain: ["Board and Funder Summary"],
+  },
+  {
+    path: "components/wizard/ExtendToFiveYearModal.tsx",
+    mustContain: [
+      "Lender Conversation Snapshot",
+      "Board and Funder Summary",
+      "5-Year Financial Model",
+    ],
+  },
+  {
+    path: "pages/landing.tsx",
+    mustContain: [
+      "Lender Conversation Snapshot",
+      "Board and Funder Summary",
+      "Founder Planning Workbook",
+      "5-Year Financial Model",
+    ],
+  },
+];
+
+const DEPRECATED_LABEL_TOKENS = [
+  "Underwriting Workbook",
+  "Underwriting Package",
+  "Underwriting Packet",
+  "Lender Packet",
+  "Lender-Ready Packet",
+  "Bank Packet",
+  "Credit Memo",
+  "Loan Approval Packet",
+  "Formula Workbook",
+  "Budget Workbook",
+];
+
+const DEPRECATED_FILENAME_TOKENS = [
+  "Underwriting_Model.xlsx",
+  "Underwriting_Workbook.xlsx",
+  "Credit_Memo.pdf",
+  "Loan_Approval_Packet.pdf",
+  "Bank_Packet.xlsx",
+  "Budget_Workbook.xlsx",
+  "Single-Year_Export.xlsx",
+];
+
+describe("founder voice — canonical export labels & filenames", () => {
+  it("ExportStep renders each of the five canonical labels", () => {
+    const src = readFileSync(EXPORT_STEP_PATH, "utf8");
+    for (const label of CANONICAL_EXPORT_LABELS) {
+      expect(src, `ExportStep is missing canonical label "${label}"`).toContain(label);
+    }
+  });
+
+  it("ExportStep download filenames use the five canonical filename tokens", () => {
+    const src = readFileSync(EXPORT_STEP_PATH, "utf8");
+    for (const token of CANONICAL_FILENAME_TOKENS) {
+      expect(src, `ExportStep is missing canonical filename token "${token}"`).toContain(token);
+    }
+  });
+
+  it("ExportStep falls back to the SchoolName_<token>.<ext> filename pattern", () => {
+    const src = readFileSync(EXPORT_STEP_PATH, "utf8");
+    // The fallback derives the school name from the wizard form context and
+    // prefixes every canonical filename token with `${safeSchoolName}_`.
+    expect(src).toMatch(/safeSchoolName/);
+    expect(src).toMatch(/\$\{safeSchoolName\}_1-Year_Operating_Budget\.xlsx/);
+    expect(src).toMatch(/\$\{safeSchoolName\}_5-Year_Financial_Model\.xlsx/);
+    expect(src).toMatch(/\$\{safeSchoolName\}_Founder_Planning_Workbook\.xlsx/);
+    expect(src).toMatch(/\$\{safeSchoolName\}_Lender_Conversation_Snapshot\.pdf/);
+    expect(src).toMatch(/\$\{safeSchoolName\}_Board_and_Funder_Summary\.pdf/);
+  });
+
+  it("ExportStep does not use deprecated filename tokens", () => {
+    const src = readFileSync(EXPORT_STEP_PATH, "utf8");
+    for (const banned of DEPRECATED_FILENAME_TOKENS) {
+      expect(src, `ExportStep should not use deprecated filename "${banned}"`).not.toContain(banned);
+    }
+  });
+
+  it.each(CANONICAL_LABEL_SURFACES)(
+    "$path uses the canonical export labels and no deprecated label",
+    ({ path, mustContain }) => {
+      const src = readFileSync(join(SRC_ROOT, path), "utf8");
+      for (const label of mustContain) {
+        expect(src, `${path} is missing canonical label "${label}"`).toContain(label);
+      }
+      for (const banned of DEPRECATED_LABEL_TOKENS) {
+        expect(
+          src,
+          `${path} must not use deprecated export label "${banned}"`,
+        ).not.toContain(banned);
+      }
+    },
+  );
+});
 
 describe("founder voice — no banned phrases on founder-facing surfaces", () => {
   const files = listFiles(SRC_ROOT);

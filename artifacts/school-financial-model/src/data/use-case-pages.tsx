@@ -246,7 +246,7 @@ export const USE_CASE_PAGES: UseCasePageData[] = [
     slug: "lenders",
     seoTitle: "School Financial Modeling for Lenders & CDFIs",
     seoDescription:
-      "SchoolStack Budget helps your borrowers build professional, consistent financial models - so you get the underwriting data you need, in the format you expect.",
+      "SchoolStack Budget helps your borrowers build professional, consistent financial models - so you get the financial data you need, in the format you expect.",
     badge: "FOR LENDERS & CDFIs",
     headline: "Better borrower financials.",
     headlineAccent: "Less back-and-forth.",
@@ -289,7 +289,7 @@ export const USE_CASE_PAGES: UseCasePageData[] = [
     ],
     closingHeadline: "Spend less time chasing numbers. More time making decisions.",
     closingText:
-      "Recommend SchoolStack Budget to your borrowers. They get guided financial planning. You get consistent, professional underwriting data. Everyone saves time.",
+      "Recommend SchoolStack Budget to your borrowers. They get guided financial planning. You get consistent, professional financial data. Everyone saves time.",
     closingCta: "Recommend to Your Borrowers",
   },
 ];
