@@ -1,6 +1,18 @@
 import { useMemo } from "react";
 import { useGetModel } from "@workspace/api-client-react";
 import { DollarSign, TrendingUp, Shield, Wallet, Loader2, AlertTriangle } from "lucide-react";
+import {
+  Bar,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  Legend,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { computeMetrics } from "@/lib/coaching/diagnostics-engine";
 import {
   computeAnnualDebt,
@@ -175,6 +187,18 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         opMonths,
       });
       const lowestCashMonth = findLowestCashMonth(series.cumulative, fyStart);
+      const monthLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const chartData = series.inflow.map((inflow, i) => {
+        const calIdx = ((fyStart - 1 + i) % 12 + 12) % 12;
+        return {
+          month: monthLabels[calIdx],
+          inflow,
+          outflow: -series.outflow[i],
+          net: series.net[i],
+          ending: series.cumulative[i],
+          isLow: lowestCashMonth?.monthIndex === i,
+        };
+      });
       return {
         operatingSurplus,
         netIncome: m.y1NetIncome,
@@ -184,6 +208,7 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
         revenue: m.y1Revenue,
         hasNumbers: m.y1Revenue > 0 || m.y1TotalExpenses > 0,
         lowestCashMonth,
+        chartData,
       };
     } catch {
       return null;
@@ -262,6 +287,140 @@ export function FinancialSnapshot({ modelId, modelName }: FinancialSnapshotProps
                     ? "Cash dips below zero — plan a reserve or line of credit before this month."
                     : "This is the month lenders focus on. Plan reserves to cover the trough."}
                 </p>
+              </div>
+            </div>
+          )}
+          {metrics?.chartData && metrics.hasNumbers && (
+            <div
+              data-testid="dashboard-monthly-cashflow-chart"
+              className="mb-4 rounded-xl border border-border/60 bg-secondary/20 p-3 sm:p-4"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-2">
+                <h3 className="font-display text-sm font-semibold text-foreground">
+                  Year 1 monthly cash flow
+                </h3>
+                <p className="text-[11px] text-muted-foreground">
+                  Bars: inflow vs outflow. Line: ending cash.
+                  {metrics.lowestCashMonth && (
+                    <>
+                      {" "}Lowest month{" "}
+                      <span className="font-semibold text-foreground">
+                        {metrics.lowestCashMonth.monthLabel}
+                      </span>{" "}
+                      highlighted.
+                    </>
+                  )}
+                </p>
+              </div>
+              <div className="h-56 sm:h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={metrics.chartData}
+                    margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      stroke="#e5e7eb"
+                      strokeDasharray="3 3"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={56}
+                      tickFormatter={(v: number) =>
+                        Math.abs(v) >= 1000
+                          ? `${(v / 1000).toFixed(0)}k`
+                          : `${v}`
+                      }
+                    />
+                    <Tooltip
+                      formatter={(value: number, name: string) => [
+                        name === "Outflow"
+                          ? formatCurrency(Math.abs(value))
+                          : formatCurrency(value),
+                        name,
+                      ]}
+                      labelFormatter={(label) => `Month: ${label}`}
+                      contentStyle={{
+                        fontSize: 12,
+                        borderRadius: 8,
+                        border: "1px solid #e5e7eb",
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11 }}
+                      iconSize={10}
+                    />
+                    <Bar
+                      dataKey="inflow"
+                      name="Inflow"
+                      fill="#16a34a"
+                      radius={[3, 3, 0, 0]}
+                    >
+                      {metrics.chartData.map((d, i) => (
+                        <Cell
+                          key={`in-${i}`}
+                          fill={d.isLow ? "#0f5132" : "#16a34a"}
+                        />
+                      ))}
+                    </Bar>
+                    <Bar
+                      dataKey="outflow"
+                      name="Outflow"
+                      fill="#e11d48"
+                      radius={[0, 0, 3, 3]}
+                    >
+                      {metrics.chartData.map((d, i) => (
+                        <Cell
+                          key={`out-${i}`}
+                          fill={d.isLow ? "#881337" : "#e11d48"}
+                        />
+                      ))}
+                    </Bar>
+                    <Line
+                      type="monotone"
+                      dataKey="net"
+                      name="Net"
+                      stroke="#2563eb"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="ending"
+                      name="Ending cash"
+                      stroke="#d97706"
+                      strokeWidth={2}
+                      dot={(props: {
+                        cx?: number;
+                        cy?: number;
+                        index?: number;
+                        payload?: { isLow?: boolean };
+                      }) => {
+                        const { cx, cy, index, payload } = props;
+                        const isLow = payload?.isLow;
+                        return (
+                          <circle
+                            key={`end-dot-${index}`}
+                            cx={cx}
+                            cy={cy}
+                            r={isLow ? 5 : 2.5}
+                            fill={isLow ? "#b45309" : "#d97706"}
+                            stroke={isLow ? "#fff" : "none"}
+                            strokeWidth={isLow ? 2 : 0}
+                          />
+                        );
+                      }}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
               </div>
             </div>
           )}
