@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { sharedLinksTable } from "@workspace/db/schema";
 import { runConsultantEngine, computeYearFinancialsFromData } from "./consultant-engine.js";
 import { computeDaysCashOnHand } from "./workbook-helpers.js";
+import { computeAnnualDscr } from "@workspace/finance";
 import { schoolTypeDisplay, entityTypeDisplay } from "./pdf-utils.js";
 import type { ReviewRequestData } from "./mailer.js";
 
@@ -76,9 +77,7 @@ export async function buildReviewRequestData(
   const revenue = yearFinancials.map((yf) => yf.totalRevenue);
   const expenses = yearFinancials.map((yf) => yf.totalExpenses);
   const netIncome = yearFinancials.map((yf) => yf.netIncome);
-  const dscr = yearFinancials.map((yf) =>
-    yf.debtService > 0 ? (yf.netIncome + yf.debtService) / yf.debtService : 0,
-  );
+  const dscr = yearFinancials.map((yf) => computeAnnualDscr(yf) ?? 0);
 
   const cf = consultantOutput.cumulativeFinancials || [];
   const reserveMonths = cf.length > 0 ? cf[cf.length - 1].reserveMonths : 0;

@@ -3,6 +3,8 @@ import { generateHealthSignals, type HealthSignal } from "./financial-health";
 import { computeDaysCashOnHand, computeEffectiveFte as computeEffectiveFteShared, BENCHMARK_DCOH_GREEN, BENCHMARK_DCOH_AMBER, BENCHMARK_DSCR_GREEN, BENCHMARK_DSCR_AMBER } from "./workbook-helpers.js";
 import {
   computeAnnualDebt,
+  computeAnnualDscr,
+  breakEvenYearFromAnnual,
   computeStraightLineDepreciation,
   computeProjectedAR,
   computeBaseFinancials,
@@ -1011,7 +1013,7 @@ function runStressScenarioFromRows(
     : capDebtRows;
 
   const financials = computeAllYearsFromRows(adjEnrollment, adjRevRows, adjStaffRows, adjExpRows, adjCapDebtRows, salaryEscRate, prorationFactor, mods.tuitionTiers, costInflationPct, schoolProfile, retentionRate, true);
-  const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
+  const breakEvenYear = breakEvenYearFromAnnual(financials);
 
   // Task #630 — resilience metrics. Final-year reserve months from
   // cumulative net income / monthly expenses (matches main-flow formula
@@ -1028,10 +1030,8 @@ function runStressScenarioFromRows(
     : 0;
 
   const y1Fin = financials[0];
-  const y1LoanDS = y1Fin?.loanDebtService ?? y1Fin?.debtService ?? 0;
-  const dscr: number | null = y1Fin && y1LoanDS > 0
-    ? Math.round(((y1Fin.netIncome + y1LoanDS) / y1LoanDS) * 100) / 100
-    : null;
+  const dscrRaw = y1Fin ? computeAnnualDscr(y1Fin) : null;
+  const dscr: number | null = dscrRaw === null ? null : Math.round(dscrRaw * 100) / 100;
 
   const monthlyNetByYear: number[][] = financials.map(yf => {
     const m = (yf.totalRevenue - yf.totalExpenses) / 12;
@@ -1043,7 +1043,7 @@ function runStressScenarioFromRows(
     scenario: label,
     y1NetIncome: financials[0]?.netIncome || 0,
     y5NetIncome: financials[financials.length - 1]?.netIncome || 0,
-    breakEvenYear: beIdx >= 0 ? beIdx + 1 : null,
+    breakEvenYear,
     reserveMonths,
     dscr,
     runwayMonths,
@@ -1068,13 +1068,12 @@ function runStressScenarioLegacy(
   const financials = adjEnrollment.map((s, idx) =>
     computeYearFinancialsLegacy(idx, s, adjRev, st, adjFac, prorationFactor),
   );
-  const beIdx = financials.findIndex(yf => yf.netIncome >= 0);
 
   return {
     scenario: label,
     y1NetIncome: financials[0].netIncome,
     y5NetIncome: financials[financials.length - 1].netIncome,
-    breakEvenYear: beIdx >= 0 ? beIdx + 1 : null,
+    breakEvenYear: breakEvenYearFromAnnual(financials),
   };
 }
 
@@ -1756,16 +1755,18 @@ export async function runConsultantEngine(rawData: Record<string, unknown>): Pro
   const enrollmentGrowthRate = y1.students > 0 ? (yLast.students - y1.students) / y1.students : 0;
   const revenueGrowth = y1.totalRevenue > 0 ? (yLast.totalRevenue - y1.totalRevenue) / y1.totalRevenue : 0;
 
-  const breakEvenYear = yearFinancials.findIndex(yf => yf.netIncome >= 0);
+  const breakEvenYearOneIndexed = breakEvenYearFromAnnual(yearFinancials);
+  // Legacy callers below treat the value as a 0-indexed findIndex result
+  // (i.e. -1 when no year breaks even). Preserve that contract while
+  // sourcing the underlying lookup from the canonical helper.
+  const breakEvenYear = breakEvenYearOneIndexed === null ? -1 : breakEvenYearOneIndexed - 1;
   const capacityUtilLastYear = sp.maxCapacity && sp.maxCapacity > 0 ? yLast.students / sp.maxCapacity : 0;
 
   const philanthropyPct = y1.totalRevenue > 0 ? y1.philanthropyRevenue / y1.totalRevenue : 0;
   const publicRevenuePct = y1.totalRevenue > 0 ? y1.publicRevenue / y1.totalRevenue : 0;
   const y1LoanDS = y1.loanDebtService ?? y1.debtService;
   const hasDebt = y1LoanDS > 0;
-  const dscr = hasDebt && y1.netIncome !== undefined
-    ? (y1.netIncome + y1LoanDS) / y1LoanDS
-    : 0;
+  const dscr = computeAnnualDscr(y1) ?? 0;
 
   const revenueComposition: RevenueComposition[] = yearFinancials.map(yf => ({
     tuitionPct: yf.totalRevenue > 0 ? yf.tuitionRevenue / yf.totalRevenue : 0,

@@ -97,72 +97,13 @@ interface AllowlistEntry {
   reason: string;
 }
 
-const KNOWN_VIOLATIONS: AllowlistEntry[] = [
-  // consultant-engine.ts derives a per-yearFinancials breakEvenYear in
-  // three legacy paths. The CE feeds these straight into the
-  // `ConsultantOutput` it returns, and the FINAL `cashRunwayMonths` /
-  // `breakEvenYear` written to `ConsultantOutput` (line 3064 / 3074)
-  // come from the canonical `computeCashRunwayMonths` /
-  // `computeBaseFinancials` calls. The local findIndex calls feed
-  // narrative-builder branches (strengths/risks copy) only — the
-  // headline numbers shipped to lenders/boards already reconcile.
-  // Tracked for cleanup but safe today (Task #618).
-  {
-    file: "artifacts/api-server/src/lib/consultant-engine.ts",
-    pattern: "local-break-even-year",
-    line: 1014,
-    reason: "Legacy stress-scenario builder; result fed to narrative copy only. Headline breakEvenYear in ConsultantOutput comes from canonical engine (Task #618).",
-  },
-  {
-    file: "artifacts/api-server/src/lib/consultant-engine.ts",
-    pattern: "local-break-even-year",
-    line: 1071,
-    reason: "Legacy stress-scenario builder; result fed to narrative copy only. Headline breakEvenYear in ConsultantOutput comes from canonical engine (Task #618).",
-  },
-  {
-    file: "artifacts/api-server/src/lib/consultant-engine.ts",
-    pattern: "local-break-even-year",
-    line: 1759,
-    reason: "Legacy assessment builder; only used to gate strengths/risks copy. The ConsultantOutput.breakEvenYear shipped downstream is overwritten with the canonical engine result before return (Task #618).",
-  },
-
-  // Legacy single-line DSCR derivations that still live in HTTP route
-  // handlers. Each surface either pre-dates the canonical lender
-  // stress-test helper or computes a Y1-only diagnostic that doesn't
-  // ship to lender / board exports. Refactor candidates for a future
-  // task; the export-reconciliation test (also Task #618) guards the
-  // surfaces founders actually download.
-  {
-    file: "artifacts/api-server/src/routes/models.ts",
-    pattern: "local-dscr-formula",
-    line: 1834,
-    reason: "Internal /models response field used by the dashboard; reconciles with canonical via cross-engine + parity tests. Refactor follow-up tracked separately (Task #618).",
-  },
-  {
-    file: "artifacts/api-server/src/routes/admin.ts",
-    pattern: "local-dscr-formula",
-    line: 1405,
-    reason: "Admin diagnostic endpoint, not part of lender / board exports (Task #618).",
-  },
-  {
-    file: "artifacts/api-server/src/routes/admin.ts",
-    pattern: "local-dscr-formula",
-    line: 1487,
-    reason: "Admin diagnostic endpoint, not part of lender / board exports (Task #618).",
-  },
-  {
-    file: "artifacts/api-server/src/routes/public.ts",
-    pattern: "local-dscr-formula",
-    line: 222,
-    reason: "Public preview endpoint surfaces a Y1 DSCR teaser; reconciliation test asserts the lender/board exports use canonical numbers (Task #618).",
-  },
-  {
-    file: "artifacts/api-server/src/lib/review-request-data.ts",
-    pattern: "local-dscr-formula",
-    line: 80,
-    reason: "Reviewer-request emailer payload; not surfaced in lender / board PDFs or workbooks (Task #618).",
-  },
-];
+// Task #684 retired the eight pre-existing entries. The allowlist is now
+// empty, so any new local DSCR / break-even / runway / cash-position math
+// outside `@workspace/finance` will fail this check on the first PR. If
+// you hit a failure here, refactor to call the canonical helper (see the
+// `fix:` text on each forbidden pattern) instead of allowlisting the
+// new occurrence.
+const KNOWN_VIOLATIONS: AllowlistEntry[] = [];
 
 interface Violation {
   file: string;

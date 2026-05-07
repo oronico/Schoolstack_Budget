@@ -1,4 +1,11 @@
 export {
+  computeAnnualDscr,
+  breakEvenYearFromAnnual,
+  type DscrYearLike,
+  type BreakEvenYearLike,
+} from "./headline-metrics.js";
+
+export {
   computeAnnualDebt,
   computeMonthlyDebt,
   computeAnnualDebtForYear,

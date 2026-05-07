@@ -16,6 +16,7 @@ import { computeDaysCashOnHand } from "../lib/workbook-helpers.js";
 import { sharedLinksTable } from "@workspace/db/schema";
 import { isNull } from "drizzle-orm";
 import { schoolTypeDisplay, entityTypeDisplay } from "../lib/pdf-utils";
+import { computeAnnualDscr } from "@workspace/finance";
 
 function normalizeModelData(data: Record<string, unknown>): Record<string, unknown> {
   if (Array.isArray(data.revenueRows)) {
@@ -1401,9 +1402,7 @@ router.get(
         metrics: {
           y1Revenue: yearFinancials[0]?.totalRevenue || 0,
           y1NetMargin: yearFinancials[0]?.netMargin || 0,
-          dscr: yearFinancials[0]?.debtService > 0
-            ? (yearFinancials[0].netIncome + yearFinancials[0].debtService) / yearFinancials[0].debtService
-            : 0,
+          dscr: yearFinancials[0] ? (computeAnnualDscr(yearFinancials[0]) ?? 0) : 0,
           cashRunwayMonths: consultantOutput.cashRunwayMonths || 0,
           reserveMonths,
           daysCashOnHand,
@@ -1483,9 +1482,7 @@ router.post(
       const serverMetrics = {
         y1Revenue: yearFinancials[0]?.totalRevenue || 0,
         y1NetMargin: yearFinancials[0]?.netMargin || 0,
-        dscr: yearFinancials[0]?.debtService > 0
-          ? (yearFinancials[0].netIncome + yearFinancials[0].debtService) / yearFinancials[0].debtService
-          : 0,
+        dscr: yearFinancials[0] ? (computeAnnualDscr(yearFinancials[0]) ?? 0) : 0,
         cashRunwayMonths: consultantOutput.cashRunwayMonths || 0,
         lenderReadiness: consultantOutput.lenderReadiness,
       };

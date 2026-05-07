@@ -28,6 +28,7 @@ import { isRequestAborted } from "../lib/request-abort";
 // the page but cuts off the trivial DoS pattern.
 const sharedLinkRateLimiter = createRateLimiter(60_000, 30);
 import { generateProFormaPDF } from "../lib/pdf-proforma";
+import { computeAnnualDscr } from "@workspace/finance";
 import { generateLoanReadinessPDF } from "../lib/pdf-loan-readiness";
 import { generateLenderProFormaWorkbook } from "../lib/lender-proforma-export";
 import { generateSingleYearBudget } from "../lib/underwriting-export";
@@ -1830,9 +1831,10 @@ router.get("/shared/:token", sharedLinkRateLimiter, async (req, res) => {
     const facilityCost = yearFinancials.map(yf => yf.facilityCost);
     const debtService = yearFinancials.map(yf => yf.debtService);
     const netMargin = yearFinancials.map(yf => yf.netMargin);
-    const dscr = yearFinancials.map(yf =>
-      yf.debtService > 0 ? Math.round(((yf.netIncome + yf.debtService) / yf.debtService) * 100) / 100 : 0
-    );
+    const dscr = yearFinancials.map(yf => {
+      const raw = computeAnnualDscr(yf);
+      return raw === null ? 0 : Math.round(raw * 100) / 100;
+    });
 
     const cf = consultantOutput.cumulativeFinancials || [];
     const reserveMonths = cf.length > 0 ? cf[cf.length - 1].reserveMonths : 0;

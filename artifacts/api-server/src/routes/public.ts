@@ -12,6 +12,7 @@ import { createRateLimiter } from "../lib/rate-limiter";
 import { trackEvent } from "../lib/track-event";
 import { isEmailConfigured, sendReviewRequestToTeam, sendReviewConfirmation } from "../lib/mailer";
 import { schoolTypeDisplay, entityTypeDisplay } from "../lib/pdf-utils";
+import { computeAnnualDscr } from "@workspace/finance";
 
 const router: IRouter = Router();
 
@@ -218,9 +219,7 @@ router.post("/public/request-review", rateLimiter, async (req: Request, res: Res
     const revenue = yearFinancials.map(yf => yf.totalRevenue);
     const expenses = yearFinancials.map(yf => yf.totalExpenses);
     const netIncome = yearFinancials.map(yf => yf.netIncome);
-    const dscr = yearFinancials.map(yf =>
-      yf.debtService > 0 ? (yf.netIncome + yf.debtService) / yf.debtService : 0
-    );
+    const dscr = yearFinancials.map(yf => computeAnnualDscr(yf) ?? 0);
 
     const cf = consultantOutput.cumulativeFinancials || [];
     const reserveMonths = cf.length > 0 ? cf[cf.length - 1].reserveMonths : 0;
