@@ -8,7 +8,7 @@ import {
   type GuestModel,
 } from "../underwriting";
 
-type RevRow = { id: string; amounts: number[] };
+type RevRow = { id: string; amounts: number[]; collectionRate?: number };
 type StaffRow = { id?: string; roleName?: string; startYear?: number; annualizedRate?: number };
 
 function defaultModel(overrides: Partial<GuestModel> = {}): GuestModel {
@@ -16,12 +16,13 @@ function defaultModel(overrides: Partial<GuestModel> = {}): GuestModel {
 }
 
 describe("buildModelDataPayload — tuition collection rate", () => {
-  it("applies collection rate to tuition row amount (30 students × $12,000 × 95% = $11,400)", () => {
+  it("passes raw sticker tuition + collectionRate so the scenario engine can apply the slippage", () => {
     const m = defaultModel({ year1Students: 30, perStudentTuition: 12000, tuitionCollectionRate: 95 });
     const payload = buildModelDataPayload(m) as { revenueRows: RevRow[] };
     const tuition = payload.revenueRows.find((r) => r.id === "rev_tuition");
     expect(tuition).toBeDefined();
-    expect(tuition!.amounts[0]).toBeCloseTo(11400, 5);
+    expect(tuition!.amounts[0]).toBeCloseTo(12000, 5);
+    expect(tuition!.collectionRate).toBe(95);
   });
 
   it("Y1 tuition revenue through engine equals $342,000 for 30 students at $12K with 95% collection", () => {

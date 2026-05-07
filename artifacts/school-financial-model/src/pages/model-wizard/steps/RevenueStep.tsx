@@ -1700,6 +1700,35 @@ function RevenueLineItem({
             </p>
           )}
 
+          {row.category === "tuition_and_fees" && row.driverType === "per_student" && schoolType !== "charter_school" && (
+            <div className="flex items-end gap-2 mt-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                  <GlossaryTerm termKey="collection_rate" schoolType={schoolType}>Collection rate</GlossaryTerm> %
+                </label>
+                <div className="relative">
+                  <input
+                    data-testid={`collection-rate-${row.id}`}
+                    type="number"
+                    value={row.collectionRate ?? DEFAULT_COLLECTION_RATE_BY_METHOD[(row.collectionMethod ?? "autopay") as "autopay" | "invoiced" | "mixed"]}
+                    onChange={(e) => { const v = parseFloat(e.target.value); onTimingChange("collectionRate", isNaN(v) ? 0 : v); }}
+                    className="w-24 rounded-lg border border-border bg-card pl-2 pr-6 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
+                </div>
+              </div>
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 cursor-help mb-2"
+                title="Industry benchmark: most invoiced K-8 private schools collect 88-93% of billed tuition annually. Lower rates compound across all 5 forecast years and materially reduce DSCR."
+              >
+                {COLLECTION_RATE_BENCHMARK_COPY}
+              </span>
+            </div>
+          )}
+
           {y1Students > 0 && row.driverType === "per_student" && row.amounts[0] > 0 && (
             <>
               <p className="text-[11px] text-muted-foreground mt-1">
